@@ -65,6 +65,7 @@ cd frontend && npm run dev
 
 ## Documentation
 
+- [Philosophy](docs/PHILOSOPHY.md) — conceptual foundations
 - [Setup Guide](docs/SETUP.md) — full installation walkthrough
 - [Configuration Reference](docs/CONFIG.md) — all config.yaml + env vars
 - [Plugin System](docs/PLUGINS.md) — how to build custom modules
