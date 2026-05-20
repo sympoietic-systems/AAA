@@ -60,6 +60,7 @@ class ConversationMetricsModule(ProcessingModule):
     async def process(self, payload: dict) -> dict:
         current_blob = payload.get("embedding")
         embedding_dim = payload.get("embedding_dim", 384)
+        conversation_id = payload.get("conversation_id", "")
 
         if not current_blob:
             payload["metrics"] = None
@@ -70,14 +71,17 @@ class ConversationMetricsModule(ProcessingModule):
         current_vec = np.frombuffer(current_blob, dtype="float32")
 
         prior_human = self._repo.get_embeddings_by_speaker(
-            "human", limit=self._pairwise_window
+            "human", limit=self._pairwise_window,
+            conversation_id=conversation_id if conversation_id else None,
         )
         prior_agent = self._repo.get_embeddings_by_speaker(
-            "apparatus", limit=self._agent_self_window
+            "apparatus", limit=self._agent_self_window,
+            conversation_id=conversation_id if conversation_id else None,
         )
 
         all_recent = self._repo.get_recent_embeddings(
-            limit=self._pairwise_window + self._agent_self_window
+            limit=self._pairwise_window + self._agent_self_window,
+            conversation_id=conversation_id if conversation_id else None,
         )
 
         metrics: dict = {}
@@ -91,7 +95,7 @@ class ConversationMetricsModule(ProcessingModule):
         rolling_entropy = _compute_rolling_entropy(current_vec, prior_human, self._entropy_window)
         metrics["rolling_entropy"] = rolling_entropy
 
-        coupling = _compute_coupling_coherence(self._repo)
+        coupling = _compute_coupling_coherence(self._repo, conversation_id if conversation_id else None)
         metrics["coupling_coherence"] = coupling
 
         agent_divergence = _compute_agent_self_divergence(prior_agent)
@@ -221,9 +225,9 @@ def _build_similarity_pairs(
     return pairs
 
 
-def _compute_coupling_coherence(repo: MessageRepository) -> float | None:
-    last_human = repo.get_last_embedding_by_speaker("human")
-    last_agent = repo.get_last_embedding_by_speaker("apparatus")
+def _compute_coupling_coherence(repo: MessageRepository, conversation_id: str | None = None) -> float | None:
+    last_human = repo.get_last_embedding_by_speaker("human", conversation_id=conversation_id)
+    last_agent = repo.get_last_embedding_by_speaker("apparatus", conversation_id=conversation_id)
     if last_human is None or last_agent is None:
         return None
     c = float(np.dot(last_human, last_agent))

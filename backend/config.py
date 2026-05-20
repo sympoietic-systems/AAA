@@ -52,6 +52,18 @@ def _apply_env_overrides(config: dict) -> dict:
                 value = int(value)
             config.setdefault(section, {})[key] = value
 
+    max_tokens = os.environ.get("AAA_CONTEXT_MAX_TOKENS")
+    if max_tokens is not None:
+        config.setdefault("context", {})["max_tokens"] = int(max_tokens)
+
+    sediment_budget = os.environ.get("AAA_SEDIMENT_TOKEN_BUDGET")
+    if sediment_budget is not None:
+        config.setdefault("sedimentation", {})["sediment_token_budget"] = int(sediment_budget)
+
+    sediment_count = os.environ.get("AAA_SEDIMENT_COUNT")
+    if sediment_count is not None:
+        config.setdefault("sedimentation", {})["sediment_count"] = int(sediment_count)
+
     thinking_env = os.environ.get("AAA_LLM_THINKING")
     if thinking_env is not None:
         thinking_cfg = config.setdefault("llm", {}).setdefault("thinking", {})

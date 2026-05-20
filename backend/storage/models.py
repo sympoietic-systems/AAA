@@ -4,10 +4,21 @@ from typing import Optional
 
 
 @dataclass
+class Conversation:
+    id: str
+    title: str
+    agent_id: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: int = 0
+
+
+@dataclass
 class Message:
     id: int | None
     timestamp: datetime
     agent_id: str
+    conversation_id: str
     speaker: str
     content: str
     thinking: Optional[str]

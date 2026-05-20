@@ -2,23 +2,29 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { getAgent, getHistory, sendMessage } from "../api/client"
 import type { ChatMessage } from "../api/client"
 
-export function useChat() {
+export function useChat(conversationId: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
-  const loaded = useRef(false)
+  const loadedRef = useRef<string>("")
 
   useEffect(() => {
-    if (loaded.current) return
-    loaded.current = true
+    if (loadedRef.current === conversationId) return
+    loadedRef.current = conversationId
+
     getAgent()
       .then((info) => setAgentName(info.name))
       .catch(() => setAgentName("agent"))
-    getHistory()
-      .then((data) => setMessages(data.messages))
-      .catch(() => {})
-  }, [])
+
+    if (conversationId) {
+      getHistory(50, conversationId)
+        .then((data) => setMessages(data.messages))
+        .catch(() => setMessages([]))
+    } else {
+      setMessages([])
+    }
+  }, [conversationId])
 
   const send = useCallback(async (content: string) => {
     if (!content.trim() || loading) return
@@ -34,7 +40,7 @@ export function useChat() {
     setMessages((prev) => [...prev, userMsg])
 
     try {
-      const response = await sendMessage(content)
+      const response = await sendMessage(content, conversationId || undefined)
       setMessages((prev) => {
         const updated = [...prev]
         if (response.metrics) {
@@ -48,13 +54,15 @@ export function useChat() {
         updated.push(response)
         return updated
       })
+      return response
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to send message"
       setError(msg)
+      return null
     } finally {
       setLoading(false)
     }
-  }, [loading])
+  }, [loading, conversationId])
 
   const clearError = useCallback(() => setError(null), [])
 

@@ -7,7 +7,76 @@ from typing import Optional
 import numpy as np
 
 from .database import get_connection
-from .models import ErrorLogEntry, Message, MetricsRecord
+from .models import Conversation, ErrorLogEntry, Message, MetricsRecord
+
+
+class ConversationRepository:
+    def __init__(self, db_path: str):
+        self._db_path = db_path
+
+    def _conn(self) -> sqlite3.Connection:
+        return get_connection(self._db_path)
+
+    def create(self, conversation_id: str, agent_id: str = "", title: str = "") -> Conversation:
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO conversations (id, title, agent_id)
+               VALUES (?, ?, ?)""",
+            (conversation_id, title, agent_id),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
+        ).fetchone()
+        return _row_to_conversation(row)
+
+    def get(self, conversation_id: str) -> Optional[Conversation]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return _row_to_conversation(row)
+
+    def list_all(self) -> list[Conversation]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT c.*, COUNT(cl.id) as message_count
+               FROM conversations c
+               LEFT JOIN conversation_log cl ON c.id = cl.conversation_id
+               GROUP BY c.id
+               ORDER BY c.updated_at DESC"""
+        ).fetchall()
+        return [_row_to_conversation(r) for r in rows]
+
+    def update_title(self, conversation_id: str, title: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            """UPDATE conversations SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?""",
+            (title, conversation_id),
+        )
+        conn.commit()
+
+    def touch(self, conversation_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (conversation_id,),
+        )
+        conn.commit()
+
+    def delete(self, conversation_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM conversation_log WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.execute(
+            "DELETE FROM conversations WHERE id = ?",
+            (conversation_id,),
+        )
+        conn.commit()
 
 
 class MessageRepository:
@@ -26,13 +95,14 @@ class MessageRepository:
         embedding_dim: int,
         thinking: Optional[str] = None,
         agent_id: str = "",
+        conversation_id: str = "",
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim),
+               (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id),
         )
         conn.commit()
         row = conn.execute(
@@ -40,12 +110,18 @@ class MessageRepository:
         ).fetchone()
         return _row_to_message(row)
 
-    def get_recent(self, limit: int = 50) -> list[Message]:
+    def get_recent(self, limit: int = 50, conversation_id: str | None = None) -> list[Message]:
         conn = self._conn()
-        rows = conn.execute(
-            "SELECT * FROM conversation_log ORDER BY timestamp DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
+        if conversation_id is not None:
+            rows = conn.execute(
+                "SELECT * FROM conversation_log WHERE conversation_id = ? ORDER BY timestamp DESC LIMIT ?",
+                (conversation_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM conversation_log ORDER BY timestamp DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
         return [_row_to_message(r) for r in reversed(rows)]
 
     def get_by_id(self, message_id: int) -> Optional[Message]:
@@ -58,14 +134,21 @@ class MessageRepository:
         return _row_to_message(row)
 
     def get_embeddings_by_speaker(
-        self, speaker: str, limit: int = 5
+        self, speaker: str, limit: int = 5, conversation_id: str | None = None
     ) -> list[np.ndarray]:
         conn = self._conn()
-        rows = conn.execute(
-            "SELECT embedding, embedding_dim FROM conversation_log "
-            "WHERE speaker = ? ORDER BY id DESC LIMIT ?",
-            (speaker, limit),
-        ).fetchall()
+        if conversation_id is not None:
+            rows = conn.execute(
+                "SELECT embedding, embedding_dim FROM conversation_log "
+                "WHERE speaker = ? AND conversation_id = ? ORDER BY id DESC LIMIT ?",
+                (speaker, conversation_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT embedding, embedding_dim FROM conversation_log "
+                "WHERE speaker = ? ORDER BY id DESC LIMIT ?",
+                (speaker, limit),
+            ).fetchall()
         result: list[np.ndarray] = []
         for row in rows:
             blob = row["embedding"]
@@ -76,13 +159,20 @@ class MessageRepository:
                     result.append(vec)
         return result
 
-    def get_last_embedding_by_speaker(self, speaker: str) -> np.ndarray | None:
+    def get_last_embedding_by_speaker(self, speaker: str, conversation_id: str | None = None) -> np.ndarray | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT embedding, embedding_dim FROM conversation_log "
-            "WHERE speaker = ? ORDER BY id DESC LIMIT 1",
-            (speaker,),
-        ).fetchone()
+        if conversation_id is not None:
+            row = conn.execute(
+                "SELECT embedding, embedding_dim FROM conversation_log "
+                "WHERE speaker = ? AND conversation_id = ? ORDER BY id DESC LIMIT 1",
+                (speaker, conversation_id),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT embedding, embedding_dim FROM conversation_log "
+                "WHERE speaker = ? ORDER BY id DESC LIMIT 1",
+                (speaker,),
+            ).fetchone()
         if row is None:
             return None
         blob = row["embedding"]
@@ -94,13 +184,20 @@ class MessageRepository:
             return None
         return vec
 
-    def get_recent_embeddings(self, limit: int = 10) -> list[np.ndarray]:
+    def get_recent_embeddings(self, limit: int = 10, conversation_id: str | None = None) -> list[np.ndarray]:
         conn = self._conn()
-        rows = conn.execute(
-            "SELECT embedding, embedding_dim FROM conversation_log "
-            "ORDER BY id DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
+        if conversation_id is not None:
+            rows = conn.execute(
+                "SELECT embedding, embedding_dim FROM conversation_log "
+                "WHERE conversation_id = ? ORDER BY id DESC LIMIT ?",
+                (conversation_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT embedding, embedding_dim FROM conversation_log "
+                "ORDER BY id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
         result: list[np.ndarray] = []
         for row in rows:
             blob = row["embedding"]
@@ -111,22 +208,69 @@ class MessageRepository:
                     result.append(vec)
         return result
 
-    def get_recent_with_metrics(self, limit: int = 50) -> list[dict]:
+    def get_recent_with_metrics(self, limit: int = 50, conversation_id: str | None = None) -> list[dict]:
+        conn = self._conn()
+        if conversation_id is not None:
+            rows = conn.execute(
+                """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                          cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
+                          cm.agent_divergence, cm.deficit,
+                          cm.reverse_perturbation, cm.surprise_index,
+                          cm.mutual_perturbation, cm.vitality,
+                          cm.boringness, cm.conceptual_velocity,
+                          cm.divergence_resolution_ratio, cm.paskian_health
+                   FROM conversation_log cl
+                   LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
+                   WHERE cl.conversation_id = ?
+                   ORDER BY cl.timestamp DESC LIMIT ?""",
+                (conversation_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                          cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
+                          cm.agent_divergence, cm.deficit,
+                          cm.reverse_perturbation, cm.surprise_index,
+                          cm.mutual_perturbation, cm.vitality,
+                          cm.boringness, cm.conceptual_velocity,
+                          cm.divergence_resolution_ratio, cm.paskian_health
+                   FROM conversation_log cl
+                   LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
+                   ORDER BY cl.timestamp DESC LIMIT ?""",
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in reversed(rows)]
+
+    def get_all_embeddings_except(
+        self, exclude_conversation_id: str, limit: int = 500
+    ) -> list[tuple[int, str, np.ndarray]]:
         conn = self._conn()
         rows = conn.execute(
-            """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
-                      cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
-                      cm.agent_divergence, cm.deficit,
-                      cm.reverse_perturbation, cm.surprise_index,
-                      cm.mutual_perturbation, cm.vitality,
-                      cm.boringness, cm.conceptual_velocity,
-                      cm.divergence_resolution_ratio, cm.paskian_health
-               FROM conversation_log cl
-               LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
-               ORDER BY cl.timestamp DESC LIMIT ?""",
-            (limit,),
+            """SELECT id, speaker, embedding, embedding_dim FROM conversation_log
+               WHERE conversation_id != ? AND conversation_id != ''
+               ORDER BY id DESC LIMIT ?""",
+            (exclude_conversation_id, limit),
         ).fetchall()
-        return [dict(r) for r in reversed(rows)]
+        result: list[tuple[int, str, np.ndarray]] = []
+        for row in rows:
+            blob = row["embedding"]
+            dim = row["embedding_dim"]
+            if blob and dim:
+                vec = np.frombuffer(blob, dtype="float32")
+                if len(vec) == dim:
+                    result.append((row["id"], row["speaker"], vec))
+        return result
+
+    def get_by_ids(self, message_ids: list[int]) -> list[Message]:
+        if not message_ids:
+            return []
+        conn = self._conn()
+        placeholders = ",".join("?" * len(message_ids))
+        rows = conn.execute(
+            f"SELECT * FROM conversation_log WHERE id IN ({placeholders})",
+            message_ids,
+        ).fetchall()
+        return [_row_to_message(r) for r in rows]
 
 
 def _row_to_message(row: sqlite3.Row) -> Message:
@@ -134,12 +278,24 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         id=row["id"],
         timestamp=datetime.fromisoformat(row["timestamp"]),
         agent_id=row["agent_id"] if "agent_id" in row.keys() else "",
+        conversation_id=row["conversation_id"] if "conversation_id" in row.keys() else "",
         speaker=row["speaker"],
         content=row["content"],
         thinking=row["thinking"] if "thinking" in row.keys() else None,
         embedding=row["embedding"],
         embedding_model=row["embedding_model"],
         embedding_dim=row["embedding_dim"],
+    )
+
+
+def _row_to_conversation(row: sqlite3.Row) -> Conversation:
+    return Conversation(
+        id=row["id"],
+        title=row["title"],
+        agent_id=row["agent_id"],
+        created_at=datetime.fromisoformat(row["created_at"]),
+        updated_at=datetime.fromisoformat(row["updated_at"]),
+        message_count=row["message_count"] if "message_count" in row.keys() else 0,
     )
 
 

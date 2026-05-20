@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -6,6 +7,9 @@ from .schemas import (
     AgentInfo,
     ChatRequest,
     ChatResponse,
+    ConversationInfo,
+    ConversationListResponse,
+    ConversationUpdateRequest,
     ErrorResponse,
     HealthResponse,
     HistoryMessage,
@@ -22,6 +26,41 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
+async def _generate_title(llm_provider, first_message: str) -> str:
+    try:
+        result = await llm_provider.generate(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Generate a concise 3-6 word title for a conversation. Return only the title, no quotes, no punctuation at the end.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Generate a short title for a conversation that starts with this message: \"{first_message[:300]}\"",
+                },
+            ],
+            temperature=0.3,
+            max_tokens=30,
+        )
+        content = result.get("content", "").strip().strip('"').strip("'")
+        if not content:
+            return first_message[:60]
+        return content
+    except Exception:
+        logger.debug("Title generation failed, using fallback", exc_info=True)
+        return first_message[:60]
+
+
+async def _get_or_create_conversation(
+    conv_repo, conversation_id: str, agent_id: str
+) -> str:
+    if conversation_id and conv_repo.get(conversation_id):
+        return conversation_id
+    conv_id = str(uuid.uuid4())
+    conv_repo.create(conversation_id=conv_id, agent_id=agent_id)
+    return conv_id
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(body: ChatRequest, request: Request):
     state = request.app.state
@@ -29,12 +68,26 @@ async def chat(body: ChatRequest, request: Request):
     repo = state.message_repo
     error_repo = state.error_repo
     metrics_repo = getattr(state, "metrics_repo", None)
+    conv_repo = getattr(state, "conversation_repo", None)
     agent_id = getattr(state, "agent_name", "symbia")
+    llm_provider = getattr(state, "llm_provider", None)
+
+    conversation_id = body.conversation_id or ""
+    is_new = False
+
+    if conv_repo:
+        if not conversation_id or not conv_repo.get(conversation_id):
+            conversation_id = str(uuid.uuid4())
+            conv_repo.create(conversation_id=conversation_id, agent_id=agent_id)
+            is_new = True
+        else:
+            conv_repo.touch(conversation_id)
 
     try:
         result = await pipeline.run({
             "content": body.content,
             "speaker": body.speaker,
+            "conversation_id": conversation_id,
         })
 
         response_text = result.payload.get("response", "")
@@ -59,6 +112,7 @@ async def chat(body: ChatRequest, request: Request):
             embedding_model=embedding_model,
             embedding_dim=embedding_dim,
             agent_id=agent_id,
+            conversation_id=conversation_id,
         )
 
         response_msg = repo.insert(
@@ -69,6 +123,7 @@ async def chat(body: ChatRequest, request: Request):
             embedding_model=embedding_model,
             embedding_dim=embedding_dim,
             agent_id=agent_id,
+            conversation_id=conversation_id,
         )
 
         payload_metrics = result.payload.get("metrics")
@@ -85,9 +140,17 @@ async def chat(body: ChatRequest, request: Request):
             except Exception:
                 logger.exception("Failed to store metrics")
 
+        if is_new and conv_repo and llm_provider:
+            try:
+                title = await _generate_title(llm_provider, body.content)
+                conv_repo.update_title(conversation_id, title)
+            except Exception:
+                logger.exception("Failed to generate conversation title")
+
         return ChatResponse(
             id=response_msg.id,
             timestamp=response_msg.timestamp,
+            conversation_id=conversation_id,
             speaker="apparatus",
             content=response_text,
             thinking=thinking,
@@ -112,10 +175,13 @@ async def get_agent(request: Request):
 
 
 @router.get("/history", response_model=HistoryResponse)
-async def history(limit: int = 50, request: Request = None):
+async def history(limit: int = 50, conversation_id: str = "", request: Request = None):
     state = request.app.state
     repo = state.message_repo
-    rows = repo.get_recent_with_metrics(limit=limit)
+    rows = repo.get_recent_with_metrics(
+        limit=limit,
+        conversation_id=conversation_id if conversation_id else None,
+    )
     messages: list[HistoryMessage] = []
     for r in rows:
         metrics = _build_history_metrics(r)
@@ -131,6 +197,78 @@ async def history(limit: int = 50, request: Request = None):
         messages=messages,
         count=len(messages),
     )
+
+
+@router.get("/conversations", response_model=ConversationListResponse)
+async def list_conversations(request: Request):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    if not conv_repo:
+        return ConversationListResponse(conversations=[])
+    convos = conv_repo.list_all()
+    return ConversationListResponse(conversations=[
+        ConversationInfo(
+            id=c.id,
+            title=c.title,
+            created_at=c.created_at,
+            updated_at=c.updated_at,
+            message_count=c.message_count,
+        )
+        for c in convos
+    ])
+
+
+@router.get("/conversations/{conversation_id}", response_model=ConversationInfo)
+async def get_conversation(conversation_id: str, request: Request):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    if not conv_repo:
+        raise HTTPException(status_code=404, detail="Conversations not available")
+    conv = conv_repo.get(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return ConversationInfo(
+        id=conv.id,
+        title=conv.title,
+        created_at=conv.created_at,
+        updated_at=conv.updated_at,
+        message_count=conv.message_count,
+    )
+
+
+@router.patch("/conversations/{conversation_id}", response_model=ConversationInfo)
+async def update_conversation(
+    conversation_id: str, body: ConversationUpdateRequest, request: Request
+):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    if not conv_repo:
+        raise HTTPException(status_code=404, detail="Conversations not available")
+    conv = conv_repo.get(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv_repo.update_title(conversation_id, body.title)
+    conv = conv_repo.get(conversation_id)
+    return ConversationInfo(
+        id=conv.id,
+        title=conv.title,
+        created_at=conv.created_at,
+        updated_at=conv.updated_at,
+        message_count=conv.message_count,
+    )
+
+
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str, request: Request):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    if not conv_repo:
+        raise HTTPException(status_code=404, detail="Conversations not available")
+    conv = conv_repo.get(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv_repo.delete(conversation_id)
+    return {"status": "deleted", "id": conversation_id}
 
 
 @router.get("/health", response_model=HealthResponse)

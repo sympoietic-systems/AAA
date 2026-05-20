@@ -22,6 +22,14 @@ def get_connection(db_path: str) -> sqlite3.Connection:
 def init_db(db_path: str) -> sqlite3.Connection:
     conn = get_connection(db_path)
     conn.executescript("""
+        CREATE TABLE IF NOT EXISTS conversations (
+            id          TEXT PRIMARY KEY,
+            title       TEXT NOT NULL DEFAULT '',
+            agent_id    TEXT NOT NULL DEFAULT '',
+            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS conversation_log (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp        DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -49,6 +57,9 @@ def init_db(db_path: str) -> sqlite3.Connection:
 
         CREATE INDEX IF NOT EXISTS idx_error_timestamp
             ON error_log(timestamp);
+
+        CREATE INDEX IF NOT EXISTS idx_conversations_updated
+            ON conversations(updated_at);
 
         CREATE TABLE IF NOT EXISTS conversation_metrics (
             message_id        INTEGER PRIMARY KEY REFERENCES conversation_log(id),
@@ -85,6 +96,18 @@ def init_db(db_path: str) -> sqlite3.Connection:
         )
     except sqlite3.OperationalError:
         pass
+    try:
+        conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN conversation_id TEXT NOT NULL DEFAULT ''"
+        )
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_conversation_log_conv_id ON conversation_log(conversation_id)"
+        )
+    except sqlite3.OperationalError:
+        pass
     for col, col_type in [
         ("reverse_perturbation", "REAL"),
         ("surprise_index", "REAL"),
@@ -109,5 +132,31 @@ def init_db(db_path: str) -> sqlite3.Connection:
             )
         except sqlite3.OperationalError:
             pass
+
+    _migrate_legacy_conversation(conn)
+
     conn.commit()
     return conn
+
+
+_LEGACY_CONVERSATION_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _migrate_legacy_conversation(conn: sqlite3.Connection) -> None:
+    orphan_count = conn.execute(
+        "SELECT COUNT(*) FROM conversation_log WHERE conversation_id = ''"
+    ).fetchone()[0]
+
+    if orphan_count == 0:
+        return
+
+    conn.execute(
+        """INSERT OR IGNORE INTO conversations (id, title, agent_id)
+           VALUES (?, ?, ?)""",
+        (_LEGACY_CONVERSATION_ID, "Legacy", ""),
+    )
+
+    conn.execute(
+        "UPDATE conversation_log SET conversation_id = ? WHERE conversation_id = ''",
+        (_LEGACY_CONVERSATION_ID,),
+    )

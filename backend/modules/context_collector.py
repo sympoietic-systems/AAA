@@ -30,7 +30,11 @@ class ContextCollectorModule(ProcessingModule):
         return True
 
     async def process(self, payload: dict) -> dict:
-        recent = self._repo.get_recent(limit=self._max_history)
+        conversation_id = payload.get("conversation_id", "")
+        recent = self._repo.get_recent(
+            limit=self._max_history,
+            conversation_id=conversation_id if conversation_id else None,
+        )
 
         messages = _format_messages(recent)
         current = payload.get("content", "")

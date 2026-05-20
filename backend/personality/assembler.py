@@ -4,12 +4,19 @@ import yaml
 
 from backend.modules.base import ProcessingModule
 from backend.skills.registry import SkillRegistry
+from backend.utils.token_counter import estimate_message_tokens
 
 
 class PromptAssemblerModule(ProcessingModule):
-    def __init__(self, identity_path: Path, skill_registry: SkillRegistry):
+    def __init__(
+        self,
+        identity_path: Path,
+        skill_registry: SkillRegistry,
+        max_context_tokens: int = 16384,
+    ):
         self._identity_path = identity_path
         self._registry = skill_registry
+        self._max_context_tokens = max_context_tokens
         self._identity: dict = {}
 
     @property
@@ -28,10 +35,66 @@ class PromptAssemblerModule(ProcessingModule):
     async def process(self, payload: dict) -> dict:
         identity = self._load_identity()
         system_content = _build_system_content(identity, self._registry)
+        system_msg = {"role": "system", "content": system_content}
+
         messages = payload.get("messages", [])
-        messages.insert(0, {"role": "system", "content": system_content})
-        payload["messages"] = messages
+        sediment_messages = payload.get("sediment_messages", [])
+
+        assembled: list[dict] = [system_msg]
+
+        for sm in sediment_messages:
+            assembled.append(sm)
+
+        for m in messages:
+            assembled.append(m)
+
+        assembled = _trim_to_budget(
+            assembled,
+            system_msg_token_count=estimate_message_tokens(system_msg),
+            max_tokens=self._max_context_tokens,
+        )
+
+        payload["messages"] = assembled
         return payload
+
+
+def _trim_to_budget(
+    messages: list[dict],
+    system_msg_token_count: int,
+    max_tokens: int,
+) -> list[dict]:
+    total = sum(estimate_message_tokens(m) for m in messages)
+    if total <= max_tokens:
+        return messages
+
+    system_idx = 0
+    sediment_end = 1
+    for i in range(1, len(messages)):
+        role = messages[i].get("role", "")
+        if role in ("user", "assistant"):
+            sediment_end = i
+            break
+    else:
+        sediment_end = len(messages)
+
+    system_part = messages[system_idx:system_idx + 1]
+    sediment_part = messages[1:sediment_end]
+    history_part = messages[sediment_end:]
+
+    system_tokens = sum(estimate_message_tokens(m) for m in system_part)
+    sediment_tokens = sum(estimate_message_tokens(m) for m in sediment_part)
+    available = max_tokens - system_tokens - sediment_tokens
+
+    trimmed_history: list[dict] = []
+    used = 0
+    for m in reversed(history_part):
+        t = estimate_message_tokens(m)
+        if used + t > available:
+            break
+        trimmed_history.insert(0, m)
+        used += t
+
+    return system_part + sediment_part + trimmed_history
 
 
 def _build_system_content(identity: dict, registry: SkillRegistry) -> str:

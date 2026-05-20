@@ -1,0 +1,86 @@
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { ConversationInfo } from "../api/client"
+import {
+  listConversations,
+  deleteConversation as deleteConvApi,
+  getConversation,
+} from "../api/client"
+
+export function useConversations() {
+  const [conversations, setConversations] = useState<ConversationInfo[]>([])
+  const [activeId, setActiveId] = useState<string>("")
+  const [loading, setLoading] = useState(false)
+  const initialized = useRef(false)
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await listConversations()
+      setConversations(data.conversations)
+      if (!activeId && data.conversations.length > 0) {
+        setActiveId(data.conversations[0].id)
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false)
+    }
+  }, [activeId])
+
+  useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true
+      refresh()
+    }
+  }, [refresh])
+
+  const selectConversation = useCallback((id: string) => {
+    setActiveId(id)
+  }, [])
+
+  const deleteConversation = useCallback(async (id: string) => {
+    try {
+      await deleteConvApi(id)
+      setConversations((prev) => prev.filter((c) => c.id !== id))
+      if (activeId === id) {
+        const remaining = conversations.filter((c) => c.id !== id)
+        setActiveId(remaining.length > 0 ? remaining[0].id : "")
+      }
+    } catch {
+      // silent
+    }
+  }, [activeId, conversations])
+
+  const addConversation = useCallback((conv: ConversationInfo) => {
+    setConversations((prev) => {
+      const exists = prev.find((c) => c.id === conv.id)
+      if (exists) return prev.map((c) => (c.id === conv.id ? conv : c))
+      return [conv, ...prev]
+    })
+    if (!activeId) {
+      setActiveId(conv.id)
+    }
+  }, [activeId])
+
+  const refreshTitle = useCallback(async (id: string) => {
+    try {
+      const updated = await getConversation(id)
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, title: updated.title } : c))
+      )
+    } catch {
+      // silent
+    }
+  }, [])
+
+  return {
+    conversations,
+    activeId,
+    setActiveId: selectConversation,
+    loading,
+    refresh,
+    deleteConversation,
+    addConversation,
+    refreshTitle,
+  }
+}

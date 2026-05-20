@@ -7,11 +7,13 @@ from pydantic import BaseModel, Field
 class ChatRequest(BaseModel):
     content: str
     speaker: str = Field(default="human", pattern="^(human|apparatus)$")
+    conversation_id: str = Field(default="", description="Conversation ID; auto-created if empty")
 
 
 class ChatResponse(BaseModel):
     id: int | None = None
     timestamp: datetime | None = None
+    conversation_id: str = ""
     speaker: str
     content: str
     thinking: Optional[str] = None
@@ -96,3 +98,19 @@ class MetricsResponse(BaseModel):
     aggregates: dict
     latest: MetricsInfo | None = None
     recommendations: HomeostaticRecommendations | None = None
+
+
+class ConversationInfo(BaseModel):
+    id: str
+    title: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    message_count: int = 0
+
+
+class ConversationListResponse(BaseModel):
+    conversations: list[ConversationInfo]
+
+
+class ConversationUpdateRequest(BaseModel):
+    title: str

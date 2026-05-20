@@ -18,11 +18,17 @@ from backend.modules.llm_client import (
     OpenAICompatibleProvider,
     OpenRouterProvider,
 )
+from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
 from backend.personality.assembler import PromptAssemblerModule
 from backend.skills.metadata import SkillMeta
 from backend.skills.registry import SkillRegistry
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import ErrorLogRepository, MessageRepository, MetricsRepository
+from backend.storage.repository import (
+    ConversationRepository,
+    ErrorLogRepository,
+    MessageRepository,
+    MetricsRepository,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -92,6 +98,7 @@ async def lifespan(app: FastAPI):
     message_repo = MessageRepository(str(full_db_path))
     error_repo = ErrorLogRepository(str(full_db_path))
     metrics_repo = MetricsRepository(str(full_db_path))
+    conversation_repo = ConversationRepository(str(full_db_path))
 
     embed_cfg = config.get("embedding", {})
     embedder = EmbedderModule(
@@ -122,6 +129,14 @@ async def lifespan(app: FastAPI):
     )
 
     homeostatic_regulator = HomeostaticRegulatorModule()
+
+    sediment_cfg = config.get("sedimentation", {})
+    sedimentation_retrieval = SedimentationRetrievalModule(
+        message_repo=message_repo,
+        sediment_token_budget=sediment_cfg.get("sediment_token_budget", 2000),
+        sediment_count=sediment_cfg.get("sediment_count", 10),
+        similarity_threshold=sediment_cfg.get("similarity_threshold", 0.3),
+    )
 
     personality_cfg = config.get("personality", {})
     identity_path = Path(personality_cfg.get("path", "backend/personality/identity.yaml"))
@@ -155,11 +170,18 @@ async def lifespan(app: FastAPI):
     prompt_assembler = PromptAssemblerModule(
         identity_path=identity_path,
         skill_registry=registry,
+        max_context_tokens=ctx_cfg.get("max_tokens", 16384),
     )
     registry.register_with_meta(
         "prompt_assembler", lambda: prompt_assembler,
-        SkillMeta(name="prompt_assembler", description="Composes system prompt from identity and skills",
+        SkillMeta(name="prompt_assembler", description="Composes system prompt from identity, skills, sediment, and conversation history within token budget",
                   category="reasoning", always_run=True),
+    )
+
+    registry.register_with_meta(
+        "sedimentation_retrieval", lambda: sedimentation_retrieval,
+        SkillMeta(name="sedimentation_retrieval", description="Retrieves semantically relevant messages from other conversations via embedding similarity",
+                  category="memory", always_run=True),
     )
 
     registry.register_with_meta(
@@ -176,7 +198,7 @@ async def lifespan(app: FastAPI):
 
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
-        ["embedder", "conversation_metrics", "context_collector", "prompt_assembler", "homeostatic_regulator", "llm_client"],
+        ["embedder", "conversation_metrics", "context_collector", "sedimentation_retrieval", "prompt_assembler", "homeostatic_regulator", "llm_client"],
     )
     pipeline_modules = registry.resolve_pipeline(pipeline_order)
 
@@ -197,10 +219,12 @@ async def lifespan(app: FastAPI):
     app.state.message_repo = message_repo
     app.state.error_repo = error_repo
     app.state.metrics_repo = metrics_repo
+    app.state.conversation_repo = conversation_repo
     app.state.registry = registry
     app.state.pipeline = pipeline
     app.state.pipeline_order = pipeline_order
     app.state.embedder = embedder
+    app.state.llm_provider = provider
 
     logger.info("All modules initialized. Server ready.")
     yield
