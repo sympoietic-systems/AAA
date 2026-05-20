@@ -182,6 +182,10 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     entropy = metrics.get("rolling_entropy")
     agent_div = metrics.get("agent_self_divergence")
     coupling = metrics.get("coupling_coherence")
+    rp_t = metrics.get("reverse_perturbation")
+    surprise = metrics.get("surprise_index")
+    mpi = metrics.get("mutual_perturbation")
+    vitality = metrics.get("conversation_vitality")
 
     flags: list[str] = []
 
@@ -202,10 +206,28 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     if coupling is not None and coupling < 0.15:
         flags.append("dissociation")
 
-    critical = {"high_similarity", "entropy_collapse", "agent_self_loop"}
+    if rp_t is not None and rp_t < 0.10:
+        flags.append("stagnant_reverse_coupling")
+
+    if mpi is not None and mpi < 0.05:
+        flags.append("mutual_deadlock")
+
+    if surprise is not None and surprise > 0.40:
+        flags.append("phase_disruption")
+
+    critical = {"high_similarity", "entropy_collapse", "agent_self_loop", "mutual_deadlock", "phase_disruption"}
 
     if any(f in critical for f in flags):
-        return "critical", flags
-    if flags:
-        return "compensating", flags
-    return "healthy", flags
+        vitality_state = "critical"
+    elif flags:
+        vitality_state = "compensating"
+    else:
+        vitality_state = "healthy"
+
+    if vitality is not None:
+        if vitality < 0.20:
+            vitality_state = "critical"
+        elif vitality < 0.40 and vitality_state == "healthy":
+            vitality_state = "compensating"
+
+    return vitality_state, flags

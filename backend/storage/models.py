@@ -25,6 +25,11 @@ class MetricsRecord:
     coupling: float | None
     agent_divergence: float | None
     deficit: float
+    reverse_perturbation: float | None
+    surprise_index: float | None
+    mutual_perturbation: float | None
+    vitality: float | None
+    phase_shifts: str | None
     temperature_rec: float | None
     presence_penalty_rec: float | None
     frequency_penalty_rec: float | None

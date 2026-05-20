@@ -6,7 +6,19 @@ export interface MetricsInfo {
   rolling_entropy: number | null
   coupling_coherence: number | null
   agent_self_divergence: number | null
+  reverse_perturbation: number | null
+  surprise_index: number | null
+  mutual_perturbation: number | null
   homeostatic_deficit: number | null
+  conversation_vitality: number | null
+  phase_shifts: Array<{
+    metric: string
+    event: string
+    delta: number
+    direction: string
+    from: number
+    to: number
+  }> | null
 }
 
 export interface HomeostaticRecommendations {

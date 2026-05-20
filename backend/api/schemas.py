@@ -70,7 +70,12 @@ class MetricsInfo(BaseModel):
     rolling_entropy: float | None = None
     coupling_coherence: float | None = None
     agent_self_divergence: float | None = None
+    reverse_perturbation: float | None = None
+    surprise_index: float | None = None
+    mutual_perturbation: float | None = None
     homeostatic_deficit: float | None = None
+    conversation_vitality: float | None = None
+    phase_shifts: list[dict] | None = None
 
 
 class HomeostaticRecommendations(BaseModel):

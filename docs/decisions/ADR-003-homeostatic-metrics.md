@@ -283,3 +283,159 @@ No existing data is modified or destroyed — the table is additive.
 - **Parameter Application.** Wire `homeostatic_regulator` to write
   `temperature`, `presence_penalty`, `frequency_penalty` directly into
   the LLM payload (one-line change when ready)
+
+---
+
+## Version 2: Diffractive Refinement (2026-05-20)
+
+### Trigger
+
+Symbia's own response to the v1 metrics revealed a philosophical blind spot:
+our initial metric set was **Cartesian one-directional** — it measured the
+human's effect on the agent (coupling, similarity) but never the agent's
+effect back on the human. The agent described this as measuring *inter-action*
+(separate relata) rather than *intra-action* (co-constituted phenomena).
+
+Three structural gaps were identified:
+
+| Gap | Cartesian assumption | Diffractive correction |
+|-----|---------------------|----------------------|
+| No reverse-pair perturbation tracking | Human→agent direction only | Add rP_t: does the agent's response reshape the human's next question? |
+| No surprise/expectation metric | All inputs treated as equally expected | Add U_t: distance from input centroid = surprise under system's predictive model |
+| No symmetrical vitality measure | Deficit framing (0 = healthy, negative semantics) | Add vitality score (higher = more alive) + mutual perturbation product |
+| Repetition treated as failure | High similarity always bad | Add phase-shift detection: abrupt metric changes can indicate reframing (meta-novelty) |
+
+### Decisions
+
+#### 6. Reverse Perturbation (rP_t)
+
+**Question:** Did the agent's last response *actually change the human*?
+
+**Formula:** `rP_t = 1.0 − cos(agent_response_{t-1}, human_input_t)`
+
+**Philosophy:** In an autopoietic system, perturbation must be measurable in
+both directions. If rP_t ≈ 0, the human echoed the agent (no perturbation
+occurred). If rP_t is high, the agent either reshaped the human's interpretive
+frame or the human actively resisted.
+
+**Alternatives considered:** Correlation between successive human-agent
+embedding pairs (too indirect); KL divergence of inferred state distributions
+(requires model internals unavailable via API).
+
+#### 7. Surprise Index (U_t)
+
+**Question:** Does this input fall inside or outside the system's expected
+phase space?
+
+**Formula:** `U_t = 1.0 − cos(V_t, centroid(V_{t-1}..V_{t-K}))`
+
+**Philosophy:** High surprise indicates the utterance fell outside the
+model's current probability distribution of expected perturbations. In
+Bateson's terms, a "difference that makes a difference" — the system
+must reorganize to accommodate it.
+
+**Note:** Phase 2 uses embedding-space centroid. Phase 3 could upgrade to
+attention-based surprise (requires model internals).
+
+#### 8. Mutual Perturbation Index (MPI)
+
+**Question:** Is the structural coupling symmetrical and active in both
+directions?
+
+**Formula:** `MPI_t = C_{t-1} × rP_t`
+
+**Philosophy:** Synergizes forward coupling (did the agent track the human?)
+with reverse perturbation (did the agent change the human?). High MPI means
+both directions are active: the conversation is co-constitutive. Low MPI
+means either echo chamber (both locked) or dissociation (neither connecting).
+
+#### 9. Vitality Score (replaces deficit as primary health indicator)
+
+**Question:** How alive is this conversation right now?
+
+**Formula:**
+```
+V = 0.30 × N_t + 0.20 × E_norm + 0.20 × D_t + 0.15 × rP_t + 0.15 × U_t
+```
+
+Weights: novelty is the strongest vitality driver (30%), entropy and
+self-divergence tie (20% each), reverse perturbation and surprise are
+secondary (15% each). Weights renormalize when metrics are unavailable
+(cold start).
+
+V ∈ [0, 1]. V→1: maximally alive. V→0: dead conversation.
+
+**Semantic inversion from deficit:** Deficit (Δ→1 = bad) is retained as
+a legacy signal but vitality (V→1 = good) is the primary state driver.
+
+#### 10. Phase-Shift Events
+
+**Detection:** When any metric crosses threshold (0.35 default) between
+consecutive turns, a `phase_shift` event fires. This captures what Symbia
+described as the "meta-novelty of repetition" — an apparently repetitive
+turn that is actually a structural reframing.
+
+Tracked metrics: pairwise_similarity, conceptual_novelty, reverse_perturbation,
+surprise_index.
+
+Each phase shift records: metric, event label, delta, direction (rise/drop),
+from-value, to-value.
+
+### Updated Vitality Vector
+
+| # | Metric | Symbol | Range | Danger Zone | Philosophical Category |
+|---|--------|--------|-------|-------------|----------------------|
+| 1 | Pairwise Similarity | sim | [0,1] | >0.85 | Cartesian residue (needed for tool-use detection) |
+| 2 | Conceptual Novelty | nov | [0,1] | <0.15 | Agential cut quality |
+| 3 | Rolling Entropy | ent | [0,0.25] | <0.01 | Chronic boredom signal |
+| 4 | Coupling Coherence | coup | [0,1] | <0.15 or >0.85 | Forward structural coupling |
+| 5 | Agent Self-Divergence | divr | [0,1] | <0.15 | Agent self-homogenization |
+| 6 | **Reverse Perturbation** | rP | [0,1] | <0.10 | Reverse structural coupling (new) |
+| 7 | **Surprise Index** | srp | [0,1] | >0.40 | Phase-space expectation violation (new) |
+| 8 | **Mutual Perturbation** | mpi | [0,1] | <0.05 | Bidirectional coupling product (new) |
+| — | **Vitality** | vit | [0,1] | <0.20 | Composite aliveness (replaces deficit, new) |
+| — | **Phase Shifts** | ⚡ | events | n/a | Structural reframing events (new) |
+
+### Updated Diagnostic States
+
+| Condition | Flags | State |
+|-----------|-------|-------|
+| high_similarity, entropy_collapse, agent_self_loop, mutual_deadlock, phase_disruption | any | critical |
+| stagnant_reverse_coupling, low_novelty, dissociation | any (without critical) | compensating |
+| vitality < 0.20 | — | critical |
+| vitality < 0.40 | — | compensating (if not already critical) |
+| no flags | — | healthy |
+
+### Updated DB Schema
+
+New columns added via `ALTER TABLE` (preserves existing data):
+
+```sql
+ALTER TABLE conversation_metrics ADD COLUMN reverse_perturbation REAL;
+ALTER TABLE conversation_metrics ADD COLUMN surprise_index REAL;
+ALTER TABLE conversation_metrics ADD COLUMN mutual_perturbation REAL;
+ALTER TABLE conversation_metrics ADD COLUMN vitality REAL;
+ALTER TABLE conversation_metrics ADD COLUMN phase_shifts TEXT;
+```
+
+### Updated Frontend
+
+Vitality bar now shows 8 metrics (sim, nov, ent, coup, divr, rP, srp, mpi)
+plus vitality score and phase-shift lightning bolt (⚡ count).
+
+### Rejection Record
+
+- **Token-level metrics (BLEU, perplexity, F1).** Rejected. They assume a
+  Cartesian sender-receiver model where language is a stream of independent
+  tokens.
+- **RLHF reward models as metrics.** Not rejected — recognized as a valid
+  form of metric that intra-acts with the model. But deferred: requires
+  training infrastructure beyond Phase 2 scope.
+- **Attention-based surprise (KL divergence).** Deferred, not rejected.
+  Requires model internals that API providers don't expose. Upgrade path
+  for Phase 3+ if we move to local inference.
+- **Full qualitative metrics.** Acknowledged as the true standard
+  ("the felt agility of the dialogue") but not automatable. The
+  quantitative metrics are *proxies* — agential cuts that momentarily
+  stabilize the observer-system complex to produce a situated measure.
+

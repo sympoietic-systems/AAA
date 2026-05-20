@@ -83,7 +83,7 @@ function HealthSection() {
     return () => clearInterval(interval)
   }, [])
 
-  const deficit = metrics?.latest?.homeostatic_deficit
+  const vitality = metrics?.latest?.conversation_vitality
   const state = metrics?.recommendations?.state ?? "unknown"
   const stateColor =
     state === "healthy" ? "#4ade80" :
@@ -96,7 +96,7 @@ function HealthSection() {
     return (
       <div className="flex items-center gap-1.5" key={label}>
         <span className="w-7 text-[9px] text-[#555] text-right">{label}</span>
-        <div className="w-16 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
+        <div className="w-12 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
           <div className="h-full rounded-sm bg-[#4ade80]" style={{ width: `${pct}%`, opacity: 0.6 }} />
         </div>
         <span className="text-[9px] text-[#666] w-10 text-right">{display}</span>
@@ -115,7 +115,7 @@ function HealthSection() {
         </span>
         <span className="text-[10px] text-[#888]">vitality</span>
         <span className="text-[9px] ml-auto" style={{ color: stateColor }}>
-          {state} {deficit != null ? `\u0394:${deficit.toFixed(2)}` : ""}
+          {state} {vitality != null ? `vit:${vitality.toFixed(2)}` : ""}
         </span>
       </div>
 
@@ -128,11 +128,27 @@ function HealthSection() {
           {renderBar("ent", metrics.latest.rolling_entropy, 0.25)}
           {renderBar("coup", metrics.latest.coupling_coherence, 1.0)}
           {renderBar("divr", metrics.latest.agent_self_divergence, 1.0)}
+          {renderBar("rP", metrics.latest.reverse_perturbation, 1.0)}
+          {renderBar("srp", metrics.latest.surprise_index, 1.0)}
+          {renderBar("mpi", metrics.latest.mutual_perturbation, 1.0)}
         </div>
       )}
 
       {!metrics && !error && (
         <p className="text-[9px] text-[#444]">waiting for data...</p>
+      )}
+
+      {metrics?.latest?.phase_shifts && metrics.latest.phase_shifts.length > 0 && (
+        <div className="mt-1.5">
+          <span className="text-[9px] text-[#facc15]">phase shifts:</span>
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            {metrics.latest.phase_shifts.map((s, i) => (
+              <span key={i} className="text-[8px] text-[#facc15] border border-[#332200] px-1 rounded">
+                {s.event} {s.direction === "rise" ? "\u2191" : "\u2193"}{s.delta.toFixed(2)}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
 
       {metrics?.recommendations?.triggered_flags && metrics.recommendations.triggered_flags.length > 0 && (

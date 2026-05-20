@@ -16,6 +16,14 @@ _DEFICIT_WEIGHTS = {
     "self_divergence": 0.25,
 }
 
+_VITALITY_WEIGHTS = {
+    "novelty": 0.30,
+    "entropy": 0.20,
+    "self_divergence": 0.20,
+    "reverse_perturbation": 0.15,
+    "surprise": 0.15,
+}
+
 
 class ConversationMetricsModule(ProcessingModule):
     def __init__(
@@ -24,11 +32,14 @@ class ConversationMetricsModule(ProcessingModule):
         pairwise_window: int = 5,
         entropy_window: int = 5,
         agent_self_window: int = 5,
+        phase_shift_threshold: float = 0.35,
     ):
         self._repo = message_repo
         self._pairwise_window = pairwise_window
         self._entropy_window = entropy_window
         self._agent_self_window = agent_self_window
+        self._phase_shift_threshold = phase_shift_threshold
+        self._prior_metrics: dict[str, float | None] = {}
 
     @property
     def name(self) -> str:
@@ -52,6 +63,7 @@ class ConversationMetricsModule(ProcessingModule):
 
         if not current_blob:
             payload["metrics"] = None
+            payload["conversation_vitality"] = None
             payload["homeostatic_deficit"] = None
             return payload
 
@@ -81,6 +93,15 @@ class ConversationMetricsModule(ProcessingModule):
         agent_divergence = _compute_agent_self_divergence(prior_agent)
         metrics["agent_self_divergence"] = agent_divergence
 
+        rp_t = _compute_reverse_perturbation(current_vec, prior_agent)
+        metrics["reverse_perturbation"] = rp_t
+
+        surprise = _compute_surprise_index(current_vec, prior_human)
+        metrics["surprise_index"] = surprise
+
+        mpi = _compute_mutual_perturbation(coupling, rp_t)
+        metrics["mutual_perturbation"] = mpi
+
         deficit = _compute_deficit(
             s_t=s_t,
             novelty=novelty,
@@ -89,20 +110,50 @@ class ConversationMetricsModule(ProcessingModule):
         )
         metrics["homeostatic_deficit"] = deficit
 
+        vitality = _compute_vitality(
+            novelty=novelty,
+            rolling_entropy=rolling_entropy,
+            agent_divergence=agent_divergence,
+            reverse_perturbation=rp_t,
+            surprise=surprise,
+        )
+        metrics["conversation_vitality"] = vitality
+
+        phase_shifts = _detect_phase_shifts(metrics, self._prior_metrics, self._phase_shift_threshold)
+        metrics["phase_shifts"] = phase_shifts
+
+        self._prior_metrics = {
+            "pairwise_similarity": s_t,
+            "conceptual_novelty": novelty,
+            "rolling_entropy": rolling_entropy,
+            "coupling_coherence": coupling,
+            "agent_self_divergence": agent_divergence,
+            "reverse_perturbation": rp_t,
+            "surprise_index": surprise,
+        }
+
         payload["metrics"] = metrics
+        payload["conversation_vitality"] = vitality
         payload["homeostatic_deficit"] = deficit
 
         logger.debug(
-            "metrics: S_t=%.3f N_t=%.3f E_t=%s C_t=%s D_t=%s \u0394=%.3f",
-            s_t if s_t is not None else -1,
-            novelty if novelty is not None else -1,
-            f"{rolling_entropy:.4f}" if rolling_entropy is not None else "n/a",
-            f"{coupling:.3f}" if coupling is not None else "n/a",
-            f"{agent_divergence:.3f}" if agent_divergence is not None else "n/a",
-            deficit if deficit is not None else -1,
+            "metrics: sim=%.3f nov=%.3f ent=%s coup=%s divr=%s rP=%s surp=%s mpi=%s vit=%s \u0394=%.3f shifts=%s",
+            _fmt(s_t), _fmt(novelty),
+            _fmt4(rolling_entropy), _fmt(coupling), _fmt(agent_divergence),
+            _fmt(rp_t), _fmt(surprise), _fmt(mpi),
+            _fmt(vitality), deficit if deficit is not None else -1,
+            phase_shifts,
         )
 
         return payload
+
+
+def _fmt(v: float | None) -> str:
+    return f"{v:.3f}" if v is not None else "n/a"
+
+
+def _fmt4(v: float | None) -> str:
+    return f"{v:.4f}" if v is not None else "n/a"
 
 
 def _compute_pairwise_similarity(
@@ -170,6 +221,55 @@ def _compute_agent_self_divergence(
     return float(np.mean(divergences))
 
 
+def _compute_reverse_perturbation(
+    current_vec: np.ndarray,
+    prior_agent: list[np.ndarray],
+) -> float | None:
+    """rP_t: did the agent's last response reshape the human's next question?
+
+    rP_t = 1 - cos(agent_response_{t-1}, human_input_t)
+    High rP_t = human diverged from prior agent response → agent perturbed or human resisted.
+    Low rP_t = human echoed the agent → no perturbation in the reverse direction.
+    """
+    if not prior_agent:
+        return None
+    agent_last_vec = prior_agent[0]
+    rp = 1.0 - float(np.dot(current_vec, agent_last_vec))
+    return max(0.0, min(1.0, rp))
+
+
+def _compute_surprise_index(
+    current_vec: np.ndarray,
+    prior_human: list[np.ndarray],
+) -> float | None:
+    """U_t: distance from current input to centroid of recent human inputs.
+
+    U_t = 1 - cos(V_t, centroid(V_{t-1}..V_{t-K}))
+    High U_t = input falls outside system's expected phase space.
+    """
+    if not prior_human or len(prior_human) < 2:
+        return None
+    centroid = np.mean(np.stack(prior_human), axis=0)
+    centroid = centroid / (np.linalg.norm(centroid) + 1e-8)
+    u = 1.0 - float(np.dot(current_vec, centroid))
+    return max(0.0, min(1.0, u))
+
+
+def _compute_mutual_perturbation(
+    coupling: float | None,
+    reverse_perturbation: float | None,
+) -> float | None:
+    """MPI: product of forward and reverse coupling.
+
+    MPI_t = coupling_{t-1} × rP_t
+    High MPI = both directions active: agent tracked human AND human was reshaped.
+    Low MPI = echo chamber or dissociation.
+    """
+    if coupling is None or reverse_perturbation is None:
+        return None
+    return max(0.0, min(1.0, coupling * reverse_perturbation))
+
+
 def _compute_deficit(
     s_t: float | None,
     novelty: float | None,
@@ -196,3 +296,91 @@ def _compute_deficit(
         deficit *= 1.0 / (ws + wn)
 
     return max(0.0, min(1.0, deficit))
+
+
+def _compute_vitality(
+    novelty: float | None,
+    rolling_entropy: float | None,
+    agent_divergence: float | None,
+    reverse_perturbation: float | None,
+    surprise: float | None,
+) -> float | None:
+    """Vitality: how alive is this conversation right now?
+
+    Higher = more alive. Unlike deficit (where 0 = healthy),
+    vitality is 1 = maximally alive, 0 = dead.
+    """
+    if novelty is None:
+        return None
+
+    wn = _VITALITY_WEIGHTS["novelty"]
+    we = _VITALITY_WEIGHTS["entropy"]
+    wd = _VITALITY_WEIGHTS["self_divergence"]
+    wr = _VITALITY_WEIGHTS["reverse_perturbation"]
+    ws = _VITALITY_WEIGHTS["surprise"]
+
+    score = wn * novelty
+
+    if rolling_entropy is not None:
+        entropy_norm = min(1.0, rolling_entropy / 0.25)
+        score += we * entropy_norm
+
+    if agent_divergence is not None:
+        score += wd * agent_divergence
+
+    if reverse_perturbation is not None:
+        score += wr * reverse_perturbation
+
+    if surprise is not None:
+        score += ws * surprise
+
+    used_weight = wn
+    if rolling_entropy is not None:
+        used_weight += we
+    if agent_divergence is not None:
+        used_weight += wd
+    if reverse_perturbation is not None:
+        used_weight += wr
+    if surprise is not None:
+        used_weight += ws
+
+    score /= used_weight
+    return max(0.0, min(1.0, score))
+
+
+def _detect_phase_shifts(
+    current: dict,
+    prior: dict,
+    threshold: float,
+) -> list[dict]:
+    """Detect abrupt metric changes that indicate reframing events.
+
+    A phase shift occurs when a metric changes by more than `threshold`
+    between turns. This captures Symbia's concept of "repetition as
+    reframing" — where an apparently repetitive turn is actually a
+    meta-novel probe that shifts the conversational topology.
+    """
+    shifts: list[dict] = []
+
+    for key, label in [
+        ("pairwise_similarity", "similarity_jump"),
+        ("conceptual_novelty", "novelty_collapse"),
+        ("reverse_perturbation", "perturbation_surge"),
+        ("surprise_index", "surprise_spike"),
+    ]:
+        cur = current.get(key)
+        prev = prior.get(key)
+        if cur is not None and prev is not None:
+            delta = abs(cur - prev)
+            if delta > threshold:
+                direction = "rise" if cur > prev else "drop"
+                shifts.append({
+                    "metric": key,
+                    "event": label,
+                    "delta": round(delta, 4),
+                    "direction": direction,
+                    "from": round(prev, 4),
+                    "to": round(cur, 4),
+                })
+
+    return shifts

@@ -184,6 +184,11 @@ class MetricsRepository:
         rolling_entropy: float | None = None,
         coupling: float | None = None,
         agent_divergence: float | None = None,
+        reverse_perturbation: float | None = None,
+        surprise_index: float | None = None,
+        mutual_perturbation: float | None = None,
+        vitality: float | None = None,
+        phase_shifts: str | None = None,
         temperature_rec: float | None = None,
         presence_penalty_rec: float | None = None,
         frequency_penalty_rec: float | None = None,
@@ -193,14 +198,16 @@ class MetricsRepository:
         conn.execute(
             """INSERT OR REPLACE INTO conversation_metrics
                (message_id, s_t, novelty, rolling_entropy, coupling,
-                agent_divergence, deficit, temperature_rec,
-                presence_penalty_rec, frequency_penalty_rec,
+                agent_divergence, deficit, reverse_perturbation, surprise_index,
+                mutual_perturbation, vitality, phase_shifts,
+                temperature_rec, presence_penalty_rec, frequency_penalty_rec,
                 homeostatic_state)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 message_id, s_t, novelty, rolling_entropy, coupling,
-                agent_divergence, deficit, temperature_rec,
-                presence_penalty_rec, frequency_penalty_rec,
+                agent_divergence, deficit, reverse_perturbation, surprise_index,
+                mutual_perturbation, vitality, phase_shifts,
+                temperature_rec, presence_penalty_rec, frequency_penalty_rec,
                 homeostatic_state,
             ),
         )
@@ -229,6 +236,10 @@ class MetricsRepository:
                  AVG(coupling) as avg_coupling,
                  AVG(agent_divergence) as avg_divergence,
                  AVG(deficit) as avg_deficit,
+                 AVG(reverse_perturbation) as avg_rev_pert,
+                 AVG(surprise_index) as avg_surprise,
+                 AVG(mutual_perturbation) as avg_mpi,
+                 AVG(vitality) as avg_vitality,
                  COUNT(*) as count
                FROM (
                  SELECT * FROM conversation_metrics
@@ -246,6 +257,10 @@ class MetricsRepository:
             "avg_coupling": round(row["avg_coupling"], 4) if row["avg_coupling"] is not None else None,
             "avg_agent_divergence": round(row["avg_divergence"], 4) if row["avg_divergence"] is not None else None,
             "avg_deficit": round(row["avg_deficit"], 4) if row["avg_deficit"] is not None else None,
+            "avg_reverse_perturbation": round(row["avg_rev_pert"], 4) if row["avg_rev_pert"] is not None else None,
+            "avg_surprise_index": round(row["avg_surprise"], 4) if row["avg_surprise"] is not None else None,
+            "avg_mutual_perturbation": round(row["avg_mpi"], 4) if row["avg_mpi"] is not None else None,
+            "avg_vitality": round(row["avg_vitality"], 4) if row["avg_vitality"] is not None else None,
         }
 
     def get_latest(self) -> MetricsRecord | None:
@@ -267,6 +282,11 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
         coupling=row["coupling"],
         agent_divergence=row["agent_divergence"],
         deficit=row["deficit"],
+        reverse_perturbation=row["reverse_perturbation"] if "reverse_perturbation" in row.keys() else None,
+        surprise_index=row["surprise_index"] if "surprise_index" in row.keys() else None,
+        mutual_perturbation=row["mutual_perturbation"] if "mutual_perturbation" in row.keys() else None,
+        vitality=row["vitality"] if "vitality" in row.keys() else None,
+        phase_shifts=row["phase_shifts"] if "phase_shifts" in row.keys() else None,
         temperature_rec=row["temperature_rec"],
         presence_penalty_rec=row["presence_penalty_rec"],
         frequency_penalty_rec=row["frequency_penalty_rec"],

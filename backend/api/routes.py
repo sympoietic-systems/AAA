@@ -234,7 +234,12 @@ async def get_metrics(request: Request, window: int = 20):
             rolling_entropy=latest.rolling_entropy,
             coupling_coherence=latest.coupling,
             agent_self_divergence=latest.agent_divergence,
+            reverse_perturbation=latest.reverse_perturbation,
+            surprise_index=latest.surprise_index,
+            mutual_perturbation=latest.mutual_perturbation,
             homeostatic_deficit=latest.deficit,
+            conversation_vitality=latest.vitality,
+            phase_shifts=_parse_phase_shifts(latest.phase_shifts),
         )
         temp_rec = None
         pres_rec = None
@@ -282,6 +287,12 @@ def _store_metrics(metrics_repo, message_id: int, metrics: dict, recommendations
             freq_rec = f.get("value")
         homeo_state = recommendations.get("state")
 
+    phase_shifts = metrics.get("phase_shifts")
+    phase_shifts_json = None
+    if phase_shifts:
+        import json as _json
+        phase_shifts_json = _json.dumps(phase_shifts)
+
     metrics_repo.insert(
         message_id=message_id,
         s_t=float(s_t),
@@ -290,6 +301,11 @@ def _store_metrics(metrics_repo, message_id: int, metrics: dict, recommendations
         rolling_entropy=float(metrics["rolling_entropy"]) if metrics.get("rolling_entropy") is not None else None,
         coupling=float(metrics["coupling_coherence"]) if metrics.get("coupling_coherence") is not None else None,
         agent_divergence=float(metrics["agent_self_divergence"]) if metrics.get("agent_self_divergence") is not None else None,
+        reverse_perturbation=float(metrics["reverse_perturbation"]) if metrics.get("reverse_perturbation") is not None else None,
+        surprise_index=float(metrics["surprise_index"]) if metrics.get("surprise_index") is not None else None,
+        mutual_perturbation=float(metrics["mutual_perturbation"]) if metrics.get("mutual_perturbation") is not None else None,
+        vitality=float(metrics["conversation_vitality"]) if metrics.get("conversation_vitality") is not None else None,
+        phase_shifts=phase_shifts_json,
         temperature_rec=float(temp_rec) if temp_rec is not None else None,
         presence_penalty_rec=float(pres_rec) if pres_rec is not None else None,
         frequency_penalty_rec=float(freq_rec) if freq_rec is not None else None,
@@ -306,7 +322,12 @@ def _build_metrics_info(metrics: dict | None) -> MetricsInfo | None:
         rolling_entropy=metrics.get("rolling_entropy"),
         coupling_coherence=metrics.get("coupling_coherence"),
         agent_self_divergence=metrics.get("agent_self_divergence"),
+        reverse_perturbation=metrics.get("reverse_perturbation"),
+        surprise_index=metrics.get("surprise_index"),
+        mutual_perturbation=metrics.get("mutual_perturbation"),
         homeostatic_deficit=metrics.get("homeostatic_deficit"),
+        conversation_vitality=metrics.get("conversation_vitality"),
+        phase_shifts=metrics.get("phase_shifts"),
     )
 
 
@@ -320,3 +341,13 @@ def _build_recommendations(recs: dict | None) -> HomeostaticRecommendations | No
         state=recs.get("state", "healthy"),
         triggered_flags=recs.get("triggered_flags", []),
     )
+
+
+def _parse_phase_shifts(raw: str | None) -> list[dict] | None:
+    if not raw:
+        return None
+    import json as _json
+    try:
+        return _json.loads(raw)
+    except Exception:
+        return None
