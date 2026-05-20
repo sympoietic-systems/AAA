@@ -45,3 +45,18 @@ class ErrorResponse(BaseModel):
 class AgentInfo(BaseModel):
     name: str
     version: str = ""
+
+
+class SkillInfo(BaseModel):
+    name: str
+    description: str
+    category: str
+    always_run: bool
+    triggers: list[str] = []
+    cost: str = "free"
+    status: bool = True
+
+
+class SkillsResponse(BaseModel):
+    pipeline: list[SkillInfo]
+    on_demand: list[SkillInfo]

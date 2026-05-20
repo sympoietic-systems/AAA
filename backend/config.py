@@ -40,6 +40,9 @@ def _apply_env_overrides(config: dict) -> dict:
         "AAA_IDENTITY_PATH": ("personality", "path"),
         "AAA_SERVER_HOST": ("server", "host"),
         "AAA_SERVER_PORT": ("server", "port"),
+        "AAA_EMBEDDING_MODEL": ("embedding", "model"),
+        "AAA_EMBEDDING_DEVICE": ("embedding", "device"),
+        "AAA_EMBEDDING_CACHE_DIR": ("embedding", "cache_dir"),
     }
 
     for env_var, (section, key) in env_mapping.items():
@@ -58,6 +61,10 @@ def _apply_env_overrides(config: dict) -> dict:
     if effort_env is not None:
         thinking_cfg = config.setdefault("llm", {}).setdefault("thinking", {})
         thinking_cfg["effort"] = effort_env
+
+    embedding_offline = os.environ.get("AAA_EMBEDDING_OFFLINE")
+    if embedding_offline is not None:
+        config.setdefault("embedding", {})["offline"] = embedding_offline.lower() in ("true", "1", "yes")
 
     provider = config.get("llm", {}).get("provider", "openrouter")
     provider_key_env = {

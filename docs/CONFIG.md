@@ -14,6 +14,11 @@ database:
 embedding:
   model: "all-MiniLM-L6-v2"    # Any sentence-transformers model
   device: "cpu"                # cpu | cuda
+  offline: true                # true: load from cache (no HF hub checks)
+                               # false: always check HF hub for updates
+                               # When offline=true and model not cached,
+                               # it auto-downloads once, then stays offline.
+  # cache_dir: ""              # optional: custom HuggingFace cache directory
 
 # ── LLM Provider ─────────────────────────────────
 llm:
@@ -79,6 +84,20 @@ The correct key is automatically selected based on `AAA_LLM_PROVIDER`.
 
 Only meaningful for DeepSeek-v4-pro/v4-flash. When enabled, `temperature`
 and `top_p` are silently ignored by the model.
+
+### Embedding
+
+| Variable | Values | Default |
+|----------|--------|---------|
+| `AAA_EMBEDDING_MODEL` | Any sentence-transformers model | `all-MiniLM-L6-v2` |
+| `AAA_EMBEDDING_DEVICE` | `cpu`, `cuda` | `cpu` |
+| `AAA_EMBEDDING_OFFLINE` | `true`, `false` | `true` |
+| `AAA_EMBEDDING_CACHE_DIR` | Path to cache directory | HuggingFace default |
+
+When `offline=true` (default), the model loads from the local HuggingFace
+cache without any network calls. If the model hasn't been downloaded yet,
+it automatically fetches it once from HuggingFace and then uses the cache.
+Set to `false` if you want the model to check for updates on every startup.
 
 ### Server
 

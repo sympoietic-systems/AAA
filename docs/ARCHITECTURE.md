@@ -6,6 +6,7 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │                        React Frontend                             │
 │  ChatView  ←→  MessageBubble (markdown)  ←→  InputBar (> prompt) │
+│  SidePanel (pipeline/skills)                                      │
 │       │  useChat hook  │  api/client.ts                           │
 └───────┼────────────────┼─────────────────────────────────────────┘
         │                │  HTTP (Vite proxy)
@@ -158,7 +159,7 @@ AAA/
 │   ├── config.py             YAML + env config loader
 │   ├── config.yaml           Default configuration
 │   ├── api/
-│   │   ├── routes.py         /chat, /history, /health, /agent, /errors
+│   │   ├── routes.py         /chat, /history, /health, /agent, /errors, /skills
 │   │   └── schemas.py        Pydantic request/response models
 │   ├── core/
 │   │   ├── pipeline.py       ProcessingPipeline orchestrator
@@ -186,6 +187,7 @@ AAA/
 │       ├── hooks/useChat.ts  Chat state management
 │       └── components/
 │           ├── ChatView.tsx  Main chat container
+│           ├── SidePanel.tsx Foldable pipeline/skills panel (right on desktop, bottom on mobile)
 │           ├── MessageBubble.tsx  Markdown + thinking display
 │           └── InputBar.tsx  Terminal prompt input
 ├── docs/

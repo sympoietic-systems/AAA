@@ -10,9 +10,10 @@ interface Props {
   agentName: string
   onSend: (text: string) => void
   onClearError: () => void
+  className?: string
 }
 
-export function ChatView({ messages, loading, error, agentName, onSend, onClearError }: Props) {
+export function ChatView({ messages, loading, error, agentName, onSend, onClearError, className = "" }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export function ChatView({ messages, loading, error, agentName, onSend, onClearE
   }, [messages])
 
   return (
-    <div className="flex flex-col h-screen max-w-3xl mx-auto">
+    <div className={`flex flex-col h-full max-w-3xl mx-auto w-full ${className}`}>
       <header className="flex items-center gap-2 px-4 py-3 border-b border-[#222] text-sm">
         <span className="text-[#4ade80]">{'>'}</span>
         <span className="text-[#888]">{agentName}</span>

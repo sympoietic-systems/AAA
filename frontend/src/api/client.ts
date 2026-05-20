@@ -42,3 +42,24 @@ export async function getAgent(): Promise<AgentInfo> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+export interface SkillInfo {
+  name: string
+  description: string
+  category: string
+  always_run: boolean
+  triggers: string[]
+  cost: string
+  status: boolean
+}
+
+export interface SkillsResponse {
+  pipeline: SkillInfo[]
+  on_demand: SkillInfo[]
+}
+
+export async function getSkills(): Promise<SkillsResponse> {
+  const res = await fetch(`${BASE}/skills`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}

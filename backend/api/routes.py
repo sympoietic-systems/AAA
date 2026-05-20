@@ -10,6 +10,8 @@ from .schemas import (
     HealthResponse,
     HistoryMessage,
     HistoryResponse,
+    SkillInfo,
+    SkillsResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -136,3 +138,58 @@ async def list_errors(limit: int = 20, request: Request = None):
         }
         for e in errors
     ]
+
+
+@router.get("/skills", response_model=SkillsResponse)
+async def get_skills(request: Request):
+    state = request.app.state
+    registry = state.registry
+    pipeline_order = getattr(state, "pipeline_order", [])
+
+    status = registry.validate_all()
+
+    pipeline: list[SkillInfo] = []
+    seen: set[str] = set()
+
+    for name in pipeline_order:
+        meta = registry.get_meta(name)
+        if meta and name not in seen:
+            seen.add(name)
+            pipeline.append(SkillInfo(
+                name=meta.name,
+                description=meta.description,
+                category=meta.category,
+                always_run=True,
+                triggers=list(meta.triggers),
+                cost=meta.cost,
+                status=status.get(name, False),
+            ))
+
+    for name, _ in registry.list_always_on():
+        if name not in seen:
+            meta = registry.get_meta(name)
+            if meta:
+                seen.add(name)
+                pipeline.append(SkillInfo(
+                    name=meta.name,
+                    description=meta.description,
+                    category=meta.category,
+                    always_run=True,
+                    triggers=list(meta.triggers),
+                    cost=meta.cost,
+                    status=status.get(name, False),
+                ))
+
+    on_demand: list[SkillInfo] = []
+    for name, _, meta in registry.list_on_demand():
+        on_demand.append(SkillInfo(
+            name=meta.name,
+            description=meta.description,
+            category=meta.category,
+            always_run=False,
+            triggers=list(meta.triggers),
+            cost=meta.cost,
+            status=status.get(name, False),
+        ))
+
+    return SkillsResponse(pipeline=pipeline, on_demand=on_demand)

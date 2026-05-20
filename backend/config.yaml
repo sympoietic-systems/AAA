@@ -7,6 +7,10 @@ database:
 embedding:
   model: "all-MiniLM-L6-v2"
   device: "cpu"
+  # offline=true loads from local cache (no HF hub checks)
+  # falls back to download if model not cached yet
+  offline: true
+  # cache_dir: ""  # optional: custom cache directory
 
 # ── LLM Provider ───────────────────────────────────
 # provider: openrouter | deepseek | ollama | openai_compatible

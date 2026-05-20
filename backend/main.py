@@ -94,8 +94,11 @@ async def lifespan(app: FastAPI):
     embedder = EmbedderModule(
         model_name=embed_cfg.get("model", "all-MiniLM-L6-v2"),
         device=embed_cfg.get("device", "cpu"),
+        offline=embed_cfg.get("offline", True),
+        cache_dir=embed_cfg.get("cache_dir"),
     )
-    logger.info(f"Loading embedding model: {embed_cfg.get('model')}")
+    logger.info("Pre-loading embedding model: %s", embed_cfg.get("model"))
+    embedder.service.preload()
 
     llm_cfg = config.get("llm", {})
     provider = _create_llm_provider(llm_cfg)
@@ -171,6 +174,7 @@ async def lifespan(app: FastAPI):
     app.state.error_repo = error_repo
     app.state.registry = registry
     app.state.pipeline = pipeline
+    app.state.pipeline_order = pipeline_order
     app.state.embedder = embedder
 
     logger.info("All modules initialized. Server ready.")

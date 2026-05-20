@@ -110,6 +110,9 @@ curl -X POST http://127.0.0.1:8000/api/chat \
 
 # History
 curl http://127.0.0.1:8000/api/history?limit=10
+
+# Skills / Pipeline
+curl http://127.0.0.1:8000/api/skills
 ```
 
 ## Troubleshooting
@@ -119,6 +122,6 @@ curl http://127.0.0.1:8000/api/history?limit=10
 | `ModuleNotFoundError: No module named 'backend'` | Run from project root: `cd aaa && uv run python -m backend.main` |
 | `401 Unauthorized` on chat | Check `.env` API key is set and valid |
 | `Illegal header value b'Bearer '` | API key is empty — the `${AAA_LLM_API_KEY}` in config.yaml resolves to `""` |
-| Embedding download stalls | First run downloads `all-MiniLM-L6-v2` (~90 MB). Wait for it, or set `HF_HUB_ENABLE_HF_TRANSFER=1` |
+| Embedding download stalls | First run downloads `all-MiniLM-L6-v2` (~90 MB). Once cached, `offline: true` (default) skips HuggingFace entirely on subsequent runs. Set `HF_HUB_ENABLE_HF_TRANSFER=1` for faster first download. |
 | Frontend blank page | Run `cd frontend && npm install && npm run dev` |
 | `uv` not found | `pip install uv` or see [uv install guide](https://docs.astral.sh/uv/getting-started/installation/) |
