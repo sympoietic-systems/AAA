@@ -40,6 +40,8 @@ export interface ChatMessage {
   speaker: "human" | "apparatus"
   content: string
   thinking?: string
+  content_tokens?: number
+  thinking_tokens?: number | null
   metrics?: MetricsInfo
   homeostatic_recommendations?: HomeostaticRecommendations
 }
@@ -138,4 +140,26 @@ export async function getConversation(id: string): Promise<ConversationInfo> {
 export async function deleteConversation(id: string): Promise<void> {
   const res = await fetch(`${BASE}/conversations/${id}`, { method: "DELETE" })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export interface ConversationTokenInfo {
+  conversation_id: string
+  title: string
+  user_tokens: number
+  agent_tokens: number
+  thinking_tokens: number
+  total_tokens: number
+}
+
+export interface TokenResponse {
+  conversations: ConversationTokenInfo[]
+  system_prompt_tokens: number
+  grand_total_tokens: number
+}
+
+export async function getTokens(conversationId?: string): Promise<TokenResponse> {
+  const params = conversationId ? `?conversation_id=${conversationId}` : ""
+  const res = await fetch(`${BASE}/tokens${params}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }

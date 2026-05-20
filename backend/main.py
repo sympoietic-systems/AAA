@@ -19,7 +19,7 @@ from backend.modules.llm_client import (
     OpenRouterProvider,
 )
 from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
-from backend.personality.assembler import PromptAssemblerModule
+from backend.personality.assembler import PromptAssemblerModule, _build_system_content
 from backend.skills.metadata import SkillMeta
 from backend.skills.registry import SkillRegistry
 from backend.storage.database import get_db_path, init_db
@@ -29,6 +29,7 @@ from backend.storage.repository import (
     MessageRepository,
     MetricsRepository,
 )
+from backend.utils.token_counter import estimate_tokens
 
 logging.basicConfig(
     level=logging.INFO,
@@ -196,6 +197,10 @@ async def lifespan(app: FastAPI):
                   category="action", always_run=True),
     )
 
+    system_prompt_text = _build_system_content(identity_data, registry)
+    system_prompt_tokens = estimate_tokens(system_prompt_text)
+    logger.info(f"System prompt tokens: {system_prompt_tokens}")
+
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
         ["embedder", "conversation_metrics", "context_collector", "sedimentation_retrieval", "prompt_assembler", "homeostatic_regulator", "llm_client"],
@@ -225,6 +230,7 @@ async def lifespan(app: FastAPI):
     app.state.pipeline_order = pipeline_order
     app.state.embedder = embedder
     app.state.llm_provider = provider
+    app.state.system_prompt_tokens = system_prompt_tokens
 
     logger.info("All modules initialized. Server ready.")
     yield

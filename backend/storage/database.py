@@ -108,6 +108,18 @@ def init_db(db_path: str) -> sqlite3.Connection:
         )
     except sqlite3.OperationalError:
         pass
+    try:
+        conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN content_tokens INTEGER NOT NULL DEFAULT 0"
+        )
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN thinking_tokens INTEGER"
+        )
+    except sqlite3.OperationalError:
+        pass
     for col, col_type in [
         ("reverse_perturbation", "REAL"),
         ("surprise_index", "REAL"),

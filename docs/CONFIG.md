@@ -36,8 +36,11 @@ llm:
 pipeline:
   modules:                     # Ordered processing stages
     - embedder
+    - conversation_metrics
     - context_collector
+    - sedimentation_retrieval
     - prompt_assembler
+    - homeostatic_regulator
     - llm_client
 
 # ── Personality ──────────────────────────────────
@@ -46,7 +49,21 @@ personality:
 
 # ── Context ──────────────────────────────────────
 context:
-  max_history: 20              # Messages sent to LLM as context
+  max_history: 20              # Fallback message count limit
+  max_tokens: 16384            # Hard cap for entire context window
+
+# ── Sedimentation ────────────────────────────────
+sedimentation:
+  enabled: true                # Cross-conversation retrieval
+  sediment_token_budget: 2000  # Max tokens for cross-conversation messages
+  sediment_count: 10           # Max number of sediment messages
+  similarity_threshold: 0.3    # Minimum cosine similarity to include
+
+# ── Homeostasis ──────────────────────────────────
+homeostasis:
+  pairwise_window: 5           # Prior human messages for similarity calc
+  entropy_window: 5            # Window for rolling entropy
+  agent_self_window: 5         # Prior agent messages for self-divergence
 
 # ── Server ───────────────────────────────────────
 server:
@@ -121,6 +138,14 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | Variable | Default |
 |----------|---------|
 | `AAA_DB_PATH` | `data/aaa.db` |
+
+### Context & Sedimentation
+
+| Variable | Values | Default |
+|----------|--------|---------|
+| `AAA_CONTEXT_MAX_TOKENS` | Any integer | `16384` (from `config.yaml`) |
+| `AAA_SEDIMENT_TOKEN_BUDGET` | Any integer | `2000` (from `config.yaml`) |
+| `AAA_SEDIMENT_COUNT` | Any integer | `10` (from `config.yaml`) |
 
 ## Provider Defaults
 

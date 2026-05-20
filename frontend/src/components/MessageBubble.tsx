@@ -147,6 +147,15 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
         )}
       </div>
 
+      {msg.content_tokens != null && msg.content_tokens > 0 && (
+        <div className="text-[9px] text-[#444] text-right mt-0.5 select-none">
+          ~{msg.content_tokens} tok
+          {msg.thinking_tokens != null && msg.thinking_tokens > 0 && (
+            <span className="text-[#3a3a3a]"> + {msg.thinking_tokens} thk</span>
+          )}
+        </div>
+      )}
+
       {isHuman && msg.metrics && <VitalityBar metrics={msg.metrics} />}
 
       {msg.thinking && (

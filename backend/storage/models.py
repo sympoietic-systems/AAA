@@ -21,10 +21,12 @@ class Message:
     conversation_id: str
     speaker: str
     content: str
-    thinking: Optional[str]
-    embedding: bytes
-    embedding_model: str
-    embedding_dim: int
+    content_tokens: int = 0
+    thinking: Optional[str] = None
+    thinking_tokens: Optional[int] = None
+    embedding: bytes = b""
+    embedding_model: str = ""
+    embedding_dim: int = 0
 
 
 @dataclass

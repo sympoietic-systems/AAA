@@ -17,6 +17,8 @@ class ChatResponse(BaseModel):
     speaker: str
     content: str
     thinking: Optional[str] = None
+    content_tokens: int = 0
+    thinking_tokens: Optional[int] = None
     embedding_generated: bool = False
     error: str | None = None
     metrics: Optional["MetricsInfo"] = None
@@ -29,6 +31,8 @@ class HistoryMessage(BaseModel):
     speaker: str
     content: str
     thinking: Optional[str] = None
+    content_tokens: int = 0
+    thinking_tokens: Optional[int] = None
     metrics: Optional["MetricsInfo"] = None
 
 
@@ -114,3 +118,18 @@ class ConversationListResponse(BaseModel):
 
 class ConversationUpdateRequest(BaseModel):
     title: str
+
+
+class ConversationTokenInfo(BaseModel):
+    conversation_id: str
+    title: str = ""
+    user_tokens: int = 0
+    agent_tokens: int = 0
+    thinking_tokens: int = 0
+    total_tokens: int = 0
+
+
+class TokenResponse(BaseModel):
+    conversations: list[ConversationTokenInfo]
+    system_prompt_tokens: int = 0
+    grand_total_tokens: int = 0

@@ -110,18 +110,67 @@ Where:
 
 The base schema is designed to scale from local relational flat logs (SQLite) to decentralized graph-vector models (Zep/Graphiti) [3, 1.2.1].
 
-### 5.1. Table: `conversation_log`
-Provides chronological sequencing of physical transactions.
+### 5.1. Table: `conversations`
+
+| Column | Data Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | TEXT | PRIMARY KEY | UUID for the conversation. |
+| `title` | TEXT | NOT NULL, DEFAULT '' | Auto-generated via cheap LLM call on first message. |
+| `agent_id` | TEXT | NOT NULL, DEFAULT '' | Agent identity (future multi-agent). |
+| `created_at` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Conversation creation time. |
+| `updated_at` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Last message time. |
+
+Index: `idx_conversations_updated` on `updated_at`.
+
+### 5.2. Table: `conversation_log`
+Provides chronological sequencing of physical transactions. Scoped to `conversation_id` with FK relation.
 
 | Column | Data Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | INTEGER | PRIMARY KEY, AUTOINCREMENT | Unique record ID. |
 | `timestamp` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Temporal registration of the event. |
+| `agent_id` | TEXT | NOT NULL, DEFAULT '' | Agent identity from `identity.yaml` (e.g., `"Symbia"`). |
+| `conversation_id` | TEXT | NOT NULL, DEFAULT '' | FK to `conversations.id`. |
 | `speaker` | TEXT | NOT NULL (human / apparatus) | Categorizes origin of the signal. |
 | `content` | TEXT | NOT NULL | Raw text token sequence. |
-| `embedding` | BLOB | NOT NULL | Binary serialized `float32` array ($384$ dim). |
+| `thinking` | TEXT | NULLABLE | Chain-of-thought reasoning from the LLM. |
+| `content_tokens` | INTEGER | NOT NULL, DEFAULT 0 | Estimated token count of `content`. |
+| `thinking_tokens` | INTEGER | NULLABLE | Estimated token count of `thinking`. |
+| `embedding` | BLOB | NOT NULL | Binary serialized `float32` array (384 dim). |
+| `embedding_model` | TEXT | NOT NULL | Model name for re-embedding tracking. |
+| `embedding_dim` | INTEGER | NOT NULL | 384 (validates BLOB size). |
 
-### 5.2. Table: `semantic_knots` (Memory Graph Nodes)
+Indexes: `idx_conversation_timestamp`, `idx_conversation_log_conv_id`.
+
+Token estimation: `max(1, len(text) // 4)` — simple char/4 approximation.
+
+### 5.3. Table: `conversation_metrics`
+Per-message vitality metrics scoped to `conversation_id` through embedding queries.
+
+| Column | Data Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `message_id` | INTEGER | PRIMARY KEY, FK `conversation_log(id)` | Associated message. |
+| `s_t` | REAL | NOT NULL | Pairwise similarity to prior human input. |
+| `novelty` | REAL | NOT NULL | Conceptual novelty (1 - max similarity). |
+| `rolling_entropy` | REAL | NULLABLE | Variance of similarity pairs over window. |
+| `coupling` | REAL | NULLABLE | Cosine between last human and last agent. |
+| `agent_divergence` | REAL | NULLABLE | Agent self-repetition metric. |
+| `deficit` | REAL | NOT NULL | Weighted homeostatic deficit score. |
+| `vitality` | REAL | NULLABLE | Composite "aliveness" score. |
+| `reverse_perturbation` | REAL | NULLABLE | Did agent reshape human's next input? |
+| `surprise_index` | REAL | NULLABLE | Distance from expected phase space. |
+| `mutual_perturbation` | REAL | NULLABLE | Product of coupling × reverse perturbation. |
+| `boringness` | REAL | NULLABLE | Joint failure to perturb in either direction. |
+| `conceptual_velocity` | REAL | NULLABLE | Entailment mesh drift rate. |
+| `divergence_resolution_ratio` | REAL | NULLABLE | Perturbation → resolution or rejection? |
+| `paskian_health` | REAL | NULLABLE | Productive zone between strict and permissive. |
+| `phase_shifts` | TEXT | NULLABLE | JSON list of detected phase shift events. |
+| `temperature_rec` | REAL | NULLABLE | Recommended generation temperature. |
+| `presence_penalty_rec` | REAL | NULLABLE | Recommended presence penalty. |
+| `frequency_penalty_rec` | REAL | NULLABLE | Recommended frequency penalty. |
+| `homeostatic_state` | TEXT | NULLABLE | `healthy`, `compensating`, or `critical`. |
+
+### 5.4. Table: `semantic_knots` (Phase 3 — Planned)
 Maintains the sedimented "scars" that represent the evolving identity of the agent.
 
 | Column | Data Type | Constraints | Description |
@@ -131,6 +180,18 @@ Maintains the sedimented "scars" that represent the evolving identity of the age
 | `weight` | REAL | NOT NULL, DEFAULT 1.0 | Internal conceptual gravity coefficient. |
 | `concept_payload` | TEXT | NOT NULL | Condensed abstraction of the transaction. |
 | `vector_map` | BLOB | NOT NULL | Key vector for diffractive indexing [1]. |
+
+### 5.5. Table: `error_log`
+
+| Column | Data Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | INTEGER | PRIMARY KEY, AUTOINCREMENT | Unique record ID. |
+| `timestamp` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Temporal registration. |
+| `module` | TEXT | NOT NULL | Module where error occurred. |
+| `error_type` | TEXT | NOT NULL | Exception class name. |
+| `error_message` | TEXT | NOT NULL | Exception message. |
+| `traceback` | TEXT | NULLABLE | Full Python traceback. |
+| `context` | TEXT | NULLABLE | JSON with relevant request context. |
 
 ---
 

@@ -96,13 +96,15 @@ class MessageRepository:
         thinking: Optional[str] = None,
         agent_id: str = "",
         conversation_id: str = "",
+        content_tokens: int = 0,
+        thinking_tokens: int | None = None,
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id),
+               (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens),
         )
         conn.commit()
         row = conn.execute(
@@ -114,12 +116,12 @@ class MessageRepository:
         conn = self._conn()
         if conversation_id is not None:
             rows = conn.execute(
-                "SELECT * FROM conversation_log WHERE conversation_id = ? ORDER BY timestamp DESC LIMIT ?",
+                "SELECT * FROM conversation_log WHERE conversation_id = ? ORDER BY id DESC LIMIT ?",
                 (conversation_id, limit),
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT * FROM conversation_log ORDER BY timestamp DESC LIMIT ?",
+                "SELECT * FROM conversation_log ORDER BY id DESC LIMIT ?",
                 (limit,),
             ).fetchall()
         return [_row_to_message(r) for r in reversed(rows)]
@@ -213,6 +215,7 @@ class MessageRepository:
         if conversation_id is not None:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                          cl.content_tokens, cl.thinking_tokens,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
                           cm.reverse_perturbation, cm.surprise_index,
@@ -222,12 +225,13 @@ class MessageRepository:
                    FROM conversation_log cl
                    LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
                    WHERE cl.conversation_id = ?
-                   ORDER BY cl.timestamp DESC LIMIT ?""",
+                   ORDER BY cl.id DESC LIMIT ?""",
                 (conversation_id, limit),
             ).fetchall()
         else:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                          cl.content_tokens, cl.thinking_tokens,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
                           cm.reverse_perturbation, cm.surprise_index,
@@ -236,7 +240,7 @@ class MessageRepository:
                           cm.divergence_resolution_ratio, cm.paskian_health
                    FROM conversation_log cl
                    LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
-                   ORDER BY cl.timestamp DESC LIMIT ?""",
+                   ORDER BY cl.id DESC LIMIT ?""",
                 (limit,),
             ).fetchall()
         return [dict(r) for r in reversed(rows)]
@@ -272,6 +276,32 @@ class MessageRepository:
         ).fetchall()
         return [_row_to_message(r) for r in rows]
 
+    def get_token_totals(self, conversation_id: str | None = None) -> list[dict]:
+        conn = self._conn()
+        if conversation_id is not None:
+            rows = conn.execute(
+                """SELECT conversation_id,
+                          SUM(CASE WHEN speaker = 'human' THEN content_tokens ELSE 0 END) as user_tokens,
+                          SUM(CASE WHEN speaker = 'apparatus' THEN content_tokens ELSE 0 END) as agent_tokens,
+                          COALESCE(SUM(thinking_tokens), 0) as thinking_tokens
+                   FROM conversation_log
+                   WHERE conversation_id = ? AND conversation_id != ''
+                   GROUP BY conversation_id""",
+                (conversation_id,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT conversation_id,
+                          SUM(CASE WHEN speaker = 'human' THEN content_tokens ELSE 0 END) as user_tokens,
+                          SUM(CASE WHEN speaker = 'apparatus' THEN content_tokens ELSE 0 END) as agent_tokens,
+                          COALESCE(SUM(thinking_tokens), 0) as thinking_tokens
+                   FROM conversation_log
+                   WHERE conversation_id != ''
+                   GROUP BY conversation_id
+                   ORDER BY conversation_id""",
+            ).fetchall()
+        return [dict(r) for r in rows]
+
 
 def _row_to_message(row: sqlite3.Row) -> Message:
     return Message(
@@ -281,7 +311,9 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         conversation_id=row["conversation_id"] if "conversation_id" in row.keys() else "",
         speaker=row["speaker"],
         content=row["content"],
+        content_tokens=row["content_tokens"] if "content_tokens" in row.keys() else 0,
         thinking=row["thinking"] if "thinking" in row.keys() else None,
+        thinking_tokens=row["thinking_tokens"] if "thinking_tokens" in row.keys() else None,
         embedding=row["embedding"],
         embedding_model=row["embedding_model"],
         embedding_dim=row["embedding_dim"],

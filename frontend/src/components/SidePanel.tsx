@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import type { SkillInfo, SkillsResponse, MetricsResponse } from "../api/client"
-import { getSkills, getMetrics } from "../api/client"
+import type { SkillInfo, SkillsResponse, MetricsResponse, TokenResponse } from "../api/client"
+import { getSkills, getMetrics, getTokens } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
   perception: "#4ade80",
@@ -67,6 +67,90 @@ function SectionHeader({
       <span>{label}</span>
       <span className="text-[#444]">({count})</span>
     </button>
+  )
+}
+
+function TokensSection() {
+  const [tokens, setTokens] = useState<TokenResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
+
+  useEffect(() => {
+    const poll = () => {
+      getTokens().then(setTokens).catch((e) => setError(e.message))
+    }
+    poll()
+    const interval = setInterval(poll, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  if (error && !tokens) {
+    return <p className="text-[9px] text-[#ef4444]">{error}</p>
+  }
+
+  if (!tokens) {
+    return <p className="text-[9px] text-[#444]">waiting for data...</p>
+  }
+
+  const { conversations, system_prompt_tokens, grand_total_tokens } = tokens
+
+  return (
+    <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-[8px] leading-none text-[#60a5fa]">{"\u25CF"}</span>
+        <span className="text-[10px] text-[#888]">tokens</span>
+        <span className="text-[9px] ml-auto text-[#60a5fa]">
+          {grand_total_tokens.toLocaleString()} total
+        </span>
+      </div>
+
+      <div className="text-[9px] text-[#666] mb-1">
+        system: {system_prompt_tokens.toLocaleString()}
+      </div>
+
+      {conversations.length === 0 && (
+        <p className="text-[9px] text-[#555]">no conversations</p>
+      )}
+
+      {conversations.slice(0, detailOpen ? undefined : 3).map((c) => (
+        <div key={c.conversation_id} className="py-1 border-b border-[#1a1a1a] last:border-b-0">
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-[#aaa] truncate flex-1">
+              {c.title || c.conversation_id.slice(0, 8)}
+            </span>
+            <span className="text-[8px] text-[#60a5fa] font-bold">
+              {c.total_tokens.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex gap-3 mt-0.5">
+            <span className="text-[8px] text-[#666]">
+              usr:{c.user_tokens.toLocaleString()}
+            </span>
+            <span className="text-[8px] text-[#666]">
+              agt:{c.agent_tokens.toLocaleString()}
+            </span>
+            {c.thinking_tokens > 0 && (
+              <span className="text-[8px] text-[#666]">
+                thk:{c.thinking_tokens.toLocaleString()}
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {conversations.length > 3 && (
+        <button
+          onClick={() => setDetailOpen(!detailOpen)}
+          className="text-[8px] text-[#555] hover:text-[#888] mt-1"
+        >
+          {detailOpen ? "show less" : `+${conversations.length - 3} more`}
+        </button>
+      )}
+
+      <div className="text-[8px] text-[#555] mt-1.5">
+        grand total: {grand_total_tokens.toLocaleString()} tok
+      </div>
+    </div>
   )
 }
 
@@ -206,6 +290,7 @@ export function SidePanel() {
   const [pipelineOpen, setPipelineOpen] = useState(false)
   const [skillsOpen, setSkillsOpen] = useState(false)
   const [healthOpen, setHealthOpen] = useState(true)
+  const [tokensOpen, setTokensOpen] = useState(true)
 
   useEffect(() => {
     getSkills()
@@ -280,6 +365,20 @@ export function SidePanel() {
               {healthOpen && (
                 <div className="pl-3">
                   <HealthSection />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Tokens"
+                count={0}
+                open={tokensOpen}
+                onToggle={() => setTokensOpen(!tokensOpen)}
+              />
+              {tokensOpen && (
+                <div className="pl-3">
+                  <TokensSection />
                 </div>
               )}
             </div>

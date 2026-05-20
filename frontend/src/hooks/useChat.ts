@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { getAgent, getHistory, sendMessage } from "../api/client"
 import type { ChatMessage } from "../api/client"
 
+function estimateTokens(text: string): number {
+  if (!text) return 0
+  return Math.max(1, Math.floor(text.length / 4))
+}
+
 export function useChat(conversationId: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
@@ -36,6 +41,7 @@ export function useChat(conversationId: string) {
       timestamp: new Date().toISOString(),
       speaker: "human",
       content,
+      content_tokens: estimateTokens(content),
     }
     setMessages((prev) => [...prev, userMsg])
 
