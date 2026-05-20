@@ -1,0 +1,44 @@
+# AAA Configuration
+# Environment variables override these values.
+
+database:
+  path: "data/aaa.db"
+
+embedding:
+  model: "all-MiniLM-L6-v2"
+  device: "cpu"
+
+# ── LLM Provider ───────────────────────────────────
+# provider: openrouter | deepseek | ollama | openai_compatible
+#
+# openrouter → model like "deepseek/deepseek-chat", base "https://openrouter.ai/api/v1"
+# deepseek   → model like "deepseek-v4-pro",          base "https://api.deepseek.com"
+#
+# API key is read from env (AAA_LLM_API_KEY or AAA_DEEPSEEK_API_KEY)
+# based on the selected provider.
+llm:
+  provider: "openrouter"
+  # model and api_base are optional — leave empty to use provider defaults
+  model: ""
+  api_base: ""
+  # thinking mode (DeepSeek-v4-pro / v4-flash)
+  # when enabled, temperature/top_p/presence_penalty are ignored by the model
+  thinking:
+    enabled: false
+    effort: "high"  # high | max
+  default_params:
+    temperature: 0.7
+    max_tokens: 2048
+
+pipeline:
+  modules:
+    - embedder
+    - context_collector
+    - llm_client
+
+context:
+  max_history: 20
+
+server:
+  host: "127.0.0.1"
+  port: 8000
