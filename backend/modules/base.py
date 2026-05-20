@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from backend.skills.metadata import SkillMeta
 
 
 @dataclass
@@ -20,3 +23,7 @@ class ProcessingModule(ABC):
 
     @abstractmethod
     async def process(self, payload: dict) -> dict: ...
+
+    @property
+    def skill_meta(self) -> "SkillMeta | None":
+        return None

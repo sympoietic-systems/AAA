@@ -25,6 +25,7 @@ def init_db(db_path: str) -> sqlite3.Connection:
         CREATE TABLE IF NOT EXISTS conversation_log (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp        DATETIME DEFAULT CURRENT_TIMESTAMP,
+            agent_id         TEXT NOT NULL DEFAULT '',
             speaker          TEXT NOT NULL,
             content          TEXT NOT NULL,
             thinking         TEXT,
@@ -52,6 +53,12 @@ def init_db(db_path: str) -> sqlite3.Connection:
     try:
         conn.execute(
             "ALTER TABLE conversation_log ADD COLUMN thinking TEXT"
+        )
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN agent_id TEXT NOT NULL DEFAULT ''"
         )
     except sqlite3.OperationalError:
         pass

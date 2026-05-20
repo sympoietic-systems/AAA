@@ -40,3 +40,8 @@ class HealthResponse(BaseModel):
 class ErrorResponse(BaseModel):
     status: str = "error"
     message: str
+
+
+class AgentInfo(BaseModel):
+    name: str
+    version: str = ""

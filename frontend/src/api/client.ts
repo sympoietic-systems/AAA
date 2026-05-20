@@ -8,6 +8,11 @@ export interface ChatMessage {
   thinking?: string
 }
 
+export interface AgentInfo {
+  name: string
+  version?: string
+}
+
 export async function sendMessage(content: string): Promise<ChatMessage> {
   const res = await fetch(`${BASE}/chat`, {
     method: "POST",
@@ -29,5 +34,11 @@ export async function getHistory(limit = 50): Promise<{ messages: ChatMessage[] 
 
 export async function getHealth() {
   const res = await fetch(`${BASE}/health`)
+  return res.json()
+}
+
+export async function getAgent(): Promise<AgentInfo> {
+  const res = await fetch(`${BASE}/agent`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

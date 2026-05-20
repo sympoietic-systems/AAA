@@ -7,11 +7,12 @@ interface Props {
   messages: ChatMessage[]
   loading: boolean
   error: string | null
+  agentName: string
   onSend: (text: string) => void
   onClearError: () => void
 }
 
-export function ChatView({ messages, loading, error, onSend, onClearError }: Props) {
+export function ChatView({ messages, loading, error, agentName, onSend, onClearError }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -22,13 +23,13 @@ export function ChatView({ messages, loading, error, onSend, onClearError }: Pro
     <div className="flex flex-col h-screen max-w-3xl mx-auto">
       <header className="flex items-center gap-2 px-4 py-3 border-b border-[#222] text-sm">
         <span className="text-[#4ade80]">{'>'}</span>
-        <span className="text-[#888]">aaa</span>
+        <span className="text-[#888]">{agentName}</span>
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 && !loading && (
           <div className="text-[#555] text-sm mt-20">
-            <p>AAA v0.1.0 — type a message below.</p>
+            <p>{agentName} v0.1.0 — type a message below.</p>
           </div>
         )}
         {messages.map((msg) => (

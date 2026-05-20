@@ -1,13 +1,14 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+import yaml
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import router
 from backend.config import load_config
 from backend.core.pipeline import ProcessingPipeline
-from backend.core.registry import ModuleRegistry
 from backend.modules.context_collector import ContextCollectorModule
 from backend.modules.embedder import EmbedderModule
 from backend.modules.llm_client import (
@@ -15,6 +16,9 @@ from backend.modules.llm_client import (
     OpenAICompatibleProvider,
     OpenRouterProvider,
 )
+from backend.personality.assembler import PromptAssemblerModule
+from backend.skills.metadata import SkillMeta
+from backend.skills.registry import SkillRegistry
 from backend.storage.database import get_db_path, init_db
 from backend.storage.repository import ErrorLogRepository, MessageRepository
 
@@ -103,13 +107,49 @@ async def lifespan(app: FastAPI):
         max_history=ctx_cfg.get("max_history", 20),
     )
 
-    registry = ModuleRegistry()
-    registry.register("embedder", lambda: embedder)
-    registry.register("context_collector", lambda: context_collector)
-    registry.register("llm_client", lambda: llm_module)
+    personality_cfg = config.get("personality", {})
+    identity_path = Path(personality_cfg.get("path", "backend/personality/identity.yaml"))
+    if not identity_path.is_absolute():
+        identity_path = Path(__file__).parent.parent / identity_path
+
+    agent_name = "symbia"
+    if identity_path.exists():
+        with open(identity_path) as f:
+            identity_data = yaml.safe_load(f)
+            agent_name = identity_data.get("agent", {}).get("name", "symbia")
+    logger.info(f"Agent identity: {agent_name}")
+
+    registry = SkillRegistry()
+    registry.register_with_meta(
+        "embedder", lambda: embedder,
+        SkillMeta(name="embedder", description="Encodes text into vector embeddings",
+                  category="perception", always_run=True),
+    )
+    registry.register_with_meta(
+        "context_collector", lambda: context_collector,
+        SkillMeta(name="context_collector", description="Gathers conversation history",
+                  category="memory", always_run=True),
+    )
+
+    prompt_assembler = PromptAssemblerModule(
+        identity_path=identity_path,
+        skill_registry=registry,
+    )
+    registry.register_with_meta(
+        "prompt_assembler", lambda: prompt_assembler,
+        SkillMeta(name="prompt_assembler", description="Composes system prompt from identity and skills",
+                  category="reasoning", always_run=True),
+    )
+
+    registry.register_with_meta(
+        "llm_client", lambda: llm_module,
+        SkillMeta(name="llm_client", description="Sends messages to the language model and returns the response",
+                  category="action", always_run=True),
+    )
 
     pipeline_order = config.get("pipeline", {}).get(
-        "modules", ["embedder", "context_collector", "llm_client"]
+        "modules",
+        ["embedder", "context_collector", "prompt_assembler", "llm_client"],
     )
     pipeline_modules = registry.resolve_pipeline(pipeline_order)
 
@@ -126,6 +166,7 @@ async def lifespan(app: FastAPI):
     )
 
     app.state.config = config
+    app.state.agent_name = agent_name
     app.state.message_repo = message_repo
     app.state.error_repo = error_repo
     app.state.registry = registry

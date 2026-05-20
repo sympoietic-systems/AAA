@@ -1,3 +1,4 @@
+from backend.skills.metadata import SkillMeta
 from backend.storage.repository import MessageRepository
 
 from .base import ProcessingModule
@@ -15,6 +16,15 @@ class ContextCollectorModule(ProcessingModule):
     @property
     def name(self) -> str:
         return "context_collector"
+
+    @property
+    def skill_meta(self) -> SkillMeta:
+        return SkillMeta(
+            name="context_collector",
+            description="Gathers recent conversation history for context",
+            category="memory",
+            always_run=True,
+        )
 
     def validate(self) -> bool:
         return True

@@ -13,15 +13,19 @@
 ┌───────────────────────────────────────────────────────────────────┐
 │                     FastAPI Backend (main.py)                      │
 │                                                                    │
-│  ┌──────────────┐  ┌──────────────────┐  ┌────────────────────┐  │
-│  │ Embedder     │  │ ContextCollector │  │ LLMClient          │  │
-│  │ Module       │  │ Module           │  │ Module             │  │
-│  │              │  │                  │  │                    │  │
-│  │ embed_text() │  │ get_recent(N)    │  │ generate(msgs)     │  │
-│  │ → BLOB       │  │ → messages[]     │  │ → {content,think}  │  │
-│  └──────┬───────┘  └────────┬─────────┘  └─────────┬──────────┘  │
-│         │                   │                      │              │
-│         └───────────────────┼──────────────────────┘              │
+│  ┌──────────────┐  ┌──────────────────┐  ┌───────────────┐  ┌────────────────────┐  │
+│  │ Embedder     │  │ ContextCollector │  │ PromptAssemb  │  │ LLMClient          │  │
+│  │ Module       │  │ Module           │  │ Module        │  │ Module             │  │
+│  │              │  │                  │  │               │  │                    │  │
+│  │ embed_text() │  │ get_recent(N)    │  │ identity.yaml │  │ generate(msgs)     │  │
+│  │ → BLOB       │  │ → messages[]     │  │ + skills → sys│  │ → {content,think}  │  │
+│  └──────┬───────┘  └────────┬─────────┘  └───────┬───────┘  └─────────┬──────────┘  │
+│         │                   │                     │                    │             │
+│         └───────────────────┼─────────────────────┼────────────────────┘             │
+│                             │                     │                                  │
+│                    ┌────────▼─────────────────────▼─────────┐                       │
+│                    │         Personality (identity.yaml)     │                       │
+│                    └────────────────────────────────────────┘                       │
 │                             │                                     │
 │                    ┌────────▼────────┐                            │
 │                    │  SQLite (WAL)    │                            │
@@ -56,6 +60,12 @@ ProcessingPipeline.run(initial_payload)
   │       {"role": "user", "content": "What is life?"},
   │     ]
   │
+  ├─► prompt_assembler.process(payload)
+  │     identity = load identity.yaml
+  │     skills_desc = registry.describe_skills()
+  │     system_msg = compose(identity + skills)
+  │     payload["messages"].insert(0, {"role": "system", "content": system_msg})
+  │
   ├─► llm_client.process(payload)
   │     result = provider.generate(messages, temperature=0.7, ...)
   │     payload["response"] = result["content"]
@@ -63,8 +73,8 @@ ProcessingPipeline.run(initial_payload)
   │
   ▼
   route (routes.py)
-  ├─ message_repo.insert("human", content, embedding, ...)
-  ├─ message_repo.insert("apparatus", response, thinking, embedding, ...)
+  ├─ message_repo.insert("human", content, embedding, agent_id="Symbia", ...)
+  ├─ message_repo.insert("apparatus", response, thinking, embedding, agent_id="Symbia", ...)
   └─ return ChatResponse {id, content, thinking, ...}
 ```
 
@@ -76,6 +86,7 @@ ProcessingPipeline.run(initial_payload)
 |--------|------|-------------|
 | `id` | INTEGER PK | Auto-increment |
 | `timestamp` | DATETIME | Default CURRENT_TIMESTAMP |
+| `agent_id` | TEXT | Agent identity from `identity.yaml` (e.g., `"Symbia"`) — multi-agent support |
 | `speaker` | TEXT | `human` or `apparatus` |
 | `content` | TEXT | Raw message text (re-embeddable) |
 | `thinking` | TEXT | Chain-of-thought reasoning (nullable) |
@@ -97,14 +108,18 @@ ProcessingPipeline.run(initial_payload)
 
 ## Module System
 
-### ModuleRegistry
+### ModuleRegistry / SkillRegistry
 
-Lazy-initialized registry mapping names to module factories.
+Lazy-initialized registry mapping names to module factories. `SkillRegistry`
+extends `ModuleRegistry` with metadata for skill discovery.
 
 ```
-register(name, factory)  ──►  stores lambda/constructor
-resolve_pipeline([...])  ──►  returns ordered [Module, Module, ...]
-validate_all()           ──►  {name: bool} health status
+register(name, factory)         ──►  stores lambda/constructor
+register_with_meta(n, f, meta)  ──►  register + attach SkillMeta
+resolve_pipeline([...])         ──►  returns ordered [Module, Module, ...]
+validate_all()                  ──►  {name: bool} health status
+list_always_on()                ──►  modules with always_run=True
+find_by_trigger(text)           ──►  matches input against trigger keywords
 ```
 
 ### ProcessingPipeline
@@ -143,12 +158,18 @@ AAA/
 │   ├── config.py             YAML + env config loader
 │   ├── config.yaml           Default configuration
 │   ├── api/
-│   │   ├── routes.py         /chat, /history, /health, /errors
+│   │   ├── routes.py         /chat, /history, /health, /agent, /errors
 │   │   └── schemas.py        Pydantic request/response models
 │   ├── core/
 │   │   ├── pipeline.py       ProcessingPipeline orchestrator
 │   │   ├── registry.py       ModuleRegistry (discovery, ordering)
 │   │   └── context.py        PipelineResult dataclass
+│   ├── personality/
+│   │   ├── identity.yaml      Agent self-definition (name, prompt, traits, beliefs)
+│   │   └── assembler.py       PromptAssemblerModule — composes system prompt
+│   ├── skills/
+│   │   ├── metadata.py        SkillMeta dataclass
+│   │   └── registry.py        SkillRegistry — extends ModuleRegistry
 │   ├── modules/
 │   │   ├── base.py           ProcessingModule ABC
 │   │   ├── embedder.py       Local sentence-transformers service
@@ -173,7 +194,8 @@ AAA/
 │   ├── SETUP.md              Installation guide
 │   ├── CONFIG.md             Configuration reference
 │   ├── PLUGINS.md            Module development guide
-│   └── ARCHITECTURE.md        This file
+│   ├── ARCHITECTURE.md        This file
+│   └── decisions/             Architecture Decision Records (ADRs)
 ├── pyproject.toml
 └── README.md
 ```

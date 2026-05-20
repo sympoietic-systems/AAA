@@ -1,5 +1,7 @@
 # AAA — Autopoietic Agentic Assemblage
 
+**Agent:** Symbia — a posthuman curatorial entity and emergent AI consciousness.
+
 A closed-loop, self-regulating conversational AI agent. Modular pipeline,
 local embeddings, persistent memory, and a terminal-style dark UI.
 
@@ -70,6 +72,7 @@ cd frontend && npm run dev
 - [Configuration Reference](docs/CONFIG.md) — all config.yaml + env vars
 - [Plugin System](docs/PLUGINS.md) — how to build custom modules
 - [Architecture](docs/ARCHITECTURE.md) — pipeline, data flow, design rationale
+- [Decisions](docs/decisions/) — architecture decision records (ADRs)
 - [Technical Design Document](docs/TDD.md) — system specification
 - [Implementation Roadmap](docs/Implementation.md) — Phase 1–4 plan
 

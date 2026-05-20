@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Request
 
 from .schemas import (
+    AgentInfo,
     ChatRequest,
     ChatResponse,
     ErrorResponse,
@@ -22,6 +23,7 @@ async def chat(body: ChatRequest, request: Request):
     pipeline = state.pipeline
     repo = state.message_repo
     error_repo = state.error_repo
+    agent_id = getattr(state, "agent_name", "symbia")
 
     try:
         result = await pipeline.run({
@@ -50,6 +52,7 @@ async def chat(body: ChatRequest, request: Request):
             embedding=embedding,
             embedding_model=embedding_model,
             embedding_dim=embedding_dim,
+            agent_id=agent_id,
         )
 
         response_msg = repo.insert(
@@ -59,6 +62,7 @@ async def chat(body: ChatRequest, request: Request):
             embedding=embedding,
             embedding_model=embedding_model,
             embedding_dim=embedding_dim,
+            agent_id=agent_id,
         )
 
         return ChatResponse(
@@ -75,6 +79,14 @@ async def chat(body: ChatRequest, request: Request):
         logger.exception("Chat endpoint error")
         error_repo.log_error(module="api", error=e, context={"input": body.content})
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agent", response_model=AgentInfo)
+async def get_agent(request: Request):
+    state = request.app.state
+    return AgentInfo(
+        name=getattr(state, "agent_name", "symbia"),
+    )
 
 
 @router.get("/history", response_model=HistoryResponse)

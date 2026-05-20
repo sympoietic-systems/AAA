@@ -32,7 +32,12 @@ pipeline:
   modules:                     # Ordered processing stages
     - embedder
     - context_collector
+    - prompt_assembler
     - llm_client
+
+# ── Personality ──────────────────────────────────
+personality:
+  path: "backend/personality/identity.yaml"   # Agent self-definition
 
 # ── Context ──────────────────────────────────────
 context:
@@ -81,6 +86,16 @@ and `top_p` are silently ignored by the model.
 |----------|---------|
 | `AAA_SERVER_HOST` | `127.0.0.1` |
 | `AAA_SERVER_PORT` | `8000` |
+
+### Personality
+
+| Variable | Default |
+|----------|---------|
+| `AAA_IDENTITY_PATH` | `backend/personality/identity.yaml` |
+
+The identity file defines the agent's name, system prompt, traits, voice,
+expertise, beliefs, and behaviors. The agent name drives the UI header
+and is stored as `agent_id` in every database row for multi-agent support.
 
 ### Database
 

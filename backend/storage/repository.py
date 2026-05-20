@@ -23,13 +23,14 @@ class MessageRepository:
         embedding_model: str,
         embedding_dim: int,
         thinking: Optional[str] = None,
+        agent_id: str = "",
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
-               (speaker, content, thinking, embedding, embedding_model, embedding_dim)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (speaker, content, thinking, embedding, embedding_model, embedding_dim),
+               (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim),
         )
         conn.commit()
         row = conn.execute(
@@ -59,6 +60,7 @@ def _row_to_message(row: sqlite3.Row) -> Message:
     return Message(
         id=row["id"],
         timestamp=datetime.fromisoformat(row["timestamp"]),
+        agent_id=row["agent_id"] if "agent_id" in row.keys() else "",
         speaker=row["speaker"],
         content=row["content"],
         thinking=row["thinking"] if "thinking" in row.keys() else None,

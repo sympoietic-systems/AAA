@@ -7,6 +7,7 @@ from typing import Optional
 class Message:
     id: int | None
     timestamp: datetime
+    agent_id: str
     speaker: str
     content: str
     thinking: Optional[str]

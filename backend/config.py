@@ -37,6 +37,7 @@ def _apply_env_overrides(config: dict) -> dict:
         "AAA_LLM_PROVIDER": ("llm", "provider"),
         "AAA_LLM_API_BASE": ("llm", "api_base"),
         "AAA_DB_PATH": ("database", "path"),
+        "AAA_IDENTITY_PATH": ("personality", "path"),
         "AAA_SERVER_HOST": ("server", "host"),
         "AAA_SERVER_PORT": ("server", "port"),
     }

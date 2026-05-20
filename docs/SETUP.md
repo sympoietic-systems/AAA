@@ -86,9 +86,9 @@ The frontend proxies `/api` requests to the backend automatically.
 Open `http://localhost:5173`. You should see:
 
 ```
-> aaa
+> symbia
 ────────────────────────────────
-AAA v0.1.0 — type a message below.
+Symbia v0.1.0 — type a message below.
 > _                              ← your prompt
 ```
 
@@ -99,6 +99,9 @@ Type a message and press Enter. The agent should respond within a few seconds.
 ```bash
 # Health check
 curl http://127.0.0.1:8000/api/health
+
+# Agent identity (name from identity.yaml)
+curl http://127.0.0.1:8000/api/agent
 
 # Chat
 curl -X POST http://127.0.0.1:8000/api/chat \

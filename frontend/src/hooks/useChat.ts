@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { getHistory, sendMessage } from "../api/client"
+import { getAgent, getHistory, sendMessage } from "../api/client"
 import type { ChatMessage } from "../api/client"
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [agentName, setAgentName] = useState("...")
   const loaded = useRef(false)
 
   useEffect(() => {
     if (loaded.current) return
     loaded.current = true
+    getAgent()
+      .then((info) => setAgentName(info.name))
+      .catch(() => setAgentName("agent"))
     getHistory()
       .then((data) => setMessages(data.messages))
       .catch(() => {})
@@ -42,5 +46,5 @@ export function useChat() {
 
   const clearError = useCallback(() => setError(null), [])
 
-  return { messages, loading, error, send, clearError }
+  return { messages, loading, error, send, clearError, agentName }
 }

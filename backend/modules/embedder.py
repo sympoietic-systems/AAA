@@ -4,6 +4,8 @@ from typing import Optional
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+from backend.skills.metadata import SkillMeta
+
 from .base import ProcessingModule
 
 
@@ -78,3 +80,12 @@ class EmbedderModule(ProcessingModule):
     @property
     def service(self) -> EmbeddingService:
         return self._service
+
+    @property
+    def skill_meta(self) -> SkillMeta:
+        return SkillMeta(
+            name="embedder",
+            description="Encodes text into 384-dimensional float32 vectors",
+            category="perception",
+            always_run=True,
+        )

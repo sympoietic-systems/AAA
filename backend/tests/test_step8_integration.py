@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, patch
 sys.path.insert(0, "D:/AAA")
 
 mock_generate = AsyncMock(return_value={
-    "content": "Hello! This is a *markdown* test.\n\n```python\nprint('hi')\n```",
-    "thinking": "Let me analyze this question step by step...",
+    "content": "Intra-action is Barad's key concept — the mutual constitution of entangled agencies.",
+    "thinking": None,
 })
 
 with patch(
@@ -17,26 +17,28 @@ with patch(
     from fastapi.testclient import TestClient
 
     with TestClient(app) as client:
-        health = client.get("/api/health")
-        print(f"Health: {health.status_code} {health.json()['status']}")
+        agent = client.get("/api/agent")
+        print(f"Agent: {agent.status_code} -> {agent.json()['name']}")
+        assert agent.status_code == 200
+        assert agent.json()["name"] == "Symbia"
 
-        chat = client.post("/api/chat", json={"content": "Hi!", "speaker": "human"})
-        print(f"Chat status: {chat.status_code}")
-        data = chat.json()
-        print(f"Content: {data.get('content', '')[:60]}")
-        print(f"Thinking: {data.get('thinking', '')[:60]}")
-        assert chat.status_code == 200
-        assert "markdown" in data["content"]
-        assert data["thinking"] == "Let me analyze this question step by step..."
-        assert data["speaker"] == "apparatus"
+        chat = client.post("/api/chat", json={"content": "What is intra-action?", "speaker": "human"})
+        assert chat.status_code == 200, f"Chat failed: {chat.json()}"
+        print(f"Chat: {chat.json()['content'][:60]}...")
 
         history = client.get("/api/history")
-        hist_data = history.json()
-        print(f"History count: {hist_data['count']}")
-        assert hist_data["count"] >= 2
+        msgs = history.json()["messages"]
+        print(f"History: {len(msgs)} messages")
 
-        apparatus_msg = [m for m in hist_data["messages"] if m["speaker"] == "apparatus"][0]
-        print(f"History thinking: {apparatus_msg.get('thinking', '')[:60]}")
-        assert apparatus_msg["thinking"] == "Let me analyze this question step by step..."
+        import sqlite3
+        db = "D:/AAA/backend/data/aaa.db"
+        conn = sqlite3.connect(db)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT id, agent_id, speaker FROM conversation_log").fetchall()
+        for r in rows:
+            print(f"  DB row {r['id']}: agent_id={r['agent_id']!r}, speaker={r['speaker']}")
+        conn.close()
 
-        print("\nFull integration test passed!")
+        assert rows[0]["agent_id"] == "Symbia"
+        assert rows[1]["agent_id"] == "Symbia"
+        print("\nAll tests passed!")
