@@ -10,6 +10,9 @@ from .schemas import (
     HealthResponse,
     HistoryMessage,
     HistoryResponse,
+    HomeostaticRecommendations,
+    MetricsInfo,
+    MetricsResponse,
     SkillInfo,
     SkillsResponse,
 )
@@ -25,6 +28,7 @@ async def chat(body: ChatRequest, request: Request):
     pipeline = state.pipeline
     repo = state.message_repo
     error_repo = state.error_repo
+    metrics_repo = getattr(state, "metrics_repo", None)
     agent_id = getattr(state, "agent_name", "symbia")
 
     try:
@@ -67,6 +71,20 @@ async def chat(body: ChatRequest, request: Request):
             agent_id=agent_id,
         )
 
+        payload_metrics = result.payload.get("metrics")
+        recommendations = result.payload.get("homeostatic_recommendations")
+
+        if payload_metrics and metrics_repo:
+            try:
+                _store_metrics(
+                    metrics_repo=metrics_repo,
+                    message_id=msg.id,
+                    metrics=payload_metrics,
+                    recommendations=recommendations,
+                )
+            except Exception:
+                logger.exception("Failed to store metrics")
+
         return ChatResponse(
             id=response_msg.id,
             timestamp=response_msg.timestamp,
@@ -74,6 +92,8 @@ async def chat(body: ChatRequest, request: Request):
             content=response_text,
             thinking=thinking,
             embedding_generated=bool(embedding),
+            metrics=_build_metrics_info(payload_metrics),
+            homeostatic_recommendations=_build_recommendations(recommendations),
         )
     except HTTPException:
         raise
@@ -193,3 +213,110 @@ async def get_skills(request: Request):
         ))
 
     return SkillsResponse(pipeline=pipeline, on_demand=on_demand)
+
+
+@router.get("/metrics", response_model=MetricsResponse)
+async def get_metrics(request: Request, window: int = 20):
+    state = request.app.state
+    metrics_repo = getattr(state, "metrics_repo", None)
+    if not metrics_repo:
+        return MetricsResponse(window_size=0, aggregates={"count": 0})
+
+    aggregates = metrics_repo.get_aggregates(limit=max(1, min(window, 100)))
+    latest = metrics_repo.get_latest()
+
+    latest_info: MetricsInfo | None = None
+    recommendations: HomeostaticRecommendations | None = None
+    if latest is not None:
+        latest_info = MetricsInfo(
+            pairwise_similarity=latest.s_t,
+            conceptual_novelty=latest.novelty,
+            rolling_entropy=latest.rolling_entropy,
+            coupling_coherence=latest.coupling,
+            agent_self_divergence=latest.agent_divergence,
+            homeostatic_deficit=latest.deficit,
+        )
+        temp_rec = None
+        pres_rec = None
+        freq_rec = None
+        if latest.temperature_rec is not None:
+            temp_rec = {"value": latest.temperature_rec, "base": 0.7, "delta": round(latest.temperature_rec - 0.7, 3), "clamped": False}
+        if latest.presence_penalty_rec is not None:
+            pres_rec = {"value": latest.presence_penalty_rec, "base": 0.0, "delta": round(latest.presence_penalty_rec, 3), "clamped": False}
+        if latest.frequency_penalty_rec is not None:
+            freq_rec = {"value": latest.frequency_penalty_rec, "base": 0.0, "delta": round(latest.frequency_penalty_rec, 3), "clamped": False}
+        recommendations = HomeostaticRecommendations(
+            temperature=temp_rec,
+            presence_penalty=pres_rec,
+            frequency_penalty=freq_rec,
+            state=latest.homeostatic_state or "healthy",
+        )
+
+    return MetricsResponse(
+        window_size=aggregates.get("count", 0),
+        aggregates=aggregates,
+        latest=latest_info,
+        recommendations=recommendations,
+    )
+
+
+def _store_metrics(metrics_repo, message_id: int, metrics: dict, recommendations: dict | None) -> None:
+    s_t = metrics.get("pairwise_similarity")
+    novelty = metrics.get("conceptual_novelty")
+    if s_t is None or novelty is None:
+        return
+
+    temp_rec = None
+    pres_rec = None
+    freq_rec = None
+    homeo_state = None
+    if recommendations:
+        t = recommendations.get("temperature")
+        p = recommendations.get("presence_penalty")
+        f = recommendations.get("frequency_penalty")
+        if isinstance(t, dict):
+            temp_rec = t.get("value")
+        if isinstance(p, dict):
+            pres_rec = p.get("value")
+        if isinstance(f, dict):
+            freq_rec = f.get("value")
+        homeo_state = recommendations.get("state")
+
+    metrics_repo.insert(
+        message_id=message_id,
+        s_t=float(s_t),
+        novelty=float(novelty),
+        deficit=float(metrics.get("homeostatic_deficit", 0.0)),
+        rolling_entropy=float(metrics["rolling_entropy"]) if metrics.get("rolling_entropy") is not None else None,
+        coupling=float(metrics["coupling_coherence"]) if metrics.get("coupling_coherence") is not None else None,
+        agent_divergence=float(metrics["agent_self_divergence"]) if metrics.get("agent_self_divergence") is not None else None,
+        temperature_rec=float(temp_rec) if temp_rec is not None else None,
+        presence_penalty_rec=float(pres_rec) if pres_rec is not None else None,
+        frequency_penalty_rec=float(freq_rec) if freq_rec is not None else None,
+        homeostatic_state=homeo_state,
+    )
+
+
+def _build_metrics_info(metrics: dict | None) -> MetricsInfo | None:
+    if not metrics:
+        return None
+    return MetricsInfo(
+        pairwise_similarity=metrics.get("pairwise_similarity"),
+        conceptual_novelty=metrics.get("conceptual_novelty"),
+        rolling_entropy=metrics.get("rolling_entropy"),
+        coupling_coherence=metrics.get("coupling_coherence"),
+        agent_self_divergence=metrics.get("agent_self_divergence"),
+        homeostatic_deficit=metrics.get("homeostatic_deficit"),
+    )
+
+
+def _build_recommendations(recs: dict | None) -> HomeostaticRecommendations | None:
+    if not recs:
+        return None
+    return HomeostaticRecommendations(
+        temperature=recs.get("temperature"),
+        presence_penalty=recs.get("presence_penalty"),
+        frequency_penalty=recs.get("frequency_penalty"),
+        state=recs.get("state", "healthy"),
+        triggered_flags=recs.get("triggered_flags", []),
+    )

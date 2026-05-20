@@ -1,7 +1,57 @@
 import { useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import type { ChatMessage } from "../api/client"
+import type { ChatMessage, MetricsInfo } from "../api/client"
+
+function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
+  const items: { label: string; value: number | null; max: number; warn: number; crit: number }[] = [
+    { label: "sim", value: metrics.pairwise_similarity, max: 1.0, warn: 0.7, crit: 0.85 },
+    { label: "nov", value: metrics.conceptual_novelty, max: 1.0, warn: 0.15, crit: 0.07 },
+    { label: "ent", value: metrics.rolling_entropy, max: 0.25, warn: 0.01, crit: 0.005 },
+    { label: "coup", value: metrics.coupling_coherence, max: 1.0, warn: 0.7, crit: 0.9 },
+    { label: "divr", value: metrics.agent_self_divergence, max: 1.0, warn: 0.2, crit: 0.1 },
+  ]
+
+  const barColor = (val: number | null, warn: number, crit: number, invert: boolean = false) => {
+    if (val == null) return "#333"
+    if (invert) {
+      if (val <= crit) return "#ef4444"
+      if (val <= warn) return "#facc15"
+      return "#4ade80"
+    }
+    if (val >= crit) return "#ef4444"
+    if (val >= warn) return "#facc15"
+    return "#4ade80"
+  }
+
+  return (
+    <div className="mt-1 flex items-center gap-1.5 text-[10px] text-[#555] select-none">
+      {items.map((item) => {
+        const pct = item.value != null ? Math.min(100, Math.max(0, (item.value / item.max) * 100)) : 0
+        const invert = item.label === "nov" || item.label === "ent" || item.label === "div"
+        const color = barColor(item.value, invert ? item.warn : item.warn, invert ? item.crit : item.crit, invert)
+        return (
+          <div key={item.label} className="flex items-center gap-0.5">
+            <span className="w-7 text-right text-[#444]">{item.label}</span>
+            <div className="w-12 h-1.5 bg-[#1a1a1a] rounded-sm overflow-hidden">
+              <div
+                className="h-full rounded-sm transition-all"
+                style={{ width: `${pct}%`, backgroundColor: color }}
+              />
+            </div>
+          </div>
+        )
+      })}
+      {metrics.homeostatic_deficit != null && (
+        <span className="ml-1">
+          Δ:<span className={metrics.homeostatic_deficit > 0.5 ? "text-[#f87171]" : "text-[#4ade80]"}>
+            {metrics.homeostatic_deficit.toFixed(2)}
+          </span>
+        </span>
+      )}
+    </div>
+  )
+}
 
 export function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isHuman = msg.speaker === "human"
@@ -24,13 +74,15 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
         )}
       </div>
 
+      {isHuman && msg.metrics && <VitalityBar metrics={msg.metrics} />}
+
       {msg.thinking && (
         <div className="mt-1">
           <button
             onClick={() => setThinkingOpen(!thinkingOpen)}
             className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1"
           >
-            <span>{thinkingOpen ? "▼" : "▶"}</span>
+            <span>{thinkingOpen ? "\u25BC" : "\u25B6"}</span>
             <span>thinking</span>
           </button>
           {thinkingOpen && (

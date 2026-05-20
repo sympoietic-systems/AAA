@@ -38,8 +38,10 @@ llm:
 pipeline:
   modules:
     - embedder
+    - conversation_metrics
     - context_collector
     - prompt_assembler
+    - homeostatic_regulator
     - llm_client
 
 # ── Personality ──────────────────────────────────
@@ -49,6 +51,12 @@ personality:
 # ── Context ──────────────────────────────────────
 context:
   max_history: 20
+
+# ── Homeostasis ──────────────────────────────────
+homeostasis:
+  pairwise_window: 5
+  entropy_window: 5
+  agent_self_window: 5
 
 # ── Server ───────────────────────────────────────
 server:

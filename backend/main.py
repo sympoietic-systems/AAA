@@ -10,7 +10,9 @@ from backend.api.routes import router
 from backend.config import load_config
 from backend.core.pipeline import ProcessingPipeline
 from backend.modules.context_collector import ContextCollectorModule
+from backend.modules.conversation_metrics import ConversationMetricsModule
 from backend.modules.embedder import EmbedderModule
+from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
 from backend.modules.llm_client import (
     LLMClientModule,
     OpenAICompatibleProvider,
@@ -20,7 +22,7 @@ from backend.personality.assembler import PromptAssemblerModule
 from backend.skills.metadata import SkillMeta
 from backend.skills.registry import SkillRegistry
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import ErrorLogRepository, MessageRepository
+from backend.storage.repository import ErrorLogRepository, MessageRepository, MetricsRepository
 
 logging.basicConfig(
     level=logging.INFO,
@@ -89,6 +91,7 @@ async def lifespan(app: FastAPI):
 
     message_repo = MessageRepository(str(full_db_path))
     error_repo = ErrorLogRepository(str(full_db_path))
+    metrics_repo = MetricsRepository(str(full_db_path))
 
     embed_cfg = config.get("embedding", {})
     embedder = EmbedderModule(
@@ -110,6 +113,16 @@ async def lifespan(app: FastAPI):
         max_history=ctx_cfg.get("max_history", 20),
     )
 
+    metrics_cfg = config.get("homeostasis", {})
+    conversation_metrics = ConversationMetricsModule(
+        message_repo=message_repo,
+        pairwise_window=metrics_cfg.get("pairwise_window", 5),
+        entropy_window=metrics_cfg.get("entropy_window", 5),
+        agent_self_window=metrics_cfg.get("agent_self_window", 5),
+    )
+
+    homeostatic_regulator = HomeostaticRegulatorModule()
+
     personality_cfg = config.get("personality", {})
     identity_path = Path(personality_cfg.get("path", "backend/personality/identity.yaml"))
     if not identity_path.is_absolute():
@@ -129,6 +142,11 @@ async def lifespan(app: FastAPI):
                   category="perception", always_run=True),
     )
     registry.register_with_meta(
+        "conversation_metrics", lambda: conversation_metrics,
+        SkillMeta(name="conversation_metrics", description="Computes conversational vitality metrics (similarity, novelty, entropy, coupling, self-divergence)",
+                  category="perception", always_run=True),
+    )
+    registry.register_with_meta(
         "context_collector", lambda: context_collector,
         SkillMeta(name="context_collector", description="Gathers conversation history",
                   category="memory", always_run=True),
@@ -145,6 +163,12 @@ async def lifespan(app: FastAPI):
     )
 
     registry.register_with_meta(
+        "homeostatic_regulator", lambda: homeostatic_regulator,
+        SkillMeta(name="homeostatic_regulator", description="Maps conversational metrics to recommended LLM parameters",
+                  category="reasoning", always_run=True),
+    )
+
+    registry.register_with_meta(
         "llm_client", lambda: llm_module,
         SkillMeta(name="llm_client", description="Sends messages to the language model and returns the response",
                   category="action", always_run=True),
@@ -152,7 +176,7 @@ async def lifespan(app: FastAPI):
 
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
-        ["embedder", "context_collector", "prompt_assembler", "llm_client"],
+        ["embedder", "conversation_metrics", "context_collector", "prompt_assembler", "homeostatic_regulator", "llm_client"],
     )
     pipeline_modules = registry.resolve_pipeline(pipeline_order)
 
@@ -172,6 +196,7 @@ async def lifespan(app: FastAPI):
     app.state.agent_name = agent_name
     app.state.message_repo = message_repo
     app.state.error_repo = error_repo
+    app.state.metrics_repo = metrics_repo
     app.state.registry = registry
     app.state.pipeline = pipeline
     app.state.pipeline_order = pipeline_order

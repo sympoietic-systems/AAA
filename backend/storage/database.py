@@ -49,6 +49,23 @@ def init_db(db_path: str) -> sqlite3.Connection:
 
         CREATE INDEX IF NOT EXISTS idx_error_timestamp
             ON error_log(timestamp);
+
+        CREATE TABLE IF NOT EXISTS conversation_metrics (
+            message_id        INTEGER PRIMARY KEY REFERENCES conversation_log(id),
+            s_t               REAL NOT NULL,
+            novelty           REAL NOT NULL,
+            rolling_entropy   REAL,
+            coupling          REAL,
+            agent_divergence  REAL,
+            deficit           REAL NOT NULL,
+            temperature_rec   REAL,
+            presence_penalty_rec REAL,
+            frequency_penalty_rec REAL,
+            homeostatic_state TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_metrics_deficit
+            ON conversation_metrics(deficit);
     """)
     try:
         conn.execute(

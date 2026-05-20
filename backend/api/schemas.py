@@ -17,6 +17,8 @@ class ChatResponse(BaseModel):
     thinking: Optional[str] = None
     embedding_generated: bool = False
     error: str | None = None
+    metrics: Optional["MetricsInfo"] = None
+    homeostatic_recommendations: Optional["HomeostaticRecommendations"] = None
 
 
 class HistoryMessage(BaseModel):
@@ -60,3 +62,27 @@ class SkillInfo(BaseModel):
 class SkillsResponse(BaseModel):
     pipeline: list[SkillInfo]
     on_demand: list[SkillInfo]
+
+
+class MetricsInfo(BaseModel):
+    pairwise_similarity: float | None = None
+    conceptual_novelty: float | None = None
+    rolling_entropy: float | None = None
+    coupling_coherence: float | None = None
+    agent_self_divergence: float | None = None
+    homeostatic_deficit: float | None = None
+
+
+class HomeostaticRecommendations(BaseModel):
+    temperature: dict | None = None
+    presence_penalty: dict | None = None
+    frequency_penalty: dict | None = None
+    state: str = "healthy"
+    triggered_flags: list[str] = []
+
+
+class MetricsResponse(BaseModel):
+    window_size: int
+    aggregates: dict
+    latest: MetricsInfo | None = None
+    recommendations: HomeostaticRecommendations | None = None

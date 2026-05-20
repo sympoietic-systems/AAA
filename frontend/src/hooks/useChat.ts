@@ -35,7 +35,19 @@ export function useChat() {
 
     try {
       const response = await sendMessage(content)
-      setMessages((prev) => [...prev, response])
+      setMessages((prev) => {
+        const updated = [...prev]
+        if (response.metrics) {
+          for (let i = updated.length - 1; i >= 0; i--) {
+            if (updated[i].speaker === "human") {
+              updated[i] = { ...updated[i], metrics: response.metrics }
+              break
+            }
+          }
+        }
+        updated.push(response)
+        return updated
+      })
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to send message"
       setError(msg)

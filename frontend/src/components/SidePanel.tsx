@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import type { SkillInfo, SkillsResponse } from "../api/client"
-import { getSkills } from "../api/client"
+import type { SkillInfo, SkillsResponse, MetricsResponse } from "../api/client"
+import { getSkills, getMetrics } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
   perception: "#4ade80",
@@ -64,11 +64,94 @@ function SectionHeader({
       className="w-full flex items-center gap-1.5 py-1 text-left hover:text-[#aaa] text-[#888] text-xs transition-colors"
     >
       <span className="text-[10px]">{open ? "\u25BC" : "\u25B6"}</span>
-      <span>
-        {label}
-      </span>
+      <span>{label}</span>
       <span className="text-[#444]">({count})</span>
     </button>
+  )
+}
+
+function HealthSection() {
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const poll = () => {
+      getMetrics().then(setMetrics).catch((e) => setError(e.message))
+    }
+    poll()
+    const interval = setInterval(poll, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const deficit = metrics?.latest?.homeostatic_deficit
+  const state = metrics?.recommendations?.state ?? "unknown"
+  const stateColor =
+    state === "healthy" ? "#4ade80" :
+    state === "compensating" ? "#facc15" :
+    state === "critical" ? "#ef4444" : "#555"
+
+  const renderBar = (label: string, value: number | null | undefined, max: number) => {
+    const pct = value != null ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
+    const display = value != null ? (value < 0.01 ? value.toFixed(4) : value.toFixed(3)) : "\u2014"
+    return (
+      <div className="flex items-center gap-1.5" key={label}>
+        <span className="w-7 text-[9px] text-[#555] text-right">{label}</span>
+        <div className="w-16 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
+          <div className="h-full rounded-sm bg-[#4ade80]" style={{ width: `${pct}%`, opacity: 0.6 }} />
+        </div>
+        <span className="text-[9px] text-[#666] w-10 text-right">{display}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span
+          className="text-[8px] leading-none"
+          style={{ color: stateColor }}
+        >
+          {"\u25CF"}
+        </span>
+        <span className="text-[10px] text-[#888]">vitality</span>
+        <span className="text-[9px] ml-auto" style={{ color: stateColor }}>
+          {state} {deficit != null ? `\u0394:${deficit.toFixed(2)}` : ""}
+        </span>
+      </div>
+
+      {error && <p className="text-[9px] text-[#ef4444]">{error}</p>}
+
+      {metrics?.latest && (
+        <div className="space-y-0.5">
+          {renderBar("sim", metrics.latest.pairwise_similarity, 1.0)}
+          {renderBar("nov", metrics.latest.conceptual_novelty, 1.0)}
+          {renderBar("ent", metrics.latest.rolling_entropy, 0.25)}
+          {renderBar("coup", metrics.latest.coupling_coherence, 1.0)}
+          {renderBar("divr", metrics.latest.agent_self_divergence, 1.0)}
+        </div>
+      )}
+
+      {!metrics && !error && (
+        <p className="text-[9px] text-[#444]">waiting for data...</p>
+      )}
+
+      {metrics?.recommendations?.triggered_flags && metrics.recommendations.triggered_flags.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {metrics.recommendations.triggered_flags.map((f) => (
+            <span key={f} className="text-[8px] text-[#f87171] border border-[#3a1a1a] px-1 rounded">
+              {f}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {metrics?.recommendations?.temperature?.delta !== undefined && metrics.recommendations.temperature.delta !== 0 && (
+        <div className="mt-1 text-[9px] text-[#666]">
+          param: T{metrics.recommendations.temperature.value.toFixed(2)}
+          {metrics.recommendations.temperature.clamped ? " (clamped)" : ""}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -78,6 +161,7 @@ export function SidePanel() {
   const [error, setError] = useState<string | null>(null)
   const [pipelineOpen, setPipelineOpen] = useState(false)
   const [skillsOpen, setSkillsOpen] = useState(false)
+  const [healthOpen, setHealthOpen] = useState(true)
 
   useEffect(() => {
     getSkills()
@@ -99,7 +183,6 @@ export function SidePanel() {
         ${collapsed ? "md:w-9 w-full" : "md:w-120 w-full"}
       `}
     >
-      {/* ---- collapsed: thin toggle strip ---- */}
       {collapsed && (
         <button
           onClick={() => setCollapsed(false)}
@@ -120,7 +203,6 @@ export function SidePanel() {
         </button>
       )}
 
-      {/* ---- open: header bar + content ---- */}
       {!collapsed && (
         <>
           <div className="flex items-center shrink-0 px-3 py-2 border-b border-[#222]">
@@ -143,6 +225,20 @@ export function SidePanel() {
             {!data && !error && (
               <p className="text-[10px] text-[#555] animate-pulse mt-2">loading...</p>
             )}
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Vitality"
+                count={0}
+                open={healthOpen}
+                onToggle={() => setHealthOpen(!healthOpen)}
+              />
+              {healthOpen && (
+                <div className="pl-3">
+                  <HealthSection />
+                </div>
+              )}
+            </div>
 
             {data && (
               <div className="flex flex-col gap-1 mt-1">

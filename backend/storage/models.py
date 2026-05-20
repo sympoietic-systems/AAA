@@ -17,6 +17,21 @@ class Message:
 
 
 @dataclass
+class MetricsRecord:
+    message_id: int
+    s_t: float
+    novelty: float
+    rolling_entropy: float | None
+    coupling: float | None
+    agent_divergence: float | None
+    deficit: float
+    temperature_rec: float | None
+    presence_penalty_rec: float | None
+    frequency_penalty_rec: float | None
+    homeostatic_state: str | None
+
+
+@dataclass
 class ErrorLogEntry:
     id: int | None
     timestamp: datetime

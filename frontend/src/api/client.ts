@@ -1,11 +1,30 @@
 const BASE = "/api"
 
+export interface MetricsInfo {
+  pairwise_similarity: number | null
+  conceptual_novelty: number | null
+  rolling_entropy: number | null
+  coupling_coherence: number | null
+  agent_self_divergence: number | null
+  homeostatic_deficit: number | null
+}
+
+export interface HomeostaticRecommendations {
+  temperature: { value: number; base: number; delta: number; clamped: boolean } | null
+  presence_penalty: { value: number; base: number; delta: number; clamped: boolean } | null
+  frequency_penalty: { value: number; base: number; delta: number; clamped: boolean } | null
+  state: string
+  triggered_flags: string[]
+}
+
 export interface ChatMessage {
   id: number
   timestamp: string
   speaker: "human" | "apparatus"
   content: string
   thinking?: string
+  metrics?: MetricsInfo
+  homeostatic_recommendations?: HomeostaticRecommendations
 }
 
 export interface AgentInfo {
@@ -60,6 +79,19 @@ export interface SkillsResponse {
 
 export async function getSkills(): Promise<SkillsResponse> {
   const res = await fetch(`${BASE}/skills`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export interface MetricsResponse {
+  window_size: number
+  aggregates: Record<string, number | null>
+  latest: MetricsInfo | null
+  recommendations: HomeostaticRecommendations | null
+}
+
+export async function getMetrics(window = 20): Promise<MetricsResponse> {
+  const res = await fetch(`${BASE}/metrics?window=${window}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
