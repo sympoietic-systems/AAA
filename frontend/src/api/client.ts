@@ -11,6 +11,10 @@ export interface MetricsInfo {
   mutual_perturbation: number | null
   homeostatic_deficit: number | null
   conversation_vitality: number | null
+  boringness: number | null
+  conceptual_velocity: number | null
+  divergence_resolution_ratio: number | null
+  paskian_health: number | null
   phase_shifts: Array<{
     metric: string
     event: string

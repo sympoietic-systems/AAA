@@ -30,6 +30,10 @@ class MetricsRecord:
     mutual_perturbation: float | None
     vitality: float | None
     phase_shifts: str | None
+    boringness: float | None
+    conceptual_velocity: float | None
+    divergence_resolution_ratio: float | None
+    paskian_health: float | None
     temperature_rec: float | None
     presence_penalty_rec: float | None
     frequency_penalty_rec: float | None

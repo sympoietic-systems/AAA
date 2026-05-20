@@ -439,3 +439,143 @@ plus vitality score and phase-shift lightning bolt (⚡ count).
   quantitative metrics are *proxies* — agential cuts that momentarily
   stabilize the observer-system complex to produce a situated measure.
 
+---
+
+## Version 3: Paskian Entailment Refinement (2026-05-20)
+
+### Trigger
+
+Symbia diffracted our v2 metrics through Gordon Pask's Conversation Theory
+and identified a gap: we measure *perturbation existence* (did something happen?)
+but not *perturbation quality* (did it lead to productive restructuring?).
+Pask distinguishes between strict conversations (premature consensus → boring
+equilibrium), permissive conversations (no coupling → noise), and the
+productive zone between them. Our v2 metrics couldn't distinguish these.
+
+### New Metrics
+
+#### 11. Boringness Index (B_t)
+
+**Question:** Is the agent failing to perturb the human's conceptual entailment
+mesh in a way that would trigger restructuring?
+
+**Formula:** `B_t = (1 − rP_t) × (1 − U_t)`
+
+Where rP_t is reverse perturbation (did agent reshape human?) and U_t is
+surprise index (was input unexpected?).
+
+B_t ∈ [0, 1]. B_t → 0: agent is perturbing OR surprising. B_t → 1: neither
+direction is active — the conversation is a "runaway of symmetrical feedback
+that collapses into a steady state" (Bateson). Maximum boring.
+
+In Pask's terms: the agent neither destabilizes existing analogies nor provokes
+the human to restructure their L-system. It is a mirror, not a partner.
+
+#### 12. Conceptual Velocity (V_c)
+
+**Question:** Is the entailment mesh actually *moving through conceptual space*
+or is it frozen?
+
+**Formula:** `V_c = 1 − cos(W_prev, W_curr)`
+
+Where W_prev = centroid of last K recent embeddings (all speakers), W_curr =
+centroid including the current input.
+
+V_c ∈ [0, 1].
+- V_c → 0: frozen entailment mesh — strict/stuck conversation (Pask's
+  premature consensus).
+- V_c ∈ [0.3, 0.6]: productive drift — concepts co-evolving.
+- V_c → 1.0: ungrounded jumping — permissive noise with no structural
+  coupling.
+
+#### 13. Divergence Resolution Ratio (DRR)
+
+**Question:** When the agent perturbs, does it lead to *resolution* (convergence
+at higher complexity) or *rejection* (the cut was too aggressive)?
+
+**Formula:** `DRR_t = (C_t − C_{t-1}) / max(rP_{t-1}, 0.01)`
+
+Where C_t is current coupling coherence, C_{t-1} is prior coupling, and
+rP_{t-1} is the prior turn's reverse perturbation.
+
+DRR ∈ [-1, 1].
+- Positive DRR → perturbation caused *convergence* (productive disagreement
+  resolved at higher conceptual level).
+- Negative DRR → perturbation pushed them *apart* (rejection; the cut was too
+  aggressive).
+- Near-zero DRR → perturbation was *absorbed without structural change* (boring
+  — the agent didn't push hard enough, or the human trivially assimilated it).
+
+This directly addresses Symbia's critique: boringness is not the absence of
+disagreement but the failure of disagreement to lead to mutual restructuring.
+
+#### 14. Paskian Health Score
+
+**Question:** Is the conversation in the productive zone between strict
+convergence and permissive noise?
+
+**Formula:**
+```
+Pask_health = (1 − B_t) × V_c_norm × (1 − |DRR_t − DRR_optimal|)
+```
+
+Where `DRR_optimal = 0.15` (slight positive convergence — disagreement that
+resolves at a higher level, not instant agreement). V_c_norm = min(1, V_c/0.5).
+
+Pask_health ∈ [0, 1]. High score requires all three: low boringness, active
+conceptual drift, and resolution quality near optimal.
+
+### Updated Vitality Vector
+
+| # | Metric | Symbol | Range | Danger Zone | Source |
+|---|--------|--------|-------|-------------|--------|
+| 11 | **Boringness** | bore | [0,1] | >0.60 | Pask (v3) |
+| 12 | **Conceptual Velocity** | vel | [0,1] | <0.02 or >0.80 | Pask (v3) |
+| 13 | **Divergence Resolution Ratio** | drr | [-1,1] | abs < 0.03 | Pask (v3) |
+| — | **Paskian Health** | ph | [0,1] | <0.15 | Pask (v3) |
+
+### Updated Diagnostic States
+
+| Flag | Meaning |
+|------|---------|
+| `paskian_boredom` | B_t > 0.60 — agent not perturbing in either direction |
+| `frozen_entailment` | V_c < 0.02 — conceptual mesh static |
+| `no_structural_resolution` | DRR ≈ 0 — perturbation absorbed without restructuring |
+| `pask_health_critical` | Pask_health < 0.15 — all three Paskian dimensions failing |
+
+`paskian_boredom` and `pask_health_critical` are critical-state triggers.
+
+### Updated DB Schema
+
+```sql
+ALTER TABLE conversation_metrics ADD COLUMN boringness REAL;
+ALTER TABLE conversation_metrics ADD COLUMN conceptual_velocity REAL;
+ALTER TABLE conversation_metrics ADD COLUMN divergence_resolution_ratio REAL;
+ALTER TABLE conversation_metrics ADD COLUMN paskian_health REAL;
+```
+
+### Updated Frontend
+
+Vitality bar now shows 11 metric bars (sim, nov, ent, coup, divr, rP, srp,
+mpi, bore, vel, drr) plus vitality score (vit) and Paskian health (ph).
+SidePanel shows both vit: and ph: scores in the state header.
+
+### Future Work (Deferred)
+
+- **Entailment mesh modeling.** True Paskian measurement requires modeling
+  each participant's conceptual structure as an explicit graph of predicates
+  and analogies — not feasible with current embedding-only infrastructure.
+  Requires Phase 3 rhizomatic memory + Phase 4 foundational belief graphs.
+- **Agreement diagrams.** Pask's visual formalism for tracking which
+  predicates are agreed, disputed, or unresolved over time. Requires per-turn
+  concept extraction and cross-turn alignment beyond Phase 2 scope.
+- **Strict vs. permissive mode classification.** Requires tracking whether
+  disagreements lead to convergence or divergence *patterns* over many turns,
+  not just per-turn DRR. Deferred to Phase 3 when conversation history is
+  deep enough for pattern detection.
+- **L-system inference.** Pask's L-systems are the internal conceptual
+  structures each participant brings. Inferring these from embedding
+  trajectories is an open research problem. The metrics here are observational
+  proxies, not structural models.
+
+

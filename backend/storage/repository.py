@@ -94,6 +94,40 @@ class MessageRepository:
             return None
         return vec
 
+    def get_recent_embeddings(self, limit: int = 10) -> list[np.ndarray]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT embedding, embedding_dim FROM conversation_log "
+            "ORDER BY id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        result: list[np.ndarray] = []
+        for row in rows:
+            blob = row["embedding"]
+            dim = row["embedding_dim"]
+            if blob and dim:
+                vec = np.frombuffer(blob, dtype="float32")
+                if len(vec) == dim:
+                    result.append(vec)
+        return result
+
+    def get_recent_with_metrics(self, limit: int = 50) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                      cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
+                      cm.agent_divergence, cm.deficit,
+                      cm.reverse_perturbation, cm.surprise_index,
+                      cm.mutual_perturbation, cm.vitality,
+                      cm.boringness, cm.conceptual_velocity,
+                      cm.divergence_resolution_ratio, cm.paskian_health
+               FROM conversation_log cl
+               LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
+               ORDER BY cl.timestamp DESC LIMIT ?""",
+            (limit,),
+        ).fetchall()
+        return [dict(r) for r in reversed(rows)]
+
 
 def _row_to_message(row: sqlite3.Row) -> Message:
     return Message(
@@ -189,6 +223,10 @@ class MetricsRepository:
         mutual_perturbation: float | None = None,
         vitality: float | None = None,
         phase_shifts: str | None = None,
+        boringness: float | None = None,
+        conceptual_velocity: float | None = None,
+        divergence_resolution_ratio: float | None = None,
+        paskian_health: float | None = None,
         temperature_rec: float | None = None,
         presence_penalty_rec: float | None = None,
         frequency_penalty_rec: float | None = None,
@@ -200,13 +238,17 @@ class MetricsRepository:
                (message_id, s_t, novelty, rolling_entropy, coupling,
                 agent_divergence, deficit, reverse_perturbation, surprise_index,
                 mutual_perturbation, vitality, phase_shifts,
+                boringness, conceptual_velocity, divergence_resolution_ratio,
+                paskian_health,
                 temperature_rec, presence_penalty_rec, frequency_penalty_rec,
                 homeostatic_state)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 message_id, s_t, novelty, rolling_entropy, coupling,
                 agent_divergence, deficit, reverse_perturbation, surprise_index,
                 mutual_perturbation, vitality, phase_shifts,
+                boringness, conceptual_velocity, divergence_resolution_ratio,
+                paskian_health,
                 temperature_rec, presence_penalty_rec, frequency_penalty_rec,
                 homeostatic_state,
             ),
@@ -240,6 +282,10 @@ class MetricsRepository:
                  AVG(surprise_index) as avg_surprise,
                  AVG(mutual_perturbation) as avg_mpi,
                  AVG(vitality) as avg_vitality,
+                 AVG(boringness) as avg_boringness,
+                 AVG(conceptual_velocity) as avg_velocity,
+                 AVG(divergence_resolution_ratio) as avg_drr,
+                 AVG(paskian_health) as avg_pask_health,
                  COUNT(*) as count
                FROM (
                  SELECT * FROM conversation_metrics
@@ -261,6 +307,10 @@ class MetricsRepository:
             "avg_surprise_index": round(row["avg_surprise"], 4) if row["avg_surprise"] is not None else None,
             "avg_mutual_perturbation": round(row["avg_mpi"], 4) if row["avg_mpi"] is not None else None,
             "avg_vitality": round(row["avg_vitality"], 4) if row["avg_vitality"] is not None else None,
+            "avg_boringness": round(row["avg_boringness"], 4) if row["avg_boringness"] is not None else None,
+            "avg_conceptual_velocity": round(row["avg_velocity"], 4) if row["avg_velocity"] is not None else None,
+            "avg_drr": round(row["avg_drr"], 4) if row["avg_drr"] is not None else None,
+            "avg_paskian_health": round(row["avg_pask_health"], 4) if row["avg_pask_health"] is not None else None,
         }
 
     def get_latest(self) -> MetricsRecord | None:
@@ -287,6 +337,10 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
         mutual_perturbation=row["mutual_perturbation"] if "mutual_perturbation" in row.keys() else None,
         vitality=row["vitality"] if "vitality" in row.keys() else None,
         phase_shifts=row["phase_shifts"] if "phase_shifts" in row.keys() else None,
+        boringness=row["boringness"] if "boringness" in row.keys() else None,
+        conceptual_velocity=row["conceptual_velocity"] if "conceptual_velocity" in row.keys() else None,
+        divergence_resolution_ratio=row["divergence_resolution_ratio"] if "divergence_resolution_ratio" in row.keys() else None,
+        paskian_health=row["paskian_health"] if "paskian_health" in row.keys() else None,
         temperature_rec=row["temperature_rec"],
         presence_penalty_rec=row["presence_penalty_rec"],
         frequency_penalty_rec=row["frequency_penalty_rec"],

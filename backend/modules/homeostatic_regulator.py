@@ -186,6 +186,10 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     surprise = metrics.get("surprise_index")
     mpi = metrics.get("mutual_perturbation")
     vitality = metrics.get("conversation_vitality")
+    boringness = metrics.get("boringness")
+    velocity = metrics.get("conceptual_velocity")
+    drr = metrics.get("divergence_resolution_ratio")
+    pask_health = metrics.get("paskian_health")
 
     flags: list[str] = []
 
@@ -215,7 +219,19 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     if surprise is not None and surprise > 0.40:
         flags.append("phase_disruption")
 
-    critical = {"high_similarity", "entropy_collapse", "agent_self_loop", "mutual_deadlock", "phase_disruption"}
+    if boringness is not None and boringness > 0.60:
+        flags.append("paskian_boredom")
+
+    if velocity is not None and velocity < 0.02:
+        flags.append("frozen_entailment")
+
+    if drr is not None and abs(drr) < 0.03:
+        flags.append("no_structural_resolution")
+
+    if pask_health is not None and pask_health < 0.15:
+        flags.append("pask_health_critical")
+
+    critical = {"high_similarity", "entropy_collapse", "agent_self_loop", "mutual_deadlock", "phase_disruption", "paskian_boredom", "pask_health_critical"}
 
     if any(f in critical for f in flags):
         vitality_state = "critical"

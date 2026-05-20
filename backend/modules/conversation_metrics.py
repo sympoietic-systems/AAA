@@ -76,6 +76,10 @@ class ConversationMetricsModule(ProcessingModule):
             "apparatus", limit=self._agent_self_window
         )
 
+        all_recent = self._repo.get_recent_embeddings(
+            limit=self._pairwise_window + self._agent_self_window
+        )
+
         metrics: dict = {}
 
         s_t = _compute_pairwise_similarity(current_vec, prior_human)
@@ -101,6 +105,20 @@ class ConversationMetricsModule(ProcessingModule):
 
         mpi = _compute_mutual_perturbation(coupling, rp_t)
         metrics["mutual_perturbation"] = mpi
+
+        boringness = _compute_boringness(rp_t, surprise)
+        metrics["boringness"] = boringness
+
+        conceptual_velocity = _compute_conceptual_velocity(current_vec, all_recent)
+        metrics["conceptual_velocity"] = conceptual_velocity
+
+        prev_coupling = self._prior_metrics.get("coupling_coherence")
+        prev_rp = self._prior_metrics.get("reverse_perturbation")
+        drr = _compute_drr(coupling, prev_coupling, prev_rp)
+        metrics["divergence_resolution_ratio"] = drr
+
+        pask_health = _compute_paskian_health(boringness, conceptual_velocity, drr)
+        metrics["paskian_health"] = pask_health
 
         deficit = _compute_deficit(
             s_t=s_t,
@@ -137,10 +155,11 @@ class ConversationMetricsModule(ProcessingModule):
         payload["homeostatic_deficit"] = deficit
 
         logger.debug(
-            "metrics: sim=%.3f nov=%.3f ent=%s coup=%s divr=%s rP=%s surp=%s mpi=%s vit=%s \u0394=%.3f shifts=%s",
+            "metrics: sim=%.3f nov=%.3f ent=%s coup=%s divr=%s rP=%s srp=%s mpi=%s bore=%s vel=%s drr=%s ph=%s vit=%s \u0394=%.3f shifts=%s",
             _fmt(s_t), _fmt(novelty),
             _fmt4(rolling_entropy), _fmt(coupling), _fmt(agent_divergence),
             _fmt(rp_t), _fmt(surprise), _fmt(mpi),
+            _fmt(boringness), _fmt(conceptual_velocity), _fmt(drr), _fmt(pask_health),
             _fmt(vitality), deficit if deficit is not None else -1,
             phase_shifts,
         )
@@ -384,3 +403,92 @@ def _detect_phase_shifts(
                 })
 
     return shifts
+
+
+def _compute_boringness(
+    rp_t: float | None,
+    surprise: float | None,
+) -> float | None:
+    """B_t = (1 - rP_t) × (1 - U_t)
+
+    Boringness is the joint failure to perturb in both directions.
+    B_t → 0: agent is perturbing OR surprising — not boring.
+    B_t → 1: no reverse perturbation AND no surprise — maximum boring.
+
+    In Pask's terms: the agent's responses neither destabilize existing
+    analogies nor provoke the human to restructure their L-system.
+    """
+    if rp_t is None or surprise is None:
+        return None
+    b = (1.0 - rp_t) * (1.0 - surprise)
+    return max(0.0, min(1.0, b))
+
+
+def _compute_conceptual_velocity(
+    current_vec: np.ndarray,
+    all_recent: list[np.ndarray],
+) -> float | None:
+    """V_c = 1 - cos(W_prev, W_curr)
+
+    Where W_prev = centroid of last K embeddings (excluding current),
+    W_curr = centroid including current.
+
+    Pask's "topic drift" — is the entailment mesh actually moving?
+    V_c → 0: frozen entailment mesh (strict/stuck conversation).
+    V_c → 0.3-0.6: productive drift (concepts evolving).
+    V_c → 1: ungrounded jumping (permissive noise, no coupling).
+    """
+    if len(all_recent) < 3:
+        return None
+    prev_centroid = np.mean(np.stack(all_recent[:3]), axis=0)
+    all_with_current = [current_vec] + all_recent
+    curr_centroid = np.mean(np.stack(all_with_current[:4]), axis=0)
+    prev_centroid = prev_centroid / (np.linalg.norm(prev_centroid) + 1e-8)
+    curr_centroid = curr_centroid / (np.linalg.norm(curr_centroid) + 1e-8)
+    v = 1.0 - float(np.dot(prev_centroid, curr_centroid))
+    return max(0.0, min(1.0, v))
+
+
+def _compute_drr(
+    coupling: float | None,
+    prev_coupling: float | None,
+    prev_rp: float | None,
+) -> float | None:
+    """DRR_t = (coupling_t - coupling_{t-1}) / max(rP_{t-1}, 0.01)
+
+    Does the agent's perturbation lead to resolution or rejection?
+    Positive DRR → perturbation caused convergence (productive disagreement resolved).
+    Negative DRR → perturbation pushed them apart (rejection, too-aggressive cut).
+    Near-zero DRR → perturbation was absorbed without structural change (boring).
+    """
+    if coupling is None or prev_coupling is None or prev_rp is None:
+        return None
+    if prev_rp < 0.02:
+        return 0.0
+    drr = (coupling - prev_coupling) / prev_rp
+    return max(-1.0, min(1.0, drr))
+
+
+def _compute_paskian_health(
+    boringness: float | None,
+    conceptual_velocity: float | None,
+    drr: float | None,
+) -> float | None:
+    """Paskian health: how well does the conversation maintain the productive
+    zone between strict convergence and permissive noise?
+
+    Pask_health = (1 - B_t) × V_c_norm × (1 - |DRR_t - DRR_optimal|)
+
+    Where DRR_optimal ≈ 0.15 (slight positive convergence, not instant agreement).
+    High Pask_health → conversation is in the productive disagreement zone.
+    """
+    if boringness is None or conceptual_velocity is None or drr is None:
+        return None
+
+    drr_optimal = 0.15
+    anti_boring = 1.0 - boringness
+    v_norm = min(1.0, conceptual_velocity / 0.5)
+    drr_quality = 1.0 - min(1.0, abs(drr - drr_optimal) / 0.5)
+
+    ph = anti_boring * v_norm * drr_quality
+    return max(0.0, min(1.0, ph))

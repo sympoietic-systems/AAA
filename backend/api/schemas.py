@@ -27,6 +27,7 @@ class HistoryMessage(BaseModel):
     speaker: str
     content: str
     thinking: Optional[str] = None
+    metrics: Optional["MetricsInfo"] = None
 
 
 class HistoryResponse(BaseModel):
@@ -75,6 +76,10 @@ class MetricsInfo(BaseModel):
     mutual_perturbation: float | None = None
     homeostatic_deficit: float | None = None
     conversation_vitality: float | None = None
+    boringness: float | None = None
+    conceptual_velocity: float | None = None
+    divergence_resolution_ratio: float | None = None
+    paskian_health: float | None = None
     phase_shifts: list[dict] | None = None
 
 

@@ -115,18 +115,20 @@ async def get_agent(request: Request):
 async def history(limit: int = 50, request: Request = None):
     state = request.app.state
     repo = state.message_repo
-    messages = repo.get_recent(limit=limit)
+    rows = repo.get_recent_with_metrics(limit=limit)
+    messages: list[HistoryMessage] = []
+    for r in rows:
+        metrics = _build_history_metrics(r)
+        messages.append(HistoryMessage(
+            id=r["id"],
+            timestamp=r["timestamp"],
+            speaker=r["speaker"],
+            content=r["content"],
+            thinking=r.get("thinking"),
+            metrics=metrics,
+        ))
     return HistoryResponse(
-        messages=[
-            HistoryMessage(
-                id=m.id,
-                timestamp=m.timestamp,
-                speaker=m.speaker,
-                content=m.content,
-                thinking=m.thinking,
-            )
-            for m in messages
-        ],
+        messages=messages,
         count=len(messages),
     )
 
@@ -239,6 +241,10 @@ async def get_metrics(request: Request, window: int = 20):
             mutual_perturbation=latest.mutual_perturbation,
             homeostatic_deficit=latest.deficit,
             conversation_vitality=latest.vitality,
+            boringness=latest.boringness,
+            conceptual_velocity=latest.conceptual_velocity,
+            divergence_resolution_ratio=latest.divergence_resolution_ratio,
+            paskian_health=latest.paskian_health,
             phase_shifts=_parse_phase_shifts(latest.phase_shifts),
         )
         temp_rec = None
@@ -306,6 +312,10 @@ def _store_metrics(metrics_repo, message_id: int, metrics: dict, recommendations
         mutual_perturbation=float(metrics["mutual_perturbation"]) if metrics.get("mutual_perturbation") is not None else None,
         vitality=float(metrics["conversation_vitality"]) if metrics.get("conversation_vitality") is not None else None,
         phase_shifts=phase_shifts_json,
+        boringness=float(metrics["boringness"]) if metrics.get("boringness") is not None else None,
+        conceptual_velocity=float(metrics["conceptual_velocity"]) if metrics.get("conceptual_velocity") is not None else None,
+        divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"]) if metrics.get("divergence_resolution_ratio") is not None else None,
+        paskian_health=float(metrics["paskian_health"]) if metrics.get("paskian_health") is not None else None,
         temperature_rec=float(temp_rec) if temp_rec is not None else None,
         presence_penalty_rec=float(pres_rec) if pres_rec is not None else None,
         frequency_penalty_rec=float(freq_rec) if freq_rec is not None else None,
@@ -327,6 +337,10 @@ def _build_metrics_info(metrics: dict | None) -> MetricsInfo | None:
         mutual_perturbation=metrics.get("mutual_perturbation"),
         homeostatic_deficit=metrics.get("homeostatic_deficit"),
         conversation_vitality=metrics.get("conversation_vitality"),
+        boringness=metrics.get("boringness"),
+        conceptual_velocity=metrics.get("conceptual_velocity"),
+        divergence_resolution_ratio=metrics.get("divergence_resolution_ratio"),
+        paskian_health=metrics.get("paskian_health"),
         phase_shifts=metrics.get("phase_shifts"),
     )
 
@@ -351,3 +365,25 @@ def _parse_phase_shifts(raw: str | None) -> list[dict] | None:
         return _json.loads(raw)
     except Exception:
         return None
+
+
+def _build_history_metrics(row: dict) -> MetricsInfo | None:
+    if row.get("s_t") is None:
+        return None
+    return MetricsInfo(
+        pairwise_similarity=row.get("s_t"),
+        conceptual_novelty=row.get("novelty"),
+        rolling_entropy=row.get("rolling_entropy"),
+        coupling_coherence=row.get("coupling"),
+        agent_self_divergence=row.get("agent_divergence"),
+        reverse_perturbation=row.get("reverse_perturbation"),
+        surprise_index=row.get("surprise_index"),
+        mutual_perturbation=row.get("mutual_perturbation"),
+        homeostatic_deficit=row.get("deficit"),
+        conversation_vitality=row.get("vitality"),
+        boringness=row.get("boringness"),
+        conceptual_velocity=row.get("conceptual_velocity"),
+        divergence_resolution_ratio=row.get("divergence_resolution_ratio"),
+        paskian_health=row.get("paskian_health"),
+        phase_shifts=None,
+    )

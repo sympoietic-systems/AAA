@@ -84,22 +84,36 @@ function HealthSection() {
   }, [])
 
   const vitality = metrics?.latest?.conversation_vitality
+  const paskHealth = metrics?.latest?.paskian_health
   const state = metrics?.recommendations?.state ?? "unknown"
   const stateColor =
     state === "healthy" ? "#4ade80" :
     state === "compensating" ? "#facc15" :
     state === "critical" ? "#ef4444" : "#555"
 
-  const renderBar = (label: string, value: number | null | undefined, max: number) => {
+  const renderBar = (label: string, fullName: string, value: number | null | undefined, max: number, hint: string) => {
     const pct = value != null ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
     const display = value != null ? (value < 0.01 ? value.toFixed(4) : value.toFixed(3)) : "\u2014"
     return (
-      <div className="flex items-center gap-1.5" key={label}>
+      <div className="flex items-center gap-1.5 group relative" key={label}>
         <span className="w-7 text-[9px] text-[#555] text-right">{label}</span>
         <div className="w-12 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
           <div className="h-full rounded-sm bg-[#4ade80]" style={{ width: `${pct}%`, opacity: 0.6 }} />
         </div>
         <span className="text-[9px] text-[#666] w-10 text-right">{display}</span>
+        <div className="
+          absolute bottom-full left-0 mb-1 px-2 py-1
+          bg-[#1a1a1a] border border-[#333] rounded
+          text-[10px] text-[#aaa] leading-snug
+          whitespace-nowrap z-50
+          opacity-0 group-hover:opacity-100
+          transition-opacity duration-150
+          pointer-events-none
+        ">
+          <div className="text-[#4ade80] text-[11px] font-bold">{fullName}</div>
+          <div className="text-[#888]">{display} / {max}</div>
+          <div className="text-[#666] max-w-48 whitespace-normal">{hint}</div>
+        </div>
       </div>
     )
   }
@@ -115,7 +129,7 @@ function HealthSection() {
         </span>
         <span className="text-[10px] text-[#888]">vitality</span>
         <span className="text-[9px] ml-auto" style={{ color: stateColor }}>
-          {state} {vitality != null ? `vit:${vitality.toFixed(2)}` : ""}
+          {state} {vitality != null ? `vit:${vitality.toFixed(2)}` : ""}{paskHealth != null ? ` ph:${paskHealth.toFixed(2)}` : ""}
         </span>
       </div>
 
@@ -123,14 +137,28 @@ function HealthSection() {
 
       {metrics?.latest && (
         <div className="space-y-0.5">
-          {renderBar("sim", metrics.latest.pairwise_similarity, 1.0)}
-          {renderBar("nov", metrics.latest.conceptual_novelty, 1.0)}
-          {renderBar("ent", metrics.latest.rolling_entropy, 0.25)}
-          {renderBar("coup", metrics.latest.coupling_coherence, 1.0)}
-          {renderBar("divr", metrics.latest.agent_self_divergence, 1.0)}
-          {renderBar("rP", metrics.latest.reverse_perturbation, 1.0)}
-          {renderBar("srp", metrics.latest.surprise_index, 1.0)}
-          {renderBar("mpi", metrics.latest.mutual_perturbation, 1.0)}
+          {renderBar("sim", "pairwise similarity", metrics.latest.pairwise_similarity, 1.0,
+            "Is this input repeating the previous one? >0.85 = near-duplicate")}
+          {renderBar("nov", "conceptual novelty", metrics.latest.conceptual_novelty, 1.0,
+            "Has anything similar been said before? <0.15 = concept exhaustion")}
+          {renderBar("ent", "rolling entropy", metrics.latest.rolling_entropy, 0.25,
+            "Is the conversation monotonous over time? <0.01 = entropy collapse")}
+          {renderBar("coup", "coupling coherence", metrics.latest.coupling_coherence, 1.0,
+            "Is the agent responding to the human? <0.15 = dissociation, >0.85 = echo")}
+          {renderBar("divr", "agent self-divergence", metrics.latest.agent_self_divergence, 1.0,
+            "Is the agent repeating itself? <0.15 = self-loop")}
+          {renderBar("rP", "reverse perturbation", metrics.latest.reverse_perturbation, 1.0,
+            "Did the agent's last response reshape the human? <0.10 = stagnant")}
+          {renderBar("srp", "surprise index", metrics.latest.surprise_index, 1.0,
+            "Distance from expected phase space? >0.40 = phase disruption")}
+          {renderBar("mpi", "mutual perturbation", metrics.latest.mutual_perturbation, 1.0,
+            "Product of coupling x reverse perturbation. <0.05 = deadlock")}
+          {renderBar("bore", "boringness", metrics.latest.boringness, 1.0,
+            "Joint failure to perturb in either direction? >0.60 = Paskian boredom")}
+          {renderBar("vel", "conceptual velocity", metrics.latest.conceptual_velocity, 1.0,
+            "Is the entailment mesh drifting? <0.02 = frozen, >0.80 = noise")}
+          {renderBar("drr", "divergence resolution ratio", metrics.latest.divergence_resolution_ratio, 1.0,
+            "Does perturbation lead to resolution? Positive = convergence, negative = rejection")}
         </div>
       )}
 

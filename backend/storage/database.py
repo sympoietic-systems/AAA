@@ -63,6 +63,10 @@ def init_db(db_path: str) -> sqlite3.Connection:
             mutual_perturbation REAL,
             vitality          REAL,
             phase_shifts      TEXT,
+            boringness        REAL,
+            conceptual_velocity REAL,
+            divergence_resolution_ratio REAL,
+            paskian_health    REAL,
             temperature_rec   REAL,
             presence_penalty_rec REAL,
             frequency_penalty_rec REAL,
@@ -87,6 +91,10 @@ def init_db(db_path: str) -> sqlite3.Connection:
         ("mutual_perturbation", "REAL"),
         ("vitality", "REAL"),
         ("phase_shifts", "TEXT"),
+        ("boringness", "REAL"),
+        ("conceptual_velocity", "REAL"),
+        ("divergence_resolution_ratio", "REAL"),
+        ("paskian_health", "REAL"),
     ]:
         try:
             conn.execute(

@@ -21,13 +21,13 @@ export function ChatView({ messages, loading, error, agentName, onSend, onClearE
   }, [messages])
 
   return (
-    <div className={`flex flex-col h-full max-w-3xl mx-auto w-full ${className}`}>
+    <div className={`flex flex-col h-full max-w-5xl mx-auto w-full ${className}`}>
       <header className="flex items-center gap-2 px-4 py-3 border-b border-[#222] text-sm">
         <span className="text-[#4ade80]">{'>'}</span>
         <span className="text-[#888]">{agentName}</span>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
         {messages.length === 0 && !loading && (
           <div className="text-[#555] text-sm mt-20">
             <p>{agentName} v0.1.0 — type a message below.</p>

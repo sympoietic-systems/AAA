@@ -81,10 +81,18 @@ a {
   text-underline-offset: 2px;
 }
 
+.markdown-body {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
 table {
   border-collapse: collapse;
   margin: 0.5rem 0;
   font-size: 0.8125rem;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
 }
 th, td {
   border: 1px solid #222;
