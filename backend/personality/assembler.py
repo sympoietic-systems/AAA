@@ -39,8 +39,13 @@ class PromptAssemblerModule(ProcessingModule):
 
         messages = payload.get("messages", [])
         sediment_messages = payload.get("sediment_messages", [])
+        file_context = payload.get("file_context", [])
+        file_context_tokens = payload.get("file_context_tokens", 0)
 
         assembled: list[dict] = [system_msg]
+
+        for fc in file_context:
+            assembled.append(fc)
 
         for sm in sediment_messages:
             assembled.append(sm)
@@ -51,6 +56,7 @@ class PromptAssemblerModule(ProcessingModule):
         assembled = _trim_to_budget(
             assembled,
             system_msg_token_count=estimate_message_tokens(system_msg),
+            file_context_count=len(file_context),
             max_tokens=self._max_context_tokens,
         )
 
@@ -62,14 +68,17 @@ def _trim_to_budget(
     messages: list[dict],
     system_msg_token_count: int,
     max_tokens: int,
+    file_context_count: int = 0,
 ) -> list[dict]:
     total = sum(estimate_message_tokens(m) for m in messages)
     if total <= max_tokens:
         return messages
 
-    system_idx = 0
-    sediment_end = 1
-    for i in range(1, len(messages)):
+    system_end = 1
+    file_context_end = system_end + file_context_count
+
+    sediment_end = file_context_end
+    for i in range(file_context_end, len(messages)):
         role = messages[i].get("role", "")
         if role in ("user", "assistant"):
             sediment_end = i
@@ -77,13 +86,11 @@ def _trim_to_budget(
     else:
         sediment_end = len(messages)
 
-    system_part = messages[system_idx:system_idx + 1]
-    sediment_part = messages[1:sediment_end]
+    sacred_part = messages[:sediment_end]
     history_part = messages[sediment_end:]
 
-    system_tokens = sum(estimate_message_tokens(m) for m in system_part)
-    sediment_tokens = sum(estimate_message_tokens(m) for m in sediment_part)
-    available = max_tokens - system_tokens - sediment_tokens
+    sacred_tokens = sum(estimate_message_tokens(m) for m in sacred_part)
+    available = max_tokens - sacred_tokens
 
     trimmed_history: list[dict] = []
     used = 0
@@ -94,7 +101,7 @@ def _trim_to_budget(
         trimmed_history.insert(0, m)
         used += t
 
-    return system_part + sediment_part + trimmed_history
+    return sacred_part + trimmed_history
 
 
 def _build_system_content(identity: dict, registry: SkillRegistry) -> str:

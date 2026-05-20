@@ -4,10 +4,18 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class AttachmentInfo(BaseModel):
+    file_name: str
+    file_type: str
+    token_count: int = 0
+    preview: str | None = None
+
+
 class ChatRequest(BaseModel):
     content: str
     speaker: str = Field(default="human", pattern="^(human|apparatus)$")
     conversation_id: str = Field(default="", description="Conversation ID; auto-created if empty")
+    attachments: list[AttachmentInfo] | None = None
 
 
 class ChatResponse(BaseModel):
@@ -23,6 +31,8 @@ class ChatResponse(BaseModel):
     error: str | None = None
     metrics: Optional["MetricsInfo"] = None
     homeostatic_recommendations: Optional["HomeostaticRecommendations"] = None
+    attachments: list[AttachmentInfo] | None = None
+    context_sent: str | None = None
 
 
 class HistoryMessage(BaseModel):

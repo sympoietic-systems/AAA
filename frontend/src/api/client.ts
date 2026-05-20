@@ -33,6 +33,13 @@ export interface HomeostaticRecommendations {
   triggered_flags: string[]
 }
 
+export interface AttachmentInfo {
+  file_name: string
+  file_type: string
+  token_count: number
+  preview?: string | null
+}
+
 export interface ChatMessage {
   id: number
   timestamp: string
@@ -44,6 +51,8 @@ export interface ChatMessage {
   thinking_tokens?: number | null
   metrics?: MetricsInfo
   homeostatic_recommendations?: HomeostaticRecommendations
+  attachments?: AttachmentInfo[] | null
+  context_sent?: string | null
 }
 
 export interface AgentInfo {
@@ -51,7 +60,30 @@ export interface AgentInfo {
   version?: string
 }
 
-export async function sendMessage(content: string, conversationId?: string): Promise<ChatMessage> {
+export async function sendMessage(
+  content: string,
+  conversationId?: string,
+  files?: File[]
+): Promise<ChatMessage> {
+  if (files && files.length > 0) {
+    const formData = new FormData()
+    formData.append("content", content)
+    formData.append("speaker", "human")
+    formData.append("conversation_id", conversationId || "")
+    for (const file of files) {
+      formData.append("files", file)
+    }
+    const res = await fetch(`${BASE}/chat`, {
+      method: "POST",
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Unknown error" }))
+      throw new Error(err.detail || `HTTP ${res.status}`)
+    }
+    return res.json()
+  }
+
   const res = await fetch(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

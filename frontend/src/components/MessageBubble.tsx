@@ -129,6 +129,7 @@ function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
 export function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isHuman = msg.speaker === "human"
   const [thinkingOpen, setThinkingOpen] = useState(false)
+  const [contextOpen, setContextOpen] = useState(false)
 
   return (
     <div className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
@@ -170,6 +171,23 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
           {thinkingOpen && (
             <div className="mt-1 pl-3 border-l border-[#2a2a2a] text-xs text-[#666] leading-relaxed whitespace-pre-wrap">
               {msg.thinking}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isHuman && msg.context_sent && (
+        <div className="mt-1">
+          <button
+            onClick={() => setContextOpen(!contextOpen)}
+            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1"
+          >
+            <span>{contextOpen ? "\u25BC" : "\u25B6"}</span>
+            <span>context</span>
+          </button>
+          {contextOpen && (
+            <div className="mt-1 pl-3 border-l border-[#2a2a2a] text-xs text-[#666] leading-relaxed whitespace-pre-wrap">
+              {msg.context_sent}
             </div>
           )}
         </div>

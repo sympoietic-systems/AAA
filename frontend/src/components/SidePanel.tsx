@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import type { SkillInfo, SkillsResponse, MetricsResponse, TokenResponse } from "../api/client"
+import type { AttachmentInfo, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse } from "../api/client"
 import { getSkills, getMetrics, getTokens } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -283,7 +283,7 @@ function HealthSection() {
   )
 }
 
-export function SidePanel() {
+export function SidePanel({ uploadedFiles = [] }: { uploadedFiles?: AttachmentInfo[] }) {
   const [collapsed, setCollapsed] = useState(true)
   const [data, setData] = useState<SkillsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -291,6 +291,7 @@ export function SidePanel() {
   const [skillsOpen, setSkillsOpen] = useState(false)
   const [healthOpen, setHealthOpen] = useState(true)
   const [tokensOpen, setTokensOpen] = useState(true)
+  const [sedimentOpen, setSedimentOpen] = useState(true)
 
   useEffect(() => {
     getSkills()
@@ -382,6 +383,34 @@ export function SidePanel() {
                 </div>
               )}
             </div>
+
+            {uploadedFiles.length > 0 && (
+              <div className="flex flex-col gap-1 mt-1">
+                <SectionHeader
+                  label="Sediment"
+                  count={uploadedFiles.length}
+                  open={sedimentOpen}
+                  onToggle={() => setSedimentOpen(!sedimentOpen)}
+                />
+                {sedimentOpen && (
+                  <div className="pl-3">
+                    <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+                      {uploadedFiles.map((f) => (
+                        <div key={f.file_name} className="flex items-center gap-1.5 py-1 border-b border-[#1a1a1a] last:border-b-0">
+                          <span className="text-xs">{f.file_type === "pdf" ? "\uD83D\uDCC4" : f.file_type === "md" ? "\uD83D\uDCDD" : "\uD83D\uDCC4"}</span>
+                          <span className="text-[10px] text-[#aaa] truncate flex-1">{f.file_name}</span>
+                          {f.token_count > 0 && (
+                            <span className="text-[8px] text-[#666]">
+                              {f.token_count >= 1000 ? `${(f.token_count / 1000).toFixed(1)}k` : f.token_count} tok
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {data && (
               <div className="flex flex-col gap-1 mt-1">

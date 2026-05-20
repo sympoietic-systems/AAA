@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 
 from .database import get_connection
-from .models import Conversation, ErrorLogEntry, Message, MetricsRecord
+from .models import Conversation, ErrorLogEntry, Message, MetricsRecord, PerceptionSediment
 
 
 class ConversationRepository:
@@ -511,6 +511,119 @@ class MetricsRepository:
         return _row_to_metrics(row)
 
 
+class PerceptionSedimentRepository:
+    def __init__(self, db_path: str):
+        self._db_path = db_path
+
+    def _conn(self) -> sqlite3.Connection:
+        return get_connection(self._db_path)
+
+    def insert_chunk(
+        self,
+        conversation_id: str,
+        file_name: str,
+        file_type: str,
+        chunk_index: int,
+        chunk_text: str,
+        embedding: bytes,
+        embedding_model: str,
+        token_count: int,
+    ) -> PerceptionSediment:
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO perception_sediment
+               (conversation_id, file_name, file_type, chunk_index, chunk_text,
+                embedding, embedding_model, token_count)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (conversation_id, file_name, file_type, chunk_index, chunk_text,
+             embedding, embedding_model, token_count),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM perception_sediment WHERE id = last_insert_rowid()"
+        ).fetchone()
+        return _row_to_perception_sediment(row)
+
+    def get_by_conversation(
+        self, conversation_id: str
+    ) -> list[PerceptionSediment]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM perception_sediment WHERE conversation_id = ? ORDER BY file_name, chunk_index",
+            (conversation_id,),
+        ).fetchall()
+        return [_row_to_perception_sediment(r) for r in rows]
+
+    def get_embeddings_by_conversation(
+        self, conversation_id: str
+    ) -> list[tuple[int, np.ndarray]]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT id, embedding, embedding_model FROM perception_sediment WHERE conversation_id = ?",
+            (conversation_id,),
+        ).fetchall()
+        result: list[tuple[int, np.ndarray]] = []
+        for row in rows:
+            blob = row["embedding"]
+            if blob:
+                vec = np.frombuffer(blob, dtype="float32")
+                result.append((row["id"], vec))
+        return result
+
+    def get_by_ids(self, chunk_ids: list[int]) -> list[PerceptionSediment]:
+        if not chunk_ids:
+            return []
+        conn = self._conn()
+        placeholders = ",".join("?" * len(chunk_ids))
+        rows = conn.execute(
+            f"SELECT * FROM perception_sediment WHERE id IN ({placeholders})",
+            chunk_ids,
+        ).fetchall()
+        id_to_row = {r["id"]: _row_to_perception_sediment(r) for r in rows}
+        return [id_to_row[cid] for cid in chunk_ids if cid in id_to_row]
+
+    def get_file_summary(
+        self, conversation_id: str
+    ) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT file_name, file_type,
+                      SUM(token_count) as total_tokens,
+                      COUNT(*) as chunk_count
+               FROM perception_sediment
+               WHERE conversation_id = ?
+               GROUP BY file_name, file_type
+               ORDER BY file_name""",
+            (conversation_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_file_preview(
+        self, conversation_id: str, file_name: str, max_chars: int = 400
+    ) -> str | None:
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT chunk_text FROM perception_sediment
+               WHERE conversation_id = ? AND file_name = ?
+               ORDER BY chunk_index LIMIT 1""",
+            (conversation_id, file_name),
+        ).fetchone()
+        if not row:
+            return None
+        text = row["chunk_text"]
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars].rstrip() + "..."
+
+    def delete_by_conversation(self, conversation_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM perception_sediment WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.commit()
+
+
 def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
     return MetricsRecord(
         message_id=row["message_id"],
@@ -533,4 +646,19 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
         presence_penalty_rec=row["presence_penalty_rec"],
         frequency_penalty_rec=row["frequency_penalty_rec"],
         homeostatic_state=row["homeostatic_state"],
+    )
+
+
+def _row_to_perception_sediment(row: sqlite3.Row) -> PerceptionSediment:
+    return PerceptionSediment(
+        id=row["id"],
+        conversation_id=row["conversation_id"],
+        file_name=row["file_name"],
+        file_type=row["file_type"],
+        chunk_index=row["chunk_index"],
+        chunk_text=row["chunk_text"],
+        embedding=row["embedding"],
+        embedding_model=row["embedding_model"],
+        token_count=row["token_count"],
+        created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
     )

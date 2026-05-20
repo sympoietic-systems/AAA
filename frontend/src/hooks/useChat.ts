@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { getAgent, getHistory, sendMessage } from "../api/client"
-import type { ChatMessage } from "../api/client"
+import type { AttachmentInfo, ChatMessage } from "../api/client"
 
 function estimateTokens(text: string): number {
   if (!text) return 0
@@ -12,6 +12,7 @@ export function useChat(conversationId: string) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
+  const [uploadedFiles, setUploadedFiles] = useState<AttachmentInfo[]>([])
   const loadedRef = useRef<string>("")
 
   useEffect(() => {
@@ -29,9 +30,10 @@ export function useChat(conversationId: string) {
     } else {
       setMessages([])
     }
+    setUploadedFiles([])
   }, [conversationId])
 
-  const send = useCallback(async (content: string) => {
+  const send = useCallback(async (content: string, files?: File[]) => {
     if (!content.trim() || loading) return
     setError(null)
     setLoading(true)
@@ -46,7 +48,11 @@ export function useChat(conversationId: string) {
     setMessages((prev) => [...prev, userMsg])
 
     try {
-      const response = await sendMessage(content, conversationId || undefined)
+      const response = await sendMessage(
+        content,
+        conversationId || undefined,
+        files && files.length > 0 ? files : undefined
+      )
       setMessages((prev) => {
         const updated = [...prev]
         if (response.metrics) {
@@ -60,6 +66,18 @@ export function useChat(conversationId: string) {
         updated.push(response)
         return updated
       })
+      if (response.attachments) {
+        setUploadedFiles((prev) => {
+          const existing = new Set(prev.map((a) => a.file_name))
+          const merged = [...prev]
+          for (const a of response.attachments!) {
+            if (!existing.has(a.file_name)) {
+              merged.push(a)
+            }
+          }
+          return merged
+        })
+      }
       return response
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to send message"
@@ -72,5 +90,5 @@ export function useChat(conversationId: string) {
 
   const clearError = useCallback(() => setError(null), [])
 
-  return { messages, loading, error, send, clearError, agentName }
+  return { messages, loading, error, send, clearError, agentName, uploadedFiles }
 }

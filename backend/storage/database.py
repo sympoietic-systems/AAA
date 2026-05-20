@@ -145,6 +145,37 @@ def init_db(db_path: str) -> sqlite3.Connection:
         except sqlite3.OperationalError:
             pass
 
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS perception_sediment (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id   TEXT NOT NULL,
+                file_name         TEXT NOT NULL,
+                file_type         TEXT NOT NULL,
+                chunk_index       INTEGER NOT NULL,
+                chunk_text        TEXT NOT NULL,
+                embedding         BLOB NOT NULL,
+                embedding_model   TEXT NOT NULL,
+                token_count       INTEGER NOT NULL,
+                created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+            )
+        """)
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ps_conv ON perception_sediment(conversation_id)"
+        )
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ps_file ON perception_sediment(conversation_id, file_name)"
+        )
+    except sqlite3.OperationalError:
+        pass
+
     _migrate_legacy_conversation(conn)
 
     conn.commit()

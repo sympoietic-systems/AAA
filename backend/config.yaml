@@ -38,6 +38,7 @@ llm:
 pipeline:
   modules:
     - embedder
+    - perception
     - conversation_metrics
     - context_collector
     - sedimentation_retrieval
@@ -60,6 +61,15 @@ sedimentation:
   sediment_token_budget: 2000
   sediment_count: 10
   similarity_threshold: 0.3
+
+# ── Perception ──────────────────────────────────
+perception:
+  enabled: true
+  file_token_budget: 3000
+  top_k_chunks: 6
+  chunk_size: 512
+  chunk_overlap: 64
+  similarity_threshold: 0.25
 
 # ── Homeostasis ──────────────────────────────────
 homeostasis:

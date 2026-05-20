@@ -121,6 +121,7 @@ class LLMClientModule(ProcessingModule):
 
     async def process(self, payload: dict) -> dict:
         messages = payload.get("messages", [])
+        payload["context_sent"] = _format_context(messages)
         params = {
             k: v
             for k, v in payload.items()
@@ -135,3 +136,16 @@ class LLMClientModule(ProcessingModule):
     @property
     def provider(self) -> BaseLLMProvider:
         return self._provider
+
+
+def _format_context(messages: list[dict]) -> str:
+    lines: list[str] = []
+    for i, msg in enumerate(messages):
+        role = msg.get("role", "unknown")
+        content = msg.get("content", "")
+        if isinstance(content, list):
+            text_parts = [p.get("text", "") for p in content if p.get("type") == "text"]
+            content = " ".join(text_parts)
+        lines.append(f"[{i}] {role}: {content}")
+        lines.append("")
+    return "\n".join(lines)

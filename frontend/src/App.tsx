@@ -17,14 +17,14 @@ export default function App() {
     refreshTitle,
   } = useConversations()
 
-  const { messages, loading, error, send, clearError, agentName } = useChat(activeId)
+  const { messages, loading, error, send, clearError, agentName, uploadedFiles } = useChat(activeId)
   const [convCollapsed, setConvCollapsed] = useState(true)
   const activeIdRef = useRef(activeId)
   activeIdRef.current = activeId
 
-  const handleSend = async (content: string) => {
+  const handleSend = async (content: string, files?: File[]) => {
     const currentActiveId = activeIdRef.current
-    const response = await send(content)
+    const response = await send(content, files)
 
     if (response && response.conversation_id) {
       if (!currentActiveId) {
@@ -59,11 +59,12 @@ export default function App() {
         loading={loading}
         error={error}
         agentName={agentName}
+        uploadedFiles={uploadedFiles}
         onSend={handleSend}
         onClearError={clearError}
         className="flex-1 min-w-0"
       />
-      <SidePanel />
+      <SidePanel uploadedFiles={uploadedFiles} />
     </div>
   )
 }

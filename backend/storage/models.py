@@ -54,6 +54,20 @@ class MetricsRecord:
 
 
 @dataclass
+class PerceptionSediment:
+    id: int | None
+    conversation_id: str
+    file_name: str
+    file_type: str
+    chunk_index: int
+    chunk_text: str
+    embedding: bytes
+    embedding_model: str
+    token_count: int
+    created_at: datetime | None = None
+
+
+@dataclass
 class ErrorLogEntry:
     id: int | None
     timestamp: datetime

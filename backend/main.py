@@ -18,6 +18,7 @@ from backend.modules.llm_client import (
     OpenAICompatibleProvider,
     OpenRouterProvider,
 )
+from backend.modules.perception import PerceptionModule
 from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
 from backend.personality.assembler import PromptAssemblerModule, _build_system_content
 from backend.skills.metadata import SkillMeta
@@ -28,6 +29,7 @@ from backend.storage.repository import (
     ErrorLogRepository,
     MessageRepository,
     MetricsRepository,
+    PerceptionSedimentRepository,
 )
 from backend.utils.token_counter import estimate_tokens
 
@@ -100,6 +102,7 @@ async def lifespan(app: FastAPI):
     error_repo = ErrorLogRepository(str(full_db_path))
     metrics_repo = MetricsRepository(str(full_db_path))
     conversation_repo = ConversationRepository(str(full_db_path))
+    perception_repo = PerceptionSedimentRepository(str(full_db_path))
 
     embed_cfg = config.get("embedding", {})
     embedder = EmbedderModule(
@@ -168,6 +171,23 @@ async def lifespan(app: FastAPI):
                   category="memory", always_run=True),
     )
 
+    perception_cfg = config.get("perception", {})
+    perception_module = PerceptionModule(
+        perception_repo=perception_repo,
+        embedding_service=embedder.service,
+        file_token_budget=perception_cfg.get("file_token_budget", 3000),
+        top_k_chunks=perception_cfg.get("top_k_chunks", 6),
+        chunk_size=perception_cfg.get("chunk_size", 512),
+        chunk_overlap=perception_cfg.get("chunk_overlap", 64),
+        similarity_threshold=perception_cfg.get("similarity_threshold", 0.25),
+    )
+    registry.register_with_meta(
+        "perception", lambda: perception_module,
+        SkillMeta(name="perception", description="Extracts text from uploaded files, chunks, embeds, and retrieves relevant sediment via similarity",
+                  category="perception", always_run=False,
+                  triggers=["file", "document", "pdf", "upload", "read"]),
+    )
+
     prompt_assembler = PromptAssemblerModule(
         identity_path=identity_path,
         skill_registry=registry,
@@ -225,6 +245,7 @@ async def lifespan(app: FastAPI):
     app.state.error_repo = error_repo
     app.state.metrics_repo = metrics_repo
     app.state.conversation_repo = conversation_repo
+    app.state.perception_repo = perception_repo
     app.state.registry = registry
     app.state.pipeline = pipeline
     app.state.pipeline_order = pipeline_order

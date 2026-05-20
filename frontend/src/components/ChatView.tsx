@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import type { ChatMessage } from "../api/client"
+import type { AttachmentInfo, ChatMessage } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 
@@ -8,12 +8,13 @@ interface Props {
   loading: boolean
   error: string | null
   agentName: string
-  onSend: (text: string) => void
+  uploadedFiles: AttachmentInfo[]
+  onSend: (text: string, files?: File[]) => void
   onClearError: () => void
   className?: string
 }
 
-export function ChatView({ messages, loading, error, agentName, onSend, onClearError, className = "" }: Props) {
+export function ChatView({ messages, loading, error, agentName, uploadedFiles, onSend, onClearError, className = "" }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -25,6 +26,11 @@ export function ChatView({ messages, loading, error, agentName, onSend, onClearE
       <header className="flex items-center gap-2 px-4 py-3 border-b border-[#222] text-sm">
         <span className="text-[#4ade80]">{'>'}</span>
         <span className="text-[#888]">{agentName}</span>
+        {uploadedFiles.length > 0 && (
+          <span className="text-[#555] text-xs ml-auto">
+            {uploadedFiles.length} file{uploadedFiles.length > 1 ? "s" : ""}
+          </span>
+        )}
       </header>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">

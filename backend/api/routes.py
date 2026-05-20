@@ -1,10 +1,12 @@
 import logging
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
 from .schemas import (
     AgentInfo,
+    AttachmentInfo,
     ChatRequest,
     ChatResponse,
     ConversationInfo,
@@ -27,6 +29,59 @@ from backend.utils.token_counter import estimate_tokens
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
+
+
+async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]]]:
+    content_type = request.headers.get("content-type", "")
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        content = str(form.get("content", ""))
+        conversation_id = str(form.get("conversation_id", ""))
+        speaker = str(form.get("speaker", "human"))
+        uploaded_files = form.getlist("files")
+
+        attachments: list[dict] = []
+        for f in uploaded_files:
+            if not hasattr(f, "filename") or not f.filename:
+                continue
+            file_bytes = await f.read()
+            ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "txt"
+            if ext in ("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"):
+                file_type = "image"
+            elif ext == "pdf":
+                file_type = "pdf"
+            elif ext == "docx":
+                file_type = "docx"
+            elif ext == "md":
+                file_type = "md"
+            else:
+                file_type = "txt"
+            attachments.append({
+                "file_name": f.filename,
+                "file_type": file_type,
+                "content": file_bytes,
+            })
+
+        return content, speaker, conversation_id, (attachments if attachments else None)
+
+    body = await request.json()
+    content = body.get("content", "")
+    speaker = body.get("speaker", "human")
+    conversation_id = body.get("conversation_id", "")
+    json_attachments = body.get("attachments")
+    parsed_attachments = None
+    if json_attachments:
+        parsed_attachments = [
+            {
+                "file_name": a.get("file_name", ""),
+                "file_type": a.get("file_type", "txt"),
+                "content": a.get("content", ""),
+            }
+            for a in json_attachments
+        ] if isinstance(json_attachments, list) else None
+
+    return content, speaker, conversation_id, parsed_attachments
 
 
 async def _generate_title(llm_provider, first_message: str) -> str:
@@ -54,18 +109,12 @@ async def _generate_title(llm_provider, first_message: str) -> str:
         return first_message[:60]
 
 
-async def _get_or_create_conversation(
-    conv_repo, conversation_id: str, agent_id: str
-) -> str:
-    if conversation_id and conv_repo.get(conversation_id):
-        return conversation_id
-    conv_id = str(uuid.uuid4())
-    conv_repo.create(conversation_id=conv_id, agent_id=agent_id)
-    return conv_id
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(body: ChatRequest, request: Request):
+async def chat(request: Request):
+    content, speaker, conversation_id, attachments = await _parse_chat_request(request)
+
     state = request.app.state
     pipeline = state.pipeline
     repo = state.message_repo
@@ -75,7 +124,6 @@ async def chat(body: ChatRequest, request: Request):
     agent_id = getattr(state, "agent_name", "symbia")
     llm_provider = getattr(state, "llm_provider", None)
 
-    conversation_id = body.conversation_id or ""
     is_new = False
 
     if conv_repo:
@@ -87,11 +135,15 @@ async def chat(body: ChatRequest, request: Request):
             conv_repo.touch(conversation_id)
 
     try:
-        result = await pipeline.run({
-            "content": body.content,
-            "speaker": body.speaker,
+        initial_payload: dict = {
+            "content": content,
+            "speaker": speaker,
             "conversation_id": conversation_id,
-        })
+        }
+        if attachments:
+            initial_payload["attachments"] = attachments
+
+        result = await pipeline.run(initial_payload)
 
         response_text = result.payload.get("response", "")
         thinking = result.payload.get("thinking")
@@ -104,15 +156,15 @@ async def chat(body: ChatRequest, request: Request):
                 error_repo.log_error(
                     module=err["module"],
                     error=RuntimeError(err["error_message"]),
-                    context={"input": body.content},
+                    context={"input": content},
                 )
             raise HTTPException(status_code=500, detail="Pipeline processing failed")
 
-        content_tokens = estimate_tokens(body.content)
+        content_tokens = estimate_tokens(content)
 
         msg = repo.insert(
-            speaker=body.speaker,
-            content=body.content,
+            speaker=speaker,
+            content=content,
             embedding=embedding,
             embedding_model=embedding_model,
             embedding_dim=embedding_dim,
@@ -152,10 +204,12 @@ async def chat(body: ChatRequest, request: Request):
 
         if is_new and conv_repo and llm_provider:
             try:
-                title = await _generate_title(llm_provider, body.content)
+                title = await _generate_title(llm_provider, content)
                 conv_repo.update_title(conversation_id, title)
             except Exception:
                 logger.exception("Failed to generate conversation title")
+
+        response_attachments = _build_response_attachments(attachments, result)
 
         return ChatResponse(
             id=response_msg.id,
@@ -169,12 +223,14 @@ async def chat(body: ChatRequest, request: Request):
             embedding_generated=bool(embedding),
             metrics=_build_metrics_info(payload_metrics),
             homeostatic_recommendations=_build_recommendations(recommendations),
+            attachments=response_attachments,
+            context_sent=result.payload.get("context_sent"),
         )
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Chat endpoint error")
-        error_repo.log_error(module="api", error=e, context={"input": body.content})
+        error_repo.log_error(module="api", error=e, context={"input": content})
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -577,3 +633,26 @@ def _build_history_metrics(row: dict) -> MetricsInfo | None:
         paskian_health=row.get("paskian_health"),
         phase_shifts=None,
     )
+
+
+def _build_response_attachments(
+    attachments: list[dict] | None, result
+) -> list[AttachmentInfo] | None:
+    if not attachments:
+        return None
+    response_attachments: list[AttachmentInfo] = []
+    for att in attachments:
+        file_name = att.get("file_name", "")
+        file_type = att.get("file_type", "txt")
+        content = att.get("content", "")
+        if isinstance(content, bytes):
+            content = content.decode("utf-8", errors="replace")
+        token_count = estimate_tokens(content) if content else 0
+        preview = content[:200] if content else None
+        response_attachments.append(AttachmentInfo(
+            file_name=file_name,
+            file_type=file_type,
+            token_count=token_count,
+            preview=preview,
+        ))
+    return response_attachments if response_attachments else None
