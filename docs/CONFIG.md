@@ -36,8 +36,10 @@ llm:
 pipeline:
   modules:                     # Ordered processing stages
     - embedder
+    - perception
     - conversation_metrics
     - context_collector
+    - consolidation_checkpoint
     - sedimentation_retrieval
     - prompt_assembler
     - homeostatic_regulator

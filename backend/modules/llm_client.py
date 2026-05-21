@@ -301,11 +301,20 @@ class LLMClientModule(ProcessingModule):
     async def process(self, payload: dict) -> dict:
         messages = payload.get("messages", [])
         payload["context_sent"] = _format_context(messages)
-        params = {
-            k: v
-            for k, v in payload.items()
-            if k in ("temperature", "max_tokens", "top_p", "presence_penalty")
-        }
+
+        params: dict = {}
+        for k in ("temperature", "max_tokens", "top_p", "presence_penalty"):
+            v = payload.get(k)
+            if v is not None:
+                params[k] = v
+
+        recs = payload.get("homeostatic_recommendations")
+        if recs:
+            for param in ("temperature", "presence_penalty", "frequency_penalty"):
+                rec = recs.get(param)
+                if isinstance(rec, dict) and "value" in rec:
+                    params[param] = rec["value"]
+
         result = await self._provider.generate(messages, **params)
         payload["response"] = result["content"]
         if result.get("thinking"):

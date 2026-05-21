@@ -17,15 +17,16 @@
 ┌───────────────────────────────────────────────────────────────────┐
 │                     FastAPI Backend (main.py)                      │
 │                                                                    │
-│  Pipeline:                                                         │
-│  embedder → conv_metrics → context_collector                      │
-│           → sedimentation_retrieval → prompt_assembler            │
-│           → homeostatic_regulator → llm_client                     │
+│  Pipeline (9 modules):                                             │
+│  embedder → perception → conversation_metrics → context_collector  │
+│           → consolidation_checkpoint → sedimentation_retrieval    │
+│           → prompt_assembler → homeostatic_regulator → llm_client  │
 │                                                                    │
 │  Each module enriches payload dict via process(payload) → payload  │
 │                                                                    │
-│  Token tracking: estimate_tokens() at insert, store in DB          │
-│  Sedimentation: cross-conversation embedding similarity            │
+│  Context compression: caveman (mid-tier) + LLM checkpoints (deep)  │
+│  Homeostatic regulator: metrics → active LLM parameter modulation  │
+│  Sedimentation: cross-conversation embedding similarity             │
 │                                                                    │
 │                    ┌──────────────────────┐                        │
 │                    │     SQLite (WAL)      │                        │
@@ -57,31 +58,34 @@ ProcessingPipeline.run(payload)
   │     payload["embedding_model"] = "all-MiniLM-L6-v2"
   │     payload["embedding_dim"] = 384
   │
+  ├─► perception.process(payload)
+  │     scoped to conversation_id
+  │     Ingests attachments (PDF/DOCX/text) → chunks → embeds → stores in perception_sediment
+  │     Retrieves top-K relevant file chunks via cosine similarity
+  │     payload["file_context"] = [...], payload["file_context_tokens"] = N
+  │
   ├─► conversation_metrics.process(payload)
   │     scoped to conversation_id
   │     payload["metrics"] = {pairwise_similarity, novelty, entropy, coupling, ...}
   │
   ├─► context_collector.process(payload)
   │     scoped to conversation_id
-  │     Three-tier compression:
+  │     Two-tier compression:
   │       Tier 1 (last N=floating_window msgs): raw, full text
   │       Tier 2 (older msgs up to max_history): caveman compressed
-  │       Tier 3 (existing checkpoint): prepended as system message
+  │     payload["messages"] = [...], payload["raw_msg_count"] = N
+  │
+  ├─► consolidation_checkpoint.process(payload)
+  │     scoped to conversation_id
+  │     Retrieves latest consolidation checkpoint from DB
+  │     Prepends [Consolidated memory: ...] system message
   │     Sets trigger_consolidation flag when msg count >= threshold
-  │     payload["messages"] = [
-  │       {"role": "system", "content": "[Consolidated memory: ...]"},
-  │       {"role": "user", "content": "[H]: compressed older msg"},
-  │       {"role": "assistant", "content": "raw recent reply"},
-  │       {"role": "user", "content": "What is life?"},
-  │     ]
   │
   ├─► sedimentation_retrieval.process(payload)
   │     All messages from OTHER conversations
   │     Cosine similarity to current embedding
   │     Top-K within sediment_token_budget (default 2000 tokens)
-  │     payload["sediment_messages"] = [
-  │       {"role": "user", "content": "cross-conversation match"},
-  │     ]
+  │     payload["sediment_messages"] = [...]
   │
   ├─► prompt_assembler.process(payload)
   │     identity = load identity.yaml
@@ -95,7 +99,8 @@ ProcessingPipeline.run(payload)
   │     payload["homeostatic_recommendations"] = {...}
   │
   ├─► llm_client.process(payload)
-  │     result = provider.generate(messages, temperature, ...)
+  │     Extracts temperature/presence_penalty from homeostatic_recommendations
+  │     result = provider.generate(messages, temperature, presence_penalty, ...)
   │     payload["response"] = result["content"]
   │     payload["thinking"] = result["thinking"]
   │
@@ -103,6 +108,7 @@ ProcessingPipeline.run(payload)
   route (routes.py)
   ├─ message_repo.insert("human", content, ..., content_tokens=N)
   ├─ message_repo.insert("apparatus", response, thinking, ..., content_tokens=M, thinking_tokens=K)
+  ├─ if trigger_consolidation: fire-and-forget background ConsolidateAction (auto at ~15 msgs)
   ├─ if new conversation: async title generation via cheap LLM call
   └─ return ChatResponse {id, content, thinking, content_tokens, thinking_tokens, ...}
 ```
@@ -204,9 +210,9 @@ writes to the `error_log` table, then halts the pipeline.
 ### Pipeline Order (Current)
 
 ```
-embedder → conversation_metrics → context_collector
-         → sedimentation_retrieval → prompt_assembler
-         → homeostatic_regulator → llm_client
+embedder → perception → conversation_metrics → context_collector
+         → consolidation_checkpoint → sedimentation_retrieval
+         → prompt_assembler → homeostatic_regulator → llm_client
 ```
 
 ### Module Replaceability
@@ -214,17 +220,19 @@ embedder → conversation_metrics → context_collector
 Context-related modules are swappable via pipeline config:
 
 ```
-Today:
-  context_collector ──► prompt_assembler
-  sedimentation_retrieval ──► prompt_assembler
+Today (9 modules):
+  embedder → perception → conversation_metrics → context_collector
+           → consolidation_checkpoint → sedimentation_retrieval
+           → prompt_assembler → homeostatic_regulator → llm_client
 
 Tomorrow (Phase 3 rhizomatic):
-  rhizomatic_context ──► prompt_assembler
-  (unified graph-based, replaces both modules)
+  embedder → perception → conversation_metrics → rhizomatic_context
+           → prompt_assembler → homeostatic_regulator → llm_client
+  (consolidation_checkpoint + sedimentation_retrieval replaced by unified graph)
 ```
 
-`prompt_assembler` only reads `payload["messages"]` and `payload["sediment_messages"]`
-— it has zero knowledge of where they came from.
+`prompt_assembler` reads `payload["messages"]`, `payload["sediment_messages"]`,
+and `payload["file_context"]` — it has zero knowledge of where they came from.
 
 ### LLM Provider Abstraction
 
@@ -273,7 +281,8 @@ Cross-conversation context retrieval via `SedimentationRetrievalModule`:
 - Computes cosine similarity to current input embedding
 - Selects top-K matches above `similarity_threshold` (default 0.3)
 - Fills up to `sediment_token_budget` (default 2000 tokens)
-- Injected at position [1] in context (after system, before history)
+- Injected after consolidation checkpoint, before conversation history
+- Assembly order: `[system] → [sediment] → [history+checkpoint] → [file_context]`
 
 Config: `config.yaml` → `sedimentation.*`, env: `AAA_SEDIMENT_TOKEN_BUDGET`,
 `AAA_SEDIMENT_COUNT`.
@@ -305,15 +314,19 @@ AAA/
 │   ├── modules/
 │   │   ├── base.py           ProcessingModule ABC
 │   │   ├── embedder.py       Local sentence-transformers service
+│   │   ├── perception.py     File ingestion + chunked retrieval
+│   │   ├── digester.py       PDF/DOCX/text extraction
 │   │   ├── llm_client.py     Provider-agnostic LLM client
 │   │   ├── context_collector.py       Conversation-scoped history retrieval
+│   │   ├── consolidation_checkpoint.py Consolidation checkpoint injection + trigger
 │   │   ├── conversation_metrics.py    Real-time vitality metrics (per-conversation)
 │   │   ├── sedimentation_retrieval.py Cross-conversation embedding similarity
-│   │   └── homeostatic_regulator.py   Metrics → parameter mapping
+│   │   ├── homeostatic_regulator.py   Metrics → parameter mapping
+│   │   └── background_tasks/         Async self-maintenance (title, summarize, consolidate)
 │   ├── storage/
 │   │   ├── database.py       SQLite init, WAL, migrations, legacy conversation
 │   │   ├── models.py         Conversation, Message, MetricsRecord, ErrorLogEntry
-│   │   └── repository.py     ConversationRepository, MessageRepository, MetricsRepository, ErrorLogRepository
+│   │   └── repository.py     ConversationRepo, MessageRepo, MetricsRepo, ErrorLogRepo, PerceptionSedimentRepo, ConsolidationCheckpointRepo
 │   ├── utils/
 │   │   └── token_counter.py  TokenBudget dataclass, estimate_tokens()
 │   └── tests/
@@ -380,13 +393,17 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 |---------|--------|-------|
 | Multi-conversation | Done | `conversations` table, UI list, CRUD |
 | Per-conversation history | Done | Scoped queries, ordered by `id` |
+| Perception (file context) | Done | PDF/DOCX ingestion, chunking, embedding, similarity retrieval |
 | Sedimentation (cross-convo) | Done | Embedding similarity, token-budgeted |
 | Token tracking | Done | Per-message, per-conversation, system prompt |
 | Token budget enforcement | Done | Tiered compression + trim oldest first |
 | Title generation | Done | Cheap LLM call on first message |
 | Legacy migration | Done | Orphaned messages → "Legacy" conversation |
 | Homeostatic metrics (per-convo) | Done | Scoped to `conversation_id` |
+| Homeostatic LLM modulation | Done | Metrics → active temperature/presence_penalty injection |
 | Tiered context compression | Done | Caveman (mid-tier) + LLM checkpoints (deep); see ADR-007 |
+| Consolidation checkpoint module | Done | Pipeline step: inject checkpoints, trigger background consolidation |
+| SidePanel hierarchy | Done | Collapsible parent-child skill display in right sidebar |
 
 ## Future Extension
 

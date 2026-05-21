@@ -13,6 +13,7 @@ from backend.modules.background_tasks.actions.consolidate import ConsolidateActi
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.title import GenerateTitleAction
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
+from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
 from backend.modules.context_collector import ContextCollectorModule
 from backend.modules.conversation_metrics import ConversationMetricsModule
 from backend.modules.embedder import EmbedderModule
@@ -158,8 +159,6 @@ async def lifespan(app: FastAPI):
         max_history=ctx_cfg.get("max_history", 20),
         floating_window=ctx_cfg.get("floating_window", 8),
         caveman_enabled=ctx_cfg.get("caveman_enabled", True),
-        consolidate_threshold=ctx_cfg.get("consolidate_threshold", 15),
-        checkpoint_repo=checkpoint_repo,
     )
 
     metrics_cfg = config.get("homeostasis", {})
@@ -206,7 +205,25 @@ async def lifespan(app: FastAPI):
     registry.register_with_meta(
         "context_collector", lambda: context_collector,
         SkillMeta(name="context_collector", description="Gathers conversation history",
-                  category="memory", always_run=True),
+                  category="memory", always_run=True,
+                  children=[
+                      SkillMeta(name="floating_window", description="Last N messages kept raw and uncompressed", category="memory"),
+                      SkillMeta(name="caveman_compression", description="Strips filler words from older messages, ~50% token reduction", category="memory"),
+                  ]),
+    )
+
+    consolidation_checkpoint = ConsolidationCheckpointModule(
+        checkpoint_repo=checkpoint_repo,
+        consolidate_threshold=ctx_cfg.get("consolidate_threshold", 15),
+    )
+    registry.register_with_meta(
+        "consolidation_checkpoint", lambda: consolidation_checkpoint,
+        SkillMeta(name="consolidation_checkpoint", description="Injects LLM-consolidated conversation summaries and triggers new checkpoints",
+                  category="memory", always_run=True,
+                  children=[
+                      SkillMeta(name="checkpoint_inject", description="Prepends [Consolidated memory: ...] system message from latest checkpoint", category="memory"),
+                      SkillMeta(name="consolidate_trigger", description="Flags conversations for background consolidation every N messages", category="memory"),
+                  ]),
     )
 
     perception_cfg = config.get("perception", {})
@@ -240,7 +257,11 @@ async def lifespan(app: FastAPI):
     registry.register_with_meta(
         "sedimentation_retrieval", lambda: sedimentation_retrieval,
         SkillMeta(name="sedimentation_retrieval", description="Retrieves semantically relevant messages from other conversations via embedding similarity",
-                  category="memory", always_run=True),
+                  category="memory", always_run=True,
+                  children=[
+                      SkillMeta(name="similarity_search", description="Cosine similarity over 500 cross-conversation embeddings", category="memory"),
+                      SkillMeta(name="token_budget", description="Limits sediment to configured token budget (default 2000)", category="memory"),
+                  ]),
     )
 
     registry.register_with_meta(
@@ -261,7 +282,9 @@ async def lifespan(app: FastAPI):
 
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
-        ["embedder", "conversation_metrics", "context_collector", "sedimentation_retrieval", "prompt_assembler", "homeostatic_regulator", "llm_client"],
+        ["embedder", "perception", "conversation_metrics", "context_collector",
+         "consolidation_checkpoint", "sedimentation_retrieval",
+         "prompt_assembler", "homeostatic_regulator", "llm_client"],
     )
     pipeline_modules = registry.resolve_pipeline(pipeline_order)
 

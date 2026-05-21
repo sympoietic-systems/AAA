@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 
 
@@ -9,3 +11,4 @@ class SkillMeta:
     category: str = "action"
     always_run: bool = False
     cost: str = "free"
+    children: list[SkillMeta] = field(default_factory=list)

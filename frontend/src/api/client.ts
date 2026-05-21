@@ -123,6 +123,7 @@ export interface SkillInfo {
   triggers: string[]
   cost: string
   status: boolean
+  children: SkillInfo[]
 }
 
 export interface SkillsResponse {

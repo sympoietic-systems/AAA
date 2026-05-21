@@ -557,44 +557,36 @@ async def get_skills(request: Request):
         meta = registry.get_meta(name)
         if meta and name not in seen:
             seen.add(name)
-            pipeline.append(SkillInfo(
-                name=meta.name,
-                description=meta.description,
-                category=meta.category,
-                always_run=True,
-                triggers=list(meta.triggers),
-                cost=meta.cost,
-                status=status.get(name, False),
-            ))
+            pipeline.append(_meta_to_skillinfo(meta, status, True))
 
     for name, _ in registry.list_always_on():
         if name not in seen:
             meta = registry.get_meta(name)
             if meta:
                 seen.add(name)
-                pipeline.append(SkillInfo(
-                    name=meta.name,
-                    description=meta.description,
-                    category=meta.category,
-                    always_run=True,
-                    triggers=list(meta.triggers),
-                    cost=meta.cost,
-                    status=status.get(name, False),
-                ))
+                pipeline.append(_meta_to_skillinfo(meta, status, True))
 
     on_demand: list[SkillInfo] = []
     for name, _, meta in registry.list_on_demand():
-        on_demand.append(SkillInfo(
-            name=meta.name,
-            description=meta.description,
-            category=meta.category,
-            always_run=False,
-            triggers=list(meta.triggers),
-            cost=meta.cost,
-            status=status.get(name, False),
-        ))
+        on_demand.append(_meta_to_skillinfo(meta, status, False))
 
     return SkillsResponse(pipeline=pipeline, on_demand=on_demand)
+
+
+def _meta_to_skillinfo(meta, status: dict[str, bool], always_run: bool) -> SkillInfo:
+    return SkillInfo(
+        name=meta.name,
+        description=meta.description,
+        category=meta.category,
+        always_run=always_run,
+        triggers=list(meta.triggers),
+        cost=meta.cost,
+        status=status.get(meta.name, False),
+        children=[
+            _meta_to_skillinfo(child, status, always_run=True)
+            for child in meta.children
+        ],
+    )
 
 
 @router.get("/metrics", response_model=MetricsResponse)

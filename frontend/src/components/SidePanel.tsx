@@ -10,16 +10,29 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 function SkillRow({ skill }: { skill: SkillInfo }) {
+  const [open, setOpen] = useState(false)
   const color = CATEGORY_COLORS[skill.category] || "#888"
+  const hasChildren = skill.children && skill.children.length > 0
+
   return (
     <div className="py-1.5 border-b border-[#1a1a1a] last:border-b-0">
       <div className="flex items-center gap-1.5">
-        <span
-          style={{ color: skill.status ? color : "#ef4444" }}
-          className="text-[8px] leading-none"
-        >
-          {skill.status ? "\u25CF" : "\u25CB"}
-        </span>
+        {hasChildren ? (
+          <button
+            onClick={() => setOpen(!open)}
+            className="text-[8px] leading-none hover:opacity-80"
+            style={{ color: skill.status ? color : "#ef4444" }}
+          >
+            {open ? "\u25BC" : "\u25B6"}
+          </button>
+        ) : (
+          <span
+            style={{ color: skill.status ? color : "#ef4444" }}
+            className="text-[8px] leading-none"
+          >
+            {skill.status ? "\u25CF" : "\u25CB"}
+          </span>
+        )}
         <span className="text-[#4ade80] text-xs font-bold">{skill.name}</span>
         <span
           className="text-[9px] px-1 py-px rounded border ml-auto"
@@ -40,6 +53,13 @@ function SkillRow({ skill }: { skill: SkillInfo }) {
             >
               {t}
             </span>
+          ))}
+        </div>
+      )}
+      {hasChildren && open && (
+        <div className="mt-0.5 ml-4 pl-2 border-l border-[#222]">
+          {skill.children.map((child) => (
+            <SkillRow key={child.name} skill={child} />
           ))}
         </div>
       )}

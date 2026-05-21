@@ -74,6 +74,7 @@ class SkillInfo(BaseModel):
     triggers: list[str] = []
     cost: str = "free"
     status: bool = True
+    children: list["SkillInfo"] = []
 
 
 class SkillsResponse(BaseModel):

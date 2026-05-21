@@ -40,7 +40,6 @@ class PromptAssemblerModule(ProcessingModule):
         messages = payload.get("messages", [])
         sediment_messages = payload.get("sediment_messages", [])
         file_context = payload.get("file_context", [])
-        file_context_tokens = payload.get("file_context_tokens", 0)
 
         assembled: list[dict] = [system_msg]
 
