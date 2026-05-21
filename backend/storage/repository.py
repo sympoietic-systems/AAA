@@ -245,6 +245,14 @@ class MessageRepository:
             ).fetchall()
         return [dict(r) for r in reversed(rows)]
 
+    def count_messages(self, conversation_id: str) -> int:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt FROM conversation_log WHERE conversation_id = ?",
+            (conversation_id,),
+        ).fetchone()
+        return row["cnt"] if row else 0
+
     def get_all_embeddings_except(
         self, exclude_conversation_id: str, limit: int = 500
     ) -> list[tuple[int, str, np.ndarray]]:

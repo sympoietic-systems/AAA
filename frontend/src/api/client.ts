@@ -174,6 +174,24 @@ export async function deleteConversation(id: string): Promise<void> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
+export async function renameConversation(id: string, title: string): Promise<ConversationInfo> {
+  const res = await fetch(`${BASE}/conversations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function generateConversationTitle(id: string): Promise<ConversationInfo> {
+  const res = await fetch(`${BASE}/conversations/${id}/generate-title`, {
+    method: "POST",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export interface ConversationTokenInfo {
   conversation_id: string
   title: string

@@ -4,6 +4,8 @@ import {
   listConversations,
   deleteConversation as deleteConvApi,
   getConversation,
+  renameConversation as renameConvApi,
+  generateConversationTitle as generateTitleApi,
 } from "../api/client"
 
 export function useConversations() {
@@ -77,6 +79,29 @@ export function useConversations() {
     }
   }, [])
 
+  const renameConversation = useCallback(async (id: string, title: string) => {
+    try {
+      await renameConvApi(id, title)
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, title } : c))
+      )
+    } catch {
+      // silent
+    }
+  }, [])
+
+  const generateTitle = useCallback(async (id: string) => {
+    try {
+      const updated = await generateTitleApi(id)
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, title: updated.title } : c))
+      )
+      return updated.title
+    } catch {
+      return null
+    }
+  }, [])
+
   return {
     conversations,
     activeId,
@@ -87,5 +112,7 @@ export function useConversations() {
     addConversation,
     newConversation,
     refreshTitle,
+    renameConversation,
+    generateTitle,
   }
 }

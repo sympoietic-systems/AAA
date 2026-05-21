@@ -16,12 +16,26 @@ export default function App() {
     addConversation,
     newConversation,
     refreshTitle,
+    renameConversation,
+    generateTitle,
   } = useConversations()
 
   const { messages, loading, error, send, clearError, agentName, uploadedFiles } = useChat(activeId)
   const [convCollapsed, setConvCollapsed] = useState(true)
   const activeIdRef = useRef(activeId)
   activeIdRef.current = activeId
+
+  const activeConv = conversations.find((c) => c.id === activeId)
+  const conversationTitle = activeConv?.title || ""
+  const conversationId = activeId
+
+  const handleRenameTitle = (title: string) => {
+    if (activeId) renameConversation(activeId, title)
+  }
+
+  const handleGenerateTitle = async () => {
+    if (activeId) await generateTitle(activeId)
+  }
 
   const handleSend = async (content: string, files?: File[]) => {
     const currentActiveId = activeIdRef.current
@@ -40,6 +54,11 @@ export default function App() {
         setTimeout(() => refreshTitle(response.conversation_id!), 2000)
       } else {
         refresh()
+        // Auto-generate title when conversation reaches 3+ messages if still untitled
+        const conv = conversations.find((c) => c.id === currentActiveId)
+        if (conv && !conv.title.trim() && conv.message_count >= 2) {
+          setTimeout(() => generateTitle(currentActiveId), 3000)
+        }
       }
     }
   }
@@ -61,9 +80,13 @@ export default function App() {
         loading={loading}
         error={error}
         agentName={agentName}
+        conversationId={conversationId}
+        conversationTitle={conversationTitle}
         uploadedFiles={uploadedFiles}
         onSend={handleSend}
         onClearError={clearError}
+        onRenameTitle={handleRenameTitle}
+        onGenerateTitle={handleGenerateTitle}
         className="flex-1 min-w-0"
       />
       <SidePanel uploadedFiles={uploadedFiles} />

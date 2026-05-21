@@ -98,6 +98,36 @@ async def _generate_title(engine, first_message: str) -> str:
         return first_message[:60]
 
 
+async def _generate_title_from_conversation(engine, message_repo, conversation_id: str) -> str:
+    """Generate a title from the conversation's message history."""
+    try:
+        rows = message_repo.get_recent_with_metrics(limit=20, conversation_id=conversation_id)
+        if not rows:
+            return "Untitled"
+        # Build context from conversation messages
+        lines = []
+        for r in rows:
+            speaker = r.get("speaker", "unknown")
+            content = r.get("content", "")[:300]
+            if speaker == "human":
+                lines.append(f"Human: {content}")
+            else:
+                lines.append(f"Agent: {content}")
+        context = "\n".join(lines)
+
+        result = await engine.run("generate_title", {
+            "context": {"first_message": rows[0].get("content", "")[:300]},
+            "text": context[:2000],
+        })
+        content = result.get("content", "").strip().strip('"').strip("'")
+        if not content:
+            return rows[0].get("content", "")[:60]
+        return content
+    except Exception:
+        logger.debug("Conversation title generation failed", exc_info=True)
+        return "Untitled"
+
+
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -197,6 +227,19 @@ async def chat(request: Request):
                 conv_repo.update_title(conversation_id, title)
             except Exception:
                 logger.exception("Failed to generate conversation title")
+
+        if not is_new and conv_repo and background_engine:
+            conv = conv_repo.get(conversation_id)
+            if conv and not conv.title.strip():
+                msg_count = repo.count_messages(conversation_id)
+                if msg_count >= 3:
+                    try:
+                        title = await _generate_title_from_conversation(
+                            background_engine, repo, conversation_id
+                        )
+                        conv_repo.update_title(conversation_id, title)
+                    except Exception:
+                        logger.exception("Failed to auto-generate conversation title")
 
         response_attachments = _build_response_attachments(attachments, result)
 
@@ -328,6 +371,35 @@ async def delete_conversation(conversation_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Conversation not found")
     conv_repo.delete(conversation_id)
     return {"status": "deleted", "id": conversation_id}
+
+
+@router.post("/conversations/{conversation_id}/generate-title", response_model=ConversationInfo)
+async def generate_conversation_title(conversation_id: str, request: Request):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    if not conv_repo:
+        raise HTTPException(status_code=404, detail="Conversations not available")
+    conv = conv_repo.get(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    background_engine = getattr(state, "background_engine", None)
+    if not background_engine:
+        raise HTTPException(status_code=503, detail="Background engine not available")
+
+    title = await _generate_title_from_conversation(
+        background_engine, request.app.state.message_repo, conversation_id
+    )
+    conv_repo.update_title(conversation_id, title)
+
+    conv = conv_repo.get(conversation_id)
+    return ConversationInfo(
+        id=conv.id,
+        title=conv.title,
+        created_at=conv.created_at,
+        updated_at=conv.updated_at,
+        message_count=conv.message_count,
+    )
 
 
 @router.get("/tokens", response_model=TokenResponse)
