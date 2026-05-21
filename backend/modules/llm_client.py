@@ -196,6 +196,97 @@ class OpenRouterProvider(OpenAICompatibleProvider):
         )
 
 
+class ModelPoolProvider(BaseLLMProvider):
+    """Provider that tries models from a pool in order, with rate-limit fallback.
+
+    When one model returns a 429 rate limit, the next model is tried.
+    Exhausted models are retried after a cooldown period.
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        models: list[str],
+        fallback_model: str = "openrouter/free",
+        api_base: str = "https://openrouter.ai/api/v1",
+        cooldown_seconds: int = 60,
+        max_retries_per_model: int = 0,
+    ):
+        self._api_key = api_key
+        self._models = models
+        self._fallback_model = fallback_model
+        self._api_base = api_base
+        self._cooldown_seconds = cooldown_seconds
+        self._max_retries_per_model = max_retries_per_model
+        self._exhausted: dict[str, float] = {}
+        self._last_model_used: str = ""
+
+    @property
+    def provider_name(self) -> str:
+        return f"model_pool({len(self._models)} models)"
+
+    def _all_models(self) -> list[str]:
+        models = list(self._models)
+        if self._fallback_model and self._fallback_model not in models:
+            models.append(self._fallback_model)
+        return models
+
+    def _is_exhausted(self, model: str) -> bool:
+        import time
+        until = self._exhausted.get(model, 0)
+        if until and time.time() < until:
+            return True
+        if until:
+            del self._exhausted[model]
+        return False
+
+    def _mark_exhausted(self, model: str):
+        import time
+        self._exhausted[model] = time.time() + self._cooldown_seconds
+
+    def _create_provider(self, model: str) -> OpenAICompatibleProvider:
+        return OpenAICompatibleProvider(
+            api_key=self._api_key,
+            model=model,
+            api_base=self._api_base,
+            provider_name="model_pool",
+            max_retries=self._max_retries_per_model,
+        )
+
+    async def generate(self, messages: list[dict], **params) -> dict:
+        errors = []
+        for model in self._all_models():
+            if self._is_exhausted(model):
+                continue
+
+            provider = self._create_provider(model)
+            try:
+                result = await provider.generate(messages, **params)
+                self._last_model_used = model
+                return result
+            except RateLimitError as e:
+                self._mark_exhausted(model)
+                errors.append(f"{model}: rate limited")
+                logger.warning("Model %s rate limited, moving to next in pool", model)
+            except Exception as e:
+                errors.append(f"{model}: {e}")
+                logger.warning("Model %s failed: %s", model, e)
+
+        error_msg = f"All models in pool exhausted. Errors: {'; '.join(errors)}"
+        logger.error(error_msg)
+        raise RateLimitError(error_msg)
+
+    async def validate_connection(self) -> bool:
+        try:
+            await self.generate(
+                [{"role": "user", "content": "ping"}],
+                max_tokens=5,
+            )
+            return True
+        except Exception:
+            return False
+
+
 class LLMClientModule(ProcessingModule):
     def __init__(self, provider: BaseLLMProvider):
         self._provider = provider

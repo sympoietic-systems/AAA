@@ -44,7 +44,9 @@ def _apply_env_overrides(config: dict) -> dict:
         "AAA_EMBEDDING_DEVICE": ("embedding", "device"),
         "AAA_EMBEDDING_CACHE_DIR": ("embedding", "cache_dir"),
         "AAA_BACKGROUND_MODEL": ("background_llm", "model"),
+        "AAA_BACKGROUND_MODELS": ("background_llm", "models"),
         "AAA_BACKGROUND_API_BASE": ("background_llm", "api_base"),
+        "AAA_BACKGROUND_FALLBACK_MODEL": ("background_llm", "fallback_model"),
         "AAA_VISION_MODEL": ("vision_llm", "model"),
         "AAA_VISION_API_BASE": ("vision_llm", "api_base"),
     }
@@ -54,6 +56,8 @@ def _apply_env_overrides(config: dict) -> dict:
         if value is not None:
             if key == "port":
                 value = int(value)
+            elif key == "models" and isinstance(value, str):
+                value = [m.strip() for m in value.split(",") if m.strip()]
             config.setdefault(section, {})[key] = value
 
     max_tokens = os.environ.get("AAA_CONTEXT_MAX_TOKENS")

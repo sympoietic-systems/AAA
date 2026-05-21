@@ -19,6 +19,7 @@ from backend.modules.embedder import EmbedderModule
 from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
 from backend.modules.llm_client import (
     LLMClientModule,
+    ModelPoolProvider,
     OpenAICompatibleProvider,
     OpenRouterProvider,
 )
@@ -93,19 +94,31 @@ def _create_llm_provider(cfg: dict):
     )
 
 
-def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider:
+def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelPoolProvider:
     api_key = cfg.get("api_key", "")
-    model = cfg.get("model", "")
     api_base = cfg.get("api_base", "https://openrouter.ai/api/v1")
+    models = cfg.get("models", [])
+    model = cfg.get("model", "")
 
-    if not model:
-        raise ValueError("Model not configured for background/vision provider")
+    if models:
+        fallback = cfg.get("fallback_model", "openrouter/free")
+        logger.info("Background model pool: %s (fallback: %s)", models, fallback)
+        return ModelPoolProvider(
+            api_key=api_key,
+            models=models,
+            fallback_model=fallback,
+            api_base=api_base,
+            cooldown_seconds=60,
+        )
 
-    return OpenRouterProvider(
-        api_key=api_key,
-        model=model,
-        api_base=api_base,
-    )
+    if model:
+        return OpenRouterProvider(
+            api_key=api_key,
+            model=model,
+            api_base=api_base,
+        )
+
+    raise ValueError("No model or models configured for background/vision provider")
 
 
 @asynccontextmanager
@@ -279,10 +292,10 @@ async def lifespan(app: FastAPI):
     background_provider = None
     vision_provider = None
 
-    if background_llm_cfg.get("model"):
+    if background_llm_cfg.get("models") or background_llm_cfg.get("model"):
         try:
             background_provider = _create_provider_from_config(background_llm_cfg)
-            logger.info(f"Background model: {background_llm_cfg.get('model')}")
+            logger.info(f"Background model: {background_llm_cfg.get('models') or background_llm_cfg.get('model')}")
         except Exception:
             logger.warning("Failed to initialize background provider, using primary")
             background_provider = provider
@@ -335,5 +348,5 @@ if __name__ == "__main__":
         "backend.main:app",
         host="127.0.0.1",
         port=8000,
-        reload=True,
+        reload=False,
     )

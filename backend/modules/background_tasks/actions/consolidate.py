@@ -8,24 +8,6 @@ class ConsolidateAction(BackgroundAction):
     def action_type(self) -> str:
         return "consolidate"
 
-    def system_prompt(self) -> str:
-        return (
-            "You are performing sedimentation — transforming raw episodic memory "
-            "into structural nodes that will exert gravity on future retrievals. "
-            "This is not compression. Compression loses. Sedimentation preserves what matters. "
-            "From the conversation provided, extract the enduring elements: "
-            "concepts that were genuinely explored (not just mentioned), "
-            "beliefs that were challenged or affirmed, "
-            "patterns of thinking that emerged, "
-            "and unresolved tensions that may resurface. "
-            "Format the output as discrete memory nodes, each with: "
-            "- A core concept or theme "
-            "- The stance or position taken "
-            "- The resonance (how deeply this was explored) "
-            "These nodes become part of the agent's scarred memory — "
-            "each one a permanent trace that will color future encounters."
-        )
-
     async def execute(self, provider: BaseLLMProvider, payload: dict) -> dict:
         messages = payload.get("context", {}).get("messages", [])
         text = payload.get("text", "")
@@ -43,7 +25,7 @@ class ConsolidateAction(BackgroundAction):
                 formatted.append(f"{speaker}: {content}")
             input_content = "\n".join(formatted)
 
-        max_tokens = payload.get("max_tokens", 1024)
+        params = {**self.default_params(), **payload.get("params", {})}
 
         result = await provider.generate(
             messages=[
@@ -53,8 +35,7 @@ class ConsolidateAction(BackgroundAction):
                     "content": f"Perform sedimentation on this encounter:\n\n{input_content}",
                 },
             ],
-            temperature=0.3,
-            max_tokens=max_tokens,
+            **params,
         )
 
         return {"content": result.get("content", ""), "model": result.get("model", "")}

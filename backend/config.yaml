@@ -78,9 +78,15 @@ homeostasis:
   agent_self_window: 5
 
 # ── Background Tasks ──────────────────────────────
-# Lightweight model for async operations (naming, summary, memory consolidation)
+# Models are tried in order. If one is rate-limited, the next is used.
+# When all are exhausted, falls back to the fallback model.
 background_llm:
-  model: "google/gemma-4-26b-a4b-it:free"
+  models:
+    - "google/gemma-4-26b-a4b-it:free"
+    - "deepseek/deepseek-v4-flash-20260423:free"
+    - "nvidia/nemotron-nano-9b-v2:free"
+    - "qwen/qwen3-next-80b-a3b-instruct:free"
+  fallback_model: "openrouter/free"
   api_base: "https://openrouter.ai/api/v1"
 
 # ── Vision Fallback ───────────────────────────────

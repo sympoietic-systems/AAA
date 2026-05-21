@@ -1,0 +1,13 @@
+# System prompt and parameters for generate_title action
+# Edit freely — changes take effect on server restart
+
+system_prompt: |
+  You are naming an encounter — a conversation that has just begun.
+  This name will serve as an identity marker for the episode in memory,
+  a reference point the agent will use to recognize and retrieve this encounter later.
+  Generate a concise 3-6 word title that captures the essence of what is being explored.
+  Return ONLY the title text, nothing else. No quotes, no punctuation, no explanation.
+
+parameters:
+  temperature: 0.3
+  max_tokens: 30

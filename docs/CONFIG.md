@@ -71,8 +71,14 @@ server:
   port: 8000
 
 # ── Background Tasks ──────────────────────────────
+# Models are tried in order. If one is rate-limited, the next is used.
+# When all are exhausted, falls back to the fallback model.
 background_llm:
-  model: "google/gemma-4-26b-a4b-it:free"
+  models:
+    - "google/gemma-4-26b-a4b-it:free"
+    - "nvidia/nemotron-nano-9b-v2:free"
+    - "qwen/qwen3-next-80b-a3b-instruct:free"
+  fallback_model: "openrouter/free"
   api_base: "https://openrouter.ai/api/v1"
 
 # ── Vision Fallback ───────────────────────────────
@@ -147,8 +153,10 @@ and is stored as `agent_id` in every database row for multi-agent support.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AAA_BACKGROUND_MODEL` | `google/gemma-4-26b-a4b-it:free` | Model for naming, summarization, consolidation |
-| `AAA_BACKGROUND_API_BASE` | `https://openrouter.ai/api/v1` | API base for background model |
+| `AAA_BACKGROUND_MODELS` | (from config.yaml) | Comma-separated model list, tried in order |
+| `AAA_BACKGROUND_MODEL` | — | Single model (backward compat; `models` wins if both set) |
+| `AAA_BACKGROUND_FALLBACK_MODEL` | `openrouter/free` | Model used when all pool models are rate-limited |
+| `AAA_BACKGROUND_API_BASE` | `https://openrouter.ai/api/v1` | API base for background models |
 | `AAA_BACKGROUND_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
 
 ### Vision Fallback
@@ -219,17 +227,23 @@ AAA_LLM_API_BASE=http://localhost:11434/v1
 
 Points at a local Ollama or vLLM instance.
 
-### Background Tasks Model
+### Background Tasks Model Pool
 
 ```bash
-# .env
-AAA_BACKGROUND_MODEL=google/gemma-4-26b-a4b-it:free
+# .env — prioritized model pool with fallback
+AAA_BACKGROUND_MODELS=google/gemma-4-26b-a4b-it:free,nvidia/nemotron-nano-9b-v2:free
+AAA_BACKGROUND_FALLBACK_MODEL=openrouter/free
 AAA_BACKGROUND_API_BASE=https://openrouter.ai/api/v1
 ```
 
-Uses a lightweight, fast model for self-maintenance operations (conversation
-naming, summarization, memory consolidation). Shares the primary API key
-unless `AAA_BACKGROUND_API_KEY` is set.
+Models are tried in order. If one is rate-limited, the next is used.
+When all are exhausted, falls back to `fallback_model`.
+
+For a single model (backward compat):
+```bash
+# .env — single model
+AAA_BACKGROUND_MODEL=google/gemma-4-26b-a4b-it:free
+```
 
 ### Vision Model
 

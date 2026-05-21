@@ -74,15 +74,40 @@ class BackgroundAction(ABC):
     @abstractmethod
     def action_type(self) -> str: ...
 
-    @abstractmethod
-    def system_prompt(self) -> str: ...
+    def system_prompt(self) -> str: ...       # Loaded from YAML
+    def default_params(self) -> dict: ...     # Loaded from YAML
 
     @abstractmethod
     async def execute(self, provider: BaseLLMProvider, payload: dict) -> dict: ...
 ```
 
-Each action defines its own system prompt (philosophically aligned) and
-execution logic. The engine routes to the correct action by `action_type`.
+The base class loads system prompts and default parameters from YAML files.
+Each action only needs to implement `action_type` and `execute()` — the
+prompt and parameters are editable without touching code.
+
+### Prompt Files (YAML)
+
+Prompts are stored as separate YAML files under `prompts/`:
+```
+backend/modules/background_tasks/
+    prompts/
+        title.yaml       # System prompt + params for title generation
+        summarize.yaml   # System prompt + params for summarization
+        consolidate.yaml # System prompt + params for consolidation
+```
+
+Each file:
+```yaml
+system_prompt: |
+  You are naming an encounter...
+
+parameters:
+  temperature: 0.3
+  max_tokens: 30
+```
+
+Benefits: prompts can be tweaked, A/B tested, and version-controlled
+independently from the action logic. Server restart picks up changes.
 
 ### Model Configuration
 
@@ -90,7 +115,11 @@ Two new model sections in `config.yaml`, independently configurable:
 
 ```yaml
 background_llm:
-  model: "google/gemma-4-26b-a4b-it:free"
+  models:
+    - "google/gemma-4-26b-a4b-it:free"
+    - "nvidia/nemotron-nano-9b-v2:free"
+    - "qwen/qwen3-next-80b-a3b-instruct:free"
+  fallback_model: "openrouter/free"
   api_base: "https://openrouter.ai/api/v1"
 
 vision_llm:
@@ -99,11 +128,30 @@ vision_llm:
 ```
 
 Environment variable overrides:
-- `AAA_BACKGROUND_MODEL`, `AAA_BACKGROUND_API_BASE`
-- `AAA_VISION_MODEL`, `AAA_VISION_API_BASE`
-- Optional separate keys: `AAA_BACKGROUND_API_KEY`, `AAA_VISION_API_KEY`
+- `AAA_BACKGROUND_MODELS` (comma-separated list), `AAA_BACKGROUND_MODEL` (single, backward compat)
+- `AAA_BACKGROUND_FALLBACK_MODEL`
+- `AAA_BACKGROUND_API_BASE`, `AAA_BACKGROUND_API_KEY`
+- `AAA_VISION_MODEL`, `AAA_VISION_API_BASE`, `AAA_VISION_API_KEY`
 
-If not overridden, background/vision models inherit the primary LLM API key.
+### Model Pool Provider
+
+The `ModelPoolProvider` wraps multiple models and implements cascading fallback:
+
+1. Tries models in the configured order
+2. When a model returns 429 (rate limited), marks it exhausted (60s cooldown)
+   and moves to the next model
+3. When all pool models are exhausted, falls back to `fallback_model`
+4. When all models including fallback are exhausted, raises `RateLimitError`
+   with details about which models were tried
+
+```python
+class ModelPoolProvider(BaseLLMProvider):
+    def __init__(self, api_key, models, fallback_model, api_base, cooldown_seconds=60):
+        ...
+```
+
+This ensures background operations degrade gracefully — the best available
+free model is always used, with transparent fallback when quotas are hit.
 
 ### Response Format (Consistent)
 
@@ -186,16 +234,17 @@ uses the background model instead of the primary conversation model.
 
 **Easier:**
 - Background operations use a model optimized for cost/speed
-- New actions can be added by creating a new file in `actions/`
+- New actions can be added by creating a new file in `actions/` + a `prompts/` YAML
+- Prompt tuning does not require code changes — edit the YAML and restart
+- Model pool provides automatic rate-limit fallback across multiple free models
 - Rate limit handling is centralized in the provider
 - Vision model can be swapped independently
 - Consistent response format regardless of model type
 
 **Harder:**
-- Two additional model configurations to maintain
-- `openrouter/free` router picks random models with varying output formats
-- Free tier has rate limits (50 req/day, 20 req/min)
-- Title extraction requires heuristics to handle reasoning model output
+- Three config sections to maintain (llm, background_llm, vision_llm)
+- YAML prompts must be validated on load (malformed YAML = missing prompt)
+- Model pool adds latency when switching between rate-limited models
 
 ## Future Work
 

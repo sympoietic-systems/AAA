@@ -41,34 +41,42 @@ async def test_background_endpoint():
             print(f"Testing: {test['name']}")
             print(f"{'=' * 60}")
 
-            try:
-                response = await client.post(url, json=test["payload"])
-
-                print(f"Status: {response.status_code}")
-
-                print(f"\nResponse:")
+            retries = 3
+            for attempt in range(retries):
                 try:
+                    response = await client.post(url, json=test["payload"])
+
+                    print(f"Status: {response.status_code}")
+
+                    if response.status_code == 502:
+                        print("  Server restarting (uvicorn reload), retrying...")
+                        await asyncio.sleep(5)
+                        continue
+
                     data = response.json()
                     print(f"  action:    {data.get('action')}")
                     print(f"  model:     {data.get('model_used')}")
                     print(f"  error:     {data.get('error')}")
                     print(f"\n  result:")
                     result = data.get("result", "")
-                    # Print first 300 chars of result
                     if len(result) > 300:
                         print(f"  {result[:300]}...")
                     else:
                         print(f"  {result}")
-                except Exception:
-                    print(f"  {response.text}")
+                    break
 
-            except httpx.TimeoutException:
-                print("  Request timed out (180s)")
-            except httpx.RequestError as e:
-                print(f"  Request error: {e}")
+                except httpx.TimeoutException:
+                    print("  Request timed out (180s)")
+                    break
+                except httpx.RequestError as e:
+                    print(f"  Request error: {e}")
+                    if attempt < retries - 1:
+                        print("  Retrying...")
+                        await asyncio.sleep(5)
+                    else:
+                        print("  Max retries reached")
 
-            # Small delay between tests
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
 
 asyncio.run(test_background_endpoint())
