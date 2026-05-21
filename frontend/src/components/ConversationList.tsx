@@ -6,6 +6,7 @@ interface Props {
   loading: boolean
   onSelect: (id: string) => void
   onDelete: (id: string) => void
+  onNew: () => void
   collapsed: boolean
   onToggle: () => void
 }
@@ -16,6 +17,7 @@ export function ConversationList({
   loading,
   onSelect,
   onDelete,
+  onNew,
   collapsed,
   onToggle,
 }: Props) {
@@ -62,6 +64,19 @@ export function ConversationList({
               <span>close</span>
             </button>
           </div>
+
+          <button
+            onClick={onNew}
+            className="
+              w-full flex items-center gap-2 px-3 py-2
+              text-[11px] text-[#4ade80] hover:bg-[#1a2a1a]
+              border-b border-[#1a1a1a]
+              transition-colors cursor-pointer
+            "
+          >
+            <span className="text-[13px] leading-none">+</span>
+            <span>new conversation</span>
+          </button>
 
           <div className="flex-1 overflow-y-auto">
             {loading && conversations.length === 0 && (

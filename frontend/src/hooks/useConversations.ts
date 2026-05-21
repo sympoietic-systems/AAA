@@ -62,6 +62,10 @@ export function useConversations() {
     }
   }, [activeId])
 
+  const newConversation = useCallback(() => {
+    setActiveId("")
+  }, [])
+
   const refreshTitle = useCallback(async (id: string) => {
     try {
       const updated = await getConversation(id)
@@ -81,6 +85,7 @@ export function useConversations() {
     refresh,
     deleteConversation,
     addConversation,
+    newConversation,
     refreshTitle,
   }
 }

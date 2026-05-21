@@ -14,6 +14,7 @@ export default function App() {
     refresh,
     deleteConversation,
     addConversation,
+    newConversation,
     refreshTitle,
   } = useConversations()
 
@@ -51,6 +52,7 @@ export default function App() {
         loading={convLoading}
         onSelect={(id) => setActiveId(id)}
         onDelete={deleteConversation}
+        onNew={newConversation}
         collapsed={convCollapsed}
         onToggle={() => setConvCollapsed(!convCollapsed)}
       />
