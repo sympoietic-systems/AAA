@@ -9,6 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.api.routes import router
 from backend.config import load_config
 from backend.core.pipeline import ProcessingPipeline
+from backend.modules.background_tasks.actions.consolidate import ConsolidateAction
+from backend.modules.background_tasks.actions.summarize import SummarizeAction
+from backend.modules.background_tasks.actions.title import GenerateTitleAction
+from backend.modules.background_tasks.engine import BackgroundTaskEngine
 from backend.modules.context_collector import ContextCollectorModule
 from backend.modules.conversation_metrics import ConversationMetricsModule
 from backend.modules.embedder import EmbedderModule
@@ -86,6 +90,21 @@ def _create_llm_provider(cfg: dict):
         default_params=default_params,
         thinking=thinking,
         reasoning_effort=reasoning_effort,
+    )
+
+
+def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider:
+    api_key = cfg.get("api_key", "")
+    model = cfg.get("model", "")
+    api_base = cfg.get("api_base", "https://openrouter.ai/api/v1")
+
+    if not model:
+        raise ValueError("Model not configured for background/vision provider")
+
+    return OpenRouterProvider(
+        api_key=api_key,
+        model=model,
+        api_base=api_base,
     )
 
 
@@ -252,6 +271,42 @@ async def lifespan(app: FastAPI):
     app.state.embedder = embedder
     app.state.llm_provider = provider
     app.state.system_prompt_tokens = system_prompt_tokens
+
+    # Background tasks engine
+    background_llm_cfg = config.get("background_llm", {})
+    vision_llm_cfg = config.get("vision_llm", {})
+
+    background_provider = None
+    vision_provider = None
+
+    if background_llm_cfg.get("model"):
+        try:
+            background_provider = _create_provider_from_config(background_llm_cfg)
+            logger.info(f"Background model: {background_llm_cfg.get('model')}")
+        except Exception:
+            logger.warning("Failed to initialize background provider, using primary")
+            background_provider = provider
+
+    if vision_llm_cfg.get("model"):
+        try:
+            vision_provider = _create_provider_from_config(vision_llm_cfg)
+            logger.info(f"Vision model: {vision_llm_cfg.get('model')}")
+        except Exception:
+            logger.warning("Failed to initialize vision provider")
+
+    background_engine = BackgroundTaskEngine(
+        provider=background_provider or provider,
+        vision_provider=vision_provider,
+    )
+    background_engine.register(GenerateTitleAction())
+    background_engine.register(SummarizeAction())
+    background_engine.register(ConsolidateAction())
+
+    app.state.background_engine = background_engine
+    app.state.background_provider = background_provider
+    app.state.vision_provider = vision_provider
+
+    logger.info("Background task engine initialized with actions: %s", background_engine.list_actions())
 
     logger.info("All modules initialized. Server ready.")
     yield

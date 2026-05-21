@@ -143,3 +143,18 @@ class TokenResponse(BaseModel):
     conversations: list[ConversationTokenInfo]
     system_prompt_tokens: int = 0
     grand_total_tokens: int = 0
+
+
+class BackgroundTaskRequest(BaseModel):
+    action: str
+    conversation_id: str | None = None
+    text: str | None = None
+    context: dict | None = None
+    use_vision: bool = False
+
+
+class BackgroundTaskResponse(BaseModel):
+    action: str
+    result: str
+    model_used: str
+    error: str | None = None

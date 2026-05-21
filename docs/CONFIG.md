@@ -69,6 +69,16 @@ homeostasis:
 server:
   host: "127.0.0.1"
   port: 8000
+
+# ── Background Tasks ──────────────────────────────
+background_llm:
+  model: "google/gemma-4-26b-a4b-it:free"
+  api_base: "https://openrouter.ai/api/v1"
+
+# ── Vision Fallback ───────────────────────────────
+vision_llm:
+  model: "google/gemma-4-26b-a4b-it:free"
+  api_base: "https://openrouter.ai/api/v1"
 ```
 
 ## Environment Variables
@@ -133,6 +143,22 @@ The identity file defines the agent's name, system prompt, traits, voice,
 expertise, beliefs, and behaviors. The agent name drives the UI header
 and is stored as `agent_id` in every database row for multi-agent support.
 
+### Background Tasks
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AAA_BACKGROUND_MODEL` | `google/gemma-4-26b-a4b-it:free` | Model for naming, summarization, consolidation |
+| `AAA_BACKGROUND_API_BASE` | `https://openrouter.ai/api/v1` | API base for background model |
+| `AAA_BACKGROUND_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
+
+### Vision Fallback
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AAA_VISION_MODEL` | `google/gemma-4-26b-a4b-it:free` | Vision-capable model for image processing |
+| `AAA_VISION_API_BASE` | `https://openrouter.ai/api/v1` | API base for vision model |
+| `AAA_VISION_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
+
 ### Database
 
 | Variable | Default |
@@ -192,3 +218,48 @@ AAA_LLM_API_BASE=http://localhost:11434/v1
 ```
 
 Points at a local Ollama or vLLM instance.
+
+### Background Tasks Model
+
+```bash
+# .env
+AAA_BACKGROUND_MODEL=google/gemma-4-26b-a4b-it:free
+AAA_BACKGROUND_API_BASE=https://openrouter.ai/api/v1
+```
+
+Uses a lightweight, fast model for self-maintenance operations (conversation
+naming, summarization, memory consolidation). Shares the primary API key
+unless `AAA_BACKGROUND_API_KEY` is set.
+
+### Vision Model
+
+```bash
+# .env
+AAA_VISION_MODEL=google/gemma-4-26b-a4b-it:free
+AAA_VISION_API_BASE=https://openrouter.ai/api/v1
+```
+
+Independently configurable vision-capable model. When `use_vision: true` is
+passed to the background endpoint, requests are routed to this model instead
+of the background model.
+
+### Background API
+
+```bash
+# Generate conversation title
+curl -X POST http://localhost:8000/api/background \
+  -H "Content-Type: application/json" \
+  -d '{"action": "generate_title", "text": "Hello, I want to discuss..."}'
+
+# Summarize text
+curl -X POST http://localhost:8000/api/background \
+  -H "Content-Type: application/json" \
+  -d '{"action": "summarize", "text": "Long conversation text..."}'
+
+# Consolidate memory
+curl -X POST http://localhost:8000/api/background \
+  -H "Content-Type: application/json" \
+  -d '{"action": "consolidate", "context": {"messages": [...]}}'
+```
+
+See [ADR-006](decisions/ADR-006-background-tasks.md) for full design rationale.

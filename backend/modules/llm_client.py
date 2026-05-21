@@ -1,9 +1,24 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+import asyncio
+import logging
+from abc import ABC, abstractmethod
+from typing import Optional
+
 import httpx
 
 from .base import ProcessingModule
+
+logger = logging.getLogger(__name__)
+
+
+class RateLimitError(Exception):
+    def __init__(self, message: str, retry_after: int = 0, remaining: int = 0, limit: int = 0):
+        super().__init__(message)
+        self.retry_after = retry_after
+        self.remaining = remaining
+        self.limit = limit
 
 
 class BaseLLMProvider(ABC):
@@ -30,6 +45,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         default_params: Optional[dict] = None,
         thinking: bool = False,
         reasoning_effort: str = "high",
+        max_retries: int = 3,
     ):
         self._api_key = api_key
         self._model = model
@@ -41,10 +57,95 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         }
         self._thinking = thinking
         self._reasoning_effort = reasoning_effort
+        self._max_retries = max_retries
 
     @property
     def provider_name(self) -> str:
         return self._name
+
+    def _parse_rate_limit_headers(self, headers) -> dict:
+        return {
+            "remaining": int(headers.get("x-ratelimit-remaining-requests", 0)),
+            "limit": int(headers.get("x-ratelimit-limit-requests", 0)),
+            "reset": headers.get("x-ratelimit-reset-requests", ""),
+        }
+
+    def _parse_message(self, message: dict, data: dict) -> dict:
+        """Parse response message into consistent format.
+
+        Handles both thinking and non-thinking models:
+        - Non-thinking: content has the response
+        - Thinking models: content may be null, reasoning has the trace
+        - OpenRouter free models: various formats (reasoning, reasoning_details, etc.)
+        """
+        content = message.get("content")
+        reasoning = message.get("reasoning") or message.get("reasoning_content") or ""
+
+        # Handle OpenRouter reasoning_details array
+        if not reasoning and message.get("reasoning_details"):
+            details = message["reasoning_details"]
+            if isinstance(details, list):
+                reasoning = " ".join(
+                    d.get("text", "") for d in details if isinstance(d, dict)
+                )
+
+        # If content is null/empty but we have reasoning, use reasoning as content
+        # This happens with reasoning models that output thinking but no final answer
+        if not content and reasoning:
+            content = reasoning
+
+        return {
+            "content": content or "",
+            "reasoning": reasoning,
+            "thinking": reasoning if reasoning else None,
+            "model": data.get("model", self._model),
+            "raw_message": message,
+        }
+
+    async def _request_with_retry(self, body: dict) -> dict:
+        last_error = None
+        for attempt in range(self._max_retries + 1):
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    f"{self._api_base}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://github.com/aaa",
+                        "X-Title": "AAA",
+                    },
+                    json=body,
+                )
+
+                if response.status_code == 429:
+                    rate_info = self._parse_rate_limit_headers(response.headers)
+                    retry_after = int(response.headers.get("retry-after", 0))
+                    if retry_after == 0:
+                        retry_after = min(2 ** attempt, 30)
+
+                    logger.warning(
+                        f"Rate limited (attempt {attempt + 1}/{self._max_retries + 1}). "
+                        f"Remaining: {rate_info['remaining']}/{rate_info['limit']}. "
+                        f"Retry after: {retry_after}s"
+                    )
+
+                    if attempt < self._max_retries:
+                        await asyncio.sleep(retry_after)
+                        continue
+
+                    raise RateLimitError(
+                        f"Rate limit exceeded. {rate_info['remaining']}/{rate_info['limit']} remaining.",
+                        retry_after=retry_after,
+                        remaining=rate_info["remaining"],
+                        limit=rate_info["limit"],
+                    )
+
+                response.raise_for_status()
+                data = response.json()
+                message = data["choices"][0]["message"]
+                return self._parse_message(message, data)
+
+        raise last_error or RuntimeError("All retries exhausted")
 
     async def generate(self, messages: list[dict], **params) -> dict:
         merged_params = {**self._default_params, **params}
@@ -59,22 +160,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         else:
             body.update(merged_params)
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(
-                f"{self._api_base}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=body,
-            )
-            response.raise_for_status()
-            data = response.json()
-            message = data["choices"][0]["message"]
-            return {
-                "content": message.get("content", ""),
-                "thinking": message.get("reasoning_content"),
-            }
+        return await self._request_with_retry(body)
 
     async def validate_connection(self) -> bool:
         try:
@@ -96,6 +182,7 @@ class OpenRouterProvider(OpenAICompatibleProvider):
         default_params: Optional[dict] = None,
         thinking: bool = False,
         reasoning_effort: str = "high",
+        max_retries: int = 3,
     ):
         super().__init__(
             api_key=api_key,
@@ -105,6 +192,7 @@ class OpenRouterProvider(OpenAICompatibleProvider):
             default_params=default_params,
             thinking=thinking,
             reasoning_effort=reasoning_effort,
+            max_retries=max_retries,
         )
 
 

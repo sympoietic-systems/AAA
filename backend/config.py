@@ -43,6 +43,10 @@ def _apply_env_overrides(config: dict) -> dict:
         "AAA_EMBEDDING_MODEL": ("embedding", "model"),
         "AAA_EMBEDDING_DEVICE": ("embedding", "device"),
         "AAA_EMBEDDING_CACHE_DIR": ("embedding", "cache_dir"),
+        "AAA_BACKGROUND_MODEL": ("background_llm", "model"),
+        "AAA_BACKGROUND_API_BASE": ("background_llm", "api_base"),
+        "AAA_VISION_MODEL": ("vision_llm", "model"),
+        "AAA_VISION_API_BASE": ("vision_llm", "api_base"),
     }
 
     for env_var, (section, key) in env_mapping.items():
@@ -88,6 +92,14 @@ def _apply_env_overrides(config: dict) -> dict:
     api_key = os.environ.get(api_key_env)
     if api_key:
         config.setdefault("llm", {})["api_key"] = api_key
+
+    background_api_key = os.environ.get("AAA_BACKGROUND_API_KEY") or os.environ.get("AAA_LLM_API_KEY")
+    if background_api_key:
+        config.setdefault("background_llm", {})["api_key"] = background_api_key
+
+    vision_api_key = os.environ.get("AAA_VISION_API_KEY") or os.environ.get("AAA_LLM_API_KEY")
+    if vision_api_key:
+        config.setdefault("vision_llm", {})["api_key"] = vision_api_key
 
     return config
 

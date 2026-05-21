@@ -51,6 +51,8 @@ cd frontend && npm run dev
 - **Persistent memory** — every message stored as raw text + vector
 - **Thinking mode** — collapsible chain-of-thought for DeepSeek-v4
 - **Modular pipeline** — reorder/extend modules via YAML config
+- **Background tasks** — separate model for conversation naming, summarization, memory consolidation
+- **Vision fallback** — independently configurable vision-capable model
 - **Error persistence** — all failures logged with full traceback
 - **Terminal dark UI** — monospace, markdown rendering, no bloat
 

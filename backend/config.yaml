@@ -77,6 +77,18 @@ homeostasis:
   entropy_window: 5
   agent_self_window: 5
 
+# ── Background Tasks ──────────────────────────────
+# Lightweight model for async operations (naming, summary, memory consolidation)
+background_llm:
+  model: "google/gemma-4-26b-a4b-it:free"
+  api_base: "https://openrouter.ai/api/v1"
+
+# ── Vision Fallback ───────────────────────────────
+# Model with vision capabilities for image understanding
+vision_llm:
+  model: "google/gemma-4-26b-a4b-it:free"
+  api_base: "https://openrouter.ai/api/v1"
+
 # ── Server ───────────────────────────────────────
 server:
   host: "127.0.0.1"

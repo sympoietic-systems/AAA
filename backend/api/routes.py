@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException, Request
 from .schemas import (
     AgentInfo,
     AttachmentInfo,
+    BackgroundTaskRequest,
+    BackgroundTaskResponse,
     ChatRequest,
     ChatResponse,
     ConversationInfo,
@@ -84,22 +86,9 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
     return content, speaker, conversation_id, parsed_attachments
 
 
-async def _generate_title(llm_provider, first_message: str) -> str:
+async def _generate_title(engine, first_message: str) -> str:
     try:
-        result = await llm_provider.generate(
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Generate a concise 3-6 word title for a conversation. Return only the title, no quotes, no punctuation at the end.",
-                },
-                {
-                    "role": "user",
-                    "content": f"Generate a short title for a conversation that starts with this message: \"{first_message[:300]}\"",
-                },
-            ],
-            temperature=0.3,
-            max_tokens=30,
-        )
+        result = await engine.run("generate_title", {"text": first_message[:300]})
         content = result.get("content", "").strip().strip('"').strip("'")
         if not content:
             return first_message[:60]
@@ -122,7 +111,7 @@ async def chat(request: Request):
     metrics_repo = getattr(state, "metrics_repo", None)
     conv_repo = getattr(state, "conversation_repo", None)
     agent_id = getattr(state, "agent_name", "symbia")
-    llm_provider = getattr(state, "llm_provider", None)
+    background_engine = getattr(state, "background_engine", None)
 
     is_new = False
 
@@ -202,9 +191,9 @@ async def chat(request: Request):
             except Exception:
                 logger.exception("Failed to store metrics")
 
-        if is_new and conv_repo and llm_provider:
+        if is_new and conv_repo and background_engine:
             try:
-                title = await _generate_title(llm_provider, content)
+                title = await _generate_title(background_engine, content)
                 conv_repo.update_title(conversation_id, title)
             except Exception:
                 logger.exception("Failed to generate conversation title")
@@ -388,6 +377,34 @@ async def health(request: Request):
         status="ok",
         modules=modules_status,
     )
+
+
+@router.post("/background", response_model=BackgroundTaskResponse)
+async def run_background_task(body: BackgroundTaskRequest, request: Request):
+    state = request.app.state
+    engine = getattr(state, "background_engine", None)
+    if not engine:
+        raise HTTPException(status_code=503, detail="Background engine not initialized")
+
+    try:
+        payload = {
+            "text": body.text,
+            "conversation_id": body.conversation_id,
+            "context": body.context or {},
+            "use_vision": body.use_vision,
+        }
+        result = await engine.run(body.action, payload)
+        return BackgroundTaskResponse(
+            action=body.action,
+            result=result.get("content", ""),
+            model_used=result.get("model", ""),
+            error=result.get("error"),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Background task error")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/errors", response_model=list[dict])

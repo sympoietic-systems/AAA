@@ -36,6 +36,7 @@ What becomes easier/harder?
 | [003](ADR-003-homeostatic-metrics.md) | Homeostatic Metrics | accepted | 2026-05-20 |
 | [004](ADR-004-conversations-context-retrieval.md) | Conversation Model & Context Retrieval | accepted | 2026-05-20 |
 | [005](ADR-005-perception-module.md) | Perception Module — File Upload & Sediment Retrieval | accepted | 2026-05-20 |
+| [006](ADR-006-background-tasks.md) | Background Tasks — Autopoietic Self-Maintenance | accepted | 2026-05-21 |
 
 ## Creating a New ADR
 
