@@ -40,6 +40,7 @@ export function InputBar({ onSend, disabled }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [files, setFiles] = useState<FileInfo[]>([])
   const [dragOver, setDragOver] = useState(false)
+  const [inputExpanded, setInputExpanded] = useState(false)
 
   const processFiles = useCallback((fileList: FileList | null) => {
     if (!fileList) return
@@ -83,6 +84,13 @@ export function InputBar({ onSend, disabled }: Props) {
       return prev.filter((f) => f.name !== name)
     })
   }, [])
+
+  const handleInput = () => {
+    const el = inputRef.current
+    if (!el || inputExpanded) return
+    el.style.height = "auto"
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`
+  }
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -169,12 +177,22 @@ export function InputBar({ onSend, disabled }: Props) {
         <textarea
           ref={inputRef}
           onKeyDown={handleKeyDown}
+          onInput={handleInput}
           disabled={disabled}
-          rows={1}
+          rows={inputExpanded ? 10 : 1}
           placeholder={dragOver ? "drop files here..." : "type a message..."}
-          className="flex-1 resize-none bg-transparent text-[#ddd] text-sm outline-none
-                     placeholder:text-[#444] disabled:opacity-30"
+          className={`flex-1 resize-none bg-transparent text-[#ddd] text-sm outline-none
+                     placeholder:text-[#444] disabled:opacity-30 ${inputExpanded ? "overflow-y-auto" : "overflow-y-hidden"}`}
         />
+        <button
+          type="button"
+          onClick={() => { setInputExpanded(!inputExpanded); if (inputExpanded && inputRef.current) { inputRef.current.style.height = "auto" } }}
+          disabled={disabled}
+          className="ml-2 text-[#555] hover:text-[#4ade80] text-sm leading-none disabled:opacity-30 transition-colors"
+          title={inputExpanded ? "collapse input" : "expand input"}
+        >
+          {inputExpanded ? "\u2014" : "\u2195"}
+        </button>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}

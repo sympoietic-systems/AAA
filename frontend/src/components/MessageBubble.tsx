@@ -1,6 +1,7 @@
 import { useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 import type { ChatMessage, MetricsInfo } from "../api/client"
 
 function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
@@ -130,18 +131,23 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isHuman = msg.speaker === "human"
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
+  const [userExpanded, setUserExpanded] = useState(false)
 
   return (
     <div className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
       <div className={`text-sm leading-relaxed ${isHuman ? "text-[#777]" : "text-[#c8c8c8]"}`}>
         {isHuman ? (
-          <span>
+          <div className="markdown-body">
             <span className="text-[#555] select-none">&gt; </span>
-            {msg.content}
-          </span>
+            <div className={userExpanded ? "" : "max-h-24 overflow-y-auto"}>
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                {msg.content}
+              </ReactMarkdown>
+            </div>
+          </div>
         ) : (
           <div className="markdown-body">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
               {msg.content}
             </ReactMarkdown>
           </div>
@@ -173,6 +179,18 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
               {msg.thinking}
             </div>
           )}
+        </div>
+      )}
+
+      {isHuman && msg.content && msg.content.length > 200 && (
+        <div className="mt-1">
+          <button
+            onClick={() => setUserExpanded(!userExpanded)}
+            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1"
+          >
+            <span>{userExpanded ? "\u25BC" : "\u25B6"}</span>
+            <span>{userExpanded ? "collapse" : "expand"}</span>
+          </button>
         </div>
       )}
 
