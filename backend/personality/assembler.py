@@ -44,19 +44,19 @@ class PromptAssemblerModule(ProcessingModule):
 
         assembled: list[dict] = [system_msg]
 
-        for fc in file_context:
-            assembled.append(fc)
-
         for sm in sediment_messages:
             assembled.append(sm)
 
         for m in messages:
             assembled.append(m)
 
+        for fc in file_context:
+            assembled.append(fc)
+
         assembled = _trim_to_budget(
             assembled,
             system_msg_token_count=estimate_message_tokens(system_msg),
-            file_context_count=len(file_context),
+            sediment_count=len(sediment_messages),
             max_tokens=self._max_context_tokens,
         )
 
@@ -68,40 +68,30 @@ def _trim_to_budget(
     messages: list[dict],
     system_msg_token_count: int,
     max_tokens: int,
-    file_context_count: int = 0,
+    sediment_count: int = 0,
 ) -> list[dict]:
     total = sum(estimate_message_tokens(m) for m in messages)
     if total <= max_tokens:
         return messages
 
-    system_end = 1
-    file_context_end = system_end + file_context_count
+    sacred_end = 1 + sediment_count
 
-    sediment_end = file_context_end
-    for i in range(file_context_end, len(messages)):
-        role = messages[i].get("role", "")
-        if role in ("user", "assistant"):
-            sediment_end = i
-            break
-    else:
-        sediment_end = len(messages)
-
-    sacred_part = messages[:sediment_end]
-    history_part = messages[sediment_end:]
+    sacred_part = messages[:sacred_end]
+    trimmable_part = messages[sacred_end:]
 
     sacred_tokens = sum(estimate_message_tokens(m) for m in sacred_part)
     available = max_tokens - sacred_tokens
 
-    trimmed_history: list[dict] = []
+    trimmed: list[dict] = []
     used = 0
-    for m in reversed(history_part):
+    for m in reversed(trimmable_part):
         t = estimate_message_tokens(m)
         if used + t > available:
             break
-        trimmed_history.insert(0, m)
+        trimmed.insert(0, m)
         used += t
 
-    return sacred_part + trimmed_history
+    return sacred_part + trimmed
 
 
 def _build_system_content(identity: dict, registry: SkillRegistry) -> str:

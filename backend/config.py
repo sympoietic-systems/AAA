@@ -64,6 +64,18 @@ def _apply_env_overrides(config: dict) -> dict:
     if max_tokens is not None:
         config.setdefault("context", {})["max_tokens"] = int(max_tokens)
 
+    floating_window = os.environ.get("AAA_CONTEXT_FLOATING_WINDOW")
+    if floating_window is not None:
+        config.setdefault("context", {})["floating_window"] = int(floating_window)
+
+    caveman_env = os.environ.get("AAA_CONTEXT_CAVEMAN")
+    if caveman_env is not None:
+        config.setdefault("context", {})["caveman_enabled"] = caveman_env.lower() in ("true", "1", "yes")
+
+    consolidate_threshold = os.environ.get("AAA_CONTEXT_CONSOLIDATE_THRESHOLD")
+    if consolidate_threshold is not None:
+        config.setdefault("context", {})["consolidate_threshold"] = int(consolidate_threshold)
+
     sediment_budget = os.environ.get("AAA_SEDIMENT_TOKEN_BUDGET")
     if sediment_budget is not None:
         config.setdefault("sedimentation", {})["sediment_token_budget"] = int(sediment_budget)

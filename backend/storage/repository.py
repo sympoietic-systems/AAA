@@ -73,6 +73,14 @@ class ConversationRepository:
             (conversation_id,),
         )
         conn.execute(
+            "DELETE FROM perception_sediment WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.execute(
+            "DELETE FROM consolidation_checkpoints WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.execute(
             "DELETE FROM conversations WHERE id = ?",
             (conversation_id,),
         )
@@ -627,6 +635,54 @@ class PerceptionSedimentRepository:
         conn = self._conn()
         conn.execute(
             "DELETE FROM perception_sediment WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.commit()
+
+
+class ConsolidationCheckpointRepository:
+    def __init__(self, db_path: str):
+        self._db_path = db_path
+
+    def _conn(self) -> sqlite3.Connection:
+        return get_connection(self._db_path)
+
+    def save(self, conversation_id: str, message_count: int, summary: str, model: str = "") -> int:
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO consolidation_checkpoints (conversation_id, message_count, summary, model)
+               VALUES (?, ?, ?, ?)""",
+            (conversation_id, message_count, summary, model),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT id FROM consolidation_checkpoints WHERE id = last_insert_rowid()"
+        ).fetchone()
+        return row["id"] if row else 0
+
+    def get_latest(self, conversation_id: str) -> dict | None:
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT * FROM consolidation_checkpoints
+               WHERE conversation_id = ?
+               ORDER BY id DESC LIMIT 1""",
+            (conversation_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "id": row["id"],
+            "conversation_id": row["conversation_id"],
+            "message_count": row["message_count"],
+            "summary": row["summary"],
+            "model": row["model"],
+            "created_at": row["created_at"],
+        }
+
+    def delete_by_conversation(self, conversation_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM consolidation_checkpoints WHERE conversation_id = ?",
             (conversation_id,),
         )
         conn.commit()

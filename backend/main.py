@@ -30,6 +30,7 @@ from backend.skills.metadata import SkillMeta
 from backend.skills.registry import SkillRegistry
 from backend.storage.database import get_db_path, init_db
 from backend.storage.repository import (
+    ConsolidationCheckpointRepository,
     ConversationRepository,
     ErrorLogRepository,
     MessageRepository,
@@ -135,6 +136,7 @@ async def lifespan(app: FastAPI):
     metrics_repo = MetricsRepository(str(full_db_path))
     conversation_repo = ConversationRepository(str(full_db_path))
     perception_repo = PerceptionSedimentRepository(str(full_db_path))
+    checkpoint_repo = ConsolidationCheckpointRepository(str(full_db_path))
 
     embed_cfg = config.get("embedding", {})
     embedder = EmbedderModule(
@@ -154,6 +156,10 @@ async def lifespan(app: FastAPI):
     context_collector = ContextCollectorModule(
         message_repo=message_repo,
         max_history=ctx_cfg.get("max_history", 20),
+        floating_window=ctx_cfg.get("floating_window", 8),
+        caveman_enabled=ctx_cfg.get("caveman_enabled", True),
+        consolidate_threshold=ctx_cfg.get("consolidate_threshold", 15),
+        checkpoint_repo=checkpoint_repo,
     )
 
     metrics_cfg = config.get("homeostasis", {})
@@ -278,6 +284,7 @@ async def lifespan(app: FastAPI):
     app.state.metrics_repo = metrics_repo
     app.state.conversation_repo = conversation_repo
     app.state.perception_repo = perception_repo
+    app.state.checkpoint_repo = checkpoint_repo
     app.state.registry = registry
     app.state.pipeline = pipeline
     app.state.pipeline_order = pipeline_order

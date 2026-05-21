@@ -49,8 +49,11 @@ personality:
 
 # ── Context ──────────────────────────────────────
 context:
-  max_history: 20              # Fallback message count limit
+  max_history: 20              # Max messages fetched from DB
   max_tokens: 16384            # Hard cap for entire context window
+  floating_window: 8           # Last N messages kept raw (uncompressed)
+  caveman_enabled: true        # Strip filler words for messages outside window
+  consolidate_threshold: 15    # Trigger LLM consolidation every N messages
 
 # ── Sedimentation ────────────────────────────────
 sedimentation:
@@ -178,6 +181,9 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | Variable | Values | Default |
 |----------|--------|---------|
 | `AAA_CONTEXT_MAX_TOKENS` | Any integer | `16384` (from `config.yaml`) |
+| `AAA_CONTEXT_FLOATING_WINDOW` | Any integer | `8` (from `config.yaml`) |
+| `AAA_CONTEXT_CAVEMAN` | `true`, `false` | `true` (from `config.yaml`) |
+| `AAA_CONTEXT_CONSOLIDATE_THRESHOLD` | Any integer | `15` (from `config.yaml`) |
 | `AAA_SEDIMENT_TOKEN_BUDGET` | Any integer | `2000` (from `config.yaml`) |
 | `AAA_SEDIMENT_COUNT` | Any integer | `10` (from `config.yaml`) |
 

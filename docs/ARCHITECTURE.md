@@ -63,10 +63,15 @@ ProcessingPipeline.run(payload)
   │
   ├─► context_collector.process(payload)
   │     scoped to conversation_id
-  │     recent = message_repo.get_recent(limit=20, conversation_id=cid)
+  │     Three-tier compression:
+  │       Tier 1 (last N=floating_window msgs): raw, full text
+  │       Tier 2 (older msgs up to max_history): caveman compressed
+  │       Tier 3 (existing checkpoint): prepended as system message
+  │     Sets trigger_consolidation flag when msg count >= threshold
   │     payload["messages"] = [
-  │       {"role": "user", "content": "previous msg"},
-  │       {"role": "assistant", "content": "previous reply"},
+  │       {"role": "system", "content": "[Consolidated memory: ...]"},
+  │       {"role": "user", "content": "[H]: compressed older msg"},
+  │       {"role": "assistant", "content": "raw recent reply"},
   │       {"role": "user", "content": "What is life?"},
   │     ]
   │
@@ -82,8 +87,8 @@ ProcessingPipeline.run(payload)
   │     identity = load identity.yaml
   │     skill_desc = registry.describe_skills()
   │     system_msg = compose(identity + skills)
-  │     Insert: [system] + [sediment_messages] + [history]
-  │     Token budget enforcement: trim oldest history if over max_tokens
+  │     Assembly order: [system] + [sediment] + [history] + [file_context]
+  │     Token budget enforcement: trim oldest history first if over max_tokens
   │
   ├─► homeostatic_regulator.process(payload)
   │     Maps metrics → temperature/presence_penalty/frequency_penalty
@@ -150,6 +155,20 @@ Per-message vitality metrics (computed by `ConversationMetricsModule`). Scoped t
 | `error_message` | TEXT | Exception message |
 | `traceback` | TEXT | Full traceback |
 | `context` | TEXT | JSON: what was being processed |
+
+### `consolidation_checkpoints`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment |
+| `conversation_id` | TEXT | FK to `conversations.id` |
+| `message_count` | INTEGER | Message count when checkpoint was created |
+| `summary` | TEXT | LLM-consolidated conversation summary |
+| `model` | TEXT | Model used for consolidation |
+| `created_at` | DATETIME | Default CURRENT_TIMESTAMP |
+
+Auto-created when conversation crosses `consolidate_threshold` (default 15 msgs).
+Prepend to future context as `[Consolidated memory: <summary>]` system message.
 
 ## Module System
 
@@ -239,10 +258,12 @@ row at insert time. System prompt token count computed once at startup
 - **API**: `GET /api/tokens` returns breakdown per conversation or filtered.
 
 ### Budget Enforcement
-`prompt_assembler` enforces `context.max_tokens` (default 16384).
-Context composition: `[system] + [sediment] + [history]`.
-If total exceeds budget, oldest conversation messages are trimmed first.
-System prompt and sediment messages are never trimmed.
+Context composition:
+```
+[system prompt / identity] → [sediment / personality memories] → [current conversation (tiered compression)] → [file context]
+```
+If total exceeds `context.max_tokens`, oldest conversation + file messages are
+trimmed first. System prompt and sediment are never trimmed.
 
 ## Sedimentation
 
@@ -361,10 +382,11 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | Per-conversation history | Done | Scoped queries, ordered by `id` |
 | Sedimentation (cross-convo) | Done | Embedding similarity, token-budgeted |
 | Token tracking | Done | Per-message, per-conversation, system prompt |
-| Token budget enforcement | Done | `prompt_assembler` trims oldest history |
+| Token budget enforcement | Done | Tiered compression + trim oldest first |
 | Title generation | Done | Cheap LLM call on first message |
 | Legacy migration | Done | Orphaned messages → "Legacy" conversation |
 | Homeostatic metrics (per-convo) | Done | Scoped to `conversation_id` |
+| Tiered context compression | Done | Caveman (mid-tier) + LLM checkpoints (deep); see ADR-007 |
 
 ## Future Extension
 

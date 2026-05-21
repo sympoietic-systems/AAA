@@ -104,7 +104,6 @@ async def _generate_title_from_conversation(engine, message_repo, conversation_i
         rows = message_repo.get_recent_with_metrics(limit=20, conversation_id=conversation_id)
         if not rows:
             return "Untitled"
-        # Build context from conversation messages
         lines = []
         for r in rows:
             speaker = r.get("speaker", "unknown")
@@ -128,6 +127,44 @@ async def _generate_title_from_conversation(engine, message_repo, conversation_i
         return "Untitled"
 
 
+def _fire_and_forget_consolidation(engine, message_repo, checkpoint_repo, conversation_id: str, msg_count: int) -> None:
+    """Trigger a background consolidation checkpoint without blocking."""
+    import asyncio
+
+    async def _do_consolidate():
+        try:
+            rows = message_repo.get_recent_with_metrics(limit=msg_count + 10, conversation_id=conversation_id)
+            if not rows:
+                return
+            lines = []
+            for r in rows:
+                speaker = r.get("speaker", "unknown")
+                content = r.get("content", "")[:500]
+                label = "Human" if speaker == "human" else "Agent"
+                lines.append(f"{label}: {content}")
+            text = "\n".join(lines)
+
+            result = await engine.run("consolidate", {
+                "text": text,
+                "context": {"messages": [
+                    {"speaker": r.get("speaker", "unknown"), "content": r.get("content", "")}
+                    for r in rows
+                ]},
+            })
+
+            summary = result.get("content", "").strip()
+            if summary and checkpoint_repo:
+                model_used = result.get("model", "")
+                checkpoint_repo.save(conversation_id, msg_count, summary, model_used)
+                logger.info("Consolidation checkpoint saved for %s (%d msgs)", conversation_id, msg_count)
+        except Exception:
+            logger.exception("Background consolidation failed")
+
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(_do_consolidate())
+    except RuntimeError:
+        pass
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -240,6 +277,14 @@ async def chat(request: Request):
                         conv_repo.update_title(conversation_id, title)
                     except Exception:
                         logger.exception("Failed to auto-generate conversation title")
+
+        if result.payload.get("trigger_consolidation") and background_engine and conv_repo:
+            _fire_and_forget_consolidation(
+                background_engine, repo,
+                getattr(state, "checkpoint_repo", None),
+                conversation_id,
+                result.payload.get("consolidate_message_count", 0),
+            )
 
         response_attachments = _build_response_attachments(attachments, result)
 

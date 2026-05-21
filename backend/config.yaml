@@ -53,7 +53,10 @@ personality:
 # ── Context ──────────────────────────────────────
 context:
   max_history: 20
-  max_tokens: 16384     # env: AAA_CONTEXT_MAX_TOKENS
+  max_tokens: 16384              # env: AAA_CONTEXT_MAX_TOKENS
+  floating_window: 8             # env: AAA_CONTEXT_FLOATING_WINDOW — last N msgs kept raw
+  caveman_enabled: true          # env: AAA_CONTEXT_CAVEMAN — strip filler words for tier 2
+  consolidate_threshold: 15      # env: AAA_CONTEXT_CONSOLIDATE_THRESHOLD — trigger consolidation every N msgs
 
 # ── Sedimentation ───────────────────────────────
 sedimentation:

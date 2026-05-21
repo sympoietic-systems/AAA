@@ -36,3 +36,28 @@ def estimate_message_tokens(message: dict) -> int:
 
 def estimate_messages_tokens(messages: list[dict]) -> int:
     return sum(estimate_message_tokens(m) for m in messages)
+
+
+STOP_WORDS: frozenset[str] = frozenset({
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "shall",
+    "should", "may", "might", "must", "can", "could", "that", "which",
+    "who", "whom", "this", "these", "those", "it", "its", "to", "of",
+    "in", "for", "on", "with", "at", "by", "from", "as", "or", "and",
+    "but", "if", "so", "no", "not", "just", "very", "really", "quite",
+    "then", "now", "here", "there", "also", "some", "any", "all", "each",
+    "what", "when", "where", "how", "why",
+})
+
+
+def caveman_compress(text: str, max_chars: int = 250) -> str:
+    if not text:
+        return ""
+    words = text.split()
+    if len(words) <= 8:
+        return text
+    compressed = [w for w in words if w.lower() not in STOP_WORDS]
+    result = " ".join(compressed)
+    if len(result) > max_chars:
+        result = result[:max_chars - 3] + "..."
+    return result
