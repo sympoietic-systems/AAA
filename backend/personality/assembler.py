@@ -48,12 +48,36 @@ class PromptAssemblerModule(ProcessingModule):
             history_prior = messages[:-1]
             current_query = [messages[-1]]
 
+        # Wrap history with boundary blocks if present
+        if history_prior:
+            history_block = [{"role": "system", "content": "--- BEGIN CONVERSATION HISTORY ---"}]
+            history_block.extend(history_prior)
+            history_block.append({"role": "system", "content": "--- END CONVERSATION HISTORY ---"})
+        else:
+            history_block = []
+
+        # Wrap cross-conversation sediment with boundary blocks if present
+        if sediment_messages:
+            sediment_block = [{"role": "system", "content": "--- BEGIN CROSS-CONVERSATION RESONANCE ---"}]
+            sediment_block.extend(sediment_messages)
+            sediment_block.append({"role": "system", "content": "--- END CROSS-CONVERSATION RESONANCE ---"})
+        else:
+            sediment_block = []
+
+        # Wrap file context with boundary blocks if present
+        if file_context:
+            file_block = [{"role": "system", "content": "--- BEGIN FILE SEDIMENT ---"}]
+            file_block.extend(file_context)
+            file_block.append({"role": "system", "content": "--- END FILE SEDIMENT ---"})
+        else:
+            file_block = []
+
         # Re-assemble the context in the topologically coherent order:
         # System Prompt -> History Prior -> Sediment (Cross-Conv Memory) -> File Context -> Current Query
         assembled = [system_msg]
-        assembled.extend(history_prior)
-        assembled.extend(sediment_messages)
-        assembled.extend(file_context)
+        assembled.extend(history_block)
+        assembled.extend(sediment_block)
+        assembled.extend(file_block)
         assembled.extend(current_query)
 
         payload["messages"] = assembled

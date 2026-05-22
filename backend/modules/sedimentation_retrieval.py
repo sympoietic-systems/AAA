@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 import numpy as np
 
@@ -9,6 +10,30 @@ from backend.utils.token_counter import estimate_message_tokens
 from .base import ProcessingModule
 
 logger = logging.getLogger(__name__)
+
+
+def _format_relative_time(dt: datetime) -> str:
+    now = datetime.now()
+    diff = now - dt
+    seconds = diff.total_seconds()
+    if seconds < 0:
+        return "just now"
+    if seconds < 60:
+        return f"{int(seconds)}s ago"
+    minutes = seconds / 60
+    if minutes < 60:
+        return f"{int(minutes)}m ago"
+    hours = minutes / 60
+    if hours < 24:
+        return f"{int(hours)}h ago"
+    days = hours / 24
+    if days < 30:
+        return f"{int(days)}d ago"
+    months = days / 30.4
+    if months < 12:
+        return f"{int(months)}mo ago"
+    years = days / 365.25
+    return f"{int(years)}y ago"
 
 
 class SedimentationRetrievalModule(ProcessingModule):
@@ -72,8 +97,8 @@ class SedimentationRetrievalModule(ProcessingModule):
             payload["sediment_messages"] = []
             return payload
 
-        messages = self._repo.get_by_ids(top_ids)
-        id_to_msg = {m.id: m for m in messages}
+        messages = self._repo.get_sediment_messages_with_metadata(top_ids)
+        id_to_msg = {m["id"]: m for m in messages}
 
         sediment: list[dict] = []
         tokens_used = 0
@@ -81,8 +106,13 @@ class SedimentationRetrievalModule(ProcessingModule):
             msg = id_to_msg.get(msg_id)
             if msg is None:
                 continue
-            role = "assistant" if msg.speaker == "apparatus" else "user"
-            entry = {"role": role, "content": msg.content}
+            original_speaker = "apparatus" if msg["speaker"] == "apparatus" else "human"
+            rel_time = _format_relative_time(msg["timestamp"])
+            title = msg["conversation_title"]
+            
+            content_formatted = f'[Memory from "{title}" | {rel_time} | Speaker: {original_speaker}]:\n"{msg["content"]}"'
+            
+            entry = {"role": "system", "content": content_formatted}
             entry_tokens = estimate_message_tokens(entry)
             if tokens_used + entry_tokens > self._sediment_token_budget:
                 break

@@ -363,6 +363,31 @@ class MessageRepository:
         return [_row_to_message(r) for r in rows]
 
     @with_connection
+    def get_sediment_messages_with_metadata(self, message_ids: list[int]) -> list[dict]:
+        if not message_ids:
+            return []
+        conn = self._conn()
+        placeholders = ",".join("?" * len(message_ids))
+        rows = conn.execute(
+            f"""SELECT cl.*, c.title as conversation_title
+               FROM conversation_log cl
+               LEFT JOIN conversations c ON cl.conversation_id = c.id
+               WHERE cl.id IN ({placeholders})""",
+            message_ids,
+        ).fetchall()
+        results = []
+        for row in rows:
+            results.append({
+                "id": row["id"],
+                "timestamp": datetime.fromisoformat(row["timestamp"]) if row["timestamp"] else datetime.now(),
+                "conversation_id": row["conversation_id"],
+                "speaker": row["speaker"],
+                "content": row["content"],
+                "conversation_title": row["conversation_title"] or "Untitled Conversation",
+            })
+        return results
+
+    @with_connection
     def get_token_totals(self, conversation_id: str | None = None) -> list[dict]:
         conn = self._conn()
         if conversation_id is not None:

@@ -88,6 +88,19 @@ Total capped at max_tokens
 
 Automated system notifications (e.g., file processing logs with speaker `system` in the database) are mapped to `role="system"` rather than `role="user"` in the prompt to prevent the model from misattributing the system's voice to the human participant. To save context tokens and avoid duplicating information already present in the File Manifest, these history entries are minimized to a single-line notification (e.g., `[System Notification: Processed file: **filename.ext** (type).]`) when sent to the LLM. The full summary is preserved in the database (for UI rendering) and in the File Manifest (for model reasoning).
 
+### Boundary Delimiters & Memory Provenance
+
+To prevent ontological collapse and keep memory layers cleanly structured for the LLM, we enforce strict visual boundaries and metadata framing:
+
+1. **Boundary Delimiters:** Every retrieved context block is wrapped inside visible system tags:
+   - History: `--- BEGIN CONVERSATION HISTORY ---` / `--- END CONVERSATION HISTORY ---`
+   - Cross-conversation memory: `--- BEGIN CROSS-CONVERSATION RESONANCE ---` / `--- END CROSS-CONVERSATION RESONANCE ---`
+   - Files context: `--- BEGIN FILE SEDIMENT ---` / `--- END FILE SEDIMENT ---`
+
+2. **Nomadic Memory Provenance:** Sediment messages retrieved from other conversations are mapped to `role="system"` to avoid consecutive role conflicts in API providers (e.g., Anthropic alternating roles). Each is prefixed with rich geo-temporal and speaker metadata:
+   `[Memory from "{conversation_title}" | {relative_time} | Speaker: {original_speaker}]:`
+   The relative time (e.g., `3d ago`, `2mo ago`) is calculated dynamically from the database timestamp to ground the memory with temporal perspective.
+
 ### Title Generation
 
 Titles are generated on first message via a cheap LLM call (async, non-blocking). The `LLMProvider` reference is stored on `app.state` for lightweight out-of-pipeline calls.
