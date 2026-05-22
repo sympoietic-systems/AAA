@@ -143,6 +143,8 @@ Legacy migration: a "Legacy" conversation (UUID `00000000-...`) is auto-created 
 | `embedding` | BLOB | float32 vector, 384 × 4 = 1536 bytes |
 | `embedding_model` | TEXT | `all-MiniLM-L6-v2` (tracked for migration) |
 | `embedding_dim` | INTEGER | 384 (validates BLOB size) |
+| `model_used` | TEXT | Name of the LLM model that generated the response |
+| `provider_used` | TEXT | Provider identifier (e.g., google, openrouter) |
 
 Indexes: `idx_conversation_timestamp`, `idx_conversation_log_conv_id`
 

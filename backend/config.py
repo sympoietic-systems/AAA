@@ -34,6 +34,7 @@ def _resolve_env_recursive(obj: Any) -> Any:
 def _apply_env_overrides(config: dict) -> dict:
     env_mapping = {
         "AAA_LLM_MODEL": ("llm", "model"),
+        "AAA_LLM_MODELS": ("llm", "models"),
         "AAA_LLM_PROVIDER": ("llm", "provider"),
         "AAA_LLM_API_BASE": ("llm", "api_base"),
         "AAA_DB_PATH": ("database", "path"),
@@ -116,6 +117,31 @@ def _apply_env_overrides(config: dict) -> dict:
     vision_api_key = os.environ.get("AAA_VISION_API_KEY") or os.environ.get("AAA_LLM_API_KEY")
     if vision_api_key:
         config.setdefault("vision_llm", {})["api_key"] = vision_api_key
+
+    google_api_key = os.environ.get("AAA_GOOGLE_API_KEY")
+    google_keys = [k.strip() for k in google_api_key.split(",") if k.strip()] if google_api_key else []
+
+    deepseek_api_key = os.environ.get("AAA_DEEPSEEK_API_KEY")
+    deepseek_keys = [k.strip() for k in deepseek_api_key.split(",") if k.strip()] if deepseek_api_key else []
+
+    openrouter_api_keys = os.environ.get("AAA_BACKGROUND_API_KEY") or os.environ.get("AAA_LLM_API_KEY")
+    openrouter_keys = [k.strip() for k in openrouter_api_keys.split(",") if k.strip()] if openrouter_api_keys else []
+
+    google_api_base = os.environ.get("AAA_GOOGLE_API_BASE")
+    deepseek_api_base = os.environ.get("AAA_DEEPSEEK_API_BASE") or os.environ.get("AAA_LLM_API_BASE")
+
+    for section in ("llm", "background_llm", "vision_llm"):
+        cfg = config.setdefault(section, {})
+        if google_keys:
+            cfg["google_keys"] = google_keys
+        if deepseek_keys:
+            cfg["deepseek_keys"] = deepseek_keys
+        if openrouter_keys:
+            cfg["openrouter_keys"] = openrouter_keys
+        if google_api_base:
+            cfg["google_api_base"] = google_api_base
+        if deepseek_api_base:
+            cfg["deepseek_api_base"] = deepseek_api_base
 
     return config
 

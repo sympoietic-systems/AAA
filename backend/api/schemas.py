@@ -33,6 +33,8 @@ class ChatResponse(BaseModel):
     homeostatic_recommendations: Optional["HomeostaticRecommendations"] = None
     attachments: list[AttachmentInfo] | None = None
     context_sent: str | None = None
+    model_used: Optional[str] = None
+    provider_used: Optional[str] = None
 
 
 class HistoryMessage(BaseModel):
@@ -44,6 +46,8 @@ class HistoryMessage(BaseModel):
     content_tokens: int = 0
     thinking_tokens: Optional[int] = None
     metrics: Optional["MetricsInfo"] = None
+    model_used: Optional[str] = None
+    provider_used: Optional[str] = None
 
 
 class HistoryResponse(BaseModel):

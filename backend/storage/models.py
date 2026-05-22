@@ -27,6 +27,8 @@ class Message:
     embedding: bytes = b""
     embedding_model: str = ""
     embedding_dim: int = 0
+    model_used: Optional[str] = None
+    provider_used: Optional[str] = None
 
 
 @dataclass

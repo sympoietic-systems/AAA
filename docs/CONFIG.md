@@ -30,6 +30,8 @@ llm:
     effort: "high"             # high | max (DeepSeek-v4 only)
   default_params:
     temperature: 0.7            # Ignored when thinking=enabled
+    # The chat endpoint now returns `model_used` and `provider_used`
+    # fields in the response payload, indicating which LLM model and provider produced the output.
     max_tokens: 2048
 
 # ── Pipeline ─────────────────────────────────────

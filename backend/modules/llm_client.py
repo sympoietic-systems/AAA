@@ -99,6 +99,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             "reasoning": reasoning,
             "thinking": reasoning if reasoning else None,
             "model": data.get("model", self._model),
+            "provider_used": self.provider_name,
             "raw_message": message,
         }
 
@@ -196,11 +197,39 @@ class OpenRouterProvider(OpenAICompatibleProvider):
         )
 
 
-class ModelPoolProvider(BaseLLMProvider):
-    """Provider that tries models from a pool in order, with rate-limit fallback.
+class KeyManager:
+    """Manages rotation and cooldowns for a list of API keys."""
 
-    When one model returns a 429 rate limit, the next model is tried.
-    Exhausted models are retried after a cooldown period.
+    def __init__(self, keys: list[str], cooldown_seconds: int = 60):
+        self.keys = keys
+        self.cooldown_seconds = cooldown_seconds
+        self._exhausted: dict[str, float] = {}
+
+    def get_available_key(self) -> Optional[str]:
+        import time
+        now = time.time()
+        for key in self.keys:
+            until = self._exhausted.get(key, 0)
+            if until and now < until:
+                continue
+            if key in self._exhausted:
+                del self._exhausted[key]
+            return key
+        return None
+
+    def mark_key_exhausted(self, key: str):
+        import time
+        self._exhausted[key] = time.time() + self.cooldown_seconds
+
+    def has_keys(self) -> bool:
+        return len(self.keys) > 0
+
+
+class ModelPoolProvider(BaseLLMProvider):
+    """Provider that tries models from a pool in order, with rate-limit and provider fallback.
+
+    Supports 'google_router/', 'deepseek_router/', and 'openrouter_router/' prefixes to route requests to
+    different providers (Google API vs DeepSeek API vs OpenRouter API) with independent API key rotation pools.
     """
 
     def __init__(
@@ -209,17 +238,38 @@ class ModelPoolProvider(BaseLLMProvider):
         models: list[str],
         fallback_model: str = "openrouter/free",
         api_base: str = "https://openrouter.ai/api/v1",
+        google_keys: Optional[list[str]] = None,
+        deepseek_keys: Optional[list[str]] = None,
+        openrouter_keys: Optional[list[str]] = None,
+        google_api_base: str = "https://generativelanguage.googleapis.com/v1beta/openai",
+        deepseek_api_base: str = "https://api.deepseek.com",
         cooldown_seconds: int = 60,
         max_retries_per_model: int = 0,
+        thinking: bool = False,
+        reasoning_effort: str = "high",
     ):
         self._api_key = api_key
         self._models = models
         self._fallback_model = fallback_model
         self._api_base = api_base
+        self._google_api_base = google_api_base
+        self._deepseek_api_base = deepseek_api_base
         self._cooldown_seconds = cooldown_seconds
         self._max_retries_per_model = max_retries_per_model
+        self._thinking = thinking
+        self._reasoning_effort = reasoning_effort
         self._exhausted: dict[str, float] = {}
         self._last_model_used: str = ""
+
+        # Setup key managers
+        self._google_key_mgr = KeyManager(google_keys or [], cooldown_seconds=cooldown_seconds)
+        self._deepseek_key_mgr = KeyManager(deepseek_keys or [], cooldown_seconds=cooldown_seconds)
+        
+        # If openrouter_keys is empty but we have api_key, use it as fallback
+        or_keys = list(openrouter_keys) if openrouter_keys else []
+        if not or_keys and api_key:
+            or_keys = [api_key]
+        self._openrouter_key_mgr = KeyManager(or_keys, cooldown_seconds=cooldown_seconds)
 
     @property
     def provider_name(self) -> str:
@@ -244,33 +294,99 @@ class ModelPoolProvider(BaseLLMProvider):
         import time
         self._exhausted[model] = time.time() + self._cooldown_seconds
 
-    def _create_provider(self, model: str) -> OpenAICompatibleProvider:
-        return OpenAICompatibleProvider(
-            api_key=self._api_key,
-            model=model,
-            api_base=self._api_base,
-            provider_name="model_pool",
-            max_retries=self._max_retries_per_model,
-        )
+    def _mask_key(self, key: str) -> str:
+        if not key:
+            return "None"
+        if len(key) <= 8:
+            return "***"
+        return f"{key[:4]}...{key[-4:]}"
 
     async def generate(self, messages: list[dict], **params) -> dict:
+        import time
         errors = []
         for model in self._all_models():
             if self._is_exhausted(model):
                 continue
 
-            provider = self._create_provider(model)
-            try:
-                result = await provider.generate(messages, **params)
-                self._last_model_used = model
+            # Route model based on prefix
+            if model.startswith("google_router/"):
+                actual_model = model.split("google_router/", 1)[1]
+                api_base = self._google_api_base
+                key_mgr = self._google_key_mgr
+                provider_type = "google"
+            elif model.startswith("deepseek_router/"):
+                actual_model = model.split("deepseek_router/", 1)[1]
+                api_base = self._deepseek_api_base
+                key_mgr = self._deepseek_key_mgr
+                provider_type = "deepseek"
+            elif model.startswith("openrouter_router/"):
+                actual_model = model.split("openrouter_router/", 1)[1]
+                api_base = self._api_base
+                key_mgr = self._openrouter_key_mgr
+                provider_type = "openrouter"
+            else:
+                actual_model = model
+                api_base = self._api_base
+                key_mgr = self._openrouter_key_mgr
+                provider_type = "openrouter"
+
+            if provider_type == "google" and not self._google_key_mgr.has_keys():
+                logger.warning("Model %s has google_router/ prefix but no google API keys are configured", model)
+                continue
+            if provider_type == "deepseek" and not self._deepseek_key_mgr.has_keys():
+                logger.warning("Model %s has deepseek_router/ prefix but no deepseek API keys are configured", model)
+                continue
+            if provider_type == "openrouter" and not self._openrouter_key_mgr.has_keys():
+                logger.warning("Model %s routes to openrouter but no openrouter API keys are configured", model)
+                continue
+
+            success = False
+            result = None
+            tried_keys = set()
+
+            while True:
+                key = key_mgr.get_available_key()
+                if not key or key in tried_keys:
+                    break
+
+                tried_keys.add(key)
+                masked_key = self._mask_key(key)
+
+                logger.info("Attempting model %s using provider %s with key %s", actual_model, provider_type, masked_key)
+
+                provider = OpenAICompatibleProvider(
+                    api_key=key,
+                    model=actual_model,
+                    api_base=api_base,
+                    provider_name=f"model_pool_{provider_type}",
+                    thinking=self._thinking if provider_type == "deepseek" else False,
+                    reasoning_effort=self._reasoning_effort,
+                    max_retries=self._max_retries_per_model,
+                )
+
+                try:
+                    result = await provider.generate(messages, **params)
+                    self._last_model_used = model
+                    success = True
+                    break
+                except RateLimitError as e:
+                    key_mgr.mark_key_exhausted(key)
+                    errors.append(f"{model} (key: {masked_key}): rate limited - {e}")
+                    logger.warning("Key %s rate limited for model %s. Rotating key...", masked_key, model)
+                except httpx.HTTPStatusError as e:
+                    key_mgr.mark_key_exhausted(key)
+                    errors.append(f"{model} (key: {masked_key}): HTTP {e.response.status_code} - {e}")
+                    logger.warning("Key %s HTTP error %s for model %s. Rotating key...", masked_key, e.response.status_code, model)
+                except Exception as e:
+                    key_mgr.mark_key_exhausted(key)
+                    errors.append(f"{model} (key: {masked_key}): {e}")
+                    logger.warning("Key %s encountered error %s for model %s. Rotating key...", masked_key, type(e).__name__, model)
+
+            if success:
                 return result
-            except RateLimitError as e:
-                self._mark_exhausted(model)
-                errors.append(f"{model}: rate limited")
-                logger.warning("Model %s rate limited, moving to next in pool", model)
-            except Exception as e:
-                errors.append(f"{model}: {e}")
-                logger.warning("Model %s failed: %s", model, e)
+
+            self._mark_exhausted(model)
+            logger.warning("All keys exhausted for model %s. Moving to next in pool.", model)
 
         error_msg = f"All models in pool exhausted. Errors: {'; '.join(errors)}"
         logger.error(error_msg)
@@ -319,6 +435,10 @@ class LLMClientModule(ProcessingModule):
         payload["response"] = result["content"]
         if result.get("thinking"):
             payload["thinking"] = result["thinking"]
+        if result.get("model"):
+            payload["model_used"] = result["model"]
+        if result.get("provider_used"):
+            payload["provider_used"] = result["provider_used"]
         return payload
 
     @property

@@ -206,6 +206,8 @@ async def chat(request: Request):
         embedding = result.payload.get("embedding", b"")
         embedding_model = result.payload.get("embedding_model", "unknown")
         embedding_dim = result.payload.get("embedding_dim", 0)
+        model_used = result.payload.get("model_used")
+        provider_used = result.payload.get("provider_used")
 
         if result.status == "error" or not response_text:
             for err in result.errors:
@@ -242,6 +244,8 @@ async def chat(request: Request):
             conversation_id=conversation_id,
             content_tokens=estimate_tokens(response_text),
             thinking_tokens=thinking_tokens,
+            model_used=model_used,
+            provider_used=provider_used,
         )
 
         payload_metrics = result.payload.get("metrics")
@@ -302,6 +306,8 @@ async def chat(request: Request):
             homeostatic_recommendations=_build_recommendations(recommendations),
             attachments=response_attachments,
             context_sent=result.payload.get("context_sent"),
+            model_used=response_msg.model_used,
+            provider_used=response_msg.provider_used,
         )
     except HTTPException:
         raise
@@ -339,6 +345,8 @@ async def history(limit: int = 50, conversation_id: str = "", request: Request =
             content_tokens=r.get("content_tokens", 0),
             thinking_tokens=r.get("thinking_tokens"),
             metrics=metrics,
+            model_used=r.get("model_used"),
+            provider_used=r.get("provider_used"),
         ))
     return HistoryResponse(
         messages=messages,

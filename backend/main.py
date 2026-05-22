@@ -74,6 +74,69 @@ def _create_llm_provider(cfg: dict):
     thinking_cfg = cfg.get("thinking", {})
     thinking = thinking_cfg.get("enabled", False)
     reasoning_effort = thinking_cfg.get("effort", "high")
+    models = cfg.get("models", [])
+
+    if models:
+        fallback = cfg.get("fallback_model", "")
+        google_keys = cfg.get("google_keys", [])
+        deepseek_keys = cfg.get("deepseek_keys", [])
+        openrouter_keys = cfg.get("openrouter_keys", [])
+        google_api_base = cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai")
+        deepseek_api_base = cfg.get("deepseek_api_base", "https://api.deepseek.com")
+        logger.info("Main model pool: %s (fallback: %s)", models, fallback)
+        return ModelPoolProvider(
+            api_key=api_key,
+            models=models,
+            fallback_model=fallback,
+            api_base=api_base,
+            google_keys=google_keys,
+            deepseek_keys=deepseek_keys,
+            openrouter_keys=openrouter_keys,
+            google_api_base=google_api_base,
+            deepseek_api_base=deepseek_api_base,
+            cooldown_seconds=60,
+            thinking=thinking,
+            reasoning_effort=reasoning_effort,
+        )
+
+    if model.startswith("google_router/"):
+        actual_model = model.split("google_router/", 1)[1]
+        google_keys = cfg.get("google_keys", [])
+        google_api_base = cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai")
+        key = google_keys[0] if google_keys else api_key
+        return OpenAICompatibleProvider(
+            api_key=key,
+            model=actual_model,
+            api_base=google_api_base,
+            provider_name="google",
+            default_params=default_params,
+        )
+    elif model.startswith("deepseek_router/"):
+        actual_model = model.split("deepseek_router/", 1)[1]
+        deepseek_keys = cfg.get("deepseek_keys", [])
+        deepseek_api_base = cfg.get("deepseek_api_base", "https://api.deepseek.com")
+        key = deepseek_keys[0] if deepseek_keys else api_key
+        return OpenAICompatibleProvider(
+            api_key=key,
+            model=actual_model,
+            api_base=deepseek_api_base,
+            provider_name="deepseek",
+            default_params=default_params,
+            thinking=thinking,
+            reasoning_effort=reasoning_effort,
+        )
+    elif model.startswith("openrouter_router/"):
+        actual_model = model.split("openrouter_router/", 1)[1]
+        openrouter_keys = cfg.get("openrouter_keys", [])
+        key = openrouter_keys[0] if openrouter_keys else api_key
+        return OpenRouterProvider(
+            api_key=key,
+            model=actual_model,
+            api_base=api_base or "https://openrouter.ai/api/v1",
+            default_params=default_params,
+            thinking=thinking,
+            reasoning_effort=reasoning_effort,
+        )
 
     if provider_name == "openrouter":
         return OpenRouterProvider(
@@ -104,21 +167,48 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
 
     if models:
         fallback = cfg.get("fallback_model", "openrouter/free")
+        google_keys = cfg.get("google_keys", [])
+        openrouter_keys = cfg.get("openrouter_keys", [])
+        google_api_base = cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai")
         logger.info("Background model pool: %s (fallback: %s)", models, fallback)
         return ModelPoolProvider(
             api_key=api_key,
             models=models,
             fallback_model=fallback,
             api_base=api_base,
+            google_keys=google_keys,
+            openrouter_keys=openrouter_keys,
+            google_api_base=google_api_base,
             cooldown_seconds=60,
         )
 
     if model:
-        return OpenRouterProvider(
-            api_key=api_key,
-            model=model,
-            api_base=api_base,
-        )
+        if model.startswith("google_router/"):
+            actual_model = model.split("google_router/", 1)[1]
+            google_keys = cfg.get("google_keys", [])
+            google_api_base = cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai")
+            key = google_keys[0] if google_keys else api_key
+            return OpenAICompatibleProvider(
+                api_key=key,
+                model=actual_model,
+                api_base=google_api_base,
+                provider_name="google",
+            )
+        elif model.startswith("openrouter_router/"):
+            actual_model = model.split("openrouter_router/", 1)[1]
+            openrouter_keys = cfg.get("openrouter_keys", [])
+            key = openrouter_keys[0] if openrouter_keys else api_key
+            return OpenRouterProvider(
+                api_key=key,
+                model=actual_model,
+                api_base=api_base,
+            )
+        else:
+            return OpenRouterProvider(
+                api_key=api_key,
+                model=model,
+                api_base=api_base,
+            )
 
     raise ValueError("No model or models configured for background/vision provider")
 

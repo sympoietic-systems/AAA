@@ -161,13 +161,15 @@ class MessageRepository:
         conversation_id: str = "",
         content_tokens: int = 0,
         thinking_tokens: int | None = None,
+        model_used: Optional[str] = None,
+        provider_used: Optional[str] = None,
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens),
+               (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used),
         )
         conn.commit()
         row = conn.execute(
@@ -284,7 +286,7 @@ class MessageRepository:
         if conversation_id is not None:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
-                          cl.content_tokens, cl.thinking_tokens,
+                          cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
                           cm.reverse_perturbation, cm.surprise_index,
@@ -300,7 +302,7 @@ class MessageRepository:
         else:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
-                          cl.content_tokens, cl.thinking_tokens,
+                          cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
                           cm.reverse_perturbation, cm.surprise_index,
@@ -398,6 +400,8 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         embedding=row["embedding"],
         embedding_model=row["embedding_model"],
         embedding_dim=row["embedding_dim"],
+        model_used=row["model_used"] if "model_used" in row.keys() else None,
+        provider_used=row["provider_used"] if "provider_used" in row.keys() else None,
     )
 
 

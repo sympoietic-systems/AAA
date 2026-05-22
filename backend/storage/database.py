@@ -39,7 +39,9 @@ def init_db(db_path: str) -> sqlite3.Connection:
             thinking         TEXT,
             embedding        BLOB NOT NULL,
             embedding_model  TEXT NOT NULL,
-            embedding_dim    INTEGER NOT NULL
+            embedding_dim    INTEGER NOT NULL,
+            model_used       TEXT,
+            provider_used    TEXT
         );
 
         CREATE TABLE IF NOT EXISTS error_log (
@@ -117,6 +119,18 @@ def init_db(db_path: str) -> sqlite3.Connection:
     try:
         conn.execute(
             "ALTER TABLE conversation_log ADD COLUMN thinking_tokens INTEGER"
+        )
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN model_used TEXT"
+        )
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN provider_used TEXT"
         )
     except sqlite3.OperationalError:
         pass

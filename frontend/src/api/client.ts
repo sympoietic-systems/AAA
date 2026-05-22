@@ -53,6 +53,8 @@ export interface ChatMessage {
   homeostatic_recommendations?: HomeostaticRecommendations
   attachments?: AttachmentInfo[] | null
   context_sent?: string | null
+  model_used?: string | null
+  provider_used?: string | null
 }
 
 export interface AgentInfo {
