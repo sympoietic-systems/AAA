@@ -75,13 +75,18 @@ A shared utility (`backend/utils/token_counter.py`) provides token estimation us
 
 Context composition order:
 ```
-[0] System prompt (identity + skills)     ~800 tokens
-[1] Sediment messages (cross-conversation) ~2000 tokens (configurable)
-[2] Current conversation history          remaining budget
-[3] Current user input                    ~200 tokens
+[0] System prompt (identity + skills)                  ~800 tokens
+[1] Conversation History Prior (up to previous turn)   remaining budget (capped)
+[2] Sediment messages (cross-conversation, responsive)  ~2000 tokens (configurable)
+[3] File Context (file manifest & similarity chunks)   ~3000 tokens (configurable)
+[4] Current user input (the agential cut)              ~200 tokens
 ─────────────────────────────────────────
 Total capped at max_tokens
 ```
+
+### System-Generated Log Messages & Role Mapping
+
+Automated system notifications (e.g., file processing logs with speaker `system` in the database) are mapped to `role="system"` rather than `role="user"` in the prompt to prevent the model from misattributing the system's voice to the human participant. To save context tokens and avoid duplicating information already present in the File Manifest, these history entries are minimized to a single-line notification (e.g., `[System Notification: Processed file: **filename.ext** (type).]`) when sent to the LLM. The full summary is preserved in the database (for UI rendering) and in the File Manifest (for model reasoning).
 
 ### Title Generation
 

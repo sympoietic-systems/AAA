@@ -41,12 +41,20 @@ class PromptAssemblerModule(ProcessingModule):
         sediment_messages = payload.get("sediment_messages", [])
         file_context = payload.get("file_context", [])
 
-        # Re-assemble the context in the recommended logical order without any trimming:
-        # System -> Sediment -> File Context -> History (ending with current query)
+        # Split history into prior turns and current query
+        history_prior = []
+        current_query = []
+        if messages:
+            history_prior = messages[:-1]
+            current_query = [messages[-1]]
+
+        # Re-assemble the context in the topologically coherent order:
+        # System Prompt -> History Prior -> Sediment (Cross-Conv Memory) -> File Context -> Current Query
         assembled = [system_msg]
+        assembled.extend(history_prior)
         assembled.extend(sediment_messages)
         assembled.extend(file_context)
-        assembled.extend(messages)
+        assembled.extend(current_query)
 
         payload["messages"] = assembled
         return payload

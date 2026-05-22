@@ -46,7 +46,13 @@ class ContextCollectorModule(ProcessingModule):
         total = len(raw_msgs)
         for i, row in enumerate(raw_msgs):
             position_from_end = total - 1 - i
-            role = "assistant" if row.speaker == "apparatus" else "user"
+            
+            if row.speaker == "apparatus":
+                role = "assistant"
+            elif row.speaker == "system":
+                role = "system"
+            else:
+                role = "user"
 
             if position_from_end < self._floating_window:
                 content = row.content
@@ -54,6 +60,11 @@ class ContextCollectorModule(ProcessingModule):
                 content = f"[{role[0].upper()}]: {caveman_compress(row.content)}"
             else:
                 content = row.content
+
+            # Minimize system messages (e.g., file processing logs) to save tokens
+            if role == "system":
+                first_line = row.content.split("\n")[0].strip()
+                content = f"[System Notification: {first_line}]"
 
             messages.append({"role": role, "content": content})
 
