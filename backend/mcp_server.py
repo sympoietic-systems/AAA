@@ -88,7 +88,125 @@ async def consult_aaa(message: str, agent_name: str) -> str:
             output_parts.append(f"<thinking>\n{thinking}\n</thinking>")
         output_parts.append(content)
         
+        resolved_id = new_conversation_id or conversation_id
+        if resolved_id:
+            output_parts.append(f"---\n*Conversation ID: {resolved_id}*")
+        
         return "\n\n".join(output_parts)
+
+
+def format_history_json(messages: list[dict], conversation_id: str, title: str, agent_name: str = None) -> str:
+    import json
+    formatted_messages = []
+    for msg in messages:
+        speaker = msg.get("speaker", "unknown")
+        # Map speaker to role
+        role = "ai" if speaker == "apparatus" else ("human" if speaker == "human" else speaker)
+        
+        msg_dict = {
+            "role": role,
+            "content": msg.get("content", "") or "",
+            "timestamp": msg.get("timestamp", ""),
+            "model_used": msg.get("model_used"),
+            "provider_used": msg.get("provider_used")
+        }
+        
+        thinking = msg.get("thinking")
+        if thinking:
+            msg_dict["thinking"] = thinking
+            
+        formatted_messages.append(msg_dict)
+        
+    result = {
+        "conversation_id": conversation_id,
+        "agent_name": agent_name,
+        "title": title,
+        "message_count": len(formatted_messages),
+        "messages": formatted_messages
+    }
+    return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+async def get_consultation_history(agent_name: str, limit: int = 50) -> str:
+    """
+    Retrieve the message history of a consultation conversation identified by agent_name.
+
+    Arguments:
+        agent_name: The name of the calling dev agent (e.g., 'antigravity', 'opencode').
+        limit: The maximum number of most recent messages to retrieve.
+    """
+    target_title = f"Consultation: {agent_name}"
+    
+    async with httpx.AsyncClient(timeout=120.0, trust_env=False) as client:
+        # 1. Look up existing conversations to find the dedicated one for this agent
+        conversation_id = None
+        try:
+            r = await client.get(f"{BASE_URL}/conversations")
+            r.raise_for_status()
+            conversations = r.json().get("conversations", [])
+            for c in conversations:
+                if c.get("title") == target_title:
+                    conversation_id = c.get("id")
+                    break
+        except Exception as e:
+            return f"Error: Failed to connect to AAA backend at {BASE_URL}. Ensure the backend server is running. (Details: {e})"
+
+        if not conversation_id:
+            import json
+            return json.dumps({
+                "error": f"No consultation history found for agent '{agent_name}'.",
+                "details": f"A conversation with title '{target_title}' does not exist yet."
+            }, indent=2)
+
+        # 2. Retrieve history for this conversation_id
+        try:
+            r = await client.get(f"{BASE_URL}/history", params={"conversation_id": conversation_id, "limit": limit})
+            r.raise_for_status()
+            res_data = r.json()
+            messages = res_data.get("messages", [])
+        except Exception as e:
+            return f"Error: Failed to retrieve history from AAA backend. (Details: {e})"
+
+        return format_history_json(messages, conversation_id, target_title, agent_name)
+
+
+@mcp.tool()
+async def get_messages_by_conversation_id(conversation_id: str, limit: int = 50) -> str:
+    """
+    Retrieve the message history of a specific conversation by its conversation ID.
+
+    Arguments:
+        conversation_id: The UUID string of the conversation.
+        limit: The maximum number of most recent messages to retrieve.
+    """
+    async with httpx.AsyncClient(timeout=120.0, trust_env=False) as client:
+        # 1. First lookup the conversation info to get its title
+        title = "Unknown Conversation"
+        agent_name = None
+        try:
+            r = await client.get(f"{BASE_URL}/conversations/{conversation_id}")
+            if r.status_code == 200:
+                data = r.json()
+                title = data.get("title", "Untitled")
+                if title.startswith("Consultation: "):
+                    agent_name = title.replace("Consultation: ", "", 1)
+        except Exception:
+            # Fallback if getting info fails but history might still work
+            pass
+
+        # 2. Retrieve history for this conversation_id
+        try:
+            r = await client.get(f"{BASE_URL}/history", params={"conversation_id": conversation_id, "limit": limit})
+            r.raise_for_status()
+            res_data = r.json()
+            messages = res_data.get("messages", [])
+        except Exception as e:
+            return f"Error: Failed to retrieve history for conversation '{conversation_id}' from AAA backend. (Details: {e})"
+
+        return format_history_json(messages, conversation_id, title, agent_name)
+
+
 
 
 @mcp.resource("aaa://philosophy")

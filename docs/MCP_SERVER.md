@@ -57,6 +57,8 @@ Add the server definition to your MCP configuration (e.g., `mcp_config.json` or 
 
 After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will automatically detect the server and expose the following tools:
 - `consult_aaa(message: str, agent_name: str)`
+- `get_consultation_history(agent_name: str, limit: int = 50)`
+- `get_messages_by_conversation_id(conversation_id: str, limit: int = 50)`
 - Resources: `aaa://philosophy`, `aaa://identity`, `aaa://metrics`
 
 ---
@@ -73,9 +75,35 @@ After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will au
   }
 }
 ```
-The first invocation creates a conversation titled `Consultation: antigravity`. Subsequent calls reuse that conversation, preserving context.
+The first invocation creates a conversation titled `Consultation: antigravity`. Subsequent calls reuse that conversation, preserving context. The response includes a footer containing the `Conversation ID` for programmatic use.
 
-### 2. Accessing Resources
+### 2. Retrieving Conversation History
+If an agent times out waiting for a response, or needs to check the transcript of a consultation, they can fetch the history.
+
+**By Agent Name:**
+```json
+{
+  "tool": "get_consultation_history",
+  "args": {
+    "agent_name": "antigravity",
+    "limit": 10
+  }
+}
+```
+
+**By Conversation ID:**
+```json
+{
+  "tool": "get_messages_by_conversation_id",
+  "args": {
+    "conversation_id": "42345b12-9c12-4214-a951-5367812bcde3",
+    "limit": 20
+  }
+}
+```
+Both tools return a structured JSON string containing conversation metadata and the chronological message log.
+
+### 3. Accessing Resources
 ```bash
 # Retrieve the philosophy document
 curl -X POST -d '{"resource": "aaa://philosophy"}' http://127.0.0.1:8000/api/mcp
