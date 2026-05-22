@@ -90,19 +90,20 @@ function SectionHeader({
   )
 }
 
-function TokensSection() {
+function TokensSection({ conversationId }: { conversationId?: string }) {
   const [tokens, setTokens] = useState<TokenResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
 
   useEffect(() => {
     const poll = () => {
-      getTokens().then(setTokens).catch((e) => setError(e.message))
+      const idToFetch = conversationId || "empty_conversation_placeholder"
+      getTokens(idToFetch).then(setTokens).catch((e) => setError(e.message))
     }
     poll()
     const interval = setInterval(poll, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, [conversationId])
 
   if (error && !tokens) {
     return <p className="text-[9px] text-[#ef4444]">{error}</p>
@@ -129,7 +130,7 @@ function TokensSection() {
       </div>
 
       {conversations.length === 0 && (
-        <p className="text-[9px] text-[#555]">no conversations</p>
+        <p className="text-[9px] text-[#555]">no messages in active conversation</p>
       )}
 
       {conversations.slice(0, detailOpen ? undefined : 3).map((c) => (
@@ -303,7 +304,13 @@ function HealthSection() {
   )
 }
 
-export function SidePanel({ uploadedFiles = [] }: { uploadedFiles?: AttachmentInfo[] }) {
+export function SidePanel({
+  uploadedFiles = [],
+  conversationId,
+}: {
+  uploadedFiles?: AttachmentInfo[]
+  conversationId?: string
+}) {
   const [collapsed, setCollapsed] = useState(true)
   const [data, setData] = useState<SkillsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -399,7 +406,7 @@ export function SidePanel({ uploadedFiles = [] }: { uploadedFiles?: AttachmentIn
               />
               {tokensOpen && (
                 <div className="pl-3">
-                  <TokensSection />
+                  <TokensSection conversationId={conversationId} />
                 </div>
               )}
             </div>

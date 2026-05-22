@@ -89,7 +89,7 @@ export default function App() {
         onGenerateTitle={handleGenerateTitle}
         className="flex-1 min-w-0"
       />
-      <SidePanel uploadedFiles={uploadedFiles} />
+      <SidePanel uploadedFiles={uploadedFiles} conversationId={conversationId} />
     </div>
   )
 }
