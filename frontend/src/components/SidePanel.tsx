@@ -191,9 +191,9 @@ function HealthSection() {
   const paskHealth = metrics?.latest?.paskian_health
   const state = metrics?.recommendations?.state ?? "unknown"
   const stateColor =
-    state === "healthy" ? "#4ade80" :
-    state === "compensating" ? "#facc15" :
-    state === "critical" ? "#ef4444" : "#555"
+    (state === "flowing" || state === "healthy") ? "#4ade80" :
+    (state === "consolidating" || state === "compensating") ? "#facc15" :
+    (state === "disrupted" || state === "critical") ? "#ef4444" : "#555"
 
   const renderBar = (label: string, fullName: string, value: number | null | undefined, max: number, hint: string) => {
     const pct = value != null ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
@@ -254,13 +254,13 @@ function HealthSection() {
           {renderBar("rP", "reverse perturbation", metrics.latest.reverse_perturbation, 1.0,
             "Did the agent's last response reshape the human? <0.10 = stagnant")}
           {renderBar("srp", "surprise index", metrics.latest.surprise_index, 1.0,
-            "Distance from expected phase space? >0.40 = phase disruption")}
+            "Distance from decay-weighted centroid of past human inputs (d=0.75). >0.40 = phase disruption")}
           {renderBar("mpi", "mutual perturbation", metrics.latest.mutual_perturbation, 1.0,
             "Product of coupling x reverse perturbation. <0.05 = deadlock")}
           {renderBar("bore", "boringness", metrics.latest.boringness, 1.0,
-            "Joint failure to perturb in either direction? >0.60 = Paskian boredom")}
+            "Joint failure to perturb: (1 - rP_t) x (1 - MPI_{t-1}). >0.60 = Paskian boredom")}
           {renderBar("vel", "conceptual velocity", metrics.latest.conceptual_velocity, 1.0,
-            "Is the entailment mesh drifting? <0.02 = frozen, >0.80 = noise")}
+            "Disjoint centroid drift rate (last 3 vs preceding 3). <0.02 = frozen, >0.80 = noise")}
           {renderBar("drr", "divergence resolution ratio", metrics.latest.divergence_resolution_ratio, 1.0,
             "Does perturbation lead to resolution? Positive = convergence, negative = rejection")}
         </div>

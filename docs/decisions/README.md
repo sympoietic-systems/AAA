@@ -37,6 +37,10 @@ What becomes easier/harder?
 | [004](ADR-004-conversations-context-retrieval.md) | Conversation Model & Context Retrieval | accepted | 2026-05-20 |
 | [005](ADR-005-perception-module.md) | Perception Module — File Upload & Sediment Retrieval | accepted | 2026-05-20 |
 | [006](ADR-006-background-tasks.md) | Background Tasks — Autopoietic Self-Maintenance | accepted | 2026-05-21 |
+| [007](ADR-007-context-compression.md) | Context Compression & Pruning | accepted | 2026-05-21 |
+| [008](ADR-008-allostatic-metrics-refinements.md) | Allostatic Metrics Refinements | accepted | 2026-05-22 |
+| [009](ADR-009-database-metrics-retrieval.md) | Database Metrics Retrieval & Test Integrity | accepted | 2026-05-22 |
+
 
 ## Creating a New ADR
 

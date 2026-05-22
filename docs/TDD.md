@@ -159,9 +159,9 @@ Per-message vitality metrics scoped to `conversation_id` through embedding queri
 | `deficit` | REAL | NOT NULL | Weighted homeostatic deficit score. |
 | `vitality` | REAL | NULLABLE | Composite "aliveness" score. |
 | `reverse_perturbation` | REAL | NULLABLE | Did agent reshape human's next input? |
-| `surprise_index` | REAL | NULLABLE | Distance from expected phase space. |
+| `surprise_index` | REAL | NULLABLE | Distance from decay-weighted centroid of past human inputs (d=0.75). |
 | `mutual_perturbation` | REAL | NULLABLE | Product of coupling × reverse perturbation. |
-| `boringness` | REAL | NULLABLE | Joint failure to perturb in either direction. |
+| `boringness` | REAL | NULLABLE | Joint failure of mutual perturbation: (1 - rP_t) × (1 - MPI_{t-1}). |
 | `conceptual_velocity` | REAL | NULLABLE | Entailment mesh drift rate. |
 | `divergence_resolution_ratio` | REAL | NULLABLE | Perturbation → resolution or rejection? |
 | `paskian_health` | REAL | NULLABLE | Productive zone between strict and permissive. |
@@ -169,7 +169,7 @@ Per-message vitality metrics scoped to `conversation_id` through embedding queri
 | `temperature_rec` | REAL | NULLABLE | Recommended generation temperature. |
 | `presence_penalty_rec` | REAL | NULLABLE | Recommended presence penalty. |
 | `frequency_penalty_rec` | REAL | NULLABLE | Recommended frequency penalty. |
-| `homeostatic_state` | TEXT | NULLABLE | `healthy`, `compensating`, or `critical`. |
+| `homeostatic_state` | TEXT | NULLABLE | `flowing`, `consolidating`, or `disrupted` (legacy rows may contain `healthy`/`compensating`/`critical`). |
 
 ### 5.4. Table: `semantic_knots` (Phase 3 — Planned)
 Maintains the sedimented "scars" that represent the evolving identity of the agent.

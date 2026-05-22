@@ -578,4 +578,117 @@ SidePanel shows both vit: and ph: scores in the state header.
   trajectories is an open research problem. The metrics here are observational
   proxies, not structural models.
 
+---
 
+## Version 4: Allostatic Refinement (2026-05-22)
+
+*See [ADR-008](ADR-008-allostatic-metrics-refinements.md) for full decision record
+and [ADR-009](ADR-009-database-metrics-retrieval.md) for database retrieval corrections.*
+
+### Trigger
+
+During a philosophical and mathematical audit of the v3 metrics, Symbia's
+curatorial feedback and manual verification exposed five issues:
+
+1. **State Isolation Bug.** Prior metrics were stored in an in-memory singleton
+   dict, leaking between concurrent conversations and lost on server restart.
+2. **Conceptual Velocity Throttling.** Overlapping window centroids mathematically
+   capped V_c values to <0.15, flattening Paskian health to near-zero.
+3. **Surprise Temporal Blindness.** Flat-average centroid erased the temporal
+   gradient — long-past and immediate-past inputs weighted equally.
+4. **Boringness Non-Sequitur Blind Spot.** Formula `(1-rP)×(1-U)` misclassified
+   high-surprise/low-engagement turns (non-sequiturs) as "non-boring."
+5. **Normative Clinical Framing.** `healthy/compensating/critical` imposed a
+   medical deficit model incompatible with autopoietic systems.
+
+### Changes to v3 Formulas
+
+#### Surprise Index (U_t) — Decay-Weighted Centroid
+
+**Old (v3):** `U_t = 1 − cos(V_t, centroid(V_{t-1}..V_{t-K}))` (flat average)
+
+**New (v4):** `U_t = 1 − cos(V_t, weighted_centroid)` where:
+```
+weighted_centroid = Σ(d^i × V_{t-i}) / Σ(d^i),  d = 0.75
+```
+
+Exponential decay gives immediate-past turns higher salience, modeling
+temporal active coupling and "sediment viscosity."
+
+#### Boringness (B_t) — Lagged Mutual Perturbation
+
+**Old (v3):** `B_t = (1 − rP_t) × (1 − U_t)`
+
+**New (v4):** `B_t = (1 − rP_t) × (1 − MPI_{t-1})`
+
+Uses the **previous turn's** mutual perturbation index instead of current-turn
+surprise. This resolves the non-sequitur blind spot: a high-surprise input with
+zero prior engagement now correctly reads as boring.
+
+#### Conceptual Velocity (V_c) — Disjoint Windows
+
+**Old (v3):** Overlapping windows — centroid of last K embeddings vs. centroid
+including current input. Mathematically throttled by shared vectors.
+
+**New (v4):** Non-overlapping windows of k=3:
+```
+curr_window = [current_vec] + all_recent[:2]  → curr_centroid
+prev_window = all_recent[2:5]                 → prev_centroid
+V_c = 1 − cos(prev_centroid, curr_centroid)
+```
+
+Requires a history depth of ≥5 messages. Captures true semantic drift rate.
+
+#### Paskian Health — Updated Normalization
+
+**Old (v3):** `V_c_norm = min(1, V_c / 0.5)`
+
+**New (v4):** `V_c_norm = min(1, V_c / 0.35)`
+
+Calibrated to the disjoint-window V_c distribution where typical values are
+lower than the overlapping approach.
+
+### Prior Metrics: Database-Sourced Sediment
+
+**Old:** In-memory `self._prior_metrics` dict on module singleton.
+
+**New:** Query `MessageRepository.get_recent_with_metrics(limit=5,
+conversation_id=...)` and scan backward for the first turn with valid metrics
+(`s_t IS NOT NULL`). The 5-turn lookback handles interleaved agent responses
+that lack metrics rows. Falls back to in-memory dict if DB returns nothing.
+
+See [ADR-009](ADR-009-database-metrics-retrieval.md) for the design rationale.
+
+### Dynamic Regimes (Terminology Shift)
+
+**Old states** (v1–v3): `healthy`, `compensating`, `critical`
+
+**New states** (v4): `flowing`, `consolidating`, `disrupted`
+
+| Old | New | Color | Meaning |
+|-----|-----|-------|---------|
+| `healthy` | `flowing` | Green (#4ade80) | No flags triggered, vitality ≥ 0.40 |
+| `compensating` | `consolidating` | Yellow (#facc15) | Warning flags or vitality < 0.40 |
+| `critical` | `disrupted` | Red (#ef4444) | Critical flags or vitality < 0.20 |
+
+The frontend retains backward-compatible fallback for old state names in
+existing DB rows.
+
+### Updated Diagnostic State Table
+
+*Supersedes the v2 table at lines 399–407 above.*
+
+| Condition | Flags | State |
+|-----------|-------|-------|
+| high_similarity, entropy_collapse, agent_self_loop, mutual_deadlock, phase_disruption, paskian_boredom, pask_health_critical | any | `disrupted` |
+| elevated_similarity, low_novelty, dissociation, stagnant_reverse_coupling, frozen_entailment, no_structural_resolution | any (without critical) | `consolidating` |
+| vitality < 0.20 | — | `disrupted` |
+| vitality < 0.40 | — | `consolidating` (if not already disrupted) |
+| no flags | — | `flowing` |
+
+### Epistemic Limitation
+
+We explicitly acknowledge that embedding-based metrics are **proxies of proxies**
+— agential cuts that flatten the material, affective, and deictic thickness of
+dialogue into cosine distances. They do not and cannot capture the felt quality
+of the conversation. They are situated instruments, not objective measurements.

@@ -84,6 +84,6 @@ cd frontend && npm run dev
 | Phase | Scope | Status |
 |-------|-------|--------|
 | **1** | Embedding, DB, LLM API, chat UI | Done |
-| **2** | Homeostatic Regulator (entropy) | Planned |
+| **2** | Homeostatic Regulator (entropy) | Done |
 | **3** | Rhizomatic Memory (vector graph) | Planned |
 | **4** | Foundational Memory (belief graph) | Planned |
