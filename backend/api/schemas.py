@@ -163,3 +163,21 @@ class BackgroundTaskResponse(BaseModel):
     result: str
     model_used: str
     error: str | None = None
+
+
+class ConversationFile(BaseModel):
+    file_name: str
+    file_type: str
+    status: str
+    summary: Optional[str] = None
+    summary_model: Optional[str] = None
+    token_count: int = 0
+    chunk_count: int = 0
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class ConversationFilesResponse(BaseModel):
+    conversation_id: str
+    files: list[ConversationFile]
+

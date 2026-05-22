@@ -271,3 +271,16 @@ for monitoring.
 ### Scheduled Consolidation
 A background scheduler could run consolidation on idle conversations
 periodically, building the agent's memory graph without user intervention.
+
+## Amendment: Asynchronous File Processing and Summarization (2026-05-22)
+
+### Background File Ingestion
+We have integrated asynchronous file processing utilizing FastAPI's `BackgroundTasks`.
+
+When a file is uploaded:
+1. The request immediately writes a pending record to the `perception_files` table with `status="uploading"`.
+2. A background task `_process_and_summarize_file` is queued, and the HTTP request returns immediately.
+3. The background task changes the status to `"processing"`, extracts text, chunks the content, generates vector embeddings, and saves them to `perception_sediment`.
+4. It calls `BackgroundTaskEngine.run("summarize", ...)` to produce an LLM summary of the file using the background model pool.
+5. Once completed, it writes the summary to the database, updates the status to `"ready"`, and appends a `"system"` message to the conversation log to trace the operation transparently. If any error occurs, the status transitions to `"error"`.
+

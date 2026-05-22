@@ -20,7 +20,18 @@ export default function App() {
     generateTitle,
   } = useConversations()
 
-  const { messages, loading, error, send, clearError, agentName, uploadedFiles } = useChat(activeId)
+  const {
+    messages,
+    loading,
+    error,
+    send,
+    clearError,
+    agentName,
+    uploadedFiles,
+    isIndexing,
+    upload,
+    deleteFile,
+  } = useChat(activeId)
   const [convCollapsed, setConvCollapsed] = useState(true)
   const activeIdRef = useRef(activeId)
   activeIdRef.current = activeId
@@ -37,9 +48,9 @@ export default function App() {
     if (activeId) await generateTitle(activeId)
   }
 
-  const handleSend = async (content: string, files?: File[]) => {
+  const handleSend = async (content: string) => {
     const currentActiveId = activeIdRef.current
-    const response = await send(content, files)
+    const response = await send(content)
 
     if (response && response.conversation_id) {
       if (!currentActiveId) {
@@ -60,6 +71,26 @@ export default function App() {
           setTimeout(() => generateTitle(currentActiveId), 3000)
         }
       }
+    }
+  }
+
+  const handleUploadFiles = async (files: File[]) => {
+    const currentActiveId = activeIdRef.current
+    const newId = await upload(files)
+    if (newId && !currentActiveId) {
+      setActiveId(newId)
+      const firstFilename = files[0].name
+      const titleBase = firstFilename.substring(0, firstFilename.lastIndexOf('.')) || firstFilename
+      addConversation({
+        id: newId,
+        title: `File trace: ${titleBase.substring(0, 50)}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        message_count: 0,
+      })
+      setTimeout(() => refreshTitle(newId), 3000)
+    } else {
+      refresh()
     }
   }
 
@@ -84,12 +115,18 @@ export default function App() {
         conversationTitle={conversationTitle}
         uploadedFiles={uploadedFiles}
         onSend={handleSend}
+        onUploadFiles={handleUploadFiles}
+        isIndexing={isIndexing}
         onClearError={clearError}
         onRenameTitle={handleRenameTitle}
         onGenerateTitle={handleGenerateTitle}
         className="flex-1 min-w-0"
       />
-      <SidePanel uploadedFiles={uploadedFiles} conversationId={conversationId} />
+      <SidePanel
+        uploadedFiles={uploadedFiles}
+        conversationId={conversationId}
+        onDeleteFile={deleteFile}
+      />
     </div>
   )
 }

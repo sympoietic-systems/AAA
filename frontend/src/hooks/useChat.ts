@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { getAgent, getHistory, sendMessage } from "../api/client"
-import type { AttachmentInfo, ChatMessage } from "../api/client"
+import {
+  getAgent,
+  getHistory,
+  sendMessage,
+  getConversationFiles,
+  uploadFiles,
+  deleteConversationFile,
+} from "../api/client"
+import type { ChatMessage, ConversationFile } from "../api/client"
 
 function estimateTokens(text: string): number {
   if (!text) return 0
@@ -12,11 +19,42 @@ export function useChat(conversationId: string) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
-  const [uploadedFiles, setUploadedFiles] = useState<AttachmentInfo[]>([])
+  const [files, setFiles] = useState<ConversationFile[]>([])
+  const [isUploading, setIsUploading] = useState(false)
   const loadedRef = useRef<string>("")
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const startPolling = useCallback((convId: string) => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const res = await getConversationFiles(convId)
+        setFiles(res.files)
+        const active = res.files.some(
+          (f) => f.status === "uploading" || f.status === "processing"
+        )
+        if (!active) {
+          if (pollTimerRef.current) {
+            clearInterval(pollTimerRef.current)
+            pollTimerRef.current = null
+          }
+          // Fetch updated conversation history to display system message after file indexing completes
+          getHistory(50, convId)
+            .then((data) => setMessages(data.messages))
+            .catch(() => {})
+        }
+      } catch {
+        // silent
+      }
+    }, 2000)
+  }, [])
 
   useEffect(() => {
-    if (loadedRef.current === conversationId) return
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+
     loadedRef.current = conversationId
 
     getAgent()
@@ -27,13 +65,31 @@ export function useChat(conversationId: string) {
       getHistory(50, conversationId)
         .then((data) => setMessages(data.messages))
         .catch(() => setMessages([]))
+
+      getConversationFiles(conversationId)
+        .then((data) => {
+          setFiles(data.files)
+          const active = data.files.some(
+            (f) => f.status === "uploading" || f.status === "processing"
+          )
+          if (active) {
+            startPolling(conversationId)
+          }
+        })
+        .catch(() => setFiles([]))
     } else {
       setMessages([])
+      setFiles([])
     }
-    setUploadedFiles([])
-  }, [conversationId])
+  }, [conversationId, startPolling])
 
-  const send = useCallback(async (content: string, files?: File[]) => {
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+    }
+  }, [])
+
+  const send = useCallback(async (content: string) => {
     if (!content.trim() || loading) return
     setError(null)
     setLoading(true)
@@ -48,11 +104,7 @@ export function useChat(conversationId: string) {
     setMessages((prev) => [...prev, userMsg])
 
     try {
-      const response = await sendMessage(
-        content,
-        conversationId || undefined,
-        files && files.length > 0 ? files : undefined
-      )
+      const response = await sendMessage(content, conversationId || undefined)
       setMessages((prev) => {
         const updated = [...prev]
         if (response.metrics) {
@@ -66,18 +118,6 @@ export function useChat(conversationId: string) {
         updated.push(response)
         return updated
       })
-      if (response.attachments) {
-        setUploadedFiles((prev) => {
-          const existing = new Set(prev.map((a) => a.file_name))
-          const merged = [...prev]
-          for (const a of response.attachments!) {
-            if (!existing.has(a.file_name)) {
-              merged.push(a)
-            }
-          }
-          return merged
-        })
-      }
       return response
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to send message"
@@ -88,7 +128,53 @@ export function useChat(conversationId: string) {
     }
   }, [loading, conversationId])
 
+  const upload = useCallback(async (filesToUpload: File[]) => {
+    if (filesToUpload.length === 0) return null
+    setIsUploading(true)
+    setError(null)
+    try {
+      const targetId = conversationId || "new"
+      const res = await uploadFiles(targetId, filesToUpload)
+      setFiles(res.files)
+      startPolling(res.conversation_id)
+      return res.conversation_id
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to upload files"
+      setError(msg)
+      return null
+    } finally {
+      setIsUploading(false)
+    }
+  }, [conversationId, startPolling])
+
+  const deleteFile = useCallback(async (fileName: string) => {
+    if (!conversationId) return
+    try {
+      await deleteConversationFile(conversationId, fileName)
+      setFiles((prev) => prev.filter((f) => f.file_name !== fileName))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to delete file"
+      setError(msg)
+    }
+  }, [conversationId])
+
   const clearError = useCallback(() => setError(null), [])
 
-  return { messages, loading, error, send, clearError, agentName, uploadedFiles }
+  const isIndexing = isUploading || files.some(
+    (f) => f.status === "uploading" || f.status === "processing"
+  )
+
+  return {
+    messages,
+    loading,
+    error,
+    send,
+    clearError,
+    agentName,
+    uploadedFiles: files,
+    isIndexing,
+    upload,
+    deleteFile,
+  }
 }
+

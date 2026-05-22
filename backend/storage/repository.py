@@ -131,6 +131,10 @@ class ConversationRepository:
             (conversation_id,),
         )
         conn.execute(
+            "DELETE FROM perception_files WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.execute(
             "DELETE FROM consolidation_checkpoints WHERE conversation_id = ?",
             (conversation_id,),
         )
@@ -713,10 +717,95 @@ class PerceptionSedimentRepository:
         return text[:max_chars].rstrip() + "..."
 
     @with_connection
+    def create_file(self, conversation_id: str, file_name: str, file_type: str, status: str = 'uploading') -> None:
+        conn = self._conn()
+        conn.execute(
+            """INSERT OR IGNORE INTO perception_files (conversation_id, file_name, file_type, status)
+               VALUES (?, ?, ?, ?)""",
+            (conversation_id, file_name, file_type, status),
+        )
+        conn.execute(
+            """UPDATE perception_files SET status = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE conversation_id = ? AND file_name = ?""",
+            (status, conversation_id, file_name),
+        )
+        conn.commit()
+
+    @with_connection
+    def update_file(
+        self,
+        conversation_id: str,
+        file_name: str,
+        status: str,
+        summary: Optional[str] = None,
+        summary_model: Optional[str] = None,
+        token_count: Optional[int] = None,
+        chunk_count: Optional[int] = None,
+    ) -> None:
+        conn = self._conn()
+        updates = ["status = ?", "updated_at = CURRENT_TIMESTAMP"]
+        params = [status]
+        if summary is not None:
+            updates.append("summary = ?")
+            params.append(summary)
+        if summary_model is not None:
+            updates.append("summary_model = ?")
+            params.append(summary_model)
+        if token_count is not None:
+            updates.append("token_count = ?")
+            params.append(token_count)
+        if chunk_count is not None:
+            updates.append("chunk_count = ?")
+            params.append(chunk_count)
+        
+        params.extend([conversation_id, file_name])
+        query = f"UPDATE perception_files SET {', '.join(updates)} WHERE conversation_id = ? AND file_name = ?"
+        conn.execute(query, params)
+        conn.commit()
+
+    @with_connection
+    def get_files_by_conversation(self, conversation_id: str) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT file_name, file_type, status, summary, summary_model, token_count, chunk_count, created_at, updated_at
+               FROM perception_files
+               WHERE conversation_id = ?
+               ORDER BY created_at DESC""",
+            (conversation_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    @with_connection
+    def delete_file(self, conversation_id: str, file_name: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM perception_sediment WHERE conversation_id = ? AND file_name = ?",
+            (conversation_id, file_name),
+        )
+        conn.execute(
+            "DELETE FROM perception_files WHERE conversation_id = ? AND file_name = ?",
+            (conversation_id, file_name),
+        )
+        conn.commit()
+
+    @with_connection
+    def delete_chunks(self, conversation_id: str, file_name: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM perception_sediment WHERE conversation_id = ? AND file_name = ?",
+            (conversation_id, file_name),
+        )
+        conn.commit()
+
+    @with_connection
     def delete_by_conversation(self, conversation_id: str) -> None:
         conn = self._conn()
         conn.execute(
             "DELETE FROM perception_sediment WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.execute(
+            "DELETE FROM perception_files WHERE conversation_id = ?",
             (conversation_id,),
         )
         conn.commit()

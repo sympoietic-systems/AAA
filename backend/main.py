@@ -403,6 +403,7 @@ async def lifespan(app: FastAPI):
     app.state.metrics_repo = metrics_repo
     app.state.conversation_repo = conversation_repo
     app.state.perception_repo = perception_repo
+    app.state.perception_module = perception_module
     app.state.checkpoint_repo = checkpoint_repo
     app.state.registry = registry
     app.state.pipeline = pipeline

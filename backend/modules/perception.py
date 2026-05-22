@@ -285,3 +285,56 @@ class PerceptionModule(ProcessingModule):
             entries.append({"role": "system", "content": entry_text})
             tokens_used += entry_tokens
         return entries
+
+    async def ingest_single_file(
+        self, conversation_id: str, file_name: str, file_type: str, file_content: bytes
+    ) -> tuple[int, int, str]:
+        with TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, file_name)
+            with open(file_path, "wb") as f:
+                f.write(file_content)
+            try:
+                extracted_text = self._digester.extract(Path(file_path), file_type)
+            except Exception as e:
+                logger.error("Failed to extract %s: %s", file_name, e)
+                raise ValueError(f"Failed to extract text from file: {e}")
+
+            if not extracted_text or not extracted_text.strip():
+                raise ValueError("Extracted text is empty")
+
+            chunks = self._digester.chunk(
+                extracted_text,
+                chunk_size=self._chunk_size,
+                overlap=self._chunk_overlap,
+            )
+
+            # Delete any existing chunks for this specific file in the conversation
+            # to avoid duplicates if re-uploaded
+            self._repo.delete_chunks(conversation_id, file_name)
+
+            chunk_count = 0
+            for i, chunk_text in enumerate(chunks):
+                try:
+                    embedding_vec = await self._embed.encode_async(chunk_text)
+                    embedding_blob = self._embed.serialize(embedding_vec)
+                except Exception as e:
+                    logger.warning("Failed to embed chunk %d of %s: %s", i, file_name, e)
+                    continue
+
+                token_count = estimate_tokens(chunk_text)
+
+                self._repo.insert_chunk(
+                    conversation_id=conversation_id,
+                    file_name=file_name,
+                    file_type=file_type,
+                    chunk_index=i,
+                    chunk_text=chunk_text,
+                    embedding=embedding_blob,
+                    embedding_model=self._embed.model_name,
+                    token_count=token_count,
+                )
+                chunk_count += 1
+
+            total_tokens = estimate_tokens(extracted_text)
+            return total_tokens, chunk_count, extracted_text
+

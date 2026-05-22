@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import type { AttachmentInfo, ChatMessage } from "../api/client"
+import type { ConversationFile, ChatMessage } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 
@@ -10,8 +10,10 @@ interface Props {
   agentName: string
   conversationId: string
   conversationTitle: string
-  uploadedFiles: AttachmentInfo[]
-  onSend: (text: string, files?: File[]) => void
+  uploadedFiles: ConversationFile[]
+  onSend: (text: string) => void
+  onUploadFiles: (files: File[]) => void
+  isIndexing: boolean
   onClearError: () => void
   onRenameTitle: (title: string) => void
   onGenerateTitle: () => void
@@ -27,6 +29,8 @@ export function ChatView({
   conversationTitle,
   uploadedFiles,
   onSend,
+  onUploadFiles,
+  isIndexing,
   onClearError,
   onRenameTitle,
   onGenerateTitle,
@@ -138,7 +142,12 @@ export function ChatView({
         </div>
       )}
 
-      <InputBar onSend={onSend} disabled={loading} />
+      <InputBar
+        onSend={onSend}
+        onUploadFiles={onUploadFiles}
+        disabled={loading}
+        isIndexing={isIndexing}
+      />
     </div>
   )
 }

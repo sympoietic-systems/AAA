@@ -248,3 +248,21 @@ Currently, file sediment is scoped to a single conversation (`conversation_id`).
 Future: files uploaded in one conversation could become cross-conversation
 sediment for others, like existing message sedimentation. This requires
 a separate retrieval query similar to `get_all_embeddings_except()`.
+
+## Amendment: Decoupled Background Ingestion & Summarization (2026-05-22)
+
+### Context & Problem
+Previously, file uploads were queued in the client's input bar and sent inline with the user's message. This created several issues:
+1. Long message delivery times because extraction, chunking, embedding generation, and LLM summarization had to run synchronously during message processing.
+2. File selections and summaries did not persist across client refreshes unless a message had been successfully dispatched.
+3. The user could not type other questions or draft messages while files were undergoing ingestion.
+
+### Refined Architecture
+We have decoupled file ingestion from message submission:
+1. **Background Uploads**: Selecting or dropping a file triggers an immediate `POST /api/conversations/{id}/files` request. If the active conversation is new, a conversation trace is provisioned on-the-fly (`POST /api/conversations/new/files`).
+2. **`perception_files` Table**: Added a dedicated tracking table in `database.py` and `repository.py` to persist file indexing states (`uploading`, `processing`, `ready`, `error`), LLM-generated summaries, and metadata (token counts, chunk counts).
+3. **Out-of-Band Worker**: We use FastAPI's `BackgroundTasks` queue to ingest, chunk, embed, and run the `SummarizeAction` background model action without blocking the main request cycle.
+4. **Apparatus Visibility**: Upon successful indexing, the worker inserts a `"system"` speaker entry into the `conversation_log` with the generated summary, making the infrastructure trace visible to the collaborator. In the UI, these system logs are collapsed by default to avoid clutter.
+5. **UI Interactivity**: The text input field remains fully interactive while files are indexing (allowing the user to type), but the Send action is blocked until the files are ready.
+6. **Sediment Sidepanel**: The files list is polled and retrieved from the database, ensuring persistence across page reloads. Summaries can be toggled via `sum` buttons and deleted via `×` (with cascading database purging).
+

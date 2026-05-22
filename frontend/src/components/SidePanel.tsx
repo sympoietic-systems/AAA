@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import type { AttachmentInfo, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse } from "../api/client"
+import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse } from "../api/client"
 import { getSkills, getMetrics, getTokens } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -307,9 +307,11 @@ function HealthSection() {
 export function SidePanel({
   uploadedFiles = [],
   conversationId,
+  onDeleteFile,
 }: {
-  uploadedFiles?: AttachmentInfo[]
+  uploadedFiles?: ConversationFile[]
   conversationId?: string
+  onDeleteFile?: (fileName: string) => void
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const [data, setData] = useState<SkillsResponse | null>(null)
@@ -319,6 +321,7 @@ export function SidePanel({
   const [healthOpen, setHealthOpen] = useState(true)
   const [tokensOpen, setTokensOpen] = useState(true)
   const [sedimentOpen, setSedimentOpen] = useState(true)
+  const [expandedFile, setExpandedFile] = useState<string | null>(null)
 
   useEffect(() => {
     getSkills()
@@ -423,13 +426,61 @@ export function SidePanel({
                   <div className="pl-3">
                     <div className="mt-2 border-t border-[#1a1a1a] pt-2">
                       {uploadedFiles.map((f) => (
-                        <div key={f.file_name} className="flex items-center gap-1.5 py-1 border-b border-[#1a1a1a] last:border-b-0">
-                          <span className="text-xs">{f.file_type === "pdf" ? "\uD83D\uDCC4" : f.file_type === "md" ? "\uD83D\uDCDD" : "\uD83D\uDCC4"}</span>
-                          <span className="text-[10px] text-[#aaa] truncate flex-1">{f.file_name}</span>
-                          {f.token_count > 0 && (
-                            <span className="text-[8px] text-[#666]">
-                              {f.token_count >= 1000 ? `${(f.token_count / 1000).toFixed(1)}k` : f.token_count} tok
+                        <div key={f.file_name} className="py-1.5 border-b border-[#1a1a1a] last:border-b-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs">
+                              {f.file_type === "pdf" ? "\uD83D\uDCC4" : f.file_type === "md" ? "\uD83D\uDCDD" : "\uD83D\uDCC4"}
                             </span>
+                            <span className="text-[10px] text-[#aaa] truncate flex-1 font-mono">
+                              {f.file_name}
+                            </span>
+                            
+                            {f.status === "uploading" && (
+                              <span className="text-[8px] text-[#eab308] animate-pulse px-1 border border-[#eab308]/30 rounded">
+                                uploading
+                              </span>
+                            )}
+                            {f.status === "processing" && (
+                              <span className="text-[8px] text-[#3b82f6] animate-pulse px-1 border border-[#3b82f6]/30 rounded">
+                                indexing
+                              </span>
+                            )}
+                            {f.status === "error" && (
+                              <span className="text-[8px] text-[#ef4444] px-1 border border-[#ef4444]/30 rounded" title={f.summary || "Unknown error"}>
+                                error
+                              </span>
+                            )}
+                            
+                            {f.token_count > 0 && f.status === "ready" && (
+                              <span className="text-[8px] text-[#666] font-mono">
+                                {f.token_count >= 1000 ? `${(f.token_count / 1000).toFixed(1)}k` : f.token_count} tok
+                              </span>
+                            )}
+
+                            {f.summary && (
+                              <button
+                                onClick={() => setExpandedFile(expandedFile === f.file_name ? null : f.file_name)}
+                                className="text-[8px] text-[#4ade80] hover:underline"
+                              >
+                                {expandedFile === f.file_name ? "hide" : "sum"}
+                              </button>
+                            )}
+
+                            {onDeleteFile && (
+                              <button
+                                onClick={() => onDeleteFile(f.file_name)}
+                                className="text-[9px] text-[#555] hover:text-[#ef4444] px-1 font-mono"
+                                title="Delete file trace"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                          
+                          {expandedFile === f.file_name && f.summary && (
+                            <div className="mt-1 ml-4 p-1.5 bg-[#141414] border border-[#222] rounded text-[9px] text-[#888] font-mono whitespace-pre-wrap leading-relaxed">
+                              {f.summary}
+                            </div>
                           )}
                         </div>
                       ))}

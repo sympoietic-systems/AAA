@@ -44,7 +44,7 @@ export interface ChatMessage {
   id: number
   timestamp: string
   conversation_id?: string
-  speaker: "human" | "apparatus"
+  speaker: "human" | "apparatus" | "system"
   content: string
   thinking?: string
   content_tokens?: number
@@ -216,3 +216,61 @@ export async function getTokens(conversationId?: string): Promise<TokenResponse>
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+export interface ConversationFile {
+  file_name: string
+  file_type: string
+  status: "uploading" | "processing" | "ready" | "error"
+  summary?: string | null
+  summary_model?: string | null
+  token_count: number
+  chunk_count: number
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface ConversationFilesResponse {
+  conversation_id: string
+  files: ConversationFile[]
+}
+
+export async function uploadFiles(
+  conversationId: string,
+  files: File[]
+): Promise<ConversationFilesResponse> {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append("files", file)
+  }
+  const res = await fetch(`${BASE}/conversations/${conversationId}/files`, {
+    method: "POST",
+    body: formData,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Unknown error" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function getConversationFiles(
+  conversationId: string
+): Promise<ConversationFilesResponse> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/files`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function deleteConversationFile(
+  conversationId: string,
+  fileName: string
+): Promise<void> {
+  const res = await fetch(
+    `${BASE}/conversations/${conversationId}/files/${encodeURIComponent(fileName)}`,
+    {
+      method: "DELETE",
+    }
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+

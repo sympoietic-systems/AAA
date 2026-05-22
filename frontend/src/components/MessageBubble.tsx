@@ -129,9 +129,36 @@ function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
 
 export function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isHuman = msg.speaker === "human"
+  const isSystem = msg.speaker === "system"
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
   const [userExpanded, setUserExpanded] = useState(false)
+  const [systemOpen, setSystemOpen] = useState(false)
+
+  if (isSystem) {
+    const lines = msg.content.split("\n")
+    const title = lines[0] || "System trace"
+    const remainingBody = lines.slice(1).join("\n")
+
+    return (
+      <div className="mb-3 pl-4 border-l border-[#222]">
+        <button
+          onClick={() => setSystemOpen(!systemOpen)}
+          className="text-[10px] text-[#eab308]/80 hover:text-[#eab308] transition-colors flex items-center gap-1.5 font-mono"
+        >
+          <span>{systemOpen ? "▼" : "▶"}</span>
+          <span>{title}</span>
+        </button>
+        {systemOpen && remainingBody && (
+          <div className="mt-2 text-xs text-[#aaa] leading-relaxed markdown-body pl-3 border-l border-[#1a1a1a]">
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+              {remainingBody}
+            </ReactMarkdown>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
