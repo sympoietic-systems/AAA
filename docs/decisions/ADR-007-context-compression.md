@@ -104,8 +104,8 @@ The `PromptAssemblerModule` now assembles messages in the correct cognitive orde
 
 This ensures the agent first receives its identity and personality, then its
 cross-conversation memories, then the current conversation context, and finally
-the file attachments. The `_trim_to_budget` logic is updated to reflect the new
-order: "sacred" part = system + sediment, "trimmable" = conversation + files.
+the file attachments. The assembler no longer performs any trimming; token-budget enforcement is now handled upstream (ContextCollectorModule and related modules).
+The “sacred” part = system + sediment, the “trimmable” part = conversation + files.
 
 ### Message Structure (Final)
 

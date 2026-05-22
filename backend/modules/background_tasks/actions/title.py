@@ -6,6 +6,8 @@ from ..base import BackgroundAction
 
 
 class GenerateTitleAction(BackgroundAction):
+    _prompt_file = "title.yaml"
+
     @property
     def action_type(self) -> str:
         return "generate_title"

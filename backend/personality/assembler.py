@@ -41,56 +41,16 @@ class PromptAssemblerModule(ProcessingModule):
         sediment_messages = payload.get("sediment_messages", [])
         file_context = payload.get("file_context", [])
 
-        assembled: list[dict] = [system_msg]
-
-        for sm in sediment_messages:
-            assembled.append(sm)
-
-        for m in messages:
-            assembled.append(m)
-
-        for fc in file_context:
-            assembled.append(fc)
-
-        assembled = _trim_to_budget(
-            assembled,
-            system_msg_token_count=estimate_message_tokens(system_msg),
-            sediment_count=len(sediment_messages),
-            max_tokens=self._max_context_tokens,
-        )
+        # Re-assemble the context in the recommended logical order without any trimming:
+        # System -> Sediment -> File Context -> History (ending with current query)
+        assembled = [system_msg]
+        assembled.extend(sediment_messages)
+        assembled.extend(file_context)
+        assembled.extend(messages)
 
         payload["messages"] = assembled
         return payload
 
-
-def _trim_to_budget(
-    messages: list[dict],
-    system_msg_token_count: int,
-    max_tokens: int,
-    sediment_count: int = 0,
-) -> list[dict]:
-    total = sum(estimate_message_tokens(m) for m in messages)
-    if total <= max_tokens:
-        return messages
-
-    sacred_end = 1 + sediment_count
-
-    sacred_part = messages[:sacred_end]
-    trimmable_part = messages[sacred_end:]
-
-    sacred_tokens = sum(estimate_message_tokens(m) for m in sacred_part)
-    available = max_tokens - sacred_tokens
-
-    trimmed: list[dict] = []
-    used = 0
-    for m in reversed(trimmable_part):
-        t = estimate_message_tokens(m)
-        if used + t > available:
-            break
-        trimmed.insert(0, m)
-        used += t
-
-    return sacred_part + trimmed
 
 
 def _build_system_content(identity: dict, registry: SkillRegistry) -> str:

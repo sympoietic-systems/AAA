@@ -307,7 +307,7 @@ AAA/
 │   │   └── context.py        PipelineResult dataclass
 │   ├── personality/
 │   │   ├── identity.yaml      Agent self-definition (name, prompt, traits, beliefs)
-│   │   └── assembler.py       PromptAssemblerModule — token-budget-aware context assembly
+│   │   └── assembler.py       PromptAssemblerModule — context assembly (no internal trimming; token budget handled upstream)
 │   ├── skills/
 │   │   ├── metadata.py        SkillMeta dataclass
 │   │   └── registry.py        SkillRegistry — extends ModuleRegistry

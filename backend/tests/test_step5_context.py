@@ -42,10 +42,16 @@ async def test_context_collector():
     print("Context collector: OK")
 
     conn.close()
-    os.remove(db_path)
-    os.remove(db_path + "-wal")
-    os.remove(db_path + "-shm")
+    import time
+    time.sleep(0.1)
+    for p in [db_path, db_path + "-wal", db_path + "-shm"]:
+        try:
+            if os.path.exists(p):
+                os.remove(p)
+        except PermissionError:
+            pass
     print("All context collector tests passed!")
 
 
 asyncio.run(test_context_collector())
+
