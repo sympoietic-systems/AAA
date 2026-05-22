@@ -28,3 +28,4 @@ frontend/dist/
 
 .agents/
 docs/protocols/*
+docs/extra/*
