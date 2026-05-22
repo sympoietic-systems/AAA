@@ -1,0 +1,1 @@
+uv run python backend/mcp_server.py

@@ -74,6 +74,7 @@ cd frontend && npm run dev
 - [Configuration Reference](docs/CONFIG.md) — all config.yaml + env vars
 - [Plugin System](docs/PLUGINS.md) — how to build custom modules
 - [Architecture](docs/ARCHITECTURE.md) — pipeline, data flow, design rationale
+- [MCP Server Guide](docs/MCP_SERVER.md) — model context protocol server for tool integration
 - [Decisions](docs/decisions/) — architecture decision records (ADRs)
 - [Technical Design Document](docs/TDD.md) — system specification
 - [Implementation Roadmap](docs/Implementation.md) — Phase 1–4 plan
