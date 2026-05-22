@@ -15,6 +15,9 @@ from backend.core.registry import ModuleRegistry
 async def test_context_collector():
     db_path = str(get_db_path("data/aaa_ctx_test.db"))
     conn = init_db(db_path)
+    conn.execute("DELETE FROM conversation_metrics")
+    conn.execute("DELETE FROM conversation_log")
+    conn.commit()
     repo = MessageRepository(db_path)
 
     import numpy as np

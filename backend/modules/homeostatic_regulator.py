@@ -42,7 +42,7 @@ class HomeostaticRegulatorModule(ProcessingModule):
     def skill_meta(self) -> SkillMeta:
         return SkillMeta(
             name="homeostatic_regulator",
-            description="Maps conversational metrics to recommended LLM generation parameters",
+            description="Maps conversational metrics to allostatic regimes and recommends generation parameters",
             category="reasoning",
             always_run=True,
         )
@@ -234,16 +234,16 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     critical = {"high_similarity", "entropy_collapse", "agent_self_loop", "mutual_deadlock", "phase_disruption", "paskian_boredom", "pask_health_critical"}
 
     if any(f in critical for f in flags):
-        vitality_state = "critical"
+        vitality_state = "disrupted"
     elif flags:
-        vitality_state = "compensating"
+        vitality_state = "consolidating"
     else:
-        vitality_state = "healthy"
+        vitality_state = "flowing"
 
     if vitality is not None:
         if vitality < 0.20:
-            vitality_state = "critical"
-        elif vitality < 0.40 and vitality_state == "healthy":
-            vitality_state = "compensating"
+            vitality_state = "disrupted"
+        elif vitality < 0.40 and vitality_state == "flowing":
+            vitality_state = "consolidating"
 
     return vitality_state, flags

@@ -49,9 +49,14 @@ class ConversationMetricsModule(ProcessingModule):
     def skill_meta(self) -> SkillMeta:
         return SkillMeta(
             name="conversation_metrics",
-            description="Computes real-time conversational vitality metrics",
+            description="Computes real-time conversational vitality and paskian metrics",
             category="perception",
             always_run=True,
+            children=[
+                SkillMeta(name="surprise_index", description="Exponentially decaying weighted surprise (d=0.75)", category="perception"),
+                SkillMeta(name="boringness", description="Joint failure of mutual perturbation: (1 - rP_t) * (1 - MPI_{t-1})", category="perception"),
+                SkillMeta(name="conceptual_velocity", description="Disjoint window centroid drift rate (k=3)", category="perception"),
+            ]
         )
 
     def validate(self) -> bool:
@@ -110,14 +115,38 @@ class ConversationMetricsModule(ProcessingModule):
         mpi = _compute_mutual_perturbation(coupling, rp_t)
         metrics["mutual_perturbation"] = mpi
 
-        boringness = _compute_boringness(rp_t, surprise)
+        # Fetch prior metrics from database to ensure state isolation across conversations
+        prior_metrics = {}
+        if conversation_id:
+            recent_with_metrics = self._repo.get_recent_with_metrics(limit=5, conversation_id=conversation_id)
+            if recent_with_metrics:
+                for turn in reversed(recent_with_metrics):
+                    if turn.get("s_t") is not None:
+                        prior_metrics = {
+                            "pairwise_similarity": turn.get("s_t"),
+                            "conceptual_novelty": turn.get("novelty"),
+                            "rolling_entropy": turn.get("rolling_entropy"),
+                            "coupling_coherence": turn.get("coupling"),
+                            "agent_self_divergence": turn.get("agent_divergence"),
+                            "reverse_perturbation": turn.get("reverse_perturbation"),
+                            "surprise_index": turn.get("surprise_index"),
+                            "mutual_perturbation": turn.get("mutual_perturbation"),
+                        }
+                        break
+
+        # Fall back to in-memory self._prior_metrics if DB returned nothing
+        if not prior_metrics:
+            prior_metrics = self._prior_metrics
+
+        prev_mpi = prior_metrics.get("mutual_perturbation")
+        boringness = _compute_boringness(rp_t, prev_mpi)
         metrics["boringness"] = boringness
 
         conceptual_velocity = _compute_conceptual_velocity(current_vec, all_recent)
         metrics["conceptual_velocity"] = conceptual_velocity
 
-        prev_coupling = self._prior_metrics.get("coupling_coherence")
-        prev_rp = self._prior_metrics.get("reverse_perturbation")
+        prev_coupling = prior_metrics.get("coupling_coherence")
+        prev_rp = prior_metrics.get("reverse_perturbation")
         drr = _compute_drr(coupling, prev_coupling, prev_rp)
         metrics["divergence_resolution_ratio"] = drr
 
@@ -141,7 +170,7 @@ class ConversationMetricsModule(ProcessingModule):
         )
         metrics["conversation_vitality"] = vitality
 
-        phase_shifts = _detect_phase_shifts(metrics, self._prior_metrics, self._phase_shift_threshold)
+        phase_shifts = _detect_phase_shifts(metrics, prior_metrics, self._phase_shift_threshold)
         metrics["phase_shifts"] = phase_shifts
 
         self._prior_metrics = {
@@ -152,6 +181,7 @@ class ConversationMetricsModule(ProcessingModule):
             "agent_self_divergence": agent_divergence,
             "reverse_perturbation": rp_t,
             "surprise_index": surprise,
+            "mutual_perturbation": mpi,
         }
 
         payload["metrics"] = metrics
@@ -269,10 +299,16 @@ def _compute_surprise_index(
 
     U_t = 1 - cos(V_t, centroid(V_{t-1}..V_{t-K}))
     High U_t = input falls outside system's expected phase space.
+    Uses exponential decay weighting (d=0.75) for temporal active coupling.
     """
     if not prior_human or len(prior_human) < 2:
         return None
-    centroid = np.mean(np.stack(prior_human), axis=0)
+    d = 0.75
+    weights = np.array([d**i for i in range(len(prior_human))])
+    stacked = np.stack(prior_human)
+    weighted_sum = np.sum(stacked * weights[:, np.newaxis], axis=0)
+    sum_weights = np.sum(weights)
+    centroid = weighted_sum / sum_weights
     centroid = centroid / (np.linalg.norm(centroid) + 1e-8)
     u = 1.0 - float(np.dot(current_vec, centroid))
     return max(0.0, min(1.0, u))
@@ -411,20 +447,17 @@ def _detect_phase_shifts(
 
 def _compute_boringness(
     rp_t: float | None,
-    surprise: float | None,
+    prev_mpi: float | None,
 ) -> float | None:
-    """B_t = (1 - rP_t) × (1 - U_t)
+    """B_t = (1 - rP_t) × (1 - MPI_{t-1})
 
     Boringness is the joint failure to perturb in both directions.
-    B_t → 0: agent is perturbing OR surprising — not boring.
-    B_t → 1: no reverse perturbation AND no surprise — maximum boring.
-
-    In Pask's terms: the agent's responses neither destabilize existing
-    analogies nor provoke the human to restructure their L-system.
+    Uses lagged Mutual Perturbation Index (MPI_{t-1}) to handle non-sequitur blind spots.
     """
-    if rp_t is None or surprise is None:
+    if rp_t is None:
         return None
-    b = (1.0 - rp_t) * (1.0 - surprise)
+    mpi_val = prev_mpi if prev_mpi is not None else 0.0
+    b = (1.0 - rp_t) * (1.0 - mpi_val)
     return max(0.0, min(1.0, b))
 
 
@@ -434,21 +467,18 @@ def _compute_conceptual_velocity(
 ) -> float | None:
     """V_c = 1 - cos(W_prev, W_curr)
 
-    Where W_prev = centroid of last K embeddings (excluding current),
-    W_curr = centroid including current.
-
-    Pask's "topic drift" — is the entailment mesh actually moving?
-    V_c → 0: frozen entailment mesh (strict/stuck conversation).
-    V_c → 0.3-0.6: productive drift (concepts evolving).
-    V_c → 1: ungrounded jumping (permissive noise, no coupling).
+    Uses non-overlapping windows of size k=3 (current + last 2 vs. preceding 3).
     """
-    if len(all_recent) < 3:
+    if len(all_recent) < 5:
         return None
-    prev_centroid = np.mean(np.stack(all_recent[:3]), axis=0)
-    all_with_current = [current_vec] + all_recent
-    curr_centroid = np.mean(np.stack(all_with_current[:4]), axis=0)
-    prev_centroid = prev_centroid / (np.linalg.norm(prev_centroid) + 1e-8)
+    curr_window = [current_vec] + all_recent[:2]
+    curr_centroid = np.mean(np.stack(curr_window), axis=0)
     curr_centroid = curr_centroid / (np.linalg.norm(curr_centroid) + 1e-8)
+
+    prev_window = all_recent[2:5]
+    prev_centroid = np.mean(np.stack(prev_window), axis=0)
+    prev_centroid = prev_centroid / (np.linalg.norm(prev_centroid) + 1e-8)
+
     v = 1.0 - float(np.dot(prev_centroid, curr_centroid))
     return max(0.0, min(1.0, v))
 
@@ -491,7 +521,7 @@ def _compute_paskian_health(
 
     drr_optimal = 0.15
     anti_boring = 1.0 - boringness
-    v_norm = min(1.0, conceptual_velocity / 0.5)
+    v_norm = min(1.0, conceptual_velocity / 0.35)
     drr_quality = 1.0 - min(1.0, abs(drr - drr_optimal) / 0.5)
 
     ph = anti_boring * v_norm * drr_quality

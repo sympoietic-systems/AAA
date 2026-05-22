@@ -200,8 +200,13 @@ async def lifespan(app: FastAPI):
     )
     registry.register_with_meta(
         "conversation_metrics", lambda: conversation_metrics,
-        SkillMeta(name="conversation_metrics", description="Computes conversational vitality metrics (similarity, novelty, entropy, coupling, self-divergence)",
-                  category="perception", always_run=True),
+        SkillMeta(name="conversation_metrics", description="Computes real-time conversational vitality and paskian metrics",
+                  category="perception", always_run=True,
+                  children=[
+                      SkillMeta(name="surprise_index", description="Exponentially decaying weighted surprise (d=0.75)", category="perception"),
+                      SkillMeta(name="boringness", description="Joint failure of mutual perturbation: (1 - rP_t) * (1 - MPI_{t-1})", category="perception"),
+                      SkillMeta(name="conceptual_velocity", description="Disjoint window centroid drift rate (k=3)", category="perception"),
+                  ]),
     )
     registry.register_with_meta(
         "context_collector", lambda: context_collector,
@@ -267,7 +272,7 @@ async def lifespan(app: FastAPI):
 
     registry.register_with_meta(
         "homeostatic_regulator", lambda: homeostatic_regulator,
-        SkillMeta(name="homeostatic_regulator", description="Maps conversational metrics to recommended LLM parameters",
+        SkillMeta(name="homeostatic_regulator", description="Maps conversational metrics to allostatic regimes and recommends generator parameters",
                   category="reasoning", always_run=True),
     )
 
