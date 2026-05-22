@@ -129,7 +129,8 @@ async def lifespan(app: FastAPI):
 
     db_path = config.get("database", {}).get("path", "data/aaa.db")
     full_db_path = get_db_path(db_path)
-    init_db(str(full_db_path))
+    init_conn = init_db(str(full_db_path))
+    init_conn.close()
     logger.info(f"Database initialized at {full_db_path}")
 
     message_repo = MessageRepository(str(full_db_path))

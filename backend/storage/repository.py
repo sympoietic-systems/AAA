@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import threading
 import traceback
 from datetime import datetime
 from typing import Optional
@@ -10,13 +11,54 @@ from .database import get_connection
 from .models import Conversation, ErrorLogEntry, Message, MetricsRecord, PerceptionSediment
 
 
+class ConnectionTracker:
+    def __init__(self):
+        self.conns = []
+        self.depth = 0
+
+
+_thread_conns = threading.local()
+
+
+def with_connection(func):
+    def wrapper(self, *args, **kwargs):
+        if not hasattr(_thread_conns, "tracker") or _thread_conns.tracker is None:
+            _thread_conns.tracker = ConnectionTracker()
+        
+        tracker = _thread_conns.tracker
+        tracker.depth += 1
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            tracker.depth -= 1
+            if tracker.depth == 0:
+                for conn in tracker.conns:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                tracker.conns = []
+                _thread_conns.tracker = None
+    return wrapper
+
+
+def _get_tracked_connection(db_path: str) -> sqlite3.Connection:
+    if not hasattr(_thread_conns, "tracker") or _thread_conns.tracker is None:
+        raise RuntimeError("Database connection requested outside of @with_connection context")
+    conn = get_connection(db_path)
+    _thread_conns.tracker.conns.append(conn)
+    return conn
+
+
+
 class ConversationRepository:
     def __init__(self, db_path: str):
         self._db_path = db_path
 
     def _conn(self) -> sqlite3.Connection:
-        return get_connection(self._db_path)
+        return _get_tracked_connection(self._db_path)
 
+    @with_connection
     def create(self, conversation_id: str, agent_id: str = "", title: str = "") -> Conversation:
         conn = self._conn()
         conn.execute(
@@ -30,6 +72,7 @@ class ConversationRepository:
         ).fetchone()
         return _row_to_conversation(row)
 
+    @with_connection
     def get(self, conversation_id: str) -> Optional[Conversation]:
         conn = self._conn()
         row = conn.execute(
@@ -39,6 +82,7 @@ class ConversationRepository:
             return None
         return _row_to_conversation(row)
 
+    @with_connection
     def list_all(self) -> list[Conversation]:
         conn = self._conn()
         rows = conn.execute(
@@ -50,6 +94,7 @@ class ConversationRepository:
         ).fetchall()
         return [_row_to_conversation(r) for r in rows]
 
+    @with_connection
     def update_title(self, conversation_id: str, title: str) -> None:
         conn = self._conn()
         conn.execute(
@@ -58,6 +103,7 @@ class ConversationRepository:
         )
         conn.commit()
 
+    @with_connection
     def touch(self, conversation_id: str) -> None:
         conn = self._conn()
         conn.execute(
@@ -66,8 +112,16 @@ class ConversationRepository:
         )
         conn.commit()
 
+    @with_connection
     def delete(self, conversation_id: str) -> None:
         conn = self._conn()
+        conn.execute(
+            """DELETE FROM conversation_metrics 
+               WHERE message_id IN (
+                   SELECT id FROM conversation_log WHERE conversation_id = ?
+               )""",
+            (conversation_id,),
+        )
         conn.execute(
             "DELETE FROM conversation_log WHERE conversation_id = ?",
             (conversation_id,),
@@ -92,8 +146,9 @@ class MessageRepository:
         self._db_path = db_path
 
     def _conn(self) -> sqlite3.Connection:
-        return get_connection(self._db_path)
+        return _get_tracked_connection(self._db_path)
 
+    @with_connection
     def insert(
         self,
         speaker: str,
@@ -120,6 +175,7 @@ class MessageRepository:
         ).fetchone()
         return _row_to_message(row)
 
+    @with_connection
     def get_recent(self, limit: int = 50, conversation_id: str | None = None) -> list[Message]:
         conn = self._conn()
         if conversation_id is not None:
@@ -134,6 +190,7 @@ class MessageRepository:
             ).fetchall()
         return [_row_to_message(r) for r in reversed(rows)]
 
+    @with_connection
     def get_by_id(self, message_id: int) -> Optional[Message]:
         conn = self._conn()
         row = conn.execute(
@@ -143,6 +200,7 @@ class MessageRepository:
             return None
         return _row_to_message(row)
 
+    @with_connection
     def get_embeddings_by_speaker(
         self, speaker: str, limit: int = 5, conversation_id: str | None = None
     ) -> list[np.ndarray]:
@@ -169,6 +227,7 @@ class MessageRepository:
                     result.append(vec)
         return result
 
+    @with_connection
     def get_last_embedding_by_speaker(self, speaker: str, conversation_id: str | None = None) -> np.ndarray | None:
         conn = self._conn()
         if conversation_id is not None:
@@ -194,6 +253,7 @@ class MessageRepository:
             return None
         return vec
 
+    @with_connection
     def get_recent_embeddings(self, limit: int = 10, conversation_id: str | None = None) -> list[np.ndarray]:
         conn = self._conn()
         if conversation_id is not None:
@@ -218,6 +278,7 @@ class MessageRepository:
                     result.append(vec)
         return result
 
+    @with_connection
     def get_recent_with_metrics(self, limit: int = 50, conversation_id: str | None = None) -> list[dict]:
         conn = self._conn()
         if conversation_id is not None:
@@ -230,10 +291,10 @@ class MessageRepository:
                           cm.mutual_perturbation, cm.vitality,
                           cm.boringness, cm.conceptual_velocity,
                           cm.divergence_resolution_ratio, cm.paskian_health
-                   FROM conversation_log cl
-                   LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
-                   WHERE cl.conversation_id = ?
-                   ORDER BY cl.id DESC LIMIT ?""",
+                    FROM conversation_log cl
+                    LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
+                    WHERE cl.conversation_id = ?
+                    ORDER BY cl.id DESC LIMIT ?""",
                 (conversation_id, limit),
             ).fetchall()
         else:
@@ -246,13 +307,14 @@ class MessageRepository:
                           cm.mutual_perturbation, cm.vitality,
                           cm.boringness, cm.conceptual_velocity,
                           cm.divergence_resolution_ratio, cm.paskian_health
-                   FROM conversation_log cl
-                   LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
-                   ORDER BY cl.id DESC LIMIT ?""",
+                    FROM conversation_log cl
+                    LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
+                    ORDER BY cl.id DESC LIMIT ?""",
                 (limit,),
             ).fetchall()
         return [dict(r) for r in reversed(rows)]
 
+    @with_connection
     def count_messages(self, conversation_id: str) -> int:
         conn = self._conn()
         row = conn.execute(
@@ -261,6 +323,7 @@ class MessageRepository:
         ).fetchone()
         return row["cnt"] if row else 0
 
+    @with_connection
     def get_all_embeddings_except(
         self, exclude_conversation_id: str, limit: int = 500
     ) -> list[tuple[int, str, np.ndarray]]:
@@ -281,6 +344,7 @@ class MessageRepository:
                     result.append((row["id"], row["speaker"], vec))
         return result
 
+    @with_connection
     def get_by_ids(self, message_ids: list[int]) -> list[Message]:
         if not message_ids:
             return []
@@ -292,6 +356,7 @@ class MessageRepository:
         ).fetchall()
         return [_row_to_message(r) for r in rows]
 
+    @with_connection
     def get_token_totals(self, conversation_id: str | None = None) -> list[dict]:
         conn = self._conn()
         if conversation_id is not None:
@@ -352,8 +417,9 @@ class ErrorLogRepository:
         self._db_path = db_path
 
     def _conn(self) -> sqlite3.Connection:
-        return get_connection(self._db_path)
+        return _get_tracked_connection(self._db_path)
 
+    @with_connection
     def log_error(
         self,
         module: str,
@@ -386,6 +452,7 @@ class ErrorLogRepository:
             context=row["context"],
         )
 
+    @with_connection
     def get_recent(self, limit: int = 20) -> list[ErrorLogEntry]:
         conn = self._conn()
         rows = conn.execute(
@@ -411,8 +478,9 @@ class MetricsRepository:
         self._db_path = db_path
 
     def _conn(self) -> sqlite3.Connection:
-        return get_connection(self._db_path)
+        return _get_tracked_connection(self._db_path)
 
+    @with_connection
     def insert(
         self,
         message_id: int,
@@ -464,6 +532,7 @@ class MetricsRepository:
         ).fetchone()
         return _row_to_metrics(row)
 
+    @with_connection
     def get_recent(self, limit: int = 50) -> list[MetricsRecord]:
         conn = self._conn()
         rows = conn.execute(
@@ -472,6 +541,7 @@ class MetricsRepository:
         ).fetchall()
         return [_row_to_metrics(r) for r in reversed(rows)]
 
+    @with_connection
     def get_aggregates(self, limit: int = 20) -> dict:
         conn = self._conn()
         row = conn.execute(
@@ -517,6 +587,7 @@ class MetricsRepository:
             "avg_paskian_health": round(row["avg_pask_health"], 4) if row["avg_pask_health"] is not None else None,
         }
 
+    @with_connection
     def get_latest(self) -> MetricsRecord | None:
         conn = self._conn()
         row = conn.execute(
@@ -532,8 +603,9 @@ class PerceptionSedimentRepository:
         self._db_path = db_path
 
     def _conn(self) -> sqlite3.Connection:
-        return get_connection(self._db_path)
+        return _get_tracked_connection(self._db_path)
 
+    @with_connection
     def insert_chunk(
         self,
         conversation_id: str,
@@ -560,6 +632,7 @@ class PerceptionSedimentRepository:
         ).fetchone()
         return _row_to_perception_sediment(row)
 
+    @with_connection
     def get_by_conversation(
         self, conversation_id: str
     ) -> list[PerceptionSediment]:
@@ -570,6 +643,7 @@ class PerceptionSedimentRepository:
         ).fetchall()
         return [_row_to_perception_sediment(r) for r in rows]
 
+    @with_connection
     def get_embeddings_by_conversation(
         self, conversation_id: str
     ) -> list[tuple[int, np.ndarray]]:
@@ -586,6 +660,7 @@ class PerceptionSedimentRepository:
                 result.append((row["id"], vec))
         return result
 
+    @with_connection
     def get_by_ids(self, chunk_ids: list[int]) -> list[PerceptionSediment]:
         if not chunk_ids:
             return []
@@ -598,6 +673,7 @@ class PerceptionSedimentRepository:
         id_to_row = {r["id"]: _row_to_perception_sediment(r) for r in rows}
         return [id_to_row[cid] for cid in chunk_ids if cid in id_to_row]
 
+    @with_connection
     def get_file_summary(
         self, conversation_id: str
     ) -> list[dict]:
@@ -614,6 +690,7 @@ class PerceptionSedimentRepository:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    @with_connection
     def get_file_preview(
         self, conversation_id: str, file_name: str, max_chars: int = 400
     ) -> str | None:
@@ -631,6 +708,7 @@ class PerceptionSedimentRepository:
             return text
         return text[:max_chars].rstrip() + "..."
 
+    @with_connection
     def delete_by_conversation(self, conversation_id: str) -> None:
         conn = self._conn()
         conn.execute(
@@ -645,8 +723,9 @@ class ConsolidationCheckpointRepository:
         self._db_path = db_path
 
     def _conn(self) -> sqlite3.Connection:
-        return get_connection(self._db_path)
+        return _get_tracked_connection(self._db_path)
 
+    @with_connection
     def save(self, conversation_id: str, message_count: int, summary: str, model: str = "") -> int:
         conn = self._conn()
         conn.execute(
@@ -660,6 +739,7 @@ class ConsolidationCheckpointRepository:
         ).fetchone()
         return row["id"] if row else 0
 
+    @with_connection
     def get_latest(self, conversation_id: str) -> dict | None:
         conn = self._conn()
         row = conn.execute(
@@ -679,6 +759,7 @@ class ConsolidationCheckpointRepository:
             "created_at": row["created_at"],
         }
 
+    @with_connection
     def delete_by_conversation(self, conversation_id: str) -> None:
         conn = self._conn()
         conn.execute(

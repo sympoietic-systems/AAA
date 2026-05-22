@@ -61,6 +61,7 @@ The system is constructed from four decoupled, highly cohesive modules that inte
 *   **Components:**
     *   **Embedder:** Local instance of `SentenceTransformer('all-MiniLM-L6-v2')` executing on CPU or GPU.
     *   **Logger:** SQLite database configured with Write-Ahead Logging (WAL) enabled to support concurrent reads during background asynchronous processing.
+*   **Improved Reliability:** Added `PRAGMA foreign_keys=ON`, increased connection timeout, and implemented cascade delete for dependent tables. Connection tracking now ensures all connections are closed via `try/finally`.
 *   **Constraint:** To prevent memory leaks, raw floating-point embedding vectors are cast to standard `float32` numpy arrays and serialized as native binary BLOBS prior to database insertion.
 
 ### 3.2. Homeostatic Regulator
