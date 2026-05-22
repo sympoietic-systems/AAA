@@ -75,13 +75,13 @@ class PerceptionModule(ProcessingModule):
                 logger.warning("Perception: 0 files successfully processed out of %d attachments",
                               len(attachments))
 
-        existing = self._repo.get_file_summary(conversation_id) if conversation_id else []
-        logger.debug("Perception: get_file_summary returned %d file(s) for conv %s",
+        existing = self._repo.get_files_by_conversation(conversation_id) if conversation_id else []
+        logger.debug("Perception: get_files_by_conversation returned %d file(s) for conv %s",
                      len(existing), conversation_id[:8] if conversation_id else "none")
         if existing:
             for fs in existing:
-                logger.debug("  file=%s type=%s tokens=%d chunks=%d",
-                           fs["file_name"], fs["file_type"], fs["total_tokens"], fs["chunk_count"])
+                logger.debug("  file=%s type=%s tokens=%d chunks=%d status=%s",
+                           fs["file_name"], fs["file_type"], fs.get("token_count") or 0, fs.get("chunk_count") or 0, fs.get("status"))
             file_context, context_tokens = await self._retrieve_relevant_chunks(
                 payload.get("content", ""),
                 conversation_id,
@@ -180,29 +180,39 @@ class PerceptionModule(ProcessingModule):
         if not query or not conversation_id:
             return [], 0
 
-        file_summaries = self._repo.get_file_summary(conversation_id)
-        if not file_summaries:
+        files = self._repo.get_files_by_conversation(conversation_id)
+        if not files:
             return [], 0
 
-        context_entries: list[dict] = []
+        from datetime import datetime
+        manifest_lines = ["[File Manifest - Co-Participant Sediment]"]
+        for f in files:
+            file_name = f["file_name"]
+            file_type = f["file_type"]
+            status = f["status"]
+            summary = f.get("summary")
+            token_count = f.get("token_count") or 0
+            chunk_count = f.get("chunk_count") or 0
 
-        for fs in file_summaries:
-            file_name = fs["file_name"]
-            file_type = fs["file_type"]
-            total_tokens = fs["total_tokens"]
-            chunk_count = fs["chunk_count"]
+            # Check if newly uploaded (within last 600 seconds / 10 minutes)
+            is_new = False
+            if f.get("created_at"):
+                try:
+                    created_dt = datetime.strptime(f["created_at"], "%Y-%m-%d %H:%M:%S")
+                    if (datetime.utcnow() - created_dt).total_seconds() < 600:
+                        is_new = True
+                except Exception:
+                    pass
 
-            preview = self._repo.get_file_preview(conversation_id, file_name, max_chars=400)
+            new_prefix = "[new] " if is_new else ""
+            if status != "ready":
+                manifest_lines.append(f"- {new_prefix}{file_name} ({file_type}, status: {status})")
+            else:
+                summary_val = summary if summary else "[No summary generated]"
+                manifest_lines.append(f"- {new_prefix}{file_name} ({file_type}, {token_count} tokens, {chunk_count} chunks) - Summary: {summary_val}")
 
-            parts = [
-                f"[File: {file_name} ({file_type})]",
-                f"Tokens: {total_tokens} in {chunk_count} chunks",
-            ]
-            if preview:
-                parts.append(f"Preview: {preview}")
-
-            summary = "\n".join(parts)
-            context_entries.append({"role": "system", "content": summary})
+        manifest_text = "\n".join(manifest_lines)
+        context_entries: list[dict] = [{"role": "system", "content": manifest_text}]
 
         try:
             query_vec = await self._embed.encode_async(query)
@@ -229,7 +239,8 @@ class PerceptionModule(ProcessingModule):
                 dim_mismatches += 1
                 continue
             sim = float(np.dot(query_vec, vec))
-            scored.append((sim, chunk_id))
+            if sim >= self._similarity_threshold:
+                scored.append((sim, chunk_id))
 
         if dim_mismatches:
             logger.warning("Retrieval: %d dimension mismatches skipped", dim_mismatches)
@@ -237,8 +248,8 @@ class PerceptionModule(ProcessingModule):
         scored.sort(key=lambda x: x[0], reverse=True)
 
         top_sims = [s for s, _ in scored[:self._top_k_chunks]]
-        logger.info("Retrieval: top-%d similarities: %s",
-                   len(top_sims), [f"{s:.3f}" for s in top_sims])
+        logger.info("Retrieval: top-%d similarities (threshold=%s): %s",
+                   len(top_sims), self._similarity_threshold, [f"{s:.3f}" for s in top_sims])
 
         top_ids = [cid for _, cid in scored[:self._top_k_chunks]]
 
@@ -260,6 +271,11 @@ class PerceptionModule(ProcessingModule):
                     break
                 context_entries.append({"role": "system", "content": entry_text})
                 tokens_used += entry_tokens
+        elif chunk_embeddings:
+            context_entries.append({
+                "role": "system",
+                "content": f"[File Context] No highly resonant memory fragments found matching the current query (similarity threshold: {self._similarity_threshold:.2f})."
+            })
 
         total_tokens = sum(estimate_tokens(e["content"]) for e in context_entries)
         logger.info(

@@ -139,20 +139,15 @@ If embedding fails or no chunk embeddings are found in the database, a
 fallback mechanism injects the first K chunks directly to ensure content
 is never absent.
 
-### File Summary
+### File Summary & Manifest
 
-Every file in the conversation gets a summary entry in the context:
+Every conversation features a persistent `[File Manifest - Co-Participant Sediment]` block in the context listing all files along with their metadata and LLM-generated summaries:
 
 ```
-[File: philosophy.md (md)]
-Tokens: 11594 in 13 chunks
-Preview: Intra-action is a key concept in Karen Barad's agential realism...
+- [new] philosophy.md (md, 11594 tokens, 13 chunks) - Summary: An exploration of agential realism, intra-action, and physical-discursive apparatuses...
 ```
 
-The preview is the first 400 characters of the file's first chunk, giving
-the model immediate orientation about file contents. A future dedicated
-`file_analyst` skill will replace this with LLM-generated structured summaries
-(main concepts, key ideas, argument structure).
+Newly uploaded files are flagged with `[new]` for the first 10 minutes. The LLM-generated summary replaces the original raw text preview, saving tokens and providing a richer cognitive map of the file sediment.
 
 ### Config
 
@@ -165,8 +160,7 @@ perception:
   chunk_overlap: 64
 ```
 
-`similarity_threshold` is reserved for future use — chunk selection currently
-uses similarity for ranking only (top-K always included), not hard filtering.
+The `similarity_threshold` (default `0.25`) is actively enforced to filter out irrelevant chunks. If no chunks exceed this threshold, the manifest remains present, but a system notification `[File Context] No highly resonant memory fragments found...` is injected to signify the cutoff.
 
 ### Payload Contract
 
