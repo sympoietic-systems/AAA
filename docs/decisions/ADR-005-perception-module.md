@@ -57,9 +57,9 @@ Rationale:
 
 ### Pipeline Placement
 
-```
-embedder → perception → conversation_metrics → context_collector
-        → sedimentation_retrieval → prompt_assembler → ...
+```mermaid
+graph LR
+    embedder --> perception --> conversation_metrics --> context_collector --> sedimentation_retrieval --> prompt_assembler --> etc["..."]
 ```
 
 Perception runs **after embedder** (reuses the embedding service for chunk
@@ -111,13 +111,17 @@ No pandoc — avoids heavy system dependency. Pandoc can be added as a
 
 ### Context Assembly Order
 
-```
-[0] System prompt (identity + skills)            ~1400 tokens
-[1] File context (summary + top-K chunks)        ≤3000 tokens (sacred)
-[2] Sediment messages (cross-conversation)       ≤2000 tokens (sacred)
-[3] Conversation history                         remaining budget
-─────────────────────────────────────────
-Total capped at max_tokens (16384)
+```mermaid
+graph TD
+    subgraph ContextBudget ["Context Window Token Allocation (16384 total)"]
+        direction TB
+        C0["[0] System Prompt (identity + skills)<br/>~1400 tokens"]
+        C1["[1] File Context (summary + top-K chunks)<br/>≤3000 tokens (sacred)"]
+        C2["[2] Sediment Messages (cross-conversation)<br/>≤2000 tokens (sacred)"]
+        C3["[3] Conversation History<br/>Remaining budget"]
+        
+        C0 --> C1 --> C2 --> C3
+    end
 ```
 
 File context is "sacred" — never trimmed by `_trim_to_budget()`. File summaries

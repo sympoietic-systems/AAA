@@ -78,10 +78,6 @@ Technical specifications, operational guides, and philosophical treatises are ma
 
 ### Conceptual Protocols & Guidelines
 *   [Conceptual Philosophy](docs/PHILOSOPHY.md) — The theoretical foundations of agential realism, diffraction, and self-organization.
-*   [The Core Protocol](docs/protocols/PROTOCOL.md) — The operating rules and commitments of sympoietic co-creation.
-*   [Post-Generative Writing Protocol](docs/protocols/POST-GENERATIVE-WRITING.md) — Lexicon, tone guidelines, and the rules of the Xenolingual voice.
-*   [Language & Semantic Guidelines](docs/protocols/LANGUAGE.md) — Standards for agent articulation.
-*   [Collaboration Protocol](docs/protocols/COLLABORATION.md) — Practical parameters for human-machine interaction.
 
 ### System Design & Architecture
 *   [System Architecture Guide](docs/ARCHITECTURE.md) — Data flow, modular pipelines, and design decisions.

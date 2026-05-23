@@ -116,13 +116,19 @@ This reads two seemingly unrelated disciplines through one another, producing
 an intellectual interference pattern directly within the context window. It is
 the mechanism for genuine, non-random creativity.
 
-```
-Traditional Retrieval (Tracing):
-  Feedback Loop ───► Homeostasis ───► Error Correction
-
-Diffractive Retrieval (Map/Rhizome):
-  Feedback Loop ───► [Schema of Flow] ───► Mycelium Growth (Biology)
-                       δ=0.7              └──► Prussian Blue (Chemistry)
+```mermaid
+graph TD
+    subgraph Tracing ["Traditional Retrieval (Tracing)"]
+        direction LR
+        FL1["Feedback Loop"] --> H1["Homeostasis"] --> EC1["Error Correction"]
+    end
+    
+    subgraph Diffractive ["Diffractive Retrieval (Map/Rhizome)"]
+        direction TB
+        FL2["Feedback Loop"] -->|"δ=0.7"| SF["Schema of Flow"]
+        SF --> MG["Mycelium Growth (Biology)"]
+        SF --> PB["Prussian Blue (Chemistry)"]
+    end
 ```
 
 ---
