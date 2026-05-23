@@ -40,6 +40,9 @@ What becomes easier/harder?
 | [007](ADR-007-context-compression.md) | Context Compression & Pruning | accepted | 2026-05-21 |
 | [008](ADR-008-allostatic-metrics-refinements.md) | Allostatic Metrics Refinements | accepted | 2026-05-22 |
 | [009](ADR-009-database-metrics-retrieval.md) | Database Metrics Retrieval & Test Integrity | accepted | 2026-05-22 |
+| [010](ADR-010-multi-model-routing.md) | Stateful Multi-Model Routing, Key Rotation, and Metadata Persistence | accepted | 2026-05-22 |
+| [011](ADR-011-rhizomatic-file-digestion-and-opacity.md) | Rhizomatic File Ingestion and Relational Opacity | accepted | 2026-05-22 |
+| [012](ADR-012-conversation-pagination-and-lazy-loading.md) | Conversation Pagination, On-Demand Detail Loading, and Render Memoization | accepted | 2026-05-23 |
 
 
 ## Creating a New ADR

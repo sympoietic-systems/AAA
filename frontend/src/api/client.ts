@@ -53,6 +53,7 @@ export interface ChatMessage {
   homeostatic_recommendations?: HomeostaticRecommendations
   attachments?: AttachmentInfo[] | null
   context_sent?: string | null
+  has_context?: boolean
   model_used?: string | null
   provider_used?: string | null
 }
@@ -98,10 +99,28 @@ export async function sendMessage(
   return res.json()
 }
 
-export async function getHistory(limit = 50, conversationId?: string): Promise<{ messages: ChatMessage[] }> {
-  const params = new URLSearchParams({ limit: String(limit) })
+export async function getHistory(limit = 50, offset = 0, conversationId?: string): Promise<{ messages: ChatMessage[]; count: number }> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
   if (conversationId) params.set("conversation_id", conversationId)
   const res = await fetch(`${BASE}/history?${params}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function getMessageThinking(messageId: number): Promise<{ thinking: string | null }> {
+  const res = await fetch(`${BASE}/messages/${messageId}/thinking`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function getMessageContext(messageId: number): Promise<{ context_sent: string | null }> {
+  const res = await fetch(`${BASE}/messages/${messageId}/context`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function getFileSummary(conversationId: string, fileName: string): Promise<{ summary: string | null; summary_model: string | null }> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/files/${encodeURIComponent(fileName)}/summary`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

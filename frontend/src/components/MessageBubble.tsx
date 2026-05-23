@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useState, memo } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import type { ChatMessage, MetricsInfo } from "../api/client"
+import { getMessageThinking, getMessageContext } from "../api/client"
 
 function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
   const items: { label: string; full: string; value: number | null; max: number; warn: number; crit: number; invert: boolean; hint: string }[] = [
@@ -127,13 +128,58 @@ function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
   )
 }
 
-export function MessageBubble({ msg }: { msg: ChatMessage }) {
+export const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isHuman = msg.speaker === "human"
   const isSystem = msg.speaker === "system"
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
   const [userExpanded, setUserExpanded] = useState(false)
   const [systemOpen, setSystemOpen] = useState(false)
+
+  const [thinkingText, setThinkingText] = useState<string | null>(msg.thinking || null)
+  const [loadingThinking, setLoadingThinking] = useState(false)
+  const [contextText, setContextText] = useState<string | null>(msg.context_sent || null)
+  const [loadingContext, setLoadingContext] = useState(false)
+
+  const handleToggleThinking = async () => {
+    if (thinkingOpen) {
+      setThinkingOpen(false)
+      return
+    }
+    setThinkingOpen(true)
+    if (!thinkingText && msg.id) {
+      setLoadingThinking(true)
+      try {
+        const res = await getMessageThinking(msg.id)
+        setThinkingText(res.thinking || "No thinking trace available.")
+      } catch (err) {
+        console.error("Failed to load thinking trace:", err)
+        setThinkingText("Failed to load thinking trace.")
+      } finally {
+        setLoadingThinking(false)
+      }
+    }
+  }
+
+  const handleToggleContext = async () => {
+    if (contextOpen) {
+      setContextOpen(false)
+      return
+    }
+    setContextOpen(true)
+    if (!contextText && msg.id) {
+      setLoadingContext(true)
+      try {
+        const res = await getMessageContext(msg.id)
+        setContextText(res.context_sent || "No context available.")
+      } catch (err) {
+        console.error("Failed to load context:", err)
+        setContextText("Failed to load context.")
+      } finally {
+        setLoadingContext(false)
+      }
+    }
+  }
 
   if (isSystem) {
     const lines = msg.content.split("\n")
@@ -160,6 +206,9 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
     )
   }
 
+  const showThinkingButton = !!msg.thinking || (msg.thinking_tokens != null && msg.thinking_tokens > 0)
+  const showContextButton = !!msg.context_sent || !!msg.has_context
+
   return (
     <div className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
       <div className={`text-sm leading-relaxed ${isHuman ? "text-[#777]" : "text-[#c8c8c8]"}`}>
@@ -182,7 +231,12 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
       </div>
 
       <div className="text-[9px] text-[#444] mt-0.5 select-none flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-2">
+          {msg.timestamp && (
+            <span className="text-[#555] font-mono">
+              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+            </span>
+          )}
           {!isHuman && (msg.model_used || msg.provider_used) && (
             <span className="text-[#555] font-mono">
               [{msg.provider_used || "unknown"} :: {msg.model_used || "unknown"}]
@@ -203,18 +257,22 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
 
       {isHuman && msg.metrics && <VitalityBar metrics={msg.metrics} />}
 
-      {msg.thinking && (
+      {showThinkingButton && (
         <div className="mt-1">
           <button
-            onClick={() => setThinkingOpen(!thinkingOpen)}
-            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1"
+            onClick={handleToggleThinking}
+            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1 font-mono"
           >
-            <span>{thinkingOpen ? "\u25BC" : "\u25B6"}</span>
+            <span>{thinkingOpen ? "▼" : "▶"}</span>
             <span>thinking</span>
           </button>
           {thinkingOpen && (
-            <div className="mt-1 pl-3 border-l border-[#2a2a2a] text-xs text-[#666] leading-relaxed whitespace-pre-wrap">
-              {msg.thinking}
+            <div className="mt-1 pl-3 border-l border-[#2a2a2a] text-xs text-[#666] leading-relaxed whitespace-pre-wrap font-mono bg-[#090909]/40 py-1 pr-2 rounded">
+              {loadingThinking ? (
+                <span className="animate-pulse">Loading thinking trace...</span>
+              ) : (
+                thinkingText
+              )}
             </div>
           )}
         </div>
@@ -224,30 +282,41 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
         <div className="mt-1">
           <button
             onClick={() => setUserExpanded(!userExpanded)}
-            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1"
+            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1 font-mono"
           >
-            <span>{userExpanded ? "\u25BC" : "\u25B6"}</span>
+            <span>{userExpanded ? "▼" : "▶"}</span>
             <span>{userExpanded ? "collapse" : "expand"}</span>
           </button>
         </div>
       )}
 
-      {!isHuman && msg.context_sent && (
+      {showContextButton && (
         <div className="mt-1">
           <button
-            onClick={() => setContextOpen(!contextOpen)}
-            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1"
+            onClick={handleToggleContext}
+            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1 font-mono"
           >
-            <span>{contextOpen ? "\u25BC" : "\u25B6"}</span>
+            <span>{contextOpen ? "▼" : "▶"}</span>
             <span>context</span>
           </button>
           {contextOpen && (
-            <div className="mt-1 pl-3 border-l border-[#2a2a2a] text-xs text-[#666] leading-relaxed whitespace-pre-wrap">
-              {msg.context_sent}
+            <div className="mt-1 pl-3 border-l border-[#2a2a2a] text-xs text-[#666] leading-relaxed whitespace-pre-wrap font-mono bg-[#090909]/40 py-1 pr-2 rounded">
+              {loadingContext ? (
+                <span className="animate-pulse">Loading context...</span>
+              ) : (
+                contextText
+              )}
             </div>
           )}
         </div>
       )}
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  return prevProps.msg.id === nextProps.msg.id &&
+         prevProps.msg.speaker === nextProps.msg.speaker &&
+         prevProps.msg.content === nextProps.msg.content &&
+         prevProps.msg.thinking === nextProps.msg.thinking &&
+         prevProps.msg.context_sent === nextProps.msg.context_sent &&
+         prevProps.msg.metrics === nextProps.msg.metrics;
+})

@@ -31,6 +31,9 @@ export default function App() {
     isIndexing,
     upload,
     deleteFile,
+    hasMore,
+    loadingMore,
+    loadMoreMessages,
   } = useChat(activeId)
   const [convCollapsed, setConvCollapsed] = useState(true)
   const activeIdRef = useRef(activeId)
@@ -120,12 +123,16 @@ export default function App() {
         onClearError={clearError}
         onRenameTitle={handleRenameTitle}
         onGenerateTitle={handleGenerateTitle}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={loadMoreMessages}
         className="flex-1 min-w-0"
       />
       <SidePanel
         uploadedFiles={uploadedFiles}
         conversationId={conversationId}
         onDeleteFile={deleteFile}
+        messageCount={messages.length}
       />
     </div>
   )

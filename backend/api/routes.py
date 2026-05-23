@@ -328,11 +328,12 @@ async def get_agent(request: Request):
 
 
 @router.get("/history", response_model=HistoryResponse)
-async def history(limit: int = 50, conversation_id: str = "", request: Request = None):
+async def history(limit: int = 50, offset: int = 0, conversation_id: str = "", request: Request = None):
     state = request.app.state
     repo = state.message_repo
     rows = repo.get_recent_with_metrics(
         limit=limit,
+        offset=offset,
         conversation_id=conversation_id if conversation_id else None,
     )
     messages: list[HistoryMessage] = []
@@ -343,17 +344,53 @@ async def history(limit: int = 50, conversation_id: str = "", request: Request =
             timestamp=r["timestamp"],
             speaker=r["speaker"],
             content=r["content"],
-            thinking=r.get("thinking"),
+            thinking=None,  # Lazy loaded on expand
+            context_sent=None,  # Lazy loaded on expand
+            has_context=bool(r.get("has_context")),
             content_tokens=r.get("content_tokens", 0),
             thinking_tokens=r.get("thinking_tokens"),
             metrics=metrics,
             model_used=r.get("model_used"),
             provider_used=r.get("provider_used"),
         ))
+    
+    total_count = repo.count_messages(conversation_id if conversation_id else None)
+
     return HistoryResponse(
         messages=messages,
-        count=len(messages),
+        count=total_count,
     )
+
+
+@router.get("/messages/{message_id}/thinking")
+async def get_message_thinking(message_id: int, request: Request):
+    state = request.app.state
+    repo = state.message_repo
+    msg = repo.get_by_id(message_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return {"thinking": msg.thinking}
+
+
+@router.get("/messages/{message_id}/context")
+async def get_message_context(message_id: int, request: Request):
+    state = request.app.state
+    repo = state.message_repo
+    msg = repo.get_by_id(message_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return {"context_sent": msg.context_sent}
+
+
+@router.get("/conversations/{conversation_id}/files/{file_name:path}/summary")
+async def get_file_summary_endpoint(conversation_id: str, file_name: str, request: Request):
+    state = request.app.state
+    perception_repo = state.perception_repo
+    files = perception_repo.get_files_by_conversation(conversation_id)
+    for f in files:
+        if f["file_name"] == file_name:
+            return {"summary": f.get("summary"), "summary_model": f.get("summary_model")}
+    raise HTTPException(status_code=404, detail="File not found")
 
 
 @router.get("/conversations", response_model=ConversationListResponse)
@@ -1027,7 +1064,7 @@ async def get_conversation_files(conversation_id: str, request: Request):
             file_name=f["file_name"],
             file_type=f["file_type"],
             status=f["status"],
-            summary=f.get("summary"),
+            summary=None,  # Loaded on demand
             summary_model=f.get("summary_model"),
             token_count=f.get("token_count", 0),
             chunk_count=f.get("chunk_count", 0),

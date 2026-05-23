@@ -15,12 +15,15 @@ function estimateTokens(text: string): number {
 }
 
 export function useChat(conversationId: string) {
+  const PAGE_SIZE = 3
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
   const [files, setFiles] = useState<ConversationFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const loadedRef = useRef<string>("")
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -39,9 +42,12 @@ export function useChat(conversationId: string) {
             pollTimerRef.current = null
           }
           // Fetch updated conversation history to display system message after file indexing completes
-          getHistory(50, convId)
-            .then((data) => setMessages(data.messages))
-            .catch(() => {})
+          getHistory(50, 0, convId)
+            .then((data) => {
+              setMessages(data.messages)
+              setHasMore(data.messages.length === 50)
+            })
+            .catch(() => { })
         }
       } catch {
         // silent
@@ -62,9 +68,17 @@ export function useChat(conversationId: string) {
       .catch(() => setAgentName("agent"))
 
     if (conversationId) {
-      getHistory(50, conversationId)
-        .then((data) => setMessages(data.messages))
-        .catch(() => setMessages([]))
+      setLoading(true)
+      getHistory(PAGE_SIZE, 0, conversationId)
+        .then((data) => {
+          setMessages(data.messages)
+          setHasMore(data.messages.length === PAGE_SIZE)
+        })
+        .catch(() => {
+          setMessages([])
+          setHasMore(false)
+        })
+        .finally(() => setLoading(false))
 
       getConversationFiles(conversationId)
         .then((data) => {
@@ -80,6 +94,7 @@ export function useChat(conversationId: string) {
     } else {
       setMessages([])
       setFiles([])
+      setHasMore(false)
     }
   }, [conversationId, startPolling])
 
@@ -88,6 +103,28 @@ export function useChat(conversationId: string) {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current)
     }
   }, [])
+
+  const loadMoreMessages = useCallback(async () => {
+    if (!conversationId || loadingMore || !hasMore) return
+    setLoadingMore(true)
+    try {
+      const data = await getHistory(PAGE_SIZE, messages.length, conversationId)
+      if (data.messages.length < PAGE_SIZE) {
+        setHasMore(false)
+      } else {
+        setHasMore(true)
+      }
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id))
+        const filteredNew = data.messages.filter((m) => !existingIds.has(m.id))
+        return [...filteredNew, ...prev]
+      })
+    } catch (e) {
+      console.error("Failed to load more messages:", e)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [conversationId, messages.length, loadingMore, hasMore])
 
   const send = useCallback(async (content: string) => {
     if (!content.trim() || loading) return
@@ -175,6 +212,9 @@ export function useChat(conversationId: string) {
     isIndexing,
     upload,
     deleteFile,
+    hasMore,
+    loadingMore,
+    loadMoreMessages,
   }
 }
 

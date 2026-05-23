@@ -167,13 +167,14 @@ class MessageRepository:
         thinking_tokens: int | None = None,
         model_used: Optional[str] = None,
         provider_used: Optional[str] = None,
+        context_sent: Optional[str] = None,
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (agent_id, speaker, content, thinking, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used),
+               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used),
         )
         conn.commit()
         row = conn.execute(
@@ -285,12 +286,13 @@ class MessageRepository:
         return result
 
     @with_connection
-    def get_recent_with_metrics(self, limit: int = 50, conversation_id: str | None = None) -> list[dict]:
+    def get_recent_with_metrics(self, limit: int = 50, offset: int = 0, conversation_id: str | None = None) -> list[dict]:
         conn = self._conn()
         if conversation_id is not None:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
+                          (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
                           cm.reverse_perturbation, cm.surprise_index,
@@ -300,13 +302,14 @@ class MessageRepository:
                     FROM conversation_log cl
                     LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
                     WHERE cl.conversation_id = ?
-                    ORDER BY cl.id DESC LIMIT ?""",
-                (conversation_id, limit),
+                    ORDER BY cl.id DESC LIMIT ? OFFSET ?""",
+                (conversation_id, limit, offset),
             ).fetchall()
         else:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
+                          (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
                           cm.reverse_perturbation, cm.surprise_index,
@@ -315,18 +318,23 @@ class MessageRepository:
                           cm.divergence_resolution_ratio, cm.paskian_health
                     FROM conversation_log cl
                     LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
-                    ORDER BY cl.id DESC LIMIT ?""",
-                (limit,),
+                    ORDER BY cl.id DESC LIMIT ? OFFSET ?""",
+                (limit, offset),
             ).fetchall()
         return [dict(r) for r in reversed(rows)]
 
     @with_connection
-    def count_messages(self, conversation_id: str) -> int:
+    def count_messages(self, conversation_id: str | None = None) -> int:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT COUNT(*) as cnt FROM conversation_log WHERE conversation_id = ?",
-            (conversation_id,),
-        ).fetchone()
+        if conversation_id:
+            row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM conversation_log WHERE conversation_id = ?",
+                (conversation_id,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM conversation_log"
+            ).fetchone()
         return row["cnt"] if row else 0
 
     @with_connection
@@ -426,6 +434,7 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         content_tokens=row["content_tokens"] if "content_tokens" in row.keys() else 0,
         thinking=row["thinking"] if "thinking" in row.keys() else None,
         thinking_tokens=row["thinking_tokens"] if "thinking_tokens" in row.keys() else None,
+        context_sent=row["context_sent"] if "context_sent" in row.keys() else None,
         embedding=row["embedding"],
         embedding_model=row["embedding_model"],
         embedding_dim=row["embedding_dim"],

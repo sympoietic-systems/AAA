@@ -94,6 +94,12 @@ def init_db(db_path: str) -> sqlite3.Connection:
         pass
     try:
         conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN context_sent TEXT"
+        )
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute(
             "ALTER TABLE conversation_log ADD COLUMN agent_id TEXT NOT NULL DEFAULT ''"
         )
     except sqlite3.OperationalError:

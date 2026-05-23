@@ -43,6 +43,8 @@ class HistoryMessage(BaseModel):
     speaker: str
     content: str
     thinking: Optional[str] = None
+    context_sent: Optional[str] = None
+    has_context: Optional[bool] = None
     content_tokens: int = 0
     thinking_tokens: Optional[int] = None
     metrics: Optional["MetricsInfo"] = None

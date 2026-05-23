@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse } from "../api/client"
-import { getSkills, getMetrics, getTokens } from "../api/client"
+import { getSkills, getMetrics, getTokens, getFileSummary } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
   perception: "#4ade80",
@@ -90,7 +90,7 @@ function SectionHeader({
   )
 }
 
-function TokensSection({ conversationId }: { conversationId?: string }) {
+function TokensSection({ conversationId, messageCount }: { conversationId?: string; messageCount: number }) {
   const [tokens, setTokens] = useState<TokenResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -101,9 +101,9 @@ function TokensSection({ conversationId }: { conversationId?: string }) {
       getTokens(idToFetch).then(setTokens).catch((e) => setError(e.message))
     }
     poll()
-    const interval = setInterval(poll, 5000)
+    const interval = setInterval(poll, 15000)
     return () => clearInterval(interval)
-  }, [conversationId])
+  }, [conversationId, messageCount])
 
   if (error && !tokens) {
     return <p className="text-[9px] text-[#ef4444]">{error}</p>
@@ -175,7 +175,7 @@ function TokensSection({ conversationId }: { conversationId?: string }) {
   )
 }
 
-function HealthSection() {
+function HealthSection({ messageCount }: { messageCount: number }) {
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -184,9 +184,9 @@ function HealthSection() {
       getMetrics().then(setMetrics).catch((e) => setError(e.message))
     }
     poll()
-    const interval = setInterval(poll, 5000)
+    const interval = setInterval(poll, 15000)
     return () => clearInterval(interval)
-  }, [])
+  }, [messageCount])
 
   const vitality = metrics?.latest?.conversation_vitality
   const paskHealth = metrics?.latest?.paskian_health
@@ -308,10 +308,12 @@ export function SidePanel({
   uploadedFiles = [],
   conversationId,
   onDeleteFile,
+  messageCount = 0,
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
   onDeleteFile?: (fileName: string) => void
+  messageCount?: number
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const [data, setData] = useState<SkillsResponse | null>(null)
@@ -322,6 +324,30 @@ export function SidePanel({
   const [tokensOpen, setTokensOpen] = useState(true)
   const [sedimentOpen, setSedimentOpen] = useState(true)
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
+  const [loadedSummaries, setLoadedSummaries] = useState<Record<string, string>>({})
+  const [loadingSummary, setLoadingSummary] = useState<string | null>(null)
+
+  const handleToggleSummary = async (fileName: string) => {
+    if (expandedFile === fileName) {
+      setExpandedFile(null)
+      return
+    }
+
+    setExpandedFile(fileName)
+    if (!loadedSummaries[fileName] && conversationId) {
+      setLoadingSummary(fileName)
+      try {
+        const res = await getFileSummary(conversationId, fileName)
+        if (res.summary) {
+          setLoadedSummaries((prev) => ({ ...prev, [fileName]: res.summary || "" }))
+        }
+      } catch (err) {
+        console.error("Failed to load file summary:", err)
+      } finally {
+        setLoadingSummary(null)
+      }
+    }
+  }
 
   useEffect(() => {
     getSkills()
@@ -395,7 +421,7 @@ export function SidePanel({
               />
               {healthOpen && (
                 <div className="pl-3">
-                  <HealthSection />
+                  <HealthSection messageCount={messageCount} />
                 </div>
               )}
             </div>
@@ -409,7 +435,7 @@ export function SidePanel({
               />
               {tokensOpen && (
                 <div className="pl-3">
-                  <TokensSection conversationId={conversationId} />
+                  <TokensSection conversationId={conversationId} messageCount={messageCount} />
                 </div>
               )}
             </div>
@@ -457,9 +483,9 @@ export function SidePanel({
                               </span>
                             )}
 
-                            {f.summary && (
+                            {f.status === "ready" && (
                               <button
-                                onClick={() => setExpandedFile(expandedFile === f.file_name ? null : f.file_name)}
+                                onClick={() => handleToggleSummary(f.file_name)}
                                 className="text-[8px] text-[#4ade80] hover:underline"
                               >
                                 {expandedFile === f.file_name ? "hide" : "sum"}
@@ -477,9 +503,13 @@ export function SidePanel({
                             )}
                           </div>
                           
-                          {expandedFile === f.file_name && f.summary && (
+                          {expandedFile === f.file_name && (
                             <div className="mt-1 ml-4 p-1.5 bg-[#141414] border border-[#222] rounded text-[9px] text-[#888] font-mono whitespace-pre-wrap leading-relaxed">
-                              {f.summary}
+                              {loadingSummary === f.file_name ? (
+                                <span className="animate-pulse">Loading summary...</span>
+                              ) : (
+                                loadedSummaries[f.file_name] || "No summary available."
+                              )}
                             </div>
                           )}
                         </div>

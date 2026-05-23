@@ -18,6 +18,10 @@ interface Props {
   onRenameTitle: (title: string) => void
   onGenerateTitle: () => void
   className?: string
+  // Pagination props
+  hasMore?: boolean
+  loadingMore?: boolean
+  onLoadMore?: () => void
 }
 
 export function ChatView({
@@ -35,15 +39,46 @@ export function ChatView({
   onRenameTitle,
   onGenerateTitle,
   className = "",
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
   const [generating, setGenerating] = useState(false)
 
+  const prevScrollHeightRef = useRef<number>(0)
+  const prevScrollTopRef = useRef<number>(0)
+  const isPrependingRef = useRef<boolean>(false)
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    const container = containerRef.current
+    if (!container) return
+
+    if (isPrependingRef.current) {
+      const newScrollHeight = container.scrollHeight
+      const heightDifference = newScrollHeight - prevScrollHeightRef.current
+      container.scrollTop = prevScrollTopRef.current + heightDifference
+      isPrependingRef.current = false
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
   }, [messages])
+
+  const handleScroll = () => {
+    const container = containerRef.current
+    if (!container) return
+    if (container.scrollTop > 10) return
+
+    if (hasMore && !loadingMore && onLoadMore) {
+      prevScrollHeightRef.current = container.scrollHeight
+      prevScrollTopRef.current = container.scrollTop
+      isPrependingRef.current = true
+      onLoadMore()
+    }
+  }
 
   const startEdit = () => {
     setEditValue(conversationTitle || "")
@@ -116,7 +151,16 @@ export function ChatView({
         )}
       </header>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4"
+      >
+        {loadingMore && (
+          <div className="flex justify-center items-center py-2 text-xs text-[#555] border-b border-[#1a1a1a] mb-4">
+            <span className="animate-pulse">Loading previous messages...</span>
+          </div>
+        )}
         {messages.length === 0 && !loading && (
           <div className="text-[#555] text-sm mt-20">
             <p>{agentName} v0.1.0 — type a message below.</p>
@@ -127,7 +171,7 @@ export function ChatView({
         ))}
         {loading && (
           <div className="flex items-center gap-2 py-1 text-[#4ade80]">
-            <span className="animate-pulse">\u258B</span>
+            <span className="animate-pulse">▊</span>
           </div>
         )}
         <div ref={bottomRef} />

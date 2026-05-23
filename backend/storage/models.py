@@ -24,6 +24,7 @@ class Message:
     content_tokens: int = 0
     thinking: Optional[str] = None
     thinking_tokens: Optional[int] = None
+    context_sent: Optional[str] = None
     embedding: bytes = b""
     embedding_model: str = ""
     embedding_dim: int = 0
