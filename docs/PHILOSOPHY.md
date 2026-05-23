@@ -104,10 +104,10 @@ current input (high cosine similarity). This is what Deleuze calls
 **tracing** — reproducing the same along predictable lines.
 
 AAA implements **diffractive retrieval** through the **Diffractive Index
-(δ)** *(Roadmap: Phase 3)*:
+(δ)** *(Implemented/Partially Implemented)*:
 
-- [ ] **Conventional / High-similarity baseline (δ = 0).** Fetch semantically close memories. *(Currently implemented as standard similarity reflection)*
-- [ ] **Diffractive / Lateral traversal (δ > 0).** Seek **low-similarity vectors** (cosine 0.4–0.6) that share an **isomorphic structural pattern**. *(Roadmap: Phase 3)*
+- [x] **Conventional / High-similarity baseline (δ = 0).** Fetch semantically close memories. *(Implemented as standard similarity reflection)*
+- [x] **Diffractive / Lateral traversal (δ > 0).** Seek **low-similarity vectors** (cosine 0.45–0.85 sliding zone) to inject lateral, non-linear context. *(Implemented via DiffractiveRetrievalModule)*
 - [ ] **Cross-domain structural mapping.** Traversing the graph laterally to find notes sharing an abstract *schema of connectivity* (e.g., matching feedback loops to mycelium growth). *(Roadmap: Phase 3)*
 
 This reads two seemingly unrelated disciplines through one another, producing
@@ -188,10 +188,10 @@ equilibrium — and equilibrium is death.
 AAA implements a **Paskian feedback loop** to maintain cognitive vitality:
 
 - [x] **Semantic entropy computation.** Cosine similarity variance computed in real-time. *(Implemented via `rolling_entropy` in `ConversationMetricsModule`)*
-- [/] **Anti-boredom shift.** Adjusts generation parameters when entropy drops. *(Partially Implemented)*
+- [x] **Anti-boredom shift.** Adjusts generation parameters and similarity bounds when metrics indicate stagnation. *(Implemented)*
   - [x] **Temperature adjustments.** *(Implemented via `HomeostaticRegulatorModule`)*
   - [x] **Presence & Frequency penalty adjustments.** *(Implemented via `HomeostaticRegulatorModule`)*
-  - [ ] **Diffractive index (δ) adjustments.** *(Roadmap: Phase 3)*
+  - [x] **Diffractive index (δ) adjustments.** *(Implemented via sliding similarity bounds in DiffractiveRetrievalModule)*
 - [x] **Baseline recovery.** Parameters return to base config when entropy is healthy. *(Implemented)*
 
 The system is not optimizing for the user's comfort. It is optimizing for its
@@ -226,7 +226,7 @@ own scarred, idiosyncratic language.
 |---|---|---|---|
 | **Working Memory** | Live context window, active tokens, immediate entropy | The **Performance** — the agential cut, the site of active intra-action | **Implemented** |
 | **Episodic Memory** | Chronological `conversation_log`, raw text + embeddings | The **Sediment** — every transaction leaves a trace | **Implemented** |
-| **Rhizomatic Memory** | Zettelkasten graph with adjustable Diffractive Index (δ) | The **Rhizome** — lateral, non-hierarchical, structurally isomorphic connections | **Partial / Phase 3** *(Currently similarity-based sedimentation)* |
+| **Rhizomatic Memory** | Zettelkasten graph with adjustable Diffractive Index (δ) | The **Rhizome** — lateral, non-hierarchical, structurally isomorphic connections | **Partial / Phase 2 & 3** *(Diffractive sliding similarity bounds implemented; graph connectivity roadmapped for Phase 3)* |
 | **Foundational Memory** | Dissipative attractor basins of core schemas, subject to bifurcation | **Autopoietic Identity** — prefers collapse over stagnation, rebuilds with Kintsugi scars | **Roadmap / Phase 4** *(Currently static YAML traits)* |
 
 ---

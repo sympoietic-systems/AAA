@@ -18,7 +18,7 @@
     *   ✅ Multi-conversation architecture (`conversations` table, `conversation_id` FK)
     *   ✅ Cross-conversation embedding similarity retrieval (`SedimentationRetrievalModule`)
     *   ✅ Token tracking and budget enforcement
-    *   🔜 Diffractive Index (δ) query algorithm for non-linear context
+    *   ✅ Diffractive Index (δ) query algorithm for non-linear context *(Implemented via DiffractiveRetrievalModule)*
     *   🔜 Semantic Knots — compaction of dense interactions into permanent nodes
     *   🔜 Graph/vector store integration (LanceDB, Graphiti, or FAISS)
 
