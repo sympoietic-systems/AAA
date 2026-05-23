@@ -28,6 +28,7 @@ from backend.modules.llm_client import (
 )
 from backend.modules.perception import PerceptionModule
 from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
+from backend.modules.structural_engine import StructuralScorerModule
 from backend.personality.assembler import PromptAssemblerModule, _build_system_content
 from backend.skills.metadata import SkillMeta
 from backend.skills.registry import SkillRegistry
@@ -246,6 +247,11 @@ async def lifespan(app: FastAPI):
     provider = _create_llm_provider(llm_cfg)
     llm_module = LLMClientModule(provider)
 
+    from backend.modules.structural_engine import CompositeStructuralScorer
+    structural_scorer = StructuralScorerModule(
+        CompositeStructuralScorer(llm_provider=provider, config=config)
+    )
+
     ctx_cfg = config.get("context", {})
     context_collector = ContextCollectorModule(
         message_repo=message_repo,
@@ -302,6 +308,11 @@ async def lifespan(app: FastAPI):
     registry.register_with_meta(
         "embedder", lambda: embedder,
         SkillMeta(name="embedder", description="Encodes text into vector embeddings",
+                  category="perception", always_run=True),
+    )
+    registry.register_with_meta(
+        "structural_scorer", lambda: structural_scorer,
+        SkillMeta(name="structural_scorer", description="Calculates 16-dimensional cybernetic structural signatures of the message text",
                   category="perception", always_run=True),
     )
     registry.register_with_meta(
@@ -400,7 +411,7 @@ async def lifespan(app: FastAPI):
 
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
-        ["embedder", "perception", "conversation_metrics", "context_collector",
+        ["embedder", "structural_scorer", "perception", "conversation_metrics", "context_collector",
          "consolidation_checkpoint", "sedimentation_retrieval", "diffractive_retrieval",
          "prompt_assembler", "homeostatic_regulator", "llm_client"],
     )

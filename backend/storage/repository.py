@@ -168,13 +168,14 @@ class MessageRepository:
         model_used: Optional[str] = None,
         provider_used: Optional[str] = None,
         context_sent: Optional[str] = None,
+        structural_signature: bytes = b"",
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used),
+               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature),
         )
         conn.commit()
         row = conn.execute(
@@ -292,6 +293,7 @@ class MessageRepository:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
+                          cl.structural_signature,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -309,6 +311,7 @@ class MessageRepository:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
+                          cl.structural_signature,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -377,6 +380,55 @@ class MessageRepository:
                 scored.append((sim, msg_id))
         return scored
 
+    @with_connection
+    def get_structural_signatures_except(
+        self, exclude_conversation_id: str, limit: int = 500
+    ) -> list[tuple[int, np.ndarray]]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT id, structural_signature FROM conversation_log
+               WHERE conversation_id != ? AND conversation_id != '' AND structural_signature IS NOT NULL
+               ORDER BY id DESC LIMIT ?""",
+            (exclude_conversation_id, limit),
+        ).fetchall()
+        result: list[tuple[int, np.ndarray]] = []
+        for row in rows:
+            blob = row["structural_signature"]
+            if blob:
+                vec = np.frombuffer(blob, dtype="float32")
+                result.append((row["id"], vec))
+        return result
+
+    @with_connection
+    def get_embeddings_and_signatures_except(
+        self, exclude_conversation_id: str, limit: int = 500
+    ) -> list[tuple[int, np.ndarray, Optional[np.ndarray]]]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT id, embedding, embedding_dim, structural_signature FROM conversation_log
+               WHERE conversation_id != ? AND conversation_id != '' AND embedding IS NOT NULL
+               ORDER BY id DESC LIMIT ?""",
+            (exclude_conversation_id, limit),
+        ).fetchall()
+        result = []
+        for row in rows:
+            emb_blob = row["embedding"]
+            dim = row["embedding_dim"]
+            sig_blob = row["structural_signature"]
+            
+            emb_vec = None
+            if emb_blob and dim:
+                vec = np.frombuffer(emb_blob, dtype="float32")
+                if len(vec) == dim:
+                    emb_vec = vec
+            
+            sig_vec = None
+            if sig_blob:
+                sig_vec = np.frombuffer(sig_blob, dtype="float32")
+                
+            if emb_vec is not None:
+                result.append((row["id"], emb_vec, sig_vec))
+        return result
 
     @with_connection
     def get_by_ids(self, message_ids: list[int]) -> list[Message]:
@@ -460,6 +512,7 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         embedding_dim=row["embedding_dim"],
         model_used=row["model_used"] if "model_used" in row.keys() else None,
         provider_used=row["provider_used"] if "provider_used" in row.keys() else None,
+        structural_signature=row["structural_signature"] if ("structural_signature" in row.keys() and row["structural_signature"] is not None) else b"",
     )
 
 
@@ -680,15 +733,16 @@ class PerceptionSedimentRepository:
         token_count: int,
         opacity: int = 0,
         opacity_meta: Optional[str] = None,
+        structural_signature: bytes = b"",
     ) -> PerceptionSediment:
         conn = self._conn()
         conn.execute(
             """INSERT INTO perception_sediment
                (conversation_id, file_name, file_type, chunk_index, chunk_text,
-                embedding, embedding_model, token_count, opacity, opacity_meta)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                embedding, embedding_model, token_count, opacity, opacity_meta, structural_signature)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (conversation_id, file_name, file_type, chunk_index, chunk_text,
-             embedding, embedding_model, token_count, opacity, opacity_meta),
+             embedding, embedding_model, token_count, opacity, opacity_meta, structural_signature),
         )
         conn.commit()
         row = conn.execute(
@@ -913,6 +967,42 @@ class PerceptionSedimentRepository:
         )
         conn.commit()
 
+    @with_connection
+    def get_structural_signatures_by_conversation(
+        self, conversation_id: str
+    ) -> list[tuple[int, np.ndarray]]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT id, structural_signature FROM perception_sediment WHERE conversation_id = ? AND structural_signature IS NOT NULL",
+            (conversation_id,),
+        ).fetchall()
+        result: list[tuple[int, np.ndarray]] = []
+        for row in rows:
+            blob = row["structural_signature"]
+            if blob:
+                vec = np.frombuffer(blob, dtype="float32")
+                result.append((row["id"], vec))
+        return result
+
+    @with_connection
+    def get_structural_signatures_except(
+        self, exclude_conversation_id: str, limit: int = 500
+    ) -> list[tuple[int, np.ndarray]]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT id, structural_signature FROM perception_sediment
+               WHERE conversation_id != ? AND conversation_id != '' AND structural_signature IS NOT NULL
+               ORDER BY id DESC LIMIT ?""",
+            (exclude_conversation_id, limit),
+        ).fetchall()
+        result: list[tuple[int, np.ndarray]] = []
+        for row in rows:
+            blob = row["structural_signature"]
+            if blob:
+                vec = np.frombuffer(blob, dtype="float32")
+                result.append((row["id"], vec))
+        return result
+
 
 class ConsolidationCheckpointRepository:
     def __init__(self, db_path: str):
@@ -994,6 +1084,7 @@ def _row_to_perception_sediment(row: sqlite3.Row) -> PerceptionSediment:
     # Safely get opacity and opacity_meta with fallbacks
     opacity = row["opacity"] if "opacity" in row.keys() else 0
     opacity_meta = row["opacity_meta"] if "opacity_meta" in row.keys() else None
+    structural_signature = row["structural_signature"] if ("structural_signature" in row.keys() and row["structural_signature"] is not None) else b""
     return PerceptionSediment(
         id=row["id"],
         conversation_id=row["conversation_id"],
@@ -1007,4 +1098,5 @@ def _row_to_perception_sediment(row: sqlite3.Row) -> PerceptionSediment:
         created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
         opacity=opacity,
         opacity_meta=opacity_meta,
+        structural_signature=structural_signature,
     )

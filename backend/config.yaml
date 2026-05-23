@@ -38,6 +38,7 @@ llm:
 pipeline:
   modules:
     - embedder
+    - structural_scorer
     - perception
     - conversation_metrics
     - context_collector
@@ -86,6 +87,44 @@ diffractive_retrieval:
   file_range_max: 0.75
   max_diffractive_count: 3
   token_budget: 1500
+
+
+# ── Structural Signature ────────────────────────
+structural_signature:
+  lexicon:
+    # 01. Homeostatic
+    - ['homeostas', 'regulat', 'stabili', 'dampen', 'equilib', 'negative feedback', 'ashby', 'restor']
+    # 02. Amplifying
+    - ['amplif', 'positive feedback', 'runaway', 'growth', 'cascade', 'multiplier', 'snowball', 'maruyama', 'vicious circle']
+    # 03. Cyclic
+    - ['cycl', 'loop', 'recurs', 'autopoie', 'self-produc', 're-ent', 'circular', 'maturana', 'varela', 'oscilla']
+    # 04. Bifurcated
+    - ['bifurc', 'tipping', 'threshold', 'phase shift', 'catastroph', 'prigogine', 'transition', 'trigger']
+    # 05. Decentralized
+    - ['decentral', 'peer-to-peer', 'p2p', 'distributed', 'mesh', 'non-hierarch', 'mcculloch', 'p2p']
+    # 06. Rhizomatic / Networked
+    - ['rhizom', 'network', 'meshwork', 'redundant', 'deleuze', 'guattari', 'hyperlink', 'lateral']
+    # 07. Boundary Permeability
+    - ['permeab', 'boundary', 'semi-permeab', 'closure', 'open system', 'closed system', 'filtering']
+    # 08. Recursion Depth
+    - ['recurs', 'nest', 'fractal', 'scaling', 'subsystem', 'hierarchy', 'beer', 'vsm', 'nested']
+    # 09. Variety Filtering
+    - ['variety', 'filter', 'attenuat', 'requisite variety', 'ashby', 'selection', 'attenuation']
+    # 10. Negentropic Complexity
+    - ['negentrop', 'entropy', 'order', 'complexity', 'schrodinger', 'information density', 'syntropy']
+    # 11. Temporal Latency
+    - ['latenc', 'delay', 'lag', 'buffer', 'time-lag', 'forrester', 'sluggish', 'retardation']
+    # 12. Attractor Depth
+    - ['attractor', 'rigidity', 'basin', 'resilien', 'plastic', 'adaptation', 'thom', 'well']
+    # 13. Symbiotic
+    - ['symbio', 'co-evolution', 'coupling', 'mutual', 'parasit', 'bateson', 'mutualism']
+    # 14. Nomadic
+    - ['nomad', 'deterritor', 'line of flight', 'drift', 'escape', 'smooth space', 'migration']
+    # 15. Conversational Co-Orientation
+    - ['convers', 'consensus', 'agreement', 'co-orient', 'pask', 'l-user', 'dialogue']
+    # 16. Substrate Materiality
+    - ['substrat', 'material', 'embod', 'physical', 'foerster', 'hardware', 'silicon', 'meatware']
+  llm_system_prompt: "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
 
 
 # ── Homeostasis ──────────────────────────────────

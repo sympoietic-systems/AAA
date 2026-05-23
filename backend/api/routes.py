@@ -31,6 +31,7 @@ from .schemas import (
     ConversationFilesResponse,
 )
 from backend.utils.token_counter import estimate_tokens
+from backend.modules.structural_engine import CompositeStructuralScorer
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +225,22 @@ async def chat(request: Request):
 
         content_tokens = estimate_tokens(content)
 
+        # Calculate structural signatures
+        scorer = CompositeStructuralScorer(llm_provider=request.app.state.llm_provider)
+        try:
+            user_sig = scorer.score(content)
+            user_sig_blob = user_sig.tobytes()
+        except Exception as e:
+            logger.warning("Failed to score user message: %s", e)
+            user_sig_blob = b""
+
+        try:
+            assistant_sig = scorer.score(response_text)
+            assistant_sig_blob = assistant_sig.tobytes()
+        except Exception as e:
+            logger.warning("Failed to score assistant message: %s", e)
+            assistant_sig_blob = b""
+
         msg = repo.insert(
             speaker=speaker,
             content=content,
@@ -233,6 +250,7 @@ async def chat(request: Request):
             agent_id=agent_id,
             conversation_id=conversation_id,
             content_tokens=content_tokens,
+            structural_signature=user_sig_blob,
         )
 
         thinking_tokens = estimate_tokens(thinking) if thinking else None
@@ -250,6 +268,7 @@ async def chat(request: Request):
             thinking_tokens=thinking_tokens,
             model_used=model_used,
             provider_used=provider_used,
+            structural_signature=assistant_sig_blob,
         )
 
         payload_metrics = result.payload.get("metrics")
@@ -346,6 +365,17 @@ async def history(limit: int = 50, offset: int = 0, conversation_id: str = "", r
     messages: list[HistoryMessage] = []
     for r in rows:
         metrics = _build_history_metrics(r)
+        
+        sig_bytes = r.get("structural_signature")
+        sig_list = None
+        if sig_bytes:
+            try:
+                import numpy as np
+                arr = np.frombuffer(sig_bytes, dtype=np.float32)
+                sig_list = arr.tolist()
+            except Exception:
+                pass
+                
         messages.append(HistoryMessage(
             id=r["id"],
             timestamp=r["timestamp"],
@@ -359,6 +389,7 @@ async def history(limit: int = 50, offset: int = 0, conversation_id: str = "", r
             metrics=metrics,
             model_used=r.get("model_used"),
             provider_used=r.get("provider_used"),
+            structural_signature=sig_list,
         ))
     
     total_count = repo.count_messages(conversation_id if conversation_id else None)
@@ -879,6 +910,15 @@ async def _insert_system_message(state, conversation_id: str, content: str):
         embedding_blob = b""
         embedding_dim = 0
         embedding_model = "none"
+
+    # Calculate structural signature
+    scorer = CompositeStructuralScorer(llm_provider=getattr(state, "llm_provider", None))
+    try:
+        sig_vec = scorer.score(content)
+        sig_blob = sig_vec.tobytes()
+    except Exception as e:
+        logger.warning("Failed to score system message: %s", e)
+        sig_blob = b""
         
     repo.insert(
         speaker="system",
@@ -889,6 +929,7 @@ async def _insert_system_message(state, conversation_id: str, content: str):
         agent_id=agent_id,
         conversation_id=conversation_id,
         content_tokens=estimate_tokens(content),
+        structural_signature=sig_blob,
     )
 
 

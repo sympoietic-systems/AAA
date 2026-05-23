@@ -25,9 +25,9 @@ graph TB
 
     subgraph Backend ["FastAPI Backend (main.py)"]
         direction TB
-        subgraph Pipeline ["Processing Pipeline (10 Modules)"]
+        subgraph Pipeline ["Processing Pipeline (11 Modules)"]
             direction LR
-            M1["embedder"] --> M2["perception"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["diffractive_retrieval"] --> M8["prompt_assembler"] --> M9["homeostatic_regulator"] --> M10["llm_client"]
+            M1["embedder"] --> M1_5["structural_scorer"] --> M2["perception"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["diffractive_retrieval"] --> M8["prompt_assembler"] --> M9["homeostatic_regulator"] --> M10["llm_client"]
         end
         
         subgraph Database ["SQLite (WAL)"]
@@ -63,6 +63,9 @@ sequenceDiagram
         Note over Pipeline: Module Ingestion & Processing
         Pipeline->>Pipeline: embedder.process()
         Note over Pipeline: payload["embedding"] = encode(content)<br/>payload["embedding_model"] = "all-MiniLM-L6-v2"<br/>payload["embedding_dim"] = 384
+        
+        Pipeline->>Pipeline: structural_scorer.process()
+        Note over Pipeline: Computes 16-dimensional cybernetic signature of content text<br/>payload["structural_signature"] = 16-dim float array bytes
         
         Pipeline->>Pipeline: perception.process()
         Note over Pipeline: Chunk/embed files → stores chunks<br/>Retrieve top-K chunks via cosine similarity<br/>payload["file_context"] = [...], tokens = N

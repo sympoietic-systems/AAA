@@ -41,7 +41,8 @@ def init_db(db_path: str) -> sqlite3.Connection:
             embedding_model  TEXT NOT NULL,
             embedding_dim    INTEGER NOT NULL,
             model_used       TEXT,
-            provider_used    TEXT
+            provider_used    TEXT,
+            structural_signature BLOB
         );
 
         CREATE TABLE IF NOT EXISTS error_log (
@@ -180,6 +181,7 @@ def init_db(db_path: str) -> sqlite3.Connection:
                 created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
                 opacity           INTEGER DEFAULT 0,
                 opacity_meta      TEXT,
+                structural_signature BLOB,
                 FOREIGN KEY (conversation_id) REFERENCES conversations(id)
             )
         """)
@@ -209,6 +211,21 @@ def init_db(db_path: str) -> sqlite3.Connection:
             )
         except sqlite3.OperationalError:
             pass
+
+    # Migration for ADR-014 structural signatures
+    try:
+        conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN structural_signature BLOB"
+        )
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute(
+            "ALTER TABLE perception_sediment ADD COLUMN structural_signature BLOB"
+        )
+    except sqlite3.OperationalError:
+        pass
 
     try:
         conn.execute("""

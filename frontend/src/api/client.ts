@@ -56,6 +56,7 @@ export interface ChatMessage {
   has_context?: boolean
   model_used?: string | null
   provider_used?: string | null
+  structural_signature?: number[] | null
 }
 
 export interface AgentInfo {

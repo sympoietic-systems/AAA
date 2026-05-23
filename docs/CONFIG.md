@@ -38,6 +38,7 @@ llm:
 pipeline:
   modules:                     # Ordered processing stages
     - embedder
+    - structural_scorer
     - perception
     - conversation_metrics
     - context_collector

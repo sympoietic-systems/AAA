@@ -30,6 +30,7 @@ class Message:
     embedding_dim: int = 0
     model_used: Optional[str] = None
     provider_used: Optional[str] = None
+    structural_signature: bytes = b""
 
 
 @dataclass
@@ -70,6 +71,7 @@ class PerceptionSediment:
     created_at: datetime | None = None
     opacity: int = 0
     opacity_meta: Optional[str] = None
+    structural_signature: bytes = b""
 
 
 @dataclass

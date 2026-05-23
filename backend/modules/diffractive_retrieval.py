@@ -10,6 +10,14 @@ from .base import ProcessingModule
 logger = logging.getLogger(__name__)
 
 
+def cosine_similarity(v1: np.ndarray, v2: np.ndarray) -> float:
+    norm1 = np.linalg.norm(v1)
+    norm2 = np.linalg.norm(v2)
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    return float(np.dot(v1, v2) / (norm1 * norm2))
+
+
 class DiffractiveRetrievalModule(ProcessingModule):
     def __init__(
         self,
@@ -191,13 +199,42 @@ class DiffractiveRetrievalModule(ProcessingModule):
         current_vec = np.frombuffer(current_blob, dtype="float32")
 
         # 1. Nomadic Cross-Conversation Retrieval (Capped at 30 candidates)
-        nomadic_candidates = self._message_repo.get_embeddings_in_similarity_range(
-            query_vec=current_vec,
-            exclude_conversation_id=conversation_id,
-            min_sim=mem_min,
-            max_sim=mem_max,
-            limit=30,
-        )
+        if stagnation >= 0.70:
+            # Dual-Vector Isomorphic Retrieval
+            from backend.modules.structural_engine import CompositeStructuralScorer
+            scorer = CompositeStructuralScorer(llm_provider=None)  # Use fast empirical scorers for latency
+            query_text = payload.get("content", "")
+            query_sig = scorer.score(query_text)
+
+            raw_candidates = self._message_repo.get_embeddings_and_signatures_except(
+                exclude_conversation_id=conversation_id, limit=500
+            )
+
+            scored_candidates = []
+            for msg_id, emb_vec, sig_vec in raw_candidates:
+                if len(emb_vec) != len(current_vec):
+                    continue
+                s_sem = cosine_similarity(current_vec, emb_vec)
+                s_str = 0.0
+                if sig_vec is not None and len(sig_vec) == 16:
+                    s_str = cosine_similarity(query_sig, sig_vec)
+
+                # Isomorphic filter: s_sem <= 0.45 AND s_str >= 0.80
+                if s_sem <= 0.45 and s_str >= 0.80:
+                    scored_candidates.append((s_sem, msg_id, s_str))
+
+            # Sort by structural similarity descending, semantic similarity ascending
+            scored_candidates.sort(key=lambda x: (-x[2], x[0]))
+            nomadic_candidates = [(item[0], item[1]) for item in scored_candidates[:30]]
+        else:
+            # Standard Goldilocks Retrieval
+            nomadic_candidates = self._message_repo.get_embeddings_in_similarity_range(
+                query_vec=current_vec,
+                exclude_conversation_id=conversation_id,
+                min_sim=mem_min,
+                max_sim=mem_max,
+                limit=30,
+            )
 
 
         selected_nomadic_messages = []

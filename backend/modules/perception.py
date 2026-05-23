@@ -8,6 +8,7 @@ import numpy as np
 
 from backend.modules.digester import FileDigester, SimpleChunkDigester, RhizomaticDigester
 from backend.modules.embedder import EmbeddingService
+from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.skills.metadata import SkillMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
@@ -28,10 +29,12 @@ class PerceptionModule(ProcessingModule):
         chunk_size: int = 512,
         chunk_overlap: int = 64,
         similarity_threshold: float = 0.25,
+        llm_provider = None,
     ):
         self._repo = perception_repo
         self._embed = embedding_service
         self._digester = digester or RhizomaticDigester()
+        self._scorer = CompositeStructuralScorer(llm_provider=llm_provider)
 
         self._file_token_budget = file_token_budget
         self._top_k_chunks = top_k_chunks
@@ -152,6 +155,14 @@ class PerceptionModule(ProcessingModule):
                         logger.warning("Failed to embed chunk %d of %s: %s", i, file_name, e)
                         continue
 
+                    # Calculate structural signature
+                    try:
+                        sig_vec = await self._scorer.score_async(chunk_text)
+                        sig_blob = sig_vec.tobytes()
+                    except Exception as e:
+                        logger.warning("Failed to score chunk %d of %s: %s", i, file_name, e)
+                        sig_blob = b""
+
                     token_count = estimate_tokens(chunk_text)
 
                     self._repo.insert_chunk(
@@ -163,6 +174,7 @@ class PerceptionModule(ProcessingModule):
                         embedding=embedding_blob,
                         embedding_model=self._embed.model_name,
                         token_count=token_count,
+                        structural_signature=sig_blob,
                     )
 
                 processed += 1

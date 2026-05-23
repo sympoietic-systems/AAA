@@ -50,6 +50,7 @@ class HistoryMessage(BaseModel):
     metrics: Optional["MetricsInfo"] = None
     model_used: Optional[str] = None
     provider_used: Optional[str] = None
+    structural_signature: Optional[list[float]] = None
 
 
 class HistoryResponse(BaseModel):
