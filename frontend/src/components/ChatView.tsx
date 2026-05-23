@@ -166,9 +166,16 @@ export function ChatView({
             <p>{agentName} v0.1.0 — type a message below.</p>
           </div>
         )}
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} />
-        ))}
+        {messages.map((msg, idx) => {
+          const prevMsg = idx > 0 ? messages[idx - 1] : null
+          return (
+            <MessageBubble 
+              key={msg.id} 
+              msg={msg} 
+              previousSignature={prevMsg?.structural_signature}
+            />
+          )
+        })}
         {loading && (
           <div className="flex items-center gap-2 py-1 text-[#4ade80]">
             <span className="animate-pulse">▊</span>

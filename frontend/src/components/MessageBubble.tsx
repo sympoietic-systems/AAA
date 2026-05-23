@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import type { ChatMessage, MetricsInfo } from "../api/client"
 import { getMessageThinking, getMessageContext } from "../api/client"
+import { StructuralAutopoieticGlyph } from "./StructuralAutopoieticGlyph"
 
 function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
   const items: { label: string; full: string; value: number | null; max: number; warn: number; crit: number; invert: boolean; hint: string }[] = [
@@ -128,14 +129,13 @@ function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
   )
 }
 
-const DIMENSION_NAMES = [
-  "Homeostatic", "Amplifying", "Cyclic", "Bifurcated",
-  "Decentralized", "Rhizomatic/Networked", "Boundary Permeability", "Recursion Depth",
-  "Variety Filtering", "Negentropic Complexity", "Temporal Latency", "Attractor Depth",
-  "Symbiotic", "Nomadic", "Conversational Co-Orientation", "Substrate Materiality"
-]
-
-export const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage }) {
+export const MessageBubble = memo(function MessageBubble({
+  msg,
+  previousSignature
+}: {
+  msg: ChatMessage
+  previousSignature?: number[] | null
+}) {
   const isHuman = msg.speaker === "human"
   const isSystem = msg.speaker === "system"
   const [thinkingOpen, setThinkingOpen] = useState(false)
@@ -320,37 +320,20 @@ export const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMes
       )}
 
       {msg.structural_signature && msg.structural_signature.length > 0 && (
-        <div className="mt-1">
+        <div className="mt-2">
           <button
             onClick={() => setSigOpen(!sigOpen)}
-            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1 font-mono"
+            className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1 font-mono mb-1.5"
           >
             <span>{sigOpen ? "▼" : "▶"}</span>
             <span>structural signature</span>
           </button>
           {sigOpen && (
-            <div className="mt-1 pl-3 border-l border-[#2a2a2a] text-xs text-[#666] leading-relaxed font-mono bg-[#090909]/40 py-2 pr-4 rounded max-w-md">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[9px]">
-                {msg.structural_signature.map((val, idx) => {
-                  const name = DIMENSION_NAMES[idx] || `Dim ${idx + 1}`
-                  const pct = Math.round(val * 100)
-                  return (
-                    <div key={idx} className="flex items-center justify-between gap-2">
-                      <span className="text-[#555] truncate max-w-[120px]">{name}</span>
-                      <div className="flex items-center gap-1 flex-1 justify-end">
-                        <div className="w-12 h-1 bg-[#1c1c1c] rounded-full overflow-hidden relative">
-                          <div
-                            className="h-full bg-[#4ade80]"
-                            style={{ width: `${pct}%`, opacity: 0.65 }}
-                          />
-                        </div>
-                        <span className="text-[#888] w-5 text-right font-mono">{val.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+            <StructuralAutopoieticGlyph
+              signature={msg.structural_signature}
+              previousSignature={previousSignature}
+              isStagnant={msg.metrics ? msg.metrics.boringness > 0.5 : false}
+            />
           )}
         </div>
       )}
@@ -363,5 +346,6 @@ export const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMes
          prevProps.msg.thinking === nextProps.msg.thinking &&
          prevProps.msg.context_sent === nextProps.msg.context_sent &&
          prevProps.msg.metrics === nextProps.msg.metrics &&
-         JSON.stringify(prevProps.msg.structural_signature) === JSON.stringify(nextProps.msg.structural_signature);
+         JSON.stringify(prevProps.msg.structural_signature) === JSON.stringify(nextProps.msg.structural_signature) &&
+         JSON.stringify(prevProps.previousSignature) === JSON.stringify(nextProps.previousSignature);
 })
