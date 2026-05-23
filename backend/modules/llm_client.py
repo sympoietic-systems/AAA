@@ -150,6 +150,12 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
     async def generate(self, messages: list[dict], **params) -> dict:
         merged_params = {**self._default_params, **params}
+        
+        # Filter out parameters not supported by Google's OpenAI-compatible endpoint
+        if "google" in self.provider_name.lower() or "googleapis.com" in self._api_base:
+            merged_params.pop("presence_penalty", None)
+            merged_params.pop("frequency_penalty", None)
+
         body: dict = {
             "model": self._model,
             "messages": messages,
@@ -419,14 +425,14 @@ class LLMClientModule(ProcessingModule):
         payload["context_sent"] = _format_context(messages)
 
         params: dict = {}
-        for k in ("temperature", "max_tokens", "top_p", "presence_penalty"):
+        for k in ("temperature", "max_tokens", "top_p"):
             v = payload.get(k)
             if v is not None:
                 params[k] = v
 
         recs = payload.get("homeostatic_recommendations")
         if recs:
-            for param in ("temperature", "presence_penalty", "frequency_penalty"):
+            for param in ("temperature",):
                 rec = recs.get(param)
                 if isinstance(rec, dict) and "value" in rec:
                     params[param] = rec["value"]
