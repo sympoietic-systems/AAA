@@ -40,8 +40,13 @@ graph TB
     end
 
     Components -.->|Actions & State| Logic
+<<<<<<< HEAD
     AC ==>|HTTP (Vite Proxy)| Backend
     Pipeline ==>|Read / Write| Database
+=======
+    AC ===>|HTTP (Vite Proxy)| Backend
+    Pipeline ===>|Read / Write| Database
+>>>>>>> 8645de1075664a734648be66ae4a6db7c3edf3ba
 ```
 
 ## Data Flow (Chat Request)
@@ -49,13 +54,21 @@ graph TB
 ```mermaid
 sequenceDiagram
     autonumber
+<<<<<<< HEAD
     actor Interlocutor
+=======
+    actor Participant as Interlocutor
+>>>>>>> 8645de1075664a734648be66ae4a6db7c3edf3ba
     participant API as routes.py (POST /api/chat)
     participant Pipeline as ProcessingPipeline
     participant DB as SQLite DB
     participant LLM as LLM Provider
 
+<<<<<<< HEAD
     Interlocutor->>API: POST /api/chat {content, conversation_id}
+=======
+    Participant->>API: POST /api/chat {content, conversation_id}
+>>>>>>> 8645de1075664a734648be66ae4a6db7c3edf3ba
     Note over API: If new conversation,<br/>create UUID & store
     API->>Pipeline: run(payload)
     
@@ -96,7 +109,11 @@ sequenceDiagram
     Note over API: If trigger_consolidation:<br/>Fire async background ConsolidateAction
     Note over API: If new conversation:<br/>Fire async background title generation
     
+<<<<<<< HEAD
     API-->>Interlocutor: ChatResponse {id, content, thinking, tokens}
+=======
+    API-->>Participant: ChatResponse {id, content, thinking, tokens}
+>>>>>>> 8645de1075664a734648be66ae4a6db7c3edf3ba
 ```
 
 ## Database Schema
