@@ -163,7 +163,33 @@ export interface MetricsResponse {
   aggregates: Record<string, number | null>
   latest: MetricsInfo | null
   recommendations: HomeostaticRecommendations | null
+  diffractive: DiffractiveInfo | null
 }
+
+export interface DiffractiveSourceInfo {
+  type: string
+  source_title: string
+  similarity: number
+}
+
+export interface DiffractiveInfo {
+  state: string
+  previous_state: string
+  p_diffract: number
+  stagnation_index: number
+  r_context: number
+  dynamic_max: number
+  cohesion_timer: number
+  similarity_range_memory: number[]
+  similarity_range_files: number[]
+  candidates_searched: number
+  items_injected: number
+  tokens_used: number
+  token_budget: number
+  duration_ms: number
+  sources: DiffractiveSourceInfo[]
+}
+
 
 export async function getMetrics(window = 20): Promise<MetricsResponse> {
   const res = await fetch(`${BASE}/metrics?window=${window}`)

@@ -157,7 +157,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             merged_params.pop("frequency_penalty", None)
             # Google Gemini models generate internal thinking/reasoning tokens that count
             # against the generation token limit. Elevate max_tokens to prevent truncation.
-            if "max_tokens" in merged_params and merged_params["max_tokens"] <= 2048:
+            if "max_tokens" in merged_params and merged_params["max_tokens"] <= 4096:
                 merged_params["max_tokens"] = 8192
 
         body: dict = {

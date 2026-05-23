@@ -85,6 +85,19 @@ def _apply_env_overrides(config: dict) -> dict:
     if sediment_count is not None:
         config.setdefault("sedimentation", {})["sediment_count"] = int(sediment_count)
 
+    diffractive_enabled = os.environ.get("AAA_DIFFRACTIVE_ENABLED")
+    if diffractive_enabled is not None:
+        config.setdefault("diffractive_retrieval", {})["enabled"] = diffractive_enabled.lower() in ("true", "1", "yes")
+
+    diffractive_budget = os.environ.get("AAA_DIFFRACTIVE_TOKEN_BUDGET")
+    if diffractive_budget is not None:
+        config.setdefault("diffractive_retrieval", {})["token_budget"] = int(diffractive_budget)
+
+    diffractive_count = os.environ.get("AAA_DIFFRACTIVE_MAX_COUNT")
+    if diffractive_count is not None:
+        config.setdefault("diffractive_retrieval", {})["max_diffractive_count"] = int(diffractive_count)
+
+
     thinking_env = os.environ.get("AAA_LLM_THINKING")
     if thinking_env is not None:
         thinking_cfg = config.setdefault("llm", {}).setdefault("thinking", {})

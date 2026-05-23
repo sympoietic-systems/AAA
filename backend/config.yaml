@@ -43,9 +43,11 @@ pipeline:
     - context_collector
     - consolidation_checkpoint
     - sedimentation_retrieval
+    - diffractive_retrieval
     - prompt_assembler
     - homeostatic_regulator
     - llm_client
+
 
 # ── Personality ──────────────────────────────────
 personality:
@@ -74,6 +76,17 @@ perception:
   chunk_size: 512
   chunk_overlap: 64
   similarity_threshold: 0.25
+
+# ── Diffractive Retrieval ───────────────────────
+diffractive_retrieval:
+  enabled: true
+  similarity_range_min: 0.45
+  similarity_range_max: 0.85
+  file_range_min: 0.35
+  file_range_max: 0.75
+  max_diffractive_count: 3
+  token_budget: 1500
+
 
 # ── Homeostasis ──────────────────────────────────
 homeostasis:

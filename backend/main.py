@@ -18,6 +18,8 @@ from backend.modules.context_collector import ContextCollectorModule
 from backend.modules.conversation_metrics import ConversationMetricsModule
 from backend.modules.embedder import EmbedderModule
 from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
+from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
+
 from backend.modules.llm_client import (
     LLMClientModule,
     ModelPoolProvider,
@@ -270,6 +272,20 @@ async def lifespan(app: FastAPI):
         similarity_threshold=sediment_cfg.get("similarity_threshold", 0.3),
     )
 
+    diffractive_cfg = config.get("diffractive_retrieval", {})
+    diffractive_retrieval = DiffractiveRetrievalModule(
+        message_repo=message_repo,
+        perception_repo=perception_repo,
+        enabled=diffractive_cfg.get("enabled", True),
+        similarity_range_min=diffractive_cfg.get("similarity_range_min", 0.35),
+        similarity_range_max=diffractive_cfg.get("similarity_range_max", 0.55),
+        file_range_min=diffractive_cfg.get("file_range_min", 0.25),
+        file_range_max=diffractive_cfg.get("file_range_max", 0.45),
+        max_diffractive_count=diffractive_cfg.get("max_diffractive_count", 3),
+        token_budget=diffractive_cfg.get("token_budget", 1500),
+    )
+
+
     personality_cfg = config.get("personality", {})
     identity_path = Path(personality_cfg.get("path", "backend/personality/identity.yaml"))
     if not identity_path.is_absolute():
@@ -361,6 +377,12 @@ async def lifespan(app: FastAPI):
     )
 
     registry.register_with_meta(
+        "diffractive_retrieval", lambda: diffractive_retrieval,
+        SkillMeta(name="diffractive_retrieval", description="Perturbs conversation loops by retrieving semantically orthogonal Nomadic and Dormant context fragments",
+                  category="memory", always_run=True),
+    )
+
+    registry.register_with_meta(
         "homeostatic_regulator", lambda: homeostatic_regulator,
         SkillMeta(name="homeostatic_regulator", description="Maps conversational metrics to allostatic regimes and recommends generator parameters",
                   category="reasoning", always_run=True),
@@ -379,10 +401,11 @@ async def lifespan(app: FastAPI):
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
         ["embedder", "perception", "conversation_metrics", "context_collector",
-         "consolidation_checkpoint", "sedimentation_retrieval",
+         "consolidation_checkpoint", "sedimentation_retrieval", "diffractive_retrieval",
          "prompt_assembler", "homeostatic_regulator", "llm_client"],
     )
     pipeline_modules = registry.resolve_pipeline(pipeline_order)
+
 
     def log_pipeline_error(module_name: str, error: Exception, payload: dict):
         error_repo.log_error(

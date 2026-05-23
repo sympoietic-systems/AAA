@@ -15,6 +15,8 @@ from .schemas import (
     ConversationListResponse,
     ConversationTokenInfo,
     ConversationUpdateRequest,
+    DiffractiveInfo,
+    DiffractiveSourceInfo,
     ErrorResponse,
     HealthResponse,
     HistoryMessage,
@@ -293,6 +295,11 @@ async def chat(request: Request):
             )
 
         response_attachments = _build_response_attachments(attachments, result)
+
+        # Store latest diffractive meta on app.state for the /metrics endpoint
+        diff_meta = result.payload.get("diffractive_meta")
+        if diff_meta:
+            request.app.state.latest_diffractive_meta = diff_meta
 
         return ChatResponse(
             id=response_msg.id,
@@ -682,11 +689,37 @@ async def get_metrics(request: Request, window: int = 20):
             state=latest.homeostatic_state or "healthy",
         )
 
+    # Build diffractive info from latest cached state
+    diff_info = None
+    raw_diff = getattr(state, "latest_diffractive_meta", None)
+    if raw_diff:
+        diff_sources = [
+            DiffractiveSourceInfo(**s) for s in raw_diff.get("sources", [])
+        ]
+        diff_info = DiffractiveInfo(
+            state=raw_diff.get("state", "FLOWING"),
+            previous_state=raw_diff.get("previous_state", "FLOWING"),
+            p_diffract=raw_diff.get("p_diffract", 0.0),
+            stagnation_index=raw_diff.get("stagnation_index", 0.0),
+            r_context=raw_diff.get("r_context", 0.0),
+            dynamic_max=raw_diff.get("dynamic_max", 0),
+            cohesion_timer=raw_diff.get("cohesion_timer", 0),
+            similarity_range_memory=raw_diff.get("similarity_range_memory", []),
+            similarity_range_files=raw_diff.get("similarity_range_files", []),
+            candidates_searched=raw_diff.get("candidates_searched", 0),
+            items_injected=raw_diff.get("items_injected", 0),
+            tokens_used=raw_diff.get("tokens_used", 0),
+            token_budget=raw_diff.get("token_budget", 0),
+            duration_ms=raw_diff.get("duration_ms", 0.0),
+            sources=diff_sources,
+        )
+
     return MetricsResponse(
         window_size=aggregates.get("count", 0),
         aggregates=aggregates,
         latest=latest_info,
         recommendations=recommendations,
+        diffractive=diff_info,
     )
 
 

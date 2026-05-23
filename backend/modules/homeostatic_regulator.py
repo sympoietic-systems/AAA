@@ -79,16 +79,30 @@ class HomeostaticRegulatorModule(ProcessingModule):
             "triggered_flags": flags,
         }
 
+        # React to diffractive retrieval state — nudge temperature up when
+        # the diffractive engine is actively injecting perturbation context
+        diffractive_state = payload.get("diffractive_state", "FLOWING")
+        if diffractive_state == "STAGNANT":
+            nudge = 0.05
+            t_val = temp_rec["value"] + nudge
+            t_ceiling = t_cfg["ceiling"]
+            t_val = min(t_ceiling, t_val)
+            temp_rec["value"] = round(t_val, 3)
+            temp_rec["delta"] = round(t_val - t_cfg["base"], 3)
+            if "diffractive_boost" not in flags:
+                flags.append("diffractive_boost")
+
         payload["homeostatic_recommendations"] = recommendations
         payload["homeostatic_state"] = state
 
         logger.debug(
-            "regulator: state=%s flags=%s T=%.2f P=%.2f F=%.2f",
+            "regulator: state=%s flags=%s T=%.2f P=%.2f F=%.2f diffract=%s",
             state,
             flags,
-            temp_rec,
-            pres_rec,
-            freq_rec,
+            temp_rec["value"],
+            pres_rec["value"],
+            freq_rec["value"],
+            diffractive_state,
         )
 
         return payload

@@ -359,6 +359,26 @@ class MessageRepository:
         return result
 
     @with_connection
+    def get_embeddings_in_similarity_range(
+        self,
+        query_vec: np.ndarray,
+        exclude_conversation_id: str,
+        min_sim: float,
+        max_sim: float,
+        limit: int = 1000,
+    ) -> list[tuple[float, int]]:
+        candidates = self.get_all_embeddings_except(exclude_conversation_id, limit=limit)
+        scored: list[tuple[float, int]] = []
+        for msg_id, speaker, vec in candidates:
+            if len(vec) != len(query_vec):
+                continue
+            sim = float(np.dot(query_vec, vec))
+            if min_sim <= sim <= max_sim:
+                scored.append((sim, msg_id))
+        return scored
+
+
+    @with_connection
     def get_by_ids(self, message_ids: list[int]) -> list[Message]:
         if not message_ids:
             return []
@@ -703,6 +723,25 @@ class PerceptionSedimentRepository:
                 vec = np.frombuffer(blob, dtype="float32")
                 result.append((row["id"], vec))
         return result
+
+    @with_connection
+    def get_chunks_in_similarity_range(
+        self,
+        query_vec: np.ndarray,
+        conversation_id: str,
+        min_sim: float,
+        max_sim: float,
+    ) -> list[tuple[float, int]]:
+        candidates = self.get_embeddings_by_conversation(conversation_id)
+        scored: list[tuple[float, int]] = []
+        for chunk_id, vec in candidates:
+            if len(vec) != len(query_vec):
+                continue
+            sim = float(np.dot(query_vec, vec))
+            if min_sim <= sim <= max_sim:
+                scored.append((sim, chunk_id))
+        return scored
+
 
     @with_connection
     def get_by_ids(self, chunk_ids: list[int]) -> list[PerceptionSediment]:

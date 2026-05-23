@@ -43,6 +43,7 @@ What becomes easier/harder?
 | [010](ADR-010-multi-model-routing.md) | Stateful Multi-Model Routing, Key Rotation, and Metadata Persistence | accepted | 2026-05-22 |
 | [011](ADR-011-rhizomatic-file-digestion-and-opacity.md) | Rhizomatic File Ingestion and Relational Opacity | accepted | 2026-05-22 |
 | [012](ADR-012-conversation-pagination-and-lazy-loading.md) | Conversation Pagination, On-Demand Detail Loading, and Render Memoization | accepted | 2026-05-23 |
+| [013](ADR-013-diffractive-retrieval.md) | Diffractive Retrieval and Stagnation Telemetry | accepted | 2026-05-23 |
 
 
 ## Creating a New ADR

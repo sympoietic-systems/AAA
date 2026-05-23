@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse } from "../api/client"
+import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse, DiffractiveInfo } from "../api/client"
 import { getSkills, getMetrics, getTokens, getFileSummary } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -304,6 +304,210 @@ function HealthSection({ messageCount }: { messageCount: number }) {
   )
 }
 
+function DiffractiveTooltip({ title, value, desc }: { title: string; value?: string; desc: string }) {
+  return (
+    <div className="
+      absolute bottom-full left-0 mb-1.5 px-2 py-1.5
+      bg-[#111] border border-[#262626] rounded
+      text-[9px] text-[#aaa] font-sans leading-relaxed
+      whitespace-normal w-56 z-50
+      opacity-0 group-hover:opacity-100
+      transition-opacity duration-150
+      pointer-events-none shadow-lg shadow-black/80
+      backdrop-blur-sm
+    ">
+      <div className="text-[#c084fc] font-bold text-[10px]">{title}</div>
+      {value && <div className="text-[#777] font-mono text-[8px] mt-0.5">{value}</div>}
+      <div className="text-[#888] mt-1 font-normal leading-normal">{desc}</div>
+    </div>
+  )
+}
+
+function DiffractiveSection({ messageCount }: { messageCount: number }) {
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
+
+  useEffect(() => {
+    const poll = () => {
+      getMetrics().then(setMetrics).catch(() => {})
+    }
+    poll()
+    const interval = setInterval(poll, 15000)
+    return () => clearInterval(interval)
+  }, [messageCount])
+
+  const diff: DiffractiveInfo | null | undefined = metrics?.diffractive
+  if (!diff) {
+    return (
+      <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+        <p className="text-[9px] text-[#444]">no diffractive data yet</p>
+      </div>
+    )
+  }
+
+  const isActive = diff.state === "STAGNANT"
+  const stateColor = isActive ? "#c084fc" : "#555"
+
+  // Cohesion timer blocks
+  const maxTimer = 3
+  const timerBlocks = Array.from({ length: maxTimer }, (_, i) =>
+    i < diff.cohesion_timer ? "\u2588" : "\u2591"
+  ).join(" ")
+
+  // Goldilocks bar (similarity visualization for first source)
+  const firstSim = diff.sources.length > 0 ? diff.sources[0].similarity : 0
+  const barWidth = 30
+  const memMin = diff.similarity_range_memory[0] ?? 0.45
+  const memMax = diff.similarity_range_memory[1] ?? 0.85
+  const barChars: string[] = Array.from({ length: barWidth }, (_, pos) => {
+    const val = pos / barWidth
+    if (val >= memMin && val <= memMax) return "\u2592"
+    return "\u2500"
+  })
+  const markerPos = Math.min(barWidth - 1, Math.max(0, Math.floor(firstSim * barWidth)))
+  barChars[markerPos] = "\u2593"
+  const barStr = barChars.join("")
+
+  return (
+    <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span
+          className="text-[8px] leading-none"
+          style={{ color: stateColor }}
+        >
+          {isActive ? "\u25CF" : "\u25CB"}
+        </span>
+        <span className="text-[10px] text-[#888]">diffraction</span>
+        <span className="text-[9px] ml-auto" style={{ color: stateColor }}>
+          {diff.state}
+        </span>
+      </div>
+
+      {/* Telemetry block - monospace ASCII style */}
+      <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded p-2 font-mono text-[8px] leading-relaxed space-y-px">
+        <div className="text-[#555]">
+          {"=== STAGNATION TELEMETRY ==="}
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          <span className="text-[#666]">METRICS</span>
+          <span className="group relative cursor-help text-[#c084fc]">
+            P:{diff.p_diffract.toFixed(2)}
+            <DiffractiveTooltip
+              title="Diffraction Probability (P)"
+              value={`Value: ${diff.p_diffract.toFixed(4)}`}
+              desc="The calculated chance of triggering diffractive context injection, driven by boringness (+), low entropy (+), and low vitality (-)."
+            />
+          </span>
+          <span className="group relative cursor-help text-[#666]">
+            S:{diff.stagnation_index.toFixed(2)}
+            <DiffractiveTooltip
+              title="Stagnation Index (S)"
+              value={`Value: ${diff.stagnation_index.toFixed(4)}`}
+              desc="Ratio between boringness and vitality. Reflects the presence and intensity of conversational loops."
+            />
+          </span>
+          <span className="group relative cursor-help text-[#666]">
+            R:{diff.r_context.toFixed(2)}
+            <DiffractiveTooltip
+              title="Context Ratio (R)"
+              value={`Value: ${diff.r_context.toFixed(4)}`}
+              desc="The dynamic context ratio used to scale down the token budget limit based on loop severity."
+            />
+          </span>
+        </div>
+        <div className="flex gap-1 flex-wrap group relative cursor-help">
+          <span className="text-[#666]">STATE</span>
+          <span style={{ color: stateColor }}>{diff.state}</span>
+          {diff.previous_state !== diff.state && (
+            <span className="text-[#555]">(was {diff.previous_state})</span>
+          )}
+          <DiffractiveTooltip
+            title="Stagnation State"
+            value={`Current: ${diff.state} | Previous: ${diff.previous_state}`}
+            desc="FLOWING = standard loop-free generation. STAGNANT = loop detected, context injection active."
+          />
+        </div>
+        <div className="flex gap-1 group relative cursor-help">
+          <span className="text-[#666]">LOCK</span>
+          <span className="text-[#c084fc]">[{timerBlocks}]</span>
+          <span className="text-[#555]">({diff.cohesion_timer}t)</span>
+          <DiffractiveTooltip
+            title="Cohesion Lock Timer"
+            value={`Turns Locked: ${diff.cohesion_timer}`}
+            desc="Countdown timer holding the STAGNANT state active for a minimum duration. Gives new conceptual paths space to establish themselves."
+          />
+        </div>
+
+        <div className="text-[#555] mt-1">
+          {"=== INTERFERENCE PATTERN ==="}
+        </div>
+
+        {diff.sources.length > 0 ? (
+          <>
+            {diff.sources.map((s, i) => (
+              <div key={i} className="flex gap-1 flex-wrap group relative cursor-help">
+                <span className={s.type === "nomadic" ? "text-[#60a5fa]" : "text-[#4ade80]"}>
+                  {s.type === "nomadic" ? "NOM" : "DRM"}
+                </span>
+                <span className="text-[#888] truncate max-w-32">{s.source_title}</span>
+                <span className="text-[#c084fc] ml-auto">{"\u03B4"}{s.similarity.toFixed(3)}</span>
+                <DiffractiveTooltip
+                  title={s.type === "nomadic" ? "Nomadic Memory Source (NOM)" : "Dormant Document Sediment (DRM)"}
+                  value={`Similarity (delta): ${s.similarity.toFixed(4)}`}
+                  desc={s.type === "nomadic"
+                    ? "Injected context retrieved from an orthogonal/external conversation memory to shift the loop."
+                    : "Injected context retrieved from static uploaded files matching the Goldilocks zone."}
+                />
+              </div>
+            ))}
+            <div className="mt-0.5 text-[#555] overflow-hidden whitespace-nowrap group relative cursor-help">
+              [{barStr}]
+              <DiffractiveTooltip
+                title="Goldilocks Zone Matcher"
+                value={`Mem: [${diff.similarity_range_memory.map(v => v.toFixed(2)).join(",")}] | File: [${diff.similarity_range_files.map(v => v.toFixed(2)).join(",")}]`}
+                desc="Visualization of similarity matching. Shaded regions (▒) show Goldilocks bounds. Marker (▓) shows similarity of the primary source relative to bounds."
+              />
+            </div>
+          </>
+        ) : (
+          <div className="text-[#444]">no sources injected</div>
+        )}
+
+        <div className="flex gap-1 flex-wrap mt-1 group relative cursor-help">
+          <span className="text-[#555]">SEARCH</span>
+          <span className="text-[#888]">{diff.candidates_searched} cand</span>
+          <span className="text-[#c084fc]">{diff.items_injected} inj</span>
+          <span className="text-[#555]">{diff.tokens_used}/{diff.token_budget}tok</span>
+          <span className="text-[#444] ml-auto">{diff.duration_ms.toFixed(0)}ms</span>
+          <DiffractiveTooltip
+            title="Vector Search & Budgeting"
+            value={`Duration: ${diff.duration_ms.toFixed(1)}ms | Injected: ${diff.items_injected}`}
+            desc="cand = scanned similarity candidates; inj = items injected under the budget limit; tok = tokens used / dynamic budget limit; ms = vector search duration."
+          />
+        </div>
+
+        <div className="flex gap-1 flex-wrap group relative cursor-help">
+          <span className="text-[#555]">RANGE</span>
+          <span className="text-[#60a5fa]">mem:[{diff.similarity_range_memory.map(v => v.toFixed(2)).join(",")}]</span>
+          <span className="text-[#4ade80]">file:[{diff.similarity_range_files.map(v => v.toFixed(2)).join(",")}]</span>
+          <DiffractiveTooltip
+            title="Dynamic Similarity Ranges"
+            desc="Similarity matching ranges (Goldilocks zone). mem = ranges for external conversation memory; file = ranges for static document chunks."
+          />
+        </div>
+        <div className="flex gap-1 group relative cursor-help">
+          <span className="text-[#555]">MAX</span>
+          <span className="text-[#888]">{diff.dynamic_max} slots</span>
+          <DiffractiveTooltip
+            title="Dynamic Slot Limit"
+            value={`Limit: ${diff.dynamic_max} slots`}
+            desc="Maximum number of diffractive candidate slots allowed to be injected during this turn, scaled dynamically based on stagnation index."
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function SidePanel({
   uploadedFiles = [],
   conversationId,
@@ -321,6 +525,7 @@ export function SidePanel({
   const [pipelineOpen, setPipelineOpen] = useState(false)
   const [skillsOpen, setSkillsOpen] = useState(false)
   const [healthOpen, setHealthOpen] = useState(true)
+  const [diffractiveOpen, setDiffractiveOpen] = useState(true)
   const [tokensOpen, setTokensOpen] = useState(true)
   const [sedimentOpen, setSedimentOpen] = useState(true)
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
@@ -422,6 +627,20 @@ export function SidePanel({
               {healthOpen && (
                 <div className="pl-3">
                   <HealthSection messageCount={messageCount} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Diffraction"
+                count={0}
+                open={diffractiveOpen}
+                onToggle={() => setDiffractiveOpen(!diffractiveOpen)}
+              />
+              {diffractiveOpen && (
+                <div className="pl-3">
+                  <DiffractiveSection messageCount={messageCount} />
                 </div>
               )}
             </div>

@@ -43,6 +43,7 @@ pipeline:
     - context_collector
     - consolidation_checkpoint
     - sedimentation_retrieval
+    - diffractive_retrieval
     - prompt_assembler
     - homeostatic_regulator
     - llm_client
@@ -65,6 +66,16 @@ sedimentation:
   sediment_token_budget: 2000  # Max tokens for cross-conversation messages
   sediment_count: 10           # Max number of sediment messages
   similarity_threshold: 0.3    # Minimum cosine similarity to include
+
+# ── Diffractive Retrieval ────────────────────────
+diffractive_retrieval:
+  enabled: true                # Enable dynamic context perturbation under stagnation
+  similarity_range_min: 0.45   # Minimum cosine similarity for nomadic Goldilocks zone
+  similarity_range_max: 0.85   # Maximum cosine similarity for nomadic Goldilocks zone
+  file_range_min: 0.35         # Minimum cosine similarity for dormant file chunk Goldilocks zone
+  file_range_max: 0.75         # Maximum cosine similarity for dormant file chunk Goldilocks zone
+  max_diffractive_count: 3     # Maximum number of items injected per turn
+  token_budget: 1500           # Base token budget limit for diffractive context
 
 # ── Homeostasis ──────────────────────────────────
 homeostasis:
@@ -190,6 +201,9 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_CONTEXT_CONSOLIDATE_THRESHOLD` | Any integer | `15` (from `config.yaml`) |
 | `AAA_SEDIMENT_TOKEN_BUDGET` | Any integer | `2000` (from `config.yaml`) |
 | `AAA_SEDIMENT_COUNT` | Any integer | `10` (from `config.yaml`) |
+| `AAA_DIFFRACTIVE_ENABLED` | `true`, `false` | `true` (from `config.yaml`) |
+| `AAA_DIFFRACTIVE_BUDGET` | Any integer | `1500` (from `config.yaml`) |
+| `AAA_DIFFRACTIVE_MAX_COUNT` | Any integer | `3` (from `config.yaml`) |
 
 ## Provider Defaults
 

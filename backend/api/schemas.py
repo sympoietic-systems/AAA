@@ -119,6 +119,32 @@ class MetricsResponse(BaseModel):
     aggregates: dict
     latest: MetricsInfo | None = None
     recommendations: HomeostaticRecommendations | None = None
+    diffractive: Optional["DiffractiveInfo"] = None
+
+
+class DiffractiveSourceInfo(BaseModel):
+    type: str
+    source_title: str
+    similarity: float
+
+
+class DiffractiveInfo(BaseModel):
+    state: str = "FLOWING"
+    previous_state: str = "FLOWING"
+    p_diffract: float = 0.0
+    stagnation_index: float = 0.0
+    r_context: float = 0.0
+    dynamic_max: int = 0
+    cohesion_timer: int = 0
+    similarity_range_memory: list[float] = []
+    similarity_range_files: list[float] = []
+    candidates_searched: int = 0
+    items_injected: int = 0
+    tokens_used: int = 0
+    token_budget: int = 0
+    duration_ms: float = 0.0
+    sources: list[DiffractiveSourceInfo] = []
+
 
 
 class ConversationInfo(BaseModel):

@@ -72,16 +72,45 @@ class PromptAssemblerModule(ProcessingModule):
         else:
             file_block = []
 
+        # Wrap diffractive messages if present and state is STAGNANT
+        diffractive_messages = payload.get("diffractive_messages", [])
+        diffractive_state = payload.get("diffractive_state", "FLOWING")
+        diffractive_block = []
+
+        if diffractive_messages and diffractive_state == "STAGNANT":
+            content_parts = []
+            for item in diffractive_messages:
+                m_type = item.get("type", "nomadic")
+                title = item.get("source_title", "Untitled")
+                sim = item.get("similarity", 0.0)
+                body = item.get("content", "")
+                content_parts.append(
+                    f'[Source: {m_type.capitalize()} Fragment ({title}) | Similarity δ: {sim:.3f}]\n"""\n{body}\n"""'
+                )
+
+            zone_text = (
+                "<diffractive_interference_zone>\n"
+                + "\n\n".join(content_parts)
+                + "\n\n"
+                + "[URGENT ATTENTION DIRECTIVE]\n"
+                + "Apply SEC-4 Diffractive Protocol immediately. Read the active conversation topic and relevant files THROUGH the structural constraints of the text above.\n\n"
+                + 'Do not state "Based on the provided text..." or "This reminds me of...". Avoid conversational hand-wringing. Instead, perform the reading directly: map the structural constraints of the injected nomadic context onto our current thread to force a lateral escape vector.\n'
+                + "</diffractive_interference_zone>"
+            )
+            diffractive_block = [{"role": "system", "content": zone_text}]
+
         # Re-assemble the context in the topologically coherent order:
-        # System Prompt -> History Prior -> Sediment (Cross-Conv Memory) -> File Context -> Current Query
+        # System Prompt -> History Prior -> Sediment (Cross-Conv Memory) -> File Context -> Diffractive Interference -> Current Query
         assembled = [system_msg]
         assembled.extend(history_block)
         assembled.extend(sediment_block)
         assembled.extend(file_block)
+        assembled.extend(diffractive_block)
         assembled.extend(current_query)
 
         payload["messages"] = assembled
         return payload
+
 
 
 

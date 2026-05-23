@@ -25,9 +25,9 @@ graph TB
 
     subgraph Backend ["FastAPI Backend (main.py)"]
         direction TB
-        subgraph Pipeline ["Processing Pipeline (9 Modules)"]
+        subgraph Pipeline ["Processing Pipeline (10 Modules)"]
             direction LR
-            M1["embedder"] --> M2["perception"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["prompt_assembler"] --> M8["homeostatic_regulator"] --> M9["llm_client"]
+            M1["embedder"] --> M2["perception"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["diffractive_retrieval"] --> M8["prompt_assembler"] --> M9["homeostatic_regulator"] --> M10["llm_client"]
         end
         
         subgraph Database ["SQLite (WAL)"]
@@ -79,8 +79,11 @@ sequenceDiagram
         Pipeline->>Pipeline: sedimentation_retrieval.process()
         Note over Pipeline: Fetch top-K messages from other conversations<br/>via cross-conversation similarity
         
+        Pipeline->>Pipeline: diffractive_retrieval.process()
+        Note over Pipeline: Evaluate P_diffract. If STAGNANT,<br/>inject Nomadic/Dormant Goldilocks fragments.
+        
         Pipeline->>Pipeline: prompt_assembler.process()
-        Note over Pipeline: Compose: system + sediment + history + file_context<br/>Enforce token budget
+        Note over Pipeline: Compose: system + sediment + diffractive + history + file_context<br/>Enforce token budget
         
         Pipeline->>Pipeline: homeostatic_regulator.process()
         Note over Pipeline: Maps metrics → dynamic temperature,<br/>presence/frequency penalty adjustments
@@ -202,7 +205,7 @@ writes to the `error_log` table, then halts the pipeline.
 
 ```mermaid
 graph LR
-    embedder --> perception --> conversation_metrics --> context_collector --> consolidation_checkpoint --> sedimentation_retrieval --> prompt_assembler --> homeostatic_regulator --> llm_client
+    embedder --> perception --> conversation_metrics --> context_collector --> consolidation_checkpoint --> sedimentation_retrieval --> diffractive_retrieval --> prompt_assembler --> homeostatic_regulator --> llm_client
 ```
 
 ### Module Replaceability
@@ -211,9 +214,9 @@ Context-related modules are swappable via pipeline config:
 
 ```mermaid
 graph TD
-    subgraph Today ["Today (9 modules)"]
+    subgraph Today ["Today (10 modules)"]
         direction LR
-        emb1["embedder"] --> per1["perception"] --> cm1["conversation_metrics"] --> cc1["context_collector"] --> cp1["consolidation_checkpoint"] --> sr1["sedimentation_retrieval"] --> pa1["prompt_assembler"] --> hr1["homeostatic_regulator"] --> llm1["llm_client"]
+        emb1["embedder"] --> per1["perception"] --> cm1["conversation_metrics"] --> cc1["context_collector"] --> cp1["consolidation_checkpoint"] --> sr1["sedimentation_retrieval"] --> diff1["diffractive_retrieval"] --> pa1["prompt_assembler"] --> hr1["homeostatic_regulator"] --> llm1["llm_client"]
     end
     
     subgraph Tomorrow ["Tomorrow (Phase 3 Rhizomatic)"]
@@ -386,6 +389,7 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | Per-conversation history | Done | Scoped queries, ordered by `id` |
 | Perception (file context) | Done | PDF/DOCX ingestion, chunking, embedding, similarity retrieval |
 | Sedimentation (cross-convo) | Done | Embedding similarity, token-budgeted |
+| Diffractive retrieval (Goldilocks zone) | Done | Context perturbation under stagnation; real-time telemetry |
 | Token tracking | Done | Per-message, per-conversation, system prompt |
 | Token budget enforcement | Done | Tiered compression + trim oldest first |
 | Title generation | Done | Cheap LLM call on first message |
