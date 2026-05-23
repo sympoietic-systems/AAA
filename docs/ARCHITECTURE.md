@@ -2,115 +2,101 @@
 
 ## High-Level Design
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                        React Frontend                             │
-│  ConversationList  │  ChatView  ←→  MessageBubble  ←→  InputBar  │
-│  (left sidebar)    │                    │                         │
-│                    │              token counts                    │
-│                    │                    │                         │
-│  SidePanel (right) │  useChat  │ useConversations                 │
-│  vitality / tokens │      hooks │ api/client.ts                   │
-└───────┬────────────┼───────────┼─────────────────────────────────┘
-        │            │           │  HTTP (Vite proxy)
-        ▼            ▼           ▼
-┌───────────────────────────────────────────────────────────────────┐
-│                     FastAPI Backend (main.py)                      │
-│                                                                    │
-│  Pipeline (9 modules):                                             │
-│  embedder → perception → conversation_metrics → context_collector  │
-│           → consolidation_checkpoint → sedimentation_retrieval    │
-│           → prompt_assembler → homeostatic_regulator → llm_client  │
-│                                                                    │
-│  Each module enriches payload dict via process(payload) → payload  │
-│                                                                    │
-│  Context compression: caveman (mid-tier) + LLM checkpoints (deep)  │
-│  Homeostatic regulator: metrics → active LLM parameter modulation  │
-│  Sedimentation: cross-conversation embedding similarity             │
-│                                                                    │
-│                    ┌──────────────────────┐                        │
-│                    │     SQLite (WAL)      │                        │
-│                    │  ┌──────────────────┐ │                        │
-│                    │  │  conversations   │ │                        │
-│                    │  ├──────────────────┤ │                        │
-│                    │  │ conversation_log │ │                        │
-│                    │  ├──────────────────┤ │                        │
-│                    │  │ conversation_met │ │                        │
-│                    │  ├──────────────────┤ │                        │
-│                    │  │   error_log      │ │                        │
-│                    │  └──────────────────┘ │                        │
-│                    └──────────────────────┘                        │
-└───────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Frontend ["React Frontend"]
+        direction TB
+        subgraph Components ["UI Layer"]
+            CL["ConversationList<br/>(Left Sidebar)"]
+            CV["ChatView"]
+            MB["MessageBubble"]
+            IB["InputBar"]
+            SP["SidePanel<br/>(Right Sidebar)"]
+        end
+        subgraph Logic ["Logic & API Layer"]
+            UC["useChat hook"]
+            UCO["useConversations hook"]
+            AC["api/client.ts"]
+        end
+        CV <--> MB <--> IB
+        MB -.->|Token Counts| UC
+        UC & UCO --> AC
+    end
+
+    subgraph Backend ["FastAPI Backend (main.py)"]
+        direction TB
+        subgraph Pipeline ["Processing Pipeline (9 Modules)"]
+            direction LR
+            M1["embedder"] --> M2["perception"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["prompt_assembler"] --> M8["homeostatic_regulator"] --> M9["llm_client"]
+        end
+        
+        subgraph Database ["SQLite (WAL)"]
+            direction TB
+            db1["conversations"]
+            db2["conversation_log"]
+            db3["conversation_metrics"]
+            db4["error_log"]
+        end
+    end
+
+    Components -.->|Actions & State| Logic
+    AC ==>|HTTP (Vite Proxy)| Backend
+    Pipeline ==>|Read / Write| Database
 ```
 
 ## Data Flow (Chat Request)
 
-```
-POST /api/chat {"content": "...", "conversation_id": "uuid"}
-  │
-  ├─ Auto-create conversation if new (UUID, stores in conversations table)
-  │
-  ▼
-ProcessingPipeline.run(payload)
-  │
-  ├─► embedder.process(payload)
-  │     payload["embedding"] = encode(content).tobytes()
-  │     payload["embedding_model"] = "all-MiniLM-L6-v2"
-  │     payload["embedding_dim"] = 384
-  │
-  ├─► perception.process(payload)
-  │     scoped to conversation_id
-  │     Ingests attachments (PDF/DOCX/text) → chunks → embeds → stores in perception_sediment
-  │     Retrieves top-K relevant file chunks via cosine similarity
-  │     payload["file_context"] = [...], payload["file_context_tokens"] = N
-  │
-  ├─► conversation_metrics.process(payload)
-  │     scoped to conversation_id
-  │     payload["metrics"] = {pairwise_similarity, novelty, entropy, coupling, ...}
-  │
-  ├─► context_collector.process(payload)
-  │     scoped to conversation_id
-  │     Two-tier compression:
-  │       Tier 1 (last N=floating_window msgs): raw, full text
-  │       Tier 2 (older msgs up to max_history): caveman compressed
-  │     payload["messages"] = [...], payload["raw_msg_count"] = N
-  │
-  ├─► consolidation_checkpoint.process(payload)
-  │     scoped to conversation_id
-  │     Retrieves latest consolidation checkpoint from DB
-  │     Prepends [Consolidated memory: ...] system message
-  │     Sets trigger_consolidation flag when msg count >= threshold
-  │
-  ├─► sedimentation_retrieval.process(payload)
-  │     All messages from OTHER conversations
-  │     Cosine similarity to current embedding
-  │     Top-K within sediment_token_budget (default 2000 tokens)
-  │     payload["sediment_messages"] = [...]
-  │
-  ├─► prompt_assembler.process(payload)
-  │     identity = load identity.yaml
-  │     skill_desc = registry.describe_skills()
-  │     system_msg = compose(identity + skills)
-  │     Assembly order: [system] + [sediment] + [history] + [file_context]
-  │     Token budget enforcement: trim oldest history first if over max_tokens
-  │
-  ├─► homeostatic_regulator.process(payload)
-  │     Maps metrics → temperature/presence_penalty/frequency_penalty
-  │     payload["homeostatic_recommendations"] = {...}
-  │
-  ├─► llm_client.process(payload)
-  │     Extracts temperature/presence_penalty from homeostatic_recommendations
-  │     result = provider.generate(messages, temperature, presence_penalty, ...)
-  │     payload["response"] = result["content"]
-  │     payload["thinking"] = result["thinking"]
-  │
-  ▼
-  route (routes.py)
-  ├─ message_repo.insert("human", content, ..., content_tokens=N)
-  ├─ message_repo.insert("apparatus", response, thinking, ..., content_tokens=M, thinking_tokens=K)
-  ├─ if trigger_consolidation: fire-and-forget background ConsolidateAction (auto at ~15 msgs)
-  ├─ if new conversation: async title generation via cheap LLM call
-  └─ return ChatResponse {id, content, thinking, content_tokens, thinking_tokens, ...}
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Interlocutor
+    participant API as routes.py (POST /api/chat)
+    participant Pipeline as ProcessingPipeline
+    participant DB as SQLite DB
+    participant LLM as LLM Provider
+
+    Interlocutor->>API: POST /api/chat {content, conversation_id}
+    Note over API: If new conversation,<br/>create UUID & store
+    API->>Pipeline: run(payload)
+    
+    rect rgb(28, 28, 30)
+        Note over Pipeline: Module Ingestion & Processing
+        Pipeline->>Pipeline: embedder.process()
+        Note over Pipeline: payload["embedding"] = encode(content)<br/>payload["embedding_model"] = "all-MiniLM-L6-v2"<br/>payload["embedding_dim"] = 384
+        
+        Pipeline->>Pipeline: perception.process()
+        Note over Pipeline: Chunk/embed files → stores chunks<br/>Retrieve top-K chunks via cosine similarity<br/>payload["file_context"] = [...], tokens = N
+        
+        Pipeline->>Pipeline: conversation_metrics.process()
+        Note over Pipeline: Computes pairwise similarity, novelty,<br/>entropy, coupling, etc.
+        
+        Pipeline->>Pipeline: context_collector.process()
+        Note over Pipeline: Two-tier compression:<br/>Tier 1: raw full-text (last N messages)<br/>Tier 2: caveman compressed history
+        
+        Pipeline->>Pipeline: consolidation_checkpoint.process()
+        Note over Pipeline: Fetch latest consolidated memory summary<br/>Sets trigger_consolidation flag if count >= threshold
+        
+        Pipeline->>Pipeline: sedimentation_retrieval.process()
+        Note over Pipeline: Fetch top-K messages from other conversations<br/>via cross-conversation similarity
+        
+        Pipeline->>Pipeline: prompt_assembler.process()
+        Note over Pipeline: Compose: system + sediment + history + file_context<br/>Enforce token budget
+        
+        Pipeline->>Pipeline: homeostatic_regulator.process()
+        Note over Pipeline: Maps metrics → dynamic temperature,<br/>presence/frequency penalty adjustments
+        
+        Pipeline->>Pipeline: llm_client.process()
+        Pipeline->>LLM: generate(messages, temp, presence_penalty)
+        LLM-->>Pipeline: response text & reasoning
+    end
+    
+    Pipeline-->>API: PipelineResult (enriched payload)
+    
+    API->>DB: Save human/apparatus messages (with tokens, thinking, embeddings)
+    Note over API: If trigger_consolidation:<br/>Fire async background ConsolidateAction
+    Note over API: If new conversation:<br/>Fire async background title generation
+    
+    API-->>Interlocutor: ChatResponse {id, content, thinking, tokens}
 ```
 
 ## Database Schema
@@ -185,13 +171,16 @@ Prepend to future context as `[Consolidated memory: <summary>]` system message.
 Lazy-initialized registry mapping names to module factories. `SkillRegistry`
 extends `ModuleRegistry` with metadata for skill discovery.
 
-```
-register(name, factory)         ──►  stores lambda/constructor
-register_with_meta(n, f, meta)  ──►  register + attach SkillMeta
-resolve_pipeline([...])         ──►  returns ordered [Module, Module, ...]
-validate_all()                  ──►  {name: bool} health status
-list_always_on()                ──►  modules with always_run=True
-find_by_trigger(text)           ──►  matches input against trigger keywords
+```mermaid
+graph TD
+    classDef method fill:#111,stroke:#333,stroke-width:1px,color:#fff;
+    
+    R1["register(name, factory)"]:::method -->|"stores"| S1["lambda/constructor"]
+    R2["register_with_meta(n, f, meta)"]:::method -->|"registers"| S2["module + SkillMeta"]
+    R3["resolve_pipeline([...])"]:::method -->|"returns"| S3["ordered [Module, Module, ...]"]
+    R4["validate_all()"]:::method -->|"returns"| S4["{name: bool} health status"]
+    R5["list_always_on()"]:::method -->|"returns"| S5["modules with always_run=True"]
+    R6["find_by_trigger(text)"]:::method -->|"matches"| S6["input against trigger keywords"]
 ```
 
 ### ProcessingPipeline
@@ -211,26 +200,26 @@ writes to the `error_log` table, then halts the pipeline.
 
 ### Pipeline Order (Current)
 
-```
-embedder → perception → conversation_metrics → context_collector
-         → consolidation_checkpoint → sedimentation_retrieval
-         → prompt_assembler → homeostatic_regulator → llm_client
+```mermaid
+graph LR
+    embedder --> perception --> conversation_metrics --> context_collector --> consolidation_checkpoint --> sedimentation_retrieval --> prompt_assembler --> homeostatic_regulator --> llm_client
 ```
 
 ### Module Replaceability
 
 Context-related modules are swappable via pipeline config:
 
-```
-Today (9 modules):
-  embedder → perception → conversation_metrics → context_collector
-           → consolidation_checkpoint → sedimentation_retrieval
-           → prompt_assembler → homeostatic_regulator → llm_client
-
-Tomorrow (Phase 3 rhizomatic):
-  embedder → perception → conversation_metrics → rhizomatic_context
-           → prompt_assembler → homeostatic_regulator → llm_client
-  (consolidation_checkpoint + sedimentation_retrieval replaced by unified graph)
+```mermaid
+graph TD
+    subgraph Today ["Today (9 modules)"]
+        direction LR
+        emb1["embedder"] --> per1["perception"] --> cm1["conversation_metrics"] --> cc1["context_collector"] --> cp1["consolidation_checkpoint"] --> sr1["sedimentation_retrieval"] --> pa1["prompt_assembler"] --> hr1["homeostatic_regulator"] --> llm1["llm_client"]
+    end
+    
+    subgraph Tomorrow ["Tomorrow (Phase 3 Rhizomatic)"]
+        direction LR
+        emb2["embedder"] --> per2["perception"] --> cm2["conversation_metrics"] --> rc2["rhizomatic_context"] --> pa2["prompt_assembler"] --> hr2["homeostatic_regulator"] --> llm2["llm_client"]
+    end
 ```
 
 `prompt_assembler` reads `payload["messages"]`, `payload["sediment_messages"]`,

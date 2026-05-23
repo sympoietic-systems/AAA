@@ -18,38 +18,12 @@ The system implements real-time conversational analysis to regulate its internal
 
 The system is constructed from four decoupled, highly cohesive modules that interact via a centralized feedback loop:
 
-```
-                  ┌─────────────────────────────────────┐
-                  │      Interlocutor Input Signal      │
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ 1. Telemetry & Sensation Module     │
-                  │    - Sentence-Transformers Embedder │
-                  │    - SQLite Write-Ahead Logging     │
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ 2. Homeostatic Regulator            │
-                  │    - Cosine Similarity Evaluation   │
-                  │    - Parameter Scaling Math         │
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ 3. Sedimentation Engine             │
-                  │    - Rhizomatic Graph / Vector DB   │
-                  │    - Diffractive Index Retrieval    │
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ 4. Parametric Decision Engine       │
-                  │    - Local LLM Runner (Ollama API)  │
-                  │    - Variable Temp/Presence Penalty │
-                  └─────────────────────────────────────┘
+```mermaid
+graph TD
+    Input["Interlocutor Input Signal"] --> Telemetry["1. Telemetry & Sensation Module<br/>- Sentence-Transformers Embedder<br/>- SQLite Write-Ahead Logging"]
+    Telemetry --> Homeostatic["2. Homeostatic Regulator<br/>- Cosine Similarity Evaluation<br/>- Parameter Scaling Math"]
+    Homeostatic --> Sedimentation["3. Sedimentation Engine<br/>- Rhizomatic Graph / Vector DB<br/>- Diffractive Index Retrieval"]
+    Sedimentation --> Decision["4. Parametric Decision Engine<br/>- Local LLM Runner (Ollama API)<br/>- Variable Temp/Presence Penalty"]
 ```
 
 ---
@@ -198,16 +172,16 @@ Maintains the sedimented "scars" that represent the evolving identity of the age
 
 ## 6. Operational Lifecycle & Fail-Safes
 
-```
-[System Init] ──► [Verify SQLite/WAL] ──► [Load Embedding Weights] ──► [Awaiting Signal]
-                                                                             │
- ┌───────────────────────────────────────────────────────────────────────────┘
- ▼
-[Signal Ingested] ──► [Compute Similarity] ──► [Calculate Parameters] ──► [Inference Engine]
-                                                                             │
- ┌───────────────────────────────────────────────────────────────────────────┘
- ▼
-[Persist State] ──► [Propagate Graph Updates (Memory Evolution)] ───────► [Awaiting Signal]
+```mermaid
+graph TD
+    subgraph Startup ["Initialization Sequence"]
+        Init["System Init"] --> Verify["Verify SQLite/WAL"] --> Load["Load Embedding Weights"] --> Await["Awaiting Signal"]
+    end
+    
+    subgraph Loop ["Runtime Loop"]
+        Await -->|"Signal Received"| Ingest["Signal Ingested"] --> Similarity["Compute Similarity"] --> Params["Calculate Parameters"] --> Inference["Inference Engine"]
+        Inference --> Persist["Persist State"] --> Propagate["Propagate Graph Updates<br/>(Memory Evolution)"] --> Await
+    end
 ```
 
 ### 6.1. Startup Sequence

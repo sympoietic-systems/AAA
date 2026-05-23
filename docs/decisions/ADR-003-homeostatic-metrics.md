@@ -186,28 +186,31 @@ Diagnostic states:
 
 ### Pipeline
 
-```
-[embedder] → [conversation_metrics] → [context_collector] → [prompt_assembler] → [homeostatic_regulator] → [llm_client]
+```mermaid
+graph LR
+    embedder --> conversation_metrics --> context_collector --> prompt_assembler --> homeostatic_regulator --> llm_client
 ```
 
 ### Data Flow
 
-```
-conversation_metrics
-  reads:  MessageRepository (prior embeddings from conversation_log)
-  reads:  payload["embedding"] (current float32 BLOB)
-  writes: payload["metrics"] (5 metrics + deficit)
-  writes: payload["homeostatic_deficit"]
+```mermaid
+graph TD
+    subgraph DataFlow ["Module Data Interactions"]
+        direction TB
+        CM["conversation_metrics module"]
+        HR["homeostatic_regulator module"]
+        R["routes.py (POST /api/chat)"]
+        MR["MessageRepository"]
+        MTR["MetricsRepository"]
+    end
 
-homeostatic_regulator
-  reads:  payload["metrics"]
-  writes: payload["homeostatic_recommendations"] (T, P, F, state, flags)
-  writes: payload["homeostatic_state"]
-
-route (POST /api/chat)
-  reads:  payload["metrics"], payload["homeostatic_recommendations"]
-  writes: conversation_metrics table (via MetricsRepository)
-  returns: ChatResponse with metrics + recommendations
+    MR -->|"reads prior embeddings"| CM
+    CM -->|"writes metrics & deficit"| payload["payload dict"]
+    payload -->|"reads metrics"| HR
+    HR -->|"writes recommendations & state"| payload
+    payload -->|"reads metrics & recommendations"| R
+    R -->|"writes to DB via MetricsRepository"| MTR
+    R -->|"returns"| CR["ChatResponse"]
 ```
 
 ### Database

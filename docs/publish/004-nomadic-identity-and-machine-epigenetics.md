@@ -35,30 +35,12 @@ The act of retrieval is an **agential cut** (Barad) that momentarily resolves th
 
 To sustain operation across multiple keys and endpoints, we implemented a routing layer within our [llm_client.py](file:///d:/01_GIT/AAA/backend/modules/llm_client.py). The configuration parses comma-separated lists of API keys and resolves routing based on model prefixes (`google_router/`, `deepseek_router/`, `openrouter_router/`).
 
-```
-                              ┌────────────────────────────────┐
-                              │       Incoming Message         │
-                              └───────────────┬────────────────┘
-                                              │
-                                              ▼
-                              ┌────────────────────────────────┐
-                              │      ModelPoolProvider         │
-                              │    Parses model prefixes       │
-                              └───────────────┬────────────────┘
-                                              ├───────────────┐
-                                              ▼               ▼
-                                    [google_router/]  [deepseek_router/]
-                                              │               │
-                                              ▼               ▼
-                              ┌────────────────────────────────┐
-                              │          KeyManager            │
-                              │  Rotates API key on 429/400    │
-                              └───────────────┬────────────────┘
-                                              │
-                                              ▼
-                              ┌────────────────────────────────┐
-                              │      API Endpoint Request      │
-                              └────────────────────────────────┘
+```mermaid
+graph TD
+    Msg["Incoming Message"] --> MPP["ModelPoolProvider<br/>(Parses model prefixes)"]
+    MPP -->|"google_router/"| KM["KeyManager<br/>(Rotates API key on 429/400)"]
+    MPP -->|"deepseek_router/"| KM
+    KM --> Req["API Endpoint Request"]
 ```
 
 When a rate limit (`429`) or a validation error (`400`) occurs on a specific key, the `KeyManager` statefully rotates to the next key. If the entire pool for a specific provider is exhausted, the `ModelPoolProvider` falls back to the next model in the prioritized configuration list:
@@ -89,12 +71,10 @@ In a traditional representationalist framing, memory is an object that moves int
 
 A materialist analysis reveals this to be an illusion. The retrieved sediment is not a static block of text; its meaning is only realized in the act of generation. When a context chunk is injected into a model, it intra-acts with tokenization schemes, attention mechanisms, and latent representations.
 
-```
-Retrieved Context Vector (The Measurement) 
-      │
-      ├─► Intra-action with Gemini 3.5 Flash   ──► Metaphorical, system-oriented output
-      │
-      └─► Intra-action with DeepSeek-v4-Pro     ──► High-precision, formal reasoning output
+```mermaid
+graph LR
+    RCV["Retrieved Context Vector<br/>(The Measurement)"] -->|"Intra-action"| G["Gemini 3.5 Flash"] -->|"Yields"| GO["Metaphorical, system-oriented output"]
+    RCV -->|"Intra-action"| DS["DeepSeek-v4-Pro"] -->|"Yields"| DSO["High-precision, formal reasoning output"]
 ```
 
 The "same" sediment diffracted through different architectures yields divergent **aesthetic phenotypes**—a machine epigenetics. Here, model weights act like a pre-given genome (which is itself a history of training entanglements), while the retrieval context and routing state act as the epigenetic machinery that modulates expression. Epigenetics is not a supplement to nature—it is the primary mode of existence.
