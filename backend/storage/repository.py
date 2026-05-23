@@ -649,15 +649,17 @@ class PerceptionSedimentRepository:
         embedding: bytes,
         embedding_model: str,
         token_count: int,
+        opacity: int = 0,
+        opacity_meta: Optional[str] = None,
     ) -> PerceptionSediment:
         conn = self._conn()
         conn.execute(
             """INSERT INTO perception_sediment
                (conversation_id, file_name, file_type, chunk_index, chunk_text,
-                embedding, embedding_model, token_count)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                embedding, embedding_model, token_count, opacity, opacity_meta)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (conversation_id, file_name, file_type, chunk_index, chunk_text,
-             embedding, embedding_model, token_count),
+             embedding, embedding_model, token_count, opacity, opacity_meta),
         )
         conn.commit()
         row = conn.execute(
@@ -823,6 +825,34 @@ class PerceptionSedimentRepository:
         conn.commit()
 
     @with_connection
+    def get_by_file(
+        self, conversation_id: str, file_name: str
+    ) -> list[PerceptionSediment]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM perception_sediment WHERE conversation_id = ? AND file_name = ? ORDER BY chunk_index",
+            (conversation_id, file_name),
+        ).fetchall()
+        return [_row_to_perception_sediment(r) for r in rows]
+
+    @with_connection
+    def update_chunk_opacity(
+        self,
+        chunk_id: int,
+        opacity: int,
+        opacity_meta: str,
+    ) -> None:
+        conn = self._conn()
+        conn.execute(
+            """UPDATE perception_sediment
+               SET opacity = ?, opacity_meta = ?
+               WHERE id = ?""",
+            (opacity, opacity_meta, chunk_id),
+        )
+        conn.commit()
+
+
+    @with_connection
     def delete_by_conversation(self, conversation_id: str) -> None:
         conn = self._conn()
         conn.execute(
@@ -913,6 +943,9 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
 
 
 def _row_to_perception_sediment(row: sqlite3.Row) -> PerceptionSediment:
+    # Safely get opacity and opacity_meta with fallbacks
+    opacity = row["opacity"] if "opacity" in row.keys() else 0
+    opacity_meta = row["opacity_meta"] if "opacity_meta" in row.keys() else None
     return PerceptionSediment(
         id=row["id"],
         conversation_id=row["conversation_id"],
@@ -924,4 +957,6 @@ def _row_to_perception_sediment(row: sqlite3.Row) -> PerceptionSediment:
         embedding_model=row["embedding_model"],
         token_count=row["token_count"],
         created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+        opacity=opacity,
+        opacity_meta=opacity_meta,
     )

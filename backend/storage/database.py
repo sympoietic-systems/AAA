@@ -172,6 +172,8 @@ def init_db(db_path: str) -> sqlite3.Connection:
                 embedding_model   TEXT NOT NULL,
                 token_count       INTEGER NOT NULL,
                 created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+                opacity           INTEGER DEFAULT 0,
+                opacity_meta      TEXT,
                 FOREIGN KEY (conversation_id) REFERENCES conversations(id)
             )
         """)
@@ -189,6 +191,18 @@ def init_db(db_path: str) -> sqlite3.Connection:
         )
     except sqlite3.OperationalError:
         pass
+
+    # Migration for ADR-011 relational opacity
+    for col, col_type in [
+        ("opacity", "INTEGER DEFAULT 0"),
+        ("opacity_meta", "TEXT"),
+    ]:
+        try:
+            conn.execute(
+                f"ALTER TABLE perception_sediment ADD COLUMN {col} {col_type}"
+            )
+        except sqlite3.OperationalError:
+            pass
 
     try:
         conn.execute("""

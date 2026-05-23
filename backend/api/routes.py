@@ -852,9 +852,42 @@ async def _process_and_summarize_file(
                 res = await background_engine.run("summarize", {"text": extracted_text})
                 summary_text = res.get("content", "").strip()
                 summary_model = res.get("model", "")
+                
+                # Apply opacity updates to chunks
+                opacity_map = res.get("opacity_map", [])
+                if opacity_map:
+                    chunks = perception_repo.get_by_file(conversation_id, file_name)
+                    op_map_by_p = {item["paragraph_index"]: item for item in opacity_map}
+                    
+                    import json as _json
+                    for chunk in chunks:
+                        try:
+                            meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
+                        except Exception:
+                            meta = {}
+                        
+                        p_indices = meta.get("paragraph_indices", [])
+                        opaque_hits = [op_map_by_p[pi] for pi in p_indices if pi in op_map_by_p]
+                        
+                        if opaque_hits:
+                            reasons = [h["reason"] for h in opaque_hits if h.get("reason")]
+                            shadows = [h["shadow_text"] for h in opaque_hits if h.get("shadow_text")]
+                            
+                            new_meta = {
+                                "paragraph_indices": p_indices,
+                                "opaque_hits": opaque_hits,
+                                "reason": "; ".join(reasons),
+                                "shadow_text": "\n\n".join(shadows),
+                            }
+                            perception_repo.update_chunk_opacity(
+                                chunk_id=chunk.id,
+                                opacity=1,
+                                opacity_meta=_json.dumps(new_meta),
+                            )
             except Exception as se:
                 logger.error("Failed to run SummarizeAction for %s: %s", file_name, se)
                 summary_text = "Failed to generate summary."
+
 
         perception_repo.update_file(
             conversation_id=conversation_id,

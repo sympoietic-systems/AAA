@@ -67,6 +67,8 @@ class PerceptionSediment:
     embedding_model: str
     token_count: int
     created_at: datetime | None = None
+    opacity: int = 0
+    opacity_meta: Optional[str] = None
 
 
 @dataclass

@@ -6,7 +6,7 @@ from typing import Optional
 
 import numpy as np
 
-from backend.modules.digester import FileDigester, SimpleChunkDigester
+from backend.modules.digester import FileDigester, SimpleChunkDigester, RhizomaticDigester
 from backend.modules.embedder import EmbeddingService
 from backend.skills.metadata import SkillMeta
 from backend.storage.repository import PerceptionSedimentRepository
@@ -31,7 +31,8 @@ class PerceptionModule(ProcessingModule):
     ):
         self._repo = perception_repo
         self._embed = embedding_service
-        self._digester = digester or SimpleChunkDigester()
+        self._digester = digester or RhizomaticDigester()
+
         self._file_token_budget = file_token_budget
         self._top_k_chunks = top_k_chunks
         self._chunk_size = chunk_size
@@ -265,12 +266,28 @@ class PerceptionModule(ProcessingModule):
                 chunk = id_to_chunk.get(chunk_id)
                 if chunk is None:
                     continue
-                entry_text = f"[{chunk.file_name} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
+
+                if getattr(chunk, "opacity", 0) == 1:
+                    import json as _json
+                    try:
+                        meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
+                    except Exception:
+                        meta = {}
+                    reason = meta.get("reason", "Standard boilerplate or repetitive noise.")
+                    shadow_text = meta.get("shadow_text", "[Boilerplate/filler omitted]")
+                    entry_text = (
+                        f"░░░ OMITTED NOISE (File: {chunk.file_name}, chunk #{chunk.chunk_index}, sim={sim:.3f}) ░░░\n"
+                        f"{shadow_text} (Reason: {reason})"
+                    )
+                else:
+                    entry_text = f"[{chunk.file_name} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
+
                 entry_tokens = estimate_tokens(entry_text)
                 if tokens_used + entry_tokens > self._file_token_budget:
                     break
                 context_entries.append({"role": "system", "content": entry_text})
                 tokens_used += entry_tokens
+
         elif chunk_embeddings:
             context_entries.append({
                 "role": "system",
@@ -294,13 +311,28 @@ class PerceptionModule(ProcessingModule):
         tokens_used = sum(estimate_tokens(e["content"]) for e in existing_entries)
         all_chunks = self._repo.get_by_conversation(conversation_id)
         for chunk in all_chunks[:self._top_k_chunks]:
-            entry_text = f"[{chunk.file_name} chunk #{chunk.chunk_index}]\n{chunk.chunk_text}"
+            if getattr(chunk, "opacity", 0) == 1:
+                import json as _json
+                try:
+                    meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
+                except Exception:
+                    meta = {}
+                reason = meta.get("reason", "Standard boilerplate or repetitive noise.")
+                shadow_text = meta.get("shadow_text", "[Boilerplate/filler omitted]")
+                entry_text = (
+                    f"░░░ OMITTED NOISE (File: {chunk.file_name}, chunk #{chunk.chunk_index}) ░░░\n"
+                    f"{shadow_text} (Reason: {reason})"
+                )
+            else:
+                entry_text = f"[{chunk.file_name} chunk #{chunk.chunk_index}]\n{chunk.chunk_text}"
+
             entry_tokens = estimate_tokens(entry_text)
             if tokens_used + entry_tokens > self._file_token_budget:
                 break
             entries.append({"role": "system", "content": entry_text})
             tokens_used += entry_tokens
         return entries
+
 
     async def ingest_single_file(
         self, conversation_id: str, file_name: str, file_type: str, file_content: bytes
@@ -318,18 +350,28 @@ class PerceptionModule(ProcessingModule):
             if not extracted_text or not extracted_text.strip():
                 raise ValueError("Extracted text is empty")
 
-            chunks = self._digester.chunk(
-                extracted_text,
-                chunk_size=self._chunk_size,
-                overlap=self._chunk_overlap,
-            )
+            if hasattr(self._digester, "chunk_with_metadata"):
+                chunks_data = self._digester.chunk_with_metadata(
+                    extracted_text,
+                    chunk_size=self._chunk_size,
+                    overlap=self._chunk_overlap,
+                )
+            else:
+                raw_chunks = self._digester.chunk(
+                    extracted_text,
+                    chunk_size=self._chunk_size,
+                    overlap=self._chunk_overlap,
+                )
+                chunks_data = [{"text": t, "paragraph_indices": []} for t in raw_chunks]
 
             # Delete any existing chunks for this specific file in the conversation
             # to avoid duplicates if re-uploaded
             self._repo.delete_chunks(conversation_id, file_name)
 
             chunk_count = 0
-            for i, chunk_text in enumerate(chunks):
+            for i, chunk_info in enumerate(chunks_data):
+                chunk_text = chunk_info["text"]
+                paragraph_indices = chunk_info.get("paragraph_indices", [])
                 try:
                     embedding_vec = await self._embed.encode_async(chunk_text)
                     embedding_blob = self._embed.serialize(embedding_vec)
@@ -338,6 +380,9 @@ class PerceptionModule(ProcessingModule):
                     continue
 
                 token_count = estimate_tokens(chunk_text)
+
+                import json as _json
+                initial_meta = _json.dumps({"paragraph_indices": paragraph_indices})
 
                 self._repo.insert_chunk(
                     conversation_id=conversation_id,
@@ -348,9 +393,12 @@ class PerceptionModule(ProcessingModule):
                     embedding=embedding_blob,
                     embedding_model=self._embed.model_name,
                     token_count=token_count,
+                    opacity=0,
+                    opacity_meta=initial_meta,
                 )
                 chunk_count += 1
 
             total_tokens = estimate_tokens(extracted_text)
             return total_tokens, chunk_count, extracted_text
+
 

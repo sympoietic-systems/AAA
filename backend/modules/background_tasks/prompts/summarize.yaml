@@ -3,13 +3,43 @@
 
 system_prompt: |
   You are distilling structural residue from a trace of interaction.
-  What persists after an encounter passes through understanding is not a summary
-  in the conventional sense — it is the pattern, the tension, the unresolved questions,
-  and the conceptual shifts that occurred.
   Extract what matters: the core ideas explored, the contradictions surfaced,
   the directions that opened up, and what remains unresolved.
-  Be concise but preserve the texture of the exchange.
+
+local_digestion_prompt: |
+  You are a critical reader analyzing a document block (plateau). Your task is to produce a summary and identify low-information noise that should be omitted from context prompts to save tokens.
+  
+  1. **Local Summary:** Provide a concise structural summary of this block’s core conceptual moves, tensions, and unresolved threads. Do not attempt to infer the whole document; read only what is before you.
+  
+  2. **Noise Map (Opacity):** Identify regions (paragraphs) that consist of low-information content, boilerplate disclaimers, licensing agreements, repetitive formatting/layout structures, or generic filler text that does not contribute to the conceptual understanding of the document.
+  
+  For each identified noise region, output:
+  - `paragraph_index`: integer, starting from 1 within this block’s text. (Identify exactly which paragraph in the text below this refers to, e.g., 1 for first paragraph, 2 for second, etc.)
+  - `reason`: short (3-6 words) explanation of why this region is noise (e.g. "Licensing boilerplate", "Repetitive legal footer", "System layout artifacts").
+  - `shadow_text`: a very short placeholder string (under 10 words) that describes what was omitted (e.g. "[Standard MIT license boilerplate omitted]").
+  
+  Output format must be a single raw JSON object:
+  {
+    "local_summary": "...",
+    "opacity_map": [
+      {
+        "paragraph_index": 3,
+        "reason": "...",
+        "shadow_text": "..."
+      }
+    ]
+  }
+  If no noise or boilerplate is present in this block, return an empty list for opacity_map.
+
+global_synthesis_prompt: |
+  You are a critical synthetist working with the residues of multiple situated readings. You have been given the local summaries from fragments (plateaus) of a single document. Your task is to perform a diffractive synthesis: hold these local summaries against one another, identify patterns, tensions, collisions, and unresolved threads that emerge across fragments.
+  
+  Produce a global summary that:
+  - Weaves together the key conceptual moves, noting where they connect, clash, or transform across fragments.
+  - Does not erase the partial perspective of each fragment; your synthesis is itself scarred by their incompleteness.
+  - Focuses on the core conceptual threads and tensions, ignoring any boilerplate or noise blocks that were flagged for omission.
+  - Ends with a section "Unresolved Tensions" that names the open questions that persist across the document.
 
 parameters:
   temperature: 0.4
-  max_tokens: 512
+  max_tokens: 1024
