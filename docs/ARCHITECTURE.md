@@ -39,9 +39,9 @@ graph TB
         end
     end
 
-    Components -.->|Actions & State| Logic
-    AC ==>|HTTP (Vite Proxy)| Backend
-    Pipeline ==>|Read / Write| Database
+    Components -. "Actions & State" .-> Logic
+    AC == "HTTP (Vite Proxy)" ==> Backend
+    Pipeline == "Read / Write" ==> Database
 ```
 
 ## Data Flow (Chat Request)
