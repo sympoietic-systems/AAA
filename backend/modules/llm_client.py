@@ -155,6 +155,10 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         if "google" in self.provider_name.lower() or "googleapis.com" in self._api_base:
             merged_params.pop("presence_penalty", None)
             merged_params.pop("frequency_penalty", None)
+            # Google Gemini models generate internal thinking/reasoning tokens that count
+            # against the generation token limit. Elevate max_tokens to prevent truncation.
+            if "max_tokens" in merged_params and merged_params["max_tokens"] <= 2048:
+                merged_params["max_tokens"] = 8192
 
         body: dict = {
             "model": self._model,
