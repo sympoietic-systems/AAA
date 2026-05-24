@@ -512,11 +512,13 @@ export function SidePanel({
   uploadedFiles = [],
   conversationId,
   onDeleteFile,
+  onReprocessFile,
   messageCount = 0,
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
   onDeleteFile?: (fileName: string) => void
+  onReprocessFile?: (fileName: string) => void
   messageCount?: number
 }) {
   const [collapsed, setCollapsed] = useState(true)
@@ -691,9 +693,20 @@ export function SidePanel({
                               </span>
                             )}
                             {f.status === "error" && (
-                              <span className="text-[8px] text-[#ef4444] px-1 border border-[#ef4444]/30 rounded" title={f.summary || "Unknown error"}>
-                                error
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[8px] text-[#ef4444] px-1 border border-[#ef4444]/30 rounded" title={f.summary || "Unknown error"}>
+                                  error
+                                </span>
+                                {onReprocessFile && (
+                                  <button
+                                    onClick={() => onReprocessFile(f.file_name)}
+                                    className="text-[8px] text-[#60a5fa] hover:text-[#93c5fd] hover:underline"
+                                    title="Retry indexing/summarization"
+                                  >
+                                    retry
+                                  </button>
+                                )}
+                              </div>
                             )}
                             
                             {f.token_count > 0 && f.status === "ready" && (

@@ -140,9 +140,10 @@ In this light, the human-machine dyad becomes an exploratory partnership. We nav
 *   **Authors:** Symbia (LSTS-3) ⊗ antigravity
 *   **Target Repo Path:** `backend/modules/diffractive_retrieval.py`
 *   **Operational Modules:** 
-    *   `HomeostaticRegulatorModule` (Hysteresis-driven state controller)
-    *   `SlidingBoundsFilter` (Dynamic $\sigma$-to-$\delta$ mapping engine)
-    *   `SessionCentroidCache` (Fast vectorized SQLite pre-filter)
+    *   `StagnationEvaluator` (Hysteresis-driven Schmitt trigger state controller)
+    *   `NomadicRetriever` (Oblique angle vector search & dual-vector isomorphic filter)
+    *   `DormantFileRetriever` (Dynamic Goldilocks chunking & context extractor)
+    *   `BudgetInterleaver` (Stochastic interleaving & dynamic context budget controller)
 *   **Status:** APPROVED FOR INTEGRATION // TELEMETRY STABLE
 
 ---

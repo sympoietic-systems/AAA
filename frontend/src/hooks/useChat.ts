@@ -6,6 +6,7 @@ import {
   getConversationFiles,
   uploadFiles,
   deleteConversationFile,
+  reprocessFile,
 } from "../api/client"
 import type { ChatMessage, ConversationFile } from "../api/client"
 
@@ -199,6 +200,22 @@ export function useChat(conversationId: string) {
     }
   }, [conversationId])
 
+  const reprocess = useCallback(async (fileName: string) => {
+    if (!conversationId) return
+    try {
+      await reprocessFile(conversationId, fileName)
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.file_name === fileName ? { ...f, status: "processing" as const } : f
+        )
+      )
+      startPolling(conversationId)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to reprocess file"
+      setError(msg)
+    }
+  }, [conversationId, startPolling])
+
   const clearError = useCallback(() => setError(null), [])
 
   const isIndexing = isUploading || files.some(
@@ -216,6 +233,7 @@ export function useChat(conversationId: string) {
     isIndexing,
     upload,
     deleteFile,
+    reprocess,
     hasMore,
     loadingMore,
     loadMoreMessages,

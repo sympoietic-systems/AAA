@@ -31,6 +31,7 @@ export default function App() {
     isIndexing,
     upload,
     deleteFile,
+    reprocess,
     hasMore,
     loadingMore,
     loadMoreMessages,
@@ -132,6 +133,7 @@ export default function App() {
         uploadedFiles={uploadedFiles}
         conversationId={conversationId}
         onDeleteFile={deleteFile}
+        onReprocessFile={reprocess}
         messageCount={messages.length}
       />
     </div>

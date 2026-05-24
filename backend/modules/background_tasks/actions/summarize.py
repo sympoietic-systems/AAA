@@ -104,7 +104,7 @@ class SummarizeAction(BackgroundAction):
 
             except Exception as ce:
                 logger.error(f"Error digesting block {idx+1}: {ce}")
-                local_summaries.append(f"Plateau {idx+1} error: {str(ce)}")
+                raise ce
 
         if len(super_chunks) == 1:
             # Single plateau: use the local summary directly
@@ -128,7 +128,7 @@ class SummarizeAction(BackgroundAction):
                 model_used = res.get("model", "")
             except Exception as se:
                 logger.error(f"Error during global synthesis: {se}")
-                final_summary = f"Failed to synthesize summaries. Compiled fragments:\n\n{compiled_text}"
+                raise se
 
         return {
             "content": final_summary,

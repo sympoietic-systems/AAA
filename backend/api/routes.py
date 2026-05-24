@@ -678,7 +678,8 @@ async def get_skills(request: Request):
     return SkillsResponse(pipeline=pipeline, on_demand=on_demand)
 
 
-def _meta_to_skillinfo(meta, status: dict[str, bool], always_run: bool) -> SkillInfo:
+def _meta_to_skillinfo(meta, status: dict[str, bool], always_run: bool, parent_status: Optional[bool] = None) -> SkillInfo:
+    self_status = status.get(meta.name, parent_status if parent_status is not None else False)
     return SkillInfo(
         name=meta.name,
         description=meta.description,
@@ -686,9 +687,9 @@ def _meta_to_skillinfo(meta, status: dict[str, bool], always_run: bool) -> Skill
         always_run=always_run,
         triggers=list(meta.triggers),
         cost=meta.cost,
-        status=status.get(meta.name, False),
+        status=self_status,
         children=[
-            _meta_to_skillinfo(child, status, always_run=True)
+            _meta_to_skillinfo(child, status, always_run=True, parent_status=self_status)
             for child in meta.children
         ],
     )
@@ -981,6 +982,8 @@ async def _process_and_summarize_file(
         if background_engine:
             try:
                 res = await background_engine.run("summarize", {"text": extracted_text})
+                if res.get("error"):
+                    raise RuntimeError(res["error"])
                 summary_text = res.get("content", "").strip()
                 summary_model = res.get("model", "")
                 
@@ -1017,7 +1020,7 @@ async def _process_and_summarize_file(
                             )
             except Exception as se:
                 logger.error("Failed to run SummarizeAction for %s: %s", file_name, se)
-                summary_text = "Failed to generate summary."
+                raise se
 
 
         perception_repo.update_file(
@@ -1038,6 +1041,97 @@ async def _process_and_summarize_file(
         if error_repo:
             error_repo.log_error(
                 module="perception_upload",
+                error=e,
+                context={"conversation_id": conversation_id, "file_name": file_name},
+            )
+        try:
+            perception_repo.update_file(
+                conversation_id=conversation_id,
+                file_name=file_name,
+                status="error",
+                summary=f"Failed to process file: {str(e)}"
+            )
+        except Exception:
+            pass
+
+
+async def _reprocess_and_summarize_file_background(
+    app_state,
+    conversation_id: str,
+    file_name: str,
+    file_type: str,
+):
+    perception_repo = app_state.perception_repo
+    background_engine = app_state.background_engine
+    error_repo = app_state.error_repo
+
+    try:
+        chunks = perception_repo.get_by_file(conversation_id, file_name)
+        if not chunks:
+            raise ValueError("No chunks found in database for this file. Please delete and re-upload.")
+
+        sorted_chunks = sorted(chunks, key=lambda c: c.chunk_index)
+        extracted_text = "\n\n".join(c.chunk_text for c in sorted_chunks)
+        token_count = sum(c.token_count for c in sorted_chunks)
+        chunk_count = len(sorted_chunks)
+
+        summary_text = ""
+        summary_model = ""
+        if background_engine:
+            res = await background_engine.run("summarize", {"text": extracted_text})
+            if res.get("error"):
+                raise RuntimeError(res["error"])
+            summary_text = res.get("content", "").strip()
+            summary_model = res.get("model", "")
+            
+            opacity_map = res.get("opacity_map", [])
+            if opacity_map:
+                op_map_by_p = {item["paragraph_index"]: item for item in opacity_map}
+                
+                import json as _json
+                for chunk in sorted_chunks:
+                    try:
+                        meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
+                    except Exception:
+                        meta = {}
+                    
+                    p_indices = meta.get("paragraph_indices", [])
+                    opaque_hits = [op_map_by_p[pi] for pi in p_indices if pi in op_map_by_p]
+                    
+                    if opaque_hits:
+                        reasons = [h["reason"] for h in opaque_hits if h.get("reason")]
+                        shadows = [h["shadow_text"] for h in opaque_hits if h.get("shadow_text")]
+                        
+                        new_meta = {
+                            "paragraph_indices": p_indices,
+                            "opaque_hits": opaque_hits,
+                            "reason": "; ".join(reasons),
+                            "shadow_text": "\n\n".join(shadows),
+                        }
+                        perception_repo.update_chunk_opacity(
+                            chunk_id=chunk.id,
+                            opacity=1,
+                            opacity_meta=_json.dumps(new_meta),
+                        )
+
+        perception_repo.update_file(
+            conversation_id=conversation_id,
+            file_name=file_name,
+            status="ready",
+            summary=summary_text,
+            summary_model=summary_model,
+            token_count=token_count,
+            chunk_count=chunk_count,
+        )
+
+        system_content = f"Processed file: **{file_name}** ({file_type}).\n\nAccording to {summary_model or 'the system'}, this file appears to be about:\n{summary_text or 'No summary could be generated.'}"
+        await _insert_system_message(app_state, conversation_id, system_content)
+
+    except Exception as e:
+        logger.exception("Background reprocessing of %s failed", file_name)
+        if error_repo:
+            error_repo.log_error(
+                module="perception_reprocess",
                 error=e,
                 context={"conversation_id": conversation_id, "file_name": file_name},
             )
@@ -1179,5 +1273,43 @@ async def delete_conversation_file(conversation_id: str, file_name: str, request
         raise HTTPException(status_code=404, detail="File not found in conversation")
         
     perception_repo.delete_file(conversation_id, file_name)
+    return {"status": "success"}
+
+
+@router.post("/conversations/{conversation_id}/files/{file_name}/reprocess")
+async def reprocess_conversation_file(
+    conversation_id: str,
+    file_name: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    state = request.app.state
+    perception_repo = state.perception_repo
+    
+    files = perception_repo.get_files_by_conversation(conversation_id)
+    target_file = None
+    for f in files:
+        if f["file_name"] == file_name:
+            target_file = f
+            break
+            
+    if not target_file:
+        raise HTTPException(status_code=404, detail="File not found in conversation")
+        
+    # Schedule the reprocessing background task
+    perception_repo.update_file(
+        conversation_id=conversation_id,
+        file_name=file_name,
+        status="processing",
+    )
+    
+    background_tasks.add_task(
+        _reprocess_and_summarize_file_background,
+        state,
+        conversation_id,
+        file_name,
+        target_file["file_type"],
+    )
+    
     return {"status": "success"}
 

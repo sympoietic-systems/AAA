@@ -44,6 +44,8 @@ What becomes easier/harder?
 | [011](ADR-011-rhizomatic-file-digestion-and-opacity.md) | Rhizomatic File Ingestion and Relational Opacity | accepted | 2026-05-22 |
 | [012](ADR-012-conversation-pagination-and-lazy-loading.md) | Conversation Pagination, On-Demand Detail Loading, and Render Memoization | accepted | 2026-05-23 |
 | [013](ADR-013-diffractive-retrieval.md) | Diffractive Retrieval and Stagnation Telemetry | accepted | 2026-05-23 |
+| [014](ADR-014-structural-signature-engine.md) | 16-Dimensional Modular Structural Signature Engine | accepted | 2026-05-23 |
+| [015](ADR-015-error-propagation-and-reprocessing.md) | Error Propagation and Manual Reprocessing for File Ingestion | accepted | 2026-05-24 |
 
 
 ## Creating a New ADR

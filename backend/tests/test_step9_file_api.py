@@ -36,6 +36,11 @@ def test_file_endpoints():
         file_record = next(f for f in files_data["files"] if f["file_name"] == "mock_file.txt")
         print(f"File status in DB: {file_record['status']}")
         
+        # 2b. Reprocess the file
+        response = client.post(f"/api/conversations/{conversation_id}/files/mock_file.txt/reprocess")
+        print("Reprocess File Status:", response.status_code)
+        assert response.status_code == 200
+        
         # 3. Clean up / Delete conversation file
         response = client.delete(f"/api/conversations/{conversation_id}/files/mock_file.txt")
         print("Delete File Status:", response.status_code)

@@ -57,6 +57,28 @@ class DiffractiveRetrievalModule(ProcessingModule):
             description="Perturbs conversation loops by retrieving semantically orthogonal Nomadic and Dormant context fragments",
             category="memory",
             always_run=True,
+            children=[
+                SkillMeta(
+                    name="StagnationEvaluator",
+                    description="Calculates loop severity via pairwise similarity, novelty, and entropy to trigger intervention",
+                    category="memory",
+                ),
+                SkillMeta(
+                    name="NomadicRetriever",
+                    description="Retrieves semantically distant but structurally isomorphic memories from other threads",
+                    category="memory",
+                ),
+                SkillMeta(
+                    name="DormantFileRetriever",
+                    description="Retrieves inactive file context segments falling in the dynamic similarity Goldilocks zone",
+                    category="memory",
+                ),
+                SkillMeta(
+                    name="BudgetInterleaver",
+                    description="Interleaves retrieved items and enforces token context limits based on loop intensity",
+                    category="memory",
+                ),
+            ]
         )
 
     def validate(self) -> bool:

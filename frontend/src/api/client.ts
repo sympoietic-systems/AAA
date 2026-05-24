@@ -324,3 +324,20 @@ export async function deleteConversationFile(
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
+export async function reprocessFile(
+  conversationId: string,
+  fileName: string
+): Promise<{ status: string }> {
+  const res = await fetch(
+    `${BASE}/conversations/${conversationId}/files/${encodeURIComponent(fileName)}/reprocess`,
+    {
+      method: "POST",
+    }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Unknown error" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+

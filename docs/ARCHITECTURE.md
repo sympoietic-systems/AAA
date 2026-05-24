@@ -35,6 +35,13 @@ graph TB
             SS2["TopologyScorer\n(markdown structure)"] --> SSC
             SS3["LLMScorer\n(LLM JSON schema analysis)"] --> SSC
         end
+        subgraph Diffractive ["Diffractive Retrieval Submodules"]
+            direction TB
+            D1["StagnationEvaluator\n(hysteresis state machine)"]
+            D2["NomadicRetriever\n(isomorphic memory search)"]
+            D3["DormantFileRetriever\n(document chunk search)"]
+            D4["BudgetInterleaver\n(interleaving & capping)"]
+        end
         
         subgraph Database ["SQLite (WAL)"]
             direction TB
@@ -48,6 +55,8 @@ graph TB
     Components -. "Actions & State" .-> Logic
     AC == "HTTP (Vite Proxy)" ==> Backend
     Pipeline == "Read / Write" ==> Database
+    M7 -.-> Diffractive
+```,StartLine:26,TargetContent:
 ```
 
 ## Data Flow (Chat Request)
@@ -363,6 +372,24 @@ Config: `config.yaml` → `sedimentation.*`, env: `AAA_SEDIMENT_TOKEN_BUDGET`,
 Future (Phase 3): replace with diffractive retrieval using δ index for
 structural isomorphism search across semantic knots.
 
+## Diffractive Retrieval
+
+To prevent conversational loops and stagnation, the `diffractive_retrieval` module perturbs the active context using a four-tier nested submodule architecture:
+
+```mermaid
+graph TD
+    SE["1. StagnationEvaluator<br/>(P_diffract & Hysteresis State)"] --> NR["2. NomadicRetriever<br/>(Cross-Session Goldilocks / Isomorphism)"]
+    SE --> DR["3. DormantFileRetriever<br/>(Document Goldilocks Sediment)"]
+    NR & DR --> BI["4. BudgetInterleaver<br/>(Interleaving & Token Limit Capping)"]
+```
+
+### Submodules
+
+1. **`StagnationEvaluator`**: Computes loop probability $P_{\text{diffract}}$ based on boringness, entropy, and vitality. It drives a Schmitt-trigger state machine to toggle between `FLOWING` and `STAGNANT` states with a 3-turn cohesion lock to prevent flickering.
+2. **`NomadicRetriever`**: Executes cross-session vector search. When stagnation is low, it extracts messages in a sliding Goldilocks zone similarity band. When stagnation is high ($\ge 0.70$), it switches to a Dual-Vector Isomorphic search, targeting semantically distant but structurally identical messages (structural similarity $\ge 0.80$, semantic similarity $\le 0.45$).
+3. **`DormantFileRetriever`**: Searches attached file content for inactive document fragments falling in a sliding Goldilocks zone to introduce static variety.
+4. **`BudgetInterleaver`**: Merges nomadic memory fragments and dormant document fragments round-robin, and caps the result under a dynamically scaled token budget fraction ($0.20$ to $0.55$ of max context).
+
 ## Directory Map
 
 ```
@@ -484,6 +511,7 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | LLM structural scorer | Done | JSON schema analysis via `structural_llm` model pool; `AAA_LLM_SCORER_ENABLED` toggle |
 | Structural justification cache | Done | In-memory SHA256-keyed cache; surfaced in UI debug panel |
 | Structural payload JSON panel | Done | Collapsible per-message debug view with named dimension scores |
+| File reprocessing & error retry | Done | Background exception propagation, `/reprocess` route, and UI retry button; see [ADR-015](decisions/ADR-015-error-propagation-and-reprocessing.md) |
 
 ## Future Extension
 
