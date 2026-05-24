@@ -16,6 +16,7 @@ class ChatRequest(BaseModel):
     speaker: str = Field(default="human", pattern="^(human|apparatus)$")
     conversation_id: str = Field(default="", description="Conversation ID; auto-created if empty")
     attachments: list[AttachmentInfo] | None = None
+    include_structural_scoring: Optional[bool] = None
 
 
 class ChatResponse(BaseModel):
@@ -35,6 +36,10 @@ class ChatResponse(BaseModel):
     context_sent: str | None = None
     model_used: Optional[str] = None
     provider_used: Optional[str] = None
+    structural_justification: Optional[str] = None
+    user_message_id: Optional[int] = None
+    user_structural_signature: Optional[list[float]] = None
+    user_structural_justification: Optional[str] = None
 
 
 class HistoryMessage(BaseModel):
@@ -51,6 +56,7 @@ class HistoryMessage(BaseModel):
     model_used: Optional[str] = None
     provider_used: Optional[str] = None
     structural_signature: Optional[list[float]] = None
+    structural_justification: Optional[str] = None
 
 
 class HistoryResponse(BaseModel):

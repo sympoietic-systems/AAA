@@ -1,4 +1,13 @@
 import logging
+import os
+
+# Bypass system registry proxy settings
+os.environ["NO_PROXY"] = "*"
+os.environ["no_proxy"] = "*"
+for k in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]:
+    if k in os.environ:
+        del os.environ[k]
+
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -167,6 +176,9 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
     api_base = cfg.get("api_base", "https://openrouter.ai/api/v1")
     models = cfg.get("models", [])
     model = cfg.get("model", "")
+    thinking_cfg = cfg.get("thinking", {})
+    thinking = thinking_cfg.get("enabled", False)
+    reasoning_effort = thinking_cfg.get("effort", "low")
 
     if models:
         fallback = cfg.get("fallback_model", "openrouter/free")
@@ -183,6 +195,8 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
             openrouter_keys=openrouter_keys,
             google_api_base=google_api_base,
             cooldown_seconds=60,
+            thinking=thinking,
+            reasoning_effort=reasoning_effort,
         )
 
     if model:
@@ -196,6 +210,8 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
                 model=actual_model,
                 api_base=google_api_base,
                 provider_name="google",
+                thinking=thinking,
+                reasoning_effort=reasoning_effort,
             )
         elif model.startswith("openrouter_router/"):
             actual_model = model.split("openrouter_router/", 1)[1]
@@ -205,12 +221,16 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
                 api_key=key,
                 model=actual_model,
                 api_base=api_base,
+                thinking=thinking,
+                reasoning_effort=reasoning_effort,
             )
         else:
             return OpenRouterProvider(
                 api_key=api_key,
                 model=model,
                 api_base=api_base,
+                thinking=thinking,
+                reasoning_effort=reasoning_effort,
             )
 
     raise ValueError("No model or models configured for background/vision provider")
@@ -247,9 +267,23 @@ async def lifespan(app: FastAPI):
     provider = _create_llm_provider(llm_cfg)
     llm_module = LLMClientModule(provider)
 
+    # ── Create Structural Scorer Provider ─────────────────
+    struct_cfg = config.get("structural_llm", {})
+    if not struct_cfg.get("model") and not struct_cfg.get("models"):
+        bg_cfg = config.get("background_llm", {})
+        struct_cfg = {
+            **bg_cfg,
+            "thinking": {"enabled": False, "effort": "low"}
+        }
+    else:
+        if "thinking" not in struct_cfg:
+            struct_cfg["thinking"] = {"enabled": False, "effort": "low"}
+
+    structural_provider = _create_provider_from_config(struct_cfg)
+
     from backend.modules.structural_engine import CompositeStructuralScorer
     structural_scorer = StructuralScorerModule(
-        CompositeStructuralScorer(llm_provider=provider, config=config)
+        CompositeStructuralScorer(llm_provider=structural_provider, config=config)
     )
 
     ctx_cfg = config.get("context", {})
@@ -444,6 +478,7 @@ async def lifespan(app: FastAPI):
     app.state.pipeline_order = pipeline_order
     app.state.embedder = embedder
     app.state.llm_provider = provider
+    app.state.structural_provider = structural_provider
     app.state.system_prompt_tokens = system_prompt_tokens
 
     # Background tasks engine

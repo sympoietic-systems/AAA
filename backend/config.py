@@ -48,6 +48,10 @@ def _apply_env_overrides(config: dict) -> dict:
         "AAA_BACKGROUND_MODELS": ("background_llm", "models"),
         "AAA_BACKGROUND_API_BASE": ("background_llm", "api_base"),
         "AAA_BACKGROUND_FALLBACK_MODEL": ("background_llm", "fallback_model"),
+        "AAA_STRUCTURAL_MODEL": ("structural_llm", "model"),
+        "AAA_STRUCTURAL_MODELS": ("structural_llm", "models"),
+        "AAA_STRUCTURAL_API_BASE": ("structural_llm", "api_base"),
+        "AAA_STRUCTURAL_FALLBACK_MODEL": ("structural_llm", "fallback_model"),
         "AAA_VISION_MODEL": ("vision_llm", "model"),
         "AAA_VISION_API_BASE": ("vision_llm", "api_base"),
     }
@@ -97,6 +101,9 @@ def _apply_env_overrides(config: dict) -> dict:
     if diffractive_count is not None:
         config.setdefault("diffractive_retrieval", {})["max_diffractive_count"] = int(diffractive_count)
 
+    llm_scorer_env = os.environ.get("AAA_LLM_SCORER_ENABLED")
+    if llm_scorer_env is not None:
+        config.setdefault("structural_signature", {})["llm_scorer_enabled"] = llm_scorer_env.lower() in ("true", "1", "yes")
 
     thinking_env = os.environ.get("AAA_LLM_THINKING")
     if thinking_env is not None:
@@ -131,6 +138,10 @@ def _apply_env_overrides(config: dict) -> dict:
     if vision_api_key:
         config.setdefault("vision_llm", {})["api_key"] = vision_api_key
 
+    structural_api_key = os.environ.get("AAA_STRUCTURAL_API_KEY") or os.environ.get("AAA_BACKGROUND_API_KEY") or os.environ.get("AAA_LLM_API_KEY")
+    if structural_api_key:
+        config.setdefault("structural_llm", {})["api_key"] = structural_api_key
+
     google_api_key = os.environ.get("AAA_GOOGLE_API_KEY")
     google_keys = [k.strip() for k in google_api_key.split(",") if k.strip()] if google_api_key else []
 
@@ -143,7 +154,7 @@ def _apply_env_overrides(config: dict) -> dict:
     google_api_base = os.environ.get("AAA_GOOGLE_API_BASE")
     deepseek_api_base = os.environ.get("AAA_DEEPSEEK_API_BASE") or os.environ.get("AAA_LLM_API_BASE")
 
-    for section in ("llm", "background_llm", "vision_llm"):
+    for section in ("llm", "background_llm", "vision_llm", "structural_llm"):
         cfg = config.setdefault(section, {})
         if google_keys:
             cfg["google_keys"] = google_keys

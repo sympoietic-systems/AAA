@@ -29,6 +29,12 @@ graph TB
             direction LR
             M1["embedder"] --> M1_5["structural_scorer"] --> M2["perception"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["diffractive_retrieval"] --> M8["prompt_assembler"] --> M9["homeostatic_regulator"] --> M10["llm_client"]
         end
+        subgraph Structural ["Structural Scoring (out-of-pipeline)"]
+            direction TB
+            SS1["LexiconScorer\n(vocabulary taxonomy)"] --> SSC["CompositeStructuralScorer"]
+            SS2["TopologyScorer\n(markdown structure)"] --> SSC
+            SS3["LLMScorer\n(LLM JSON schema analysis)"] --> SSC
+        end
         
         subgraph Database ["SQLite (WAL)"]
             direction TB
@@ -137,6 +143,7 @@ Legacy migration: a "Legacy" conversation (UUID `00000000-...`) is auto-created 
 | `embedding_dim` | INTEGER | 384 (validates BLOB size) |
 | `model_used` | TEXT | Name of the LLM model that generated the response |
 | `provider_used` | TEXT | Provider identifier (e.g., google, openrouter) |
+| `structural_signature` | BLOB | 16-dimensional float32 vector (64 bytes) representing cybernetic topology of the message |
 
 Indexes: `idx_conversation_timestamp`, `idx_conversation_log_conv_id`
 
@@ -208,8 +215,10 @@ writes to the `error_log` table, then halts the pipeline.
 
 ```mermaid
 graph LR
-    embedder --> perception --> conversation_metrics --> context_collector --> consolidation_checkpoint --> sedimentation_retrieval --> diffractive_retrieval --> prompt_assembler --> homeostatic_regulator --> llm_client
+    embedder --> structural_scorer --> perception --> conversation_metrics --> context_collector --> consolidation_checkpoint --> sedimentation_retrieval --> diffractive_retrieval --> prompt_assembler --> homeostatic_regulator --> llm_client
 ```
+
+The `structural_scorer` runs **outside** the pipeline as well — called again by `routes.py` post-pipeline to score both the human message and the LLM response independently for storage and UI display.
 
 ### Module Replaceability
 
@@ -270,6 +279,73 @@ Context composition:
 If total exceeds `context.max_tokens`, oldest conversation + file messages are
 trimmed first. System prompt and sediment are never trimmed.
 
+## Structural Signature
+
+Each message is profiled by a **16-dimensional cybernetic taxonomy vector** computed by `CompositeStructuralScorer` (`backend/modules/structural_engine.py`). The vector is stored as a 64-byte BLOB (`float32 × 16`) in `conversation_log.structural_signature` and surfaced in the frontend as the `StructuralAutopoieticGlyph`.
+
+### The 16 Dimensions
+
+| # | Dimension | What it measures |
+|---|-----------|-----------------|
+| 1 | Homeostatic | Negative feedback, stability, dampening |
+| 2 | Amplifying | Positive feedback, runaway growth, cascade |
+| 3 | Cyclic | Autopoietic loops, self-reference, circular |
+| 4 | Bifurcated | Tipping points, thresholds, phase shifts |
+| 5 | Decentralized | Distributed control, peer-to-peer, mesh |
+| 6 | Rhizomatic/Networked | Redundant links, flat lateral paths |
+| 7 | Boundary Permeability | Selectivity of system borders |
+| 8 | Recursion Depth | Nested systems, fractals, scaling |
+| 9 | Variety Filtering | Variety attenuation or control |
+| 10 | Negentropic Complexity | Dense information, ordered structure |
+| 11 | Temporal Latency | Time lags, feedback delay |
+| 12 | Attractor Depth | Resilience, rigidity vs. plasticity |
+| 13 | Symbiotic | Co-evolution, coupling, environmental match |
+| 14 | Nomadic | Boundary crossing, lines of flight, drift |
+| 15 | Conversational Co-Orientation | Dialogue, agreement dynamics |
+| 16 | Substrate Materiality | Physical embodiment vs. symbolic virtuality |
+
+### Composite Scoring Architecture
+
+```
+CompositeStructuralScorer
+  ├─ LexiconScorer   (w=0.4)  — vocabulary taxonomy matching via sigmoid activation
+  ├─ TopologyScorer  (w=0.3)  — markdown structure: headers, lists, links, codeblocks
+  └─ LLMScorer       (w=0.3)  — LLM JSON schema analysis (optional, toggleable)
+```
+
+**LLMScorer** calls the `structural_llm` model pool with a structured prompt requesting a JSON response:
+```json
+{
+  "justification": "concise reasoning string",
+  "scores": [0.0, ..., 1.0]   // exactly 16 floats
+}
+```
+The `justification` string is cached in memory (SHA256-keyed, max 1000 entries) and returned to the frontend for display. The `scores` array drives the actual vector math.
+
+### Enable/Disable Control
+
+The LLM scorer is controlled at two levels:
+- **Global**: `AAA_LLM_SCORER_ENABLED=true/false` in `.env`
+- **Per-request**: `include_structural_scoring` field in the `/api/chat` payload. When `false` (as sent by the MCP server), only `LexiconScorer` + `TopologyScorer` run.
+
+### Model Pool
+
+Uses a dedicated `structural_llm` model pool configured via:
+```
+AAA_STRUCTURAL_MODELS=google_router/gemini-3.5-flash,...
+AAA_STRUCTURAL_FALLBACK_MODEL=openrouter_router/...
+```
+Endpoint routing is handled automatically by the router prefix (`google_router/`, `deepseek_router/`, `openrouter_router/`) — no separate `AAA_STRUCTURAL_API_BASE` needed.
+
+### Frontend Debug Panels
+
+Three collapsible panels appear under each message in `MessageBubble`:
+1. **structural signature** — `StructuralAutopoieticGlyph` radar/bar visualization
+2. **structural justification (debug)** — amber text panel with LLM reasoning
+3. **structural payload (JSON)** — cyan JSON block with named dimension scores + justification
+
+Config: `AAA_LLM_SCORER_ENABLED`, `AAA_STRUCTURAL_MODELS`, `AAA_STRUCTURAL_FALLBACK_MODEL`.
+
 ## Sedimentation
 
 Cross-conversation context retrieval via `SedimentationRetrievalModule`:
@@ -316,6 +392,7 @@ AAA/
 │   │   ├── llm_client.py     Provider-agnostic LLM client
 │   │   ├── context_collector.py       Conversation-scoped history retrieval
 │   │   ├── consolidation_checkpoint.py Consolidation checkpoint injection + trigger
+│   │   ├── structural_engine.py       16-dim cybernetic signature (LexiconScorer + TopologyScorer + LLMScorer)
 │   │   ├── conversation_metrics.py    Real-time vitality metrics (per-conversation)
 │   │   ├── sedimentation_retrieval.py Cross-conversation embedding similarity
 │   │   ├── homeostatic_regulator.py   Metrics → parameter mapping
@@ -338,7 +415,8 @@ AAA/
 │           ├── ConversationList.tsx  Collapsible left sidebar
 │           ├── ChatView.tsx      Main chat container
 │           ├── SidePanel.tsx     Foldable pipeline/vitality/tokens/skills panel
-│           ├── MessageBubble.tsx Markdown + thinking + token counts
+│           ├── MessageBubble.tsx Markdown + thinking + token counts + structural glyph + debug panels
+│           ├── StructuralAutopoieticGlyph.tsx  16-dim radar/bar visualization of cybernetic signature
 │           └── InputBar.tsx      Terminal prompt input
 ├── docs/
 │   ├── TDD.md                Technical Design Document
@@ -402,6 +480,10 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | Tiered context compression | Done | Caveman (mid-tier) + LLM checkpoints (deep); see ADR-007 |
 | Consolidation checkpoint module | Done | Pipeline step: inject checkpoints, trigger background consolidation |
 | SidePanel hierarchy | Done | Collapsible parent-child skill display in right sidebar |
+| Structural signature (16-dim) | Done | LexiconScorer + TopologyScorer + LLMScorer; stored as BLOB per message |
+| LLM structural scorer | Done | JSON schema analysis via `structural_llm` model pool; `AAA_LLM_SCORER_ENABLED` toggle |
+| Structural justification cache | Done | In-memory SHA256-keyed cache; surfaced in UI debug panel |
+| Structural payload JSON panel | Done | Collapsible per-message debug view with named dimension scores |
 
 ## Future Extension
 

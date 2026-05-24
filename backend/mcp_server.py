@@ -57,7 +57,8 @@ async def consult_aaa(message: str, agent_name: str) -> str:
         chat_payload = {
             "content": message,
             "speaker": "human",
-            "conversation_id": conversation_id or ""
+            "conversation_id": conversation_id or "",
+            "include_structural_scoring": False
         }
         
         try:

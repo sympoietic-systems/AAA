@@ -114,6 +114,9 @@ Provides chronological sequencing of physical transactions. Scoped to `conversat
 | `embedding` | BLOB | NOT NULL | Binary serialized `float32` array (384 dim). |
 | `embedding_model` | TEXT | NOT NULL | Model name for re-embedding tracking. |
 | `embedding_dim` | INTEGER | NOT NULL | 384 (validates BLOB size). |
+| `model_used` | TEXT | NULLABLE | LLM model that generated the response. |
+| `provider_used` | TEXT | NULLABLE | Provider identifier (e.g., `model_pool_google`). |
+| `structural_signature` | BLOB | NULLABLE | 16-dimensional `float32` vector (64 bytes) — cybernetic topology profile across homeostatic, amplifying, cyclic, bifurcated, decentralized, rhizomatic, boundary permeability, recursion depth, variety filtering, negentropic complexity, temporal latency, attractor depth, symbiotic, nomadic, conversational co-orientation, and substrate materiality dimensions. |
 
 Indexes: `idx_conversation_timestamp`, `idx_conversation_log_conv_id`.
 

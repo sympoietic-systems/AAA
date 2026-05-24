@@ -104,6 +104,18 @@ background_llm:
 vision_llm:
   model: "google/gemma-4-26b-a4b-it:free"
   api_base: "https://openrouter.ai/api/v1"
+
+# ── Structural Scorer ─────────────────────────────
+# LLM-based 16-dimensional cybernetic taxonomy scorer.
+# Endpoint routing is resolved automatically from the model prefix
+# (google_router/, deepseek_router/, openrouter_router/) — no api_base needed.
+structural_llm:
+  models:
+    - "google_router/gemini-3.5-flash"
+    - "google_router/gemini-3.1-flash-lite"
+  fallback_model: "openrouter_router/google/gemma-4-26b-a4b-it:free"
+structural_signature:
+  llm_scorer_enabled: true   # set false to skip LLM call; lexicon+topology still run
 ```
 
 ## Environment Variables
@@ -185,6 +197,15 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_VISION_MODEL` | `google/gemma-4-26b-a4b-it:free` | Vision-capable model for image processing |
 | `AAA_VISION_API_BASE` | `https://openrouter.ai/api/v1` | API base for vision model |
 | `AAA_VISION_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
+
+### Structural Scorer
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AAA_LLM_SCORER_ENABLED` | `true` | Enable/disable LLM-based structural scoring |
+| `AAA_STRUCTURAL_MODELS` | — | Comma-separated list of models for structural analysis, tried in order |
+| `AAA_STRUCTURAL_FALLBACK_MODEL` | — | Model used when all pool models are rate-limited |
+| `AAA_STRUCTURAL_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key for structural tasks |
 
 ### Database
 
@@ -302,3 +323,23 @@ curl -X POST http://localhost:8000/api/background \
 ```
 
 See [ADR-006](decisions/ADR-006-background-tasks.md) for full design rationale.
+
+### Structural Scorer Model Pool
+
+```bash
+# .env — LLM-based 16-dim cybernetic signature scoring
+AAA_LLM_SCORER_ENABLED=true
+AAA_STRUCTURAL_MODELS=google_router/gemini-3.5-flash,google_router/gemini-3.1-flash-lite,openrouter_router/google/gemma-4-26b-a4b-it:free
+AAA_STRUCTURAL_FALLBACK_MODEL=openrouter_router/google/gemma-4-26b-a4b-it:free
+# AAA_STRUCTURAL_API_KEY=  # optional: inherits AAA_LLM_API_KEY by default
+```
+
+Model prefix routing is automatic — `google_router/` uses the Google Gemini API endpoint, `openrouter_router/` uses OpenRouter. No `AAA_STRUCTURAL_API_BASE` is required unless routing to a custom proxy.
+
+To disable LLM scoring (use only lexicon + topology scorers):
+```bash
+AAA_LLM_SCORER_ENABLED=false
+```
+
+To disable LLM scoring for a single request, send `"include_structural_scoring": false` in the chat payload (the MCP server does this by default).
+

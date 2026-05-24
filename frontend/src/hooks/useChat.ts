@@ -144,12 +144,16 @@ export function useChat(conversationId: string) {
       const response = await sendMessage(content, conversationId || undefined)
       setMessages((prev) => {
         const updated = [...prev]
-        if (response.metrics) {
-          for (let i = updated.length - 1; i >= 0; i--) {
-            if (updated[i].speaker === "human") {
-              updated[i] = { ...updated[i], metrics: response.metrics }
-              break
+        for (let i = updated.length - 1; i >= 0; i--) {
+          if (updated[i].speaker === "human") {
+            updated[i] = {
+              ...updated[i],
+              id: response.user_message_id || updated[i].id,
+              metrics: response.metrics || updated[i].metrics,
+              structural_signature: response.user_structural_signature || undefined,
+              structural_justification: response.user_structural_justification || undefined,
             }
+            break
           }
         }
         updated.push(response)

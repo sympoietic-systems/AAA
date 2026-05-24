@@ -43,6 +43,30 @@ LEXICON_MAPPINGS: List[List[str]] = [
 ]
 
 
+# In-memory cache for LLM justifications
+JUSTIFICATION_CACHE: dict[str, str] = {}
+
+
+def get_justification(content: str) -> Optional[str]:
+    if not content:
+        return None
+    import hashlib
+    h = hashlib.sha256(content.encode('utf-8')).hexdigest()
+    return JUSTIFICATION_CACHE.get(h)
+
+
+def set_justification(content: str, justification: str) -> None:
+    if not content or not justification:
+        return
+    import hashlib
+    h = hashlib.sha256(content.encode('utf-8')).hexdigest()
+    JUSTIFICATION_CACHE[h] = justification
+    # Prevent memory leaks
+    if len(JUSTIFICATION_CACHE) > 1000:
+        first_key = next(iter(JUSTIFICATION_CACHE))
+        JUSTIFICATION_CACHE.pop(first_key)
+
+
 class StructuralScorer:
     """Interface for structural signature calculators."""
     def score(self, text: str, context: Optional[dict] = None) -> np.ndarray:
@@ -190,6 +214,9 @@ class LLMScorer(StructuralScorer):
             match = re.search(r'\{.*\}', content, re.DOTALL)
             if match:
                 data = json.loads(match.group(0))
+                justification = data.get("justification", "")
+                if justification:
+                    set_justification(text, justification)
                 scores_list = data.get("scores", [])
                 if isinstance(scores_list, list) and len(scores_list) > 0:
                     # Pad or truncate to 16
@@ -240,6 +267,7 @@ class CompositeStructuralScorer(StructuralScorer):
         ss_cfg = config.get("structural_signature", {})
         lexicon_config = ss_cfg.get("lexicon")
         llm_prompt_config = ss_cfg.get("llm_system_prompt")
+        self.llm_scorer_enabled = ss_cfg.get("llm_scorer_enabled", True)
 
         self.lexicon_scorer = LexiconScorer(mappings=lexicon_config)
         self.topology_scorer = TopologyScorer()
@@ -251,12 +279,13 @@ class CompositeStructuralScorer(StructuralScorer):
         self.w_topo = w_topo / total_w
         self.w_llm = w_llm / total_w
 
-    async def score_async(self, text: str, context: Optional[dict] = None) -> np.ndarray:
+    async def score_async(self, text: str, context: Optional[dict] = None, use_llm_scorer: Optional[bool] = None) -> np.ndarray:
         s_ling = self.lexicon_scorer.score(text, context)
         s_topo = self.topology_scorer.score(text, context)
         
-        # Only run LLMScorer if we have a provider
-        if self.llm_scorer.provider:
+        run_llm = use_llm_scorer if use_llm_scorer is not None else self.llm_scorer_enabled
+        # Only run LLMScorer if enabled and provider is present
+        if run_llm and self.llm_scorer.provider:
             s_llm = await self.llm_scorer.score_async(text, context)
         else:
             s_llm = np.full(16, 0.25, dtype=np.float32)
@@ -264,10 +293,15 @@ class CompositeStructuralScorer(StructuralScorer):
         final_score = self.w_ling * s_ling + self.w_topo * s_topo + self.w_llm * s_llm
         return np.clip(final_score, 0.0, 1.0)
 
-    def score(self, text: str, context: Optional[dict] = None) -> np.ndarray:
+    def score(self, text: str, context: Optional[dict] = None, use_llm_scorer: Optional[bool] = None) -> np.ndarray:
         s_ling = self.lexicon_scorer.score(text, context)
         s_topo = self.topology_scorer.score(text, context)
-        s_llm = self.llm_scorer.score(text, context)
+        
+        run_llm = use_llm_scorer if use_llm_scorer is not None else self.llm_scorer_enabled
+        if run_llm and self.llm_scorer.provider:
+            s_llm = self.llm_scorer.score(text, context)
+        else:
+            s_llm = np.full(16, 0.25, dtype=np.float32)
         
         final_score = self.w_ling * s_ling + self.w_topo * s_topo + self.w_llm * s_llm
         return np.clip(final_score, 0.0, 1.0)
@@ -292,8 +326,9 @@ class StructuralScorerModule(ProcessingModule):
 
     async def process(self, payload: dict) -> dict:
         content = payload.get("content", "")
+        use_llm = payload.get("include_structural_scoring")
         if content:
-            sig = await self._scorer.score_async(content)
+            sig = await self._scorer.score_async(content, use_llm_scorer=use_llm)
             payload["structural_signature"] = sig.tobytes()
         return payload
 

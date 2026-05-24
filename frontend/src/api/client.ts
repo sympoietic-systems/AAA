@@ -57,6 +57,10 @@ export interface ChatMessage {
   model_used?: string | null
   provider_used?: string | null
   structural_signature?: number[] | null
+  structural_justification?: string | null
+  user_message_id?: number | null
+  user_structural_signature?: number[] | null
+  user_structural_justification?: string | null
 }
 
 export interface AgentInfo {

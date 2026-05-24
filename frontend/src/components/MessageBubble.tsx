@@ -5,6 +5,24 @@ import remarkBreaks from "remark-breaks"
 import type { ChatMessage, MetricsInfo } from "../api/client"
 import { getMessageThinking, getMessageContext } from "../api/client"
 import { StructuralAutopoieticGlyph } from "./StructuralAutopoieticGlyph"
+const DIMENSION_NAMES = [
+  "Homeostatic",
+  "Amplifying",
+  "Cyclic",
+  "Bifurcated",
+  "Decentralized",
+  "Rhizomatic/Networked",
+  "Boundary Permeability",
+  "Recursion Depth",
+  "Variety Filtering",
+  "Negentropic Complexity",
+  "Temporal Latency",
+  "Attractor Depth",
+  "Symbiotic",
+  "Nomadic",
+  "Conversational Co-Orientation",
+  "Substrate Materiality"
+];
 
 function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
   const items: { label: string; full: string; value: number | null; max: number; warn: number; crit: number; invert: boolean; hint: string }[] = [
@@ -143,6 +161,8 @@ export const MessageBubble = memo(function MessageBubble({
   const [sigOpen, setSigOpen] = useState(false)
   const [userExpanded, setUserExpanded] = useState(false)
   const [systemOpen, setSystemOpen] = useState(false)
+  const [justificationOpen, setJustificationOpen] = useState(false)
+  const [payloadOpen, setPayloadOpen] = useState(false)
 
   const [thinkingText, setThinkingText] = useState<string | null>(msg.thinking || null)
   const [loadingThinking, setLoadingThinking] = useState(false)
@@ -216,6 +236,19 @@ export const MessageBubble = memo(function MessageBubble({
 
   const showThinkingButton = !!msg.thinking || (msg.thinking_tokens != null && msg.thinking_tokens > 0)
   const showContextButton = !!msg.context_sent || !!msg.has_context
+
+  const getStructuralJson = () => {
+    if (!msg.structural_signature) return null;
+    const scoresMap: Record<string, number> = {};
+    msg.structural_signature.forEach((val, idx) => {
+      const dimName = DIMENSION_NAMES[idx] || `Dimension ${idx + 1}`;
+      scoresMap[dimName] = val;
+    });
+    return JSON.stringify({
+      scores: scoresMap,
+      justification: msg.structural_justification || null
+    }, null, 2);
+  };
 
   return (
     <div className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
@@ -332,8 +365,44 @@ export const MessageBubble = memo(function MessageBubble({
             <StructuralAutopoieticGlyph
               signature={msg.structural_signature}
               previousSignature={previousSignature}
-              isStagnant={msg.metrics ? msg.metrics.boringness > 0.5 : false}
+              isStagnant={msg.metrics && msg.metrics.boringness != null ? msg.metrics.boringness > 0.5 : false}
             />
+          )}
+        </div>
+      )}
+
+      {msg.structural_justification && (
+        <div className="mt-1">
+          <button
+            onClick={() => setJustificationOpen(!justificationOpen)}
+            className="text-[10px] text-[#eab308]/60 hover:text-[#eab308]/90 transition-colors flex items-center gap-1 font-mono"
+          >
+            <span>{justificationOpen ? "▼" : "▶"}</span>
+            <span>structural justification (debug)</span>
+          </button>
+          {justificationOpen && (
+            <div className="mt-1 pl-3 border-l border-[#eab308]/20 text-xs text-[#888] leading-relaxed whitespace-pre-wrap font-mono bg-[#090909]/40 py-1 pr-2 rounded">
+              {msg.structural_justification}
+            </div>
+          )}
+        </div>
+      )}
+
+      {msg.structural_signature && msg.structural_signature.length > 0 && (
+        <div className="mt-1">
+          <button
+            onClick={() => setPayloadOpen(!payloadOpen)}
+            className="text-[10px] text-[#06b6d4]/60 hover:text-[#06b6d4]/90 transition-colors flex items-center gap-1 font-mono"
+          >
+            <span>{payloadOpen ? "▼" : "▶"}</span>
+            <span>structural payload (JSON)</span>
+          </button>
+          {payloadOpen && (
+            <div className="mt-1 pl-3 border-l border-[#06b6d4]/20 text-xs text-[#888] font-mono bg-[#090909]/40 py-1 pr-2 rounded">
+              <pre className="whitespace-pre-wrap text-[10px] text-[#06b6d4]/95 leading-tight">
+                {getStructuralJson()}
+              </pre>
+            </div>
           )}
         </div>
       )}
@@ -346,6 +415,7 @@ export const MessageBubble = memo(function MessageBubble({
          prevProps.msg.thinking === nextProps.msg.thinking &&
          prevProps.msg.context_sent === nextProps.msg.context_sent &&
          prevProps.msg.metrics === nextProps.msg.metrics &&
+         prevProps.msg.structural_justification === nextProps.msg.structural_justification &&
          JSON.stringify(prevProps.msg.structural_signature) === JSON.stringify(nextProps.msg.structural_signature) &&
          JSON.stringify(prevProps.previousSignature) === JSON.stringify(nextProps.previousSignature);
 })

@@ -124,6 +124,7 @@ structural_signature:
     - ['convers', 'consensus', 'agreement', 'co-orient', 'pask', 'l-user', 'dialogue']
     # 16. Substrate Materiality
     - ['substrat', 'material', 'embod', 'physical', 'foerster', 'hardware', 'silicon', 'meatware']
+  llm_scorer_enabled: true
   llm_system_prompt: "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
 
 

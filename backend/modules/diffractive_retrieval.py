@@ -204,7 +204,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
             from backend.modules.structural_engine import CompositeStructuralScorer
             scorer = CompositeStructuralScorer(llm_provider=None)  # Use fast empirical scorers for latency
             query_text = payload.get("content", "")
-            query_sig = scorer.score(query_text)
+            query_sig = await scorer.score_async(query_text)
 
             raw_candidates = self._message_repo.get_embeddings_and_signatures_except(
                 exclude_conversation_id=conversation_id, limit=500

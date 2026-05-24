@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
-async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]]]:
+async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool]]:
     content_type = request.headers.get("content-type", "")
 
     if "multipart/form-data" in content_type:
@@ -47,6 +47,11 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
         conversation_id = str(form.get("conversation_id", ""))
         speaker = str(form.get("speaker", "human"))
         uploaded_files = form.getlist("files")
+        include_structural_scoring_raw = form.get("include_structural_scoring")
+        if include_structural_scoring_raw is not None:
+            include_structural_scoring = str(include_structural_scoring_raw).lower() in ("true", "1", "yes")
+        else:
+            include_structural_scoring = None
 
         attachments: list[dict] = []
         for f in uploaded_files:
@@ -70,13 +75,14 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
                 "content": file_bytes,
             })
 
-        return content, speaker, conversation_id, (attachments if attachments else None)
+        return content, speaker, conversation_id, (attachments if attachments else None), include_structural_scoring
 
     body = await request.json()
     content = body.get("content", "")
     speaker = body.get("speaker", "human")
     conversation_id = body.get("conversation_id", "")
     json_attachments = body.get("attachments")
+    include_structural_scoring = body.get("include_structural_scoring")
     parsed_attachments = None
     if json_attachments:
         parsed_attachments = [
@@ -88,7 +94,7 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
             for a in json_attachments
         ] if isinstance(json_attachments, list) else None
 
-    return content, speaker, conversation_id, parsed_attachments
+    return content, speaker, conversation_id, parsed_attachments, include_structural_scoring
 
 
 async def _generate_title(engine, first_message: str) -> str:
@@ -174,7 +180,7 @@ def _fire_and_forget_consolidation(engine, message_repo, checkpoint_repo, conver
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: Request):
-    content, speaker, conversation_id, attachments = await _parse_chat_request(request)
+    content, speaker, conversation_id, attachments, include_structural_scoring = await _parse_chat_request(request)
 
     state = request.app.state
     pipeline = state.pipeline
@@ -200,6 +206,7 @@ async def chat(request: Request):
             "content": content,
             "speaker": speaker,
             "conversation_id": conversation_id,
+            "include_structural_scoring": include_structural_scoring,
         }
         if attachments:
             initial_payload["attachments"] = attachments
@@ -226,16 +233,16 @@ async def chat(request: Request):
         content_tokens = estimate_tokens(content)
 
         # Calculate structural signatures
-        scorer = CompositeStructuralScorer(llm_provider=request.app.state.llm_provider)
+        scorer = CompositeStructuralScorer(llm_provider=request.app.state.structural_provider)
         try:
-            user_sig = scorer.score(content)
+            user_sig = await scorer.score_async(content, use_llm_scorer=include_structural_scoring)
             user_sig_blob = user_sig.tobytes()
         except Exception as e:
             logger.warning("Failed to score user message: %s", e)
             user_sig_blob = b""
 
         try:
-            assistant_sig = scorer.score(response_text)
+            assistant_sig = await scorer.score_async(response_text, use_llm_scorer=include_structural_scoring)
             assistant_sig_blob = assistant_sig.tobytes()
         except Exception as e:
             logger.warning("Failed to score assistant message: %s", e)
@@ -320,6 +327,11 @@ async def chat(request: Request):
         if diff_meta:
             request.app.state.latest_diffractive_meta = diff_meta
 
+        from backend.modules.structural_engine import get_justification
+        justification = get_justification(response_text)
+        user_justification = get_justification(content)
+        user_sig_list = user_sig.tolist() if 'user_sig' in locals() and user_sig is not None else None
+
         return ChatResponse(
             id=response_msg.id,
             timestamp=response_msg.timestamp,
@@ -336,6 +348,10 @@ async def chat(request: Request):
             context_sent=result.payload.get("context_sent"),
             model_used=response_msg.model_used,
             provider_used=response_msg.provider_used,
+            structural_justification=justification,
+            user_message_id=msg.id,
+            user_structural_signature=user_sig_list,
+            user_structural_justification=user_justification,
         )
     except HTTPException:
         raise
@@ -363,6 +379,7 @@ async def history(limit: int = 50, offset: int = 0, conversation_id: str = "", r
         conversation_id=conversation_id if conversation_id else None,
     )
     messages: list[HistoryMessage] = []
+    from backend.modules.structural_engine import get_justification
     for r in rows:
         metrics = _build_history_metrics(r)
         
@@ -376,6 +393,8 @@ async def history(limit: int = 50, offset: int = 0, conversation_id: str = "", r
             except Exception:
                 pass
                 
+        justification = get_justification(r["content"])
+
         messages.append(HistoryMessage(
             id=r["id"],
             timestamp=r["timestamp"],
@@ -390,6 +409,7 @@ async def history(limit: int = 50, offset: int = 0, conversation_id: str = "", r
             model_used=r.get("model_used"),
             provider_used=r.get("provider_used"),
             structural_signature=sig_list,
+            structural_justification=justification,
         ))
     
     total_count = repo.count_messages(conversation_id if conversation_id else None)
@@ -912,9 +932,9 @@ async def _insert_system_message(state, conversation_id: str, content: str):
         embedding_model = "none"
 
     # Calculate structural signature
-    scorer = CompositeStructuralScorer(llm_provider=getattr(state, "llm_provider", None))
+    scorer = CompositeStructuralScorer(llm_provider=getattr(state, "structural_provider", None))
     try:
-        sig_vec = scorer.score(content)
+        sig_vec = await scorer.score_async(content)
         sig_blob = sig_vec.tobytes()
     except Exception as e:
         logger.warning("Failed to score system message: %s", e)
