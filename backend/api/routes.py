@@ -2,7 +2,10 @@ import logging
 import uuid
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, Header, Depends
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 from .schemas import (
     AgentInfo,
@@ -35,7 +38,42 @@ from backend.modules.structural_engine import CompositeStructuralScorer
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api")
+AAA_PASSWORD = os.environ.get("AAA_PASSWORD", "").strip()
+
+async def verify_password(authorization: Optional[str] = Header(None)):
+    if not AAA_PASSWORD:
+        return
+    
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    token = None
+    if authorization.startswith("Bearer "):
+        token = authorization[7:]
+    
+    if token != AAA_PASSWORD:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+router = APIRouter(prefix="/api", dependencies=[Depends(verify_password)])
+
+@router.get("/auth/verify")
+async def verify_auth(request: Request):
+    """
+    Check if the client is authenticated (or if authentication is disabled).
+    """
+    return {
+        "status": "authenticated",
+        "auth_enabled": bool(AAA_PASSWORD)
+    }
+
 
 
 async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool]]:

@@ -1,5 +1,54 @@
 const BASE = "/api"
 
+// Intercept global fetch to automatically inject AAA_PASSWORD header for API requests
+const originalFetch = window.fetch
+window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const urlStr = typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url
+  if (urlStr.includes("/api/")) {
+    const password = localStorage.getItem("aaa_password")
+    if (password) {
+      const headers = new Headers(init?.headers || {})
+      if (!headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${password}`)
+      }
+      return originalFetch(input, { ...init, headers })
+    }
+  }
+  return originalFetch(input, init)
+}
+
+export async function checkAuthStatus(): Promise<{ authenticated: boolean; authEnabled: boolean }> {
+  try {
+    const res = await fetch(`${BASE}/auth/verify`)
+    if (res.status === 401) {
+      return { authenticated: false, authEnabled: true }
+    }
+    const data = await res.json().catch(() => ({}))
+    return {
+      authenticated: res.ok,
+      authEnabled: !!data.auth_enabled,
+    }
+  } catch {
+    return { authenticated: true, authEnabled: false }
+  }
+}
+
+export async function verifyPassword(password: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE}/auth/verify`, {
+      headers: { "Authorization": `Bearer ${password}` }
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+export function logout(): void {
+  localStorage.removeItem("aaa_password")
+}
+
+
 export interface MetricsInfo {
   pairwise_similarity: number | null
   conceptual_novelty: number | null

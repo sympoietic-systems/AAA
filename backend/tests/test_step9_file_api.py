@@ -8,6 +8,10 @@ from backend.main import app
 
 def test_file_endpoints():
     with TestClient(app) as client:
+        import os
+        password = os.environ.get("AAA_PASSWORD", "").strip()
+        if password:
+            client.headers.update({"Authorization": f"Bearer {password}"})
         # 1. Upload a mock text file
         mock_file_data = b"This is a mock text file content for indexing and summarization."
         files = {

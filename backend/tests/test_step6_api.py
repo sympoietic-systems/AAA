@@ -7,6 +7,10 @@ from backend.main import app
 
 
 with TestClient(app) as client:
+    import os
+    password = os.environ.get("AAA_PASSWORD", "").strip()
+    if password:
+        client.headers.update({"Authorization": f"Bearer {password}"})
 
     response = client.get("/api/health")
     assert response.status_code == 200

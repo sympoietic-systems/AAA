@@ -1,11 +1,41 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useChat } from "./hooks/useChat"
 import { useConversations } from "./hooks/useConversations"
 import { ChatView } from "./components/ChatView"
 import { ConversationList } from "./components/ConversationList"
 import { SidePanel } from "./components/SidePanel"
+import { checkAuthStatus, verifyPassword, logout } from "./api/client"
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [isAuthEnabled, setIsAuthEnabled] = useState<boolean>(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  useEffect(() => {
+    checkAuthStatus().then((status) => {
+      setIsAuthenticated(status.authenticated)
+      setIsAuthEnabled(status.authEnabled)
+    })
+  }, [])
+
+  const handlePasswordSubmit = async (password: string) => {
+    setAuthError(null)
+    const success = await verifyPassword(password)
+    if (success) {
+      localStorage.setItem("aaa_password", password)
+      setIsAuthenticated(true)
+      window.location.reload()
+    } else {
+      setAuthError("Incorrect password")
+    }
+  }
+
+  const handleLogout = () => {
+    logout()
+    setIsAuthenticated(false)
+    window.location.reload()
+  }
+
   const {
     conversations,
     activeId,
@@ -98,6 +128,49 @@ export default function App() {
     }
   }
 
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#0c0c0c] text-sm font-mono text-[#555] select-none">
+        <span className="animate-pulse">initializing system...</span>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
+        <ConversationList
+          conversations={[]}
+          activeId=""
+          loading={false}
+          onSelect={() => {}}
+          onDelete={() => {}}
+          onNew={() => {}}
+          collapsed={convCollapsed}
+          onToggle={() => setConvCollapsed(!convCollapsed)}
+          showLogout={false}
+        />
+        <ChatView
+          messages={[]}
+          loading={false}
+          error={authError}
+          agentName="..."
+          conversationId=""
+          conversationTitle=""
+          uploadedFiles={[]}
+          onSend={handlePasswordSubmit}
+          onUploadFiles={() => {}}
+          isIndexing={false}
+          onClearError={() => setAuthError(null)}
+          onRenameTitle={() => {}}
+          onGenerateTitle={async () => {}}
+          isPassword={true}
+          className="flex-1 min-w-0"
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
       <ConversationList
@@ -109,6 +182,8 @@ export default function App() {
         onNew={newConversation}
         collapsed={convCollapsed}
         onToggle={() => setConvCollapsed(!convCollapsed)}
+        showLogout={isAuthEnabled}
+        onLogout={handleLogout}
       />
       <ChatView
         messages={messages}

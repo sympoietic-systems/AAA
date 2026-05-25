@@ -22,6 +22,7 @@ interface Props {
   hasMore?: boolean
   loadingMore?: boolean
   onLoadMore?: () => void
+  isPassword?: boolean
 }
 
 export function ChatView({
@@ -42,6 +43,7 @@ export function ChatView({
   hasMore = false,
   loadingMore = false,
   onLoadMore,
+  isPassword = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -103,7 +105,7 @@ export function ChatView({
     <div className={`flex flex-col h-full max-w-5xl mx-auto w-full ${className}`}>
       <header className="flex items-center gap-1.5 px-4 py-3 border-b border-[#222] text-sm">
         <span className="text-[#4ade80]">{'>'}</span>
-        <span className="text-[#888]">{agentName}</span>
+        <span className="text-[#888]">{isPassword ? "authentication" : agentName}</span>
         {conversationId ? (
           <>
             <span className="text-[#444]">{'>'}</span>
@@ -154,32 +156,44 @@ export function ChatView({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 flex flex-col"
       >
-        {loadingMore && (
-          <div className="flex justify-center items-center py-2 text-xs text-[#555] border-b border-[#1a1a1a] mb-4">
-            <span className="animate-pulse">Loading previous messages...</span>
+        {isPassword ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-6 select-none max-w-sm mx-auto my-auto border border-[#222] bg-[#0c0c0c] rounded-sm">
+            <span className="text-2xl text-[#ef4444] mb-3 animate-pulse">⚙</span>
+            <h2 className="text-[#ddd] text-xs font-mono tracking-widest mb-1.5 uppercase">SYSTEM LOCK</h2>
+            <p className="text-[#555] text-[10px] font-mono leading-relaxed uppercase">
+              Authentication required. Enter credentials in prompt below.
+            </p>
           </div>
-        )}
-        {messages.length === 0 && !loading && (
-          <div className="text-[#555] text-sm mt-20">
-            <p>{agentName} v0.1.0 — type a message below.</p>
-          </div>
-        )}
-        {messages.map((msg, idx) => {
-          const prevMsg = idx > 0 ? messages[idx - 1] : null
-          return (
-            <MessageBubble 
-              key={msg.id} 
-              msg={msg} 
-              previousSignature={prevMsg?.structural_signature}
-            />
-          )
-        })}
-        {loading && (
-          <div className="flex items-center gap-2 py-1 text-[#4ade80]">
-            <span className="animate-pulse">▊</span>
-          </div>
+        ) : (
+          <>
+            {loadingMore && (
+              <div className="flex justify-center items-center py-2 text-xs text-[#555] border-b border-[#1a1a1a] mb-4">
+                <span className="animate-pulse">Loading previous messages...</span>
+              </div>
+            )}
+            {messages.length === 0 && !loading && (
+              <div className="text-[#555] text-sm mt-20">
+                <p>{agentName} v0.1.0 — type a message below.</p>
+              </div>
+            )}
+            {messages.map((msg, idx) => {
+              const prevMsg = idx > 0 ? messages[idx - 1] : null
+              return (
+                <MessageBubble 
+                  key={msg.id} 
+                  msg={msg} 
+                  previousSignature={prevMsg?.structural_signature}
+                />
+              )
+            })}
+            {loading && (
+              <div className="flex items-center gap-2 py-1 text-[#4ade80]">
+                <span className="animate-pulse">▊</span>
+              </div>
+            )}
+          </>
         )}
         <div ref={bottomRef} />
       </div>
@@ -198,6 +212,7 @@ export function ChatView({
         onUploadFiles={onUploadFiles}
         disabled={loading}
         isIndexing={isIndexing}
+        isPassword={isPassword}
       />
     </div>
   )

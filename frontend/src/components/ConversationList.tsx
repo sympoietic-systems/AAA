@@ -5,10 +5,13 @@ interface Props {
   activeId: string
   loading: boolean
   onSelect: (id: string) => void
+  // Delete, New
   onDelete: (id: string) => void
   onNew: () => void
   collapsed: boolean
   onToggle: () => void
+  showLogout?: boolean
+  onLogout?: () => void
 }
 
 export function ConversationList({
@@ -20,6 +23,8 @@ export function ConversationList({
   onNew,
   collapsed,
   onToggle,
+  showLogout,
+  onLogout,
 }: Props) {
   return (
     <div
@@ -138,6 +143,19 @@ export function ConversationList({
               </div>
             ))}
           </div>
+          {showLogout && onLogout && (
+            <button
+              onClick={onLogout}
+              className="
+                w-full flex items-center justify-center gap-1.5 px-3 py-2
+                text-[10px] text-[#ef4444] hover:bg-[#221212] hover:text-[#ff6666]
+                border-t border-[#222]
+                transition-colors cursor-pointer mt-auto shrink-0 uppercase tracking-wider font-mono
+              "
+            >
+              <span>logout</span>
+            </button>
+          )}
         </>
       )}
     </div>

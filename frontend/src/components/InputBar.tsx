@@ -7,10 +7,11 @@ interface Props {
   onUploadFiles: (files: File[]) => void
   disabled?: boolean
   isIndexing?: boolean
+  isPassword?: boolean
 }
 
-export function InputBar({ onSend, onUploadFiles, disabled, isIndexing }: Props) {
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+export function InputBar({ onSend, onUploadFiles, disabled, isIndexing, isPassword }: Props) {
+  const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const [inputExpanded, setInputExpanded] = useState(false)
@@ -21,7 +22,8 @@ export function InputBar({ onSend, onUploadFiles, disabled, isIndexing }: Props)
   }, [onUploadFiles])
 
   const handleInput = () => {
-    const el = inputRef.current
+    if (isPassword) return
+    const el = inputRef.current as HTMLTextAreaElement
     if (!el || inputExpanded) return
     el.style.height = "auto"
     el.style.height = `${Math.min(el.scrollHeight, 128)}px`
@@ -35,7 +37,9 @@ export function InputBar({ onSend, onUploadFiles, disabled, isIndexing }: Props)
       onSend(text)
       if (inputRef.current) {
         inputRef.current.value = ""
-        inputRef.current.style.height = "auto"
+        if (!isPassword) {
+          (inputRef.current as HTMLTextAreaElement).style.height = "auto"
+        }
       }
     }
   }
@@ -76,11 +80,11 @@ export function InputBar({ onSend, onUploadFiles, disabled, isIndexing }: Props)
     <div>
       <form
         onSubmit={handleSubmit}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        onDragOver={isPassword ? undefined : handleDragOver}
+        onDragLeave={isPassword ? undefined : handleDragLeave}
+        onDrop={isPassword ? undefined : handleDrop}
         className={`flex items-center border-t border-[#222] bg-[#0f0f0f] px-4 py-3 transition-colors ${
-          dragOver ? "border-[#4ade80] bg-[#111]" : isIndexing ? "border-[#eab308]/40 bg-[#0f0f0c]" : ""
+          !isPassword && dragOver ? "border-[#4ade80] bg-[#111]" : isIndexing ? "border-[#eab308]/40 bg-[#0f0f0c]" : ""
         }`}
       >
         <span className={`mr-2 select-none text-sm font-mono ${
@@ -88,47 +92,63 @@ export function InputBar({ onSend, onUploadFiles, disabled, isIndexing }: Props)
         }`}>
           {isIndexing ? "•" : ">"}
         </span>
-        <textarea
-          ref={inputRef}
-          onKeyDown={handleKeyDown}
-          onInput={handleInput}
-          disabled={disabled}
-          rows={inputExpanded ? 10 : 1}
-          placeholder={
-            dragOver
-              ? "drop files here..."
-              : isIndexing
-              ? "Indexing files in background..."
-              : "type a message..."
-          }
-          className={`flex-1 resize-none bg-transparent text-[#ddd] text-sm outline-none
-                     placeholder:text-[#444] disabled:opacity-30 ${
-                       inputExpanded ? "overflow-y-auto" : "overflow-y-hidden"
-                     }`}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            setInputExpanded(!inputExpanded)
-            if (inputExpanded && inputRef.current) {
-              inputRef.current.style.height = "auto"
+        {isPassword ? (
+          <input
+            type="password"
+            ref={inputRef as any}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            placeholder="enter password to unlock..."
+            className="flex-1 bg-transparent text-[#ddd] text-sm outline-none placeholder:text-[#444] disabled:opacity-30"
+            autoFocus
+          />
+        ) : (
+          <textarea
+            ref={inputRef as any}
+            onKeyDown={handleKeyDown}
+            onInput={handleInput}
+            disabled={disabled}
+            rows={inputExpanded ? 10 : 1}
+            placeholder={
+              dragOver
+                ? "drop files here..."
+                : isIndexing
+                ? "Indexing files in background..."
+                : "type a message..."
             }
-          }}
-          disabled={disabled}
-          className="ml-2 text-[#555] hover:text-[#4ade80] text-sm leading-none disabled:opacity-30 transition-colors"
-          title={inputExpanded ? "collapse input" : "expand input"}
-        >
-          {inputExpanded ? "—" : "↕"}
-        </button>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isIndexing}
-          className="ml-2 text-[#555] hover:text-[#4ade80] text-lg leading-none disabled:opacity-30 transition-colors"
-          title="Attach files"
-        >
-          +
-        </button>
+            className={`flex-1 resize-none bg-transparent text-[#ddd] text-sm outline-none
+                       placeholder:text-[#444] disabled:opacity-30 ${
+                         inputExpanded ? "overflow-y-auto" : "overflow-y-hidden"
+                       }`}
+          />
+        )}
+        {!isPassword && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setInputExpanded(!inputExpanded)
+                if (inputExpanded && inputRef.current) {
+                  (inputRef.current as HTMLTextAreaElement).style.height = "auto"
+                }
+              }}
+              disabled={disabled}
+              className="ml-2 text-[#555] hover:text-[#4ade80] text-sm leading-none disabled:opacity-30 transition-colors"
+              title={inputExpanded ? "collapse input" : "expand input"}
+            >
+              {inputExpanded ? "—" : "↕"}
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || isIndexing}
+              className="ml-2 text-[#555] hover:text-[#4ade80] text-lg leading-none disabled:opacity-30 transition-colors"
+              title="Attach files"
+            >
+              +
+            </button>
+          </>
+        )}
         <button
           type="submit"
           disabled={!canSubmit}
@@ -137,9 +157,9 @@ export function InputBar({ onSend, onUploadFiles, disabled, isIndexing }: Props)
               ? "text-[#4ade80] hover:bg-[#1f2937]"
               : "text-[#333] cursor-not-allowed"
           }`}
-          title="Send message"
+          title={isPassword ? "Unlock application" : "Send message"}
         >
-          Send
+          {isPassword ? "Unlock" : "Send"}
         </button>
         <input
           ref={fileInputRef}
