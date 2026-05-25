@@ -1,4 +1,8 @@
 #!/bin/bash
+# Load fnm (Fast Node Manager)
+export PATH="/home/dev/.local/share/fnm:$PATH"
+eval "$(fnm env --use-on-cd)"
+
 # Resolve the directory of the frontend project
 cd "$(dirname "$0")/frontend"
 
