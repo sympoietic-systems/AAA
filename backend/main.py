@@ -545,10 +545,20 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
+    from backend.config import load_config
+
+    try:
+        config = load_config()
+        server_cfg = config.get("server", {})
+        host = server_cfg.get("host", "127.0.0.1")
+        port = int(server_cfg.get("port", 8000))
+    except Exception:
+        host = os.environ.get("AAA_SERVER_HOST", "127.0.0.1")
+        port = int(os.environ.get("AAA_SERVER_PORT", 8000))
 
     uvicorn.run(
         "backend.main:app",
-        host="127.0.0.1",
-        port=8000,
+        host=host,
+        port=port,
         reload=False,
     )
