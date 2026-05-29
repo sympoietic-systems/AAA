@@ -136,7 +136,7 @@ export default function App() {
     )
   }
 
-  if (!isAuthenticated) {
+  if (isAuthEnabled && !isAuthenticated) {
     return (
       <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
         <ConversationList
