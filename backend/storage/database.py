@@ -254,6 +254,19 @@ def init_db(db_path: str) -> sqlite3.Connection:
     except sqlite3.OperationalError:
         pass
 
+    # Migration for document collision metadata
+    for col, col_type in [
+        ("interference_score", "REAL DEFAULT 0.0"),
+        ("belief_nodes_implicated", "TEXT"),
+        ("state_vector_impact", "TEXT"),
+    ]:
+        try:
+            conn.execute(
+                f"ALTER TABLE perception_files ADD COLUMN {col} {col_type}"
+            )
+        except sqlite3.OperationalError:
+            pass
+
     try:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS consolidation_checkpoints (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse, DiffractiveInfo, ImageMetadata, WebMetadata, BeliefsResponse } from "../api/client"
+import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse, DiffractiveInfo, ImageMetadata, WebMetadata, DocumentMetadata, BeliefsResponse } from "../api/client"
 import { getSkills, getMetrics, getTokens, getFileSummary, getBeliefs } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -227,6 +227,103 @@ function WebMetadataCard({ metadata, summary }: { metadata: WebMetadata; summary
                 {node}
               </span>
             ))}
+          </div>
+        </div>
+      )}
+    </article>
+  )
+}
+
+function DocumentMetadataCard({ metadata, summary }: { metadata: DocumentMetadata; summary: string | null }) {
+  const [hoveredDim, setHoveredDim] = useState<{ index: number; label: string; desc: string; val: number } | null>(null)
+
+  const vec = metadata.state_vector_impact || []
+  const implicatedNodes = metadata.belief_nodes_implicated || []
+
+  return (
+    <article className="border-l-2 border-[#10b981] p-3 bg-[#091510] relative font-sans text-xs">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] text-[#6c6c8a] font-mono">[ SEDIMENT_TELEMETRY ]</span>
+        <span className="text-[8px] tracking-wider uppercase bg-[#0c251a] text-[#10b981] border border-[#10b981]/30 px-1.5 py-0.5 rounded font-mono">
+          document
+        </span>
+      </div>
+
+      <div className="mb-3 border-b border-[#222]/50 pb-2">
+        <div>
+          <span className="text-[#666] font-mono text-[9px]">Interference Score: </span>
+          <span className="text-[#facc15] font-mono font-bold">
+            {metadata.interference_score.toFixed(4)}
+          </span>
+        </div>
+      </div>
+
+      {summary && (
+        <div className="mb-3">
+          <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1">[ Insight / Summary ]</span>
+          <p className="text-[#e0e0f0] text-[11px] leading-relaxed font-sans">
+            {summary}
+          </p>
+        </div>
+      )}
+
+      {implicatedNodes.length > 0 && (
+        <div className="mb-3">
+          <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1">. . . COLLIDES WITH . . .</span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {implicatedNodes.map((node) => (
+              <span key={node} className="text-[8px] font-mono text-[#10b981] border border-[#10b981]/30 bg-[#10b981]/5 px-1.5 py-0.5 rounded">
+                {node}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {vec.length > 0 && (
+        <div className="mt-3 pt-2.5 border-t border-[#222]/50">
+          <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1.5">[ 16D State Vector Impact ]</span>
+          
+          <div className="flex items-center gap-0.5 h-12 mt-1 border border-[#1a1a24] bg-[#08080c] p-1 rounded w-fit relative">
+            <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-[#333]/50 pointer-events-none" />
+            
+            {vec.map((val: number, idx: number) => {
+              const heightPercent = Math.min(100, Math.max(5, Math.round((val + 0.5) * 100)))
+              const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx}`, desc: "" }
+              const isHovered = hoveredDim?.index === idx
+              const barColor = val >= 0 ? '#10b981' : '#ef4444'
+              return (
+                <div
+                  key={idx}
+                  style={{ height: `${heightPercent}%` }}
+                  onMouseEnter={() => setHoveredDim({ index: idx, label: dimInfo.label, desc: dimInfo.desc, val })}
+                  onMouseLeave={() => setHoveredDim(null)}
+                  className="w-2 transition-all cursor-crosshair relative"
+                >
+                  <div 
+                    className="absolute bottom-0 left-0 right-0 top-0 transition-colors"
+                    style={{ 
+                      backgroundColor: isHovered ? barColor : `${barColor}60`
+                    }}
+                  />
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-2 min-h-[34px] bg-[#08080c] border border-[#1a1a24] p-1.5 rounded font-mono text-[9px] text-[#888] leading-tight transition-all">
+            {hoveredDim ? (
+              <div>
+                <div className="font-bold" style={{ color: hoveredDim.val >= 0 ? '#10b981' : '#ef4444' }}>
+                  {hoveredDim.label}: <span className="text-[#eee]">{hoveredDim.val >= 0 ? '+' : ''}{hoveredDim.val.toFixed(4)}</span>
+                </div>
+                <div className="text-[8px] text-[#666] mt-0.5">{hoveredDim.desc}</div>
+              </div>
+            ) : (
+              <div className="text-[#555] italic flex items-center h-full">
+                Hover over coordinate vectors to inspect state impact...
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1103,7 +1200,7 @@ export function SidePanel({
   const [tokensOpen, setTokensOpen] = useState(false)
   const [sedimentOpen, setSedimentOpen] = useState(false)
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
-  const [loadedSummaries, setLoadedSummaries] = useState<Record<string, { summary: string | null; summary_model: string | null; image_metadata?: ImageMetadata | null; web_metadata?: WebMetadata | null }>>({})
+  const [loadedSummaries, setLoadedSummaries] = useState<Record<string, { summary: string | null; summary_model: string | null; image_metadata?: ImageMetadata | null; web_metadata?: WebMetadata | null; document_metadata?: DocumentMetadata | null }>>({})
   const [loadingSummary, setLoadingSummary] = useState<string | null>(null)
 
   const handleToggleSummary = async (fileName: string) => {
@@ -1123,7 +1220,8 @@ export function SidePanel({
             summary: res.summary,
             summary_model: res.summary_model,
             image_metadata: res.image_metadata,
-            web_metadata: res.web_metadata
+            web_metadata: res.web_metadata,
+            document_metadata: res.document_metadata
           }
         }))
       } catch (err) {
@@ -1334,6 +1432,8 @@ export function SidePanel({
                                     <ImageMetadataCard metadata={loadedSummaries[f.file_name].image_metadata!} />
                                   ) : loadedSummaries[f.file_name]?.web_metadata ? (
                                     <WebMetadataCard metadata={loadedSummaries[f.file_name].web_metadata!} summary={loadedSummaries[f.file_name].summary} />
+                                  ) : loadedSummaries[f.file_name]?.document_metadata ? (
+                                    <DocumentMetadataCard metadata={loadedSummaries[f.file_name].document_metadata!} summary={loadedSummaries[f.file_name].summary} />
                                   ) : (
                                     <div className="p-2 text-[9px] text-[#888] font-mono whitespace-pre-wrap leading-relaxed">
                                       {loadedSummaries[f.file_name]?.summary || "No summary available."}

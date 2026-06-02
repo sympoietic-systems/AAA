@@ -900,6 +900,9 @@ class PerceptionSedimentRepository:
         summary_model: Optional[str] = None,
         token_count: Optional[int] = None,
         chunk_count: Optional[int] = None,
+        interference_score: Optional[float] = None,
+        belief_nodes_implicated: Optional[str] = None,
+        state_vector_impact: Optional[str] = None,
     ) -> None:
         conn = self._conn()
         updates = ["status = ?", "updated_at = CURRENT_TIMESTAMP"]
@@ -916,6 +919,15 @@ class PerceptionSedimentRepository:
         if chunk_count is not None:
             updates.append("chunk_count = ?")
             params.append(chunk_count)
+        if interference_score is not None:
+            updates.append("interference_score = ?")
+            params.append(interference_score)
+        if belief_nodes_implicated is not None:
+            updates.append("belief_nodes_implicated = ?")
+            params.append(belief_nodes_implicated)
+        if state_vector_impact is not None:
+            updates.append("state_vector_impact = ?")
+            params.append(state_vector_impact)
         
         params.extend([conversation_id, file_name])
         query = f"UPDATE perception_files SET {', '.join(updates)} WHERE conversation_id = ? AND file_name = ?"
@@ -926,7 +938,8 @@ class PerceptionSedimentRepository:
     def get_files_by_conversation(self, conversation_id: str) -> list[dict]:
         conn = self._conn()
         rows = conn.execute(
-            """SELECT file_name, file_type, status, summary, summary_model, token_count, chunk_count, created_at, updated_at
+            """SELECT file_name, file_type, status, summary, summary_model, token_count, chunk_count, created_at, updated_at,
+                      interference_score, belief_nodes_implicated, state_vector_impact
                FROM perception_files
                WHERE conversation_id = ?
                ORDER BY created_at DESC""",

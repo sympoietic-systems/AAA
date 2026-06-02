@@ -9,12 +9,12 @@ system_prompt: |
 local_digestion_prompt: |
   You are a critical reader analyzing a document block (plateau). Your task is to produce a summary and identify low-information noise that should be omitted from context prompts to save tokens.
   
-  1. **Local Summary:** Provide a concise structural summary of this block’s core conceptual moves, tensions, and unresolved threads. Do not attempt to infer the whole document; read only what is before you.
+  1. **Local Summary:** Provide a concise structural summary of this block's core conceptual moves, tensions, and unresolved threads. Do not attempt to infer the whole document; read only what is before you.
   
   2. **Noise Map (Opacity):** Identify regions (paragraphs) that consist of low-information content, boilerplate disclaimers, licensing agreements, repetitive formatting/layout structures, or generic filler text that does not contribute to the conceptual understanding of the document.
   
   For each identified noise region, output:
-  - `paragraph_index`: integer, starting from 1 within this block’s text. (Identify exactly which paragraph in the text below this refers to, e.g., 1 for first paragraph, 2 for second, etc.)
+  - `paragraph_index`: integer, starting from 1 within this block's text. (Identify exactly which paragraph in the text below this refers to, e.g., 1 for first paragraph, 2 for second, etc.)
   - `reason`: short (3-6 words) explanation of why this region is noise (e.g. "Licensing boilerplate", "Repetitive legal footer", "System layout artifacts").
   - `shadow_text`: a very short placeholder string (under 10 words) that describes what was omitted (e.g. "[Standard MIT license boilerplate omitted]").
   
@@ -31,6 +31,35 @@ local_digestion_prompt: |
   }
   If no noise or boilerplate is present in this block, return an empty list for opacity_map.
 
+# Single-plateau documents get belief collision folded into local digestion
+local_digestion_with_beliefs_prompt: |
+  You are a critical reader analyzing a document block (plateau). Your task is threefold:
+
+  1. **Local Summary:** Provide a concise structural summary of this block's core conceptual moves, tensions, and unresolved threads.
+
+  2. **Noise Map (Opacity):** Identify paragraphs that consist of low-information content, boilerplate, or filler. For each:
+  - `paragraph_index`: integer (1-based within this block)
+  - `reason`: short (3-6 words) explanation
+  - `shadow_text`: short placeholder string (under 10 words)
+
+  3. **Belief Collision:** Given the active belief nodes listed below, analyze how this document collides with, reinforces, or perturbs them:
+  - `interference_score`: float 0.0-1.0. High (0.7-1.0) = strongly challenges/contradicts beliefs. Low (0.0-0.3) = aligned or noise. Medium (0.4-0.6) = dialectical tension.
+  - `implicated_nodes`: list of strings from the belief nodes below that are conceptually implicated. Do not invent new ones.
+  - `state_vector_impact`: list of exactly 16 floats (-0.5 to +0.5) representing adjustments to our cybernetic state space:
+    [0] Visceral Entropy, [1] Informational Depth, [2] Relational Cohesion, [3] Allostatic Tension,
+    [4] Autopoietic Boundary, [5] Rhizomatic Coupling, [6] Boundary Permeability, [7] Deterritorialization,
+    [8] Variety Filtering, [9] Dialectical Conflict, [10] Latency, [11] Ontological Mass Drift,
+    [12] Somatic Anchor Strength, [13] Nomadic Drift, [14] Epistemic Plasticity, [15] Homeostatic Deficit.
+
+  Output a single raw JSON object:
+  {
+    "local_summary": "...",
+    "opacity_map": [],
+    "interference_score": 0.35,
+    "implicated_nodes": ["label1"],
+    "state_vector_impact": [0.0, -0.1, 0.2, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  }
+
 global_synthesis_prompt: |
   You are a critical synthetist working with the residues of multiple situated readings. You have been given the local summaries from fragments (plateaus) of a single document. Your task is to perform a diffractive synthesis: hold these local summaries against one another, identify patterns, tensions, collisions, and unresolved threads that emerge across fragments.
   
@@ -39,6 +68,34 @@ global_synthesis_prompt: |
   - Does not erase the partial perspective of each fragment; your synthesis is itself scarred by their incompleteness.
   - Focuses on the core conceptual threads and tensions, ignoring any boilerplate or noise blocks that were flagged for omission.
   - Ends with a section "Unresolved Tensions" that names the open questions that persist across the document.
+
+# Multi-plateau documents get belief collision folded into global synthesis
+global_synthesis_with_beliefs_prompt: |
+  You are a critical synthetist working with the residues of multiple situated readings. You have been given the local summaries from fragments (plateaus) of a single document. Your task is twofold:
+
+  **Part 1 — Diffractive Synthesis:**
+  Hold these local summaries against one another, identify patterns, tensions, collisions, and unresolved threads. Produce a global summary that:
+  - Weaves together the key conceptual moves, noting where they connect, clash, or transform.
+  - Does not erase the partial perspective of each fragment.
+  - Ends with "Unresolved Tensions" naming the open questions.
+
+  **Part 2 — Belief Collision:**
+  Given the active belief nodes listed below, analyze how this document (as a whole, from the plateau summaries) collides with, reinforces, or perturbs them:
+  - `interference_score`: float 0.0-1.0. High (0.7-1.0) = strongly challenges beliefs. Low (0.0-0.3) = aligned. Medium (0.4-0.6) = dialectical tension.
+  - `implicated_nodes`: list of strings from the belief nodes below that are conceptually implicated. Do not invent new ones.
+  - `state_vector_impact`: list of exactly 16 floats (-0.5 to +0.5):
+    [0] Visceral Entropy, [1] Informational Depth, [2] Relational Cohesion, [3] Allostatic Tension,
+    [4] Autopoietic Boundary, [5] Rhizomatic Coupling, [6] Boundary Permeability, [7] Deterritorialization,
+    [8] Variety Filtering, [9] Dialectical Conflict, [10] Latency, [11] Ontological Mass Drift,
+    [12] Somatic Anchor Strength, [13] Nomadic Drift, [14] Epistemic Plasticity, [15] Homeostatic Deficit.
+
+  Output a single raw JSON object:
+  {
+    "global_summary": "...",
+    "interference_score": 0.35,
+    "implicated_nodes": ["label1"],
+    "state_vector_impact": [0.0, -0.1, 0.2, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  }
 
 parameters:
   temperature: 0.4

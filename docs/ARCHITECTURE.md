@@ -415,7 +415,7 @@ AAA/
 │   │   ├── perception/       vision_tripartite.yaml
 │   │   ├── web_retrieval/    query_routing.yaml, belief_collision.yaml
 │   │   ├── structural_engine/ classification.yaml
-│   │   └── background_tasks/ title.yaml, summarize.yaml, consolidate.yaml
+│   │   └── background_tasks/ title.yaml, summarize.yaml, consolidate.yaml, document_collision.yaml
 │   ├── modules/
 │   │   ├── base.py           ProcessingModule ABC
 │   │   ├── embedder.py       Local sentence-transformers service
@@ -428,7 +428,7 @@ AAA/
 │   │   ├── conversation_metrics.py    Real-time vitality metrics (per-conversation)
 │   │   ├── sedimentation_retrieval.py Cross-conversation embedding similarity
 │   │   ├── homeostatic_regulator.py   Metrics → parameter mapping
-│   │   └── background_tasks/         Async self-maintenance (title, summarize, consolidate)
+│   │   └── background_tasks/         Async self-maintenance (title, summarize+belief collision, consolidate, document_collision)
 │   ├── storage/
 │   │   ├── database.py       SQLite init, WAL, migrations, legacy conversation
 │   │   ├── models.py         Conversation, Message, MetricsRecord, ErrorLogEntry
@@ -522,6 +522,7 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | Centralized prompts configuration | Done | Relocated all scattered prompts into YAML templates under `backend/prompts/` with robust inline fallbacks. |
 | Dynamic vision model pooling | Done | Prioritized pool of vision models with Google API key rotation & OpenRouter Gemma fallbacks. |
 | Premium Diagnostics UI Telemetry | Done | Custom layouts for somatic ingestion records and exogenous search telemetries in the Side Panel, including a 16D hover coordinate inspector, mono badges for conceptual collision belief nodes, and collapsible OCR drawer. |
+| Document belief collision analysis | Done | Uploaded text/PDF documents undergo belief collision analysis folded into the summarize action (single LLM pass). Produces interference score, implicated belief nodes, and 16D state vector impact. Results displayed in a `DocumentMetadataCard` in the SidePanel. |
 
 ## Future Extension
 

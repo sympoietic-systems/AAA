@@ -21,6 +21,7 @@ from backend.core.pipeline import ProcessingPipeline
 from backend.modules.background_tasks.actions.consolidate import ConsolidateAction
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.title import GenerateTitleAction
+from backend.modules.background_tasks.actions.document_collision import DocumentCollisionAction
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
 from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
 from backend.modules.context_collector import ContextCollectorModule
@@ -576,6 +577,7 @@ async def lifespan(app: FastAPI):
     background_engine.register(GenerateTitleAction())
     background_engine.register(SummarizeAction())
     background_engine.register(ConsolidateAction())
+    background_engine.register(DocumentCollisionAction())
 
     app.state.background_engine = background_engine
     app.state.background_provider = background_provider

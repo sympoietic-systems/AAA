@@ -61,9 +61,10 @@ backend/modules/background_tasks/
     base.py          # BackgroundAction abstract class
     engine.py        # BackgroundTaskEngine — dispatches to actions
     actions/
-        title.py       # GenerateTitleAction
-        summarize.py   # SummarizeAction
-        consolidate.py # ConsolidateAction
+        title.py               # GenerateTitleAction
+        summarize.py           # SummarizeAction (includes belief collision analysis)
+        consolidate.py         # ConsolidateAction
+        document_collision.py  # DocumentCollisionAction (standalone, for direct invocation)
 ```
 
 ### Action Interface
@@ -192,8 +193,9 @@ This handles:
 ```
 POST /api/background
 {
-    "action": "generate_title" | "summarize" | "consolidate",
-    "text": "...",                    # For summarize
+    "action": "generate_title" | "summarize" | "consolidate" | "document_collision",
+    "text": "...",                    # For summarize / document_collision
+    "active_beliefs_list": [...],     # For summarize (optional) — triggers belief collision in-band
     "conversation_id": "...",         # Optional
     "context": {"messages": [...]},   # For consolidate/title
     "use_vision": false               # Route to vision provider
@@ -281,6 +283,8 @@ When a file is uploaded:
 1. The request immediately writes a pending record to the `perception_files` table with `status="uploading"`.
 2. A background task `_process_and_summarize_file` is queued, and the HTTP request returns immediately.
 3. The background task changes the status to `"processing"`, extracts text, chunks the content, generates vector embeddings, and saves them to `perception_sediment`.
-4. It calls `BackgroundTaskEngine.run("summarize", ...)` to produce an LLM summary of the file using the background model pool.
-5. Once completed, it writes the summary to the database, updates the status to `"ready"`, and appends a `"system"` message to the conversation log to trace the operation transparently. If any error occurs, the status transitions to `"error"`.
+4. It fetches the active belief node labels from the belief system (`belief_repo.list_beliefs("symbia")`).
+5. It calls `BackgroundTaskEngine.run("summarize", {text, active_beliefs_list})` — the summarize action produces the LLM summary, opacity map, **and** belief collision metrics (interference score, implicated nodes, 16D state vector impact) in a single unified LLM pass.
+6. It persists the summary and collision metrics to `perception_files`, then calls `metabolize_perception` with perturbation scaled by interference (`1.0 + score × 2.0`).
+7. Once completed, it updates the status to `"ready"` and appends a `"system"` message to the conversation log. If any error occurs, the status transitions to `"error"`.
 

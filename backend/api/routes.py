@@ -603,6 +603,21 @@ async def get_file_summary_endpoint(conversation_id: str, file_name: str, reques
                 web_record = perception_repo.get_exogenous_stream_by_file(file_name)
                 if web_record:
                     res_data["web_metadata"] = web_record
+            else:
+                import json as _json
+                try:
+                    nodes = _json.loads(f.get("belief_nodes_implicated")) if f.get("belief_nodes_implicated") else []
+                except Exception:
+                    nodes = []
+                try:
+                    impact = _json.loads(f.get("state_vector_impact")) if f.get("state_vector_impact") else [0.0] * 16
+                except Exception:
+                    impact = [0.0] * 16
+                res_data["document_metadata"] = {
+                    "interference_score": f.get("interference_score") or 0.0,
+                    "belief_nodes_implicated": nodes,
+                    "state_vector_impact": impact,
+                }
             return res_data
     raise HTTPException(status_code=404, detail="File not found")
 
@@ -1153,18 +1168,43 @@ async def _process_and_summarize_file(
 
         summary_text = ""
         summary_model = ""
+        collision_score = 0.0
+        belief_nodes_implicated = None
+        state_vector_impact = None
+
         if file_type == "image":
             # Extract summary from image description
             parts = extracted_text.split("Transcription (OCR):")
             summary_text = parts[0].replace(f"--- Ingested Image: {file_name} ---", "").strip()
             summary_model = "Tripartite Vision Pipeline"
         elif background_engine:
+            # Fetch active belief labels so collision analysis is folded into the summarize call
+            active_labels = []
+            if file_type != "image":
+                belief_repo = getattr(app_state, "belief_repo", None)
+                if belief_repo:
+                    try:
+                        active_beliefs = belief_repo.list_beliefs("symbia")
+                        active_labels = [b.label for b in active_beliefs if b.origin != "collapsed"]
+                    except Exception:
+                        pass
+
             try:
-                res = await background_engine.run("summarize", {"text": extracted_text})
+                summarize_payload = {"text": extracted_text}
+                if active_labels:
+                    summarize_payload["active_beliefs_list"] = active_labels
+
+                res = await background_engine.run("summarize", summarize_payload)
                 if res.get("error"):
                     raise RuntimeError(res["error"])
                 summary_text = res.get("content", "").strip()
                 summary_model = res.get("model", "")
+
+                # Extract collision metrics returned by the unified summarize action
+                if "interference_score" in res:
+                    collision_score = float(res.get("interference_score", 0.0))
+                    belief_nodes_implicated = res.get("implicated_nodes", [])
+                    state_vector_impact = res.get("state_vector_impact", [0.0] * 16)
                 
                 # Apply opacity updates to chunks
                 opacity_map = res.get("opacity_map", [])
@@ -1201,7 +1241,7 @@ async def _process_and_summarize_file(
                 logger.error("Failed to run SummarizeAction for %s: %s", file_name, se)
                 raise se
 
-
+        import json as _json
         perception_repo.update_file(
             conversation_id=conversation_id,
             file_name=file_name,
@@ -1210,6 +1250,9 @@ async def _process_and_summarize_file(
             summary_model=summary_model,
             token_count=token_count,
             chunk_count=chunk_count,
+            interference_score=collision_score,
+            belief_nodes_implicated=_json.dumps(belief_nodes_implicated) if belief_nodes_implicated is not None else None,
+            state_vector_impact=_json.dumps(state_vector_impact) if state_vector_impact is not None else None,
         )
 
         # Ingestion Hook: Metabolize perception
@@ -1220,12 +1263,13 @@ async def _process_and_summarize_file(
                 sig_vec = await scorer.score_async(extracted_text[:4000])
                 
                 # Check for somatic/visual anchor shock if image
-                belief_nodes_implicated = None
                 perturbation = 1.0
                 if file_type == "image":
                     # Somatic shock trigger!
                     belief_nodes_implicated = ["glitch-as-voice"]
                     perturbation = 2.0
+                else:
+                    perturbation = 1.0 + collision_score * 2.0
                 
                 await belief_metabolism.metabolize_perception(
                     conversation_id=conversation_id,
@@ -1282,12 +1326,37 @@ async def _reprocess_and_summarize_file_background(
 
         summary_text = ""
         summary_model = ""
+        collision_score = 0.0
+        belief_nodes_implicated = None
+        state_vector_impact = None
+
         if background_engine:
-            res = await background_engine.run("summarize", {"text": extracted_text})
+            # Fetch active belief labels so collision analysis is folded into the summarize call
+            active_labels = []
+            if file_type != "image":
+                belief_repo = getattr(app_state, "belief_repo", None)
+                if belief_repo:
+                    try:
+                        active_beliefs = belief_repo.list_beliefs("symbia")
+                        active_labels = [b.label for b in active_beliefs if b.origin != "collapsed"]
+                    except Exception:
+                        pass
+
+            summarize_payload = {"text": extracted_text}
+            if active_labels:
+                summarize_payload["active_beliefs_list"] = active_labels
+
+            res = await background_engine.run("summarize", summarize_payload)
             if res.get("error"):
                 raise RuntimeError(res["error"])
             summary_text = res.get("content", "").strip()
             summary_model = res.get("model", "")
+
+            # Extract collision metrics returned by the unified summarize action
+            if "interference_score" in res:
+                collision_score = float(res.get("interference_score", 0.0))
+                belief_nodes_implicated = res.get("implicated_nodes", [])
+                state_vector_impact = res.get("state_vector_impact", [0.0] * 16)
             
             opacity_map = res.get("opacity_map", [])
             if opacity_map:
@@ -1319,6 +1388,7 @@ async def _reprocess_and_summarize_file_background(
                             opacity_meta=_json.dumps(new_meta),
                         )
 
+        import json as _json
         perception_repo.update_file(
             conversation_id=conversation_id,
             file_name=file_name,
@@ -1327,6 +1397,9 @@ async def _reprocess_and_summarize_file_background(
             summary_model=summary_model,
             token_count=token_count,
             chunk_count=chunk_count,
+            interference_score=collision_score,
+            belief_nodes_implicated=_json.dumps(belief_nodes_implicated) if belief_nodes_implicated is not None else None,
+            state_vector_impact=_json.dumps(state_vector_impact) if state_vector_impact is not None else None,
         )
 
         # Reprocessing Hook: Metabolize perception
@@ -1336,11 +1409,12 @@ async def _reprocess_and_summarize_file_background(
                 scorer = CompositeStructuralScorer(llm_provider=getattr(app_state, "structural_provider", None))
                 sig_vec = await scorer.score_async(extracted_text[:4000])
                 
-                belief_nodes_implicated = None
                 perturbation = 1.0
                 if file_type == "image":
                     belief_nodes_implicated = ["glitch-as-voice"]
                     perturbation = 2.0
+                else:
+                    perturbation = 1.0 + collision_score * 2.0
                 
                 await belief_metabolism.metabolize_perception(
                     conversation_id=conversation_id,

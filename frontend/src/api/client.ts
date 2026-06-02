@@ -198,6 +198,12 @@ export interface WebMetadata {
   timestamp: string
 }
 
+export interface DocumentMetadata {
+  interference_score: number
+  belief_nodes_implicated: string[]
+  state_vector_impact: number[]
+}
+
 export async function getFileSummary(
   conversationId: string,
   fileName: string
@@ -206,6 +212,7 @@ export async function getFileSummary(
   summary_model: string | null
   image_metadata?: ImageMetadata | null
   web_metadata?: WebMetadata | null
+  document_metadata?: DocumentMetadata | null
 }> {
   const res = await fetch(`${BASE}/conversations/${conversationId}/files/${encodeURIComponent(fileName)}/summary`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

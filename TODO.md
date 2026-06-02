@@ -3,7 +3,7 @@
 
 ## OTHER
     [ ] Background belief digester
-    [ ] Belief Digestor for the documents too
+    [x] Belief Digestor for the documents too
 
 ## Future Metrics & Refinements
     [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.
