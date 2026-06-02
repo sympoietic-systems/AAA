@@ -751,6 +751,40 @@ class PerceptionSedimentRepository:
         return _get_tracked_connection(self._db_path)
 
     @with_connection
+    def get_unfinished_files(self) -> list[dict]:
+        conn = self._conn()
+        cursor = conn.execute(
+            """SELECT conversation_id, file_name, file_type, status 
+               FROM perception_files 
+               WHERE status IN ('uploading', 'processing', 'error')"""
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+    @with_connection
+    def get_missed_belief_turns(self) -> list[dict]:
+        conn = self._conn()
+        cursor = conn.execute(
+            """
+            SELECT user_msg.id AS user_id, user_msg.conversation_id, assistant_msg.id AS assistant_id
+            FROM conversation_log user_msg
+            JOIN conversation_log assistant_msg ON assistant_msg.id = (
+                SELECT id FROM conversation_log
+                WHERE id > user_msg.id 
+                  AND conversation_id = user_msg.conversation_id 
+                  AND speaker = 'apparatus'
+                ORDER BY id ASC LIMIT 1
+            )
+            WHERE user_msg.speaker = 'human'
+              AND CAST(user_msg.id AS TEXT) NOT IN (
+                  SELECT source_id FROM belief_events WHERE source_type = 'chat_turn' AND source_id IS NOT NULL
+              )
+            ORDER BY user_msg.id ASC
+            LIMIT 50
+            """
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+    @with_connection
     def insert_chunk(
         self,
         conversation_id: str,
@@ -786,7 +820,10 @@ class PerceptionSedimentRepository:
     ) -> list[PerceptionSediment]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM perception_sediment WHERE conversation_id = ? ORDER BY file_name, chunk_index",
+            """SELECT ps.* FROM perception_sediment ps
+               LEFT JOIN perception_files pf ON ps.conversation_id = pf.conversation_id AND ps.file_name = pf.file_name
+               WHERE ps.conversation_id = ? AND (pf.status IS NULL OR pf.status = 'ready')
+               ORDER BY ps.file_name, ps.chunk_index""",
             (conversation_id,),
         ).fetchall()
         return [_row_to_perception_sediment(r) for r in rows]
@@ -797,7 +834,9 @@ class PerceptionSedimentRepository:
     ) -> list[tuple[int, np.ndarray]]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT id, embedding, embedding_model FROM perception_sediment WHERE conversation_id = ?",
+            """SELECT ps.id, ps.embedding, ps.embedding_model FROM perception_sediment ps
+               LEFT JOIN perception_files pf ON ps.conversation_id = pf.conversation_id AND ps.file_name = pf.file_name
+               WHERE ps.conversation_id = ? AND (pf.status IS NULL OR pf.status = 'ready')""",
             (conversation_id,),
         ).fetchall()
         result: list[tuple[int, np.ndarray]] = []
@@ -970,6 +1009,15 @@ class PerceptionSedimentRepository:
         conn.commit()
 
     @with_connection
+    def delete_chunks_from_index(self, conversation_id: str, file_name: str, from_index: int) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM perception_sediment WHERE conversation_id = ? AND file_name = ? AND chunk_index >= ?",
+            (conversation_id, file_name, from_index),
+        )
+        conn.commit()
+
+    @with_connection
     def get_by_file(
         self, conversation_id: str, file_name: str
     ) -> list[PerceptionSediment]:
@@ -1016,7 +1064,10 @@ class PerceptionSedimentRepository:
     ) -> list[tuple[int, np.ndarray]]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT id, structural_signature FROM perception_sediment WHERE conversation_id = ? AND structural_signature IS NOT NULL",
+            """SELECT ps.id, ps.structural_signature FROM perception_sediment ps
+               LEFT JOIN perception_files pf ON ps.conversation_id = pf.conversation_id AND ps.file_name = pf.file_name
+               WHERE ps.conversation_id = ? AND ps.structural_signature IS NOT NULL
+                 AND (pf.status IS NULL OR pf.status = 'ready')""",
             (conversation_id,),
         ).fetchall()
         result: list[tuple[int, np.ndarray]] = []
@@ -1033,9 +1084,11 @@ class PerceptionSedimentRepository:
     ) -> list[tuple[int, np.ndarray]]:
         conn = self._conn()
         rows = conn.execute(
-            """SELECT id, structural_signature FROM perception_sediment
-               WHERE conversation_id != ? AND conversation_id != '' AND structural_signature IS NOT NULL
-               ORDER BY id DESC LIMIT ?""",
+            """SELECT ps.id, ps.structural_signature FROM perception_sediment ps
+               LEFT JOIN perception_files pf ON ps.conversation_id = pf.conversation_id AND ps.file_name = pf.file_name
+               WHERE ps.conversation_id != ? AND ps.conversation_id != '' AND ps.structural_signature IS NOT NULL
+                 AND (pf.status IS NULL OR pf.status = 'ready')
+               ORDER BY ps.id DESC LIMIT ?""",
             (exclude_conversation_id, limit),
         ).fetchall()
         result: list[tuple[int, np.ndarray]] = []

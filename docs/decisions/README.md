@@ -49,6 +49,8 @@ What becomes easier/harder?
 | [016](ADR-016-extended-perception-and-web-retrieval.md) | Extended Perception, Exogenous Web Retrieval, and Prompts Centralization | accepted | 2026-06-01 |
 | [017](ADR-017-dynamic-autopoietic-belief-metabolism.md) | Dynamic Autopoietic Belief Metabolism | accepted | 2026-06-02 |
 | [018](ADR-018-ui-color-system-and-category-alignment.md) | UI Color System and Category Alignment | accepted | 2026-06-02 |
+| [019](ADR-019-unified-document-belief-collision.md) | Unified Document Belief Collision Analysis | accepted | 2026-06-02 |
+| [020](ADR-020-resumable-indexing-and-startup-scheduler.md) | Resumable Indexing and Startup Background Scheduler | accepted | 2026-06-02 |
 
 
 ## Creating a New ADR

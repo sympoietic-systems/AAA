@@ -2,7 +2,7 @@
     [x] Add the information for the request to see (context, metrics, diffractive range, match, and search candidates in SidePanel)
 
 ## OTHER
-    [ ] Background belief digester
+    [x] Background belief digester (integrated into BackgroundStartupScheduler on restart)
     [x] Belief Digestor for the documents too
 
 ## Future Metrics & Refinements

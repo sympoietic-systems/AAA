@@ -867,6 +867,25 @@ def _meta_to_skillinfo(meta, status: dict[str, bool], always_run: bool, parent_s
 
 
 
+@router.get("/scheduler/status")
+async def get_scheduler_status(request: Request):
+    state = request.app.state
+    scheduler = getattr(state, "startup_scheduler", None)
+    if not scheduler:
+        return {
+            "status": "not_initialized",
+            "indexing_tasks_found": 0,
+            "indexing_tasks_completed": 0,
+            "indexing_tasks_failed": 0,
+            "active_indexing_jobs": [],
+            "belief_turns_found": 0,
+            "belief_turns_completed": 0,
+            "belief_turns_failed": 0,
+            "error_details": "No startup scheduler registered on app state"
+        }
+    return scheduler.get_status()
+
+
 @router.get("/metrics", response_model=MetricsResponse)
 async def get_metrics(request: Request, window: int = 20):
     state = request.app.state
@@ -1148,7 +1167,7 @@ async def _process_and_summarize_file(
     conversation_id: str,
     file_name: str,
     file_type: str,
-    file_content: bytes,
+    file_content: Optional[bytes] = None,
 ):
     perception_module = app_state.perception_module
     perception_repo = app_state.perception_repo
@@ -1494,6 +1513,13 @@ async def upload_conversation_files(
         else:
             file_type = "txt"
 
+        # Persist uploaded file to disk cache
+        upload_dir = os.path.join("backend", "data", "uploads", conversation_id)
+        os.makedirs(upload_dir, exist_ok=True)
+        cached_filepath = os.path.join(upload_dir, f.filename)
+        with open(cached_filepath, "wb") as cache_file:
+            cache_file.write(file_bytes)
+
         perception_repo.create_file(
             conversation_id=conversation_id,
             file_name=f.filename,
@@ -1575,6 +1601,18 @@ async def delete_conversation_file(conversation_id: str, file_name: str, request
     if not exists:
         raise HTTPException(status_code=404, detail="File not found in conversation")
         
+    # Delete from disk cache if exists
+    try:
+        cached_file = os.path.join("backend", "data", "uploads", conversation_id, file_name)
+        if os.path.exists(cached_file):
+            os.remove(cached_file)
+        # Clean up empty parent directory if empty
+        convo_dir = os.path.dirname(cached_file)
+        if os.path.exists(convo_dir) and not os.listdir(convo_dir):
+            os.rmdir(convo_dir)
+    except Exception as e:
+        logger.error(f"Failed to delete disk cache file {file_name}: {e}")
+
     perception_repo.delete_file(conversation_id, file_name)
     return {"status": "success"}
 

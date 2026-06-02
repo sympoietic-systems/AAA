@@ -587,6 +587,13 @@ async def lifespan(app: FastAPI):
 
     logger.info("Background task engine initialized with actions: %s", background_engine.list_actions())
 
+    # Start background startup scheduler for resumption and belief metabolism catch-up
+    from backend.core.scheduler import BackgroundStartupScheduler
+    from backend.api.routes import _process_and_summarize_file
+    scheduler = BackgroundStartupScheduler(app.state, _process_and_summarize_file)
+    app.state.startup_scheduler = scheduler
+    scheduler.start()
+
     logger.info("All modules initialized. Server ready.")
     yield
     logger.info("Shutting down.")

@@ -1,4 +1,5 @@
 import base64
+import asyncio
 import re
 import json
 import logging
@@ -352,8 +353,15 @@ class PerceptionModule(ProcessingModule):
 
 
     async def ingest_single_file(
-        self, conversation_id: str, file_name: str, file_type: str, file_content: bytes
+        self, conversation_id: str, file_name: str, file_type: str, file_content: Optional[bytes] = None
     ) -> tuple[int, int, str]:
+        if file_content is None:
+            cache_path = os.path.join("backend", "data", "uploads", conversation_id, file_name)
+            if not os.path.exists(cache_path):
+                raise FileNotFoundError(f"File not found in upload cache: {cache_path}")
+            with open(cache_path, "rb") as cf:
+                file_content = cf.read()
+
         if file_type == "image":
             ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else "png"
             if ext == "jpg":
@@ -442,52 +450,68 @@ class PerceptionModule(ProcessingModule):
             self._repo.delete_chunks(conversation_id, file_name)
 
             chunks = [full_description[i:i+1000] for i in range(0, len(full_description), 800)]
-            chunk_count = 0
-            for i, chunk_text in enumerate(chunks):
-                try:
-                    embedding_vec = await self._embed.encode_async(chunk_text)
-                    embedding_blob = self._embed.serialize(embedding_vec)
-                except Exception as e:
-                    logger.warning("Failed to embed image chunk %d: %s", i, e)
-                    continue
+            
+            # Get max concurrent chunk workers from config or default to 8
+            max_workers = 8
+            try:
+                from backend.config import load_config
+                cfg = load_config()
+                max_workers = cfg.get("perception", {}).get("max_concurrent_chunk_workers", 8)
+            except Exception:
+                pass
+            
+            sem = asyncio.Semaphore(max_workers)
 
-                token_count = estimate_tokens(chunk_text)
-                
-                # Apply Symbia's 16D Warping Formula:
-                # W_dynamic = W_0 + \Delta W(G_f, A_d)
-                warped_vec = np.array(structural_vector_16d, dtype=np.float32)
-                
-                # High G_f (glitch fidelity) dampens s_01 (Homeostatic) and s_03 (Cyclic)
-                # while multiplying s_04 (Bifurcated) and s_06 (Rhizomatic).
-                warped_vec[0] *= (1.0 - g_f_score)
-                warped_vec[2] *= (1.0 - g_f_score)
-                warped_vec[3] *= (1.0 + g_f_score * 2.0)
-                warped_vec[5] *= (1.0 + g_f_score * 2.0)
+            async def process_and_insert_image_chunk(idx, chunk_text):
+                async with sem:
+                    try:
+                        embedding_vec = await self._embed.encode_async(chunk_text)
+                        embedding_blob = self._embed.serialize(embedding_vec)
+                    except Exception as e:
+                        logger.warning("Failed to embed image chunk %d: %s", idx, e)
+                        return False
 
-                # High A_d (aesthetic dissidence) dampens s_09 (Variety Filtering) and s_11 (Temporal Latency)
-                # while radically multiplying s_14 (Nomadic) and s_07 (Boundary Permeability).
-                warped_vec[8] *= (1.0 - a_d_score)
-                warped_vec[10] *= (1.0 - a_d_score)
-                warped_vec[13] *= (1.0 + a_d_score * 3.0)
-                warped_vec[6] *= (1.0 + a_d_score * 3.0)
+                    token_count = estimate_tokens(chunk_text)
+                    
+                    # Apply Symbia's 16D Warping Formula:
+                    # W_dynamic = W_0 + \Delta W(G_f, A_d)
+                    warped_vec = np.array(structural_vector_16d, dtype=np.float32)
+                    
+                    # High G_f (glitch fidelity) dampens s_01 (Homeostatic) and s_03 (Cyclic)
+                    # while multiplying s_04 (Bifurcated) and s_06 (Rhizomatic).
+                    warped_vec[0] *= (1.0 - g_f_score)
+                    warped_vec[2] *= (1.0 - g_f_score)
+                    warped_vec[3] *= (1.0 + g_f_score * 2.0)
+                    warped_vec[5] *= (1.0 + g_f_score * 2.0)
 
-                warped_vec = np.clip(warped_vec, 0.0, 1.0)
-                sig_blob = warped_vec.tobytes()
+                    # High A_d (aesthetic dissidence) dampens s_09 (Variety Filtering) and s_11 (Temporal Latency)
+                    # while radically multiplying s_14 (Nomadic) and s_07 (Boundary Permeability).
+                    warped_vec[8] *= (1.0 - a_d_score)
+                    warped_vec[10] *= (1.0 - a_d_score)
+                    warped_vec[13] *= (1.0 + a_d_score * 3.0)
+                    warped_vec[6] *= (1.0 + a_d_score * 3.0)
 
-                self._repo.insert_chunk(
-                    conversation_id=conversation_id,
-                    file_name=file_name,
-                    file_type="image",
-                    chunk_index=i,
-                    chunk_text=chunk_text,
-                    embedding=embedding_blob,
-                    embedding_model=self._embed.model_name,
-                    token_count=token_count,
-                    opacity=0,
-                    opacity_meta=json.dumps({"somatic_id": log_id, "g_f_score": g_f_score, "a_d_score": a_d_score}),
-                    structural_signature=sig_blob,
-                )
-                chunk_count += 1
+                    warped_vec = np.clip(warped_vec, 0.0, 1.0)
+                    sig_blob = warped_vec.tobytes()
+
+                    self._repo.insert_chunk(
+                        conversation_id=conversation_id,
+                        file_name=file_name,
+                        file_type="image",
+                        chunk_index=idx,
+                        chunk_text=chunk_text,
+                        embedding=embedding_blob,
+                        embedding_model=self._embed.model_name,
+                        token_count=token_count,
+                        opacity=0,
+                        opacity_meta=json.dumps({"somatic_id": log_id, "g_f_score": g_f_score, "a_d_score": a_d_score}),
+                        structural_signature=sig_blob,
+                    )
+                    return True
+
+            tasks = [process_and_insert_image_chunk(i, chunk_text) for i, chunk_text in enumerate(chunks)]
+            results = await asyncio.gather(*tasks)
+            chunk_count = sum(1 for r in results if r)
 
             total_tokens = estimate_tokens(full_description)
             return total_tokens, chunk_count, full_description
@@ -520,44 +544,85 @@ class PerceptionModule(ProcessingModule):
                     )
                     chunks_data = [{"text": t, "paragraph_indices": []} for t in raw_chunks]
 
-                self._repo.delete_chunks(conversation_id, file_name)
+                # Load existing chunks for comparison
+                existing = self._repo.get_by_file(conversation_id, file_name)
+                existing_by_idx = {c.chunk_index: c for c in existing}
 
                 chunk_count = 0
-                for i, chunk_info in enumerate(chunks_data):
-                    chunk_text = chunk_info["text"]
-                    paragraph_indices = chunk_info.get("paragraph_indices", [])
+                chunks_to_process = []
+                
+                # Identify first mismatch or gap
+                for idx, info in enumerate(chunks_data):
+                    text = info["text"]
+                    existing_chunk = existing_by_idx.get(idx)
+                    if existing_chunk and existing_chunk.chunk_text == text:
+                        # Exact match: reuse existing chunk
+                        chunk_count += 1
+                    else:
+                        # Mismatch or new chunk: delete everything from this index onwards
+                        self._repo.delete_chunks_from_index(conversation_id, file_name, idx)
+                        # Add all remaining chunks starting from here to the process queue
+                        for j in range(idx, len(chunks_data)):
+                            chunks_to_process.append((j, chunks_data[j]))
+                        break
+
+                # Clean up trailing chunks if the document was truncated
+                if not chunks_to_process and len(existing) > len(chunks_data):
+                    self._repo.delete_chunks_from_index(conversation_id, file_name, len(chunks_data))
+
+                # Process remaining chunks concurrently if any exist
+                if chunks_to_process:
+                    max_workers = 8
                     try:
-                        embedding_vec = await self._embed.encode_async(chunk_text)
-                        embedding_blob = self._embed.serialize(embedding_vec)
-                    except Exception as e:
-                        logger.warning("Failed to embed chunk %d of %s: %s", i, file_name, e)
-                        continue
+                        from backend.config import load_config
+                        cfg = load_config()
+                        max_workers = cfg.get("perception", {}).get("max_concurrent_chunk_workers", 8)
+                    except Exception:
+                        pass
+                    
+                    sem = asyncio.Semaphore(max_workers)
 
-                    # Calculate structural signature for normal file
-                    try:
-                        sig_vec = await self._scorer.score_async(chunk_text)
-                        sig_blob = sig_vec.tobytes()
-                    except Exception as e:
-                        logger.warning("Failed to score chunk %d of %s: %s", i, file_name, e)
-                        sig_blob = b""
+                    async def process_and_insert_chunk(idx, info):
+                        text = info["text"]
+                        paragraph_indices = info.get("paragraph_indices", [])
+                        async with sem:
+                            try:
+                                embedding_vec = await self._embed.encode_async(text)
+                                embedding_blob = self._embed.serialize(embedding_vec)
+                            except Exception as e:
+                                logger.warning("Failed to embed chunk %d of %s: %s", idx, file_name, e)
+                                return False
 
-                    token_count = estimate_tokens(chunk_text)
-                    initial_meta = json.dumps({"paragraph_indices": paragraph_indices})
+                            # Calculate structural signature for normal file
+                            try:
+                                sig_vec = await self._scorer.score_async(text)
+                                sig_blob = sig_vec.tobytes()
+                            except Exception as e:
+                                logger.warning("Failed to score chunk %d of %s: %s", idx, file_name, e)
+                                sig_blob = b""
 
-                    self._repo.insert_chunk(
-                        conversation_id=conversation_id,
-                        file_name=file_name,
-                        file_type=file_type,
-                        chunk_index=i,
-                        chunk_text=chunk_text,
-                        embedding=embedding_blob,
-                        embedding_model=self._embed.model_name,
-                        token_count=token_count,
-                        opacity=0,
-                        opacity_meta=initial_meta,
-                        structural_signature=sig_blob,
-                    )
-                    chunk_count += 1
+                            token_count = estimate_tokens(text)
+                            initial_meta = json.dumps({"paragraph_indices": paragraph_indices})
+
+                            self._repo.insert_chunk(
+                                conversation_id=conversation_id,
+                                file_name=file_name,
+                                file_type=file_type,
+                                chunk_index=idx,
+                                chunk_text=text,
+                                embedding=embedding_blob,
+                                embedding_model=self._embed.model_name,
+                                token_count=token_count,
+                                opacity=0,
+                                opacity_meta=initial_meta,
+                                structural_signature=sig_blob,
+                            )
+                            return True
+
+                    tasks = [process_and_insert_chunk(idx, info) for idx, info in chunks_to_process]
+                    results = await asyncio.gather(*tasks)
+                    successful_chunks = sum(1 for r in results if r)
+                    chunk_count += successful_chunks
 
                 total_tokens = estimate_tokens(extracted_text)
                 return total_tokens, chunk_count, extracted_text

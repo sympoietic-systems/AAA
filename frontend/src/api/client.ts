@@ -473,3 +473,21 @@ export async function reprocessFile(
   return res.json()
 }
 
+export interface SchedulerStatusResponse {
+  status: "pending" | "running" | "completed" | "error" | "not_initialized"
+  indexing_tasks_found: number
+  indexing_tasks_completed: number
+  indexing_tasks_failed: number
+  active_indexing_jobs: string[]
+  belief_turns_found: number
+  belief_turns_completed: number
+  belief_turns_failed: number
+  error_details?: string | null
+}
+
+export async function getSchedulerStatus(): Promise<SchedulerStatusResponse> {
+  const res = await fetch(`${BASE}/scheduler/status`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
