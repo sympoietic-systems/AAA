@@ -46,6 +46,7 @@ pipeline:
     - consolidation_checkpoint
     - sedimentation_retrieval
     - diffractive_retrieval
+    - belief_metabolism
     - prompt_assembler
     - homeostatic_regulator
     - llm_client

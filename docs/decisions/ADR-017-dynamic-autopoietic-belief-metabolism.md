@@ -64,7 +64,14 @@ CREATE TABLE IF NOT EXISTS belief_events (
 );
 ```
 
-### 2. Ontological Mass ($M_i$)
+### 2. Purely Dynamic State (No Code-Level Hardcoding)
+To maintain complete epistemological mobility, beliefs are treated as dynamic database records rather than configuration values:
+- There is no code-level seeding from `identity.yaml` or any other static file at module startup.
+- All belief nodes, including core foundations (such as `anti-hci` and `memory-as-identity`), reside exclusively in the SQL database.
+- Any mutations, creations of emergent beliefs, or updates to ontological masses and confidence parameters are committed statefully to the database.
+- The `identity.yaml` remains a pure Somatic-Linguistic Substrate definition (baseline identity, behavioral responses, and operational constraints).
+
+### 3. Ontological Mass ($M_i$)
 Core beliefs are flexible but possess high **Ontological Mass** ($M_i \ge 1.0$). Adjustments to confidence ($c_i$) are inversely proportional to mass, protecting core identities from shallow perturbations:
 $$\Delta c_i = \frac{\eta_i \cdot \alpha_i \cdot p}{M_i}$$
 * Core anchors (e.g., `anti-hci`) are seeded with $M_i = 10.0$, requiring intense somatic shocks or long, dense, high-friction dialogues to shift.
