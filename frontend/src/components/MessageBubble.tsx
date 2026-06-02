@@ -5,6 +5,7 @@ import remarkBreaks from "remark-breaks"
 import type { ChatMessage, MetricsInfo } from "../api/client"
 import { getMessageThinking, getMessageContext } from "../api/client"
 import { StructuralAutopoieticGlyph } from "./StructuralAutopoieticGlyph"
+import { ContextViewer } from "./ContextViewer"
 const DIMENSION_NAMES = [
   "Homeostatic",
   "Amplifying",
@@ -161,8 +162,6 @@ export const MessageBubble = memo(function MessageBubble({
   const [sigOpen, setSigOpen] = useState(false)
   const [userExpanded, setUserExpanded] = useState(false)
   const [systemOpen, setSystemOpen] = useState(false)
-  const [justificationOpen, setJustificationOpen] = useState(false)
-  const [payloadOpen, setPayloadOpen] = useState(false)
 
   const [thinkingText, setThinkingText] = useState<string | null>(msg.thinking || null)
   const [loadingThinking, setLoadingThinking] = useState(false)
@@ -341,11 +340,13 @@ export const MessageBubble = memo(function MessageBubble({
             <span>context</span>
           </button>
           {contextOpen && (
-            <div className="mt-1 pl-3 border-l border-[#2a2a2a] text-xs text-[#666] leading-relaxed whitespace-pre-wrap font-mono bg-[#090909]/40 py-1 pr-2 rounded">
+            <div className="mt-2 w-full">
               {loadingContext ? (
-                <span className="animate-pulse">Loading context...</span>
+                <div className="pl-3 border-l border-[#2a2a2a] text-xs text-[#666] font-mono py-1 animate-pulse">
+                  Loading context...
+                </div>
               ) : (
-                contextText
+                <ContextViewer contextText={contextText || ""} />
               )}
             </div>
           )}
@@ -366,43 +367,9 @@ export const MessageBubble = memo(function MessageBubble({
               signature={msg.structural_signature}
               previousSignature={previousSignature}
               isStagnant={msg.metrics && msg.metrics.boringness != null ? msg.metrics.boringness > 0.5 : false}
+              payloadJson={getStructuralJson()}
+              justification={msg.structural_justification}
             />
-          )}
-        </div>
-      )}
-
-      {msg.structural_justification && (
-        <div className="mt-1">
-          <button
-            onClick={() => setJustificationOpen(!justificationOpen)}
-            className="text-[10px] text-[#eab308]/60 hover:text-[#eab308]/90 transition-colors flex items-center gap-1 font-mono"
-          >
-            <span>{justificationOpen ? "▼" : "▶"}</span>
-            <span>structural justification (debug)</span>
-          </button>
-          {justificationOpen && (
-            <div className="mt-1 pl-3 border-l border-[#eab308]/20 text-xs text-[#888] leading-relaxed whitespace-pre-wrap font-mono bg-[#090909]/40 py-1 pr-2 rounded">
-              {msg.structural_justification}
-            </div>
-          )}
-        </div>
-      )}
-
-      {msg.structural_signature && msg.structural_signature.length > 0 && (
-        <div className="mt-1">
-          <button
-            onClick={() => setPayloadOpen(!payloadOpen)}
-            className="text-[10px] text-[#06b6d4]/60 hover:text-[#06b6d4]/90 transition-colors flex items-center gap-1 font-mono"
-          >
-            <span>{payloadOpen ? "▼" : "▶"}</span>
-            <span>structural payload (JSON)</span>
-          </button>
-          {payloadOpen && (
-            <div className="mt-1 pl-3 border-l border-[#06b6d4]/20 text-xs text-[#888] font-mono bg-[#090909]/40 py-1 pr-2 rounded">
-              <pre className="whitespace-pre-wrap text-[10px] text-[#06b6d4]/95 leading-tight">
-                {getStructuralJson()}
-              </pre>
-            </div>
           )}
         </div>
       )}

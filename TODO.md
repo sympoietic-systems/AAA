@@ -1,6 +1,10 @@
 ## UI
     [x] Add the information for the request to see (context, metrics, diffractive range, match, and search candidates in SidePanel)
 
+## OTHER
+    [ ] Background belief digester
+    [ ] Belief Digestor for the documents too
+
 ## Future Metrics & Refinements
     [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.
     [ ] Implement Aesthetic Dissidence perplexity measurements to trace semantic and stylistic rebellion.

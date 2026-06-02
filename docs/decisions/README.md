@@ -48,6 +48,7 @@ What becomes easier/harder?
 | [015](ADR-015-error-propagation-and-reprocessing.md) | Error Propagation and Manual Reprocessing for File Ingestion | accepted | 2026-05-24 |
 | [016](ADR-016-extended-perception-and-web-retrieval.md) | Extended Perception, Exogenous Web Retrieval, and Prompts Centralization | accepted | 2026-06-01 |
 | [017](ADR-017-dynamic-autopoietic-belief-metabolism.md) | Dynamic Autopoietic Belief Metabolism | accepted | 2026-06-02 |
+| [018](ADR-018-ui-color-system-and-category-alignment.md) | UI Color System and Category Alignment | accepted | 2026-06-02 |
 
 
 ## Creating a New ADR

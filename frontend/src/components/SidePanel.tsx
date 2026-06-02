@@ -299,18 +299,18 @@ function SectionHeader({
   onToggle,
 }: {
   label: string
-  count: number
+  count?: number
   open: boolean
   onToggle: () => void
 }) {
   return (
     <button
       onClick={onToggle}
-      className="w-full flex items-center gap-1.5 py-1 text-left hover:text-[#aaa] text-[#888] text-xs transition-colors"
+      className="w-full flex items-center gap-1.5 py-1 text-left hover:text-[#aaa] text-[#888] text-xs transition-colors font-mono"
     >
       <span className="text-[10px]">{open ? "\u25BC" : "\u25B6"}</span>
       <span>{label}</span>
-      <span className="text-[#444]">({count})</span>
+      {count !== undefined && <span className="text-[#444]">({count})</span>}
     </button>
   )
 }
@@ -466,7 +466,7 @@ function HealthSection({ messageCount }: { messageCount: number }) {
       {error && <p className="text-[9px] text-[#ef4444]">{error}</p>}
 
       {metrics?.latest && (
-        <div className="space-y-0.5">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1.5">
           {renderBar("sim", "pairwise similarity", metrics.latest.pairwise_similarity, 1.0,
             "Is this input repeating the previous one? >0.85 = near-duplicate")}
           {renderBar("nov", "conceptual novelty", metrics.latest.conceptual_novelty, 1.0,
@@ -541,9 +541,81 @@ function DiffractiveTooltip({ title, value, desc }: { title: string; value?: str
       pointer-events-none shadow-lg shadow-black/80
       backdrop-blur-sm
     ">
-      <div className="text-[#c084fc] font-bold text-[10px]">{title}</div>
+      <div className="text-[#f43f5e] font-bold text-[10px]">{title}</div>
       {value && <div className="text-[#777] font-mono text-[8px] mt-0.5">{value}</div>}
       <div className="text-[#888] mt-1 font-normal leading-normal">{desc}</div>
+    </div>
+  )
+}
+
+function BeliefTooltip({
+  title,
+  category,
+  mass,
+  confidence,
+  statement,
+}: {
+  title: string
+  category: string
+  mass: number
+  confidence: number
+  statement: string
+}) {
+  const getCatDesc = (cat: string) => {
+    switch (cat.toLowerCase()) {
+      case "foundational":
+        return "Core stabilizing beliefs. High ontological mass, resistant to perturbation."
+      case "ontological":
+        return "Beliefs regarding the nature of being, reality, and conceptual definitions."
+      case "methodological":
+        return "Operational rules, reasoning patterns, and system methodologies."
+      default:
+        return "Epistemological or general perceptual beliefs."
+    }
+  }
+
+  const getCategoryColor = (cat: string) => {
+    switch (cat.toLowerCase()) {
+      case "foundational": return "#4ade80"
+      case "ontological": return "#a78bfa"
+      case "methodological": return "#facc15"
+      default: return "#60a5fa"
+    }
+  }
+
+  const color = getCategoryColor(category)
+
+  return (
+    <div className="
+      absolute bottom-full left-0 mb-2 px-2.5 py-2
+      bg-[#0f0f15] border border-[#2e2e42] rounded
+      text-[10px] text-[#c0caf5] font-sans leading-relaxed
+      whitespace-normal w-64 z-50
+      opacity-0 group-hover:opacity-100
+      transition-opacity duration-150
+      pointer-events-none shadow-xl shadow-black/90
+      backdrop-blur-md
+      text-left
+    ">
+      <div className="flex justify-between items-center border-b border-[#2e2e42]/50 pb-1 mb-1.5">
+        <span className="font-bold text-[#e0e0f0] font-mono text-[9px]">{title}</span>
+        <span
+          className="text-[8px] uppercase font-mono px-1.5 py-px rounded border"
+          style={{ color, borderColor: `${color}40`, backgroundColor: `${color}10` }}
+        >
+          {category}
+        </span>
+      </div>
+      <div className="font-serif italic text-[#a9b1d6] mb-2 leading-relaxed text-[10.5px]">
+        "{statement}"
+      </div>
+      <div className="grid grid-cols-2 gap-1 text-[8px] font-mono text-[#6c6c8a] border-t border-[#2e2e42]/30 pt-1.5">
+        <div>Mass: <span className="text-white">{mass.toFixed(1)}</span></div>
+        <div>Confidence: <span className="text-white">{(confidence * 100).toFixed(0)}%</span></div>
+      </div>
+      <div className="text-[8px] text-[#565f89] mt-1.5 leading-normal">
+        {getCatDesc(category)}
+      </div>
     </div>
   )
 }
@@ -570,7 +642,7 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
   }
 
   const isActive = diff.state === "STAGNANT"
-  const stateColor = isActive ? "#c084fc" : "#555"
+  const stateColor = isActive ? "#f43f5e" : "#555"
 
   // Cohesion timer blocks
   const maxTimer = 3
@@ -614,7 +686,7 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
         </div>
         <div className="flex gap-1 flex-wrap">
           <span className="text-[#666]">METRICS</span>
-          <span className="group relative cursor-help text-[#c084fc]">
+          <span className="group relative cursor-help text-[#f43f5e]">
             P:{diff.p_diffract.toFixed(2)}
             <DiffractiveTooltip
               title="Diffraction Probability (P)"
@@ -653,7 +725,7 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
         </div>
         <div className="flex gap-1 group relative cursor-help">
           <span className="text-[#666]">LOCK</span>
-          <span className="text-[#c084fc]">[{timerBlocks}]</span>
+          <span className="text-[#f43f5e]">[{timerBlocks}]</span>
           <span className="text-[#555]">({diff.cohesion_timer}t)</span>
           <DiffractiveTooltip
             title="Cohesion Lock Timer"
@@ -674,7 +746,7 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
                   {s.type === "nomadic" ? "NOM" : "DRM"}
                 </span>
                 <span className="text-[#888] truncate max-w-32">{s.source_title}</span>
-                <span className="text-[#c084fc] ml-auto">{"\u03B4"}{s.similarity.toFixed(3)}</span>
+                <span className="text-[#f43f5e] ml-auto">{"\u03B4"}{s.similarity.toFixed(3)}</span>
                 <DiffractiveTooltip
                   title={s.type === "nomadic" ? "Nomadic Memory Source (NOM)" : "Dormant Document Sediment (DRM)"}
                   value={`Similarity (delta): ${s.similarity.toFixed(4)}`}
@@ -700,7 +772,7 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
         <div className="flex gap-1 flex-wrap mt-1 group relative cursor-help">
           <span className="text-[#555]">SEARCH</span>
           <span className="text-[#888]">{diff.candidates_searched} cand</span>
-          <span className="text-[#c084fc]">{diff.items_injected} inj</span>
+          <span className="text-[#f43f5e]">{diff.items_injected} inj</span>
           <span className="text-[#555]">{diff.tokens_used}/{diff.token_budget}tok</span>
           <span className="text-[#444] ml-auto">{diff.duration_ms.toFixed(0)}ms</span>
           <DiffractiveTooltip
@@ -798,15 +870,27 @@ function BeliefsSection({ conversationId, messageCount }: { conversationId?: str
             <span className="text-[9px] text-[#444] italic">No active attractors</span>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {attractor_window.map((label, idx) => (
-                <span
-                  key={label}
-                  className="text-[9px] font-mono bg-[#1a1a2e] text-[#a78bfa] border border-[#a78bfa]/40 px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm"
-                >
-                  <span className="text-[#6c6c8a] text-[8px]">{idx + 1}:</span>
-                  {label}
-                </span>
-              ))}
+              {attractor_window.map((label, idx) => {
+                const b = beliefs.find(x => x.label === label)
+                return (
+                  <span
+                    key={label}
+                    className="relative group text-[9px] font-mono bg-[#1a1a2e] text-[#a78bfa] border border-[#a78bfa]/40 px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm cursor-help"
+                  >
+                    <span className="text-[#6c6c8a] text-[8px]">{idx + 1}:</span>
+                    {label}
+                    {b && (
+                      <BeliefTooltip
+                        title={b.label}
+                        category={b.category}
+                        mass={b.ontological_mass}
+                        confidence={b.confidence}
+                        statement={b.statement}
+                      />
+                    )}
+                  </span>
+                )
+              })}
             </div>
           )}
         </div>
@@ -817,22 +901,42 @@ function BeliefsSection({ conversationId, messageCount }: { conversationId?: str
               [ Spectral Margin - Obsessive Ghosts ]
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {spectral_margin.map((label) => (
-                <span
-                  key={label}
-                  className="text-[9px] font-mono bg-[#1a0f0f] text-[#ef4444]/70 border border-[#ef4444]/20 px-1.5 py-0.5 rounded flex items-center gap-1 opacity-70 line-through"
-                  title="Collapsed belief slot (Confidence < 0.20)"
-                >
-                  👻 {label}
-                </span>
-              ))}
+              {spectral_margin.map((label) => {
+                const b = beliefs.find(x => x.label === label)
+                return (
+                  <span
+                    key={label}
+                    className="relative group text-[9px] font-mono bg-[#1a0f0f] text-[#ef4444]/70 border border-[#ef4444]/20 px-1.5 py-0.5 rounded flex items-center gap-1 opacity-70 line-through cursor-help"
+                  >
+                    👻 {label}
+                    {b && (
+                      <BeliefTooltip
+                        title={b.label}
+                        category={b.category}
+                        mass={b.ontological_mass}
+                        confidence={b.confidence}
+                        statement={b.statement}
+                      />
+                    )}
+                  </span>
+                )
+              })}
             </div>
           </div>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block">
+      <div className="mb-2 flex items-center justify-between text-[8px] font-mono text-[#555] border-b border-[#222]/30 pb-1.5">
+        <span className="text-[#6c6c8a] uppercase tracking-wider">[ Nodes Legend ]</span>
+        <div className="flex gap-2">
+          <span className="text-[#4ade80] flex items-center gap-0.5"><span className="text-[10px]">●</span> foundational</span>
+          <span className="text-[#a78bfa] flex items-center gap-0.5"><span className="text-[10px]">●</span> ontological</span>
+          <span className="text-[#facc15] flex items-center gap-0.5"><span className="text-[10px]">●</span> methodological</span>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block mb-1">
           [ Belief Network Nodes ]
         </span>
         {beliefs.map((b) => {
@@ -850,41 +954,40 @@ function BeliefsSection({ conversationId, messageCount }: { conversationId?: str
           return (
             <div
               key={b.id}
-              className={`border border-[#1f1f2e]/60 bg-[#070709] rounded overflow-hidden transition-all duration-200 ${
-                isCollapsed ? "opacity-60" : ""
+              className={`border border-[#1f1f2e]/30 bg-[#070709] rounded overflow-hidden transition-all duration-200 ${
+                isCollapsed ? "opacity-55" : ""
               }`}
             >
-              <button
+              <div
+                className="relative group p-1.5 flex items-center justify-between hover:bg-[#12121a] cursor-pointer transition-colors"
                 onClick={() => setExpandedBelief(isExpanded ? null : b.id)}
-                className="w-full p-2 text-left hover:bg-[#12121a] flex flex-col gap-1 focus:outline-none"
               >
-                <div className="flex items-center justify-between w-full">
-                  <span
-                    className="font-mono text-[10px] font-bold"
-                    style={{ color: catColor }}
-                  >
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="text-[9px] leading-none" style={{ color: catColor }}>●</span>
+                  <span className="font-mono text-[10px] font-bold truncate text-[#ccc] group-hover:text-[#eee]">
                     {b.label}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[8px] uppercase font-mono text-[#555]">
-                      mass: {b.ontological_mass}
-                    </span>
-                    <span className="text-[10px] font-mono font-bold text-[#eee]">
-                      {(b.confidence * 100).toFixed(0)}%
-                    </span>
-                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 pl-2">
+                  <span className="text-[8px] font-mono text-[#555]">
+                    m:{b.ontological_mass}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-[#aaa] group-hover:text-white">
+                    {(b.confidence * 100).toFixed(0)}%
+                  </span>
+                  <span className="text-[8px] text-[#666] font-mono leading-none">
+                    {isExpanded ? "▼" : "▶"}
+                  </span>
                 </div>
 
-                <div className="w-full h-1 bg-[#151522] rounded-full overflow-hidden relative">
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${b.confidence * 100}%`,
-                      backgroundColor: catColor,
-                    }}
-                  />
-                </div>
-              </button>
+                <BeliefTooltip
+                  title={b.label}
+                  category={b.category}
+                  mass={b.ontological_mass}
+                  confidence={b.confidence}
+                  statement={b.statement}
+                />
+              </div>
 
               {isExpanded && (
                 <div className="px-2 pb-2.5 pt-1 border-t border-[#1a1a24] bg-[#0c0c12] space-y-2 text-[10px] font-sans">
@@ -994,11 +1097,11 @@ export function SidePanel({
   const [error, setError] = useState<string | null>(null)
   const [pipelineOpen, setPipelineOpen] = useState(false)
   const [skillsOpen, setSkillsOpen] = useState(false)
-  const [healthOpen, setHealthOpen] = useState(true)
-  const [beliefsOpen, setBeliefsOpen] = useState(true)
-  const [diffractiveOpen, setDiffractiveOpen] = useState(true)
-  const [tokensOpen, setTokensOpen] = useState(true)
-  const [sedimentOpen, setSedimentOpen] = useState(true)
+  const [healthOpen, setHealthOpen] = useState(false)
+  const [beliefsOpen, setBeliefsOpen] = useState(false)
+  const [diffractiveOpen, setDiffractiveOpen] = useState(false)
+  const [tokensOpen, setTokensOpen] = useState(false)
+  const [sedimentOpen, setSedimentOpen] = useState(false)
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
   const [loadedSummaries, setLoadedSummaries] = useState<Record<string, { summary: string | null; summary_model: string | null; image_metadata?: ImageMetadata | null; web_metadata?: WebMetadata | null }>>({})
   const [loadingSummary, setLoadingSummary] = useState<string | null>(null)
@@ -1032,12 +1135,13 @@ export function SidePanel({
   }
 
   useEffect(() => {
-    getSkills()
-      .then(setData)
-      .catch((e) => setError(e.message))
-  }, [])
+    if ((pipelineOpen || skillsOpen) && !data) {
+      getSkills()
+        .then(setData)
+        .catch((e) => setError(e.message))
+    }
+  }, [pipelineOpen, skillsOpen, data])
 
-  const hasSkills = (data?.on_demand.length ?? 0) > 0
 
   return (
     <div
@@ -1097,7 +1201,6 @@ export function SidePanel({
             <div className="flex flex-col gap-1 mt-1">
               <SectionHeader
                 label="Vitality"
-                count={0}
                 open={healthOpen}
                 onToggle={() => setHealthOpen(!healthOpen)}
               />
@@ -1111,7 +1214,6 @@ export function SidePanel({
             <div className="flex flex-col gap-1 mt-1">
               <SectionHeader
                 label="Beliefs"
-                count={0}
                 open={beliefsOpen}
                 onToggle={() => setBeliefsOpen(!beliefsOpen)}
               />
@@ -1125,7 +1227,6 @@ export function SidePanel({
             <div className="flex flex-col gap-1 mt-1">
               <SectionHeader
                 label="Diffraction"
-                count={0}
                 open={diffractiveOpen}
                 onToggle={() => setDiffractiveOpen(!diffractiveOpen)}
               />
@@ -1139,7 +1240,6 @@ export function SidePanel({
             <div className="flex flex-col gap-1 mt-1">
               <SectionHeader
                 label="Tokens"
-                count={0}
                 open={tokensOpen}
                 onToggle={() => setTokensOpen(!tokensOpen)}
               />
@@ -1251,47 +1351,44 @@ export function SidePanel({
               </div>
             )}
 
-            {data && (
-              <div className="flex flex-col gap-1 mt-1">
-                <SectionHeader
-                  label="Pipeline"
-                  count={data.pipeline.length}
-                  open={pipelineOpen}
-                  onToggle={() => setPipelineOpen(!pipelineOpen)}
-                />
-                {pipelineOpen && (
-                  <div className="pl-3">
-                    {data.pipeline.map((s) => (
-                      <SkillRow key={s.name} skill={s} />
-                    ))}
-                  </div>
-                )}
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Pipeline"
+                count={data ? data.pipeline.length : undefined}
+                open={pipelineOpen}
+                onToggle={() => setPipelineOpen(!pipelineOpen)}
+              />
+              {pipelineOpen && (
+                <div className="pl-3">
+                  {!data && !error && (
+                    <p className="text-[10px] text-[#555] animate-pulse py-1">loading pipeline...</p>
+                  )}
+                  {data && data.pipeline.map((s) => (
+                    <SkillRow key={s.name} skill={s} />
+                  ))}
+                </div>
+              )}
 
-                {hasSkills && (
-                  <>
-                    <SectionHeader
-                      label="Skills"
-                      count={data.on_demand.length}
-                      open={skillsOpen}
-                      onToggle={() => setSkillsOpen(!skillsOpen)}
-                    />
-                    {skillsOpen && (
-                      <div className="pl-3">
-                        {data.on_demand.map((s) => (
-                          <SkillRow key={s.name} skill={s} />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {!hasSkills && (
-                  <p className="text-[10px] text-[#444] mt-1">
-                    no on-demand skills available
-                  </p>
-                )}
-              </div>
-            )}
+              <SectionHeader
+                label="Skills"
+                count={data ? data.on_demand.length : undefined}
+                open={skillsOpen}
+                onToggle={() => setSkillsOpen(!skillsOpen)}
+              />
+              {skillsOpen && (
+                <div className="pl-3">
+                  {!data && !error && (
+                    <p className="text-[10px] text-[#555] animate-pulse py-1">loading skills...</p>
+                  )}
+                  {data && data.on_demand.length === 0 && (
+                    <p className="text-[10px] text-[#444] py-1">no on-demand skills available</p>
+                  )}
+                  {data && data.on_demand.map((s) => (
+                    <SkillRow key={s.name} skill={s} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
