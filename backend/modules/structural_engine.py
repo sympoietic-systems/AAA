@@ -1,6 +1,8 @@
 import logging
 import re
 import json
+from pathlib import Path
+import yaml
 import numpy as np
 from typing import Optional, List, Tuple
 
@@ -165,7 +167,20 @@ class LLMScorer(StructuralScorer):
     """Interrogates the LLM to score the text across the 16 dimensions using a structured schema."""
     def __init__(self, provider = None, system_prompt: Optional[str] = None):
         self.provider = provider
-        self.system_prompt = system_prompt or "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
+        if system_prompt is None:
+            try:
+                prompts_file = Path(__file__).resolve().parents[1] / "prompts" / "structural_engine" / "classification.yaml"
+                if prompts_file.exists():
+                    with open(prompts_file, "r", encoding="utf-8") as f:
+                        c_data = yaml.safe_load(f) or {}
+                    self.system_prompt = c_data.get("system_prompt", "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object.")
+                else:
+                    self.system_prompt = "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
+            except Exception as e:
+                logger.warning("Failed to load taxonomy system prompt from YAML: %s", e)
+                self.system_prompt = "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
+        else:
+            self.system_prompt = system_prompt
 
     async def score_async(self, text: str, context: Optional[dict] = None) -> np.ndarray:
         if not self.provider:

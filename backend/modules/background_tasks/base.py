@@ -6,7 +6,7 @@ import yaml
 
 from backend.modules.llm_client import BaseLLMProvider
 
-PROMPTS_DIR = Path(__file__).parent / "prompts"
+PROMPTS_DIR = Path(__file__).resolve().parents[2] / "prompts" / "background_tasks"
 logger = logging.getLogger(__name__)
 
 

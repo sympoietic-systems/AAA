@@ -411,6 +411,11 @@ AAA/
 │   ├── skills/
 │   │   ├── metadata.py        SkillMeta dataclass
 │   │   └── registry.py        SkillRegistry — extends ModuleRegistry
+│   ├── prompts/              Centralized system, tool, and background prompts
+│   │   ├── perception/       vision_tripartite.yaml
+│   │   ├── web_retrieval/    query_routing.yaml, belief_collision.yaml
+│   │   ├── structural_engine/ classification.yaml
+│   │   └── background_tasks/ title.yaml, summarize.yaml, consolidate.yaml
 │   ├── modules/
 │   │   ├── base.py           ProcessingModule ABC
 │   │   ├── embedder.py       Local sentence-transformers service
@@ -512,6 +517,11 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | Structural justification cache | Done | In-memory SHA256-keyed cache; surfaced in UI debug panel |
 | Structural payload JSON panel | Done | Collapsible per-message debug view with named dimension scores |
 | File reprocessing & error retry | Done | Background exception propagation, `/reprocess` route, and UI retry button; see [ADR-015](decisions/ADR-015-error-propagation-and-reprocessing.md) |
+| Extended perception (Tripartite Vision) | Done | Ingestion of images (PNG, JPEG, WebP) with classification, OCR text extraction, somatic/aesthetic notes, and belief collisions mapping. |
+| Exogenous Web retrieval | Done | Rhizome Web Probe DuckDuckGo crawler & scorer for real-time web-probing context. |
+| Centralized prompts configuration | Done | Relocated all scattered prompts into YAML templates under `backend/prompts/` with robust inline fallbacks. |
+| Dynamic vision model pooling | Done | Prioritized pool of vision models with Google API key rotation & OpenRouter Gemma fallbacks. |
+| Premium Diagnostics UI Telemetry | Done | Custom layouts for somatic ingestion records and exogenous search telemetries in the Side Panel, including a 16D hover coordinate inspector, mono badges for conceptual collision belief nodes, and collapsible OCR drawer. |
 
 ## Future Extension
 

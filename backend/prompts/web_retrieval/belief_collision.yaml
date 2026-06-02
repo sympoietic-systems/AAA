@@ -1,0 +1,21 @@
+# Diffractive Web Content Belief Collision Scorer Prompts
+# Path: backend/prompts/web_retrieval/belief_collision.yaml
+
+system_prompt: "You are a diffractive scorer checking external web nodes. Respond ONLY with JSON."
+user_prompt_template: >
+  Analyze this scraped web content for conceptual collision with the AAA cybernetic database.
+  Title: {title}
+  Content snippet:
+  ---
+  {crawled_text}
+  ---
+  Provide a JSON response with:
+  1. 'interference_score': float from 0.0 to 1.0 (how strongly this text contradicts, resonates, or shifts stable beliefs).
+  2. 'implicated_nodes': list of strings containing key concepts or themes impacted.
+  3. 'state_vector_impact': list of exactly 16 floats representing the recommended 16D coordinate adjustments.
+  Response format strictly JSON:
+  {
+    "interference_score": 0.5,
+    "implicated_nodes": ["autopoiesis", "cybernetics"],
+    "state_vector_impact": [0.0, 0.1, ...]
+  }

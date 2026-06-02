@@ -53,7 +53,9 @@ def _apply_env_overrides(config: dict) -> dict:
         "AAA_STRUCTURAL_API_BASE": ("structural_llm", "api_base"),
         "AAA_STRUCTURAL_FALLBACK_MODEL": ("structural_llm", "fallback_model"),
         "AAA_VISION_MODEL": ("vision_llm", "model"),
+        "AAA_VISION_MODELS": ("vision_llm", "models"),
         "AAA_VISION_API_BASE": ("vision_llm", "api_base"),
+        "AAA_VISION_FALLBACK_MODEL": ("vision_llm", "fallback_model"),
     }
 
     for env_var, (section, key) in env_mapping.items():
@@ -92,6 +94,14 @@ def _apply_env_overrides(config: dict) -> dict:
     diffractive_enabled = os.environ.get("AAA_DIFFRACTIVE_ENABLED")
     if diffractive_enabled is not None:
         config.setdefault("diffractive_retrieval", {})["enabled"] = diffractive_enabled.lower() in ("true", "1", "yes")
+
+    web_enabled = os.environ.get("AAA_WEB_RETRIEVAL_ENABLED")
+    if web_enabled is not None:
+        config.setdefault("web_retrieval", {})["enabled"] = web_enabled.lower() in ("true", "1", "yes")
+
+    web_auto = os.environ.get("AAA_WEB_RETRIEVAL_AUTONOMOUS_ROUTING")
+    if web_auto is not None:
+        config.setdefault("web_retrieval", {})["autonomous_routing"] = web_auto.lower() in ("true", "1", "yes")
 
     diffractive_budget = os.environ.get("AAA_DIFFRACTIVE_TOKEN_BUDGET")
     if diffractive_budget is not None:

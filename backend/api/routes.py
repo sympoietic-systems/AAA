@@ -485,7 +485,16 @@ async def get_file_summary_endpoint(conversation_id: str, file_name: str, reques
     files = perception_repo.get_files_by_conversation(conversation_id)
     for f in files:
         if f["file_name"] == file_name:
-            return {"summary": f.get("summary"), "summary_model": f.get("summary_model")}
+            res_data = {"summary": f.get("summary"), "summary_model": f.get("summary_model")}
+            if f.get("file_type") == "image":
+                log_record = perception_repo.get_perception_log_by_image(file_name)
+                if log_record:
+                    res_data["image_metadata"] = log_record
+            elif f.get("file_type") == "web_probe":
+                web_record = perception_repo.get_exogenous_stream_by_file(file_name)
+                if web_record:
+                    res_data["web_metadata"] = web_record
+            return res_data
     raise HTTPException(status_code=404, detail="File not found")
 
 
@@ -1017,7 +1026,12 @@ async def _process_and_summarize_file(
 
         summary_text = ""
         summary_model = ""
-        if background_engine:
+        if file_type == "image":
+            # Extract summary from image description
+            parts = extracted_text.split("Transcription (OCR):")
+            summary_text = parts[0].replace(f"--- Ingested Image: {file_name} ---", "").strip()
+            summary_model = "Tripartite Vision Pipeline"
+        elif background_engine:
             try:
                 res = await background_engine.run("summarize", {"text": extracted_text})
                 if res.get("error"):

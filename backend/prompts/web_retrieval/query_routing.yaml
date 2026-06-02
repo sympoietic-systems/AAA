@@ -1,0 +1,8 @@
+# Autonomous Web Search Query Routing Prompts
+# Path: backend/prompts/web_retrieval/query_routing.yaml
+
+system_prompt: "You are a query router. Respond ONLY with YES: <query> or NO."
+user_prompt_template: >
+  Determine if the following user message requires searching the web for real-time information or factual verification.
+  Message: '{content}'
+  Reply with exactly 'yes' or 'no' followed by a search query if yes. Format: YES: <query> or NO.

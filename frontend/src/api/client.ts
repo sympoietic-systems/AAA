@@ -173,7 +173,40 @@ export async function getMessageContext(messageId: number): Promise<{ context_se
   return res.json()
 }
 
-export async function getFileSummary(conversationId: string, fileName: string): Promise<{ summary: string | null; summary_model: string | null }> {
+export interface ImageMetadata {
+  id: string
+  image_path: string
+  artifact_type: string
+  raw_transcription?: string | null
+  somatic_notes?: string | null
+  diffractive_analysis?: string | null
+  g_f_score: number
+  a_d_score: number
+  structural_vector_16d: string
+  timestamp: string
+  belief_nodes_implicated?: string | null
+}
+
+export interface WebMetadata {
+  id: string
+  query_used: string
+  source_url: string
+  raw_content: string
+  interference_score: number
+  belief_nodes_implicated?: string | null
+  state_vector_impact?: string | null
+  timestamp: string
+}
+
+export async function getFileSummary(
+  conversationId: string,
+  fileName: string
+): Promise<{
+  summary: string | null
+  summary_model: string | null
+  image_metadata?: ImageMetadata | null
+  web_metadata?: WebMetadata | null
+}> {
   const res = await fetch(`${BASE}/conversations/${conversationId}/files/${encodeURIComponent(fileName)}/summary`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

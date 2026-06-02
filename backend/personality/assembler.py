@@ -72,6 +72,15 @@ class PromptAssemblerModule(ProcessingModule):
         else:
             file_block = []
 
+        # Wrap web context with boundary blocks if present
+        web_context = payload.get("web_context", [])
+        if web_context:
+            web_block = [{"role": "system", "content": "--- BEGIN EXOGENOUS WEB CONTEXT ---"}]
+            web_block.extend(web_context)
+            web_block.append({"role": "system", "content": "--- END EXOGENOUS WEB CONTEXT ---"})
+        else:
+            web_block = []
+
         # Wrap diffractive messages if present and state is STAGNANT
         diffractive_messages = payload.get("diffractive_messages", [])
         diffractive_state = payload.get("diffractive_state", "FLOWING")
@@ -100,11 +109,12 @@ class PromptAssemblerModule(ProcessingModule):
             diffractive_block = [{"role": "system", "content": zone_text}]
 
         # Re-assemble the context in the topologically coherent order:
-        # System Prompt -> History Prior -> Sediment (Cross-Conv Memory) -> File Context -> Diffractive Interference -> Current Query
+        # System Prompt -> History Prior -> Sediment (Cross-Conv Memory) -> File Context -> Web Context -> Diffractive Interference -> Current Query
         assembled = [system_msg]
         assembled.extend(history_block)
         assembled.extend(sediment_block)
         assembled.extend(file_block)
+        assembled.extend(web_block)
         assembled.extend(diffractive_block)
         assembled.extend(current_query)
 

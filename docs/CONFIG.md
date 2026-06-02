@@ -100,9 +100,12 @@ background_llm:
   fallback_model: "openrouter/free"
   api_base: "https://openrouter.ai/api/v1"
 
-# ── Vision Fallback ───────────────────────────────
+# ── Vision Model Pool ─────────────────────────────
 vision_llm:
-  model: "google/gemma-4-26b-a4b-it:free"
+  models:
+    - "google_router/gemini-3.5-flash"
+    - "google_router/gemini-3.1-flash-lite"
+  fallback_model: "openrouter_router/google/gemma-4-26b-a4b-it:free"
   api_base: "https://openrouter.ai/api/v1"
 
 # ── Structural Scorer ─────────────────────────────
@@ -190,12 +193,14 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_BACKGROUND_API_BASE` | `https://openrouter.ai/api/v1` | API base for background models |
 | `AAA_BACKGROUND_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
 
-### Vision Fallback
+### Vision Model Pool
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AAA_VISION_MODEL` | `google/gemma-4-26b-a4b-it:free` | Vision-capable model for image processing |
-| `AAA_VISION_API_BASE` | `https://openrouter.ai/api/v1` | API base for vision model |
+| `AAA_VISION_MODELS` | — | Comma-separated list of vision-capable models, tried in order |
+| `AAA_VISION_MODEL` | — | Single vision-capable model (backward compatibility) |
+| `AAA_VISION_FALLBACK_MODEL` | — | Model used when all vision pool models are rate-limited or fail |
+| `AAA_VISION_API_BASE` | `https://openrouter.ai/api/v1` | API base for vision models |
 | `AAA_VISION_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
 
 ### Structural Scorer
@@ -291,17 +296,15 @@ For a single model (backward compat):
 AAA_BACKGROUND_MODEL=google/gemma-4-26b-a4b-it:free
 ```
 
-### Vision Model
+### Vision Model Pool
 
 ```bash
 # .env
-AAA_VISION_MODEL=google/gemma-4-26b-a4b-it:free
-AAA_VISION_API_BASE=https://openrouter.ai/api/v1
+AAA_VISION_MODELS=google_router/gemini-3.5-flash,google_router/gemini-3.1-flash-lite,openrouter_router/google/gemma-4-26b-a4b-it:free
+AAA_VISION_FALLBACK_MODEL=openrouter_router/google/gemma-4-26b-a4b-it:free
 ```
 
-Independently configurable vision-capable model. When `use_vision: true` is
-passed to the background endpoint, requests are routed to this model instead
-of the background model.
+Independently configurable vision-capable model pool. When an image asset is ingested, requests are routed through this pool in order. If a model fails or is rate-limited, the system automatically falls back to the next model in the pool.
 
 ### Background API
 

@@ -1,7 +1,8 @@
-import asyncio
+from pathlib import Path
 import sys
+import asyncio
 
-sys.path.insert(0, "D:/AAA")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.core.pipeline import ProcessingPipeline
 from backend.core.registry import ModuleRegistry

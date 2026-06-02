@@ -160,6 +160,22 @@ export function useChat(conversationId: string) {
         updated.push(response)
         return updated
       })
+
+      const targetConvId = conversationId || response.conversation_id
+      if (targetConvId) {
+        getConversationFiles(targetConvId)
+          .then((res) => {
+            setFiles(res.files)
+            const active = res.files.some(
+              (f) => f.status === "uploading" || f.status === "processing"
+            )
+            if (active) {
+              startPolling(targetConvId)
+            }
+          })
+          .catch(() => {})
+      }
+
       return response
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to send message"

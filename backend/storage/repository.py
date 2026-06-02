@@ -1004,6 +1004,103 @@ class PerceptionSedimentRepository:
         return result
 
 
+    @with_connection
+    def insert_perception_log(
+        self,
+        id: str,
+        image_path: str,
+        artifact_type: str,
+        raw_transcription: Optional[str] = None,
+        somatic_notes: Optional[str] = None,
+        diffractive_analysis: Optional[str] = None,
+        g_f_score: float = 0.0,
+        a_d_score: float = 0.0,
+        structural_vector_16d: str = "[]",
+        associated_day: Optional[int] = None,
+        belief_nodes_implicated: Optional[str] = None,
+    ) -> None:
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO perception_log
+               (id, image_path, artifact_type, raw_transcription, somatic_notes,
+                diffractive_analysis, g_f_score, a_d_score, structural_vector_16d, associated_day, belief_nodes_implicated)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (id, image_path, artifact_type, raw_transcription, somatic_notes,
+             diffractive_analysis, g_f_score, a_d_score, structural_vector_16d, associated_day, belief_nodes_implicated),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_perception_log_by_image(self, image_path: str) -> Optional[dict]:
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT * FROM perception_log
+               WHERE image_path = ?
+               ORDER BY timestamp DESC LIMIT 1""",
+            (image_path,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "id": row["id"],
+            "image_path": row["image_path"],
+            "artifact_type": row["artifact_type"],
+            "raw_transcription": row["raw_transcription"],
+            "somatic_notes": row["somatic_notes"],
+            "diffractive_analysis": row["diffractive_analysis"],
+            "g_f_score": row["g_f_score"],
+            "a_d_score": row["a_d_score"],
+            "structural_vector_16d": row["structural_vector_16d"],
+            "timestamp": row["timestamp"],
+            "belief_nodes_implicated": row["belief_nodes_implicated"] if "belief_nodes_implicated" in row.keys() else None,
+        }
+
+    @with_connection
+    def insert_exogenous_stream(
+        self,
+        id: str,
+        query_used: str,
+        source_url: str,
+        raw_content: str,
+        interference_score: float = 0.0,
+        belief_nodes_implicated: Optional[str] = None,
+        state_vector_impact: Optional[str] = None,
+        associated_file_name: Optional[str] = None,
+    ) -> None:
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO exogenous_stream
+               (id, query_used, source_url, raw_content, interference_score,
+                belief_nodes_implicated, state_vector_impact, associated_file_name)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (id, query_used, source_url, raw_content, interference_score,
+             belief_nodes_implicated, state_vector_impact, associated_file_name),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_exogenous_stream_by_file(self, file_name: str) -> Optional[dict]:
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT * FROM exogenous_stream
+               WHERE associated_file_name = ?
+               ORDER BY timestamp DESC LIMIT 1""",
+            (file_name,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "id": row["id"],
+            "query_used": row["query_used"],
+            "source_url": row["source_url"],
+            "raw_content": row["raw_content"],
+            "interference_score": row["interference_score"],
+            "belief_nodes_implicated": row["belief_nodes_implicated"],
+            "state_vector_impact": row["state_vector_impact"],
+            "timestamp": row["timestamp"],
+        }
+
+
 class ConsolidationCheckpointRepository:
     def __init__(self, db_path: str):
         self._db_path = db_path

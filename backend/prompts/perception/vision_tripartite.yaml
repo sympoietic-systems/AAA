@@ -1,0 +1,25 @@
+# Tripartite Somatic/Content Extraction Vision Ingestion Prompt
+# Path: backend/prompts/perception/vision_tripartite.yaml
+
+tripartite_image_analysis_prompt: >
+  Analyze the uploaded image across the tripartite somatic/content extraction pipeline.
+  You must perform the following tasks:
+  1. Classification: Categorize the image type (artistic, screenshot, diagram, photo, document, noise).
+  2. Transcription (OCR): Transcribe all text content exactly as it appears in the image.
+  3. Somatic/Aesthetic notes: Write detailed notes on visual style, composition, glitch patterns, color harmony, and sensory impact.
+  4. Diffractive analysis: Analyze how this visual aligns or collides with cybernetic systems, autopoiesis, boundary permeabilities, or structural drift.
+  5. Belief Collision: Identify key conceptual belief nodes or themes from the system (e.g. autopoiesis, somatic_exhaustion, computational_ethics, boundary_breach, archival_will) that this image collides with, shifts, or resonates with.
+  6. Aesthetic Telemetry: Provide scores (floats between 0.0 and 1.0) for Glitch Fidelity (G_f) and Aesthetic Dissidence (A_d).
+  7. Structural trajectory: Recommend a 16-dimensional cybernetic signature vector (16 floats between 0.0 and 1.0 representing Homeostatic, Amplifying, Cyclic, Bifurcated, Decentralized, Rhizomatic, Permeable, Recursion, Variety, Negentropy, Latency, Attractor, Symbiotic, Nomadic, Conversational, Substrate).
+
+  You MUST respond ONLY with a valid JSON object matching this schema:
+  {
+    "classification": "diagram",
+    "transcription": "text found in the image...",
+    "somatic_notes": "description of visual style, colors, composition...",
+    "diffractive_analysis": "how this visual diffracts through cybernetic schemas...",
+    "belief_nodes_implicated": ["somatic_exhaustion", "archival_will"],
+    "g_f_score": 0.4,
+    "a_d_score": 0.7,
+    "structural_vector_16d": [0.2, 0.3, ...]
+  }

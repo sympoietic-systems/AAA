@@ -46,6 +46,7 @@ What becomes easier/harder?
 | [013](ADR-013-diffractive-retrieval.md) | Diffractive Retrieval and Stagnation Telemetry | accepted | 2026-05-23 |
 | [014](ADR-014-structural-signature-engine.md) | 16-Dimensional Modular Structural Signature Engine | accepted | 2026-05-23 |
 | [015](ADR-015-error-propagation-and-reprocessing.md) | Error Propagation and Manual Reprocessing for File Ingestion | accepted | 2026-05-24 |
+| [016](ADR-016-extended-perception-and-web-retrieval.md) | Extended Perception, Exogenous Web Retrieval, and Prompts Centralization | accepted | 2026-06-01 |
 
 
 ## Creating a New ADR

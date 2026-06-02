@@ -28,6 +28,7 @@ from backend.modules.conversation_metrics import ConversationMetricsModule
 from backend.modules.embedder import EmbedderModule
 from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
 from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
+from backend.modules.web_retrieval import WebRetrievalModule
 
 from backend.modules.llm_client import (
     LLMClientModule,
@@ -342,12 +343,20 @@ async def lifespan(app: FastAPI):
     registry.register_with_meta(
         "embedder", lambda: embedder,
         SkillMeta(name="embedder", description="Encodes text into vector embeddings",
-                  category="perception", always_run=True),
+                  category="perception", always_run=True,
+                  children=[
+                      SkillMeta(name="text_encoder", description="Translates textual sequences into 384-dimensional dense vectors", category="perception"),
+                      SkillMeta(name="vector_cache", description="Caches computed embeddings to prevent redundant API calls", category="perception"),
+                  ]),
     )
     registry.register_with_meta(
         "structural_scorer", lambda: structural_scorer,
         SkillMeta(name="structural_scorer", description="Calculates 16-dimensional cybernetic structural signatures of the message text",
-                  category="perception", always_run=True),
+                  category="perception", always_run=True,
+                  children=[
+                      SkillMeta(name="signature_generator", description="Parses syntax pattern frequencies to output a 16D array", category="perception"),
+                      SkillMeta(name="dynamic_coordinate_warper", description="Applies dynamic coordinate warping scaling factors", category="perception"),
+                  ]),
     )
     registry.register_with_meta(
         "conversation_metrics", lambda: conversation_metrics,
@@ -383,6 +392,15 @@ async def lifespan(app: FastAPI):
                   ]),
     )
 
+    vision_llm_cfg = config.get("vision_llm", {})
+    vision_provider = None
+    if vision_llm_cfg.get("models") or vision_llm_cfg.get("model"):
+        try:
+            vision_provider = _create_provider_from_config(vision_llm_cfg)
+            logger.info(f"Vision model(s): {vision_llm_cfg.get('models') or vision_llm_cfg.get('model')}")
+        except Exception:
+            logger.warning("Failed to initialize vision provider")
+
     perception_cfg = config.get("perception", {})
     perception_module = PerceptionModule(
         perception_repo=perception_repo,
@@ -392,12 +410,36 @@ async def lifespan(app: FastAPI):
         chunk_size=perception_cfg.get("chunk_size", 512),
         chunk_overlap=perception_cfg.get("chunk_overlap", 64),
         similarity_threshold=perception_cfg.get("similarity_threshold", 0.25),
+        llm_provider=provider,
+        vision_provider=vision_provider,
     )
     registry.register_with_meta(
         "perception", lambda: perception_module,
         SkillMeta(name="perception", description="Extracts text from uploaded files, chunks, embeds, and retrieves relevant sediment via similarity",
                   category="perception", always_run=False,
-                  triggers=["file", "document", "pdf", "upload", "read"]),
+                  triggers=["file", "document", "pdf", "upload", "read"],
+                  children=[
+                      SkillMeta(name="file_extractor", description="Parses text from plain text, PDF, and DOCX files", category="perception"),
+                      SkillMeta(name="tripartite_vision", description="Performs OCR, semantic description, diffractive analysis, and aesthetic scoring on images", category="perception"),
+                  ]),
+    )
+
+    web_retrieval_cfg = config.get("web_retrieval", {})
+    web_retrieval = WebRetrievalModule(
+        perception_repo=perception_repo,
+        embedder=embedder,
+        structural_scorer=structural_scorer,
+        llm_provider=provider,
+        config=config,
+    )
+    registry.register_with_meta(
+        "web_retrieval", lambda: web_retrieval,
+        SkillMeta(name="web_retrieval", description="Exogenous rhizomatic web retrieval and HTML scraping",
+                  category="perception", always_run=True,
+                  children=[
+                      SkillMeta(name="rhizome_web_probe", description="Scrapes search engines dynamically to bring exogenous context", category="perception"),
+                      SkillMeta(name="html_scraper", description="Strips HTML styling/scripts and parses main content to markdown", category="perception"),
+                  ]),
     )
 
     prompt_assembler = PromptAssemblerModule(
@@ -436,13 +478,21 @@ async def lifespan(app: FastAPI):
     registry.register_with_meta(
         "homeostatic_regulator", lambda: homeostatic_regulator,
         SkillMeta(name="homeostatic_regulator", description="Maps conversational metrics to allostatic regimes and recommends generator parameters",
-                  category="reasoning", always_run=True),
+                  category="reasoning", always_run=True,
+                  children=[
+                      SkillMeta(name="allostatic_parameter_adjuster", description="Computes offsets for temperature, presence penalty, and frequency penalty", category="reasoning"),
+                      SkillMeta(name="regime_diagnostician", description="Evaluates conversational metrics to determine homeostatic state flags", category="reasoning"),
+                  ]),
     )
 
     registry.register_with_meta(
         "llm_client", lambda: llm_module,
         SkillMeta(name="llm_client", description="Sends messages to the language model and returns the response",
-                  category="action", always_run=True),
+                  category="action", always_run=True,
+                  children=[
+                      SkillMeta(name="llm_router", description="Manages model pools, fallback rules, and automatic rotation under rate limits", category="action"),
+                      SkillMeta(name="rate_limit_handler", description="Intercepts 429/503 HTTP responses to apply provider cooling periods", category="action"),
+                  ]),
     )
 
     system_prompt_text = _build_system_content(identity_data, registry)
@@ -451,7 +501,7 @@ async def lifespan(app: FastAPI):
 
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
-        ["embedder", "structural_scorer", "perception", "conversation_metrics", "context_collector",
+        ["embedder", "structural_scorer", "perception", "web_retrieval", "conversation_metrics", "context_collector",
          "consolidation_checkpoint", "sedimentation_retrieval", "diffractive_retrieval",
          "prompt_assembler", "homeostatic_regulator", "llm_client"],
     )
@@ -492,7 +542,6 @@ async def lifespan(app: FastAPI):
     vision_llm_cfg = config.get("vision_llm", {})
 
     background_provider = None
-    vision_provider = None
 
     if background_llm_cfg.get("models") or background_llm_cfg.get("model"):
         try:
@@ -502,12 +551,7 @@ async def lifespan(app: FastAPI):
             logger.warning("Failed to initialize background provider, using primary")
             background_provider = provider
 
-    if vision_llm_cfg.get("model"):
-        try:
-            vision_provider = _create_provider_from_config(vision_llm_cfg)
-            logger.info(f"Vision model: {vision_llm_cfg.get('model')}")
-        except Exception:
-            logger.warning("Failed to initialize vision provider")
+
 
     background_engine = BackgroundTaskEngine(
         provider=background_provider or provider,

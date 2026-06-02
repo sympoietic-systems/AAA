@@ -32,7 +32,7 @@ llm:
     effort: "high"  # high | max
   default_params:
     temperature: 0.7
-    max_tokens: 2048
+    max_tokens: 8192
 
 # ── Pipeline ─────────────────────────────────────
 pipeline:
@@ -40,6 +40,7 @@ pipeline:
     - embedder
     - structural_scorer
     - perception
+    - web_retrieval
     - conversation_metrics
     - context_collector
     - consolidation_checkpoint
@@ -65,14 +66,14 @@ context:
 # ── Sedimentation ───────────────────────────────
 sedimentation:
   enabled: true
-  sediment_token_budget: 2000
+  sediment_token_budget: 4000
   sediment_count: 10
   similarity_threshold: 0.3
 
 # ── Perception ──────────────────────────────────
 perception:
   enabled: true
-  file_token_budget: 3000
+  file_token_budget: 6000
   top_k_chunks: 6
   chunk_size: 512
   chunk_overlap: 64
@@ -86,7 +87,7 @@ diffractive_retrieval:
   file_range_min: 0.35
   file_range_max: 0.75
   max_diffractive_count: 3
-  token_budget: 1500
+  token_budget: 6000
 
 
 # ── Structural Signature ────────────────────────
@@ -151,6 +152,11 @@ background_llm:
 vision_llm:
   model: "google/gemma-4-26b-a4b-it:free"
   api_base: "https://openrouter.ai/api/v1"
+
+# ── Web Retrieval ───────────────────────────────
+web_retrieval:
+  enabled: true
+  autonomous_routing: false  # Change to true to let the model decide when to search
 
 # ── Server ───────────────────────────────────────
 server:

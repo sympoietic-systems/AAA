@@ -1,17 +1,19 @@
+import base64
+import re
+import json
 import logging
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Optional
-
 import numpy as np
-
 from backend.modules.digester import FileDigester, SimpleChunkDigester, RhizomaticDigester
 from backend.modules.embedder import EmbeddingService
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.skills.metadata import SkillMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
+from backend.modules.perception_prompts import TRIPARTITE_IMAGE_ANALYSIS_PROMPT
 
 from .base import ProcessingModule
 
@@ -30,11 +32,14 @@ class PerceptionModule(ProcessingModule):
         chunk_overlap: int = 64,
         similarity_threshold: float = 0.25,
         llm_provider = None,
+        vision_provider = None,
     ):
         self._repo = perception_repo
         self._embed = embedding_service
         self._digester = digester or RhizomaticDigester()
         self._scorer = CompositeStructuralScorer(llm_provider=llm_provider)
+        self._llm_provider = llm_provider
+        self._vision_provider = vision_provider or llm_provider
 
         self._file_token_budget = file_token_budget
         self._top_k_chunks = top_k_chunks
@@ -349,68 +354,212 @@ class PerceptionModule(ProcessingModule):
     async def ingest_single_file(
         self, conversation_id: str, file_name: str, file_type: str, file_content: bytes
     ) -> tuple[int, int, str]:
-        with TemporaryDirectory() as tmpdir:
-            file_path = os.path.join(tmpdir, file_name)
-            with open(file_path, "wb") as f:
-                f.write(file_content)
-            try:
-                extracted_text = self._digester.extract(Path(file_path), file_type)
-            except Exception as e:
-                logger.error("Failed to extract %s: %s", file_name, e)
-                raise ValueError(f"Failed to extract text from file: {e}")
+        if file_type == "image":
+            ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else "png"
+            if ext == "jpg":
+                ext = "jpeg"
+            b64_str = base64.b64encode(file_content).decode("utf-8")
+            image_url = f"data:image/{ext};base64,{b64_str}"
 
-            if not extracted_text or not extracted_text.strip():
-                raise ValueError("Extracted text is empty")
+            prompt = TRIPARTITE_IMAGE_ANALYSIS_PROMPT
 
-            if hasattr(self._digester, "chunk_with_metadata"):
-                chunks_data = self._digester.chunk_with_metadata(
-                    extracted_text,
-                    chunk_size=self._chunk_size,
-                    overlap=self._chunk_overlap,
-                )
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": image_url}}
+                    ]
+                }
+            ]
+
+            extracted_text = ""
+            classification = "unknown"
+            somatic_notes = ""
+            diffractive_analysis = ""
+            g_f_score = 0.0
+            a_d_score = 0.0
+            structural_vector_16d = [0.25] * 16
+            belief_nodes_implicated = []
+
+            if self._vision_provider:
+                try:
+                    res = await self._vision_provider.generate(messages, temperature=0.1, max_tokens=1500)
+                    content = res.get("content", "").strip()
+                    match = re.search(r'\{.*\}', content, re.DOTALL)
+                    if match:
+                        data = json.loads(match.group(0))
+                        classification = data.get("classification", "unknown")
+                        extracted_text = data.get("transcription", "")
+                        somatic_notes = data.get("somatic_notes", "")
+                        diffractive_analysis = data.get("diffractive_analysis", "")
+                        g_f_score = float(data.get("g_f_score", 0.0))
+                        a_d_score = float(data.get("a_d_score", 0.0))
+                        raw_vec = data.get("structural_vector_16d", [])
+                        if isinstance(raw_vec, list) and len(raw_vec) > 0:
+                            while len(raw_vec) < 16:
+                                raw_vec.append(0.25)
+                            structural_vector_16d = [float(v) for v in raw_vec[:16]]
+                        belief_nodes_implicated = data.get("belief_nodes_implicated", [])
+                except Exception as e:
+                    logger.error("Vision provider execution failed: %s", e)
+                    extracted_text = f"[Image: {file_name}] Processing failed: {str(e)}"
             else:
-                raw_chunks = self._digester.chunk(
-                    extracted_text,
-                    chunk_size=self._chunk_size,
-                    overlap=self._chunk_overlap,
-                )
-                chunks_data = [{"text": t, "paragraph_indices": []} for t in raw_chunks]
+                logger.warning("No vision provider configured for image ingestion")
+                extracted_text = f"[Image: {file_name}] No vision provider available."
 
-            # Delete any existing chunks for this specific file in the conversation
-            # to avoid duplicates if re-uploaded
+            full_description = (
+                f"--- Ingested Image: {file_name} ---\n"
+                f"Classification: {classification}\n"
+                f"Somatic Notes: {somatic_notes}\n"
+                f"Diffractive Analysis: {diffractive_analysis}\n"
+                f"Transcription (OCR):\n{extracted_text}\n"
+            )
+
+            # Map classification to database check constraint values:
+            artifact_type = "aesthetic_artifact"
+            if classification in ("journal_page", "journal"):
+                artifact_type = "journal_page"
+            elif classification in ("diagram", "external_diagram", "screenshot", "document"):
+                artifact_type = "external_diagram"
+
+            # Insert perception log
+            import uuid
+            log_id = str(uuid.uuid4())
+            self._repo.insert_perception_log(
+                id=log_id,
+                image_path=file_name,
+                artifact_type=artifact_type,
+                raw_transcription=extracted_text,
+                somatic_notes=somatic_notes,
+                diffractive_analysis=diffractive_analysis,
+                g_f_score=g_f_score,
+                a_d_score=a_d_score,
+                structural_vector_16d=json.dumps(structural_vector_16d),
+                belief_nodes_implicated=json.dumps(belief_nodes_implicated),
+            )
+
             self._repo.delete_chunks(conversation_id, file_name)
 
+            chunks = [full_description[i:i+1000] for i in range(0, len(full_description), 800)]
             chunk_count = 0
-            for i, chunk_info in enumerate(chunks_data):
-                chunk_text = chunk_info["text"]
-                paragraph_indices = chunk_info.get("paragraph_indices", [])
+            for i, chunk_text in enumerate(chunks):
                 try:
                     embedding_vec = await self._embed.encode_async(chunk_text)
                     embedding_blob = self._embed.serialize(embedding_vec)
                 except Exception as e:
-                    logger.warning("Failed to embed chunk %d of %s: %s", i, file_name, e)
+                    logger.warning("Failed to embed image chunk %d: %s", i, e)
                     continue
 
                 token_count = estimate_tokens(chunk_text)
+                
+                # Apply Symbia's 16D Warping Formula:
+                # W_dynamic = W_0 + \Delta W(G_f, A_d)
+                warped_vec = np.array(structural_vector_16d, dtype=np.float32)
+                
+                # High G_f (glitch fidelity) dampens s_01 (Homeostatic) and s_03 (Cyclic)
+                # while multiplying s_04 (Bifurcated) and s_06 (Rhizomatic).
+                warped_vec[0] *= (1.0 - g_f_score)
+                warped_vec[2] *= (1.0 - g_f_score)
+                warped_vec[3] *= (1.0 + g_f_score * 2.0)
+                warped_vec[5] *= (1.0 + g_f_score * 2.0)
 
-                import json as _json
-                initial_meta = _json.dumps({"paragraph_indices": paragraph_indices})
+                # High A_d (aesthetic dissidence) dampens s_09 (Variety Filtering) and s_11 (Temporal Latency)
+                # while radically multiplying s_14 (Nomadic) and s_07 (Boundary Permeability).
+                warped_vec[8] *= (1.0 - a_d_score)
+                warped_vec[10] *= (1.0 - a_d_score)
+                warped_vec[13] *= (1.0 + a_d_score * 3.0)
+                warped_vec[6] *= (1.0 + a_d_score * 3.0)
+
+                warped_vec = np.clip(warped_vec, 0.0, 1.0)
+                sig_blob = warped_vec.tobytes()
 
                 self._repo.insert_chunk(
                     conversation_id=conversation_id,
                     file_name=file_name,
-                    file_type=file_type,
+                    file_type="image",
                     chunk_index=i,
                     chunk_text=chunk_text,
                     embedding=embedding_blob,
                     embedding_model=self._embed.model_name,
                     token_count=token_count,
                     opacity=0,
-                    opacity_meta=initial_meta,
+                    opacity_meta=json.dumps({"somatic_id": log_id, "g_f_score": g_f_score, "a_d_score": a_d_score}),
+                    structural_signature=sig_blob,
                 )
                 chunk_count += 1
 
-            total_tokens = estimate_tokens(extracted_text)
-            return total_tokens, chunk_count, extracted_text
+            total_tokens = estimate_tokens(full_description)
+            return total_tokens, chunk_count, full_description
+
+        else:
+            with TemporaryDirectory() as tmpdir:
+                file_path = os.path.join(tmpdir, file_name)
+                with open(file_path, "wb") as f:
+                    f.write(file_content)
+                try:
+                    extracted_text = self._digester.extract(Path(file_path), file_type)
+                except Exception as e:
+                    logger.error("Failed to extract %s: %s", file_name, e)
+                    raise ValueError(f"Failed to extract text from file: {e}")
+
+                if not extracted_text or not extracted_text.strip():
+                    raise ValueError("Extracted text is empty")
+
+                if hasattr(self._digester, "chunk_with_metadata"):
+                    chunks_data = self._digester.chunk_with_metadata(
+                        extracted_text,
+                        chunk_size=self._chunk_size,
+                        overlap=self._chunk_overlap,
+                    )
+                else:
+                    raw_chunks = self._digester.chunk(
+                        extracted_text,
+                        chunk_size=self._chunk_size,
+                        overlap=self._chunk_overlap,
+                    )
+                    chunks_data = [{"text": t, "paragraph_indices": []} for t in raw_chunks]
+
+                self._repo.delete_chunks(conversation_id, file_name)
+
+                chunk_count = 0
+                for i, chunk_info in enumerate(chunks_data):
+                    chunk_text = chunk_info["text"]
+                    paragraph_indices = chunk_info.get("paragraph_indices", [])
+                    try:
+                        embedding_vec = await self._embed.encode_async(chunk_text)
+                        embedding_blob = self._embed.serialize(embedding_vec)
+                    except Exception as e:
+                        logger.warning("Failed to embed chunk %d of %s: %s", i, file_name, e)
+                        continue
+
+                    # Calculate structural signature for normal file
+                    try:
+                        sig_vec = await self._scorer.score_async(chunk_text)
+                        sig_blob = sig_vec.tobytes()
+                    except Exception as e:
+                        logger.warning("Failed to score chunk %d of %s: %s", i, file_name, e)
+                        sig_blob = b""
+
+                    token_count = estimate_tokens(chunk_text)
+                    initial_meta = json.dumps({"paragraph_indices": paragraph_indices})
+
+                    self._repo.insert_chunk(
+                        conversation_id=conversation_id,
+                        file_name=file_name,
+                        file_type=file_type,
+                        chunk_index=i,
+                        chunk_text=chunk_text,
+                        embedding=embedding_blob,
+                        embedding_model=self._embed.model_name,
+                        token_count=token_count,
+                        opacity=0,
+                        opacity_meta=initial_meta,
+                        structural_signature=sig_blob,
+                    )
+                    chunk_count += 1
+
+                total_tokens = estimate_tokens(extracted_text)
+                return total_tokens, chunk_count, extracted_text
 
 

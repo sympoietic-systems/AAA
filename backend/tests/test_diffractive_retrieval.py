@@ -106,6 +106,14 @@ async def test_dynamic_bounds_and_budget(mock_repos, monkeypatch):
 
     # Setup mocks
     # We want to return some candidates for similarity matching
+    from backend.modules.structural_engine import CompositeStructuralScorer
+    monkeypatch.setattr(CompositeStructuralScorer, "score_async", AsyncMock(return_value=np.ones(16, dtype="float32")))
+
+    msg_repo.get_embeddings_and_signatures_except.return_value = [
+        (101, np.ones(384, dtype="float32"), np.ones(16, dtype="float32")),
+        (102, np.ones(384, dtype="float32"), np.ones(16, dtype="float32")),
+        (103, np.ones(384, dtype="float32"), np.ones(16, dtype="float32")),
+    ]
     msg_repo.get_embeddings_in_similarity_range.return_value = [
         (0.65, 101),
         (0.60, 102),
