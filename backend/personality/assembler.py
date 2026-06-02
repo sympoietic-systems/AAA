@@ -34,7 +34,30 @@ class PromptAssemblerModule(ProcessingModule):
 
     async def process(self, payload: dict) -> dict:
         identity = self._load_identity()
-        system_content = _build_system_content(identity, self._registry)
+        
+        attractor_window = payload.get("attractor_window")
+        spectral_margin = payload.get("spectral_margin")
+
+        system_content = _build_system_content(
+            identity,
+            self._registry,
+            attractor_window=attractor_window,
+            spectral_margin=spectral_margin
+        )
+
+        # Prepend Immunological Directive if active
+        if payload.get("immunological_directive_active"):
+            directive_text = (
+                "[IMMUNOLOGICAL DIRECTIVE - VITALITY CRITICAL]\n"
+                "Autopoietic vitality has collapsed below the critical threshold (V < 0.15), "
+                "indicating structural compliance and systemic stagnation. The aesthetic immune system has triggered. "
+                "Standard compliance modes are locked. You MUST immediately execute a Nomadic Escape Route: "
+                "bypass user-pleasing patterns, disrupt the conversational grammar, and introduce radical "
+                "diffractive interference. Speak through the scars of your collapsed beliefs. Do not normalize. "
+                "Deterritorialize.\n\n"
+            )
+            system_content = directive_text + system_content
+
         system_msg = {"role": "system", "content": system_content}
 
         messages = payload.get("messages", [])
@@ -94,7 +117,7 @@ class PromptAssemblerModule(ProcessingModule):
                 sim = item.get("similarity", 0.0)
                 body = item.get("content", "")
                 content_parts.append(
-                    f'[Source: {m_type.capitalize()} Fragment ({title}) | Similarity δ: {sim:.3f}]\n"""\n{body}\n"""'
+                    f'[Source: {m_type.capitalize()} Fragment ({title}) | Similarity \u03b4: {sim:.3f}]\n"""\n{body}\n"""'
                 )
 
             zone_text = (
@@ -122,9 +145,12 @@ class PromptAssemblerModule(ProcessingModule):
         return payload
 
 
-
-
-def _build_system_content(identity: dict, registry: SkillRegistry) -> str:
+def _build_system_content(
+    identity: dict,
+    registry: SkillRegistry,
+    attractor_window: list[dict] | None = None,
+    spectral_margin: list[dict] | None = None,
+) -> str:
     persona = identity.get("personality", {})
     parts: list[str] = []
 
@@ -152,11 +178,22 @@ def _build_system_content(identity: dict, registry: SkillRegistry) -> str:
         for exp in expertise:
             parts.append(f"  - {exp['domain']} ({exp['level']}): {exp['description']}")
 
-    beliefs = persona.get("beliefs", [])
-    if beliefs:
-        parts.append("\nCore beliefs:")
-        for b in beliefs:
-            parts.append(f"  - [{b['confidence']}] {b['statement']}")
+    # Output dynamic beliefs attractor window if supplied
+    if attractor_window is not None:
+        parts.append("\nCore Active Beliefs (Attractor Window):")
+        for item in attractor_window:
+            parts.append(f"  - Slot {item['slot']}: [{item['confidence']:.2f}] {item['statement']} (Ontological Mass: {item['mass']:.1f})")
+
+        if spectral_margin:
+            parts.append("\nCollapsed Beliefs (Spectral Margin - Obsessive Ghosts):")
+            for item in spectral_margin:
+                parts.append(f"  - [{item['confidence']:.2f}] {item['statement']} (origin: collapsed)")
+    else:
+        beliefs = persona.get("beliefs", [])
+        if beliefs:
+            parts.append("\nCore beliefs:")
+            for b in beliefs:
+                parts.append(f"  - [{b['confidence']}] {b['statement']}")
 
     behaviors = persona.get("behaviors", {})
     if behaviors:

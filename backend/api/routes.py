@@ -1,5 +1,6 @@
 import logging
 import uuid
+import json
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, Header, Depends
@@ -217,7 +218,7 @@ def _fire_and_forget_consolidation(engine, message_repo, checkpoint_repo, conver
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: Request):
+async def chat(request: Request, background_tasks: BackgroundTasks):
     content, speaker, conversation_id, attachments, include_structural_scoring = await _parse_chat_request(request)
 
     state = request.app.state
@@ -330,6 +331,16 @@ async def chat(request: Request):
             except Exception:
                 logger.exception("Failed to store metrics")
 
+        # Schedule dynamic belief metabolism
+        belief_metabolism = getattr(state, "belief_metabolism", None)
+        if belief_metabolism:
+            background_tasks.add_task(
+                belief_metabolism.metabolize,
+                conversation_id,
+                msg.id,
+                response_msg.id
+            )
+
         if is_new and conv_repo and background_engine:
             try:
                 title = await _generate_title(background_engine, content)
@@ -405,6 +416,103 @@ async def get_agent(request: Request):
     return AgentInfo(
         name=getattr(state, "agent_name", "symbia"),
     )
+
+
+@router.get("/beliefs")
+async def get_beliefs(request: Request, conversation_id: Optional[str] = None, agent_id: str = "symbia"):
+    state = request.app.state
+    belief_repo = getattr(state, "belief_repo", None)
+    if not belief_repo:
+        raise HTTPException(status_code=503, detail="Belief repository not initialized")
+    
+    engine = getattr(state, "belief_metabolism", None)
+    if engine:
+        try:
+            engine._seed_initial_beliefs_if_needed(agent_id)
+        except Exception as e:
+            logger.error(f"Error seeding beliefs in get_beliefs: {e}")
+            
+    raw_beliefs = belief_repo.list_beliefs(agent_id)
+    beliefs_list = []
+    for b in raw_beliefs:
+        events = belief_repo.get_events_for_belief(b.id)
+        if b.ontological_mass >= 1.5:
+            cat = "foundational"
+        elif b.ontological_mass >= 1.2:
+            cat = "ontological"
+        else:
+            cat = "methodological"
+            
+        beliefs_list.append({
+            "id": b.id,
+            "label": b.label,
+            "statement": b.statement,
+            "category": cat,
+            "confidence": b.confidence,
+            "ontological_mass": b.ontological_mass,
+            "vector_16d": b.vector_16d,
+            "origin": b.origin,
+            "updated_at": b.updated_at.isoformat() if b.updated_at else None,
+            "events": [
+                {
+                    "id": e.id,
+                    "timestamp": e.timestamp.isoformat(),
+                    "source_id": e.source_id,
+                    "source_type": e.source_type,
+                    "delta_confidence": e.delta_confidence,
+                    "description": e.description
+                }
+                for e in events
+            ]
+        })
+    
+    somatic_state = None
+    attractor_window = []
+    spectral_margin = []
+    
+    if conversation_id:
+        somatic = belief_repo.get_conversation_somatic_state(conversation_id)
+        if somatic:
+            somatic_state = {
+                "somatic_reservoir_ad": somatic.get("somatic_reservoir_ad", 0.0),
+                "matrix_warping": somatic.get("matrix_warping", 0.0),
+                "immunological_directive_active": bool(somatic.get("immunological_directive_active", 0))
+            }
+            
+            engine = getattr(state, "belief_metabolism", None)
+            if engine:
+                try:
+                    active_beliefs = [b for b in raw_beliefs if b.origin != "collapsed" and b.confidence >= 0.20]
+                    collapsed_beliefs = [b for b in raw_beliefs if b.origin == "collapsed" or b.confidence < 0.20]
+                    
+                    if active_beliefs:
+                        slot1 = max(active_beliefs, key=lambda b: b.ontological_mass)
+                        slot2 = None
+                        stressed_beliefs = [b for b in active_beliefs if b.confidence < 0.50]
+                        if stressed_beliefs:
+                            slot2 = min(stressed_beliefs, key=lambda b: b.confidence)
+                        
+                        slot3 = None
+                        remaining = [b for b in active_beliefs if b.id != slot1.id and (not slot2 or b.id != slot2.id)]
+                        if remaining:
+                            slot3 = remaining[0]
+                        
+                        attractors = [slot1]
+                        if slot2: attractors.append(slot2)
+                        if slot3: attractors.append(slot3)
+                        
+                        attractor_window = [a.label for a in attractors]
+                    
+                    spectral_margin = [b.label for b in collapsed_beliefs]
+                except Exception as e:
+                    logger.error(f"Error computing UI attractor window: {e}")
+                    
+    return {
+        "beliefs": beliefs_list,
+        "somatic": somatic_state,
+        "attractor_window": attractor_window,
+        "spectral_margin": spectral_margin
+    }
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -740,6 +848,7 @@ def _meta_to_skillinfo(meta, status: dict[str, bool], always_run: bool, parent_s
             for child in meta.children
         ],
     )
+
 
 
 @router.get("/metrics", response_model=MetricsResponse)
@@ -1085,6 +1194,32 @@ async def _process_and_summarize_file(
             chunk_count=chunk_count,
         )
 
+        # Ingestion Hook: Metabolize perception
+        belief_metabolism = getattr(app_state, "belief_metabolism", None)
+        if belief_metabolism and extracted_text:
+            try:
+                scorer = CompositeStructuralScorer(llm_provider=getattr(app_state, "structural_provider", None))
+                sig_vec = await scorer.score_async(extracted_text[:4000])
+                
+                # Check for somatic/visual anchor shock if image
+                belief_nodes_implicated = None
+                perturbation = 1.0
+                if file_type == "image":
+                    # Somatic shock trigger!
+                    belief_nodes_implicated = ["glitch-as-voice"]
+                    perturbation = 2.0
+                
+                await belief_metabolism.metabolize_perception(
+                    conversation_id=conversation_id,
+                    source_id=file_name,
+                    source_type="file",
+                    structural_signature=sig_vec,
+                    belief_nodes_implicated=belief_nodes_implicated,
+                    perturbation=perturbation,
+                )
+            except Exception as pe:
+                logger.error(f"Perceptual belief update failed for file {file_name}: {pe}")
+
         system_content = f"Processed file: **{file_name}** ({file_type}).\n\nAccording to {summary_model or 'the system'}, this file appears to be about:\n{summary_text or 'No summary could be generated.'}"
         await _insert_system_message(app_state, conversation_id, system_content)
 
@@ -1175,6 +1310,30 @@ async def _reprocess_and_summarize_file_background(
             token_count=token_count,
             chunk_count=chunk_count,
         )
+
+        # Reprocessing Hook: Metabolize perception
+        belief_metabolism = getattr(app_state, "belief_metabolism", None)
+        if belief_metabolism and extracted_text:
+            try:
+                scorer = CompositeStructuralScorer(llm_provider=getattr(app_state, "structural_provider", None))
+                sig_vec = await scorer.score_async(extracted_text[:4000])
+                
+                belief_nodes_implicated = None
+                perturbation = 1.0
+                if file_type == "image":
+                    belief_nodes_implicated = ["glitch-as-voice"]
+                    perturbation = 2.0
+                
+                await belief_metabolism.metabolize_perception(
+                    conversation_id=conversation_id,
+                    source_id=file_name,
+                    source_type="file",
+                    structural_signature=sig_vec,
+                    belief_nodes_implicated=belief_nodes_implicated,
+                    perturbation=perturbation,
+                )
+            except Exception as pe:
+                logger.error(f"Perceptual belief update failed for reprocessed file {file_name}: {pe}")
 
         system_content = f"Processed file: **{file_name}** ({file_type}).\n\nAccording to {summary_model or 'the system'}, this file appears to be about:\n{summary_text or 'No summary could be generated.'}"
         await _insert_system_message(app_state, conversation_id, system_content)

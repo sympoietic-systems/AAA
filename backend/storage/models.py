@@ -11,6 +11,9 @@ class Conversation:
     created_at: datetime
     updated_at: datetime
     message_count: int = 0
+    somatic_reservoir_ad: float = 0.0
+    matrix_warping: float = 0.0
+    immunological_directive_active: int = 0
 
 
 @dataclass
@@ -83,3 +86,32 @@ class ErrorLogEntry:
     error_message: str
     traceback: Optional[str]
     context: Optional[str]
+
+
+@dataclass
+class BeliefNode:
+    id: str
+    agent_id: str
+    label: str
+    statement: str
+    origin: str
+    confidence: float
+    ontological_mass: float
+    somatic_anchor: str
+    vector_16d: str  # JSON list
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass
+class BeliefEvent:
+    id: str
+    timestamp: datetime
+    belief_id: str
+    source_type: str
+    source_id: Optional[str]
+    alignment_coefficient: Optional[float]
+    perturbation_magnitude: Optional[float]
+    event_type: str
+    impact_score: float
+    rationale: Optional[str]

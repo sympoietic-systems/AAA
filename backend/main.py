@@ -50,6 +50,7 @@ from backend.storage.repository import (
     MessageRepository,
     MetricsRepository,
     PerceptionSedimentRepository,
+    BeliefRepository,
 )
 from backend.utils.token_counter import estimate_tokens
 
@@ -253,6 +254,7 @@ async def lifespan(app: FastAPI):
     conversation_repo = ConversationRepository(str(full_db_path))
     perception_repo = PerceptionSedimentRepository(str(full_db_path))
     checkpoint_repo = ConsolidationCheckpointRepository(str(full_db_path))
+    belief_repo = BeliefRepository(str(full_db_path))
 
     embed_cfg = config.get("embedding", {})
     embedder = EmbedderModule(
@@ -338,6 +340,13 @@ async def lifespan(app: FastAPI):
             identity_data = yaml.safe_load(f)
             agent_name = identity_data.get("agent", {}).get("name", "symbia")
     logger.info(f"Agent identity: {agent_name}")
+
+    from backend.modules.belief_engine import BeliefDynamicsEngine
+    belief_metabolism = BeliefDynamicsEngine(
+        belief_repo=belief_repo,
+        message_repo=message_repo,
+        identity_yaml_path=identity_path,
+    )
 
     registry = SkillRegistry()
     registry.register_with_meta(
@@ -454,6 +463,11 @@ async def lifespan(app: FastAPI):
     )
 
     registry.register_with_meta(
+        "belief_metabolism", lambda: belief_metabolism,
+        belief_metabolism.skill_meta
+    )
+
+    registry.register_with_meta(
         "sedimentation_retrieval", lambda: sedimentation_retrieval,
         SkillMeta(name="sedimentation_retrieval", description="Retrieves semantically relevant messages from other conversations via embedding similarity",
                   category="memory", always_run=True,
@@ -502,7 +516,7 @@ async def lifespan(app: FastAPI):
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
         ["embedder", "structural_scorer", "perception", "web_retrieval", "conversation_metrics", "context_collector",
-         "consolidation_checkpoint", "sedimentation_retrieval", "diffractive_retrieval",
+         "consolidation_checkpoint", "sedimentation_retrieval", "diffractive_retrieval", "belief_metabolism",
          "prompt_assembler", "homeostatic_regulator", "llm_client"],
     )
     pipeline_modules = registry.resolve_pipeline(pipeline_order)
@@ -529,6 +543,8 @@ async def lifespan(app: FastAPI):
     app.state.perception_repo = perception_repo
     app.state.perception_module = perception_module
     app.state.checkpoint_repo = checkpoint_repo
+    app.state.belief_repo = belief_repo
+    app.state.belief_metabolism = belief_metabolism
     app.state.registry = registry
     app.state.pipeline = pipeline
     app.state.pipeline_order = pipeline_order

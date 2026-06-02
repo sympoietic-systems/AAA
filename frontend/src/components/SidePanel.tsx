@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse, DiffractiveInfo, ImageMetadata, WebMetadata } from "../api/client"
-import { getSkills, getMetrics, getTokens, getFileSummary } from "../api/client"
+import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse, DiffractiveInfo, ImageMetadata, WebMetadata, BeliefsResponse } from "../api/client"
+import { getSkills, getMetrics, getTokens, getFileSummary, getBeliefs } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
   perception: "#4ade80",
@@ -733,6 +733,249 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
   )
 }
 
+function BeliefsSection({ conversationId, messageCount }: { conversationId?: string; messageCount: number }) {
+  const [data, setData] = useState<BeliefsResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [expandedBelief, setExpandedBelief] = useState<string | null>(null)
+
+  useEffect(() => {
+    const poll = () => {
+      getBeliefs(conversationId)
+        .then(setData)
+        .catch((e) => setError(e.message))
+    }
+    poll()
+    const interval = setInterval(poll, 15000)
+    return () => clearInterval(interval)
+  }, [conversationId, messageCount])
+
+  if (error && !data) {
+    return <p className="text-[9px] text-[#ef4444]">{error}</p>
+  }
+
+  if (!data) {
+    return <p className="text-[9px] text-[#444]">waiting for data...</p>
+  }
+
+  const { beliefs, somatic, attractor_window, spectral_margin } = data
+
+  const getCategoryColor = (category: string) => {
+    switch (category.toLowerCase()) {
+      case "foundational": return "#4ade80"
+      case "ontological": return "#a78bfa"
+      case "methodological": return "#facc15"
+      default: return "#60a5fa"
+    }
+  }
+
+  return (
+    <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+      {somatic && (
+        <div className="mb-3 bg-[#0c0c12] border border-[#222]/40 rounded p-2 font-mono text-[9px] space-y-1">
+          <div className="text-[#6c6c8a] uppercase text-[8px] tracking-wider mb-1">[ Somatic Reservoir State ]</div>
+          <div className="flex justify-between items-center">
+            <span className="text-[#888]">Somatic Shock (Ad):</span>
+            <span className="text-[#f77f00] font-bold">{somatic.somatic_reservoir_ad.toFixed(3)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-[#888]">Matrix Warping:</span>
+            <span className="text-[#3b82f6] font-bold">{somatic.matrix_warping.toFixed(3)}</span>
+          </div>
+          {somatic.immunological_directive_active && (
+            <div className="mt-1 px-1.5 py-0.5 bg-[#ef4444]/15 border border-[#ef4444]/40 text-[#ef4444] text-[8px] font-bold uppercase tracking-wider rounded animate-pulse text-center">
+              ⚠️ Aesthetic Immune Response Triggered
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mb-3 space-y-1.5">
+        <div>
+          <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block mb-1">
+            [ Attractor Window Slots ]
+          </span>
+          {attractor_window.length === 0 ? (
+            <span className="text-[9px] text-[#444] italic">No active attractors</span>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {attractor_window.map((label, idx) => (
+                <span
+                  key={label}
+                  className="text-[9px] font-mono bg-[#1a1a2e] text-[#a78bfa] border border-[#a78bfa]/40 px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm"
+                >
+                  <span className="text-[#6c6c8a] text-[8px]">{idx + 1}:</span>
+                  {label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {spectral_margin.length > 0 && (
+          <div>
+            <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block mb-1">
+              [ Spectral Margin - Obsessive Ghosts ]
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {spectral_margin.map((label) => (
+                <span
+                  key={label}
+                  className="text-[9px] font-mono bg-[#1a0f0f] text-[#ef4444]/70 border border-[#ef4444]/20 px-1.5 py-0.5 rounded flex items-center gap-1 opacity-70 line-through"
+                  title="Collapsed belief slot (Confidence < 0.20)"
+                >
+                  👻 {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block">
+          [ Belief Network Nodes ]
+        </span>
+        {beliefs.map((b) => {
+          const catColor = getCategoryColor(b.category)
+          const isExpanded = expandedBelief === b.id
+          const isCollapsed = b.confidence < 0.20
+          
+          let vec: number[] = []
+          try {
+            if (b.vector_16d) {
+              vec = JSON.parse(b.vector_16d)
+            }
+          } catch {}
+
+          return (
+            <div
+              key={b.id}
+              className={`border border-[#1f1f2e]/60 bg-[#070709] rounded overflow-hidden transition-all duration-200 ${
+                isCollapsed ? "opacity-60" : ""
+              }`}
+            >
+              <button
+                onClick={() => setExpandedBelief(isExpanded ? null : b.id)}
+                className="w-full p-2 text-left hover:bg-[#12121a] flex flex-col gap-1 focus:outline-none"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span
+                    className="font-mono text-[10px] font-bold"
+                    style={{ color: catColor }}
+                  >
+                    {b.label}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] uppercase font-mono text-[#555]">
+                      mass: {b.ontological_mass}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-[#eee]">
+                      {(b.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-full h-1 bg-[#151522] rounded-full overflow-hidden relative">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${b.confidence * 100}%`,
+                      backgroundColor: catColor,
+                    }}
+                  />
+                </div>
+              </button>
+
+              {isExpanded && (
+                <div className="px-2 pb-2.5 pt-1 border-t border-[#1a1a24] bg-[#0c0c12] space-y-2 text-[10px] font-sans">
+                  <div>
+                    <div className="text-[#555] font-mono text-[8px] uppercase">[ Statement ]</div>
+                    <div className="text-[#ccc] text-[10.5px] italic font-serif leading-relaxed mt-0.5">
+                      "{b.statement}"
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[9px] font-mono text-[#888]">
+                    <div>
+                      <span className="text-[#444]">Category:</span>{" "}
+                      <span style={{ color: catColor }}>{b.category}</span>
+                    </div>
+                    <div>
+                      <span className="text-[#444]">Origin:</span>{" "}
+                      <span className="text-[#aaa]">{b.origin}</span>
+                    </div>
+                  </div>
+
+                  {vec.length > 0 && (
+                    <div>
+                      <div className="text-[#555] font-mono text-[8px] uppercase mb-1">[ 16D Autopoietic Vector ]</div>
+                      <div className="flex items-end gap-0.5 h-4 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit">
+                        {vec.map((val: number, idx: number) => {
+                          const heightPercent = Math.min(100, Math.max(10, Math.round(((val + 1.0) / 2.0) * 100)))
+                          return (
+                            <div
+                              key={idx}
+                              style={{ height: `${heightPercent}%` }}
+                              title={`Dimension ${idx + 1}: ${val.toFixed(4)}`}
+                              className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa]"
+                            />
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="text-[#555] font-mono text-[8px] uppercase">[ Metabolism Log ]</div>
+                    {b.events.length === 0 ? (
+                      <div className="text-[9px] text-[#444] italic mt-0.5">No metabolic events logged</div>
+                    ) : (
+                      <div className="space-y-1.5 mt-1 max-h-24 overflow-y-auto pr-1">
+                        {b.events.map((e) => {
+                          const isPositive = e.delta_confidence >= 0
+                          const diffStr = isPositive
+                            ? `+${e.delta_confidence.toFixed(3)}`
+                            : `${e.delta_confidence.toFixed(3)}`
+                          return (
+                            <div
+                              key={e.id}
+                              className="text-[9px] border-b border-[#222]/30 pb-1 last:border-b-0 leading-normal"
+                            >
+                              <div className="flex items-center justify-between text-[#888]">
+                                <span className="font-mono text-[8px]">
+                                  {new Date(e.timestamp).toLocaleTimeString()}
+                                </span>
+                                <span
+                                  className={`font-mono text-[8px] font-bold ${
+                                    isPositive ? "text-[#4ade80]" : "text-[#f87171]"
+                                  }`}
+                                >
+                                  {diffStr}
+                                </span>
+                              </div>
+                              <div className="text-[#ccc] mt-0.5">
+                                <span className="text-[#6c6c8a] font-mono text-[8px] mr-1">
+                                  [{e.source_type}:{e.source_id}]
+                                </span>
+                                {e.description}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+
 export function SidePanel({
   uploadedFiles = [],
   conversationId,
@@ -752,6 +995,7 @@ export function SidePanel({
   const [pipelineOpen, setPipelineOpen] = useState(false)
   const [skillsOpen, setSkillsOpen] = useState(false)
   const [healthOpen, setHealthOpen] = useState(true)
+  const [beliefsOpen, setBeliefsOpen] = useState(true)
   const [diffractiveOpen, setDiffractiveOpen] = useState(true)
   const [tokensOpen, setTokensOpen] = useState(true)
   const [sedimentOpen, setSedimentOpen] = useState(true)
@@ -860,6 +1104,20 @@ export function SidePanel({
               {healthOpen && (
                 <div className="pl-3">
                   <HealthSection messageCount={messageCount} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Beliefs"
+                count={0}
+                open={beliefsOpen}
+                onToggle={() => setBeliefsOpen(!beliefsOpen)}
+              />
+              {beliefsOpen && (
+                <div className="pl-3">
+                  <BeliefsSection conversationId={conversationId} messageCount={messageCount} />
                 </div>
               )}
             </div>

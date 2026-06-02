@@ -278,6 +278,49 @@ export interface DiffractiveInfo {
 }
 
 
+export interface BeliefEventInfo {
+  id: string
+  timestamp: string
+  source_id: string
+  source_type: string
+  delta_confidence: number
+  description: string
+}
+
+export interface BeliefNodeInfo {
+  id: string
+  label: string
+  statement: string
+  category: string
+  confidence: number
+  ontological_mass: number
+  vector_16d: string
+  origin: string
+  updated_at: string | null
+  events: BeliefEventInfo[]
+}
+
+export interface SomaticStateInfo {
+  somatic_reservoir_ad: number
+  matrix_warping: number
+  immunological_directive_active: boolean
+}
+
+export interface BeliefsResponse {
+  beliefs: BeliefNodeInfo[]
+  somatic: SomaticStateInfo | null
+  attractor_window: string[]
+  spectral_margin: string[]
+}
+
+export async function getBeliefs(conversationId?: string): Promise<BeliefsResponse> {
+  const params = conversationId ? `?conversation_id=${conversationId}` : ""
+  const res = await fetch(`${BASE}/beliefs${params}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+
 export async function getMetrics(window = 20): Promise<MetricsResponse> {
   const res = await fetch(`${BASE}/metrics?window=${window}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

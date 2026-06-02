@@ -8,7 +8,7 @@ from typing import Optional
 import numpy as np
 
 from .database import get_connection
-from .models import Conversation, ErrorLogEntry, Message, MetricsRecord, PerceptionSediment
+from .models import Conversation, ErrorLogEntry, Message, MetricsRecord, PerceptionSediment, BeliefNode, BeliefEvent
 
 
 class ConnectionTracker:
@@ -207,6 +207,33 @@ class MessageRepository:
         if row is None:
             return None
         return _row_to_message(row)
+
+    @with_connection
+    def get_surprise_index(self, message_id: int) -> float:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT surprise_index FROM conversation_metrics WHERE message_id = ?",
+            (message_id,),
+        ).fetchone()
+        if row and row["surprise_index"] is not None:
+            return float(row["surprise_index"])
+        return 0.0
+
+    @with_connection
+    def get_recent_assistant_signatures(self, conversation_id: str, limit: int = 5) -> list[bytes]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT structural_signature FROM conversation_log
+               WHERE conversation_id = ? AND speaker = 'apparatus' AND structural_signature IS NOT NULL
+               ORDER BY id DESC LIMIT ?""",
+            (conversation_id, limit),
+        ).fetchall()
+        signatures = []
+        for r in rows:
+            blob = r["structural_signature"]
+            if blob:
+                signatures.append(blob)
+        return signatures
 
     @with_connection
     def get_embeddings_by_speaker(
@@ -524,6 +551,9 @@ def _row_to_conversation(row: sqlite3.Row) -> Conversation:
         created_at=datetime.fromisoformat(row["created_at"]),
         updated_at=datetime.fromisoformat(row["updated_at"]),
         message_count=row["message_count"] if "message_count" in row.keys() else 0,
+        somatic_reservoir_ad=row["somatic_reservoir_ad"] if "somatic_reservoir_ad" in row.keys() else 0.0,
+        matrix_warping=row["matrix_warping"] if "matrix_warping" in row.keys() else 0.0,
+        immunological_directive_active=row["immunological_directive_active"] if "immunological_directive_active" in row.keys() else 0,
     )
 
 
@@ -1196,4 +1226,172 @@ def _row_to_perception_sediment(row: sqlite3.Row) -> PerceptionSediment:
         opacity=opacity,
         opacity_meta=opacity_meta,
         structural_signature=structural_signature,
+    )
+
+
+class BeliefRepository:
+    def __init__(self, db_path: str):
+        self._db_path = db_path
+
+    def _conn(self) -> sqlite3.Connection:
+        return _get_tracked_connection(self._db_path)
+
+    @with_connection
+    def get_belief(self, agent_id: str, belief_id: str) -> Optional[BeliefNode]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT * FROM belief_nodes WHERE agent_id = ? AND id = ?",
+            (agent_id, belief_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return _row_to_belief_node(row)
+
+    @with_connection
+    def list_beliefs(self, agent_id: str) -> list[BeliefNode]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_nodes WHERE agent_id = ?",
+            (agent_id,),
+        ).fetchall()
+        return [_row_to_belief_node(r) for r in rows]
+
+    @with_connection
+    def create_belief(
+        self,
+        id: str,
+        agent_id: str,
+        label: str,
+        statement: str,
+        origin: str,
+        confidence: float,
+        ontological_mass: float,
+        somatic_anchor: str,
+        vector_16d: str,
+    ) -> BeliefNode:
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO belief_nodes
+               (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM belief_nodes WHERE id = ?", (id,)
+        ).fetchone()
+        return _row_to_belief_node(row)
+
+    @with_connection
+    def update_belief(
+        self,
+        belief_id: str,
+        confidence: float,
+        vector_16d: str,
+        origin: str,
+    ) -> None:
+        conn = self._conn()
+        conn.execute(
+            """UPDATE belief_nodes
+               SET confidence = ?, vector_16d = ?, origin = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (confidence, vector_16d, origin, belief_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def insert_belief_event(
+        self,
+        event_id: str,
+        belief_id: str,
+        source_type: str,
+        source_id: Optional[str],
+        alignment: Optional[float],
+        perturbation: Optional[float],
+        event_type: str,
+        impact: float,
+        rationale: Optional[str],
+    ) -> None:
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO belief_events
+               (id, belief_id, source_type, source_id, alignment_coefficient, perturbation_magnitude, event_type, impact_score, rationale)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (event_id, belief_id, source_type, source_id, alignment, perturbation, event_type, impact, rationale),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_events_for_belief(self, belief_id: str, limit: int = 20) -> list[BeliefEvent]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_events WHERE belief_id = ? ORDER BY timestamp DESC LIMIT ?",
+            (belief_id, limit),
+        ).fetchall()
+        return [_row_to_belief_event(r) for r in rows]
+
+    @with_connection
+    def update_conversation_somatic_state(
+        self,
+        conversation_id: str,
+        somatic_reservoir_ad: float,
+        matrix_warping: float,
+        immunological_directive_active: int,
+    ) -> None:
+        conn = self._conn()
+        conn.execute(
+            """UPDATE conversations
+               SET somatic_reservoir_ad = ?, matrix_warping = ?, immunological_directive_active = ?
+               WHERE id = ?""",
+            (somatic_reservoir_ad, matrix_warping, immunological_directive_active, conversation_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_conversation_somatic_state(self, conversation_id: str) -> Optional[dict]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT somatic_reservoir_ad, matrix_warping, immunological_directive_active FROM conversations WHERE id = ?",
+            (conversation_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "somatic_reservoir_ad": row["somatic_reservoir_ad"] or 0.0,
+            "matrix_warping": row["matrix_warping"] or 0.0,
+            "immunological_directive_active": row["immunological_directive_active"] or 0,
+        }
+
+
+def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
+    created = row["created_at"]
+    updated = row["updated_at"]
+    return BeliefNode(
+        id=row["id"],
+        agent_id=row["agent_id"],
+        label=row["label"],
+        statement=row["statement"],
+        origin=row["origin"],
+        confidence=row["confidence"],
+        ontological_mass=row["ontological_mass"],
+        somatic_anchor=row["somatic_anchor"],
+        vector_16d=row["vector_16d"],
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
+        updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
+    )
+
+
+def _row_to_belief_event(row: sqlite3.Row) -> BeliefEvent:
+    ts = row["timestamp"]
+    return BeliefEvent(
+        id=row["id"],
+        timestamp=datetime.fromisoformat(ts) if isinstance(ts, str) else ts,
+        belief_id=row["belief_id"],
+        source_type=row["source_type"],
+        source_id=row["source_id"],
+        alignment_coefficient=row["alignment_coefficient"],
+        perturbation_magnitude=row["perturbation_magnitude"],
+        event_type=row["event_type"],
+        impact_score=row["impact_score"],
+        rationale=row["rationale"],
     )
