@@ -72,6 +72,54 @@ class BeliefDynamicsEngine(ProcessingModule):
     def validate(self) -> bool:
         return True
 
+    def _seed_initial_beliefs_if_needed(self, agent_id: str) -> None:
+        existing = self._belief_repo.list_beliefs(agent_id)
+        if len(existing) > 0:
+            return
+
+        if not self._identity_yaml_path.exists():
+            logger.warning(f"Identity file {self._identity_yaml_path} not found. Cannot seed beliefs.")
+            return
+
+        try:
+            with open(self._identity_yaml_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+            config_beliefs = data.get("personality", {}).get("beliefs", [])
+            for cb in config_beliefs:
+                label = cb.get("id")
+                statement = cb.get("statement")
+                confidence = cb.get("confidence", 0.5)
+                category = cb.get("category", "ontological")
+
+                # Map category to Ontological Mass
+                if category == "foundational":
+                    mass = 1.5
+                elif category == "ontological":
+                    mass = 1.2
+                elif category == "methodological":
+                    mass = 1.0
+                else:
+                    mass = 1.0
+
+                # Compute baseline 16D vector using LexiconScorer
+                vec = self._scorer.score(statement)
+                vec_json = json.dumps(vec.tolist())
+
+                self._belief_repo.create_belief(
+                    id=str(uuid.uuid4()),
+                    agent_id=agent_id,
+                    label=label,
+                    statement=statement,
+                    origin="authored",
+                    confidence=confidence,
+                    ontological_mass=mass,
+                    somatic_anchor="none",
+                    vector_16d=vec_json,
+                )
+            logger.info(f"Successfully seeded {len(config_beliefs)} baseline beliefs for agent {agent_id}.")
+        except Exception as e:
+            logger.error(f"Error seeding beliefs: {e}", exc_info=True)
+
     async def process(self, payload: dict) -> dict:
         conversation_id = payload.get("conversation_id", "")
         agent_id = payload.get("agent_id", "symbia")

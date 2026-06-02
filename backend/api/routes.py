@@ -314,6 +314,7 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
             thinking_tokens=thinking_tokens,
             model_used=model_used,
             provider_used=provider_used,
+            context_sent=result.payload.get("context_sent"),
             structural_signature=assistant_sig_blob,
         )
 
@@ -459,8 +460,8 @@ async def get_beliefs(request: Request, conversation_id: Optional[str] = None, a
                     "timestamp": e.timestamp.isoformat(),
                     "source_id": e.source_id,
                     "source_type": e.source_type,
-                    "delta_confidence": e.delta_confidence,
-                    "description": e.description
+                    "delta_confidence": e.impact_score,
+                    "description": e.rationale
                 }
                 for e in events
             ]
