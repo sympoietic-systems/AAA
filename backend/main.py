@@ -98,6 +98,7 @@ def _create_llm_provider(cfg: dict):
         openrouter_keys = cfg.get("openrouter_keys", [])
         google_api_base = cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai")
         deepseek_api_base = cfg.get("deepseek_api_base", "https://api.deepseek.com")
+        cooldown_seconds = cfg.get("cooldown_seconds", 300)
         logger.info("Main model pool: %s (fallback: %s)", models, fallback)
         return ModelPoolProvider(
             api_key=api_key,
@@ -109,7 +110,7 @@ def _create_llm_provider(cfg: dict):
             openrouter_keys=openrouter_keys,
             google_api_base=google_api_base,
             deepseek_api_base=deepseek_api_base,
-            cooldown_seconds=60,
+            cooldown_seconds=cooldown_seconds,
             thinking=thinking,
             reasoning_effort=reasoning_effort,
         )
@@ -188,6 +189,7 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
         google_keys = cfg.get("google_keys", [])
         openrouter_keys = cfg.get("openrouter_keys", [])
         google_api_base = cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai")
+        cooldown_seconds = cfg.get("cooldown_seconds", 300)
         logger.info("Background model pool: %s (fallback: %s)", models, fallback)
         return ModelPoolProvider(
             api_key=api_key,
@@ -197,7 +199,7 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
             google_keys=google_keys,
             openrouter_keys=openrouter_keys,
             google_api_base=google_api_base,
-            cooldown_seconds=60,
+            cooldown_seconds=cooldown_seconds,
             thinking=thinking,
             reasoning_effort=reasoning_effort,
         )

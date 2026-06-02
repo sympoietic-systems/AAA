@@ -23,6 +23,7 @@ embedding:
 # ── LLM Provider ─────────────────────────────────
 llm:
   provider: "openrouter"       # openrouter | deepseek | openai_compatible
+  cooldown_seconds: 300        # Cooldown in seconds for exhausted keys/models (default: 300)
   model: ""                    # Leave empty → auto from provider
   api_base: ""                 # Leave empty → auto from provider
   thinking:
@@ -99,6 +100,7 @@ background_llm:
     - "qwen/qwen3-next-80b-a3b-instruct:free"
   fallback_model: "openrouter/free"
   api_base: "https://openrouter.ai/api/v1"
+  cooldown_seconds: 300        # Cooldown in seconds for exhausted keys/models (default: 300)
 
 # ── Vision Model Pool ─────────────────────────────
 vision_llm:
@@ -117,9 +119,22 @@ structural_llm:
     - "google_router/gemini-3.5-flash"
     - "google_router/gemini-3.1-flash-lite"
   fallback_model: "openrouter_router/google/gemma-4-26b-a4b-it:free"
-structural_signature:
-  llm_scorer_enabled: true   # set false to skip LLM call; lexicon+topology still run
+# ── Background Tasks ──────────────────────────────
+background_llm:
+  models:
+    - "google/gemma-4-26b-a4b-it:free"
+  fallback_model: "openrouter/free"
+  cooldown_seconds: 300        # Cooldown in seconds for rate-limited keys/models (default: 300)
 ```
+
+## Stateful Model Pool & Fallback Prioritization
+
+When utilizing model pools (such as the `background_llm`, `vision_llm`, or `structural_llm` model lists), the system utilizes a stateful routing client that optimizes key usage and latency:
+
+1. **State Retention**: The model pool client caches the last working model (`_last_model_used`).
+2. **Prioritization**: When a fallback switch occurs, subsequent calls prioritize the working fallback model first to avoid spinning through previously failing/rate-limited keys and endpoints.
+3. **Fallback Period Expiration**: If the elapsed time since the switch exceeds the configured `cooldown_seconds` (default: 300 seconds), priority resets and the system attempts to route to the primary/preferred model again.
+4. **Key Rotation & Cooldowns**: Individual API keys and models that hit rate limits or transient errors are put on cooldown for `cooldown_seconds` before the system will attempt to utilize them again.
 
 ## Environment Variables
 

@@ -210,7 +210,7 @@ class OpenRouterProvider(OpenAICompatibleProvider):
 class KeyManager:
     """Manages rotation and cooldowns for a list of API keys."""
 
-    def __init__(self, keys: list[str], cooldown_seconds: int = 60):
+    def __init__(self, keys: list[str], cooldown_seconds: int = 300):
         self.keys = keys
         self.cooldown_seconds = cooldown_seconds
         self._exhausted: dict[str, float] = {}
@@ -253,7 +253,7 @@ class ModelPoolProvider(BaseLLMProvider):
         openrouter_keys: Optional[list[str]] = None,
         google_api_base: str = "https://generativelanguage.googleapis.com/v1beta/openai",
         deepseek_api_base: str = "https://api.deepseek.com",
-        cooldown_seconds: int = 60,
+        cooldown_seconds: int = 300,
         max_retries_per_model: int = 0,
         thinking: bool = False,
         reasoning_effort: str = "high",
@@ -270,6 +270,7 @@ class ModelPoolProvider(BaseLLMProvider):
         self._reasoning_effort = reasoning_effort
         self._exhausted: dict[str, float] = {}
         self._last_model_used: str = ""
+        self._last_model_time: float = 0.0
 
         # Setup key managers
         self._google_key_mgr = KeyManager(google_keys or [], cooldown_seconds=cooldown_seconds)
@@ -314,7 +315,21 @@ class ModelPoolProvider(BaseLLMProvider):
     async def generate(self, messages: list[dict], **params) -> dict:
         import time
         errors = []
-        for model in self._all_models():
+        
+        now = time.time()
+        models_to_try = self._all_models()
+        if self._last_model_used and self._last_model_used in models_to_try:
+            preferred_model = models_to_try[0]
+            if self._last_model_used != preferred_model:
+                if now - self._last_model_time >= self._cooldown_seconds:
+                    logger.info("Fallback period expired. Resetting priority to try preferred model %s again.", preferred_model)
+                    self._last_model_used = ""
+                    self._last_model_time = 0.0
+                else:
+                    # Prioritize last working model
+                    models_to_try = [self._last_model_used] + [m for m in models_to_try if m != self._last_model_used]
+
+        for model in models_to_try:
             if self._is_exhausted(model):
                 continue
 
@@ -376,7 +391,9 @@ class ModelPoolProvider(BaseLLMProvider):
 
                 try:
                     result = await provider.generate(messages, **params)
-                    self._last_model_used = model
+                    if self._last_model_used != model:
+                        self._last_model_used = model
+                        self._last_model_time = time.time()
                     success = True
                     break
                 except RateLimitError as e:

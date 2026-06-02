@@ -255,11 +255,14 @@ and `payload["file_context"]` — it has zero knowledge of where they came from.
 BaseLLMProvider (ABC)
   ├─ OpenAICompatibleProvider   ← generic (DeepSeek, any OpenAI-compat)
   │    └─ OpenRouterProvider    ← specialized (OpenRouter model names)
+  ├─ ModelPoolProvider          ← stateful fallback router & key manager
   └─ (future: OllamaProvider)
 ```
 
 Each provider takes `api_key`, `model`, `api_base`, and optional
 `thinking`/`reasoning_effort` params.
+
+The `ModelPoolProvider` manages a list of target models and individual API key sets (`google_keys`, `deepseek_keys`, `openrouter_keys`). It rotates keys when rate-limited, switches to fallback models when all keys are exhausted, and tracks exhaustion states. It also retains state about the last working model (`_last_model_used`) to prioritize it during subsequent calls, resetting priority back to the preferred model only after the configured `cooldown_seconds` has elapsed.
 
 ## Token Tracking
 

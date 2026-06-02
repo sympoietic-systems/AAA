@@ -22,6 +22,7 @@ embedding:
 # based on the selected provider.
 llm:
   provider: "openrouter"
+  cooldown_seconds: 300  # Cooldown in seconds for exhausted keys/models in pool (default: 300)
   # model and api_base are optional — leave empty to use provider defaults
   model: ""
   api_base: ""
@@ -147,6 +148,7 @@ background_llm:
     - "qwen/qwen3-next-80b-a3b-instruct:free"
   fallback_model: "openrouter/free"
   api_base: "https://openrouter.ai/api/v1"
+  cooldown_seconds: 300  # Cooldown in seconds for exhausted keys/models in pool (default: 300)
 
 # ── Vision Fallback ───────────────────────────────
 # Model with vision capabilities for image understanding

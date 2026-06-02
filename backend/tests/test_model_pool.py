@@ -133,5 +133,62 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         # We can inspect the parameters passed during generate() or the mock call args
         self.assertEqual(mock_generate.call_count, 1)
 
+    @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate", autospec=True)
+    async def test_last_working_model_stateful_prioritization(self, mock_generate):
+        import time
+        provider = ModelPoolProvider(
+            api_key="or_key_default",
+            models=["google_router/gemini-2.5-flash", "openrouter_router/google/gemma-4-26b-a4b-it:free"],
+            google_keys=["g_key1"],
+            openrouter_keys=["or_key1"],
+            cooldown_seconds=300,
+        )
+
+        calls = []
+
+        async def side_effect(provider_inst, messages, **params):
+            calls.append(provider_inst._model)
+            if provider_inst._model == "gemini-2.5-flash":
+                raise RateLimitError("google rate limit")
+            return {"content": f"Success from {provider_inst._model}", "thinking": None}
+
+        mock_generate.side_effect = side_effect
+
+        # --- Request 1 ---
+        result1 = await provider.generate([{"role": "user", "content": "hello"}])
+        self.assertEqual(result1["content"], "Success from google/gemma-4-26b-a4b-it:free")
+        self.assertEqual(provider._last_model_used, "openrouter_router/google/gemma-4-26b-a4b-it:free")
+        self.assertGreater(provider._last_model_time, 0.0)
+        self.assertEqual(calls, ["gemini-2.5-flash", "google/gemma-4-26b-a4b-it:free"])
+
+        # Reset recorded calls
+        calls.clear()
+
+        # --- Request 2 ---
+        result2 = await provider.generate([{"role": "user", "content": "hello again"}])
+        self.assertEqual(result2["content"], "Success from google/gemma-4-26b-a4b-it:free")
+        self.assertEqual(provider._last_model_used, "openrouter_router/google/gemma-4-26b-a4b-it:free")
+        self.assertEqual(calls, ["google/gemma-4-26b-a4b-it:free"])
+
+        # Reset recorded calls
+        calls.clear()
+
+        # --- Request 3 ---
+        provider._last_model_time -= 301
+        for m in list(provider._exhausted.keys()):
+            provider._exhausted[m] -= 301
+        for k in list(provider._google_key_mgr._exhausted.keys()):
+            provider._google_key_mgr._exhausted[k] -= 301
+
+        async def side_effect_success(provider_inst, messages, **params):
+            calls.append(provider_inst._model)
+            return {"content": f"Success from {provider_inst._model}", "thinking": None}
+        mock_generate.side_effect = side_effect_success
+
+        result3 = await provider.generate([{"role": "user", "content": "hello after cooldown"}])
+        self.assertEqual(result3["content"], "Success from gemini-2.5-flash")
+        self.assertEqual(provider._last_model_used, "google_router/gemini-2.5-flash")
+        self.assertEqual(calls, ["gemini-2.5-flash"])
+
 if __name__ == "__main__":
     unittest.main()
