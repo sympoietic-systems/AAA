@@ -1,7 +1,7 @@
 import logging
 import uuid
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, Header, Depends
 import os
@@ -1673,8 +1673,8 @@ async def upload_conversation_files(
             status="uploading",
             token_count=0,
             chunk_count=0,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         ))
 
     return ConversationFilesResponse(conversation_id=conversation_id, files=schema_files)

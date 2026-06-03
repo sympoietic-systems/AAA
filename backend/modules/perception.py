@@ -203,7 +203,7 @@ class PerceptionModule(ProcessingModule):
         if not files:
             return [], 0
 
-        from datetime import datetime
+        from datetime import datetime, timezone
         manifest_lines = ["[File Manifest - Co-Participant Sediment]"]
         for f in files:
             file_name = f["file_name"]
@@ -218,7 +218,7 @@ class PerceptionModule(ProcessingModule):
             if f.get("created_at"):
                 try:
                     created_dt = datetime.strptime(f["created_at"], "%Y-%m-%d %H:%M:%S")
-                    if (datetime.utcnow() - created_dt).total_seconds() < 600:
+                    if (datetime.now(timezone.utc).replace(tzinfo=None) - created_dt).total_seconds() < 600:
                         is_new = True
                 except Exception:
                     pass
