@@ -106,6 +106,10 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
                 file_type = "docx"
             elif ext == "md":
                 file_type = "md"
+            elif ext == "epub":
+                file_type = "epub"
+            elif ext == "mobi":
+                file_type = "mobi"
             else:
                 file_type = "txt"
             attachments.append({
@@ -1633,6 +1637,10 @@ async def upload_conversation_files(
             file_type = "docx"
         elif ext == "md":
             file_type = "md"
+        elif ext == "epub":
+            file_type = "epub"
+        elif ext == "mobi":
+            file_type = "mobi"
         else:
             file_type = "txt"
 

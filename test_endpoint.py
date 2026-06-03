@@ -35,7 +35,7 @@ async def test_background_endpoint():
         },
     ]
 
-    async with httpx.AsyncClient(timeout=180.0) as client:
+    async with httpx.AsyncClient(trust_env=False, timeout=180.0) as client:
         for test in tests:
             print(f"\n{'=' * 60}")
             print(f"Testing: {test['name']}")

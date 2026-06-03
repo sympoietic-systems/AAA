@@ -104,19 +104,33 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         }
 
     async def _request_with_retry(self, body: dict) -> dict:
+        is_anthropic = "anthropic" in self._api_base
+        url = f"{self._api_base}/v1/messages" if is_anthropic else f"{self._api_base}/chat/completions"
+        
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/aaa",
+            "X-Title": "AAA",
+        }
+        if is_anthropic:
+            headers["anthropic-version"] = "2023-06-01"
+
         last_error = None
         for attempt in range(self._max_retries + 1):
             async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
-                    f"{self._api_base}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self._api_key}",
-                        "Content-Type": "application/json",
-                        "HTTP-Referer": "https://github.com/aaa",
-                        "X-Title": "AAA",
-                    },
-                    json=body,
-                )
+                try:
+                    response = await client.post(
+                        url,
+                        headers=headers,
+                        json=body,
+                    )
+                except httpx.RequestError as e:
+                    last_error = e
+                    if attempt < self._max_retries:
+                        await asyncio.sleep(min(2 ** attempt, 30))
+                        continue
+                    raise
 
                 if response.status_code == 429:
                     rate_info = self._parse_rate_limit_headers(response.headers)
@@ -143,7 +157,25 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
                 response.raise_for_status()
                 data = response.json()
-                message = data["choices"][0]["message"]
+                
+                if is_anthropic:
+                    content_list = data.get("content", [])
+                    text_content = ""
+                    reasoning_content = ""
+                    for block in content_list:
+                        if block.get("type") == "text":
+                            text_content += block.get("text", "")
+                        elif block.get("type") == "thinking":
+                            reasoning_content += block.get("thinking", "")
+                    
+                    message = {
+                        "role": data.get("role", "assistant"),
+                        "content": text_content,
+                        "reasoning_content": reasoning_content,
+                    }
+                else:
+                    message = data["choices"][0]["message"]
+                
                 return self._parse_message(message, data)
 
         raise last_error or RuntimeError("All retries exhausted")
@@ -151,7 +183,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
     async def generate(self, messages: list[dict], **params) -> dict:
         merged_params = {**self._default_params, **params}
         
-        # Filter out parameters not supported by Google's OpenAI-compatible endpoint
+        is_anthropic = "anthropic" in self._api_base
+
+        # Filter out parameters not supported by specific endpoints
         if "google" in self.provider_name.lower() or "googleapis.com" in self._api_base:
             merged_params.pop("presence_penalty", None)
             merged_params.pop("frequency_penalty", None)
@@ -159,15 +193,49 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             # against the generation token limit. Elevate max_tokens to prevent truncation.
             if "max_tokens" in merged_params and merged_params["max_tokens"] <= 4096:
                 merged_params["max_tokens"] = 8192
+        elif is_anthropic:
+            merged_params.pop("presence_penalty", None)
+            merged_params.pop("frequency_penalty", None)
 
         body: dict = {
             "model": self._model,
-            "messages": messages,
         }
 
+        if is_anthropic:
+            # For Anthropic, system messages must be passed as a top-level parameter
+            system_prompt = ""
+            filtered_messages = []
+            for m in messages:
+                if m.get("role") == "system":
+                    system_prompt += m.get("content", "") + "\n"
+                else:
+                    # Clean role mapping to match Anthropic expectations
+                    role = m.get("role", "user")
+                    if role not in ("user", "assistant"):
+                        role = "user"
+                    filtered_messages.append({
+                        "role": role,
+                        "content": m.get("content", "")
+                    })
+            body["messages"] = filtered_messages
+            if system_prompt:
+                body["system"] = system_prompt.strip()
+            
+            # Anthropic requires max_tokens
+            body["max_tokens"] = merged_params.get("max_tokens", 4096)
+        else:
+            body["messages"] = messages
+            body["model"] = self._model
+
         if self._thinking:
-            body["thinking"] = {"type": "enabled"}
-            body["reasoning_effort"] = self._reasoning_effort
+            if is_anthropic:
+                body["thinking"] = {
+                    "type": "enabled",
+                    "budget_tokens": 1024
+                }
+            else:
+                body["thinking"] = {"type": "enabled"}
+                body["reasoning_effort"] = self._reasoning_effort
         else:
             # Explicitly exclude reasoning/thinking for providers if supported
             is_openrouter = "openrouter" in self.provider_name.lower() or "openrouter.ai" in self._api_base
@@ -178,6 +246,15 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 body["include_reasoning"] = False
             elif is_google:
                 body["thinking_config"] = {"thinking_budget": 0}
+            elif is_anthropic:
+                body["thinking"] = {"type": "disabled"}
+
+            # Clean merged_params from keys that could conflict
+            merged_params.pop("thinking", None)
+            merged_params.pop("thinking_config", None)
+            merged_params.pop("reasoning", None)
+            merged_params.pop("include_reasoning", None)
+            merged_params.pop("max_tokens", None)
 
             body.update(merged_params)
 

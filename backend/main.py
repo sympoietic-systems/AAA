@@ -495,6 +495,7 @@ async def lifespan(app: FastAPI):
                   children=[
                       SkillMeta(name="StagnationEvaluator", description="Calculates loop severity via pairwise similarity, novelty, and entropy to trigger intervention", category="memory"),
                       SkillMeta(name="NomadicRetriever", description="Retrieves semantically distant but structurally isomorphic memories from other threads", category="memory"),
+                      SkillMeta(name="SemanticKnotRetriever", description="Retrieves distilled concepts from semantic knots to perturb stagnant conversation loops", category="memory"),
                       SkillMeta(name="DormantFileRetriever", description="Retrieves inactive file context segments falling in the dynamic similarity Goldilocks zone", category="memory"),
                       SkillMeta(name="BudgetInterleaver", description="Interleaves retrieved items and enforces token context limits based on loop intensity", category="memory"),
                   ]),

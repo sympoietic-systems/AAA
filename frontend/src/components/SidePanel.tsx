@@ -839,16 +839,18 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
           <>
             {diff.sources.map((s, i) => (
               <div key={i} className="flex gap-1 flex-wrap group relative cursor-help">
-                <span className={s.type === "nomadic" ? "text-[#60a5fa]" : "text-[#4ade80]"}>
-                  {s.type === "nomadic" ? "NOM" : "DRM"}
+                <span className={s.type === "nomadic" ? "text-[#60a5fa]" : s.type === "semantic_knot" ? "text-[#a78bfa]" : "text-[#4ade80]"}>
+                  {s.type === "nomadic" ? "NOM" : s.type === "semantic_knot" ? "KNOT" : "DRM"}
                 </span>
                 <span className="text-[#888] truncate max-w-32">{s.source_title}</span>
                 <span className="text-[#f43f5e] ml-auto">{"\u03B4"}{s.similarity.toFixed(3)}</span>
                 <DiffractiveTooltip
-                  title={s.type === "nomadic" ? "Nomadic Memory Source (NOM)" : "Dormant Document Sediment (DRM)"}
+                  title={s.type === "nomadic" ? "Nomadic Memory Source (NOM)" : s.type === "semantic_knot" ? "Sedimented Semantic Knot (KNOT)" : "Dormant Document Sediment (DRM)"}
                   value={`Similarity (delta): ${s.similarity.toFixed(4)}`}
                   desc={s.type === "nomadic"
                     ? "Injected context retrieved from an orthogonal/external conversation memory to shift the loop."
+                    : s.type === "semantic_knot"
+                    ? "Injected context retrieved from distilled semantic knots of past conversations."
                     : "Injected context retrieved from static uploaded files matching the Goldilocks zone."}
                 />
               </div>
@@ -1494,7 +1496,7 @@ export function SidePanel({
                         <div key={f.file_name} className="py-1.5 border-b border-[#1a1a1a] last:border-b-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs">
-                              {f.file_type === "image" ? "\uD83D\uDDBC" : f.file_type === "pdf" ? "\uD83D\uDCC4" : f.file_type === "md" ? "\uD83D\uDCDD" : "\uD83D\uDCC4"}
+                              {f.file_type === "image" ? "\uD83D\uDDBC" : f.file_type === "pdf" ? "\uD83D\uDCC4" : f.file_type === "md" ? "\uD83D\uDCDD" : (f.file_type === "epub" || f.file_type === "mobi") ? "\uD83D\uDCD6" : "\uD83D\uDCC4"}
                             </span>
                             <span className="text-[10px] text-[#aaa] truncate flex-1 font-mono">
                               {f.file_name}

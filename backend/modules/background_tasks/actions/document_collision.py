@@ -8,14 +8,102 @@ logger = logging.getLogger(__name__)
 
 
 def parse_json_safely(text: str) -> dict:
-    text = text.strip()
-    first_brace = text.find("{")
-    last_brace = text.rfind("}")
-    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-        json_str = text[first_brace:last_brace + 1]
-    else:
-        json_str = text
-    return json.loads(json_str)
+    import json
+    import re
+
+    # 1. Clean think tags
+    cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+
+    # 2. Extract starting from first {
+    first_brace = cleaned.find("{")
+    if first_brace == -1:
+        return json.loads(cleaned)
+    
+    json_part = cleaned[first_brace:]
+
+    # 3. Helper to clean control characters and commas inside string
+    def sanitize(s: str) -> str:
+        s = re.sub(r',\s*([\]\}])', r'\1', s)
+        chars = []
+        in_string = False
+        escape = False
+        for char in s:
+            if char == '"' and not escape:
+                in_string = not in_string
+                chars.append(char)
+            elif in_string:
+                if char == '\n':
+                    chars.append('\\n')
+                elif char == '\t':
+                    chars.append('\\t')
+                elif char == '\r':
+                    chars.append('\\r')
+                else:
+                    chars.append(char)
+            else:
+                chars.append(char)
+                
+            if char == '\\' and in_string:
+                escape = not escape
+            else:
+                escape = False
+        return "".join(chars)
+
+    # 4. Helper to auto-close open structures in truncated string
+    def auto_close(s: str) -> str:
+        stack = []
+        in_string = False
+        escape = False
+        for char in s:
+            if char == '"' and not escape:
+                in_string = not in_string
+            elif in_string:
+                if char == '\\':
+                    escape = not escape
+                else:
+                    escape = False
+            else:
+                if char in ('{', '['):
+                    stack.append(char)
+                elif char in ('}', ']'):
+                    if stack:
+                         top = stack[-1]
+                         if (char == '}' and top == '{') or (char == ']' and top == '['):
+                             stack.pop()
+        
+        repaired = s
+        if in_string:
+            repaired += '"'
+        for item in reversed(stack):
+            if item == '{':
+                repaired += '}'
+            elif item == '[':
+                repaired += ']'
+        return repaired
+
+    # Try standard sanitize and parse
+    sanitized = sanitize(json_part)
+    try:
+        return json.loads(sanitized)
+    except Exception:
+        pass
+
+    # Try auto-closing and parsing
+    try:
+        closed = auto_close(sanitized)
+        return json.loads(closed)
+    except Exception:
+        pass
+
+    # Try finding last brace if any and slice/parse
+    last_brace = sanitized.rfind("}")
+    if last_brace != -1:
+        try:
+            return json.loads(sanitized[:last_brace + 1])
+        except Exception:
+            pass
+
+    return json.loads(cleaned)
 
 
 class DocumentCollisionAction(BackgroundAction):

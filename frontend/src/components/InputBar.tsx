@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, type ChangeEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react"
 
-const ACCEPTED_EXTENSIONS = ".pdf,.txt,.md,.docx,.py,.json,.yaml,.yml,.csv,.xml,.html,.css,.js,.ts,.tsx,.jsx,.rs,.go,.java,.c,.h,.cpp,.hpp,.sh,.bat,.ps1,.toml,.ini,.cfg,.env,.log"
+const ACCEPTED_EXTENSIONS = ".pdf,.txt,.md,.docx,.epub,.mobi,.py,.json,.yaml,.yml,.csv,.xml,.html,.css,.js,.ts,.tsx,.jsx,.rs,.go,.java,.c,.h,.cpp,.hpp,.sh,.bat,.ps1,.toml,.ini,.cfg,.env,.log"
 
 interface Props {
   onSend: (text: string) => void

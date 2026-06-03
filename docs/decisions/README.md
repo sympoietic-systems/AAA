@@ -52,6 +52,7 @@ What becomes easier/harder?
 | [019](ADR-019-unified-document-belief-collision.md) | Unified Document Belief Collision Analysis | accepted | 2026-06-02 |
 | [020](ADR-020-resumable-indexing-and-startup-scheduler.md) | Resumable Indexing and Startup Background Scheduler | accepted | 2026-06-02 |
 | [021](ADR-021-thinking-suppression-two-speed-brain.md) | Thinking Suppression and Two-Speed Brain | accepted | 2026-06-03 |
+| [022](ADR-022-semantic-knots-compaction.md) | Semantic Knots Compaction and Isomorphic Cross-Conversation Retrieval | accepted | 2026-06-03 |
 
 
 ## Creating a New ADR

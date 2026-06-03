@@ -72,6 +72,11 @@ class DiffractiveRetrievalModule(ProcessingModule):
                     category="memory",
                 ),
                 SkillMeta(
+                    name="SemanticKnotRetriever",
+                    description="Retrieves distilled concepts from semantic knots to perturb stagnant conversation loops",
+                    category="memory",
+                ),
+                SkillMeta(
                     name="DormantFileRetriever",
                     description="Retrieves inactive file context segments falling in the dynamic similarity Goldilocks zone",
                     category="memory",

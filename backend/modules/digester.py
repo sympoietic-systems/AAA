@@ -1,5 +1,7 @@
 import logging
+import re
 from abc import ABC, abstractmethod
+from html.parser import HTMLParser
 from pathlib import Path
 
 from backend.utils.token_counter import estimate_tokens
@@ -25,6 +27,10 @@ class SimpleChunkDigester(FileDigester):
             return self._extract_pdf(file_path)
         if ext == ".docx":
             return self._extract_docx(file_path)
+        if ext == ".epub":
+            return self._extract_epub(file_path)
+        if ext == ".mobi":
+            return self._extract_mobi(file_path)
         if ext in TEXT_EXTENSIONS:
             return self._extract_text(file_path)
 
@@ -86,6 +92,102 @@ class SimpleChunkDigester(FileDigester):
         doc = Document(str(file_path))
         paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
         return "\n\n".join(paragraphs)
+
+    @staticmethod
+    def _extract_epub(file_path: Path) -> str:
+        try:
+            import ebooklib
+            from ebooklib import epub
+        except ImportError:
+            raise ImportError(
+                "ebooklib is required for EPUB extraction. Install with: pip install EbookLib"
+            )
+
+        book = epub.read_epub(str(file_path))
+        text_parts = []
+        for item in book.get_items():
+            if item.get_type() == ebooklib.ITEM_DOCUMENT:
+                content_bytes = item.get_content()
+                try:
+                    content_str = content_bytes.decode("utf-8")
+                except UnicodeDecodeError:
+                    content_str = content_bytes.decode("latin-1", errors="ignore")
+                
+                parser = EPUBMOBIHTMLParser()
+                parser.feed(content_str)
+                cleaned_text = parser.get_text()
+                if cleaned_text.strip():
+                    text_parts.append(cleaned_text.strip())
+
+        if not text_parts:
+            raise ValueError("No text content could be extracted from the EPUB file.")
+
+        return "\n\n".join(text_parts)
+
+    @staticmethod
+    def _extract_mobi(file_path: Path) -> str:
+        try:
+            import mobi
+        except ImportError:
+            raise ImportError(
+                "mobi is required for MOBI extraction. Install with: pip install mobi"
+            )
+        
+        import shutil
+
+        tempdir, filepath = mobi.extract(str(file_path))
+        try:
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                content_str = f.read()
+            
+            parser = EPUBMOBIHTMLParser()
+            parser.feed(content_str)
+            cleaned_text = parser.get_text()
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
+
+        if not cleaned_text.strip():
+            raise ValueError("No text content could be extracted from the MOBI file.")
+
+        return cleaned_text
+
+
+class EPUBMOBIHTMLParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.text_parts = []
+        self.ignore_tags = {"script", "style", "nav", "header", "footer", "form", "noscript", "head", "iframe", "button"}
+        self.ignore_stack = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.ignore_tags:
+            self.ignore_stack.append(tag)
+        elif not self.ignore_stack:
+            if tag in {"p", "div", "br", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"}:
+                self.text_parts.append("\n")
+            if tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+                try:
+                    level = int(tag[1])
+                except ValueError:
+                    level = 2
+                self.text_parts.append("#" * level + " ")
+
+    def handle_data(self, data):
+        if not self.ignore_stack:
+            self.text_parts.append(data)
+
+    def handle_endtag(self, tag):
+        if self.ignore_stack and tag == self.ignore_stack[-1]:
+            self.ignore_stack.pop()
+        elif not self.ignore_stack:
+            if tag in {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"}:
+                self.text_parts.append("\n")
+
+    def get_text(self) -> str:
+        raw_text = "".join(self.text_parts)
+        cleaned = re.sub(r'[ \t]+', ' ', raw_text)
+        cleaned = re.sub(r'\n\s*\n+', '\n\n', cleaned)
+        return cleaned.strip()
 
 
 class RhizomaticDigester(SimpleChunkDigester):
