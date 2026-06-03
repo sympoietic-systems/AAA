@@ -40,3 +40,15 @@ Where:
     $$\chi = \chi_{\text{min}} + (\chi_{\text{max}} - \chi_{\text{min}}) \cdot \sigma$$
 *   **Flowing state ($\sigma \to 0$):** $\chi \to 0.1$, prioritizing direct topic semantic continuity.
 *   **Stagnant state ($\sigma \to 1$):** $\chi \to 0.7$, shifting focus to lateral, structurally isomorphic connections across domains.
+
+---
+
+### Phase 5: Agential Independence & The Autopoietic Dream Daemon ✅
+*   **Goal:** Enable self-directed agency and offline cognitive cycles during inactivity periods.
+*   **Deliverables:**
+    *   ✅ Continuous background thread loop (`AutopoieticDreamDaemon` in `backend/core/daemon.py`)
+    *   ✅ Nonlinear Somatic Drift modeling temporal belief decay with core rigidity
+    *   ✅ Autocorrelation-based Somatic Vitality ($V$) and sigmoidal curiosity weighting ($g(V)$)
+    *   ✅ Structure-aware memory compaction and LLM-synthesized concept merging
+    *   ✅ Exogenous web ingestion using the headless `RhizomeWebProbe` to break stagnation
+

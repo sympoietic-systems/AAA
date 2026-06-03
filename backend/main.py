@@ -605,9 +605,17 @@ async def lifespan(app: FastAPI):
     app.state.startup_scheduler = scheduler
     scheduler.start()
 
+    # Start Autopoietic Dream Daemon background cycle
+    from backend.core.daemon import AutopoieticDreamDaemon
+    dream_daemon = AutopoieticDreamDaemon(app.state)
+    app.state.dream_daemon = dream_daemon
+    dream_daemon.start()
+
     logger.info("All modules initialized. Server ready.")
     yield
     logger.info("Shutting down.")
+    if hasattr(app.state, "dream_daemon"):
+        app.state.dream_daemon.stop()
 
 
 def create_app() -> FastAPI:

@@ -199,6 +199,25 @@ class MessageRepository:
         return [_row_to_message(r) for r in reversed(rows)]
 
     @with_connection
+    def get_last_message_timestamp(self, conversation_id: Optional[str] = None) -> Optional[datetime]:
+        conn = self._conn()
+        if conversation_id:
+            row = conn.execute(
+                "SELECT timestamp FROM conversation_log WHERE conversation_id = ? ORDER BY id DESC LIMIT 1",
+                (conversation_id,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT timestamp FROM conversation_log ORDER BY id DESC LIMIT 1",
+            ).fetchone()
+        if row is None or not row["timestamp"]:
+            return None
+        try:
+            return datetime.fromisoformat(row["timestamp"])
+        except Exception:
+            return None
+
+    @with_connection
     def get_by_id(self, message_id: int) -> Optional[Message]:
         conn = self._conn()
         row = conn.execute(
@@ -1558,6 +1577,33 @@ class SemanticKnotRepository:
             knot_ids,
         ).fetchall()
         return [_row_to_semantic_knot(r) for r in rows]
+
+    @with_connection
+    def update_knot(
+        self,
+        knot_id: str,
+        concept_payload: str,
+        embedding: bytes,
+        weight: float,
+        structural_signature: bytes,
+    ) -> None:
+        conn = self._conn()
+        conn.execute(
+            """UPDATE semantic_knots
+               SET concept_payload = ?, embedding = ?, weight = ?, structural_signature = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (concept_payload, embedding, weight, structural_signature, knot_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def delete_knot(self, knot_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM semantic_knots WHERE id = ?",
+            (knot_id,),
+        )
+        conn.commit()
 
 
 def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
