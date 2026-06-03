@@ -169,6 +169,16 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             body["thinking"] = {"type": "enabled"}
             body["reasoning_effort"] = self._reasoning_effort
         else:
+            # Explicitly exclude reasoning/thinking for providers if supported
+            is_openrouter = "openrouter" in self.provider_name.lower() or "openrouter.ai" in self._api_base
+            is_google = "google" in self.provider_name.lower() or "googleapis.com" in self._api_base
+            
+            if is_openrouter:
+                body["reasoning"] = {"exclude": True}
+                body["include_reasoning"] = False
+            elif is_google:
+                body["thinking_config"] = {"thinking_budget": 0}
+
             body.update(merged_params)
 
         return await self._request_with_retry(body)

@@ -199,9 +199,47 @@ async def test_dual_vector_isomorphic_retrieval():
         os.remove(db_path)
 
 
+def test_robust_parser():
+    print("--- Testing Robust Parser for LLM Scorer ---")
+    from backend.modules.structural_engine import parse_scorer_response
+    
+    # 1. Perfect JSON
+    content_perfect = '{\n  "scores": [0.1, 0.2, 0.3],\n  "justification": "this is simple"\n}'
+    scores, just = parse_scorer_response(content_perfect)
+    assert scores == [0.1, 0.2, 0.3]
+    assert just == "this is simple"
+    
+    # 2. Trailing comma in list
+    content_comma = '{\n  "scores": [0.1, 0.2, 0.3,],\n  "justification": "trailing comma"\n}'
+    scores, just = parse_scorer_response(content_comma)
+    assert scores == [0.1, 0.2, 0.3]
+    assert just == "trailing comma"
+    
+    # 3. With <think> tags
+    content_think = '<think>\nLet us analyze...\n</think>\n{\n  "scores": [0.5, 0.6],\n  "justification": "reasoning"\n}'
+    scores, just = parse_scorer_response(content_think)
+    assert scores == [0.5, 0.6]
+    assert just == "reasoning"
+    
+    # 4. Truncated scores array (missing end bracket and brace)
+    content_trunc_array = '{\n  "scores": [0.1, 0.2, 0.05, 0.4'
+    scores, just = parse_scorer_response(content_trunc_array)
+    assert scores == [0.1, 0.2, 0.05, 0.4]
+    
+    # 5. Truncated justification
+    content_trunc_just = '{\n  "scores": [0.1, 0.2],\n  "justification": "this was cut off'
+    scores, just = parse_scorer_response(content_trunc_just)
+    assert scores == [0.1, 0.2]
+    assert just == "this was cut off"
+
+    print("Robust parser tests passed successfully!")
+
+
 if __name__ == "__main__":
+    test_robust_parser()
     test_scorers()
     test_repository_signatures()
     import asyncio
     asyncio.run(test_dual_vector_isomorphic_retrieval())
     print("\nALL VERIFICATION TESTS COMPLETED SUCCESSFULLY!")
+

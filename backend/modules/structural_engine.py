@@ -163,6 +163,84 @@ class TopologyScorer(StructuralScorer):
         return scores
 
 
+def parse_scorer_response(content: str) -> Tuple[Optional[List[float]], Optional[str]]:
+    """Robustly parse structural scorer response even under truncation, think tags, or trailing commas."""
+    # Clean up <think> tags if any (e.g. from reasoning/R1 models)
+    content_clean = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+    
+    # Try standard JSON extraction
+    start_brace = content_clean.find('{')
+    end_brace = content_clean.rfind('}')
+    
+    scores = None
+    justification = None
+    
+    if start_brace != -1 and end_brace > start_brace:
+        json_str = content_clean[start_brace:end_brace+1]
+        try:
+            data = json.loads(json_str)
+            if isinstance(data, dict):
+                scores = data.get("scores")
+                justification = data.get("justification")
+        except Exception:
+            # Try removing trailing commas and parse again
+            try:
+                cleaned_json = re.sub(r',\s*([\]\}])', r'\1', json_str)
+                data = json.loads(cleaned_json)
+                if isinstance(data, dict):
+                    scores = data.get("scores")
+                    justification = data.get("justification")
+            except Exception:
+                pass
+                
+    # Fallback for scores: if standard parse failed, search scores array with regex
+    if not isinstance(scores, list) or len(scores) == 0:
+        scores = None
+        scores_match = re.search(r'"scores"\s*:\s*\[', content_clean, re.IGNORECASE)
+        if not scores_match:
+            scores_match = re.search(r'scores\s*:\s*\[', content_clean, re.IGNORECASE)
+        
+        if scores_match:
+            start_idx = scores_match.end()
+            remainder = content_clean[start_idx:]
+            end_idx = remainder.find(']')
+            if end_idx != -1:
+                array_content = remainder[:end_idx]
+            else:
+                end_idx = remainder.find('}')
+                if end_idx != -1:
+                    array_content = remainder[:end_idx]
+                else:
+                    array_content = remainder
+            
+            nums = re.findall(r'-?\d*\.\d+|-?\d+', array_content)
+            scores_list = []
+            for n in nums:
+                try:
+                    scores_list.append(float(n))
+                except ValueError:
+                    pass
+            if len(scores_list) > 0:
+                scores = scores_list
+
+    # Fallback for justification: search with regex
+    if not isinstance(justification, str) or not justification:
+        just_match = re.search(r'"justification"\s*:\s*"([^"]*)"', content_clean, re.IGNORECASE)
+        if not just_match:
+            just_match = re.search(r'justification\s*:\s*"([^"]*)"', content_clean, re.IGNORECASE)
+        if just_match:
+            justification = just_match.group(1)
+        else:
+            # Truncated string within quotes fallback
+            just_match_trunc = re.search(r'"justification"\s*:\s*"([^"]*)$', content_clean, re.IGNORECASE)
+            if not just_match_trunc:
+                just_match_trunc = re.search(r'justification\s*:\s*"([^"]*)$', content_clean, re.IGNORECASE)
+            if just_match_trunc:
+                justification = just_match_trunc.group(1)
+
+    return scores, justification
+
+
 class LLMScorer(StructuralScorer):
     """Interrogates the LLM to score the text across the 16 dimensions using a structured schema."""
     def __init__(self, provider = None, system_prompt: Optional[str] = None):
@@ -190,8 +268,7 @@ class LLMScorer(StructuralScorer):
             f"Analyze the structural/systemic profile of the following text chunk across 16 cybernetic dimensions.\n"
             f"Text to analyze:\n---\n{text}\n---\n"
             f"You must output a JSON object containing:\n"
-            f'1. "justification": A concise string explaining your reasoning for the structural properties of the text.\n'
-            f'2. "scores": An array of exactly 16 float values, each strictly between 0.0 and 1.0, representing the intensity of the following dimensions in order:\n'
+            f'1. "scores": An array of exactly 16 float values, each strictly between 0.0 and 1.0, representing the intensity of the following dimensions in order:\n'
             f"   01: Homeostatic (negative feedback, stability, dampening)\n"
             f"   02: Amplifying (positive feedback, runaway growth, cascade)\n"
             f"   03: Cyclic (autopoietic loops, self-reference, circular)\n"
@@ -208,8 +285,9 @@ class LLMScorer(StructuralScorer):
             f"   14: Nomadic (boundary crossing, lines of flight, drift)\n"
             f"   15: Conversational Co-Orientation (dialogue, agreement dynamics)\n"
             f"   16: Substrate Materiality (physical embodiment vs. symbolic virtuality)\n\n"
+            f'2. "justification": A concise string explaining your reasoning for the structural properties of the text.\n\n'
             f"Response must be valid JSON matching this schema:\n"
-            f'{{\n  "justification": "reasoning...",\n  "scores": [0.1, 0.2, ...]\n}}'
+            f'{{\n  "scores": [0.1, 0.2, ...],\n  "justification": "reasoning..."\n}}'
         )
 
         messages = [
@@ -221,26 +299,22 @@ class LLMScorer(StructuralScorer):
             res = await self.provider.generate(
                 messages,
                 temperature=0.1,
-                max_tokens=600
+                max_tokens=1000
             )
             content = res.get("content", "").strip()
             
-            # Simple extract JSON regex block
-            match = re.search(r'\{.*\}', content, re.DOTALL)
-            if match:
-                data = json.loads(match.group(0))
-                justification = data.get("justification", "")
-                if justification:
-                    set_justification(text, justification)
-                scores_list = data.get("scores", [])
-                if isinstance(scores_list, list) and len(scores_list) > 0:
-                    # Pad or truncate to 16
-                    while len(scores_list) < 16:
-                        scores_list.append(0.25)
-                    scores_list = scores_list[:16]
-                    # Clamp values strictly to [0.0, 1.0]
-                    clamped = [max(0.0, min(1.0, float(v))) for v in scores_list]
-                    return np.array(clamped, dtype=np.float32)
+            scores_list, justification = parse_scorer_response(content)
+            if justification:
+                set_justification(text, justification)
+                
+            if scores_list is not None and len(scores_list) > 0:
+                # Pad or truncate to 16
+                while len(scores_list) < 16:
+                    scores_list.append(0.25)
+                scores_list = scores_list[:16]
+                # Clamp values strictly to [0.0, 1.0]
+                clamped = [max(0.0, min(1.0, float(v))) for v in scores_list]
+                return np.array(clamped, dtype=np.float32)
             logger.warning("Failed to parse scores from LLMScorer response content: %s", content)
         except Exception as e:
             logger.exception("Error in LLMScorer generation: %s", e)
