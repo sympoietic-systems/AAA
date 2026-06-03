@@ -59,7 +59,7 @@ class PerceptionModule(ProcessingModule):
             description="Extracts text from uploaded files, chunks, embeds, and retrieves relevant sediment via similarity",
             category="perception",
             always_run=False,
-            triggers=["file", "document", "pdf", "upload", "read"],
+            triggers=["file", "document", "pdf", "epub", "mobi", "upload", "read"],
         )
 
     def validate(self) -> bool:

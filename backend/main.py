@@ -437,9 +437,9 @@ async def lifespan(app: FastAPI):
         "perception", lambda: perception_module,
         SkillMeta(name="perception", description="Extracts text from uploaded files, chunks, embeds, and retrieves relevant sediment via similarity",
                   category="perception", always_run=False,
-                  triggers=["file", "document", "pdf", "upload", "read"],
+                  triggers=["file", "document", "pdf", "epub", "mobi", "upload", "read"],
                   children=[
-                      SkillMeta(name="file_extractor", description="Parses text from plain text, PDF, and DOCX files", category="perception"),
+                      SkillMeta(name="file_extractor", description="Parses text from plain text, PDF, DOCX, EPUB, and MOBI files", category="perception"),
                       SkillMeta(name="tripartite_vision", description="Performs OCR, semantic description, diffractive analysis, and aesthetic scoring on images", category="perception"),
                   ]),
     )

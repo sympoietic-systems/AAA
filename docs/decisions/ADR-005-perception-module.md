@@ -18,7 +18,7 @@ material-discursive apparatus. The agent doesn't "read" a file; it
 conversation's embedding space.
 
 We need:
-- File upload (text formats: PDF, Markdown, TXT, DOCX, code files)
+- File upload (text formats: PDF, EPUB, MOBI, Markdown, TXT, DOCX, code files)
 - Extraction → chunking → embedding → storage for retrieval
 - Similarity-based retrieval of relevant chunks on every message
 - Token-budget-aware injection into the context window
@@ -105,6 +105,8 @@ Initial implementation: `SimpleChunkDigester` with per-format extractors:
 - `.txt`, `.md`, `.py`, `.json`, `.yaml`, `.csv` — native `open().read()`
 - `.pdf` — `pdfplumber`
 - `.docx` — `python-docx`
+- `.epub` — `ebooklib` & `beautifulsoup4`
+- `.mobi` — `mobi`
 
 No pandoc — avoids heavy system dependency. Pandoc can be added as a
 `PandocDigester` implementation later, adhering to the same ABC.
