@@ -1,9 +1,10 @@
 import logging
 from datetime import datetime
+from typing import Optional
 import numpy as np
 
 from backend.skills.metadata import SkillMeta
-from backend.storage.repository import MessageRepository, PerceptionSedimentRepository
+from backend.storage.repository import MessageRepository, PerceptionSedimentRepository, SemanticKnotRepository
 from backend.utils.token_counter import estimate_tokens
 from .base import ProcessingModule
 
@@ -23,6 +24,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
         self,
         message_repo: MessageRepository,
         perception_repo: PerceptionSedimentRepository,
+        semantic_knot_repo: Optional[SemanticKnotRepository] = None,
         enabled: bool = True,
         similarity_range_min: float = 0.35,
         similarity_range_max: float = 0.55,
@@ -34,6 +36,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
     ):
         self._message_repo = message_repo
         self._perception_repo = perception_repo
+        self._semantic_knot_repo = semantic_knot_repo
         self._enabled = enabled
         self._similarity_range_min = similarity_range_min
         self._similarity_range_max = similarity_range_max
@@ -221,6 +224,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
         current_vec = np.frombuffer(current_blob, dtype="float32")
 
         # 1. Nomadic Cross-Conversation Retrieval (Capped at 30 candidates)
+        # 1. Nomadic Cross-Conversation Retrieval & Semantic Knots (Capped at 30 candidates)
         if stagnation >= 0.70:
             # Dual-Vector Isomorphic Retrieval
             from backend.modules.structural_engine import CompositeStructuralScorer
@@ -231,6 +235,12 @@ class DiffractiveRetrievalModule(ProcessingModule):
             raw_candidates = self._message_repo.get_embeddings_and_signatures_except(
                 exclude_conversation_id=conversation_id, limit=500
             )
+
+            raw_knots = []
+            if self._semantic_knot_repo:
+                raw_knots = self._semantic_knot_repo.get_embeddings_and_signatures_except(
+                    exclude_conversation_id=conversation_id, limit=500
+                )
 
             scored_candidates = []
             for msg_id, emb_vec, sig_vec in raw_candidates:
@@ -243,31 +253,95 @@ class DiffractiveRetrievalModule(ProcessingModule):
 
                 # Isomorphic filter: s_sem <= 0.45 AND s_str >= 0.80
                 if s_sem <= 0.45 and s_str >= 0.80:
-                    scored_candidates.append((s_sem, msg_id, s_str))
+                    scored_candidates.append((s_sem, msg_id, s_str, "nomadic"))
+
+            for knot_id, emb_vec, sig_vec, payload_text in raw_knots:
+                if len(emb_vec) != len(current_vec):
+                    continue
+                s_sem = cosine_similarity(current_vec, emb_vec)
+                s_str = 0.0
+                if sig_vec is not None and len(sig_vec) == 16:
+                    s_str = cosine_similarity(query_sig, sig_vec)
+
+                if s_sem <= 0.45 and s_str >= 0.80:
+                    scored_candidates.append((s_sem, knot_id, s_str, "semantic_knot"))
 
             # Sort by structural similarity descending, semantic similarity ascending
             scored_candidates.sort(key=lambda x: (-x[2], x[0]))
-            nomadic_candidates = [(item[0], item[1]) for item in scored_candidates[:30]]
+            nomadic_candidates = [(item[0], item[1], item[3]) for item in scored_candidates[:30]]
         else:
             # Standard Goldilocks Retrieval
-            nomadic_candidates = self._message_repo.get_embeddings_in_similarity_range(
+            raw_nomadic = self._message_repo.get_embeddings_in_similarity_range(
                 query_vec=current_vec,
                 exclude_conversation_id=conversation_id,
                 min_sim=mem_min,
                 max_sim=mem_max,
                 limit=30,
             )
+            nomadic_candidates = [(sim, msg_id, "nomadic") for sim, msg_id in raw_nomadic]
 
+            if self._semantic_knot_repo:
+                raw_knots = self._semantic_knot_repo.get_knots_in_similarity_range(
+                    query_vec=current_vec,
+                    exclude_conversation_id=conversation_id,
+                    min_sim=mem_min,
+                    max_sim=mem_max,
+                    limit=30,
+                )
+                nomadic_candidates += [(sim, knot_id, "semantic_knot") for sim, knot_id in raw_knots]
 
         selected_nomadic_messages = []
         if nomadic_candidates:
-            # Sort by message_id DESC (most recent first) to apply recency weighting
-            nomadic_candidates.sort(key=lambda x: x[1], reverse=True)
+            nomadic_ids = [cid for _, cid, ctype in nomadic_candidates if ctype == "nomadic"]
+            knot_ids = [cid for _, cid, ctype in nomadic_candidates if ctype == "semantic_knot"]
+
+            msgs_by_id = {}
+            if nomadic_ids:
+                msgs = self._message_repo.get_sediment_messages_with_metadata(nomadic_ids)
+                msgs_by_id = {m["id"]: m for m in msgs}
+
+            knots_by_id = {}
+            if knot_ids and self._semantic_knot_repo:
+                knots = self._semantic_knot_repo.get_by_ids(knot_ids)
+                knots_by_id = {k.id: k for k in knots}
+
+            candidates_with_details = []
+            for sim, cid, ctype in nomadic_candidates:
+                if ctype == "nomadic":
+                    m = msgs_by_id.get(cid)
+                    if m:
+                        candidates_with_details.append({
+                            "type": "nomadic",
+                            "content": m["content"],
+                            "similarity": sim,
+                            "source_title": m["conversation_title"],
+                            "timestamp": m["timestamp"],
+                        })
+                elif ctype == "semantic_knot":
+                    k = knots_by_id.get(cid)
+                    if k:
+                        candidates_with_details.append({
+                            "type": "semantic_knot",
+                            "content": k.concept_payload,
+                            "similarity": sim,
+                            "source_title": f"Sedimented Knot (Conv {k.conversation_id[:8]})",
+                            "timestamp": k.created_at,
+                        })
+
+            def parse_date(d):
+                if isinstance(d, str):
+                    try:
+                        return datetime.fromisoformat(d)
+                    except ValueError:
+                        return datetime.min
+                return d or datetime.min
+
+            candidates_with_details.sort(key=lambda x: parse_date(x["timestamp"]), reverse=True)
 
             # Roulette selection with exponential decay
             selected_indices = []
-            indices = list(range(len(nomadic_candidates)))
-            weights = [np.exp(-0.05 * i) for i in range(len(nomadic_candidates))]
+            indices = list(range(len(candidates_with_details)))
+            weights = [np.exp(-0.05 * i) for i in range(len(candidates_with_details))]
 
             while len(selected_indices) < dynamic_max and indices:
                 total_w = sum(weights[idx] for idx in indices)
@@ -286,19 +360,8 @@ class DiffractiveRetrievalModule(ProcessingModule):
                 selected_indices.append(chosen_idx)
                 indices.remove(chosen_idx)
 
-            target_msg_ids = [nomadic_candidates[idx][1] for idx in selected_indices]
-            sim_dict = {msg_id: sim for sim, msg_id in nomadic_candidates}
-
-            if target_msg_ids:
-                nomadic_msgs = self._message_repo.get_sediment_messages_with_metadata(target_msg_ids)
-                for m in nomadic_msgs:
-                    selected_nomadic_messages.append({
-                        "type": "nomadic",
-                        "content": m["content"],
-                        "similarity": sim_dict.get(m["id"], 0.0),
-                        "source_title": m["conversation_title"],
-                        "timestamp": m["timestamp"],
-                    })
+            for idx in selected_indices:
+                selected_nomadic_messages.append(candidates_with_details[idx])
 
         # 2. Dormant File Chunks Retrieval (Capped at 30 candidates)
         file_candidates = self._perception_repo.get_chunks_in_similarity_range(

@@ -22,6 +22,7 @@ from backend.modules.background_tasks.actions.consolidate import ConsolidateActi
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.title import GenerateTitleAction
 from backend.modules.background_tasks.actions.document_collision import DocumentCollisionAction
+from backend.modules.background_tasks.actions.semantic_knot import SemanticKnotAction
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
 from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
 from backend.modules.context_collector import ContextCollectorModule
@@ -52,6 +53,7 @@ from backend.storage.repository import (
     MetricsRepository,
     PerceptionSedimentRepository,
     BeliefRepository,
+    SemanticKnotRepository,
 )
 from backend.utils.token_counter import estimate_tokens
 
@@ -187,8 +189,10 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
     if models:
         fallback = cfg.get("fallback_model", "openrouter/free")
         google_keys = cfg.get("google_keys", [])
+        deepseek_keys = cfg.get("deepseek_keys", [])
         openrouter_keys = cfg.get("openrouter_keys", [])
         google_api_base = cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai")
+        deepseek_api_base = cfg.get("deepseek_api_base", "https://api.deepseek.com")
         cooldown_seconds = cfg.get("cooldown_seconds", 300)
         logger.info("Background model pool: %s (fallback: %s)", models, fallback)
         return ModelPoolProvider(
@@ -197,8 +201,10 @@ def _create_provider_from_config(cfg: dict) -> OpenAICompatibleProvider | ModelP
             fallback_model=fallback,
             api_base=api_base,
             google_keys=google_keys,
+            deepseek_keys=deepseek_keys,
             openrouter_keys=openrouter_keys,
             google_api_base=google_api_base,
+            deepseek_api_base=deepseek_api_base,
             cooldown_seconds=cooldown_seconds,
             thinking=thinking,
             reasoning_effort=reasoning_effort,
@@ -258,6 +264,7 @@ async def lifespan(app: FastAPI):
     perception_repo = PerceptionSedimentRepository(str(full_db_path))
     checkpoint_repo = ConsolidationCheckpointRepository(str(full_db_path))
     belief_repo = BeliefRepository(str(full_db_path))
+    semantic_knot_repo = SemanticKnotRepository(str(full_db_path))
 
     embed_cfg = config.get("embedding", {})
     embedder = EmbedderModule(
@@ -322,6 +329,7 @@ async def lifespan(app: FastAPI):
     diffractive_retrieval = DiffractiveRetrievalModule(
         message_repo=message_repo,
         perception_repo=perception_repo,
+        semantic_knot_repo=semantic_knot_repo,
         enabled=diffractive_cfg.get("enabled", True),
         similarity_range_min=diffractive_cfg.get("similarity_range_min", 0.35),
         similarity_range_max=diffractive_cfg.get("similarity_range_max", 0.55),
@@ -422,7 +430,7 @@ async def lifespan(app: FastAPI):
         chunk_size=perception_cfg.get("chunk_size", 512),
         chunk_overlap=perception_cfg.get("chunk_overlap", 64),
         similarity_threshold=perception_cfg.get("similarity_threshold", 0.25),
-        llm_provider=provider,
+        llm_provider=structural_provider,
         vision_provider=vision_provider,
     )
     registry.register_with_meta(
@@ -441,7 +449,7 @@ async def lifespan(app: FastAPI):
         perception_repo=perception_repo,
         embedder=embedder,
         structural_scorer=structural_scorer,
-        llm_provider=provider,
+        llm_provider=structural_provider,
         config=config,
     )
     registry.register_with_meta(
@@ -547,6 +555,7 @@ async def lifespan(app: FastAPI):
     app.state.perception_module = perception_module
     app.state.checkpoint_repo = checkpoint_repo
     app.state.belief_repo = belief_repo
+    app.state.semantic_knot_repo = semantic_knot_repo
     app.state.belief_metabolism = belief_metabolism
     app.state.registry = registry
     app.state.pipeline = pipeline
@@ -580,6 +589,7 @@ async def lifespan(app: FastAPI):
     background_engine.register(SummarizeAction())
     background_engine.register(ConsolidateAction())
     background_engine.register(DocumentCollisionAction())
+    background_engine.register(SemanticKnotAction())
 
     app.state.background_engine = background_engine
     app.state.background_provider = background_provider

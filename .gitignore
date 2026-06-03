@@ -26,6 +26,6 @@ frontend/dist/
 *.swo
 .DS_Store
 
-.agents/
+.agents/*
 docs/protocols/*
 docs/extra/*

@@ -115,3 +115,16 @@ class BeliefEvent:
     event_type: str
     impact_score: float
     rationale: Optional[str]
+
+
+@dataclass
+class SemanticKnot:
+    id: str
+    conversation_id: str
+    created_at: datetime
+    weight: float
+    concept_payload: str
+    embedding: bytes
+    embedding_model: str
+    token_count: int
+    structural_signature: bytes = b""
