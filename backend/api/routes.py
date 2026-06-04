@@ -41,6 +41,7 @@ from .schemas import (
     SedimentInjectRequest,
     SedimentInjectionInfo,
     SedimentInjectionsResponse,
+    TagCreateRequest,
 )
 from backend.utils.token_counter import estimate_tokens
 from backend.modules.structural_engine import CompositeStructuralScorer
@@ -494,12 +495,8 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
                         logger.exception("Failed to auto-generate conversation title")
 
         if result.payload.get("trigger_consolidation") and background_engine and conv_repo:
-            _fire_and_forget_consolidation(
-                background_engine, repo,
-                getattr(state, "checkpoint_repo", None),
-                conversation_id,
-                result.payload.get("consolidate_message_count", 0),
-            )
+            conv_repo.mark_requires_consolidation(conversation_id, True)
+            logger.info("Marked conversation %s as requiring consolidation", conversation_id)
 
         response_attachments = _build_response_attachments(attachments, result)
 
@@ -786,23 +783,52 @@ async def get_file_by_name_endpoint(file_name: str, request: Request):
     return file_info
 
 
+def _ensure_structural_tags(conv_repo, conversation) -> list[dict]:
+    title = conversation.title or ""
+    agent_id = conversation.agent_id or ""
+    if "Dream Log" in title or "Internal Diary" in title or "dream" in title.lower():
+        structural_tag = "dreams"
+    elif title.startswith("Consultation:") or (agent_id and agent_id != "symbia"):
+        structural_tag = "other agents"
+    else:
+        structural_tag = "user conversation"
+        
+    existing_tags = conv_repo.get_tags(conversation.id)
+    has_tag = False
+    for et in existing_tags:
+        if et["tag_type"] == "structural":
+            if et["tag"] != structural_tag:
+                conv_repo.remove_tag(conversation.id, et["tag"])
+            else:
+                has_tag = True
+    if not has_tag:
+        conv_repo.add_tag(conversation.id, structural_tag, "structural")
+        existing_tags = conv_repo.get_tags(conversation.id)
+    return existing_tags
+
+
 @router.get("/conversations", response_model=ConversationListResponse)
-async def list_conversations(request: Request):
+async def list_conversations(request: Request, tag: Optional[str] = None):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     if not conv_repo:
         return ConversationListResponse(conversations=[])
-    convos = conv_repo.list_all()
-    return ConversationListResponse(conversations=[
-        ConversationInfo(
-            id=c.id,
-            title=c.title,
-            created_at=c.created_at,
-            updated_at=c.updated_at,
-            message_count=c.message_count,
+    convos = conv_repo.list_all(tag=tag)
+    
+    res_convos = []
+    for c in convos:
+        tags = _ensure_structural_tags(conv_repo, c)
+        res_convos.append(
+            ConversationInfo(
+                id=c.id,
+                title=c.title,
+                created_at=c.created_at,
+                updated_at=c.updated_at,
+                message_count=c.message_count,
+                tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags]
+            )
         )
-        for c in convos
-    ])
+    return ConversationListResponse(conversations=res_convos)
 
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationInfo)
@@ -814,12 +840,15 @@ async def get_conversation(conversation_id: str, request: Request):
     conv = conv_repo.get(conversation_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    tags = _ensure_structural_tags(conv_repo, conv)
     return ConversationInfo(
         id=conv.id,
         title=conv.title,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
         message_count=conv.message_count,
+        tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags]
     )
 
 
@@ -836,12 +865,15 @@ async def update_conversation(
         raise HTTPException(status_code=404, detail="Conversation not found")
     conv_repo.update_title(conversation_id, body.title)
     conv = conv_repo.get(conversation_id)
+    
+    tags = _ensure_structural_tags(conv_repo, conv)
     return ConversationInfo(
         id=conv.id,
         title=conv.title,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
         message_count=conv.message_count,
+        tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags]
     )
 
 
@@ -878,12 +910,14 @@ async def generate_conversation_title(conversation_id: str, request: Request):
     conv_repo.update_title(conversation_id, title)
 
     conv = conv_repo.get(conversation_id)
+    tags = _ensure_structural_tags(conv_repo, conv)
     return ConversationInfo(
         id=conv.id,
         title=conv.title,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
         message_count=conv.message_count,
+        tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags]
     )
 
 
@@ -1816,5 +1850,41 @@ async def remove_sediment_injection(injection_id: str, request: Request):
     perception_repo = state.perception_repo
     perception_repo.remove_injection(injection_id)
     return {"status": "success"}
+
+
+@router.post("/conversations/{conversation_id}/tags")
+async def add_conversation_tag(conversation_id: str, body: TagCreateRequest, request: Request):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    if not conv_repo:
+        raise HTTPException(status_code=404, detail="Conversations not available")
+    conv = conv_repo.get(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv_repo.add_tag(conversation_id, body.tag.strip(), "semantic")
+    return {"status": "success"}
+
+
+@router.delete("/conversations/{conversation_id}/tags/{tag}")
+async def remove_conversation_tag(conversation_id: str, tag: str, request: Request):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    if not conv_repo:
+        raise HTTPException(status_code=404, detail="Conversations not available")
+    conv = conv_repo.get(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv_repo.remove_tag(conversation_id, tag)
+    return {"status": "success"}
+
+
+@router.get("/tags")
+async def get_all_unique_tags(request: Request):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    if not conv_repo:
+        return {"tags": []}
+    tags = conv_repo.get_all_unique_tags()
+    return {"tags": tags}
 
 

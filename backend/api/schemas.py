@@ -154,12 +154,18 @@ class DiffractiveInfo(BaseModel):
 
 
 
+class ConversationTagInfo(BaseModel):
+    tag: str
+    tag_type: str
+
+
 class ConversationInfo(BaseModel):
     id: str
     title: str
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     message_count: int = 0
+    tags: list[ConversationTagInfo] = []
 
 
 class ConversationListResponse(BaseModel):
@@ -275,3 +281,7 @@ class SedimentInjectionInfo(BaseModel):
 
 class SedimentInjectionsResponse(BaseModel):
     injections: list[SedimentInjectionInfo]
+
+
+class TagCreateRequest(BaseModel):
+    tag: str
