@@ -785,10 +785,9 @@ async def get_file_by_name_endpoint(file_name: str, request: Request):
 
 def _ensure_structural_tags(conv_repo, conversation) -> list[dict]:
     title = conversation.title or ""
-    agent_id = conversation.agent_id or ""
     if "Dream Log" in title or "Internal Diary" in title or "dream" in title.lower():
         structural_tag = "dreams"
-    elif title.startswith("Consultation:") or (agent_id and agent_id != "symbia"):
+    elif "consultation: antigravity" in title.lower():
         structural_tag = "other agents"
     else:
         structural_tag = "user conversation"
