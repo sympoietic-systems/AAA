@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
@@ -267,9 +270,11 @@ export function ChatView({
             )}
           </div>
           {showSummary && summary && (
-            <div className="px-4 pb-2 pt-0.5 border-t border-[#1a1a1a] text-[10px] text-[#aaa] font-mono leading-relaxed select-text whitespace-pre-wrap max-h-48 overflow-y-auto">
+            <div className="px-4 pb-2 pt-0.5 border-t border-[#1a1a1a] text-[10px] text-[#aaa] font-mono leading-relaxed select-text markdown-body max-h-48 overflow-y-auto">
               <div className="text-[8px] text-[#555] mb-1 uppercase tracking-wider select-none font-bold">Autopoietic Summary Checkpoint</div>
-              {summary}
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                {summary}
+              </ReactMarkdown>
             </div>
           )}
         </div>
