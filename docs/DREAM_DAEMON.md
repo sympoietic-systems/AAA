@@ -45,19 +45,43 @@ The daemon combines them into a single consolidated knot, aggregates their attra
 
 ## Configuration Settings
 
-Configure daemon thresholds in `backend/core/config.json`:
-```json
-{
-  "daemon": {
-    "enabled": true,
-    "check_interval": 30,
-    "idle_threshold": 60,
-    "min_dream_interval": 300,
-    "max_daily_dreams": 12,
-    "drift_coefficient": 0.00001
-  }
-}
+Configure daemon thresholds in `backend/config.yaml` or override them in `.env`:
+
+### YAML Configuration (`backend/config.yaml`)
+```yaml
+daemon:
+  enabled: true
+  check_interval: 60       # seconds between checking state
+  idle_threshold: 1800     # seconds of user silence before dreaming (e.g. 30 mins)
+  min_dream_interval: 3600 # minimum seconds between successive dreams (e.g. 1 hour)
+  max_daily_dreams: 10     # daily dream count budget limit
+  drift_coefficient: 0.00001
 ```
+
+### Environment Variable Overrides (`.env`)
+```bash
+AAA_DAEMON_ENABLED=true
+AAA_DAEMON_CHECK_INTERVAL=60
+AAA_DAEMON_IDLE_THRESHOLD=1800
+AAA_DAEMON_MIN_DREAM_INTERVAL=3600
+AAA_DAEMON_MAX_DAILY_DREAMS=10
+AAA_DAEMON_DRIFT_COEFFICIENT=0.00001
+```
+
+---
+
+## Database Budget Caps & Agentic Meta-Cognitive Routing
+
+### 1. Database-Backed Budget Caps
+To prevent daemon budget bypasses caused by server restarts (uvicorn auto-reload) or multiple parallel backend instances, the daily dream count is tracked dynamically in the database via `count_dreams_since` with wildcards (`LIKE 'Dream Log%' OR LIKE 'Internal Diary%'`). This counts all successful dream monologues executed since midnight UTC of the current calendar day.
+
+### 2. Agentic Meta-Cognitive Routing
+Instead of writing all dreams to a single, monolithic log that grows bloated and drifts in context, the background model itself decides where to route each dream cycle.
+* **Selection Process**: The daemon queries the background LLM provider with a list of active dream logs. The model decides whether to **reuse** an existing conversation or **create** a new topic conversation.
+* **Auto-Splitting / Numbered Parts**: If any dream conversation grows to **12 messages** (6 complete dream cycles), the controller automatically splits it by creating a new part (e.g., `Dream Log: Somatic Drift (Part 2)`). This keeps prompt contexts lightweight, fast, and cost-effective.
+* **Constraint**: All dream conversation titles are automatically normalized and enforced to start with the prefix `Dream Log:`.
+
+---
 
 ## API Telemetry
 *   `GET /api/daemon/status`: Returns current state of inactivity, last drift times, and vitality indexes.

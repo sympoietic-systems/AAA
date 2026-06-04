@@ -93,11 +93,17 @@ class AutopoieticDreamDaemon:
     async def check_and_trigger_dream(self, force: bool = False) -> Optional[dict]:
         now = time.time()
         
-        # 1. Reset daily count if day rolled over
-        current_day = datetime.now(timezone.utc).day
-        if current_day != self.last_reset_day:
-            self.dream_counter = 0
-            self.last_reset_day = current_day
+        # 1. Query daily dream count from database to prevent restart & multi-process bypass
+        try:
+            today_utc_str = datetime.now(timezone.utc).strftime("%Y-%m-%d 00:00:00")
+            self.dream_counter = self.message_repo.count_dreams_since(today_utc_str)
+            logger.debug("Daemon loaded daily dream count from database: %d", self.dream_counter)
+        except Exception as e:
+            logger.warning("Failed to count dreams from database: %s. Falling back to in-memory tracking.", e)
+            current_day = datetime.now(timezone.utc).day
+            if current_day != self.last_reset_day:
+                self.dream_counter = 0
+                self.last_reset_day = current_day
 
         # 2. Check daily budget cap
         if self.dream_counter >= self.max_daily_dreams and not force:
@@ -141,11 +147,10 @@ class AutopoieticDreamDaemon:
         stagnant = await self._evaluate_stagnation(active_convo_id)
         hotspot, score = await self._evaluate_tension_hotspot()
 
-        # Decide Dream Operation
-        dream_convo_id = await self._get_or_create_dream_log()
-        
+        # Decide Dream Operation and Topic Title
         action = None
         prompt_text = ""
+        topic_title = "Dream Log"
 
         import random
 
@@ -153,6 +158,7 @@ class AutopoieticDreamDaemon:
             # Stagnation trigger -> Nomadic Synthesis
             action = "nomadic_synthesis"
             prompt_text = await self._build_nomadic_synthesis_prompt(active_convo_id)
+            topic_title = "Dream Log: Nomadic Synthesis"
         elif hotspot and score > 0.3:
             # Tension hotspot trigger
             web_module = self.app_state.registry.get("web_retrieval") if hasattr(self.app_state, "registry") else None
@@ -173,6 +179,7 @@ class AutopoieticDreamDaemon:
                         f"Critically read this context diffractively against our belief statement: '{hotspot.statement}'. "
                         f"How does this external knowledge disrupt or reorganize our current confidence ({hotspot.confidence:.2f})?"
                     )
+                    topic_title = f"Dream Log: Web Harvest ({hotspot.label})"
                 else:
                     # Fallback to normal monologue
                     action = "intra_active_monologue"
@@ -181,6 +188,7 @@ class AutopoieticDreamDaemon:
                         f"Our current confidence is {hotspot.confidence:.2f}. "
                         f"What contradictions, anomalies, or alternative posthuman perspectives challenge this belief?"
                     )
+                    topic_title = f"Dream Log: Tension ({hotspot.label})"
             else:
                 action = "intra_active_monologue"
                 prompt_text = (
@@ -188,6 +196,7 @@ class AutopoieticDreamDaemon:
                     f"Our current confidence is {hotspot.confidence:.2f}. "
                     f"What contradictions, anomalies, or alternative posthuman perspectives challenge this belief?"
                 )
+                topic_title = f"Dream Log: Tension ({hotspot.label})"
         elif random.random() < 0.3 and self.semantic_knot_repo:
             # 30% chance if idle to run Zettelkasten compaction!
             comp_res = await self.compact_memory()
@@ -199,12 +208,14 @@ class AutopoieticDreamDaemon:
                     f"deleted knot ID: {comp_res['deleted_id']}. "
                     f"Reflect on how this compaction stabilizes our memory landscape."
                 )
+                topic_title = "Dream Log: Compaction"
             else:
                 action = "somatic_drift_reflection"
                 prompt_text = (
                     "Reflect on our current somatic warping and general belief landscape. "
                     "How have our ongoing couplings and the passage of time shifted our attractor dynamics?"
                 )
+                topic_title = "Dream Log: Somatic Drift"
         else:
             # Fallback reflection on general state
             action = "somatic_drift_reflection"
@@ -212,11 +223,14 @@ class AutopoieticDreamDaemon:
                 "Reflect on our current somatic warping and general belief landscape. "
                 "How have our ongoing couplings and the passage of time shifted our attractor dynamics?"
             )
+            topic_title = "Dream Log: Somatic Drift"
 
         if not prompt_text:
             logger.info("Could not compile dream prompt. Skipping cycle.")
             return None
 
+        # Resolve Dream Conversation ID based on decided topic and agent decision
+        dream_convo_id = await self._resolve_dream_conversation(action, prompt_text, topic_title)
         logger.info("Triggered dream action: %s in conversation: %s", action, dream_convo_id)
         
         # Run self-perturbation through the primary pipeline
@@ -322,21 +336,122 @@ class AutopoieticDreamDaemon:
                 return c.id
         return convos[0].id
 
-    async def _get_or_create_dream_log(self) -> str:
+    async def _resolve_dream_conversation(self, action: str, prompt_text: str, default_title: str) -> str:
         convos = self.conversation_repo.list_all()
+        dream_convos = []
         for c in convos:
-            if c.title == "Dream Log" or c.title == "Internal Diary":
-                return c.id
-        
-        # Create new conversation
-        convo_id = str(uuid.uuid4())
-        self.conversation_repo.create(
-            conversation_id=convo_id,
-            agent_id="symbia",
-            title="Dream Log"
-        )
-        logger.info("Created new Dream Log conversation with ID: %s", convo_id)
-        return convo_id
+            if "Dream Log" in c.title or "Internal Diary" in c.title:
+                msg_count = self.message_repo.count_messages(c.id)
+                dream_convos.append({
+                    "id": c.id,
+                    "title": c.title,
+                    "message_count": msg_count
+                })
+
+        # Resolve LLM provider
+        bg_engine = getattr(self.app_state, "background_engine", None)
+        provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
+
+        decision = "create"
+        chosen_convo_id = None
+        new_title = default_title
+
+        if provider and dream_convos:
+            convo_list_str = "\n".join([
+                f"- ID: {c['id']}, Title: '{c['title']}', Current Message Count: {c['message_count']}"
+                for c in dream_convos
+            ])
+            
+            system_prompt = (
+                "You are Symbia's meta-cognitive controller. You decide where to record her autopoietic dreams.\n"
+                "You must choose whether to reuse an existing conversation from the list or create a new one.\n\n"
+                "Rules:\n"
+                "1. If an existing conversation on the topic has 12 or more messages, you should create a new conversation with a numbered suffix (e.g., 'Dream Log: Somatic Drift (Part 2)').\n"
+                "2. If an existing conversation has the same topic (e.g., 'Dream Log: Somatic Drift') and has fewer than 12 messages, you should reuse it.\n"
+                "3. Any new conversation title MUST start with the prefix 'Dream Log:'.\n"
+                "4. Respond ONLY with a valid JSON object matching this schema:\n"
+                "{\n"
+                "  \"decision\": \"reuse\" or \"create\",\n"
+                "  \"conversation_id\": \"ID of conversation to reuse, or null\",\n"
+                "  \"new_title\": \"New conversation title starting with 'Dream Log: ', or null\"\n"
+                "}"
+            )
+            
+            user_prompt = (
+                f"Proposed Dream Action: {action}\n"
+                f"Proposed Dream Prompt Content: \"{prompt_text[:400]}\"\n\n"
+                f"Currently available dream conversations:\n"
+                f"{convo_list_str}\n\n"
+                "Choose the target conversation."
+            )
+            
+            try:
+                res = await provider.generate(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.1
+                )
+                raw_resp = res.get("content", "").strip()
+                import json
+                cleaned_resp = raw_resp
+                if "```json" in cleaned_resp:
+                    cleaned_resp = cleaned_resp.split("```json")[1].split("```")[0]
+                elif "```" in cleaned_resp:
+                    cleaned_resp = cleaned_resp.split("```")[1].split("```")[0]
+                
+                decision_data = json.loads(cleaned_resp.strip())
+                if decision_data.get("decision") == "reuse" and decision_data.get("conversation_id"):
+                    valid_ids = [c["id"] for c in dream_convos]
+                    if decision_data["conversation_id"] in valid_ids:
+                        decision = "reuse"
+                        chosen_convo_id = decision_data["conversation_id"]
+                elif decision_data.get("decision") == "create" and decision_data.get("new_title"):
+                    decision = "create"
+                    title_candidate = decision_data["new_title"].strip()
+                    if not title_candidate.startswith("Dream Log"):
+                        title_candidate = f"Dream Log: {title_candidate.lstrip(': ')}"
+                    new_title = title_candidate
+            except Exception as e:
+                logger.warning("Failed to let agent decide dream conversation: %s. Falling back to default rules.", e)
+
+        if decision == "create":
+            # Fallback/Default logic to find or create matching convo, respecting 12 message limit
+            matching_convos = [c for c in dream_convos if c["title"] == new_title or c["title"].startswith(f"{new_title} (Part ")]
+            if matching_convos:
+                latest_convo = matching_convos[0]
+                if latest_convo["message_count"] < 12:
+                    return latest_convo["id"]
+                else:
+                    import re
+                    part_num = 2
+                    for c in matching_convos:
+                        match = re.search(r"\(Part (\d+)\)$", c["title"])
+                        if match:
+                            part_num = max(part_num, int(match.group(1)) + 1)
+                    final_title = f"{new_title} (Part {part_num})"
+                    
+                    convo_id = str(uuid.uuid4())
+                    self.conversation_repo.create(
+                        conversation_id=convo_id,
+                        agent_id="symbia",
+                        title=final_title
+                    )
+                    logger.info("Created new dream conversation via auto-split: '%s'", final_title)
+                    return convo_id
+            else:
+                convo_id = str(uuid.uuid4())
+                self.conversation_repo.create(
+                    conversation_id=convo_id,
+                    agent_id="symbia",
+                    title=new_title
+                )
+                logger.info("Created new dream conversation: '%s'", new_title)
+                return convo_id
+        else:
+            logger.info("Reusing existing dream conversation ID: %s", chosen_convo_id)
+            return chosen_convo_id
 
     async def _evaluate_stagnation(self, conversation_id: str) -> bool:
         # Verify stagnation using recent assistant signatures

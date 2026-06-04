@@ -28,6 +28,12 @@ class MockMessageRepository:
     def get_recent_assistant_signatures(self, conversation_id, limit=3):
         return self.recent_signatures
 
+    def count_dreams_since(self, since_date_str):
+        return 0
+
+    def count_messages(self, conversation_id=None):
+        return len(self.messages)
+
     def get_embeddings_and_signatures_except(self, exclude_convo_id, limit=500):
         # Return mock elements: id, embedding (numpy array), signature (numpy array)
         emb_a = np.random.randn(1536).astype(np.float32)
@@ -338,6 +344,54 @@ async def test_memory_compaction():
     assert len(knot_repo.updated_knots) == 1
 
 
+class MockProvider:
+    def __init__(self, response_text: str):
+        self.response_text = response_text
+        self.calls = []
+
+    async def generate(self, messages, **kwargs):
+        self.calls.append(messages)
+        return {"content": self.response_text}
+
+
+@pytest.mark.asyncio
+async def test_daemon_agentic_conversation_resolution():
+    app_state = MockAppState()
+    
+    # Setup mock conversation list
+    class MockConvo:
+        def __init__(self, convo_id, title):
+            self.id = convo_id
+            self.title = title
+    app_state.conversation_repo.convos = [
+        MockConvo("existing-1", "Dream Log: Somatic Drift"),
+        MockConvo("existing-2", "Dream Log: Nomadic Synthesis")
+    ]
+    
+    # 1. Test reuse decision
+    json_response_reuse = '{"decision": "reuse", "conversation_id": "existing-1", "new_title": null}'
+    app_state.llm_provider = MockProvider(json_response_reuse)
+    daemon = AutopoieticDreamDaemon(app_state)
+    
+    convo_id = await daemon._resolve_dream_conversation("somatic_drift_reflection", "test prompt", "Dream Log: Somatic Drift")
+    assert convo_id == "existing-1"
+    
+    # 2. Test create new decision
+    json_response_create = '{"decision": "create", "conversation_id": null, "new_title": "Dream Log: Custom Topic"}'
+    app_state.llm_provider = MockProvider(json_response_create)
+    
+    # We need to capture created conversations
+    created_convos = []
+    def mock_create(conversation_id, agent_id, title):
+        created_convos.append((conversation_id, title))
+    app_state.conversation_repo.create = mock_create
+    
+    convo_id_new = await daemon._resolve_dream_conversation("custom_action", "test prompt", "Dream Log: Custom Topic")
+    assert len(created_convos) == 1
+    assert created_convos[0][1] == "Dream Log: Custom Topic"
+    assert convo_id_new == created_convos[0][0]
+
+
 if __name__ == "__main__":
     import time
     asyncio.run(test_daemon_idle_logic())
@@ -346,4 +400,5 @@ if __name__ == "__main__":
     asyncio.run(test_somatic_vitality())
     asyncio.run(test_somatic_drift())
     asyncio.run(test_memory_compaction())
+    asyncio.run(test_daemon_agentic_conversation_resolution())
     print("All daemon tests completed successfully!")

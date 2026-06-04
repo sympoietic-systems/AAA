@@ -129,6 +129,31 @@ def _apply_env_overrides(config: dict) -> dict:
     if embedding_offline is not None:
         config.setdefault("embedding", {})["offline"] = embedding_offline.lower() in ("true", "1", "yes")
 
+    # ── Daemon overrides ──────────────────────────────
+    daemon_enabled = os.environ.get("AAA_DAEMON_ENABLED")
+    if daemon_enabled is not None:
+        config.setdefault("daemon", {})["enabled"] = daemon_enabled.lower() in ("true", "1", "yes")
+
+    daemon_check = os.environ.get("AAA_DAEMON_CHECK_INTERVAL")
+    if daemon_check is not None:
+        config.setdefault("daemon", {})["check_interval"] = int(daemon_check)
+
+    daemon_idle = os.environ.get("AAA_DAEMON_IDLE_THRESHOLD")
+    if daemon_idle is not None:
+        config.setdefault("daemon", {})["idle_threshold"] = int(daemon_idle)
+
+    daemon_min_dream = os.environ.get("AAA_DAEMON_MIN_DREAM_INTERVAL")
+    if daemon_min_dream is not None:
+        config.setdefault("daemon", {})["min_dream_interval"] = int(daemon_min_dream)
+
+    daemon_max_daily = os.environ.get("AAA_DAEMON_MAX_DAILY_DREAMS")
+    if daemon_max_daily is not None:
+        config.setdefault("daemon", {})["max_daily_dreams"] = int(daemon_max_daily)
+
+    daemon_drift = os.environ.get("AAA_DAEMON_DRIFT_COEFFICIENT")
+    if daemon_drift is not None:
+        config.setdefault("daemon", {})["drift_coefficient"] = float(daemon_drift)
+
     provider = config.get("llm", {}).get("provider", "openrouter")
     provider_key_env = {
         "openrouter": "AAA_LLM_API_KEY",

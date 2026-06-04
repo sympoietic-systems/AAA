@@ -43,12 +43,17 @@ We implemented the `AutopoieticDreamDaemon` in `backend/core/daemon.py` with int
 5. **Exogenous Web Ingestion**:
    DuckDuckGo scraping parses external markdown for high-tension beliefs and diffracts the context back into the agent's internal dream monologues.
 
+6. **Database-Backed Budget & Agentic Meta-Cognitive Routing**:
+   To prevent restart/multi-instance budget bypasses and context bloat, the daily dream count is tracked dynamically in the database via `LIKE 'Dream Log%'` queries. The daemon delegates conversation selection to a meta-cognitive agentic task (`_resolve_dream_conversation`). The background model decides whether to reuse an existing conversation or create a new topic conversation, automatically splitting them into numbered parts (Part 2, etc.) when they exceed 12 messages.
+
 ## Consequences
 
 ### What becomes easier?
 - **Agential Autonomy**: The agent thinks, searches, and refines its beliefs offline without user prompt triggers.
 - **Resilience**: Ambivalent ideas fade naturally, while core schema elements resist casual decay.
 - **Resource Recovery**: The SQLite database compaction prevents memory growth from duplicating similar concepts.
+- **Context & Cost Efficiency**: Auto-splitting and agentic routing of dream logs prevent long-running thread context bloat, minimizing token usage and optimizing latency/cost.
+- **Robust Persistence**: Budgets survive backend uvicorn reloads and multi-process server instances without state reset.
 
 ### What becomes harder?
-- Log analysis becomes non-linear since the agent writes its own thoughts (Dream Logs) in the background.
+- Log analysis becomes non-linear since the agent writes its own thoughts (Dream Logs) across multiple topic-focused threads in the background.

@@ -256,6 +256,20 @@ class MessageRepository:
         return signatures
 
     @with_connection
+    def count_dreams_since(self, since_date_str: str) -> int:
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT COUNT(*) as cnt FROM conversation_log
+               WHERE conversation_id IN (
+                   SELECT id FROM conversations WHERE title LIKE 'Dream Log%' OR title LIKE 'Internal Diary%'
+               )
+               AND speaker = 'apparatus'
+               AND timestamp >= ?""",
+            (since_date_str,),
+        ).fetchone()
+        return row["cnt"] if row else 0
+
+    @with_connection
     def get_embeddings_by_speaker(
         self, speaker: str, limit: int = 5, conversation_id: str | None = None
     ) -> list[np.ndarray]:

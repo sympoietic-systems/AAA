@@ -137,6 +137,15 @@ homeostasis:
   entropy_window: 5
   agent_self_window: 5
 
+# ── Dream Daemon ──────────────────────────────────
+daemon:
+  enabled: true
+  check_interval: 60             # seconds between trigger evaluation checks (default: 60)
+  idle_threshold: 1800           # seconds of human inactivity before dreaming (e.g., 30 mins)
+  min_dream_interval: 3600       # minimum seconds between successful dreams (e.g., 1 hour)
+  max_daily_dreams: 10            # max number of dreams triggered in a 24h rolling day (default: 10)
+  drift_coefficient: 0.00001     # decay speed for somatic belief drift
+
 # ── Background Tasks ──────────────────────────────
 # Models are tried in order. If one is rate-limited, the next is used.
 # When all are exhausted, falls back to the fallback model.

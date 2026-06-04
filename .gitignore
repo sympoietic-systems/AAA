@@ -29,3 +29,5 @@ frontend/dist/
 .agents/*
 docs/protocols/*
 docs/extra/*
+backend/.agents/*
+backend/scratch/*
