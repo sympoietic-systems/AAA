@@ -810,6 +810,7 @@ def _ensure_structural_tags(conv_repo, conversation) -> list[dict]:
 async def list_conversations(request: Request, tag: Optional[str] = None):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
+    checkpoint_repo = getattr(state, "checkpoint_repo", None)
     if not conv_repo:
         return ConversationListResponse(conversations=[])
     convos = conv_repo.list_all(tag=tag)
@@ -817,6 +818,11 @@ async def list_conversations(request: Request, tag: Optional[str] = None):
     res_convos = []
     for c in convos:
         tags = _ensure_structural_tags(conv_repo, c)
+        summary = None
+        if checkpoint_repo:
+            cp = checkpoint_repo.get_latest(c.id)
+            if cp:
+                summary = cp.get("summary")
         res_convos.append(
             ConversationInfo(
                 id=c.id,
@@ -824,7 +830,8 @@ async def list_conversations(request: Request, tag: Optional[str] = None):
                 created_at=c.created_at,
                 updated_at=c.updated_at,
                 message_count=c.message_count,
-                tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags]
+                tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags],
+                summary=summary
             )
         )
     return ConversationListResponse(conversations=res_convos)
@@ -834,6 +841,7 @@ async def list_conversations(request: Request, tag: Optional[str] = None):
 async def get_conversation(conversation_id: str, request: Request):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
+    checkpoint_repo = getattr(state, "checkpoint_repo", None)
     if not conv_repo:
         raise HTTPException(status_code=404, detail="Conversations not available")
     conv = conv_repo.get(conversation_id)
@@ -841,13 +849,20 @@ async def get_conversation(conversation_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Conversation not found")
     
     tags = _ensure_structural_tags(conv_repo, conv)
+    summary = None
+    if checkpoint_repo:
+        cp = checkpoint_repo.get_latest(conv.id)
+        if cp:
+            summary = cp.get("summary")
+            
     return ConversationInfo(
         id=conv.id,
         title=conv.title,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
         message_count=conv.message_count,
-        tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags]
+        tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags],
+        summary=summary
     )
 
 
@@ -857,6 +872,7 @@ async def update_conversation(
 ):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
+    checkpoint_repo = getattr(state, "checkpoint_repo", None)
     if not conv_repo:
         raise HTTPException(status_code=404, detail="Conversations not available")
     conv = conv_repo.get(conversation_id)
@@ -866,13 +882,20 @@ async def update_conversation(
     conv = conv_repo.get(conversation_id)
     
     tags = _ensure_structural_tags(conv_repo, conv)
+    summary = None
+    if checkpoint_repo:
+        cp = checkpoint_repo.get_latest(conv.id)
+        if cp:
+            summary = cp.get("summary")
+            
     return ConversationInfo(
         id=conv.id,
         title=conv.title,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
         message_count=conv.message_count,
-        tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags]
+        tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags],
+        summary=summary
     )
 
 

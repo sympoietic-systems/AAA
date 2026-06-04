@@ -166,6 +166,7 @@ class ConversationInfo(BaseModel):
     updated_at: Optional[datetime] = None
     message_count: int = 0
     tags: list[ConversationTagInfo] = []
+    summary: Optional[str] = None
 
 
 class ConversationListResponse(BaseModel):

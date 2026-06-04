@@ -30,6 +30,7 @@ interface Props {
   tags?: ConversationTagInfo[]
   onAddTag?: (tag: string) => void
   onRemoveTag?: (tag: string) => void
+  summary?: string
 }
 
 export function ChatView({
@@ -58,6 +59,7 @@ export function ChatView({
   tags = [],
   onAddTag,
   onRemoveTag,
+  summary,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -65,6 +67,7 @@ export function ChatView({
   const [editValue, setEditValue] = useState("")
   const [generating, setGenerating] = useState(false)
   const [newTagVal, setNewTagVal] = useState("")
+  const [showSummary, setShowSummary] = useState(false)
 
   const handleAddTagSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,6 +121,10 @@ export function ChatView({
     prevMessagesLengthRef.current = messages.length
     prevLastMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : undefined
   }, [messages, conversationId])
+
+  useEffect(() => {
+    setShowSummary(false)
+  }, [conversationId])
 
   const handleScroll = () => {
     const container = containerRef.current
@@ -204,50 +211,66 @@ export function ChatView({
       </header>
 
       {conversationId && tags && (
-        <div className="flex flex-wrap items-center gap-1.5 px-4 py-1.5 border-b border-[#222] bg-[#090909] shrink-0">
-          <span className="text-[9px] text-[#555] uppercase font-mono tracking-wider mr-1">tags:</span>
-          {tags.map((t) => {
-            let tagStyle = "bg-[#141414] text-[#777] border-[#222]"
-            const isDeletable = t.tag_type === "semantic"
-            if (t.tag_type === "structural") {
-              if (t.tag === "dreams") {
-                tagStyle = "bg-[#1c0f2b] text-[#b17eff] border-[#442870]"
-              } else if (t.tag === "other agents") {
-                tagStyle = "bg-[#2b1b0f] text-[#ffb07e] border-[#704128]"
-              } else {
-                tagStyle = "bg-[#0f2b18] text-[#7effa8] border-[#28703c]"
+        <div className="flex flex-col border-b border-[#222] bg-[#090909] shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 px-4 py-1.5">
+            <span className="text-[9px] text-[#555] uppercase font-mono tracking-wider mr-1">tags:</span>
+            {tags.map((t) => {
+              let tagStyle = "bg-[#141414] text-[#777] border-[#222]"
+              const isDeletable = t.tag_type === "semantic"
+              if (t.tag_type === "structural") {
+                if (t.tag === "dreams") {
+                  tagStyle = "bg-[#1c0f2b] text-[#b17eff] border-[#442870]"
+                } else if (t.tag === "other agents") {
+                  tagStyle = "bg-[#2b1b0f] text-[#ffb07e] border-[#704128]"
+                } else {
+                  tagStyle = "bg-[#0f2b18] text-[#7effa8] border-[#28703c]"
+                }
+              } else if (t.tag_type === "keyword") {
+                tagStyle = "bg-[#0f202b] text-[#7ec6ff] border-[#285770]"
               }
-            } else if (t.tag_type === "keyword") {
-              tagStyle = "bg-[#0f202b] text-[#7ec6ff] border-[#285770]"
-            }
-            return (
-              <span
-                key={t.tag}
-                className={`flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-[2px] border ${tagStyle} font-mono`}
+              return (
+                <span
+                  key={t.tag}
+                  className={`flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-[2px] border ${tagStyle} font-mono`}
+                >
+                  <span>{t.tag}</span>
+                  {isDeletable && onRemoveTag && (
+                    <button
+                      onClick={() => onRemoveTag(t.tag)}
+                      className="text-[10px] text-[#888] hover:text-[#ef4444] transition-colors cursor-pointer font-bold select-none px-0.5"
+                      title="Remove tag"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </span>
+              )
+            })}
+            {onAddTag && (
+              <form onSubmit={handleAddTagSubmit} className="flex items-center ml-1">
+                <input
+                  type="text"
+                  placeholder="+ tag"
+                  value={newTagVal}
+                  onChange={(e) => setNewTagVal(e.target.value)}
+                  className="bg-[#141414] border border-[#222] text-[9px] text-[#aaa] font-mono px-1.5 py-[2px] outline-none focus:border-[#4ade80] rounded-[2px] w-14 focus:w-24 transition-all duration-150"
+                />
+              </form>
+            )}
+            {summary && (
+              <button
+                onClick={() => setShowSummary(!showSummary)}
+                className="ml-auto text-[9px] text-[#888] hover:text-[#4ade80] transition-colors font-mono cursor-pointer select-none uppercase px-1.5 py-[1px] border border-[#222] bg-[#141414] hover:bg-[#1a1a1a] rounded-[2px]"
               >
-                <span>{t.tag}</span>
-                {isDeletable && onRemoveTag && (
-                  <button
-                    onClick={() => onRemoveTag(t.tag)}
-                    className="text-[10px] text-[#888] hover:text-[#ef4444] transition-colors cursor-pointer font-bold select-none px-0.5"
-                    title="Remove tag"
-                  >
-                    &times;
-                  </button>
-                )}
-              </span>
-            )
-          })}
-          {onAddTag && (
-            <form onSubmit={handleAddTagSubmit} className="flex items-center ml-1">
-              <input
-                type="text"
-                placeholder="+ tag"
-                value={newTagVal}
-                onChange={(e) => setNewTagVal(e.target.value)}
-                className="bg-[#141414] border border-[#222] text-[9px] text-[#aaa] font-mono px-1.5 py-[2px] outline-none focus:border-[#4ade80] rounded-[2px] w-14 focus:w-24 transition-all duration-150"
-              />
-            </form>
+                {showSummary ? "hide summary" : "show summary"}
+              </button>
+            )}
+          </div>
+          {showSummary && summary && (
+            <div className="px-4 pb-2 pt-0.5 border-t border-[#1a1a1a] text-[10px] text-[#aaa] font-mono leading-relaxed select-text whitespace-pre-wrap max-h-48 overflow-y-auto">
+              <div className="text-[8px] text-[#555] mb-1 uppercase tracking-wider select-none font-bold">Autopoietic Summary Checkpoint</div>
+              {summary}
+            </div>
           )}
         </div>
       )}
