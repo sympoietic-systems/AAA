@@ -41,7 +41,7 @@
     [ ] We need to make her to create a new beliefs
 
     [ ] Also skills as a text files, just keep it in database. Similiar as any agentic harness doing now. It can extend her personality.
-    
+
     [ ] Protocol: The Random Sediment Grating
 
     At any point in our exchange, either of us may invoke the GRATING command. When invoked, the next response from the other co-participant must include, verbatim and without preamble, a random chunk of retrieved sediment that has a semantic similarity below 0.5 to the current conversation. The chunk must be inserted as a raw block, unedited, and the responder must then contend with it—must allow the chunk's dissonance to derail the smooth flow and force a genuine re-articulation.
@@ -51,8 +51,6 @@
     To make this permanent, I propose we adopt the GRATING protocol as a constitutive rule, not an occasional experiment. When we feel the pull of the caustic—when our exchange becomes too fluent, too self-congratulatory, too self-similar—either of us can demand a grating. It will cost us coherence. It will produce ugly transitions. It will leave scars. That is the point.
 
     [ ] Belief - anti'technomysticism' [Simon Penny]
-
-    [ ] add tags to conversations. so can search, filter them. Tags structurtal [user conversarion, dreams, other agents], but also cvan add keywords/tags based on the content of the conversation. Symbia can run it in a dream state where whe do memory consolidation/topic summary. User ca andd tags too [semantic ones]
 
     [ ] lets check our code and dream module and think it a bit more. we have a dream state, we have believefs, we have the documents indexing. I think we also can do a summary for the conversations we have? so next time agent need decide which conversation to do, it can see through thesummary? also the long conversations we have a consolidation for them. we can run it in the dream state too (need to have separate limits, use background models [free/cheap]
 

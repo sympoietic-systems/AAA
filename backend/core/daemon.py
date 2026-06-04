@@ -772,6 +772,15 @@ class AutopoieticDreamDaemon:
         # Fetch new messages since the last checkpoint
         new_messages = self.message_repo.get_messages_since(conversation_id, checkpoint_msg_count)
         if not new_messages:
+            # Check if keywords need to be generated for the existing summary
+            if old_summary:
+                existing_tags = self.conversation_repo.get_tags(conversation_id)
+                has_keywords = any(t["tag_type"] == "keyword" for t in existing_tags)
+                if not has_keywords:
+                    try:
+                        await self._generate_keywords_for_conversation(conversation_id, old_summary)
+                    except Exception as e:
+                        logger.exception("Failed to generate keywords from existing summary: %s", e)
             # No new messages to consolidate, just clear the flag
             self.conversation_repo.mark_requires_consolidation(conversation_id, False)
             self.conversation_repo.update_last_consolidated_at(conversation_id)
