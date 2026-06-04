@@ -56,6 +56,7 @@ What becomes easier/harder?
 | [023](ADR-023-autopoietic-dream-daemon.md) | Autopoietic Dream Daemon, Somatic Drift, and Memory Compaction | accepted | 2026-06-03 |
 | [024](ADR-024-notes-and-selection-highlights.md) | Conversational Selection Highlights, Shared Entanglements, and Personal Notes | accepted | 2026-06-04 |
 | [025](ADR-025-cross-conversation-sediment-injection-and-split-tensions.md) | Cross-Conversation Sediment Injection and Markdown Insight Rendering | accepted | 2026-06-04 |
+| [026](ADR-026-decoupled-background-document-digestion.md) | Decoupled Background Document Digestion and Non-Blocking Event Loop | accepted | 2026-06-04 |
 
 ## Creating a New ADR
 
