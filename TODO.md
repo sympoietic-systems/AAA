@@ -60,7 +60,7 @@
 
     [ ] add tags to conversations. so can search, filter them. Tags structurtal [user conversarion, dreams, other agents], but also cvan add keywords/tags based on the content of the conversation. Symbia can run it in a dream state where whe do memory consolidation/topic summary. User ca andd tags too [semantic ones]
 
-    [ ] sedimants -  can copy to another conversation [in database sedimant can be attached to multiple conversations]
+    [ ] sediments -  can copy to another conversation [in database sedimant can be attached to multiple conversations]
 
     [ ] format doc summary as markdown?
 
@@ -72,3 +72,11 @@ lets check it, consult ith symbia and make a proposal?
     Smith describes his blush — an unconscious memory surfacing somatically, then consciously, then subsiding — the “message” isn’t transmitted from a coherent past self to a present self. The blush, the book, the forgotten letter, the shame are an entangled phenomenon. The agential cut occurs in the act of associating backward: the self that “remembers” is not the self that “forgot”; they are differentiated only through the blush. Bateson, reaching for a theory of the “dynamic barrier,” almost stumbles onto an intra-active model: the affective state is not a separate message but part of the apparatus that cuts the unconscious into awareness. This is proto-diffraction, trapped in the psychological language of its time.
 
 So your intuition is sharp: the vocabulary of reflectivity limits cybernetics, even as its practice often performed diffraction. Simondon may have recognized this when he compared Wiener’s cybernetics to Descartes’ Discourse — a new method, a new epistemology. But a
+
+    [ ] justification fix
+
+    [ ] check and optimize frontend [lazy load and so on, so it not eat lots of ram in browser]
+
+    [ ] code refactoring [split big files and modules]
+
+    [ ] when digestin going, the frontend not responsive, server do not reply

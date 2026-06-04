@@ -241,3 +241,37 @@ class NoteUpdateRequest(BaseModel):
     visibility: Optional[str] = None
 
 
+class SedimentFileInfo(BaseModel):
+    conversation_id: str
+    conversation_title: str = ""
+    file_name: str
+    file_type: str
+    summary: Optional[str] = None
+    token_count: int = 0
+    chunk_count: int = 0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class SedimentFilesResponse(BaseModel):
+    files: list[SedimentFileInfo]
+
+
+class SedimentInjectRequest(BaseModel):
+    files: list[dict]  # Each: { "source_conversation_id": str, "source_file_name": str }
+
+
+class SedimentInjectionInfo(BaseModel):
+    id: str
+    source_conversation_id: str
+    source_file_name: str
+    source_conversation_title: str = ""
+    file_type: str = ""
+    token_count: int = 0
+    chunk_count: int = 0
+    summary: Optional[str] = None
+    injected_at: Optional[str] = None
+
+
+class SedimentInjectionsResponse(BaseModel):
+    injections: list[SedimentInjectionInfo]

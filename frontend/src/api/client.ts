@@ -578,3 +578,68 @@ export async function deleteNote(conversationId: string, noteId: string): Promis
 }
 
 
+// ── Sediment Injection (cross-conversation linking) ────────────────
+
+export interface SedimentFileInfo {
+  conversation_id: string
+  conversation_title: string
+  file_name: string
+  file_type: string
+  summary: string | null
+  token_count: number
+  chunk_count: number
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface SedimentInjectionInfo {
+  id: string
+  source_conversation_id: string
+  source_file_name: string
+  source_conversation_title: string
+  file_type: string
+  token_count: number
+  chunk_count: number
+  summary: string | null
+  injected_at: string | null
+}
+
+export async function listSedimentFiles(
+  excludeConversationId?: string,
+  search?: string
+): Promise<{ files: SedimentFileInfo[] }> {
+  const params = new URLSearchParams()
+  if (excludeConversationId) params.set("exclude_conversation_id", excludeConversationId)
+  if (search) params.set("search", search)
+  const res = await fetch(`${BASE}/sediment/files?${params}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function injectSediment(
+  conversationId: string,
+  files: { source_conversation_id: string; source_file_name: string }[]
+): Promise<{ injections: SedimentInjectionInfo[] }> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/sediment/inject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ files }),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function getConversationInjections(
+  conversationId: string
+): Promise<{ injections: SedimentInjectionInfo[] }> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/sediment/injections`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function removeSedimentInjection(injectionId: string): Promise<void> {
+  const res = await fetch(`${BASE}/sediment/injections/${injectionId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}

@@ -1169,6 +1169,123 @@ class PerceptionSedimentRepository:
         return result
 
 
+    # ── Sediment Injection (cross-conversation linking) ───────────────
+
+    @with_connection
+    def get_all_files_across_conversations(
+        self, exclude_conversation_id: str | None = None, search: str | None = None
+    ) -> list[dict]:
+        """Return perception_files from all conversations, optionally excluding one and filtering by search."""
+        conn = self._conn()
+        query = """
+            SELECT pf.conversation_id, pf.file_name, pf.file_type, pf.status,
+                   pf.summary, pf.token_count, pf.chunk_count,
+                   pf.created_at, pf.updated_at,
+                   c.title AS conversation_title
+            FROM perception_files pf
+            LEFT JOIN conversations c ON pf.conversation_id = c.id
+            WHERE pf.status = 'ready'
+        """
+        params: list = []
+        if exclude_conversation_id:
+            query += " AND pf.conversation_id != ?"
+            params.append(exclude_conversation_id)
+        if search:
+            query += " AND (pf.file_name LIKE ? OR pf.summary LIKE ?)"
+            params.extend([f"%{search}%", f"%{search}%"])
+        query += " ORDER BY pf.updated_at DESC"
+        rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+    @with_connection
+    def inject_sediment(
+        self,
+        injection_id: str,
+        source_conversation_id: str,
+        source_file_name: str,
+        target_conversation_id: str,
+    ) -> None:
+        """Create a sediment injection link from a source file to a target conversation."""
+        conn = self._conn()
+        conn.execute(
+            """INSERT OR IGNORE INTO sediment_injections
+               (id, source_conversation_id, source_file_name, target_conversation_id)
+               VALUES (?, ?, ?, ?)""",
+            (injection_id, source_conversation_id, source_file_name, target_conversation_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_injections_for_conversation(self, target_conversation_id: str) -> list[dict]:
+        """Get all sediment injections linked to a target conversation."""
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT si.id, si.source_conversation_id, si.source_file_name,
+                      si.target_conversation_id, si.injected_at,
+                      pf.file_type, pf.status, pf.summary, pf.token_count, pf.chunk_count,
+                      c.title AS source_conversation_title
+               FROM sediment_injections si
+               JOIN perception_files pf
+                 ON si.source_conversation_id = pf.conversation_id
+                AND si.source_file_name = pf.file_name
+               LEFT JOIN conversations c ON si.source_conversation_id = c.id
+               WHERE si.target_conversation_id = ?
+               ORDER BY si.injected_at DESC""",
+            (target_conversation_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    @with_connection
+    def remove_injection(self, injection_id: str) -> None:
+        """Remove a sediment injection link."""
+        conn = self._conn()
+        conn.execute("DELETE FROM sediment_injections WHERE id = ?", (injection_id,))
+        conn.commit()
+
+    @with_connection
+    def get_injected_file_chunks(self, target_conversation_id: str) -> list["PerceptionSediment"]:
+        """Get all perception_sediment chunks that have been injected into a target conversation."""
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT ps.* FROM perception_sediment ps
+               JOIN sediment_injections si
+                 ON ps.conversation_id = si.source_conversation_id
+                AND ps.file_name = si.source_file_name
+               WHERE si.target_conversation_id = ?
+               ORDER BY ps.file_name, ps.chunk_index""",
+            (target_conversation_id,),
+        ).fetchall()
+        return [_row_to_perception_sediment(r) for r in rows]
+
+    @with_connection
+    def get_injected_structural_signatures(
+        self, target_conversation_id: str
+    ) -> list[tuple[int, np.ndarray]]:
+        """Get structural signatures for injected sediment chunks."""
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT ps.id, ps.structural_signature FROM perception_sediment ps
+               JOIN sediment_injections si
+                 ON ps.conversation_id = si.source_conversation_id
+                AND ps.file_name = si.source_file_name
+               JOIN perception_files pf
+                 ON ps.conversation_id = pf.conversation_id
+                AND ps.file_name = pf.file_name
+               WHERE si.target_conversation_id = ?
+                 AND ps.structural_signature IS NOT NULL
+                 AND pf.status = 'ready'""",
+            (target_conversation_id,),
+        ).fetchall()
+        result: list[tuple[int, np.ndarray]] = []
+        for row in rows:
+            blob = row["structural_signature"]
+            if blob:
+                vec = np.frombuffer(blob, dtype="float32")
+                result.append((row["id"], vec))
+        return result
+
+    # ── Perception Log ─────────────────────────────────────────────────
+
     @with_connection
     def insert_perception_log(
         self,

@@ -463,6 +463,27 @@ def init_db(db_path: str) -> sqlite3.Connection:
     except sqlite3.OperationalError:
         pass
 
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sediment_injections (
+                id                    TEXT PRIMARY KEY,
+                source_conversation_id TEXT NOT NULL,
+                source_file_name      TEXT NOT NULL,
+                target_conversation_id TEXT NOT NULL,
+                injected_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (source_conversation_id) REFERENCES conversations(id),
+                FOREIGN KEY (target_conversation_id) REFERENCES conversations(id)
+            )
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_si_target ON sediment_injections(target_conversation_id)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_si_source ON sediment_injections(source_conversation_id, source_file_name)"
+        )
+    except sqlite3.OperationalError:
+        pass
+
     _migrate_legacy_conversation(conn)
 
     conn.commit()

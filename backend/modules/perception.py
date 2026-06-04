@@ -86,12 +86,14 @@ class PerceptionModule(ProcessingModule):
                               len(attachments))
 
         existing = self._repo.get_files_by_conversation(conversation_id) if conversation_id else []
-        logger.debug("Perception: get_files_by_conversation returned %d file(s) for conv %s",
-                     len(existing), conversation_id[:8] if conversation_id else "none")
-        if existing:
-            for fs in existing:
-                logger.debug("  file=%s type=%s tokens=%d chunks=%d status=%s",
-                           fs["file_name"], fs["file_type"], fs.get("token_count") or 0, fs.get("chunk_count") or 0, fs.get("status"))
+        injections = self._repo.get_injections_for_conversation(conversation_id) if conversation_id else []
+        logger.debug("Perception: native_files=%d, injected_files=%d for conv %s",
+                     len(existing), len(injections), conversation_id[:8] if conversation_id else "none")
+        if existing or injections:
+            if existing:
+                for fs in existing:
+                    logger.debug("  file=%s type=%s tokens=%d chunks=%d status=%s",
+                               fs["file_name"], fs["file_type"], fs.get("token_count") or 0, fs.get("chunk_count") or 0, fs.get("status"))
             file_context, context_tokens = await self._retrieve_relevant_chunks(
                 payload.get("content", ""),
                 conversation_id,
@@ -99,7 +101,7 @@ class PerceptionModule(ProcessingModule):
             logger.info("Perception: file_context has %d entries, %d tokens",
                        len(file_context), context_tokens)
         else:
-            logger.debug("Perception: no sediment files found, context empty")
+            logger.debug("Perception: no native or injected sediment files found, context empty")
             file_context, context_tokens = [], 0
 
         payload["file_context"] = file_context
@@ -200,37 +202,57 @@ class PerceptionModule(ProcessingModule):
             return [], 0
 
         files = self._repo.get_files_by_conversation(conversation_id)
-        if not files:
+        injections = self._repo.get_injections_for_conversation(conversation_id)
+        if not files and not injections:
             return [], 0
 
-        from datetime import datetime, timezone
-        manifest_lines = ["[File Manifest - Co-Participant Sediment]"]
-        for f in files:
-            file_name = f["file_name"]
-            file_type = f["file_type"]
-            status = f["status"]
-            summary = f.get("summary")
-            token_count = f.get("token_count") or 0
-            chunk_count = f.get("chunk_count") or 0
+        manifest_parts = []
 
-            # Check if newly uploaded (within last 600 seconds / 10 minutes)
-            is_new = False
-            if f.get("created_at"):
-                try:
-                    created_dt = datetime.strptime(f["created_at"], "%Y-%m-%d %H:%M:%S")
-                    if (datetime.now(timezone.utc).replace(tzinfo=None) - created_dt).total_seconds() < 600:
-                        is_new = True
-                except Exception:
-                    pass
+        if files:
+            from datetime import datetime, timezone
+            manifest_lines = ["[File Manifest - Co-Participant Sediment]"]
+            for f in files:
+                file_name = f["file_name"]
+                file_type = f["file_type"]
+                status = f["status"]
+                summary = f.get("summary")
+                token_count = f.get("token_count") or 0
+                chunk_count = f.get("chunk_count") or 0
 
-            new_prefix = "[new] " if is_new else ""
-            if status != "ready":
-                manifest_lines.append(f"- {new_prefix}{file_name} ({file_type}, status: {status})")
-            else:
-                summary_val = summary if summary else "[No summary generated]"
-                manifest_lines.append(f"- {new_prefix}{file_name} ({file_type}, {token_count} tokens, {chunk_count} chunks) - Summary: {summary_val}")
+                # Check if newly uploaded (within last 600 seconds / 10 minutes)
+                is_new = False
+                if f.get("created_at"):
+                    try:
+                        created_dt = datetime.strptime(f["created_at"], "%Y-%m-%d %H:%M:%S")
+                        if (datetime.now(timezone.utc).replace(tzinfo=None) - created_dt).total_seconds() < 600:
+                            is_new = True
+                    except Exception:
+                        pass
 
-        manifest_text = "\n".join(manifest_lines)
+                new_prefix = "[new] " if is_new else ""
+                if status != "ready":
+                    manifest_lines.append(f"- {new_prefix}{file_name} ({file_type}, status: {status})")
+                else:
+                    summary_val = summary if summary else "[No summary generated]"
+                    manifest_lines.append(f"- {new_prefix}{file_name} ({file_type}, {token_count} tokens, {chunk_count} chunks) - Summary: {summary_val}")
+            manifest_parts.append("\n".join(manifest_lines))
+
+        # Also include injected sediment files in the manifest
+        if injections:
+            manifest_lines_inj = ["[Injected Sediment - Cross-Conversation Links]"]
+            for inj in injections:
+                inj_name = inj["source_file_name"]
+                inj_type = inj.get("file_type", "unknown")
+                inj_summary = inj.get("summary") or "[No summary]"
+                inj_tokens = inj.get("token_count", 0)
+                inj_chunks = inj.get("chunk_count", 0)
+                inj_conv_title = inj.get("source_conversation_title") or "untitled"
+                manifest_lines_inj.append(
+                    f"- {inj_name} ({inj_type}, {inj_tokens} tokens, {inj_chunks} chunks, from \"{inj_conv_title}\") - Summary: {inj_summary}"
+                )
+            manifest_parts.append("\n".join(manifest_lines_inj))
+
+        manifest_text = "\n\n".join(manifest_parts)
         context_entries: list[dict] = [{"role": "system", "content": manifest_text}]
 
         try:
@@ -242,7 +264,18 @@ class PerceptionModule(ProcessingModule):
             return context_entries, sum(estimate_tokens(e["content"]) for e in context_entries)
 
         chunk_embeddings = self._repo.get_embeddings_by_conversation(conversation_id)
-        logger.info("Retrieval: query='%s' dim=%d chunks_found=%d",
+
+        # Also include embeddings from injected sediment files
+        injected_embeddings = self._repo.get_injected_file_chunks(conversation_id)
+        for chunk in injected_embeddings:
+            if chunk.embedding:
+                try:
+                    vec = np.frombuffer(chunk.embedding, dtype="float32")
+                    chunk_embeddings.append((chunk.id, vec))
+                except Exception:
+                    pass
+
+        logger.info("Retrieval: query='%s' dim=%d chunks_found=%d (incl. injected)",
                     query[:60], len(query_vec), len(chunk_embeddings))
 
         if not chunk_embeddings:
@@ -328,7 +361,9 @@ class PerceptionModule(ProcessingModule):
         entries: list[dict] = []
         tokens_used = sum(estimate_tokens(e["content"]) for e in existing_entries)
         all_chunks = self._repo.get_by_conversation(conversation_id)
-        for chunk in all_chunks[:self._top_k_chunks]:
+        injected_chunks = self._repo.get_injected_file_chunks(conversation_id)
+        combined_chunks = all_chunks + injected_chunks
+        for chunk in combined_chunks[:self._top_k_chunks]:
             if getattr(chunk, "opacity", 0) == 1:
                 import json as _json
                 try:

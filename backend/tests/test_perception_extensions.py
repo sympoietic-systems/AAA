@@ -174,10 +174,131 @@ async def test_coordinates_warping():
             os.remove(p)
 
 
+async def test_sediment_entanglement():
+    db_path = str(get_db_path("data/aaa_entangle_test.db"))
+    conn = init_db(db_path)
+    
+    # Clean DB
+    conn.execute("DELETE FROM perception_sediment")
+    conn.execute("DELETE FROM perception_files")
+    conn.execute("DELETE FROM sediment_injections")
+    conn.execute("DELETE FROM conversations")
+    conn.commit()
+
+    repo = PerceptionSedimentRepository(db_path)
+    from backend.storage.repository import ConversationRepository
+    conv_repo = ConversationRepository(db_path)
+    
+    source_conv = "conv_source_1"
+    target_conv = "conv_target_2"
+    file_name = "nomadic_sediment.txt"
+
+    # 1. Create parent conversations
+    conv_repo.create(source_conv, title="Source Chat")
+    conv_repo.create(target_conv, title="Target Chat")
+
+    # 2. Add native file to source chat
+    repo.create_file(source_conv, file_name, "md", "ready")
+    repo.update_file(
+        source_conv,
+        file_name,
+        status="ready",
+        summary="A text on rhizomatic connections.",
+        summary_model="mock-gpt",
+        token_count=150,
+        chunk_count=1
+    )
+
+    # 3. Add chunk to source file
+    embed = EmbeddingService(model_name="all-MiniLM-L6-v2", device="cpu")
+    embed.load()
+    
+    embed_vec = await embed.encode_async("Autonomous agents deterritorialize space.")
+    embed_blob = np.array(embed_vec, dtype=np.float32).tobytes()
+    repo.insert_chunk(
+        conversation_id=source_conv,
+        file_name=file_name,
+        file_type="md",
+        chunk_index=0,
+        chunk_text="Autonomous agents deterritorialize space.",
+        embedding=embed_blob,
+        embedding_model="all-MiniLM-L6-v2",
+        token_count=10,
+        structural_signature=b"\x00" * 64
+    )
+
+    # 4. Verify find across conversations (excluding target_conv)
+    available = repo.get_all_files_across_conversations(exclude_conversation_id=target_conv)
+    assert len(available) == 1
+    assert available[0]["file_name"] == file_name
+    assert available[0]["conversation_id"] == source_conv
+
+    # 5. Inject source file into target conversation
+    import uuid
+    repo.inject_sediment(
+        injection_id=str(uuid.uuid4()),
+        source_conversation_id=source_conv,
+        source_file_name=file_name,
+        target_conversation_id=target_conv,
+    )
+
+    # 6. Retrieve injections for target conversation
+    injections = repo.get_injections_for_conversation(target_conv)
+    assert len(injections) == 1
+    assert injections[0]["source_file_name"] == file_name
+    assert injections[0]["source_conversation_id"] == source_conv
+    assert injections[0]["source_conversation_title"] == "Source Chat"
+    assert injections[0]["summary"] == "A text on rhizomatic connections."
+
+    # 7. Check injected file chunks retrieval
+    injected_chunks = repo.get_injected_file_chunks(target_conv)
+    assert len(injected_chunks) == 1
+    assert injected_chunks[0].chunk_text == "Autonomous agents deterritorialize space."
+
+    # 8. Test perception module retrieval with injections (context manifests)
+    embed = EmbeddingService(model_name="all-MiniLM-L6-v2", device="cpu")
+    embed.load()
+
+    perception_module = PerceptionModule(
+        perception_repo=repo,
+        embedding_service=embed
+    )
+
+    context_entries, tokens = await perception_module._retrieve_relevant_chunks(
+        query="deterritorialize",
+        conversation_id=target_conv
+    )
+    
+    # Verify the manifest entry for injected file was included
+    manifest_entry = context_entries[0]["content"]
+    assert "Injected Sediment" in manifest_entry
+    assert "nomadic_sediment.txt" in manifest_entry
+    assert "Source Chat" in manifest_entry
+    assert "A text on rhizomatic connections." in manifest_entry
+
+    # Verify that the injected chunk content was retrieved as system prompt entry
+    assert any("Autonomous agents deterritorialize space." in entry["content"] for entry in context_entries[1:])
+
+    # 9. Remove injection and confirm it is gone
+    injection_id = injections[0]["id"]
+    repo.remove_injection(injection_id)
+    assert len(repo.get_injections_for_conversation(target_conv)) == 0
+    assert len(repo.get_injected_file_chunks(target_conv)) == 0
+
+    print("Sediment Cross-Conversation Entanglement Logic: OK")
+
+    # Clean up
+    conn.close()
+    for p in [db_path, db_path + "-wal", db_path + "-shm"]:
+        if os.path.exists(p):
+            os.remove(p)
+
+
 async def main():
     await test_ddg_parser()
     await test_html_to_text()
     await test_coordinates_warping()
+    await test_sediment_entanglement()
     print("All perception extensions tests passed successfully!")
 
 if __name__ == "__main__":
