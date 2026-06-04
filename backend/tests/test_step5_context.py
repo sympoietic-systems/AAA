@@ -8,7 +8,7 @@ sys.path.insert(0, root_path)
 os.chdir(root_path)
 
 from backend.storage.database import init_db, get_db_path
-from backend.storage.repository import ErrorLogRepository, MessageRepository
+from backend.storage.repository import ErrorLogRepository, MessageRepository, NoteRepository
 from backend.modules.context_collector import ContextCollectorModule
 from backend.core.pipeline import ProcessingPipeline
 from backend.core.registry import ModuleRegistry
@@ -21,6 +21,7 @@ async def test_context_collector():
     conn.execute("DELETE FROM conversation_log")
     conn.commit()
     repo = MessageRepository(db_path)
+    note_repo = NoteRepository(db_path)
 
     import numpy as np
 
@@ -30,7 +31,7 @@ async def test_context_collector():
     repo.insert("apparatus", "It is sunny today.", emb, "test", 384)
     repo.insert("human", "Tell me more.", emb, "test", 384)
 
-    mod = ContextCollectorModule(message_repo=repo, max_history=20)
+    mod = ContextCollectorModule(message_repo=repo, note_repo=note_repo, max_history=20)
     assert mod.validate()
     assert mod.name == "context_collector"
 

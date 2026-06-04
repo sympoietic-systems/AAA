@@ -226,6 +226,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         else:
             body["messages"] = messages
             body["model"] = self._model
+            if "max_tokens" in merged_params:
+                body["max_tokens"] = merged_params["max_tokens"]
 
         if self._thinking:
             if is_anthropic:

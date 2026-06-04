@@ -190,5 +190,52 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(provider._last_model_used, "google_router/gemini-2.5-flash")
         self.assertEqual(calls, ["gemini-2.5-flash"])
 
+    @patch("httpx.AsyncClient.post")
+    async def test_openai_compatible_max_tokens(self, mock_post):
+        mock_response = unittest.mock.MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": "hello"
+                }
+            }]
+        }
+        mock_post.return_value = mock_response
+
+        # 1. Non-thinking provider
+        provider = OpenAICompatibleProvider(
+            api_key="test_key",
+            model="test_model",
+            api_base="https://api.test.com",
+        )
+        await provider.generate([{"role": "user", "content": "hi"}], max_tokens=123)
+        
+        # Check mock_post call arguments
+        self.assertEqual(mock_post.call_count, 1)
+        args, kwargs = mock_post.call_args
+        body = kwargs["json"]
+        self.assertEqual(body["max_tokens"], 123)
+        self.assertEqual(body["temperature"], 0.7)  # default parameter
+
+        # Reset mock
+        mock_post.reset_mock()
+
+        # 2. Thinking provider
+        provider_thinking = OpenAICompatibleProvider(
+            api_key="test_key",
+            model="test_model",
+            api_base="https://api.test.com",
+            thinking=True,
+        )
+        await provider_thinking.generate([{"role": "user", "content": "hi"}], max_tokens=456)
+        
+        self.assertEqual(mock_post.call_count, 1)
+        args, kwargs = mock_post.call_args
+        body = kwargs["json"]
+        self.assertEqual(body["max_tokens"], 456)
+        self.assertNotIn("temperature", body)  # temperature not sent in thinking mode
+
 if __name__ == "__main__":
     unittest.main()
