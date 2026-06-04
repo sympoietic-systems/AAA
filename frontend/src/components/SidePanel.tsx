@@ -40,7 +40,7 @@ function ImageMetadataCard({ metadata }: { metadata: ImageMetadata }) {
   let vec: number[] = []
   try {
     vec = JSON.parse(rawVec)
-  } catch {}
+  } catch { }
 
   const implicatedNodes: string[] = []
   try {
@@ -50,7 +50,7 @@ function ImageMetadataCard({ metadata }: { metadata: ImageMetadata }) {
         implicatedNodes.push(...parsed)
       }
     }
-  } catch {}
+  } catch { }
 
   return (
     <article className="border-l-2 border-[#4ade80] p-3 bg-[#0c0c12] relative font-sans text-xs">
@@ -109,7 +109,7 @@ function ImageMetadataCard({ metadata }: { metadata: ImageMetadata }) {
 
       {metadata.raw_transcription && (
         <div className="mb-3">
-          <button 
+          <button
             onClick={() => setOcrOpen(!ocrOpen)}
             className="flex items-center gap-1 text-[9px] text-[#6c6c8a] hover:text-[#999] font-mono transition-colors focus:outline-none"
           >
@@ -127,7 +127,7 @@ function ImageMetadataCard({ metadata }: { metadata: ImageMetadata }) {
       {vec.length > 0 && (
         <div className="mt-3 pt-2.5 border-t border-[#222]/50">
           <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1.5">[ 16D Autopoietic Signature ]</span>
-          
+
           <div className="flex items-end gap-0.5 h-7 mt-1 border border-[#1a1a24] bg-[#08080c] p-1 rounded w-fit">
             {vec.map((val: number, idx: number) => {
               const heightPercent = Math.min(100, Math.max(5, Math.round(((val + 1.0) / 2.0) * 100)))
@@ -211,7 +211,7 @@ function WebMetadataCard({ metadata, summary }: { metadata: WebMetadata; summary
         implicatedNodes.push(...parsed)
       }
     }
-  } catch {}
+  } catch { }
 
   const { cleanSummary, unresolvedTensions } = splitSummaryAndTension(summary)
 
@@ -242,9 +242,9 @@ function WebMetadataCard({ metadata, summary }: { metadata: WebMetadata; summary
 
       <div className="mb-3">
         <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1">[ Source ]</span>
-        <a 
-          href={metadata.source_url} 
-          target="_blank" 
+        <a
+          href={metadata.source_url}
+          target="_blank"
           rel="noopener noreferrer"
           className="text-[#60a5fa] hover:underline font-mono break-all text-[10px]"
         >
@@ -358,10 +358,10 @@ function DocumentMetadataCard({ metadata, summary }: { metadata: DocumentMetadat
       {vec.length > 0 && (
         <div className="mt-3 pt-2.5 border-t border-[#222]/50">
           <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1.5">[ 16D State Vector Impact ]</span>
-          
+
           <div className="flex items-center gap-0.5 h-12 mt-1 border border-[#1a1a24] bg-[#08080c] p-1 rounded w-fit relative">
             <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-[#333]/50 pointer-events-none" />
-            
+
             {vec.map((val: number, idx: number) => {
               const heightPercent = Math.min(100, Math.max(5, Math.round((val + 0.5) * 100)))
               const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx}`, desc: "" }
@@ -375,9 +375,9 @@ function DocumentMetadataCard({ metadata, summary }: { metadata: DocumentMetadat
                   onMouseLeave={() => setHoveredDim(null)}
                   className="w-2 transition-all cursor-crosshair relative"
                 >
-                  <div 
+                  <div
                     className="absolute bottom-0 left-0 right-0 top-0 transition-colors"
-                    style={{ 
+                    style={{
                       backgroundColor: isHovered ? barColor : `${barColor}60`
                     }}
                   />
@@ -590,8 +590,8 @@ function HealthSection({ messageCount }: { messageCount: number }) {
   const state = metrics?.recommendations?.state ?? "unknown"
   const stateColor =
     (state === "flowing" || state === "healthy") ? "#4ade80" :
-    (state === "consolidating" || state === "compensating") ? "#facc15" :
-    (state === "disrupted" || state === "critical") ? "#ef4444" : "#555"
+      (state === "consolidating" || state === "compensating") ? "#facc15" :
+        (state === "disrupted" || state === "critical") ? "#ef4444" : "#555"
 
   const renderBar = (label: string, fullName: string, value: number | null | undefined, max: number, hint: string) => {
     const pct = value != null ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
@@ -797,7 +797,7 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
 
   useEffect(() => {
     const poll = () => {
-      getMetrics().then(setMetrics).catch(() => {})
+      getMetrics().then(setMetrics).catch(() => { })
     }
     poll()
     const interval = setInterval(poll, 15000)
@@ -925,8 +925,8 @@ function DiffractiveSection({ messageCount }: { messageCount: number }) {
                   desc={s.type === "nomadic"
                     ? "Injected context retrieved from an orthogonal/external conversation memory to shift the loop."
                     : s.type === "semantic_knot"
-                    ? "Injected context retrieved from distilled semantic knots of past conversations."
-                    : "Injected context retrieved from static uploaded files matching the Goldilocks zone."}
+                      ? "Injected context retrieved from distilled semantic knots of past conversations."
+                      : "Injected context retrieved from static uploaded files matching the Goldilocks zone."}
                 />
               </div>
             ))}
@@ -1117,20 +1117,19 @@ function BeliefsSection({ conversationId, messageCount }: { conversationId?: str
           const catColor = getCategoryColor(b.category)
           const isExpanded = expandedBelief === b.id
           const isCollapsed = b.confidence < 0.20
-          
+
           let vec: number[] = []
           try {
             if (b.vector_16d) {
               vec = JSON.parse(b.vector_16d)
             }
-          } catch {}
+          } catch { }
 
           return (
             <div
               key={b.id}
-              className={`border border-[#1f1f2e]/30 bg-[#070709] rounded overflow-hidden transition-all duration-200 ${
-                isCollapsed ? "opacity-55" : ""
-              }`}
+              className={`border border-[#1f1f2e]/30 bg-[#070709] rounded overflow-hidden transition-all duration-200 ${isCollapsed ? "opacity-55" : ""
+                }`}
             >
               <div
                 className="relative group p-1.5 flex items-center justify-between hover:bg-[#12121a] cursor-pointer transition-colors"
@@ -1223,9 +1222,8 @@ function BeliefsSection({ conversationId, messageCount }: { conversationId?: str
                                   {new Date(e.timestamp).toLocaleTimeString()}
                                 </span>
                                 <span
-                                  className={`font-mono text-[8px] font-bold ${
-                                    isPositive ? "text-[#4ade80]" : "text-[#f87171]"
-                                  }`}
+                                  className={`font-mono text-[8px] font-bold ${isPositive ? "text-[#4ade80]" : "text-[#f87171]"
+                                    }`}
                                 >
                                   {diffStr}
                                 </span>
@@ -1618,13 +1616,13 @@ function NotesSection({
       {notes.map((note) => {
         const isShared = note.visibility === "shared"
         const borderColor = isShared ? "border-purple-600/40" : "border-yellow-600/30"
-        const badgeColor = isShared 
-          ? "bg-purple-950/50 text-purple-300 border-purple-800/40" 
+        const badgeColor = isShared
+          ? "bg-purple-950/50 text-purple-300 border-purple-800/40"
           : "bg-yellow-950/40 text-yellow-300 border-yellow-800/30"
 
         return (
-          <div 
-            key={note.id} 
+          <div
+            key={note.id}
             onClick={() => handleNoteClick(note.id)}
             className={`p-2 bg-[#0c0c0c] border border-[#1a1a1a] border-l-2 ${borderColor} rounded-sm flex flex-col gap-1.5 cursor-pointer hover:bg-[#121212] transition-colors`}
           >
@@ -1675,7 +1673,7 @@ function NotesSection({
                     rows={2}
                   />
                   <div className="flex justify-end gap-1.5 text-[9px]">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation()
                         setEditingNoteId(null)
@@ -1684,7 +1682,7 @@ function NotesSection({
                     >
                       cancel
                     </button>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation()
                         saveEdit(note.id)
@@ -1833,18 +1831,16 @@ function SedimentInjectionModal({
                   <div
                     key={key}
                     onClick={() => toggleFile(key)}
-                    className={`flex items-start gap-2 px-2.5 py-2 rounded cursor-pointer transition-all duration-150 ${
-                      isSelected
+                    className={`flex items-start gap-2 px-2.5 py-2 rounded cursor-pointer transition-all duration-150 ${isSelected
                         ? "bg-[#a78bfa]/10 border border-[#a78bfa]/30"
                         : "hover:bg-[#151515] border border-transparent"
-                    }`}
+                      }`}
                   >
                     {/* Checkbox */}
-                    <div className={`w-3.5 h-3.5 mt-0.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected
+                    <div className={`w-3.5 h-3.5 mt-0.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${isSelected
                         ? "border-[#a78bfa] bg-[#a78bfa]/20"
                         : "border-[#333] bg-[#0a0a0a]"
-                    }`}>
+                      }`}>
                       {isSelected && <span className="text-[8px] text-[#a78bfa] leading-none">✓</span>}
                     </div>
 
@@ -1882,11 +1878,10 @@ function SedimentInjectionModal({
           <button
             onClick={handleInject}
             disabled={selected.size === 0 || injecting}
-            className={`text-[9px] font-mono px-3 py-1 rounded transition-all duration-200 ${
-              selected.size === 0 || injecting
+            className={`text-[9px] font-mono px-3 py-1 rounded transition-all duration-200 ${selected.size === 0 || injecting
                 ? "text-[#444] bg-[#111] border border-[#222] cursor-not-allowed"
                 : "text-[#a78bfa] bg-[#a78bfa]/10 border border-[#a78bfa]/30 hover:bg-[#a78bfa]/20 hover:border-[#a78bfa]/50"
-            }`}
+              }`}
           >
             {injecting ? "injecting..." : `inject ${selected.size > 0 ? `(${selected.size})` : ""}`}
           </button>
@@ -1976,7 +1971,6 @@ function SedimentSection({
           {injections.map((inj) => (
             <div key={inj.id} className="py-1.5 border-b border-[#1a1a1a] last:border-b-0">
               <div className="flex items-center gap-1.5 group">
-                <span className="text-[8px] text-[#a78bfa]">◈</span>
                 <span className="text-xs">{fileIcon(inj.file_type)}</span>
                 <div className="flex-1 min-w-0">
                   <span className="text-[10px] text-[#aaa] font-mono truncate block">
@@ -1986,7 +1980,7 @@ function SedimentSection({
                     from "{inj.source_conversation_title || "untitled"}"
                   </span>
                 </div>
-                
+
                 <span className="text-[8px] text-[#666] font-mono shrink-0">
                   {inj.token_count >= 1000 ? `${(inj.token_count / 1000).toFixed(1)}k` : inj.token_count} tok
                 </span>
@@ -2051,7 +2045,7 @@ function SedimentSection({
                 <span className="text-[10px] text-[#aaa] truncate flex-1 font-mono">
                   {f.file_name}
                 </span>
-                
+
                 {f.status === "uploading" && (
                   <span className="text-[8px] text-[#eab308] animate-pulse px-1 border border-[#eab308]/30 rounded">
                     uploading
@@ -2078,7 +2072,7 @@ function SedimentSection({
                     )}
                   </div>
                 )}
-                
+
                 {f.token_count > 0 && f.status === "ready" && (
                   <span className="text-[8px] text-[#666] font-mono">
                     {f.token_count >= 1000 ? `${(f.token_count / 1000).toFixed(1)}k` : f.token_count} tok
@@ -2104,7 +2098,7 @@ function SedimentSection({
                   </button>
                 )}
               </div>
-              
+
               {expandedFile === f.file_name && (
                 <div className="mt-1 ml-4 bg-[#141414] border border-[#222] rounded overflow-hidden">
                   {loadingSummary === f.file_name ? (

@@ -60,10 +60,6 @@
 
     [ ] add tags to conversations. so can search, filter them. Tags structurtal [user conversarion, dreams, other agents], but also cvan add keywords/tags based on the content of the conversation. Symbia can run it in a dream state where whe do memory consolidation/topic summary. User ca andd tags too [semantic ones]
 
-    [ ] sediments -  can copy to another conversation [in database sedimant can be attached to multiple conversations]
-
-    [ ] format doc summary as markdown?
-
     [ ] lets check our code and dream module and think it a bit more. we have a dream state, we have believefs, we have the documents indexing. I think we also can do a summary for the conversations we have? so next time agent need decide which conversation to do, it can see through thesummary? also the long conversations we have a consolidation for them. we can run it in the dream state too (need to have separate limits, use background models [free/cheap]
 
 lets check it, consult ith symbia and make a proposal?
@@ -78,5 +74,3 @@ So your intuition is sharp: the vocabulary of reflectivity limits cybernetics, e
     [ ] check and optimize frontend [lazy load and so on, so it not eat lots of ram in browser]
 
     [ ] code refactoring [split big files and modules]
-
-    [ ] when digestin going, the frontend not responsive, server do not reply
