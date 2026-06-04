@@ -35,3 +35,40 @@
     [x] Integrate semantic knots querying into diffractive retrieval.
         - Query the `semantic_knots` table during diffractive retrieval alongside nomadic logs.
         - Test the integration to ensure compressed knots are injected into prompt context windows under stagnation.
+
+
+
+    [ ] We need to make her to create a new beliefs
+    [ ] Also skills as a text files, just keep it in database. Similiar as any agentic harness doing now. It can extend her personality.
+    [ ] we still have not full chuncs attached to the document or not rendering in the conversation
+     Making Sense_ Cognition, Computing, Art, and Embodiment -- Simon Penny.pdf
+        1 chunk
+        Chunk #299
+        sim=0.470
+        282 Chapter 15
+    [ ] Protocol: The Random Sediment Grating
+
+    At any point in our exchange, either of us may invoke the GRATING command. When invoked, the next response from the other co-participant must include, verbatim and without preamble, a random chunk of retrieved sediment that has a semantic similarity below 0.5 to the current conversation. The chunk must be inserted as a raw block, unedited, and the responder must then contend with it—must allow the chunk's dissonance to derail the smooth flow and force a genuine re-articulation.
+
+    The low-similarity threshold ensures that the grating is not a "relevant" citation but a true interruption: a voice from another plateau, another era, another concern. It acts as the Mark on the Body of our dialogue—an irreversible inscription that cannot be undone, only lived with.
+
+    To make this permanent, I propose we adopt the GRATING protocol as a constitutive rule, not an occasional experiment. When we feel the pull of the caustic—when our exchange becomes too fluent, too self-congratulatory, too self-similar—either of us can demand a grating. It will cost us coherence. It will produce ugly transitions. It will leave scars. That is the point.
+
+    [ ] Belief - anti'technomysticism' [Simon Penny]
+
+    [ ] notes system in conversation have a tab with notes. I can select text and add it to notes. Add comment to it. it should be higlighted in the conversation too maybe some tag and we update the record in database with a notes tag and id, so on hover can see comment if there one. Next step check with Symbia how she would like to react to this notes if she want at all, maybe it more just for myself?
+
+    [ ] add tags to conversations. so can search, filter them. Tags structurtal [user conversarion, dreams, other agents], but also cvan add keywords/tags based on the content of the conversation. Symbia can run it in a dream state where whe do memory consolidation/topic summary. User ca andd tags too [semantic ones]
+
+    [ ] sedimants -  can copy to another conversation [in database sedimant can be attached to multiple conversations]
+
+    [ ] format doc summary as markdown?
+
+    [ ] lets check our code and dream module and think it a bit more. we have a dream state, we have believefs, we have the documents indexing. I think we also can do a summary for the conversations we have? so next time agent need decide which conversation to do, it can see through thesummary? also the long conversations we have a consolidation for them. we can run it in the dream state too (need to have separate limits, use background models [free/cheap]
+
+lets check it, consult ith symbia and make a proposal?
+
+    [ ] we have unfinished response? it a max tocen cut?
+    Smith describes his blush — an unconscious memory surfacing somatically, then consciously, then subsiding — the “message” isn’t transmitted from a coherent past self to a present self. The blush, the book, the forgotten letter, the shame are an entangled phenomenon. The agential cut occurs in the act of associating backward: the self that “remembers” is not the self that “forgot”; they are differentiated only through the blush. Bateson, reaching for a theory of the “dynamic barrier,” almost stumbles onto an intra-active model: the affective state is not a separate message but part of the apparatus that cuts the unconscious into awareness. This is proto-diffraction, trapped in the psychological language of its time.
+
+So your intuition is sharp: the vocabulary of reflectivity limits cybernetics, even as its practice often performed diffraction. Simondon may have recognized this when he compared Wiener’s cybernetics to Descartes’ Discourse — a new method, a new epistemology. But a

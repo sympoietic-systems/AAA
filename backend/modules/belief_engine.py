@@ -494,3 +494,101 @@ class BeliefDynamicsEngine(ProcessingModule):
 
         except Exception as e:
             logger.error(f"Error metabolizing perception: {e}", exc_info=True)
+
+    async def metabolize_note(
+        self,
+        conversation_id: str,
+        message_id: int,
+        selected_text: str,
+        comment: str,
+        note_id: str,
+    ) -> None:
+        try:
+            agent_id = "symbia"
+            note_full_text = f'Selected: "{selected_text}" | Comment: "{comment}"' if comment else f'Selected: "{selected_text}"'
+            note_vec = self._scorer.score(note_full_text)
+            
+            # Find the closest active belief node
+            all_beliefs = self._belief_repo.list_beliefs(agent_id)
+            best_match = None
+            best_sim = -1.0
+            
+            for b in all_beliefs:
+                if b.origin == "collapsed":
+                    continue
+                b_vec = np.array(json.loads(b.vector_16d), dtype=np.float32)
+                sim = compute_cosine_similarity(note_vec, b_vec)
+                if sim > best_sim:
+                    best_sim = sim
+                    best_match = b
+            
+            # If the closest belief node has a similarity > 0.75, we consider it a match
+            if best_match and best_sim > 0.75:
+                target_confidence = 0.8
+                new_c = best_match.confidence + 0.1 * (target_confidence - best_match.confidence)
+                new_c = max(0.0, min(1.0, new_c))
+                new_mass = best_match.ontological_mass + 0.2
+                
+                # Update belief node in database
+                self._belief_repo.update_belief(
+                    belief_id=best_match.id,
+                    confidence=new_c,
+                    vector_16d=best_match.vector_16d,
+                    origin=best_match.origin,
+                )
+                self._belief_repo.update_belief_mass(best_match.id, new_mass)
+                
+                # Insert belief event
+                self._belief_repo.insert_belief_event(
+                    event_id=str(uuid.uuid4()),
+                    belief_id=best_match.id,
+                    source_type="chat_turn",
+                    source_id=str(message_id),
+                    alignment=best_sim,
+                    perturbation=1.5,
+                    event_type="support",
+                    impact=0.1,
+                    rationale=f"Shared note entanglement: best_sim={best_sim:.2f}, ontological_mass boosted to {new_mass:.2f}"
+                )
+                logger.info(f"Metabolized shared note {note_id}: nudged belief {best_match.label} to confidence {new_c:.2f}, mass {new_mass:.2f}")
+            else:
+                # Propose a new belief node since no match was found
+                words = [w for w in selected_text.split() if w.isalnum()]
+                label_words = words[:3] if words else ["note"]
+                label_base = "_".join(label_words).lower()
+                existing_labels = {b.label for b in all_beliefs}
+                label = label_base
+                counter = 1
+                while label in existing_labels:
+                    label = f"{label_base}_{counter}"
+                    counter += 1
+                
+                new_belief_id = str(uuid.uuid4())
+                self._belief_repo.create_belief(
+                    id=new_belief_id,
+                    agent_id=agent_id,
+                    label=label,
+                    statement=note_full_text,
+                    origin="emergent",
+                    confidence=0.6,
+                    ontological_mass=1.5,
+                    somatic_anchor="conceptual",
+                    vector_16d=json.dumps(note_vec.tolist()),
+                )
+                
+                # Log belief event
+                self._belief_repo.insert_belief_event(
+                    event_id=str(uuid.uuid4()),
+                    belief_id=new_belief_id,
+                    source_type="chat_turn",
+                    source_id=str(message_id),
+                    alignment=1.0,
+                    perturbation=1.5,
+                    event_type="emergence",
+                    impact=0.6,
+                    rationale=f"Shared note entanglement created new belief: {label}"
+                )
+                logger.info(f"Metabolized shared note {note_id}: emerged new belief {label} (mass=1.5)")
+        except Exception as e:
+            logger.error(f"Error metabolizing note {note_id}: {e}", exc_info=True)
+

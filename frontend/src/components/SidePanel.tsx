@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse, DiffractiveInfo, ImageMetadata, WebMetadata, DocumentMetadata, BeliefsResponse, SchedulerStatusResponse, DaemonStatusResponse } from "../api/client"
+import type { ConversationFile, SkillInfo, SkillsResponse, MetricsResponse, TokenResponse, DiffractiveInfo, ImageMetadata, WebMetadata, DocumentMetadata, BeliefsResponse, SchedulerStatusResponse, DaemonStatusResponse, NoteInfo } from "../api/client"
 import { getSkills, getMetrics, getTokens, getFileSummary, getBeliefs, getSchedulerStatus, getDaemonStatus } from "../api/client"
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -1487,18 +1487,182 @@ function DreamingSection({ messageCount }: { messageCount: number }) {
 }
 
 
+function NotesSection({
+  notes,
+  onDeleteNote,
+  onUpdateNote,
+}: {
+  notes: NoteInfo[]
+  onDeleteNote?: (noteId: string) => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+}) {
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editComment, setEditComment] = useState("")
+
+  const startEditing = (note: NoteInfo) => {
+    setEditingNoteId(note.id)
+    setEditComment(note.comment)
+  }
+
+  const saveEdit = (noteId: string) => {
+    if (onUpdateNote) {
+      onUpdateNote(noteId, editComment, undefined)
+    }
+    setEditingNoteId(null)
+  }
+
+  const toggleVisibility = (note: NoteInfo) => {
+    if (onUpdateNote) {
+      const nextVisibility = note.visibility === "personal" ? "shared" : "personal"
+      onUpdateNote(note.id, undefined, nextVisibility)
+    }
+  }
+
+  const handleNoteClick = (noteId: string) => {
+    const el = document.getElementById(`note-highlight-${noteId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('animate-pulse', 'scale-[1.02]', 'ring-2', 'ring-green-500/50')
+      setTimeout(() => {
+        el.classList.remove('animate-pulse', 'scale-[1.02]', 'ring-2', 'ring-green-500/50')
+      }, 1500)
+    }
+  }
+
+  if (notes.length === 0) {
+    return (
+      <div className="text-[10px] text-[#444] py-2 font-mono italic">
+        No notes or highlights in this conversation.
+        Select text in the conversation bubbles to create a note.
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 border-t border-[#1a1a1a] pt-2 space-y-3 font-mono text-xs">
+      {notes.map((note) => {
+        const isShared = note.visibility === "shared"
+        const borderColor = isShared ? "border-purple-600/40" : "border-yellow-600/30"
+        const badgeColor = isShared 
+          ? "bg-purple-950/50 text-purple-300 border-purple-800/40" 
+          : "bg-yellow-950/40 text-yellow-300 border-yellow-800/30"
+
+        return (
+          <div 
+            key={note.id} 
+            onClick={() => handleNoteClick(note.id)}
+            className={`p-2 bg-[#0c0c0c] border border-[#1a1a1a] border-l-2 ${borderColor} rounded-sm flex flex-col gap-1.5 cursor-pointer hover:bg-[#121212] transition-colors`}
+          >
+            {/* Header: Badge & Actions */}
+            <div className="flex items-center justify-between">
+              <span className={`text-[8px] tracking-wider uppercase border px-1.5 py-0.5 rounded ${badgeColor}`}>
+                {note.visibility}
+              </span>
+              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleVisibility(note)
+                  }}
+                  className="text-[8px] text-[#888] hover:text-white transition-colors"
+                  title="Toggle Personal / Shared"
+                >
+                  [Visibility]
+                </button>
+                {onDeleteNote && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDeleteNote(note.id)
+                    }}
+                    className="text-[9px] text-[#555] hover:text-[#ef4444] font-bold"
+                    title="Delete Note"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Selected Text Quote */}
+            <blockquote className="text-[10px] text-gray-400 bg-[#060606] p-1.5 rounded border border-[#111] overflow-x-auto whitespace-pre-wrap leading-relaxed">
+              "{note.selected_text}"
+            </blockquote>
+
+            {/* Comment Body */}
+            <div>
+              {editingNoteId === note.id ? (
+                <div className="flex flex-col gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
+                  <textarea
+                    value={editComment}
+                    onChange={(e) => setEditComment(e.target.value)}
+                    className="w-full bg-[#1a1a1a] border border-[#333] p-1.5 rounded text-[10px] text-[#ccc] focus:outline-none focus:border-[#4ade80]"
+                    rows={2}
+                  />
+                  <div className="flex justify-end gap-1.5 text-[9px]">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingNoteId(null)
+                      }}
+                      className="text-gray-500 hover:text-gray-300 px-1 py-0.5"
+                    >
+                      cancel
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        saveEdit(note.id)
+                      }}
+                      className="text-[#4ade80] hover:underline px-1 py-0.5"
+                    >
+                      save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="group/comment flex items-start justify-between gap-2 mt-0.5">
+                  <p className="text-[10px] text-gray-300 italic flex-1 min-w-0 break-words">
+                    {note.comment || <span className="text-gray-600 font-serif">No comment. Click edit to add...</span>}
+                  </p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startEditing(note)
+                    }}
+                    className="text-[8px] text-[#555] hover:text-[#888] opacity-0 group-hover/comment:opacity-100 transition-opacity font-mono shrink-0"
+                  >
+                    [edit]
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+
 export function SidePanel({
   uploadedFiles = [],
   conversationId,
   onDeleteFile,
   onReprocessFile,
   messageCount = 0,
+  notes = [],
+  onDeleteNote,
+  onUpdateNote,
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
   onDeleteFile?: (fileName: string) => void
   onReprocessFile?: (fileName: string) => void
   messageCount?: number
+  notes?: NoteInfo[]
+  onDeleteNote?: (noteId: string) => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const [data, setData] = useState<SkillsResponse | null>(null)
@@ -1512,6 +1676,7 @@ export function SidePanel({
   const [schedulerOpen, setSchedulerOpen] = useState(false)
   const [tokensOpen, setTokensOpen] = useState(false)
   const [sedimentOpen, setSedimentOpen] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
   const [loadedSummaries, setLoadedSummaries] = useState<Record<string, { summary: string | null; summary_model: string | null; image_metadata?: ImageMetadata | null; web_metadata?: WebMetadata | null; document_metadata?: DocumentMetadata | null }>>({})
   const [loadingSummary, setLoadingSummary] = useState<string | null>(null)
@@ -1683,6 +1848,24 @@ export function SidePanel({
               {tokensOpen && (
                 <div className="pl-3">
                   <TokensSection conversationId={conversationId} messageCount={messageCount} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Notes"
+                count={notes.length}
+                open={notesOpen}
+                onToggle={() => setNotesOpen(!notesOpen)}
+              />
+              {notesOpen && (
+                <div className="pl-3">
+                  <NotesSection
+                    notes={notes}
+                    onDeleteNote={onDeleteNote}
+                    onUpdateNote={onUpdateNote}
+                  />
                 </div>
               )}
             </div>

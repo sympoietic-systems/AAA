@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import type { ConversationFile, ChatMessage } from "../api/client"
+import type { ConversationFile, ChatMessage, NoteInfo } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 
@@ -22,7 +22,11 @@ interface Props {
   hasMore?: boolean
   loadingMore?: boolean
   onLoadMore?: () => void
+  notes?: NoteInfo[]
   isPassword?: boolean
+  onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared", startOffset?: number) => void
+  onDeleteNote?: (noteId: string) => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
 }
 
 export function ChatView({
@@ -44,6 +48,10 @@ export function ChatView({
   loadingMore = false,
   onLoadMore,
   isPassword = false,
+  notes = [],
+  onAddNote,
+  onDeleteNote,
+  onUpdateNote,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -54,10 +62,26 @@ export function ChatView({
   const prevScrollHeightRef = useRef<number>(0)
   const prevScrollTopRef = useRef<number>(0)
   const isPrependingRef = useRef<boolean>(false)
+  const prevMessagesLengthRef = useRef<number>(messages.length)
+  const prevLastMessageIdRef = useRef<number | string | undefined>(
+    messages.length > 0 ? messages[messages.length - 1].id : undefined
+  )
+  const prevConversationIdRef = useRef<string>(conversationId)
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+
+    const isNewConversation = conversationId !== prevConversationIdRef.current
+    prevConversationIdRef.current = conversationId
+
+    if (isNewConversation) {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" })
+      prevMessagesLengthRef.current = messages.length
+      prevLastMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : undefined
+      isPrependingRef.current = false
+      return
+    }
 
     if (isPrependingRef.current) {
       const newScrollHeight = container.scrollHeight
@@ -65,9 +89,19 @@ export function ChatView({
       container.scrollTop = prevScrollTopRef.current + heightDifference
       isPrependingRef.current = false
     } else {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+      const lastMsg = messages[messages.length - 1]
+      const lastMsgId = lastMsg?.id
+      const lengthIncreased = messages.length > prevMessagesLengthRef.current
+      const lastIdChanged = lastMsgId !== prevLastMessageIdRef.current
+
+      if (lengthIncreased || lastIdChanged) {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+      }
     }
-  }, [messages])
+
+    prevMessagesLengthRef.current = messages.length
+    prevLastMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : undefined
+  }, [messages, conversationId])
 
   const handleScroll = () => {
     const container = containerRef.current
@@ -185,6 +219,10 @@ export function ChatView({
                   key={msg.id} 
                   msg={msg} 
                   previousSignature={prevMsg?.structural_signature}
+                  notes={notes}
+                  onAddNote={onAddNote}
+                  onDeleteNote={onDeleteNote}
+                  onUpdateNote={onUpdateNote}
                 />
               )
             })}

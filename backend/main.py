@@ -54,6 +54,7 @@ from backend.storage.repository import (
     PerceptionSedimentRepository,
     BeliefRepository,
     SemanticKnotRepository,
+    NoteRepository,
 )
 from backend.utils.token_counter import estimate_tokens
 
@@ -265,6 +266,7 @@ async def lifespan(app: FastAPI):
     checkpoint_repo = ConsolidationCheckpointRepository(str(full_db_path))
     belief_repo = BeliefRepository(str(full_db_path))
     semantic_knot_repo = SemanticKnotRepository(str(full_db_path))
+    note_repo = NoteRepository(str(full_db_path))
 
     embed_cfg = config.get("embedding", {})
     embedder = EmbedderModule(
@@ -302,6 +304,7 @@ async def lifespan(app: FastAPI):
     ctx_cfg = config.get("context", {})
     context_collector = ContextCollectorModule(
         message_repo=message_repo,
+        note_repo=note_repo,
         max_history=ctx_cfg.get("max_history", 20),
         floating_window=ctx_cfg.get("floating_window", 8),
         caveman_enabled=ctx_cfg.get("caveman_enabled", True),
@@ -557,6 +560,7 @@ async def lifespan(app: FastAPI):
     app.state.checkpoint_repo = checkpoint_repo
     app.state.belief_repo = belief_repo
     app.state.semantic_knot_repo = semantic_knot_repo
+    app.state.note_repo = note_repo
     app.state.belief_metabolism = belief_metabolism
     app.state.registry = registry
     app.state.pipeline = pipeline

@@ -216,3 +216,28 @@ class ConversationFilesResponse(BaseModel):
     conversation_id: str
     files: list[ConversationFile]
 
+
+class NoteCreateRequest(BaseModel):
+    message_id: int
+    selected_text: str
+    comment: str = ""
+    visibility: str = "personal"
+    start_offset: Optional[int] = None
+
+
+class NoteResponse(BaseModel):
+    id: str
+    conversation_id: str
+    message_id: int
+    selected_text: str
+    comment: str
+    visibility: str
+    created_at: str
+    updated_at: str
+
+
+class NoteUpdateRequest(BaseModel):
+    comment: Optional[str] = None
+    visibility: Optional[str] = None
+
+

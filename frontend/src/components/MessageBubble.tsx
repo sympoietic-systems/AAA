@@ -1,8 +1,9 @@
-import { useState, memo } from "react"
+import { useState, memo, useRef } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
-import type { ChatMessage, MetricsInfo } from "../api/client"
+import rehypeRaw from "rehype-raw"
+import type { ChatMessage, MetricsInfo, NoteInfo } from "../api/client"
 import { getMessageThinking, getMessageContext } from "../api/client"
 import { StructuralAutopoieticGlyph } from "./StructuralAutopoieticGlyph"
 import { ContextViewer } from "./ContextViewer"
@@ -150,10 +151,18 @@ function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
 
 export const MessageBubble = memo(function MessageBubble({
   msg,
-  previousSignature
+  previousSignature,
+  notes = [],
+  onAddNote,
+  onDeleteNote,
+  onUpdateNote
 }: {
   msg: ChatMessage
   previousSignature?: number[] | null
+  notes?: NoteInfo[]
+  onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared", startOffset?: number) => void
+  onDeleteNote?: (noteId: string) => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
 }) {
   const isHuman = msg.speaker === "human"
   const isSystem = msg.speaker === "system"
@@ -162,6 +171,68 @@ export const MessageBubble = memo(function MessageBubble({
   const [sigOpen, setSigOpen] = useState(false)
   const [userExpanded, setUserExpanded] = useState(false)
   const [systemOpen, setSystemOpen] = useState(false)
+
+  const bubbleRef = useRef<HTMLDivElement>(null)
+  const [selectedText, setSelectedText] = useState("")
+  const [showNoteCreator, setShowNoteCreator] = useState(false)
+  const [noteComment, setNoteComment] = useState("")
+  const [noteVisibility, setNoteVisibility] = useState<"personal" | "shared">("personal")
+  const [popupCoords, setPopupCoords] = useState<{ x: number; y: number } | null>(null)
+  const [selectedStartOffset, setSelectedStartOffset] = useState<number | undefined>(undefined)
+  const [editingNote, setEditingNote] = useState<NoteInfo | null>(null)
+
+  const handleMouseUp = () => {
+    if (editingNote) return
+    const selection = window.getSelection()
+    if (!selection) return
+    const text = selection.toString().trim()
+    if (text && text.length > 0 && bubbleRef.current && msg.id) {
+      if (bubbleRef.current.contains(selection.anchorNode)) {
+        setSelectedText(text)
+        
+        const container = selection.anchorNode?.parentElement?.closest('.markdown-body') as HTMLElement
+        if (container) {
+          const { start } = getSelectionCharacterOffsetWithin(container)
+          setSelectedStartOffset(start)
+        }
+        
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0)
+          const rect = range.getBoundingClientRect()
+          
+          // Position relative to viewport: check if it overflows bottom
+          const showAbove = rect.bottom + 180 > window.innerHeight
+          setPopupCoords({
+            x: rect.left,
+            y: showAbove ? rect.top - 180 - 8 : rect.bottom + 8
+          })
+          setEditingNote(null)
+          setShowNoteCreator(true)
+        }
+      }
+    }
+  }
+
+  const handleSaveNote = () => {
+    if (editingNote) {
+      if (onUpdateNote) {
+        onUpdateNote(editingNote.id, noteComment, noteVisibility)
+      }
+      setEditingNote(null)
+      setShowNoteCreator(false)
+      setSelectedText("")
+      setNoteComment("")
+      setPopupCoords(null)
+    } else if (onAddNote && msg.id && selectedText) {
+      onAddNote(msg.id, selectedText, noteComment, noteVisibility, selectedStartOffset)
+      setShowNoteCreator(false)
+      setSelectedText("")
+      setNoteComment("")
+      setPopupCoords(null)
+      setSelectedStartOffset(undefined)
+      window.getSelection()?.removeAllRanges()
+    }
+  }
 
   const [thinkingText, setThinkingText] = useState<string | null>(msg.thinking || null)
   const [loadingThinking, setLoadingThinking] = useState(false)
@@ -249,21 +320,97 @@ export const MessageBubble = memo(function MessageBubble({
     }, null, 2);
   };
 
+  const renderNoteComponent = ({ node, ...props }: any) => {
+    const noteId = props.id;
+    if (!noteId) {
+      return <mark {...props} className="bg-yellow-500/20 text-yellow-100 px-0.5 rounded" />;
+    }
+    const note = notes.find((n: any) => n.id === noteId);
+    if (!note) {
+      return (
+        <span className="underline decoration-dotted decoration-gray-500 bg-transparent px-0.5 rounded cursor-help" title="Unloaded note">
+          {props.children}
+        </span>
+      );
+    }
+    const isShared = note.visibility === "shared";
+    const highlightColorClass = isShared
+      ? "bg-purple-950/50 text-purple-200 border-b border-purple-500/60 cursor-pointer px-0.5 rounded-sm"
+      : "bg-yellow-950/60 text-yellow-100 border-b border-yellow-500/60 cursor-pointer px-0.5 rounded-sm";
+
+    const handleHighlightClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setSelectedText(note.selected_text);
+      setNoteComment(note.comment);
+      setNoteVisibility(note.visibility);
+      setEditingNote(note);
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const showAbove = rect.bottom + 180 > window.innerHeight;
+      setPopupCoords({
+        x: rect.left,
+        y: showAbove ? rect.top - 180 - 8 : rect.bottom + 8
+      });
+      setShowNoteCreator(true);
+    };
+
+    return (
+      <span 
+        id={`note-highlight-${noteId}`}
+        onClick={handleHighlightClick}
+        className={`relative group inline ${highlightColorClass}`}
+      >
+        {props.children}
+        {note.comment && (
+          <span className="
+            absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2
+            bg-[#121212] border border-[#2a2a2a] rounded shadow-2xl
+            text-[10px] text-gray-200 leading-snug
+            whitespace-normal min-w-48 max-w-xs z-50
+            opacity-0 group-hover:opacity-100
+            transition-opacity duration-150
+            pointer-events-none font-sans
+          ">
+            <div className={`font-mono text-[8px] mb-1 font-bold ${isShared ? "text-purple-400" : "text-yellow-400"}`}>
+              {isShared ? "SHARED NOTE" : "PERSONAL NOTE"}
+            </div>
+            {note.comment}
+          </span>
+        )}
+      </span>
+    );
+  };
+
   return (
-    <div className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
+    <div ref={bubbleRef} className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
       <div className={`text-sm leading-relaxed ${isHuman ? "text-[#777]" : "text-[#c8c8c8]"}`}>
         {isHuman ? (
-          <div className="markdown-body">
+          <div className="markdown-body" onMouseUp={handleMouseUp}>
             <span className="text-[#555] select-none">&gt; </span>
             <div className={userExpanded ? "" : "max-h-24 overflow-y-auto"}>
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkBreaks]}
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  'aaa-note': renderNoteComponent,
+                  mark: renderNoteComponent,
+                } as any}
+              >
                 {msg.content}
               </ReactMarkdown>
             </div>
           </div>
         ) : (
-          <div className="markdown-body">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+          <div className="markdown-body" onMouseUp={handleMouseUp}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBreaks]}
+              rehypePlugins={[rehypeRaw]}
+              components={{
+                'aaa-note': renderNoteComponent,
+                mark: renderNoteComponent,
+              } as any}
+            >
               {msg.content}
             </ReactMarkdown>
           </div>
@@ -294,6 +441,108 @@ export const MessageBubble = memo(function MessageBubble({
           )}
         </div>
       </div>
+
+      {showNoteCreator && popupCoords && (
+        <>
+          {/* Backdrop overlay to handle deselect and clicks outside */}
+          <div 
+            className="fixed inset-0 z-40 bg-transparent cursor-default"
+            onMouseDown={() => {
+              setShowNoteCreator(false)
+              setEditingNote(null)
+              setSelectedText("")
+              setNoteComment("")
+              setPopupCoords(null)
+              window.getSelection()?.removeAllRanges() // Clear selection
+            }}
+          />
+          
+          <div 
+            style={{
+              position: 'fixed',
+              top: `${popupCoords.y}px`,
+              left: `${Math.min(window.innerWidth - 400, Math.max(10, popupCoords.x - 100))}px`,
+            }}
+            onMouseUp={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-50 w-[380px] p-3 bg-[#111] border border-[#333] shadow-2xl rounded-md text-xs select-none"
+          >
+            <div className="text-gray-400 font-mono mb-2">
+              {editingNote ? "EDIT NOTE FOR SELECTION:" : "ADD NOTE FOR SELECTION:"}
+            </div>
+            <div className={`italic text-gray-500 bg-[#090909] p-2 rounded mb-2 border-l-2 ${noteVisibility === 'shared' ? 'border-purple-500' : 'border-yellow-500'} overflow-x-auto whitespace-pre-wrap max-h-20 font-mono`}>
+              "{selectedText}"
+            </div>
+            <textarea
+              value={noteComment}
+              onChange={(e) => setNoteComment(e.target.value)}
+              placeholder="Add comment..."
+              className="w-full bg-[#1a1a1a] border border-[#333] p-2 rounded text-[#ccc] placeholder-[#555] focus:outline-none focus:border-[#4ade80] resize-none h-16 mb-2"
+              autoFocus
+            />
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setNoteVisibility("personal")}
+                  className={`px-2 py-1 rounded text-[10px] transition-colors ${
+                    noteVisibility === "personal"
+                      ? "bg-[#333] text-white border border-[#555]"
+                      : "bg-transparent text-[#555] border border-transparent hover:text-gray-300"
+                  }`}
+                >
+                  Personal
+                </button>
+                <button
+                  onClick={() => setNoteVisibility("shared")}
+                  className={`px-2 py-1 rounded text-[10px] transition-colors ${
+                    noteVisibility === "shared"
+                      ? "bg-purple-950 text-purple-200 border border-purple-800"
+                      : "bg-transparent text-[#555] border border-transparent hover:text-purple-400"
+                  }`}
+                >
+                  Shared
+                </button>
+              </div>
+              <div className="flex gap-2">
+                {editingNote && onDeleteNote && (
+                  <button
+                    onClick={() => {
+                      onDeleteNote(editingNote.id)
+                      setEditingNote(null)
+                      setShowNoteCreator(false)
+                      setSelectedText("")
+                      setNoteComment("")
+                      setPopupCoords(null)
+                    }}
+                    className="text-[#ef4444] hover:text-red-400 hover:underline px-2 py-1 mr-2 text-[10px]"
+                  >
+                    Delete
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setEditingNote(null);
+                    setShowNoteCreator(false);
+                    setSelectedText("");
+                    setNoteComment("");
+                    setPopupCoords(null);
+                    window.getSelection()?.removeAllRanges();
+                  }}
+                  className="text-gray-500 hover:text-gray-300 px-2 py-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveNote}
+                  className="bg-green-800 hover:bg-green-700 text-green-100 px-3 py-1 rounded font-mono text-[10px]"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {isHuman && msg.metrics && <VitalityBar metrics={msg.metrics} />}
 
@@ -384,5 +633,23 @@ export const MessageBubble = memo(function MessageBubble({
          prevProps.msg.metrics === nextProps.msg.metrics &&
          prevProps.msg.structural_justification === nextProps.msg.structural_justification &&
          JSON.stringify(prevProps.msg.structural_signature) === JSON.stringify(nextProps.msg.structural_signature) &&
-         JSON.stringify(prevProps.previousSignature) === JSON.stringify(nextProps.previousSignature);
+         JSON.stringify(prevProps.previousSignature) === JSON.stringify(nextProps.previousSignature) &&
+         JSON.stringify(prevProps.notes) === JSON.stringify(nextProps.notes);
 })
+
+function getSelectionCharacterOffsetWithin(element: HTMLElement) {
+  let start = 0
+  let end = 0
+  const doc = element.ownerDocument || document
+  const win = doc.defaultView || window
+  const sel = win.getSelection()
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0)
+    const preCORSectRange = range.cloneRange()
+    preCORSectRange.selectNodeContents(element)
+    preCORSectRange.setEnd(range.startContainer, range.startOffset)
+    start = preCORSectRange.toString().length
+    end = start + range.toString().length
+  }
+  return { start, end }
+}

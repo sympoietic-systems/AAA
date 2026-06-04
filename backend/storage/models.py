@@ -35,6 +35,7 @@ class Message:
     provider_used: Optional[str] = None
     structural_signature: bytes = b""
     structural_justification: Optional[str] = None
+    note_count: int = 0
 
 
 @dataclass

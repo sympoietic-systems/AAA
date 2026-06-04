@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useChat } from "./hooks/useChat"
 import { useConversations } from "./hooks/useConversations"
+import { useNotes } from "./hooks/useNotes"
 import { ChatView } from "./components/ChatView"
 import { ConversationList } from "./components/ConversationList"
 import { SidePanel } from "./components/SidePanel"
@@ -65,7 +66,39 @@ export default function App() {
     hasMore,
     loadingMore,
     loadMoreMessages,
+    refreshMessages,
   } = useChat(activeId)
+
+  const {
+    notes,
+    addNote,
+    editNote,
+    removeNote,
+  } = useNotes(activeId || "")
+
+  const handleAddNote = async (
+    messageId: number,
+    selectedText: string,
+    comment: string,
+    visibility: "personal" | "shared",
+    startOffset?: number
+  ) => {
+    const res = await addNote(messageId, selectedText, comment, visibility, startOffset)
+    if (res) {
+      refreshMessages()
+    }
+  }
+
+  const handleDeleteNote = async (noteId: string) => {
+    await removeNote(noteId)
+    refreshMessages()
+  }
+
+  const handleUpdateNote = async (noteId: string, comment?: string, visibility?: "personal" | "shared") => {
+    await editNote(noteId, comment, visibility)
+    refreshMessages()
+  }
+
   const [convCollapsed, setConvCollapsed] = useState(true)
   const activeIdRef = useRef(activeId)
   activeIdRef.current = activeId
@@ -202,6 +235,10 @@ export default function App() {
         hasMore={hasMore}
         loadingMore={loadingMore}
         onLoadMore={loadMoreMessages}
+        notes={notes}
+        onAddNote={handleAddNote}
+        onDeleteNote={handleDeleteNote}
+        onUpdateNote={handleUpdateNote}
         className="flex-1 min-w-0"
       />
       <SidePanel
@@ -210,6 +247,9 @@ export default function App() {
         onDeleteFile={deleteFile}
         onReprocessFile={reprocess}
         messageCount={messages.length}
+        notes={notes}
+        onDeleteNote={handleDeleteNote}
+        onUpdateNote={handleUpdateNote}
       />
     </div>
   )

@@ -234,6 +234,16 @@ export function useChat(conversationId: string) {
 
   const clearError = useCallback(() => setError(null), [])
 
+  const refreshMessages = useCallback(() => {
+    if (conversationId) {
+      getHistory(messages.length || PAGE_SIZE, 0, conversationId)
+        .then((data) => {
+          setMessages(data.messages)
+        })
+        .catch(() => {})
+    }
+  }, [conversationId, messages.length])
+
   const isIndexing = isUploading || files.some(
     (f) => f.status === "uploading" || f.status === "processing"
   )
@@ -253,6 +263,7 @@ export function useChat(conversationId: string) {
     hasMore,
     loadingMore,
     loadMoreMessages,
+    refreshMessages,
   }
 }
 
