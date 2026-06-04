@@ -835,7 +835,11 @@ class AutopoieticDreamDaemon:
 
     async def _generate_keywords_for_conversation(self, conversation_id: str, summary: str) -> None:
         bg_engine = getattr(self.app_state, "background_engine", None)
-        provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
+        provider = None
+        if bg_engine:
+            provider = getattr(bg_engine, "provider", None) or getattr(bg_engine, "_provider", None)
+        if not provider:
+            provider = getattr(self.app_state, "llm_provider", None)
         if not provider:
             return
             
