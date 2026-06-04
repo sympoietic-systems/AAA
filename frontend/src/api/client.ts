@@ -334,16 +334,23 @@ export async function getMetrics(window = 20): Promise<MetricsResponse> {
   return res.json()
 }
 
+export interface ConversationTagInfo {
+  tag: string
+  tag_type: string
+}
+
 export interface ConversationInfo {
   id: string
   title: string
   created_at: string | null
   updated_at: string | null
   message_count: number
+  tags?: ConversationTagInfo[]
 }
 
-export async function listConversations(): Promise<{ conversations: ConversationInfo[] }> {
-  const res = await fetch(`${BASE}/conversations`)
+export async function listConversations(tag?: string): Promise<{ conversations: ConversationInfo[] }> {
+  const params = tag ? `?tag=${encodeURIComponent(tag)}` : ""
+  const res = await fetch(`${BASE}/conversations${params}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
@@ -373,6 +380,31 @@ export async function generateConversationTitle(id: string): Promise<Conversatio
   const res = await fetch(`${BASE}/conversations/${id}/generate-title`, {
     method: "POST",
   })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function addConversationTag(conversationId: string, tag: string): Promise<void> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/tags`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tag }),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export async function removeConversationTag(conversationId: string, tag: string): Promise<void> {
+  const res = await fetch(
+    `${BASE}/conversations/${conversationId}/tags/${encodeURIComponent(tag)}`,
+    {
+      method: "DELETE",
+    }
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export async function getAllUniqueTags(): Promise<{ tags: ConversationTagInfo[] }> {
+  const res = await fetch(`${BASE}/tags`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

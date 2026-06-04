@@ -1,3 +1,4 @@
+import { useState } from "react"
 import type { ConversationInfo } from "../api/client"
 
 interface Props {
@@ -26,6 +27,29 @@ export function ConversationList({
   showLogout,
   onLogout,
 }: Props) {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [activeCategory, setActiveCategory] = useState<"all" | "user" | "dreams" | "agents">("all")
+
+  // Filter conversations
+  const filteredConversations = conversations.filter((conv) => {
+    // 1. Structural category filter
+    if (activeCategory !== "all") {
+      const structuralTag = conv.tags?.find(t => t.tag_type === "structural")?.tag
+      if (activeCategory === "dreams" && structuralTag !== "dreams") return false
+      if (activeCategory === "agents" && structuralTag !== "other agents") return false
+      if (activeCategory === "user" && structuralTag !== "user conversation") return false
+    }
+
+    // 2. Query search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      const titleMatch = (conv.title || "").toLowerCase().includes(query)
+      const tagMatch = conv.tags?.some(t => t.tag.toLowerCase().includes(query))
+      return titleMatch || tagMatch
+    }
+
+    return true
+  })
   return (
     <div
       className={`
@@ -83,6 +107,34 @@ export function ConversationList({
             <span>new conversation</span>
           </button>
 
+          {/* Search and Category Filters */}
+          <div className="px-3 py-2 border-b border-[#222] bg-[#090909] flex flex-col gap-1.5 shrink-0">
+            <input
+              type="text"
+              placeholder="Search title or tag..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full text-[10px] text-[#aaa] bg-[#141414] border border-[#222] px-2 py-1 outline-none focus:border-[#4ade80] placeholder-[#444] rounded-[2px] font-mono"
+            />
+            <div className="flex gap-1">
+              {(["all", "user", "dreams", "agents"] as const).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`
+                    flex-1 py-0.5 text-[8px] tracking-wider uppercase border rounded-[2px] transition-colors font-mono cursor-pointer
+                    ${activeCategory === cat
+                      ? "bg-[#1a2a1a] text-[#4ade80] border-[#4ade80]"
+                      : "bg-transparent text-[#555] border-[#222] hover:text-[#888]"
+                    }
+                  `}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex-1 overflow-y-auto">
             {loading && conversations.length === 0 && (
               <p className="text-[10px] text-[#555] animate-pulse px-3 py-2">
@@ -96,7 +148,13 @@ export function ConversationList({
               </p>
             )}
 
-            {conversations.map((conv) => (
+            {!loading && filteredConversations.length === 0 && conversations.length > 0 && (
+              <p className="text-[10px] text-[#444] px-3 py-2">
+                no matching conversations
+              </p>
+            )}
+
+            {filteredConversations.map((conv) => (
               <div
                 key={conv.id}
                 onClick={() => onSelect(conv.id)}
@@ -121,9 +179,40 @@ export function ConversationList({
                   <p className="text-[11px] text-[#aaa] truncate">
                     {conv.title || "untitled"}
                   </p>
-                  <p className="text-[9px] text-[#555]">
-                    {conv.message_count} msgs
-                  </p>
+                  <div className="flex justify-between items-center mt-0.5">
+                    <p className="text-[9px] text-[#555]">
+                      {conv.message_count} msgs
+                    </p>
+                  </div>
+                  {conv.tags && conv.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {conv.tags.slice(0, 3).map((t) => {
+                        let tagStyle = "bg-[#141414] text-[#777] border-[#222]"
+                        if (t.tag_type === "structural") {
+                          if (t.tag === "dreams") {
+                            tagStyle = "bg-[#1c0f2b] text-[#b17eff] border-[#442870]"
+                          } else if (t.tag === "other agents") {
+                            tagStyle = "bg-[#2b1b0f] text-[#ffb07e] border-[#704128]"
+                          } else {
+                            tagStyle = "bg-[#0f2b18] text-[#7effa8] border-[#28703c]"
+                          }
+                        }
+                        return (
+                          <span
+                            key={t.tag}
+                            className={`text-[8px] px-1 py-[1px] rounded-[2px] border ${tagStyle} font-mono`}
+                          >
+                            {t.tag}
+                          </span>
+                        )
+                      })}
+                      {conv.tags.length > 3 && (
+                        <span className="text-[8px] text-[#444] font-mono self-center">
+                          +{conv.tags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={(e) => {

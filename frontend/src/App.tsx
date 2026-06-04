@@ -5,7 +5,7 @@ import { useNotes } from "./hooks/useNotes"
 import { ChatView } from "./components/ChatView"
 import { ConversationList } from "./components/ConversationList"
 import { SidePanel } from "./components/SidePanel"
-import { checkAuthStatus, verifyPassword, logout } from "./api/client"
+import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag } from "./api/client"
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -113,6 +113,28 @@ export default function App() {
 
   const handleGenerateTitle = async () => {
     if (activeId) await generateTitle(activeId)
+  }
+
+  const handleAddTag = async (tag: string) => {
+    if (activeId) {
+      try {
+        await addConversationTag(activeId, tag)
+        refresh()
+      } catch (err) {
+        console.error("Failed to add tag:", err)
+      }
+    }
+  }
+
+  const handleRemoveTag = async (tag: string) => {
+    if (activeId) {
+      try {
+        await removeConversationTag(activeId, tag)
+        refresh()
+      } catch (err) {
+        console.error("Failed to remove tag:", err)
+      }
+    }
   }
 
   const handleSend = async (content: string) => {
@@ -239,6 +261,9 @@ export default function App() {
         onAddNote={handleAddNote}
         onDeleteNote={handleDeleteNote}
         onUpdateNote={handleUpdateNote}
+        tags={activeConv?.tags || []}
+        onAddTag={handleAddTag}
+        onRemoveTag={handleRemoveTag}
         className="flex-1 min-w-0"
       />
       <SidePanel

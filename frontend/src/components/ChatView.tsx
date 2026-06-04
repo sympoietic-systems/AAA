@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import type { ConversationFile, ChatMessage, NoteInfo } from "../api/client"
+import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 
@@ -27,6 +27,9 @@ interface Props {
   onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared", startOffset?: number) => void
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  tags?: ConversationTagInfo[]
+  onAddTag?: (tag: string) => void
+  onRemoveTag?: (tag: string) => void
 }
 
 export function ChatView({
@@ -52,12 +55,25 @@ export function ChatView({
   onAddNote,
   onDeleteNote,
   onUpdateNote,
+  tags = [],
+  onAddTag,
+  onRemoveTag,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
   const [generating, setGenerating] = useState(false)
+  const [newTagVal, setNewTagVal] = useState("")
+
+  const handleAddTagSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = newTagVal.trim().toLowerCase()
+    if (trimmed && onAddTag) {
+      onAddTag(trimmed)
+      setNewTagVal("")
+    }
+  }
 
   const prevScrollHeightRef = useRef<number>(0)
   const prevScrollTopRef = useRef<number>(0)
@@ -186,6 +202,55 @@ export function ChatView({
           </>
         )}
       </header>
+
+      {conversationId && tags && (
+        <div className="flex flex-wrap items-center gap-1.5 px-4 py-1.5 border-b border-[#222] bg-[#090909] shrink-0">
+          <span className="text-[9px] text-[#555] uppercase font-mono tracking-wider mr-1">tags:</span>
+          {tags.map((t) => {
+            let tagStyle = "bg-[#141414] text-[#777] border-[#222]"
+            const isDeletable = t.tag_type === "semantic"
+            if (t.tag_type === "structural") {
+              if (t.tag === "dreams") {
+                tagStyle = "bg-[#1c0f2b] text-[#b17eff] border-[#442870]"
+              } else if (t.tag === "other agents") {
+                tagStyle = "bg-[#2b1b0f] text-[#ffb07e] border-[#704128]"
+              } else {
+                tagStyle = "bg-[#0f2b18] text-[#7effa8] border-[#28703c]"
+              }
+            } else if (t.tag_type === "keyword") {
+              tagStyle = "bg-[#0f202b] text-[#7ec6ff] border-[#285770]"
+            }
+            return (
+              <span
+                key={t.tag}
+                className={`flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-[2px] border ${tagStyle} font-mono`}
+              >
+                <span>{t.tag}</span>
+                {isDeletable && onRemoveTag && (
+                  <button
+                    onClick={() => onRemoveTag(t.tag)}
+                    className="text-[10px] text-[#888] hover:text-[#ef4444] transition-colors cursor-pointer font-bold select-none px-0.5"
+                    title="Remove tag"
+                  >
+                    &times;
+                  </button>
+                )}
+              </span>
+            )
+          })}
+          {onAddTag && (
+            <form onSubmit={handleAddTagSubmit} className="flex items-center ml-1">
+              <input
+                type="text"
+                placeholder="+ tag"
+                value={newTagVal}
+                onChange={(e) => setNewTagVal(e.target.value)}
+                className="bg-[#141414] border border-[#222] text-[9px] text-[#aaa] font-mono px-1.5 py-[2px] outline-none focus:border-[#4ade80] rounded-[2px] w-14 focus:w-24 transition-all duration-150"
+              />
+            </form>
+          )}
+        </div>
+      )}
 
       <div
         ref={containerRef}
