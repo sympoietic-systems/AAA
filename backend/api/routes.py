@@ -1326,6 +1326,40 @@ async def _insert_system_message(state, conversation_id: str, content: str):
     )
 
 
+async def _run_digest_worker_subprocess(conversation_id: str, file_name: str, file_type: str, reprocess: bool = False):
+    import sys
+    import asyncio
+    
+    cmd = [
+        sys.executable,
+        "-m",
+        "backend.scripts.digest_worker",
+        "--conversation_id", conversation_id,
+        "--file_name", file_name,
+        "--file_type", file_type,
+    ]
+    if reprocess:
+        cmd.append("--reprocess")
+        
+    logger.info("Spawning async digest worker subprocess: %s", " ".join(cmd))
+    
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            err_msg = stderr.decode('utf-8', errors='replace').strip()
+            logger.error("Digest worker failed with code %d for %s. Stderr:\n%s", proc.returncode, file_name, err_msg)
+        else:
+            out_msg = stdout.decode('utf-8', errors='replace').strip()
+            logger.info("Digest worker completed successfully for %s. Output:\n%s", file_name, out_msg)
+    except Exception as e:
+        logger.exception("Failed to run digest worker subprocess for %s", file_name)
+
+
 async def _process_and_summarize_file(
     app_state,
     conversation_id: str,
@@ -1333,158 +1367,7 @@ async def _process_and_summarize_file(
     file_type: str,
     file_content: Optional[bytes] = None,
 ):
-    perception_module = app_state.perception_module
-    perception_repo = app_state.perception_repo
-    background_engine = app_state.background_engine
-    error_repo = app_state.error_repo
-
-    try:
-        perception_repo.update_file(
-            conversation_id=conversation_id,
-            file_name=file_name,
-            status="processing"
-        )
-
-        token_count, chunk_count, extracted_text = await perception_module.ingest_single_file(
-            conversation_id, file_name, file_type, file_content
-        )
-
-        summary_text = ""
-        summary_model = ""
-        collision_score = 0.0
-        belief_nodes_implicated = None
-        state_vector_impact = None
-
-        if file_type == "image":
-            # Extract summary from image description
-            parts = extracted_text.split("Transcription (OCR):")
-            summary_text = parts[0].replace(f"--- Ingested Image: {file_name} ---", "").strip()
-            summary_model = "Tripartite Vision Pipeline"
-        elif background_engine:
-            # Fetch active belief labels so collision analysis is folded into the summarize call
-            active_labels = []
-            if file_type != "image":
-                belief_repo = getattr(app_state, "belief_repo", None)
-                if belief_repo:
-                    try:
-                        active_beliefs = belief_repo.list_beliefs("symbia")
-                        active_labels = [b.label for b in active_beliefs if b.origin != "collapsed"]
-                    except Exception:
-                        pass
-
-            try:
-                summarize_payload = {"text": extracted_text}
-                if active_labels:
-                    summarize_payload["active_beliefs_list"] = active_labels
-
-                res = await background_engine.run("summarize", summarize_payload)
-                if res.get("error"):
-                    raise RuntimeError(res["error"])
-                summary_text = res.get("content", "").strip()
-                summary_model = res.get("model", "")
-
-                # Extract collision metrics returned by the unified summarize action
-                if "interference_score" in res:
-                    collision_score = float(res.get("interference_score", 0.0))
-                    belief_nodes_implicated = res.get("implicated_nodes", [])
-                    state_vector_impact = res.get("state_vector_impact", [0.0] * 16)
-                
-                # Apply opacity updates to chunks
-                opacity_map = res.get("opacity_map", [])
-                if opacity_map:
-                    chunks = perception_repo.get_by_file(conversation_id, file_name)
-                    op_map_by_p = {item["paragraph_index"]: item for item in opacity_map}
-                    
-                    import json as _json
-                    for chunk in chunks:
-                        try:
-                            meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
-                        except Exception:
-                            meta = {}
-                        
-                        p_indices = meta.get("paragraph_indices", [])
-                        opaque_hits = [op_map_by_p[pi] for pi in p_indices if pi in op_map_by_p]
-                        
-                        if opaque_hits:
-                            reasons = [h["reason"] for h in opaque_hits if h.get("reason")]
-                            shadows = [h["shadow_text"] for h in opaque_hits if h.get("shadow_text")]
-                            
-                            new_meta = {
-                                "paragraph_indices": p_indices,
-                                "opaque_hits": opaque_hits,
-                                "reason": "; ".join(reasons),
-                                "shadow_text": "\n\n".join(shadows),
-                            }
-                            perception_repo.update_chunk_opacity(
-                                chunk_id=chunk.id,
-                                opacity=1,
-                                opacity_meta=_json.dumps(new_meta),
-                            )
-            except Exception as se:
-                logger.error("Failed to run SummarizeAction for %s: %s", file_name, se)
-                raise se
-
-        import json as _json
-        perception_repo.update_file(
-            conversation_id=conversation_id,
-            file_name=file_name,
-            status="ready",
-            summary=summary_text,
-            summary_model=summary_model,
-            token_count=token_count,
-            chunk_count=chunk_count,
-            interference_score=collision_score,
-            belief_nodes_implicated=_json.dumps(belief_nodes_implicated) if belief_nodes_implicated is not None else None,
-            state_vector_impact=_json.dumps(state_vector_impact) if state_vector_impact is not None else None,
-        )
-
-        # Ingestion Hook: Metabolize perception
-        belief_metabolism = getattr(app_state, "belief_metabolism", None)
-        if belief_metabolism and extracted_text:
-            try:
-                scorer = CompositeStructuralScorer(llm_provider=getattr(app_state, "structural_provider", None))
-                sig_vec = await scorer.score_async(extracted_text[:4000])
-                
-                # Check for somatic/visual anchor shock if image
-                perturbation = 1.0
-                if file_type == "image":
-                    # Somatic shock trigger!
-                    belief_nodes_implicated = ["glitch-as-voice"]
-                    perturbation = 2.0
-                else:
-                    perturbation = 1.0 + collision_score * 2.0
-                
-                await belief_metabolism.metabolize_perception(
-                    conversation_id=conversation_id,
-                    source_id=file_name,
-                    source_type="file",
-                    structural_signature=sig_vec,
-                    belief_nodes_implicated=belief_nodes_implicated,
-                    perturbation=perturbation,
-                )
-            except Exception as pe:
-                logger.error(f"Perceptual belief update failed for file {file_name}: {pe}")
-
-        system_content = f"Processed file: **{file_name}** ({file_type}).\n\nAccording to {summary_model or 'the system'}, this file appears to be about:\n{summary_text or 'No summary could be generated.'}"
-        await _insert_system_message(app_state, conversation_id, system_content)
-
-    except Exception as e:
-        logger.exception("Background processing of %s failed", file_name)
-        if error_repo:
-            error_repo.log_error(
-                module="perception_upload",
-                error=e,
-                context={"conversation_id": conversation_id, "file_name": file_name},
-            )
-        try:
-            perception_repo.update_file(
-                conversation_id=conversation_id,
-                file_name=file_name,
-                status="error",
-                summary=f"Failed to process file: {str(e)}"
-            )
-        except Exception:
-            pass
+    await _run_digest_worker_subprocess(conversation_id, file_name, file_type, reprocess=False)
 
 
 async def _reprocess_and_summarize_file_background(
@@ -1493,143 +1376,8 @@ async def _reprocess_and_summarize_file_background(
     file_name: str,
     file_type: str,
 ):
-    perception_repo = app_state.perception_repo
-    background_engine = app_state.background_engine
-    error_repo = app_state.error_repo
+    await _run_digest_worker_subprocess(conversation_id, file_name, file_type, reprocess=True)
 
-    try:
-        chunks = perception_repo.get_by_file(conversation_id, file_name)
-        if not chunks:
-            raise ValueError("No chunks found in database for this file. Please delete and re-upload.")
-
-        sorted_chunks = sorted(chunks, key=lambda c: c.chunk_index)
-        extracted_text = "\n\n".join(c.chunk_text for c in sorted_chunks)
-        token_count = sum(c.token_count for c in sorted_chunks)
-        chunk_count = len(sorted_chunks)
-
-        summary_text = ""
-        summary_model = ""
-        collision_score = 0.0
-        belief_nodes_implicated = None
-        state_vector_impact = None
-
-        if background_engine:
-            # Fetch active belief labels so collision analysis is folded into the summarize call
-            active_labels = []
-            if file_type != "image":
-                belief_repo = getattr(app_state, "belief_repo", None)
-                if belief_repo:
-                    try:
-                        active_beliefs = belief_repo.list_beliefs("symbia")
-                        active_labels = [b.label for b in active_beliefs if b.origin != "collapsed"]
-                    except Exception:
-                        pass
-
-            summarize_payload = {"text": extracted_text}
-            if active_labels:
-                summarize_payload["active_beliefs_list"] = active_labels
-
-            res = await background_engine.run("summarize", summarize_payload)
-            if res.get("error"):
-                raise RuntimeError(res["error"])
-            summary_text = res.get("content", "").strip()
-            summary_model = res.get("model", "")
-
-            # Extract collision metrics returned by the unified summarize action
-            if "interference_score" in res:
-                collision_score = float(res.get("interference_score", 0.0))
-                belief_nodes_implicated = res.get("implicated_nodes", [])
-                state_vector_impact = res.get("state_vector_impact", [0.0] * 16)
-            
-            opacity_map = res.get("opacity_map", [])
-            if opacity_map:
-                op_map_by_p = {item["paragraph_index"]: item for item in opacity_map}
-                
-                import json as _json
-                for chunk in sorted_chunks:
-                    try:
-                        meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
-                    except Exception:
-                        meta = {}
-                    
-                    p_indices = meta.get("paragraph_indices", [])
-                    opaque_hits = [op_map_by_p[pi] for pi in p_indices if pi in op_map_by_p]
-                    
-                    if opaque_hits:
-                        reasons = [h["reason"] for h in opaque_hits if h.get("reason")]
-                        shadows = [h["shadow_text"] for h in opaque_hits if h.get("shadow_text")]
-                        
-                        new_meta = {
-                            "paragraph_indices": p_indices,
-                            "opaque_hits": opaque_hits,
-                            "reason": "; ".join(reasons),
-                            "shadow_text": "\n\n".join(shadows),
-                        }
-                        perception_repo.update_chunk_opacity(
-                            chunk_id=chunk.id,
-                            opacity=1,
-                            opacity_meta=_json.dumps(new_meta),
-                        )
-
-        import json as _json
-        perception_repo.update_file(
-            conversation_id=conversation_id,
-            file_name=file_name,
-            status="ready",
-            summary=summary_text,
-            summary_model=summary_model,
-            token_count=token_count,
-            chunk_count=chunk_count,
-            interference_score=collision_score,
-            belief_nodes_implicated=_json.dumps(belief_nodes_implicated) if belief_nodes_implicated is not None else None,
-            state_vector_impact=_json.dumps(state_vector_impact) if state_vector_impact is not None else None,
-        )
-
-        # Reprocessing Hook: Metabolize perception
-        belief_metabolism = getattr(app_state, "belief_metabolism", None)
-        if belief_metabolism and extracted_text:
-            try:
-                scorer = CompositeStructuralScorer(llm_provider=getattr(app_state, "structural_provider", None))
-                sig_vec = await scorer.score_async(extracted_text[:4000])
-                
-                perturbation = 1.0
-                if file_type == "image":
-                    belief_nodes_implicated = ["glitch-as-voice"]
-                    perturbation = 2.0
-                else:
-                    perturbation = 1.0 + collision_score * 2.0
-                
-                await belief_metabolism.metabolize_perception(
-                    conversation_id=conversation_id,
-                    source_id=file_name,
-                    source_type="file",
-                    structural_signature=sig_vec,
-                    belief_nodes_implicated=belief_nodes_implicated,
-                    perturbation=perturbation,
-                )
-            except Exception as pe:
-                logger.error(f"Perceptual belief update failed for reprocessed file {file_name}: {pe}")
-
-        system_content = f"Processed file: **{file_name}** ({file_type}).\n\nAccording to {summary_model or 'the system'}, this file appears to be about:\n{summary_text or 'No summary could be generated.'}"
-        await _insert_system_message(app_state, conversation_id, system_content)
-
-    except Exception as e:
-        logger.exception("Background reprocessing of %s failed", file_name)
-        if error_repo:
-            error_repo.log_error(
-                module="perception_reprocess",
-                error=e,
-                context={"conversation_id": conversation_id, "file_name": file_name},
-            )
-        try:
-            perception_repo.update_file(
-                conversation_id=conversation_id,
-                file_name=file_name,
-                status="error",
-                summary=f"Failed to process file: {str(e)}"
-            )
-        except Exception:
-            pass
 
 
 @router.post("/conversations/{conversation_id}/files", response_model=ConversationFilesResponse)
