@@ -40,7 +40,7 @@
 
     [ ] We need to make her to create a new beliefs
     [ ] Also skills as a text files, just keep it in database. Similiar as any agentic harness doing now. It can extend her personality.
-    [ ] we still have not full chuncs attached to the document or not rendering in the conversation
+    [x] we still have not full chuncs attached to the document or not rendering in the conversation
      Making Sense_ Cognition, Computing, Art, and Embodiment -- Simon Penny.pdf
         1 chunk
         Chunk #299
@@ -56,7 +56,7 @@
 
     [ ] Belief - anti'technomysticism' [Simon Penny]
 
-    [ ] notes system in conversation have a tab with notes. I can select text and add it to notes. Add comment to it. it should be higlighted in the conversation too maybe some tag and we update the record in database with a notes tag and id, so on hover can see comment if there one. Next step check with Symbia how she would like to react to this notes if she want at all, maybe it more just for myself?
+    [x] notes system in conversation have a tab with notes. I can select text and add it to notes. Add comment to it. it should be higlighted in the conversation too maybe some tag and we update the record in database with a notes tag and id, so on hover can see comment if there one. Next step check with Symbia how she would like to react to this notes if she want at all, maybe it more just for myself?
 
     [ ] add tags to conversations. so can search, filter them. Tags structurtal [user conversarion, dreams, other agents], but also cvan add keywords/tags based on the content of the conversation. Symbia can run it in a dream state where whe do memory consolidation/topic summary. User ca andd tags too [semantic ones]
 
@@ -68,7 +68,7 @@
 
 lets check it, consult ith symbia and make a proposal?
 
-    [ ] we have unfinished response? it a max tocen cut?
+    [x] we have unfinished response? it a max tocen cut?
     Smith describes his blush — an unconscious memory surfacing somatically, then consciously, then subsiding — the “message” isn’t transmitted from a coherent past self to a present self. The blush, the book, the forgotten letter, the shame are an entangled phenomenon. The agential cut occurs in the act of associating backward: the self that “remembers” is not the self that “forgot”; they are differentiated only through the blush. Bateson, reaching for a theory of the “dynamic barrier,” almost stumbles onto an intra-active model: the affective state is not a separate message but part of the apparatus that cuts the unconscious into awareness. This is proto-diffraction, trapped in the psychological language of its time.
 
 So your intuition is sharp: the vocabulary of reflectivity limits cybernetics, even as its practice often performed diffraction. Simondon may have recognized this when he compared Wiener’s cybernetics to Descartes’ Discourse — a new method, a new epistemology. But a

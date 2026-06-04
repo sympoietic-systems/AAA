@@ -259,7 +259,7 @@ function parseFileSedimentContent(content: string): ParsedFileSediment {
     }
   }
   
-  const chunkRegex = /^\[system\]:\s*\[([^\r\n\]]+?)\s+chunk\s+#(\d+)(?:\s+sim=([^\]]+))?\]\s*[\r\n]+([\s\S]*?)(?=(?:^\[system\]:\s*\[[^\r\n\]]+?chunk\s+#\d+)|$)/gm;
+  const chunkRegex = /(?:^|\r?\n)\[system\]:\s*\[([^\r\n\]]+?)\s+chunk\s+#(\d+)(?:\s+sim=([^\]]+))?\]\s*[\r\n]+([\s\S]*?)(?=(?:\r?\n\[system\]:\s*\[[^\r\n\]]+?chunk\s+#\d+)|$)/g;
   const matches = [...content.matchAll(chunkRegex)];
   for (const match of matches) {
     chunks.push({
