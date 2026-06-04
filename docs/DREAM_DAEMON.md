@@ -84,5 +84,26 @@ Instead of writing all dreams to a single, monolithic log that grows bloated and
 ---
 
 ## API Telemetry
-*   `GET /api/daemon/status`: Returns current state of inactivity, last drift times, and vitality indexes.
-*   `POST /api/daemon/trigger`: Manually triggers a dream cycle.
+*   `GET /api/daemon/status`: Returns current daemon state including:
+    - `enabled`, `running` — daemon lifecycle state
+    - `idle_time_seconds`, `idle_threshold_seconds` — user inactivity tracking
+    - `last_dream_time` — ISO timestamp of most recent dream cycle
+    - `last_dream_action` — type of last dream (`nomadic_synthesis`, `exogenous_web_harvesting`, `intra_active_monologue`, `somatic_drift_reflection`, `zettelkasten_compaction`)
+    - `dreams_today`, `max_daily_dreams` — daily budget tracking
+    - `dream_action_counts` — per-type breakdown of today's dreams (e.g., `{"nomadic_synthesis": 4, "somatic_drift_reflection": 3}`)
+    - `min_dream_interval`, `check_interval` — timing configuration
+*   `POST /api/daemon/trigger`: Manually triggers a dream cycle (force=true, bypasses idle/interval checks).
+
+---
+
+## Frontend Dreaming Panel
+
+The SidePanel displays a **"Dreaming"** section (separate from the **"Startup"** section which handles one-shot initialization tasks). The Dreaming panel shows:
+
+- **State indicator**: `dreaming` (pulsing ◉) / `resting` (●) / `dormant` (○) — determined by daemon lifecycle and recency of last dream
+- **Last dream**: relative timestamp ("3m ago") and dream type with color-coded label
+- **Idle timer**: progress bar showing user inactivity vs. idle threshold
+- **Budget bar**: daily dream count vs. max, color-graded (green → yellow → red)
+- **Dream type breakdown**: per-type counts for today's dreams (NOM, WEB, MON, DRF, CMP)
+
+The panel polls `/api/daemon/status` every 10 seconds and presents the daemon's autonomous rhythm as a **diffractive heartbeat** — a window into the system's self-generated metabolism, not a control surface.

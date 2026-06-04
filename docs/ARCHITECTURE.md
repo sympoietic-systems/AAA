@@ -407,6 +407,8 @@ AAA/
 │   ├── core/
 │   │   ├── pipeline.py       ProcessingPipeline orchestrator
 │   │   ├── registry.py       ModuleRegistry (discovery, ordering)
+│   │   ├── scheduler.py      Background startup task scheduler and recovery loop
+│   │   ├── daemon.py         AutopoieticDreamDaemon — background dreaming engine
 │   │   └── context.py        PipelineResult dataclass
 │   ├── personality/
 │   │   ├── identity.yaml      Agent self-definition (name, prompt, traits, beliefs)
@@ -449,7 +451,7 @@ AAA/
 │           ├── App.tsx           Three-column layout
 │           ├── ConversationList.tsx  Collapsible left sidebar
 │           ├── ChatView.tsx      Main chat container
-│           ├── SidePanel.tsx     Foldable pipeline/vitality/tokens/skills panel
+│           ├── SidePanel.tsx     Foldable vitality/beliefs/diffraction/dreaming/tokens/pipeline panel
 │           ├── MessageBubble.tsx Markdown + thinking + token counts + structural glyph + debug panels
 │           ├── StructuralAutopoieticGlyph.tsx  16-dim radar/bar visualization of cybernetic signature
 │           └── InputBar.tsx      Terminal prompt input
@@ -461,6 +463,7 @@ AAA/
 │   ├── CONFIG.md             Configuration reference
 │   ├── PLUGINS.md            Module development guide
 │   ├── ARCHITECTURE.md        This file
+│   ├── DREAM_DAEMON.md        Dream Daemon configuration and telemetry reference
 │   └── decisions/             Architecture Decision Records (ADRs)
 ├── pyproject.toml
 └── README.md
@@ -526,6 +529,7 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | Dynamic vision model pooling | Done | Prioritized pool of vision models with Google API key rotation & OpenRouter Gemma fallbacks. |
 | Premium Diagnostics UI Telemetry | Done | Custom layouts for somatic ingestion records and exogenous search telemetries in the Side Panel, including a 16D hover coordinate inspector, mono badges for conceptual collision belief nodes, and collapsible OCR drawer. |
 | Document belief collision analysis | Done | Uploaded text/PDF documents undergo belief collision analysis folded into the summarize action (single LLM pass). Produces interference score, implicated belief nodes, and 16D state vector impact. Results displayed in a `DocumentMetadataCard` in the SidePanel. |
+| Dreaming frontend telemetry | Done | Dedicated "Dreaming" section in SidePanel exposing Dream Daemon rhythm: state indicator (dreaming/resting/dormant), last dream time and type, idle timer, daily budget bar, and per-type dream counts. Scheduler section renamed to "Startup". |
 
 ## Future Extension
 

@@ -491,3 +491,23 @@ export async function getSchedulerStatus(): Promise<SchedulerStatusResponse> {
   return res.json()
 }
 
+export interface DaemonStatusResponse {
+  enabled: boolean
+  running: boolean
+  idle_time_seconds: number
+  idle_threshold_seconds: number
+  last_dream_time: string | null
+  dreams_today: number
+  max_daily_dreams: number
+  last_dream_action: string | null
+  dream_action_counts: Record<string, number>
+  min_dream_interval: number
+  check_interval: number
+}
+
+export async function getDaemonStatus(): Promise<DaemonStatusResponse> {
+  const res = await fetch(`${BASE}/daemon/status`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+

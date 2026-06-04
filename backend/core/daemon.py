@@ -48,6 +48,10 @@ class AutopoieticDreamDaemon:
         self.is_running = False
         self._task: Optional[asyncio.Task] = None
 
+        # Dream telemetry
+        self.last_dream_action: Optional[str] = None
+        self.dream_action_counts: Dict[str, int] = {}
+
     def start(self) -> None:
         if not self.enabled:
             logger.info("Autopoietic Dream Daemon is disabled in configuration.")
@@ -75,7 +79,11 @@ class AutopoieticDreamDaemon:
             "idle_threshold_seconds": self.idle_threshold,
             "last_dream_time": datetime.fromtimestamp(self.last_dream_time, tz=timezone.utc).isoformat() if self.last_dream_time else None,
             "dreams_today": self.dream_counter,
-            "max_daily_dreams": self.max_daily_dreams
+            "max_daily_dreams": self.max_daily_dreams,
+            "last_dream_action": self.last_dream_action,
+            "dream_action_counts": dict(self.dream_action_counts),
+            "min_dream_interval": self.min_dream_interval,
+            "check_interval": self.check_interval,
         }
 
     async def _run_loop(self) -> None:
@@ -103,6 +111,7 @@ class AutopoieticDreamDaemon:
             current_day = datetime.now(timezone.utc).day
             if current_day != self.last_reset_day:
                 self.dream_counter = 0
+                self.dream_action_counts = {}
                 self.last_reset_day = current_day
 
         # 2. Check daily budget cap
@@ -236,6 +245,8 @@ class AutopoieticDreamDaemon:
         # Run self-perturbation through the primary pipeline
         self.last_dream_time = now
         self.dream_counter += 1
+        self.last_dream_action = action
+        self.dream_action_counts[action] = self.dream_action_counts.get(action, 0) + 1
 
         # We execute this as a simulated chat request with speaker='human' so that the pipeline generates a response.
         # But we pass a custom metadata indicator in the payload so the pipeline and logs know it's a dream.
