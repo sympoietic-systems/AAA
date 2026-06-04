@@ -28,6 +28,7 @@ class AutopoieticDreamDaemon:
         self.belief_repo = app_state.belief_repo
         self.conversation_repo = app_state.conversation_repo
         self.semantic_knot_repo = getattr(app_state, "semantic_knot_repo", None)
+        self.checkpoint_repo = getattr(app_state, "checkpoint_repo", None)
         self.pipeline = app_state.pipeline
 
         # Daemon Configuration
@@ -90,6 +91,10 @@ class AutopoieticDreamDaemon:
         # Give server time to settle
         await asyncio.sleep(5)
         while self.is_running:
+            try:
+                await self.consolidate_pending_conversations()
+            except Exception as e:
+                logger.exception("Error in Autopoietic Dream Daemon consolidation check: %s", e)
             try:
                 await self.check_and_trigger_dream()
             except asyncio.CancelledError:
@@ -728,3 +733,141 @@ class AutopoieticDreamDaemon:
         except Exception as e:
             logger.error("Failed to compile nomadic synthesis prompt: %s", e)
             return "Reflect on our historical memories and synthesize a dream note."
+
+    async def consolidate_pending_conversations(self) -> None:
+        if not self.conversation_repo or not self.checkpoint_repo:
+            return
+        
+        convs = self.conversation_repo.list_all()
+        for c in convs:
+            if not getattr(c, "requires_consolidation", 0):
+                continue
+                
+            # Check 24 hour limit (max once daily)
+            last_time = getattr(c, "last_consolidated_at", None)
+            if last_time:
+                if last_time.tzinfo is None:
+                    last_time = last_time.replace(tzinfo=timezone.utc)
+                elapsed = datetime.now(timezone.utc) - last_time
+                if elapsed.total_seconds() < 86400:
+                    logger.debug("Skipping consolidation for conversation %s: last consolidated %.1f hours ago", c.id, elapsed.total_seconds() / 3600.0)
+                    continue
+            
+            # Perform incremental consolidation
+            try:
+                await self._consolidate_conversation(c)
+            except Exception as e:
+                logger.exception("Failed to consolidate conversation %s: %s", c.id, e)
+
+    async def _consolidate_conversation(self, conversation) -> None:
+        conversation_id = conversation.id
+        checkpoint = self.checkpoint_repo.get_latest(conversation_id)
+        
+        # Get total number of messages currently in the conversation
+        total_msg_count = self.message_repo.count_messages(conversation_id)
+        
+        checkpoint_msg_count = checkpoint["message_count"] if checkpoint else 0
+        old_summary = checkpoint["summary"] if checkpoint else ""
+        
+        # Fetch new messages since the last checkpoint
+        new_messages = self.message_repo.get_messages_since(conversation_id, checkpoint_msg_count)
+        if not new_messages:
+            # No new messages to consolidate, just clear the flag
+            self.conversation_repo.mark_requires_consolidation(conversation_id, False)
+            self.conversation_repo.update_last_consolidated_at(conversation_id)
+            logger.info("No new messages since last checkpoint for %s, cleared requires_consolidation flag.", conversation_id)
+            return
+
+        # Format new messages text
+        formatted_lines = []
+        for msg in new_messages:
+            speaker_label = "Human" if msg.speaker == "human" else "Agent"
+            formatted_lines.append(f"{speaker_label}: {msg.content}")
+        new_messages_text = "\n".join(formatted_lines)
+        
+        # Build incremental prompt
+        if old_summary:
+            prompt_text = (
+                f"We are incrementally updating the consolidated summary of the conversation.\n"
+                f"Existing Consolidated Summary:\n"
+                f"\"\"\"\n{old_summary}\n\"\"\"\n\n"
+                f"New Messages to integrate:\n"
+                f"\"\"\"\n{new_messages_text}\n\"\"\"\n\n"
+                f"Please update the existing summary to include the key points, themes, and shifts from the new messages. "
+                f"Maintain the overall coherence, and return the newly updated summary. Do not include any intros or explanation, just return the summary text."
+            )
+        else:
+            prompt_text = (
+                f"Please write a consolidated summary of the following conversation history:\n"
+                f"\"\"\"\n{new_messages_text}\n\"\"\"\n\n"
+                f"Summarize the key points, topics discussed, and belief shifts. Return only the summary text, with no preamble."
+            )
+
+        bg_engine = getattr(self.app_state, "background_engine", None)
+        if not bg_engine:
+            logger.warning("No background engine available for consolidation")
+            return
+            
+        logger.info("Running incremental consolidation for conversation %s (messages offset: %d)", conversation_id, checkpoint_msg_count)
+        result = await bg_engine.run("consolidate", {
+            "text": prompt_text
+        })
+        
+        summary = result.get("content", "").strip()
+        if summary:
+            model_used = result.get("model", "")
+            # Save checkpoint
+            self.checkpoint_repo.save(conversation_id, total_msg_count, summary, model_used)
+            logger.info("Consolidation checkpoint saved for %s (%d msgs)", conversation_id, total_msg_count)
+            
+            # Keywords: generate only once when we reach some state (first consolidation).
+            existing_tags = self.conversation_repo.get_tags(conversation_id)
+            has_keywords = any(t["tag_type"] == "keyword" for t in existing_tags)
+            if not has_keywords:
+                try:
+                    await self._generate_keywords_for_conversation(conversation_id, summary)
+                except Exception as e:
+                    logger.exception("Failed to generate keywords: %s", e)
+            
+            # Clear flag and update timestamp
+            self.conversation_repo.mark_requires_consolidation(conversation_id, False)
+            self.conversation_repo.update_last_consolidated_at(conversation_id)
+
+    async def _generate_keywords_for_conversation(self, conversation_id: str, summary: str) -> None:
+        bg_engine = getattr(self.app_state, "background_engine", None)
+        provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
+        if not provider:
+            return
+            
+        prompt = (
+            f"Based on this conversation summary, extract 3 to 5 highly relevant keyword tags for search and categorization.\n"
+            f"Summary:\n"
+            f"\"\"\"\n{summary}\n\"\"\"\n\n"
+            f"Respond ONLY with a JSON list of strings representing the keywords (e.g. [\"posthumanism\", \"cybernetics\", \"tension\"]). "
+            f"Keep keywords short, all lowercase, and avoid special characters."
+        )
+        
+        res = await provider.generate(
+            messages=[
+                {"role": "system", "content": "You are a precise tag generator. Respond ONLY with a JSON list of strings."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1
+        )
+        content = res.get("content", "").strip()
+        if not content:
+            return
+            
+        # Clean JSON markdown if any
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+            
+        import json
+        keywords = json.loads(content.strip())
+        if isinstance(keywords, list):
+            for kw in keywords:
+                if isinstance(kw, str) and kw.strip():
+                    self.conversation_repo.add_tag(conversation_id, kw.strip().lower(), "keyword")
+            logger.info("Successfully generated and saved keywords for conversation %s: %s", conversation_id, keywords)
