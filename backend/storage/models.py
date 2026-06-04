@@ -14,6 +14,8 @@ class Conversation:
     somatic_reservoir_ad: float = 0.0
     matrix_warping: float = 0.0
     immunological_directive_active: int = 0
+    requires_consolidation: int = 0
+    last_consolidated_at: Optional[datetime] = None
 
 
 @dataclass

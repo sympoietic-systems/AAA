@@ -484,6 +484,33 @@ def init_db(db_path: str) -> sqlite3.Connection:
     except sqlite3.OperationalError:
         pass
 
+    # Migration for conversation tags
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS conversation_tags (
+                conversation_id TEXT NOT NULL,
+                tag             TEXT NOT NULL,
+                tag_type        TEXT NOT NULL,
+                PRIMARY KEY (conversation_id, tag),
+                FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ct_conv ON conversation_tags(conversation_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ct_tag ON conversation_tags(tag)")
+    except sqlite3.OperationalError:
+        pass
+
+    # Migration for conversations scheduling flags
+    try:
+        conn.execute("ALTER TABLE conversations ADD COLUMN requires_consolidation INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE conversations ADD COLUMN last_consolidated_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+
     _migrate_legacy_conversation(conn)
 
     conn.commit()

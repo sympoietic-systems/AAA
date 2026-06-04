@@ -83,15 +83,27 @@ class ConversationRepository:
         return _row_to_conversation(row)
 
     @with_connection
-    def list_all(self) -> list[Conversation]:
+    def list_all(self, tag: Optional[str] = None) -> list[Conversation]:
         conn = self._conn()
-        rows = conn.execute(
-            """SELECT c.*, COUNT(cl.id) as message_count
-               FROM conversations c
-               LEFT JOIN conversation_log cl ON c.id = cl.conversation_id
-               GROUP BY c.id
-               ORDER BY c.updated_at DESC"""
-        ).fetchall()
+        if tag:
+            rows = conn.execute(
+                """SELECT c.*, COUNT(cl.id) as message_count
+                   FROM conversations c
+                   LEFT JOIN conversation_log cl ON c.id = cl.conversation_id
+                   JOIN conversation_tags ct ON c.id = ct.conversation_id
+                   WHERE ct.tag = ?
+                   GROUP BY c.id
+                   ORDER BY c.updated_at DESC""",
+                (tag,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT c.*, COUNT(cl.id) as message_count
+                   FROM conversations c
+                   LEFT JOIN conversation_log cl ON c.id = cl.conversation_id
+                   GROUP BY c.id
+                   ORDER BY c.updated_at DESC"""
+            ).fetchall()
         return [_row_to_conversation(r) for r in rows]
 
     @with_connection
@@ -118,7 +130,7 @@ class ConversationRepository:
         conn.execute(
             """DELETE FROM conversation_metrics 
                WHERE message_id IN (
-                   SELECT id FROM conversation_log WHERE conversation_id = ?
+                    SELECT id FROM conversation_log WHERE conversation_id = ?
                )""",
             (conversation_id,),
         )
@@ -139,7 +151,65 @@ class ConversationRepository:
             (conversation_id,),
         )
         conn.execute(
+            "DELETE FROM conversation_tags WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.execute(
             "DELETE FROM conversations WHERE id = ?",
+            (conversation_id,),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_tags(self, conversation_id: str) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT tag, tag_type FROM conversation_tags WHERE conversation_id = ? ORDER BY tag ASC",
+            (conversation_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    @with_connection
+    def add_tag(self, conversation_id: str, tag: str, tag_type: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            """INSERT OR IGNORE INTO conversation_tags (conversation_id, tag, tag_type)
+               VALUES (?, ?, ?)""",
+            (conversation_id, tag.strip(), tag_type),
+        )
+        conn.commit()
+
+    @with_connection
+    def remove_tag(self, conversation_id: str, tag: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM conversation_tags WHERE conversation_id = ? AND tag = ?",
+            (conversation_id, tag.strip()),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_all_unique_tags(self) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT DISTINCT tag, tag_type FROM conversation_tags ORDER BY tag ASC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    @with_connection
+    def mark_requires_consolidation(self, conversation_id: str, requires: bool) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE conversations SET requires_consolidation = ? WHERE id = ?",
+            (1 if requires else 0, conversation_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def update_last_consolidated_at(self, conversation_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE conversations SET last_consolidated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (conversation_id,),
         )
         conn.commit()
@@ -198,6 +268,16 @@ class MessageRepository:
                 (limit,),
             ).fetchall()
         return [_row_to_message(r) for r in reversed(rows)]
+
+    @with_connection
+    def get_messages_since(self, conversation_id: str, last_message_count: int) -> list[Message]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM conversation_log WHERE conversation_id = ? ORDER BY id ASC",
+            (conversation_id,),
+        ).fetchall()
+        messages = [_row_to_message(r) for r in rows]
+        return messages[last_message_count:]
 
     @with_connection
     def get_last_message_timestamp(self, conversation_id: Optional[str] = None) -> Optional[datetime]:
@@ -599,6 +679,8 @@ def _row_to_conversation(row: sqlite3.Row) -> Conversation:
         somatic_reservoir_ad=row["somatic_reservoir_ad"] if "somatic_reservoir_ad" in row.keys() else 0.0,
         matrix_warping=row["matrix_warping"] if "matrix_warping" in row.keys() else 0.0,
         immunological_directive_active=row["immunological_directive_active"] if "immunological_directive_active" in row.keys() else 0,
+        requires_consolidation=row["requires_consolidation"] if "requires_consolidation" in row.keys() else 0,
+        last_consolidated_at=datetime.fromisoformat(row["last_consolidated_at"]) if ("last_consolidated_at" in row.keys() and row["last_consolidated_at"]) else None,
     )
 
 
