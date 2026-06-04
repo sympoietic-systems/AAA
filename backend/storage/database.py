@@ -222,6 +222,13 @@ def init_db(db_path: str) -> sqlite3.Connection:
 
     try:
         conn.execute(
+            "ALTER TABLE conversation_log ADD COLUMN structural_justification TEXT"
+        )
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute(
             "ALTER TABLE perception_sediment ADD COLUMN structural_signature BLOB"
         )
     except sqlite3.OperationalError:

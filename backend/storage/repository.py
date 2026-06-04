@@ -169,13 +169,14 @@ class MessageRepository:
         provider_used: Optional[str] = None,
         context_sent: Optional[str] = None,
         structural_signature: bytes = b"",
+        structural_justification: Optional[str] = None,
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature),
+               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification),
         )
         conn.commit()
         row = conn.execute(
@@ -339,7 +340,7 @@ class MessageRepository:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
-                          cl.structural_signature,
+                          cl.structural_signature, cl.structural_justification,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -357,7 +358,7 @@ class MessageRepository:
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
-                          cl.structural_signature,
+                          cl.structural_signature, cl.structural_justification,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -559,6 +560,7 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         model_used=row["model_used"] if "model_used" in row.keys() else None,
         provider_used=row["provider_used"] if "provider_used" in row.keys() else None,
         structural_signature=row["structural_signature"] if ("structural_signature" in row.keys() and row["structural_signature"] is not None) else b"",
+        structural_justification=row["structural_justification"] if "structural_justification" in row.keys() else None,
     )
 
 
@@ -1076,6 +1078,30 @@ class PerceptionSedimentRepository:
             (conversation_id,),
         )
         conn.commit()
+
+    @with_connection
+    def find_file_by_name(self, file_name: str) -> Optional[dict]:
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT conversation_id, file_name, file_type, status, summary, summary_model, token_count, chunk_count, created_at, updated_at
+               FROM perception_files
+               WHERE file_name = ?
+               ORDER BY updated_at DESC LIMIT 1""",
+            (file_name,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    @with_connection
+    def get_chunks_by_file(self, conversation_id: str, file_name: str) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT chunk_index, chunk_text, token_count, opacity, opacity_meta
+               FROM perception_sediment
+               WHERE conversation_id = ? AND file_name = ?
+               ORDER BY chunk_index""",
+            (conversation_id, file_name),
+        ).fetchall()
+        return [dict(r) for r in rows]
 
     @with_connection
     def get_structural_signatures_by_conversation(

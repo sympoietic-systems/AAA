@@ -1,5 +1,7 @@
 ## UI
     [x] Add the information for the request to see (context, metrics, diffractive range, match, and search candidates in SidePanel)
+    [x] Fix multi-line truncation bug in context panel views (History, Dialogue Memory, File Chunks) and group chunks by filename.
+
 
 ## OTHER
     [x] Background belief digester (integrated into BackgroundStartupScheduler on restart)

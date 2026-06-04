@@ -404,6 +404,10 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
             logger.warning("Failed to score assistant message: %s", e)
             assistant_sig_blob = b""
 
+        from backend.modules.structural_engine import get_justification
+        user_just = get_justification(content)
+        assistant_just = get_justification(response_text)
+
         msg = repo.insert(
             speaker=speaker,
             content=content,
@@ -414,6 +418,7 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
             conversation_id=conversation_id,
             content_tokens=content_tokens,
             structural_signature=user_sig_blob,
+            structural_justification=user_just,
         )
 
         thinking_tokens = estimate_tokens(thinking) if thinking else None
@@ -433,6 +438,7 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
             provider_used=provider_used,
             context_sent=result.payload.get("context_sent"),
             structural_signature=assistant_sig_blob,
+            structural_justification=assistant_just,
         )
 
         payload_metrics = result.payload.get("metrics")
@@ -667,7 +673,7 @@ async def history(limit: int = 50, offset: int = 0, conversation_id: str = "", r
             except Exception:
                 pass
                 
-        justification = get_justification(r["content"])
+        justification = r.get("structural_justification") or get_justification(r["content"])
 
         messages.append(HistoryMessage(
             id=r["id"],
@@ -747,6 +753,20 @@ async def get_file_summary_endpoint(conversation_id: str, file_name: str, reques
                 }
             return res_data
     raise HTTPException(status_code=404, detail="File not found")
+
+
+@router.get("/files/by-name")
+async def get_file_by_name_endpoint(file_name: str, request: Request):
+    state = request.app.state
+    perception_repo = state.perception_repo
+    
+    file_info = perception_repo.find_file_by_name(file_name)
+    if not file_info:
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    chunks = perception_repo.get_chunks_by_file(file_info["conversation_id"], file_name)
+    file_info["chunks"] = chunks
+    return file_info
 
 
 @router.get("/conversations", response_model=ConversationListResponse)

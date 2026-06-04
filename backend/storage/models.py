@@ -34,6 +34,7 @@ class Message:
     model_used: Optional[str] = None
     provider_used: Optional[str] = None
     structural_signature: bytes = b""
+    structural_justification: Optional[str] = None
 
 
 @dataclass
