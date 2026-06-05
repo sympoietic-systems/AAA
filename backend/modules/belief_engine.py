@@ -527,7 +527,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                 target_confidence = 0.8
                 new_c = best_match.confidence + 0.1 * (target_confidence - best_match.confidence)
                 new_c = max(0.0, min(1.0, new_c))
-                new_mass = best_match.ontological_mass + 0.2
+                new_mass = min(best_match.ontological_mass + 0.2, 1.5)
                 
                 # Update belief node in database
                 self._belief_repo.update_belief(
@@ -571,7 +571,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                     statement=note_full_text,
                     origin="emergent",
                     confidence=0.6,
-                    ontological_mass=1.5,
+                    ontological_mass=1.0,
                     somatic_anchor="conceptual",
                     vector_16d=json.dumps(note_vec.tolist()),
                 )
