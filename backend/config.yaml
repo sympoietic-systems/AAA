@@ -170,6 +170,8 @@ daemon:
   min_dream_interval: 3600       # minimum seconds between successful dreams (e.g., 1 hour)
   max_daily_dreams: 10            # max number of dreams triggered in a 24h rolling day (default: 10)
   drift_coefficient: 0.00001     # decay speed for somatic belief drift
+  belief_dream_cooldown_minutes: 30  # minimum minutes between dreams about the same belief
+  prompt_hash_window: 10             # number of recent prompt hashes to deduplicate against
 
 # ── Background Tasks ──────────────────────────────
 # Models are tried in order. If one is rate-limited, the next is used.

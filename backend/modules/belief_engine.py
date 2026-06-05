@@ -58,6 +58,7 @@ class BeliefDynamicsEngine(ProcessingModule):
             "conversational_pattern": 0.4,
             "shared_note": 0.5,
             "web_retrieval": 0.15,
+            "dream_turn": 0.05,
         }
 
     def _get_source_weight(self, source_type: str) -> float:
@@ -481,6 +482,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         conversation_id: str,
         user_message_id: int,
         assistant_message_id: int,
+        source_type: str = "chat_turn",
     ) -> None:
         try:
             user_msg = self._message_repo.get_by_id(user_message_id)
@@ -489,10 +491,14 @@ class BeliefDynamicsEngine(ProcessingModule):
                 logger.warning("Message records missing. Skipping metabolism.")
                 return
 
+            # Skip already-metabolized messages
+            if getattr(user_msg, "metabolized", 0) == 1:
+                logger.debug("Message %d already metabolized. Skipping.", user_message_id)
+                return
+
             user_sig_bytes = user_msg.structural_signature
             assistant_sig_bytes = assistant_msg.structural_signature
             if not user_sig_bytes or not assistant_sig_bytes:
-                # Lazy fallback: compute missing signatures from message content
                 user_sig_bytes = await self._ensure_signature(user_msg, user_sig_bytes)
                 assistant_sig_bytes = await self._ensure_signature(assistant_msg, assistant_sig_bytes)
                 if not user_sig_bytes or not assistant_sig_bytes:
@@ -507,10 +513,8 @@ class BeliefDynamicsEngine(ProcessingModule):
 
             agent_id = user_msg.agent_id if user_msg.agent_id else "symbia"
 
-            # 1. Concept Density Dc of User Text
             dc = calculate_concept_density(user_msg.content)
 
-            # 2. Get surprise index from metrics (default to 0.0)
             surprise_index = 0.0
             try:
                 surprise_index = self._message_repo.get_surprise_index(user_message_id)
@@ -519,23 +523,28 @@ class BeliefDynamicsEngine(ProcessingModule):
 
             perturbation = 1.0 + surprise_index
 
-            # 3. Proto-belief lifecycle: find closest match, accrete or nucleate
             closest = self._find_closest_active_belief(agent_id, user_vec, min_similarity=0.3)
-            source_weight = self._get_source_weight("chat_turn")
+            source_weight = self._get_source_weight(source_type)
             if closest is not None:
                 b_vec = np.array(json.loads(closest.vector_16d), dtype=np.float32)
                 alignment = compute_cosine_similarity(user_vec, b_vec)
                 self._accrete_belief(closest, user_vec, source_weight, alignment, perturbation,
-                                     source_type="chat_turn", source_id=str(user_message_id))
+                                     source_type=source_type, source_id=str(user_message_id))
             elif dc > 0.3:
                 self._nucleate_proto_belief(
                     agent_id=agent_id,
                     statement=user_msg.content[:200],
                     vector=user_vec,
-                    source_type="chat_turn",
+                    source_type=source_type,
                     source_id=str(user_message_id),
                     source_weight=source_weight,
                 )
+
+            # Mark message as metabolized
+            try:
+                self._message_repo.mark_message_metabolized(user_message_id)
+            except Exception as e:
+                logger.warning("Failed to mark message %d as metabolized: %s", user_message_id, e)
 
             # 4. Check Trajectory Novelty & Vitality
             # Fetch last 5 assistant responses

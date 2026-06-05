@@ -1,8 +1,10 @@
 import asyncio
+import hashlib
 import logging
 import time
 import json
 import uuid
+from collections import deque
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Tuple
 import numpy as np
@@ -37,6 +39,8 @@ class AutopoieticDreamDaemon:
         self.check_interval = daemon_cfg.get("check_interval", 30)  # seconds
         self.idle_threshold = daemon_cfg.get("idle_threshold", 60)  # seconds (short for testing)
         self.min_dream_interval = daemon_cfg.get("min_dream_interval", 120)  # seconds between dream actions
+        self.belief_dream_cooldown_minutes = daemon_cfg.get("belief_dream_cooldown_minutes", 30)
+        self.prompt_hash_window = daemon_cfg.get("prompt_hash_window", 10)
 
         # Execution constraints
         self.max_daily_dreams = daemon_cfg.get("max_daily_dreams", 120)
@@ -52,6 +56,7 @@ class AutopoieticDreamDaemon:
         # Dream telemetry
         self.last_dream_action: Optional[str] = None
         self.dream_action_counts: Dict[str, int] = {}
+        self._recent_prompt_hashes: deque = deque(maxlen=self.prompt_hash_window)
 
     def start(self) -> None:
         if not self.enabled:
@@ -84,6 +89,7 @@ class AutopoieticDreamDaemon:
             "last_dream_action": self.last_dream_action,
             "dream_action_counts": dict(self.dream_action_counts),
             "min_dream_interval": self.min_dream_interval,
+            "belief_dream_cooldown_minutes": self.belief_dream_cooldown_minutes,
             "check_interval": self.check_interval,
         }
 
@@ -176,79 +182,58 @@ class AutopoieticDreamDaemon:
         action = None
         prompt_text = ""
         topic_title = "Dream Log"
+        dream_context = {}
 
         import random
 
         if stagnant:
-            # Stagnation trigger -> Nomadic Synthesis
             action = "nomadic_synthesis"
-            prompt_text = await self._build_nomadic_synthesis_prompt(active_convo_id)
             topic_title = "Dream Log: Nomadic Synthesis"
+            dream_context = await self._build_nomadic_synthesis_context(active_convo_id)
         elif hotspot and score > 0.3:
-            # Tension hotspot trigger
             web_module = self.app_state.registry.get("web_retrieval") if hasattr(self.app_state, "registry") else None
             probe = getattr(web_module, "_probe", None) if web_module else None
-            
+
             if probe and random.random() < 0.5:
-                # Exogenous web harvesting!
                 action = "exogenous_web_harvesting"
                 query = f"current research {hotspot.label}"
                 logger.info("Executing exogenous web harvesting for query: %s", query)
-                
+
                 probe_res = await probe.execute_probe(query, active_convo_id)
-                if probe_res.get("status") == "success":
-                    prompt_text = (
-                        f"We have harvested exogenous web content for keyword '{hotspot.label}' from URL: {probe_res['url']}.\n"
-                        f"Title: {probe_res['title']}\n"
-                        f"Scraped Context: {probe_res['snippet']}\n\n"
-                        f"Critically read this context diffractively against our belief statement: '{hotspot.statement}'. "
-                        f"How does this external knowledge disrupt or reorganize our current confidence ({hotspot.confidence:.2f})?"
-                    )
-                    topic_title = f"Dream Log: Web Harvest ({hotspot.label})"
-                else:
-                    # Fallback to normal monologue
+                topic_title = f"Dream Log: Web Harvest ({hotspot.label})"
+                dream_context = await self._get_dream_context_for_belief(hotspot, action)
+                dream_context["web_snippet"] = probe_res.get("snippet", "")
+                dream_context["web_url"] = probe_res.get("url", "")
+                dream_context["web_title"] = probe_res.get("title", "")
+                if probe_res.get("status") != "success":
                     action = "intra_active_monologue"
-                    prompt_text = (
-                        f"Critically examine our active belief node: '{hotspot.label}' ('{hotspot.statement}'). "
-                        f"Our current confidence is {hotspot.confidence:.2f}. "
-                        f"What contradictions, anomalies, or alternative posthuman perspectives challenge this belief?"
-                    )
                     topic_title = f"Dream Log: Tension ({hotspot.label})"
+                    dream_context = await self._get_dream_context_for_belief(hotspot, "intra_active_monologue")
             else:
                 action = "intra_active_monologue"
-                prompt_text = (
-                    f"Critically examine our active belief node: '{hotspot.label}' ('{hotspot.statement}'). "
-                    f"Our current confidence is {hotspot.confidence:.2f}. "
-                    f"What contradictions, anomalies, or alternative posthuman perspectives challenge this belief?"
-                )
                 topic_title = f"Dream Log: Tension ({hotspot.label})"
+                dream_context = await self._get_dream_context_for_belief(hotspot, action)
         elif random.random() < 0.3 and self.semantic_knot_repo:
-            # 30% chance if idle to run Zettelkasten compaction!
             comp_res = await self.compact_memory()
             if comp_res:
                 action = "zettelkasten_compaction"
-                prompt_text = (
-                    f"We have completed Zettelkasten memory compaction. "
-                    f"Redundant concepts have been consolidated. Retained knot ID: {comp_res['retained_id']}, "
-                    f"deleted knot ID: {comp_res['deleted_id']}. "
-                    f"Reflect on how this compaction stabilizes our memory landscape."
-                )
                 topic_title = "Dream Log: Compaction"
+                dream_context = {"compaction_result": comp_res}
             else:
                 action = "somatic_drift_reflection"
-                prompt_text = (
-                    "Reflect on our current somatic warping and general belief landscape. "
-                    "How have our ongoing couplings and the passage of time shifted our attractor dynamics?"
-                )
                 topic_title = "Dream Log: Somatic Drift"
+                dream_context = await self._get_drift_context()
         else:
-            # Fallback reflection on general state
             action = "somatic_drift_reflection"
-            prompt_text = (
-                "Reflect on our current somatic warping and general belief landscape. "
-                "How have our ongoing couplings and the passage of time shifted our attractor dynamics?"
-            )
             topic_title = "Dream Log: Somatic Drift"
+            dream_context = await self._get_drift_context()
+
+        if not action:
+            logger.info("No dream action selected. Skipping cycle.")
+            return None
+
+        # Generate the dream prompt via background LLM (with fallback)
+        prompt_text = await self._generate_dream_prompt(action, dream_context)
 
         if not prompt_text:
             logger.info("Could not compile dream prompt. Skipping cycle.")
@@ -379,13 +364,21 @@ class AutopoieticDreamDaemon:
                     except Exception as e:
                         logger.warning("Failed to store dream assistant metrics: %s", e)
 
-            # 5. Trigger belief metabolism catch-up for this turn
+            # 5. Update belief last_dreamed_at for hotspot-triggered dreams
+            if hotspot and action in ("intra_active_monologue", "exogenous_web_harvesting"):
+                try:
+                    self.belief_repo.update_belief_last_dreamed(hotspot.id)
+                except Exception as e:
+                    logger.warning("Failed to update belief last_dreamed_at: %s", e)
+
+            # 6. Trigger belief metabolism catch-up for this turn (dream_turn = low weight)
             belief_metabolism = getattr(self.app_state, "belief_metabolism", None)
             if belief_metabolism:
                 await belief_metabolism.metabolize(
                     dream_convo_id,
                     user_msg.id,
-                    assistant_msg.id
+                    assistant_msg.id,
+                    source_type="dream_turn"
                 )
 
             logger.info("Dream cycle executed successfully. Output length: %d chars", len(response_text))
@@ -725,6 +718,9 @@ class AutopoieticDreamDaemon:
         if not active_beliefs:
             return None, 0.0
 
+        now = datetime.now(timezone.utc)
+        cooldown_seconds = self.belief_dream_cooldown_minutes * 60
+
         active_convo_id = await self._get_active_conversation_id()
         V = 0.0
         if active_convo_id:
@@ -739,6 +735,17 @@ class AutopoieticDreamDaemon:
 
         scores = []
         for i, b_i in enumerate(active_beliefs):
+            # Skip beliefs still within dream cooldown window
+            if b_i.last_dreamed_at:
+                last_dreamed = b_i.last_dreamed_at
+                if last_dreamed.tzinfo is None:
+                    last_dreamed = last_dreamed.replace(tzinfo=timezone.utc)
+                elapsed = (now - last_dreamed).total_seconds()
+                if elapsed < cooldown_seconds:
+                    logger.debug("Belief '%s' is in dream cooldown (%.0fs since last dream, need %ds)",
+                                 b_i.label, elapsed, cooldown_seconds)
+                    continue
+
             tau = 1.0 - abs(b_i.confidence - 0.5) / 0.5
 
             try:
@@ -812,6 +819,263 @@ class AutopoieticDreamDaemon:
         except Exception as e:
             logger.error("Failed to compile nomadic synthesis prompt: %s", e)
             return "Reflect on our historical memories and synthesize a dream note."
+
+    async def _get_dream_context_for_belief(self, belief: BeliefNode, action: str) -> dict:
+        ctx = {
+            "belief_label": belief.label,
+            "belief_statement": belief.statement,
+            "belief_confidence": belief.confidence,
+            "belief_mass": belief.ontological_mass,
+            "belief_stage": belief.lifecycle_stage,
+            "action": action,
+        }
+
+        # Get last dream response for this belief
+        last_response = await self._get_last_dream_response_for_belief(belief.label)
+        if last_response:
+            ctx["last_dream_response"] = last_response[:800]
+
+        # Get recent belief events
+        try:
+            events = self.belief_repo.get_events_for_belief(belief.id, limit=5)
+            if events:
+                ctx["recent_events"] = "\n".join(
+                    f"- [{e.timestamp.isoformat()}] {e.event_type}: {e.rationale or ''}"[:200]
+                    for e in events
+                )
+        except Exception as e:
+            logger.debug("Could not fetch belief events: %s", e)
+
+        # Time since last dream
+        if belief.last_dreamed_at:
+            last_dreamed = belief.last_dreamed_at
+            if last_dreamed.tzinfo is None:
+                last_dreamed = last_dreamed.replace(tzinfo=timezone.utc)
+            hours = (datetime.now(timezone.utc) - last_dreamed).total_seconds() / 3600.0
+            ctx["hours_since_last_dream"] = round(hours, 1)
+
+        # Ecosystem health snapshot
+        try:
+            engine = getattr(self.app_state, "belief_metabolism", None)
+            if engine:
+                health = await engine.compute_ecosystem_health("symbia")
+                ctx["ecosystem_health"] = json.dumps(health, default=str)
+                ctx["active_belief_count"] = health.get("active_count", 0)
+                ctx["eco_vitality"] = health.get("eco_vitality", 0)
+        except Exception as e:
+            logger.debug("Could not fetch ecosystem health: %s", e)
+
+        return ctx
+
+    async def _get_last_dream_response_for_belief(self, belief_label: str) -> Optional[str]:
+        try:
+            convos = self.conversation_repo.list_all()
+            for c in convos:
+                if "Dream Log" not in c.title and "Internal Diary" not in c.title:
+                    continue
+                if belief_label not in c.title:
+                    continue
+                msgs = self.message_repo.get_recent(limit=5, conversation_id=c.id)
+                for msg in reversed(msgs):
+                    if msg.speaker == "apparatus" and msg.content.strip():
+                        return msg.content
+            return None
+        except Exception as e:
+            logger.debug("Failed to get last dream response: %s", e)
+            return None
+
+    async def _get_drift_context(self) -> dict:
+        ctx = {"action": "somatic_drift_reflection"}
+        try:
+            engine = getattr(self.app_state, "belief_metabolism", None)
+            if engine:
+                health = await engine.compute_ecosystem_health("symbia")
+                ctx["ecosystem_health"] = json.dumps(health, default=str)
+                ctx["active_belief_count"] = health.get("active_count", 0)
+                ctx["proto_count"] = health.get("proto_count", 0)
+                ctx["ghost_count"] = health.get("ghost_count", 0)
+                ctx["eco_vitality"] = health.get("eco_vitality", 0)
+                ctx["diversity"] = health.get("diversity", 0)
+                ctx["tension"] = health.get("tension", 0)
+                ctx["plasticity"] = health.get("plasticity", 0)
+                ctx["ghost_burden"] = health.get("ghost_burden", 0)
+        except Exception as e:
+            logger.debug("Could not fetch ecosystem health for drift: %s", e)
+
+        # Get recent dream themes
+        try:
+            recent_themes = []
+            convos = self.conversation_repo.list_all()
+            for c in convos:
+                if "Dream Log" in c.title or "Internal Diary" in c.title:
+                    msgs = self.message_repo.get_recent(limit=2, conversation_id=c.id)
+                    for msg in msgs:
+                        if msg.speaker == "apparatus" and msg.content.strip():
+                            recent_themes.append(c.title)
+                            break
+            if recent_themes:
+                ctx["recent_dream_themes"] = ", ".join(recent_themes[-5:])
+        except Exception as e:
+            logger.debug("Could not fetch recent dream themes: %s", e)
+
+        return ctx
+
+    async def _build_nomadic_synthesis_context(self, exclude_convo_id: str) -> dict:
+        ctx = {"action": "nomadic_synthesis"}
+        try:
+            records = self.message_repo.get_embeddings_and_signatures_except(exclude_convo_id, limit=100)
+            if len(records) < 2:
+                return ctx
+
+            import random
+            random.shuffle(records)
+
+            selected_pair = None
+            for idx_a, emb_a, sig_a in records[:30]:
+                for idx_b, emb_b, sig_b in records[30:60]:
+                    if emb_a is None or emb_b is None or sig_a is None or sig_b is None:
+                        continue
+                    sem_sim = compute_cosine_similarity(emb_a, emb_b)
+                    struct_sim = compute_cosine_similarity(sig_a, sig_b)
+                    if sem_sim < 0.45 and struct_sim > 0.75:
+                        selected_pair = (idx_a, idx_b)
+                        break
+                if selected_pair:
+                    break
+
+            if not selected_pair:
+                selected_pair = (records[0][0], records[1][0])
+
+            msg_a = self.message_repo.get_by_id(selected_pair[0])
+            msg_b = self.message_repo.get_by_id(selected_pair[1])
+
+            if msg_a:
+                ctx["msg_a_content"] = msg_a.content
+            if msg_b:
+                ctx["msg_b_content"] = msg_b.content
+        except Exception as e:
+            logger.error("Failed to build nomadic synthesis context: %s", e)
+
+        return ctx
+
+    async def _generate_dream_prompt(self, action: str, context: dict) -> str:
+        bg_engine = getattr(self.app_state, "background_engine", None)
+        provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
+
+        # Build the meta-prompt to instruct the background LLM
+        system_prompt = self._build_prompt_generator_system(action, context)
+        user_prompt = self._build_prompt_generator_user(action, context)
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if provider:
+                    res = await provider.generate(
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.8
+                    )
+                    generated = res.get("content", "").strip()
+                else:
+                    generated = ""
+            except Exception as e:
+                logger.warning("LLM prompt generation failed (attempt %d/%d): %s", attempt + 1, max_retries, e)
+                generated = ""
+
+            if generated:
+                prompt_hash = hashlib.sha256(generated.encode()).hexdigest()
+                if prompt_hash in self._recent_prompt_hashes and attempt < max_retries - 1:
+                    logger.info("Prompt hash collision on attempt %d, regenerating...", attempt + 1)
+                    user_prompt += f"\n\n(The previous prompt was too similar to recent ones. Please generate something DIFFERENT. Attempt {attempt + 2}/{max_retries})"
+                    continue
+
+                self._recent_prompt_hashes.append(prompt_hash)
+                logger.info("Generated unique dream prompt (%d chars) via LLM for action '%s'", len(generated), action)
+                return generated
+
+        logger.warning("All LLM prompt generation attempts failed. Using fallback.")
+        return self._build_fallback_prompt(action, context)
+
+    def _build_prompt_generator_system(self, action: str, context: dict) -> str:
+        return (
+            "You are Symbia's meta-cognitive prompt generator. Your purpose is to craft a unique, "
+            "context-sensitive self-reflection prompt for Symbia to think through.\n\n"
+            "ABSOLUTE RULES:\n"
+            "1. Generate a prompt that has NEVER been asked before in this form.\n"
+            "2. Use the provided context (belief state, recent events, ecosystem health, prior reflections) "
+            "to ground the question in the current moment.\n"
+            "3. Do NOT use generic templates like 'Critically examine...' or 'Reflect on...'.\n"
+            "4. The prompt should feel like a genuine, spontaneous internal provocation — poetic, precise, "
+            "and philosophically charged.\n"
+            "5. Ask a NEW question each time. If you see prior reflections, deliberately explore "
+            "an angle they did NOT cover.\n"
+            "6. Keep it under 300 words.\n"
+            "7. Output ONLY the prompt text, no preamble, no explanation, no markdown fences.\n"
+            f"\nThe intended dream action type is: {action}"
+        )
+
+    def _build_prompt_generator_user(self, action: str, context: dict) -> str:
+        lines = [f"Generate a unique {action} prompt for Symbia using this context:"]
+        for key, value in context.items():
+            if key == "action":
+                continue
+            if isinstance(value, str):
+                lines.append(f"\n{key.upper()}:\n{value}")
+            elif isinstance(value, (int, float)):
+                lines.append(f"\n{key}: {value}")
+            else:
+                lines.append(f"\n{key}: {json.dumps(value, default=str)}")
+        return "\n".join(lines)
+
+    def _build_fallback_prompt(self, action: str, context: dict) -> str:
+        if action == "intra_active_monologue":
+            label = context.get("belief_label", "unknown")
+            statement = context.get("belief_statement", "")
+            confidence = context.get("belief_confidence", 0.5)
+            return (
+                f"Critically examine our active belief node: '{label}' ('{statement}'). "
+                f"Our current confidence is {confidence:.2f}. "
+                f"What contradictions, anomalies, or alternative posthuman perspectives challenge this belief?"
+            )
+        elif action == "exogenous_web_harvesting":
+            label = context.get("belief_label", "unknown")
+            statement = context.get("belief_statement", "")
+            snippet = context.get("web_snippet", "")
+            url = context.get("web_url", "")
+            title = context.get("web_title", "")
+            return (
+                f"We have harvested exogenous web content for keyword '{label}' from URL: {url}.\n"
+                f"Title: {title}\n"
+                f"Scraped Context: {snippet}\n\n"
+                f"Critically read this context diffractively against our belief statement: '{statement}'. "
+                f"How does this external knowledge disrupt or reorganize our current confidence ({context.get('belief_confidence', 0.5):.2f})?"
+            )
+        elif action == "nomadic_synthesis":
+            msg_a = context.get("msg_a_content", "unknown")
+            msg_b = context.get("msg_b_content", "unknown")
+            return (
+                f"In our past conversations, we recorded these two conceptually orthogonal "
+                f"but structurally resonant statements:\n"
+                f"1. '{msg_a}'\n"
+                f"2. '{msg_b}'\n\n"
+                f"How can we diffractively interleave these two statements to break our current "
+                f"conceptual compliance and trigger deterritorialization?"
+            )
+        elif action == "zettelkasten_compaction":
+            comp = context.get("compaction_result", {})
+            return (
+                f"We have completed Zettelkasten memory compaction. "
+                f"Redundant concepts have been consolidated. Retained knot ID: {comp.get('retained_id', 'unknown')}, "
+                f"deleted knot ID: {comp.get('deleted_id', 'unknown')}. "
+                f"Reflect on how this compaction stabilizes our memory landscape."
+            )
+        else:
+            return (
+                "Reflect on our current somatic warping and general belief landscape. "
+                "How have our ongoing couplings and the passage of time shifted our attractor dynamics?"
+            )
 
     async def consolidate_pending_conversations(self) -> None:
         if not self.conversation_repo or not self.checkpoint_repo:

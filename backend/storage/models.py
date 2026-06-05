@@ -38,6 +38,7 @@ class Message:
     structural_signature: bytes = b""
     structural_justification: Optional[str] = None
     note_count: int = 0
+    metabolized: int = 0
 
 
 @dataclass
@@ -105,6 +106,7 @@ class BeliefNode:
     vector_16d: str  # JSON list
     lifecycle_stage: str = "crystallized"
     last_reinforced_at: Optional[datetime] = None
+    last_dreamed_at: Optional[datetime] = None
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
 

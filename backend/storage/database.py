@@ -522,6 +522,16 @@ def init_db(db_path: str) -> sqlite3.Connection:
     except sqlite3.OperationalError:
         pass
 
+    try:
+        conn.execute("ALTER TABLE belief_nodes ADD COLUMN last_dreamed_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE conversation_log ADD COLUMN metabolized INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
     # Backfill existing beliefs: map origin to lifecycle_stage
     conn.execute(
         "UPDATE belief_nodes SET lifecycle_stage = 'collapsed' WHERE origin = 'collapsed' AND lifecycle_stage = 'crystallized'"

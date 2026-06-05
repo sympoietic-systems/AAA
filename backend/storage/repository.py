@@ -395,6 +395,15 @@ class MessageRepository:
         return row["cnt"] if row else 0
 
     @with_connection
+    def mark_message_metabolized(self, message_id: int) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE conversation_log SET metabolized = 1 WHERE id = ?",
+            (message_id,),
+        )
+        conn.commit()
+
+    @with_connection
     def get_embeddings_by_speaker(
         self, speaker: str, limit: int = 5, conversation_id: str | None = None,
         exclude_message_id: int | None = None,
@@ -721,6 +730,7 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         structural_signature=row["structural_signature"] if ("structural_signature" in row.keys() and row["structural_signature"] is not None) else b"",
         structural_justification=row["structural_justification"] if "structural_justification" in row.keys() else None,
         note_count=row["note_count"] if "note_count" in row.keys() else 0,
+        metabolized=row["metabolized"] if "metabolized" in row.keys() else 0,
     )
 
 
@@ -958,6 +968,7 @@ class PerceptionSedimentRepository:
                 ORDER BY id ASC LIMIT 1
             )
             WHERE user_msg.speaker = 'human'
+              AND user_msg.metabolized = 0
               AND CAST(user_msg.id AS TEXT) NOT IN (
                   SELECT source_id FROM belief_events WHERE source_type = 'chat_turn' AND source_id IS NOT NULL
               )
@@ -1755,6 +1766,21 @@ class BeliefRepository:
         return None
 
     @with_connection
+    def update_belief_last_dreamed(self, belief_id: str, timestamp: Optional[str] = None) -> None:
+        conn = self._conn()
+        if timestamp:
+            conn.execute(
+                "UPDATE belief_nodes SET last_dreamed_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (timestamp, belief_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE belief_nodes SET last_dreamed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (belief_id,),
+            )
+        conn.commit()
+
+    @with_connection
     def insert_belief_event(
         self,
         event_id: str,
@@ -2058,6 +2084,14 @@ def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
     except (IndexError, KeyError):
         pass
 
+    last_dreamed = None
+    try:
+        last_dreamed_raw = row["last_dreamed_at"]
+        if last_dreamed_raw:
+            last_dreamed = datetime.fromisoformat(last_dreamed_raw) if isinstance(last_dreamed_raw, str) else last_dreamed_raw
+    except (IndexError, KeyError):
+        pass
+
     return BeliefNode(
         id=row["id"],
         agent_id=row["agent_id"],
@@ -2070,6 +2104,7 @@ def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
         vector_16d=row["vector_16d"],
         lifecycle_stage=lifecycle,
         last_reinforced_at=last_reinforced,
+        last_dreamed_at=last_dreamed,
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
         updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
     )

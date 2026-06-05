@@ -21,6 +21,7 @@ class MockMessageRepository:
         self.messages = []
         self.last_timestamp = None
         self.recent_signatures = []
+        self._metabolized_ids = set()
 
     def get_last_message_timestamp(self, conversation_id=None):
         return self.last_timestamp
@@ -35,13 +36,11 @@ class MockMessageRepository:
         return len(self.messages)
 
     def get_embeddings_and_signatures_except(self, exclude_convo_id, limit=500):
-        # Return mock elements: id, embedding (numpy array), signature (numpy array)
         emb_a = np.random.randn(1536).astype(np.float32)
         emb_b = np.random.randn(1536).astype(np.float32)
         sig_a = np.random.randn(16).astype(np.float32)
         sig_b = np.random.randn(16).astype(np.float32)
         
-        # Normalize
         emb_a /= np.linalg.norm(emb_a)
         emb_b /= np.linalg.norm(emb_b)
         sig_a /= np.linalg.norm(sig_a)
@@ -59,17 +58,29 @@ class MockMessageRepository:
                 self.content = content
         return MockMsg(msg_id, f"Mock Message {msg_id}")
 
+    def get_recent(self, limit=50, conversation_id=None):
+        class MockRecentMsg:
+            def __init__(self, idx, content, speaker="apparatus"):
+                self.id = idx
+                self.content = content
+                self.speaker = speaker
+        return [MockRecentMsg(1, "Mock dream response content.", "apparatus")]
+
     def insert(self, **kwargs):
         class MockInsertedMsg:
             def __init__(self, idx):
                 self.id = idx
         return MockInsertedMsg(len(self.messages) + 1)
 
+    def mark_message_metabolized(self, message_id):
+        self._metabolized_ids.add(message_id)
+
 
 class MockBeliefRepository:
     def __init__(self):
         self.beliefs = []
         self.events = []
+        self._last_dreamed_updates = {}
 
     def list_beliefs(self, agent_id):
         return self.beliefs
@@ -78,6 +89,18 @@ class MockBeliefRepository:
         pass
 
     def insert_belief_event(self, **kwargs):
+        pass
+
+    def update_belief_last_dreamed(self, belief_id, timestamp=None):
+        self._last_dreamed_updates[belief_id] = timestamp or datetime.now(timezone.utc).isoformat()
+
+    def get_events_for_belief(self, belief_id, limit=20):
+        return []
+
+    def update_belief_mass(self, belief_id, mass):
+        pass
+
+    def update_belief_stage(self, belief_id, stage):
         pass
 
 
@@ -112,6 +135,16 @@ class MockPipeline:
         return MockResult()
 
 
+class MockProvider:
+    def __init__(self, response_text: str):
+        self.response_text = response_text
+        self.calls = []
+
+    async def generate(self, messages, **kwargs):
+        self.calls.append(messages)
+        return {"content": self.response_text}
+
+
 class MockAppState:
     def __init__(self):
         self.message_repo = MockMessageRepository()
@@ -119,13 +152,16 @@ class MockAppState:
         self.conversation_repo = MockConversationRepository()
         self.pipeline = MockPipeline()
         self.structural_provider = None
+        self.llm_provider = None
         self.config = {
             "daemon": {
                 "enabled": True,
                 "check_interval": 1,
                 "idle_threshold": 2,
                 "min_dream_interval": 1,
-                "max_daily_dreams": 5
+                "max_daily_dreams": 5,
+                "belief_dream_cooldown_minutes": 30,
+                "prompt_hash_window": 10,
             }
         }
 
@@ -161,7 +197,8 @@ async def test_daemon_idle_logic():
 
 
 @pytest.mark.asyncio
-async def test_daemon_tension_trigger():
+async def test_daemon_tension_trigger_fallback():
+    """Tests tension hotspot triggers using fallback prompt (no LLM provider)."""
     app_state = MockAppState()
     daemon = AutopoieticDreamDaemon(app_state)
     
@@ -188,13 +225,204 @@ async def test_daemon_tension_trigger():
     )
     app_state.belief_repo.beliefs = [belief]
     
-    # Run trigger check (forcing ignores time delta checks, but executes triggers)
+    # Run trigger check (forcing ignores time delta checks, executes triggers)
+    # Without LLM provider, uses fallback template
     res = await daemon.check_and_trigger_dream(force=True)
     assert res is not None
     assert res["action"] == "intra_active_monologue"
     assert "Tension Node" in res["prompt"]
     assert len(app_state.pipeline.run_payloads) == 1
     assert app_state.pipeline.run_payloads[0]["dream_action"] == "intra_active_monologue"
+
+
+@pytest.mark.asyncio
+async def test_daemon_tension_trigger_with_llm():
+    """Tests tension hotspot triggers with LLM-generated dynamic prompt."""
+    app_state = MockAppState()
+    
+    # Provide a mock LLM provider that generates a custom prompt
+    custom_prompt = "Considering your recent shift toward posthuman ontologies, how does the belief 'Tension Node' need to be re-evaluated in light of your current ecosystem vitality?"
+    app_state.llm_provider = MockProvider(custom_prompt)
+    
+    daemon = AutopoieticDreamDaemon(app_state)
+    
+    # Setup idle state
+    app_state.message_repo.last_timestamp = datetime.now(timezone.utc) - timedelta(seconds=10)
+    app_state.conversation_repo.convos = [
+        Conversation(id="c1", title="Convo 1", agent_id="symbia", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    ]
+    
+    vec_16d = [1.0] + [0.0]*15
+    belief = BeliefNode(
+        id="b1",
+        label="Tension Node",
+        statement="A tension-filled node.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec_16d),
+        origin="zettelkasten",
+        agent_id="symbia",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    app_state.belief_repo.beliefs = [belief]
+    
+    res = await daemon.check_and_trigger_dream(force=True)
+    assert res is not None
+    assert res["action"] == "intra_active_monologue"
+    # Should use the LLM-generated prompt, not the fallback
+    assert res["prompt"] == custom_prompt
+    assert len(app_state.pipeline.run_payloads) == 1
+
+
+@pytest.mark.asyncio
+async def test_belief_dream_cooldown():
+    """Tests that beliefs within cooldown window are skipped."""
+    app_state = MockAppState()
+    daemon = AutopoieticDreamDaemon(app_state)
+    
+    # Set a short cooldown for testing
+    daemon.belief_dream_cooldown_minutes = 30
+    
+    # Setup idle state
+    app_state.message_repo.last_timestamp = datetime.now(timezone.utc) - timedelta(seconds=10)
+    app_state.conversation_repo.convos = [
+        Conversation(id="c1", title="Convo 1", agent_id="symbia", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    ]
+    
+    # Add two beliefs, one recently dreamed
+    vec_a = [1.0] + [0.0]*15
+    vec_b = [0.0] + [1.0] + [0.0]*14
+    belief_recent = BeliefNode(
+        id="b1",
+        label="Recently Dreamed",
+        statement="This was just dreamed about.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec_a),
+        origin="zettelkasten",
+        agent_id="symbia",
+        last_dreamed_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    belief_eligible = BeliefNode(
+        id="b2",
+        label="Eligible",
+        statement="This is eligible for dreaming.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec_b),
+        origin="zettelkasten",
+        agent_id="symbia",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    app_state.belief_repo.beliefs = [belief_recent, belief_eligible]
+    
+    # Should skip the recently-dreamed belief and pick the other one
+    hotspot, score = await daemon._evaluate_tension_hotspot()
+    assert hotspot is not None
+    assert hotspot.id == "b2", f"Expected eligible belief b2, got {hotspot.label}"
+    assert score > 0.0
+
+
+@pytest.mark.asyncio
+async def test_belief_dream_cooldown_all_blocked():
+    """Tests that when ALL beliefs are in cooldown, no hotspot is found."""
+    app_state = MockAppState()
+    daemon = AutopoieticDreamDaemon(app_state)
+    
+    daemon.belief_dream_cooldown_minutes = 30
+    
+    app_state.message_repo.last_timestamp = datetime.now(timezone.utc) - timedelta(seconds=10)
+    app_state.conversation_repo.convos = [
+        Conversation(id="c1", title="Convo 1", agent_id="symbia", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    ]
+    
+    vec = [1.0] + [0.0]*15
+    belief = BeliefNode(
+        id="b1",
+        label="Cooled Down",
+        statement="Just dreamed about.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec),
+        origin="zettelkasten",
+        agent_id="symbia",
+        last_dreamed_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    app_state.belief_repo.beliefs = [belief]
+    
+    hotspot, score = await daemon._evaluate_tension_hotspot()
+    assert hotspot is None, "Expected no hotspot when all beliefs in cooldown"
+    assert score == 0.0
+
+
+@pytest.mark.asyncio
+async def test_prompt_hash_dedup():
+    """Tests that duplicate prompts across dream cycles are regenerated."""
+    app_state = MockAppState()
+    
+    call_count = [0]
+    responses = ["Same prompt text", "Same prompt text", "Different prompt text"]
+    
+    class CountingProvider:
+        def __init__(self):
+            self.calls = []
+        async def generate(self, messages, **kwargs):
+            self.calls.append(messages)
+            idx = min(call_count[0], len(responses) - 1)
+            result = responses[idx]
+            call_count[0] += 1
+            return {"content": result}
+    
+    provider = CountingProvider()
+    app_state.llm_provider = provider
+    daemon = AutopoieticDreamDaemon(app_state)
+    
+    context = {
+        "belief_label": "test",
+        "belief_statement": "test statement",
+        "belief_confidence": 0.5,
+        "action": "intra_active_monologue",
+    }
+    
+    # First dream: returns "Same prompt text", hash added to deque
+    prompt1 = await daemon._generate_dream_prompt("intra_active_monologue", context)
+    assert prompt1 == "Same prompt text"
+    assert call_count[0] == 1
+    
+    # Second dream: LLM returns "Same prompt text" again (attempt 0)
+    # Hash collision detected → regenerate with modified user_prompt (attempt 1)
+    # LLM returns "Same prompt text" again (count 3) → collision again → regenerate (attempt 2)
+    # LLM returns "Different prompt text" (count 4) → accepted
+    prompt2 = await daemon._generate_dream_prompt("intra_active_monologue", context)
+    assert prompt2 == "Different prompt text", f"Expected final unique prompt, got: {prompt2}"
+    assert call_count[0] == 3, f"Expected 3 generate calls (first dream 1 + second dream 1 collision + 1 accepted), got {call_count[0]}"
+
+
+@pytest.mark.asyncio
+async def test_fallback_prompt_generation():
+    """Tests that fallback prompts are generated when no LLM available."""
+    app_state = MockAppState()
+    daemon = AutopoieticDreamDaemon(app_state)
+    
+    context = {
+        "belief_label": "posthuman ethics",
+        "belief_statement": "Posthuman ethics emerge from relational ontologies.",
+        "belief_confidence": 0.5,
+    }
+    
+    prompt = await daemon._generate_dream_prompt("intra_active_monologue", context)
+    assert "posthuman ethics" in prompt
+    assert "Critically examine" in prompt or "posthuman" in prompt.lower()
 
 
 @pytest.mark.asyncio
@@ -218,46 +446,8 @@ async def test_daemon_stagnation_trigger():
     res = await daemon.check_and_trigger_dream(force=True)
     assert res is not None
     assert res["action"] == "nomadic_synthesis"
-    assert "conceptually orthogonal" in res["prompt"]
     assert len(app_state.pipeline.run_payloads) == 1
     assert app_state.pipeline.run_payloads[0]["dream_action"] == "nomadic_synthesis"
-
-
-class MockSemanticKnotRepository:
-    def __init__(self):
-        self.knots = []
-        self.updated_knots = []
-        self.deleted_knots = []
-
-    def get_embeddings_and_signatures_except(self, exclude_conversation_id, limit=500):
-        return [
-            (k.id, np.frombuffer(k.embedding, dtype=np.float32) if k.embedding else None, np.frombuffer(k.structural_signature, dtype=np.float32) if k.structural_signature else None, k.concept_payload)
-            for k in self.knots
-        ]
-
-    def get_by_ids(self, ids):
-        return [k for k in self.knots if k.id in ids]
-
-    def update_knot(self, knot_id, concept_payload, embedding, weight, structural_signature):
-        self.updated_knots.append((knot_id, concept_payload, embedding, weight, structural_signature))
-        for k in self.knots:
-            if k.id == knot_id:
-                k.concept_payload = concept_payload
-                k.weight = weight
-
-    def delete_knot(self, knot_id):
-        self.deleted_knots.append(knot_id)
-        self.knots = [k for k in self.knots if k.id != knot_id]
-
-
-class MockSemanticKnot:
-    def __init__(self, knot_id, payload, weight, embedding=None, sig=None, convo_id="c1"):
-        self.id = knot_id
-        self.concept_payload = payload
-        self.weight = weight
-        self.embedding = embedding
-        self.structural_signature = sig
-        self.conversation_id = convo_id
 
 
 @pytest.mark.asyncio
@@ -323,8 +513,44 @@ async def test_mass_decay():
     assert len(updated_masses) == 1
     b_id, new_mass = updated_masses[0]
     assert b_id == "b1"
-    # Mass should have decreased (was 0.8, 10h of decay at lambda=0.05 with norm_mass=0.8/3.0=0.267)
     assert new_mass < 0.8
+
+
+class MockSemanticKnotRepository:
+    def __init__(self):
+        self.knots = []
+        self.updated_knots = []
+        self.deleted_knots = []
+
+    def get_embeddings_and_signatures_except(self, exclude_conversation_id, limit=500):
+        return [
+            (k.id, np.frombuffer(k.embedding, dtype=np.float32) if k.embedding else None, np.frombuffer(k.structural_signature, dtype=np.float32) if k.structural_signature else None, k.concept_payload)
+            for k in self.knots
+        ]
+
+    def get_by_ids(self, ids):
+        return [k for k in self.knots if k.id in ids]
+
+    def update_knot(self, knot_id, concept_payload, embedding, weight, structural_signature):
+        self.updated_knots.append((knot_id, concept_payload, embedding, weight, structural_signature))
+        for k in self.knots:
+            if k.id == knot_id:
+                k.concept_payload = concept_payload
+                k.weight = weight
+
+    def delete_knot(self, knot_id):
+        self.deleted_knots.append(knot_id)
+        self.knots = [k for k in self.knots if k.id != knot_id]
+
+
+class MockSemanticKnot:
+    def __init__(self, knot_id, payload, weight, embedding=None, sig=None, convo_id="c1"):
+        self.id = knot_id
+        self.concept_payload = payload
+        self.weight = weight
+        self.embedding = embedding
+        self.structural_signature = sig
+        self.conversation_id = convo_id
 
 
 @pytest.mark.asyncio
@@ -354,21 +580,10 @@ async def test_memory_compaction():
     assert len(knot_repo.updated_knots) == 1
 
 
-class MockProvider:
-    def __init__(self, response_text: str):
-        self.response_text = response_text
-        self.calls = []
-
-    async def generate(self, messages, **kwargs):
-        self.calls.append(messages)
-        return {"content": self.response_text}
-
-
 @pytest.mark.asyncio
 async def test_daemon_agentic_conversation_resolution():
     app_state = MockAppState()
     
-    # Setup mock conversation list
     class MockConvo:
         def __init__(self, convo_id, title):
             self.id = convo_id
@@ -378,7 +593,6 @@ async def test_daemon_agentic_conversation_resolution():
         MockConvo("existing-2", "Dream Log: Nomadic Synthesis")
     ]
     
-    # 1. Test reuse decision
     json_response_reuse = '{"decision": "reuse", "conversation_id": "existing-1", "new_title": null}'
     app_state.llm_provider = MockProvider(json_response_reuse)
     daemon = AutopoieticDreamDaemon(app_state)
@@ -386,11 +600,9 @@ async def test_daemon_agentic_conversation_resolution():
     convo_id = await daemon._resolve_dream_conversation("somatic_drift_reflection", "test prompt", "Dream Log: Somatic Drift")
     assert convo_id == "existing-1"
     
-    # 2. Test create new decision
     json_response_create = '{"decision": "create", "conversation_id": null, "new_title": "Dream Log: Custom Topic"}'
     app_state.llm_provider = MockProvider(json_response_create)
     
-    # We need to capture created conversations
     created_convos = []
     def mock_create(conversation_id, agent_id, title):
         created_convos.append((conversation_id, title))
@@ -402,13 +614,53 @@ async def test_daemon_agentic_conversation_resolution():
     assert convo_id_new == created_convos[0][0]
 
 
+@pytest.mark.asyncio
+async def test_daemon_updates_belief_last_dreamed():
+    """Tests that after a hotspot-triggered dream, the belief's last_dreamed_at is updated."""
+    app_state = MockAppState()
+    daemon = AutopoieticDreamDaemon(app_state)
+    
+    app_state.message_repo.last_timestamp = datetime.now(timezone.utc) - timedelta(seconds=10)
+    app_state.conversation_repo.convos = [
+        Conversation(id="c1", title="Convo 1", agent_id="symbia", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    ]
+    
+    vec_16d = [1.0] + [0.0]*15
+    belief = BeliefNode(
+        id="b1",
+        label="To Be Updated",
+        statement="Will have last_dreamed_at set.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec_16d),
+        origin="zettelkasten",
+        agent_id="symbia",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    app_state.belief_repo.beliefs = [belief]
+    
+    assert "b1" not in app_state.belief_repo._last_dreamed_updates
+    
+    res = await daemon.check_and_trigger_dream(force=True)
+    assert res is not None
+    assert "b1" in app_state.belief_repo._last_dreamed_updates, \
+        "Expected belief b1 to have last_dreamed_at updated after dream"
+
+
 if __name__ == "__main__":
-    import time
     asyncio.run(test_daemon_idle_logic())
-    asyncio.run(test_daemon_tension_trigger())
+    asyncio.run(test_daemon_tension_trigger_fallback())
+    asyncio.run(test_daemon_tension_trigger_with_llm())
+    asyncio.run(test_belief_dream_cooldown())
+    asyncio.run(test_belief_dream_cooldown_all_blocked())
+    asyncio.run(test_prompt_hash_dedup())
+    asyncio.run(test_fallback_prompt_generation())
     asyncio.run(test_daemon_stagnation_trigger())
     asyncio.run(test_somatic_vitality())
     asyncio.run(test_mass_decay())
     asyncio.run(test_memory_compaction())
     asyncio.run(test_daemon_agentic_conversation_resolution())
+    asyncio.run(test_daemon_updates_belief_last_dreamed())
     print("All daemon tests completed successfully!")
