@@ -160,3 +160,12 @@ Messages created before the `structural_signature` column migration have `NULL` 
 **Background backfill** via `BackgroundStartupScheduler._backfill_structural_signatures()`: on startup and every 60 seconds thereafter, the scheduler scans for messages with `NULL` structural signatures and fills them in using lexicon+topology scoring. This self-heals any gaps introduced by legacy data or exceptional code paths.
 
 **Scope**: applies to all messages in `conversation_log` and `perception_sediment`, including legacy conversations (`00000000-...`), consultation conversations (antigravity), and dream log conversations.
+
+### Justification Storage Policy (2026-06-05)
+
+The `LLMScorer` generates both scores and a `justification` string. This justification is cached in memory (SHA256-keyed, max 1000 entries) and stored in `conversation_log.structural_justification` at message insertion time. The lazy fallback and background backfill paths do not store justifications since they bypass the LLM scorer entirely.
+
+All primary message creation paths now store justifications:
+- **Normal chat** (`routes.py`): stores justifications for both user and apparatus messages when `include_structural_scoring=true`
+- **Dream daemon** (`daemon.py`): stores justifications for both dream prompt and dream response messages (full LLM scoring)
+- **Document ingestion** (`digest_worker.py`, `routes.py:_insert_system_message`): stores justifications for system messages

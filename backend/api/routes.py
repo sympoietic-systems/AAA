@@ -1420,6 +1420,7 @@ async def _insert_system_message(state, conversation_id: str, content: str):
         embedding_model = "none"
 
     # Calculate structural signature
+    from backend.modules.structural_engine import get_justification
     scorer = CompositeStructuralScorer(llm_provider=getattr(state, "structural_provider", None))
     try:
         sig_vec = await scorer.score_async(content)
@@ -1438,6 +1439,7 @@ async def _insert_system_message(state, conversation_id: str, content: str):
         conversation_id=conversation_id,
         content_tokens=estimate_tokens(content),
         structural_signature=sig_blob,
+        structural_justification=get_justification(content),
     )
 
 

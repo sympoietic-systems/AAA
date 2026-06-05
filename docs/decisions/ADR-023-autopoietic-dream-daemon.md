@@ -60,3 +60,18 @@ We implemented the `AutopoieticDreamDaemon` in `backend/core/daemon.py` with int
 
 ### What becomes harder?
 - Log analysis becomes non-linear since the agent writes its own thoughts (Dream Logs) across multiple topic-focused threads in the background.
+
+---
+
+## Appendix A: Full LLM Structural Scoring for Dream Messages (2026-06-05)
+
+### Rationale
+Dream messages are critical to belief metabolism: somatic vitality, tension hotspot evaluation, and belief mass accretion all depend on the 16-dimensional structural signature vectors of dream turn messages. Previously, dream daemon structural signatures were computed using only deterministic lexicon+topology scoring (`use_llm_scorer=False`), and no `structural_justification` was stored alongside the signature vector.
+
+### Change
+The dream daemon now uses full LLM-based structural scoring (`use_llm_scorer=True`) via the `CompositeStructuralScorer`, which invokes the `LLMScorer` with the configured `structural_llm` model pool. The LLM generates both the 16-dimensional scores and a `justification` string explaining the structural profile. This justification is cached (SHA256-keyed, max 1000 entries) and stored in `conversation_log.structural_justification` alongside the signature BLOB for both dream prompt and dream response messages.
+
+### Affected Code Paths
+- `backend/core/daemon.py`: Dream prompt and response structural scoring now uses `use_llm_scorer=True`, with `get_justification()` called after scoring and `structural_justification` passed to both `message_repo.insert()` calls.
+- `backend/scripts/digest_worker.py`: System messages for ingested documents now also store `structural_justification`.
+- `backend/api/routes.py` (`_insert_system_message`): System message inserts during file ingestion now also store `structural_justification`.

@@ -271,20 +271,24 @@ class AutopoieticDreamDaemon:
             provider_used = result.payload.get("provider_used")
 
             # Calculate structural signatures for dream messages to drive belief metabolism
+            from backend.modules.structural_engine import get_justification
             scorer = CompositeStructuralScorer(llm_provider=self.app_state.structural_provider)
             try:
-                user_sig = await scorer.score_async(prompt_text, use_llm_scorer=False)
+                user_sig = await scorer.score_async(prompt_text, use_llm_scorer=True)
                 user_sig_blob = user_sig.tobytes()
             except Exception as e:
                 logger.warning("Failed to score dream prompt: %s", e)
                 user_sig_blob = b""
 
             try:
-                assistant_sig = await scorer.score_async(response_text, use_llm_scorer=False)
+                assistant_sig = await scorer.score_async(response_text, use_llm_scorer=True)
                 assistant_sig_blob = assistant_sig.tobytes()
             except Exception as e:
                 logger.warning("Failed to score dream response: %s", e)
                 assistant_sig_blob = b""
+
+            user_just = get_justification(prompt_text)
+            assistant_just = get_justification(response_text)
 
             # 1. Insert user-side dream prompt
             from backend.utils.token_counter import estimate_tokens
@@ -298,6 +302,7 @@ class AutopoieticDreamDaemon:
                 conversation_id=dream_convo_id,
                 content_tokens=estimate_tokens(prompt_text),
                 structural_signature=user_sig_blob,
+                structural_justification=user_just,
             )
 
             # 2. Insert agent response to monologue
@@ -316,6 +321,7 @@ class AutopoieticDreamDaemon:
                 provider_used=provider_used,
                 context_sent=result.payload.get("context_sent"),
                 structural_signature=assistant_sig_blob,
+                structural_justification=assistant_just,
             )
 
             # 3. Embed assistant response and update its embedding for proper metrics

@@ -23,7 +23,7 @@ from backend.modules.llm_client import (
     LLMClientModule,
 )
 from backend.main import _create_llm_provider, _create_provider_from_config
-from backend.modules.structural_engine import CompositeStructuralScorer
+from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
 from backend.modules.perception import PerceptionModule
 from backend.modules.belief_engine import BeliefDynamicsEngine
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
@@ -80,6 +80,7 @@ async def insert_system_message(
         conversation_id=conversation_id,
         content_tokens=estimate_tokens(content),
         structural_signature=sig_blob,
+        structural_justification=get_justification(content),
     )
 
 
