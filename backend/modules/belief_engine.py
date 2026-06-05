@@ -51,6 +51,17 @@ class BeliefDynamicsEngine(ProcessingModule):
         self._identity_yaml_path = identity_yaml_path
         self._beta = learning_rate_beta
         self._scorer = LexiconScorer()
+        self._source_weights = {
+            "chat_turn": 0.4,
+            "user_assertion": 0.4,
+            "ingested_document": 0.5,
+            "conversational_pattern": 0.4,
+            "shared_note": 0.5,
+            "web_retrieval": 0.15,
+        }
+
+    def _get_source_weight(self, source_type: str) -> float:
+        return self._source_weights.get(source_type, 0.4)
 
     @property
     def name(self) -> str:
@@ -480,13 +491,13 @@ class BeliefDynamicsEngine(ProcessingModule):
 
             # 3. Proto-belief lifecycle: find closest match, accrete or nucleate
             closest = self._find_closest_active_belief(agent_id, user_vec, min_similarity=0.3)
+            source_weight = self._get_source_weight("chat_turn")
             if closest is not None:
                 b_vec = np.array(json.loads(closest.vector_16d), dtype=np.float32)
                 alignment = compute_cosine_similarity(user_vec, b_vec)
-                source_weight = 0.4
-                self._accrete_belief(closest, user_vec, source_weight, alignment, perturbation)
+                self._accrete_belief(closest, user_vec, source_weight, alignment, perturbation,
+                                     source_type="chat_turn", source_id=str(user_message_id))
             elif dc > 0.3:
-                source_weight = 0.4
                 self._nucleate_proto_belief(
                     agent_id=agent_id,
                     statement=user_msg.content[:200],
@@ -592,7 +603,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                     impact_multiplier = 2.5
                     is_implicated = True
 
-                source_weight = 0.5
+                source_weight = self._get_source_weight("ingested_document")
                 self._accrete_belief(b, structural_signature, source_weight, alignment, perturbation,
                                      source_type=source_type, source_id=source_id)
 
@@ -628,7 +639,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                     best_sim = sim
                     best_match = b
 
-            source_weight = 0.5
+            source_weight = self._get_source_weight("shared_note")
             if best_match and best_sim > 0.75:
                 # Accrete the existing belief
                 self._accrete_belief(
@@ -648,6 +659,68 @@ class BeliefDynamicsEngine(ProcessingModule):
                 logger.info(f"Metabolized shared note {note_id}: nucleated proto-belief")
         except Exception as e:
             logger.error(f"Error metabolizing note {note_id}: {e}", exc_info=True)
+
+    async def metabolize_web(
+        self,
+        conversation_id: str,
+        source_id: str,
+        extracted_text: str,
+    ) -> None:
+        try:
+            agent_id = "symbia"
+            source_weight = self._get_source_weight("web_retrieval")
+            web_vec = self._scorer.score(extracted_text)
+
+            closest = self._find_closest_active_belief(agent_id, web_vec, min_similarity=0.3)
+            if closest is not None:
+                b_vec = np.array(json.loads(closest.vector_16d), dtype=np.float32)
+                alignment = compute_cosine_similarity(web_vec, b_vec)
+                self._accrete_belief(closest, web_vec, source_weight, alignment, perturbation=1.0,
+                                     source_type="web_probe", source_id=source_id)
+            elif calculate_concept_density(extracted_text) > 0.3:
+                self._nucleate_proto_belief(
+                    agent_id=agent_id,
+                    statement=extracted_text[:200],
+                    vector=web_vec,
+                    source_type="web_probe",
+                    source_id=source_id,
+                    source_weight=source_weight,
+                )
+            logger.info(f"Web retrieval {source_id} metabolized into belief system")
+        except Exception as e:
+            logger.error(f"Error metabolizing web retrieval: {e}", exc_info=True)
+
+    async def metabolize_conversational_pattern(
+        self,
+        agent_id: str,
+        theme_text: str,
+    ) -> None:
+        try:
+            source_weight = self._get_source_weight("conversational_pattern")
+            theme_vec = self._scorer.score(theme_text)
+            dc = calculate_concept_density(theme_text)
+
+            if dc < 0.3:
+                return
+
+            closest = self._find_closest_active_belief(agent_id, theme_vec, min_similarity=0.3)
+            if closest is not None:
+                b_vec = np.array(json.loads(closest.vector_16d), dtype=np.float32)
+                alignment = compute_cosine_similarity(theme_vec, b_vec)
+                self._accrete_belief(closest, theme_vec, source_weight, alignment, perturbation=1.0,
+                                     source_type="chat_turn", source_id=None)
+            else:
+                self._nucleate_proto_belief(
+                    agent_id=agent_id,
+                    statement=theme_text[:200],
+                    vector=theme_vec,
+                    source_type="chat_turn",
+                    source_id="cross_conversation",
+                    source_weight=source_weight,
+                )
+            logger.info(f"Conversational pattern metabolized: '{theme_text[:80]}...'")
+        except Exception as e:
+            logger.error(f"Error metabolizing conversational pattern: {e}", exc_info=True)
 
     async def compute_tension_field(self, agent_id: str = "symbia") -> dict:
         all_beliefs = self._belief_repo.list_beliefs(agent_id)
