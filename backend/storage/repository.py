@@ -1762,6 +1762,71 @@ class BeliefRepository:
         }
 
 
+    @with_connection
+    def upsert_tension(self, belief_a_id: str, belief_b_id: str, cosine_similarity: float, tension_magnitude: float) -> None:
+        conn = self._conn()
+        a, b = sorted([belief_a_id, belief_b_id])
+        conn.execute(
+            """INSERT INTO belief_tensions (belief_a_id, belief_b_id, cosine_similarity, tension_magnitude, last_updated)
+               VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT(belief_a_id, belief_b_id) DO UPDATE SET
+               cosine_similarity = excluded.cosine_similarity,
+               tension_magnitude = excluded.tension_magnitude,
+               last_updated = CURRENT_TIMESTAMP""",
+            (a, b, cosine_similarity, tension_magnitude),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_tensions_for_belief(self, belief_id: str) -> list:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT * FROM belief_tensions WHERE belief_a_id = ? OR belief_b_id = ?
+               ORDER BY tension_magnitude DESC""",
+            (belief_id, belief_id),
+        ).fetchall()
+        return [
+            {
+                "other_id": row["belief_a_id"] if row["belief_b_id"] == belief_id else row["belief_b_id"],
+                "cosine_similarity": row["cosine_similarity"],
+                "tension_magnitude": row["tension_magnitude"],
+                "last_updated": row["last_updated"],
+            }
+            for row in rows
+        ]
+
+    @with_connection
+    def get_active_tension_pairs(self, min_magnitude: float = 0.01) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_tensions WHERE tension_magnitude >= ? ORDER BY tension_magnitude DESC",
+            (min_magnitude,),
+        ).fetchall()
+        return [
+            {
+                "belief_a_id": row["belief_a_id"],
+                "belief_b_id": row["belief_b_id"],
+                "cosine_similarity": row["cosine_similarity"],
+                "tension_magnitude": row["tension_magnitude"],
+                "last_updated": row["last_updated"],
+            }
+            for row in rows
+        ]
+
+    @with_connection
+    def get_total_system_tension(self) -> float:
+        conn = self._conn()
+        row = conn.execute("SELECT SUM(tension_magnitude) FROM belief_tensions").fetchone()
+        return float(row[0]) if row[0] is not None else 0.0
+
+    @with_connection
+    def remove_tension(self, belief_a_id: str, belief_b_id: str) -> None:
+        conn = self._conn()
+        a, b = sorted([belief_a_id, belief_b_id])
+        conn.execute("DELETE FROM belief_tensions WHERE belief_a_id = ? AND belief_b_id = ?", (a, b))
+        conn.commit()
+
+
 class SemanticKnotRepository:
     def __init__(self, db_path: str):
         self._db_path = db_path

@@ -420,6 +420,16 @@ class BeliefDynamicsEngine(ProcessingModule):
         payload["matrix_warping"] = matrix_warping
         payload["immunological_directive_active"] = bool(immunological_directive_active)
 
+        # Compute tension field between active beliefs
+        try:
+            tension_data = await self.compute_tension_field(agent_id)
+            payload["tension_field"] = tension_data
+            payload["tension_pairs"] = self._belief_repo.get_active_tension_pairs()
+        except Exception as e:
+            logger.error(f"Error computing tension field: {e}")
+            payload["tension_field"] = {}
+            payload["tension_pairs"] = []
+
         return payload
 
     async def metabolize(
@@ -631,4 +641,37 @@ class BeliefDynamicsEngine(ProcessingModule):
                 logger.info(f"Metabolized shared note {note_id}: nucleated proto-belief")
         except Exception as e:
             logger.error(f"Error metabolizing note {note_id}: {e}", exc_info=True)
+
+    async def compute_tension_field(self, agent_id: str = "symbia") -> dict:
+        all_beliefs = self._belief_repo.list_beliefs(agent_id)
+        active = [b for b in all_beliefs if b.lifecycle_stage in ("crystallized", "senescence")]
+
+        symbiotic_count = 0
+        antagonistic_count = 0
+        total_tension = 0.0
+
+        for i in range(len(active)):
+            for j in range(i + 1, len(active)):
+                try:
+                    vec_a = np.array(json.loads(active[i].vector_16d), dtype=np.float32)
+                    vec_b = np.array(json.loads(active[j].vector_16d), dtype=np.float32)
+                    sim = compute_cosine_similarity(vec_a, vec_b)
+
+                    if sim > 0.7:
+                        symbiotic_count += 1
+                    elif sim < -0.2:
+                        tension = (1.0 + abs(sim)) * min(active[i].ontological_mass, active[j].ontological_mass)
+                        total_tension += tension
+                        antagonistic_count += 1
+                        self._belief_repo.upsert_tension(
+                            active[i].id, active[j].id, sim, tension
+                        )
+                except Exception:
+                    continue
+
+        return {
+            "symbiotic_pairs": symbiotic_count,
+            "antagonistic_pairs": antagonistic_count,
+            "total_tension": total_tension,
+        }
 

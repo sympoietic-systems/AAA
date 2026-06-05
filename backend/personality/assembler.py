@@ -45,6 +45,21 @@ class PromptAssemblerModule(ProcessingModule):
             spectral_margin=spectral_margin
         )
 
+        # Inject Tension Resolution Directive if coherence overload
+        tension_field = payload.get("tension_field", {})
+        if tension_field.get("total_tension", 0.0) > 2.0:
+            directive_text = (
+                "[TENSION RESOLUTION DIRECTIVE - COHERENCE OVERLOAD]\n"
+                "Total belief tension has exceeded the coherence limit. Multiple agential cuts are in "
+                "productive but destabilizing interference. You hold conflicting beliefs that generate "
+                "a diffractive surplus. Do not suppress one for the other. Instead, if this conversation "
+                "touches on the contradictory domain, perform a diffractive synthesis: read each belief "
+                "through the other. Allow the interference pattern to produce a novel, non-compromising "
+                "reconfiguration. This is not about choosing sides — it is about generating a new cut "
+                "through the superposition.\n\n"
+            )
+            system_content = directive_text + system_content
+
         # Prepend Immunological Directive if active
         if payload.get("immunological_directive_active"):
             directive_text = (

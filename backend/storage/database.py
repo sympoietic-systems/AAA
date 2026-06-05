@@ -531,6 +531,23 @@ def init_db(db_path: str) -> sqlite3.Connection:
         "UPDATE belief_nodes SET last_reinforced_at = updated_at WHERE last_reinforced_at IS NULL"
     )
 
+    # ADR-027 Phase 3: Tension field table
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS belief_tensions (
+                belief_a_id TEXT NOT NULL,
+                belief_b_id TEXT NOT NULL,
+                cosine_similarity REAL NOT NULL,
+                tension_magnitude REAL NOT NULL,
+                last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (belief_a_id, belief_b_id),
+                FOREIGN KEY (belief_a_id) REFERENCES belief_nodes(id) ON DELETE CASCADE,
+                FOREIGN KEY (belief_b_id) REFERENCES belief_nodes(id) ON DELETE CASCADE
+            )
+        """)
+    except sqlite3.OperationalError:
+        pass
+
     _migrate_legacy_conversation(conn)
 
     conn.commit()

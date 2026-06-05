@@ -124,6 +124,29 @@ class BeliefEvent:
 
 
 @dataclass
+class BeliefTension:
+    belief_a_id: str
+    belief_b_id: str
+    cosine_similarity: float
+    tension_magnitude: float
+    last_updated: datetime = datetime.min
+
+
+@dataclass
+class EcosystemSnapshot:
+    timestamp: datetime
+    diversity: float
+    coherence: float
+    tension: float
+    plasticity: float
+    ghost_burden: float
+    eco_vitality: float
+    active_count: int
+    proto_count: int
+    ghost_count: int
+
+
+@dataclass
 class SemanticKnot:
     id: str
     conversation_id: str
