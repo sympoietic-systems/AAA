@@ -562,6 +562,14 @@ async def lifespan(app: FastAPI):
     app.state.semantic_knot_repo = semantic_knot_repo
     app.state.note_repo = note_repo
     app.state.belief_metabolism = belief_metabolism
+
+    # Seed foundational beliefs from identity.yaml on startup
+    try:
+        logger.info("Seeding foundational beliefs on startup...")
+        belief_metabolism._seed_initial_beliefs_if_needed("symbia")
+        logger.info("Belief seeding complete.")
+    except Exception as e:
+        logger.error(f"Failed to seed beliefs on startup: {e}")
     app.state.registry = registry
     app.state.pipeline = pipeline
     app.state.pipeline_order = pipeline_order
