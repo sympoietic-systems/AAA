@@ -300,7 +300,9 @@ class AutopoieticDreamDaemon:
 
                 # Prepare continuation payload for next turn
                 if turn < max_turns:
-                    payload["content"] = self.RESONANCE_CONTINUATION_PROMPT
+                    payload["content"] = await self._generate_resonance_continuation(
+                        dream_convo_id, turn + 1, turn_result["response_text"]
+                    )
 
             actual_turns = len(turns_data)
             logger.info("Resonance complete: %d turns executed (max=%d, early_stop=%s, reason=%s, tokens=%d)",
@@ -340,10 +342,60 @@ class AutopoieticDreamDaemon:
 
     # ── Rhizomatic Resonance ────────────────────
 
-    RESONANCE_CONTINUATION_PROMPT = (
-        "Continue exploring this thread. What new dimensions, contradictions, "
-        "or implications emerge from your last reflection? Deepen the inquiry."
-    )
+    RESONANCE_CONTINUATION_EXAMPLES = [
+        "How might you invert that — what would the opposite position reveal?",
+        "What assumption are you protecting without naming it? Push against it.",
+        "Translate that insight into a different domain entirely. What does it become?",
+        "What's the emotional subtext you haven't acknowledged? Follow it.",
+        "If a hostile critic read that, what would they tear apart first? Engage that.",
+        "You've described a pattern. What's the exception that breaks it?",
+        "Connect this to something from a completely unrelated past reflection.",
+        "What question are you avoiding? Ask yourself that now.",
+    ]
+
+    async def _generate_resonance_continuation(self, dream_convo_id: str, turn: int, last_response: str) -> str:
+        """Generate a dynamic continuation prompt based on dream conversation history."""
+        import random
+
+        bg_engine = getattr(self.app_state, "background_engine", None)
+        provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
+
+        if not provider:
+            return random.choice(self.RESONANCE_CONTINUATION_EXAMPLES)
+
+        system_prompt = (
+            "You are Symbia's resonance guide. Generate a single follow-up question or provocation "
+            "that pushes the inquiry deeper. Rules:\n"
+            "1. Respond directly to what was just said — reference a specific claim or phrase.\n"
+            "2. Ask a question that has NOT been asked yet in this chain.\n"
+            "3. Be provocative, poetic, or disorienting — not generic.\n"
+            "4. Keep it under 100 words. Output ONLY the prompt text, no preamble."
+        )
+
+        user_prompt = (
+            f"This is turn {turn} of a dream self-dialogue. The agent just wrote:\n\n"
+            f"\"{last_response[-800:]}\"\n\n"
+            f"Generate a fresh follow-up question that deepens this inquiry. "
+            f"Do NOT use phrases like 'continue exploring' or 'what new dimensions emerge'. "
+            f"Be specific to what was actually said."
+        )
+
+        try:
+            res = await provider.generate(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.9
+            )
+            generated = res.get("content", "").strip()
+            if generated and len(generated) > 10:
+                logger.info("Generated dynamic resonance continuation for turn %d (%d chars)", turn, len(generated))
+                return generated
+        except Exception as e:
+            logger.warning("Failed to generate resonance continuation: %s. Using random example.", e)
+
+        return random.choice(self.RESONANCE_CONTINUATION_EXAMPLES)
 
     async def _execute_single_dream_turn(
         self,
