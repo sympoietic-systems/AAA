@@ -659,13 +659,22 @@ async def get_beliefs(request: Request, conversation_id: Optional[str] = None, a
                 except Exception as e:
                     logger.error(f"Error computing UI attractor window: {e}")
                     
+    ecosystem = None
+    engine = getattr(state, "belief_metabolism", None)
+    if engine:
+        try:
+            ecosystem = await engine.compute_ecosystem_health(agent_id)
+        except Exception as e:
+            logger.error(f"Error computing ecosystem health: {e}")
+
     return {
         "beliefs": beliefs_list,
         "proto_beliefs": proto_beliefs_list,
         "ghosts": ghosts_list,
         "somatic": somatic_state,
         "attractor_window": attractor_window,
-        "spectral_margin": spectral_margin
+        "spectral_margin": spectral_margin,
+        "ecosystem": ecosystem
     }
 
 

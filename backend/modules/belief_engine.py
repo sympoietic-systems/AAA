@@ -448,6 +448,12 @@ class BeliefDynamicsEngine(ProcessingModule):
             payload["tension_field"] = {}
             payload["tension_pairs"] = []
 
+        # Compute ecosystem health
+        try:
+            payload["ecosystem_health"] = await self.compute_ecosystem_health(agent_id)
+        except Exception as e:
+            logger.error(f"Error computing ecosystem health: {e}")
+
         return payload
 
     async def metabolize(
@@ -721,6 +727,88 @@ class BeliefDynamicsEngine(ProcessingModule):
             logger.info(f"Conversational pattern metabolized: '{theme_text[:80]}...'")
         except Exception as e:
             logger.error(f"Error metabolizing conversational pattern: {e}", exc_info=True)
+
+    async def compute_ecosystem_health(self, agent_id: str = "symbia") -> dict:
+        all_beliefs = self._belief_repo.list_beliefs(agent_id)
+        active = [b for b in all_beliefs if b.lifecycle_stage in ("crystallized", "senescence")]
+        protos = [b for b in all_beliefs if b.lifecycle_stage in ("nucleation", "accretion")]
+        ghosts = [b for b in all_beliefs if b.lifecycle_stage == "collapsed"]
+
+        active_count = len(active)
+        proto_count = len(protos)
+        ghost_count = len(ghosts)
+
+        # Diversity: mean pairwise cosine distance
+        diversity = 0.5
+        if active_count >= 2:
+            distances = []
+            for i in range(len(active)):
+                for j in range(i + 1, len(active)):
+                    try:
+                        vec_a = np.array(json.loads(active[i].vector_16d), dtype=np.float32)
+                        vec_b = np.array(json.loads(active[j].vector_16d), dtype=np.float32)
+                        distances.append(1.0 - abs(compute_cosine_similarity(vec_a, vec_b)))
+                    except Exception:
+                        continue
+            diversity = float(np.mean(distances)) if distances else 0.5
+
+        # Coherence: 1 - diversity
+        coherence = 1.0 - diversity
+
+        # Tension: sum of antagonistic tensions / total active pairs
+        total_tension = self._belief_repo.get_total_system_tension()
+        max_pairs = max(active_count * (active_count - 1) / 2, 1)
+        tension_norm = total_tension / max_pairs if max_pairs > 0 else 0.0
+
+        # Plasticity: mean(1 - mass/max_mass)
+        plasticity = 0.5
+        if active_count > 0:
+            max_mass = max(b.ontological_mass for b in active) or 3.0
+            plasticities = [1.0 - b.ontological_mass / max_mass for b in active]
+            plasticity = float(np.mean(plasticities))
+
+        # Ghost burden
+        ghost_burden = ghost_count / max(active_count, 1)
+
+        # Eco-vitality: diversity * tension * plasticity
+        eco_vitality = diversity * max(tension_norm, 0.01) * plasticity
+
+        # Self-tuning logic
+        tuning = {}
+        config = self._source_weights  # use as initial config
+        crystallization_threshold = 0.5
+
+        if diversity < 0.2:
+            crystallization_threshold *= 0.7
+            tuning["crystallization_threshold"] = crystallization_threshold
+        elif diversity > 0.8:
+            crystallization_threshold *= 1.15
+            tuning["crystallization_threshold"] = crystallization_threshold
+
+        if tension_norm < 0.05:
+            tuning["antagonistic_receptivity"] = "increased"
+        elif tension_norm > 0.40:
+            tuning["coherence_limit_increased"] = True
+
+        if plasticity < 0.1:
+            self._beta = min(self._beta * 1.1, 0.15)
+            tuning["learning_rate_beta"] = self._beta
+
+        if ghost_burden > 0.5:
+            tuning["ghost_fading_accelerated"] = True
+
+        return {
+            "diversity": round(diversity, 4),
+            "coherence": round(coherence, 4),
+            "tension": round(tension_norm, 4),
+            "plasticity": round(plasticity, 4),
+            "ghost_burden": round(ghost_burden, 4),
+            "eco_vitality": round(eco_vitality, 4),
+            "active_count": active_count,
+            "proto_count": proto_count,
+            "ghost_count": ghost_count,
+            "self_tuning": tuning,
+        }
 
     async def compute_tension_field(self, agent_id: str = "symbia") -> dict:
         all_beliefs = self._belief_repo.list_beliefs(agent_id)

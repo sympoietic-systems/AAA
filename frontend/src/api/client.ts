@@ -315,6 +315,19 @@ export interface SomaticStateInfo {
   immunological_directive_active: boolean
 }
 
+export interface EcosystemSnapshot {
+  diversity: number
+  coherence: number
+  tension: number
+  plasticity: number
+  ghost_burden: number
+  eco_vitality: number
+  active_count: number
+  proto_count: number
+  ghost_count: number
+  self_tuning: Record<string, unknown>
+}
+
 export interface BeliefsResponse {
   beliefs: BeliefNodeInfo[]
   proto_beliefs: BeliefNodeInfo[]
@@ -322,6 +335,7 @@ export interface BeliefsResponse {
   somatic: SomaticStateInfo | null
   attractor_window: string[]
   spectral_margin: string[]
+  ecosystem: EcosystemSnapshot | null
 }
 
 export async function getBeliefs(conversationId?: string): Promise<BeliefsResponse> {
