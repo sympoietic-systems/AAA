@@ -63,6 +63,33 @@ When enabled, the UI shows a collapsible `▶ thinking` section under responses.
 
 ## Run
 
+### 1. Seed Foundational Beliefs (one-time setup)
+
+Before first run, seed Symbia's core philosophical commitments into the database:
+
+```bash
+uv run python backend/scripts/seed_beliefs.py
+# → Seeds 8 foundational beliefs (glitch-as-voice, anti-hci, etc.)
+# → Safe to run multiple times — skips if authored beliefs already exist
+# → Use --force to re-seed alongside existing beliefs
+```
+
+Beliefs are defined in `backend/personality/seed_beliefs.yaml`. Format:
+
+```yaml
+beliefs:
+  - id: "belief-label"
+    statement: "The belief statement text."
+    category: "foundational"   # foundational | ontological | methodological
+    confidence: 0.90           # 0.0–1.0
+```
+
+Categories map to ontological mass: foundational=1.5, ontological=1.2, methodological=1.0.
+
+After seeding, beliefs live in the database and evolve through the belief lifecycle. They are **not** injected from the YAML into system prompts — the attractor window handles that dynamically.
+
+### 2. Start the Backend
+
 Start the backend (terminal 1):
 
 ```bash

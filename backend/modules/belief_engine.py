@@ -86,7 +86,8 @@ class BeliefDynamicsEngine(ProcessingModule):
 
     def _seed_initial_beliefs_if_needed(self, agent_id: str) -> None:
         existing = self._belief_repo.list_beliefs(agent_id)
-        if len(existing) > 0:
+        authored = [b for b in existing if b.origin == "authored"]
+        if len(authored) > 0:
             return
 
         seed_path = self._identity_yaml_path.parent / "seed_beliefs.yaml"
