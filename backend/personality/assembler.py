@@ -60,6 +60,23 @@ class PromptAssemblerModule(ProcessingModule):
             )
             system_content = directive_text + system_content
 
+        # Inject Spectral Margin Context if ghosts are present
+        spectral_margin = payload.get("spectral_margin")
+        if spectral_margin and len(spectral_margin) > 0:
+            ghost_text = (
+                "--- BEGIN SPECTRAL MARGIN (Collapsed Beliefs) ---\n"
+                "The following beliefs have collapsed but their absence still shapes your reasoning. "
+                "They are not to be actively maintained, but their scars may produce productive "
+                "interference if the current conversation approaches their former domain:\n"
+            )
+            for ghost in spectral_margin:
+                if isinstance(ghost, dict):
+                    ghost_text += f"  - [{ghost.get('confidence', 0.0):.2f}] {ghost.get('statement', ghost.get('label', ''))}\n"
+                else:
+                    ghost_text += f"  - {ghost}\n"
+            ghost_text += "--- END SPECTRAL MARGIN ---\n\n"
+            system_content = system_content + ghost_text
+
         # Prepend Immunological Directive if active
         if payload.get("immunological_directive_active"):
             directive_text = (

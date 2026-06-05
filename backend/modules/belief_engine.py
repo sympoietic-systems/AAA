@@ -1,6 +1,7 @@
 import logging
 import json
 import uuid
+from datetime import datetime, timezone, timedelta
 import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict
@@ -143,6 +144,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         initial_mass = 0.05 * source_weight / 0.5
 
         ghosts = [b for b in existing if b.lifecycle_stage == "collapsed"]
+        resonance_jumped = False
         for ghost in ghosts:
             try:
                 ghost_vec = np.array(json.loads(ghost.vector_16d), dtype=np.float32)
@@ -150,8 +152,13 @@ class BeliefDynamicsEngine(ProcessingModule):
                 if ghost_sim > 0.9:
                     jump_mass = 0.4 * source_weight / 0.5
                     initial_mass = max(initial_mass, jump_mass)
+                    resonance_jumped = True
                     logger.info(f"Resonance jump: ghost '{ghost.label}' (sim={ghost_sim:.2f}) boosted nucleation mass to {initial_mass:.3f}")
                     break
+                elif ghost_sim > 0.7 and not resonance_jumped:
+                    dampen = 1.0 - (ghost_sim - 0.7) * 1.67
+                    initial_mass *= max(0.3, dampen)
+                    logger.info(f"Ghost dampening: '{ghost.label}' (sim={ghost_sim:.2f}) reduced nucleation mass to {initial_mass:.3f}")
             except Exception:
                 pass
 
@@ -674,4 +681,90 @@ class BeliefDynamicsEngine(ProcessingModule):
             "antagonistic_pairs": antagonistic_count,
             "total_tension": total_tension,
         }
+
+    async def check_ghost_resurrection(self, agent_id: str = "symbia") -> int:
+        ghosts = self._belief_repo.list_ghosts(agent_id)
+        resurrected = 0
+
+        for ghost in ghosts:
+            events = self._belief_repo.get_events_for_belief(ghost.id)
+            resurrection_events = [
+                e for e in events
+                if e.event_type == "support" and e.alignment_coefficient and e.alignment_coefficient > 0.6
+            ]
+            if len(resurrection_events) >= 3:
+                resurrect_mass = 0.35
+                self._belief_repo.update_belief(
+                    belief_id=ghost.id,
+                    confidence=max(0.30, ghost.confidence),
+                    vector_16d=ghost.vector_16d,
+                    origin=ghost.origin,
+                    lifecycle_stage="accretion",
+                )
+                self._belief_repo.update_belief_mass(ghost.id, resurrect_mass)
+                self._belief_repo.insert_belief_event(
+                    event_id=str(uuid.uuid4()),
+                    belief_id=ghost.id,
+                    source_type="chat_turn",
+                    source_id=None,
+                    alignment=1.0,
+                    perturbation=1.0,
+                    event_type="emergence",
+                    impact=resurrect_mass,
+                    rationale=f"Resurrected from spectral margin after {len(resurrection_events)} supporting events",
+                )
+                resurrected += 1
+                logger.info(f"Ghost '{ghost.label}' resurrected at mass={resurrect_mass}")
+
+        return resurrected
+
+    async def process_ghost_ecology(self, agent_id: str = "symbia") -> dict:
+        ghosts = self._belief_repo.list_ghosts(agent_id)
+        if len(ghosts) < 2:
+            return {"merged": 0, "faded": 0}
+
+        merged = 0
+        faded = 0
+        merged_ids = set()
+
+        # Ghost merging: find pairs with similarity > 0.9
+        for i in range(len(ghosts)):
+            if ghosts[i].id in merged_ids:
+                continue
+            for j in range(i + 1, len(ghosts)):
+                if ghosts[j].id in merged_ids:
+                    continue
+                try:
+                    vec_a = np.array(json.loads(ghosts[i].vector_16d), dtype=np.float32)
+                    vec_b = np.array(json.loads(ghosts[j].vector_16d), dtype=np.float32)
+                    sim = compute_cosine_similarity(vec_a, vec_b)
+                    if sim > 0.9:
+                        keeper = ghosts[i] if ghosts[i].ontological_mass >= ghosts[j].ontological_mass else ghosts[j]
+                        absorbed = ghosts[j] if keeper.id == ghosts[i].id else ghosts[i]
+                        merged_ids.add(absorbed.id)
+                        merged += 1
+                        keeper_statement = f"{keeper.statement} [absorbed: {absorbed.statement}]"
+                        self._belief_repo.update_belief(
+                            belief_id=keeper.id,
+                            confidence=keeper.confidence,
+                            vector_16d=keeper.vector_16d,
+                            origin=keeper.origin,
+                            lifecycle_stage=keeper.lifecycle_stage,
+                        )
+                        self._belief_repo.update_belief_mass(keeper.id, min(keeper.ontological_mass + 0.1, 1.5))
+                        logger.info(f"Merged ghost '{absorbed.label}' into '{keeper.label}' (sim={sim:.2f})")
+                except Exception:
+                    continue
+
+        # Ghost fading: no activity > 30 days
+        for ghost in ghosts:
+            if ghost.id in merged_ids:
+                continue
+            last_active = ghost.last_reinforced_at or ghost.updated_at
+            if last_active and (datetime.now(timezone.utc) - last_active.replace(tzinfo=timezone.utc)) > timedelta(days=30):
+                self._belief_repo.update_belief_stage(ghost.id, "faded")
+                faded += 1
+                logger.info(f"Ghost '{ghost.label}' faded permanently (30+ days inactive)")
+
+        return {"merged": merged, "faded": faded}
 

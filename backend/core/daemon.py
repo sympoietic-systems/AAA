@@ -150,6 +150,17 @@ class AutopoieticDreamDaemon:
         
         # Apply Mass Decay
         await self._apply_mass_decay(idle_duration)
+
+        # Process Ghost Ecology (merging, fading, resurrection)
+        try:
+            engine = getattr(self.app_state, "belief_metabolism", None)
+            if engine:
+                ghost_result = await engine.process_ghost_ecology("symbia")
+                resurrected = await engine.check_ghost_resurrection("symbia")
+                if ghost_result["merged"] > 0 or ghost_result["faded"] > 0 or resurrected > 0:
+                    logger.info(f"Ghost ecology: merged={ghost_result['merged']}, faded={ghost_result['faded']}, resurrected={resurrected}")
+        except Exception as e:
+            logger.error(f"Ghost ecology error: {e}")
         
         # Select active target conversation to read context from (usually the last updated conversation)
         active_convo_id = await self._get_active_conversation_id()
