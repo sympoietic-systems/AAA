@@ -52,12 +52,12 @@
 
     [ ] Belief - anti'technomysticism' [Simon Penny]
 
+    [ ] Beliefes  - It added two beliefes now form the notes I did, and they have quite high mass
+
     [ ] lets check our code and dream module and think it a bit more. we have a dream state, we have believefs, we have the documents indexing. I think we also can do a summary for the conversations we have? so next time agent need decide which conversation to do, it can see through thesummary? also the long conversations we have a consolidation for them. we can run it in the dream state too (need to have separate limits, use background models [free/cheap]
 
 lets check it, consult ith symbia and make a proposal?
 
     [ ] justification fix
-
-    [ ] check and optimize frontend [lazy load and so on, so it not eat lots of ram in browser]
 
     [ ] code refactoring [split big files and modules]

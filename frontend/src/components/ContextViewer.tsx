@@ -273,7 +273,7 @@ function parseFileSedimentContent(content: string): ParsedFileSediment {
   return { manifests, chunks };
 }
 
-const HistorySectionViewer: React.FC<{ content: string; style: SectionColors }> = ({ content, style }) => {
+const HistorySectionViewer: React.FC<{ content: string; style: SectionColors }> = ({ content }) => {
   const parsed = parseHistoryContent(content);
   const consolidated = parsed.filter(m => m.isConsolidated);
   const compressed = parsed.filter(m => m.isCompressed);
@@ -320,8 +320,7 @@ const HistorySectionViewer: React.FC<{ content: string; style: SectionColors }> 
         {activeTabData.messages.map((msg, i) => (
           <div
             key={i}
-            className="flex flex-col gap-1 p-2 rounded border bg-[#09090e]/60 hover:bg-[#0e0e16]/80 transition-colors"
-            style={{ borderColor: `${style.border}15` }}
+            className="flex flex-col gap-1 p-2 rounded border border-[#1c1c1c] bg-[#09090e]/60 hover:bg-[#0e0e16]/80 transition-colors"
           >
             <div className="flex items-center gap-1.5 text-[7.5px] uppercase font-bold text-[#94a3b8] opacity-75">
               <span
@@ -678,21 +677,18 @@ const FileSectionViewer: React.FC<{ content: string }> = ({ content }) => {
 };
 
 interface SectionColors {
-  border: string;
-  bg: string;
-  text: string;
-  badgeBg: string;
+  accent: string;
 }
 
 const SECTION_STYLES: Record<ContextSection['type'], SectionColors> = {
-  system_prompt: { border: '#475569', bg: '#1e293b10', text: '#94a3b8', badgeBg: '#47556920' },
-  history: { border: '#2563eb', bg: '#1d4ed808', text: '#60a5fa', badgeBg: '#2563eb20' },
-  sediment: { border: '#2563eb', bg: '#1d4ed808', text: '#60a5fa', badgeBg: '#2563eb20' },
-  file: { border: '#059669', bg: '#04785708', text: '#4ade80', badgeBg: '#05966920' },
-  web: { border: '#7c3aed', bg: '#6d28d908', text: '#c084fc', badgeBg: '#7c3aed20' },
-  diffractive: { border: '#db2777', bg: '#be185d08', text: '#f43f5e', badgeBg: '#db277720' },
-  query: { border: '#d97706', bg: '#b4530908', text: '#facc15', badgeBg: '#d9770620' },
-  other: { border: '#4b5563', bg: '#37415108', text: '#9ca3af', badgeBg: '#4b556320' },
+  system_prompt: { accent: '#475569' },
+  history: { accent: '#60a5fa' },
+  sediment: { accent: '#60a5fa' },
+  file: { accent: '#4ade80' },
+  web: { accent: '#c084fc' },
+  diffractive: { accent: '#f43f5e' },
+  query: { accent: '#facc15' },
+  other: { accent: '#4b5563' },
 };
 
 export const ContextViewer: React.FC<{ contextText: string }> = ({ contextText }) => {
@@ -731,10 +727,10 @@ export const ContextViewer: React.FC<{ contextText: string }> = ({ contextText }
         return (
           <div
             key={idx}
-            className="border rounded transition-all duration-200"
+            className="border border-[#222] rounded transition-all duration-200 overflow-hidden"
             style={{
-              borderColor: `${style.border}30`,
-              backgroundColor: isOpen ? style.bg : 'transparent',
+              borderLeft: `2px solid ${style.accent}`,
+              backgroundColor: isOpen ? '#090909' : 'transparent',
             }}
           >
             {/* Header */}
@@ -746,19 +742,16 @@ export const ContextViewer: React.FC<{ contextText: string }> = ({ contextText }
                 <span className="text-[8px] opacity-60">
                   {isOpen ? '▼' : '▶'}
                 </span>
-                <span
-                  className="font-bold tracking-wide uppercase text-[9px]"
-                  style={{ color: style.text }}
-                >
+                <span className="font-bold tracking-wide uppercase text-[9px] text-[#aaa]">
                   {section.title}
                 </span>
               </div>
               <span
-                className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded border"
+                className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded border font-bold"
                 style={{
-                  color: style.text,
-                  backgroundColor: style.badgeBg,
-                  borderColor: `${style.border}45`,
+                  color: style.accent,
+                  backgroundColor: '#141414',
+                  borderColor: `${style.accent}33`,
                 }}
               >
                 {section.type}
@@ -767,12 +760,7 @@ export const ContextViewer: React.FC<{ contextText: string }> = ({ contextText }
 
             {/* Content Accordion */}
             {isOpen && (
-              <div
-                className="p-3 pt-1.5 border-t text-[11px] text-[#c0caf5] leading-relaxed bg-[#050507]/90 font-mono overflow-x-auto select-text"
-                style={{
-                  borderColor: `${style.border}20`,
-                }}
-              >
+              <div className="p-3 pt-1.5 border-t border-[#1a1a1a] text-[11px] text-[#c0caf5] leading-relaxed bg-[#050507]/90 font-mono overflow-x-auto select-text">
                 {section.type === 'history' ? (
                   <HistorySectionViewer content={section.content} style={style} />
                 ) : section.type === 'sediment' ? (

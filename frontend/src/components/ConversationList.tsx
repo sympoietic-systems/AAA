@@ -187,14 +187,14 @@ export function ConversationList({
                   {conv.tags && conv.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {conv.tags.slice(0, 3).map((t) => {
-                        let tagStyle = "bg-[#141414] text-[#777] border-[#222]"
+                        let tagStyle = "bg-[#141414] text-[#888] border-[#222]"
                         if (t.tag_type === "structural") {
                           if (t.tag === "dreams") {
-                            tagStyle = "bg-[#1c0f2b] text-[#b17eff] border-[#442870]"
+                            tagStyle = "bg-[#141414] text-[#a892ee]/85 border-[#222]"
                           } else if (t.tag === "other agents") {
-                            tagStyle = "bg-[#2b1b0f] text-[#ffb07e] border-[#704128]"
+                            tagStyle = "bg-[#141414] text-[#e09b67]/85 border-[#222]"
                           } else {
-                            tagStyle = "bg-[#0f2b18] text-[#7effa8] border-[#28703c]"
+                            tagStyle = "bg-[#141414] text-[#6bc28c]/85 border-[#222]"
                           }
                         }
                         return (

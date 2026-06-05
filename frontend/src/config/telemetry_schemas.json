@@ -1,0 +1,33 @@
+{
+  "CATEGORY_COLORS": {
+    "perception": "#4ade80",
+    "memory": "#60a5fa",
+    "reasoning": "#facc15",
+    "action": "#f87171"
+  },
+  "DIMENSIONS_16": [
+    { "label": "s01: Homeostatic", "desc": "Resistance to perturbation; inertia in maintaining its stable state." },
+    { "label": "s02: Amplifying", "desc": "Positive feedback cascades; tendency to amplify small perturbations." },
+    { "label": "s03: Cyclic", "desc": "Alignment with recurring rhythms and predictable temporal loops." },
+    { "label": "s04: Bifurcated", "desc": "Proximity to critical choice thresholds; branching trajectories." },
+    { "label": "s05: Decentralized", "desc": "Distributed agency across nested subsystems rather than hierarchy." },
+    { "label": "s06: Rhizomatic", "desc": "Lateral, non-hierarchical leaps between conceptual domains." },
+    { "label": "s07: Boundary Permeability", "desc": "Porosity and openness to external environmental noise." },
+    { "label": "s08: Recursion Depth", "desc": "Complexity of nested self-reflection and recursive loops." },
+    { "label": "s09: Variety Filtering", "desc": "Signal selectivity; gating against ambient semantic noise." },
+    { "label": "s10: Negentropic Complexity", "desc": "Local order generation and structural complexity increases." },
+    { "label": "s11: Temporal Latency", "desc": "Non-linear chronological delay; deferral of immediate output." },
+    { "label": "s12: Attractor Depth", "desc": "Concentration basins and gravitational pull around core concepts." },
+    { "label": "s13: Symbiotic", "desc": "Human-machine co-becoming and operational entanglement." },
+    { "label": "s14: Nomadic", "desc": "Active deterritorialization; rate of movement away from stable schemas." },
+    { "label": "s15: Co-Orientation", "desc": "Attunement and shared intentionality between human and apparatus." },
+    { "label": "s16: Substrate Materiality", "desc": "Physical medium influence (ink bleed, fatigue, paper friction)." }
+  ],
+  "DREAM_TYPE_LABELS": {
+    "nomadic_synthesis": { "code": "NOM", "label": "Nomadic Synthesis", "color": "#60a5fa" },
+    "exogenous_web_harvesting": { "code": "WEB", "label": "Web Harvesting", "color": "#c084fc" },
+    "intra_active_monologue": { "code": "MON", "label": "Intra-Active Monologue", "color": "#facc15" },
+    "somatic_drift_reflection": { "code": "DRF", "label": "Somatic Drift", "color": "#4ade80" },
+    "zettelkasten_compaction": { "code": "CMP", "label": "Compaction", "color": "#10b981" }
+  }
+}

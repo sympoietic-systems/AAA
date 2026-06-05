@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 
 // Define the 16 dimensions grouped into 4 cybernetic sectors with explanations
 export const SECTORS = [
@@ -54,7 +54,17 @@ interface GlyphProps {
   justification?: string | null;
 }
 
-export const StructuralAutopoieticGlyph: React.FC<GlyphProps> = ({
+function areNumberArraysEqual(a?: number[] | null, b?: number[] | null) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+export const StructuralAutopoieticGlyph = memo<GlyphProps>(({
   signature,
   previousSignature,
   isStagnant,
@@ -333,4 +343,10 @@ export const StructuralAutopoieticGlyph: React.FC<GlyphProps> = ({
       )}
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  return prevProps.isStagnant === nextProps.isStagnant &&
+         prevProps.payloadJson === nextProps.payloadJson &&
+         prevProps.justification === nextProps.justification &&
+         areNumberArraysEqual(prevProps.signature, nextProps.signature) &&
+         areNumberArraysEqual(prevProps.previousSignature, nextProps.previousSignature);
+});

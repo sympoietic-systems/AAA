@@ -632,10 +632,35 @@ export const MessageBubble = memo(function MessageBubble({
          prevProps.msg.context_sent === nextProps.msg.context_sent &&
          prevProps.msg.metrics === nextProps.msg.metrics &&
          prevProps.msg.structural_justification === nextProps.msg.structural_justification &&
-         JSON.stringify(prevProps.msg.structural_signature) === JSON.stringify(nextProps.msg.structural_signature) &&
-         JSON.stringify(prevProps.previousSignature) === JSON.stringify(nextProps.previousSignature) &&
-         JSON.stringify(prevProps.notes) === JSON.stringify(nextProps.notes);
+         areNumberArraysEqual(prevProps.msg.structural_signature, nextProps.msg.structural_signature) &&
+         areNumberArraysEqual(prevProps.previousSignature, nextProps.previousSignature) &&
+         areNotesEqual(prevProps.notes, nextProps.notes);
 })
+
+function areNumberArraysEqual(a?: number[] | null, b?: number[] | null) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function areNotesEqual(a?: NoteInfo[] | null, b?: NoteInfo[] | null) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id || 
+        a[i].comment !== b[i].comment || 
+        a[i].visibility !== b[i].visibility || 
+        a[i].selected_text !== b[i].selected_text) {
+      return false;
+    }
+  }
+  return true;
+}
 
 function getSelectionCharacterOffsetWithin(element: HTMLElement) {
   let start = 0
