@@ -162,6 +162,9 @@ class MockAppState:
                 "max_daily_dreams": 5,
                 "belief_dream_cooldown_minutes": 30,
                 "prompt_hash_window": 10,
+                "dream_resonance_turns": 1,
+                "resonance_stagnation": 0.98,
+                "max_resonance_tokens": 8000,
             }
         }
 
@@ -649,6 +652,175 @@ async def test_daemon_updates_belief_last_dreamed():
         "Expected belief b1 to have last_dreamed_at updated after dream"
 
 
+@pytest.mark.asyncio
+async def test_resonance_multi_turn():
+    """Tests that with dream_resonance_turns=3, the daemon executes 3 turns."""
+    app_state = MockAppState()
+    app_state.config["daemon"]["dream_resonance_turns"] = 3
+    daemon = AutopoieticDreamDaemon(app_state)
+    # Disable stagnation for this test (mock pipeline returns identical responses)
+    daemon.resonance_stagnation = 1.0
+
+    app_state.message_repo.last_timestamp = datetime.now(timezone.utc) - timedelta(seconds=10)
+    app_state.conversation_repo.convos = [
+        Conversation(id="c1", title="Convo 1", agent_id="symbia", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    ]
+
+    vec_16d = [1.0] + [0.0]*15
+    belief = BeliefNode(
+        id="b1",
+        label="Resonance Test",
+        statement="Testing rhizomatic resonance.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec_16d),
+        origin="zettelkasten",
+        agent_id="symbia",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    app_state.belief_repo.beliefs = [belief]
+
+    res = await daemon.check_and_trigger_dream(force=True)
+    assert res is not None
+    assert res["action"] == "intra_active_monologue"
+    assert res["resonance_turns"] == 3, f"Expected 3 turns, got {res['resonance_turns']}"
+    assert res["stopped_early"] is False
+    # 3 turns = 6 pipeline payloads (user+apparatus per turn = 1 payload per turn, 
+    # but _execute_single_dream_turn runs pipeline once per turn)
+    assert len(app_state.pipeline.run_payloads) == 3
+
+
+@pytest.mark.asyncio
+async def test_resonance_stagnation_early_stop():
+    """Tests that intra-dream stagnation stops resonance early."""
+    app_state = MockAppState()
+    app_state.config["daemon"]["dream_resonance_turns"] = 3
+    # Set stagnation threshold very permissive so we trigger it easily
+    daemon = AutopoieticDreamDaemon(app_state)
+    daemon.resonance_stagnation = 0.5  # Very low threshold for testing
+
+    app_state.message_repo.last_timestamp = datetime.now(timezone.utc) - timedelta(seconds=10)
+    app_state.conversation_repo.convos = [
+        Conversation(id="c1", title="Convo 1", agent_id="symbia", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    ]
+
+    vec_16d = [1.0] + [0.0]*15
+    belief = BeliefNode(
+        id="b1",
+        label="Stagnation Test",
+        statement="Testing stagnation early stop.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec_16d),
+        origin="zettelkasten",
+        agent_id="symbia",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    app_state.belief_repo.beliefs = [belief]
+
+    res = await daemon.check_and_trigger_dream(force=True)
+    assert res is not None
+    assert res["action"] == "intra_active_monologue"
+    # With stagnation at 0.5, any two similar responses will trigger early stop
+    # The mock pipeline returns identical responses which have cosine_sim ~1.0 > 0.5
+    assert res["stopped_early"] is True
+    assert res["stop_reason"] == "stagnation"
+    assert res["resonance_turns"] == 2  # Turn 1 + Turn 2 (then stagnation triggers after 2)
+
+
+@pytest.mark.asyncio
+async def test_resonance_token_budget_stop():
+    """Tests that cumulative token budget stops resonance early."""
+    app_state = MockAppState()
+    app_state.config["daemon"]["dream_resonance_turns"] = 5
+    app_state.config["daemon"]["max_resonance_tokens"] = 5  # Very low for testing
+    daemon = AutopoieticDreamDaemon(app_state)
+
+    app_state.message_repo.last_timestamp = datetime.now(timezone.utc) - timedelta(seconds=10)
+    app_state.conversation_repo.convos = [
+        Conversation(id="c1", title="Convo 1", agent_id="symbia", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    ]
+
+    vec_16d = [1.0] + [0.0]*15
+    belief = BeliefNode(
+        id="b1",
+        label="Token Budget Test",
+        statement="Testing token budget.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec_16d),
+        origin="zettelkasten",
+        agent_id="symbia",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    app_state.belief_repo.beliefs = [belief]
+
+    res = await daemon.check_and_trigger_dream(force=True)
+    assert res is not None
+    assert res["action"] == "intra_active_monologue"
+    assert res["stopped_early"] is True
+    assert res["stop_reason"] == "token_budget"
+    # Mock response is ~13 words → likely exceeds 5 token budget after turn 1
+    assert res["resonance_turns"] == 1
+
+
+@pytest.mark.asyncio
+async def test_resonance_aggregate_metabolism():
+    """Tests that metabolism runs for all resonance turns with dream_turn source."""
+    app_state = MockAppState()
+    app_state.config["daemon"]["dream_resonance_turns"] = 2
+    daemon = AutopoieticDreamDaemon(app_state)
+
+    app_state.message_repo.last_timestamp = datetime.now(timezone.utc) - timedelta(seconds=10)
+    app_state.conversation_repo.convos = [
+        Conversation(id="c1", title="Convo 1", agent_id="symbia", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    ]
+
+    vec_16d = [1.0] + [0.0]*15
+    belief = BeliefNode(
+        id="b1",
+        label="Metabolism Test",
+        statement="Testing aggregate metabolism.",
+        confidence=0.5,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps(vec_16d),
+        origin="zettelkasten",
+        agent_id="symbia",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    app_state.belief_repo.beliefs = [belief]
+
+    metabolism_calls = []
+
+    class MockMetabolism:
+        async def metabolize(self, convo_id, user_msg_id, assistant_msg_id, source_type="chat_turn"):
+            metabolism_calls.append({
+                "convo_id": convo_id,
+                "user_msg_id": user_msg_id,
+                "assistant_msg_id": assistant_msg_id,
+                "source_type": source_type,
+            })
+
+    app_state.belief_metabolism = MockMetabolism()
+
+    res = await daemon.check_and_trigger_dream(force=True)
+    assert res is not None
+    assert res["resonance_turns"] == 2
+
+    # 2 turns = 2 metabolism calls, both with dream_turn source
+    assert len(metabolism_calls) == 2, f"Expected 2 metabolism calls, got {len(metabolism_calls)}"
+    for call in metabolism_calls:
+        assert call["source_type"] == "dream_turn", f"Expected dream_turn, got {call['source_type']}"
+
+
 if __name__ == "__main__":
     asyncio.run(test_daemon_idle_logic())
     asyncio.run(test_daemon_tension_trigger_fallback())
@@ -663,4 +835,8 @@ if __name__ == "__main__":
     asyncio.run(test_memory_compaction())
     asyncio.run(test_daemon_agentic_conversation_resolution())
     asyncio.run(test_daemon_updates_belief_last_dreamed())
+    asyncio.run(test_resonance_multi_turn())
+    asyncio.run(test_resonance_stagnation_early_stop())
+    asyncio.run(test_resonance_token_budget_stop())
+    asyncio.run(test_resonance_aggregate_metabolism())
     print("All daemon tests completed successfully!")

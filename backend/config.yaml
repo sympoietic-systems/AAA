@@ -168,10 +168,13 @@ daemon:
   check_interval: 60             # seconds between trigger evaluation checks (default: 60)
   idle_threshold: 1800           # seconds of human inactivity before dreaming (e.g., 30 mins)
   min_dream_interval: 3600       # minimum seconds between successful dreams (e.g., 1 hour)
-  max_daily_dreams: 10            # max number of dreams triggered in a 24h rolling day (default: 10)
+  max_daily_dreams: 30            # max number of dreams triggered in a 24h rolling day (default: 10)
   drift_coefficient: 0.00001     # decay speed for somatic belief drift
   belief_dream_cooldown_minutes: 30  # minimum minutes between dreams about the same belief
   prompt_hash_window: 10             # number of recent prompt hashes to deduplicate against
+  dream_resonance_turns: 4           # max self-response rounds per dream (rhizomatic resonance; 1 = classic single-turn)
+  resonance_stagnation: 0.98         # intra-dream assistant similarity threshold for early termination
+  max_resonance_tokens: 30000         # cumulative assistant token cap per dream cycle
 
 # ── Background Tasks ──────────────────────────────
 # Models are tried in order. If one is rate-limited, the next is used.

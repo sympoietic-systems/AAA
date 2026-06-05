@@ -41,6 +41,9 @@ class AutopoieticDreamDaemon:
         self.min_dream_interval = daemon_cfg.get("min_dream_interval", 120)  # seconds between dream actions
         self.belief_dream_cooldown_minutes = daemon_cfg.get("belief_dream_cooldown_minutes", 30)
         self.prompt_hash_window = daemon_cfg.get("prompt_hash_window", 10)
+        self.dream_resonance_turns = daemon_cfg.get("dream_resonance_turns", 1)
+        self.resonance_stagnation = daemon_cfg.get("resonance_stagnation", 0.98)
+        self.max_resonance_tokens = daemon_cfg.get("max_resonance_tokens", 8000)
 
         # Execution constraints
         self.max_daily_dreams = daemon_cfg.get("max_daily_dreams", 120)
@@ -90,6 +93,9 @@ class AutopoieticDreamDaemon:
             "dream_action_counts": dict(self.dream_action_counts),
             "min_dream_interval": self.min_dream_interval,
             "belief_dream_cooldown_minutes": self.belief_dream_cooldown_minutes,
+            "dream_resonance_turns": self.dream_resonance_turns,
+            "resonance_stagnation": self.resonance_stagnation,
+            "max_resonance_tokens": self.max_resonance_tokens,
             "check_interval": self.check_interval,
         }
 
@@ -207,11 +213,11 @@ class AutopoieticDreamDaemon:
                 dream_context["web_title"] = probe_res.get("title", "")
                 if probe_res.get("status") != "success":
                     action = "intra_active_monologue"
-                    topic_title = f"Dream Log: Tension ({hotspot.label})"
+                    topic_title = f"Dream Log: Soliloquy ({hotspot.label})"
                     dream_context = await self._get_dream_context_for_belief(hotspot, "intra_active_monologue")
             else:
                 action = "intra_active_monologue"
-                topic_title = f"Dream Log: Tension ({hotspot.label})"
+                topic_title = f"Dream Log: Soliloquy ({hotspot.label})"
                 dream_context = await self._get_dream_context_for_belief(hotspot, action)
         elif random.random() < 0.3 and self.semantic_knot_repo:
             comp_res = await self.compact_memory()
@@ -241,16 +247,14 @@ class AutopoieticDreamDaemon:
 
         # Resolve Dream Conversation ID based on decided topic and agent decision
         dream_convo_id = await self._resolve_dream_conversation(action, prompt_text, topic_title)
-        logger.info("Triggered dream action: %s in conversation: %s", action, dream_convo_id)
+        logger.info("Triggered dream action: %s in conversation: %s (resonance turns: %d)", 
+                     action, dream_convo_id, self.dream_resonance_turns)
         
-        # Run self-perturbation through the primary pipeline
         self.last_dream_time = now
         self.dream_counter += 1
         self.last_dream_action = action
         self.dream_action_counts[action] = self.dream_action_counts.get(action, 0) + 1
 
-        # We execute this as a simulated chat request with speaker='human' so that the pipeline generates a response.
-        # But we pass a custom metadata indicator in the payload so the pipeline and logs know it's a dream.
         payload = {
             "content": prompt_text,
             "speaker": "human",
@@ -261,6 +265,103 @@ class AutopoieticDreamDaemon:
         }
 
         try:
+            max_turns = self.dream_resonance_turns
+            turns_data = []
+            cumulative_tokens = 0
+            stopped_early = False
+            stop_reason = ""
+
+            for turn in range(1, max_turns + 1):
+                turn_result = await self._execute_single_dream_turn(payload, dream_convo_id)
+                if not turn_result:
+                    logger.warning("Dream turn %d/%d failed. Stopping resonance.", turn, max_turns)
+                    stop_reason = "turn_failed"
+                    break
+
+                turns_data.append(turn_result)
+
+                # Check intra-dream stagnation (need at least 2 assistant sigs to compare)
+                if len(turns_data) >= 2:
+                    sig_blobs = [t["assistant_sig_blob"] for t in turns_data]
+                    if self._compute_intra_dream_stagnation(sig_blobs):
+                        logger.info("Intra-dream stagnation detected after turn %d. Stopping resonance.", turn)
+                        stop_reason = "stagnation"
+                        stopped_early = True
+                        break
+
+                # Check token budget
+                cumulative_tokens += turn_result["content_tokens"]
+                if cumulative_tokens >= self.max_resonance_tokens:
+                    logger.info("Resonance token budget reached after turn %d (%d tokens). Stopping.", 
+                                 turn, cumulative_tokens)
+                    stop_reason = "token_budget"
+                    stopped_early = True
+                    break
+
+                # Prepare continuation payload for next turn
+                if turn < max_turns:
+                    payload["content"] = self.RESONANCE_CONTINUATION_PROMPT
+
+            actual_turns = len(turns_data)
+            logger.info("Resonance complete: %d turns executed (max=%d, early_stop=%s, reason=%s, tokens=%d)",
+                         actual_turns, max_turns, stopped_early, stop_reason, cumulative_tokens)
+
+            # Update belief last_dreamed_at for hotspot-triggered dreams
+            if hotspot and action in ("intra_active_monologue", "exogenous_web_harvesting"):
+                try:
+                    self.belief_repo.update_belief_last_dreamed(hotspot.id)
+                except Exception as e:
+                    logger.warning("Failed to update belief last_dreamed_at: %s", e)
+
+            # Aggregate metabolism: metabolize each turn pair as dream_turn (weight=0.05)
+            belief_metabolism = getattr(self.app_state, "belief_metabolism", None)
+            if belief_metabolism:
+                for td in turns_data:
+                    await belief_metabolism.metabolize(
+                        dream_convo_id,
+                        td["user_msg"].id,
+                        td["assistant_msg"].id,
+                        source_type="dream_turn"
+                    )
+
+            first_response = turns_data[0]["response_text"] if turns_data else ""
+            return {
+                "action": action,
+                "prompt": prompt_text,
+                "response": first_response[:200] + "...",
+                "conversation_id": dream_convo_id,
+                "resonance_turns": actual_turns,
+                "stopped_early": stopped_early,
+                "stop_reason": stop_reason,
+            }
+        except Exception as e:
+            logger.exception("Failed to execute resonance for Dream Daemon: %s", e)
+            return None
+
+    # ── Rhizomatic Resonance ────────────────────
+
+    RESONANCE_CONTINUATION_PROMPT = (
+        "Continue exploring this thread. What new dimensions, contradictions, "
+        "or implications emerge from your last reflection? Deepen the inquiry."
+    )
+
+    async def _execute_single_dream_turn(
+        self,
+        payload: dict,
+        dream_convo_id: str,
+    ) -> Optional[dict]:
+        """Execute one turn of the dream pipeline and store messages + metrics.
+
+        Returns dict with keys: response_text, user_msg, assistant_msg,
+        assistant_sig_blob, content_tokens, embedding, embedding_model,
+        embedding_dim, response_emb_blob, response_emb_dim.
+        Returns None on failure.
+        """
+        from backend.utils.token_counter import estimate_tokens
+        from backend.modules.structural_engine import get_justification
+
+        content = payload.get("content", "")
+        try:
             result = await self.pipeline.run(payload)
             response_text = result.payload.get("response", "")
             thinking = result.payload.get("thinking")
@@ -269,134 +370,145 @@ class AutopoieticDreamDaemon:
             embedding_dim = result.payload.get("embedding_dim", 0)
             model_used = result.payload.get("model_used")
             provider_used = result.payload.get("provider_used")
-
-            # Calculate structural signatures for dream messages to drive belief metabolism
-            from backend.modules.structural_engine import get_justification
-            scorer = CompositeStructuralScorer(llm_provider=self.app_state.structural_provider)
-            try:
-                user_sig = await scorer.score_async(prompt_text, use_llm_scorer=True)
-                user_sig_blob = user_sig.tobytes()
-            except Exception as e:
-                logger.warning("Failed to score dream prompt: %s", e)
-                user_sig_blob = b""
-
-            try:
-                assistant_sig = await scorer.score_async(response_text, use_llm_scorer=True)
-                assistant_sig_blob = assistant_sig.tobytes()
-            except Exception as e:
-                logger.warning("Failed to score dream response: %s", e)
-                assistant_sig_blob = b""
-
-            user_just = get_justification(prompt_text)
-            assistant_just = get_justification(response_text)
-
-            # 1. Insert user-side dream prompt
-            from backend.utils.token_counter import estimate_tokens
-            user_msg = self.message_repo.insert(
-                speaker="human",
-                content=prompt_text,
-                embedding=embedding,
-                embedding_model=embedding_model,
-                embedding_dim=embedding_dim,
-                agent_id="symbia",
-                conversation_id=dream_convo_id,
-                content_tokens=estimate_tokens(prompt_text),
-                structural_signature=user_sig_blob,
-                structural_justification=user_just,
-            )
-
-            # 2. Insert agent response to monologue
-            assistant_msg = self.message_repo.insert(
-                speaker="apparatus",
-                content=response_text,
-                thinking=thinking,
-                embedding=embedding,
-                embedding_model=embedding_model,
-                embedding_dim=embedding_dim,
-                agent_id="symbia",
-                conversation_id=dream_convo_id,
-                content_tokens=estimate_tokens(response_text),
-                thinking_tokens=estimate_tokens(thinking) if thinking else None,
-                model_used=model_used,
-                provider_used=provider_used,
-                context_sent=result.payload.get("context_sent"),
-                structural_signature=assistant_sig_blob,
-                structural_justification=assistant_just,
-            )
-
-            # 3. Embed assistant response and update its embedding for proper metrics
-            response_embedder = getattr(self.app_state, "embedder", None)
-            response_emb_blob = None
-            response_emb_dim = 384
-            if response_embedder and response_embedder.service.is_loaded and response_text.strip():
-                try:
-                    response_emb = await response_embedder.service.encode_async(response_text)
-                    response_emb_blob = response_embedder.service.serialize(response_emb)
-                    response_emb_dim = response_embedder.service.dim
-                    self.message_repo.update_embedding(
-                        assistant_msg.id,
-                        response_emb_blob,
-                        response_embedder.service.model_name,
-                        response_emb_dim,
-                    )
-                except Exception as e:
-                    logger.warning("Failed to embed dream assistant response: %s", e)
-
-            # 4. Store conversation metrics for both dream messages
-            metrics_repo = getattr(self.app_state, "metrics_repo", None)
-            metrics_module = getattr(self.app_state, "metrics_module", None)
-            if metrics_repo and metrics_module:
-                payload_metrics = result.payload.get("metrics")
-                if payload_metrics and payload_metrics.get("pairwise_similarity") is not None:
-                    try:
-                        _store_daemon_metrics(metrics_repo, user_msg.id, payload_metrics)
-                    except Exception as e:
-                        logger.warning("Failed to store dream user metrics: %s", e)
-
-                # Compute assistant metrics using the response embedding
-                if response_text.strip() and response_emb_blob:
-                    try:
-                        assistant_payload = {
-                            "content": response_text,
-                            "embedding": response_emb_blob,
-                            "embedding_dim": response_emb_dim,
-                            "conversation_id": dream_convo_id,
-                            "exclude_message_id": assistant_msg.id,
-                        }
-                        assistant_result = await metrics_module.process(assistant_payload)
-                        assistant_metrics = assistant_result.get("metrics")
-                        if assistant_metrics and assistant_metrics.get("pairwise_similarity") is not None:
-                            _store_daemon_metrics(metrics_repo, assistant_msg.id, assistant_metrics)
-                    except Exception as e:
-                        logger.warning("Failed to store dream assistant metrics: %s", e)
-
-            # 5. Update belief last_dreamed_at for hotspot-triggered dreams
-            if hotspot and action in ("intra_active_monologue", "exogenous_web_harvesting"):
-                try:
-                    self.belief_repo.update_belief_last_dreamed(hotspot.id)
-                except Exception as e:
-                    logger.warning("Failed to update belief last_dreamed_at: %s", e)
-
-            # 6. Trigger belief metabolism catch-up for this turn (dream_turn = low weight)
-            belief_metabolism = getattr(self.app_state, "belief_metabolism", None)
-            if belief_metabolism:
-                await belief_metabolism.metabolize(
-                    dream_convo_id,
-                    user_msg.id,
-                    assistant_msg.id,
-                    source_type="dream_turn"
-                )
-
-            logger.info("Dream cycle executed successfully. Output length: %d chars", len(response_text))
-            return {
-                "action": action,
-                "prompt": prompt_text,
-                "response": response_text[:200] + "...",
-                "conversation_id": dream_convo_id,
-            }
         except Exception as e:
-            logger.exception("Failed to execute pipeline run for Dream Daemon: %s", e)
+            logger.exception("Pipeline run failed for dream turn: %s", e)
             return None
+
+        if not response_text.strip():
+            logger.warning("Empty dream response. Skipping turn.")
+            return None
+
+        # Structural signatures
+        scorer = CompositeStructuralScorer(llm_provider=self.app_state.structural_provider)
+        try:
+            user_sig = await scorer.score_async(content, use_llm_scorer=True)
+            user_sig_blob = user_sig.tobytes()
+        except Exception as e:
+            logger.warning("Failed to score dream prompt: %s", e)
+            user_sig_blob = b""
+
+        try:
+            assistant_sig = await scorer.score_async(response_text, use_llm_scorer=True)
+            assistant_sig_blob = assistant_sig.tobytes()
+        except Exception as e:
+            logger.warning("Failed to score dream response: %s", e)
+            assistant_sig_blob = b""
+
+        user_just = get_justification(content)
+        assistant_just = get_justification(response_text)
+
+        # Insert user-side message
+        user_msg = self.message_repo.insert(
+            speaker="human",
+            content=content,
+            embedding=embedding,
+            embedding_model=embedding_model,
+            embedding_dim=embedding_dim,
+            agent_id="symbia",
+            conversation_id=dream_convo_id,
+            content_tokens=estimate_tokens(content),
+            structural_signature=user_sig_blob,
+            structural_justification=user_just,
+        )
+
+        # Insert assistant message
+        assistant_msg = self.message_repo.insert(
+            speaker="apparatus",
+            content=response_text,
+            thinking=thinking,
+            embedding=embedding,
+            embedding_model=embedding_model,
+            embedding_dim=embedding_dim,
+            agent_id="symbia",
+            conversation_id=dream_convo_id,
+            content_tokens=estimate_tokens(response_text),
+            thinking_tokens=estimate_tokens(thinking) if thinking else None,
+            model_used=model_used,
+            provider_used=provider_used,
+            context_sent=result.payload.get("context_sent"),
+            structural_signature=assistant_sig_blob,
+            structural_justification=assistant_just,
+        )
+
+        # Embed assistant response
+        response_embedder = getattr(self.app_state, "embedder", None)
+        response_emb_blob = None
+        response_emb_dim = 384
+        if response_embedder and response_embedder.service.is_loaded and response_text.strip():
+            try:
+                response_emb = await response_embedder.service.encode_async(response_text)
+                response_emb_blob = response_embedder.service.serialize(response_emb)
+                response_emb_dim = response_embedder.service.dim
+                self.message_repo.update_embedding(
+                    assistant_msg.id,
+                    response_emb_blob,
+                    response_embedder.service.model_name,
+                    response_emb_dim,
+                )
+            except Exception as e:
+                logger.warning("Failed to embed dream assistant response: %s", e)
+
+        # Store metrics
+        metrics_repo = getattr(self.app_state, "metrics_repo", None)
+        metrics_module = getattr(self.app_state, "metrics_module", None)
+        if metrics_repo and metrics_module:
+            payload_metrics = result.payload.get("metrics")
+            if payload_metrics and payload_metrics.get("pairwise_similarity") is not None:
+                try:
+                    _store_daemon_metrics(metrics_repo, user_msg.id, payload_metrics)
+                except Exception as e:
+                    logger.warning("Failed to store dream user metrics: %s", e)
+
+            if response_text.strip() and response_emb_blob:
+                try:
+                    assistant_payload = {
+                        "content": response_text,
+                        "embedding": response_emb_blob,
+                        "embedding_dim": response_emb_dim,
+                        "conversation_id": dream_convo_id,
+                        "exclude_message_id": assistant_msg.id,
+                    }
+                    assistant_result = await metrics_module.process(assistant_payload)
+                    assistant_metrics = assistant_result.get("metrics")
+                    if assistant_metrics and assistant_metrics.get("pairwise_similarity") is not None:
+                        _store_daemon_metrics(metrics_repo, assistant_msg.id, assistant_metrics)
+                except Exception as e:
+                    logger.warning("Failed to store dream assistant metrics: %s", e)
+
+        assistant_tokens = estimate_tokens(response_text)
+
+        return {
+            "response_text": response_text,
+            "user_msg": user_msg,
+            "assistant_msg": assistant_msg,
+            "assistant_sig_blob": assistant_sig_blob,
+            "content_tokens": assistant_tokens,
+            "embedding": embedding,
+            "embedding_model": embedding_model,
+            "embedding_dim": embedding_dim,
+            "response_emb_blob": response_emb_blob,
+            "response_emb_dim": response_emb_dim,
+        }
+
+    def _compute_intra_dream_stagnation(self, sig_blobs: list) -> bool:
+        """Check if the last two assistant signatures are too similar (stagnation)."""
+        if len(sig_blobs) < 2:
+            return False
+        try:
+            sig_a = sig_blobs[-2]
+            sig_b = sig_blobs[-1]
+            if not sig_a or not sig_b:
+                return False
+            v_a = np.frombuffer(sig_a, dtype=np.float32)
+            v_b = np.frombuffer(sig_b, dtype=np.float32)
+            if len(v_a) != 16 or len(v_b) != 16:
+                return False
+            sim = compute_cosine_similarity(v_a, v_b)
+            logger.debug("Intra-dream stagnation similarity: %.4f (threshold: %.4f)", sim, self.resonance_stagnation)
+            return sim > self.resonance_stagnation
+        except Exception as e:
+            logger.debug("Failed to compute intra-dream stagnation: %s", e)
+            return False
 
     async def _get_active_conversation_id(self) -> Optional[str]:
         convos = self.conversation_repo.list_all()
