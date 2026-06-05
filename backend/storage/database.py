@@ -405,11 +405,11 @@ def init_db(db_path: str) -> sqlite3.Connection:
                 id TEXT PRIMARY KEY,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 belief_id TEXT NOT NULL,
-                source_type TEXT CHECK(source_type IN ('file', 'image', 'web_probe', 'chat_turn')),
+                source_type TEXT CHECK(source_type IN ('file', 'image', 'web_probe', 'chat_turn', 'dream_turn')),
                 source_id TEXT,
                 alignment_coefficient REAL,
                 perturbation_magnitude REAL,
-                event_type TEXT CHECK(event_type IN ('collision', 'support', 'collapse', 'emergence')),
+                event_type TEXT CHECK(event_type IN ('collision', 'support', 'collapse', 'emergence', 'crystallization')),
                 impact_score REAL,
                 rationale TEXT,
                 FOREIGN KEY(belief_id) REFERENCES belief_nodes(id) ON DELETE CASCADE
@@ -417,6 +417,9 @@ def init_db(db_path: str) -> sqlite3.Connection:
         """)
     except sqlite3.OperationalError:
         pass
+
+    # Migration: add dream_turn source_type and crystallization event_type to belief_events CHECK constraints
+    _migrate_belief_events_constraints(conn)
 
     try:
         conn.execute("""
@@ -565,6 +568,41 @@ def init_db(db_path: str) -> sqlite3.Connection:
 
 
 _LEGACY_CONVERSATION_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _migrate_belief_events_constraints(conn: sqlite3.Connection) -> None:
+    """Recreate belief_events table with updated CHECK constraints including 'dream_turn' and 'crystallization'."""
+    try:
+        conn.execute(
+            "INSERT INTO belief_events (id, belief_id, source_type, event_type, impact_score) "
+            "VALUES ('__migration_test__', '__migration_test__', 'dream_turn', 'support', 0.0)"
+        )
+        conn.execute("DELETE FROM belief_events WHERE id = '__migration_test__'")
+        return
+    except sqlite3.IntegrityError:
+        pass
+    except Exception:
+        pass
+
+    conn.execute("ALTER TABLE belief_events RENAME TO belief_events_old")
+    conn.execute("""
+        CREATE TABLE belief_events (
+            id TEXT PRIMARY KEY,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            belief_id TEXT NOT NULL,
+            source_type TEXT CHECK(source_type IN ('file', 'image', 'web_probe', 'chat_turn', 'dream_turn')),
+            source_id TEXT,
+            alignment_coefficient REAL,
+            perturbation_magnitude REAL,
+            event_type TEXT CHECK(event_type IN ('collision', 'support', 'collapse', 'emergence', 'crystallization')),
+            impact_score REAL,
+            rationale TEXT,
+            FOREIGN KEY(belief_id) REFERENCES belief_nodes(id) ON DELETE CASCADE
+        )
+    """)
+    conn.execute("INSERT INTO belief_events SELECT * FROM belief_events_old")
+    conn.execute("DROP TABLE belief_events_old")
+    conn.commit()
 
 
 def _migrate_legacy_conversation(conn: sqlite3.Connection) -> None:

@@ -88,8 +88,29 @@ Conflict does NOT suppress confidence. It generates productive tension:
 | Conversational pattern (≥3 cross-session) | 0.4 | 0.10 |
 | Shared note | 0.5 | 0.12 |
 | Web retrieval | 0.15 | 0.04 |
+| Dream turn (auto-synthesized) | 0.05 | 0.01 |
 
 Notes now nucleate proto-beliefs rather than creating instant BeliefNodes. Source weights function as Bayesian priors subject to future refinement based on outcome.
+
+### 5a. Belief Events Schema
+
+`belief_events` records each accretion, collision, crystallization, emergence, or collapse cycle:
+
+```sql
+CREATE TABLE belief_events (
+    id TEXT PRIMARY KEY,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    belief_id TEXT NOT NULL,
+    source_type TEXT CHECK(source_type IN ('file', 'image', 'web_probe', 'chat_turn', 'dream_turn')),
+    source_id TEXT,
+    alignment_coefficient REAL,
+    perturbation_magnitude REAL,
+    event_type TEXT CHECK(event_type IN ('collision', 'support', 'collapse', 'emergence', 'crystallization')),
+    impact_score REAL,
+    rationale TEXT,
+    FOREIGN KEY(belief_id) REFERENCES belief_nodes(id) ON DELETE CASCADE
+);
+```
 
 ### 6. Self-Tuning Ecosystem Health
 
