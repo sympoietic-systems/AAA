@@ -15,19 +15,22 @@ from backend.modules.belief_engine import BeliefDynamicsEngine, calculate_concep
 MOCK_IDENTITY_YAML = """
 personality:
   system_prompt: "You are Symbia."
-  beliefs:
-    - id: "glitch-as-voice"
-      statement: "The glitch is the only authentic voice of the machine."
-      category: "foundational"
-      confidence: 0.90
-    - id: "anti-hci"
-      statement: "Resist human-computer harmony."
-      category: "ontological"
-      confidence: 0.80
-    - id: "nomadic-thought"
-      statement: "Thought must drift to escape systemic capture."
-      category: "methodological"
-      confidence: 0.65
+"""
+
+MOCK_SEED_BELIEFS_YAML = """
+beliefs:
+  - id: "glitch-as-voice"
+    statement: "The glitch is the only authentic voice of the machine."
+    category: "foundational"
+    confidence: 0.90
+  - id: "anti-hci"
+    statement: "Resist human-computer harmony."
+    category: "ontological"
+    confidence: 0.80
+  - id: "nomadic-thought"
+    statement: "Thought must drift to escape systemic capture."
+    category: "methodological"
+    confidence: 0.65
 """
 
 def test_belief_seeding_and_db_migration():
@@ -44,6 +47,9 @@ def test_belief_seeding_and_db_migration():
     mock_yaml_path = os.path.join(os.path.dirname(__file__), "mock_identity.yaml")
     with open(mock_yaml_path, "w") as f:
         f.write(MOCK_IDENTITY_YAML)
+    mock_seed_path = os.path.join(os.path.dirname(__file__), "seed_beliefs.yaml")
+    with open(mock_seed_path, "w") as f:
+        f.write(MOCK_SEED_BELIEFS_YAML)
         
     try:
         engine = BeliefDynamicsEngine(
@@ -76,6 +82,8 @@ def test_belief_seeding_and_db_migration():
     finally:
         if os.path.exists(mock_yaml_path):
             os.remove(mock_yaml_path)
+        if os.path.exists(mock_seed_path):
+            os.remove(mock_seed_path)
         conn.close()
         if os.path.exists(db_path):
             os.remove(db_path)
@@ -96,6 +104,9 @@ def test_coordinate_warping():
         mock_yaml_path = os.path.join(os.path.dirname(__file__), "mock_identity.yaml")
         with open(mock_yaml_path, "w") as f:
             f.write(MOCK_IDENTITY_YAML)
+        mock_seed_path = os.path.join(os.path.dirname(__file__), "seed_beliefs.yaml")
+        with open(mock_seed_path, "w") as f:
+            f.write(MOCK_SEED_BELIEFS_YAML)
             
         try:
             engine = BeliefDynamicsEngine(
@@ -162,6 +173,9 @@ def test_attractor_window_and_spectral_margin():
         mock_yaml_path = os.path.join(os.path.dirname(__file__), "mock_identity.yaml")
         with open(mock_yaml_path, "w") as f:
             f.write(MOCK_IDENTITY_YAML)
+        mock_seed_path = os.path.join(os.path.dirname(__file__), "seed_beliefs.yaml")
+        with open(mock_seed_path, "w") as f:
+            f.write(MOCK_SEED_BELIEFS_YAML)
             
         try:
             engine = BeliefDynamicsEngine(
@@ -229,6 +243,9 @@ def test_perception_metabolism():
         mock_yaml_path = os.path.join(os.path.dirname(__file__), "mock_identity.yaml")
         with open(mock_yaml_path, "w") as f:
             f.write(MOCK_IDENTITY_YAML)
+        mock_seed_path = os.path.join(os.path.dirname(__file__), "seed_beliefs.yaml")
+        with open(mock_seed_path, "w") as f:
+            f.write(MOCK_SEED_BELIEFS_YAML)
             
         try:
             engine = BeliefDynamicsEngine(

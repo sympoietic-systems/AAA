@@ -89,14 +89,15 @@ class BeliefDynamicsEngine(ProcessingModule):
         if len(existing) > 0:
             return
 
-        if not self._identity_yaml_path.exists():
-            logger.warning(f"Identity file {self._identity_yaml_path} not found. Cannot seed beliefs.")
+        seed_path = self._identity_yaml_path.parent / "seed_beliefs.yaml"
+        if not seed_path.exists():
+            logger.warning(f"Seed beliefs file {seed_path} not found. Cannot seed beliefs.")
             return
 
         try:
-            with open(self._identity_yaml_path, "r", encoding="utf-8") as f:
+            with open(seed_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
-            config_beliefs = data.get("personality", {}).get("beliefs", [])
+            config_beliefs = data.get("beliefs", [])
             for cb in config_beliefs:
                 label = cb.get("id")
                 statement = cb.get("statement")
