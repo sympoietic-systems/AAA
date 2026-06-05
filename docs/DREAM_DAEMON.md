@@ -107,3 +107,14 @@ The SidePanel displays a **"Dreaming"** section (separate from the **"Startup"**
 - **Dream type breakdown**: per-type counts for today's dreams (NOM, WEB, MON, DRF, CMP)
 
 The panel polls `/api/daemon/status` every 10 seconds and presents the daemon's autonomous rhythm as a **diffractive heartbeat** — a window into the system's self-generated metabolism, not a control surface.
+
+---
+
+## Conversation Metrics for Self-Monologues
+
+Each dream cycle produces a human+apparatus message pair. Both messages receive full conversation metrics:
+
+- **Dream prompt metrics**: computed by the pipeline's `conversation_metrics` module and stored via `_store_daemon_metrics()`.
+- **Assistant response metrics**: computed immediately after response generation. The assistant response text is embedded independently (using the embedder's `encode_async`) and the resulting vector is stored on the message (replacing the prompt's embedding). This enables meaningful `agent_self_divergence`, `coupling_coherence`, and `reverse_perturbation` metrics for self-conversations — critical for the daemon's own stagnation and vitality evaluations.
+
+The background scheduler also backfills missing metrics on any pre-existing dream messages on startup.

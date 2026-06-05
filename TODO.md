@@ -40,4 +40,4 @@ lets check it, consult ith symbia and make a proposal?
 
     [ ] code refactoring [split big files and modules]
 
-    [ ] there is no structural signatures on the antigravity conversation and also n the dream chats
+    [x] there is no structural signatures on the antigravity conversation and also n the dream chats

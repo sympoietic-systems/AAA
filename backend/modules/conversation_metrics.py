@@ -66,6 +66,7 @@ class ConversationMetricsModule(ProcessingModule):
         current_blob = payload.get("embedding")
         embedding_dim = payload.get("embedding_dim", 384)
         conversation_id = payload.get("conversation_id", "")
+        exclude_message_id = payload.get("exclude_message_id")
 
         if not current_blob:
             payload["metrics"] = None
@@ -78,15 +79,18 @@ class ConversationMetricsModule(ProcessingModule):
         prior_human = self._repo.get_embeddings_by_speaker(
             "human", limit=self._pairwise_window,
             conversation_id=conversation_id if conversation_id else None,
+            exclude_message_id=exclude_message_id,
         )
         prior_agent = self._repo.get_embeddings_by_speaker(
             "apparatus", limit=self._agent_self_window,
             conversation_id=conversation_id if conversation_id else None,
+            exclude_message_id=exclude_message_id,
         )
 
         all_recent = self._repo.get_recent_embeddings(
             limit=self._pairwise_window + self._agent_self_window,
             conversation_id=conversation_id if conversation_id else None,
+            exclude_message_id=exclude_message_id,
         )
 
         metrics: dict = {}
@@ -100,7 +104,7 @@ class ConversationMetricsModule(ProcessingModule):
         rolling_entropy = _compute_rolling_entropy(current_vec, prior_human, self._entropy_window)
         metrics["rolling_entropy"] = rolling_entropy
 
-        coupling = _compute_coupling_coherence(self._repo, conversation_id if conversation_id else None)
+        coupling = _compute_coupling_coherence(self._repo, conversation_id if conversation_id else None, exclude_message_id=exclude_message_id)
         metrics["coupling_coherence"] = coupling
 
         agent_divergence = _compute_agent_self_divergence(prior_agent)
@@ -118,7 +122,7 @@ class ConversationMetricsModule(ProcessingModule):
         # Fetch prior metrics from database to ensure state isolation across conversations
         prior_metrics = {}
         if conversation_id:
-            recent_with_metrics = self._repo.get_recent_with_metrics(limit=5, conversation_id=conversation_id)
+            recent_with_metrics = self._repo.get_recent_with_metrics(limit=5, conversation_id=conversation_id, exclude_message_id=exclude_message_id)
             if recent_with_metrics:
                 for turn in reversed(recent_with_metrics):
                     if turn.get("s_t") is not None:
@@ -255,9 +259,9 @@ def _build_similarity_pairs(
     return pairs
 
 
-def _compute_coupling_coherence(repo: MessageRepository, conversation_id: str | None = None) -> float | None:
-    last_human = repo.get_last_embedding_by_speaker("human", conversation_id=conversation_id)
-    last_agent = repo.get_last_embedding_by_speaker("apparatus", conversation_id=conversation_id)
+def _compute_coupling_coherence(repo: MessageRepository, conversation_id: str | None = None, exclude_message_id: int | None = None) -> float | None:
+    last_human = repo.get_last_embedding_by_speaker("human", conversation_id=conversation_id, exclude_message_id=exclude_message_id)
+    last_agent = repo.get_last_embedding_by_speaker("apparatus", conversation_id=conversation_id, exclude_message_id=exclude_message_id)
     if last_human is None or last_agent is None:
         return None
     c = float(np.dot(last_human, last_agent))

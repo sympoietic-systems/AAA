@@ -44,7 +44,10 @@ We implemented the `AutopoieticDreamDaemon` in `backend/core/daemon.py` with int
    DuckDuckGo scraping parses external markdown for high-tension beliefs and diffracts the context back into the agent's internal dream monologues.
 
 6. **Database-Backed Budget & Agentic Meta-Cognitive Routing**:
-   To prevent restart/multi-instance budget bypasses and context bloat, the daily dream count is tracked dynamically in the database via `LIKE 'Dream Log%'` queries. The daemon delegates conversation selection to a meta-cognitive agentic task (`_resolve_dream_conversation`). The background model decides whether to reuse an existing conversation or create a new topic conversation, automatically splitting them into numbered parts (Part 2, etc.) when they exceed 12 messages.
+    To prevent restart/multi-instance budget bypasses and context bloat, the daily dream count is tracked dynamically in the database via `LIKE 'Dream Log%'` queries. The daemon delegates conversation selection to a meta-cognitive agentic task (`_resolve_dream_conversation`). The background model decides whether to reuse an existing conversation or create a new topic conversation, automatically splitting them into numbered parts (Part 2, etc.) when they exceed 12 messages.
+
+7. **Conversation Metrics Storage (2026-06-05)**:
+    Both the dream prompt (human) and assistant response now receive full conversation metrics. The assistant response is embedded independently (using its own response text rather than the prompt's embedding), enabling meaningful coupling_coherence, agent_self_divergence, and reverse_perturbation metrics for self-conversations. Metrics are stored via `_store_daemon_metrics()` immediately after message insertion, ensuring the dream conversation has complete metrics coverage for downstream belief metabolism and somatic vitality computation.
 
 ## Consequences
 

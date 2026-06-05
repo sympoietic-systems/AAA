@@ -333,7 +333,53 @@ class AutopoieticDreamDaemon:
                 structural_signature=assistant_sig_blob,
             )
 
-            # 3. Trigger belief metabolism catch-up for this turn
+            # 3. Embed assistant response and update its embedding for proper metrics
+            response_embedder = getattr(self.app_state, "embedder", None)
+            response_emb_blob = None
+            response_emb_dim = 384
+            if response_embedder and response_embedder.service.is_loaded and response_text.strip():
+                try:
+                    response_emb = await response_embedder.service.encode_async(response_text)
+                    response_emb_blob = response_embedder.service.serialize(response_emb)
+                    response_emb_dim = response_embedder.service.dim
+                    self.message_repo.update_embedding(
+                        assistant_msg.id,
+                        response_emb_blob,
+                        response_embedder.service.model_name,
+                        response_emb_dim,
+                    )
+                except Exception as e:
+                    logger.warning("Failed to embed dream assistant response: %s", e)
+
+            # 4. Store conversation metrics for both dream messages
+            metrics_repo = getattr(self.app_state, "metrics_repo", None)
+            metrics_module = getattr(self.app_state, "metrics_module", None)
+            if metrics_repo and metrics_module:
+                payload_metrics = result.payload.get("metrics")
+                if payload_metrics and payload_metrics.get("pairwise_similarity") is not None:
+                    try:
+                        _store_daemon_metrics(metrics_repo, user_msg.id, payload_metrics)
+                    except Exception as e:
+                        logger.warning("Failed to store dream user metrics: %s", e)
+
+                # Compute assistant metrics using the response embedding
+                if response_text.strip() and response_emb_blob:
+                    try:
+                        assistant_payload = {
+                            "content": response_text,
+                            "embedding": response_emb_blob,
+                            "embedding_dim": response_emb_dim,
+                            "conversation_id": dream_convo_id,
+                            "exclude_message_id": assistant_msg.id,
+                        }
+                        assistant_result = await metrics_module.process(assistant_payload)
+                        assistant_metrics = assistant_result.get("metrics")
+                        if assistant_metrics and assistant_metrics.get("pairwise_similarity") is not None:
+                            _store_daemon_metrics(metrics_repo, assistant_msg.id, assistant_metrics)
+                    except Exception as e:
+                        logger.warning("Failed to store dream assistant metrics: %s", e)
+
+            # 5. Trigger belief metabolism catch-up for this turn
             belief_metabolism = getattr(self.app_state, "belief_metabolism", None)
             if belief_metabolism:
                 await belief_metabolism.metabolize(
@@ -917,3 +963,33 @@ class AutopoieticDreamDaemon:
                 if isinstance(kw, str) and kw.strip():
                     self.conversation_repo.add_tag(conversation_id, kw.strip().lower(), "keyword")
             logger.info("Successfully generated and saved keywords for conversation %s: %s", conversation_id, keywords)
+
+
+def _store_daemon_metrics(metrics_repo, message_id: int, metrics: dict) -> None:
+    s_t = metrics.get("pairwise_similarity")
+    novelty = metrics.get("conceptual_novelty")
+    if s_t is None or novelty is None:
+        return
+    phase_shifts = metrics.get("phase_shifts")
+    phase_shifts_json = None
+    if phase_shifts:
+        import json as _json
+        phase_shifts_json = _json.dumps(phase_shifts)
+    metrics_repo.insert(
+        message_id=message_id,
+        s_t=float(s_t),
+        novelty=float(novelty),
+        deficit=float(metrics.get("homeostatic_deficit", 0.0)),
+        rolling_entropy=float(metrics["rolling_entropy"]) if metrics.get("rolling_entropy") is not None else None,
+        coupling=float(metrics["coupling_coherence"]) if metrics.get("coupling_coherence") is not None else None,
+        agent_divergence=float(metrics["agent_self_divergence"]) if metrics.get("agent_self_divergence") is not None else None,
+        reverse_perturbation=float(metrics["reverse_perturbation"]) if metrics.get("reverse_perturbation") is not None else None,
+        surprise_index=float(metrics["surprise_index"]) if metrics.get("surprise_index") is not None else None,
+        mutual_perturbation=float(metrics["mutual_perturbation"]) if metrics.get("mutual_perturbation") is not None else None,
+        vitality=float(metrics["conversation_vitality"]) if metrics.get("conversation_vitality") is not None else None,
+        phase_shifts=phase_shifts_json,
+        boringness=float(metrics["boringness"]) if metrics.get("boringness") is not None else None,
+        conceptual_velocity=float(metrics["conceptual_velocity"]) if metrics.get("conceptual_velocity") is not None else None,
+        divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"]) if metrics.get("divergence_resolution_ratio") is not None else None,
+        paskian_health=float(metrics["paskian_health"]) if metrics.get("paskian_health") is not None else None,
+    )

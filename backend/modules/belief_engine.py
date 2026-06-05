@@ -11,7 +11,7 @@ from backend.modules.base import ProcessingModule
 from backend.skills.metadata import SkillMeta
 from backend.storage.repository import MessageRepository, BeliefRepository
 from backend.storage.models import BeliefNode
-from backend.modules.structural_engine import LEXICON_MAPPINGS, LexiconScorer
+from backend.modules.structural_engine import LEXICON_MAPPINGS, LexiconScorer, CompositeStructuralScorer
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,24 @@ class BeliefDynamicsEngine(ProcessingModule):
 
     def validate(self) -> bool:
         return True
+
+    async def _ensure_signature(self, msg, current_sig_bytes: bytes) -> bytes:
+        if current_sig_bytes:
+            return current_sig_bytes
+        content = getattr(msg, 'content', '') or ''
+        if not content.strip():
+            return b""
+        try:
+            scorer = CompositeStructuralScorer(llm_provider=None)
+            sig = await scorer.score_async(content, use_llm_scorer=False)
+            sig_bytes = sig.tobytes()
+            if hasattr(msg, 'id') and msg.id:
+                self._message_repo.update_signature(msg.id, sig_bytes)
+            logger.info("Lazy-computed structural signature for message %d", msg.id)
+            return sig_bytes
+        except Exception as e:
+            logger.warning("Failed lazy signature computation for message %d: %s", getattr(msg, 'id', None), e)
+            return b""
 
     def _seed_initial_beliefs_if_needed(self, agent_id: str) -> None:
         existing = self._belief_repo.list_beliefs(agent_id)
@@ -474,8 +492,12 @@ class BeliefDynamicsEngine(ProcessingModule):
             user_sig_bytes = user_msg.structural_signature
             assistant_sig_bytes = assistant_msg.structural_signature
             if not user_sig_bytes or not assistant_sig_bytes:
-                logger.warning("Structural signatures not found on messages. Skipping metabolism.")
-                return
+                # Lazy fallback: compute missing signatures from message content
+                user_sig_bytes = await self._ensure_signature(user_msg, user_sig_bytes)
+                assistant_sig_bytes = await self._ensure_signature(assistant_msg, assistant_sig_bytes)
+                if not user_sig_bytes or not assistant_sig_bytes:
+                    logger.warning("Structural signatures could not be computed. Skipping metabolism.")
+                    return
 
             user_vec = np.frombuffer(user_sig_bytes, dtype=np.float32)
             assistant_vec = np.frombuffer(assistant_sig_bytes, dtype=np.float32)

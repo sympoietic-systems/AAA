@@ -146,3 +146,17 @@ To protect the FastAPI response budget (sub-100ms for pipeline passes), the engi
     *   **Performance:** Non-blocking design ensures low-latency execution for user interactions.
 *   **Cons:**
     *   Linguistic target lists and topology heuristics are language-dependent and require calibration. Exposing target lemmatization lists in `config.yaml` mitigates this.
+
+---
+
+## Appendix A: Lazy Fallback and Automatic Backfill (2026-06-05)
+
+### Problem
+Messages created before the `structural_signature` column migration have `NULL` signatures. When belief metabolism encounters a message pair without signatures, it skips the turn entirely — preventing belief formation, attractor window population, and autopoietic personality adaptation.
+
+### Solution
+**Lazy fallback** in `BeliefDynamicsEngine.metabolize()`: when a message lacks a structural signature, the engine calls `_ensure_signature()` which computes a vector from lexicon+topology scoring (no LLM), stores it back to the database via `MessageRepository.update_signature()`, then proceeds with metabolism.
+
+**Background backfill** via `BackgroundStartupScheduler._backfill_structural_signatures()`: on startup and every 60 seconds thereafter, the scheduler scans for messages with `NULL` structural signatures and fills them in using lexicon+topology scoring. This self-heals any gaps introduced by legacy data or exceptional code paths.
+
+**Scope**: applies to all messages in `conversation_log` and `perception_sediment`, including legacy conversations (`00000000-...`), consultation conversations (antigravity), and dream log conversations.

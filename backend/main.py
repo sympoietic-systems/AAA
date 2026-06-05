@@ -554,6 +554,7 @@ async def lifespan(app: FastAPI):
     app.state.message_repo = message_repo
     app.state.error_repo = error_repo
     app.state.metrics_repo = metrics_repo
+    app.state.metrics_module = conversation_metrics
     app.state.conversation_repo = conversation_repo
     app.state.perception_repo = perception_repo
     app.state.perception_module = perception_module

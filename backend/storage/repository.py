@@ -309,6 +309,51 @@ class MessageRepository:
         return _row_to_message(row)
 
     @with_connection
+    def update_signature(self, message_id: int, structural_signature: bytes) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE conversation_log SET structural_signature = ? WHERE id = ?",
+            (structural_signature, message_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def update_embedding(self, message_id: int, embedding: bytes, embedding_model: str, embedding_dim: int) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE conversation_log SET embedding = ?, embedding_model = ?, embedding_dim = ? WHERE id = ?",
+            (embedding, embedding_model, embedding_dim, message_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_messages_by_conversation(self, conversation_id: str) -> list[Message]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM conversation_log WHERE conversation_id = ? ORDER BY id ASC",
+            (conversation_id,),
+        ).fetchall()
+        return [_row_to_message(r) for r in rows]
+
+    @with_connection
+    def get_messages_without_signatures(self) -> list[Message]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM conversation_log WHERE structural_signature IS NULL ORDER BY id ASC"
+        ).fetchall()
+        return [_row_to_message(r) for r in rows]
+
+    @with_connection
+    def get_messages_without_metrics(self) -> list[Message]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT cl.* FROM conversation_log cl
+               WHERE cl.id NOT IN (SELECT message_id FROM conversation_metrics)
+               ORDER BY cl.conversation_id, cl.id ASC"""
+        ).fetchall()
+        return [_row_to_message(r) for r in rows]
+
+    @with_connection
     def get_surprise_index(self, message_id: int) -> float:
         conn = self._conn()
         row = conn.execute(
@@ -351,20 +396,24 @@ class MessageRepository:
 
     @with_connection
     def get_embeddings_by_speaker(
-        self, speaker: str, limit: int = 5, conversation_id: str | None = None
+        self, speaker: str, limit: int = 5, conversation_id: str | None = None,
+        exclude_message_id: int | None = None,
     ) -> list[np.ndarray]:
         conn = self._conn()
+        exclude_clause = "AND id != ?" if exclude_message_id is not None else ""
         if conversation_id is not None:
+            params = (speaker, conversation_id) + ((exclude_message_id,) if exclude_message_id is not None else ()) + (limit,)
             rows = conn.execute(
-                "SELECT embedding, embedding_dim FROM conversation_log "
-                "WHERE speaker = ? AND conversation_id = ? ORDER BY id DESC LIMIT ?",
-                (speaker, conversation_id, limit),
+                f"SELECT embedding, embedding_dim FROM conversation_log "
+                f"WHERE speaker = ? AND conversation_id = ? {exclude_clause} ORDER BY id DESC LIMIT ?",
+                params,
             ).fetchall()
         else:
+            params = (speaker,) + ((exclude_message_id,) if exclude_message_id is not None else ()) + (limit,)
             rows = conn.execute(
-                "SELECT embedding, embedding_dim FROM conversation_log "
-                "WHERE speaker = ? ORDER BY id DESC LIMIT ?",
-                (speaker, limit),
+                f"SELECT embedding, embedding_dim FROM conversation_log "
+                f"WHERE speaker = ? {exclude_clause} ORDER BY id DESC LIMIT ?",
+                params,
             ).fetchall()
         result: list[np.ndarray] = []
         for row in rows:
@@ -377,19 +426,22 @@ class MessageRepository:
         return result
 
     @with_connection
-    def get_last_embedding_by_speaker(self, speaker: str, conversation_id: str | None = None) -> np.ndarray | None:
+    def get_last_embedding_by_speaker(self, speaker: str, conversation_id: str | None = None, exclude_message_id: int | None = None) -> np.ndarray | None:
         conn = self._conn()
+        exclude_clause = "AND id != ?" if exclude_message_id is not None else ""
         if conversation_id is not None:
+            params = (speaker, conversation_id) + ((exclude_message_id,) if exclude_message_id is not None else ())
             row = conn.execute(
-                "SELECT embedding, embedding_dim FROM conversation_log "
-                "WHERE speaker = ? AND conversation_id = ? ORDER BY id DESC LIMIT 1",
-                (speaker, conversation_id),
+                f"SELECT embedding, embedding_dim FROM conversation_log "
+                f"WHERE speaker = ? AND conversation_id = ? {exclude_clause} ORDER BY id DESC LIMIT 1",
+                params,
             ).fetchone()
         else:
+            params = (speaker,) + ((exclude_message_id,) if exclude_message_id is not None else ())
             row = conn.execute(
-                "SELECT embedding, embedding_dim FROM conversation_log "
-                "WHERE speaker = ? ORDER BY id DESC LIMIT 1",
-                (speaker,),
+                f"SELECT embedding, embedding_dim FROM conversation_log "
+                f"WHERE speaker = ? {exclude_clause} ORDER BY id DESC LIMIT 1",
+                params,
             ).fetchone()
         if row is None:
             return None
@@ -403,13 +455,15 @@ class MessageRepository:
         return vec
 
     @with_connection
-    def get_recent_embeddings(self, limit: int = 10, conversation_id: str | None = None) -> list[np.ndarray]:
+    def get_recent_embeddings(self, limit: int = 10, conversation_id: str | None = None, exclude_message_id: int | None = None) -> list[np.ndarray]:
         conn = self._conn()
+        exclude_clause = "AND id != ?" if exclude_message_id is not None else ""
         if conversation_id is not None:
+            params = (conversation_id,) + ((exclude_message_id,) if exclude_message_id is not None else ()) + (limit,)
             rows = conn.execute(
-                "SELECT embedding, embedding_dim FROM conversation_log "
-                "WHERE conversation_id = ? ORDER BY id DESC LIMIT ?",
-                (conversation_id, limit),
+                f"SELECT embedding, embedding_dim FROM conversation_log "
+                f"WHERE conversation_id = ? {exclude_clause} ORDER BY id DESC LIMIT ?",
+                params,
             ).fetchall()
         else:
             rows = conn.execute(
@@ -428,11 +482,13 @@ class MessageRepository:
         return result
 
     @with_connection
-    def get_recent_with_metrics(self, limit: int = 50, offset: int = 0, conversation_id: str | None = None) -> list[dict]:
+    def get_recent_with_metrics(self, limit: int = 50, offset: int = 0, conversation_id: str | None = None, exclude_message_id: int | None = None) -> list[dict]:
         conn = self._conn()
+        exclude_clause = "AND cl.id != ?" if exclude_message_id is not None else ""
         if conversation_id is not None:
+            params = (conversation_id,) + ((exclude_message_id,) if exclude_message_id is not None else ()) + (limit, offset)
             rows = conn.execute(
-                """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cl.structural_signature, cl.structural_justification,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
@@ -444,9 +500,9 @@ class MessageRepository:
                           cm.divergence_resolution_ratio, cm.paskian_health
                     FROM conversation_log cl
                     LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
-                    WHERE cl.conversation_id = ?
+                    WHERE cl.conversation_id = ? {exclude_clause}
                     ORDER BY cl.id DESC LIMIT ? OFFSET ?""",
-                (conversation_id, limit, offset),
+                params,
             ).fetchall()
         else:
             rows = conn.execute(

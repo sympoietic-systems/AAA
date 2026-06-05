@@ -464,6 +464,41 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
             except Exception:
                 logger.exception("Failed to store metrics")
 
+        # Compute and store metrics for assistant response
+        if metrics_repo and response_text.strip():
+            try:
+                embedder = getattr(state, "embedder", None)
+                if embedder and embedder.service.is_loaded:
+                    assistant_emb = await embedder.service.encode_async(response_text)
+                    assistant_emb_blob = embedder.service.serialize(assistant_emb)
+                    repo.update_embedding(
+                        response_msg.id,
+                        assistant_emb_blob,
+                        embedder.service.model_name,
+                        embedder.service.dim,
+                    )
+                    # Compute assistant metrics via the metrics module
+                    metrics_module = getattr(state, "metrics_module", None)
+                    if metrics_module:
+                        assistant_payload = {
+                            "content": response_text,
+                            "embedding": assistant_emb_blob,
+                            "embedding_dim": embedder.service.dim,
+                            "conversation_id": conversation_id,
+                            "exclude_message_id": response_msg.id,
+                        }
+                        assistant_result = await metrics_module.process(assistant_payload)
+                        assistant_metrics = assistant_result.get("metrics")
+                        if assistant_metrics and assistant_metrics.get("pairwise_similarity") is not None:
+                            _store_metrics(
+                                metrics_repo=metrics_repo,
+                                message_id=response_msg.id,
+                                metrics=assistant_metrics,
+                                recommendations=None,
+                            )
+            except Exception:
+                logger.exception("Failed to compute assistant metrics")
+
         # Schedule dynamic belief metabolism
         belief_metabolism = getattr(state, "belief_metabolism", None)
         if belief_metabolism:
