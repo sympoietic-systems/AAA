@@ -103,8 +103,10 @@ class BeliefNode:
     ontological_mass: float
     somatic_anchor: str
     vector_16d: str  # JSON list
-    created_at: datetime
-    updated_at: datetime
+    lifecycle_stage: str = "crystallized"
+    last_reinforced_at: Optional[datetime] = None
+    created_at: datetime = datetime.min
+    updated_at: datetime = datetime.min
 
 
 @dataclass

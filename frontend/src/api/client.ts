@@ -303,6 +303,8 @@ export interface BeliefNodeInfo {
   ontological_mass: number
   vector_16d: string
   origin: string
+  lifecycle_stage: string
+  last_reinforced_at: string | null
   updated_at: string | null
   events: BeliefEventInfo[]
 }
@@ -315,6 +317,8 @@ export interface SomaticStateInfo {
 
 export interface BeliefsResponse {
   beliefs: BeliefNodeInfo[]
+  proto_beliefs: BeliefNodeInfo[]
+  ghosts: BeliefNodeInfo[]
   somatic: SomaticStateInfo | null
   attractor_window: string[]
   spectral_margin: string[]

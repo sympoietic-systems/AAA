@@ -511,6 +511,26 @@ def init_db(db_path: str) -> sqlite3.Connection:
     except sqlite3.OperationalError:
         pass
 
+    # Migration: ADR-027 proto-belief lifecycle + mass dynamics
+    try:
+        conn.execute("ALTER TABLE belief_nodes ADD COLUMN lifecycle_stage TEXT DEFAULT 'crystallized'")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE belief_nodes ADD COLUMN last_reinforced_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+
+    # Backfill existing beliefs: map origin to lifecycle_stage
+    conn.execute(
+        "UPDATE belief_nodes SET lifecycle_stage = 'collapsed' WHERE origin = 'collapsed' AND lifecycle_stage = 'crystallized'"
+    )
+    # Set last_reinforced_at to updated_at for existing rows that lack it
+    conn.execute(
+        "UPDATE belief_nodes SET last_reinforced_at = updated_at WHERE last_reinforced_at IS NULL"
+    )
+
     _migrate_legacy_conversation(conn)
 
     conn.commit()

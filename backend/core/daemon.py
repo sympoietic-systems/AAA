@@ -526,7 +526,7 @@ class AutopoieticDreamDaemon:
             return
             
         beliefs = self.belief_repo.list_beliefs("symbia")
-        active_beliefs = [b for b in beliefs if b.origin != "collapsed"]
+        active_beliefs = [b for b in beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
         
         drift_coeff = self.config.get("daemon", {}).get("drift_coefficient", 0.00001)
         beta = 2.0
@@ -642,7 +642,7 @@ class AutopoieticDreamDaemon:
 
     async def _evaluate_tension_hotspot(self) -> Tuple[Optional[BeliefNode], float]:
         beliefs = self.belief_repo.list_beliefs("symbia")
-        active_beliefs = [b for b in beliefs if b.origin != "collapsed" and b.confidence >= 0.20]
+        active_beliefs = [b for b in beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
         if not active_beliefs:
             return None, 0.0
 

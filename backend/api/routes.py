@@ -573,6 +573,9 @@ async def get_beliefs(request: Request, conversation_id: Optional[str] = None, a
             
     raw_beliefs = belief_repo.list_beliefs(agent_id)
     beliefs_list = []
+    proto_beliefs_list = []
+    ghosts_list = []
+
     for b in raw_beliefs:
         events = belief_repo.get_events_for_belief(b.id)
         if b.ontological_mass >= 1.5:
@@ -581,8 +584,8 @@ async def get_beliefs(request: Request, conversation_id: Optional[str] = None, a
             cat = "ontological"
         else:
             cat = "methodological"
-            
-        beliefs_list.append({
+
+        belief_data = {
             "id": b.id,
             "label": b.label,
             "statement": b.statement,
@@ -591,6 +594,8 @@ async def get_beliefs(request: Request, conversation_id: Optional[str] = None, a
             "ontological_mass": b.ontological_mass,
             "vector_16d": b.vector_16d,
             "origin": b.origin,
+            "lifecycle_stage": b.lifecycle_stage,
+            "last_reinforced_at": b.last_reinforced_at.isoformat() if b.last_reinforced_at else None,
             "updated_at": b.updated_at.isoformat() if b.updated_at else None,
             "events": [
                 {
@@ -603,7 +608,15 @@ async def get_beliefs(request: Request, conversation_id: Optional[str] = None, a
                 }
                 for e in events
             ]
-        })
+        }
+
+        stage = b.lifecycle_stage
+        if stage in ("crystallized", "senescence"):
+            beliefs_list.append(belief_data)
+        elif stage in ("nucleation", "accretion"):
+            proto_beliefs_list.append(belief_data)
+        elif stage == "collapsed":
+            ghosts_list.append(belief_data)
     
     somatic_state = None
     attractor_window = []
@@ -621,8 +634,8 @@ async def get_beliefs(request: Request, conversation_id: Optional[str] = None, a
             engine = getattr(state, "belief_metabolism", None)
             if engine:
                 try:
-                    active_beliefs = [b for b in raw_beliefs if b.origin != "collapsed" and b.confidence >= 0.20]
-                    collapsed_beliefs = [b for b in raw_beliefs if b.origin == "collapsed" or b.confidence < 0.20]
+                    active_beliefs = [b for b in raw_beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
+                    collapsed_beliefs = [b for b in raw_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20]
                     
                     if active_beliefs:
                         slot1 = max(active_beliefs, key=lambda b: b.ontological_mass)
@@ -648,6 +661,8 @@ async def get_beliefs(request: Request, conversation_id: Optional[str] = None, a
                     
     return {
         "beliefs": beliefs_list,
+        "proto_beliefs": proto_beliefs_list,
+        "ghosts": ghosts_list,
         "somatic": somatic_state,
         "attractor_window": attractor_window,
         "spectral_margin": spectral_margin

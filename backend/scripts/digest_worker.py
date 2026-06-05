@@ -128,7 +128,7 @@ async def process_and_summarize_file(
             if file_type != "image":
                 try:
                     active_beliefs = belief_repo.list_beliefs(agent_name)
-                    active_labels = [b.label for b in active_beliefs if b.origin != "collapsed"]
+                    active_labels = [b.label for b in active_beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
                 except Exception:
                     pass
 
@@ -282,7 +282,7 @@ async def reprocess_and_summarize_file_background(
             if file_type != "image":
                 try:
                     active_beliefs = belief_repo.list_beliefs(agent_name)
-                    active_labels = [b.label for b in active_beliefs if b.origin != "collapsed"]
+                    active_labels = [b.label for b in active_beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
                 except Exception:
                     pass
 

@@ -91,7 +91,6 @@ class BeliefDynamicsEngine(ProcessingModule):
                 confidence = cb.get("confidence", 0.5)
                 category = cb.get("category", "ontological")
 
-                # Map category to Ontological Mass
                 if category == "foundational":
                     mass = 1.5
                 elif category == "ontological":
@@ -101,7 +100,6 @@ class BeliefDynamicsEngine(ProcessingModule):
                 else:
                     mass = 1.0
 
-                # Compute baseline 16D vector using LexiconScorer
                 vec = self._scorer.score(statement)
                 vec_json = json.dumps(vec.tolist())
 
@@ -115,10 +113,187 @@ class BeliefDynamicsEngine(ProcessingModule):
                     ontological_mass=mass,
                     somatic_anchor="none",
                     vector_16d=vec_json,
+                    lifecycle_stage="crystallized",
                 )
             logger.info(f"Successfully seeded {len(config_beliefs)} baseline beliefs for agent {agent_id}.")
         except Exception as e:
             logger.error(f"Error seeding beliefs: {e}", exc_info=True)
+
+    def _nucleate_proto_belief(
+        self,
+        agent_id: str,
+        statement: str,
+        vector: np.ndarray,
+        source_type: str,
+        source_id: str,
+        source_weight: float,
+    ) -> Optional[str]:
+        existing = self._belief_repo.list_beliefs(agent_id)
+        all_labels = {b.label for b in existing}
+
+        words = [w for w in statement.split() if w.isalnum()]
+        label_words = words[:3] if words else ["proto"]
+        label_base = "_".join(label_words).lower()
+        label = label_base
+        counter = 1
+        while label in all_labels:
+            label = f"{label_base}_{counter}"
+            counter += 1
+
+        initial_mass = 0.05 * source_weight / 0.5
+
+        ghosts = [b for b in existing if b.lifecycle_stage == "collapsed"]
+        for ghost in ghosts:
+            try:
+                ghost_vec = np.array(json.loads(ghost.vector_16d), dtype=np.float32)
+                ghost_sim = compute_cosine_similarity(vector, ghost_vec)
+                if ghost_sim > 0.9:
+                    jump_mass = 0.4 * source_weight / 0.5
+                    initial_mass = max(initial_mass, jump_mass)
+                    logger.info(f"Resonance jump: ghost '{ghost.label}' (sim={ghost_sim:.2f}) boosted nucleation mass to {initial_mass:.3f}")
+                    break
+            except Exception:
+                pass
+
+        belief_id = str(uuid.uuid4())
+        stage = "nucleation" if initial_mass < 0.5 else "accretion"
+        self._belief_repo.create_belief(
+            id=belief_id,
+            agent_id=agent_id,
+            label=label,
+            statement=statement,
+            origin="emergent",
+            confidence=0.10,
+            ontological_mass=initial_mass,
+            somatic_anchor="conceptual",
+            vector_16d=json.dumps(vector.tolist()),
+            lifecycle_stage=stage,
+        )
+
+        self._belief_repo.insert_belief_event(
+            event_id=str(uuid.uuid4()),
+            belief_id=belief_id,
+            source_type=source_type,
+            source_id=source_id,
+            alignment=1.0,
+            perturbation=1.0,
+            event_type="emergence",
+            impact=initial_mass,
+            rationale=f"Proto-belief nucleated from {source_type}:{source_id} with mass={initial_mass:.3f}, stage={stage}",
+        )
+
+        logger.info(f"Nucleated proto-belief '{label}' (mass={initial_mass:.3f}, stage={stage})")
+        return belief_id
+
+    def _accrete_belief(
+        self,
+        belief: BeliefNode,
+        input_vector: np.ndarray,
+        source_weight: float,
+        alignment: float,
+        perturbation: float,
+        source_type: str = "chat_turn",
+        source_id: str | None = None,
+    ) -> float:
+        eta = 0.02
+        current_mass = belief.ontological_mass
+        delta_m = eta * source_weight * alignment / (1.0 + current_mass)
+
+        new_mass = current_mass + delta_m
+        new_mass = max(0.0, min(3.0, new_mass))
+
+        new_confidence = belief.confidence
+        dc = 0.5
+        plasticity = dc * ((1.0 - alignment) / 2.0)
+        delta_c = (plasticity * alignment * perturbation) / max(current_mass, 0.01)
+        new_confidence = max(0.0, min(1.0, belief.confidence + delta_c))
+
+        new_stage = self._compute_lifecycle_stage(belief, new_mass, new_confidence)
+
+        self._belief_repo.update_belief(
+            belief_id=belief.id,
+            confidence=new_confidence,
+            vector_16d=belief.vector_16d,
+            origin=belief.origin,
+            lifecycle_stage=new_stage,
+        )
+        self._belief_repo.update_belief_mass(belief.id, new_mass)
+
+        event_type = "support" if alignment >= 0.0 else "collision"
+        if new_stage != belief.lifecycle_stage:
+            event_type = "crystallization" if new_stage == "crystallized" else "collapse" if new_stage == "collapsed" else event_type
+
+        self._belief_repo.insert_belief_event(
+            event_id=str(uuid.uuid4()),
+            belief_id=belief.id,
+            source_type=source_type,
+            source_id=source_id,
+            alignment=alignment,
+            perturbation=perturbation,
+            event_type=event_type,
+            impact=delta_m,
+            rationale=f"Accreted: mass={new_mass:.3f} (delta={delta_m:+.3f}), conf={new_confidence:.3f}, stage={new_stage}",
+        )
+
+        return new_mass
+
+    def _compute_lifecycle_stage(
+        self,
+        belief: BeliefNode,
+        new_mass: float,
+        new_confidence: float,
+    ) -> str:
+        current_stage = belief.lifecycle_stage
+
+        if new_confidence < 0.20:
+            return "collapsed"
+        if new_mass < 0.02:
+            return "collapsed"
+        if new_mass < 0.001:
+            return "faded"
+
+        if new_mass >= 0.5 and current_stage in ("nucleation", "accretion"):
+            return "crystallized"
+
+        if current_stage == "crystallized":
+            return "crystallized"
+        if current_stage == "senescence":
+            if new_mass >= 0.5:
+                return "crystallized"
+            return "senescence"
+        if current_stage == "collapsed":
+            return "collapsed"
+        if current_stage == "faded":
+            return "faded"
+
+        if new_mass < 0.1:
+            return "nucleation"
+        return "accretion"
+
+    def _find_closest_active_belief(
+        self,
+        agent_id: str,
+        input_vector: np.ndarray,
+        min_similarity: float = 0.3,
+    ) -> Optional[BeliefNode]:
+        all_beliefs = self._belief_repo.list_beliefs(agent_id)
+        active = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
+
+        best = None
+        best_sim = -1.0
+        for b in active:
+            try:
+                b_vec = np.array(json.loads(b.vector_16d), dtype=np.float32)
+                sim = compute_cosine_similarity(input_vector, b_vec)
+                if sim > best_sim:
+                    best_sim = sim
+                    best = b
+            except Exception:
+                continue
+
+        if best and best_sim >= min_similarity:
+            return best
+        return None
 
     async def process(self, payload: dict) -> dict:
         conversation_id = payload.get("conversation_id", "")
@@ -169,8 +344,8 @@ class BeliefDynamicsEngine(ProcessingModule):
 
         # 4. Extract Attractor Window and Spectral Margin
         all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        active_beliefs = [b for b in all_beliefs if b.origin != "collapsed" and b.confidence >= 0.20]
-        collapsed_beliefs = [b for b in all_beliefs if b.origin == "collapsed" or b.confidence < 0.20]
+        active_beliefs = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
+        collapsed_beliefs = [b for b in all_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20]
 
         # Attractor Window (3 slots)
         slot1: Optional[BeliefNode] = None
@@ -286,62 +461,22 @@ class BeliefDynamicsEngine(ProcessingModule):
 
             perturbation = 1.0 + surprise_index
 
-            # 3. Update Belief Coordinates & Confidences
-            all_beliefs = self._belief_repo.list_beliefs(agent_id)
-            for b in all_beliefs:
-                if b.origin == "collapsed":
-                    continue
-
-                b_vec = np.array(json.loads(b.vector_16d), dtype=np.float32)
+            # 3. Proto-belief lifecycle: find closest match, accrete or nucleate
+            closest = self._find_closest_active_belief(agent_id, user_vec, min_similarity=0.3)
+            if closest is not None:
+                b_vec = np.array(json.loads(closest.vector_16d), dtype=np.float32)
                 alignment = compute_cosine_similarity(user_vec, b_vec)
-
-                # Plasticity
-                plasticity = dc * ((1.0 - alignment) / 2.0)
-
-                # Delta confidence
-                delta_c = (plasticity * alignment * perturbation) / b.ontological_mass
-                new_c = max(0.0, min(1.0, b.confidence + delta_c))
-
-                # Vector Nomadic Drift
-                new_b_vec = b_vec + self._beta * plasticity * alignment * user_vec
-                norm = np.linalg.norm(new_b_vec)
-                if norm > 1e-8:
-                    new_b_vec = new_b_vec / norm
-                else:
-                    new_b_vec = b_vec
-
-                # Check for collapse transition
-                new_origin = b.origin
-                if new_c < 0.20:
-                    new_origin = "collapsed"
-                    logger.info(f"Belief '{b.label}' collapsed! Transitioning to spectral margin.")
-
-                self._belief_repo.update_belief(
-                    belief_id=b.id,
-                    confidence=new_c,
-                    vector_16d=json.dumps(new_b_vec.tolist()),
-                    origin=new_origin,
-                )
-
-                # Log event
-                event_type = "support" if alignment >= 0.0 else "collision"
-                if new_origin == "collapsed":
-                    event_type = "collapse"
-
-                rationale = (
-                    f"Message ID {user_message_id} alignment={alignment:.2f} "
-                    f"density={dc:.2f} surprise={surprise_index:.2f} delta_c={delta_c:.4f}"
-                )
-                self._belief_repo.insert_belief_event(
-                    event_id=str(uuid.uuid4()),
-                    belief_id=b.id,
+                source_weight = 0.4
+                self._accrete_belief(closest, user_vec, source_weight, alignment, perturbation)
+            elif dc > 0.3:
+                source_weight = 0.4
+                self._nucleate_proto_belief(
+                    agent_id=agent_id,
+                    statement=user_msg.content[:200],
+                    vector=user_vec,
                     source_type="chat_turn",
                     source_id=str(user_message_id),
-                    alignment=alignment,
-                    perturbation=perturbation,
-                    event_type=event_type,
-                    impact=delta_c,
-                    rationale=rationale,
+                    source_weight=source_weight,
                 )
 
             # 4. Check Trajectory Novelty & Vitality
@@ -425,70 +560,24 @@ class BeliefDynamicsEngine(ProcessingModule):
 
             # 1. Update all non-collapsed beliefs by similarity against perception signature
             for b in all_beliefs:
-                if b.origin == "collapsed":
+                if b.lifecycle_stage in ("collapsed", "faded"):
                     continue
 
                 b_vec = np.array(json.loads(b.vector_16d), dtype=np.float32)
                 alignment = compute_cosine_similarity(structural_signature, b_vec)
 
-                # Use a standard high perception density (e.g. 0.8) or calculate from signature if possible
                 dc = 0.80
-
-                # Plasticity
                 plasticity = dc * ((1.0 - alignment) / 2.0)
 
-                # Shock scale if this specific belief slug/label is implicated in belief_nodes_implicated
                 impact_multiplier = 1.0
                 is_implicated = False
                 if belief_nodes_implicated and (b.label in belief_nodes_implicated or b.id in belief_nodes_implicated):
                     impact_multiplier = 2.5
                     is_implicated = True
 
-                # Delta confidence
-                delta_c = (plasticity * alignment * perturbation * impact_multiplier) / b.ontological_mass
-                new_c = max(0.0, min(1.0, b.confidence + delta_c))
-
-                # Vector nomadic drift towards/away from perception signature
-                new_b_vec = b_vec + self._beta * plasticity * alignment * structural_signature
-                norm = np.linalg.norm(new_b_vec)
-                if norm > 1e-8:
-                    new_b_vec = new_b_vec / norm
-                else:
-                    new_b_vec = b_vec
-
-                # Check for collapse
-                new_origin = b.origin
-                if new_c < 0.20:
-                    new_origin = "collapsed"
-                    logger.info(f"Belief '{b.label}' collapsed under perception shock!")
-
-                self._belief_repo.update_belief(
-                    belief_id=b.id,
-                    confidence=new_c,
-                    vector_16d=json.dumps(new_b_vec.tolist()),
-                    origin=new_origin,
-                )
-
-                # Log event
-                event_type = "support" if alignment >= 0.0 else "collision"
-                if new_origin == "collapsed":
-                    event_type = "collapse"
-
-                rationale = (
-                    f"Perception {source_type}:{source_id} alignment={alignment:.2f} "
-                    f"implicated={is_implicated} delta_c={delta_c:.4f}"
-                )
-                self._belief_repo.insert_belief_event(
-                    event_id=str(uuid.uuid4()),
-                    belief_id=b.id,
-                    source_type=source_type,
-                    source_id=source_id,
-                    alignment=alignment,
-                    perturbation=perturbation,
-                    event_type=event_type,
-                    impact=delta_c,
-                    rationale=rationale,
-                )
+                source_weight = 0.5
+                self._accrete_belief(b, structural_signature, source_weight, alignment, perturbation,
+                                     source_type=source_type, source_id=source_id)
 
             logger.info(f"Successfully metabolized perception '{source_id}' of type '{source_type}'.")
 
@@ -507,88 +596,39 @@ class BeliefDynamicsEngine(ProcessingModule):
             agent_id = "symbia"
             note_full_text = f'Selected: "{selected_text}" | Comment: "{comment}"' if comment else f'Selected: "{selected_text}"'
             note_vec = self._scorer.score(note_full_text)
-            
-            # Find the closest active belief node
+
+            # Find the closest active belief node (excluding ghosts)
             all_beliefs = self._belief_repo.list_beliefs(agent_id)
             best_match = None
             best_sim = -1.0
-            
+
             for b in all_beliefs:
-                if b.origin == "collapsed":
+                if b.lifecycle_stage in ("collapsed", "faded"):
                     continue
                 b_vec = np.array(json.loads(b.vector_16d), dtype=np.float32)
                 sim = compute_cosine_similarity(note_vec, b_vec)
                 if sim > best_sim:
                     best_sim = sim
                     best_match = b
-            
-            # If the closest belief node has a similarity > 0.75, we consider it a match
+
+            source_weight = 0.5
             if best_match and best_sim > 0.75:
-                target_confidence = 0.8
-                new_c = best_match.confidence + 0.1 * (target_confidence - best_match.confidence)
-                new_c = max(0.0, min(1.0, new_c))
-                new_mass = min(best_match.ontological_mass + 0.2, 1.5)
-                
-                # Update belief node in database
-                self._belief_repo.update_belief(
-                    belief_id=best_match.id,
-                    confidence=new_c,
-                    vector_16d=best_match.vector_16d,
-                    origin=best_match.origin,
+                # Accrete the existing belief
+                self._accrete_belief(
+                    best_match, note_vec, source_weight, alignment=best_sim, perturbation=1.5
                 )
-                self._belief_repo.update_belief_mass(best_match.id, new_mass)
-                
-                # Insert belief event
-                self._belief_repo.insert_belief_event(
-                    event_id=str(uuid.uuid4()),
-                    belief_id=best_match.id,
-                    source_type="chat_turn",
-                    source_id=str(message_id),
-                    alignment=best_sim,
-                    perturbation=1.5,
-                    event_type="support",
-                    impact=0.1,
-                    rationale=f"Shared note entanglement: best_sim={best_sim:.2f}, ontological_mass boosted to {new_mass:.2f}"
-                )
-                logger.info(f"Metabolized shared note {note_id}: nudged belief {best_match.label} to confidence {new_c:.2f}, mass {new_mass:.2f}")
+                logger.info(f"Metabolized shared note {note_id}: accreted belief '{best_match.label}' (sim={best_sim:.2f})")
             else:
-                # Propose a new belief node since no match was found
-                words = [w for w in selected_text.split() if w.isalnum()]
-                label_words = words[:3] if words else ["note"]
-                label_base = "_".join(label_words).lower()
-                existing_labels = {b.label for b in all_beliefs}
-                label = label_base
-                counter = 1
-                while label in existing_labels:
-                    label = f"{label_base}_{counter}"
-                    counter += 1
-                
-                new_belief_id = str(uuid.uuid4())
-                self._belief_repo.create_belief(
-                    id=new_belief_id,
+                # Nucleate a proto-belief instead of instant creation
+                self._nucleate_proto_belief(
                     agent_id=agent_id,
-                    label=label,
                     statement=note_full_text,
-                    origin="emergent",
-                    confidence=0.6,
-                    ontological_mass=1.0,
-                    somatic_anchor="conceptual",
-                    vector_16d=json.dumps(note_vec.tolist()),
-                )
-                
-                # Log belief event
-                self._belief_repo.insert_belief_event(
-                    event_id=str(uuid.uuid4()),
-                    belief_id=new_belief_id,
+                    vector=note_vec,
                     source_type="chat_turn",
                     source_id=str(message_id),
-                    alignment=1.0,
-                    perturbation=1.5,
-                    event_type="emergence",
-                    impact=0.6,
-                    rationale=f"Shared note entanglement created new belief: {label}"
+                    source_weight=source_weight,
                 )
-                logger.info(f"Metabolized shared note {note_id}: emerged new belief {label} (mass=1.5)")
+                logger.info(f"Metabolized shared note {note_id}: nucleated proto-belief")
         except Exception as e:
             logger.error(f"Error metabolizing note {note_id}: {e}", exc_info=True)
 

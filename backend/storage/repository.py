@@ -1602,13 +1602,14 @@ class BeliefRepository:
         ontological_mass: float,
         somatic_anchor: str,
         vector_16d: str,
+        lifecycle_stage: str = "crystallized",
     ) -> BeliefNode:
         conn = self._conn()
         conn.execute(
             """INSERT INTO belief_nodes
-               (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d),
+               (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage, last_reinforced_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+            (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage),
         )
         conn.commit()
         row = conn.execute(
@@ -1623,24 +1624,79 @@ class BeliefRepository:
         confidence: float,
         vector_16d: str,
         origin: str,
+        lifecycle_stage: str | None = None,
     ) -> None:
         conn = self._conn()
-        conn.execute(
-            """UPDATE belief_nodes
-               SET confidence = ?, vector_16d = ?, origin = ?, updated_at = CURRENT_TIMESTAMP
-               WHERE id = ?""",
-            (confidence, vector_16d, origin, belief_id),
-        )
+        if lifecycle_stage is not None:
+            conn.execute(
+                """UPDATE belief_nodes
+                   SET confidence = ?, vector_16d = ?, origin = ?, lifecycle_stage = ?, updated_at = CURRENT_TIMESTAMP
+                   WHERE id = ?""",
+                (confidence, vector_16d, origin, lifecycle_stage, belief_id),
+            )
+        else:
+            conn.execute(
+                """UPDATE belief_nodes
+                   SET confidence = ?, vector_16d = ?, origin = ?, updated_at = CURRENT_TIMESTAMP
+                   WHERE id = ?""",
+                (confidence, vector_16d, origin, belief_id),
+            )
         conn.commit()
 
     @with_connection
     def update_belief_mass(self, belief_id: str, ontological_mass: float) -> None:
         conn = self._conn()
         conn.execute(
-            "UPDATE belief_nodes SET ontological_mass = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE belief_nodes SET ontological_mass = ?, last_reinforced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (ontological_mass, belief_id),
         )
         conn.commit()
+
+    @with_connection
+    def update_belief_stage(self, belief_id: str, lifecycle_stage: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE belief_nodes SET lifecycle_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (lifecycle_stage, belief_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def list_active_beliefs(self, agent_id: str) -> list[BeliefNode]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_nodes WHERE agent_id = ? AND lifecycle_stage IN ('crystallized', 'senescence')",
+            (agent_id,),
+        ).fetchall()
+        return [_row_to_belief_node(r) for r in rows]
+
+    @with_connection
+    def list_proto_beliefs(self, agent_id: str) -> list[BeliefNode]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_nodes WHERE agent_id = ? AND lifecycle_stage IN ('nucleation', 'accretion')",
+            (agent_id,),
+        ).fetchall()
+        return [_row_to_belief_node(r) for r in rows]
+
+    @with_connection
+    def list_ghosts(self, agent_id: str) -> list[BeliefNode]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_nodes WHERE agent_id = ? AND lifecycle_stage = 'collapsed'",
+            (agent_id,),
+        ).fetchall()
+        return [_row_to_belief_node(r) for r in rows]
+
+    @with_connection
+    def get_belief_last_reinforced(self, belief_id: str) -> str | None:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT last_reinforced_at FROM belief_nodes WHERE id = ?", (belief_id,)
+        ).fetchone()
+        if row:
+            return row["last_reinforced_at"]
+        return None
 
     @with_connection
     def insert_belief_event(
@@ -1867,6 +1923,20 @@ class SemanticKnotRepository:
 def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
     created = row["created_at"]
     updated = row["updated_at"]
+    last_reinforced = None
+    try:
+        last_reinforced_raw = row["last_reinforced_at"]
+        if last_reinforced_raw:
+            last_reinforced = datetime.fromisoformat(last_reinforced_raw) if isinstance(last_reinforced_raw, str) else last_reinforced_raw
+    except (IndexError, KeyError):
+        pass
+
+    lifecycle = "crystallized"
+    try:
+        lifecycle = row["lifecycle_stage"] or "crystallized"
+    except (IndexError, KeyError):
+        pass
+
     return BeliefNode(
         id=row["id"],
         agent_id=row["agent_id"],
@@ -1877,6 +1947,8 @@ def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
         ontological_mass=row["ontological_mass"],
         somatic_anchor=row["somatic_anchor"],
         vector_16d=row["vector_16d"],
+        lifecycle_stage=lifecycle,
+        last_reinforced_at=last_reinforced,
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
         updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
     )

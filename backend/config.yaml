@@ -131,6 +131,31 @@ structural_signature:
   llm_system_prompt: "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
 
 
+# ── Belief Ecosystem (ADR-027) ──────────────────
+belief_ecosystem:
+  crystallization_threshold: 0.5
+  collapse_mass_threshold: 0.02
+  fade_mass_threshold: 0.001
+  fade_days: 30
+  resurrection_events_required: 3
+  ghost_merge_similarity: 0.9
+  ghost_influence_dampening: 0.5
+  mass_decay_lambda_base: 0.05
+  source_weights:
+    user_assertion: 0.4
+    ingested_document: 0.5
+    conversational_pattern: 0.4
+    shared_note: 0.5
+    web_retrieval: 0.15
+    chat_turn: 0.4
+  tension_field:
+    symbiotic_threshold: 0.7
+    antagonistic_threshold: -0.2
+    coherence_limit: 2.0
+  self_tuning:
+    enabled: true
+    max_adjustment_pct: 0.30
+
 # ── Homeostasis ──────────────────────────────────
 homeostasis:
   pairwise_window: 5
