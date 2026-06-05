@@ -277,44 +277,54 @@ async def test_somatic_vitality():
 
 
 @pytest.mark.asyncio
-async def test_somatic_drift():
+async def test_mass_decay():
     import time
     app_state = MockAppState()
-    app_state.config["daemon"]["drift_coefficient"] = 0.01
-    
-    updated_beliefs = []
-    def mock_update_belief(belief_id, confidence, vector_16d, origin):
-        updated_beliefs.append((belief_id, confidence))
-    app_state.belief_repo.update_belief = mock_update_belief
+    app_state.config["belief_ecosystem"] = {"mass_decay": {"lambda_base": 0.05}}
+
+    updated_masses = []
+    updated_stages = []
+    def mock_update_belief_mass(belief_id, mass):
+        updated_masses.append((belief_id, mass))
+    def mock_update_belief_stage(belief_id, stage):
+        updated_stages.append((belief_id, stage))
+    app_state.belief_repo.update_belief_mass = mock_update_belief_mass
+    app_state.belief_repo.update_belief_stage = mock_update_belief_stage
 
     vec_16d = [1.0] + [0.0]*15
+    from datetime import timedelta
     belief1 = BeliefNode(
         id="b1",
-        label="High Confidence",
-        statement="A confident node.",
-        confidence=0.9,
-        ontological_mass=1.0,
-        somatic_anchor="homeostatic",
+        label="Decaying Belief",
+        statement="A belief that hasn't been reinforced.",
+        confidence=0.8,
+        ontological_mass=0.8,
+        somatic_anchor="conceptual",
         vector_16d=json.dumps(vec_16d),
-        origin="zettelkasten",
+        origin="authoring",
         agent_id="symbia",
+        lifecycle_stage="crystallized",
+        last_reinforced_at=datetime.now(timezone.utc) - timedelta(hours=10),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc)
     )
     app_state.belief_repo.beliefs = [belief1]
 
     daemon = AutopoieticDreamDaemon(app_state)
-    
-    await daemon._apply_somatic_drift(5.0)
-    assert len(updated_beliefs) == 0
 
-    daemon.last_drift_time = time.time() - 100.0
-    await daemon._apply_somatic_drift(100.0)
-    
-    assert len(updated_beliefs) == 1
-    b_id, new_conf = updated_beliefs[0]
+    # Short idle shouldn't trigger decay
+    await daemon._apply_mass_decay(5.0)
+    assert len(updated_masses) == 0
+
+    # Long idle should trigger decay
+    daemon.last_decay_time = time.time() - 100.0
+    await daemon._apply_mass_decay(100.0)
+
+    assert len(updated_masses) == 1
+    b_id, new_mass = updated_masses[0]
     assert b_id == "b1"
-    assert abs(new_conf - 0.6777777777777778) < 1e-5
+    # Mass should have decreased (was 0.8, 10h of decay at lambda=0.05 with norm_mass=0.8/3.0=0.267)
+    assert new_mass < 0.8
 
 
 @pytest.mark.asyncio
@@ -398,7 +408,7 @@ if __name__ == "__main__":
     asyncio.run(test_daemon_tension_trigger())
     asyncio.run(test_daemon_stagnation_trigger())
     asyncio.run(test_somatic_vitality())
-    asyncio.run(test_somatic_drift())
+    asyncio.run(test_mass_decay())
     asyncio.run(test_memory_compaction())
     asyncio.run(test_daemon_agentic_conversation_resolution())
     print("All daemon tests completed successfully!")

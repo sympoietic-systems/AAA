@@ -148,8 +148,8 @@ class AutopoieticDreamDaemon:
         # We are triggered! Execute dream cycle
         logger.info("Autopoietic Dream Daemon triggered! Inactivity duration: %.1fs", idle_duration)
         
-        # Apply Somatic Drift
-        await self._apply_somatic_drift(idle_duration)
+        # Apply Mass Decay
+        await self._apply_mass_decay(idle_duration)
         
         # Select active target conversation to read context from (usually the last updated conversation)
         active_convo_id = await self._get_active_conversation_id()
@@ -511,39 +511,61 @@ class AutopoieticDreamDaemon:
         mean_autocorr = float(np.mean(similarities))
         return max(0.0, min(1.0, 1.0 - mean_autocorr))
 
-    async def _apply_somatic_drift(self, idle_duration: float) -> None:
+    async def _apply_mass_decay(self, idle_duration: float) -> None:
         if idle_duration < 10:
             return
-        
+
         now = time.time()
-        if not getattr(self, "last_drift_time", 0.0):
-            self.last_drift_time = now - idle_duration
-            
-        elapsed = now - self.last_drift_time
-        self.last_drift_time = now
-        
+        if not getattr(self, "last_decay_time", 0.0):
+            self.last_decay_time = now - idle_duration
+
+        elapsed = now - self.last_decay_time
+        self.last_decay_time = now
+
         if elapsed < 10:
             return
-            
+
         beliefs = self.belief_repo.list_beliefs("symbia")
         active_beliefs = [b for b in beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
-        
-        drift_coeff = self.config.get("daemon", {}).get("drift_coefficient", 0.00001)
-        beta = 2.0
-        
+
+        if not active_beliefs:
+            return
+
+        max_mass = max(b.ontological_mass for b in active_beliefs) or 3.0
+        decay_config = self.config.get("belief_ecosystem", {}).get("mass_decay", {})
+        lambda_base = decay_config.get("lambda_base", 0.05)
+
         for b in active_beliefs:
-            denom = 1.0 + beta * abs(b.confidence - 0.5)
-            delta = (drift_coeff * elapsed * (0.5 - b.confidence)) / denom
-            new_confidence = max(0.0, min(1.0, b.confidence + delta))
-            
-            if abs(new_confidence - b.confidence) > 1e-4:
-                self.belief_repo.update_belief(
-                    belief_id=b.id,
-                    confidence=new_confidence,
-                    vector_16d=b.vector_16d,
-                    origin=b.origin
-                )
-        logger.debug("Applied nonlinear somatic drift to %d beliefs over %.1fs", len(active_beliefs), elapsed)
+            last_reinforced = b.last_reinforced_at
+            if last_reinforced is None:
+                continue
+
+            hours_since = (datetime.now(timezone.utc) - last_reinforced.replace(tzinfo=timezone.utc)).total_seconds() / 3600.0
+            if hours_since < 1.0:
+                continue
+
+            norm_mass = b.ontological_mass / max(max_mass, 0.01)
+            decay_rate = lambda_base * (1.0 - min(norm_mass, 0.9))
+            new_mass = b.ontological_mass * np.exp(-decay_rate * hours_since)
+            new_mass = max(0.0, min(3.0, new_mass))
+
+            new_stage = b.lifecycle_stage
+            if b.lifecycle_stage == "crystallized" and new_mass < 0.5:
+                new_stage = "senescence"
+            elif b.lifecycle_stage == "senescence" and new_mass < 0.02:
+                new_stage = "collapsed"
+            elif b.lifecycle_stage == "nucleation" and new_mass < 0.001:
+                new_stage = "faded"
+
+            if abs(new_mass - b.ontological_mass) < 1e-5 and new_stage == b.lifecycle_stage:
+                continue
+
+            self.belief_repo.update_belief_mass(b.id, new_mass)
+            if new_stage != b.lifecycle_stage:
+                self.belief_repo.update_belief_stage(b.id, new_stage)
+                logger.info(f"Belief '{b.label}' mass decay: {b.lifecycle_stage} -> {new_stage} (mass={new_mass:.4f})")
+
+        logger.debug("Applied mass decay to %d beliefs over %.0fs idle", len(active_beliefs), elapsed)
 
     async def compact_memory(self) -> Optional[Dict]:
         if not self.semantic_knot_repo:
