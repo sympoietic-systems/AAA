@@ -125,9 +125,9 @@ AAA utilizes Tailwind CSS v4 alongside custom HSL color definitions in [frontend
 ## 4. Testing Standards
 
 *   **Location**: All test scripts must be written in the [backend/tests/](file:///d:/01_GIT/AAA/backend/tests/) directory and prefixed with `test_`.
-*   **Database Isolation**: Always instantiate mock/temporary database connections (e.g. SQLite `:memory:` or temp test files) within test fixtures. Never allow tests to execute against `apparatus_state.db`.
+*   **Database Isolation**: Always instantiate mock/temporary database connections (e.g. SQLite `:memory:` or temp test files) within test fixtures. A global `conftest.py` is configured to automatically force test database path to `data/aaa_test.db` and delete it upon test completion to ensure the production database (`aaa.db`) is never modified or polluted by tests.
 *   **LLM Provider Mocking**: Do not trigger real LLM completions inside standard unit tests. Create mock completions containing expected mock JSON fields (e.g., `opacity_map`, `interference_score`) to assert state changes.
-*   **Running Tests**: Propose `uv run pytest` to execute the full test suite. Make sure all unit, routing, and database tests pass before committing.
+*   **Running Tests**: Propose `uv run pytest` or `pytest backend/tests/` to execute the full test suite. Make sure all unit, routing, and database tests pass before committing.
 
 ---
 

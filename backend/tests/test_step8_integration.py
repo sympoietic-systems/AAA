@@ -42,7 +42,10 @@ with patch(
         assert apparatus_msg["provider_used"] == "mock-provider"
 
         import sqlite3
-        db = str(Path(__file__).parent.parent / "data" / "aaa.db")
+        from backend.storage.database import get_db_path
+        from backend.config import load_config
+        config = load_config()
+        db = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
         conn = sqlite3.connect(db)
         conn.row_factory = sqlite3.Row
         rows = conn.execute("SELECT id, agent_id, speaker, model_used, provider_used FROM conversation_log").fetchall()

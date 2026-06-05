@@ -18,6 +18,14 @@ class BackgroundTaskEngine:
         self._vision_provider = vision_provider
         self._actions: dict[str, BackgroundAction] = {}
 
+    @property
+    def provider(self) -> BaseLLMProvider:
+        return self._provider
+
+    @property
+    def vision_provider(self) -> Optional[BaseLLMProvider]:
+        return self._vision_provider
+
     def register(self, action: BackgroundAction) -> None:
         self._actions[action.action_type] = action
 
