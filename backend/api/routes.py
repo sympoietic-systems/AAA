@@ -86,7 +86,7 @@ async def verify_auth(request: Request):
 
 
 
-async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool]]:
+async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool], Optional[int]]:
     content_type = request.headers.get("content-type", "")
 
     if "multipart/form-data" in content_type:
@@ -100,6 +100,8 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
             include_structural_scoring = str(include_structural_scoring_raw).lower() in ("true", "1", "yes")
         else:
             include_structural_scoring = None
+        max_tokens_raw = form.get("max_tokens")
+        max_tokens = int(max_tokens_raw) if max_tokens_raw is not None else None
 
         attachments: list[dict] = []
         for f in uploaded_files:
@@ -127,7 +129,7 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
                 "content": file_bytes,
             })
 
-        return content, speaker, conversation_id, (attachments if attachments else None), include_structural_scoring
+        return content, speaker, conversation_id, (attachments if attachments else None), include_structural_scoring, max_tokens
 
     body = await request.json()
     content = body.get("content", "")
@@ -135,6 +137,7 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
     conversation_id = body.get("conversation_id", "")
     json_attachments = body.get("attachments")
     include_structural_scoring = body.get("include_structural_scoring")
+    max_tokens = body.get("max_tokens")
     parsed_attachments = None
     if json_attachments:
         parsed_attachments = [
@@ -146,7 +149,7 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
             for a in json_attachments
         ] if isinstance(json_attachments, list) else None
 
-    return content, speaker, conversation_id, parsed_attachments, include_structural_scoring
+    return content, speaker, conversation_id, parsed_attachments, include_structural_scoring, max_tokens
 
 
 async def _generate_title(engine, first_message: str) -> str:
@@ -345,7 +348,7 @@ def _fire_and_forget_consolidation(engine, message_repo, checkpoint_repo, conver
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, background_tasks: BackgroundTasks):
-    content, speaker, conversation_id, attachments, include_structural_scoring = await _parse_chat_request(request)
+    content, speaker, conversation_id, attachments, include_structural_scoring, max_tokens_override = await _parse_chat_request(request)
 
     state = request.app.state
     pipeline = state.pipeline
@@ -375,6 +378,8 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
         }
         if attachments:
             initial_payload["attachments"] = attachments
+        if max_tokens_override is not None:
+            initial_payload["max_tokens"] = max_tokens_override
 
         result = await pipeline.run(initial_payload)
 
@@ -575,6 +580,8 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
             user_message_id=msg.id,
             user_structural_signature=user_sig_list,
             user_structural_justification=user_justification,
+            truncated=result.payload.get("truncated"),
+            finish_reason=result.payload.get("finish_reason"),
         )
     except HTTPException:
         raise

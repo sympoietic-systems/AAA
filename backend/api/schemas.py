@@ -17,6 +17,7 @@ class ChatRequest(BaseModel):
     conversation_id: str = Field(default="", description="Conversation ID; auto-created if empty")
     attachments: list[AttachmentInfo] | None = None
     include_structural_scoring: Optional[bool] = None
+    max_tokens: Optional[int] = Field(default=None, description="Override max_tokens for this request")
 
 
 class ChatResponse(BaseModel):
@@ -40,6 +41,8 @@ class ChatResponse(BaseModel):
     user_message_id: Optional[int] = None
     user_structural_signature: Optional[list[float]] = None
     user_structural_justification: Optional[str] = None
+    truncated: Optional[bool] = Field(default=None, description="Whether response was truncated by token limit")
+    finish_reason: Optional[str] = Field(default=None, description="LLM finish reason (stop, length, max_tokens)")
 
 
 class HistoryMessage(BaseModel):

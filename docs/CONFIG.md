@@ -33,7 +33,11 @@ llm:
     temperature: 0.7            # Ignored when thinking=enabled
     # The chat endpoint now returns `model_used` and `provider_used`
     # fields in the response payload, indicating which LLM model and provider produced the output.
-    max_tokens: 2048
+    max_tokens: 16384           # Default per-response token cap. Overridable per-request.
+    # When the LLM hits the max_tokens limit (finish_reason="length"),
+    # the response payload includes `truncated: true` and `finish_reason`.
+    # The MCP server requests max_tokens=16384 and surfaces truncation warnings.
+    # The web UI displays a truncation banner on affected messages.
 
 # ── Pipeline ─────────────────────────────────────
 pipeline:

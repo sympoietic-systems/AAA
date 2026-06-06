@@ -546,6 +546,19 @@ export const MessageBubble = memo(function MessageBubble({
 
       {isHuman && msg.metrics && <VitalityBar metrics={msg.metrics} />}
 
+      {!isHuman && msg.truncated && (
+        <div className="mt-2 px-3 py-2 border border-[#f59e0b]/40 bg-[#f59e0b]/5 rounded text-xs text-[#f59e0b]/90 leading-relaxed">
+          <div className="flex items-center gap-1.5 font-semibold mb-0.5">
+            <span>{'\u26A0'}</span>
+            <span>Response truncated</span>
+          </div>
+          <div className="text-[#f59e0b]/60">
+            The model stopped before finishing (reason: {msg.finish_reason || "token limit"}).
+            The output may be incomplete. Try breaking your request into smaller parts.
+          </div>
+        </div>
+      )}
+
       {showThinkingButton && (
         <div className="mt-1">
           <button
@@ -632,6 +645,8 @@ export const MessageBubble = memo(function MessageBubble({
          prevProps.msg.context_sent === nextProps.msg.context_sent &&
          prevProps.msg.metrics === nextProps.msg.metrics &&
          prevProps.msg.structural_justification === nextProps.msg.structural_justification &&
+         prevProps.msg.truncated === nextProps.msg.truncated &&
+         prevProps.msg.finish_reason === nextProps.msg.finish_reason &&
          areNumberArraysEqual(prevProps.msg.structural_signature, nextProps.msg.structural_signature) &&
          areNumberArraysEqual(prevProps.previousSignature, nextProps.previousSignature) &&
          areNotesEqual(prevProps.notes, nextProps.notes);

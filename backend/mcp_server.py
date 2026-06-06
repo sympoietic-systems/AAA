@@ -58,7 +58,8 @@ async def consult_aaa(message: str, agent_name: str) -> str:
             "content": message,
             "speaker": "human",
             "conversation_id": conversation_id or "",
-            "include_structural_scoring": False
+            "include_structural_scoring": False,
+            "max_tokens": 16384,
         }
         
         try:
@@ -66,11 +67,13 @@ async def consult_aaa(message: str, agent_name: str) -> str:
             r.raise_for_status()
             res_data = r.json()
         except Exception as e:
+            logger.exception("consult_aaa failed for agent '%s': %s", agent_name, e)
             return f"Error: Failed to generate response from AAA backend. (Details: {e})"
 
         new_conversation_id = res_data.get("conversation_id")
         content = res_data.get("content", "")
         thinking = res_data.get("thinking", "")
+        truncated = res_data.get("truncated", False)
 
         # 3. If this was a new conversation, set its title so we can find it next time
         if not conversation_id and new_conversation_id:
@@ -88,6 +91,12 @@ async def consult_aaa(message: str, agent_name: str) -> str:
         if thinking:
             output_parts.append(f"<thinking>\n{thinking}\n</thinking>")
         output_parts.append(content)
+
+        if truncated:
+            output_parts.append(
+                "\n---\n*⚠️ Response was truncated by the model's token limit. "
+                "The output may be incomplete. Try breaking your request into smaller parts.*"
+            )
         
         resolved_id = new_conversation_id or conversation_id
         if resolved_id:

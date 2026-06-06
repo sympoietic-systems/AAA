@@ -94,6 +94,21 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         if not content and reasoning:
             content = reasoning
 
+        # Detect truncation from finish_reason
+        finish_reason = None
+        if "choices" in data and data["choices"]:
+            finish_reason = data["choices"][0].get("finish_reason")
+        elif data.get("stop_reason"):
+            finish_reason = data.get("stop_reason")  # Anthropic format
+
+        truncated = finish_reason in ("length", "max_tokens")
+        if truncated:
+            logger.warning(
+                "Response truncated by token limit (finish_reason=%s, model=%s). "
+                "Content length: %d chars. Consider increasing max_tokens.",
+                finish_reason, self._model, len(content or "")
+            )
+
         return {
             "content": content or "",
             "reasoning": reasoning,
@@ -101,6 +116,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             "model": data.get("model", self._model),
             "provider_used": self.provider_name,
             "raw_message": message,
+            "truncated": truncated,
+            "finish_reason": finish_reason,
         }
 
     async def _request_with_retry(self, body: dict) -> dict:
@@ -555,6 +572,10 @@ class LLMClientModule(ProcessingModule):
             payload["model_used"] = result["model"]
         if result.get("provider_used"):
             payload["provider_used"] = result["provider_used"]
+        if result.get("truncated"):
+            payload["truncated"] = result["truncated"]
+        if result.get("finish_reason"):
+            payload["finish_reason"] = result["finish_reason"]
         return payload
 
     @property

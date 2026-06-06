@@ -110,6 +110,8 @@ export interface ChatMessage {
   user_message_id?: number | null
   user_structural_signature?: number[] | null
   user_structural_justification?: string | null
+  truncated?: boolean | null
+  finish_reason?: string | null
 }
 
 export interface AgentInfo {
