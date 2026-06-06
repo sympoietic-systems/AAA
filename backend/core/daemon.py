@@ -1339,7 +1339,21 @@ class AutopoieticDreamDaemon:
         total_msg_count = self.message_repo.count_messages(conversation_id)
         checkpoint_msg_count = checkpoint["message_count"] if checkpoint else 0
 
-        new_messages = self.message_repo.get_messages_since(conversation_id, checkpoint_msg_count)
+        # Detect re-consolidation: old-format checkpoint with no structured memory nodes
+        memory_node_repo = getattr(self.app_state, "memory_node_repo", None)
+        existing_nodes = memory_node_repo.get_nodes(conversation_id) if memory_node_repo else []
+        is_reconsolidation = bool(checkpoint and not existing_nodes and checkpoint.get("summary"))
+
+        if is_reconsolidation:
+            # Fetch ALL messages for a full re-sedimentation pass
+            new_messages = self.message_repo.get_messages_since(conversation_id, 0)
+            logger.info(
+                "Re-consolidating %s from scratch (old-format checkpoint, %d total messages)",
+                conversation_id, total_msg_count,
+            )
+        else:
+            new_messages = self.message_repo.get_messages_since(conversation_id, checkpoint_msg_count)
+
         if not new_messages:
             self.conversation_repo.mark_requires_consolidation(conversation_id, False)
             self.conversation_repo.update_last_consolidated_at(conversation_id)
@@ -1355,10 +1369,6 @@ class AutopoieticDreamDaemon:
             speaker_label = "Human" if msg.speaker == "human" else "Agent"
             formatted_lines.append(f"{speaker_label}: {msg.content}")
         new_messages_text = "\n".join(formatted_lines)
-
-        # Get existing memory nodes for incremental merge
-        memory_node_repo = getattr(self.app_state, "memory_node_repo", None)
-        existing_nodes = memory_node_repo.get_nodes(conversation_id) if memory_node_repo else []
 
         # Build prompt
         if existing_nodes:
