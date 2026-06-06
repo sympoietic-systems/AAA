@@ -1263,17 +1263,52 @@ class AutopoieticDreamDaemon:
     async def consolidate_pending_conversations(self) -> None:
         if not self.conversation_repo or not self.checkpoint_repo:
             return
-        
+
+        memory_node_repo = getattr(self.app_state, "memory_node_repo", None)
+
         convs = self.conversation_repo.list_all()
         for c in convs:
-            # Check 24 hour limit (max once daily)
-            last_time = getattr(c, "last_consolidated_at", None)
-            if last_time:
-                if last_time.tzinfo is None:
-                    last_time = last_time.replace(tzinfo=timezone.utc)
-                elapsed = datetime.now(timezone.utc) - last_time
-                if elapsed.total_seconds() < 86400:
-                    continue
+            needs_reconsolidation = False
+
+            # Backfill: parse existing checkpoint summaries into memory nodes (no LLM cost)
+            if memory_node_repo:
+                existing_nodes = memory_node_repo.get_nodes(c.id)
+                if not existing_nodes:
+                    checkpoint = self.checkpoint_repo.get_latest(c.id)
+                    if checkpoint and checkpoint.get("summary", "").strip():
+                        parsed_nodes, _ = _parse_sedimentation_yaml(checkpoint["summary"])
+                        if parsed_nodes:
+                            try:
+                                checkpoint_id = checkpoint["id"]
+                                memory_node_repo.delete_by_conversation(c.id)
+                                memory_node_repo.save_nodes(c.id, checkpoint_id, parsed_nodes)
+                                self._sync_diffractive_tags(c.id, parsed_nodes)
+                                logger.info(
+                                    "Backfilled %d memory nodes from existing checkpoint for %s",
+                                    len(parsed_nodes), c.id,
+                                )
+                                continue
+                            except Exception as e:
+                                logger.warning(
+                                    "Failed to backfill memory nodes for %s: %s", c.id, e,
+                                )
+                        else:
+                            needs_reconsolidation = True
+                            self.conversation_repo.mark_requires_consolidation(c.id, True)
+                            logger.info(
+                                "Flagged %s for re-consolidation (unparseable old-format checkpoint)",
+                                c.id,
+                            )
+
+            # Check 24 hour cooldown (skip if re-consolidation needed for old-format backfill)
+            if not needs_reconsolidation:
+                last_time = getattr(c, "last_consolidated_at", None)
+                if last_time:
+                    if last_time.tzinfo is None:
+                        last_time = last_time.replace(tzinfo=timezone.utc)
+                    elapsed = datetime.now(timezone.utc) - last_time
+                    if elapsed.total_seconds() < 86400:
+                        continue
 
             requires_consolidation = getattr(c, "requires_consolidation", 0)
             if not requires_consolidation:
