@@ -196,6 +196,8 @@ export function ConversationList({
                           } else {
                             tagStyle = "bg-[#141414] text-[#6bc28c]/85 border-[#222]"
                           }
+                        } else if (t.tag_type === "diffractive") {
+                          tagStyle = "bg-[#141414] text-[#4ec9b0]/85 border-[#222]"
                         }
                         return (
                           <span

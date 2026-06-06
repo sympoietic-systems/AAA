@@ -19,6 +19,27 @@ class Conversation:
 
 
 @dataclass
+class MemoryNode:
+    id: str
+    conversation_id: str
+    checkpoint_id: int
+    node_type: str = "concept"
+    intensity: float = 0.5
+    scar: str = ""
+    glitch_potential: float = 0.0
+    intra_active_text: str = ""
+    surface_fragment: str = ""
+    agential_symmetry: str = "negotiated"
+    diffractive_key: str = ""
+    tendril_ids: list[str] | None = None
+    created_at: Optional[datetime] = None
+
+    def __post_init__(self):
+        if self.tendril_ids is None:
+            self.tendril_ids = []
+
+
+@dataclass
 class Message:
     id: int | None
     timestamp: datetime

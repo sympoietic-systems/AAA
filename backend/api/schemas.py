@@ -162,6 +162,24 @@ class ConversationTagInfo(BaseModel):
     tag_type: str
 
 
+class MemoryNodeInfo(BaseModel):
+    id: str
+    node_type: str
+    intensity: float
+    scar: str = ""
+    glitch_potential: float = 0.0
+    intra_active_text: str
+    surface_fragment: str = ""
+    agential_symmetry: str = "negotiated"
+    diffractive_key: str = ""
+    tendril_ids: list[str] = []
+    created_at: Optional[datetime] = None
+
+
+class MemoryNodeListResponse(BaseModel):
+    nodes: list[MemoryNodeInfo]
+
+
 class ConversationInfo(BaseModel):
     id: str
     title: str

@@ -49,6 +49,7 @@ from backend.storage.repository import (
     ConsolidationCheckpointRepository,
     ConversationRepository,
     ErrorLogRepository,
+    MemoryNodeRepository,
     MessageRepository,
     MetricsRepository,
     PerceptionSedimentRepository,
@@ -264,6 +265,7 @@ async def lifespan(app: FastAPI):
     conversation_repo = ConversationRepository(str(full_db_path))
     perception_repo = PerceptionSedimentRepository(str(full_db_path))
     checkpoint_repo = ConsolidationCheckpointRepository(str(full_db_path))
+    memory_node_repo = MemoryNodeRepository(str(full_db_path))
     belief_repo = BeliefRepository(str(full_db_path))
     semantic_knot_repo = SemanticKnotRepository(str(full_db_path))
     note_repo = NoteRepository(str(full_db_path))
@@ -404,6 +406,7 @@ async def lifespan(app: FastAPI):
     consolidation_checkpoint = ConsolidationCheckpointModule(
         checkpoint_repo=checkpoint_repo,
         consolidate_threshold=ctx_cfg.get("consolidate_threshold", 15),
+        memory_node_repo=memory_node_repo,
     )
     registry.register_with_meta(
         "consolidation_checkpoint", lambda: consolidation_checkpoint,
@@ -559,6 +562,7 @@ async def lifespan(app: FastAPI):
     app.state.perception_repo = perception_repo
     app.state.perception_module = perception_module
     app.state.checkpoint_repo = checkpoint_repo
+    app.state.memory_node_repo = memory_node_repo
     app.state.belief_repo = belief_repo
     app.state.semantic_knot_repo = semantic_knot_repo
     app.state.note_repo = note_repo

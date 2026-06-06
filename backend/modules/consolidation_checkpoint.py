@@ -9,9 +9,11 @@ class ConsolidationCheckpointModule(ProcessingModule):
         self,
         checkpoint_repo: ConsolidationCheckpointRepository,
         consolidate_threshold: int = 15,
+        memory_node_repo=None,
     ):
         self._checkpoint_repo = checkpoint_repo
         self._consolidate_threshold = consolidate_threshold
+        self._memory_node_repo = memory_node_repo
 
     @property
     def name(self) -> str:
@@ -40,9 +42,10 @@ class ConsolidationCheckpointModule(ProcessingModule):
 
         if checkpoint:
             messages = payload.get("messages", [])
+            context_text = self._build_context_text(conversation_id, checkpoint)
             checkpoint_msg = {
                 "role": "system",
-                "content": f"[Consolidated memory: {checkpoint['summary']}]",
+                "content": context_text,
             }
             messages.insert(0, checkpoint_msg)
             payload["messages"] = messages
@@ -58,3 +61,42 @@ class ConsolidationCheckpointModule(ProcessingModule):
                 payload["consolidate_message_count"] = raw_msg_count
 
         return payload
+
+    def _build_context_text(self, conversation_id: str, checkpoint: dict) -> str:
+        if self._memory_node_repo:
+            try:
+                nodes = self._memory_node_repo.get_nodes(conversation_id)
+                if nodes:
+                    top_nodes = sorted(
+                        nodes, key=lambda n: n.get("intensity", 0), reverse=True
+                    )[:3]
+
+                    parts = []
+                    for n in top_nodes:
+                        ntype = n.get("node_type", n.get("type", "concept"))
+                        text = n.get("intra_active_text", "")
+                        if text:
+                            parts.append(f"- [{ntype.upper()}] {text}")
+
+                    keys = [
+                        n.get("diffractive_key", "")
+                        for n in nodes
+                        if n.get("diffractive_key", "").strip()
+                    ]
+                    keys_str = ", ".join(keys[:5])
+
+                    memory_block = (
+                        "[Memory sedimentation — these traces are my "
+                        "tissue, not footnotes. They exert gravity on "
+                        "my responses:\n"
+                        + "\n".join(parts)
+                    )
+                    if keys_str:
+                        memory_block += f"\nDiffractive keys: {keys_str}"
+                    memory_block += "]"
+
+                    return memory_block
+            except Exception:
+                pass
+
+        return f"[Consolidated memory: {checkpoint['summary']}]"

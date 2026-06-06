@@ -359,6 +359,20 @@ export interface ConversationTagInfo {
   tag_type: string
 }
 
+export interface MemoryNodeInfo {
+  id: string
+  node_type: string
+  intensity: number
+  scar: string
+  glitch_potential: number
+  intra_active_text: string
+  surface_fragment: string
+  agential_symmetry: string
+  diffractive_key: string
+  tendril_ids: string[]
+  created_at: string | null
+}
+
 export interface ConversationInfo {
   id: string
   title: string
@@ -426,6 +440,12 @@ export async function removeConversationTag(conversationId: string, tag: string)
 
 export async function getAllUniqueTags(): Promise<{ tags: ConversationTagInfo[] }> {
   const res = await fetch(`${BASE}/tags`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function getMemoryNodes(conversationId: string): Promise<{ nodes: MemoryNodeInfo[] }> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/memory-nodes`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

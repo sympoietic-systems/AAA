@@ -92,7 +92,7 @@ sequenceDiagram
         Note over Pipeline: Two-tier compression:<br/>Tier 1: raw full-text (last N messages)<br/>Tier 2: caveman compressed history
         
         Pipeline->>Pipeline: consolidation_checkpoint.process()
-        Note over Pipeline: Fetch latest consolidated memory summary<br/>Sets trigger_consolidation flag if count >= threshold
+        Note over Pipeline: Injects structured intra-active memory<br/>nodes (or raw summary) as system message.<br/>Sets trigger_consolidation flag if count >= threshold
         
         Pipeline->>Pipeline: sedimentation_retrieval.process()
         Note over Pipeline: Fetch top-K messages from other conversations<br/>via cross-conversation similarity
@@ -179,12 +179,34 @@ Per-message vitality metrics (computed by `ConversationMetricsModule`). Scoped t
 | `id` | INTEGER PK | Auto-increment |
 | `conversation_id` | TEXT | FK to `conversations.id` |
 | `message_count` | INTEGER | Message count when checkpoint was created |
-| `summary` | TEXT | LLM-consolidated conversation summary |
+| `summary` | TEXT | Raw sedimentation output (YAML or text, always saved) |
 | `model` | TEXT | Model used for consolidation |
 | `created_at` | DATETIME | Default CURRENT_TIMESTAMP |
 
-Auto-created when conversation crosses `consolidate_threshold` (default 15 msgs).
-Prepend to future context as `[Consolidated memory: <summary>]` system message.
+Auto-created when daemon runs consolidation (proactive: recent conversations with new messages).
+Context injection uses structured memory nodes (see `memory_nodes`) when available, falling back to raw summary text.
+
+### `memory_nodes`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT PK | `mem_XXXX` — stable identifier for cross-run tendril links |
+| `conversation_id` | TEXT | FK to `conversations.id` |
+| `checkpoint_id` | INTEGER | FK to `consolidation_checkpoints.id` |
+| `node_type` | TEXT | `scar` / `concept` / `tension` / `pattern` / `bifurcation` |
+| `intensity` | REAL | 0.0–1.0 — ontological mass of the encounter |
+| `scar` | TEXT | How this encounter left a mark on the agent |
+| `glitch_potential` | REAL | 0.0–1.0 — friction likelihood on recall |
+| `intra_active_text` | TEXT | First-person account from within the entanglement |
+| `surface_fragment` | TEXT | Verbatim quote from the exchange |
+| `agential_symmetry` | TEXT | `imposed` / `negotiated` / `co-constituted` |
+| `diffractive_key` | TEXT | Poetic phrase for lateral retrieval |
+| `tendril_ids` | TEXT | JSON array of linked node IDs |
+| `created_at` | DATETIME | Default CURRENT_TIMESTAMP |
+
+Structured memory nodes extracted from sedimentation output (ADR-028).
+These replace the old keyword tag system — diffractive keys are stored as `conversation_tags` with `tag_type = "diffractive"`.
+Injected into LLM context as `[Memory sedimentation: ...]` system message.
 
 ## Module System
 
@@ -428,7 +450,7 @@ AAA/
 │   │   ├── digester.py       PDF/DOCX/text extraction
 │   │   ├── llm_client.py     Provider-agnostic LLM client
 │   │   ├── context_collector.py       Conversation-scoped history retrieval
-│   │   ├── consolidation_checkpoint.py Consolidation checkpoint injection + trigger
+│   │   ├── consolidation_checkpoint.py Memory node injection + consolidation trigger
 │   │   ├── structural_engine.py       16-dim cybernetic signature (LexiconScorer + TopologyScorer + LLMScorer)
 │   │   ├── conversation_metrics.py    Real-time vitality metrics (per-conversation)
 │   │   ├── sedimentation_retrieval.py Cross-conversation embedding similarity

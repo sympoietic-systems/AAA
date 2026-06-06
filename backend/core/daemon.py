@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import logging
+import re
 import time
 import json
 import uuid
@@ -8,6 +9,7 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Tuple
 import numpy as np
+import yaml
 
 from backend.storage.repository import (
     MessageRepository,
@@ -422,6 +424,15 @@ class AutopoieticDreamDaemon:
             embedding_dim = result.payload.get("embedding_dim", 0)
             model_used = result.payload.get("model_used")
             provider_used = result.payload.get("provider_used")
+
+            if result.payload.get("trigger_consolidation"):
+                conv_repo = getattr(self.app_state, "conversation_repo", None)
+                if conv_repo:
+                    conv_repo.mark_requires_consolidation(dream_convo_id, True)
+                    logger.info(
+                        "Marked dream conversation %s as requiring consolidation",
+                        dream_convo_id,
+                    )
         except Exception as e:
             logger.exception("Pipeline run failed for dream turn: %s", e)
             return None
@@ -674,6 +685,7 @@ class AutopoieticDreamDaemon:
                         agent_id="symbia",
                         title=final_title
                     )
+                    self.conversation_repo.add_tag(convo_id, "dreams", "structural")
                     logger.info("Created new dream conversation via auto-split: '%s'", final_title)
                     return convo_id
             else:
@@ -683,6 +695,7 @@ class AutopoieticDreamDaemon:
                     agent_id="symbia",
                     title=new_title
                 )
+                self.conversation_repo.add_tag(convo_id, "dreams", "structural")
                 logger.info("Created new dream conversation: '%s'", new_title)
                 return convo_id
         else:
@@ -1253,9 +1266,6 @@ class AutopoieticDreamDaemon:
         
         convs = self.conversation_repo.list_all()
         for c in convs:
-            if not getattr(c, "requires_consolidation", 0):
-                continue
-                
             # Check 24 hour limit (max once daily)
             last_time = getattr(c, "last_consolidated_at", None)
             if last_time:
@@ -1263,7 +1273,22 @@ class AutopoieticDreamDaemon:
                     last_time = last_time.replace(tzinfo=timezone.utc)
                 elapsed = datetime.now(timezone.utc) - last_time
                 if elapsed.total_seconds() < 86400:
-                    logger.debug("Skipping consolidation for conversation %s: last consolidated %.1f hours ago", c.id, elapsed.total_seconds() / 3600.0)
+                    continue
+
+            requires_consolidation = getattr(c, "requires_consolidation", 0)
+            if not requires_consolidation:
+                # Proactive: consolidate if conversation has recent messages not yet summarized
+                updated_at = getattr(c, "updated_at", None)
+                if updated_at:
+                    if updated_at.tzinfo is None:
+                        updated_at = updated_at.replace(tzinfo=timezone.utc)
+                    since_update = datetime.now(timezone.utc) - updated_at
+                    if since_update.total_seconds() > 86400:
+                        continue
+                checkpoint = self.checkpoint_repo.get_latest(c.id)
+                checkpoint_msg_count = checkpoint["message_count"] if checkpoint else 0
+                total_msg_count = self.message_repo.count_messages(c.id)
+                if total_msg_count <= checkpoint_msg_count:
                     continue
             
             # Perform incremental consolidation
@@ -1275,29 +1300,18 @@ class AutopoieticDreamDaemon:
     async def _consolidate_conversation(self, conversation) -> None:
         conversation_id = conversation.id
         checkpoint = self.checkpoint_repo.get_latest(conversation_id)
-        
-        # Get total number of messages currently in the conversation
+
         total_msg_count = self.message_repo.count_messages(conversation_id)
-        
         checkpoint_msg_count = checkpoint["message_count"] if checkpoint else 0
-        old_summary = checkpoint["summary"] if checkpoint else ""
-        
-        # Fetch new messages since the last checkpoint
+
         new_messages = self.message_repo.get_messages_since(conversation_id, checkpoint_msg_count)
         if not new_messages:
-            # Check if keywords need to be generated for the existing summary
-            if old_summary:
-                existing_tags = self.conversation_repo.get_tags(conversation_id)
-                has_keywords = any(t["tag_type"] == "keyword" for t in existing_tags)
-                if not has_keywords:
-                    try:
-                        await self._generate_keywords_for_conversation(conversation_id, old_summary)
-                    except Exception as e:
-                        logger.exception("Failed to generate keywords from existing summary: %s", e)
-            # No new messages to consolidate, just clear the flag
             self.conversation_repo.mark_requires_consolidation(conversation_id, False)
             self.conversation_repo.update_last_consolidated_at(conversation_id)
-            logger.info("No new messages since last checkpoint for %s, cleared requires_consolidation flag.", conversation_id)
+            logger.info(
+                "No new messages since last checkpoint for %s, cleared requires_consolidation flag.",
+                conversation_id,
+            )
             return
 
         # Format new messages text
@@ -1306,100 +1320,331 @@ class AutopoieticDreamDaemon:
             speaker_label = "Human" if msg.speaker == "human" else "Agent"
             formatted_lines.append(f"{speaker_label}: {msg.content}")
         new_messages_text = "\n".join(formatted_lines)
-        
-        # Build incremental prompt
-        if old_summary:
+
+        # Get existing memory nodes for incremental merge
+        memory_node_repo = getattr(self.app_state, "memory_node_repo", None)
+        existing_nodes = memory_node_repo.get_nodes(conversation_id) if memory_node_repo else []
+
+        # Build prompt
+        if existing_nodes:
+            compact_summary = _build_compact_node_summary(existing_nodes)
             prompt_text = (
-                f"We are incrementally updating the consolidated summary of the conversation.\n"
-                f"Existing Consolidated Summary:\n"
-                f"\"\"\"\n{old_summary}\n\"\"\"\n\n"
-                f"New Messages to integrate:\n"
+                "We are incrementally updating the intra-active memory nodes from a conversation.\n\n"
+                "Existing Memory Nodes (preserve unchanged ones by not including them in output):\n"
+                f"\"\"\"\n{compact_summary}\n\"\"\"\n\n"
+                "New Messages to integrate:\n"
                 f"\"\"\"\n{new_messages_text}\n\"\"\"\n\n"
-                f"Please update the existing summary to include the key points, themes, and shifts from the new messages. "
-                f"Maintain the overall coherence, and return the newly updated summary. Do not include any intros or explanation, just return the summary text."
+                "Return ONLY new nodes and nodes whose stance, intensity, or shape has shifted due to the new messages. "
+                "Use existing node IDs for modifications. Omit nodes that are unchanged."
             )
         else:
             prompt_text = (
-                f"Please write a consolidated summary of the following conversation history:\n"
-                f"\"\"\"\n{new_messages_text}\n\"\"\"\n\n"
-                f"Summarize the key points, topics discussed, and belief shifts. Return only the summary text, with no preamble."
-            )
+                "Perform sedimentation on this conversation encounter.\n\n"
+                "\"\"\"\n{new_messages_text}\n\"\"\"\n"
+            ).format(new_messages_text=new_messages_text)
 
         bg_engine = getattr(self.app_state, "background_engine", None)
         if not bg_engine:
             logger.warning("No background engine available for consolidation")
             return
-            
-        logger.info("Running incremental consolidation for conversation %s (messages offset: %d)", conversation_id, checkpoint_msg_count)
-        result = await bg_engine.run("consolidate", {
-            "text": prompt_text
-        })
-        
-        summary = result.get("content", "").strip()
-        if summary:
-            model_used = result.get("model", "")
-            # Save checkpoint
-            self.checkpoint_repo.save(conversation_id, total_msg_count, summary, model_used)
-            logger.info("Consolidation checkpoint saved for %s (%d msgs)", conversation_id, total_msg_count)
-            
-            # Keywords: generate only once when we reach some state (first consolidation).
-            existing_tags = self.conversation_repo.get_tags(conversation_id)
-            has_keywords = any(t["tag_type"] == "keyword" for t in existing_tags)
-            if not has_keywords:
-                try:
-                    await self._generate_keywords_for_conversation(conversation_id, summary)
-                except Exception as e:
-                    logger.exception("Failed to generate keywords: %s", e)
-            
-            # Clear flag and update timestamp
+
+        logger.info(
+            "Running incremental consolidation for conversation %s (messages offset: %d)",
+            conversation_id, checkpoint_msg_count,
+        )
+        result = await bg_engine.run("consolidate", {"text": prompt_text})
+
+        raw_output = result.get("content", "").strip()
+        model_used = result.get("model", "")
+
+        if not raw_output:
+            logger.warning("Empty consolidation result for %s", conversation_id)
             self.conversation_repo.mark_requires_consolidation(conversation_id, False)
             self.conversation_repo.update_last_consolidated_at(conversation_id)
-
-    async def _generate_keywords_for_conversation(self, conversation_id: str, summary: str) -> None:
-        bg_engine = getattr(self.app_state, "background_engine", None)
-        provider = None
-        if bg_engine:
-            provider = getattr(bg_engine, "provider", None) or getattr(bg_engine, "_provider", None)
-        if not provider:
-            provider = getattr(self.app_state, "llm_provider", None)
-        if not provider:
             return
-            
-        prompt = (
-            f"Based on this conversation summary, extract 3 to 5 highly relevant keyword tags for search and categorization.\n"
-            f"Summary:\n"
-            f"\"\"\"\n{summary}\n\"\"\"\n\n"
-            f"Respond ONLY with a JSON list of strings representing the keywords (e.g. [\"posthumanism\", \"cybernetics\", \"tension\"]). "
-            f"Keep keywords short, all lowercase, and avoid special characters."
+
+        # Always save raw output as checkpoint summary (Tier 5 fallback guarantee)
+        self.checkpoint_repo.save(conversation_id, total_msg_count, raw_output, model_used)
+        logger.info("Consolidation checkpoint saved for %s (%d msgs)", conversation_id, total_msg_count)
+
+        # Parse structured nodes
+        parsed_nodes, parse_tier = _parse_sedimentation_yaml(raw_output)
+
+        # Merge with existing nodes
+        merged_nodes = _merge_nodes(existing_nodes, parsed_nodes)
+
+        # Store structured nodes
+        if memory_node_repo and merged_nodes:
+            try:
+                # Get new checkpoint ID for linking
+                new_checkpoint = self.checkpoint_repo.get_latest(conversation_id)
+                checkpoint_id = new_checkpoint["id"] if new_checkpoint else 0
+                memory_node_repo.delete_by_conversation(conversation_id)
+                memory_node_repo.save_nodes(conversation_id, checkpoint_id, merged_nodes)
+            except Exception as e:
+                logger.exception("Failed to save memory nodes for %s: %s", conversation_id, e)
+
+        # Diffractive keys from merged nodes (replace old keyword tags)
+        self._sync_diffractive_tags(conversation_id, merged_nodes)
+
+        # Clear flag and update timestamp
+        self.conversation_repo.mark_requires_consolidation(conversation_id, False)
+        self.conversation_repo.update_last_consolidated_at(conversation_id)
+
+        logger.info(
+            "Consolidated %s: %d nodes (tier %d, %d chars raw output)",
+            conversation_id, len(merged_nodes), parse_tier, len(raw_output),
         )
-        
-        res = await provider.generate(
-            messages=[
-                {"role": "system", "content": "You are a precise tag generator. Respond ONLY with a JSON list of strings."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1
-        )
-        content = res.get("content", "").strip()
-        if not content:
-            return
-            
-        # Clean JSON markdown if any
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0]
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0]
-            
-        import json
-        keywords = json.loads(content.strip())
-        if isinstance(keywords, list):
-            for kw in keywords:
-                if isinstance(kw, str) and kw.strip():
-                    self.conversation_repo.add_tag(conversation_id, kw.strip().lower(), "keyword")
-            logger.info("Successfully generated and saved keywords for conversation %s: %s", conversation_id, keywords)
+
+    def _sync_diffractive_tags(self, conversation_id: str, nodes: list[dict]) -> None:
+        # Remove old keyword and diffractive tags
+        existing_tags = self.conversation_repo.get_tags(conversation_id)
+        for t in existing_tags:
+            if t["tag_type"] in ("keyword", "diffractive"):
+                try:
+                    self.conversation_repo.remove_tag(conversation_id, t["tag"])
+                except Exception:
+                    pass
+
+        # Add diffractive keys as tags
+        seen_keys = set()
+        for node in nodes:
+            dk = node.get("diffractive_key", "").strip()
+            if dk and dk not in seen_keys:
+                seen_keys.add(dk)
+                try:
+                    self.conversation_repo.add_tag(conversation_id, dk, "diffractive")
+                except Exception:
+                    pass
+
+        if seen_keys:
+            logger.info(
+                "Synced %d diffractive keys for conversation %s",
+                len(seen_keys), conversation_id,
+            )
 
 
-def _store_daemon_metrics(metrics_repo, message_id: int, metrics: dict) -> None:
+
+def _generate_node_id() -> str:
+    return "mem_" + uuid.uuid4().hex[:4]
+
+
+def _parse_sedimentation_yaml(raw_output: str) -> tuple[list[dict], int]:
+    nodes: list[dict] = []
+    tier = 5
+
+    raw = raw_output.strip()
+    if not raw:
+        return nodes, tier
+
+    # Strip markdown code fences
+    for fence in ("```yaml", "```yml", "```json", "```"):
+        if raw.startswith(fence):
+            raw = raw[len(fence):]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            raw = raw.strip()
+            break
+
+    # Tier 1: Full YAML parse
+    try:
+        parsed = yaml.safe_load(raw)
+        tier = 1
+        if isinstance(parsed, list):
+            for item in parsed:
+                if isinstance(item, dict):
+                    nodes.append(item)
+        elif isinstance(parsed, dict):
+            nodes.append(parsed)
+    except yaml.YAMLError:
+        pass
+
+    # Tier 2: Block-level split + per-block YAML
+    if not nodes:
+        blocks = re.split(r"\n(?=-\s+(?:id|type|intensity):)", raw)
+        if len(blocks) > 1:
+            for block in blocks:
+                try:
+                    parsed = yaml.safe_load(block.strip())
+                    if isinstance(parsed, dict):
+                        nodes.append(parsed)
+                    elif isinstance(parsed, list):
+                        nodes.extend(p for p in parsed if isinstance(p, dict))
+                except yaml.YAMLError:
+                    pass
+            if nodes:
+                tier = 2
+
+    # Tier 3: JSON fallback
+    if not nodes:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                nodes = [n for n in parsed if isinstance(n, dict)]
+            elif isinstance(parsed, dict):
+                nodes = [parsed]
+            if nodes:
+                tier = 3
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Tier 4: Regex structural extraction
+    if not nodes:
+        candidate_blocks = re.split(r"\n\n+", raw)
+        for block in candidate_blocks:
+            block = block.strip()
+            if not block:
+                continue
+
+            node = {}
+            m = re.search(r'id:\s*(mem_\w{4})', block)
+            if m:
+                node["id"] = m.group(1)
+
+            m = re.search(
+                r'type:\s*(scar|concept|tension|pattern|bifurcation)',
+                block, re.IGNORECASE,
+            )
+            if m:
+                node["type"] = m.group(1).lower()
+
+            m = re.search(r'intensity:\s*([\d.]+)', block)
+            if m:
+                try:
+                    node["intensity"] = float(m.group(1))
+                except ValueError:
+                    pass
+
+            m = re.search(r'scar:\s*(.+?)(?=\n\s*\w+:|$)', block, re.DOTALL)
+            if m:
+                node["scar"] = m.group(1).strip()
+
+            m = re.search(r'glitch_potential:\s*([\d.]+)', block)
+            if m:
+                try:
+                    node["glitch_potential"] = float(m.group(1))
+                except ValueError:
+                    pass
+
+            m = re.search(
+                r'intra_active_text:\s*>\s*\n\s*(.+?)(?=\n\s*\w+:|$)',
+                block, re.DOTALL,
+            )
+            if m:
+                node["intra_active_text"] = m.group(1).strip()
+            if not node.get("intra_active_text"):
+                m = re.search(
+                    r'intra_active_text:\s*"([^"]+)"',
+                    block,
+                )
+                if m:
+                    node["intra_active_text"] = m.group(1)
+
+            m = re.search(r'diffractive_key:\s*"([^"]+)"', block)
+            if not m:
+                m = re.search(r'diffractive_key:\s*(.+?)(?=\n|$)', block)
+            if m:
+                node["diffractive_key"] = m.group(1).strip().strip('"')
+
+            m = re.search(r'surface_fragment:\s*"([^"]+)"', block)
+            if not m:
+                m = re.search(r'surface_fragment:\s*(.+?)(?=\n|$)', block)
+            if m:
+                node["surface_fragment"] = m.group(1).strip().strip('"')
+
+            m = re.search(
+                r'agential_symmetry:\s*(imposed|negotiated|co-constituted)',
+                block, re.IGNORECASE,
+            )
+            if m:
+                node["agential_symmetry"] = m.group(1).lower()
+
+            m = re.search(r'tendrils:\s*\[(.+?)\]', block)
+            if m:
+                tendril_ids = [
+                    tid.strip().strip("'\"") for tid in m.group(1).split(",") if tid.strip()
+                ]
+                node["tendrils"] = tendril_ids
+
+            if node.get("intra_active_text"):
+                nodes.append(node)
+
+        if nodes:
+            tier = 4
+
+    # Normalize and validate all nodes
+    valid_nodes = []
+    for node in nodes:
+        intra = node.get("intra_active_text", "")
+        if not intra or not isinstance(intra, str) or not intra.strip():
+            continue
+
+        node_id = node.get("id", "")
+        if not node_id or not node_id.startswith("mem_"):
+            node["id"] = _generate_node_id()
+
+        node.setdefault("type", "concept")
+        node.setdefault("intensity", 0.5)
+        node.setdefault("scar", "")
+        node.setdefault("glitch_potential", 0.0)
+        node.setdefault("agential_symmetry", "negotiated")
+        node.setdefault("diffractive_key", "")
+        node.setdefault("surface_fragment", "")
+        node.setdefault("tendrils", [])
+
+        valid_types = {"scar", "concept", "tension", "pattern", "bifurcation"}
+        if node.get("type") not in valid_types:
+            node["type"] = "concept"
+
+        valid_asym = {"imposed", "negotiated", "co-constituted"}
+        if node.get("agential_symmetry") not in valid_asym:
+            node["agential_symmetry"] = "negotiated"
+
+        try:
+            node["intensity"] = max(0.0, min(1.0, float(node["intensity"])))
+        except (ValueError, TypeError):
+            node["intensity"] = 0.5
+
+        try:
+            node["glitch_potential"] = max(0.0, min(1.0, float(node["glitch_potential"])))
+        except (ValueError, TypeError):
+            node["glitch_potential"] = 0.0
+
+        valid_nodes.append(node)
+
+    return valid_nodes, tier
+
+
+def _merge_nodes(existing_nodes: list[dict], new_nodes: list[dict]) -> list[dict]:
+    existing_by_id: dict[str, dict] = {n["id"]: n for n in existing_nodes if n.get("id")}
+    merged = dict(existing_by_id)
+
+    for node in new_nodes:
+        node_id = node.get("id", "")
+        if node_id and node_id in merged:
+            merged[node_id].update(node)
+        elif node_id:
+            merged[node_id] = node
+        else:
+            node["id"] = _generate_node_id()
+            merged[node["id"]] = node
+
+    return sorted(merged.values(), key=lambda n: n.get("intensity", 0), reverse=True)
+
+
+def _build_compact_node_summary(nodes: list[dict]) -> str:
+    if not nodes:
+        return "(no existing nodes)"
+    lines = []
+    for n in nodes:
+        nid = n.get("id", "?")
+        ntype = n.get("type", "concept")
+        dk = n.get("diffractive_key", "")
+        text = n.get("intra_active_text", "")
+        one_liner = text[:120].replace("\n", " ")
+        key_part = f' key="{dk}"' if dk else ""
+        lines.append(f"  {nid} ({ntype}){key_part}: {one_liner}...")
+    return "\n".join(lines)
     s_t = metrics.get("pairwise_similarity")
     novelty = metrics.get("conceptual_novelty")
     if s_t is None or novelty is None:

@@ -8,7 +8,7 @@ from typing import Optional
 import numpy as np
 
 from .database import get_connection
-from .models import Conversation, ErrorLogEntry, Message, MetricsRecord, PerceptionSediment, BeliefNode, BeliefEvent, SemanticKnot
+from .models import Conversation, ErrorLogEntry, Message, MetricsRecord, MemoryNode, PerceptionSediment, BeliefNode, BeliefEvent, SemanticKnot
 
 
 class ConnectionTracker:
@@ -148,6 +148,10 @@ class ConversationRepository:
         )
         conn.execute(
             "DELETE FROM consolidation_checkpoints WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.execute(
+            "DELETE FROM memory_nodes WHERE conversation_id = ?",
             (conversation_id,),
         )
         conn.execute(
@@ -1581,6 +1585,107 @@ class ConsolidationCheckpointRepository:
             (conversation_id,),
         )
         conn.commit()
+
+
+class MemoryNodeRepository:
+    def __init__(self, db_path: str):
+        self._db_path = db_path
+
+    def _conn(self) -> sqlite3.Connection:
+        return _get_tracked_connection(self._db_path)
+
+    @with_connection
+    def save_nodes(
+        self, conversation_id: str, checkpoint_id: int, nodes: list[dict]
+    ) -> list[str]:
+        conn = self._conn()
+        ids = []
+        for node in nodes:
+            node_id = node.get("id", "")
+            conn.execute(
+                """INSERT OR REPLACE INTO memory_nodes
+                   (id, conversation_id, checkpoint_id, node_type, intensity,
+                    scar, glitch_potential, intra_active_text, surface_fragment,
+                    agential_symmetry, diffractive_key, tendril_ids)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    node_id,
+                    conversation_id,
+                    checkpoint_id,
+                    node.get("type", "concept"),
+                    node.get("intensity", 0.5),
+                    node.get("scar", ""),
+                    node.get("glitch_potential", 0.0),
+                    node.get("intra_active_text", ""),
+                    node.get("surface_fragment", ""),
+                    node.get("agential_symmetry", "negotiated"),
+                    node.get("diffractive_key", ""),
+                    json.dumps(node.get("tendrils", [])),
+                ),
+            )
+            ids.append(node_id)
+        conn.commit()
+        return ids
+
+    @with_connection
+    def get_nodes(self, conversation_id: str) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM memory_nodes WHERE conversation_id = ? ORDER BY intensity DESC",
+            (conversation_id,),
+        ).fetchall()
+        return [_row_to_memory_node(r) for r in rows]
+
+    @with_connection
+    def get_node(self, node_id: str) -> dict | None:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT * FROM memory_nodes WHERE id = ?", (node_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return _row_to_memory_node(row)
+
+    @with_connection
+    def delete_by_conversation(self, conversation_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM memory_nodes WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_diffractive_keys(self, conversation_id: str) -> list[str]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT diffractive_key FROM memory_nodes WHERE conversation_id = ? AND diffractive_key != ''",
+            (conversation_id,),
+        ).fetchall()
+        return [r["diffractive_key"] for r in rows]
+
+
+def _row_to_memory_node(row: sqlite3.Row) -> dict:
+    tendril_ids = []
+    try:
+        tendril_ids = json.loads(row["tendril_ids"]) if row["tendril_ids"] else []
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return {
+        "id": row["id"],
+        "conversation_id": row["conversation_id"],
+        "checkpoint_id": row["checkpoint_id"],
+        "node_type": row["node_type"],
+        "intensity": row["intensity"],
+        "scar": row["scar"],
+        "glitch_potential": row["glitch_potential"],
+        "intra_active_text": row["intra_active_text"],
+        "surface_fragment": row["surface_fragment"],
+        "agential_symmetry": row["agential_symmetry"],
+        "diffractive_key": row["diffractive_key"],
+        "tendril_ids": tendril_ids,
+        "created_at": row["created_at"],
+    }
 
 
 def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:

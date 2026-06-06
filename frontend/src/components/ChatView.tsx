@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
-import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo } from "../api/client"
+import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, MemoryNodeInfo } from "../api/client"
+import { getMemoryNodes } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
+import { MemoryNodeCard } from "./MemoryNodeCard"
 
 interface Props {
   messages: ChatMessage[]
@@ -71,6 +73,9 @@ export function ChatView({
   const [generating, setGenerating] = useState(false)
   const [newTagVal, setNewTagVal] = useState("")
   const [showSummary, setShowSummary] = useState(false)
+  const [showMemoryNodes, setShowMemoryNodes] = useState(false)
+  const [memoryNodes, setMemoryNodes] = useState<MemoryNodeInfo[]>([])
+  const [loadingNodes, setLoadingNodes] = useState(false)
 
   const handleAddTagSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,6 +132,8 @@ export function ChatView({
 
   useEffect(() => {
     setShowSummary(false)
+    setShowMemoryNodes(false)
+    setMemoryNodes([])
   }, [conversationId])
 
   const handleScroll = () => {
@@ -230,6 +237,8 @@ export function ChatView({
                 }
               } else if (t.tag_type === "keyword") {
                 tagStyle = "bg-[#141414] text-[#6fafe2]/85 border-[#222]"
+              } else if (t.tag_type === "diffractive") {
+                tagStyle = "bg-[#141414] text-[#4ec9b0]/85 border-[#222]"
               }
               return (
                 <span
@@ -268,6 +277,24 @@ export function ChatView({
                 {showSummary ? "hide summary" : "show summary"}
               </button>
             )}
+            {conversationId && (
+              <button
+                onClick={async () => {
+                  if (!showMemoryNodes) {
+                    setLoadingNodes(true)
+                    try {
+                      const data = await getMemoryNodes(conversationId)
+                      setMemoryNodes(data.nodes)
+                    } catch { /* ignore */ }
+                    setLoadingNodes(false)
+                  }
+                  setShowMemoryNodes(!showMemoryNodes)
+                }}
+                className="text-[9px] text-[#888] hover:text-[#4ec9b0] transition-colors font-mono cursor-pointer select-none uppercase px-1.5 py-[1px] border border-[#222] bg-[#141414] hover:bg-[#1a1a1a] rounded-[2px]"
+              >
+                {loadingNodes ? "loading..." : showMemoryNodes ? "hide nodes" : "memory nodes"}
+              </button>
+            )}
           </div>
           {showSummary && summary && (
             <div className="px-4 pb-2 pt-0.5 border-t border-[#1a1a1a] text-[10px] text-[#aaa] font-mono leading-relaxed select-text markdown-body max-h-48 overflow-y-auto">
@@ -275,6 +302,23 @@ export function ChatView({
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                 {summary}
               </ReactMarkdown>
+            </div>
+          )}
+          {showMemoryNodes && memoryNodes.length > 0 && (
+            <div className="px-3 pb-2 pt-1 border-t border-[#1a1a1a] max-h-64 overflow-y-auto">
+              <div className="text-[8px] text-[#555] mb-1.5 uppercase tracking-wider select-none font-bold px-1">
+                Intra-Active Memory Nodes ({memoryNodes.length})
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {memoryNodes.map((node) => (
+                  <MemoryNodeCard key={node.id} node={node} />
+                ))}
+              </div>
+            </div>
+          )}
+          {showMemoryNodes && !loadingNodes && memoryNodes.length === 0 && (
+            <div className="px-4 pb-2 pt-1 border-t border-[#1a1a1a] text-[9px] text-[#555] font-mono text-center">
+              no memory nodes yet — sedimentation runs when conversations reach the consolidation threshold
             </div>
           )}
         </div>

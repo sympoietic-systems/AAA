@@ -64,7 +64,8 @@ context:
   max_tokens: 16384            # Hard cap for entire context window
   floating_window: 8           # Last N messages kept raw (uncompressed)
   caveman_enabled: true        # Strip filler words for messages outside window
-  consolidate_threshold: 15    # Trigger LLM consolidation every N messages
+  consolidate_threshold: 15    # Inject structured memory nodes into context every N messages
+                                # (background consolidation runs proactively for any recent conversation)
 
 # ── Sedimentation ────────────────────────────────
 sedimentation:
