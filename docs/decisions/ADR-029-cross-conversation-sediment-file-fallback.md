@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-07
 **Status:** accepted
-**Deciders:** Interlocutor, Antigravity
+**Deciders:** Interlocutor, Antigravity, Symbia
 
 ## Context
 
