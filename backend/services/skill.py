@@ -45,22 +45,28 @@ class SkillService:
         identity = getattr(state, "config", {}).get("personality", {})
         identity_path = identity.get("path", "backend/personality/identity.yaml")
         from pathlib import Path
-        yaml_path = Path(identity_path)
-        if not yaml_path.exists():
-            project_root = Path(__file__).parent.parent
-            yaml_path = project_root / "personality" / "identity.yaml"
-            if not yaml_path.exists():
-                yaml_path = project_root.parent / "backend" / "personality" / "identity.yaml"
+        parent_dir = Path(identity_path).parent if identity_path else Path(__file__).parent.parent / "personality"
+        seed_path = parent_dir / "seed_skills.yaml"
 
-        if not yaml_path.exists():
-            logger.warning("identity.yaml not found, cannot seed skills")
+        if isinstance(parent_dir, str):
+            parent_dir = Path(parent_dir)
+            seed_path = parent_dir / "seed_skills.yaml"
+
+        if not seed_path.exists():
+            project_root = Path(__file__).parent.parent
+            seed_path = project_root / "personality" / "seed_skills.yaml"
+            if not seed_path.exists():
+                seed_path = project_root.parent / "backend" / "personality" / "seed_skills.yaml"
+
+        if not seed_path.exists():
+            logger.warning("seed_skills.yaml not found, cannot seed skills")
             return
 
         try:
-            with open(yaml_path, "r", encoding="utf-8") as f:
+            with open(seed_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
         except Exception as e:
-            logger.error("Error loading identity.yaml for skill seeding: %s", e)
+            logger.error("Error loading seed_skills.yaml: %s", e)
             return
 
         skills_cfg = data.get("skills", {})
