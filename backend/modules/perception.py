@@ -203,8 +203,6 @@ class PerceptionModule(ProcessingModule):
 
         files = self._repo.get_files_by_conversation(conversation_id)
         injections = self._repo.get_injections_for_conversation(conversation_id)
-        if not files and not injections:
-            return [], 0
 
         manifest_parts = []
 
@@ -278,12 +276,6 @@ class PerceptionModule(ProcessingModule):
         logger.info("Retrieval: query='%s' dim=%d chunks_found=%d (incl. injected)",
                     query[:60], len(query_vec), len(chunk_embeddings))
 
-        if not chunk_embeddings:
-            logger.warning("Retrieval: no chunk embeddings found for conv %s", conversation_id[:8])
-            _fallback_chunks = self._get_fallback_chunks(conversation_id, context_entries)
-            context_entries.extend(_fallback_chunks)
-            return context_entries, sum(estimate_tokens(e["content"]) for e in context_entries)
-
         scored: list[tuple[float, int]] = []
         dim_mismatches = 0
         for chunk_id, vec in chunk_embeddings:
@@ -303,15 +295,34 @@ class PerceptionModule(ProcessingModule):
         logger.info("Retrieval: top-%d similarities (threshold=%s): %s",
                    len(top_sims), self._similarity_threshold, [f"{s:.3f}" for s in top_sims])
 
+        cross_conv_matches: list[tuple[float, int]] = []
+        if len(scored) < self._top_k_chunks:
+            try:
+                cross_embeddings = self._repo.get_all_chunk_embeddings_except(
+                    exclude_conversation_id=conversation_id, limit=500
+                )
+                if cross_embeddings:
+                    for chunk_id, vec in cross_embeddings:
+                        if len(vec) != len(query_vec):
+                            continue
+                        sim = float(np.dot(query_vec, vec))
+                        if sim >= self._similarity_threshold:
+                            cross_conv_matches.append((sim, chunk_id))
+                    cross_conv_matches.sort(key=lambda x: x[0], reverse=True)
+                    cross_sims = [s for s, _ in cross_conv_matches[:self._top_k_chunks]]
+                    logger.info("Retrieval: cross-conv top-%d similarities: %s",
+                               len(cross_sims), [f"{s:.3f}" for s in cross_sims])
+            except Exception as e:
+                logger.warning("Cross-conversation chunk retrieval failed: %s", e)
+
         top_ids = [cid for _, cid in scored[:self._top_k_chunks]]
+        tokens_used = sum(
+            estimate_tokens(e["content"]) for e in context_entries
+        )
 
         if top_ids:
             chunks = self._repo.get_by_ids(top_ids)
             id_to_chunk = {c.id: c for c in chunks}
-
-            tokens_used = sum(
-                estimate_tokens(e["content"]) for e in context_entries
-            )
 
             for sim, chunk_id in scored[:self._top_k_chunks]:
                 chunk = id_to_chunk.get(chunk_id)
@@ -339,11 +350,46 @@ class PerceptionModule(ProcessingModule):
                 context_entries.append({"role": "system", "content": entry_text})
                 tokens_used += entry_tokens
 
-        elif chunk_embeddings:
+        if cross_conv_matches:
+            cross_ids = [cid for _, cid in cross_conv_matches[:self._top_k_chunks]]
+            cross_chunks = self._repo.get_by_ids(cross_ids)
+            id_to_cross = {c.id: c for c in cross_chunks}
+
+            for sim, chunk_id in cross_conv_matches[:self._top_k_chunks]:
+                chunk = id_to_cross.get(chunk_id)
+                if chunk is None:
+                    continue
+
+                if getattr(chunk, "opacity", 0) == 1:
+                    import json as _json
+                    try:
+                        meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
+                    except Exception:
+                        meta = {}
+                    reason = meta.get("reason", "Standard boilerplate or repetitive noise.")
+                    shadow_text = meta.get("shadow_text", "[Boilerplate/filler omitted]")
+                    entry_text = (
+                        f"░░░ OMITTED NOISE (Cross-Conversation: {chunk.file_name}, chunk #{chunk.chunk_index}, sim={sim:.3f}) ░░░\n"
+                        f"{shadow_text} (Reason: {reason})"
+                    )
+                else:
+                    entry_text = f"[Cross-Conversation: {chunk.file_name} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
+
+                entry_tokens = estimate_tokens(entry_text)
+                if tokens_used + entry_tokens > self._file_token_budget:
+                    break
+                context_entries.append({"role": "system", "content": entry_text})
+                tokens_used += entry_tokens
+
+        if not top_ids and not cross_conv_matches and chunk_embeddings:
             context_entries.append({
                 "role": "system",
                 "content": f"[File Context] No highly resonant memory fragments found matching the current query (similarity threshold: {self._similarity_threshold:.2f})."
             })
+
+        if not top_ids and not cross_conv_matches and not chunk_embeddings:
+            _fallback_chunks = self._get_fallback_chunks(conversation_id, context_entries)
+            context_entries.extend(_fallback_chunks)
 
         total_tokens = sum(estimate_tokens(e["content"]) for e in context_entries)
         logger.info(
@@ -362,7 +408,16 @@ class PerceptionModule(ProcessingModule):
         tokens_used = sum(estimate_tokens(e["content"]) for e in existing_entries)
         all_chunks = self._repo.get_by_conversation(conversation_id)
         injected_chunks = self._repo.get_injected_file_chunks(conversation_id)
-        combined_chunks = all_chunks + injected_chunks
+        combined_chunks = list(all_chunks) + list(injected_chunks)
+
+        cross_embeddings = self._repo.get_all_chunk_embeddings_except(
+            exclude_conversation_id=conversation_id, limit=100
+        )
+        cross_chunk_ids = [cid for cid, _ in cross_embeddings[:self._top_k_chunks]]
+        if cross_chunk_ids:
+            cross_chunks = self._repo.get_by_ids(cross_chunk_ids)
+            combined_chunks.extend(cross_chunks)
+
         for chunk in combined_chunks[:self._top_k_chunks]:
             if getattr(chunk, "opacity", 0) == 1:
                 import json as _json

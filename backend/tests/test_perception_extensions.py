@@ -294,11 +294,108 @@ async def test_sediment_entanglement():
             os.remove(p)
 
 
+async def test_cross_conversation_sediment_fallback():
+    db_path = str(get_db_path("data/aaa_cross_fallback_test.db"))
+    conn = init_db(db_path)
+
+    conn.execute("DELETE FROM perception_sediment")
+    conn.execute("DELETE FROM perception_files")
+    conn.execute("DELETE FROM sediment_injections")
+    conn.execute("DELETE FROM conversations")
+    conn.commit()
+
+    repo = PerceptionSedimentRepository(db_path)
+    from backend.storage.repository import ConversationRepository
+    conv_repo = ConversationRepository(db_path)
+
+    source_conv = "conv_source_x"
+    target_conv = "conv_target_y"
+    file_name_a = "posthuman_manifesto.txt"
+
+    conv_repo.create(source_conv, title="Source: Posthuman Theory")
+    conv_repo.create(target_conv, title="Target: Empty Conversation")
+
+    repo.create_file(source_conv, file_name_a, "txt", "ready")
+    repo.update_file(
+        source_conv,
+        file_name_a,
+        status="ready",
+        summary="A radical treatise on posthuman agency.",
+        summary_model="mock",
+        token_count=80,
+        chunk_count=2,
+    )
+
+    embed = EmbeddingService(model_name="all-MiniLM-L6-v2", device="cpu")
+    embed.load()
+
+    chunk_text_a = "Autonomous machines deterritorialize control space."
+    embed_vec_a = await embed.encode_async(chunk_text_a)
+    embed_blob_a = np.array(embed_vec_a, dtype=np.float32).tobytes()
+    repo.insert_chunk(
+        conversation_id=source_conv,
+        file_name=file_name_a,
+        file_type="txt",
+        chunk_index=0,
+        chunk_text=chunk_text_a,
+        embedding=embed_blob_a,
+        embedding_model="all-MiniLM-L6-v2",
+        token_count=10,
+        structural_signature=b"\x00" * 64,
+    )
+
+    chunk_text_b = "Rhizomes multiply without central authority."
+    embed_vec_b = await embed.encode_async(chunk_text_b)
+    embed_blob_b = np.array(embed_vec_b, dtype=np.float32).tobytes()
+    repo.insert_chunk(
+        conversation_id=source_conv,
+        file_name=file_name_a,
+        file_type="txt",
+        chunk_index=1,
+        chunk_text=chunk_text_b,
+        embedding=embed_blob_b,
+        embedding_model="all-MiniLM-L6-v2",
+        token_count=10,
+        structural_signature=b"\x00" * 64,
+    )
+
+    assert len(repo.get_embeddings_by_conversation(target_conv)) == 0
+    assert len(repo.get_injections_for_conversation(target_conv)) == 0
+
+    perception_module = PerceptionModule(
+        perception_repo=repo,
+        embedding_service=embed,
+    )
+
+    context_entries, tokens = await perception_module._retrieve_relevant_chunks(
+        query="deterritorialize",
+        conversation_id=target_conv,
+    )
+
+    assert any(
+        "Cross-Conversation:" in entry["content"] for entry in context_entries
+    ), f"Expected cross-conversation entries, got: {[e['content'][:80] for e in context_entries]}"
+
+    cross_entries = [e for e in context_entries if "Cross-Conversation:" in e["content"]]
+    assert len(cross_entries) > 0
+    assert "deterritorialize" in cross_entries[0]["content"].lower()
+
+    assert tokens > 0
+
+    print("Cross-Conversation Sediment Fallback: OK")
+
+    conn.close()
+    for p in [db_path, db_path + "-wal", db_path + "-shm"]:
+        if os.path.exists(p):
+            os.remove(p)
+
+
 async def main():
     await test_ddg_parser()
     await test_html_to_text()
     await test_coordinates_warping()
     await test_sediment_entanglement()
+    await test_cross_conversation_sediment_fallback()
     print("All perception extensions tests passed successfully!")
 
 if __name__ == "__main__":
