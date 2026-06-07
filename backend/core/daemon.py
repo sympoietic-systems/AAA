@@ -1684,23 +1684,13 @@ def _build_compact_node_summary(nodes: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _extract_human_summary(raw_output: str) -> str:
-    m = re.search(
-        r"---\s*CONSOLIDATION SUMMARY\s*---\s*\n(.*?)\n\s*---\s*END SUMMARY\s*---",
-        raw_output, re.DOTALL | re.IGNORECASE,
-    )
-    if m:
-        return m.group(1).strip()
-    return ""
+def _store_daemon_metrics(metrics_repo, message_id: int, metrics: dict) -> None:
     s_t = metrics.get("pairwise_similarity")
     novelty = metrics.get("conceptual_novelty")
     if s_t is None or novelty is None:
         return
     phase_shifts = metrics.get("phase_shifts")
-    phase_shifts_json = None
-    if phase_shifts:
-        import json as _json
-        phase_shifts_json = _json.dumps(phase_shifts)
+    phase_shifts_json = json.dumps(phase_shifts) if phase_shifts else None
     metrics_repo.insert(
         message_id=message_id,
         s_t=float(s_t),
@@ -1719,3 +1709,13 @@ def _extract_human_summary(raw_output: str) -> str:
         divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"]) if metrics.get("divergence_resolution_ratio") is not None else None,
         paskian_health=float(metrics["paskian_health"]) if metrics.get("paskian_health") is not None else None,
     )
+
+
+def _extract_human_summary(raw_output: str) -> str:
+    m = re.search(
+        r"---\s*CONSOLIDATION SUMMARY\s*---\s*\n(.*?)\n\s*---\s*END SUMMARY\s*---",
+        raw_output, re.DOTALL | re.IGNORECASE,
+    )
+    if m:
+        return m.group(1).strip()
+    return ""

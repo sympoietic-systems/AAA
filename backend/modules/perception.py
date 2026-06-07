@@ -457,7 +457,8 @@ class PerceptionModule(ProcessingModule):
         self, conversation_id: str, file_name: str, file_type: str, file_content: Optional[bytes] = None
     ) -> tuple[int, int, str]:
         if file_content is None:
-            cache_path = os.path.join("backend", "data", "uploads", conversation_id, file_name)
+            from backend.utils.filesystem import get_upload_path
+            cache_path = get_upload_path(conversation_id, file_name)
             if not os.path.exists(cache_path):
                 raise FileNotFoundError(f"File not found in upload cache: {cache_path}")
             with open(cache_path, "rb") as cf:

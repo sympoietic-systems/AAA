@@ -30,12 +30,11 @@ def calculate_concept_density(text: str, lambda_param: float = 3.0) -> float:
     return float(np.tanh(matched_dims / lambda_param))
 
 
+from backend.utils.similarity import cosine_similarity
+
+
 def compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-    norm_a = np.linalg.norm(vec_a)
-    norm_b = np.linalg.norm(vec_b)
-    if norm_a < 1e-8 or norm_b < 1e-8:
-        return 0.0
-    return float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
+    return cosine_similarity(vec_a, vec_b)
 
 
 class BeliefDynamicsEngine(ProcessingModule):

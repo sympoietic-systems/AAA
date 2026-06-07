@@ -132,7 +132,8 @@ class BackgroundStartupScheduler:
                 convo_id = f["conversation_id"]
                 file_name = f["file_name"]
                 file_type = f["file_type"]
-                cache_path = os.path.join("backend", "data", "uploads", convo_id, file_name)
+                from backend.utils.filesystem import get_upload_path
+                cache_path = get_upload_path(convo_id, file_name)
                 
                 self._active_indexing_jobs.append(file_name)
                 try:

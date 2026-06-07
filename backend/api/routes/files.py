@@ -4,11 +4,23 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
-from backend.services.file import FileService
-
 from backend.api.schemas import ConversationFile, ConversationFilesResponse
+from backend.services.file import FileService
+from backend.utils.filesystem import ensure_upload_dir, get_upload_path
 
 router = APIRouter()
+
+
+def _parse_file_datetime(val):
+    if not val:
+        return None
+    try:
+        return datetime.fromisoformat(val.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            return datetime.strptime(val, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return None
 
 
 @router.post("/conversations/{conversation_id}/files", response_model=ConversationFilesResponse)
@@ -78,24 +90,8 @@ async def get_conversation_files(conversation_id: str, request: Request):
     files = perception_repo.get_files_by_conversation(conversation_id)
     schema_files = []
     for f in files:
-        created_at_dt = None
-        if f.get("created_at"):
-            try:
-                created_at_dt = datetime.fromisoformat(f["created_at"].replace("Z", "+00:00"))
-            except ValueError:
-                try:
-                    created_at_dt = datetime.strptime(f["created_at"], "%Y-%m-%d %H:%M:%S")
-                except ValueError:
-                    pass
-        updated_at_dt = None
-        if f.get("updated_at"):
-            try:
-                updated_at_dt = datetime.fromisoformat(f["updated_at"].replace("Z", "+00:00"))
-            except ValueError:
-                try:
-                    updated_at_dt = datetime.strptime(f["updated_at"], "%Y-%m-%d %H:%M:%S")
-                except ValueError:
-                    pass
+        created_at_dt = _parse_file_datetime(f.get("created_at"))
+        updated_at_dt = _parse_file_datetime(f.get("updated_at"))
         schema_files.append(ConversationFile(
             file_name=f["file_name"], file_type=f["file_type"], status=f["status"],
             summary=None, summary_model=f.get("summary_model"),
@@ -116,7 +112,7 @@ async def delete_conversation_file(conversation_id: str, file_name: str, request
     if not exists:
         raise HTTPException(status_code=404, detail="File not found in conversation")
     try:
-        cached_file = os.path.join("backend", "data", "uploads", conversation_id, file_name)
+        cached_file = get_upload_path(conversation_id, file_name)
         if os.path.exists(cached_file):
             os.remove(cached_file)
         convo_dir = os.path.dirname(cached_file)

@@ -1,8 +1,6 @@
-from abc import ABC, abstractmethod
-from typing import Optional
-
 import asyncio
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -322,7 +320,6 @@ class KeyManager:
         self._exhausted: dict[str, float] = {}
 
     def get_available_key(self) -> Optional[str]:
-        import time
         now = time.time()
         for key in self.keys:
             until = self._exhausted.get(key, 0)
@@ -334,7 +331,6 @@ class KeyManager:
         return None
 
     def mark_key_exhausted(self, key: str):
-        import time
         self._exhausted[key] = time.time() + self.cooldown_seconds
 
     def has_keys(self) -> bool:
@@ -399,7 +395,6 @@ class ModelPoolProvider(BaseLLMProvider):
         return models
 
     def _is_exhausted(self, model: str) -> bool:
-        import time
         until = self._exhausted.get(model, 0)
         if until and time.time() < until:
             return True
@@ -408,7 +403,6 @@ class ModelPoolProvider(BaseLLMProvider):
         return False
 
     def _mark_exhausted(self, model: str):
-        import time
         self._exhausted[model] = time.time() + self._cooldown_seconds
 
     def _mask_key(self, key: str) -> str:
@@ -419,7 +413,6 @@ class ModelPoolProvider(BaseLLMProvider):
         return f"{key[:4]}...{key[-4:]}"
 
     async def generate(self, messages: list[dict], **params) -> dict:
-        import time
         errors = []
         
         now = time.time()

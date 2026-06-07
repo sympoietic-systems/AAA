@@ -1,7 +1,8 @@
 import asyncio
 import logging
-import os
 import sys
+
+from backend.utils.filesystem import ensure_upload_dir, get_upload_path
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +21,8 @@ class FileService:
 
     @staticmethod
     def cache_file(conversation_id: str, filename: str, file_bytes: bytes) -> str:
-        upload_dir = os.path.join("backend", "data", "uploads", conversation_id)
-        os.makedirs(upload_dir, exist_ok=True)
-        cached_filepath = os.path.join(upload_dir, filename)
+        ensure_upload_dir(conversation_id)
+        cached_filepath = get_upload_path(conversation_id, filename)
         with open(cached_filepath, "wb") as f:
             f.write(file_bytes)
         return cached_filepath
