@@ -128,6 +128,7 @@ class SkillActivatorModule(ProcessingModule):
         for item in attractor_window:
             label = item.get("label", "")
             if not label.startswith("skill:"):
+                continue
             for skill in on_demand_skills:
                 if f"skill:{skill.name}" == label or label == skill.name or label == f"skill-{skill.name}":
                     if skill.name not in candidates:

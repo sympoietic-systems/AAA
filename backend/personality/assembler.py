@@ -96,6 +96,15 @@ class PromptAssemblerModule(ProcessingModule):
             )
             system_content = directive_text + system_content
 
+        # Inject Skill Ecology Notes if underperforming skills detected
+        ecology_notes = payload.get("skill_ecology_notes", [])
+        if ecology_notes:
+            note_text = "--- BEGIN SKILL ECOLOGY NOTES ---\n"
+            for note in ecology_notes:
+                note_text += f"{note}\n"
+            note_text += "--- END SKILL ECOLOGY NOTES ---\n\n"
+            system_content = system_content + note_text
+
         system_msg = {"role": "system", "content": system_content}
 
         messages = payload.get("messages", [])
