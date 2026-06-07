@@ -38,7 +38,7 @@ def migrate():
             # Determine structural tag
             if "Dream Log" in title or "Internal Diary" in title or "dream" in title.lower():
                 structural_tag = "dreams"
-            elif "consultation: antigravity" in title.lower():
+            elif "consultation:" in title.lower():
                 structural_tag = "other agents"
             else:
                 structural_tag = "user conversation"

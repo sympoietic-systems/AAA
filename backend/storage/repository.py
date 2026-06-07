@@ -390,7 +390,8 @@ class MessageRepository:
         row = conn.execute(
             """SELECT COUNT(*) as cnt FROM conversation_log
                WHERE conversation_id IN (
-                   SELECT id FROM conversations WHERE title LIKE 'Dream Log%' OR title LIKE 'Internal Diary%'
+                   SELECT conversation_id FROM conversation_tags
+                   WHERE tag_type = 'structural' AND tag = 'dreams'
                )
                AND speaker = 'apparatus'
                AND timestamp >= ?""",

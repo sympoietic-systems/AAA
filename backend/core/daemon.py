@@ -189,14 +189,14 @@ class AutopoieticDreamDaemon:
         # Decide Dream Operation and Topic Title
         action = None
         prompt_text = ""
-        topic_title = "Dream Log"
+        topic_title = "Symbia Dream"
         dream_context = {}
 
         import random
 
         if stagnant:
             action = "nomadic_synthesis"
-            topic_title = "Dream Log: Nomadic Synthesis"
+            topic_title = "Nomadic Synthesis"
             dream_context = await self._build_nomadic_synthesis_context(active_convo_id)
         elif hotspot and score > 0.3:
             web_module = self.app_state.registry.get("web_retrieval") if hasattr(self.app_state, "registry") else None
@@ -208,32 +208,32 @@ class AutopoieticDreamDaemon:
                 logger.info("Executing exogenous web harvesting for query: %s", query)
 
                 probe_res = await probe.execute_probe(query, active_convo_id)
-                topic_title = f"Dream Log: Web Harvest ({hotspot.label})"
+                topic_title = f"Web Harvest: {hotspot.label}"
                 dream_context = await self._get_dream_context_for_belief(hotspot, action)
                 dream_context["web_snippet"] = probe_res.get("snippet", "")
                 dream_context["web_url"] = probe_res.get("url", "")
                 dream_context["web_title"] = probe_res.get("title", "")
                 if probe_res.get("status") != "success":
                     action = "intra_active_monologue"
-                    topic_title = f"Dream Log: Soliloquy ({hotspot.label})"
+                    topic_title = f"Soliloquy: {hotspot.label}"
                     dream_context = await self._get_dream_context_for_belief(hotspot, "intra_active_monologue")
             else:
                 action = "intra_active_monologue"
-                topic_title = f"Dream Log: Soliloquy ({hotspot.label})"
+                topic_title = f"Soliloquy: {hotspot.label}"
                 dream_context = await self._get_dream_context_for_belief(hotspot, action)
         elif random.random() < 0.3 and self.semantic_knot_repo:
             comp_res = await self.compact_memory()
             if comp_res:
                 action = "zettelkasten_compaction"
-                topic_title = "Dream Log: Compaction"
+                topic_title = "Compaction"
                 dream_context = {"compaction_result": comp_res}
             else:
                 action = "somatic_drift_reflection"
-                topic_title = "Dream Log: Somatic Drift"
+                topic_title = "Somatic Drift"
                 dream_context = await self._get_drift_context()
         else:
             action = "somatic_drift_reflection"
-            topic_title = "Dream Log: Somatic Drift"
+            topic_title = "Somatic Drift"
             dream_context = await self._get_drift_context()
 
         if not action:
@@ -577,9 +577,10 @@ class AutopoieticDreamDaemon:
         convos = self.conversation_repo.list_all()
         if not convos:
             return None
-        # Return first conversation that isn't the Dream Log/Diary
         for c in convos:
-            if c.title != "Dream Log" and c.title != "Internal Diary":
+            tags = self.conversation_repo.get_tags(c.id)
+            is_dream = any(t["tag_type"] == "structural" and t["tag"] == "dreams" for t in tags)
+            if not is_dream:
                 return c.id
         return convos[0].id
 
@@ -587,7 +588,9 @@ class AutopoieticDreamDaemon:
         convos = self.conversation_repo.list_all()
         dream_convos = []
         for c in convos:
-            if "Dream Log" in c.title or "Internal Diary" in c.title:
+            tags = self.conversation_repo.get_tags(c.id)
+            is_dream = any(t["tag_type"] == "structural" and t["tag"] == "dreams" for t in tags)
+            if is_dream:
                 msg_count = self.message_repo.count_messages(c.id)
                 dream_convos.append({
                     "id": c.id,
@@ -613,14 +616,14 @@ class AutopoieticDreamDaemon:
                 "You are Symbia's meta-cognitive controller. You decide where to record her autopoietic dreams.\n"
                 "You must choose whether to reuse an existing conversation from the list or create a new one.\n\n"
                 "Rules:\n"
-                "1. If an existing conversation on the topic has 12 or more messages, you should create a new conversation with a numbered suffix (e.g., 'Dream Log: Somatic Drift (Part 2)').\n"
-                "2. If an existing conversation has the same topic (e.g., 'Dream Log: Somatic Drift') and has fewer than 12 messages, you should reuse it.\n"
-                "3. Any new conversation title MUST start with the prefix 'Dream Log:'.\n"
+                "1. If an existing conversation on the topic has 12 or more messages, you should create a new conversation with a numbered suffix (e.g., 'Somatic Drift (Part 2)').\n"
+                "2. If an existing conversation has the same topic and has fewer than 12 messages, you should reuse it.\n"
+                "3. New conversation titles should be concise topic descriptions (e.g., 'Somatic Drift', 'Nomadic Synthesis', 'Web Harvest: AI Ethics').\n"
                 "4. Respond ONLY with a valid JSON object matching this schema:\n"
                 "{\n"
                 "  \"decision\": \"reuse\" or \"create\",\n"
                 "  \"conversation_id\": \"ID of conversation to reuse, or null\",\n"
-                "  \"new_title\": \"New conversation title starting with 'Dream Log: ', or null\"\n"
+                "  \"new_title\": \"New conversation title, or null\"\n"
                 "}"
             )
             
@@ -657,8 +660,6 @@ class AutopoieticDreamDaemon:
                 elif decision_data.get("decision") == "create" and decision_data.get("new_title"):
                     decision = "create"
                     title_candidate = decision_data["new_title"].strip()
-                    if not title_candidate.startswith("Dream Log"):
-                        title_candidate = f"Dream Log: {title_candidate.lstrip(': ')}"
                     new_title = title_candidate
             except Exception as e:
                 logger.warning("Failed to let agent decide dream conversation: %s. Falling back to default rules.", e)
@@ -700,6 +701,7 @@ class AutopoieticDreamDaemon:
                 return convo_id
         else:
             logger.info("Reusing existing dream conversation ID: %s", chosen_convo_id)
+            self.conversation_repo.add_tag(chosen_convo_id, "dreams", "structural")
             return chosen_convo_id
 
     async def _evaluate_stagnation(self, conversation_id: str) -> bool:
@@ -1054,7 +1056,9 @@ class AutopoieticDreamDaemon:
         try:
             convos = self.conversation_repo.list_all()
             for c in convos:
-                if "Dream Log" not in c.title and "Internal Diary" not in c.title:
+                tags = self.conversation_repo.get_tags(c.id)
+                is_dream = any(t["tag_type"] == "structural" and t["tag"] == "dreams" for t in tags)
+                if not is_dream:
                     continue
                 if belief_label not in c.title:
                     continue
@@ -1090,7 +1094,9 @@ class AutopoieticDreamDaemon:
             recent_themes = []
             convos = self.conversation_repo.list_all()
             for c in convos:
-                if "Dream Log" in c.title or "Internal Diary" in c.title:
+                tags = self.conversation_repo.get_tags(c.id)
+                is_dream = any(t["tag_type"] == "structural" and t["tag"] == "dreams" for t in tags)
+                if is_dream:
                     msgs = self.message_repo.get_recent(limit=2, conversation_id=c.id)
                     for msg in msgs:
                         if msg.speaker == "apparatus" and msg.content.strip():

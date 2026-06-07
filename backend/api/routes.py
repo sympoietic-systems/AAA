@@ -852,26 +852,26 @@ async def get_file_by_name_endpoint(file_name: str, request: Request):
 
 
 def _ensure_structural_tags(conv_repo, conversation) -> list[dict]:
+    existing_tags = conv_repo.get_tags(conversation.id)
+    has_structural = False
+    for et in existing_tags:
+        if et["tag_type"] == "structural":
+            has_structural = True
+            break
+
+    if has_structural:
+        return existing_tags
+
     title = conversation.title or ""
     if "Dream Log" in title or "Internal Diary" in title or "dream" in title.lower():
         structural_tag = "dreams"
-    elif "consultation: antigravity" in title.lower():
+    elif "consultation:" in title.lower():
         structural_tag = "other agents"
     else:
         structural_tag = "user conversation"
-        
-    existing_tags = conv_repo.get_tags(conversation.id)
-    has_tag = False
-    for et in existing_tags:
-        if et["tag_type"] == "structural":
-            if et["tag"] != structural_tag:
-                conv_repo.remove_tag(conversation.id, et["tag"])
-            else:
-                has_tag = True
-    if not has_tag:
-        conv_repo.add_tag(conversation.id, structural_tag, "structural")
-        existing_tags = conv_repo.get_tags(conversation.id)
-    return existing_tags
+
+    conv_repo.add_tag(conversation.id, structural_tag, "structural")
+    return conv_repo.get_tags(conversation.id)
 
 
 @router.get("/conversations", response_model=ConversationListResponse)
