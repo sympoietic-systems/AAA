@@ -10,4 +10,3 @@ from backend.api.schemas import (
     SedimentInjectRequest, SedimentInjectionInfo, SedimentInjectionsResponse,
     SkillInfo, SkillsResponse, TagCreateRequest, TokenResponse,
 )
-from backend.api.router import router
