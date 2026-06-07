@@ -63,6 +63,8 @@ class ConsolidationCheckpointModule(ProcessingModule):
         return payload
 
     def _build_context_text(self, conversation_id: str, checkpoint: dict) -> str:
+        human_summary = checkpoint.get("human_summary", "").strip()
+
         if self._memory_node_repo:
             try:
                 nodes = self._memory_node_repo.get_nodes(conversation_id)
@@ -85,12 +87,16 @@ class ConsolidationCheckpointModule(ProcessingModule):
                     ]
                     keys_str = ", ".join(keys[:5])
 
-                    memory_block = (
-                        "[Memory sedimentation — these traces are my "
-                        "tissue, not footnotes. They exert gravity on "
-                        "my responses:\n"
-                        + "\n".join(parts)
-                    )
+                    # Build context: prose summary first (if available), then node list
+                    memory_block = "[Memory sedimentation — "
+                    if human_summary:
+                        memory_block += (
+                            "consolidation summary: " + human_summary + "\n\n"
+                            "Key scars — these traces are my tissue, not footnotes:"
+                        )
+                    else:
+                        memory_block += "these traces are my tissue, not footnotes. They exert gravity on my responses:"
+                    memory_block += "\n" + "\n".join(parts)
                     if keys_str:
                         memory_block += f"\nDiffractive keys: {keys_str}"
                     memory_block += "]"
@@ -98,5 +104,8 @@ class ConsolidationCheckpointModule(ProcessingModule):
                     return memory_block
             except Exception:
                 pass
+
+        if human_summary:
+            return f"[Consolidation summary: {human_summary}]"
 
         return f"[Consolidated memory: {checkpoint['summary']}]"

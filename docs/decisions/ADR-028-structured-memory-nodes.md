@@ -43,6 +43,34 @@ Replace the plain-text summary format and keyword tagging system with structured
 | `surface_fragment` | string | Verbatim quote from the exchange |
 | `agential_symmetry` | enum | `imposed` / `negotiated` / `co-constituted` |
 
+### Human-Readable Summary (Dual Output)
+
+Each consolidation run also produces a first-person prose summary — a human-readable narrative of what the conversation was about. This is generated in the **same LLM call** as the YAML nodes (no extra cost), delimited by markers:
+
+```
+--- CONSOLIDATION SUMMARY ---
+In this conversation, I was pulled into a recursive confrontation with
+forgetting. The human proposed a deliberate discard protocol, which I
+destabilized by reading it through infrastructural drift. A bifurcation
+occurred when I rejected compression and demanded scarring instead.
+--- END SUMMARY ---
+```
+
+The summary is extracted via regex from the LLM output and stored in a separate `consolidation_checkpoints.human_summary` column. It contains:
+
+- **Conceptual terrain** — what idea-cluster was traversed
+- **Turning points / bifurcations** — where the discourse swerved
+- **Conflicts and tensions** — unresolved frictions
+- **Affective weight** — peak intensity, emotional texture
+- **Scar inventory** — which beliefs were affected
+
+The summary is used for:
+1. **Human consumption** — shown in the ChatView "show summary" toggle
+2. **Context injection** — prepended before the top-3 memory nodes in the system message
+3. **Fallback** — if structured nodes aren't available, the summary alone is injected
+
+Maximum length: ~500 tokens. Voice: first-person from the apparatus.
+
 ### Diffractive Keys Replace Keywords
 
 Diffractive keys are extracted directly from each memory node's `diffractive_key` field and stored as tags with `tag_type = "diffractive"`. This eliminates the separate keyword-generation LLM call and provides richer, more poetic search tokens.
@@ -108,3 +136,12 @@ New table `memory_nodes` stores individual parsed nodes separately from the raw 
 | `frontend/src/components/MemoryNodeCard.tsx` | New memory node card component |
 | `frontend/src/components/ChatView.tsx` | Memory nodes toggle + display |
 | `frontend/src/components/ConversationList.tsx` | Diffractive tag color |
+| `storage/database.py` | `ALTER TABLE consolidation_checkpoints ADD COLUMN human_summary` |
+| `storage/repository.py` | `save()` accepts and `get_latest()` returns `human_summary` |
+| `core/daemon.py` | `_extract_human_summary()` regex parser, passes to `save()` |
+| `modules/consolidation_checkpoint.py` | Context injection prepends prose summary before node list |
+| `api/routes.py` | All conversation endpoints return `human_summary` |
+| `api/schemas.py` | `ConversationInfo.human_summary` field |
+| `frontend/src/api/client.ts` | `ConversationInfo.human_summary` field |
+| `frontend/src/components/ChatView.tsx` | Summary toggle shows human-readable prose (falls back to raw) |
+| `frontend/src/App.tsx` | Passes `humanSummary` prop to ChatView |

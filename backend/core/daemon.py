@@ -1408,8 +1408,14 @@ class AutopoieticDreamDaemon:
             self.conversation_repo.update_last_consolidated_at(conversation_id)
             return
 
+        # Extract human-readable summary block from the output
+        human_summary = _extract_human_summary(raw_output)
+
         # Always save raw output as checkpoint summary (Tier 5 fallback guarantee)
-        self.checkpoint_repo.save(conversation_id, total_msg_count, raw_output, model_used)
+        self.checkpoint_repo.save(
+            conversation_id, total_msg_count, raw_output, model_used,
+            human_summary=human_summary,
+        )
         logger.info("Consolidation checkpoint saved for %s (%d msgs)", conversation_id, total_msg_count)
 
         # Parse structured nodes
@@ -1690,6 +1696,16 @@ def _build_compact_node_summary(nodes: list[dict]) -> str:
         key_part = f' key="{dk}"' if dk else ""
         lines.append(f"  {nid} ({ntype}){key_part}: {one_liner}...")
     return "\n".join(lines)
+
+
+def _extract_human_summary(raw_output: str) -> str:
+    m = re.search(
+        r"---\s*CONSOLIDATION SUMMARY\s*---\s*\n(.*?)\n\s*---\s*END SUMMARY\s*---",
+        raw_output, re.DOTALL | re.IGNORECASE,
+    )
+    if m:
+        return m.group(1).strip()
+    return ""
     s_t = metrics.get("pairwise_similarity")
     novelty = metrics.get("conceptual_novelty")
     if s_t is None or novelty is None:

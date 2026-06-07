@@ -263,6 +263,7 @@ export default function App() {
         onUpdateNote={handleUpdateNote}
         tags={activeConv?.tags || []}
         summary={activeConv?.summary}
+        humanSummary={activeConv?.human_summary}
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
         className="flex-1 min-w-0"

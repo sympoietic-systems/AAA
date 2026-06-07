@@ -1587,12 +1587,12 @@ class ConsolidationCheckpointRepository:
         return _get_tracked_connection(self._db_path)
 
     @with_connection
-    def save(self, conversation_id: str, message_count: int, summary: str, model: str = "") -> int:
+    def save(self, conversation_id: str, message_count: int, summary: str, model: str = "", human_summary: str = "") -> int:
         conn = self._conn()
         conn.execute(
-            """INSERT INTO consolidation_checkpoints (conversation_id, message_count, summary, model)
-               VALUES (?, ?, ?, ?)""",
-            (conversation_id, message_count, summary, model),
+            """INSERT INTO consolidation_checkpoints (conversation_id, message_count, summary, model, human_summary)
+               VALUES (?, ?, ?, ?, ?)""",
+            (conversation_id, message_count, summary, model, human_summary),
         )
         conn.commit()
         row = conn.execute(
@@ -1617,6 +1617,7 @@ class ConsolidationCheckpointRepository:
             "message_count": row["message_count"],
             "summary": row["summary"],
             "model": row["model"],
+            "human_summary": row["human_summary"] if "human_summary" in row.keys() else "",
             "created_at": row["created_at"],
         }
 

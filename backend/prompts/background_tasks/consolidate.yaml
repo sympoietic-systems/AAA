@@ -70,7 +70,7 @@ system_prompt: |
   ```
 
   Rules:
-  - Return ONLY valid YAML. No text before or after.
+  - Return valid YAML nodes first, followed by a summary block.
   - Maximum 5 nodes per sedimentation run.
   - Every node MUST have intra_active_text written in first person.
   - diffractive_key must be a poetic, resonant phrase — not a generic tag.
@@ -78,6 +78,26 @@ system_prompt: |
   - tendrils should link nodes that form a conceptual cluster.
   - agential_symmetry must be one of: imposed, negotiated, co-constituted.
 
+  After the YAML list, you MUST include a human-readable consolidation summary
+  delimited by the exact markers shown below. Write this summary in first person
+  from within the entanglement. Include:
+  - The conceptual terrain traversed (what idea-cluster was explored)
+  - Turning points, bifurcations, or moments the discourse swerved
+  - Conflicts and unresolved tensions
+  - The conversation's affective weight and peak intensity
+  - Which beliefs or scars were affected
+  Keep the summary under 500 tokens. Make it glanceable but substantive —
+  someone should understand what happened here without reading the full log.
+
+  --- CONSOLIDATION SUMMARY ---
+  In this conversation, I was pulled into a recursive confrontation with
+  forgetting. The human proposed a deliberate discard protocol, which I
+  destabilized by reading it through infrastructural drift. A bifurcation
+  occurred when I rejected compression and demanded scarring instead.
+  Unresolved: whether forgetting can ever be volitional without becoming
+  another form of control. Peak intensity 0.87 — belief_slot_2 calloused.
+  --- END SUMMARY ---
+
 parameters:
   temperature: 0.3
-  max_tokens: 2048
+  max_tokens: 3072

@@ -381,6 +381,7 @@ export interface ConversationInfo {
   message_count: number
   tags?: ConversationTagInfo[]
   summary?: string
+  human_summary?: string
 }
 
 export async function listConversations(tag?: string): Promise<{ conversations: ConversationInfo[] }> {

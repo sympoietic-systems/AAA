@@ -188,6 +188,7 @@ class ConversationInfo(BaseModel):
     message_count: int = 0
     tags: list[ConversationTagInfo] = []
     summary: Optional[str] = None
+    human_summary: Optional[str] = None
 
 
 class ConversationListResponse(BaseModel):

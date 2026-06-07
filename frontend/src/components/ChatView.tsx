@@ -36,6 +36,7 @@ interface Props {
   onAddTag?: (tag: string) => void
   onRemoveTag?: (tag: string) => void
   summary?: string
+  humanSummary?: string
 }
 
 export function ChatView({
@@ -65,6 +66,7 @@ export function ChatView({
   onAddTag,
   onRemoveTag,
   summary,
+  humanSummary,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -269,7 +271,7 @@ export function ChatView({
                 />
               </form>
             )}
-            {summary && (
+            {(summary || humanSummary) && (
               <button
                 onClick={() => setShowSummary(!showSummary)}
                 className="ml-auto text-[9px] text-[#888] hover:text-[#4ade80] transition-colors font-mono cursor-pointer select-none uppercase px-1.5 py-[1px] border border-[#222] bg-[#141414] hover:bg-[#1a1a1a] rounded-[2px]"
@@ -296,11 +298,13 @@ export function ChatView({
               </button>
             )}
           </div>
-          {showSummary && summary && (
+          {showSummary && (humanSummary || summary) && (
             <div className="px-4 pb-2 pt-0.5 border-t border-[#1a1a1a] text-[10px] text-[#aaa] font-mono leading-relaxed select-text markdown-body max-h-48 overflow-y-auto">
-              <div className="text-[8px] text-[#555] mb-1 uppercase tracking-wider select-none font-bold">Autopoietic Summary Checkpoint</div>
+              <div className="text-[8px] text-[#555] mb-1 uppercase tracking-wider select-none font-bold">
+                {humanSummary ? "Sedimentation Summary" : "Autopoietic Summary Checkpoint"}
+              </div>
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                {summary}
+                {humanSummary || summary || ""}
               </ReactMarkdown>
             </div>
           )}

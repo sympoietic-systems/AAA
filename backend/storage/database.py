@@ -302,6 +302,13 @@ def init_db(db_path: str) -> sqlite3.Connection:
         pass
 
     try:
+        conn.execute(
+            "ALTER TABLE consolidation_checkpoints ADD COLUMN human_summary TEXT DEFAULT ''"
+        )
+    except sqlite3.OperationalError:
+        pass
+
+    try:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS perception_log (
                 id                    TEXT PRIMARY KEY,

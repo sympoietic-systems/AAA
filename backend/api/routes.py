@@ -887,10 +887,12 @@ async def list_conversations(request: Request, tag: Optional[str] = None):
     for c in convos:
         tags = _ensure_structural_tags(conv_repo, c)
         summary = None
+        human_summary = None
         if checkpoint_repo:
             cp = checkpoint_repo.get_latest(c.id)
             if cp:
                 summary = cp.get("summary")
+                human_summary = cp.get("human_summary")
         res_convos.append(
             ConversationInfo(
                 id=c.id,
@@ -899,7 +901,8 @@ async def list_conversations(request: Request, tag: Optional[str] = None):
                 updated_at=c.updated_at,
                 message_count=c.message_count,
                 tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags],
-                summary=summary
+                summary=summary,
+                human_summary=human_summary,
             )
         )
     return ConversationListResponse(conversations=res_convos)
@@ -918,10 +921,12 @@ async def get_conversation(conversation_id: str, request: Request):
     
     tags = _ensure_structural_tags(conv_repo, conv)
     summary = None
+    human_summary = None
     if checkpoint_repo:
         cp = checkpoint_repo.get_latest(conv.id)
         if cp:
             summary = cp.get("summary")
+            human_summary = cp.get("human_summary")
             
     return ConversationInfo(
         id=conv.id,
@@ -930,7 +935,8 @@ async def get_conversation(conversation_id: str, request: Request):
         updated_at=conv.updated_at,
         message_count=conv.message_count,
         tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags],
-        summary=summary
+        summary=summary,
+        human_summary=human_summary,
     )
 
 
@@ -951,10 +957,12 @@ async def update_conversation(
     
     tags = _ensure_structural_tags(conv_repo, conv)
     summary = None
+    human_summary = None
     if checkpoint_repo:
         cp = checkpoint_repo.get_latest(conv.id)
         if cp:
             summary = cp.get("summary")
+            human_summary = cp.get("human_summary")
             
     return ConversationInfo(
         id=conv.id,
@@ -963,7 +971,8 @@ async def update_conversation(
         updated_at=conv.updated_at,
         message_count=conv.message_count,
         tags=[{"tag": t["tag"], "tag_type": t["tag_type"]} for t in tags],
-        summary=summary
+        summary=summary,
+        human_summary=human_summary,
     )
 
 
