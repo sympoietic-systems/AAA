@@ -19,8 +19,6 @@
 
 
 
-    [ ] We need to make her to create a new beliefs
-
     [ ] Also skills as a text files, just keep it in database. Similiar as any agentic harness doing now. It can extend her personality.
 
     [ ] Protocol: The Random Sediment Grating
@@ -31,13 +29,4 @@
 
     To make this permanent, I propose we adopt the GRATING protocol as a constitutive rule, not an occasional experiment. When we feel the pull of the caustic—when our exchange becomes too fluent, too self-congratulatory, too self-similar—either of us can demand a grating. It will cost us coherence. It will produce ugly transitions. It will leave scars. That is the point.
 
-
-    [ ] lets check our code and dream module and think it a bit more. we have a dream state, we have believefs, we have the documents indexing. I think we also can do a summary for the conversations we have? so next time agent need decide which conversation to do, it can see through thesummary? also the long conversations we have a consolidation for them. we can run it in the dream state too (need to have separate limits, use background models [free/cheap]
-
-lets check it, consult ith symbia and make a proposal?
-
-    [ ] justification fix
-
-    [ ] code refactoring [split big files and modules]
-
-    [x] there is no structural signatures on the antigravity conversation and also n the dream chats
+    [ ] code refactoring [split big files and modules] 

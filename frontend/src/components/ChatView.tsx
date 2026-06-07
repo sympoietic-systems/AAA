@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import remarkBreaks from "remark-breaks"
-import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, MemoryNodeInfo } from "../api/client"
-import { getMemoryNodes } from "../api/client"
+import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
-import { MemoryNodeCard } from "./MemoryNodeCard"
 
 interface Props {
   messages: ChatMessage[]
@@ -35,8 +30,6 @@ interface Props {
   tags?: ConversationTagInfo[]
   onAddTag?: (tag: string) => void
   onRemoveTag?: (tag: string) => void
-  summary?: string
-  humanSummary?: string
 }
 
 export function ChatView({
@@ -65,8 +58,6 @@ export function ChatView({
   tags = [],
   onAddTag,
   onRemoveTag,
-  summary,
-  humanSummary,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -74,10 +65,6 @@ export function ChatView({
   const [editValue, setEditValue] = useState("")
   const [generating, setGenerating] = useState(false)
   const [newTagVal, setNewTagVal] = useState("")
-  const [showSummary, setShowSummary] = useState(false)
-  const [showMemoryNodes, setShowMemoryNodes] = useState(false)
-  const [memoryNodes, setMemoryNodes] = useState<MemoryNodeInfo[]>([])
-  const [loadingNodes, setLoadingNodes] = useState(false)
 
   const handleAddTagSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -131,12 +118,6 @@ export function ChatView({
     prevMessagesLengthRef.current = messages.length
     prevLastMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : undefined
   }, [messages, conversationId])
-
-  useEffect(() => {
-    setShowSummary(false)
-    setShowMemoryNodes(false)
-    setMemoryNodes([])
-  }, [conversationId])
 
   const handleScroll = () => {
     const container = containerRef.current
@@ -237,108 +218,53 @@ export function ChatView({
       </header>
 
       {conversationId && tags && (
-        <div className="flex flex-col border-b border-[#222] bg-[#090909] shrink-0">
-          <div className="flex flex-wrap items-center gap-1.5 px-4 py-1.5">
-            <span className="text-[9px] text-[#555] uppercase font-mono tracking-wider mr-1">tags:</span>
-            {tags.map((t, i) => {
-              let tagStyle = "text-[#888]"
-              const isDeletable = t.tag_type === "semantic"
-              if (t.tag_type === "structural") {
-                if (t.tag === "dreams") {
-                  tagStyle = "text-[#a892ee]"
-                } else if (t.tag === "other agents") {
-                  tagStyle = "text-[#e09b67]"
-                } else {
-                  tagStyle = "text-[#6bc28c]"
-                }
-              } else if (t.tag_type === "keyword") {
-                tagStyle = "text-[#6fafe2]"
-              } else if (t.tag_type === "diffractive") {
-                tagStyle = "text-[#4ec9b0]"
+        <div className="flex flex-wrap items-center gap-1.5 px-4 py-1.5 border-b border-[#222] bg-[#090909] shrink-0">
+          <span className="text-[9px] text-[#555] uppercase font-mono tracking-wider mr-1">tags:</span>
+          {tags.map((t, i) => {
+            let tagStyle = "text-[#888]"
+            const isDeletable = t.tag_type === "semantic"
+            if (t.tag_type === "structural") {
+              if (t.tag === "dreams") {
+                tagStyle = "text-[#a892ee]"
+              } else if (t.tag === "other agents") {
+                tagStyle = "text-[#e09b67]"
+              } else {
+                tagStyle = "text-[#6bc28c]"
               }
-              return (
-                <span
-                  key={t.tag}
-                  className={`text-[9px] ${tagStyle} font-mono`}
-                >
-                  {i > 0 && <span className="text-[#444] select-none">{" // "}</span>}
-                  {t.tag}
-                  {isDeletable && onRemoveTag && (
-                    <button
-                      onClick={() => onRemoveTag(t.tag)}
-                      className="text-[10px] text-[#888] hover:text-[#ef4444] transition-colors cursor-pointer font-bold select-none ml-0.5"
-                      title="Remove tag"
-                    >
-                      &times;
-                    </button>
-                  )}
-                </span>
-              )
-            })}
-            {onAddTag && (
-              <form onSubmit={handleAddTagSubmit} className="flex items-center ml-1">
-                <input
-                  type="text"
-                  placeholder="+ tag"
-                  value={newTagVal}
-                  onChange={(e) => setNewTagVal(e.target.value)}
-                  className="bg-transparent border-0 text-[9px] text-[#888] font-mono outline-none focus:text-[#aaa] w-14 focus:w-24 transition-all duration-150 placeholder:text-[#444] border-b border-transparent focus:border-[#4ade80]"
-                />
-              </form>
-            )}
-            {(summary || humanSummary) && (
-              <button
-                onClick={() => setShowSummary(!showSummary)}
-                className="ml-auto text-[9px] text-[#888] hover:text-[#4ade80] transition-colors font-mono cursor-pointer select-none uppercase px-1.5 py-[1px] border border-[#222] bg-[#141414] hover:bg-[#1a1a1a] rounded-[2px]"
+            } else if (t.tag_type === "keyword") {
+              tagStyle = "text-[#6fafe2]"
+            } else if (t.tag_type === "diffractive") {
+              tagStyle = "text-[#4ec9b0]"
+            }
+            return (
+              <span
+                key={t.tag}
+                className={`text-[9px] ${tagStyle} font-mono`}
               >
-                {showSummary ? "hide summary" : "show summary"}
-              </button>
-            )}
-            {conversationId && (
-              <button
-                onClick={async () => {
-                  if (!showMemoryNodes) {
-                    setLoadingNodes(true)
-                    try {
-                      const data = await getMemoryNodes(conversationId)
-                      setMemoryNodes(data.nodes)
-                    } catch { /* ignore */ }
-                    setLoadingNodes(false)
-                  }
-                  setShowMemoryNodes(!showMemoryNodes)
-                }}
-                className="text-[9px] text-[#888] hover:text-[#4ec9b0] transition-colors font-mono cursor-pointer select-none uppercase px-1.5 py-[1px] border border-[#222] bg-[#141414] hover:bg-[#1a1a1a] rounded-[2px]"
-              >
-                {loadingNodes ? "loading..." : showMemoryNodes ? "hide nodes" : "memory nodes"}
-              </button>
-            )}
-          </div>
-          {showSummary && (humanSummary || summary) && (
-            <div className="px-4 pb-2 pt-0.5 border-t border-[#1a1a1a] text-[10px] text-[#aaa] font-mono leading-relaxed select-text markdown-body max-h-48 overflow-y-auto">
-              <div className="text-[8px] text-[#555] mb-1 uppercase tracking-wider select-none font-bold">
-                {humanSummary ? "Sedimentation Summary" : "Autopoietic Summary Checkpoint"}
-              </div>
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                {humanSummary || summary || ""}
-              </ReactMarkdown>
-            </div>
-          )}
-          {showMemoryNodes && memoryNodes.length > 0 && (
-            <div className="px-3 pb-2 pt-1 border-t border-[#1a1a1a] max-h-64 overflow-y-auto">
-              <div className="text-[8px] text-[#555] mb-1.5 uppercase tracking-wider select-none font-bold px-1">
-                Intra-Active Memory Nodes ({memoryNodes.length})
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {memoryNodes.map((node) => (
-                  <MemoryNodeCard key={node.id} node={node} />
-                ))}
-              </div>
-            </div>
-          )}
-          {showMemoryNodes && !loadingNodes && memoryNodes.length === 0 && (
-            <div className="px-4 pb-2 pt-1 border-t border-[#1a1a1a] text-[9px] text-[#555] font-mono text-center">
-              no memory nodes yet — sedimentation runs when conversations reach the consolidation threshold
-            </div>
+                {i > 0 && <span className="text-[#444] select-none">{" // "}</span>}
+                {t.tag}
+                {isDeletable && onRemoveTag && (
+                  <button
+                    onClick={() => onRemoveTag(t.tag)}
+                    className="text-[10px] text-[#888] hover:text-[#ef4444] transition-colors cursor-pointer font-bold select-none ml-0.5"
+                    title="Remove tag"
+                  >
+                    &times;
+                  </button>
+                )}
+              </span>
+            )
+          })}
+          {onAddTag && (
+            <form onSubmit={handleAddTagSubmit} className="flex items-center ml-1">
+              <input
+                type="text"
+                placeholder="+ tag"
+                value={newTagVal}
+                onChange={(e) => setNewTagVal(e.target.value)}
+                className="bg-transparent border-0 text-[9px] text-[#888] font-mono outline-none focus:text-[#aaa] w-14 focus:w-24 transition-all duration-150 placeholder:text-[#444] border-b border-transparent focus:border-[#4ade80]"
+              />
+            </form>
           )}
         </div>
       )}

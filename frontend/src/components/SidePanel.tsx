@@ -19,6 +19,8 @@ import { StartupSection } from "./sidepanel/StartupSection"
 import { TokensSection } from "./sidepanel/TokensSection"
 import { NotesSection } from "./sidepanel/NotesSection"
 import { SedimentSection } from "./sidepanel/SedimentSection"
+import { SummarySection } from "./sidepanel/SummarySection"
+import { MemoryNodesSection } from "./sidepanel/MemoryNodesSection"
 
 export function SidePanel({
   uploadedFiles = [],
@@ -29,6 +31,8 @@ export function SidePanel({
   notes = [],
   onDeleteNote,
   onUpdateNote,
+  summary,
+  humanSummary,
   width,
   panelCollapsed,
   onPanelToggle,
@@ -41,6 +45,8 @@ export function SidePanel({
   notes?: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  summary?: string
+  humanSummary?: string
   width?: number
   panelCollapsed?: boolean
   onPanelToggle?: () => void
@@ -65,6 +71,8 @@ export function SidePanel({
   const [sedimentOpen, setSedimentOpen] = useState(false)
   const [pipelineOpen, setPipelineOpen] = useState(false)
   const [skillsOpen, setSkillsOpen] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [memoryNodesOpen, setMemoryNodesOpen] = useState(false)
 
   // Sediment detail state
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
@@ -186,80 +194,30 @@ export function SidePanel({
           </div>
 
           <div className="flex-1 overflow-y-auto px-3 pb-3">
+            {/* ── conversation ──────────────────────── */}
+
             <div className="flex flex-col gap-1 mt-1">
               <SectionHeader
-                label="Vitality"
-                open={healthOpen}
-                onToggle={() => setHealthOpen(!healthOpen)}
+                label="Summary"
+                open={summaryOpen}
+                onToggle={() => setSummaryOpen(!summaryOpen)}
               />
-              {healthOpen && (
+              {summaryOpen && (
                 <div className="pl-3">
-                  <VitalitySection metrics={metrics} error={metricsError} />
+                  <SummarySection summary={summary} humanSummary={humanSummary} />
                 </div>
               )}
             </div>
 
             <div className="flex flex-col gap-1 mt-1">
               <SectionHeader
-                label="Beliefs"
-                open={beliefsOpen}
-                onToggle={() => setBeliefsOpen(!beliefsOpen)}
+                label="Memory Nodes"
+                open={memoryNodesOpen}
+                onToggle={() => setMemoryNodesOpen(!memoryNodesOpen)}
               />
-              {beliefsOpen && (
+              {memoryNodesOpen && (
                 <div className="pl-3">
-                  <BeliefsSection data={beliefs} error={beliefsError} />
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1 mt-1">
-              <SectionHeader
-                label="Diffraction"
-                open={diffractiveOpen}
-                onToggle={() => setDiffractiveOpen(!diffractiveOpen)}
-              />
-              {diffractiveOpen && (
-                <div className="pl-3">
-                  <DiffractionSection metrics={metrics} />
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1 mt-1">
-              <SectionHeader
-                label="Dreaming"
-                open={dreamingOpen}
-                onToggle={() => setDreamingOpen(!dreamingOpen)}
-              />
-              {dreamingOpen && (
-                <div className="pl-3">
-                  <DreamingSection status={daemon} error={daemonError} />
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1 mt-1">
-              <SectionHeader
-                label="Startup"
-                open={startupOpen}
-                onToggle={() => setStartupOpen(!startupOpen)}
-              />
-              {startupOpen && (
-                <div className="pl-3">
-                  <StartupSection status={scheduler} error={schedulerError} />
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1 mt-1">
-              <SectionHeader
-                label="Tokens"
-                open={tokensOpen}
-                onToggle={() => setTokensOpen(!tokensOpen)}
-              />
-              {tokensOpen && (
-                <div className="pl-3">
-                  <TokensSection tokens={tokens} error={tokensError} />
+                  <MemoryNodesSection conversationId={conversationId} />
                 </div>
               )}
             </div>
@@ -300,6 +258,90 @@ export function SidePanel({
                   loadedSummaries={loadedSummaries}
                   onToggleSummary={handleToggleSummary}
                 />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Tokens"
+                open={tokensOpen}
+                onToggle={() => setTokensOpen(!tokensOpen)}
+              />
+              {tokensOpen && (
+                <div className="pl-3">
+                  <TokensSection tokens={tokens} error={tokensError} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Vitality"
+                open={healthOpen}
+                onToggle={() => setHealthOpen(!healthOpen)}
+              />
+              {healthOpen && (
+                <div className="pl-3">
+                  <VitalitySection metrics={metrics} error={metricsError} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Diffraction"
+                open={diffractiveOpen}
+                onToggle={() => setDiffractiveOpen(!diffractiveOpen)}
+              />
+              {diffractiveOpen && (
+                <div className="pl-3">
+                  <DiffractionSection metrics={metrics} />
+                </div>
+              )}
+            </div>
+
+            {/* ── agent ──────────────────────────── */}
+
+            <div className="mt-3 mb-1.5 border-t border-[#1a1a1a] pt-2">
+              <span className="text-[8px] text-[#444] uppercase font-mono tracking-[0.2em] select-none">agent</span>
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Beliefs"
+                open={beliefsOpen}
+                onToggle={() => setBeliefsOpen(!beliefsOpen)}
+              />
+              {beliefsOpen && (
+                <div className="pl-3">
+                  <BeliefsSection data={beliefs} error={beliefsError} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Dreaming"
+                open={dreamingOpen}
+                onToggle={() => setDreamingOpen(!dreamingOpen)}
+              />
+              {dreamingOpen && (
+                <div className="pl-3">
+                  <DreamingSection status={daemon} error={daemonError} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Daemons"
+                open={startupOpen}
+                onToggle={() => setStartupOpen(!startupOpen)}
+              />
+              {startupOpen && (
+                <div className="pl-3">
+                  <StartupSection status={scheduler} error={schedulerError} />
+                </div>
               )}
             </div>
 

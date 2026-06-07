@@ -333,8 +333,6 @@ export default function App() {
         onDeleteNote={handleDeleteNote}
         onUpdateNote={handleUpdateNote}
         tags={activeConv?.tags || []}
-        summary={activeConv?.summary}
-        humanSummary={activeConv?.human_summary}
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
         className="flex-1 min-w-0"
@@ -354,6 +352,8 @@ export default function App() {
         notes={notes}
         onDeleteNote={handleDeleteNote}
         onUpdateNote={handleUpdateNote}
+        summary={activeConv?.summary}
+        humanSummary={activeConv?.human_summary}
         width={rightPanelWidth}
         panelCollapsed={rightPanelCollapsed}
         onPanelToggle={() => setRightPanelCollapsed(p => !p)}
