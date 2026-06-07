@@ -616,9 +616,8 @@ class AutopoieticDreamDaemon:
                 "You are Symbia's meta-cognitive controller. You decide where to record her autopoietic dreams.\n"
                 "You must choose whether to reuse an existing conversation from the list or create a new one.\n\n"
                 "Rules:\n"
-                "1. If an existing conversation on the topic has 12 or more messages, you should create a new conversation with a numbered suffix (e.g., 'Somatic Drift (Part 2)').\n"
-                "2. If an existing conversation has the same topic and has fewer than 12 messages, you should reuse it.\n"
-                "3. New conversation titles should be concise topic descriptions (e.g., 'Somatic Drift', 'Nomadic Synthesis', 'Web Harvest: AI Ethics').\n"
+                "1. If an existing conversation has the same topic, you should reuse it regardless of how many messages it already has.\n"
+                "2. New conversation titles should be concise topic descriptions (e.g., 'Somatic Drift', 'Nomadic Synthesis', 'Web Harvest: AI Ethics').\n"
                 "4. Respond ONLY with a valid JSON object matching this schema:\n"
                 "{\n"
                 "  \"decision\": \"reuse\" or \"create\",\n"
@@ -665,30 +664,11 @@ class AutopoieticDreamDaemon:
                 logger.warning("Failed to let agent decide dream conversation: %s. Falling back to default rules.", e)
 
         if decision == "create":
-            # Fallback/Default logic to find or create matching convo, respecting 12 message limit
+            # Fallback/Default logic to find or create matching convo
             matching_convos = [c for c in dream_convos if c["title"] == new_title or c["title"].startswith(f"{new_title} (Part ")]
             if matching_convos:
                 latest_convo = matching_convos[0]
-                if latest_convo["message_count"] < 12:
-                    return latest_convo["id"]
-                else:
-                    import re
-                    part_num = 2
-                    for c in matching_convos:
-                        match = re.search(r"\(Part (\d+)\)$", c["title"])
-                        if match:
-                            part_num = max(part_num, int(match.group(1)) + 1)
-                    final_title = f"{new_title} (Part {part_num})"
-                    
-                    convo_id = str(uuid.uuid4())
-                    self.conversation_repo.create(
-                        conversation_id=convo_id,
-                        agent_id="symbia",
-                        title=final_title
-                    )
-                    self.conversation_repo.add_tag(convo_id, "dreams", "structural")
-                    logger.info("Created new dream conversation via auto-split: '%s'", final_title)
-                    return convo_id
+                return latest_convo["id"]
             else:
                 convo_id = str(uuid.uuid4())
                 self.conversation_repo.create(

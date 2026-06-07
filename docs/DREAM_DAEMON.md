@@ -78,7 +78,7 @@ To prevent daemon budget bypasses caused by server restarts (uvicorn auto-reload
 ### 2. Agentic Meta-Cognitive Routing
 Instead of writing all dreams to a single, monolithic log that grows bloated and drifts in context, the background model itself decides where to route each dream cycle.
 * **Selection Process**: The daemon queries the background LLM provider with a list of active dream logs. The model decides whether to **reuse** an existing conversation or **create** a new topic conversation.
-* **Auto-Splitting / Numbered Parts**: If any dream conversation grows to **12 messages** (6 complete dream cycles), the controller automatically splits it by creating a new part (e.g., `Dream Log: Somatic Drift (Part 2)`). This keeps prompt contexts lightweight, fast, and cost-effective.
+* **Continuous Threads**: Dream conversations on the same topic continue in a single thread indefinitely. This preserves full topical context and helps prevent repetitive cycles across fragmented conversation logs.
 * **Constraint**: All dream conversation titles are automatically normalized and enforced to start with the prefix `Dream Log:`.
 
 ---

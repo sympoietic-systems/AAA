@@ -44,7 +44,7 @@ We implemented the `AutopoieticDreamDaemon` in `backend/core/daemon.py` with int
    DuckDuckGo scraping parses external markdown for high-tension beliefs and diffracts the context back into the agent's internal dream monologues.
 
 6. **Database-Backed Budget & Agentic Meta-Cognitive Routing**:
-    To prevent restart/multi-instance budget bypasses and context bloat, the daily dream count is tracked dynamically in the database via `LIKE 'Dream Log%'` queries. The daemon delegates conversation selection to a meta-cognitive agentic task (`_resolve_dream_conversation`). The background model decides whether to reuse an existing conversation or create a new topic conversation, automatically splitting them into numbered parts (Part 2, etc.) when they exceed 12 messages.
+    To prevent restart/multi-instance budget bypasses and context bloat, the daily dream count is tracked dynamically in the database via `LIKE 'Dream Log%'` queries. The daemon delegates conversation selection to a meta-cognitive agentic task (`_resolve_dream_conversation`). The background model decides whether to reuse an existing conversation or create a new topic conversation. Conversations on the same topic continue indefinitely in the same thread to maintain full topical context and avoid cyclical repetition across fragmented logs.
 
 7. **Conversation Metrics Storage (2026-06-05)**:
     Both the dream prompt (human) and assistant response now receive full conversation metrics. The assistant response is embedded independently (using its own response text rather than the prompt's embedding), enabling meaningful coupling_coherence, agent_self_divergence, and reverse_perturbation metrics for self-conversations. Metrics are stored via `_store_daemon_metrics()` immediately after message insertion, ensuring the dream conversation has complete metrics coverage for downstream belief metabolism and somatic vitality computation.
@@ -55,7 +55,7 @@ We implemented the `AutopoieticDreamDaemon` in `backend/core/daemon.py` with int
 - **Agential Autonomy**: The agent thinks, searches, and refines its beliefs offline without user prompt triggers.
 - **Resilience**: Ambivalent ideas fade naturally, while core schema elements resist casual decay.
 - **Resource Recovery**: The SQLite database compaction prevents memory growth from duplicating similar concepts.
-- **Context & Cost Efficiency**: Auto-splitting and agentic routing of dream logs prevent long-running thread context bloat, minimizing token usage and optimizing latency/cost.
+- **Context & Cost Efficiency**: Agentic routing of dream logs allows the daemon to direct monologues to appropriate topics while keeping single-thread contexts coherent and avoiding fragmented, redundant logs.
 - **Robust Persistence**: Budgets survive backend uvicorn reloads and multi-process server instances without state reset.
 
 ### What becomes harder?
