@@ -25,9 +25,9 @@ graph TB
 
     subgraph Backend ["FastAPI Backend (main.py)"]
         direction TB
-        subgraph Pipeline ["Processing Pipeline (11 Modules)"]
+        subgraph Pipeline ["Processing Pipeline (13 Modules)"]
             direction LR
-            M1["embedder"] --> M1_5["structural_scorer"] --> M2["perception"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["diffractive_retrieval"] --> M8["prompt_assembler"] --> M9["homeostatic_regulator"] --> M10["llm_client"]
+            M1["embedder"] --> M1_5["structural_scorer"] --> M2["perception"] --> M2_5["web_retrieval"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["diffractive_retrieval"] --> M7_5["belief_metabolism"] --> M8["prompt_assembler"] --> M9["homeostatic_regulator"] --> M10["llm_client"]
         end
         subgraph Structural ["Structural Scoring (out-of-pipeline)"]
             direction TB
@@ -65,7 +65,7 @@ graph TB
 sequenceDiagram
     autonumber
     actor Interlocutor
-    participant API as routes.py (POST /api/chat)
+    participant API as api/routes/chat.py
     participant Pipeline as ProcessingPipeline
     participant DB as SQLite DB
     participant LLM as LLM Provider
@@ -85,6 +85,9 @@ sequenceDiagram
         Pipeline->>Pipeline: perception.process()
         Note over Pipeline: Chunk/embed files → stores chunks<br/>Retrieve top-K chunks via cosine similarity<br/>payload["file_context"] = [...], tokens = N
         
+        Pipeline->>Pipeline: web_retrieval.process()
+        Note over Pipeline: Exogenous rhizomatic web retrieval<br/>Scrapes search engines for relevant context<br/>payload["web_context"] = "..."
+        
         Pipeline->>Pipeline: conversation_metrics.process()
         Note over Pipeline: Computes pairwise similarity, novelty,<br/>entropy, coupling, etc.
         
@@ -99,6 +102,9 @@ sequenceDiagram
         
         Pipeline->>Pipeline: diffractive_retrieval.process()
         Note over Pipeline: Evaluate P_diffract. If STAGNANT,<br/>inject Nomadic/Dormant Goldilocks fragments.
+        
+        Pipeline->>Pipeline: belief_metabolism.process()
+        Note over Pipeline: Update proto-belief lifecycle states,<br/>compute ecosystem health, detect bifurcations
         
         Pipeline->>Pipeline: prompt_assembler.process()
         Note over Pipeline: Compose: system + sediment + diffractive + history + file_context<br/>Enforce token budget
@@ -420,21 +426,40 @@ graph TD
 ```
 AAA/
 ├── backend/
-│   ├── main.py              FastAPI app + lifespan (module wiring)
+│   ├── main.py              FastAPI app + lifespan (factory-orchestrated startup)
 │   ├── config.py             YAML + env config loader
 │   ├── config.yaml           Default configuration
 │   ├── api/
-│   │   ├── routes.py         /chat, /history, /conversations, /tokens, /health, /agent, /errors, /skills, /metrics
-│   │   └── schemas.py        Pydantic request/response models
+│   │   ├── router.py         Main router (includes all sub-routers)
+│   │   ├── schemas.py        Pydantic request/response models
+│   │   ├── helpers.py        Shared request parsing + response assembly helpers
+│   │   ├── deps.py           Authentication dependencies
+│   │   └── routes/           20 domain route files (thin, delegate to services)
+│   ├── services/             13 service classes (business logic layer)
+│   │   ├── chat.py           ChatService — pipeline orchestration + response assembly
+│   │   ├── belief.py         BeliefService — ecosystem health, attractor windows
+│   │   ├── conversation.py   ConversationService — CRUD, tags, consolidation flag
+│   │   ├── file.py           FileService — upload, process, digest worker orchestration
+│   │   ├── metrics.py        MetricsService — storage, aggregation, formatting
+│   │   ├── note.py           NoteService — note CRUD + belief metabolism trigger
+│   │   ├── sediment.py       SedimentService — cross-conversation injection
+│   │   ├── title.py          TitleService — title generation via background engine
+│   │   ├── semantic_knot.py  SemanticKnotService — compaction/distillation
+│   │   ├── consolidation.py  ConsolidationService — checkpoint creation
+│   │   ├── daemon.py         DaemonService — dream status + trigger
+│   │   ├── health.py         HealthService — module validation
+│   │   └── skill.py          SkillService — registry queries
 │   ├── core/
+│   │   ├── app_state.py      Typed AppState dataclass
 │   │   ├── pipeline.py       ProcessingPipeline orchestrator
-│   │   ├── registry.py       ModuleRegistry (discovery, ordering)
 │   │   ├── scheduler.py      Background startup task scheduler and recovery loop
 │   │   ├── daemon.py         AutopoieticDreamDaemon — background dreaming engine
 │   │   └── context.py        PipelineResult dataclass
+│   ├── app_factory/
+│   │   └── __init__.py       register_all() — skill registration factory
 │   ├── personality/
 │   │   ├── identity.yaml      Agent self-definition (name, prompt, traits, beliefs)
-│   │   └── assembler.py       PromptAssemblerModule — context assembly (no internal trimming; token budget handled upstream)
+│   │   └── assembler.py       PromptAssemblerModule — context assembly
 │   ├── skills/
 │   │   ├── metadata.py        SkillMeta dataclass
 │   │   └── registry.py        SkillRegistry — extends ModuleRegistry
@@ -447,21 +472,29 @@ AAA/
 │   │   ├── base.py           ProcessingModule ABC
 │   │   ├── embedder.py       Local sentence-transformers service
 │   │   ├── perception.py     File ingestion + chunked retrieval
+│   │   ├── web_retrieval.py  Exogenous rhizomatic web retrieval
 │   │   ├── digester.py       PDF/DOCX/text extraction
 │   │   ├── llm_client.py     Provider-agnostic LLM client
 │   │   ├── context_collector.py       Conversation-scoped history retrieval
 │   │   ├── consolidation_checkpoint.py Memory node injection + consolidation trigger
-│   │   ├── structural_engine.py       16-dim cybernetic signature (LexiconScorer + TopologyScorer + LLMScorer)
-│   │   ├── conversation_metrics.py    Real-time vitality metrics (per-conversation)
+│   │   ├── structural_engine.py       16-dim cybernetic signature
+│   │   ├── conversation_metrics.py    Real-time vitality metrics
 │   │   ├── sedimentation_retrieval.py Cross-conversation embedding similarity
+│   │   ├── diffractive_retrieval.py   Stagnation detection + nomadic retrieval
+│   │   ├── belief_engine.py          Proto-belief lifecycle + tension ecology + self-tuning
 │   │   ├── homeostatic_regulator.py   Metrics → parameter mapping
-│   │   └── background_tasks/         Async self-maintenance (title, summarize+belief collision, consolidate, document_collision)
+│   │   └── background_tasks/         Async self-maintenance actions
 │   ├── storage/
-│   │   ├── database.py       SQLite init, WAL, migrations, legacy conversation
+│   │   ├── database.py       DB path, connection, init_db (thin, delegates to migrations)
 │   │   ├── models.py         Conversation, Message, MetricsRecord, ErrorLogEntry
-│   │   └── repository.py     ConversationRepo, MessageRepo, MetricsRepo, ErrorLogRepo, PerceptionSedimentRepo, ConsolidationCheckpointRepo
+│   │   ├── connection.py     ConnectionTracker, with_connection decorator
+│   │   ├── row_mappers.py    All _row_to_* conversion functions
+│   │   ├── repositories/     10 repository files (one per entity)
+│   │   └── migrations/       15 numbered migration files + runner
 │   ├── utils/
-│   │   └── token_counter.py  TokenBudget dataclass, estimate_tokens()
+│   │   ├── token_counter.py  TokenBudget dataclass, estimate_tokens()
+│   │   ├── similarity.py     Shared cosine_similarity()
+│   │   └── filesystem.py     UPLOAD_DIR constant, get_upload_path(), to_utc()
 │   └── tests/
 ├── frontend/
 │   └── src/

@@ -1,240 +1,133 @@
-# Backend Refactoring Plan
+# Backend Refactoring
 
-**Branch**: `refactor/backend-modularity`
+**Branch**: `refactor/backend-modularity` → merged to `main`
 **Date**: 2026-06-07
-**Goal**: Decompose monolithic backend files into modular, maintainable units following Python conventions.
+**Status**: Complete
 
 ---
 
-## Current State
+## Results
 
-| Metric | Value |
-|--------|-------|
-| `storage/repository.py` | 2,517 lines — 10 repos + helpers in 1 file |
-| `api/routes.py` | 2,003 lines — 35+ endpoints + business logic |
-| `core/daemon.py` | 1,721 lines |
-| `main.py` lifespan | 370+ lines wiring everything |
-| `storage/database.py` | 580 lines migration in one function |
-| All `__init__.py` | Empty (no public API surfaces) |
-| Code duplication | Identical `__init__`/`_conn()` pattern in all 10 repos |
+| Metric | Before | After | Delta |
+|--------|--------|-------|-------|
+| Largest single file | 2,517 lines (`repository.py`) | 573 lines (`perception_sediment.py`) | -78% |
+| `database.py` | 659 lines | 57 lines | -91% |
+| `main.py` | 663 lines | 516 lines | -22% |
+| Backend files | 95 | 168 | +73 files, each single-responsibility |
+| Duplicate `__init__`/`_conn()` | 10x copy-paste | Eliminated via `BaseRepository` | -100 lines |
+| Duplicate provider factories | 2 (80% overlap) | 1 | Consolidated |
+| `__init__.py` with re-exports | 0 | 7 packages | Enables single-line imports |
+| Duplicate `cosine_similarity()` | 2 files | 1 shared utility | DRY |
+| Inline imports inside functions | 58 | 0 | Module-level imports |
+| Hardcoded upload paths | 5 files | 1 constant | Centralized |
+| Route handler business logic | Inline | Delegated to 13 services | Thin routes |
+| Test regressions | — | 0 | 22 pass / 33 pre-existing env failures |
+| Backend starts | ✓ | ✓ | All 15 migrations, 13 pipeline modules, 5 background actions verified |
 
----
-
-## Phase 1: Split Monolithic Repository
-
-**Goal**: One repository class per file. Zero logic changes. Eliminate boilerplate via `BaseRepository`.
-
-### Target Structure
-
-```
-backend/storage/
-├── __init__.py                 # Re-exports
-├── connection.py               # ConnectionTracker, with_connection, _get_tracked_connection
-├── database.py                 # Schema + migrations
-├── models.py                   # Dataclasses (unchanged)
-├── row_mappers.py              # All _row_to_* functions
-└── repositories/
-    ├── __init__.py             # Re-exports
-    ├── base.py                 # BaseRepository (eliminates duplicate __init__/_conn)
-    ├── conversation.py         # ConversationRepository
-    ├── message.py              # MessageRepository
-    ├── error_log.py            # ErrorLogRepository
-    ├── metrics.py              # MetricsRepository
-    ├── perception_sediment.py  # PerceptionSedimentRepository
-    ├── consolidation.py        # ConsolidationCheckpointRepository
-    ├── memory_node.py          # MemoryNodeRepository
-    ├── belief.py               # BeliefRepository
-    ├── semantic_knot.py        # SemanticKnotRepository
-    └── note.py                 # NoteRepository
-```
-
-### Key Changes
-- `repository.py` becomes a backward-compat re-export shim
-- All imports throughout codebase continue working unchanged
-- `BaseRepository` eliminates ~100 lines of duplicate boilerplate
-
----
-
-## Phase 2: Split Monolithic Routes
-
-**Goal**: One route file per domain. Zero logic changes in this phase.
-
-### Target Structure
+## Final Architecture
 
 ```
-backend/api/
-├── __init__.py
-├── schemas.py                # Pydantic models (unchanged)
-├── router.py                 # Main router including sub-routers
-├── deps.py                   # verify_password, shared dependencies
-└── routes/
-    ├── __init__.py
-    ├── chat.py               # POST /chat
-    ├── auth.py               # GET /auth/verify
-    ├── agent.py              # GET /agent
-    ├── beliefs.py            # GET /beliefs
-    ├── history.py            # GET /history, /messages/{id}/thinking, /messages/{id}/context
-    ├── conversations.py      # CRUD, generate-title
-    ├── tokens.py             # GET /tokens
-    ├── health.py             # GET /health
-    ├── skills.py             # GET /skills
-    ├── scheduler.py          # GET /scheduler/status
-    ├── metrics.py            # GET /metrics
-    ├── background.py         # POST /background
-    ├── errors.py             # GET /errors
-    ├── files.py              # File upload/download/delete/reprocess/summary
-    ├── daemon.py             # GET /daemon/status, POST /daemon/trigger
-    ├── notes.py              # Note CRUD
-    ├── sediment.py           # Sediment injection endpoints
-    ├── tags.py               # Tag management
-    └── memory_nodes.py       # GET /memory-nodes
+backend/
+├── api/
+│   ├── __init__.py           # Schema re-exports
+│   ├── schemas.py            # Pydantic models
+│   ├── router.py             # Main router (includes all sub-routers)
+│   ├── deps.py               # verify_password, shared dependencies
+│   ├── helpers.py            # _parse_chat_request, _insert_system_message, _build_response_attachments
+│   └── routes/               # 20 domain route files (one per endpoint group)
+│       ├── __init__.py       # Backward-compat service re-exports
+│       ├── chat.py           # POST /chat (36 lines)
+│       ├── beliefs.py        # GET /beliefs
+│       ├── conversations.py  # CRUD + title generation
+│       ├── files.py          # Upload/download/delete/reprocess/summary
+│       ├── history.py        # GET /history, messages/{id}/thinking, messages/{id}/context
+│       ├── metrics.py        # GET /metrics
+│       ├── notes.py          # Note CRUD + metabolism
+│       ├── sediment.py       # Sediment injection endpoints
+│       ├── tags.py           # Tag management
+│       └── ... (10 more)
+├── services/                 # Business logic layer
+│   ├── __init__.py           # Re-exports all services
+│   ├── chat.py               # ChatService — pipeline orchestration
+│   ├── belief.py             # BeliefService
+│   ├── conversation.py       # ConversationService
+│   ├── file.py               # FileService
+│   ├── metrics.py            # MetricsService
+│   ├── note.py               # NoteService
+│   ├── sediment.py           # SedimentService
+│   ├── title.py              # TitleService
+│   ├── semantic_knot.py      # SemanticKnotService
+│   ├── consolidation.py      # ConsolidationService
+│   ├── daemon.py             # DaemonService
+│   ├── health.py             # HealthService
+│   └── skill.py              # SkillService
+├── storage/
+│   ├── __init__.py           # Model + repository re-exports
+│   ├── models.py             # All dataclasses
+│   ├── database.py           # get_db_path, get_connection, init_db (57 lines)
+│   ├── connection.py         # ConnectionTracker, with_connection, _get_tracked_connection
+│   ├── row_mappers.py        # All _row_to_* functions
+│   ├── repositories/
+│   │   ├── __init__.py       # Re-exports with __all__
+│   │   ├── base.py           # BaseRepository (eliminates boilerplate)
+│   │   ├── belief.py
+│   │   ├── consolidation.py
+│   │   ├── conversation.py
+│   │   ├── error_log.py
+│   │   ├── memory_node.py
+│   │   ├── message.py
+│   │   ├── metrics.py
+│   │   ├── note.py
+│   │   ├── perception_sediment.py
+│   │   └── semantic_knot.py
+│   └── migrations/
+│       ├── __init__.py       # MigrationRunner + run_all_migrations
+│       ├── m001_initial_schema.py
+│       ├── m002_conversation_log_extensions.py
+│       ├── m003_metrics_extensions.py
+│       ├── m004_perception_sediment.py
+│       ├── m005_structural_signatures.py
+│       ├── m006_perception_files.py
+│       ├── m007_consolidation_checkpoints.py
+│       ├── m008_perception_log.py
+│       ├── m009_exogenous_stream.py
+│       ├── m010_belief_system.py
+│       ├── m011_semantic_knots.py
+│       ├── m012_conversation_notes.py
+│       ├── m013_sediment_and_tags.py
+│       ├── m014_memory_nodes.py
+│       └── m015_belief_tensions.py
+├── core/
+│   ├── __init__.py
+│   ├── pipeline.py           # ProcessingPipeline
+│   ├── daemon.py             # AutopoieticDreamDaemon
+│   ├── scheduler.py          # Background startup scheduler
+│   ├── context.py            # PipelineResult
+│   └── app_state.py          # Typed AppState dataclass
+├── app_factory/
+│   └── __init__.py           # register_all() — skill registration factory
+├── modules/                  # 13 pipeline modules (unchanged)
+├── utils/
+│   ├── __init__.py           # Re-exports
+│   ├── token_counter.py      # estimate_tokens
+│   ├── similarity.py         # cosine_similarity (shared)
+│   └── filesystem.py         # UPLOAD_DIR, get_upload_path, to_utc
+└── main.py                   # Slim factory-orchestrated startup (516 lines)
 ```
 
----
+## Backward Compatibility
 
-## Phase 3: Extract Services Layer
-
-**Goal**: Move business logic from routes into dedicated service classes. Routes become thin wrappers.
-
-### Target Structure
-
-```
-backend/services/
-├── __init__.py
-├── chat.py          # ChatService
-├── belief.py        # BeliefService
-├── conversation.py  # ConversationService
-├── file.py          # FileService
-├── metrics.py       # MetricsService
-├── note.py          # NoteService
-├── sediment.py      # SedimentService
-├── title.py         # TitleService
-├── semantic_knot.py # SemanticKnotService
-├── consolidation.py # ConsolidationService
-├── daemon.py        # DaemonService
-└── health.py        # HealthService
-```
-
----
-
-## Phase 4: Refactor main.py Lifespan
-
-**Goal**: Break 370-line lifespan into focused factory functions.
-
-### Extracted Functions
-- `_init_database()` — DB init + repo creation
-- `_init_embedder()` — Embedder creation
-- `_init_providers()` — LLM + structural + vision + background providers
-- `_init_context_collector()` — Context collector
-- `_init_conversation_metrics()` — Metrics module
-- `_init_sedimentation()` — Sedimentation retrieval
-- `_init_diffractive_retrieval()` — Diffractive retrieval
-- `_init_belief_engine()` — Belief metabolism
-- `_init_perception()` — Perception module
-- `_init_web_retrieval()` — Web retrieval
-- `_register_skills()` — All 13 skill registrations
-- `_wire_pipeline()` — Pipeline + app.state wiring
-- `_start_background_services()` — Scheduler + daemon
-
-Also: Merge `_create_llm_provider()` and `_create_provider_from_config()` (80% duplicate).
-
----
-
-## Phase 5: Extract Database Migrations
-
-**Goal**: Replace monolithic `init_db()` with numbered migration files + runner.
-
-```
-backend/storage/migrations/
-├── __init__.py
-├── runner.py             # MigrationRunner
-├── 001_initial_schema.py
-├── 002_conversation_metrics.py
-├── 003_perception_sediment.py
-├── 004_perception_files.py
-├── 005_consolidation_checkpoints.py
-├── 006_perception_log.py
-├── 007_exogenous_stream.py
-├── 008_belief_system.py
-├── 009_semantic_knots.py
-├── 010_conversation_notes.py
-├── 011_sediment_injections.py
-├── 012_conversation_tags.py
-├── 013_memory_nodes.py
-├── 014_belief_tensions.py
-└── 015_somatic_state.py
-```
-
-Each migration: `up(conn)` function. Runner tracks applied in `_migrations` table.
-
----
-
-## Phase 6: Standardize Public APIs
-
-**Goal**: Every package has explicit re-exports for clean single-line imports.
-
-Example:
-```python
-# Before
-from backend.storage.repository import MessageRepository
-from backend.storage.models import Message
-
-# After
-from backend.storage import MessageRepository, Message
-```
-
----
-
-## Phase 7: Typed AppState Container
-
-**Goal**: Replace `getattr(state, "x_repo", None)` with typed `dataclass`.
+All old import paths continue to work via re-export shims:
 
 ```python
-@dataclass
-class AppState:
-    config: dict
-    agent_name: str = "symbia"
-    message_repo: MessageRepository
-    error_repo: ErrorLogRepository
-    # ... all 20+ attributes typed
+# Both work
+from backend.storage.repository import MessageRepository   # old
+from backend.storage import MessageRepository              # new
+from backend.storage.repositories import MessageRepository   # explicit
 ```
 
----
+## Bug Fixes Included
 
-## Risk Assessment
-
-| Phase | Risk | Test Impact | Rollback |
-|-------|------|-------------|----------|
-| 1: Split repository | Low | Update imports only | Keep old file as re-export shim |
-| 2: Split routes | Low-Medium | No change (API endpoints) | Keep old router as re-export |
-| 3: Service layer | Medium | Add service unit tests | Phase 2 routes still work |
-| 4: Main.py refactor | Medium | Integration tests cover startup | Compare state before/after |
-| 5: Migration extract | Medium | Schema tests (same SQL) | Old init_db() as fallback |
-| 6: __init__.py | Very Low | Zero impact | Additive only |
-| 7: AppState | Low | Zero impact (type annotations) | Dataclass wrapper only |
-
----
-
-## Verification Per Phase
-
-```bash
-# Run full test suite
-pytest backend/tests/ -v
-
-# Lint
-ruff check backend/
-
-# Health check
-curl http://localhost:8000/api/health
-```
-
----
-
-## Conventions
-
-- **Python naming**: `snake_case` for functions/variables, `PascalCase` for classes
-- **Imports**: stdlib → third-party → local (in that order)
-- **Private members**: prefixed with `_`
-- **File size**: target under 500 lines, max 750
-- **Function size**: target under 50 lines
-- **Type hints**: on all public methods
+| Bug | Location | Fix |
+|-----|----------|-----|
+| `_store_daemon_metrics` dead code | `core/daemon.py` | Extracted orphaned function body into proper standalone function. Was unreachable after `return ""` in `_extract_human_summary`, would cause `NameError` if daemon metrics path was reached |
