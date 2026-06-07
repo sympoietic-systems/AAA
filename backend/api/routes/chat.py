@@ -505,7 +505,7 @@ def _build_metrics_info(metrics: dict | None) -> MetricsInfo | None:
 
 
 def _build_recommendations(recs: dict | None):
-    from .schemas import HomeostaticRecommendations
+    from backend.api.schemas import HomeostaticRecommendations
     if not recs:
         return None
     return HomeostaticRecommendations(

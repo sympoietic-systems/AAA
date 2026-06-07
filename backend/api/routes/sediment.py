@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Request
 
-from .schemas import (
+from backend.api.schemas import (
     SedimentFileInfo,
     SedimentFilesResponse,
     SedimentInjectRequest,

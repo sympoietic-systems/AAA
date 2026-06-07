@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 
-from .schemas import TagCreateRequest
+from backend.api.schemas import TagCreateRequest
 
 router = APIRouter()
 

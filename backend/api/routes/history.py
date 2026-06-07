@@ -2,13 +2,13 @@ from fastapi import APIRouter, HTTPException, Request
 
 from backend.modules.structural_engine import get_justification
 
-from .schemas import HistoryMessage, HistoryResponse
+from backend.api.schemas import HistoryMessage, HistoryResponse
 
 router = APIRouter()
 
 
 def _build_history_metrics(row: dict):
-    from .schemas import MetricsInfo
+    from backend.api.schemas import MetricsInfo
     if row.get("s_t") is None:
         return None
     return MetricsInfo(

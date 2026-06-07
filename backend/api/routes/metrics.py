@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from .schemas import (
+from backend.api.schemas import (
     DiffractiveInfo,
     DiffractiveSourceInfo,
     HomeostaticRecommendations,

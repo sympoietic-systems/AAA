@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from .schemas import BackgroundTaskRequest, BackgroundTaskResponse
+from backend.api.schemas import BackgroundTaskRequest, BackgroundTaskResponse
 
 logger = logging.getLogger(__name__)
 

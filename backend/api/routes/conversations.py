@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
-from .schemas import ConversationInfo, ConversationListResponse, ConversationUpdateRequest
+from backend.api.schemas import ConversationInfo, ConversationListResponse, ConversationUpdateRequest
 from backend.api.helpers import _ensure_structural_tags
 
 router = APIRouter()

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from .schemas import ConversationTokenInfo, TokenResponse
+from backend.api.schemas import ConversationTokenInfo, TokenResponse
 
 router = APIRouter()
 

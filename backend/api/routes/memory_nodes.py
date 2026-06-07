@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from .schemas import MemoryNodeInfo, MemoryNodeListResponse
+from backend.api.schemas import MemoryNodeInfo, MemoryNodeListResponse
 
 router = APIRouter()
 

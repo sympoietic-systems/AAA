@@ -3,7 +3,7 @@ import uuid
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
-from .schemas import NoteCreateRequest, NoteResponse, NoteUpdateRequest
+from backend.api.schemas import NoteCreateRequest, NoteResponse, NoteUpdateRequest
 
 logger = logging.getLogger(__name__)
 

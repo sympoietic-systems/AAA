@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Request
 
-from .schemas import SkillInfo, SkillsResponse
+from backend.api.schemas import SkillInfo, SkillsResponse
 
 router = APIRouter()
 

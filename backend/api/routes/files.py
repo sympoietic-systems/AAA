@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
 from backend.utils.token_counter import estimate_tokens
 
-from .schemas import ConversationFile, ConversationFilesResponse
+from backend.api.schemas import ConversationFile, ConversationFilesResponse
 
 logger = logging.getLogger(__name__)
 

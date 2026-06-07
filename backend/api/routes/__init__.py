@@ -7,7 +7,6 @@ These re-exports preserve existing imports like:
     from backend.api.routes import _process_and_summarize_file
 """
 
-from backend.api.router import router
 from backend.api.routes.files import (
     _insert_system_message,
     _process_and_summarize_file,
