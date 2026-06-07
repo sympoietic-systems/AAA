@@ -166,6 +166,8 @@ export default function App() {
   const activeIdRef = useRef(activeId)
   activeIdRef.current = activeId
 
+  const scrollToNoteRef = useRef<((noteId: string) => void) | null>(null)
+
   const activeConv = conversations.find((c) => c.id === activeId)
   const conversationTitle = activeConv?.title || ""
   const conversationId = activeId
@@ -335,6 +337,7 @@ export default function App() {
         tags={activeConv?.tags || []}
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
+        scrollToNoteRef={scrollToNoteRef}
         className="flex-1 min-w-0"
       />
       {!rightPanelCollapsed && (
@@ -357,6 +360,7 @@ export default function App() {
         width={rightPanelWidth}
         panelCollapsed={rightPanelCollapsed}
         onPanelToggle={() => setRightPanelCollapsed(p => !p)}
+        scrollToNoteRef={scrollToNoteRef}
       />
     </div>
   )

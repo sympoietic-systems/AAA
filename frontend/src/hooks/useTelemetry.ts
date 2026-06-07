@@ -28,40 +28,34 @@ export function useTelemetry(
   conversationId: string | null,
   activeSections: TelemetryActiveSections
 ) {
-  // Metrics (Vitality & Diffraction)
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(false)
 
-  // Beliefs
   const [beliefs, setBeliefs] = useState<BeliefsResponse | null>(null)
   const [beliefsError, setBeliefsError] = useState<string | null>(null)
   const [beliefsLoading, setBeliefsLoading] = useState(false)
 
-  // Daemon (Dreaming)
   const [daemon, setDaemon] = useState<DaemonStatusResponse | null>(null)
   const [daemonError, setDaemonError] = useState<string | null>(null)
   const [daemonLoading, setDaemonLoading] = useState(false)
 
-  // Scheduler (Startup)
   const [scheduler, setScheduler] = useState<SchedulerStatusResponse | null>(null)
   const [schedulerError, setSchedulerError] = useState<string | null>(null)
   const [schedulerLoading, setSchedulerLoading] = useState(false)
 
-  // Tokens
   const [tokens, setTokens] = useState<TokenResponse | null>(null)
   const [tokensError, setTokensError] = useState<string | null>(null)
   const [tokensLoading, setTokensLoading] = useState(false)
 
-  // --- MANUAL REFRESH FUNCTIONS ---
   const refreshMetrics = useCallback(async () => {
     setMetricsLoading(true)
     try {
       const res = await getMetrics()
       setMetrics(res)
       setMetricsError(null)
-    } catch (e: any) {
-      setMetricsError(e.message || "Failed to fetch metrics")
+    } catch (e: unknown) {
+      setMetricsError(e instanceof Error ? e.message : "Failed to fetch metrics")
     } finally {
       setMetricsLoading(false)
     }
@@ -74,7 +68,7 @@ export function useTelemetry(
       const res = await getBeliefs(conversationId)
       setBeliefs(res)
       setBeliefsError(null)
-    } catch (e: any) {
+    } catch (e: unknown) {
       setBeliefsError(e.message || "Failed to fetch beliefs")
     } finally {
       setBeliefsLoading(false)
@@ -87,7 +81,7 @@ export function useTelemetry(
       const res = await getDaemonStatus()
       setDaemon(res)
       setDaemonError(null)
-    } catch (e: any) {
+    } catch (e: unknown) {
       setDaemonError(e.message || "Failed to fetch daemon status")
     } finally {
       setDaemonLoading(false)
@@ -100,7 +94,7 @@ export function useTelemetry(
       const res = await getSchedulerStatus()
       setScheduler(res)
       setSchedulerError(null)
-    } catch (e: any) {
+    } catch (e: unknown) {
       setSchedulerError(e.message || "Failed to fetch scheduler status")
     } finally {
       setSchedulerLoading(false)
@@ -113,38 +107,74 @@ export function useTelemetry(
       const res = await getTokens(conversationId || undefined)
       setTokens(res)
       setTokensError(null)
-    } catch (e: any) {
+    } catch (e: unknown) {
       setTokensError(e.message || "Failed to fetch tokens")
     } finally {
       setTokensLoading(false)
     }
   }, [conversationId])
 
-  // --- POLLING LOGIC ---
-
-  // 1. Metrics (Health & Diffraction) - Polls every 15 seconds with jitter
+  // Consolidated polling — single tick loop batches all enabled endpoint calls
   useEffect(() => {
-    if (collapsed || (!activeSections.health && !activeSections.diffraction)) return
+    if (collapsed) return
+
+    const needsMetrics = activeSections.health || activeSections.diffraction
+    const needsBeliefs = activeSections.beliefs && !!conversationId
+    const needsDaemon = activeSections.dreaming
+    const needsScheduler = activeSections.scheduler
+    const needsTokens = activeSections.tokens
+    const anyActive = needsMetrics || needsBeliefs || needsDaemon || needsScheduler || needsTokens
+
+    if (!anyActive) return
 
     let active = true
     let timeoutId: ReturnType<typeof setTimeout>
 
     const tick = async () => {
       if (!active) return
-      try {
-        const res = await getMetrics()
-        if (active) {
-          setMetrics(res)
-          setMetricsError(null)
-        }
-      } catch (e: any) {
-        if (active) {
-          setMetricsError(e.message || "Failed to fetch metrics")
-        }
+
+      const promises: Promise<void>[] = []
+
+      if (needsMetrics) {
+        promises.push(
+          getMetrics()
+            .then((res) => { if (active) { setMetrics(res); setMetricsError(null) } })
+            .catch((e: unknown) => { if (active) setMetricsError(e.message || "Failed to fetch metrics") })
+        )
+      }
+      if (needsBeliefs && conversationId) {
+        promises.push(
+          getBeliefs(conversationId)
+            .then((res) => { if (active) { setBeliefs(res); setBeliefsError(null) } })
+            .catch((e: unknown) => { if (active) setBeliefsError(e.message || "Failed to fetch beliefs") })
+        )
+      }
+      if (needsDaemon) {
+        promises.push(
+          getDaemonStatus()
+            .then((res) => { if (active) { setDaemon(res); setDaemonError(null) } })
+            .catch((e: unknown) => { if (active) setDaemonError(e.message || "Failed to fetch daemon status") })
+        )
+      }
+      if (needsScheduler) {
+        promises.push(
+          getSchedulerStatus()
+            .then((res) => { if (active) { setScheduler(res); setSchedulerError(null) } })
+            .catch((e: unknown) => { if (active) setSchedulerError(e.message || "Failed to fetch scheduler status") })
+        )
+      }
+      if (needsTokens) {
+        promises.push(
+          getTokens(conversationId || undefined)
+            .then((res) => { if (active) { setTokens(res); setTokensError(null) } })
+            .catch((e: unknown) => { if (active) setTokensError(e.message || "Failed to fetch tokens") })
+        )
       }
 
+      await Promise.allSettled(promises)
+
       if (active) {
-        const delay = 15000 + (Math.random() - 0.5) * 1000 // 15s ± 500ms
+        const delay = 15000 + (Math.random() - 0.5) * 1000
         timeoutId = setTimeout(tick, delay)
       }
     }
@@ -155,147 +185,16 @@ export function useTelemetry(
       active = false
       clearTimeout(timeoutId)
     }
-  }, [collapsed, activeSections.health, activeSections.diffraction])
-
-  // 2. Beliefs - Polls every 15 seconds with jitter
-  useEffect(() => {
-    if (collapsed || !activeSections.beliefs || !conversationId) return
-
-    let active = true
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const tick = async () => {
-      if (!active) return
-      try {
-        const res = await getBeliefs(conversationId)
-        if (active) {
-          setBeliefs(res)
-          setBeliefsError(null)
-        }
-      } catch (e: any) {
-        if (active) {
-          setBeliefsError(e.message || "Failed to fetch beliefs")
-        }
-      }
-
-      if (active) {
-        const delay = 15000 + (Math.random() - 0.5) * 1000 // 15s ± 500ms
-        timeoutId = setTimeout(tick, delay)
-      }
-    }
-
-    tick()
-
-    return () => {
-      active = false
-      clearTimeout(timeoutId)
-    }
-  }, [collapsed, activeSections.beliefs, conversationId])
-
-  // 3. Dreaming (Daemon) - Polls every 10 seconds with jitter
-  useEffect(() => {
-    if (collapsed || !activeSections.dreaming) return
-
-    let active = true
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const tick = async () => {
-      if (!active) return
-      try {
-        const res = await getDaemonStatus()
-        if (active) {
-          setDaemon(res)
-          setDaemonError(null)
-        }
-      } catch (e: any) {
-        if (active) {
-          setDaemonError(e.message || "Failed to fetch daemon status")
-        }
-      }
-
-      if (active) {
-        const delay = 10000 + (Math.random() - 0.5) * 1000 // 10s ± 500ms
-        timeoutId = setTimeout(tick, delay)
-      }
-    }
-
-    tick()
-
-    return () => {
-      active = false
-      clearTimeout(timeoutId)
-    }
-  }, [collapsed, activeSections.dreaming])
-
-  // 4. Scheduler (Startup) - Polls every 10 seconds with jitter
-  useEffect(() => {
-    if (collapsed || !activeSections.scheduler) return
-
-    let active = true
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const tick = async () => {
-      if (!active) return
-      try {
-        const res = await getSchedulerStatus()
-        if (active) {
-          setScheduler(res)
-          setSchedulerError(null)
-        }
-      } catch (e: any) {
-        if (active) {
-          setSchedulerError(e.message || "Failed to fetch scheduler status")
-        }
-      }
-
-      if (active) {
-        const delay = 10000 + (Math.random() - 0.5) * 1000 // 10s ± 500ms
-        timeoutId = setTimeout(tick, delay)
-      }
-    }
-
-    tick()
-
-    return () => {
-      active = false
-      clearTimeout(timeoutId)
-    }
-  }, [collapsed, activeSections.scheduler])
-
-  // 5. Tokens - Polls every 15 seconds with jitter
-  useEffect(() => {
-    if (collapsed || !activeSections.tokens) return
-
-    let active = true
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const tick = async () => {
-      if (!active) return
-      try {
-        const res = await getTokens(conversationId || undefined)
-        if (active) {
-          setTokens(res)
-          setTokensError(null)
-        }
-      } catch (e: any) {
-        if (active) {
-          setTokensError(e.message || "Failed to fetch tokens")
-        }
-      }
-
-      if (active) {
-        const delay = 15000 + (Math.random() - 0.5) * 1000 // 15s ± 500ms
-        timeoutId = setTimeout(tick, delay)
-      }
-    }
-
-    tick()
-
-    return () => {
-      active = false
-      clearTimeout(timeoutId)
-    }
-  }, [collapsed, activeSections.tokens, conversationId])
+  }, [
+    collapsed,
+    conversationId,
+    activeSections.health,
+    activeSections.diffraction,
+    activeSections.beliefs,
+    activeSections.dreaming,
+    activeSections.scheduler,
+    activeSections.tokens,
+  ])
 
   return {
     metrics,

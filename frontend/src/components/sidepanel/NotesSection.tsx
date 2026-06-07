@@ -4,18 +4,20 @@ interface NotesSectionProps {
   notes: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  scrollToNoteRef?: React.MutableRefObject<((noteId: string) => void) | null>
 }
 
 export function NotesSection({
   notes,
+  scrollToNoteRef,
 }: NotesSectionProps) {
   const handleNoteClick = (noteId: string) => {
-    const el = document.getElementById(`note-highlight-${noteId}`)
-    if (el) {
-      el.scrollIntoView({ behavior: 'auto', block: 'center' })
+    if (scrollToNoteRef?.current) {
+      scrollToNoteRef.current(noteId)
       setTimeout(() => {
-        el.click()
-      }, 50)
+        const el = document.getElementById(`note-highlight-${noteId}`)
+        if (el) el.click()
+      }, 100)
     }
   }
 

@@ -16,7 +16,8 @@ function estimateTokens(text: string): number {
 }
 
 export function useChat(conversationId: string) {
-  const PAGE_SIZE = 3
+  const PAGE_SIZE = 50
+  const MAX_MESSAGES = 500
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -45,7 +46,7 @@ export function useChat(conversationId: string) {
           // Fetch updated conversation history to display system message after file indexing completes
           getHistory(50, 0, convId)
             .then((data) => {
-              setMessages(data.messages)
+              setMessages(data.messages.slice(-MAX_MESSAGES))
               setHasMore(data.messages.length === 50)
             })
             .catch(() => { })
@@ -72,7 +73,7 @@ export function useChat(conversationId: string) {
       setLoading(true)
       getHistory(PAGE_SIZE, 0, conversationId)
         .then((data) => {
-          setMessages(data.messages)
+          setMessages(data.messages.slice(-MAX_MESSAGES))
           setHasMore(data.messages.length === PAGE_SIZE)
         })
         .catch(() => {
@@ -118,7 +119,8 @@ export function useChat(conversationId: string) {
       setMessages((prev) => {
         const existingIds = new Set(prev.map((m) => m.id))
         const filteredNew = data.messages.filter((m) => !existingIds.has(m.id))
-        return [...filteredNew, ...prev]
+        const merged = [...filteredNew, ...prev]
+        return merged.length > MAX_MESSAGES ? merged.slice(-MAX_MESSAGES) : merged
       })
     } catch (e) {
       console.error("Failed to load more messages:", e)
@@ -139,7 +141,10 @@ export function useChat(conversationId: string) {
       content,
       content_tokens: estimateTokens(content),
     }
-    setMessages((prev) => [...prev, userMsg])
+    setMessages((prev) => {
+      const next = [...prev, userMsg]
+      return next.length > MAX_MESSAGES ? next.slice(-MAX_MESSAGES) : next
+    })
 
     try {
       const response = await sendMessage(content, conversationId || undefined)
@@ -158,7 +163,7 @@ export function useChat(conversationId: string) {
           }
         }
         updated.push(response)
-        return updated
+        return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated
       })
 
       const targetConvId = conversationId || response.conversation_id
@@ -236,13 +241,13 @@ export function useChat(conversationId: string) {
 
   const refreshMessages = useCallback(() => {
     if (conversationId) {
-      getHistory(messages.length || PAGE_SIZE, 0, conversationId)
+      getHistory(PAGE_SIZE, 0, conversationId)
         .then((data) => {
-          setMessages(data.messages)
+          setMessages(data.messages.slice(-MAX_MESSAGES))
         })
         .catch(() => {})
     }
-  }, [conversationId, messages.length])
+  }, [conversationId])
 
   const isIndexing = isUploading || files.some(
     (f) => f.status === "uploading" || f.status === "processing"

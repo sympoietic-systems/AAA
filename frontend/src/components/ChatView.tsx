@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
 import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
@@ -18,7 +19,6 @@ interface Props {
   onRenameTitle: (title: string) => void
   onGenerateTitle: () => void
   className?: string
-  // Pagination props
   hasMore?: boolean
   loadingMore?: boolean
   onLoadMore?: () => void
@@ -30,6 +30,7 @@ interface Props {
   tags?: ConversationTagInfo[]
   onAddTag?: (tag: string) => void
   onRemoveTag?: (tag: string) => void
+  scrollToNoteRef?: React.MutableRefObject<((noteId: string) => void) | null>
 }
 
 export function ChatView({
@@ -58,13 +59,56 @@ export function ChatView({
   tags = [],
   onAddTag,
   onRemoveTag,
+  scrollToNoteRef,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const virtuosoRef = useRef<VirtuosoHandle>(null)
+  const [firstItemIndex, setFirstItemIndex] = useState(100000)
+  const [atBottom, setAtBottom] = useState(true)
+  const prevLengthRef = useRef(messages.length)
+  const prevConversationIdRef = useRef(conversationId)
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
   const [generating, setGenerating] = useState(false)
   const [newTagVal, setNewTagVal] = useState("")
+
+  // Expose scrollToNote for note navigation from sidebar
+  useEffect(() => {
+    if (scrollToNoteRef) {
+      scrollToNoteRef.current = (noteId: string) => {
+        const note = notes.find((n) => n.id === noteId)
+        if (!note) return
+        const msgIndex = messages.findIndex((m) => m.id === note.message_id)
+        if (msgIndex >= 0) {
+          virtuosoRef.current?.scrollToIndex({ index: msgIndex, align: "center", behavior: "auto" })
+        }
+      }
+    }
+    return () => { if (scrollToNoteRef) scrollToNoteRef.current = null }
+  }, [scrollToNoteRef, messages, notes])
+
+  // Reset firstItemIndex on conversation change
+  useEffect(() => {
+    if (conversationId !== prevConversationIdRef.current) {
+      prevConversationIdRef.current = conversationId
+      setFirstItemIndex(100000)
+      prevLengthRef.current = 0
+    }
+  }, [conversationId])
+
+  // Adjust firstItemIndex when older messages are prepended
+  useEffect(() => {
+    const diff = messages.length - prevLengthRef.current
+    if (diff > 0 && prevLengthRef.current > 0) {
+      setFirstItemIndex((prev) => prev - diff)
+    }
+    prevLengthRef.current = messages.length
+  }, [messages.length])
+
+  const handleStartReached = useCallback(() => {
+    if (hasMore && !loadingMore && onLoadMore) {
+      onLoadMore()
+    }
+  }, [hasMore, loadingMore, onLoadMore])
 
   const handleAddTagSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,63 +116,6 @@ export function ChatView({
     if (trimmed && onAddTag) {
       onAddTag(trimmed)
       setNewTagVal("")
-    }
-  }
-
-  const prevScrollHeightRef = useRef<number>(0)
-  const prevScrollTopRef = useRef<number>(0)
-  const isPrependingRef = useRef<boolean>(false)
-  const prevMessagesLengthRef = useRef<number>(messages.length)
-  const prevLastMessageIdRef = useRef<number | string | undefined>(
-    messages.length > 0 ? messages[messages.length - 1].id : undefined
-  )
-  const prevConversationIdRef = useRef<string>(conversationId)
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    const isNewConversation = conversationId !== prevConversationIdRef.current
-    prevConversationIdRef.current = conversationId
-
-    if (isNewConversation) {
-      bottomRef.current?.scrollIntoView({ behavior: "auto" })
-      prevMessagesLengthRef.current = messages.length
-      prevLastMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : undefined
-      isPrependingRef.current = false
-      return
-    }
-
-    if (isPrependingRef.current) {
-      const newScrollHeight = container.scrollHeight
-      const heightDifference = newScrollHeight - prevScrollHeightRef.current
-      container.scrollTop = prevScrollTopRef.current + heightDifference
-      isPrependingRef.current = false
-    } else {
-      const lastMsg = messages[messages.length - 1]
-      const lastMsgId = lastMsg?.id
-      const lengthIncreased = messages.length > prevMessagesLengthRef.current
-      const lastIdChanged = lastMsgId !== prevLastMessageIdRef.current
-
-      if (lengthIncreased || lastIdChanged) {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-      }
-    }
-
-    prevMessagesLengthRef.current = messages.length
-    prevLastMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : undefined
-  }, [messages, conversationId])
-
-  const handleScroll = () => {
-    const container = containerRef.current
-    if (!container) return
-    if (container.scrollTop > 10) return
-
-    if (hasMore && !loadingMore && onLoadMore) {
-      prevScrollHeightRef.current = container.scrollHeight
-      prevScrollTopRef.current = container.scrollTop
-      isPrependingRef.current = true
-      onLoadMore()
     }
   }
 
@@ -151,6 +138,10 @@ export function ChatView({
     setGenerating(false)
   }
 
+  const getMsgNotes = (msg: ChatMessage) => {
+    return notes.filter((n) => n.message_id === msg.id)
+  }
+
   return (
     <div className={`flex flex-col h-full max-w-5xl mx-auto w-full ${className}`}>
       <header className="flex items-center gap-1.5 px-4 py-3 border-b border-[#222] text-sm">
@@ -159,7 +150,7 @@ export function ChatView({
           <>
             <span className="text-[#444]">{">>"}</span>
             {(() => {
-              const structural = tags?.find(t => t.tag_type === "structural")
+              const structural = tags?.find((t) => t.tag_type === "structural")
               let letterColor = "text-[#6bc28c]"
               let letter = "U"
               if (structural) {
@@ -183,7 +174,7 @@ export function ChatView({
             ) : (
               <span className="text-[#aaa] truncate flex-1 min-w-0">
                 {(() => {
-                  const structural = tags?.find(t => t.tag_type === "structural")
+                  const structural = tags?.find((t) => t.tag_type === "structural")
                   const title = conversationTitle || "untitled"
                   if (structural?.tag === "dreams") return title.replace(/^Dream Log:\s*/i, "")
                   return title
@@ -269,55 +260,63 @@ export function ChatView({
         </div>
       )}
 
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 flex flex-col"
-      >
-        {isPassword ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 select-none max-w-sm mx-auto my-auto border border-[#222] bg-[#0c0c0c] rounded-sm">
-            <span className="text-2xl text-[#ef4444] mb-3 animate-pulse">⚙</span>
-            <h2 className="text-[#ddd] text-xs font-mono tracking-widest mb-1.5 uppercase">SYSTEM LOCK</h2>
-            <p className="text-[#555] text-[10px] font-mono leading-relaxed uppercase">
-              Authentication required. Enter credentials in prompt below.
-            </p>
-          </div>
-        ) : (
-          <>
-            {loadingMore && (
-              <div className="flex justify-center items-center py-2 text-xs text-[#555] border-b border-[#1a1a1a] mb-4">
-                <span className="animate-pulse">Loading previous messages...</span>
-              </div>
-            )}
-            {messages.length === 0 && !loading && (
-              <div className="text-[#555] text-sm mt-20">
-                <p>{agentName} v0.1.0 — type a message below.</p>
-              </div>
-            )}
-            {messages.map((msg, idx) => {
-              const prevMsg = idx > 0 ? messages[idx - 1] : null
-              const msgNotes = notes.filter((n) => n.message_id === msg.id)
-              return (
-                <MessageBubble 
-                  key={msg.id} 
-                  msg={msg} 
-                  previousSignature={prevMsg?.structural_signature}
-                  notes={msgNotes}
-                  onAddNote={onAddNote}
-                  onDeleteNote={onDeleteNote}
-                  onUpdateNote={onUpdateNote}
-                />
-              )
-            })}
-            {loading && (
-              <div className="flex items-center gap-2 py-1 text-[#4ade80]">
-                <span className="animate-pulse">▊</span>
-              </div>
-            )}
-          </>
-        )}
-        <div ref={bottomRef} />
-      </div>
+      {isPassword ? (
+        <div className="flex flex-col items-center justify-center h-full text-center p-6 select-none max-w-sm mx-auto my-auto border border-[#222] bg-[#0c0c0c] rounded-sm">
+          <span className="text-2xl text-[#ef4444] mb-3 animate-pulse">&bull;</span>
+          <h2 className="text-[#ddd] text-xs font-mono tracking-widest mb-1.5 uppercase">SYSTEM LOCK</h2>
+          <p className="text-[#555] text-[10px] font-mono leading-relaxed uppercase">
+            Authentication required. Enter credentials in prompt below.
+          </p>
+        </div>
+      ) : (
+        <Virtuoso
+          ref={virtuosoRef}
+          firstItemIndex={firstItemIndex}
+          initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
+          data={messages}
+          startReached={handleStartReached}
+          followOutput={atBottom ? "smooth" : false}
+          atBottomStateChange={setAtBottom}
+          style={{ flex: 1, overflowX: "hidden" }}
+          className="px-4"
+          components={{
+            Header: () =>
+              loadingMore ? (
+                <div className="flex justify-center items-center py-2 text-xs text-[#555] border-b border-[#1a1a1a] mb-4">
+                  <span className="animate-pulse">Loading previous messages...</span>
+                </div>
+              ) : null,
+            Footer: () =>
+              loading ? (
+                <div className="flex items-center gap-2 py-1 text-[#4ade80]">
+                  <span className="animate-pulse">&block;</span>
+                </div>
+              ) : null,
+            EmptyPlaceholder: () =>
+              !loading ? (
+                <div className="text-[#555] text-sm mt-20 text-center">
+                  <p>{agentName} v0.1.0 &mdash; type a message below.</p>
+                </div>
+              ) : null,
+          }}
+          itemContent={(_, msg) => {
+            const idx = messages.indexOf(msg)
+            const prevMsg = idx > 0 ? messages[idx - 1] : null
+            const msgNotes = getMsgNotes(msg)
+            return (
+              <MessageBubble
+                key={msg.id}
+                msg={msg}
+                previousSignature={prevMsg?.structural_signature}
+                notes={msgNotes}
+                onAddNote={onAddNote}
+                onDeleteNote={onDeleteNote}
+                onUpdateNote={onUpdateNote}
+              />
+            )
+          }}
+        />
+      )}
 
       {error && (
         <div className="mx-4 mb-1 flex items-center gap-2 bg-[#1a1010] border border-[#3a1a1a] px-4 py-2 text-sm text-[#ef4444]">

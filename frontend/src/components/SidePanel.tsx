@@ -36,6 +36,7 @@ export function SidePanel({
   width,
   panelCollapsed,
   onPanelToggle,
+  scrollToNoteRef,
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
@@ -50,6 +51,7 @@ export function SidePanel({
   width?: number
   panelCollapsed?: boolean
   onPanelToggle?: () => void
+  scrollToNoteRef?: React.MutableRefObject<((noteId: string) => void) | null>
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const isCollapsed = panelCollapsed !== undefined ? panelCollapsed : collapsed
@@ -235,6 +237,7 @@ export function SidePanel({
                     notes={notes}
                     onDeleteNote={onDeleteNote}
                     onUpdateNote={onUpdateNote}
+                    scrollToNoteRef={scrollToNoteRef}
                   />
                 </div>
               )}

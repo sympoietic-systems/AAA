@@ -174,12 +174,14 @@ export const MessageBubble = memo(function MessageBubble({
 
   const bubbleRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState("")
+  const [showSelectionToolbar, setShowSelectionToolbar] = useState(false)
   const [showNoteCreator, setShowNoteCreator] = useState(false)
   const [noteComment, setNoteComment] = useState("")
   const [noteVisibility, setNoteVisibility] = useState<"personal" | "shared">("personal")
   const [popupCoords, setPopupCoords] = useState<{ x: number; y: number } | null>(null)
   const [selectedStartOffset, setSelectedStartOffset] = useState<number | undefined>(undefined)
   const [editingNote, setEditingNote] = useState<NoteInfo | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const handleMouseUp = () => {
     if (editingNote) return
@@ -189,25 +191,27 @@ export const MessageBubble = memo(function MessageBubble({
     if (text && text.length > 0 && bubbleRef.current && msg.id) {
       if (bubbleRef.current.contains(selection.anchorNode)) {
         setSelectedText(text)
-        
+        setShowSelectionToolbar(false)
+        setShowNoteCreator(false)
+        setCopied(false)
+
         const container = selection.anchorNode?.parentElement?.closest('.markdown-body') as HTMLElement
         if (container) {
           const { start } = getSelectionCharacterOffsetWithin(container)
           setSelectedStartOffset(start)
         }
-        
+
         if (selection.rangeCount > 0) {
           const range = selection.getRangeAt(0)
           const rect = range.getBoundingClientRect()
-          
-          // Position relative to viewport: check if it overflows bottom
-          const showAbove = rect.bottom + 180 > window.innerHeight
+
+          const showAbove = rect.bottom + 36 > window.innerHeight
           setPopupCoords({
             x: rect.left,
-            y: showAbove ? rect.top - 180 - 8 : rect.bottom + 8
+            y: showAbove ? rect.top - 36 - 8 : rect.bottom + 8
           })
           setEditingNote(null)
-          setShowNoteCreator(true)
+          setShowSelectionToolbar(true)
         }
       }
     }
@@ -233,6 +237,27 @@ export const MessageBubble = memo(function MessageBubble({
       window.getSelection()?.removeAllRanges()
     }
   }
+
+  // Escape key dismisses toolbar or popup
+  useEffect(() => {
+    if (!showSelectionToolbar && !showNoteCreator) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showNoteCreator) {
+          setEditingNote(null)
+          setShowNoteCreator(false)
+          setSelectedText("")
+          setNoteComment("")
+          setPopupCoords(null)
+          window.getSelection()?.removeAllRanges()
+        } else if (showSelectionToolbar) {
+          setShowSelectionToolbar(false)
+        }
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [showSelectionToolbar, showNoteCreator])
 
   const [thinkingText, setThinkingText] = useState<string | null>(msg.thinking || null)
   const [loadingThinking, setLoadingThinking] = useState(false)
@@ -441,6 +466,50 @@ export const MessageBubble = memo(function MessageBubble({
           )}
         </div>
       </div>
+
+      {/* Floating selection toolbar — shows on text selection before the full note popup */}
+      {showSelectionToolbar && popupCoords && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-transparent cursor-default"
+            onMouseDown={() => setShowSelectionToolbar(false)}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: `${popupCoords.y}px`,
+              left: `${Math.min(window.innerWidth - 180, Math.max(10, popupCoords.x))}px`,
+            }}
+            onMouseUp={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-50 flex items-center gap-0 bg-[#1a1a1a] border border-[#333] shadow-xl rounded-md px-1 py-1 select-none"
+          >
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(selectedText)
+                setCopied(true)
+                setTimeout(() => {
+                  setShowSelectionToolbar(false)
+                  setCopied(false)
+                }, 800)
+              }}
+              className="text-[#888] hover:text-[#4ade80] px-2 py-0.5 text-[10px] font-mono transition-colors whitespace-nowrap"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
+            <span className="text-[#333] text-[10px] px-0.5">|</span>
+            <button
+              onClick={() => {
+                setShowSelectionToolbar(false)
+                setShowNoteCreator(true)
+              }}
+              className="text-[#888] hover:text-[#e09b67] px-2 py-0.5 text-[10px] font-mono transition-colors whitespace-nowrap"
+            >
+              Note
+            </button>
+          </div>
+        </>
+      )}
 
       {showNoteCreator && popupCoords && (
         <>
