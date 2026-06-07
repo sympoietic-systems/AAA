@@ -15,7 +15,7 @@ import yaml
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api.routes import router
+from backend.api.router import router
 from backend.config import load_config
 from backend.core.pipeline import ProcessingPipeline
 from backend.modules.background_tasks.actions.consolidate import ConsolidateAction
@@ -609,7 +609,7 @@ async def lifespan(app: FastAPI):
 
     # Start background startup scheduler for resumption and belief metabolism catch-up
     from backend.core.scheduler import BackgroundStartupScheduler
-    from backend.api.routes import _process_and_summarize_file
+    from backend.api.routes.files import _process_and_summarize_file
     scheduler = BackgroundStartupScheduler(app.state, _process_and_summarize_file)
     app.state.startup_scheduler = scheduler
     scheduler.start()
