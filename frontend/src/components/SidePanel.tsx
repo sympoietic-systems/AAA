@@ -29,6 +29,9 @@ export function SidePanel({
   notes = [],
   onDeleteNote,
   onUpdateNote,
+  width,
+  panelCollapsed,
+  onPanelToggle,
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
@@ -38,8 +41,16 @@ export function SidePanel({
   notes?: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  width?: number
+  panelCollapsed?: boolean
+  onPanelToggle?: () => void
 }) {
   const [collapsed, setCollapsed] = useState(true)
+  const isCollapsed = panelCollapsed !== undefined ? panelCollapsed : collapsed
+  const togglePanel = () => {
+    if (onPanelToggle) onPanelToggle()
+    else setCollapsed(p => !p)
+  }
   const [skillsData, setSkillsData] = useState<SkillsResponse | null>(null)
   const [skillsError, setSkillsError] = useState<string | null>(null)
 
@@ -79,7 +90,7 @@ export function SidePanel({
     tokens,
     tokensError,
   } = useTelemetry(
-    collapsed,
+    isCollapsed,
     conversationId || null,
     {
       health: healthOpen,
@@ -138,12 +149,13 @@ export function SidePanel({
         flex flex-col shrink-0
         overflow-hidden
         transition-all duration-200
-        ${collapsed ? "md:w-9 w-full" : "md:w-120 w-full"}
+        ${isCollapsed ? "md:w-9 w-full" : "w-full"}
       `}
+      style={!isCollapsed && width ? { width: `${width}px` } : undefined}
     >
-      {collapsed && (
+      {isCollapsed && (
         <button
-          onClick={() => setCollapsed(false)}
+          onClick={togglePanel}
           className="
             flex items-center gap-1.5 shrink-0
             text-xs text-[#555] hover:text-[#888]
@@ -161,11 +173,11 @@ export function SidePanel({
         </button>
       )}
 
-      {!collapsed && (
+      {!isCollapsed && (
         <>
           <div className="flex items-center shrink-0 px-3 py-2 border-b border-[#222]">
             <button
-              onClick={() => setCollapsed(true)}
+              onClick={togglePanel}
               className="flex items-center gap-1.5 text-[10px] text-[#555] hover:text-[#888] transition-colors"
             >
               <span>▶</span>

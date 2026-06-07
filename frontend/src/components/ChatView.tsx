@@ -173,11 +173,20 @@ export function ChatView({
   return (
     <div className={`flex flex-col h-full max-w-5xl mx-auto w-full ${className}`}>
       <header className="flex items-center gap-1.5 px-4 py-3 border-b border-[#222] text-sm">
-        <span className="text-[#4ade80]">{'>'}</span>
         <span className="text-[#888]">{isPassword ? "authentication" : agentName}</span>
         {conversationId ? (
           <>
-            <span className="text-[#444]">{'>'}</span>
+            <span className="text-[#444]">{">>"}</span>
+            {(() => {
+              const structural = tags?.find(t => t.tag_type === "structural")
+              let letterColor = "text-[#6bc28c]"
+              let letter = "U"
+              if (structural) {
+                if (structural.tag === "dreams") { letterColor = "text-[#a892ee]"; letter = "D" }
+                else if (structural.tag === "other agents") { letterColor = "text-[#e09b67]"; letter = "A" }
+              }
+              return <span className={`text-sm ${letterColor} font-mono font-bold shrink-0`}>[{letter}]</span>
+            })()}
             {editing ? (
               <input
                 className="flex-1 text-[#aaa] bg-[#1a1a1a] border border-[#333] px-1.5 py-0.5 text-sm outline-none focus:border-[#4ade80] min-w-0 max-w-md"
@@ -192,7 +201,12 @@ export function ChatView({
               />
             ) : (
               <span className="text-[#aaa] truncate flex-1 min-w-0">
-                {conversationTitle || "untitled"}
+                {(() => {
+                  const structural = tags?.find(t => t.tag_type === "structural")
+                  const title = conversationTitle || "untitled"
+                  if (structural?.tag === "dreams") return title.replace(/^Dream Log:\s*/i, "")
+                  return title
+                })()}
               </span>
             )}
             <div className="ml-auto flex items-center gap-1 shrink-0">
@@ -226,32 +240,33 @@ export function ChatView({
         <div className="flex flex-col border-b border-[#222] bg-[#090909] shrink-0">
           <div className="flex flex-wrap items-center gap-1.5 px-4 py-1.5">
             <span className="text-[9px] text-[#555] uppercase font-mono tracking-wider mr-1">tags:</span>
-            {tags.map((t) => {
-              let tagStyle = "bg-[#141414] text-[#888] border-[#222]"
+            {tags.map((t, i) => {
+              let tagStyle = "text-[#888]"
               const isDeletable = t.tag_type === "semantic"
               if (t.tag_type === "structural") {
                 if (t.tag === "dreams") {
-                  tagStyle = "bg-[#141414] text-[#a892ee]/85 border-[#222]"
+                  tagStyle = "text-[#a892ee]"
                 } else if (t.tag === "other agents") {
-                  tagStyle = "bg-[#141414] text-[#e09b67]/85 border-[#222]"
+                  tagStyle = "text-[#e09b67]"
                 } else {
-                  tagStyle = "bg-[#141414] text-[#6bc28c]/85 border-[#222]"
+                  tagStyle = "text-[#6bc28c]"
                 }
               } else if (t.tag_type === "keyword") {
-                tagStyle = "bg-[#141414] text-[#6fafe2]/85 border-[#222]"
+                tagStyle = "text-[#6fafe2]"
               } else if (t.tag_type === "diffractive") {
-                tagStyle = "bg-[#141414] text-[#4ec9b0]/85 border-[#222]"
+                tagStyle = "text-[#4ec9b0]"
               }
               return (
                 <span
                   key={t.tag}
-                  className={`flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-[2px] border ${tagStyle} font-mono`}
+                  className={`text-[9px] ${tagStyle} font-mono`}
                 >
-                  <span>{t.tag}</span>
+                  {i > 0 && <span className="text-[#444] select-none">{" // "}</span>}
+                  {t.tag}
                   {isDeletable && onRemoveTag && (
                     <button
                       onClick={() => onRemoveTag(t.tag)}
-                      className="text-[10px] text-[#888] hover:text-[#ef4444] transition-colors cursor-pointer font-bold select-none px-0.5"
+                      className="text-[10px] text-[#888] hover:text-[#ef4444] transition-colors cursor-pointer font-bold select-none ml-0.5"
                       title="Remove tag"
                     >
                       &times;
@@ -267,7 +282,7 @@ export function ChatView({
                   placeholder="+ tag"
                   value={newTagVal}
                   onChange={(e) => setNewTagVal(e.target.value)}
-                  className="bg-[#141414] border border-[#222] text-[9px] text-[#aaa] font-mono px-1.5 py-[2px] outline-none focus:border-[#4ade80] rounded-[2px] w-14 focus:w-24 transition-all duration-150"
+                  className="bg-transparent border-0 text-[9px] text-[#888] font-mono outline-none focus:text-[#aaa] w-14 focus:w-24 transition-all duration-150 placeholder:text-[#444] border-b border-transparent focus:border-[#4ade80]"
                 />
               </form>
             )}

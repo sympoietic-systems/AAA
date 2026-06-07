@@ -100,6 +100,69 @@ export default function App() {
   }
 
   const [convCollapsed, setConvCollapsed] = useState(true)
+
+  const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
+    const saved = localStorage.getItem("aaa_leftPanelWidth")
+    return saved ? parseInt(saved, 10) : 288
+  })
+  const widthRef = useRef(leftPanelWidth)
+  widthRef.current = leftPanelWidth
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = leftPanelWidth
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+
+    const onMove = (ev: MouseEvent) => {
+      const w = Math.max(200, Math.min(500, startWidth + ev.clientX - startX))
+      widthRef.current = w
+      setLeftPanelWidth(w)
+    }
+    const onUp = () => {
+      localStorage.setItem("aaa_leftPanelWidth", String(widthRef.current))
+      document.removeEventListener("mousemove", onMove)
+      document.removeEventListener("mouseup", onUp)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+    document.addEventListener("mousemove", onMove)
+    document.addEventListener("mouseup", onUp)
+  }
+
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(true)
+
+  const [rightPanelWidth, setRightPanelWidth] = useState(() => {
+    const saved = localStorage.getItem("aaa_rightPanelWidth")
+    return saved ? parseInt(saved, 10) : 320
+  })
+  const rightWidthRef = useRef(rightPanelWidth)
+  rightWidthRef.current = rightPanelWidth
+
+  const handleRightResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = rightPanelWidth
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+
+    const onMove = (ev: MouseEvent) => {
+      const w = Math.max(200, Math.min(600, startWidth - (ev.clientX - startX)))
+      rightWidthRef.current = w
+      setRightPanelWidth(w)
+    }
+    const onUp = () => {
+      localStorage.setItem("aaa_rightPanelWidth", String(rightWidthRef.current))
+      document.removeEventListener("mousemove", onMove)
+      document.removeEventListener("mouseup", onUp)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+    document.addEventListener("mousemove", onMove)
+    document.addEventListener("mouseup", onUp)
+  }
+
   const activeIdRef = useRef(activeId)
   activeIdRef.current = activeId
 
@@ -204,6 +267,7 @@ export default function App() {
           collapsed={convCollapsed}
           onToggle={() => setConvCollapsed(!convCollapsed)}
           showLogout={false}
+          width={leftPanelWidth}
         />
         <ChatView
           messages={[]}
@@ -239,7 +303,14 @@ export default function App() {
         onToggle={() => setConvCollapsed(!convCollapsed)}
         showLogout={isAuthEnabled}
         onLogout={handleLogout}
+        width={leftPanelWidth}
       />
+      {!convCollapsed && (
+        <div
+          onMouseDown={handleResizeStart}
+          className="w-1 cursor-col-resize hover:bg-[#4ade80]/30 active:bg-[#4ade80]/50 transition-colors shrink-0 hidden md:block"
+        />
+      )}
       <ChatView
         messages={messages}
         loading={loading}
@@ -268,6 +339,12 @@ export default function App() {
         onRemoveTag={handleRemoveTag}
         className="flex-1 min-w-0"
       />
+      {!rightPanelCollapsed && (
+        <div
+          onMouseDown={handleRightResizeStart}
+          className="w-1 cursor-col-resize hover:bg-[#4ade80]/30 active:bg-[#4ade80]/50 transition-colors shrink-0 hidden md:block"
+        />
+      )}
       <SidePanel
         uploadedFiles={uploadedFiles}
         conversationId={conversationId}
@@ -277,6 +354,9 @@ export default function App() {
         notes={notes}
         onDeleteNote={handleDeleteNote}
         onUpdateNote={handleUpdateNote}
+        width={rightPanelWidth}
+        panelCollapsed={rightPanelCollapsed}
+        onPanelToggle={() => setRightPanelCollapsed(p => !p)}
       />
     </div>
   )

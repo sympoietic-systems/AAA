@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import type { ConversationInfo } from "../api/client"
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   onToggle: () => void
   showLogout?: boolean
   onLogout?: () => void
+  width?: number
 }
 
 export function ConversationList({
@@ -26,9 +27,27 @@ export function ConversationList({
   onToggle,
   showLogout,
   onLogout,
+  width,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState<"all" | "user" | "dreams" | "agents">("all")
+  const [tooltipInfo, setTooltipInfo] = useState<{ conv: ConversationInfo; top: number } | null>(null)
+  const outerRef = useRef<HTMLDivElement>(null)
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return ""
+    const d = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - d.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMins < 1) return "just now"
+    if (diffMins < 60) return `${diffMins}m ago`
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays < 7) return `${diffDays}d ago`
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined })
+  }
 
   // Filter conversations
   const filteredConversations = conversations.filter((conv) => {
@@ -52,15 +71,17 @@ export function ConversationList({
   })
   return (
     <div
+      ref={outerRef}
       className={`
         border-[#222] bg-[#0c0c0c]
         md:border-r md:border-l-0 md:h-full
         border-b
         flex flex-col shrink-0
-        overflow-hidden
+        relative
         transition-all duration-200
-        ${collapsed ? "md:w-9 w-full" : "md:w-64 w-full"}
+        ${collapsed ? "md:w-9 w-full" : "w-full"}
       `}
+      style={!collapsed && width ? { width: `${width}px` } : undefined}
     >
       {collapsed && (
         <button
@@ -158,6 +179,14 @@ export function ConversationList({
               <div
                 key={conv.id}
                 onClick={() => onSelect(conv.id)}
+                onMouseEnter={(e) => {
+                  if (outerRef.current) {
+                    const outerRect = outerRef.current.getBoundingClientRect()
+                    const itemRect = e.currentTarget.getBoundingClientRect()
+                    setTooltipInfo({ conv, top: itemRect.top - outerRect.top })
+                  }
+                }}
+                onMouseLeave={() => setTooltipInfo(null)}
                 className={`
                   group flex items-center gap-1.5 px-3 py-2 cursor-pointer
                   border-b border-[#1a1a1a] last:border-b-0
@@ -168,54 +197,33 @@ export function ConversationList({
                   }
                 `}
               >
-                <span
-                  className={`text-[8px] leading-none shrink-0 ${
-                    activeId === conv.id ? "text-[#4ade80]" : "text-[#444]"
-                  }`}
-                >
-                  {"\u25CF"}
-                </span>
+                {(() => {
+                  const structural = conv.tags?.find(t => t.tag_type === "structural")
+                  let letterColor = "text-[#6bc28c]"
+                  let letter = "U"
+                  if (structural) {
+                    if (structural.tag === "dreams") { letterColor = "text-[#a892ee]"; letter = "D" }
+                    else if (structural.tag === "other agents") { letterColor = "text-[#e09b67]"; letter = "A" }
+                  }
+                  return (
+                    <span className={`text-[8px] font-mono font-bold shrink-0 ${letterColor}`}>
+                      [{letter}]
+                    </span>
+                  )
+                })()}
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] text-[#aaa] truncate">
-                    {conv.title || "untitled"}
+                    {(() => {
+                      const title = conv.title || "untitled"
+                      const structural = conv.tags?.find(t => t.tag_type === "structural")
+                      if (structural?.tag === "dreams") return title.replace(/^Dream Log:\s*/i, "")
+                      return title
+                    })()}
                   </p>
-                  <div className="flex justify-between items-center mt-0.5">
-                    <p className="text-[9px] text-[#555]">
-                      {conv.message_count} msgs
-                    </p>
-                  </div>
-                  {conv.tags && conv.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {conv.tags.slice(0, 3).map((t) => {
-                        let tagStyle = "bg-[#141414] text-[#888] border-[#222]"
-                        if (t.tag_type === "structural") {
-                          if (t.tag === "dreams") {
-                            tagStyle = "bg-[#141414] text-[#a892ee]/85 border-[#222]"
-                          } else if (t.tag === "other agents") {
-                            tagStyle = "bg-[#141414] text-[#e09b67]/85 border-[#222]"
-                          } else {
-                            tagStyle = "bg-[#141414] text-[#6bc28c]/85 border-[#222]"
-                          }
-                        } else if (t.tag_type === "diffractive") {
-                          tagStyle = "bg-[#141414] text-[#4ec9b0]/85 border-[#222]"
-                        }
-                        return (
-                          <span
-                            key={t.tag}
-                            className={`text-[8px] px-1 py-[1px] rounded-[2px] border ${tagStyle} font-mono`}
-                          >
-                            {t.tag}
-                          </span>
-                        )
-                      })}
-                      {conv.tags.length > 3 && (
-                        <span className="text-[8px] text-[#444] font-mono self-center">
-                          +{conv.tags.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
+                <span className="text-[#444] text-[9px] font-mono select-none shrink-0">{">>"}</span>
+                <span className="text-[9px] text-[#555] font-mono shrink-0">{conv.message_count}msg</span>
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -234,6 +242,40 @@ export function ConversationList({
               </div>
             ))}
           </div>
+          {tooltipInfo && (
+            <div
+              className="absolute z-50 left-full top-0 ml-1 bg-[#0c0c0c] border border-[#222] px-3 py-2 rounded-[2px] shadow-lg min-w-[280px] max-w-[640px] pointer-events-none"
+              style={{ top: tooltipInfo.top }}
+            >
+              <p className="text-[10px] text-[#ccc] font-mono mb-1 leading-relaxed break-words">
+                {tooltipInfo.conv.title || "untitled"}
+              </p>
+              {tooltipInfo.conv.created_at && (
+                <p className="text-[8px] text-[#555] font-mono mb-1">
+                  created {formatDate(tooltipInfo.conv.created_at)}
+                </p>
+              )}
+              {tooltipInfo.conv.tags && tooltipInfo.conv.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {tooltipInfo.conv.tags.map((t) => {
+                    let tagStyle = "text-[#888]"
+                    if (t.tag_type === "structural") {
+                      if (t.tag === "dreams") tagStyle = "text-[#a892ee]"
+                      else if (t.tag === "other agents") tagStyle = "text-[#e09b67]"
+                      else tagStyle = "text-[#6bc28c]"
+                    } else if (t.tag_type === "diffractive") {
+                      tagStyle = "text-[#4ec9b0]"
+                    }
+                    return (
+                      <span key={t.tag} className={`text-[8px] ${tagStyle} font-mono`}>
+                        {t.tag}
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           {showLogout && onLogout && (
             <button
               onClick={onLogout}
