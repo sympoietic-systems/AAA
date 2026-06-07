@@ -110,7 +110,19 @@ class SkillActivatorModule(ProcessingModule):
                 logger.warning("Failed to record skill usage for %s: %s", skill.name, e)
 
         payload["loaded_skills"] = loaded_skills
+        self._detect_underperformance(payload, all_skills)
         return payload
+
+    def _detect_underperformance(self, payload: dict, all_skills) -> None:
+        underperforming = []
+        for skill in all_skills:
+            if skill.lifecycle_stage != "crystallized":
+                continue
+            if skill.confidence < 0.3:
+                underperforming.append(f"{skill.name} (confidence={skill.confidence:.2f})")
+        if underperforming:
+            note = f"[Skill underperformance detected: {', '.join(underperforming)}. These skills may be misaligned with current entanglement patterns.]"
+            payload.setdefault("skill_ecology_notes", []).append(note)
 
     def _match_attractor_window(self, attractor_window, on_demand_skills, candidates):
         for item in attractor_window:
