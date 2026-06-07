@@ -98,6 +98,58 @@ class SkillsResponse(BaseModel):
     on_demand: list[SkillInfo]
 
 
+class DbSkillInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    always_active: bool = False
+    trigger_keywords: list[str] = []
+    lifecycle_stage: str = "nucleation"
+    confidence: float = 0.0
+    ontological_mass: float = 0.05
+    source: str = "authored"
+    version: int = 1
+    changelog: str = ""
+    last_used_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class DbSkillsResponse(BaseModel):
+    always_active: list[DbSkillInfo]
+    on_demand: list[DbSkillInfo]
+    all: list[DbSkillInfo]
+
+
+class WorkshopActionRequest(BaseModel):
+    name: str = ""
+    description: str = ""
+    content: str = ""
+    skill_id: str = ""
+    always_active: bool = False
+    trigger_keywords: list[str] = []
+    changelog: str = ""
+    reason: str = ""
+    human_approved: bool = False
+    stage: str = ""
+
+
+class WorkshopResponse(BaseModel):
+    status: str
+    message: str = ""
+    skill_id: str = ""
+    name: str = ""
+    confidence: float = 0.0
+    approval_tier: str = ""
+    lifecycle_stage: str = ""
+    version: int = 0
+    anti_mastery_assessment: dict = {}
+    skills: list[dict] = []
+    count: int = 0
+    skill: Optional[dict] = None
+    events: list[dict] = []
+
+
 class MetricsInfo(BaseModel):
     pairwise_similarity: float | None = None
     conceptual_novelty: float | None = None
