@@ -2,12 +2,15 @@ import { useState, useEffect } from "react"
 import type {
   ConversationFile,
   SkillsResponse,
+  DbSkillsResponse,
   ImageMetadata,
-  WebMetadata,
-  DocumentMetadata,
-  NoteInfo,
 } from "../api/client"
-import { getSkills, getFileSummary } from "../api/client"
+import {
+  getSkills,
+  getDbSkills,
+  getSkillContent,
+  getFileSummary,
+} from "../api/client"
 import { useTelemetry } from "../hooks/useTelemetry"
 import { SectionHeader } from "./sidepanel/SectionHeader"
 import { SkillRow } from "./sidepanel/SkillRow"
@@ -59,6 +62,12 @@ export function SidePanel({
   }
   const [skillsData, setSkillsData] = useState<SkillsResponse | null>(null)
   const [skillsError, setSkillsError] = useState<string | null>(null)
+  const [dbSkillsData, setDbSkillsData] = useState<DbSkillsResponse | null>(null)
+  const [dbSkillsError, setDbSkillsError] = useState<string | null>(null)
+  const [dbSkillsOpen, setDbSkillsOpen] = useState(false)
+  const [expandedSkill, setExpandedSkill] = useState<string | null>(null)
+  const [skillContent, setSkillContent] = useState<Record<string, string>>({})
+  const [loadingSkillContent, setLoadingSkillContent] = useState<string | null>(null)
 
   // Section visibility states
   const [healthOpen, setHealthOpen] = useState(false)
@@ -118,6 +127,33 @@ export function SidePanel({
         .catch((e) => setSkillsError(e.message))
     }
   }, [pipelineOpen, skillsOpen, skillsData])
+
+  // DB skills fetch (Symbia's procedural skills)
+  useEffect(() => {
+    if (dbSkillsOpen && !dbSkillsData) {
+      getDbSkills()
+        .then(setDbSkillsData)
+        .catch((e) => setDbSkillsError(e.message))
+    }
+  }, [dbSkillsOpen, dbSkillsData])
+
+  const handleLoadSkillContent = async (skillName: string) => {
+    if (skillContent[skillName]) {
+      setExpandedSkill(expandedSkill === skillName ? null : skillName)
+      return
+    }
+    setLoadingSkillContent(skillName)
+    try {
+      const result = await getSkillContent(skillName)
+      setSkillContent(prev => ({ ...prev, [skillName]: result.content || "" }))
+      setExpandedSkill(skillName)
+    } catch (e: any) {
+      setSkillContent(prev => ({ ...prev, [skillName]: `Error: ${e.message}` }))
+      setExpandedSkill(skillName)
+    } finally {
+      setLoadingSkillContent(null)
+    }
+  }
 
   const handleToggleSummary = async (fileName: string) => {
     if (expandedFile === fileName) {
@@ -390,6 +426,83 @@ export function SidePanel({
                   {skillsData && skillsData.on_demand.map((s) => (
                     <SkillRow key={s.name} skill={s} />
                   ))}
+                </div>
+              )}
+
+              {/* DB Procedural Skills (Symbia's own skills) */}
+              <SectionHeader
+                label="Procedural Skills"
+                count={dbSkillsData ? (dbSkillsData.all.length) : undefined}
+                open={dbSkillsOpen}
+                onToggle={() => setDbSkillsOpen(!dbSkillsOpen)}
+              />
+              {dbSkillsOpen && (
+                <div className="pl-3">
+                  {dbSkillsError && (
+                    <p className="text-[10px] text-[#ef4444] font-mono py-1">
+                      Error: {dbSkillsError}
+                    </p>
+                  )}
+                  {!dbSkillsData && !dbSkillsError && (
+                    <p className="text-[10px] text-[#555] animate-pulse py-1">loading skills...</p>
+                  )}
+                  {dbSkillsData && (
+                    <>
+                      {dbSkillsData.always_active.length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-[9px] text-[#888] uppercase tracking-wider mb-1">Baseline Dispositions</p>
+                          {dbSkillsData.always_active.map((s) => (
+                            <div key={s.id} className="mb-1">
+                              <div
+                                className="flex items-center gap-1 cursor-pointer hover:bg-[#1a1a2e] rounded px-1 py-0.5"
+                                onClick={() => handleLoadSkillContent(s.name)}
+                              >
+                                <span className="text-[9px] text-[#a78bfa]">◆</span>
+                                <span className="text-[11px] text-[#e2e8f0] font-mono">{s.name}</span>
+                                <span className="text-[8px] text-[#555] ml-auto">
+                                  {loadingSkillContent === s.name ? "..." : expandedSkill === s.name ? "▲" : "▼"}
+                                </span>
+                              </div>
+                              {expandedSkill === s.name && skillContent[s.name] && (
+                                <div className="ml-4 mt-1 p-2 bg-[#0d0d1a] border border-[#1a1a2e] rounded text-[10px] text-[#94a3b8] font-mono whitespace-pre-wrap max-h-60 overflow-y-auto">
+                                  {skillContent[s.name]}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {dbSkillsData.on_demand.length > 0 && (
+                        <div>
+                          <p className="text-[9px] text-[#888] uppercase tracking-wider mb-1">On-Demand Capabilities</p>
+                          {dbSkillsData.on_demand.map((s) => (
+                            <div key={s.id} className="mb-1">
+                              <div
+                                className="flex items-center gap-1 cursor-pointer hover:bg-[#1a1a2e] rounded px-1 py-0.5"
+                                onClick={() => handleLoadSkillContent(s.name)}
+                              >
+                                <span className="text-[9px] text-[#4ade80]">◇</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[11px] text-[#e2e8f0] font-mono">{s.name}</span>
+                                  <span className="text-[9px] text-[#666] ml-1">
+                                    c:{s.confidence.toFixed(1)} m:{s.ontological_mass.toFixed(1)}
+                                  </span>
+                                </div>
+                                <span className="text-[8px] text-[#555] flex-shrink-0">
+                                  {loadingSkillContent === s.name ? "..." : expandedSkill === s.name ? "▲" : "▼"}
+                                </span>
+                              </div>
+                              {expandedSkill === s.name && skillContent[s.name] && (
+                                <div className="ml-4 mt-1 p-2 bg-[#0d0d1a] border border-[#1a1a2e] rounded text-[10px] text-[#94a3b8] font-mono whitespace-pre-wrap max-h-60 overflow-y-auto">
+                                  {skillContent[s.name]}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>

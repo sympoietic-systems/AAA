@@ -429,6 +429,16 @@ export const MessageBubble = memo(function MessageBubble({
               [{msg.provider_used || "unknown"} :: {msg.model_used || "unknown"}]
             </span>
           )}
+          {!isHuman && msg.active_skills && msg.active_skills.length > 0 && msg.active_skills.map(skill => (
+            <span key={skill} className="text-[9px] text-[#4ade80] font-mono border border-[#1a3a1a] bg-[#0a1a0a] px-1 rounded">
+              {skill}
+            </span>
+          ))}
+          {!isHuman && msg.active_beliefs && msg.active_beliefs.length > 0 && msg.active_beliefs.map(belief => (
+            <span key={belief} className="text-[9px] text-[#60a5fa] font-mono border border-[#1a2a3a] bg-[#0a1220] px-1 rounded">
+              {belief}
+            </span>
+          ))}
         </div>
         <div>
           {msg.content_tokens != null && msg.content_tokens > 0 && (
@@ -646,13 +656,25 @@ export const MessageBubble = memo(function MessageBubble({
          prevProps.msg.metrics === nextProps.msg.metrics &&
          prevProps.msg.structural_justification === nextProps.msg.structural_justification &&
          prevProps.msg.truncated === nextProps.msg.truncated &&
-         prevProps.msg.finish_reason === nextProps.msg.finish_reason &&
+          prevProps.msg.finish_reason === nextProps.msg.finish_reason &&
+          areStringArraysEqual(prevProps.msg.active_skills, nextProps.msg.active_skills) &&
+          areStringArraysEqual(prevProps.msg.active_beliefs, nextProps.msg.active_beliefs) &&
          areNumberArraysEqual(prevProps.msg.structural_signature, nextProps.msg.structural_signature) &&
          areNumberArraysEqual(prevProps.previousSignature, nextProps.previousSignature) &&
          areNotesEqual(prevProps.notes, nextProps.notes);
 })
 
 function areNumberArraysEqual(a?: number[] | null, b?: number[] | null) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function areStringArraysEqual(a?: string[] | null | undefined, b?: string[] | null | undefined) {
   if (a === b) return true;
   if (!a || !b) return false;
   if (a.length !== b.length) return false;

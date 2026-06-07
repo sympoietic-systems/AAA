@@ -43,6 +43,8 @@ class ChatResponse(BaseModel):
     user_structural_justification: Optional[str] = None
     truncated: Optional[bool] = Field(default=None, description="Whether response was truncated by token limit")
     finish_reason: Optional[str] = Field(default=None, description="LLM finish reason (stop, length, max_tokens)")
+    active_skills: list[str] = Field(default_factory=list, description="Skill names active for this response")
+    active_beliefs: list[str] = Field(default_factory=list, description="Belief labels in the attractor window for this response")
 
 
 class HistoryMessage(BaseModel):

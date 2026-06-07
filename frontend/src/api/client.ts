@@ -107,6 +107,8 @@ export interface ChatMessage {
   provider_used?: string | null
   structural_signature?: number[] | null
   structural_justification?: string | null
+  active_skills?: string[]
+  active_beliefs?: string[]
   user_message_id?: number | null
   user_structural_signature?: number[] | null
   user_structural_justification?: string | null
@@ -250,6 +252,45 @@ export interface SkillsResponse {
 
 export async function getSkills(): Promise<SkillsResponse> {
   const res = await fetch(`${BASE}/skills`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export interface DbSkillInfo {
+  id: string
+  name: string
+  description: string
+  always_active: boolean
+  trigger_keywords: string[]
+  lifecycle_stage: string
+  confidence: number
+  ontological_mass: number
+  source: string
+  version: number
+  changelog: string
+  last_used_at: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface DbSkillsResponse {
+  always_active: DbSkillInfo[]
+  on_demand: DbSkillInfo[]
+  all: DbSkillInfo[]
+}
+
+export async function getDbSkills(): Promise<DbSkillsResponse> {
+  const res = await fetch(`${BASE}/skills/db`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function getSkillContent(skillName: string): Promise<{ content: string }> {
+  const res = await fetch(`${BASE}/skills/workshop/load`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: skillName }),
+  })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

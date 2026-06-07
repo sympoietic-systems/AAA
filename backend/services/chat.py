@@ -229,6 +229,12 @@ class ChatService:
             user_justification = get_justification(content)
             user_sig_list = user_sig.tolist() if 'user_sig' in locals() and user_sig is not None else None
 
+            loaded_skills = result.payload.get("loaded_skills", [])
+            active_skill_names = [s.get("name", "") for s in loaded_skills if s.get("name")]
+
+            attractor_window = result.payload.get("attractor_window", [])
+            active_belief_labels = [item.get("label", "") for item in attractor_window if item.get("label")]
+
             return ChatResponse(
                 id=response_msg.id,
                 timestamp=response_msg.timestamp,
@@ -251,6 +257,8 @@ class ChatService:
                 user_structural_justification=user_justification,
                 truncated=result.payload.get("truncated"),
                 finish_reason=result.payload.get("finish_reason"),
+                active_skills=active_skill_names,
+                active_beliefs=active_belief_labels,
             )
         except ValueError:
             raise
