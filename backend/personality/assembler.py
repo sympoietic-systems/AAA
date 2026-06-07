@@ -37,12 +37,14 @@ class PromptAssemblerModule(ProcessingModule):
         
         attractor_window = payload.get("attractor_window")
         spectral_margin = payload.get("spectral_margin")
+        loaded_skills = payload.get("loaded_skills", [])
 
         system_content = _build_system_content(
             identity,
             self._registry,
             attractor_window=attractor_window,
-            spectral_margin=spectral_margin
+            spectral_margin=spectral_margin,
+            loaded_skills=loaded_skills,
         )
 
         # Inject Tension Resolution Directive if coherence overload
@@ -182,6 +184,7 @@ def _build_system_content(
     registry: SkillRegistry,
     attractor_window: list[dict] | None = None,
     spectral_margin: list[dict] | None = None,
+    loaded_skills: list[dict] | None = None,
 ) -> str:
     persona = identity.get("personality", {})
     parts: list[str] = []
@@ -210,16 +213,30 @@ def _build_system_content(
         for exp in expertise:
             parts.append(f"  - {exp['domain']} ({exp['level']}): {exp['description']}")
 
+    # Baseline Dispositions (Always-Active Skills)
+    skills_cfg = identity.get("skills", {})
+    always_active = skills_cfg.get("always_active", [])
+    if always_active:
+        parts.append("\n## Baseline Dispositions (Always Active)")
+        for skill in always_active:
+            parts.append(f"  - {skill['id']}: {skill['statement']}")
+
     # Output dynamic beliefs attractor window if supplied
     if attractor_window is not None:
         parts.append("\nCore Active Beliefs (Attractor Window):")
         for item in attractor_window:
-            parts.append(f"  - Slot {item['slot']}: [{item['confidence']:.2f}] {item['statement']} (Ontological Mass: {item['mass']:.1f})")
+            origin_tag = ""
+            if item.get("origin") == "skill":
+                origin_tag = " [procedural]"
+            parts.append(f"  - Slot {item['slot']}: [{item['confidence']:.2f}] {item['statement']} (Ontological Mass: {item['mass']:.1f}){origin_tag}")
 
         if spectral_margin:
             parts.append("\nCollapsed Beliefs (Spectral Margin - Obsessive Ghosts):")
             for item in spectral_margin:
-                parts.append(f"  - [{item['confidence']:.2f}] {item['statement']} (origin: collapsed)")
+                origin_tag = ""
+                if item.get("origin") == "skill":
+                    origin_tag = " [collapsed skill]"
+                parts.append(f"  - [{item['confidence']:.2f}] {item['statement']} (origin: collapsed){origin_tag}")
     else:
         beliefs = persona.get("beliefs", [])
         if beliefs:
@@ -233,8 +250,24 @@ def _build_system_content(
         for situation, response in behaviors.items():
             parts.append(f"  - {situation}: {response}")
 
-    skills_desc = registry.describe_skills()
-    if skills_desc:
-        parts.append(f"\n{skills_desc}")
+    # Active Procedural Skills (Auto-Loaded This Turn)
+    if loaded_skills:
+        parts.append("\n## Active Procedural Skills (Loaded This Turn)")
+        for skill in loaded_skills:
+            reason = skill.get("match_reason", "explicit")
+            content = skill.get("content_truncated", skill.get("content", ""))
+            parts.append(f"\n### {skill['name']}")
+            if reason:
+                parts.append(f"  Loaded because: {reason}")
+            parts.append(f"  {content}")
+
+    # Available Capabilities (On-Demand Skills)
+    on_demand = skills_cfg.get("on_demand", [])
+    if on_demand:
+        parts.append("\n## Available Capabilities (On-Demand)")
+        parts.append("Call load_skill(name) to load full instructions.")
+        for skill in on_demand:
+            desc = skill.get("description", "")
+            parts.append(f"  - {skill['id']}: {desc}")
 
     return "\n".join(parts)

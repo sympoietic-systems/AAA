@@ -417,6 +417,12 @@ async def lifespan(app: FastAPI):
     )
     modules["prompt_assembler"] = prompt_assembler
 
+    # 6b. Skill activator
+    from backend.modules.skill_activator import SkillActivatorModule
+    skill_activator = SkillActivatorModule()
+    skill_activator.set_repos(repos["skill_repo"], repos["belief_repo"])
+    modules["skill_activator"] = skill_activator
+
     # 7. Register skills
     _register_skills(registry, embedder, modules, belief_metabolism, llm_module)
 

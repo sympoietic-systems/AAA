@@ -48,6 +48,7 @@ pipeline:
     - sedimentation_retrieval
     - diffractive_retrieval
     - belief_metabolism
+    - skill_activator
     - prompt_assembler
     - homeostatic_regulator
     - llm_client
