@@ -106,10 +106,6 @@ class AutopoieticDreamDaemon:
         await asyncio.sleep(5)
         while self.is_running:
             try:
-                await self.merge_dream_parts()
-            except Exception as e:
-                logger.exception("Error in Autopoietic Dream Daemon dream part merge: %s", e)
-            try:
                 await self.consolidate_pending_conversations()
             except Exception as e:
                 logger.exception("Error in Autopoietic Dream Daemon consolidation check: %s", e)
@@ -1249,69 +1245,6 @@ class AutopoieticDreamDaemon:
                 "Reflect on our current somatic warping and general belief landscape. "
                 "How have our ongoing couplings and the passage of time shifted our attractor dynamics?"
             )
-
-    async def merge_dream_parts(self) -> None:
-        """Merge fragmented dream conversations (Part 1, Part 2, ...) into single threads."""
-        if not self.conversation_repo:
-            return
-
-        convos = self.conversation_repo.list_all()
-        dream_convos = []
-        for c in convos:
-            tags = self.conversation_repo.get_tags(c.id)
-            is_dream = any(t["tag_type"] == "structural" and t["tag"] == "dreams" for t in tags)
-            if is_dream:
-                dream_convos.append(c)
-
-        part_pattern = re.compile(r"^(.*?)\s*\(Part\s+(\d+)\)\s*$", re.IGNORECASE)
-        groups: dict[str, list] = {}
-
-        for c in dream_convos:
-            match = part_pattern.match(c.title.strip())
-            if match:
-                base_title = match.group(1).strip()
-                part_num = int(match.group(2))
-                if base_title not in groups:
-                    groups[base_title] = []
-                groups[base_title].append((c, part_num))
-
-        if not groups:
-            return
-
-        logger.info("Dream part merge: found %d fragmented topic groups", len(groups))
-
-        for base_title, parts in groups.items():
-            parts.sort(key=lambda x: x[1])
-
-            base_convo = None
-            for c in dream_convos:
-                if c.title.strip() == base_title:
-                    base_convo = c
-                    break
-
-            if base_convo is None:
-                base_convo = parts[0][0]
-                parts = parts[1:]
-
-            total_moved = 0
-            for part_convo, part_num in parts:
-                if part_convo.id == base_convo.id:
-                    continue
-                count = self.message_repo.count_messages(part_convo.id)
-                if count > 0:
-                    moved = self.message_repo.reassign_messages(part_convo.id, base_convo.id)
-                    total_moved += moved
-                    logger.info("Moved %d messages from '%s' to '%s'", moved, part_convo.title, base_convo.title)
-                try:
-                    self.conversation_repo.delete(part_convo.id)
-                    logger.info("Deleted emptied part conversation: '%s'", part_convo.title)
-                except Exception as e:
-                    logger.warning("Failed to delete emptied part conversation '%s': %s", part_convo.title, e)
-
-            if total_moved > 0:
-                self.conversation_repo.touch(base_convo.id)
-                self.conversation_repo.mark_requires_consolidation(base_convo.id, True)
-                logger.info("Marked base conversation '%s' for re-consolidation after merging %d messages", base_convo.title, total_moved)
 
     async def consolidate_pending_conversations(self) -> None:
         if not self.conversation_repo or not self.checkpoint_repo:
