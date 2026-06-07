@@ -280,7 +280,7 @@ class SkillWorkshopModule(ProcessingModule):
                         agent_id="symbia",
                         label=f"skill:{skill.name}",
                         statement=skill.short_content or skill.description,
-                        origin="skill",
+                        origin="emergent",
                         confidence=skill.confidence,
                         ontological_mass=1.0,
                         somatic_anchor="conceptual",

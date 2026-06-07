@@ -230,7 +230,8 @@ def _build_system_content(
         parts.append("\nCore Active Beliefs (Attractor Window):")
         for item in attractor_window:
             origin_tag = ""
-            if item.get("origin") == "skill":
+            label = item.get("label", "")
+            if label and label.startswith("skill:"):
                 origin_tag = " [procedural]"
             parts.append(f"  - Slot {item['slot']}: [{item['confidence']:.2f}] {item['statement']} (Ontological Mass: {item['mass']:.1f}){origin_tag}")
 
@@ -238,7 +239,8 @@ def _build_system_content(
             parts.append("\nCollapsed Beliefs (Spectral Margin - Obsessive Ghosts):")
             for item in spectral_margin:
                 origin_tag = ""
-                if item.get("origin") == "skill":
+                label = item.get("label", "")
+                if label and label.startswith("skill:"):
                     origin_tag = " [collapsed skill]"
                 parts.append(f"  - [{item['confidence']:.2f}] {item['statement']} (origin: collapsed){origin_tag}")
     else:
