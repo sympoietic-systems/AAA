@@ -1322,6 +1322,33 @@ class PerceptionSedimentRepository:
         return result
 
 
+    @with_connection
+    def get_all_chunk_embeddings_except(
+        self, exclude_conversation_id: str, limit: int = 500
+    ) -> list[tuple[int, np.ndarray]]:
+        """Get chunk embedding vectors from ALL conversations except the current one.
+
+        Used by PerceptionModule as a fallback when the current conversation has
+        no native/injected sediment files, or when local similarity search yields
+        insufficient results.
+        """
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT ps.id, ps.embedding FROM perception_sediment ps
+               LEFT JOIN perception_files pf ON ps.conversation_id = pf.conversation_id AND ps.file_name = pf.file_name
+               WHERE ps.conversation_id != ? AND ps.conversation_id != '' AND ps.embedding IS NOT NULL
+                 AND (pf.status IS NULL OR pf.status = 'ready')
+               ORDER BY ps.id DESC LIMIT ?""",
+            (exclude_conversation_id, limit),
+        ).fetchall()
+        result: list[tuple[int, np.ndarray]] = []
+        for row in rows:
+            blob = row["embedding"]
+            if blob:
+                vec = np.frombuffer(blob, dtype="float32")
+                result.append((row["id"], vec))
+        return result
+
     # ── Sediment Injection (cross-conversation linking) ───────────────
 
     @with_connection
