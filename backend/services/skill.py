@@ -150,7 +150,9 @@ class SkillService:
                 except Exception as e:
                     logger.warning("Failed to compute vector for skill %s: %s", name, e)
 
-            content = self._generate_skill_content(name, description, is_always_active=False)
+            content = skill_def.get("content", "")
+            if not content:
+                content = self._generate_skill_content(name, description, is_always_active=False)
 
             skill_repo.create_skill(
                 id=skill_id,
