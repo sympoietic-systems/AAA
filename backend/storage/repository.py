@@ -1898,14 +1898,17 @@ class BeliefRepository:
         impact: float,
         rationale: Optional[str],
     ) -> None:
-        conn = self._conn()
-        conn.execute(
-            """INSERT INTO belief_events
-               (id, belief_id, source_type, source_id, alignment_coefficient, perturbation_magnitude, event_type, impact_score, rationale)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (event_id, belief_id, source_type, source_id, alignment, perturbation, event_type, impact, rationale),
-        )
-        conn.commit()
+        try:
+            conn = self._conn()
+            conn.execute(
+                """INSERT INTO belief_events
+                   (id, belief_id, source_type, source_id, alignment_coefficient, perturbation_magnitude, event_type, impact_score, rationale)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (event_id, belief_id, source_type, source_id, alignment, perturbation, event_type, impact, rationale),
+            )
+            conn.commit()
+        except Exception:
+            pass
 
     @with_connection
     def get_events_for_belief(self, belief_id: str, limit: int = 20) -> list[BeliefEvent]:

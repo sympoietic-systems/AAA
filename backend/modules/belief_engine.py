@@ -502,13 +502,21 @@ class BeliefDynamicsEngine(ProcessingModule):
                 user_sig_bytes = await self._ensure_signature(user_msg, user_sig_bytes)
                 assistant_sig_bytes = await self._ensure_signature(assistant_msg, assistant_sig_bytes)
                 if not user_sig_bytes or not assistant_sig_bytes:
-                    logger.warning("Structural signatures could not be computed. Skipping metabolism.")
+                    logger.warning("Structural signatures could not be computed. Marking as metabolized to avoid retry loop.")
+                    try:
+                        self._message_repo.mark_message_metabolized(user_message_id)
+                    except Exception as e:
+                        logger.warning("Failed to mark message %d as metabolized: %s", user_message_id, e)
                     return
 
             user_vec = np.frombuffer(user_sig_bytes, dtype=np.float32)
             assistant_vec = np.frombuffer(assistant_sig_bytes, dtype=np.float32)
             if len(user_vec) != 16 or len(assistant_vec) != 16:
-                logger.warning("Incorrect structural vector dimensions. Skipping.")
+                logger.warning("Incorrect structural vector dimensions. Marking as metabolized to avoid retry loop.")
+                try:
+                    self._message_repo.mark_message_metabolized(user_message_id)
+                except Exception as e:
+                    logger.warning("Failed to mark message %d as metabolized: %s", user_message_id, e)
                 return
 
             agent_id = user_msg.agent_id if user_msg.agent_id else "symbia"
