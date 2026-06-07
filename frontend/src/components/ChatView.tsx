@@ -270,53 +270,56 @@ export function ChatView({
           </p>
         </div>
       ) : (
-        <Virtuoso
-          ref={virtuosoRef}
-          firstItemIndex={firstItemIndex}
-          initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
-          data={messages}
-          startReached={handleStartReached}
-          followOutput={atBottom ? "smooth" : false}
-          atBottomStateChange={setAtBottom}
-          style={{ flex: 1, overflowX: "hidden" }}
-          className="px-4"
-          components={{
-            Header: () =>
-              loadingMore ? (
-                <div className="flex justify-center items-center py-2 text-xs text-[#555] border-b border-[#1a1a1a] mb-4">
-                  <span className="animate-pulse">Loading previous messages...</span>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <Virtuoso
+            ref={virtuosoRef}
+            firstItemIndex={firstItemIndex}
+            initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
+            data={messages}
+            startReached={handleStartReached}
+            followOutput={atBottom ? "smooth" : false}
+            atBottomStateChange={setAtBottom}
+            style={{ minHeight: 0 }}
+            components={{
+              Header: () =>
+                loadingMore ? (
+                  <div className="flex justify-center items-center pt-4 pb-2 text-xs text-[#555] border-b border-[#1a1a1a] mb-4">
+                    <span className="animate-pulse">Loading previous messages...</span>
+                  </div>
+                ) : null,
+              Footer: () =>
+                loading ? (
+                  <div className="flex items-center gap-2 pt-2 pb-4 text-[#4ade80]">
+                    <span className="animate-pulse">&block;</span>
+                  </div>
+                ) : null,
+              EmptyPlaceholder: () =>
+                !loading ? (
+                  <div className="text-[#555] text-sm pt-20 text-center">
+                    <p>{agentName} v0.1.0 &mdash; type a message below.</p>
+                  </div>
+                ) : null,
+            }}
+            itemContent={(_, msg) => {
+              const idx = messages.indexOf(msg)
+              const prevMsg = idx > 0 ? messages[idx - 1] : null
+              const msgNotes = getMsgNotes(msg)
+              return (
+                <div className="px-4 min-w-0">
+                  <MessageBubble
+                    key={msg.id}
+                    msg={msg}
+                    previousSignature={prevMsg?.structural_signature}
+                    notes={msgNotes}
+                    onAddNote={onAddNote}
+                    onDeleteNote={onDeleteNote}
+                    onUpdateNote={onUpdateNote}
+                  />
                 </div>
-              ) : null,
-            Footer: () =>
-              loading ? (
-                <div className="flex items-center gap-2 py-1 text-[#4ade80]">
-                  <span className="animate-pulse">&block;</span>
-                </div>
-              ) : null,
-            EmptyPlaceholder: () =>
-              !loading ? (
-                <div className="text-[#555] text-sm mt-20 text-center">
-                  <p>{agentName} v0.1.0 &mdash; type a message below.</p>
-                </div>
-              ) : null,
-          }}
-          itemContent={(_, msg) => {
-            const idx = messages.indexOf(msg)
-            const prevMsg = idx > 0 ? messages[idx - 1] : null
-            const msgNotes = getMsgNotes(msg)
-            return (
-              <MessageBubble
-                key={msg.id}
-                msg={msg}
-                previousSignature={prevMsg?.structural_signature}
-                notes={msgNotes}
-                onAddNote={onAddNote}
-                onDeleteNote={onDeleteNote}
-                onUpdateNote={onUpdateNote}
-              />
-            )
+              )
           }}
         />
+        </div>
       )}
 
       {error && (

@@ -102,3 +102,8 @@ th, td {
 th {
   background: #141414;
 }
+
+/* Prevent Virtuoso internal scroller from horizontal overflow */
+[data-virtuoso-scroller] {
+  overflow-x: hidden !important;
+}
