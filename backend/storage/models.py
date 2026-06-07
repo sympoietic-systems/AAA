@@ -170,6 +170,39 @@ class EcosystemSnapshot:
 
 
 @dataclass
+class SkillNode:
+    id: str
+    name: str
+    description: str
+    content: str
+    short_content: str = ""
+    always_active: bool = False
+    trigger_keywords: str = "[]"
+    lifecycle_stage: str = "nucleation"
+    confidence: float = 0.0
+    ontological_mass: float = 0.05
+    vector_16d: str = "[]"
+    source: str = "authored"
+    version: int = 1
+    changelog: str = ""
+    attunement_notes: str = "[]"
+    last_used_at: Optional[datetime] = None
+    created_at: datetime = datetime.min
+    updated_at: datetime = datetime.min
+
+
+@dataclass
+class SkillEvent:
+    id: str
+    skill_id: str
+    event_type: str
+    source_type: str = ""
+    rationale: str = ""
+    annotation: str = ""
+    created_at: datetime = datetime.min
+
+
+@dataclass
 class SemanticKnot:
     id: str
     conversation_id: str

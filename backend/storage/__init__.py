@@ -10,6 +10,8 @@ from backend.storage.models import (
     MetricsRecord,
     PerceptionSediment,
     SemanticKnot,
+    SkillEvent,
+    SkillNode,
 )
 from backend.storage.repositories import (
     BeliefRepository,
@@ -22,4 +24,5 @@ from backend.storage.repositories import (
     NoteRepository,
     PerceptionSedimentRepository,
     SemanticKnotRepository,
+    SkillRepository,
 )

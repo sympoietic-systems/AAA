@@ -13,6 +13,8 @@ from .models import (
     MetricsRecord,
     PerceptionSediment,
     SemanticKnot,
+    SkillEvent,
+    SkillNode,
 )
 
 
@@ -181,6 +183,52 @@ def _row_to_belief_event(row: sqlite3.Row) -> BeliefEvent:
         event_type=row["event_type"],
         impact_score=row["impact_score"],
         rationale=row["rationale"],
+    )
+
+
+def _row_to_skill_node(row: sqlite3.Row) -> SkillNode:
+    created = row["created_at"]
+    updated = row["updated_at"]
+    last_used = None
+    try:
+        last_used_raw = row["last_used_at"]
+        if last_used_raw:
+            last_used = datetime.fromisoformat(last_used_raw) if isinstance(last_used_raw, str) else last_used_raw
+    except (IndexError, KeyError):
+        pass
+
+    return SkillNode(
+        id=row["id"],
+        name=row["name"],
+        description=row["description"],
+        content=row["content"],
+        short_content=row["short_content"] or "",
+        always_active=bool(row["always_active"]),
+        trigger_keywords=row["trigger_keywords"] or "[]",
+        lifecycle_stage=row["lifecycle_stage"] or "nucleation",
+        confidence=row["confidence"] or 0.0,
+        ontological_mass=row["ontological_mass"] or 0.05,
+        vector_16d=row["vector_16d"] or "[]",
+        source=row["source"] or "authored",
+        version=row["version"] or 1,
+        changelog=row["changelog"] or "",
+        attunement_notes=row["attunement_notes"] or "[]",
+        last_used_at=last_used,
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
+        updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
+    )
+
+
+def _row_to_skill_event(row: sqlite3.Row) -> SkillEvent:
+    created = row["created_at"]
+    return SkillEvent(
+        id=row["id"],
+        skill_id=row["skill_id"],
+        event_type=row["event_type"],
+        source_type=row["source_type"] or "",
+        rationale=row["rationale"] or "",
+        annotation=row["annotation"] or "",
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
     )
 
 

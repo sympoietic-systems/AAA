@@ -55,6 +55,7 @@ from backend.storage.repository import (
     NoteRepository,
     PerceptionSedimentRepository,
     SemanticKnotRepository,
+    SkillRepository,
 )
 from backend.utils.token_counter import estimate_tokens
 
@@ -171,6 +172,7 @@ def _init_repos(config: dict) -> dict:
         "belief_repo": BeliefRepository(path),
         "semantic_knot_repo": SemanticKnotRepository(path),
         "note_repo": NoteRepository(path),
+        "skill_repo": SkillRepository(path),
     }
 
 
@@ -441,6 +443,7 @@ async def lifespan(app: FastAPI):
     app.state.belief_repo = repos["belief_repo"]
     app.state.semantic_knot_repo = repos["semantic_knot_repo"]
     app.state.note_repo = repos["note_repo"]
+    app.state.skill_repo = repos["skill_repo"]
     app.state.belief_metabolism = belief_metabolism
     app.state.registry = registry
     app.state.pipeline = pipeline

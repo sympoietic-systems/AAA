@@ -21,6 +21,8 @@ from backend.storage.row_mappers import (
     _row_to_metrics,
     _row_to_perception_sediment,
     _row_to_semantic_knot,
+    _row_to_skill_event,
+    _row_to_skill_node,
 )
 from backend.storage.repositories import (
     BeliefRepository,
@@ -33,6 +35,7 @@ from backend.storage.repositories import (
     NoteRepository,
     PerceptionSedimentRepository,
     SemanticKnotRepository,
+    SkillRepository,
 )
 
 __all__ = [
@@ -57,4 +60,5 @@ __all__ = [
     "BeliefRepository",
     "SemanticKnotRepository",
     "NoteRepository",
+    "SkillRepository",
 ]
