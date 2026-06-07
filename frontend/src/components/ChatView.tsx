@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react"
-import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
+import { Virtuoso } from "react-virtuoso"
+import type { VirtuosoHandle } from "react-virtuoso"
 import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
