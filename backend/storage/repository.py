@@ -706,6 +706,16 @@ class MessageRepository:
         return [dict(r) for r in rows]
 
     @with_connection
+    def reassign_messages(self, from_conversation_id: str, to_conversation_id: str) -> int:
+        conn = self._conn()
+        cursor = conn.execute(
+            "UPDATE conversation_log SET conversation_id = ? WHERE conversation_id = ?",
+            (to_conversation_id, from_conversation_id),
+        )
+        conn.commit()
+        return cursor.rowcount
+
+    @with_connection
     def increment_message_note_count(self, message_id: int, amount: int = 1) -> None:
         conn = self._conn()
         conn.execute(
