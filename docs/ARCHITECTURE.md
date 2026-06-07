@@ -300,7 +300,7 @@ row at insert time. System prompt token count computed once at startup
 
 ### Display
 - **SidePanel**: "Tokens" section with system prompt, per-conversation
-  breakdown (usr/agt/thk totals), grand total. Polls `/api/tokens` every 5s.
+  breakdown (usr/agt/thk totals), grand total. Polls via consolidated telemetry loop every 15s.
 - **MessageBubble**: Each message shows `~N tok` (and `+ N thk` for thinking)
   in subdued text.
 - **API**: `GET /api/tokens` returns breakdown per conversation or filtered.
@@ -467,16 +467,18 @@ AAA/
 │   └── src/
 │       ├── api/client.ts     Backend API calls (chat, history, conversations, tokens, metrics, skills)
 │       ├── hooks/
-│       │   ├── useChat.ts    Chat state (scoped to conversationId)
-│       │   └── useConversations.ts  Conversation list + active ID state
+│       │   ├── useChat.ts               Chat state (message pagination, send, files)
+│       │   ├── useConversations.ts       Conversation list with 30s polling + visibility refresh
+│       │   ├── useTelemetry.ts           Side panel consolidated polling loop (15s tick)
+│       │   └── useNotes.ts               Notes CRUD with message-synced refresh
 │       └── components/
-│           ├── App.tsx           Three-column layout
-│           ├── ConversationList.tsx  Collapsible left sidebar
-│           ├── ChatView.tsx      Main chat container
-│           ├── SidePanel.tsx     Foldable vitality/beliefs/diffraction/dreaming/tokens/pipeline panel
-│           ├── MessageBubble.tsx Markdown + thinking + token counts + structural glyph + debug panels
-│           ├── StructuralAutopoieticGlyph.tsx  16-dim radar/bar visualization of cybernetic signature
-│           └── InputBar.tsx      Terminal prompt input
+│           ├── App.tsx                    Three-column layout with resize handles
+│           ├── ConversationList.tsx       Collapsible left sidebar with 30s auto-refresh
+│           ├── ChatView.tsx               Virtual-scrolled message list (react-virtuoso)
+│           ├── SidePanel.tsx              Foldable vitality/beliefs/diffraction/dreaming/tokens panel
+│           ├── MessageBubble.tsx          Markdown + thinking + tokens + glyph + notes + selection toolbar
+│           ├── StructuralAutopoieticGlyph.tsx  16-dim radar/bar visualization
+│           └── InputBar.tsx               Terminal prompt input
 ├── docs/
 │   ├── TDD.md                Technical Design Document
 │   ├── Implementation.md     Phase 1–4 roadmap

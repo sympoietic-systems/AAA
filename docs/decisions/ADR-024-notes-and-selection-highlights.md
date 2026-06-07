@@ -68,3 +68,22 @@ Symbia views the notes system as a **diffractive interface** and an **agential c
 
 ### What becomes harder?
 *   Text alignment and rendering becomes more complex, as matching identical substring notes in a message requires precise unique index mapping (e.g. tag index tracking) to avoid highlights shifting to duplicate phrases in the same bubble.
+
+## Update (2026-06-07): Floating Selection Toolbar
+
+The original design opened the full note creator popup immediately on `mouseup` with a text selection. This caused the browser to clear the underlying text selection when the user interacted with the popup, preventing natural copy-paste workflows (Ctrl+C would not work once the popup appeared).
+
+### Two-Phase Selection UX
+
+1. **Floating Toolbar** (Phase 1): On text selection, a minimal floating toolbar appears near the selection end with two buttons:
+   - **Copy** — calls `navigator.clipboard.writeText(selectedText)`, shows "Copied!" feedback for 800ms, then dismisses. The browser's native selection remains intact throughout.
+   - **Note** — dismisses the toolbar and opens the full note creator popup.
+   - The toolbar has a transparent backdrop overlay — clicking outside dismisses the toolbar **without** clearing the selection (Ctrl+C still works).
+
+2. **Note Creator Popup** (Phase 2): Same as the original design — visibility toggle (Personal/Shared), comment textarea, and Save/Cancel/Delete actions. Opens when "Note" is clicked in the toolbar or directly when editing an existing note.
+
+### Keyboard Dismissal
+- **Escape key** added as a global listener (via `useEffect` + `keydown`):
+  - In toolbar mode: dismisses the toolbar, preserves selection.
+  - In popup mode: dismisses popup, clears selection and state.
+

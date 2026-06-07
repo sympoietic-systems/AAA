@@ -55,3 +55,30 @@ We decided to implement **Option B** for all three areas:
 *   **Responsiveness:** Typing lag and scroll stuttering are completely eliminated. React ignores old message bubbles when homeostatic metrics are polled or updated.
 *   **Reduced Bandwidth & Connection Time:** Typical conversation payload size drops from megabytes of hidden thinking logs to a few kilobytes of text.
 *   **UI Experience:** When scrolling up, previous message chunks load seamlessly and are prepended without throwing the scrollbar position off-course. Collapsed nodes are cleanly pruned from the DOM.
+
+## Update (2026-06-07): Virtual Scrolling & Memory Caps
+
+The incremental pagination approach was sufficient for short conversations but exhibited DOM bloat with 100+ messages — every loaded message remained mounted in the DOM. A three-phase optimization was applied:
+
+### Phase 2a: Pagination Tuning
+- **`PAGE_SIZE`** increased from `3` → `50` to reduce incremental load frequency.
+- **`refreshMessages`** fixed to use constant `PAGE_SIZE` instead of `messages.length`, preventing re-fetch of entire history after note CRUD operations.
+
+### Phase 2b: Virtual Scrolling (`react-virtuoso`)
+- Replaced the manual `<div onScroll>` container + `scrollIntoView` anchoring with `<Virtuoso>`.
+- **`firstItemIndex`** with high base offset (100000) enables seamless prepending without scroll jump.
+- **`startReached`** callback triggers `loadMoreMessages` when the user scrolls to the top — no more `scrollTop` threshold hacks.
+- **`followOutput`** with `atBottomStateChange` handles auto-scroll-to-bottom for new messages; pauses when the user scrolls up.
+- Only ~10–20 messages renders to DOM at any time (viewport windowing), regardless of conversation length.
+
+### Phase 2c: In-Memory Message Cap
+- **`MAX_MESSAGES = 500`** enforced across all `setMessages` call sites (`send`, `loadMoreMessages`, `refreshMessages`, file polling).
+- When loading older messages pushes past the cap, oldest messages are evicted from state.
+- Acts as a safety net for extremely long conversations even with virtualization.
+
+### Note Navigation
+- The notes sidebar no longer relies on `document.getElementById().scrollIntoView()`. Instead:
+  - `ChatView` exposes `scrollToNoteRef` via `useRef` — a callback `(noteId: string) => void`.
+  - `NotesSection` calls `scrollToNoteRef.current(noteId)` on click.
+  - Internally maps `note_id → message index → virtuosoRef.scrollToIndex({ index, align: "center" })`.
+  - After the scroll, a delayed `click()` on the highlight element opens the edit/delete popover.

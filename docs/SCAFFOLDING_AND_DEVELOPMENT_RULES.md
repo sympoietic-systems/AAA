@@ -35,10 +35,15 @@ AAA/
     ├── src/
     │   ├── api/                # Axios instances & API request definitions
     │   ├── components/         # Reusable React components
-    │   │   ├── ChatView.tsx    # Scrollable chat window and status indicators
-    │   │   ├── SidePanel.tsx   # Control interface for somatic meters & logs
-    │   │   └── ...             # Visual elements and SVGs
-    │   ├── hooks/              # Custom React hooks (polling, scroll containment)
+    │   │   ├── ChatView.tsx    # Virtual-scrolled chat (react-virtuoso)
+    │   │   ├── MessageBubble.tsx # Markdown + notes + selection toolbar
+    │   │   ├── SidePanel.tsx   # Telemetry, notes, sediment, tokens
+    │   │   └── sidepanel/      # Side panel sub-components
+    │   ├── hooks/              # Custom React hooks (virtual scrolling, polling, notes)
+    │   │   ├── useChat.ts               # Chat state + 500-message cap + files
+    │   │   ├── useConversations.ts       # 30s polling + visibility refresh
+    │   │   ├── useTelemetry.ts           # Consolidated side panel tick loop (15s)
+    │   │   └── useNotes.ts               # Notes CRUD + refresh sync
     │   ├── App.tsx             # Root layout and context propagation
     │   ├── index.css           # Global themes & Tailwind CSS directives
     │   └── main.tsx            # React application entry point
@@ -107,8 +112,8 @@ class CustomAnalysisModule(ProcessingModule):
 ## 3. Frontend Scaffolding Rules
 
 ### 3.1. Directory Conventions
-*   `frontend/src/components/`: Modular UI widgets. Break large elements (like SidePanel or ChatView) into sub-components (e.g. `BeliefAttractorCard`, `SomaticMeter`) when they exceed 1000 lines of code.
-*   `frontend/src/hooks/`: Move persistent side effects, polling routines, and layout calculations (such as automatic message window scrolling) into clean custom hooks.
+*   `frontend/src/components/`: Modular UI widgets. Break large elements (like SidePanel or ChatView) into sub-components (e.g. `BeliefAttractorCard`, `SomaticMeter`) when they exceed 1000 lines of code. Message list rendering uses `react-virtuoso` for DOM windowing — only visible messages render to the DOM.
+*   `frontend/src/hooks/`: Move persistent side effects, polling routines, and layout calculations (such as automatic message window scrolling via virtualized refs) into clean custom hooks. The consolidated telemetry loop in `useTelemetry.ts` batches all side-panel API calls into a single 15s tick.
 *   `frontend/src/api/`: All network queries should be located here. Do not make raw fetch/axios calls directly inside visual render components.
 
 ### 3.2. Styling & Theme System
