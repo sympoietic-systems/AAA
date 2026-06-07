@@ -1,27 +1,34 @@
 """
 Backward-compatibility re-exports for the routes package.
 
-All route endpoints are now in individual files under backend/api/routes/.
-The main router is at backend/api/router.py.
-These re-exports preserve existing imports like:
+Business logic has moved to backend/services/. These re-exports preserve
+existing imports like:
     from backend.api.routes import _process_and_summarize_file
 """
 
-from backend.api.routes.files import (
-    _insert_system_message,
-    _process_and_summarize_file,
-    _reprocess_and_summarize_file_background,
-    _run_digest_worker_subprocess,
-)
-from backend.api.routes.chat import (
-    _build_metrics_info,
-    _build_recommendations,
-    _generate_title,
-    _generate_title_from_conversation,
-    _fire_and_forget_consolidation,
-    _fire_and_forget_semantic_knot_compaction,
-    _store_metrics,
-)
+from backend.services.chat import ChatService
+from backend.services.consolidation import ConsolidationService
+from backend.services.file import FileService
+from backend.services.metrics import MetricsService
+from backend.services.note import NoteService
+from backend.services.semantic_knot import SemanticKnotService
+from backend.services.title import TitleService
+
+# Re-export with original names for backward compat
+_process_and_summarize_file = FileService.process_and_summarize
+_reprocess_and_summarize_file_background = FileService.reprocess_and_summarize
+_run_digest_worker_subprocess = FileService.run_digest_worker
+_insert_system_message = None  # moved internally, kept in files.py
+
+# These are provided by the ChatService via static methods
+_fire_and_forget_semantic_knot_compaction = SemanticKnotService.fire_and_forget
+_fire_and_forget_consolidation = ConsolidationService.fire_and_forget
+_store_metrics = MetricsService.store
+_build_metrics_info = MetricsService.build_info
+_build_recommendations = MetricsService.build_recommendations
+_generate_title = TitleService.generate
+_generate_title_from_conversation = TitleService.generate_from_conversation
+
 from backend.api.helpers import (
     _build_response_attachments,
     _ensure_structural_tags,

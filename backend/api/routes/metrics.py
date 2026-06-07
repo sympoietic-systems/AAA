@@ -7,18 +7,9 @@ from backend.api.schemas import (
     MetricsInfo,
     MetricsResponse,
 )
+from backend.services.metrics import MetricsService
 
 router = APIRouter()
-
-
-def _parse_phase_shifts(raw: str | None) -> list[dict] | None:
-    if not raw:
-        return None
-    import json as _json
-    try:
-        return _json.loads(raw)
-    except Exception:
-        return None
 
 
 @router.get("/metrics", response_model=MetricsResponse)
@@ -49,7 +40,7 @@ async def get_metrics(request: Request, window: int = 20):
             conceptual_velocity=latest.conceptual_velocity,
             divergence_resolution_ratio=latest.divergence_resolution_ratio,
             paskian_health=latest.paskian_health,
-            phase_shifts=_parse_phase_shifts(latest.phase_shifts),
+            phase_shifts=MetricsService.parse_phase_shifts(latest.phase_shifts),
         )
         temp_rec = None
         pres_rec = None
@@ -70,26 +61,15 @@ async def get_metrics(request: Request, window: int = 20):
     raw_diff = getattr(state, "latest_diffractive_meta", None)
     if not raw_diff:
         raw_diff = {
-            "state": "FLOWING",
-            "previous_state": "FLOWING",
-            "p_diffract": 0.0,
-            "stagnation_index": 0.0,
-            "r_context": 0.20,
-            "dynamic_max": 0,
-            "cohesion_timer": 0,
-            "similarity_range_memory": [0.45, 0.85],
-            "similarity_range_files": [0.35, 0.75],
-            "candidates_searched": 0,
-            "items_injected": 0,
-            "tokens_used": 0,
-            "token_budget": 0,
-            "duration_ms": 0.0,
-            "sources": [],
+            "state": "FLOWING", "previous_state": "FLOWING", "p_diffract": 0.0,
+            "stagnation_index": 0.0, "r_context": 0.20, "dynamic_max": 0,
+            "cohesion_timer": 0, "similarity_range_memory": [0.45, 0.85],
+            "similarity_range_files": [0.35, 0.75], "candidates_searched": 0,
+            "items_injected": 0, "tokens_used": 0, "token_budget": 0,
+            "duration_ms": 0.0, "sources": [],
         }
 
-    diff_sources = [
-        DiffractiveSourceInfo(**s) for s in raw_diff.get("sources", [])
-    ]
+    diff_sources = [DiffractiveSourceInfo(**s) for s in raw_diff.get("sources", [])]
     diff_info = DiffractiveInfo(
         state=raw_diff.get("state", "FLOWING"),
         previous_state=raw_diff.get("previous_state", "FLOWING"),

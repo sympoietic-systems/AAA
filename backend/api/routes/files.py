@@ -1,109 +1,14 @@
-import asyncio
 import json
-import logging
 import os
-import sys
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
-from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
-from backend.utils.token_counter import estimate_tokens
+from backend.services.file import FileService
 
 from backend.api.schemas import ConversationFile, ConversationFilesResponse
 
-logger = logging.getLogger(__name__)
-
 router = APIRouter()
-
-
-async def _insert_system_message(state, conversation_id: str, content: str):
-    repo = state.message_repo
-    embedder = state.embedder.service
-    agent_id = getattr(state, "agent_name", "symbia")
-
-    try:
-        embedding_vec = await embedder.encode_async(content)
-        embedding_blob = embedder.serialize(embedding_vec)
-        embedding_dim = len(embedding_vec)
-        embedding_model = embedder.model_name
-    except Exception as e:
-        logger.warning("Failed to generate embedding for system message: %s", e)
-        embedding_blob = b""
-        embedding_dim = 0
-        embedding_model = "none"
-
-    scorer = CompositeStructuralScorer(llm_provider=getattr(state, "structural_provider", None))
-    try:
-        sig_vec = await scorer.score_async(content)
-        sig_blob = sig_vec.tobytes()
-    except Exception as e:
-        logger.warning("Failed to score system message: %s", e)
-        sig_blob = b""
-
-    repo.insert(
-        speaker="system",
-        content=content,
-        embedding=embedding_blob,
-        embedding_model=embedding_model,
-        embedding_dim=embedding_dim,
-        agent_id=agent_id,
-        conversation_id=conversation_id,
-        content_tokens=estimate_tokens(content),
-        structural_signature=sig_blob,
-        structural_justification=get_justification(content),
-    )
-
-
-async def _run_digest_worker_subprocess(conversation_id: str, file_name: str, file_type: str, reprocess: bool = False):
-    cmd = [
-        sys.executable,
-        "-m",
-        "backend.scripts.digest_worker",
-        "--conversation_id", conversation_id,
-        "--file_name", file_name,
-        "--file_type", file_type,
-    ]
-    if reprocess:
-        cmd.append("--reprocess")
-
-    logger.info("Spawning async digest worker subprocess: %s", " ".join(cmd))
-
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            err_msg = stderr.decode('utf-8', errors='replace').strip()
-            logger.error("Digest worker failed with code %d for %s. Stderr:\n%s", proc.returncode, file_name, err_msg)
-        else:
-            out_msg = stdout.decode('utf-8', errors='replace').strip()
-            logger.info("Digest worker completed successfully for %s. Output:\n%s", file_name, out_msg)
-    except Exception as e:
-        logger.exception("Failed to run digest worker subprocess for %s", file_name)
-
-
-async def _process_and_summarize_file(
-    app_state,
-    conversation_id: str,
-    file_name: str,
-    file_type: str,
-    file_content=None,
-):
-    await _run_digest_worker_subprocess(conversation_id, file_name, file_type, reprocess=False)
-
-
-async def _reprocess_and_summarize_file_background(
-    app_state,
-    conversation_id: str,
-    file_name: str,
-    file_type: str,
-):
-    await _run_digest_worker_subprocess(conversation_id, file_name, file_type, reprocess=True)
 
 
 @router.post("/conversations/{conversation_id}/files", response_model=ConversationFilesResponse)
@@ -119,11 +24,11 @@ async def upload_conversation_files(
 
     form = await request.form()
     uploaded_files = form.getlist("files")
-
     if not uploaded_files:
         raise HTTPException(status_code=400, detail="No files uploaded")
 
     if conversation_id == "new" or not conv_repo or not conv_repo.get(conversation_id):
+        import uuid
         conversation_id = str(uuid.uuid4())
         if conv_repo:
             conv_repo.create(conversation_id=conversation_id, agent_id=agent_id)
@@ -139,27 +44,8 @@ async def upload_conversation_files(
         if not hasattr(f, "filename") or not f.filename:
             continue
         file_bytes = await f.read()
-        ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "txt"
-        if ext in ("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"):
-            file_type = "image"
-        elif ext == "pdf":
-            file_type = "pdf"
-        elif ext == "docx":
-            file_type = "docx"
-        elif ext == "md":
-            file_type = "md"
-        elif ext == "epub":
-            file_type = "epub"
-        elif ext == "mobi":
-            file_type = "mobi"
-        else:
-            file_type = "txt"
-
-        upload_dir = os.path.join("backend", "data", "uploads", conversation_id)
-        os.makedirs(upload_dir, exist_ok=True)
-        cached_filepath = os.path.join(upload_dir, f.filename)
-        with open(cached_filepath, "wb") as cache_file:
-            cache_file.write(file_bytes)
+        file_type = FileService.map_extension_to_type(f.filename)
+        FileService.cache_file(conversation_id, f.filename, file_bytes)
 
         perception_repo.create_file(
             conversation_id=conversation_id,
@@ -169,20 +55,15 @@ async def upload_conversation_files(
         )
 
         background_tasks.add_task(
-            _process_and_summarize_file,
-            state,
-            conversation_id,
-            f.filename,
-            file_type,
-            file_bytes,
+            FileService.process_and_summarize,
+            state, conversation_id, f.filename, file_type, file_bytes,
         )
 
         schema_files.append(ConversationFile(
             file_name=f.filename,
             file_type=file_type,
             status="uploading",
-            token_count=0,
-            chunk_count=0,
+            token_count=0, chunk_count=0,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         ))
@@ -194,7 +75,6 @@ async def upload_conversation_files(
 async def get_conversation_files(conversation_id: str, request: Request):
     state = request.app.state
     perception_repo = state.perception_repo
-
     files = perception_repo.get_files_by_conversation(conversation_id)
     schema_files = []
     for f in files:
@@ -207,7 +87,6 @@ async def get_conversation_files(conversation_id: str, request: Request):
                     created_at_dt = datetime.strptime(f["created_at"], "%Y-%m-%d %H:%M:%S")
                 except ValueError:
                     pass
-
         updated_at_dt = None
         if f.get("updated_at"):
             try:
@@ -217,31 +96,25 @@ async def get_conversation_files(conversation_id: str, request: Request):
                     updated_at_dt = datetime.strptime(f["updated_at"], "%Y-%m-%d %H:%M:%S")
                 except ValueError:
                     pass
-
         schema_files.append(ConversationFile(
-            file_name=f["file_name"],
-            file_type=f["file_type"],
-            status=f["status"],
-            summary=None,
-            summary_model=f.get("summary_model"),
-            token_count=f.get("token_count", 0),
-            chunk_count=f.get("chunk_count", 0),
-            created_at=created_at_dt,
-            updated_at=updated_at_dt,
+            file_name=f["file_name"], file_type=f["file_type"], status=f["status"],
+            summary=None, summary_model=f.get("summary_model"),
+            token_count=f.get("token_count", 0), chunk_count=f.get("chunk_count", 0),
+            created_at=created_at_dt, updated_at=updated_at_dt,
         ))
     return ConversationFilesResponse(conversation_id=conversation_id, files=schema_files)
 
 
 @router.delete("/conversations/{conversation_id}/files/{file_name}")
 async def delete_conversation_file(conversation_id: str, file_name: str, request: Request):
+    import logging
+    logger = logging.getLogger(__name__)
     state = request.app.state
     perception_repo = state.perception_repo
-
     files = perception_repo.get_files_by_conversation(conversation_id)
     exists = any(f["file_name"] == file_name for f in files)
     if not exists:
         raise HTTPException(status_code=404, detail="File not found in conversation")
-
     try:
         cached_file = os.path.join("backend", "data", "uploads", conversation_id, file_name)
         if os.path.exists(cached_file):
@@ -251,45 +124,30 @@ async def delete_conversation_file(conversation_id: str, file_name: str, request
             os.rmdir(convo_dir)
     except Exception as e:
         logger.error(f"Failed to delete disk cache file {file_name}: {e}")
-
     perception_repo.delete_file(conversation_id, file_name)
     return {"status": "success"}
 
 
 @router.post("/conversations/{conversation_id}/files/{file_name}/reprocess")
 async def reprocess_conversation_file(
-    conversation_id: str,
-    file_name: str,
-    request: Request,
-    background_tasks: BackgroundTasks,
+    conversation_id: str, file_name: str,
+    request: Request, background_tasks: BackgroundTasks,
 ):
     state = request.app.state
     perception_repo = state.perception_repo
-
     files = perception_repo.get_files_by_conversation(conversation_id)
     target_file = None
     for f in files:
         if f["file_name"] == file_name:
             target_file = f
             break
-
     if not target_file:
         raise HTTPException(status_code=404, detail="File not found in conversation")
-
-    perception_repo.update_file(
-        conversation_id=conversation_id,
-        file_name=file_name,
-        status="processing",
-    )
-
+    perception_repo.update_file(conversation_id=conversation_id, file_name=file_name, status="processing")
     background_tasks.add_task(
-        _reprocess_and_summarize_file_background,
-        state,
-        conversation_id,
-        file_name,
-        target_file["file_type"],
+        FileService.reprocess_and_summarize,
+        state, conversation_id, file_name, target_file["file_type"],
     )
-
     return {"status": "success"}
 
 
@@ -297,14 +155,12 @@ async def reprocess_conversation_file(
 async def get_file_summary_endpoint(conversation_id: str, file_name: str, request: Request):
     state = request.app.state
     perception_repo = state.perception_repo
-
     target_conv_id = conversation_id
     injections = perception_repo.get_injections_for_conversation(conversation_id)
     for inj in injections:
         if inj["source_file_name"] == file_name:
             target_conv_id = inj["source_conversation_id"]
             break
-
     files = perception_repo.get_files_by_conversation(target_conv_id)
     for f in files:
         if f["file_name"] == file_name:
@@ -339,11 +195,9 @@ async def get_file_summary_endpoint(conversation_id: str, file_name: str, reques
 async def get_file_by_name_endpoint(file_name: str, request: Request):
     state = request.app.state
     perception_repo = state.perception_repo
-
     file_info = perception_repo.find_file_by_name(file_name)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
-
     chunks = perception_repo.get_chunks_by_file(file_info["conversation_id"], file_name)
     file_info["chunks"] = chunks
     return file_info

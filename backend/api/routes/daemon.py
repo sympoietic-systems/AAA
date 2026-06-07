@@ -1,25 +1,21 @@
 from fastapi import APIRouter, HTTPException, Request
 
+from backend.services.daemon import DaemonService
+
 router = APIRouter()
 
 
 @router.get("/daemon/status")
 async def get_daemon_status(request: Request):
-    state = request.app.state
-    daemon = getattr(state, "dream_daemon", None)
-    if not daemon:
+    status = DaemonService.get_status(request.app.state)
+    if status is None:
         raise HTTPException(status_code=503, detail="Dream Daemon not initialized")
-    return daemon.get_status()
+    return status
 
 
 @router.post("/daemon/trigger")
 async def trigger_daemon_dream(request: Request):
-    state = request.app.state
-    daemon = getattr(state, "dream_daemon", None)
-    if not daemon:
-        raise HTTPException(status_code=503, detail="Dream Daemon not initialized")
-
-    result = await daemon.check_and_trigger_dream(force=True)
+    result = await DaemonService.trigger(request.app.state)
     if result is None:
-        return {"status": "skipped", "reason": "No active conversation or compilation error"}
-    return {"status": "success", "dream": result}
+        raise HTTPException(status_code=503, detail="Dream Daemon not initialized")
+    return result
