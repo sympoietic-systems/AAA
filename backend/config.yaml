@@ -49,6 +49,7 @@ pipeline:
     - diffractive_retrieval
     - belief_metabolism
     - skill_activator
+    - skill_workshop
     - prompt_assembler
     - homeostatic_regulator
     - llm_client

@@ -423,6 +423,12 @@ async def lifespan(app: FastAPI):
     skill_activator.set_repos(repos["skill_repo"], repos["belief_repo"])
     modules["skill_activator"] = skill_activator
 
+    # 6c. Skill workshop
+    from backend.modules.skill_workshop import SkillWorkshopModule
+    skill_workshop = SkillWorkshopModule()
+    skill_workshop.set_repos(repos["skill_repo"], repos["belief_repo"])
+    modules["skill_workshop"] = skill_workshop
+
     # 7. Register skills
     _register_skills(registry, embedder, modules, belief_metabolism, llm_module)
 

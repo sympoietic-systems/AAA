@@ -72,6 +72,11 @@ def register_all(registry: SkillRegistry, embedder, modules: dict, belief_metabo
         name="skill_activator", description="Auto-loads relevant procedural skills each turn via attractor window resonance, semantic vector matching, and keyword triggers",
         category="reasoning", always_run=True,
     ))
+    reg.register_with_meta("skill_workshop", lambda: modules["skill_workshop"], SkillMeta(
+        name="skill_workshop", description="Propose, revise, review, apply, and reject procedural skills with three-tier approval and diffractive anti-mastery assessment",
+        category="action", always_run=False,
+        triggers=["skill workshop", "create skill", "new skill", "develop skill", "load skill", "review skill"],
+    ))
     reg.register_with_meta("sedimentation_retrieval", lambda: modules["sedimentation_retrieval"], SkillMeta(
         name="sedimentation_retrieval", description="Retrieves semantically relevant messages from other conversations via embedding similarity",
         category="memory", always_run=True,
