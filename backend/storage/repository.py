@@ -1349,6 +1349,22 @@ class PerceptionSedimentRepository:
                 result.append((row["id"], vec))
         return result
 
+    @with_connection
+    def get_conversation_titles_for_chunk_ids(
+        self, chunk_ids: list[int]
+    ) -> dict[int, str]:
+        conn = self._conn()
+        if not chunk_ids:
+            return {}
+        placeholders = ",".join("?" * len(chunk_ids))
+        rows = conn.execute(
+            f"""SELECT ps.id, c.title FROM perception_sediment ps
+                JOIN conversations c ON ps.conversation_id = c.id
+                WHERE ps.id IN ({placeholders})""",
+            chunk_ids,
+        ).fetchall()
+        return {row["id"]: row["title"] for row in rows}
+
     # ── Sediment Injection (cross-conversation linking) ───────────────
 
     @with_connection

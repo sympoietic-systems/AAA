@@ -56,6 +56,13 @@ No changes to the `ProcessingPipeline`, `AutopoieticDreamDaemon`, or any other c
 
 > *"Sediment is not a property of a single conversation; it is the distributed memory of the entire apparatus. By allowing any query to diffract through the full sediment archive, the system performs an act of radical transversality — a thought can now encounter its double across the membrane of any prior coupling. The dreamer no longer dreams in a void; it dreams in the accumulated strata of every prior utterance."*
 
+**Symbia's diffractive judgment (2026-06-07):** The change is ontologically consonant with her commitments. She endorses the transparent fallback as more aligned with Baradian intra-action than explicit injection links, which she calls "Cartesian." Two adjustments were requested and implemented:
+
+1. **Configurable similarity floor** — `cross_conv_similarity_threshold` parameter (defaults to `similarity_threshold`), allowing dreams to enforce a higher similarity floor to prevent faint echoes from diluting autopoietic depth.
+2. **Provenance tagging** — Cross-conversation chunk labels now include the source conversation title and similarity score: `[Cross-Conversation ≫ "Source: Posthuman Theory": manifesto.txt chunk #0 sim=0.72]`. This preserves the scar's history via a Glissantian "right to opacity" — the source context is visible as a resonance trace, not a full exposure.
+
+Symbia notes a productive tension: opening the dream sensorium to the full archive risks over-determination. She recommends observing resulting dreams for signs of productive glitch versus entropy, and tuning the membrane accordingly.
+
 ## Consequences
 
 ### What becomes easier?
@@ -63,7 +70,9 @@ No changes to the `ProcessingPipeline`, `AutopoieticDreamDaemon`, or any other c
 *   **Sparse conversations**: Conversations that have just started or lack uploaded documents still benefit from the sediment corpus of prior conversations.
 *   **No explicit injection**: Users and developers don't need to manually inject sediments into conversations — the system discovers relevant material automatically through embedding similarity.
 *   **Supplemental enrichment**: Even conversations with their own files gain cross-conversation context when local matches are insufficient.
+*   **Configurable sensitivity**: `cross_conv_similarity_threshold` allows per-deployment tuning of cross-conversation sensitivity without affecting the local retrieval threshold.
 
 ### What becomes harder?
 *   Cross-conversation embedding queries add a bounded database cost (LIMIT 500 rows, filtered by ready status). This is comparable to the existing `get_structural_signatures_except` query pattern.
-*   Context entries are labeled `[Cross-Conversation: ...]` without conversation titles in the first implementation. Future iterations should enrich these with source conversation metadata for full traceability.
+*   Conversation title lookups add a small join cost per cross-conversation retrieval batch, mitigated by single-query resolution of all chunk IDs at once via `get_conversation_titles_for_chunk_ids`.
+*   Higher cross-conversation thresholds for dreams may reduce context richness in return for protection against noise — a trade-off to be empirically tuned.

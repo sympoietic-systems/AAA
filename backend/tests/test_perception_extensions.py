@@ -373,12 +373,16 @@ async def test_cross_conversation_sediment_fallback():
     )
 
     assert any(
-        "Cross-Conversation:" in entry["content"] for entry in context_entries
+        "Cross-Conversation" in entry["content"] for entry in context_entries
     ), f"Expected cross-conversation entries, got: {[e['content'][:80] for e in context_entries]}"
 
-    cross_entries = [e for e in context_entries if "Cross-Conversation:" in e["content"]]
+    cross_entries = [e for e in context_entries if "Cross-Conversation" in e["content"]]
     assert len(cross_entries) > 0
     assert "deterritorialize" in cross_entries[0]["content"].lower()
+
+    assert "Source: Posthuman Theory" in cross_entries[0]["content"], (
+        f"Expected conversation title in cross-conv label, got: {cross_entries[0]['content'][:200]}"
+    )
 
     assert tokens > 0
 

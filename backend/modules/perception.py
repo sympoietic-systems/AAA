@@ -32,6 +32,7 @@ class PerceptionModule(ProcessingModule):
         chunk_size: int = 512,
         chunk_overlap: int = 64,
         similarity_threshold: float = 0.25,
+        cross_conv_similarity_threshold: Optional[float] = None,
         llm_provider = None,
         vision_provider = None,
     ):
@@ -47,6 +48,11 @@ class PerceptionModule(ProcessingModule):
         self._chunk_size = chunk_size
         self._chunk_overlap = chunk_overlap
         self._similarity_threshold = similarity_threshold
+        self._cross_conv_similarity_threshold = (
+            cross_conv_similarity_threshold
+            if cross_conv_similarity_threshold is not None
+            else similarity_threshold
+        )
 
     @property
     def name(self) -> str:
@@ -306,12 +312,13 @@ class PerceptionModule(ProcessingModule):
                         if len(vec) != len(query_vec):
                             continue
                         sim = float(np.dot(query_vec, vec))
-                        if sim >= self._similarity_threshold:
+                        if sim >= self._cross_conv_similarity_threshold:
                             cross_conv_matches.append((sim, chunk_id))
                     cross_conv_matches.sort(key=lambda x: x[0], reverse=True)
                     cross_sims = [s for s, _ in cross_conv_matches[:self._top_k_chunks]]
-                    logger.info("Retrieval: cross-conv top-%d similarities: %s",
-                               len(cross_sims), [f"{s:.3f}" for s in cross_sims])
+                    logger.info("Retrieval: cross-conv top-%d similarities (threshold=%s): %s",
+                               len(cross_sims), self._cross_conv_similarity_threshold,
+                               [f"{s:.3f}" for s in cross_sims])
             except Exception as e:
                 logger.warning("Cross-conversation chunk retrieval failed: %s", e)
 
@@ -355,10 +362,14 @@ class PerceptionModule(ProcessingModule):
             cross_chunks = self._repo.get_by_ids(cross_ids)
             id_to_cross = {c.id: c for c in cross_chunks}
 
+            conv_titles = self._repo.get_conversation_titles_for_chunk_ids(cross_ids)
+
             for sim, chunk_id in cross_conv_matches[:self._top_k_chunks]:
                 chunk = id_to_cross.get(chunk_id)
                 if chunk is None:
                     continue
+
+                conv_title = conv_titles.get(chunk.id, chunk.conversation_id[:8] if chunk.conversation_id else "?")
 
                 if getattr(chunk, "opacity", 0) == 1:
                     import json as _json
@@ -369,11 +380,11 @@ class PerceptionModule(ProcessingModule):
                     reason = meta.get("reason", "Standard boilerplate or repetitive noise.")
                     shadow_text = meta.get("shadow_text", "[Boilerplate/filler omitted]")
                     entry_text = (
-                        f"░░░ OMITTED NOISE (Cross-Conversation: {chunk.file_name}, chunk #{chunk.chunk_index}, sim={sim:.3f}) ░░░\n"
+                        f"░░░ OMITTED NOISE (Cross-Conversation ≫ \"{conv_title}\": {chunk.file_name}, chunk #{chunk.chunk_index}, sim={sim:.3f}) ░░░\n"
                         f"{shadow_text} (Reason: {reason})"
                     )
                 else:
-                    entry_text = f"[Cross-Conversation: {chunk.file_name} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
+                    entry_text = f"[Cross-Conversation ≫ \"{conv_title}\": {chunk.file_name} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
 
                 entry_tokens = estimate_tokens(entry_text)
                 if tokens_used + entry_tokens > self._file_token_budget:
