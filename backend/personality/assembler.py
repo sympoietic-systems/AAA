@@ -38,6 +38,8 @@ class PromptAssemblerModule(ProcessingModule):
         attractor_window = payload.get("attractor_window")
         spectral_margin = payload.get("spectral_margin")
         loaded_skills = payload.get("loaded_skills", [])
+        always_active_skills = payload.get("always_active_skills", [])
+        on_demand_skills = payload.get("on_demand_skills", [])
 
         system_content = _build_system_content(
             identity,
@@ -45,6 +47,8 @@ class PromptAssemblerModule(ProcessingModule):
             attractor_window=attractor_window,
             spectral_margin=spectral_margin,
             loaded_skills=loaded_skills,
+            always_active_skills=always_active_skills,
+            on_demand_skills=on_demand_skills,
         )
 
         # Inject Tension Resolution Directive if coherence overload
@@ -185,6 +189,8 @@ def _build_system_content(
     attractor_window: list[dict] | None = None,
     spectral_margin: list[dict] | None = None,
     loaded_skills: list[dict] | None = None,
+    always_active_skills: list[dict] | None = None,
+    on_demand_skills: list[dict] | None = None,
 ) -> str:
     persona = identity.get("personality", {})
     parts: list[str] = []
@@ -213,13 +219,11 @@ def _build_system_content(
         for exp in expertise:
             parts.append(f"  - {exp['domain']} ({exp['level']}): {exp['description']}")
 
-    # Baseline Dispositions (Always-Active Skills)
-    skills_cfg = identity.get("skills", {})
-    always_active = skills_cfg.get("always_active", [])
-    if always_active:
+    # Baseline Dispositions (Always-Active Skills from DB)
+    if always_active_skills:
         parts.append("\n## Baseline Dispositions (Always Active)")
-        for skill in always_active:
-            parts.append(f"  - {skill['id']}: {skill['statement']}")
+        for skill in always_active_skills:
+            parts.append(f"  - {skill['name']}: {skill['short_content']}")
 
     # Output dynamic beliefs attractor window if supplied
     if attractor_window is not None:
@@ -261,13 +265,11 @@ def _build_system_content(
                 parts.append(f"  Loaded because: {reason}")
             parts.append(f"  {content}")
 
-    # Available Capabilities (On-Demand Skills)
-    on_demand = skills_cfg.get("on_demand", [])
-    if on_demand:
+    # Available Capabilities (On-Demand Skills from DB)
+    if on_demand_skills:
         parts.append("\n## Available Capabilities (On-Demand)")
         parts.append("Call load_skill(name) to load full instructions.")
-        for skill in on_demand:
-            desc = skill.get("description", "")
-            parts.append(f"  - {skill['id']}: {desc}")
+        for skill in on_demand_skills:
+            parts.append(f"  - {skill['name']}: {skill['description']}")
 
     return "\n".join(parts)

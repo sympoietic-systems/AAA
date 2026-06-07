@@ -43,14 +43,23 @@ class SkillActivatorModule(ProcessingModule):
     async def process(self, payload: dict) -> dict:
         if not self._skill_repo:
             payload["loaded_skills"] = []
+            payload["always_active_skills"] = []
+            payload["on_demand_skills"] = []
             return payload
 
-        active_skills = self._skill_repo.list_crystallized()
-        if not active_skills:
-            payload["loaded_skills"] = []
-            return payload
+        all_skills = self._skill_repo.list_crystallized()
+        always_active_skills = [s for s in all_skills if s.always_active]
+        on_demand_skills = [s for s in all_skills if not s.always_active]
 
-        on_demand_skills = [s for s in active_skills if not s.always_active]
+        payload["always_active_skills"] = [
+            {"name": s.name, "short_content": s.short_content or s.description}
+            for s in always_active_skills
+        ]
+        payload["on_demand_skills"] = [
+            {"name": s.name, "description": s.description}
+            for s in on_demand_skills
+        ]
+
         if not on_demand_skills:
             payload["loaded_skills"] = []
             return payload
