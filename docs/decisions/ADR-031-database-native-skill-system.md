@@ -238,14 +238,21 @@ The skill system adds two pipeline modules:
 embedder → structural_scorer → perception → web_retrieval →
 conversation_metrics → context_collector → consolidation_checkpoint →
 sedimentation_retrieval → diffractive_retrieval →
-belief_metabolism ──────→ ╔══════════════════╗ → prompt_assembler →
-                           ║ skill_activator  ║
-                           ╚══════════════════╝
+belief_metabolism ──────→ ╔══════════════════╗
+                            ║ skill_activator  ║
+                            ╚══════╦═══════════╝
+                                   │
+                            ╔══════╩═══════════╗
+                            ║ skill_workshop   ║ (on-demand)
+                            ╚══════╦═══════════╝
+                                   ↓
+                            prompt_assembler →
+homeostatic_regulator → llm_client
 ```
 
-- **`skill_activator`**: Runs after `belief_metabolism` (needs updated attractor window) and before `prompt_assembler` (needs to inject loaded skill content). Executes the three-tier trigger matching, loads truncated content for auto-matched skills, and writes `payload["loaded_skills"]`.
+- **`skill_activator`**: Runs after `belief_metabolism` (needs updated attractor window) and before `prompt_assembler` (needs to inject loaded skill content). Executes the three-tier trigger matching (attractor window resonance, semantic vector matching via `structural_signature`/`embedding`, keyword triggers), loads truncated content for auto-matched skills, and writes `payload["loaded_skills"]`.
 
-- **`skill_workshop`**: Registered as on-demand capability. Handles propose/revise/review/apply flow, belief bridge synchronization, and diffractive assessment generation.
+- **`skill_workshop`**: Registered as on-demand capability (`always_run=False`). Handles propose/revise/review/apply flow, belief bridge synchronization, and diffractive assessment generation.
 
 ### 10. System Prompt Assembly
 
@@ -289,6 +296,33 @@ Symbia is **both creator and consumer** of her own skills. She creates skills th
 - Attunement annotation system adds complexity to skill execution tracking
 - Three-tier approval logic must be enforced consistently across workshop actions
 - Semantic vector matching adds computational cost per turn (cosine similarity across all crystallized skills)
+
+## Implementation Notes (2026-06-08)
+
+### 16D Structural Vectors
+
+Skills now store **dual vectors** as combined JSON in `vector_16d`:
+```json
+{"v16d": [0.0, 0.0, ...], "v384d": [0.5, 0.3, ...]}
+```
+- **`v16d`** — 16D structural signature computed by `LexiconScorer` (cybernetic keyword density, no LLM needed). Used for structural matching against the conversation's `structural_signature`.
+- **`v384d`** — 384D semantic embedding from the `EmbedderModule` (`all-MiniLM-L6-v2`). Used for semantic matching against the conversation's `embedding`.
+- Legacy 384D-only vectors (plain arrays) are migrated automatically on next `GET /api/skills/db` call.
+- Per-skill 16D vectors are visualized in the UI sidebar as a miniature 16-bar chart (same pattern as belief vectors).
+
+### Strategy B Fix (Semantic Vector Matching)
+
+Previously, `_get_current_vector()` looked for `payload["current_vector_16d"]` which was **never set** by any pipeline module — making Strategy B dead code. Fixed:
+1. `_get_current_vector()` now extracts the conversation vector from `payload["structural_signature"]` (16D, set by `StructuralScorerModule`) or `payload["embedding"]` (384D, set by `EmbedderModule`).
+2. `_match_semantic()` selects the appropriate sub-vector (`v16d` or `v384d`) from the combined format based on the current vector's dimension — both 16D structural and 384D semantic matching now work.
+
+### Workshop API Response Fix
+
+`WorkshopResponse` Pydantic model was missing `content` and `description` fields. FastAPI's `response_model` stripped them from `POST /api/skills/workshop/load` responses, making skill content invisible in the UI sidebar. Added to schema.
+
+### Pipeline Fallback
+
+Hardcoded fallback pipeline order in `main.py` now includes `skill_activator` and `skill_workshop` (previously only present in `config.yaml`).
 
 ## Open Questions
 

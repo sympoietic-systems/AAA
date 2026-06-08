@@ -19,7 +19,7 @@
 
 
 
-    [ ] Also skills as a text files, just keep it in database. Similiar as any agentic harness doing now. It can extend her personality.
+    [x] Also skills as a text files, just keep it in database. Similiar as any agentic harness doing now. It can extend her personality.
 
     [ ] Protocol: The Random Sediment Grating
 
