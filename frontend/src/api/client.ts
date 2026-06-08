@@ -265,6 +265,7 @@ export interface DbSkillInfo {
   lifecycle_stage: string
   confidence: number
   ontological_mass: number
+  vector_16d: number[]
   source: string
   version: number
   changelog: string

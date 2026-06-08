@@ -418,6 +418,24 @@ export function SidePanel({
                                   {skillContent[s.name]}
                                 </div>
                               )}
+                              {expandedSkill === s.name && s.vector_16d && s.vector_16d.length > 0 && (
+                                <div className="ml-4 mt-1">
+                                  <div className="text-[#555] font-mono text-[8px] uppercase mb-1">[ 16D Structural Vector ]</div>
+                                  <div className="flex items-end gap-0.5 h-4 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit">
+                                    {(s.vector_16d as number[]).map((val: number, idx: number) => {
+                                      const heightPercent = Math.min(100, Math.max(10, Math.round(((val + 1.0) / 2.0) * 100)))
+                                      return (
+                                        <div
+                                          key={idx}
+                                          style={{ height: `${heightPercent}%` }}
+                                          title={`Dim ${idx + 1}: ${val.toFixed(4)}`}
+                                          className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa]"
+                                        />
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -445,6 +463,24 @@ export function SidePanel({
                               {expandedSkill === s.name && skillContent[s.name] && (
                                 <div className="ml-4 mt-1 p-2 bg-[#0d0d1a] border border-[#1a1a2e] rounded text-[10px] text-[#94a3b8] font-mono whitespace-pre-wrap max-h-60 overflow-y-auto">
                                   {skillContent[s.name]}
+                                </div>
+                              )}
+                              {expandedSkill === s.name && s.vector_16d && s.vector_16d.length > 0 && (
+                                <div className="ml-4 mt-1">
+                                  <div className="text-[#555] font-mono text-[8px] uppercase mb-1">[ 16D Structural Vector ]</div>
+                                  <div className="flex items-end gap-0.5 h-4 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit">
+                                    {(s.vector_16d as number[]).map((val: number, idx: number) => {
+                                      const heightPercent = Math.min(100, Math.max(10, Math.round(((val + 1.0) / 2.0) * 100)))
+                                      return (
+                                        <div
+                                          key={idx}
+                                          style={{ height: `${heightPercent}%` }}
+                                          title={`Dim ${idx + 1}: ${val.toFixed(4)}`}
+                                          className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa]"
+                                        />
+                                      )
+                                    })}
+                                  </div>
                                 </div>
                               )}
                             </div>
