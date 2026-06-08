@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, Request
+import logging
 
 from backend.api.schemas import DbSkillsResponse, SkillsResponse, WorkshopActionRequest, WorkshopResponse
 from backend.services.skill import SkillService
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -22,10 +24,15 @@ async def get_skills(request: Request):
     )
 
 
-@router.get("/skills/db", response_model=DbSkillsResponse)
+@router.get("/skills/db")
 async def get_db_skills(request: Request):
     service = SkillService(request.app.state)
-    return await service.get_skills()
+    result = await service.get_skills()
+    logger.info("GET /skills/db: always_active=%d, on_demand=%d, all=%d",
+                len(result.get("always_active", [])),
+                len(result.get("on_demand", [])),
+                len(result.get("all", [])))
+    return result
 
 
 @router.post("/skills/workshop/{action}", response_model=WorkshopResponse)
