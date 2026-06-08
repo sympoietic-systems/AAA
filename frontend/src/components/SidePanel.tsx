@@ -112,14 +112,24 @@ export function SidePanel({
     }
   )
 
-  // DB skills fetch (Symbia's procedural skills)
+  // DB skills fetch (Symbia's procedural skills) — fetch on mount
   useEffect(() => {
-    if (dbSkillsOpen && !dbSkillsData) {
+    if (!dbSkillsData && !dbSkillsError) {
+      console.log("[Skills] Fetching /api/skills/db...")
       getDbSkills()
-        .then(setDbSkillsData)
-        .catch((e) => setDbSkillsError(e.message))
+        .then(data => {
+          console.log("[Skills] Received:", data)
+          if (!data || (!data.always_active && !data.on_demand)) {
+            console.warn("[Skills] Empty or malformed response:", data)
+          }
+          setDbSkillsData({ always_active: data?.always_active || [], on_demand: data?.on_demand || [], all: data?.all || data?.always_active?.concat(data?.on_demand || []) || [] })
+        })
+        .catch(e => {
+          console.error("[Skills] Error:", e)
+          setDbSkillsError(e.message || String(e))
+        })
     }
-  }, [dbSkillsOpen, dbSkillsData])
+  }, [dbSkillsData, dbSkillsError])
 
   const handleLoadSkillContent = async (skillName: string) => {
     if (expandedSkill === skillName) {
@@ -382,20 +392,16 @@ export function SidePanel({
               />
               {dbSkillsOpen && (
                 <div className="pl-3">
-                  {dbSkillsError && (
-                    <p className="text-[10px] text-[#ef4444] font-mono py-1">
-                      Error: {dbSkillsError}
-                    </p>
-                  )}
-                  {!dbSkillsData && !dbSkillsError && (
+                  {dbSkillsError ? (
+                    <p className="text-[10px] text-[#ef4444] font-mono py-1">Error: {dbSkillsError}</p>
+                  ) : !dbSkillsData ? (
                     <p className="text-[10px] text-[#555] animate-pulse py-1">loading skills...</p>
-                  )}
-                  {dbSkillsData && (
+                  ) : (
                     <>
-                      {dbSkillsData.always_active.length > 0 && (
+                      {dbSkillsData.always_active && dbSkillsData.always_active.length > 0 && (
                         <div className="mb-2">
                           <p className="text-[9px] text-[#888] uppercase tracking-wider mb-1">Baseline Dispositions</p>
-                          {dbSkillsData.always_active.map((s) => (
+                          {dbSkillsData.always_active.map((s: any) => (
                             <div key={s.id} className="mb-1">
                               <div
                                 className="flex items-center gap-1 cursor-pointer hover:bg-[#1a1a2e] rounded px-1 py-0.5"
