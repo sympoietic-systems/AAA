@@ -34,6 +34,11 @@ from backend.utils.similarity import cosine_similarity
 
 
 def compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    if vec_a.shape != vec_b.shape:
+        logger.warning(
+            f"Vector dimension mismatch in cosine similarity: {vec_a.shape} vs {vec_b.shape}. Returning 0.0."
+        )
+        return 0.0
     return cosine_similarity(vec_a, vec_b)
 
 
@@ -102,8 +107,43 @@ class BeliefDynamicsEngine(ProcessingModule):
             logger.warning("Failed lazy signature computation for message %d: %s", getattr(msg, 'id', None), e)
             return b""
 
+    def _repair_belief_vectors(self, agent_id: str, existing: list) -> int:
+        """Identify and fix beliefs with non-16-dimensional vectors by recalculating from statement text."""
+        fixed = 0
+        for b in existing:
+            try:
+                vec_list = json.loads(b.vector_16d)
+                if isinstance(vec_list, list) and len(vec_list) == 16:
+                    continue  # Already correct
+            except (json.JSONDecodeError, TypeError):
+                pass  # Malformed JSON, needs repair
+
+            # Recalculate vector from statement
+            new_vec = self._scorer.score(b.statement)
+            new_vec_json = json.dumps(new_vec.tolist())
+            self._belief_repo.update_belief(
+                belief_id=b.id,
+                confidence=b.confidence,
+                vector_16d=new_vec_json,
+                origin=b.origin,
+                lifecycle_stage=b.lifecycle_stage,
+            )
+            fixed += 1
+            logger.info(
+                f"Repaired vector for belief '{b.label}' ({b.id}): "
+                f"recalculated as 16-dim from statement"
+            )
+
+        if fixed > 0:
+            logger.info(f"Belief vector repair complete: {fixed} belief(s) fixed for agent {agent_id}")
+        return fixed
+
     def _seed_initial_beliefs_if_needed(self, agent_id: str) -> None:
         existing = self._belief_repo.list_beliefs(agent_id)
+
+        # Always repair malformed vectors before proceeding
+        self._repair_belief_vectors(agent_id, existing)
+
         authored = [b for b in existing if b.origin == "authored"]
         if len(authored) > 0:
             return
@@ -637,7 +677,11 @@ class BeliefDynamicsEngine(ProcessingModule):
                 if b.lifecycle_stage in ("collapsed", "faded"):
                     continue
 
-                b_vec = np.array(json.loads(b.vector_16d), dtype=np.float32)
+                try:
+                    b_vec = np.array(json.loads(b.vector_16d), dtype=np.float32)
+                except Exception:
+                    logger.warning(f"Skipping belief '{b.label}' with malformed vector_16d: {b.vector_16d[:80]}")
+                    continue
                 alignment = compute_cosine_similarity(structural_signature, b_vec)
 
                 dc = 0.80
@@ -672,18 +716,14 @@ class BeliefDynamicsEngine(ProcessingModule):
             note_vec = self._scorer.score(note_full_text)
 
             # Find the closest active belief node (excluding ghosts)
-            all_beliefs = self._belief_repo.list_beliefs(agent_id)
-            best_match = None
-            best_sim = -1.0
-
-            for b in all_beliefs:
-                if b.lifecycle_stage in ("collapsed", "faded"):
-                    continue
-                b_vec = np.array(json.loads(b.vector_16d), dtype=np.float32)
-                sim = compute_cosine_similarity(note_vec, b_vec)
-                if sim > best_sim:
-                    best_sim = sim
-                    best_match = b
+            best_match = self._find_closest_active_belief(agent_id, note_vec, min_similarity=0.0)
+            best_sim = 0.0
+            if best_match:
+                try:
+                    b_vec = np.array(json.loads(best_match.vector_16d), dtype=np.float32)
+                    best_sim = compute_cosine_similarity(note_vec, b_vec)
+                except Exception:
+                    best_sim = 0.0
 
             source_weight = self._get_source_weight("shared_note")
             if best_match and best_sim > 0.75:
