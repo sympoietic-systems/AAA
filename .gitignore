@@ -27,6 +27,7 @@ frontend/dist/
 .DS_Store
 
 .agents/*
+.codebuddy/*
 docs/protocols/*
 docs/extra/*
 backend/.agents/*

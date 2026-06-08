@@ -42,7 +42,7 @@ class ConversationRepository(BaseRepository):
                    JOIN conversation_tags ct ON c.id = ct.conversation_id
                    WHERE ct.tag = ?
                    GROUP BY c.id
-                   ORDER BY c.updated_at DESC""",
+                   ORDER BY MAX(cl.timestamp) DESC""",
                 (tag,),
             ).fetchall()
         else:
@@ -51,7 +51,7 @@ class ConversationRepository(BaseRepository):
                    FROM conversations c
                    LEFT JOIN conversation_log cl ON c.id = cl.conversation_id
                    GROUP BY c.id
-                   ORDER BY c.updated_at DESC"""
+                   ORDER BY MAX(cl.timestamp) DESC"""
             ).fetchall()
         return [_row_to_conversation(r) for r in rows]
 
