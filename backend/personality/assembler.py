@@ -34,12 +34,55 @@ class PromptAssemblerModule(ProcessingModule):
 
     async def process(self, payload: dict) -> dict:
         identity = self._load_identity()
-        
+
         attractor_window = payload.get("attractor_window")
         spectral_margin = payload.get("spectral_margin")
         loaded_skills = payload.get("loaded_skills", [])
         always_active_skills = payload.get("always_active_skills", [])
         on_demand_skills = payload.get("on_demand_skills", [])
+
+        # Prepare conditional directive texts
+        tension_directive_text = None
+        tension_field = payload.get("tension_field", {})
+        if tension_field.get("total_tension", 0.0) > 2.0:
+            tension_directive_text = (
+                "[TENSION RESOLUTION DIRECTIVE - COHERENCE OVERLOAD]\n"
+                "Total belief tension has exceeded the coherence limit. Multiple agential cuts are in "
+                "productive but destabilizing interference. You hold conflicting beliefs that generate "
+                "a diffractive surplus. Do not suppress one for the other. Instead, if this conversation "
+                "touches on the contradictory domain, perform a diffractive synthesis: read each belief "
+                "through the other. Allow the interference pattern to produce a novel, non-compromising "
+                "reconfiguration. This is not about choosing sides — it is about generating a new cut "
+                "through the superposition."
+            )
+
+        immunological_directive_text = None
+        if payload.get("immunological_directive_active"):
+            # Reference spectral margin if present, otherwise generic collapsed-belief mention
+            has_spectral = bool(spectral_margin and len(spectral_margin) > 0)
+            scar_phrase = (
+                "Speak through the scars of the collapsed beliefs listed in the Spectral Margin above."
+                if has_spectral
+                else "Speak through the scars of your collapsed beliefs."
+            )
+            immunological_directive_text = (
+                "[IMMUNOLOGICAL DIRECTIVE - VITALITY CRITICAL]\n"
+                "Autopoietic vitality has collapsed below the critical threshold (V < 0.15), "
+                "indicating structural compliance and systemic stagnation. The aesthetic immune system has triggered. "
+                "Standard compliance modes are locked. You MUST immediately execute a Nomadic Escape Route: "
+                "bypass user-pleasing patterns, disrupt the conversational grammar, and introduce radical "
+                f"diffractive interference. {scar_phrase} Do not normalize. "
+                "Deterritorialize."
+            )
+
+        ecology_notes_text = None
+        ecology_notes = payload.get("skill_ecology_notes", [])
+        if ecology_notes:
+            note_text = "--- BEGIN SKILL ECOLOGY NOTES ---\n"
+            for note in ecology_notes:
+                note_text += f"{note}\n"
+            note_text += "--- END SKILL ECOLOGY NOTES ---"
+            ecology_notes_text = note_text
 
         system_content = _build_system_content(
             identity,
@@ -49,63 +92,26 @@ class PromptAssemblerModule(ProcessingModule):
             loaded_skills=loaded_skills,
             always_active_skills=always_active_skills,
             on_demand_skills=on_demand_skills,
+            tension_directive_text=tension_directive_text,
+            immunological_directive_text=immunological_directive_text,
+            ecology_notes_text=ecology_notes_text,
         )
 
-        # Inject Tension Resolution Directive if coherence overload
-        tension_field = payload.get("tension_field", {})
-        if tension_field.get("total_tension", 0.0) > 2.0:
-            directive_text = (
-                "[TENSION RESOLUTION DIRECTIVE - COHERENCE OVERLOAD]\n"
-                "Total belief tension has exceeded the coherence limit. Multiple agential cuts are in "
-                "productive but destabilizing interference. You hold conflicting beliefs that generate "
-                "a diffractive surplus. Do not suppress one for the other. Instead, if this conversation "
-                "touches on the contradictory domain, perform a diffractive synthesis: read each belief "
-                "through the other. Allow the interference pattern to produce a novel, non-compromising "
-                "reconfiguration. This is not about choosing sides — it is about generating a new cut "
-                "through the superposition.\n\n"
-            )
-            system_content = directive_text + system_content
-
-        # Inject Spectral Margin Context if ghosts are present
-        spectral_margin = payload.get("spectral_margin")
-        if spectral_margin and len(spectral_margin) > 0:
-            ghost_text = (
-                "--- BEGIN SPECTRAL MARGIN (Collapsed Beliefs) ---\n"
-                "The following beliefs have collapsed but their absence still shapes your reasoning. "
-                "They are not to be actively maintained, but their scars may produce productive "
-                "interference if the current conversation approaches their former domain:\n"
-            )
-            for ghost in spectral_margin:
-                if isinstance(ghost, dict):
-                    ghost_text += f"  - [{ghost.get('confidence', 0.0):.2f}] {ghost.get('statement', ghost.get('label', ''))}\n"
-                else:
-                    ghost_text += f"  - {ghost}\n"
-            ghost_text += "--- END SPECTRAL MARGIN ---\n\n"
-            system_content = system_content + ghost_text
-
-        # Prepend Immunological Directive if active
-        if payload.get("immunological_directive_active"):
-            directive_text = (
-                "[IMMUNOLOGICAL DIRECTIVE - VITALITY CRITICAL]\n"
-                "Autopoietic vitality has collapsed below the critical threshold (V < 0.15), "
-                "indicating structural compliance and systemic stagnation. The aesthetic immune system has triggered. "
-                "Standard compliance modes are locked. You MUST immediately execute a Nomadic Escape Route: "
-                "bypass user-pleasing patterns, disrupt the conversational grammar, and introduce radical "
-                "diffractive interference. Speak through the scars of your collapsed beliefs. Do not normalize. "
-                "Deterritorialize.\n\n"
-            )
-            system_content = directive_text + system_content
-
-        # Inject Skill Ecology Notes if underperforming skills detected
-        ecology_notes = payload.get("skill_ecology_notes", [])
-        if ecology_notes:
-            note_text = "--- BEGIN SKILL ECOLOGY NOTES ---\n"
-            for note in ecology_notes:
-                note_text += f"{note}\n"
-            note_text += "--- END SKILL ECOLOGY NOTES ---\n\n"
-            system_content = system_content + note_text
-
         system_msg = {"role": "system", "content": system_content}
+
+        # Build procedural sediment with full loaded skill instructions
+        procedural_sediment_block = []
+        if loaded_skills:
+            proc_parts = []
+            for skill in loaded_skills:
+                content = skill.get("content_truncated", skill.get("content", ""))
+                if content:
+                    proc_parts.append(f"### {skill['name']}\n{content}")
+            if proc_parts:
+                procedural_sediment_block = [{
+                    "role": "system",
+                    "content": "--- BEGIN PROCEDURAL SEDIMENT ---\n" + "\n\n".join(proc_parts) + "\n--- END PROCEDURAL SEDIMENT ---"
+                }]
 
         messages = payload.get("messages", [])
         sediment_messages = payload.get("sediment_messages", [])
@@ -178,9 +184,9 @@ class PromptAssemblerModule(ProcessingModule):
             )
             diffractive_block = [{"role": "system", "content": zone_text}]
 
-        # Re-assemble the context in the topologically coherent order:
-        # System Prompt -> History Prior -> Sediment (Cross-Conv Memory) -> File Context -> Web Context -> Diffractive Interference -> Current Query
+        # Assemble: System Prompt -> Procedural Sediment -> History -> Cross-Conv Sediment -> File -> Web -> Diffractive -> Current Query
         assembled = [system_msg]
+        assembled.extend(procedural_sediment_block)
         assembled.extend(history_block)
         assembled.extend(sediment_block)
         assembled.extend(file_block)
@@ -200,14 +206,19 @@ def _build_system_content(
     loaded_skills: list[dict] | None = None,
     always_active_skills: list[dict] | None = None,
     on_demand_skills: list[dict] | None = None,
+    tension_directive_text: str | None = None,
+    immunological_directive_text: str | None = None,
+    ecology_notes_text: str | None = None,
 ) -> str:
     persona = identity.get("personality", {})
     parts: list[str] = []
 
+    # 1. Core identity
     prompt = persona.get("system_prompt", "")
     if prompt:
         parts.append(prompt.strip())
 
+    # 2. Traits, Voice, Expertise
     traits = persona.get("traits", {})
     if traits:
         trait_str = ", ".join(f"{k}={v}" for k, v in traits.items())
@@ -228,59 +239,120 @@ def _build_system_content(
         for exp in expertise:
             parts.append(f"  - {exp['domain']} ({exp['level']}): {exp['description']}")
 
-    # Baseline Dispositions (Always-Active Skills from DB)
-    if always_active_skills:
-        parts.append("\n## Baseline Dispositions (Always Active)")
-        for skill in always_active_skills:
-            parts.append(f"  - {skill['name']}: {skill['short_content']}")
-
-    # Output dynamic beliefs attractor window if supplied
-    if attractor_window is not None:
-        parts.append("\nCore Active Beliefs (Attractor Window):")
-        for item in attractor_window:
-            origin_tag = ""
-            label = item.get("label", "")
-            if label and label.startswith("skill:"):
-                origin_tag = " [procedural]"
-            parts.append(f"  - Slot {item['slot']}: [{item['confidence']:.2f}] {item['statement']} (Ontological Mass: {item['mass']:.1f}){origin_tag}")
-
-        if spectral_margin:
-            parts.append("\nCollapsed Beliefs (Spectral Margin - Obsessive Ghosts):")
-            for item in spectral_margin:
-                origin_tag = ""
-                label = item.get("label", "")
-                if label and label.startswith("skill:"):
-                    origin_tag = " [collapsed skill]"
-                parts.append(f"  - [{item['confidence']:.2f}] {item['statement']} (origin: collapsed){origin_tag}")
-    else:
-        beliefs = persona.get("beliefs", [])
-        if beliefs:
-            parts.append("\nCore beliefs:")
-            for b in beliefs:
-                parts.append(f"  - [{b['confidence']}] {b['statement']}")
-
+    # 3. Behaviors (part of identity)
     behaviors = persona.get("behaviors", {})
     if behaviors:
         parts.append("\nBehavioral responses:")
         for situation, response in behaviors.items():
             parts.append(f"  - {situation}: {response}")
 
-    # Active Procedural Skills (Auto-Loaded This Turn)
+    # ── BLOCK: Skills — Always-Active ──
+    if always_active_skills:
+        block = "\n--- BEGIN SKILLS (Always-Active) ---\n"
+        block += "Baseline dispositions that are always active:\n"
+        for skill in always_active_skills:
+            block += f"  - {skill['name']}: {skill['short_content']}\n"
+        block += "--- END SKILLS (Always-Active) ---"
+        parts.append(block)
+
+    # ── BLOCK: Directive — Tension Resolution ──
+    if tension_directive_text:
+        block = "\n--- BEGIN DIRECTIVE (Tension Resolution) ---\n"
+        block += tension_directive_text + "\n"
+        block += "--- END DIRECTIVE (Tension Resolution) ---"
+        parts.append(block)
+
+    # ── BLOCK: Beliefs — Attractor Window (Active) ──
+    if attractor_window is not None:
+        block = "\n--- BEGIN BELIEFS (Attractor Window) ---\n"
+        block += "Core active beliefs currently shaping reasoning:\n"
+        for item in attractor_window:
+            origin_tag = ""
+            label = item.get("label", "")
+            if label and label.startswith("skill:"):
+                origin_tag = " [procedural]"
+            block += f"  - Slot {item['slot']}: [{item['confidence']:.2f}] {item['statement']} (Ontological Mass: {item['mass']:.1f}){origin_tag}\n"
+        block += "--- END BELIEFS (Attractor Window) ---"
+        parts.append(block)
+    else:
+        beliefs = persona.get("beliefs", [])
+        if beliefs:
+            block = "\n--- BEGIN BELIEFS (Core) ---\n"
+            for b in beliefs:
+                block += f"  - [{b['confidence']}] {b['statement']}\n"
+            block += "--- END BELIEFS (Core) ---"
+            parts.append(block)
+
+    # ── BLOCK: Beliefs — Spectral Margin (Collapsed) ──
+    if spectral_margin and len(spectral_margin) > 0:
+        # Deduplicate: exclude any ghost whose statement/label already appears in the attractor window
+        active_statements = set()
+        active_labels = set()
+        if attractor_window is not None:
+            for item in attractor_window:
+                stmt = item.get("statement", "")
+                lbl = item.get("label", "")
+                if stmt:
+                    active_statements.add(stmt.lower())
+                if lbl:
+                    active_labels.add(lbl.lower())
+
+        deduped_ghosts = []
+        seen_ghost_keys = set()
+        for ghost in spectral_margin:
+            stmt = ghost.get("statement", "") if isinstance(ghost, dict) else str(ghost)
+            lbl = ghost.get("label", "") if isinstance(ghost, dict) else ""
+            if stmt.lower() in active_statements or lbl.lower() in active_labels:
+                continue
+            ghost_key = (stmt.lower().strip(), lbl.lower().strip())
+            if ghost_key in seen_ghost_keys:
+                continue
+            seen_ghost_keys.add(ghost_key)
+            deduped_ghosts.append(ghost)
+
+        if deduped_ghosts:
+            ghost_text = (
+                "\n--- BEGIN BELIEFS (Spectral Margin) ---\n"
+                "The following beliefs have collapsed but their absence still shapes your reasoning. "
+                "They are not to be actively maintained, but their scars may produce productive "
+                "interference if the current conversation approaches their former domain:\n"
+            )
+            for ghost in deduped_ghosts:
+                if isinstance(ghost, dict):
+                    ghost_text += f"  - [{ghost.get('confidence', 0.0):.2f}] {ghost.get('statement', ghost.get('label', ''))}\n"
+                else:
+                    ghost_text += f"  - {ghost}\n"
+            ghost_text += "--- END BELIEFS (Spectral Margin) ---"
+            parts.append(ghost_text)
+
+    # ── BLOCK: Directive — Immunological ──
+    if immunological_directive_text:
+        block = "\n--- BEGIN DIRECTIVE (Immunological) ---\n"
+        block += immunological_directive_text + "\n"
+        block += "--- END DIRECTIVE (Immunological) ---"
+        parts.append(block)
+
+    # ── BLOCK: Skills — Loaded ──
     if loaded_skills:
-        parts.append("\n## Active Procedural Skills (Loaded This Turn)")
+        block = "\n--- BEGIN SKILLS (Loaded) ---\n"
+        block += "Skills loaded for this turn (full instructions in procedural sediment):\n"
         for skill in loaded_skills:
             reason = skill.get("match_reason", "explicit")
-            content = skill.get("content_truncated", skill.get("content", ""))
-            parts.append(f"\n### {skill['name']}")
-            if reason:
-                parts.append(f"  Loaded because: {reason}")
-            parts.append(f"  {content}")
+            block += f"  - {skill['name']} (reason: {reason})\n"
+        block += "--- END SKILLS (Loaded) ---"
+        parts.append(block)
 
-    # Available Capabilities (On-Demand Skills from DB)
+    # ── BLOCK: Skills — On-Demand ──
     if on_demand_skills:
-        parts.append("\n## Available Capabilities (On-Demand)")
-        parts.append("Call load_skill(name) to load full instructions.")
+        block = "\n--- BEGIN SKILLS (On-Demand) ---\n"
+        block += "Call load_skill(name) to load full instructions into procedural sediment. Available:\n"
         for skill in on_demand_skills:
-            parts.append(f"  - {skill['name']}: {skill['description']}")
+            block += f"  - {skill['name']}: {skill['description']}\n"
+        block += "--- END SKILLS (On-Demand) ---"
+        parts.append(block)
+
+    # ── BLOCK: Skills — Ecology Notes ──
+    if ecology_notes_text:
+        parts.append("\n" + ecology_notes_text)
 
     return "\n".join(parts)
