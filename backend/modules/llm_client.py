@@ -133,7 +133,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
         last_error = None
         for attempt in range(self._max_retries + 1):
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            async with httpx.AsyncClient(timeout=300.0) as client:
                 try:
                     response = await client.post(
                         url,

@@ -39,7 +39,7 @@ async def consult_aaa(message: str, agent_name: str) -> str:
     """
     target_title = f"Consultation: {agent_name}"
     
-    async with httpx.AsyncClient(timeout=120.0, trust_env=False) as client:
+    async with httpx.AsyncClient(timeout=300.0, trust_env=False) as client:
         # 1. Look up existing conversations to find the dedicated one for this agent
         conversation_id = None
         try:
@@ -148,7 +148,7 @@ async def get_consultation_history(agent_name: str, limit: int = 50) -> str:
     """
     target_title = f"Consultation: {agent_name}"
     
-    async with httpx.AsyncClient(timeout=120.0, trust_env=False) as client:
+    async with httpx.AsyncClient(timeout=300.0, trust_env=False) as client:
         # 1. Look up existing conversations to find the dedicated one for this agent
         conversation_id = None
         try:
@@ -190,7 +190,7 @@ async def get_messages_by_conversation_id(conversation_id: str, limit: int = 50)
         conversation_id: The UUID string of the conversation.
         limit: The maximum number of most recent messages to retrieve.
     """
-    async with httpx.AsyncClient(timeout=120.0, trust_env=False) as client:
+    async with httpx.AsyncClient(timeout=300.0, trust_env=False) as client:
         # 1. First lookup the conversation info to get its title
         title = "Unknown Conversation"
         agent_name = None
