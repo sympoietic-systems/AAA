@@ -110,6 +110,7 @@ class SkillRepository(BaseRepository):
         lifecycle_stage: str = None,
         confidence: float = None,
         ontological_mass: float = None,
+        vector_16d: str = None,
         version: int = None,
         changelog: str = None,
         attunement_notes: str = None,
@@ -128,6 +129,7 @@ class SkillRepository(BaseRepository):
             "lifecycle_stage": lifecycle_stage if lifecycle_stage is not None else current.lifecycle_stage,
             "confidence": confidence if confidence is not None else current.confidence,
             "ontological_mass": ontological_mass if ontological_mass is not None else current.ontological_mass,
+            "vector_16d": vector_16d if vector_16d is not None else current.vector_16d,
             "version": version if version is not None else current.version,
             "changelog": changelog if changelog is not None else current.changelog,
             "attunement_notes": attunement_notes if attunement_notes is not None else current.attunement_notes,
@@ -137,12 +139,13 @@ class SkillRepository(BaseRepository):
             """UPDATE skill_nodes SET
                content = ?, description = ?, short_content = ?, trigger_keywords = ?,
                lifecycle_stage = ?, confidence = ?, ontological_mass = ?,
-               version = ?, changelog = ?, attunement_notes = ?,
+               vector_16d = ?, version = ?, changelog = ?, attunement_notes = ?,
                updated_at = CURRENT_TIMESTAMP
                WHERE id = ?""",
             (updates["content"], updates["description"], updates["short_content"],
              updates["trigger_keywords"], updates["lifecycle_stage"],
              updates["confidence"], updates["ontological_mass"],
+             updates["vector_16d"],
              updates["version"], updates["changelog"], updates["attunement_notes"],
              skill_id),
         )

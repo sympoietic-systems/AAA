@@ -5,6 +5,7 @@ import uuid
 import yaml
 import numpy as np
 
+from backend.modules.structural_engine import LexiconScorer
 from backend.storage.models import SkillNode
 
 logger = logging.getLogger(__name__)
@@ -88,18 +89,8 @@ class SkillService:
             name = skill_def["id"]
             statement = skill_def["statement"]
 
-            vec_json = "[]"
-            if scorer:
-                try:
-                    vec = scorer.encode(statement)
-                    if hasattr(vec, 'tolist'):
-                        vec_json = json.dumps(vec.tolist())
-                    else:
-                        vec_json = json.dumps(list(vec))
-                except Exception as e:
-                    logger.warning("Failed to compute vector for skill %s: %s", name, e)
-
             content = self._generate_skill_content(name, statement, is_always_active=True)
+            vec_json = self._compute_skill_vector(statement, scorer)
 
             skill_repo.create_skill(
                 id=skill_id,
@@ -140,20 +131,11 @@ class SkillService:
             triggers = skill_def.get("triggers", [])
             trigger_json = json.dumps(triggers)
 
-            vec_json = "[]"
-            if scorer:
-                try:
-                    vec = scorer.encode(description)
-                    if hasattr(vec, 'tolist'):
-                        vec_json = json.dumps(vec.tolist())
-                    else:
-                        vec_json = json.dumps(list(vec))
-                except Exception as e:
-                    logger.warning("Failed to compute vector for skill %s: %s", name, e)
-
             content = skill_def.get("content", "")
             if not content:
                 content = self._generate_skill_content(name, description, is_always_active=False)
+
+            vec_json = self._compute_skill_vector(content or description, scorer)
 
             skill_repo.create_skill(
                 id=skill_id,
@@ -191,25 +173,53 @@ class SkillService:
         logger.info("Seeded %d initial skills (%d always-active, %d on-demand)", total, len(always_active), len(on_demand))
 
     def _repair_empty_skill_content(self, skill_repo) -> None:
+        state = self._state
+        embedder = getattr(state, "embedder", None)
+        scorer = getattr(embedder, "service", None) if embedder else None
+
         skills = skill_repo.list_skills()
         repaired = 0
         for skill in skills:
-            if skill.content and len(skill.content.strip()) > 50:
+            needs_content = not skill.content or len(skill.content.strip()) <= 50
+            needs_vector = self._vector_needs_migration(skill.vector_16d)
+
+            if not needs_content and not needs_vector:
                 continue
 
-            seed_content = self._find_seed_content(skill.name)
-            if not seed_content:
-                continue
+            seed_content = self._find_seed_content(skill.name) if needs_content else skill.content
 
-            skill_repo.update_skill(
-                skill_id=skill.id,
-                content=seed_content,
-            )
-            repaired += 1
-            logger.info("Repaired empty content for skill '%s' from seed", skill.name)
+            updates = {}
+            if needs_content and seed_content:
+                updates["content"] = seed_content
+            if needs_vector:
+                text = seed_content or skill.content or skill.description
+                updates["vector_16d"] = self._compute_skill_vector(text, scorer)
+
+            if updates:
+                skill_repo.update_skill(skill_id=skill.id, **updates)
+                repaired += 1
+                reasons = []
+                if "content" in updates:
+                    reasons.append("content")
+                if "vector_16d" in updates:
+                    reasons.append("vector")
+                logger.info("Repaired skill '%s': %s", skill.name, ", ".join(reasons))
 
         if repaired > 0:
-            logger.info("Repaired %d skills with empty/stub content", repaired)
+            logger.info("Repaired %d skills with empty/stub content or legacy vectors", repaired)
+
+    def _vector_needs_migration(self, vector_json: str) -> bool:
+        if not vector_json or vector_json == "[]":
+            return True
+        try:
+            data = json.loads(vector_json)
+            if isinstance(data, list):
+                return True
+            if isinstance(data, dict):
+                return "v16d" not in data
+        except (json.JSONDecodeError, TypeError):
+            return True
+        return False
 
     def _find_seed_content(self, skill_name: str) -> str:
         from pathlib import Path
@@ -237,6 +247,27 @@ class SkillService:
                 return skill_def.get("content", "")
         return ""
 
+    def _compute_skill_vector(self, text: str, embedder_service=None) -> str:
+        result = {"v16d": [], "v384d": []}
+
+        try:
+            scorer = LexiconScorer()
+            v16d = scorer.score(text)
+            result["v16d"] = v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)
+        except Exception as e:
+            logger.warning("Failed to compute 16D structural vector: %s", e)
+            result["v16d"] = [0.0] * 16
+
+        if embedder_service:
+            try:
+                v384d = embedder_service.encode(text)
+                result["v384d"] = v384d.tolist() if hasattr(v384d, "tolist") else list(v384d)
+            except Exception as e:
+                logger.warning("Failed to compute 384D embedding vector: %s", e)
+                result["v384d"] = []
+
+        return json.dumps(result)
+
     def _generate_skill_content(self, name: str, description: str, is_always_active: bool) -> str:
         sections = [f"# {name}\n\n{description}\n"]
         if is_always_active:
@@ -259,6 +290,8 @@ class SkillService:
         except (json.JSONDecodeError, TypeError):
             trigger_keywords = []
 
+        v16d = self._extract_16d_vector(skill.vector_16d)
+
         return {
             "id": skill.id,
             "name": skill.name,
@@ -269,6 +302,7 @@ class SkillService:
             "lifecycle_stage": skill.lifecycle_stage,
             "confidence": skill.confidence,
             "ontological_mass": skill.ontological_mass,
+            "vector_16d": v16d,
             "source": skill.source,
             "version": skill.version,
             "changelog": skill.changelog,
@@ -276,3 +310,19 @@ class SkillService:
             "created_at": skill.created_at.isoformat() if skill.created_at else None,
             "updated_at": skill.updated_at.isoformat() if skill.updated_at else None,
         }
+
+    def _extract_16d_vector(self, vector_json: str) -> list[float]:
+        if not vector_json or vector_json == "[]":
+            return []
+        try:
+            data = json.loads(vector_json)
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+        if isinstance(data, list):
+            return [float(v) for v in data]
+
+        if isinstance(data, dict) and "v16d" in data:
+            return [float(v) for v in data["v16d"]]
+
+        return []

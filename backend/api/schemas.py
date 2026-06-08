@@ -109,6 +109,7 @@ class DbSkillInfo(BaseModel):
     lifecycle_stage: str = "nucleation"
     confidence: float = 0.0
     ontological_mass: float = 0.05
+    vector_16d: list[float] = []
     source: str = "authored"
     version: int = 1
     changelog: str = ""
