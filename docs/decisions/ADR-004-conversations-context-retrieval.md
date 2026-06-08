@@ -92,12 +92,24 @@ Automated system notifications (e.g., file processing logs with speaker `system`
 
 To prevent ontological collapse and keep memory layers cleanly structured for the LLM, we enforce strict visual boundaries and metadata framing:
 
-1. **Boundary Delimiters:** Every retrieved context block is wrapped inside visible system tags:
+1. **Boundary Delimiters (Top-Level Context Blocks):** Every retrieved context block is wrapped inside visible system tags:
    - History: `--- BEGIN CONVERSATION HISTORY ---` / `--- END CONVERSATION HISTORY ---`
    - Cross-conversation memory: `--- BEGIN CROSS-CONVERSATION RESONANCE ---` / `--- END CROSS-CONVERSATION RESONANCE ---`
    - Files context: `--- BEGIN FILE SEDIMENT ---` / `--- END FILE SEDIMENT ---`
+   - Web context: `--- BEGIN EXOGENOUS WEB CONTEXT ---` / `--- END EXOGENOUS WEB CONTEXT ---`
+   - Diffractive zone: `<diffractive_interference_zone>` / `</diffractive_interference_zone>` (XML-tagged, appears only during STAGNANT state)
 
-2. **Nomadic Memory Provenance:** Sediment messages retrieved from other conversations are mapped to `role="system"` to avoid consecutive role conflicts in API providers (e.g., Anthropic alternating roles). Each is prefixed with rich geo-temporal and speaker metadata:
+2. **Block Markers (System Prompt Sub-Sections):** Within the system prompt, structured sub-sections use the same `--- BEGIN TYPE (SUBTYPE) ---` / `--- END TYPE (SUBTYPE) ---` convention for consistent frontend parsing:
+   - Skills: `SKILLS (Always-Active)`, `SKILLS (Loaded)`, `SKILLS (On-Demand)`
+   - Beliefs: `BELIEFS (Attractor Window)`, `BELIEFS (Spectral Margin)`
+   - Directives: `DIRECTIVE (Tension Resolution)`, `DIRECTIVE (Immunological)`
+   - Ecology: `SKILL ECOLOGY NOTES` (legacy format, single-line markers)
+   
+   The frontend `ContextViewer` uses a generic regex (`--- BEGIN (\w+) \((.+)\) ---`) to auto-discover and tabulate these blocks without hardcoded section names, enabling backend changes without frontend modifications.
+
+3. **Beliefs Deduplication:** The Spectral Margin block (`BELIEFS (Spectral Margin)`) is a single-occurrence block. Collapsed beliefs whose statement or label duplicates an entry in the Attractor Window are excluded. Internal duplicates within the spectral margin are also removed.
+
+4. **Nomadic Memory Provenance:** Sediment messages retrieved from other conversations are mapped to `role="system"` to avoid consecutive role conflicts in API providers (e.g., Anthropic alternating roles). Each is prefixed with rich geo-temporal and speaker metadata:
    `[Memory from "{conversation_title}" | {relative_time} | Speaker: {original_speaker}]:`
    The relative time (e.g., `3d ago`, `2mo ago`) is calculated dynamically from the database timestamp to ground the memory with temporal perspective.
 

@@ -107,7 +107,7 @@ sequenceDiagram
         Note over Pipeline: Update proto-belief lifecycle states,<br/>compute ecosystem health, detect bifurcations
         
         Pipeline->>Pipeline: prompt_assembler.process()
-        Note over Pipeline: Compose: system + sediment + diffractive + history + file_context<br/>Enforce token budget
+        Note over Pipeline: Compose: system prompt (with BEGIN/END<br/>SKILLS/BELIEFS/DIRECTIVE blocks) + procedural<br/>sediment + history + cross-conv + file + web<br/>+ diffractive zone + query. Enforce token budget.
         
         Pipeline->>Pipeline: homeostatic_regulator.process()
         Note over Pipeline: Maps metrics → dynamic temperature,<br/>presence/frequency penalty adjustments
@@ -379,10 +379,13 @@ Endpoint routing is handled automatically by the router prefix (`google_router/`
 
 ### Frontend Debug Panels
 
-Three collapsible panels appear under each message in `MessageBubble`:
-1. **structural signature** — `StructuralAutopoieticGlyph` radar/bar visualization
-2. **structural justification (debug)** — amber text panel with LLM reasoning
-3. **structural payload (JSON)** — cyan JSON block with named dimension scores + justification
+Collapsible panels appear under each apparatus message in `MessageBubble`:
+1. **thinking** — raw thinking/reasoning trace from the LLM
+2. **context** — `ContextViewer` that parses `context_sent` into collapsible sections (System Prompt, History, Sediment, File, Web, Diffractive, Query) with structured sub-tab viewers:
+   - `SystemPromptViewer` — Identity, Skills, Beliefs, Directives, Raw tabs
+   - `DiffractiveZoneViewer` — Fragments, Directive, Raw tabs
+3. **structural signature** — `StructuralAutopoieticGlyph` radar/bar visualization
+4. **notes** — inline text annotation system (select → create → render as highlights)
 
 Config: `AAA_LLM_SCORER_ENABLED`, `AAA_STRUCTURAL_MODELS`, `AAA_STRUCTURAL_FALLBACK_MODEL`.
 
@@ -395,7 +398,7 @@ Cross-conversation context retrieval via `SedimentationRetrievalModule`:
 - Selects top-K matches above `similarity_threshold` (default 0.3)
 - Fills up to `sediment_token_budget` (default 2000 tokens)
 - Injected after consolidation checkpoint, before conversation history
-- Assembly order: `[system] → [sediment] → [history+checkpoint] → [file_context]`
+- Assembly order: `[system_prompt] → [procedural_sediment] → [history] → [cross-conv_sediment] → [file] → [web] → [diffractive_zone] → [query]`
 
 Config: `config.yaml` → `sedimentation.*`, env: `AAA_SEDIMENT_TOKEN_BUDGET`,
 `AAA_SEDIMENT_COUNT`.
