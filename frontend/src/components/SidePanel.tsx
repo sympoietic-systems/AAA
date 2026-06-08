@@ -133,7 +133,10 @@ export function SidePanel({
     setLoadingSkillContent(skillName)
     try {
       const result = await getSkillContent(skillName)
-      setSkillContent(prev => ({ ...prev, [skillName]: result.content || `(no content — lifecycle: ${result.lifecycle_stage || "unknown"})` }))
+      const text = result.content
+        || result.description
+        || `(no content available — lifecycle: ${result.lifecycle_stage || "unknown"}, status: ${result.status || "unknown"})`
+      setSkillContent(prev => ({ ...prev, [skillName]: text }))
       setExpandedSkill(skillName)
     } catch (e: any) {
       setSkillContent(prev => ({ ...prev, [skillName]: `Failed to load: ${e.message}` }))

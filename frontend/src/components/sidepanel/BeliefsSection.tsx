@@ -300,7 +300,12 @@ export function BeliefsSection({ data, error }: BeliefsSectionProps) {
     return <p className="text-[9px] text-[#444] font-mono">waiting for data...</p>
   }
 
-  const { beliefs, proto_beliefs, ghosts, somatic, attractor_window, spectral_margin, ecosystem } = data
+  const { beliefs: rawBeliefs, proto_beliefs: rawProtos, ghosts: rawGhosts, somatic, attractor_window, spectral_margin, ecosystem } = data
+
+  const isSkillBelief = (b: BeliefNodeInfo) => b.label?.startsWith("skill:") ?? false
+  const beliefs = (rawBeliefs || []).filter(b => !isSkillBelief(b))
+  const proto_beliefs = (rawProtos || []).filter(b => !isSkillBelief(b))
+  const ghosts = (rawGhosts || []).filter(b => !isSkillBelief(b))
 
   return (
     <div className="mt-2 border-t border-[#1a1a1a] pt-2">
@@ -365,7 +370,7 @@ export function BeliefsSection({ data, error }: BeliefsSectionProps) {
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {attractor_window.map((label) => {
-                const b = [...beliefs, ...(proto_beliefs || []), ...(ghosts || [])].find(x => x.label === label)
+                const b = [...(rawBeliefs || []), ...(rawProtos || []), ...(rawGhosts || [])].find(x => x.label === label)
                 const catColor = b ? getCategoryColor(b.category) : "#555"
                 return (
                   <span
@@ -400,7 +405,7 @@ export function BeliefsSection({ data, error }: BeliefsSectionProps) {
             </span>
             <div className="flex flex-wrap gap-1.5">
               {spectral_margin.map((label) => {
-                const b = (ghosts || []).find(x => x.label === label)
+                const b = (rawGhosts || []).find(x => x.label === label)
                 return (
                   <span
                     key={label}

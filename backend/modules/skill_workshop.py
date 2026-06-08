@@ -336,16 +336,23 @@ class SkillWorkshopModule(ProcessingModule):
         if isinstance(skill, dict):
             return skill
 
-        if skill.lifecycle_stage != "crystallized":
-            return {
-                "status": "error",
-                "message": f"Skill '{skill.name}' is not active (stage: {skill.lifecycle_stage}). Use 'apply' first.",
-            }
-
         try:
             self._skill_repo.record_usage(skill.id)
         except Exception:
             pass
+
+        if not skill.content or len(skill.content.strip()) < 10:
+            return {
+                "status": "ok",
+                "skill_id": skill.id,
+                "name": skill.name,
+                "description": skill.description,
+                "content": f"# {skill.name}\n\n{skill.description}\n\n*(Full procedural instructions are being generated. Skills evolve through the workshop — use 'review' to assess and 'apply' to crystallize with full content.)*",
+                "confidence": skill.confidence,
+                "version": skill.version,
+                "lifecycle_stage": skill.lifecycle_stage,
+                "message": f"Content for '{skill.name}' is a stub. The skill needs full instructions via the workshop.",
+            }
 
         return {
             "status": "ok",
@@ -355,6 +362,7 @@ class SkillWorkshopModule(ProcessingModule):
             "content": skill.content,
             "confidence": skill.confidence,
             "version": skill.version,
+            "lifecycle_stage": skill.lifecycle_stage,
             "message": f"Loaded full content for skill '{skill.name}' (v{skill.version}).",
         }
 

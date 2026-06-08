@@ -40,6 +40,7 @@ class SkillService:
 
         count = skill_repo.skill_count()
         if count > 0:
+            self._repair_empty_skill_content(skill_repo)
             return
 
         identity = getattr(state, "config", {}).get("personality", {})
@@ -188,6 +189,53 @@ class SkillService:
 
         total = len(always_active) + len(on_demand)
         logger.info("Seeded %d initial skills (%d always-active, %d on-demand)", total, len(always_active), len(on_demand))
+
+    def _repair_empty_skill_content(self, skill_repo) -> None:
+        skills = skill_repo.list_skills()
+        repaired = 0
+        for skill in skills:
+            if skill.content and len(skill.content.strip()) > 50:
+                continue
+
+            seed_content = self._find_seed_content(skill.name)
+            if not seed_content:
+                continue
+
+            skill_repo.update_skill(
+                skill_id=skill.id,
+                content=seed_content,
+            )
+            repaired += 1
+            logger.info("Repaired empty content for skill '%s' from seed", skill.name)
+
+        if repaired > 0:
+            logger.info("Repaired %d skills with empty/stub content", repaired)
+
+    def _find_seed_content(self, skill_name: str) -> str:
+        from pathlib import Path
+        import yaml
+
+        project_root = Path(__file__).parent.parent
+        seed_path = project_root / "personality" / "seed_skills.yaml"
+        if not seed_path.exists():
+            seed_path = project_root.parent / "backend" / "personality" / "seed_skills.yaml"
+        if not seed_path.exists():
+            return ""
+
+        try:
+            with open(seed_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except Exception:
+            return ""
+
+        skills_cfg = data.get("skills", {})
+        for skill_def in skills_cfg.get("on_demand", []):
+            if skill_def.get("id") == skill_name:
+                return skill_def.get("content", "")
+        for skill_def in skills_cfg.get("always_active", []):
+            if skill_def.get("id") == skill_name:
+                return skill_def.get("content", "")
+        return ""
 
     def _generate_skill_content(self, name: str, description: str, is_always_active: bool) -> str:
         sections = [f"# {name}\n\n{description}\n"]
