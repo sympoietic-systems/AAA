@@ -333,8 +333,9 @@ def _build_pipeline(config: dict, registry: SkillRegistry, repos: dict, modules:
         "modules",
         ["embedder", "structural_scorer", "perception", "web_retrieval", "conversation_metrics",
          "context_collector", "consolidation_checkpoint", "sedimentation_retrieval",
-         "diffractive_retrieval", "belief_metabolism", "prompt_assembler",
-         "homeostatic_regulator", "llm_client"],
+         "diffractive_retrieval", "belief_metabolism", "skill_activator",
+         "skill_workshop", "prompt_assembler", "homeostatic_regulator",
+         "llm_client"],
     )
     pipeline_modules = registry.resolve_pipeline(pipeline_order)
 

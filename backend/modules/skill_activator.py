@@ -143,10 +143,11 @@ class SkillActivatorModule(ProcessingModule):
     def _match_semantic(self, current_vector, on_demand_skills, candidates):
         if current_vector is None:
             return
+        current_dim = len(current_vector)
         for skill in on_demand_skills:
             if skill.name in candidates:
                 continue
-            skill_vec = self._parse_vector(skill.vector_16d or "[]")
+            skill_vec = self._parse_vector(skill.vector_16d or "[]", target_dim=current_dim)
             if skill_vec is None:
                 continue
             try:
@@ -161,7 +162,7 @@ class SkillActivatorModule(ProcessingModule):
             if similarity >= VECTOR_SIMILARITY_THRESHOLD:
                 candidates[skill.name] = {
                     "skill": skill,
-                    "reason": f"Semantic match (cos_sim={similarity:.2f})",
+                    "reason": f"Semantic match ({current_dim}D cos_sim={similarity:.2f})",
                     "priority": 2,
                     "score": float(similarity),
                 }
@@ -189,6 +190,30 @@ class SkillActivatorModule(ProcessingModule):
                 return vector_raw
             if isinstance(vector_raw, list):
                 return np.array(vector_raw, dtype=np.float32)
+
+        structural_sig = payload.get("structural_signature")
+        if structural_sig is not None:
+            try:
+                if isinstance(structural_sig, bytes):
+                    return np.frombuffer(structural_sig, dtype=np.float32)
+                if isinstance(structural_sig, list):
+                    return np.array(structural_sig, dtype=np.float32)
+                if isinstance(structural_sig, np.ndarray):
+                    return structural_sig.astype(np.float32)
+            except Exception:
+                pass
+
+        embedding_blob = payload.get("embedding")
+        if embedding_blob is not None:
+            try:
+                if isinstance(embedding_blob, bytes):
+                    return np.frombuffer(embedding_blob, dtype=np.float32)
+                if isinstance(embedding_blob, list):
+                    return np.array(embedding_blob, dtype=np.float32)
+                if isinstance(embedding_blob, np.ndarray):
+                    return embedding_blob.astype(np.float32)
+            except Exception:
+                return None
         return None
 
     def _get_user_message(self, payload: dict) -> Optional[str]:
@@ -200,13 +225,28 @@ class SkillActivatorModule(ProcessingModule):
                 return msg.get("content", "")
         return None
 
-    def _parse_vector(self, vector_json: str) -> Optional[np.ndarray]:
+    def _parse_vector(self, vector_json: str, target_dim: int = None) -> Optional[np.ndarray]:
         if not vector_json or vector_json == "[]":
             return None
         try:
-            return np.array(json.loads(vector_json), dtype=np.float32)
+            data = json.loads(vector_json)
         except (json.JSONDecodeError, ValueError, TypeError):
             return None
+
+        if isinstance(data, dict):
+            if target_dim:
+                key = "v16d" if target_dim == 16 else "v384d" if target_dim >= 100 else None
+                if key and key in data and data[key]:
+                    return np.array(data[key], dtype=np.float32)
+            for key in ("v16d", "v384d"):
+                if key in data and data[key]:
+                    return np.array(data[key], dtype=np.float32)
+            return None
+
+        if isinstance(data, list):
+            return np.array(data, dtype=np.float32)
+
+        return None
 
     def _parse_trigger_keywords(self, trigger_json: str) -> list[str]:
         if not trigger_json or trigger_json == "[]":
