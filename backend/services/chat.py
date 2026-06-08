@@ -59,6 +59,10 @@ class ChatService:
                 initial_payload["attachments"] = attachments
             if max_tokens_override is not None:
                 initial_payload["max_tokens"] = max_tokens_override
+            else:
+                llm_cfg = state.config.get("llm", {}).get("default_params", {})
+                if "max_tokens" in llm_cfg:
+                    initial_payload["max_tokens"] = llm_cfg["max_tokens"]
 
             result = await pipeline.run(initial_payload)
 

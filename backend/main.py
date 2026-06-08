@@ -101,6 +101,7 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             google_keys=google_keys, deepseek_keys=deepseek_keys, openrouter_keys=openrouter_keys,
             google_api_base=google_api_base, deepseek_api_base=deepseek_api_base,
             cooldown_seconds=cooldown_seconds, thinking=thinking, reasoning_effort=reasoning_effort,
+            default_params=default_params,
         )
 
     effective_model = model

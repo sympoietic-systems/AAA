@@ -51,7 +51,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         self._name = provider_name
         self._default_params = default_params or {
             "temperature": 0.7,
-            "max_tokens": 2048,
+            "max_tokens": 16384,
         }
         self._thinking = thinking
         self._reasoning_effort = reasoning_effort
@@ -359,6 +359,7 @@ class ModelPoolProvider(BaseLLMProvider):
         max_retries_per_model: int = 0,
         thinking: bool = False,
         reasoning_effort: str = "high",
+        default_params: Optional[dict] = None,
     ):
         self._api_key = api_key
         self._models = models
@@ -370,6 +371,7 @@ class ModelPoolProvider(BaseLLMProvider):
         self._max_retries_per_model = max_retries_per_model
         self._thinking = thinking
         self._reasoning_effort = reasoning_effort
+        self._default_params = default_params
         self._exhausted: dict[str, float] = {}
         self._last_model_used: str = ""
         self._last_model_time: float = 0.0
@@ -486,6 +488,7 @@ class ModelPoolProvider(BaseLLMProvider):
                     thinking=self._thinking if provider_type == "deepseek" else False,
                     reasoning_effort=self._reasoning_effort,
                     max_retries=self._max_retries_per_model,
+                    default_params=self._default_params,
                 )
 
                 try:
