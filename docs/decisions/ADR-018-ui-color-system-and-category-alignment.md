@@ -18,7 +18,7 @@ We establish a unified color mapping across all frontend components:
 
 We have applied this color-coding alignment across:
 1. `SidePanel.tsx`: Updated `DiffractiveSection` colors from purple (`#c084fc`) to rose/red (`#f43f5e`), resolving the color clash with the `WebMetadataCard` purple styles.
-2. `ContextViewer.tsx`: Aligned the styling dictionary keys (`system_prompt`, `history`, `sediment`, `file`, `web`, `diffractive`, `query`) with these exact unified hex codes.
+2. `contextViewer/types.ts`: Aligned the `SECTION_STYLES` dictionary keys (`system_prompt`, `history`, `sediment`, `file`, `web`, `diffractive`, `query`) with these exact unified hex codes.
 
 ### ContextViewer Sub-Tabs (2026-06-08)
 

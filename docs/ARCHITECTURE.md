@@ -381,9 +381,14 @@ Endpoint routing is handled automatically by the router prefix (`google_router/`
 
 Collapsible panels appear under each apparatus message in `MessageBubble`:
 1. **thinking** — raw thinking/reasoning trace from the LLM
-2. **context** — `ContextViewer` that parses `context_sent` into collapsible sections (System Prompt, History, Sediment, File, Web, Diffractive, Query) with structured sub-tab viewers:
-   - `SystemPromptViewer` — Identity, Skills, Beliefs, Directives, Raw tabs
-   - `DiffractiveZoneViewer` — Fragments, Directive, Raw tabs
+2. **context** — `ContextViewer` that parses `context_sent` into collapsible sections (System Prompt, History, Sediment, File, Web, Diffractive, Query). The component is split into a modular structure under `contextViewer/`:
+   - `types.ts` — shared `ContextSection`, `SectionColors`, and `SECTION_STYLES`
+   - `parsers.ts` — `parseContextSent` section-detection logic
+   - `HistorySectionViewer.tsx` — Consolidated, Compressed, Raw sub-tabs
+   - `SedimentSectionViewer.tsx` — Dialogue and File Traces sub-tabs
+   - `FileSectionViewer.tsx` — Files & Summaries, Retrieved Chunks sub-tabs
+   - `SystemPromptViewer.tsx` — Identity, Skills, Beliefs, Directives, Raw tabs
+   - `DiffractiveZoneViewer.tsx` — Fragments, Directive, Raw tabs
 3. **structural signature** — `StructuralAutopoieticGlyph` radar/bar visualization
 4. **notes** — inline text annotation system (select → create → render as highlights)
 
