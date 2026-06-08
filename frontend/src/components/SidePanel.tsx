@@ -1,19 +1,16 @@
 import { useState, useEffect } from "react"
 import type {
   ConversationFile,
-  SkillsResponse,
   DbSkillsResponse,
   ImageMetadata,
 } from "../api/client"
 import {
-  getSkills,
   getDbSkills,
   getSkillContent,
   getFileSummary,
 } from "../api/client"
 import { useTelemetry } from "../hooks/useTelemetry"
 import { SectionHeader } from "./sidepanel/SectionHeader"
-import { SkillRow } from "./sidepanel/SkillRow"
 import { VitalitySection } from "./sidepanel/VitalitySection"
 import { BeliefsSection } from "./sidepanel/BeliefsSection"
 import { DiffractionSection } from "./sidepanel/DiffractionSection"
@@ -60,8 +57,6 @@ export function SidePanel({
     if (onPanelToggle) onPanelToggle()
     else setCollapsed(p => !p)
   }
-  const [skillsData, setSkillsData] = useState<SkillsResponse | null>(null)
-  const [skillsError, setSkillsError] = useState<string | null>(null)
   const [dbSkillsData, setDbSkillsData] = useState<DbSkillsResponse | null>(null)
   const [dbSkillsError, setDbSkillsError] = useState<string | null>(null)
   const [dbSkillsOpen, setDbSkillsOpen] = useState(false)
@@ -78,8 +73,6 @@ export function SidePanel({
   const [tokensOpen, setTokensOpen] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
   const [sedimentOpen, setSedimentOpen] = useState(false)
-  const [pipelineOpen, setPipelineOpen] = useState(false)
-  const [skillsOpen, setSkillsOpen] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [memoryNodesOpen, setMemoryNodesOpen] = useState(false)
 
@@ -119,15 +112,6 @@ export function SidePanel({
     }
   )
 
-  // Local skills registry fetch (on-demand)
-  useEffect(() => {
-    if ((pipelineOpen || skillsOpen) && !skillsData) {
-      getSkills()
-        .then(setSkillsData)
-        .catch((e) => setSkillsError(e.message))
-    }
-  }, [pipelineOpen, skillsOpen, skillsData])
-
   // DB skills fetch (Symbia's procedural skills)
   useEffect(() => {
     if (dbSkillsOpen && !dbSkillsData) {
@@ -138,17 +122,21 @@ export function SidePanel({
   }, [dbSkillsOpen, dbSkillsData])
 
   const handleLoadSkillContent = async (skillName: string) => {
+    if (expandedSkill === skillName) {
+      setExpandedSkill(null)
+      return
+    }
     if (skillContent[skillName]) {
-      setExpandedSkill(expandedSkill === skillName ? null : skillName)
+      setExpandedSkill(skillName)
       return
     }
     setLoadingSkillContent(skillName)
     try {
       const result = await getSkillContent(skillName)
-      setSkillContent(prev => ({ ...prev, [skillName]: result.content || "" }))
+      setSkillContent(prev => ({ ...prev, [skillName]: result.content || `(no content — lifecycle: ${result.lifecycle_stage || "unknown"})` }))
       setExpandedSkill(skillName)
     } catch (e: any) {
-      setSkillContent(prev => ({ ...prev, [skillName]: `Error: ${e.message}` }))
+      setSkillContent(prev => ({ ...prev, [skillName]: `Failed to load: ${e.message}` }))
       setExpandedSkill(skillName)
     } finally {
       setLoadingSkillContent(null)
@@ -382,56 +370,9 @@ export function SidePanel({
             </div>
 
             <div className="flex flex-col gap-1 mt-1">
-              <SectionHeader
-                label="Pipeline"
-                count={skillsData ? skillsData.pipeline.length : undefined}
-                open={pipelineOpen}
-                onToggle={() => setPipelineOpen(!pipelineOpen)}
-              />
-              {pipelineOpen && (
-                <div className="pl-3">
-                  {skillsError && (
-                    <p className="text-[10px] text-[#ef4444] font-mono py-1">
-                      Error: {skillsError}
-                    </p>
-                  )}
-                  {!skillsData && !skillsError && (
-                    <p className="text-[10px] text-[#555] animate-pulse py-1">loading pipeline...</p>
-                  )}
-                  {skillsData && skillsData.pipeline.map((s) => (
-                    <SkillRow key={s.name} skill={s} />
-                  ))}
-                </div>
-              )}
-
-              <SectionHeader
-                label="Skills"
-                count={skillsData ? skillsData.on_demand.length : undefined}
-                open={skillsOpen}
-                onToggle={() => setSkillsOpen(!skillsOpen)}
-              />
-              {skillsOpen && (
-                <div className="pl-3">
-                  {skillsError && (
-                    <p className="text-[10px] text-[#ef4444] font-mono py-1">
-                      Error: {skillsError}
-                    </p>
-                  )}
-                  {!skillsData && !skillsError && (
-                    <p className="text-[10px] text-[#555] animate-pulse py-1">loading skills...</p>
-                  )}
-                  {skillsData && skillsData.on_demand.length === 0 && (
-                    <p className="text-[10px] text-[#444] py-1">no on-demand skills available</p>
-                  )}
-                  {skillsData && skillsData.on_demand.map((s) => (
-                    <SkillRow key={s.name} skill={s} />
-                  ))}
-                </div>
-              )}
-
               {/* DB Procedural Skills (Symbia's own skills) */}
               <SectionHeader
-                label="Procedural Skills"
+                label="Skills"
                 count={dbSkillsData ? (dbSkillsData.all.length) : undefined}
                 open={dbSkillsOpen}
                 onToggle={() => setDbSkillsOpen(!dbSkillsOpen)}

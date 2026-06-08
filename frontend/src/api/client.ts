@@ -285,7 +285,25 @@ export async function getDbSkills(): Promise<DbSkillsResponse> {
   return res.json()
 }
 
-export async function getSkillContent(skillName: string): Promise<{ content: string }> {
+export interface WorkshopResponse {
+  status: string
+  message?: string
+  skill_id?: string
+  name?: string
+  content?: string
+  description?: string
+  confidence?: number
+  version?: number
+  approval_tier?: string
+  lifecycle_stage?: string
+  anti_mastery_assessment?: Record<string, unknown>
+  skills?: Record<string, unknown>[]
+  count?: number
+  skill?: Record<string, unknown>
+  events?: Record<string, unknown>[]
+}
+
+export async function getSkillContent(skillName: string): Promise<WorkshopResponse> {
   const res = await fetch(`${BASE}/skills/workshop/load`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
