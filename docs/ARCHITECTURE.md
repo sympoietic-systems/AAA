@@ -383,12 +383,12 @@ Collapsible panels appear under each apparatus message in `MessageBubble`:
 1. **thinking** — raw thinking/reasoning trace from the LLM
 2. **context** — `ContextViewer` that parses `context_sent` into collapsible sections (System Prompt, History, Sediment, File, Web, Diffractive, Query). The component is split into a modular structure under `contextViewer/`:
    - `types.ts` — shared `ContextSection`, `SectionColors`, and `SECTION_STYLES`
-   - `parsers.ts` — `parseContextSent` section-detection logic
+   - `parsers.ts` — `parseContextSent` section-detection with line-ending normalization (`\r?\n`), diffractive zone same-message handling, and post-processing reclassification safety net
    - `HistorySectionViewer.tsx` — Consolidated, Compressed, Raw sub-tabs
    - `SedimentSectionViewer.tsx` — Dialogue and File Traces sub-tabs
    - `FileSectionViewer.tsx` — Files & Summaries, Retrieved Chunks sub-tabs
-   - `SystemPromptViewer.tsx` — Identity, Skills, Beliefs, Directives, Raw tabs
-   - `DiffractiveZoneViewer.tsx` — Fragments, Directive, Raw tabs
+   - `SystemPromptViewer.tsx` — Identity, Skills, Beliefs, Directives, Raw tabs; parses `--- BEGIN SKILLS/BELIEFS/DIRECTIVE ---` blocks with `\r?\n` robustness, `--- BEGIN PROCEDURAL SEDIMENT ---` blocks, and loose fallback for malformed content
+   - `DiffractiveZoneViewer.tsx` — Fragments, Directive, Raw tabs; falls back to system-block parsing when content contains skills/beliefs markers
 3. **structural signature** — `StructuralAutopoieticGlyph` radar/bar visualization
 4. **notes** — inline text annotation system (select → create → render as highlights)
 
@@ -403,7 +403,7 @@ Cross-conversation context retrieval via `SedimentationRetrievalModule`:
 - Selects top-K matches above `similarity_threshold` (default 0.3)
 - Fills up to `sediment_token_budget` (default 2000 tokens)
 - Injected after consolidation checkpoint, before conversation history
-- Assembly order: `[system_prompt] → [procedural_sediment] → [history] → [cross-conv_sediment] → [file] → [web] → [diffractive_zone] → [query]`
+- Assembly order: `[system_prompt] → [procedural_sediment (--- BEGIN/END blocks)] → [history] → [cross-conv_sediment] → [file] → [web] → [diffractive_zone] → [query]`
 
 Config: `config.yaml` → `sedimentation.*`, env: `AAA_SEDIMENT_TOKEN_BUDGET`,
 `AAA_SEDIMENT_COUNT`.

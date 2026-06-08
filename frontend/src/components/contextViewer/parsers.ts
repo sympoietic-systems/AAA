@@ -16,7 +16,9 @@ function getTitle(type: ContextSection['type']) {
 export function parseContextSent(contextText: string): ContextSection[] {
   if (!contextText) return [];
 
-  const lines = contextText.split('\n');
+  // Normalize line endings: convert \r\n → \n, strip stray \r for robust parsing
+  const normalized = contextText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalized.split('\n');
   const messages: { index: number; role: string; contentLines: string[] }[] = [];
   let currentMsg: typeof messages[number] | null = null;
   const msgStartRegex = /^\[(\d+)\] (system|user|assistant|unknown|apparatus):(.*)$/;
@@ -107,19 +109,34 @@ export function parseContextSent(contextText: string): ContextSection[] {
       continue;
     }
 
-    if (rawContent.includes('<diffractive_interference_zone>')) {
+    // Handle diffractive interference zone — opening and closing tags may be in the same message
+    const hasOpening = rawContent.includes('<diffractive_interference_zone>');
+    const hasClosing = rawContent.includes('</diffractive_interference_zone>');
+
+    if (hasOpening) {
       flushSection();
       currentSectionType = 'diffractive';
-      const cleanContent = rawContent.replace('<diffractive_interference_zone>', '').trim();
+      // Strip both tags from the content
+      let cleanContent = rawContent
+        .replace('<diffractive_interference_zone>', '')
+        .replace('</diffractive_interference_zone>', '')
+        .trim();
       if (cleanContent) {
-        currentSectionContent.push(`[${msg.role}]: ${cleanContent}`);
+        currentSectionContent.push(cleanContent);
+      }
+      // If closing tag was in the same message, flush immediately
+      if (hasClosing) {
+        flushSection();
+        currentSectionType = 'other';
       }
       continue;
     }
-    if (rawContent.includes('</diffractive_interference_zone>')) {
+
+    // Handle closing tag in a separate message (legacy path)
+    if (hasClosing) {
       const cleanContent = rawContent.replace('</diffractive_interference_zone>', '').trim();
       if (cleanContent) {
-        currentSectionContent.push(`[${msg.role}]: ${cleanContent}`);
+        currentSectionContent.push(cleanContent);
       }
       flushSection();
       currentSectionType = 'other';
@@ -134,6 +151,29 @@ export function parseContextSent(contextText: string): ContextSection[] {
   }
   flushSection();
 
+  // ── Post-processing: reclassify sections that contain mismatched content ──
+
+  // If a 'diffractive' section contains system-prompt block markers, it was misclassified
+  for (const sec of sections) {
+    if (sec.type === 'diffractive' || sec.type === 'other') {
+      const hasSystemBlocks =
+        sec.content.includes('--- BEGIN SKILLS') ||
+        sec.content.includes('--- BEGIN BELIEFS') ||
+        sec.content.includes('--- BEGIN DIRECTIVE') ||
+        sec.content.includes('--- BEGIN PROCEDURAL SEDIMENT ---');
+      const hasDiffractiveMarkers =
+        sec.content.includes('[Source:') ||
+        sec.content.includes('[URGENT ATTENTION DIRECTIVE]') ||
+        sec.content.includes('<diffractive_interference_zone>');
+
+      if (hasSystemBlocks && !hasDiffractiveMarkers) {
+        // This is system prompt content, misclassified
+        sec.type = 'system_prompt';
+        sec.title = getTitle('system_prompt');
+      }
+    }
+  }
+
   if (sections.length > 0) {
     const lastSec = sections[sections.length - 1];
     if (lastSec.type === 'other') {
@@ -142,5 +182,23 @@ export function parseContextSent(contextText: string): ContextSection[] {
     }
   }
 
-  return sections.filter(s => s.content.trim() !== '');
+  const filtered = sections.filter(s => s.content.trim() !== '');
+
+  // Debug: log section breakdown to help diagnose classification issues
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug(
+      '[ContextViewer] Parsed sections:',
+      filtered.map(s => ({
+        type: s.type,
+        title: s.title,
+        contentLen: s.content.length,
+        preview: s.content.slice(0, 120),
+        hasSkills: s.content.includes('--- BEGIN SKILLS'),
+        hasBeliefs: s.content.includes('--- BEGIN BELIEFS'),
+        hasDiffractive: s.content.includes('[Source:') || s.content.includes('<diffractive'),
+      }))
+    );
+  }
+
+  return filtered;
 }

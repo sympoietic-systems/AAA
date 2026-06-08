@@ -32,3 +32,4 @@ docs/protocols/*
 docs/extra/*
 backend/.agents/*
 backend/scratch/*
+.agents/

@@ -337,8 +337,12 @@ def _build_system_content(
         block = "\n--- BEGIN SKILLS (Loaded) ---\n"
         block += "Skills loaded for this turn (full instructions in procedural sediment):\n"
         for skill in loaded_skills:
+            desc = skill.get("description", "")
             reason = skill.get("match_reason", "explicit")
-            block += f"  - {skill['name']} (reason: {reason})\n"
+            if desc:
+                block += f"  - {skill['name']}: {desc} (reason: {reason})\n"
+            else:
+                block += f"  - {skill['name']} (reason: {reason})\n"
         block += "--- END SKILLS (Loaded) ---"
         parts.append(block)
 

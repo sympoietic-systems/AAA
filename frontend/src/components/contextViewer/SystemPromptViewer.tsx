@@ -19,7 +19,8 @@ function parseSystemPrompt(content: string): ParsedSystemPrompt {
   };
 
   // Match all --- BEGIN TYPE (SUBTYPE) --- ... --- END TYPE (SUBTYPE) --- blocks
-  const blockRegex = /--- BEGIN (\w+) \(([^)]+)\) ---\n([\s\S]*?)--- END \1 \(\2\) ---/g;
+  // Use \r?\n to handle both Unix (LF) and Windows (CRLF) line endings robustly
+  const blockRegex = /--- BEGIN (\w+) \(([^)]+)\) ---\r?\n([\s\S]*?)--- END \1 \(\2\) ---/g;
 
   const blocks: { index: number; type: string; subtype: string; body: string }[] = [];
   let match: RegExpExecArray | null;
@@ -38,9 +39,10 @@ function parseSystemPrompt(content: string): ParsedSystemPrompt {
     result.identity = text.slice(0, blocks[0].index).trim();
   } else {
     result.identity = text.trim();
-    return result;
+    // Even if no blocks, still try to parse procedural sediment and ecology notes
   }
 
+  // Parse the known block types
   for (const block of blocks) {
     const lines = block.body.split('\n').map(l => l.trim()).filter(Boolean);
     // First line is usually a description/header line, skip it
@@ -62,12 +64,82 @@ function parseSystemPrompt(content: string): ParsedSystemPrompt {
     }
   }
 
+  // Parse PROCEDURAL SEDIMENT — separate block without parentheses, contains loaded skills as ### headings
+  const sedRegex = /--- BEGIN PROCEDURAL SEDIMENT ---\r?\n([\s\S]*?)--- END PROCEDURAL SEDIMENT ---/;
+  const sedMatch = text.match(sedRegex);
+  if (sedMatch) {
+    const sedBody = sedMatch[1].trim();
+    // Split by ### headings — each heading is a skill name, body is the skill content
+    const headingRegex = /^### (.+)$/gm;
+    const sedSkills: { label: string; items: string[] }[] = [];
+    const headings: string[] = [];
+    let hMatch: RegExpExecArray | null;
+    while ((hMatch = headingRegex.exec(sedBody)) !== null) {
+      headings.push(hMatch[1].trim());
+    }
+    for (let i = 0; i < headings.length; i++) {
+      const skillName = headings[i];
+      // Body for this skill: the text after this heading until the next heading (or end)
+      // Find the section text
+      const headingIndex = sedBody.indexOf('### ' + skillName);
+      const nextHeadingIndex = i + 1 < headings.length
+        ? sedBody.indexOf('### ' + headings[i + 1], headingIndex + 1)
+        : sedBody.length;
+      const sectionText = sedBody.slice(headingIndex + ('### ' + skillName).length, nextHeadingIndex).trim();
+      // Extract the first line as description
+      const descLines = sectionText.split('\n').map(l => l.trim()).filter(Boolean);
+      const desc = descLines.length > 0 ? descLines[0] : '';
+      if (skillName && desc) {
+        sedSkills.push({ label: 'Sediment', items: [`${skillName}: ${desc}`] });
+      }
+    }
+    // Merge sediment skills into result, avoiding duplicates by name prefix
+    const existingSkillPrefixes = new Set(
+      result.skills.flatMap(s => s.items).map(item => item.split(':')[0].trim())
+    );
+    const mergedItems: string[] = [];
+    for (const s of sedSkills) {
+      for (const item of s.items) {
+        const prefix = item.split(':')[0].trim();
+        if (!existingSkillPrefixes.has(prefix)) {
+          mergedItems.push(item);
+        }
+      }
+    }
+    if (mergedItems.length > 0) {
+      result.skills.push({ label: 'Procedural Sediment', items: mergedItems });
+    }
+  }
+
   // Also parse SKILL ECOLOGY NOTES (legacy format still used for ecology notes)
-  const ecologyMatch = text.match(/--- BEGIN SKILL ECOLOGY NOTES ---\n([\s\S]*?)--- END SKILL ECOLOGY NOTES ---/);
+  const ecologyMatch = text.match(/--- BEGIN SKILL ECOLOGY NOTES ---\r?\n([\s\S]*?)--- END SKILL ECOLOGY NOTES ---/);
   if (ecologyMatch) {
     const ecoLines = ecologyMatch[1].trim().split('\n').map(l => l.trim()).filter(Boolean);
     if (ecoLines.length > 0) {
       result.skills.push({ label: 'Ecology Notes', items: ecoLines });
+    }
+  }
+
+  // ── Fallback: if structured parsing produced nothing, try loose pattern matching ──
+  if (result.skills.length === 0 && result.beliefs.length === 0 && result.directives.length === 0) {
+    const allLines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+    // Try to find skill-like lines: "- name: description"
+    const skillItems = allLines.filter(l =>
+      /^-\s*[\w-]+:/.test(l) && !/^-\s*Slot\s+\d+:/.test(l)
+    ).map(l => l.replace(/^-\s*/, ''));
+
+    if (skillItems.length > 0) {
+      result.skills.push({ label: 'Detected Skills', items: skillItems });
+    }
+
+    // Try to find belief-like lines
+    const beliefItems = allLines.filter(l =>
+      /^-\s*Slot\s+\d+:/.test(l) || /^-\s*\[[\d.]+\]/.test(l)
+    ).map(l => l.replace(/^-\s*/, ''));
+
+    if (beliefItems.length > 0) {
+      result.beliefs.push({ label: 'Detected Beliefs', items: beliefItems });
     }
   }
 

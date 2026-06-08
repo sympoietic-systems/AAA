@@ -93,6 +93,7 @@ Automated system notifications (e.g., file processing logs with speaker `system`
 To prevent ontological collapse and keep memory layers cleanly structured for the LLM, we enforce strict visual boundaries and metadata framing:
 
 1. **Boundary Delimiters (Top-Level Context Blocks):** Every retrieved context block is wrapped inside visible system tags:
+   - Procedural sediment: `--- BEGIN PROCEDURAL SEDIMENT ---` / `--- END PROCEDURAL SEDIMENT ---` (loaded skill instructions, joined as a separate system message after the main prompt)
    - History: `--- BEGIN CONVERSATION HISTORY ---` / `--- END CONVERSATION HISTORY ---`
    - Cross-conversation memory: `--- BEGIN CROSS-CONVERSATION RESONANCE ---` / `--- END CROSS-CONVERSATION RESONANCE ---`
    - Files context: `--- BEGIN FILE SEDIMENT ---` / `--- END FILE SEDIMENT ---`
@@ -105,7 +106,9 @@ To prevent ontological collapse and keep memory layers cleanly structured for th
    - Directives: `DIRECTIVE (Tension Resolution)`, `DIRECTIVE (Immunological)`
    - Ecology: `SKILL ECOLOGY NOTES` (legacy format, single-line markers)
    
-   The frontend `ContextViewer` uses a generic regex (`--- BEGIN (\w+) \((.+)\) ---`) to auto-discover and tabulate these blocks without hardcoded section names, enabling backend changes without frontend modifications.
+   The frontend `ContextViewer` uses a generic regex (`--- BEGIN (\w+) \((.+)\) ---\r?\n`) with `\r?\n` for cross-platform line-ending robustness. If structured parsing produces no sections, a loose fallback detects skill-like and belief-like patterns from raw text. A post-processing reclassification step catches sections misclassified as `diffractive` or `other` that contain system-prompt block markers, correcting their type to `system_prompt`. The `<diffractive_interference_zone>` tag is handled atomically when both opening and closing tags appear in the same message.
+
+3. **Loaded Skills Format:** Loaded skills in the system prompt use the format `- skill_name: description_text (reason: match_reason)`, carrying the skill's `short_content` or `description` field for the model's immediate reference alongside the full instructions in procedural sediment.
 
 3. **Beliefs Deduplication:** The Spectral Margin block (`BELIEFS (Spectral Margin)`) is a single-occurrence block. Collapsed beliefs whose statement or label duplicates an entry in the Attractor Window are excluded. Internal duplicates within the spectral margin are also removed.
 

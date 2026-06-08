@@ -99,6 +99,7 @@ class SkillActivatorModule(ProcessingModule):
             loaded_skills.append({
                 "id": skill.id,
                 "name": skill.name,
+                "description": skill.short_content or skill.description,
                 "content_truncated": truncated,
                 "match_reason": candidate["reason"],
                 "score": candidate.get("score"),
