@@ -141,6 +141,8 @@ class WorkshopResponse(BaseModel):
     message: str = ""
     skill_id: str = ""
     name: str = ""
+    content: str = ""
+    description: str = ""
     confidence: float = 0.0
     approval_tier: str = ""
     lifecycle_stage: str = ""
