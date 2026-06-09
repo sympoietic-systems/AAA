@@ -22,6 +22,8 @@ class DreamContextMixin:
         if not convos:
             return None
         for c in convos:
+            if not hasattr(self.conversation_repo, "get_tags"):
+                return c.id
             tags = self.conversation_repo.get_tags(c.id)
             is_dream = any(t["tag_type"] == "structural" and t["tag"] == "dreams" for t in tags)
             if not is_dream:

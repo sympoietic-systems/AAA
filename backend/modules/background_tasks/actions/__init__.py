@@ -4,3 +4,4 @@ from backend.modules.background_tasks.actions.document_collision import Document
 from backend.modules.background_tasks.actions.semantic_knot import SemanticKnotAction
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.title import GenerateTitleAction
+from backend.modules.background_tasks.actions.dream_topic_decision import DreamTopicDecisionAction

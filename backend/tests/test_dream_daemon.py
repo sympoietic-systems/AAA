@@ -114,6 +114,13 @@ class MockConversationRepository:
     def create(self, **kwargs):
         pass
 
+    def get_tags(self, conversation_id):
+        # All mock conversations in the test are treated as dream logs
+        return [{"tag_type": "structural", "tag": "dreams"}]
+
+    def add_tag(self, conversation_id, tag, tag_type):
+        pass
+
 
 class MockPipeline:
     def __init__(self):

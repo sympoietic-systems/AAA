@@ -29,6 +29,7 @@ from backend.modules.belief_engine import BeliefDynamicsEngine
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.document_collision import DocumentCollisionAction
+from backend.modules.background_tasks.actions.dream_topic_decision import DreamTopicDecisionAction
 from backend.utils.token_counter import estimate_tokens
 
 # Set up logging for the worker process
@@ -493,6 +494,7 @@ async def main():
     )
     background_engine.register(SummarizeAction())
     background_engine.register(DocumentCollisionAction())
+    background_engine.register(DreamTopicDecisionAction())
 
     # 8. Dispatch based on reprocess flag
     if args.reprocess:

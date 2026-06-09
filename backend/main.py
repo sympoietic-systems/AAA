@@ -24,6 +24,7 @@ from backend.modules.background_tasks.actions.document_collision import Document
 from backend.modules.background_tasks.actions.semantic_knot import SemanticKnotAction
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.title import GenerateTitleAction
+from backend.modules.background_tasks.actions.dream_topic_decision import DreamTopicDecisionAction
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
 from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
 from backend.modules.context_collector import ContextCollectorModule
@@ -371,6 +372,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     engine.register(ConversationSummaryAction())
     engine.register(DocumentCollisionAction())
     engine.register(SemanticKnotAction())
+    engine.register(DreamTopicDecisionAction())
     logger.info("Background task engine initialized with actions: %s", engine.list_actions())
     return engine, background_provider
 

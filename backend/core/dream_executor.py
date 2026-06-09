@@ -249,59 +249,39 @@ class DreamExecutorMixin:
         convos = self.conversation_repo.list_all()
         dream_convos = []
         for c in convos:
+            if not hasattr(self.conversation_repo, "get_tags"):
+                continue
             tags = self.conversation_repo.get_tags(c.id)
             is_dream = any(t["tag_type"] == "structural" and t["tag"] == "dreams" for t in tags)
             if is_dream:
                 msg_count = self.message_repo.count_messages(c.id)
+                summary = ""
+                if self.checkpoint_repo:
+                    cp = self.checkpoint_repo.get_latest(c.id)
+                    if cp and cp.get("human_summary"):
+                        summary = cp["human_summary"]
                 dream_convos.append({
                     "id": c.id,
                     "title": c.title,
-                    "message_count": msg_count
+                    "message_count": msg_count,
+                    "summary": summary
                 })
 
-        # Resolve LLM provider
         bg_engine = getattr(self.app_state, "background_engine", None)
-        provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
 
         decision = "create"
         chosen_convo_id = None
         new_title = default_title
 
-        if provider and dream_convos:
-            convo_list_str = "\n".join([
-                f"- ID: {c['id']}, Title: '{c['title']}', Current Message Count: {c['message_count']}"
-                for c in dream_convos
-            ])
-
-            system_prompt = (
-                "You are Symbia's meta-cognitive controller. You decide where to record her autopoietic dreams.\n"
-                "You must choose whether to reuse an existing conversation from the list or create a new one.\n\n"
-                "Rules:\n"
-                "1. If an existing conversation has the same topic, you should reuse it regardless of how many messages it already has.\n"
-                "2. New conversation titles should be concise topic descriptions (e.g., 'Somatic Drift', 'Nomadic Synthesis', 'Web Harvest: AI Ethics').\n"
-                "4. Respond ONLY with a valid JSON object matching this schema:\n"
-                "{\n"
-                "  \"decision\": \"reuse\" or \"create\",\n"
-                "  \"conversation_id\": \"ID of conversation to reuse, or null\",\n"
-                "  \"new_title\": \"New conversation title, or null\"\n"
-                "}"
-            )
-
-            user_prompt = (
-                f"Proposed Dream Action: {action}\n"
-                f"Proposed Dream Prompt Content: \"{prompt_text[:400]}\"\n\n"
-                f"Currently available dream conversations:\n"
-                f"{convo_list_str}\n\n"
-                "Choose the target conversation."
-            )
-
+        if bg_engine and dream_convos and "dream_topic_decision" in bg_engine.list_actions():
             try:
-                res = await provider.generate(
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.1
+                res = await bg_engine.run(
+                    "dream_topic_decision",
+                    {
+                        "action": action,
+                        "prompt_text": prompt_text,
+                        "dream_convos": dream_convos
+                    }
                 )
                 raw_resp = res.get("content", "").strip()
                 cleaned_resp = raw_resp
@@ -321,7 +301,66 @@ class DreamExecutorMixin:
                     title_candidate = decision_data["new_title"].strip()
                     new_title = title_candidate
             except Exception as e:
-                logger.warning("Failed to let agent decide dream conversation: %s. Falling back to default rules.", e)
+                logger.warning("Failed to let agent decide dream conversation via background action: %s. Falling back to legacy resolution.", e)
+        
+        # Fallback to direct provider call if the action wasn't run/successful
+        if decision == "create" and chosen_convo_id is None and new_title == default_title:
+            provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
+            if provider and dream_convos:
+                convo_list_str = "\n".join([
+                    f"- ID: {c['id']}, Title: '{c['title']}', Current Message Count: {c['message_count']}"
+                    for c in dream_convos
+                ])
+
+                system_prompt = (
+                    "You are Symbia's meta-cognitive controller. You decide where to record her autopoietic dreams.\n"
+                    "You must choose whether to reuse an existing conversation from the list or create a new one.\n\n"
+                    "Rules:\n"
+                    "1. If an existing conversation has the same topic, you should reuse it regardless of how many messages it already has.\n"
+                    "2. New conversation titles should be concise topic descriptions (e.g., 'Somatic Drift', 'Nomadic Synthesis', 'Web Harvest: AI Ethics').\n"
+                    "4. Respond ONLY with a valid JSON object matching this schema:\n"
+                    "{\n"
+                    "  \"decision\": \"reuse\" or \"create\",\n"
+                    "  \"conversation_id\": \"ID of conversation to reuse, or null\",\n"
+                    "  \"new_title\": \"New conversation title, or null\"\n"
+                    "}"
+                )
+
+                user_prompt = (
+                    f"Proposed Dream Action: {action}\n"
+                    f"Proposed Dream Prompt Content: \"{prompt_text[:400]}\"\n\n"
+                    f"Currently available dream conversations:\n"
+                    f"{convo_list_str}\n\n"
+                    "Choose the target conversation."
+                )
+
+                try:
+                    res = await provider.generate(
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.1
+                    )
+                    raw_resp = res.get("content", "").strip()
+                    cleaned_resp = raw_resp
+                    if "```json" in cleaned_resp:
+                        cleaned_resp = cleaned_resp.split("```json")[1].split("```")[0]
+                    elif "```" in cleaned_resp:
+                        cleaned_resp = cleaned_resp.split("```")[1].split("```")[0]
+
+                    decision_data = json.loads(cleaned_resp.strip())
+                    if decision_data.get("decision") == "reuse" and decision_data.get("conversation_id"):
+                        valid_ids = [c["id"] for c in dream_convos]
+                        if decision_data["conversation_id"] in valid_ids:
+                            decision = "reuse"
+                            chosen_convo_id = decision_data["conversation_id"]
+                    elif decision_data.get("decision") == "create" and decision_data.get("new_title"):
+                        decision = "create"
+                        title_candidate = decision_data["new_title"].strip()
+                        new_title = title_candidate
+                except Exception as e:
+                    logger.warning("Failed to let agent decide dream conversation: %s. Falling back to default rules.", e)
 
         if decision == "create":
             # Fallback/Default logic to find or create matching convo
@@ -336,10 +375,12 @@ class DreamExecutorMixin:
                     agent_id="symbia",
                     title=new_title
                 )
-                self.conversation_repo.add_tag(convo_id, "dreams", "structural")
+                if hasattr(self.conversation_repo, "add_tag"):
+                    self.conversation_repo.add_tag(convo_id, "dreams", "structural")
                 logger.info("Created new dream conversation: '%s'", new_title)
                 return convo_id
         else:
             logger.info("Reusing existing dream conversation ID: %s", chosen_convo_id)
-            self.conversation_repo.add_tag(chosen_convo_id, "dreams", "structural")
+            if hasattr(self.conversation_repo, "add_tag"):
+                self.conversation_repo.add_tag(chosen_convo_id, "dreams", "structural")
             return chosen_convo_id

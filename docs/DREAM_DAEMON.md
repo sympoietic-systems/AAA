@@ -76,10 +76,10 @@ AAA_DAEMON_DRIFT_COEFFICIENT=0.00001
 To prevent daemon budget bypasses caused by server restarts (uvicorn auto-reload) or multiple parallel backend instances, the daily dream count is tracked dynamically in the database via `count_dreams_since` with wildcards (`LIKE 'Dream Log%' OR LIKE 'Internal Diary%'`). This counts all successful dream monologues executed since midnight UTC of the current calendar day.
 
 ### 2. Agentic Meta-Cognitive Routing
-Instead of writing all dreams to a single, monolithic log that grows bloated and drifts in context, the background model itself decides where to route each dream cycle.
-* **Selection Process**: The daemon queries the background LLM provider with a list of active dream logs. The model decides whether to **reuse** an existing conversation or **create** a new topic conversation.
-* **Continuous Threads**: Dream conversations on the same topic continue in a single thread indefinitely. This preserves full topical context and helps prevent repetitive cycles across fragmented conversation logs.
-* **Constraint**: All dream conversation titles are automatically normalized and enforced to start with the prefix `Dream Log:`.
+Instead of writing all dreams to a single, monolithic log or dividing them strictly by their technical dream action types (which produces extremely long, mixed-topic logs), the background model itself decides where to route each dream cycle based on the **specific conceptual topic or theme**.
+* **Selection Process**: The daemon queries the background LLM (via the `dream_topic_decision` action) with the proposed dream action, the proposed dream prompt content, and a detailed list of active dream logs. Each log in the list includes its title, message count, and its latest human-readable consolidation summary (truncated to 300 characters for token efficiency).
+* **Thematic Alignment**: The model decides whether to **reuse** an existing dream conversation (if it has a strong conceptual alignment with the new dream's theme) or **create** a new one.
+* **Concise Evocative Titles**: If the model decides to create a new conversation, it generates a concise, theme-specific, lowercase title using hyphens (e.g., `somatic-attractor-drift`, `diffractive-glitch-metabolism`, `exogenous-knowledge-collision`) representing the specific topic/theme, avoiding generic words.
 
 ---
 
