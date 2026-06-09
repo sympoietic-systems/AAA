@@ -73,17 +73,17 @@ is configurable via `config.yaml` and env var.
 ### Consolidation Checkpoints
 
 When a conversation crosses the `consolidate_threshold` (default: 15 messages),
-the system triggers the existing `ConsolidateAction` background task. The resulting
-summary is stored in a new `consolidation_checkpoints` table and prepended to
-future context as a special system message:
+the system sets the `trigger_consolidation` flag. The Dream Daemon picks up this
+flag and runs the `ConsolidateAction` background task. The resulting summary is
+stored in a `consolidation_checkpoints` table and prepended to future context as
+a special system message:
 
 ```
 [system]: [Consolidated memory: <checkpoint summary>]
 ```
 
 This replaces the need to send all 15+ raw messages. Consecutive checkpoints are
-created as the conversation grows (at 15, 30, 45, etc.) with older ones being
-replaced by the latest.
+created as the conversation grows, with older ones being replaced by the latest.
 
 The consolidation prompt (`consolidate.yaml`) produces:
 - Core concepts genuinely explored
@@ -93,6 +93,21 @@ The consolidation prompt (`consolidate.yaml`) produces:
 
 This IS the **sedimentation** layer — the "scar tissue" that persists as the
 conversation grows beyond the floating window.
+
+#### Consolidation Scheduling Rules
+
+The Dream Daemon evaluates consolidation for every conversation on each cycle
+(every `check_interval` seconds). Three rules apply, in priority order:
+
+| Priority | Rule | Condition | Thresholds |
+|----------|------|-----------|------------|
+| 1 | **Explicit flag** | `requires_consolidation = True` | None — always consolidate immediately |
+| 2 | **Re-consolidation** | Previously consolidated | `consolidate_cooldown_hours` (default: 12h) elapsed + `consolidate_min_new_messages` (default: 4) new messages since last checkpoint |
+| 3 | **First-time** | Never consolidated | `consolidate_first_time_threshold` (default: 12) total messages |
+
+The inline pipeline sets the explicit flag every `consolidate_threshold` (default: 15)
+messages. The daemon's proactive rules (2 & 3) ensure conversations are consolidated
+even if the inline flag was missed or the conversation went idle.
 
 ### Reordered Message Assembly
 
@@ -133,6 +148,10 @@ context:
   floating_window: 8             # env: AAA_CONTEXT_FLOATING_WINDOW
   caveman_enabled: true          # env: AAA_CONTEXT_CAVEMAN
   consolidate_threshold: 15      # env: AAA_CONTEXT_CONSOLIDATE_THRESHOLD
+daemon:
+  consolidate_cooldown_hours: 12     # hours before re-consolidating
+  consolidate_min_new_messages: 4    # min new msgs for re-consolidation
+  consolidate_first_time_threshold: 12  # min msgs for first-ever consolidation
 ```
 
 ### Database Schema Addition

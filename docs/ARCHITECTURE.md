@@ -189,7 +189,7 @@ Per-message vitality metrics (computed by `ConversationMetricsModule`). Scoped t
 | `model` | TEXT | Model used for consolidation |
 | `created_at` | DATETIME | Default CURRENT_TIMESTAMP |
 
-Auto-created when daemon runs consolidation (proactive: recent conversations with new messages).
+Auto-created when daemon runs consolidation (see scheduling rules in ADR-007).
 Context injection uses structured memory nodes (see `memory_nodes`) when available, falling back to raw summary text.
 
 ### `memory_nodes`

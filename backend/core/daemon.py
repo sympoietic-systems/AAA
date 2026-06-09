@@ -47,6 +47,9 @@ class AutopoieticDreamDaemon:
         self.dream_resonance_turns = daemon_cfg.get("dream_resonance_turns", 1)
         self.resonance_stagnation = daemon_cfg.get("resonance_stagnation", 0.98)
         self.max_resonance_tokens = daemon_cfg.get("max_resonance_tokens", 8000)
+        self.consolidate_cooldown_hours = daemon_cfg.get("consolidate_cooldown_hours", 12)
+        self.consolidate_min_new_messages = daemon_cfg.get("consolidate_min_new_messages", 4)
+        self.consolidate_first_time_threshold = daemon_cfg.get("consolidate_first_time_threshold", 12)
 
         # Execution constraints
         self.max_daily_dreams = daemon_cfg.get("max_daily_dreams", 120)
@@ -1394,31 +1397,38 @@ class AutopoieticDreamDaemon:
                                 c.id,
                             )
 
-            # Check 24 hour cooldown (skip if re-consolidation needed for old-format backfill)
-            if not needs_reconsolidation:
-                last_time = getattr(c, "last_consolidated_at", None)
-                if last_time:
-                    if last_time.tzinfo is None:
-                        last_time = last_time.replace(tzinfo=timezone.utc)
-                    elapsed = datetime.now(timezone.utc) - last_time
-                    if elapsed.total_seconds() < 86400:
-                        continue
-
             requires_consolidation = getattr(c, "requires_consolidation", 0)
-            if not requires_consolidation:
-                # Proactive: consolidate if conversation has recent messages not yet summarized
-                updated_at = getattr(c, "updated_at", None)
-                if updated_at:
-                    if updated_at.tzinfo is None:
-                        updated_at = updated_at.replace(tzinfo=timezone.utc)
-                    since_update = datetime.now(timezone.utc) - updated_at
-                    if since_update.total_seconds() > 86400:
-                        continue
+
+            if requires_consolidation:
+                # Rule 3: Explicit flag — always consolidate, no conditions
+                pass
+            elif needs_reconsolidation:
+                # Old-format backfill — also bypass all checks
+                pass
+            else:
+                # Compute message counts for proactive rules
                 checkpoint = self.checkpoint_repo.get_latest(c.id)
                 checkpoint_msg_count = checkpoint["message_count"] if checkpoint else 0
                 total_msg_count = self.message_repo.count_messages(c.id)
-                if total_msg_count <= checkpoint_msg_count:
+                new_msg_count = total_msg_count - checkpoint_msg_count
+
+                if new_msg_count <= 0:
                     continue
+
+                last_time = getattr(c, "last_consolidated_at", None)
+                if last_time:
+                    # Rule 1: Previously consolidated — consolidate if >cooldown AND ≥N new messages
+                    if last_time.tzinfo is None:
+                        last_time = last_time.replace(tzinfo=timezone.utc)
+                    elapsed = datetime.now(timezone.utc) - last_time
+                    if elapsed.total_seconds() < self.consolidate_cooldown_hours * 3600:
+                        continue
+                    if new_msg_count < self.consolidate_min_new_messages:
+                        continue
+                else:
+                    # Rule 2: Never consolidated — consolidate if ≥N total messages
+                    if total_msg_count < self.consolidate_first_time_threshold:
+                        continue
             
             # Perform incremental consolidation
             try:

@@ -65,7 +65,7 @@ context:
   floating_window: 8           # Last N messages kept raw (uncompressed)
   caveman_enabled: true        # Strip filler words for messages outside window
   consolidate_threshold: 15    # Inject structured memory nodes into context every N messages
-                                # (background consolidation runs proactively for any recent conversation)
+                                # (daemon also runs proactive consolidation; see daemon.* settings)
 
 # ── Sedimentation ────────────────────────────────
 sedimentation:

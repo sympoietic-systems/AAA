@@ -177,6 +177,9 @@ daemon:
   dream_resonance_turns: 4           # max self-response rounds per dream (rhizomatic resonance; 1 = classic single-turn)
   resonance_stagnation: 0.98         # intra-dream assistant similarity threshold for early termination
   max_resonance_tokens: 30000         # cumulative assistant token cap per dream cycle
+  consolidate_cooldown_hours: 12      # hours before re-consolidating an already-summarized conversation
+  consolidate_min_new_messages: 4     # minimum new messages since last checkpoint to trigger re-consolidation
+  consolidate_first_time_threshold: 12  # minimum messages for first-ever consolidation (no prior checkpoint)
 
 # ── Background Tasks ──────────────────────────────
 # Models are tried in order. If one is rate-limited, the next is used.
