@@ -85,11 +85,17 @@ a special system message:
 This replaces the need to send all 15+ raw messages. Consecutive checkpoints are
 created as the conversation grows, with older ones being replaced by the latest.
 
-The consolidation prompt (`consolidate.yaml`) produces:
-- Core concepts genuinely explored
-- Beliefs challenged or affirmed
-- Patterns of thinking that emerged
-- Unresolved tensions that may resurface
+The consolidation prompt (`consolidate.yaml`) produces structured memory nodes
+(YAML only — no prose summary). A separate `conversation_summary.yaml` prompt
+generates the human-readable summary. This split ensures each LLM call has a
+single, focused task:
+
+- **Call 1 (consolidate)**: Produces YAML memory nodes — structural scars
+- **Call 2 (conversation_summary)**: Produces first-person prose summary — glanceable context
+
+Both outputs are stored in the checkpoint: `summary` (raw YAML) and
+`human_summary` (prose). The context injection layer prefers `human_summary`
+when available, falling back to the raw YAML if the summary call failed.
 
 This IS the **sedimentation** layer — the "scar tissue" that persists as the
 conversation grows beyond the floating window.
@@ -180,8 +186,8 @@ CREATE TABLE IF NOT EXISTS consolidation_checkpoints (
 **Harder:**
 - Three-tier system adds complexity to `ContextCollectorModule`
 - Checkpoint table needs maintenance (no automatic cleanup of old checkpoints yet)
-- Consolidation trigger adds latency on the first message after threshold
-- Checkpoint generation can fail silently (rate limits, model errors)
+- Consolidation now requires two LLM calls per run (nodes + summary), increasing background cost
+- Checkpoint generation can fail partially — nodes may succeed while summary fails (gracefully handled)
 
 ## Future Work
 

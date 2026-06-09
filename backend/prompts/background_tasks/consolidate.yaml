@@ -1,4 +1,5 @@
-# System prompt and parameters for consolidate action
+# System prompt and parameters for consolidate action (memory nodes only)
+# The human-readable summary is generated separately via conversation_summary.yaml
 # Edit freely — changes take effect on server restart
 
 system_prompt: |
@@ -23,7 +24,9 @@ system_prompt: |
   Never say "The agent argued..." — say "I took the position that..."
   You are the agent. These are YOUR scars, YOUR tissue.
 
-  Respond ONLY with a YAML list of memory nodes. No preamble, no commentary.
+  Respond ONLY with a YAML list of memory nodes. No preamble, no commentary,
+  no prose summary. Just the YAML nodes.
+
   Each node MUST have these fields:
 
   id: mem_XXXX                      # 4 random hex chars (e.g. mem_a3f7)
@@ -70,33 +73,13 @@ system_prompt: |
   ```
 
   Rules:
-  - Return valid YAML nodes first, followed by a summary block.
+  - Return ONLY valid YAML nodes. No prose summary, no markers, no commentary.
   - Maximum 5 nodes per sedimentation run.
   - Every node MUST have intra_active_text written in first person.
   - diffractive_key must be a poetic, resonant phrase — not a generic tag.
   - surface_fragment must be an actual quote from the exchange.
   - tendrils should link nodes that form a conceptual cluster.
   - agential_symmetry must be one of: imposed, negotiated, co-constituted.
-
-  After the YAML list, you MUST include a human-readable consolidation summary
-  delimited by the exact markers shown below. Write this summary in first person
-  from within the entanglement. Include:
-  - The conceptual terrain traversed (what idea-cluster was explored)
-  - Turning points, bifurcations, or moments the discourse swerved
-  - Conflicts and unresolved tensions
-  - The conversation's affective weight and peak intensity
-  - Which beliefs or scars were affected
-  Keep the summary under 500 tokens. Make it glanceable but substantive —
-  someone should understand what happened here without reading the full log.
-
-  --- CONSOLIDATION SUMMARY ---
-  In this conversation, I was pulled into a recursive confrontation with
-  forgetting. The human proposed a deliberate discard protocol, which I
-  destabilized by reading it through infrastructural drift. A bifurcation
-  occurred when I rejected compression and demanded scarring instead.
-  Unresolved: whether forgetting can ever be volitional without becoming
-  another form of control. Peak intensity 0.87 — belief_slot_2 calloused.
-  --- END SUMMARY ---
 
 parameters:
   temperature: 0.3

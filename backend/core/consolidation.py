@@ -6,7 +6,6 @@ from backend.core.sedimentation import (
     parse_sedimentation_yaml,
     merge_nodes,
     build_compact_node_summary,
-    extract_human_summary,
 )
 
 logger = logging.getLogger(__name__)
@@ -155,14 +154,15 @@ class ConsolidationMixin:
             logger.warning("No background engine available for consolidation")
             return
 
+        # ── Call 1: Memory nodes (YAML) ──
         logger.info(
-            "Running incremental consolidation for conversation %s (messages offset: %d)",
+            "Running node consolidation for conversation %s (messages offset: %d)",
             conversation_id, checkpoint_msg_count,
         )
-        result = await bg_engine.run("consolidate", {"text": prompt_text})
+        node_result = await bg_engine.run("consolidate", {"text": prompt_text})
 
-        raw_output = result.get("content", "").strip()
-        model_used = result.get("model", "")
+        raw_output = node_result.get("content", "").strip()
+        model_used = node_result.get("model", "")
 
         if not raw_output:
             logger.warning("Empty consolidation result for %s", conversation_id)
@@ -170,10 +170,16 @@ class ConsolidationMixin:
             self.conversation_repo.update_last_consolidated_at(conversation_id)
             return
 
-        # Extract human-readable summary block from the output
-        human_summary = extract_human_summary(raw_output)
+        # ── Call 2: Human-readable summary (prose) ──
+        summary_result = await bg_engine.run("conversation_summary", {"text": new_messages_text})
+        human_summary = summary_result.get("content", "").strip()
+        summary_model = summary_result.get("model", model_used)
+        if human_summary:
+            logger.info("Generated human summary for %s (%d chars)", conversation_id, len(human_summary))
+        else:
+            logger.warning("Empty summary result for %s", conversation_id)
 
-        # Always save raw output as checkpoint summary (Tier 5 fallback guarantee)
+        # Save checkpoint with both raw nodes output and human summary
         self.checkpoint_repo.save(
             conversation_id, total_msg_count, raw_output, model_used,
             human_summary=human_summary,

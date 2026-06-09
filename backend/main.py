@@ -367,6 +367,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     engine.register(GenerateTitleAction())
     engine.register(SummarizeAction())
     engine.register(ConsolidateAction())
+    engine.register(ConversationSummaryAction())
     engine.register(DocumentCollisionAction())
     engine.register(SemanticKnotAction())
     logger.info("Background task engine initialized with actions: %s", engine.list_actions())
