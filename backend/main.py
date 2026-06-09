@@ -19,6 +19,7 @@ from backend.api.router import router
 from backend.config import load_config
 from backend.core.pipeline import ProcessingPipeline
 from backend.modules.background_tasks.actions.consolidate import ConsolidateAction
+from backend.modules.background_tasks.actions.conversation_summary import ConversationSummaryAction
 from backend.modules.background_tasks.actions.document_collision import DocumentCollisionAction
 from backend.modules.background_tasks.actions.semantic_knot import SemanticKnotAction
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
