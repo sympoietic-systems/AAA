@@ -8,6 +8,7 @@ from .base import ProcessingModule
 
 
 def process_inline_notes(content: str, notes_by_id: dict) -> str:
+    """Strip personal notes, entangle shared notes, and pass through scar folds untouched."""
     def replace_tag(match):
         note_id = match.group(1)
         text = match.group(2)
@@ -19,7 +20,19 @@ def process_inline_notes(content: str, notes_by_id: dict) -> str:
             return text
 
     pattern = r'<(?:aaa-note|mark) id="([^"]+)">([\s\S]*?)</(?:aaa-note|mark)>'
-    return re.sub(pattern, replace_tag, content)
+    content = re.sub(pattern, replace_tag, content)
+
+    # Scar folds pass through untouched — they are preserved in Symbia's context
+    # as material folds for self-reflexive annotations. Truncate to 200 chars as safeguard.
+    def truncate_scar_fold(match):
+        inner = match.group(1)
+        if len(inner) > 200:
+            return f"<scar_fold>{inner[:200]}</scar_fold>"
+        return match.group(0)
+
+    content = re.sub(r'<scar_fold>([\s\S]*?)</scar_fold>', truncate_scar_fold, content)
+
+    return content
 
 
 class ContextCollectorModule(ProcessingModule):

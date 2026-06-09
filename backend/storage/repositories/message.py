@@ -507,3 +507,12 @@ class MessageRepository(BaseRepository):
             (amount, message_id),
         )
         conn.commit()
+
+    @with_connection
+    def update_content(self, message_id: int, content: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE conversation_log SET content = ? WHERE id = ?",
+            (content, message_id),
+        )
+        conn.commit()

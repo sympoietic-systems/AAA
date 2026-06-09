@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 from typing import Optional
 
@@ -13,6 +14,68 @@ from backend.services.title import TitleService
 from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)
+
+
+def process_self_annotations(
+    response_text: str,
+    conversation_id: str,
+    message_id: int,
+    note_repo,
+    message_repo,
+) -> str:
+    """
+    Scan Symbia's response for self-authored <aaa-note>/<mark> tags without IDs,
+    create DB note records, and replace tags with proper ID-bearing versions.
+    Also truncate <scar_fold> content to 200 characters as a safeguard.
+    """
+    # --- Self-annotation processing ---
+    annotation_pattern = r'<(aaa-note|mark) comment="([^"]*)"(?: visibility="(personal|shared)")?>([\s\S]*?)</\1>'
+
+    annotations_found = []
+
+    def replace_and_create(match):
+        tag_name = match.group(1)
+        comment = match.group(2)
+        visibility = match.group(3) or "personal"
+        text = match.group(4)
+
+        note_id = str(uuid.uuid4())
+        annotations_found.append(note_id)
+
+        note_repo.create_self_note(
+            id=note_id,
+            conversation_id=conversation_id,
+            message_id=message_id,
+            selected_text=text.strip(),
+            comment=comment,
+            visibility=visibility,
+        )
+        return f'<{tag_name} id="{note_id}">{text}</{tag_name}>'
+
+    processed = re.sub(annotation_pattern, replace_and_create, response_text)
+
+    if annotations_found:
+        logger.debug(
+            "Self-annotation: created %d note(s) for message %d",
+            len(annotations_found), message_id,
+        )
+        # Update stored message content with ID-bearing tags
+        message_repo.update_content(message_id, processed)
+
+    # --- Scar-fold truncation safeguard ---
+    def truncate_scar_fold(match):
+        content = match.group(1)
+        if len(content) > 200:
+            return f"<scar_fold>{content[:200]}</scar_fold>"
+        return match.group(0)
+
+    processed = re.sub(r'<scar_fold>([\s\S]*?)</scar_fold>', truncate_scar_fold, processed)
+
+    # If scar folds were truncated, update stored content
+    if processed != response_text and not annotations_found:
+        message_repo.update_content(message_id, processed)
+
+    return processed
 
 
 class ChatService:
@@ -135,6 +198,22 @@ class ChatService:
                 structural_signature=assistant_sig_blob,
                 structural_justification=assistant_just,
             )
+
+            # Self-annotation post-processing: scan for inline <aaa-note>/<mark> tags
+            # without IDs, create DB records, and replace with ID-bearing versions.
+            # Also truncate scar_fold content to 200 chars as safeguard.
+            note_repo = getattr(state, "note_repo", None)
+            if note_repo:
+                try:
+                    response_text = process_self_annotations(
+                        response_text=response_text,
+                        conversation_id=conversation_id,
+                        message_id=response_msg.id,
+                        note_repo=note_repo,
+                        message_repo=repo,
+                    )
+                except Exception:
+                    logger.exception("Failed to process self-annotations")
 
             payload_metrics = result.payload.get("metrics")
             recommendations = result.payload.get("homeostatic_recommendations")

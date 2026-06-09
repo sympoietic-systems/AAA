@@ -419,6 +419,7 @@ export const MessageBubble = memo(function MessageBubble({
                 components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,
+                  'scar-fold': () => null,
                 } as any}
               >
                 {msg.content}
@@ -431,12 +432,13 @@ export const MessageBubble = memo(function MessageBubble({
               remarkPlugins={[remarkGfm, remarkBreaks]}
               rehypePlugins={[rehypeRaw]}
               components={{
-                'aaa-note': renderNoteComponent,
-                mark: renderNoteComponent,
-              } as any}
-            >
-              {msg.content}
-            </ReactMarkdown>
+                  'aaa-note': renderNoteComponent,
+                  mark: renderNoteComponent,
+                  'scar-fold': () => null,
+                } as any}
+              >
+                {msg.content}
+              </ReactMarkdown>
           </div>
         )}
       </div>

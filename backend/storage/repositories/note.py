@@ -7,6 +7,33 @@ from backend.storage.repositories.base import BaseRepository
 
 class NoteRepository(BaseRepository):
     @with_connection
+    def create_self_note(
+        self,
+        id: str,
+        conversation_id: str,
+        message_id: int,
+        selected_text: str,
+        comment: str = "",
+        visibility: str = "personal",
+    ) -> dict:
+        """Create a note record for apparatus-authored inline annotations.
+        Unlike create_note, this does not modify message content — the tag
+        is already present in Symbia's response and will be updated with
+        the ID by the post-processor."""
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO conversation_notes (id, conversation_id, message_id, selected_text, comment, visibility)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (id, conversation_id, message_id, selected_text, comment, visibility),
+        )
+        conn.commit()
+
+        row = conn.execute(
+            "SELECT * FROM conversation_notes WHERE id = ?", (id,)
+        ).fetchone()
+        return dict(row) if row else {}
+
+    @with_connection
     def create_note(
         self,
         id: str,
