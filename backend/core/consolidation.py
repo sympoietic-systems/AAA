@@ -1,6 +1,7 @@
 """Conversation consolidation mixin for the Dream Daemon."""
 
 import logging
+from datetime import datetime, timezone
 
 from backend.core.sedimentation import (
     parse_sedimentation_yaml,
@@ -77,7 +78,7 @@ class ConsolidationMixin:
                     # Rule 1: Previously consolidated — consolidate if >cooldown AND ≥N new messages
                     if last_time.tzinfo is None:
                         last_time = last_time.replace(tzinfo=timezone.utc)
-                    elapsed = __import__("datetime").datetime.now(__import__("datetime").timezone.utc) - last_time
+                    elapsed = datetime.now(timezone.utc) - last_time
                     if elapsed.total_seconds() < self.consolidate_cooldown_hours * 3600:
                         continue
                     if new_msg_count < self.consolidate_min_new_messages:
