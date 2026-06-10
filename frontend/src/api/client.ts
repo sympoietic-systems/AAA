@@ -114,6 +114,8 @@ export interface ChatMessage {
   user_structural_justification?: string | null
   truncated?: boolean | null
   finish_reason?: string | null
+  parent_message_id?: number | null
+  proposed_branches?: Array<{ title: string; content: string }> | null
 }
 
 export interface AgentInfo {
@@ -124,13 +126,17 @@ export interface AgentInfo {
 export async function sendMessage(
   content: string,
   conversationId?: string,
-  files?: File[]
+  files?: File[],
+  parentMessageId?: number | null
 ): Promise<ChatMessage> {
   if (files && files.length > 0) {
     const formData = new FormData()
     formData.append("content", content)
     formData.append("speaker", "human")
     formData.append("conversation_id", conversationId || "")
+    if (parentMessageId !== undefined && parentMessageId !== null) {
+      formData.append("parent_message_id", String(parentMessageId))
+    }
     for (const file of files) {
       formData.append("files", file)
     }
@@ -148,7 +154,12 @@ export async function sendMessage(
   const res = await fetch(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, speaker: "human", conversation_id: conversationId || "" }),
+    body: JSON.stringify({
+      content,
+      speaker: "human",
+      conversation_id: conversationId || "",
+      parent_message_id: parentMessageId !== undefined ? parentMessageId : null,
+    }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Unknown error" }))
@@ -173,6 +184,51 @@ export async function getMessageThinking(messageId: number): Promise<{ thinking:
 
 export async function getMessageContext(messageId: number): Promise<{ context_sent: string | null }> {
   const res = await fetch(`${BASE}/messages/${messageId}/context`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function commitBranch(
+  conversationId: string,
+  parentMessageId: number,
+  content: string,
+  speaker = "apparatus"
+): Promise<ChatMessage> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/commit-branch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      parent_message_id: parentMessageId,
+      content,
+      speaker,
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Unknown error" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export interface ConversationTreeNode {
+  id: number
+  speaker: string
+  content: string
+  parent_message_id: number | null
+  timestamp: string
+}
+
+export interface ConversationTreeLink {
+  id: string
+  source_id: number
+  target_id: number
+  link_type: string
+}
+
+export async function getConversationTree(
+  conversationId: string
+): Promise<{ nodes: ConversationTreeNode[]; links: ConversationTreeLink[] }> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/tree`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

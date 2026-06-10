@@ -7,6 +7,7 @@ import {
   uploadFiles,
   deleteConversationFile,
   reprocessFile,
+  commitBranch,
 } from "../api/client"
 import type { ChatMessage, ConversationFile } from "../api/client"
 
@@ -15,9 +16,31 @@ function estimateTokens(text: string): number {
   return Math.max(1, Math.floor(text.length / 4))
 }
 
+function getAncestorPathIds(messages: ChatMessage[], leafId: number | null): Set<number> {
+  const path = new Set<number>()
+  if (!leafId) return path
+
+  let currentId: number | null = leafId
+  const parentMap = new Map<number, number | null>()
+  for (const m of messages) {
+    parentMap.set(m.id, m.parent_message_id || null)
+  }
+
+  const visited = new Set<number>()
+  while (currentId !== null && !visited.has(currentId)) {
+    visited.add(currentId)
+    path.add(currentId)
+    currentId = parentMap.get(currentId) || null
+  }
+
+  return path
+}
+
+
 export function useChat(conversationId: string) {
-  const PAGE_SIZE = 3
+  const PAGE_SIZE = 1000
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [activeMessageId, setActiveMessageId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
@@ -43,10 +66,18 @@ export function useChat(conversationId: string) {
             pollTimerRef.current = null
           }
           // Fetch updated conversation history to display system message after file indexing completes
-          getHistory(50, 0, convId)
+          getHistory(1000, 0, convId)
             .then((data) => {
               setMessages(data.messages)
-              setHasMore(data.messages.length === 50)
+              if (data.messages.length > 0) {
+                setActiveMessageId((prev) => {
+                  if (prev !== null && data.messages.some((m) => m.id === prev)) {
+                    return prev
+                  }
+                  return data.messages[data.messages.length - 1].id
+                })
+              }
+              setHasMore(false)
             })
             .catch(() => { })
         }
@@ -70,13 +101,20 @@ export function useChat(conversationId: string) {
 
     if (conversationId) {
       setLoading(true)
-      getHistory(PAGE_SIZE, 0, conversationId)
+      getHistory(1000, 0, conversationId)
         .then((data) => {
           setMessages(data.messages)
-          setHasMore(data.messages.length === PAGE_SIZE)
+          if (data.messages.length > 0) {
+            const newest = data.messages[data.messages.length - 1]
+            setActiveMessageId(newest.id)
+          } else {
+            setActiveMessageId(null)
+          }
+          setHasMore(false)
         })
         .catch(() => {
           setMessages([])
+          setActiveMessageId(null)
           setHasMore(false)
         })
         .finally(() => setLoading(false))
@@ -132,21 +170,24 @@ export function useChat(conversationId: string) {
     setError(null)
     setLoading(true)
 
+    const parentId = activeMessageId
+
     const userMsg: ChatMessage = {
       id: Date.now(),
       timestamp: new Date().toISOString(),
       speaker: "human",
       content,
       content_tokens: estimateTokens(content),
+      parent_message_id: parentId || undefined,
     }
     setMessages((prev) => [...prev, userMsg])
 
     try {
-      const response = await sendMessage(content, conversationId || undefined)
+      const response = await sendMessage(content, conversationId || undefined, undefined, parentId)
       setMessages((prev) => {
         const updated = [...prev]
         for (let i = updated.length - 1; i >= 0; i--) {
-          if (updated[i].speaker === "human") {
+          if (updated[i].speaker === "human" && updated[i].id === userMsg.id) {
             updated[i] = {
               ...updated[i],
               id: response.user_message_id || updated[i].id,
@@ -161,6 +202,7 @@ export function useChat(conversationId: string) {
         return updated
       })
 
+      setActiveMessageId(response.id)
       const targetConvId = conversationId || response.conversation_id
       if (targetConvId) {
         getConversationFiles(targetConvId)
@@ -184,7 +226,7 @@ export function useChat(conversationId: string) {
     } finally {
       setLoading(false)
     }
-  }, [loading, conversationId])
+  }, [loading, conversationId, activeMessageId, startPolling])
 
   const upload = useCallback(async (filesToUpload: File[]) => {
     if (filesToUpload.length === 0) return null
@@ -236,20 +278,49 @@ export function useChat(conversationId: string) {
 
   const refreshMessages = useCallback(() => {
     if (conversationId) {
-      getHistory(messages.length || PAGE_SIZE, 0, conversationId)
+      getHistory(1000, 0, conversationId)
         .then((data) => {
           setMessages(data.messages)
         })
         .catch(() => {})
     }
-  }, [conversationId, messages.length])
+  }, [conversationId])
 
   const isIndexing = isUploading || files.some(
     (f) => f.status === "uploading" || f.status === "processing"
   )
 
+  const activePathIds = getAncestorPathIds(messages, activeMessageId)
+  const activePathMessages = messages.filter((m) => activePathIds.has(m.id))
+
+  const commitProposedBranch = useCallback(async (parentMsgId: number, content: string) => {
+    if (!conversationId) return null
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await commitBranch(conversationId, parentMsgId, content)
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === response.id)) return prev
+        return [...prev, response]
+      })
+      setActiveMessageId(response.id)
+      return response
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to commit branch"
+      setError(msg)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [conversationId])
+
   return {
-    messages,
+    messages: activePathMessages,
+    fullTreeMessages: messages,
+    activeMessageId,
+    setActiveMessageId,
+    activePathIds,
+    commitProposedBranch,
     loading,
     error,
     send,
