@@ -93,8 +93,8 @@ export default function ConnectionCloud({
         content: m.content,
         isProposed: false,
         parentMsgId: m.parent_message_id,
-        x: prevPos ? prevPos.x : dimensions.width / 2 + (Math.random() - 0.5) * 40,
-        y: prevPos ? prevPos.y : dimensions.height / 2 + (Math.random() - 0.5) * 40,
+        x: prevPos ? prevPos.x : dimensions.width / 2 + (i - sorted.length / 2) * 12 + (Math.random() - 0.5) * 8,
+        y: prevPos ? prevPos.y : dimensions.height / 2 + (i - sorted.length / 2) * 12 + (Math.random() - 0.5) * 8,
         vx: 0,
         vy: 0,
       })
@@ -164,13 +164,20 @@ export default function ConnectionCloud({
     if (simNodes.length === 0) return
 
     let animationFrameId: number
-    const friction = 0.82
+    let alpha = 1.0 // Simulation temperature
+    const decay = 0.965 // Cooling rate
+    const friction = 0.78 // Slightly lower friction for faster settling
     const gravityStrength = 0.05
-    const repulseStrength = 320
-    const springLength = 45
-    const springStrength = 0.09
+    const repulseStrength = 180 // Reduced repulsion for smaller nodes
+    const springLength = 32 // Shorter links for a more compact structure
+    const springStrength = 0.08
 
     const runSimulation = () => {
+      // Stop calculation once the system has cooled/settled
+      if (alpha < 0.015) {
+        return
+      }
+
       setSimNodes((currentNodes) => {
         // Create local copy to mutate for this step
         const nodes = currentNodes.map((n) => ({ ...n }))
@@ -191,8 +198,8 @@ export default function ConnectionCloud({
             const distSq = dx * dx + dy * dy + 1e-4
             const dist = Math.sqrt(distSq)
 
-            if (dist < 180) {
-              const force = repulseStrength / distSq
+            if (dist < 120) {
+              const force = (repulseStrength * alpha) / distSq
               const fx = (dx / dist) * force
               const fy = (dy / dist) * force
 
@@ -215,7 +222,7 @@ export default function ConnectionCloud({
           const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4
 
           const displacement = dist - springLength
-          const force = displacement * springStrength
+          const force = displacement * springStrength * alpha
           const fx = (dx / dist) * force
           const fy = (dy / dist) * force
 
@@ -227,8 +234,8 @@ export default function ConnectionCloud({
 
         // 3. Centering force (gravity)
         for (const n of nodes) {
-          n.vx += (cx - n.x) * gravityStrength
-          n.vy += (cy - n.y) * gravityStrength
+          n.vx += (cx - n.x) * gravityStrength * alpha
+          n.vy += (cy - n.y) * gravityStrength * alpha
 
           // Update positions
           n.x += n.vx
@@ -249,6 +256,7 @@ export default function ConnectionCloud({
         return nodes
       })
 
+      alpha *= decay
       animationFrameId = requestAnimationFrame(runSimulation)
     }
 
@@ -415,43 +423,43 @@ export default function ConnectionCloud({
 
             let fill = "#1e1e24"
             let stroke = "#3f3f4e"
-            let strokeWidth = "1.5"
-            let radius = "6"
+            let strokeWidth = "1.0"
+            let radius = "4"
             let nodeClass = "transition-all duration-200 cursor-pointer"
 
             if (node.isProposed) {
               fill = "transparent"
               stroke = "#ec4899" // Proposed pink
-              strokeWidth = "1.5"
-              radius = "7"
+              strokeWidth = "1.2"
+              radius = "5"
               nodeClass += " animate-pulse stroke-dasharray-[3,3]"
             } else if (node.speaker === "human") {
               if (isActive) {
                 fill = "#00e5ff" // Cyan for active user msg
                 stroke = "#ffffff"
-                strokeWidth = isLeaf ? "2.5" : "1.5"
-                radius = isLeaf ? "9" : "7.5"
+                strokeWidth = isLeaf ? "2.0" : "1.2"
+                radius = isLeaf ? "8" : "6"
               } else {
                 fill = "#0891b2" // Dim cyan
                 stroke = "#00e5ff" // Cyan border
-                radius = "6"
+                radius = "4"
               }
             } else if (node.speaker === "apparatus") {
               if (isActive) {
                 fill = "#c084fc" // Purple for active agent msg
                 stroke = "#ffffff"
-                strokeWidth = isLeaf ? "2.5" : "1.5"
-                radius = isLeaf ? "9" : "7.5"
+                strokeWidth = isLeaf ? "2.0" : "1.2"
+                radius = isLeaf ? "8" : "6"
               } else {
                 fill = "#7c3aed" // Dim purple
                 stroke = "#c084fc" // Purple border
-                radius = "6"
+                radius = "4"
               }
             } else {
               // System
               fill = "#4b5563"
               stroke = "#374151"
-              radius = "4"
+              radius = "3"
             }
 
             return (
