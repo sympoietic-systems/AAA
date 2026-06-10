@@ -6,6 +6,7 @@ import type {
   NoteInfo,
   WebMetadata,
   DocumentMetadata,
+  ChatMessage,
 } from "../api/client"
 import {
   getDbSkills,
@@ -24,6 +25,7 @@ import { NotesSection } from "./sidepanel/NotesSection"
 import { SedimentSection } from "./sidepanel/SedimentSection"
 import { SummarySection } from "./sidepanel/SummarySection"
 import { MemoryNodesSection } from "./sidepanel/MemoryNodesSection"
+import ConnectionCloud from "./ConnectionCloud"
 
 export function SidePanel({
   uploadedFiles = [],
@@ -39,6 +41,12 @@ export function SidePanel({
   width,
   panelCollapsed,
   onPanelToggle,
+  fullTreeMessages = [],
+  links = [],
+  activeMessageId = null,
+  activePathIds = new Set<number>(),
+  setActiveMessageId = () => {},
+  commitProposedBranch = async () => null,
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
@@ -53,6 +61,12 @@ export function SidePanel({
   width?: number
   panelCollapsed?: boolean
   onPanelToggle?: () => void
+  fullTreeMessages?: ChatMessage[]
+  links?: any[]
+  activeMessageId?: number | null
+  activePathIds?: Set<number>
+  setActiveMessageId?: (id: number | null) => void
+  commitProposedBranch?: (parentMsgId: number, content: string) => Promise<any>
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const isCollapsed = panelCollapsed !== undefined ? panelCollapsed : collapsed
@@ -78,6 +92,7 @@ export function SidePanel({
   const [sedimentOpen, setSedimentOpen] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [memoryNodesOpen, setMemoryNodesOpen] = useState(false)
+  const [cloudOpen, setCloudOpen] = useState(true)
 
   // Sediment detail state
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
@@ -245,6 +260,26 @@ export function SidePanel({
               {summaryOpen && (
                 <div className="pl-3">
                   <SummarySection summary={summary} humanSummary={humanSummary} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Connection Cloud"
+                open={cloudOpen}
+                onToggle={() => setCloudOpen(!cloudOpen)}
+              />
+              {cloudOpen && (
+                <div className="w-full h-[280px] my-1">
+                  <ConnectionCloud
+                    messages={fullTreeMessages}
+                    links={links}
+                    activeMessageId={activeMessageId}
+                    activePathIds={activePathIds}
+                    setActiveMessageId={setActiveMessageId}
+                    commitProposedBranch={commitProposedBranch}
+                  />
                 </div>
               )}
             </div>

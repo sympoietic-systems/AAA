@@ -30,6 +30,7 @@ interface Props {
   tags?: ConversationTagInfo[]
   onAddTag?: (tag: string) => void
   onRemoveTag?: (tag: string) => void
+  onBranch?: (messageId: number) => void
 }
 
 export function ChatView({
@@ -58,6 +59,7 @@ export function ChatView({
   tags = [],
   onAddTag,
   onRemoveTag,
+  onBranch,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -306,6 +308,7 @@ export function ChatView({
                   onAddNote={onAddNote}
                   onDeleteNote={onDeleteNote}
                   onUpdateNote={onUpdateNote}
+                  onBranch={onBranch}
                 />
               )
             })}

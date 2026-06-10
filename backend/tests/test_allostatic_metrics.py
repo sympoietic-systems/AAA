@@ -89,8 +89,8 @@ async def test_allostatic_metrics():
     h_emb3[2] = 1.0 # current turn
 
     # Insert h_emb1 and h_emb2 as prior human embeddings
-    repo.insert("human", "h1", h_emb1.tobytes(), "test", 384, conversation_id=conv_b)
-    repo.insert("human", "h2", h_emb2.tobytes(), "test", 384, conversation_id=conv_b)
+    msg_h1 = repo.insert("human", "h1", h_emb1.tobytes(), "test", 384, conversation_id=conv_b)
+    repo.insert("human", "h2", h_emb2.tobytes(), "test", 384, conversation_id=conv_b, parent_message_id=msg_h1.id)
 
     # Compute surprise index manually:
     # prior_human has [h_emb2, h_emb1] (ordered by id DESC)
@@ -118,7 +118,8 @@ async def test_allostatic_metrics():
     # Let's insert a turn with a known mutual_perturbation, and verify that the next turn's boringness uses it.
     # B_t = (1 - rp_t) * (1 - prev_mpi)
     # Let's mock a prior turn with mutual_perturbation = 0.4 in conv_b
-    msg_b_prev = repo.insert("human", "prev", emb_bytes, "test", 384, conversation_id=conv_b)
+    last_msg = repo.get_recent(1, conversation_id=conv_b)[0]
+    msg_b_prev = repo.insert("human", "prev", emb_bytes, "test", 384, conversation_id=conv_b, parent_message_id=last_msg.id)
     metrics_repo.insert(
         message_id=msg_b_prev.id,
         s_t=0.5,
@@ -142,7 +143,7 @@ async def test_allostatic_metrics():
     # For the new turn, we have a prior agent response, let's say reverse_perturbation = 0.2
     # Then boringness should be: (1 - 0.2) * (1 - 0.4) = 0.8 * 0.6 = 0.48
     # Insert an agent turn first to have a prior agent embedding
-    repo.insert("apparatus", "agent response", emb_bytes, "test", 384, conversation_id=conv_b)
+    repo.insert("apparatus", "agent response", emb_bytes, "test", 384, conversation_id=conv_b, parent_message_id=msg_b_prev.id)
     
     # We want reverse_perturbation = 0.2, so current_vec dot agent_last_vec should be 0.8
     # agent_last_vec is emb = [1, 0, 0, ...]

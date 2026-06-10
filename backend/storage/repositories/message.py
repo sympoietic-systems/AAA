@@ -289,7 +289,7 @@ class MessageRepository(BaseRepository):
             rows = conn.execute(
                 f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
-                          cl.structural_signature, cl.structural_justification,
+                          cl.structural_signature, cl.structural_justification, cl.parent_message_id,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -307,7 +307,7 @@ class MessageRepository(BaseRepository):
             rows = conn.execute(
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
-                          cl.structural_signature, cl.structural_justification,
+                          cl.structural_signature, cl.structural_justification, cl.parent_message_id,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -320,6 +320,36 @@ class MessageRepository(BaseRepository):
                     ORDER BY cl.id DESC LIMIT ? OFFSET ?""",
                 (limit, offset),
             ).fetchall()
+        return [dict(r) for r in reversed(rows)]
+
+    @with_connection
+    def get_recent_with_metrics_for_path(self, message_ids: list[int], limit: int = 5, exclude_message_id: int | None = None) -> list[dict]:
+        if not message_ids:
+            return []
+        conn = self._conn()
+        ids = list(message_ids)
+        if exclude_message_id is not None:
+            ids = [i for i in ids if i != exclude_message_id]
+        if not ids:
+            return []
+        placeholders = ",".join("?" * len(ids))
+        rows = conn.execute(
+            f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                      cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
+                      cl.structural_signature, cl.structural_justification, cl.parent_message_id,
+                      (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
+                      cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
+                      cm.agent_divergence, cm.deficit,
+                      cm.reverse_perturbation, cm.surprise_index,
+                      cm.mutual_perturbation, cm.vitality,
+                      cm.boringness, cm.conceptual_velocity,
+                      cm.divergence_resolution_ratio, cm.paskian_health
+                FROM conversation_log cl
+                LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
+                WHERE cl.id IN ({placeholders})
+                ORDER BY cl.id DESC LIMIT ?""",
+            ids + [limit],
+        ).fetchall()
         return [dict(r) for r in reversed(rows)]
 
     @with_connection

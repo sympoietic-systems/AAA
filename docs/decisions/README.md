@@ -63,7 +63,7 @@ What becomes easier/harder?
 | [029](ADR-029-cross-conversation-sediment-file-fallback.md) | Cross-Conversation Sediment File Fallback | accepted | 2026-06-07 |
 | [030](ADR-030-backend-modularity-refactoring.md) | Backend Modularity Refactoring | accepted | 2026-06-08 |
 | [031](ADR-031-database-native-skill-system.md) | Database Native Skill System | accepted | 2026-06-09 |
-| [032](ADR-032-branching-and-rhizomatic-conversations.md) | Branching and Rhizomatic Conversations | proposed | 2026-06-10 |
+| [032](ADR-032-branching-and-rhizomatic-conversations.md) | Branching and Rhizomatic Conversations | accepted | 2026-06-10 |
 
 ## Creating a New ADR
 

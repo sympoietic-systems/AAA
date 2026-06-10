@@ -53,6 +53,12 @@ export default function App() {
 
   const {
     messages,
+    fullTreeMessages,
+    links,
+    activeMessageId,
+    setActiveMessageId,
+    activePathIds,
+    commitProposedBranch,
     loading,
     error,
     send,
@@ -335,6 +341,7 @@ export default function App() {
         tags={activeConv?.tags || []}
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
+        onBranch={setActiveMessageId}
         className="flex-1 min-w-0"
       />
       {!rightPanelCollapsed && (
@@ -357,6 +364,12 @@ export default function App() {
         width={rightPanelWidth}
         panelCollapsed={rightPanelCollapsed}
         onPanelToggle={() => setRightPanelCollapsed(p => !p)}
+        fullTreeMessages={fullTreeMessages}
+        links={links}
+        activeMessageId={activeMessageId}
+        activePathIds={activePathIds}
+        setActiveMessageId={setActiveMessageId}
+        commitProposedBranch={commitProposedBranch}
       />
     </div>
   )

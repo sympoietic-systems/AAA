@@ -8,6 +8,7 @@ import {
   deleteConversationFile,
   reprocessFile,
   commitBranch,
+  getConversationTree,
 } from "../api/client"
 import type { ChatMessage, ConversationFile } from "../api/client"
 
@@ -41,6 +42,7 @@ export function useChat(conversationId: string) {
   const PAGE_SIZE = 1000
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [activeMessageId, setActiveMessageId] = useState<number | null>(null)
+  const [links, setLinks] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
@@ -118,6 +120,10 @@ export function useChat(conversationId: string) {
           setHasMore(false)
         })
         .finally(() => setLoading(false))
+
+      getConversationTree(conversationId)
+        .then((data) => setLinks(data.links))
+        .catch(() => setLinks([]))
 
       getConversationFiles(conversationId)
         .then((data) => {
@@ -317,6 +323,7 @@ export function useChat(conversationId: string) {
   return {
     messages: activePathMessages,
     fullTreeMessages: messages,
+    links,
     activeMessageId,
     setActiveMessageId,
     activePathIds,

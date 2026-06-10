@@ -1,6 +1,6 @@
 # ADR-032: Branching and Rhizomatic Conversations
 
-**Status:** Proposed  
+**Status:** Accepted (Implemented)  
 **Date:** 2026-06-10
 
 ## Context

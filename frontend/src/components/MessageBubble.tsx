@@ -155,7 +155,8 @@ export const MessageBubble = memo(function MessageBubble({
   notes = [],
   onAddNote,
   onDeleteNote,
-  onUpdateNote
+  onUpdateNote,
+  onBranch
 }: {
   msg: ChatMessage
   previousSignature?: number[] | null
@@ -163,6 +164,7 @@ export const MessageBubble = memo(function MessageBubble({
   onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared", startOffset?: number) => void
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  onBranch?: (messageId: number) => void
 }) {
   const isHuman = msg.speaker === "human"
   const isSystem = msg.speaker === "system"
@@ -460,6 +462,15 @@ export const MessageBubble = memo(function MessageBubble({
             <span className="text-[#555] font-mono">
               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
             </span>
+          )}
+          {msg.id && onBranch && (
+            <button
+              onClick={() => onBranch(msg.id)}
+              className="text-[#555] hover:text-[#00e5ff] transition-colors font-mono text-[9px] cursor-pointer"
+              title="Branch from this message"
+            >
+              #branch
+            </button>
           )}
           {!isHuman && (msg.model_used || msg.provider_used) && (
             <span className="text-[#555] font-mono">
