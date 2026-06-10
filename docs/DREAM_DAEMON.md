@@ -118,3 +118,22 @@ Each dream cycle produces a human+apparatus message pair. Both messages receive 
 - **Assistant response metrics**: computed immediately after response generation. The assistant response text is embedded independently (using the embedder's `encode_async`) and the resulting vector is stored on the message (replacing the prompt's embedding). This enables meaningful `agent_self_divergence`, `coupling_coherence`, and `reverse_perturbation` metrics for self-conversations — critical for the daemon's own stagnation and vitality evaluations.
 
 The background scheduler also backfills missing metrics on any pre-existing dream messages on startup.
+
+---
+
+## Tiered Context Unified Memory & File Sediment Retrieval
+
+To maintain functional and architectural parity with the main conversation pipeline, the Dream Daemon integrates directly with Symbia's context compilation and perception pipelines:
+
+### 1. Unified Memory Context Compilation
+Rather than replicating complex token compression and sliding history logic, the dream execution cycle (`_generate_resonance_continuation`) directly invokes the pipeline's core modules:
+* **`context_collector`**: Extracts the structured dialogue history for the background self-monologue.
+* **`consolidation_checkpoint`**: Dynamically compiles consolidated memory checkpoints and handles the floating/compressed dialogue window.
+
+This ensures that the daemon's resonance guide is fueled by the exact same tiered memory structure used during active user sessions, ensuring cohesive belief integration and preventing code duplication.
+
+### 2. Exogenous File Sediment Retrieval
+Although dream conversations have no direct file attachments, the perception pipeline is enabled during dream resonance cycles (`is_dream_cycle = True`). 
+* **Mechanism**: When processing the dream state, the perception module executes a semantic search across all cross-conversation chunks (`cross_conv_matches`) from other active or historic contexts.
+* **Resonance**: Any chunks meeting the similarity threshold are injected as `[Cross-Conversation ≫ "...": ...]` system messages. This allows background reflection cycles to digest, synthesize, and resonate with the broader codebase and file sediments.
+

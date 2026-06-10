@@ -93,9 +93,10 @@ class PerceptionModule(ProcessingModule):
 
         existing = self._repo.get_files_by_conversation(conversation_id) if conversation_id else []
         injections = self._repo.get_injections_for_conversation(conversation_id) if conversation_id else []
-        logger.debug("Perception: native_files=%d, injected_files=%d for conv %s",
-                     len(existing), len(injections), conversation_id[:8] if conversation_id else "none")
-        if existing or injections:
+        is_dream = payload.get("is_dream_cycle", False)
+        logger.debug("Perception: native_files=%d, injected_files=%d, is_dream=%s for conv %s",
+                     len(existing), len(injections), is_dream, conversation_id[:8] if conversation_id else "none")
+        if existing or injections or is_dream:
             if existing:
                 for fs in existing:
                     logger.debug("  file=%s type=%s tokens=%d chunks=%d status=%s",
@@ -257,7 +258,9 @@ class PerceptionModule(ProcessingModule):
             manifest_parts.append("\n".join(manifest_lines_inj))
 
         manifest_text = "\n\n".join(manifest_parts)
-        context_entries: list[dict] = [{"role": "system", "content": manifest_text}]
+        context_entries: list[dict] = []
+        if manifest_text:
+            context_entries.append({"role": "system", "content": manifest_text})
 
         try:
             query_vec = await self._embed.encode_async(query)

@@ -123,8 +123,11 @@ async def test_dual_vector_isomorphic_retrieval():
     print("--- Testing Dual-Vector Isomorphic Retrieval Hysteresis ---")
     db_path = str(get_db_path("data/aaa_dual_test.db"))
     if os.path.exists(db_path):
-        os.remove(db_path)
-    init_db(db_path)
+        try:
+            os.remove(db_path)
+        except Exception:
+            pass
+    conn = init_db(db_path)
 
     from backend.storage.repository import ConversationRepository
     conv_repo = ConversationRepository(db_path)
@@ -195,8 +198,12 @@ async def test_dual_vector_isomorphic_retrieval():
     print("STAGNANT: Retrieved messages count:", len(res_stagnant.get("diffractive_messages", [])))
     print("Dual-vector isomorphic retrieval passed!")
 
+    conn.close()
     if os.path.exists(db_path):
-        os.remove(db_path)
+        try:
+            os.remove(db_path)
+        except Exception:
+            pass
 
 
 def test_robust_parser():

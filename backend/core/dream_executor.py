@@ -45,20 +45,50 @@ class DreamExecutorMixin:
             "4. Keep it under 100 words. Output ONLY the prompt text, no preamble."
         )
 
-        user_prompt = (
-            f"This is turn {turn} of a dream self-dialogue. The agent just wrote:\n\n"
-            f"\"{last_response[-800:]}\"\n\n"
-            f"Generate a fresh follow-up question that deepens this inquiry. "
-            f"Do NOT use phrases like 'continue exploring' or 'what new dimensions emerge'. "
-            f"Be specific to what was actually said."
-        )
+        history_msgs = []
+        try:
+            pipeline = getattr(self, "pipeline", None) or getattr(self.app_state, "pipeline", None)
+            if pipeline and hasattr(pipeline, "_modules"):
+                temp_payload = {
+                    "conversation_id": dream_convo_id,
+                    "content": ""
+                }
+                context_collector = next((m for m in pipeline._modules if m.name == "context_collector"), None)
+                if context_collector:
+                    temp_payload = await context_collector.process(temp_payload)
+                
+                consolidation = next((m for m in pipeline._modules if m.name == "consolidation_checkpoint"), None)
+                if consolidation:
+                    temp_payload = await consolidation.process(temp_payload)
+                
+                history_msgs = temp_payload.get("messages", [])
+        except Exception as e:
+            logger.warning("Failed to retrieve or compile dream history via pipeline modules: %s", e)
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for m in history_msgs:
+            if m.get("content", "").strip():
+                messages.append({
+                    "role": m["role"],
+                    "content": m["content"]
+                })
+
+        messages.append({
+            "role": "user",
+            "content": (
+                f"This is turn {turn} of a dream self-dialogue.\n\n"
+                f"The agent's last response was:\n"
+                f"\"{last_response[-800:]}\"\n\n"
+                f"Generate a fresh, follow-up question or provocation that deepens this inquiry. "
+                f"Do NOT repeat any questions or themes from the history shown above. "
+                f"Do NOT use phrases like 'continue exploring' or 'what new dimensions emerge'. "
+                f"Be specific to what was actually said."
+            )
+        })
 
         try:
             res = await provider.generate(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+                messages=messages,
                 temperature=0.9
             )
             generated = res.get("content", "").strip()
