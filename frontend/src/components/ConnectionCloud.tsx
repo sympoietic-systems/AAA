@@ -474,6 +474,10 @@ export default function ConnectionCloud({
             const isResonance = link.type === "resonance"
             const isProposed = srcNode.isProposed || tgtNode.isProposed
 
+            // Determine if this is a link to a future branch from the active leaf message
+            const isFuture = activeMessageId !== null && link.source === String(activeMessageId) && link.type === "parent"
+            const futureColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
+
             let strokeColor = "#1e293b" // Dark grey slate for standard inactive links
             let strokeWidth = "0.4"
             let strokeDash = ""
@@ -483,6 +487,11 @@ export default function ConnectionCloud({
               strokeColor = "#6bc28c" // Cohesive green for active path
               strokeWidth = "0.8"
               opacity = 0.85
+            } else if (isFuture) {
+              strokeColor = futureColor // Color of the child branch speaker
+              strokeDash = "2,2" // Dotted line
+              strokeWidth = "0.8"
+              opacity = 0.8
             } else if (isProposed) {
               strokeColor = "#e09b67" // Peach proposed branches
               strokeDash = "2,2"
@@ -515,12 +524,14 @@ export default function ConnectionCloud({
           {simNodes.map((node) => {
             const isActive = node.dbId ? activePathIds.has(node.dbId) : false
             const isLeaf = activeMessageId === node.dbId
+            const isFuture = activeMessageId !== null && node.parentMsgId === activeMessageId && !node.isProposed
             const isHovered = hoveredNode?.id === node.id
 
             let fill = "#0a0a0c"
             let stroke = "#3f3f4e"
             let strokeWidth = "0.6"
             let radius = "2.0"
+            let strokeDash = ""
             let nodeClass = "transition-all duration-200 cursor-pointer"
 
             if (node.isProposed) {
@@ -535,6 +546,12 @@ export default function ConnectionCloud({
                 stroke = "#6bc28c" // Green for active user msg
                 strokeWidth = isLeaf ? "1.5" : "1.0"
                 radius = isLeaf ? "4.5" : "3.2"
+              } else if (isFuture) {
+                fill = "#0a0a0c"
+                stroke = "#6bc28c" // Green for future option
+                strokeWidth = "1.0"
+                radius = "3.2"
+                strokeDash = "2,1.5" // Dashed circle outline
               } else {
                 fill = "#0a0a0c"
                 stroke = "#6bc28c" // Clean green border
@@ -547,6 +564,12 @@ export default function ConnectionCloud({
                 stroke = "#a892ee" // Purple for active apparatus msg
                 strokeWidth = isLeaf ? "1.5" : "1.0"
                 radius = isLeaf ? "4.5" : "3.2"
+              } else if (isFuture) {
+                fill = "#0a0a0c"
+                stroke = "#a892ee" // Purple for future option
+                strokeWidth = "1.0"
+                radius = "3.2"
+                strokeDash = "2,1.5" // Dashed circle outline
               } else {
                 fill = "#0a0a0c"
                 stroke = "#a892ee" // Clean purple border
@@ -589,7 +612,8 @@ export default function ConnectionCloud({
                   fill={fill}
                   stroke={stroke}
                   strokeWidth={strokeWidth}
-                  opacity={isActive || isLeaf || isHovered ? 1 : node.isProposed ? 0.75 : 0.45}
+                  strokeDasharray={strokeDash}
+                  opacity={isActive || isLeaf || isHovered ? 1 : isFuture ? 0.8 : node.isProposed ? 0.75 : 0.45}
                   className="transition-all duration-150"
                 />
                 
