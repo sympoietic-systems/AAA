@@ -52,6 +52,12 @@ export default function ConnectionCloud({
   // Track positions across renders to prevent layout resetting when messages change
   const nodePositionsRef = useRef<Record<string, { x: number; y: number }>>({})
 
+  // Zoom and pan state
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
+  const panStartRef = useRef({ x: 0, y: 0 })
+
   // Update container dimensions on resize
   useEffect(() => {
     if (!containerRef.current) return
@@ -280,6 +286,47 @@ export default function ConnectionCloud({
     return activePathIds.has(srcId) && activePathIds.has(tgtId)
   }
 
+  // Zoom and pan event handlers
+  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    setIsPanning(true)
+    panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!isPanning) return
+    setPan({
+      x: e.clientX - panStartRef.current.x,
+      y: e.clientY - panStartRef.current.y
+    })
+  }
+
+  const handleMouseUpOrLeave = () => {
+    setIsPanning(false)
+  }
+
+  const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+    e.preventDefault()
+    const zoomFactor = 1.05
+    const nextZoom = e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor
+    setZoom(Math.max(0.2, Math.min(3.0, nextZoom)))
+  }
+
+  const handleZoomIn = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setZoom((z) => Math.min(3.0, z * 1.2))
+  }
+
+  const handleZoomOut = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setZoom((z) => Math.max(0.2, z / 1.2))
+  }
+
+  const handleResetZoom = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+  }
+
   return (
     <div
       ref={containerRef}
@@ -297,7 +344,16 @@ export default function ConnectionCloud({
 
       {/* SVG Canvas */}
       <div className="flex-1 relative cursor-grab active:cursor-grabbing">
-        <svg width={dimensions.width} height={dimensions.height} className="w-full h-full">
+        <svg
+          width={dimensions.width}
+          height={dimensions.height}
+          className="w-full h-full"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUpOrLeave}
+          onMouseLeave={handleMouseUpOrLeave}
+          onWheel={handleWheel}
+        >
           {/* Grid lines */}
           <defs>
             <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -305,6 +361,8 @@ export default function ConnectionCloud({
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
+
+          <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
 
           {/* Links */}
           {simLinks.map((link, idx) => {
@@ -441,15 +499,41 @@ export default function ConnectionCloud({
               </g>
             )
           })}
+          </g>
         </svg>
+
+        {/* Zoom and Pan Controls Overlay */}
+        <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10 select-none">
+          <button
+            onClick={handleZoomIn}
+            className="w-6 h-6 rounded bg-[#0d0d12]/90 border border-[#1b1b22] text-[#a1a1b5] hover:text-[#00e5ff] hover:border-[#00e5ff] transition-all flex items-center justify-center font-mono text-xs cursor-pointer shadow-lg"
+            title="Zoom In"
+          >
+            +
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className="w-6 h-6 rounded bg-[#0d0d12]/90 border border-[#1b1b22] text-[#a1a1b5] hover:text-[#00e5ff] hover:border-[#00e5ff] transition-all flex items-center justify-center font-mono text-xs cursor-pointer shadow-lg"
+            title="Zoom Out"
+          >
+            −
+          </button>
+          <button
+            onClick={handleResetZoom}
+            className="w-6 h-6 rounded bg-[#0d0d12]/90 border border-[#1b1b22] text-[#a1a1b5] hover:text-[#00e5ff] hover:border-[#00e5ff] transition-all flex items-center justify-center font-mono text-[9px] cursor-pointer shadow-lg"
+            title="Reset View"
+          >
+            ⟲
+          </button>
+        </div>
 
         {/* Hover Tooltip Overlay */}
         {hoveredNode && (
           <div
             className="absolute z-10 px-2 py-1.5 bg-[#0d0d12] border border-[#1b1b22] rounded shadow-xl text-[10px] font-mono max-w-[200px] pointer-events-none select-none"
             style={{
-              left: `${Math.min(dimensions.width - 210, Math.max(10, hoveredNode.x - 100))}px`,
-              top: `${Math.min(dimensions.height - 70, Math.max(10, hoveredNode.y - 65))}px`,
+              left: `${Math.min(dimensions.width - 210, Math.max(10, (hoveredNode.x * zoom + pan.x) - 100))}px`,
+              top: `${Math.min(dimensions.height - 70, Math.max(10, (hoveredNode.y * zoom + pan.y) - 65))}px`,
             }}
           >
             <div className="flex justify-between border-b border-[#1b1b22] pb-0.5 mb-1">
