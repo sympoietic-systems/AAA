@@ -508,7 +508,7 @@ export default function ConnectionCloud({
                 radius = isLeaf ? "4.5" : "3.2"
               } else {
                 fill = "#0a0a0c"
-                stroke = "#243d2f" // Dark desaturated green border
+                stroke = "#6bc28c" // Clean green border
                 strokeWidth = "0.7"
                 radius = "2.2"
               }
@@ -520,14 +520,14 @@ export default function ConnectionCloud({
                 radius = isLeaf ? "4.5" : "3.2"
               } else {
                 fill = "#0a0a0c"
-                stroke = "#352b54" // Dark desaturated purple border
+                stroke = "#a892ee" // Clean purple border
                 strokeWidth = "0.7"
                 radius = "2.2"
               }
             } else {
               // System
               fill = "#0a0a0c"
-              stroke = "#27272a"
+              stroke = "#94a3b8" // Slate blue
               radius = "1.8"
             }
 
@@ -560,7 +560,7 @@ export default function ConnectionCloud({
                   fill={fill}
                   stroke={stroke}
                   strokeWidth={strokeWidth}
-                  opacity={isActive || isLeaf || isHovered ? 1 : node.isProposed ? 0.7 : 0.6}
+                  opacity={isActive || isLeaf || isHovered ? 1 : node.isProposed ? 0.75 : 0.45}
                   className="transition-all duration-150"
                 />
                 
