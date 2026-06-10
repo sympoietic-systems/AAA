@@ -275,6 +275,7 @@ export function SidePanel({
                   <ConnectionCloud
                     messages={fullTreeMessages}
                     links={links}
+                    notes={notes}
                     activeMessageId={activeMessageId}
                     activePathIds={activePathIds}
                     setActiveMessageId={setActiveMessageId}

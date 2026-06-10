@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react"
-import type { ChatMessage } from "../api/client"
+import type { ChatMessage, NoteInfo } from "../api/client"
 
 interface ConnectionCloudProps {
   messages: ChatMessage[]
   links: any[]
+  notes: NoteInfo[]
   activeMessageId: number | null
   activePathIds: Set<number>
   setActiveMessageId: (id: number | null) => void
@@ -35,6 +36,7 @@ interface SimLink {
 export default function ConnectionCloud({
   messages,
   links,
+  notes,
   activeMessageId,
   activePathIds,
   setActiveMessageId,
@@ -528,6 +530,7 @@ export default function ConnectionCloud({
             const isLeaf = activeMessageId === node.dbId
             const isFuture = node.parentMsgId !== null && node.parentMsgId !== undefined && activePathIds.has(node.parentMsgId) && !isActive && !node.isProposed
             const isHovered = hoveredNode?.id === node.id
+            const nodeNotes = notes.filter((n) => n.message_id === node.dbId)
 
             let fill = "#0a0a0c"
             let stroke = "#3f3f4e"
@@ -618,6 +621,32 @@ export default function ConnectionCloud({
                   opacity={isActive || isLeaf || isHovered ? 1 : isFuture ? 0.8 : node.isProposed ? 0.75 : 0.45}
                   className="transition-all duration-150"
                 />
+                
+                {/* Note Indicator Dots */}
+                {nodeNotes.map((note, idx) => {
+                  const isShared = note.visibility === "shared"
+                  const dotColor = isShared ? "#a892ee" : "#facc15" // Purple for shared, yellow/gold for personal
+                  
+                  // Position around the node boundary (using trigonometry)
+                  // Place up to 4 dots at top-right, top-left, bottom-right, bottom-left
+                  const angle = -Math.PI / 4 - (idx * Math.PI) / 2
+                  const dist = parseFloat(radius) + 2.2
+                  const dx = dist * Math.cos(angle)
+                  const dy = dist * Math.sin(angle)
+
+                  return (
+                    <circle
+                      key={`note-dot-${note.id}`}
+                      cx={dx}
+                      cy={dy}
+                      r="1.1"
+                      fill={dotColor}
+                      stroke="#0a0a0c"
+                      strokeWidth="0.3"
+                      opacity={isActive || isLeaf || isHovered ? 1.0 : 0.6}
+                    />
+                  )
+                })}
                 
                 {/* Proposed Title Label */}
                 {node.isProposed && (
