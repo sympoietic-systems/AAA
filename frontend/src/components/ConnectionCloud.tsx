@@ -474,8 +474,10 @@ export default function ConnectionCloud({
             const isResonance = link.type === "resonance"
             const isProposed = srcNode.isProposed || tgtNode.isProposed
 
-            // Determine if this is a link to a future branch from the active leaf message
-            const isFuture = activeMessageId !== null && link.source === String(activeMessageId) && link.type === "parent"
+            // Determine if this is a link to an alternate branch splitting off from the active path
+            const srcId = parseInt(link.source)
+            const tgtId = parseInt(link.target)
+            const isFuture = !isNaN(srcId) && !isNaN(tgtId) && activePathIds.has(srcId) && !activePathIds.has(tgtId) && link.type === "parent"
             const futureColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
 
             let strokeColor = "#1e293b" // Dark grey slate for standard inactive links
@@ -524,7 +526,7 @@ export default function ConnectionCloud({
           {simNodes.map((node) => {
             const isActive = node.dbId ? activePathIds.has(node.dbId) : false
             const isLeaf = activeMessageId === node.dbId
-            const isFuture = activeMessageId !== null && node.parentMsgId === activeMessageId && !node.isProposed
+            const isFuture = node.parentMsgId !== null && node.parentMsgId !== undefined && activePathIds.has(node.parentMsgId) && !isActive && !node.isProposed
             const isHovered = hoveredNode?.id === node.id
 
             let fill = "#0a0a0c"
