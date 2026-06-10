@@ -72,8 +72,11 @@ export default function ConnectionCloud({
     const newNodes: SimNode[] = []
     const newLinks: SimLink[] = []
 
+    const sorted = [...messages].sort((a, b) => a.id - b.id)
+
     // 1. Add all message nodes
-    for (const m of messages) {
+    for (let i = 0; i < sorted.length; i++) {
+      const m = sorted[i]
       const idStr = String(m.id)
       const prevPos = nodePositionsRef.current[idStr]
       
@@ -90,10 +93,14 @@ export default function ConnectionCloud({
         vy: 0,
       })
 
-      // Link to parent message if it is in the active messages list
-      if (m.parent_message_id && messages.some((msg) => msg.id === m.parent_message_id)) {
+      // Link to parent message (use chronological fallback if parent_message_id is null/undefined)
+      const parentId = m.parent_message_id !== undefined && m.parent_message_id !== null
+        ? m.parent_message_id
+        : (i > 0 ? sorted[i - 1].id : null)
+
+      if (parentId && sorted.some((msg) => msg.id === parentId)) {
         newLinks.push({
-          source: String(m.parent_message_id),
+          source: String(parentId),
           target: idStr,
           type: "parent",
         })

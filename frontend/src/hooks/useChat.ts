@@ -21,10 +21,19 @@ function getAncestorPathIds(messages: ChatMessage[], leafId: number | null): Set
   const path = new Set<number>()
   if (!leafId) return path
 
+  const sorted = [...messages].sort((a, b) => a.id - b.id)
+
   let currentId: number | null = leafId
   const parentMap = new Map<number, number | null>()
-  for (const m of messages) {
-    parentMap.set(m.id, m.parent_message_id || null)
+  for (let i = 0; i < sorted.length; i++) {
+    const m = sorted[i]
+    if (m.parent_message_id !== undefined && m.parent_message_id !== null) {
+      parentMap.set(m.id, m.parent_message_id)
+    } else if (i > 0) {
+      parentMap.set(m.id, sorted[i - 1].id)
+    } else {
+      parentMap.set(m.id, null)
+    }
   }
 
   const visited = new Set<number>()
