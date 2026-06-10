@@ -73,6 +73,7 @@ export default function App() {
     loadingMore,
     loadMoreMessages,
     refreshMessages,
+    refreshTree,
   } = useChat(activeId)
 
   const {
@@ -371,6 +372,7 @@ export default function App() {
         activePathIds={activePathIds}
         setActiveMessageId={setActiveMessageId}
         commitProposedBranch={commitProposedBranch}
+        refreshTree={refreshTree}
       />
     </div>
   )

@@ -223,6 +223,8 @@ export interface ConversationTreeLink {
   source_id: number
   target_id: number
   link_type: string
+  status: "active" | "proposed"
+  justification?: string
 }
 
 export async function getConversationTree(
@@ -832,4 +834,66 @@ export async function removeSedimentInjection(injectionId: string): Promise<void
     method: "DELETE",
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export interface SpectralSuggestion {
+  message_id: number
+  speaker: string
+  content: string
+  similarity: number
+  timestamp: string
+}
+
+export async function createResonanceLink(
+  conversationId: string,
+  sourceId: number,
+  targetId: number,
+  justification = "",
+  status: "active" | "proposed" = "active"
+): Promise<ConversationTreeLink> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/links`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      source_id: sourceId,
+      target_id: targetId,
+      link_type: "resonance",
+      status,
+      justification,
+    }),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function confirmResonanceLink(
+  conversationId: string,
+  linkId: string
+): Promise<void> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/links/${linkId}/confirm`, {
+    method: "POST",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export async function deleteResonanceLink(
+  conversationId: string,
+  linkId: string
+): Promise<void> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/links/${linkId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export async function getSpectralSuggestions(
+  conversationId: string,
+  messageId: number,
+  threshold = 0.70
+): Promise<SpectralSuggestion[]> {
+  const res = await fetch(
+    `${BASE}/conversations/${conversationId}/messages/${messageId}/spectral-suggestions?threshold=${threshold}`
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }

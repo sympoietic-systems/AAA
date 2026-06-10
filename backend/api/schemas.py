@@ -395,8 +395,26 @@ class TreeLink(BaseModel):
     source_id: int
     target_id: int
     link_type: str
+    status: str = "active"
+    justification: Optional[str] = ""
 
 
 class ConversationTreeResponse(BaseModel):
     nodes: list[TreeNode]
     links: list[TreeLink]
+
+
+class SpectralSuggestion(BaseModel):
+    message_id: int
+    speaker: str
+    content: str
+    similarity: float
+    timestamp: datetime
+
+
+class CommitLinkRequest(BaseModel):
+    source_id: int
+    target_id: int
+    link_type: str = "resonance"
+    status: str = "active"
+    justification: Optional[str] = ""

@@ -220,6 +220,10 @@ export function useChat(conversationId: string) {
       setActiveMessageId(response.id)
       const targetConvId = conversationId || response.conversation_id
       if (targetConvId) {
+        getConversationTree(targetConvId)
+          .then((data) => setLinks(data.links))
+          .catch(() => {})
+
         getConversationFiles(targetConvId)
           .then((res) => {
             setFiles(res.files)
@@ -298,6 +302,18 @@ export function useChat(conversationId: string) {
           setMessages(data.messages)
         })
         .catch(() => {})
+
+      getConversationTree(conversationId)
+        .then((data) => setLinks(data.links))
+        .catch(() => setLinks([]))
+    }
+  }, [conversationId])
+
+  const refreshTree = useCallback(() => {
+    if (conversationId) {
+      getConversationTree(conversationId)
+        .then((data) => setLinks(data.links))
+        .catch(() => {})
     }
   }, [conversationId])
 
@@ -314,6 +330,9 @@ export function useChat(conversationId: string) {
     setError(null)
     try {
       const response = await commitBranch(conversationId, parentMsgId, content)
+      getConversationTree(conversationId)
+        .then((data) => setLinks(data.links))
+        .catch(() => {})
       setMessages((prev) => {
         if (prev.some((m) => m.id === response.id)) return prev
         return [...prev, response]
@@ -351,6 +370,7 @@ export function useChat(conversationId: string) {
     loadingMore,
     loadMoreMessages,
     refreshMessages,
+    refreshTree,
   }
 }
 

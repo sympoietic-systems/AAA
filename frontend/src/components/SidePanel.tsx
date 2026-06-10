@@ -26,6 +26,7 @@ import { SedimentSection } from "./sidepanel/SedimentSection"
 import { SummarySection } from "./sidepanel/SummarySection"
 import { MemoryNodesSection } from "./sidepanel/MemoryNodesSection"
 import ConnectionCloud from "./ConnectionCloud"
+import { SpectralEchoes } from "./SpectralEchoes"
 
 export function SidePanel({
   uploadedFiles = [],
@@ -47,6 +48,7 @@ export function SidePanel({
   activePathIds = new Set<number>(),
   setActiveMessageId = () => {},
   commitProposedBranch = async () => null,
+  refreshTree = () => {},
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
@@ -67,6 +69,7 @@ export function SidePanel({
   activePathIds?: Set<number>
   setActiveMessageId?: (id: number | null) => void
   commitProposedBranch?: (parentMsgId: number, content: string) => Promise<any>
+  refreshTree?: () => void
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const isCollapsed = panelCollapsed !== undefined ? panelCollapsed : collapsed
@@ -93,6 +96,7 @@ export function SidePanel({
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [memoryNodesOpen, setMemoryNodesOpen] = useState(false)
   const [cloudOpen, setCloudOpen] = useState(true)
+  const [spectralEchoesOpen, setSpectralEchoesOpen] = useState(true)
 
   // Sediment detail state
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
@@ -280,6 +284,25 @@ export function SidePanel({
                     activePathIds={activePathIds}
                     setActiveMessageId={setActiveMessageId}
                     commitProposedBranch={commitProposedBranch}
+                    refreshTree={refreshTree}
+                    conversationId={conversationId || ""}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Spectral Echoes"
+                open={spectralEchoesOpen}
+                onToggle={() => setSpectralEchoesOpen(!spectralEchoesOpen)}
+              />
+              {spectralEchoesOpen && (
+                <div className="pl-3 pr-2 my-1">
+                  <SpectralEchoes
+                    conversationId={conversationId || ""}
+                    activeMessageId={activeMessageId}
+                    refreshTree={refreshTree}
                   />
                 </div>
               )}

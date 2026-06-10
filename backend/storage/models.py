@@ -70,6 +70,8 @@ class MessageLink:
     target_id: int
     link_type: str = "resonance"
     created_at: Optional[datetime] = None
+    status: str = "active"
+    justification: str = ""
 
 
 @dataclass

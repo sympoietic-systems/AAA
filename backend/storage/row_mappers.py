@@ -52,6 +52,8 @@ def _row_to_message_link(row: sqlite3.Row) -> MessageLink:
         target_id=row["target_id"],
         link_type=row["link_type"],
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
+        status=row["status"] if "status" in row.keys() else "active",
+        justification=row["justification"] if "justification" in row.keys() else "",
     )
 
 

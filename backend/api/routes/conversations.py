@@ -12,6 +12,8 @@ from backend.api.schemas import (
     TreeNode,
     TreeLink,
     ChatResponse,
+    CommitLinkRequest,
+    SpectralSuggestion,
 )
 from backend.services.conversation import ConversationService
 from backend.services.title import TitleService
@@ -187,6 +189,75 @@ async def get_conversation_tree(conversation_id: str, request: Request):
             source_id=l.source_id,
             target_id=l.target_id,
             link_type=l.link_type,
+            status=l.status,
+            justification=l.justification,
         ))
         
     return ConversationTreeResponse(nodes=nodes, links=links)
+
+
+@router.post("/conversations/{conversation_id}/links", response_model=TreeLink)
+async def create_resonance_link(conversation_id: str, body: CommitLinkRequest, request: Request):
+    state = request.app.state
+    repo = state.message_repo
+    
+    link = repo.add_message_link(
+        source_id=body.source_id,
+        target_id=body.target_id,
+        link_type=body.link_type,
+        status=body.status,
+        justification=body.justification or "",
+    )
+    return TreeLink(
+        id=link.id,
+        source_id=link.source_id,
+        target_id=link.target_id,
+        link_type=link.link_type,
+        status=link.status,
+        justification=link.justification,
+    )
+
+
+@router.post("/conversations/{conversation_id}/links/{link_id}/confirm")
+async def confirm_resonance_link(conversation_id: str, link_id: str, request: Request):
+    state = request.app.state
+    repo = state.message_repo
+    repo.confirm_message_link(link_id)
+    return {"status": "success"}
+
+
+@router.delete("/conversations/{conversation_id}/links/{link_id}")
+async def delete_resonance_link(conversation_id: str, link_id: str, request: Request):
+    state = request.app.state
+    repo = state.message_repo
+    repo.delete_message_link(link_id)
+    return {"status": "success"}
+
+
+@router.get("/conversations/{conversation_id}/messages/{message_id}/spectral-suggestions", response_model=list[SpectralSuggestion])
+async def get_spectral_suggestions(conversation_id: str, message_id: int, request: Request, threshold: float = 0.70):
+    state = request.app.state
+    repo = state.message_repo
+    
+    # Get ancestor path for this message
+    path_msgs = repo.get_ancestor_path(message_id)
+    ancestor_ids = [m.id for m in path_msgs]
+    
+    raw_suggestions = repo.get_parallel_messages_by_similarity(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        ancestor_ids=ancestor_ids,
+        threshold=threshold,
+        limit=5
+    )
+    
+    suggestions = []
+    for s in raw_suggestions:
+        suggestions.append(SpectralSuggestion(
+            message_id=s["message_id"],
+            speaker=s["speaker"],
+            content=s["content"],
+            similarity=s["similarity"],
+            timestamp=s["timestamp"],
+        ))
+    return suggestions

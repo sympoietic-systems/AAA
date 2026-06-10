@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { ChatMessage, NoteInfo } from "../api/client"
+import { confirmResonanceLink, deleteResonanceLink } from "../api/client"
 
 interface ConnectionCloudProps {
   messages: ChatMessage[]
@@ -9,6 +10,8 @@ interface ConnectionCloudProps {
   activePathIds: Set<number>
   setActiveMessageId: (id: number | null) => void
   commitProposedBranch: (parentMsgId: number, content: string) => Promise<any>
+  refreshTree: () => void
+  conversationId: string
 }
 
 interface SimNode {
@@ -28,9 +31,12 @@ interface SimNode {
 }
 
 interface SimLink {
+  id?: string
   source: string
   target: string
   type: "parent" | "resonance"
+  status?: "active" | "proposed"
+  justification?: string
 }
 
 export default function ConnectionCloud({
@@ -41,12 +47,18 @@ export default function ConnectionCloud({
   activePathIds,
   setActiveMessageId,
   commitProposedBranch,
+  refreshTree,
+  conversationId,
 }: ConnectionCloudProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 300, height: 300 })
   const [simNodes, setSimNodes] = useState<SimNode[]>([])
   const [simLinks, setSimLinks] = useState<SimLink[]>([])
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null)
+  
+  // Resonance link selection state
+  const [selectedLink, setSelectedLink] = useState<SimLink | null>(null)
+  const [selectedLinkPos, setSelectedLinkPos] = useState<{ x: number; y: number } | null>(null)
   
   // Branch proposal commit overlay state
   const [committingNode, setCommittingNode] = useState<SimNode | null>(null)
@@ -177,9 +189,12 @@ export default function ConnectionCloud({
       // Only include links where both nodes exist in the current message set
       if (newNodes.some((n) => n.id === srcStr) && newNodes.some((n) => n.id === tgtStr)) {
         newLinks.push({
+          id: l.id,
           source: srcStr,
           target: tgtStr,
           type: "resonance",
+          status: l.status || "active",
+          justification: l.justification || "",
         })
       }
     }
@@ -329,6 +344,8 @@ export default function ConnectionCloud({
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     setIsPanning(true)
     panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+    setSelectedLink(null)
+    setSelectedLinkPos(null)
   }
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -475,6 +492,7 @@ export default function ConnectionCloud({
             const isActive = isLinkActive(link)
             const isResonance = link.type === "resonance"
             const isProposed = srcNode.isProposed || tgtNode.isProposed
+            const isProposedResonance = isResonance && link.status === "proposed"
 
             // Determine if this is a link to an alternate branch splitting off from the active path
             const srcId = parseInt(link.source)
@@ -502,25 +520,52 @@ export default function ConnectionCloud({
               strokeWidth = "0.5"
               opacity = 0.35
             } else if (isResonance) {
-              strokeColor = "#94a3b8" // Slate blue for resonance cross-links
-              strokeDash = "3,3"
-              strokeWidth = "0.5"
-              opacity = 0.45
+              if (isProposedResonance) {
+                strokeColor = "#e09b67" // Peach proposed resonance link
+                strokeDash = "1,3"
+                strokeWidth = "0.7"
+                opacity = 0.7
+              } else {
+                strokeColor = "#94a3b8" // Slate blue for active resonance cross-links
+                strokeDash = "3,3"
+                strokeWidth = "0.5"
+                opacity = 0.45
+              }
             }
 
             return (
-              <line
-                key={`link-${idx}`}
-                x1={srcNode.x}
-                y1={srcNode.y}
-                x2={tgtNode.x}
-                y2={tgtNode.y}
-                stroke={strokeColor}
-                strokeWidth={strokeWidth}
-                strokeDasharray={strokeDash}
-                opacity={opacity}
-                className="transition-all duration-300"
-              />
+              <g key={`link-${idx}`}>
+                {isResonance && (
+                  <line
+                    x1={srcNode.x}
+                    y1={srcNode.y}
+                    x2={tgtNode.x}
+                    y2={tgtNode.y}
+                    stroke="transparent"
+                    strokeWidth="6"
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedLink(link)
+                      setSelectedLinkPos({
+                        x: (srcNode.x + tgtNode.x) / 2,
+                        y: (srcNode.y + tgtNode.y) / 2,
+                      })
+                    }}
+                  />
+                )}
+                <line
+                  x1={srcNode.x}
+                  y1={srcNode.y}
+                  x2={tgtNode.x}
+                  y2={tgtNode.y}
+                  stroke={strokeColor}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={strokeDash}
+                  opacity={opacity}
+                  className={`transition-all duration-300 ${isProposedResonance ? "animate-pulse" : ""}`}
+                />
+              </g>
             )
           })}
 
@@ -750,6 +795,101 @@ export default function ConnectionCloud({
               >
                 {isCommitLoading ? "Committing..." : "Commit Branch to DAG"}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Resonance Link Details Overlay */}
+        {selectedLink && selectedLinkPos && (
+          <div
+            className="absolute z-20 p-2.5 bg-[#0d0d12]/95 border border-[#1b1b22] rounded-lg shadow-2xl text-[10px] font-mono w-[220px]"
+            style={{
+              left: `${Math.min(dimensions.width - 230, Math.max(10, (selectedLinkPos.x * zoom + pan.x) - 110))}px`,
+              top: `${Math.min(dimensions.height - 110, Math.max(10, (selectedLinkPos.y * zoom + pan.y) - 95))}px`,
+            }}
+          >
+            <div className="flex justify-between border-b border-[#1b1b22] pb-1 mb-1">
+              <span className={`font-bold ${selectedLink.status === "proposed" ? "text-[#e09b67]" : "text-[#94a3b8]"}`}>
+                {selectedLink.status === "proposed" ? "Proposed Resonance" : "Resonance Link"}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedLink(null)
+                  setSelectedLinkPos(null)
+                }}
+                className="text-[#4b4b5c] hover:text-[#a1a1b5] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {selectedLink.justification && (
+              <div className="text-[#a1a1b5] mb-2 italic bg-[#07070a] p-1.5 rounded border border-[#14141a]">
+                "{selectedLink.justification}"
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              {selectedLink.status === "proposed" ? (
+                <>
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      if (selectedLink.id && conversationId) {
+                        try {
+                          await confirmResonanceLink(conversationId, selectedLink.id)
+                          refreshTree()
+                        } catch (err) {
+                          console.error("Failed to confirm link", err)
+                        }
+                      }
+                      setSelectedLink(null)
+                      setSelectedLinkPos(null)
+                    }}
+                    className="flex-1 py-1 rounded bg-[#6bc28c] hover:bg-[#5bb27c] text-black font-bold font-mono text-[9px] cursor-pointer text-center"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      if (selectedLink.id && conversationId) {
+                        try {
+                          await deleteResonanceLink(conversationId, selectedLink.id)
+                          refreshTree()
+                        } catch (err) {
+                          console.error("Failed to delete link", err)
+                        }
+                      }
+                      setSelectedLink(null)
+                      setSelectedLinkPos(null)
+                    }}
+                    className="flex-1 py-1 rounded bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold font-mono text-[9px] cursor-pointer text-center"
+                  >
+                    Dismiss
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    if (selectedLink.id && conversationId) {
+                      try {
+                        await deleteResonanceLink(conversationId, selectedLink.id)
+                        refreshTree()
+                      } catch (err) {
+                        console.error("Failed to delete link", err)
+                      }
+                    }
+                    setSelectedLink(null)
+                    setSelectedLinkPos(null)
+                  }}
+                  className="w-full py-1 rounded bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold font-mono text-[9px] cursor-pointer text-center"
+                >
+                  Remove Link
+                </button>
+              )}
             </div>
           </div>
         )}

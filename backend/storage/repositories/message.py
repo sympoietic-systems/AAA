@@ -566,13 +566,14 @@ class MessageRepository(BaseRepository):
         return [_row_to_message(r) for r in reversed(rows)]
 
     @with_connection
-    def add_message_link(self, source_id: int, target_id: int, link_type: str = "resonance") -> MessageLink:
+    def add_message_link(self, source_id: int, target_id: int, link_type: str = "resonance", status: str = "active", justification: str = "") -> MessageLink:
         conn = self._conn()
         link_id = f"{source_id}_{target_id}_{link_type}"
         conn.execute(
-            """INSERT OR IGNORE INTO message_links (id, source_id, target_id, link_type)
-               VALUES (?, ?, ?, ?)""",
-            (link_id, source_id, target_id, link_type),
+            """INSERT INTO message_links (id, source_id, target_id, link_type, status, justification)
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(id) DO UPDATE SET status = excluded.status, justification = excluded.justification""",
+            (link_id, source_id, target_id, link_type, status, justification),
         )
         conn.commit()
         row = conn.execute(
@@ -580,6 +581,24 @@ class MessageRepository(BaseRepository):
             (link_id,),
         ).fetchone()
         return _row_to_message_link(row)
+
+    @with_connection
+    def confirm_message_link(self, link_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE message_links SET status = 'active' WHERE id = ?",
+            (link_id,),
+        )
+        conn.commit()
+
+    @with_connection
+    def delete_message_link(self, link_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM message_links WHERE id = ?",
+            (link_id,),
+        )
+        conn.commit()
 
     @with_connection
     def get_message_links(self, conversation_id: str) -> list[MessageLink]:
@@ -592,3 +611,66 @@ class MessageRepository(BaseRepository):
             (conversation_id, conversation_id),
         ).fetchall()
         return [_row_to_message_link(r) for r in rows]
+
+    @with_connection
+    def get_parallel_messages_by_similarity(
+        self,
+        conversation_id: str,
+        message_id: int,
+        ancestor_ids: list[int],
+        threshold: float,
+        limit: int = 5,
+    ) -> list[dict]:
+        import numpy as np
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT embedding, embedding_dim FROM conversation_log WHERE id = ?",
+            (message_id,),
+        ).fetchone()
+        if not row or not row["embedding"] or not row["embedding_dim"]:
+            return []
+        
+        query_vec = np.frombuffer(row["embedding"], dtype="float32")
+        query_dim = row["embedding_dim"]
+        if len(query_vec) != query_dim:
+            return []
+            
+        norm = np.linalg.norm(query_vec)
+        if norm > 0:
+            query_vec = query_vec / norm
+
+        ancestor_placeholders = ",".join(["?"] * len(ancestor_ids)) if ancestor_ids else "NULL"
+        query_str = f"""
+            SELECT id, speaker, content, embedding, embedding_dim, timestamp 
+            FROM conversation_log 
+            WHERE conversation_id = ? AND id != ? AND id NOT IN ({ancestor_placeholders})
+        """
+        params = [conversation_id, message_id] + ancestor_ids
+        rows = conn.execute(query_str, params).fetchall()
+
+        results = []
+        for r in rows:
+            blob = r["embedding"]
+            dim = r["embedding_dim"]
+            if not blob or not dim:
+                continue
+            vec = np.frombuffer(blob, dtype="float32")
+            if len(vec) != dim or len(vec) != len(query_vec):
+                continue
+            
+            v_norm = np.linalg.norm(vec)
+            if v_norm > 0:
+                vec = vec / v_norm
+            sim = float(np.dot(query_vec, vec))
+            
+            if sim >= threshold:
+                results.append({
+                    "message_id": r["id"],
+                    "speaker": r["speaker"],
+                    "content": r["content"],
+                    "similarity": sim,
+                    "timestamp": r["timestamp"],
+                })
+        
+        results.sort(key=lambda x: x["similarity"], reverse=True)
+        return results[:limit]

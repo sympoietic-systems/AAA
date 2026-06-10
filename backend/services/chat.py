@@ -79,6 +79,69 @@ def process_self_annotations(
     return processed
 
 
+async def run_background_resonance_scan(
+    background_engine,
+    message_repo,
+    conversation_id: str,
+    message_id: int,
+):
+    try:
+        # Get ancestor path to find parallel nodes
+        path_msgs = message_repo.get_ancestor_path(message_id)
+        ancestor_ids = [m.id for m in path_msgs]
+
+        # Get the current message content/speaker
+        current_msg = None
+        for m in path_msgs:
+            if m.id == message_id:
+                current_msg = m
+                break
+        if not current_msg:
+            # Fallback if not found in path
+            msgs = message_repo.get_by_ids([message_id])
+            if msgs:
+                current_msg = msgs[0]
+        
+        if not current_msg or not current_msg.embedding:
+            return
+
+        # Find parallel messages with similarity > 0.82
+        # (Exclude ancestor path to only find cross-branch resonances)
+        candidates = message_repo.get_parallel_messages_by_similarity(
+            conversation_id=conversation_id,
+            message_id=message_id,
+            ancestor_ids=ancestor_ids,
+            threshold=0.82,
+            limit=5,
+        )
+
+        for cand in candidates:
+            # Call the background task engine to execute resonance finder LLM query
+            payload = {
+                "message_a": current_msg.content,
+                "speaker_a": current_msg.speaker,
+                "message_b": cand["content"],
+                "speaker_b": cand["speaker"],
+            }
+            res = await background_engine.run("resonance_finder", payload)
+            if res.get("has_resonance"):
+                reason = res.get("reason", "")
+                # Create proposed link
+                message_repo.add_message_link(
+                    source_id=message_id,
+                    target_id=cand["message_id"],
+                    link_type="resonance",
+                    status="proposed",
+                    justification=reason,
+                )
+                logger.info(
+                    "Background resonance link proposed: %d -> %d (reason: %s)",
+                    message_id, cand["message_id"], reason
+                )
+    except Exception:
+        logger.exception("Error during background resonance scan")
+
+
 class ChatService:
     def __init__(self, state):
         self._state = state
@@ -141,6 +204,18 @@ class ChatService:
             for title, body in matches:
                 proposed_branches.append({"title": title, "content": body.strip()})
             response_text = re.sub(lof_pattern, "", response_text).strip()
+
+            # Parse and strip proposed resonance links (<resonance target="ID">Reason</resonance>)
+            proposed_resonances = []
+            res_pattern = r'<resonance\s+target=["\']([^"\']+)["\']\s*>([\s\S]*?)</resonance>'
+            res_matches = re.findall(res_pattern, response_text)
+            for target_id_str, justification in res_matches:
+                try:
+                    target_id = int(target_id_str)
+                    proposed_resonances.append((target_id, justification.strip()))
+                except ValueError:
+                    logger.warning("Invalid resonance target ID: %s", target_id_str)
+            response_text = re.sub(res_pattern, "", response_text).strip()
             thinking = result.payload.get("thinking")
             embedding = result.payload.get("embedding", b"")
             embedding_model = result.payload.get("embedding_model", "unknown")
@@ -212,6 +287,19 @@ class ChatService:
                 parent_message_id=msg.id,
             )
 
+            # Save proposed agential resonance links (Tier 1)
+            for target_id, justification in proposed_resonances:
+                try:
+                    repo.add_message_link(
+                        source_id=response_msg.id,
+                        target_id=target_id,
+                        link_type="resonance",
+                        status="proposed",
+                        justification=justification,
+                    )
+                except Exception as e:
+                    logger.warning("Failed to save proposed agential resonance link: %s", e)
+
             # Self-annotation post-processing: scan for inline <aaa-note>/<mark> tags
             # without IDs, create DB records, and replace with ID-bearing versions.
             # Also truncate scar_fold content to 200 chars as safeguard.
@@ -281,6 +369,15 @@ class ChatService:
                     belief_metabolism.metabolize,
                     conversation_id,
                     msg.id,
+                    response_msg.id,
+                )
+
+            if background_engine and background_tasks:
+                background_tasks.add_task(
+                    run_background_resonance_scan,
+                    background_engine,
+                    repo,
+                    conversation_id,
                     response_msg.id,
                 )
 
