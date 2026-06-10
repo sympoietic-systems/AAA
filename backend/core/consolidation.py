@@ -35,7 +35,7 @@ class ConsolidationMixin:
                         if parsed_nodes:
                             try:
                                 checkpoint_id = checkpoint["id"]
-                                memory_node_repo.delete_by_conversation(c.id)
+                                memory_node_repo.delete_by_checkpoint(checkpoint_id)
                                 memory_node_repo.save_nodes(c.id, checkpoint_id, parsed_nodes)
                                 self._sync_diffractive_tags(c.id, parsed_nodes)
                                 logger.info(
@@ -64,10 +64,17 @@ class ConsolidationMixin:
                 # Old-format backfill — also bypass all checks
                 pass
             else:
-                # Compute message counts for proactive rules
-                checkpoint = self.checkpoint_repo.get_latest(c.id)
+                # Compute message counts for proactive rules on the active branch
+                last_msgs = self.message_repo.get_recent(limit=1, conversation_id=c.id)
+                if not last_msgs:
+                    continue
+                leaf_message = last_msgs[0]
+                ancestor_msgs = self.message_repo.get_ancestor_path(leaf_message.id)
+                ancestor_ids = [m.id for m in ancestor_msgs if m.id is not None]
+
+                checkpoint = self.checkpoint_repo.get_latest_checkpoint_for_path(c.id, ancestor_ids)
                 checkpoint_msg_count = checkpoint["message_count"] if checkpoint else 0
-                total_msg_count = self.message_repo.count_messages(c.id)
+                total_msg_count = len(ancestor_msgs)
                 new_msg_count = total_msg_count - checkpoint_msg_count
 
                 if new_msg_count <= 0:
@@ -96,25 +103,50 @@ class ConsolidationMixin:
 
     async def _consolidate_conversation(self, conversation) -> None:
         conversation_id = conversation.id
-        checkpoint = self.checkpoint_repo.get_latest(conversation_id)
-
-        total_msg_count = self.message_repo.count_messages(conversation_id)
-        checkpoint_msg_count = checkpoint["message_count"] if checkpoint else 0
-
-        # Detect re-consolidation: old-format checkpoint with no structured memory nodes
         memory_node_repo = getattr(self.app_state, "memory_node_repo", None)
-        existing_nodes = memory_node_repo.get_nodes(conversation_id) if memory_node_repo else []
+
+        last_msgs = self.message_repo.get_recent(limit=1, conversation_id=conversation_id)
+        if not last_msgs:
+            return
+        leaf_message = last_msgs[0]
+        leaf_message_id = leaf_message.id
+
+        ancestor_msgs = self.message_repo.get_ancestor_path(leaf_message_id)
+        ancestor_ids = [m.id for m in ancestor_msgs if m.id is not None]
+
+        checkpoint = self.checkpoint_repo.get_latest_checkpoint_for_path(conversation_id, ancestor_ids)
+
+        checkpoint_id = checkpoint.get("id") if checkpoint else None
+        existing_nodes = memory_node_repo.get_nodes_by_checkpoint(checkpoint_id) if (memory_node_repo and checkpoint_id) else []
+
+        total_msg_count = len(ancestor_msgs)
         is_reconsolidation = bool(checkpoint and not existing_nodes and checkpoint.get("summary"))
 
         if is_reconsolidation:
-            # Fetch ALL messages for a full re-sedimentation pass
-            new_messages = self.message_repo.get_messages_since(conversation_id, 0)
+            new_messages = ancestor_msgs
             logger.info(
                 "Re-consolidating %s from scratch (old-format checkpoint, %d total messages)",
                 conversation_id, total_msg_count,
             )
         else:
-            new_messages = self.message_repo.get_messages_since(conversation_id, checkpoint_msg_count)
+            if checkpoint:
+                checkpoint_msg_id = checkpoint.get("message_id")
+                if checkpoint_msg_id is not None:
+                    idx = -1
+                    for i, m in enumerate(ancestor_msgs):
+                        if m.id == checkpoint_msg_id:
+                            idx = i
+                            break
+                    if idx != -1:
+                        new_messages = ancestor_msgs[idx + 1:]
+                    else:
+                        checkpoint_msg_count = checkpoint.get("message_count", 0)
+                        new_messages = ancestor_msgs[checkpoint_msg_count:]
+                else:
+                    checkpoint_msg_count = checkpoint.get("message_count", 0)
+                    new_messages = ancestor_msgs[checkpoint_msg_count:]
+            else:
+                new_messages = ancestor_msgs
 
         if not new_messages:
             self.conversation_repo.mark_requires_consolidation(conversation_id, False)
@@ -157,8 +189,8 @@ class ConsolidationMixin:
 
         # ── Call 1: Memory nodes (YAML) ──
         logger.info(
-            "Running node consolidation for conversation %s (messages offset: %d)",
-            conversation_id, checkpoint_msg_count,
+            "Running node consolidation for conversation %s (messages count along branch: %d)",
+            conversation_id, total_msg_count,
         )
         node_result = await bg_engine.run("consolidate", {"text": prompt_text})
 
@@ -181,9 +213,9 @@ class ConsolidationMixin:
             logger.warning("Empty summary result for %s", conversation_id)
 
         # Save checkpoint with both raw nodes output and human summary
-        self.checkpoint_repo.save(
+        checkpoint_id = self.checkpoint_repo.save(
             conversation_id, total_msg_count, raw_output, model_used,
-            human_summary=human_summary,
+            human_summary=human_summary, message_id=leaf_message_id,
         )
         logger.info("Consolidation checkpoint saved for %s (%d msgs)", conversation_id, total_msg_count)
 
@@ -196,10 +228,7 @@ class ConsolidationMixin:
         # Store structured nodes
         if memory_node_repo and merged_nodes:
             try:
-                # Get new checkpoint ID for linking
-                new_checkpoint = self.checkpoint_repo.get_latest(conversation_id)
-                checkpoint_id = new_checkpoint["id"] if new_checkpoint else 0
-                memory_node_repo.delete_by_conversation(conversation_id)
+                memory_node_repo.delete_by_checkpoint(checkpoint_id)
                 memory_node_repo.save_nodes(conversation_id, checkpoint_id, merged_nodes)
             except Exception as e:
                 logger.exception("Failed to save memory nodes for %s: %s", conversation_id, e)

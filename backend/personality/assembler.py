@@ -97,6 +97,10 @@ class PromptAssemblerModule(ProcessingModule):
             ecology_notes_text=ecology_notes_text,
         )
 
+        branch_context_tag = payload.get("branch_context_tag")
+        if branch_context_tag:
+            system_content += f"\n\n[Nomadic Branch Context Tag: {branch_context_tag}]"
+
         system_msg = {"role": "system", "content": system_content}
 
         # Build procedural sediment with full loaded skill instructions

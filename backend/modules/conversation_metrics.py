@@ -76,22 +76,48 @@ class ConversationMetricsModule(ProcessingModule):
 
         current_vec = np.frombuffer(current_blob, dtype="float32")
 
-        prior_human = self._repo.get_embeddings_by_speaker(
-            "human", limit=self._pairwise_window,
-            conversation_id=conversation_id if conversation_id else None,
-            exclude_message_id=exclude_message_id,
-        )
-        prior_agent = self._repo.get_embeddings_by_speaker(
-            "apparatus", limit=self._agent_self_window,
-            conversation_id=conversation_id if conversation_id else None,
-            exclude_message_id=exclude_message_id,
-        )
+        ancestor_message_ids = payload.get("ancestor_message_ids", [])
+        if ancestor_message_ids:
+            ancestor_msgs = self._repo.get_by_ids(ancestor_message_ids)
+            ancestor_msgs.sort(key=lambda m: m.id if m.id is not None else 0)
+        else:
+            parent_message_id = payload.get("parent_message_id")
+            if parent_message_id is None and conversation_id:
+                last_msgs = self._repo.get_recent(limit=1, conversation_id=conversation_id)
+                if last_msgs:
+                    parent_message_id = last_msgs[0].id
+            if parent_message_id is not None:
+                ancestor_msgs = self._repo.get_ancestor_path(parent_message_id, limit=50)
+            else:
+                ancestor_msgs = []
 
-        all_recent = self._repo.get_recent_embeddings(
-            limit=self._pairwise_window + self._agent_self_window,
-            conversation_id=conversation_id if conversation_id else None,
-            exclude_message_id=exclude_message_id,
-        )
+        if exclude_message_id is not None:
+            ancestor_msgs = [m for m in ancestor_msgs if m.id != exclude_message_id]
+
+        prior_human_msgs = [m for m in reversed(ancestor_msgs) if m.speaker == "human"]
+        prior_agent_msgs = [m for m in reversed(ancestor_msgs) if m.speaker == "apparatus"]
+
+        prior_human = []
+        for m in prior_human_msgs[:self._pairwise_window]:
+            if m.embedding and m.embedding_dim:
+                vec = np.frombuffer(m.embedding, dtype="float32")
+                if len(vec) == m.embedding_dim:
+                    prior_human.append(vec)
+
+        prior_agent = []
+        for m in prior_agent_msgs[:self._agent_self_window]:
+            if m.embedding and m.embedding_dim:
+                vec = np.frombuffer(m.embedding, dtype="float32")
+                if len(vec) == m.embedding_dim:
+                    prior_agent.append(vec)
+
+        all_recent = []
+        for m in reversed(ancestor_msgs):
+            if m.embedding and m.embedding_dim:
+                vec = np.frombuffer(m.embedding, dtype="float32")
+                if len(vec) == m.embedding_dim:
+                    all_recent.append(vec)
+        all_recent = all_recent[:self._pairwise_window + self._agent_self_window]
 
         metrics: dict = {}
 
@@ -104,7 +130,10 @@ class ConversationMetricsModule(ProcessingModule):
         rolling_entropy = _compute_rolling_entropy(current_vec, prior_human, self._entropy_window)
         metrics["rolling_entropy"] = rolling_entropy
 
-        coupling = _compute_coupling_coherence(self._repo, conversation_id if conversation_id else None, exclude_message_id=exclude_message_id)
+        coupling = None
+        if prior_human and prior_agent:
+            coupling = float(np.dot(prior_human[0], prior_agent[0]))
+            coupling = max(0.0, min(1.0, coupling))
         metrics["coupling_coherence"] = coupling
 
         agent_divergence = _compute_agent_self_divergence(prior_agent)
@@ -119,10 +148,12 @@ class ConversationMetricsModule(ProcessingModule):
         mpi = _compute_mutual_perturbation(coupling, rp_t)
         metrics["mutual_perturbation"] = mpi
 
-        # Fetch prior metrics from database to ensure state isolation across conversations
         prior_metrics = {}
-        if conversation_id:
-            recent_with_metrics = self._repo.get_recent_with_metrics(limit=5, conversation_id=conversation_id, exclude_message_id=exclude_message_id)
+        path_ids = [m.id for m in ancestor_msgs if m.id is not None]
+        if path_ids:
+            recent_with_metrics = self._repo.get_recent_with_metrics_for_path(
+                path_ids, limit=5, exclude_message_id=exclude_message_id
+            )
             if recent_with_metrics:
                 for turn in reversed(recent_with_metrics):
                     if turn.get("s_t") is not None:

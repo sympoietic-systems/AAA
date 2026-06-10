@@ -37,8 +37,9 @@ class ConsolidationCheckpointModule(ProcessingModule):
             return payload
 
         raw_msg_count = payload.get("raw_msg_count", 0)
+        ancestor_message_ids = payload.get("ancestor_message_ids", [])
 
-        checkpoint = self._checkpoint_repo.get_latest(conversation_id)
+        checkpoint = self._checkpoint_repo.get_latest_checkpoint_for_path(conversation_id, ancestor_message_ids)
 
         if checkpoint:
             messages = payload.get("messages", [])
@@ -64,10 +65,11 @@ class ConsolidationCheckpointModule(ProcessingModule):
 
     def _build_context_text(self, conversation_id: str, checkpoint: dict) -> str:
         human_summary = checkpoint.get("human_summary", "").strip()
+        checkpoint_id = checkpoint.get("id")
 
-        if self._memory_node_repo:
+        if self._memory_node_repo and checkpoint_id:
             try:
-                nodes = self._memory_node_repo.get_nodes(conversation_id)
+                nodes = self._memory_node_repo.get_nodes_by_checkpoint(checkpoint_id)
                 if nodes:
                     top_nodes = sorted(
                         nodes, key=lambda n: n.get("intensity", 0), reverse=True
