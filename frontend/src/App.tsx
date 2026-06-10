@@ -154,7 +154,8 @@ export default function App() {
     document.body.style.userSelect = "none"
 
     const onMove = (ev: MouseEvent) => {
-      const w = Math.max(200, Math.min(600, startWidth - (ev.clientX - startX)))
+      const maxW = Math.floor(window.innerWidth * 0.5)
+      const w = Math.max(200, Math.min(maxW, startWidth - (ev.clientX - startX)))
       rightWidthRef.current = w
       setRightPanelWidth(w)
     }
