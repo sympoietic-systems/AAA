@@ -345,7 +345,8 @@ export const MessageBubble = memo(function MessageBubble({
   };
 
   const renderNoteComponent = ({ node, ...props }: any) => {
-    const noteId = props.id;
+    // Support both data-note-id (new split marks) and id (legacy marks)
+    const noteId = props["data-note-id"] || props.id;
     if (!noteId) {
       return <mark {...props} className="bg-yellow-500/20 text-yellow-100 px-0.5 rounded" />;
     }
@@ -379,14 +380,19 @@ export const MessageBubble = memo(function MessageBubble({
       setShowNoteCreator(true);
     };
 
+    // Determine if this is the primary (first) segment for scroll targeting
+    // The primary segment has id="note-highlight-{noteId}", secondary ones only have data-note-id
+    const isPrimary = props.id && props.id.startsWith("note-highlight-");
+
     return (
       <span 
-        id={`note-highlight-${noteId}`}
+        id={isPrimary ? `note-highlight-${noteId}` : undefined}
+        data-note-id={noteId}
         onClick={handleHighlightClick}
         className={`relative group inline ${highlightColorClass}`}
       >
         {props.children}
-        {note.comment && (
+        {note.comment && isPrimary && (
           <span className="
             absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2
             bg-[#121212] border border-[#2a2a2a] rounded shadow-2xl

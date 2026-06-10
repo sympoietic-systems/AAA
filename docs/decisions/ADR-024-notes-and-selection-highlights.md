@@ -50,8 +50,9 @@ In `backend/modules/context_collector.py`, message history is filtered dynamical
 
 ### 3. Bidirectional Navigation & UI Interaction
 - **Selection Popover**: Positioned dynamically near the selected text to prevent scrolling offsets.
-- **Side Panel Notes List**: Displays notes by visibility color (purple for shared, yellow for personal). Clicking a card calls `.scrollIntoView()` on the highlight element, adding a 1.5-second visual pulse (`scale-[1.02] ring-2 ring-green-500/50`).
+- **Side Panel Notes List**: Displays notes by visibility color (purple for shared, yellow for personal). Clicking a card calls `.scrollIntoView()` on the highlight element with a brief scale highlight (`scale-[1.02] ring-2 ring-green-500/50`). Each note card has a delete button (✕) with two-step confirmation (✕ → ✓/✕), visible on hover.
 - **Highlight Overlay**: Clicking directly on highlighted text in a bubble brings up the edit/delete popover.
+- **Inline Formatting Splitting**: When highlighted text contains markdown inline formatting (`**bold**`, `*italic*`, `` `code` ``, etc.), the backend splits `<mark>` tags at formatting boundaries so that delimiters stay outside the marks while the formatted content remains inside. This ensures remark processes the markdown correctly. Example: `<mark>some **bold** text</mark>` → `<mark>some </mark>**<mark>bold</mark>**<mark> text</mark>`.
 
 ## Symbia's Philosophical Alignment
 

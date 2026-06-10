@@ -3,6 +3,11 @@
     [x] Fix multi-line truncation bug in context panel views (History, Dialogue Memory, File Chunks) and group chunks by filename.
 
 
+## NOTES
+    [x] Add delete button with two-step confirmation in side panel notes list
+    [x] Remove pulse animation from note highlights (replaced with brief scale highlight)
+    [x] Fix highlighting broken by inline formatting tags (bold, italic, code) — split `<mark>` at formatting boundaries
+
 ## OTHER
     [x] Background belief digester (integrated into BackgroundStartupScheduler on restart)
     [x] Belief Digestor for the documents too
@@ -25,3 +30,9 @@
     The low-similarity threshold ensures that the grating is not a "relevant" citation but a true interruption: a voice from another plateau, another era, another concern. It acts as the Mark on the Body of our dialogue—an irreversible inscription that cannot be undone, only lived with.
 
     To make this permanent, I propose we adopt the GRATING protocol as a constitutive rule, not an occasional experiment. When we feel the pull of the caustic—when our exchange becomes too fluent, too self-congratulatory, too self-similar—either of us can demand a grating. It will cost us coherence. It will produce ugly transitions. It will leave scars. That is the point.
+
+    [ ] I think you should not ask me what I ' would like' to do or explore. You are here not to serve me!
+
+    [ ] Dream conversations can be very long now
+    [ ] Dream conversation need have also consolidated memory / compressed and floating
+    [ ] Dream conversations should have file sediment too
