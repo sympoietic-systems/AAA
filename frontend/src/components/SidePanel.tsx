@@ -271,7 +271,7 @@ export function SidePanel({
                 onToggle={() => setCloudOpen(!cloudOpen)}
               />
               {cloudOpen && (
-                <div className="w-full h-[280px] my-1">
+                <div className="w-full h-[550px] my-1">
                   <ConnectionCloud
                     messages={fullTreeMessages}
                     links={links}

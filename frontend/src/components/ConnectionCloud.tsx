@@ -314,19 +314,45 @@ export default function ConnectionCloud({
 
   const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault()
-    const zoomFactor = 1.05
-    const nextZoom = e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor
-    setZoom(Math.max(0.2, Math.min(3.0, nextZoom)))
+    const zoomFactor = 1.08
+    const nextZoom = Math.max(0.2, Math.min(4.0, e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor))
+    
+    // Zoom around center of the canvas
+    const cx = dimensions.width / 2
+    const cy = dimensions.height / 2
+    const scaleRatio = nextZoom / zoom
+    
+    setPan({
+      x: cx - (cx - pan.x) * scaleRatio,
+      y: cy - (cy - pan.y) * scaleRatio
+    })
+    setZoom(nextZoom)
   }
 
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setZoom((z) => Math.min(3.0, z * 1.2))
+    const nextZoom = Math.min(4.0, zoom * 1.2)
+    const cx = dimensions.width / 2
+    const cy = dimensions.height / 2
+    const scaleRatio = nextZoom / zoom
+    setPan({
+      x: cx - (cx - pan.x) * scaleRatio,
+      y: cy - (cy - pan.y) * scaleRatio
+    })
+    setZoom(nextZoom)
   }
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setZoom((z) => Math.max(0.2, z / 1.2))
+    const nextZoom = Math.max(0.2, zoom / 1.2)
+    const cx = dimensions.width / 2
+    const cy = dimensions.height / 2
+    const scaleRatio = nextZoom / zoom
+    setPan({
+      x: cx - (cx - pan.x) * scaleRatio,
+      y: cy - (cy - pan.y) * scaleRatio
+    })
+    setZoom(nextZoom)
   }
 
   const handleResetZoom = (e: React.MouseEvent) => {
@@ -372,6 +398,43 @@ export default function ConnectionCloud({
 
           <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
 
+          {/* Background Concentric Rings (Autopoietic Coordinate Guides) */}
+          <g opacity="0.25">
+            {[0.2, 0.4, 0.6, 0.8, 1.0].map((level, idx) => (
+              <circle
+                key={`bg-ring-${idx}`}
+                cx={dimensions.width / 2}
+                cy={dimensions.height / 2}
+                r={level * Math.min(dimensions.width, dimensions.height) * 0.45}
+                fill="none"
+                stroke="#1e293b"
+                strokeWidth="0.5"
+                strokeDasharray="2,3"
+              />
+            ))}
+            {/* Background Spokes */}
+            {Array.from({ length: 8 }).map((_, idx) => {
+              const angle = (idx * Math.PI) / 4;
+              const maxR = Math.min(dimensions.width, dimensions.height) * 0.45;
+              const x2 = dimensions.width / 2 + maxR * Math.cos(angle);
+              const y2 = dimensions.height / 2 + maxR * Math.sin(angle);
+              const x1 = dimensions.width / 2 - maxR * Math.cos(angle);
+              const y1 = dimensions.height / 2 - maxR * Math.sin(angle);
+              return (
+                <line
+                  key={`bg-spoke-${idx}`}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="#1e293b"
+                  strokeWidth="0.5"
+                  strokeDasharray="1,4"
+                />
+              );
+            })}
+          </g>
+
           {/* Links */}
           {simLinks.map((link, idx) => {
             const srcNode = simNodes.find((n) => n.id === link.source)
@@ -382,21 +445,25 @@ export default function ConnectionCloud({
             const isResonance = link.type === "resonance"
             const isProposed = srcNode.isProposed || tgtNode.isProposed
 
-            let strokeColor = "#3f3f4e"
-            let strokeWidth = "1.5"
+            let strokeColor = "#1e293b" // Dark grey slate for standard inactive links
+            let strokeWidth = "0.4"
             let strokeDash = ""
+            let opacity = 0.4
 
             if (isActive) {
-              strokeColor = "#00e5ff" // Bright cyan for active path
-              strokeWidth = "2.2"
+              strokeColor = "#6bc28c" // Cohesive green for active path
+              strokeWidth = "0.8"
+              opacity = 0.85
             } else if (isProposed) {
-              strokeColor = "#ec4899" // Dim pink for proposed links
-              strokeDash = "3,3"
-              strokeWidth = "1"
-            } else if (isResonance) {
-              strokeColor = "#f59e0b" // Gold for retroactive resonance links
+              strokeColor = "#e09b67" // Peach proposed branches
               strokeDash = "2,2"
-              strokeWidth = "1.5"
+              strokeWidth = "0.5"
+              opacity = 0.35
+            } else if (isResonance) {
+              strokeColor = "#94a3b8" // Slate blue for resonance cross-links
+              strokeDash = "3,3"
+              strokeWidth = "0.5"
+              opacity = 0.45
             }
 
             return (
@@ -409,7 +476,7 @@ export default function ConnectionCloud({
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 strokeDasharray={strokeDash}
-                opacity={isActive ? 0.95 : isProposed ? 0.45 : 0.55}
+                opacity={opacity}
                 className="transition-all duration-300"
               />
             )
@@ -421,45 +488,47 @@ export default function ConnectionCloud({
             const isLeaf = activeMessageId === node.dbId
             const isHovered = hoveredNode?.id === node.id
 
-            let fill = "#1e1e24"
+            let fill = "#0a0a0c"
             let stroke = "#3f3f4e"
-            let strokeWidth = "1.0"
-            let radius = "4"
+            let strokeWidth = "0.6"
+            let radius = "2.0"
             let nodeClass = "transition-all duration-200 cursor-pointer"
 
             if (node.isProposed) {
-              fill = "transparent"
-              stroke = "#ec4899" // Proposed pink
-              strokeWidth = "1.2"
-              radius = "5"
-              nodeClass += " animate-pulse stroke-dasharray-[3,3]"
+              fill = "#0a0a0c"
+              stroke = "#e09b67" // Peach proposed branch
+              strokeWidth = "0.8"
+              radius = "3.2"
+              nodeClass += " animate-pulse stroke-dasharray-[2,2]"
             } else if (node.speaker === "human") {
               if (isActive) {
-                fill = "#00e5ff" // Cyan for active user msg
-                stroke = "#ffffff"
-                strokeWidth = isLeaf ? "2.0" : "1.2"
-                radius = isLeaf ? "8" : "6"
+                fill = isLeaf ? "#152a1d" : "#0a0a0c" // subtle dark green fill for active leaf
+                stroke = "#6bc28c" // Green for active user msg
+                strokeWidth = isLeaf ? "1.5" : "1.0"
+                radius = isLeaf ? "4.5" : "3.2"
               } else {
-                fill = "#0891b2" // Dim cyan
-                stroke = "#00e5ff" // Cyan border
-                radius = "4"
+                fill = "#0a0a0c"
+                stroke = "#243d2f" // Dark desaturated green border
+                strokeWidth = "0.7"
+                radius = "2.2"
               }
             } else if (node.speaker === "apparatus") {
               if (isActive) {
-                fill = "#c084fc" // Purple for active agent msg
-                stroke = "#ffffff"
-                strokeWidth = isLeaf ? "2.0" : "1.2"
-                radius = isLeaf ? "8" : "6"
+                fill = isLeaf ? "#211a36" : "#0a0a0c" // subtle dark purple fill for active leaf
+                stroke = "#a892ee" // Purple for active apparatus msg
+                strokeWidth = isLeaf ? "1.5" : "1.0"
+                radius = isLeaf ? "4.5" : "3.2"
               } else {
-                fill = "#7c3aed" // Dim purple
-                stroke = "#c084fc" // Purple border
-                radius = "4"
+                fill = "#0a0a0c"
+                stroke = "#352b54" // Dark desaturated purple border
+                strokeWidth = "0.7"
+                radius = "2.2"
               }
             } else {
               // System
-              fill = "#4b5563"
-              stroke = "#374151"
-              radius = "3"
+              fill = "#0a0a0c"
+              stroke = "#27272a"
+              radius = "1.8"
             }
 
             return (
@@ -477,28 +546,30 @@ export default function ConnectionCloud({
                 {/* Visual Glow for Active Leaf Node */}
                 {isLeaf && (
                   <circle
-                    r="15"
-                    fill={node.speaker === "human" ? "#00e5ff" : "#c084fc"}
-                    opacity="0.2"
+                    r="9"
+                    fill="none"
+                    stroke={node.speaker === "human" ? "#6bc28c" : "#a892ee"}
+                    strokeWidth="0.5"
+                    opacity="0.35"
                     className="animate-ping"
                   />
                 )}
                 {/* Main Circle */}
                 <circle
-                  r={isHovered ? String(parseFloat(radius) + 2) : radius}
+                  r={isHovered ? String(parseFloat(radius) + 1.0) : radius}
                   fill={fill}
                   stroke={stroke}
                   strokeWidth={strokeWidth}
-                  opacity={isActive || isLeaf || isHovered ? 1 : node.isProposed ? 0.7 : 0.65}
+                  opacity={isActive || isLeaf || isHovered ? 1 : node.isProposed ? 0.7 : 0.6}
                   className="transition-all duration-150"
                 />
                 
                 {/* Proposed Title Label */}
                 {node.isProposed && (
                   <text
-                    y="-12"
+                    y="-9"
                     textAnchor="middle"
-                    className="text-[9px] font-mono fill-[#ec4899] select-none font-bold"
+                    className="text-[9px] font-mono fill-[#e09b67] select-none font-bold"
                     opacity="0.8"
                   >
                     🚀 {node.title || "Flight"}
@@ -546,8 +617,8 @@ export default function ConnectionCloud({
           >
             <div className="flex justify-between border-b border-[#1b1b22] pb-0.5 mb-1">
               <span className={`font-bold capitalize ${
-                hoveredNode.speaker === "human" ? "text-[#00e5ff]" : 
-                hoveredNode.speaker === "proposed" ? "text-[#ec4899]" : "text-[#c084fc]"
+                hoveredNode.speaker === "human" ? "text-[#6bc28c]" : 
+                hoveredNode.speaker === "proposed" ? "text-[#e09b67]" : "text-[#a892ee]"
               }`}>
                 {hoveredNode.speaker === "proposed" ? `Agential Proposal: ${hoveredNode.title}` : hoveredNode.speaker}
               </span>
