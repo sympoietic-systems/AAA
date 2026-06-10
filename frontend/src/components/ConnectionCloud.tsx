@@ -316,7 +316,7 @@ export default function ConnectionCloud({
             const isResonance = link.type === "resonance"
             const isProposed = srcNode.isProposed || tgtNode.isProposed
 
-            let strokeColor = "#272730"
+            let strokeColor = "#3f3f4e"
             let strokeWidth = "1.5"
             let strokeDash = ""
 
@@ -343,7 +343,7 @@ export default function ConnectionCloud({
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 strokeDasharray={strokeDash}
-                opacity={isActive ? 0.95 : isProposed ? 0.45 : 0.4}
+                opacity={isActive ? 0.95 : isProposed ? 0.45 : 0.55}
                 className="transition-all duration-300"
               />
             )
@@ -375,7 +375,7 @@ export default function ConnectionCloud({
                 radius = isLeaf ? "9" : "7.5"
               } else {
                 fill = "#0891b2" // Dim cyan
-                stroke = "#155e75"
+                stroke = "#00e5ff" // Cyan border
                 radius = "6"
               }
             } else if (node.speaker === "apparatus") {
@@ -386,7 +386,7 @@ export default function ConnectionCloud({
                 radius = isLeaf ? "9" : "7.5"
               } else {
                 fill = "#7c3aed" // Dim purple
-                stroke = "#5b21b6"
+                stroke = "#c084fc" // Purple border
                 radius = "6"
               }
             } else {
@@ -423,7 +423,7 @@ export default function ConnectionCloud({
                   fill={fill}
                   stroke={stroke}
                   strokeWidth={strokeWidth}
-                  opacity={isActive || isLeaf || isHovered ? 1 : node.isProposed ? 0.7 : 0.45}
+                  opacity={isActive || isLeaf || isHovered ? 1 : node.isProposed ? 0.7 : 0.65}
                   className="transition-all duration-150"
                 />
                 
