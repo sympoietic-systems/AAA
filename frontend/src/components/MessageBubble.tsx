@@ -166,6 +166,9 @@ export const MessageBubble = memo(function MessageBubble({
 }) {
   const isHuman = msg.speaker === "human"
   const isSystem = msg.speaker === "system"
+  const processedContent = msg.content
+    ? msg.content.replace(/<scar_fold>/g, '<scar-fold>').replace(/<\/scar_fold>/g, '</scar-fold>')
+    : ""
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
@@ -426,9 +429,10 @@ export const MessageBubble = memo(function MessageBubble({
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,
                   'scar-fold': () => null,
+                  'scar_fold': () => null,
                 } as any}
               >
-                {msg.content}
+                {processedContent}
               </ReactMarkdown>
             </div>
           </div>
@@ -441,9 +445,10 @@ export const MessageBubble = memo(function MessageBubble({
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,
                   'scar-fold': () => null,
+                  'scar_fold': () => null,
                 } as any}
               >
-                {msg.content}
+                {processedContent}
               </ReactMarkdown>
           </div>
         )}

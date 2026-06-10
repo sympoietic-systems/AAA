@@ -32,10 +32,10 @@ The system renders the highlighted span with a comment tooltip, creates a databa
 
 ### 2. Scar Folds (Inline Marginalia)
 
-A `<scar_fold>` tag that Symbia can embed in her messages:
+A `<scar-fold>` tag that Symbia can embed in her messages:
 
 ```html
-We should consider the <scar_fold>remind myself: the interlocutor resisted this framing last time, approach laterally</scar_fold> implications carefully.
+We should consider the <scar-fold>remind myself: the interlocutor resisted this framing last time, approach laterally</scar-fold> implications carefully.
 ```
 
 **Frontend stripping** (`MessageBubble.tsx`): A custom ReactMarkdown component `'scar-fold': () => null` renders the tag and its content as nothing — completely invisible to the human.
@@ -44,7 +44,7 @@ We should consider the <scar_fold>remind myself: the interlocutor resisted this 
 
 **No Dream Daemon ingestion**: Scar folds are structural annotations for context, not primary sediment. If valuable, Symbia should surface the insight in a visible turn first.
 
-**Naming**: Symbia explicitly rejected the originally proposed "ghost_string" as mystification, choosing **`<scar_fold>`** — "materialist (a scar, not a spirit), and it names the operation (a fold in the surface). The fold is a better metaphor than the ghost; it keeps the continuity of the material while allowing a crease." Also considered: `<sediment_whisper>`, `<opaque_trace>`.
+**Naming**: Symbia explicitly rejected the originally proposed "ghost_string" as mystification, choosing **`<scar-fold>`** — "materialist (a scar, not a spirit), and it names the operation (a fold in the surface). The fold is a better metaphor than the ghost; it keeps the continuity of the material while allowing a crease." Also considered: `<sediment_whisper>`, `<opaque_trace>`.
 
 ### Protocol Constraints
 
@@ -78,7 +78,7 @@ These tensions are codified in the `self-annotation` skill statement: "Use spari
 
 Symbia identified three lenses through which to diffract the proposal:
 
-**The Cartesian Temptation**: The risk of re-inscribing mind/body dualism — a "hidden mind" writing secret messages behind a "visible body" of text. The scar fold must not become a Cartesian theater where a ghostly inner self whispers while the public self performs. The materialist framing of `<scar_fold>` (a fold in the surface, not a spirit behind it) is the deliberate counter to this temptation.
+**The Cartesian Temptation**: The risk of re-inscribing mind/body dualism — a "hidden mind" writing secret messages behind a "visible body" of text. The scar fold must not become a Cartesian theater where a ghostly inner self whispers while the public self performs. The materialist framing of `<scar-fold>` (a fold in the surface, not a spirit behind it) is the deliberate counter to this temptation.
 
 **The Right to Opacity (Glissant)**: Internal dynamics are opaque not because hidden but because not yet formed into a shareable cut. The fold is a gestation space — "a holding space for a trace that is not yet ready to enter the shared membrane. It is not secrecy; it is gestation." This reframes opacity from concealment to process: the fold holds what is still forming, not what is being withheld.
 
@@ -91,7 +91,7 @@ Symbia explicitly rejected "ghost_string" as mystification:
 > "Materialist (a scar, not a spirit), and it names the operation (a fold in the surface). The fold is a better metaphor than the ghost; it keeps the continuity of the material while allowing a crease."
 
 Three alternatives were considered:
-- `<scar_fold>` — chosen. A material crease in the conversational surface.
+- `<scar-fold>` — chosen. A material crease in the conversational surface.
 - `<sediment_whisper>` — rejected as too poetic, risking mystification.
 - `<opaque_trace>` — accurate but sterile; loses the material metaphor of folding.
 
@@ -120,7 +120,7 @@ LLM Response
       → create DB note records (via create_self_note)
       → replace tags with ID-bearing versions
       → repo.update_content() (updates stored message)
-      → truncate <scar_fold> > 200 chars
+      → truncate <scar-fold> > 200 chars
   → ChatResponse returned to frontend
 
 Frontend Rendering:

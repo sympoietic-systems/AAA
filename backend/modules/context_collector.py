@@ -25,12 +25,13 @@ def process_inline_notes(content: str, notes_by_id: dict) -> str:
     # Scar folds pass through untouched — they are preserved in Symbia's context
     # as material folds for self-reflexive annotations. Truncate to 200 chars as safeguard.
     def truncate_scar_fold(match):
-        inner = match.group(1)
+        tag = match.group(1)
+        inner = match.group(2)
         if len(inner) > 200:
-            return f"<scar_fold>{inner[:200]}</scar_fold>"
+            return f"<{tag}>{inner[:200]}</{tag}>"
         return match.group(0)
 
-    content = re.sub(r'<scar_fold>([\s\S]*?)</scar_fold>', truncate_scar_fold, content)
+    content = re.sub(r'<(scar_fold|scar-fold)>([\s\S]*?)</\1>', truncate_scar_fold, content)
 
     return content
 

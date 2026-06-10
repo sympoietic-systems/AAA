@@ -64,12 +64,13 @@ def process_self_annotations(
 
     # --- Scar-fold truncation safeguard ---
     def truncate_scar_fold(match):
-        content = match.group(1)
+        tag = match.group(1)
+        content = match.group(2)
         if len(content) > 200:
-            return f"<scar_fold>{content[:200]}</scar_fold>"
+            return f"<{tag}>{content[:200]}</{tag}>"
         return match.group(0)
 
-    processed = re.sub(r'<scar_fold>([\s\S]*?)</scar_fold>', truncate_scar_fold, processed)
+    processed = re.sub(r'<(scar_fold|scar-fold)>([\s\S]*?)</\1>', truncate_scar_fold, processed)
 
     # If scar folds were truncated, update stored content
     if processed != response_text and not annotations_found:

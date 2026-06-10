@@ -201,11 +201,10 @@ class SkillService:
         return False
 
     def _upsert_missing_seed_skills(self, skill_repo) -> None:
-        """Add skills from seed_skills.yaml that don't yet exist in the database.
+        """Add or update skills from seed_skills.yaml in the database.
 
-        This ensures that newly authored seed skills (e.g. self-annotation,
-        scar-fold-marginalia) are picked up on existing deployments without
-        requiring a full re-seed.
+        This ensures that newly authored or modified seed skills (e.g. self-annotation,
+        scar-fold-marginalia) are picked up on existing deployments.
         """
         seed_data = self._load_seed_file()
         if not seed_data:
@@ -218,12 +217,25 @@ class SkillService:
 
         skills_cfg = seed_data.get("skills", {})
         added = 0
+        updated = 0
 
         for skill_def in skills_cfg.get("always_active", []):
             name = skill_def["id"]
-            if name in existing_names:
-                continue
             statement = skill_def["statement"]
+            if name in existing_names:
+                existing_skill = skill_repo.get_skill_by_name(name)
+                if existing_skill:
+                    content = self._generate_skill_content(name, statement, is_always_active=True)
+                    if existing_skill.description != statement or existing_skill.content != content:
+                        logger.info("Updating existing seed skill '%s' to match seed_skills.yaml", name)
+                        skill_repo.update_skill(
+                            skill_id=existing_skill.id,
+                            description=statement,
+                            content=content,
+                            short_content=statement
+                        )
+                        updated += 1
+                continue
             content = self._generate_skill_content(name, statement, is_always_active=True)
             vec_json = self._compute_skill_vector(statement, scorer)
             skill_repo.create_skill(
@@ -261,12 +273,24 @@ class SkillService:
 
         for skill_def in skills_cfg.get("on_demand", []):
             name = skill_def["id"]
-            if name in existing_names:
-                continue
             description = skill_def.get("description", name)
+            content = skill_def.get("content", "")
+            if name in existing_names:
+                existing_skill = skill_repo.get_skill_by_name(name)
+                if existing_skill:
+                    if not content:
+                        content = self._generate_skill_content(name, description, is_always_active=False)
+                    if existing_skill.description != description or existing_skill.content != content:
+                        logger.info("Updating existing seed skill '%s' to match seed_skills.yaml", name)
+                        skill_repo.update_skill(
+                            skill_id=existing_skill.id,
+                            description=description,
+                            content=content
+                        )
+                        updated += 1
+                continue
             triggers = skill_def.get("triggers", [])
             trigger_json = json.dumps(triggers)
-            content = skill_def.get("content", "")
             if not content:
                 content = self._generate_skill_content(name, description, is_always_active=False)
             vec_json = self._compute_skill_vector(content or description, scorer)
@@ -303,8 +327,8 @@ class SkillService:
             existing_names.add(name)
             added += 1
 
-        if added > 0:
-            logger.info("Upserted %d new seed skill(s) into existing database", added)
+        if added > 0 or updated > 0:
+            logger.info("Sync complete: upserted %d new, updated %d existing seed skills", added, updated)
 
     def _load_seed_file(self) -> dict | None:
         from pathlib import Path

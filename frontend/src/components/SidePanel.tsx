@@ -3,6 +3,9 @@ import type {
   ConversationFile,
   DbSkillsResponse,
   ImageMetadata,
+  NoteInfo,
+  WebMetadata,
+  DocumentMetadata,
 } from "../api/client"
 import {
   getDbSkills,

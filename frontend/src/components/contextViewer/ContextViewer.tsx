@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { type ContextSection, SECTION_STYLES } from './types';
+import { SECTION_STYLES } from './types';
 import { parseContextSent } from './parsers';
 import { HistorySectionViewer } from './HistorySectionViewer';
 import { SedimentSectionViewer } from './SedimentSectionViewer';

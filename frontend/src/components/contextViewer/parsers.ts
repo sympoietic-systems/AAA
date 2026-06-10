@@ -185,7 +185,7 @@ export function parseContextSent(contextText: string): ContextSection[] {
   const filtered = sections.filter(s => s.content.trim() !== '');
 
   // Debug: log section breakdown to help diagnose classification issues
-  if (process.env.NODE_ENV !== 'production') {
+  if (import.meta.env.MODE !== 'production') {
     console.debug(
       '[ContextViewer] Parsed sections:',
       filtered.map(s => ({

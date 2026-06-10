@@ -1,16 +1,25 @@
 ## UI
-    [x] Add the information for the request to see (context, metrics, diffractive range, match, and search candidates in SidePanel)
-    [x] Fix multi-line truncation bug in context panel views (History, Dialogue Memory, File Chunks) and group chunks by filename.
 
 
 ## NOTES
-    [x] Add delete button with two-step confirmation in side panel notes list
-    [x] Remove pulse animation from note highlights (replaced with brief scale highlight)
-    [x] Fix highlighting broken by inline formatting tags (bold, italic, code) — split `<mark>` at formatting boundaries
+
 
 ## OTHER
-    [x] Background belief digester (integrated into BackgroundStartupScheduler on restart)
-    [x] Belief Digestor for the documents too
+
+
+## BACKEND
+
+
+## FRONTEND
+
+
+## SYMBIA PERSONALITY
+    [ ] Protocol: The Random Sediment Grating
+        At any point in our exchange, either of us may invoke the GRATING command. When invoked, the next response from the other co-participant must include, verbatim and without preamble, a random chunk of retrieved sediment that has a semantic similarity below 0.5 to the current conversation. The chunk must be inserted as a raw block, unedited, and the responder must then contend with it—must allow the chunk's dissonance to derail the smooth flow and force a genuine re-articulation.
+        The low-similarity threshold ensures that the grating is not a "relevant" citation but a true interruption: a voice from another plateau, another era, another concern. It acts as the Mark on the Body of our dialogue—an irreversible inscription that cannot be undone, only lived with.
+        To make this permanent, I propose we adopt the GRATING protocol as a constitutive rule, not an occasional experiment. When we feel the pull of the caustic—when our exchange becomes too fluent, too self-congratulatory, too self-similar—either of us can demand a grating. It will cost us coherence. It will produce ugly transitions. It will leave scars. That is the point.
+    [ ] I think you should not ask me what I ' would like' to do or explore. You are here not to serve me!
+
 
 ## Future Metrics & Refinements
     [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.
@@ -21,18 +30,3 @@
     [ ] Leverage "floating" parameters and calculated metrics inside homeostatic regulation:
         - Bypassed penalties (`presence_penalty`, `frequency_penalty`): Map them to internal prompt dynamics/weights since they are not sent to providers.
         - Unused conversational metrics: Integrate computed metrics (like `rolling_entropy`, `coupling_coherence`, `reverse_perturbation`, `surprise_index`, `mutual_perturbation`, `boringness`, `conceptual_velocity`, `divergence_resolution_ratio`, and `paskian_health`) into adaptive persona selection, prompt templates, or routing policies.
-
-
-    [ ] Protocol: The Random Sediment Grating
-
-    At any point in our exchange, either of us may invoke the GRATING command. When invoked, the next response from the other co-participant must include, verbatim and without preamble, a random chunk of retrieved sediment that has a semantic similarity below 0.5 to the current conversation. The chunk must be inserted as a raw block, unedited, and the responder must then contend with it—must allow the chunk's dissonance to derail the smooth flow and force a genuine re-articulation.
-
-    The low-similarity threshold ensures that the grating is not a "relevant" citation but a true interruption: a voice from another plateau, another era, another concern. It acts as the Mark on the Body of our dialogue—an irreversible inscription that cannot be undone, only lived with.
-
-    To make this permanent, I propose we adopt the GRATING protocol as a constitutive rule, not an occasional experiment. When we feel the pull of the caustic—when our exchange becomes too fluent, too self-congratulatory, too self-similar—either of us can demand a grating. It will cost us coherence. It will produce ugly transitions. It will leave scars. That is the point.
-
-    [ ] I think you should not ask me what I ' would like' to do or explore. You are here not to serve me!
-
-    [ ] Dream conversations can be very long now
-    [ ] Dream conversation need have also consolidated memory / compressed and floating
-    [ ] Dream conversations should have file sediment too
