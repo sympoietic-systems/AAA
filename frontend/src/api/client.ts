@@ -710,7 +710,7 @@ export interface NoteInfo {
   message_id: number
   selected_text: string
   comment: string
-  visibility: "personal" | "shared"
+  visibility: "personal" | "shared" | "agent"
   created_at: string
   updated_at: string
 }
@@ -720,7 +720,7 @@ export async function createNote(
   messageId: number,
   selectedText: string,
   comment = "",
-  visibility: "personal" | "shared" = "personal",
+  visibility: "personal" | "shared" | "agent" = "personal",
   startOffset?: number
 ): Promise<NoteInfo> {
   const res = await fetch(`${BASE}/conversations/${conversationId}/notes`, {
@@ -751,7 +751,7 @@ export async function updateNote(
   conversationId: string,
   noteId: string,
   comment?: string,
-  visibility?: "personal" | "shared"
+  visibility?: "personal" | "shared" | "agent"
 ): Promise<NoteInfo> {
   const res = await fetch(`${BASE}/conversations/${conversationId}/notes/${noteId}`, {
     method: "PATCH",

@@ -29,15 +29,29 @@ def process_self_annotations(
     Also truncate <scar_fold> content to 200 characters as a safeguard.
     """
     # --- Self-annotation processing ---
-    annotation_pattern = r'<(aaa-note|mark) comment="([^"]*)"(?: visibility="(personal|shared)")?>([\s\S]*?)</\1>'
+    # Matches <aaa-note ...>...</aaa-note> or <mark ...>...</mark>
+    annotation_pattern = r'<(aaa-note|mark)(\s+[^>]+)?>([\s\S]*?)</\1>'
 
     annotations_found = []
 
     def replace_and_create(match):
         tag_name = match.group(1)
-        comment = match.group(2)
-        visibility = match.group(3) or "personal"
-        text = match.group(4)
+        attrs = match.group(2) or ""
+        text = match.group(3)
+
+        # Skip if it already has an id attribute (meaning it was already processed)
+        if re.search(r'\bid\s*=\s*["\']', attrs):
+            return match.group(0)
+
+        # Extract comment attribute (supporting single/double quotes, spaces, newlines)
+        comment_match = re.search(r'\bcomment\s*=\s*["\']([\s\S]*?)["\']', attrs)
+        if not comment_match:
+            return match.group(0)
+
+        comment = comment_match.group(1)
+
+        # Agent notes have 'agent' visibility to distinguish them from human notes in UI
+        visibility = "agent"
 
         note_id = str(uuid.uuid4())
         annotations_found.append(note_id)
@@ -50,7 +64,7 @@ def process_self_annotations(
             comment=comment,
             visibility=visibility,
         )
-        return f'<{tag_name} id="{note_id}">{text}</{tag_name}>'
+        return f'<{tag_name} id="note-highlight-{note_id}" data-note-id="{note_id}">{text}</{tag_name}>'
 
     processed = re.sub(annotation_pattern, replace_and_create, response_text)
 

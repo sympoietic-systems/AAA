@@ -161,9 +161,9 @@ export const MessageBubble = memo(function MessageBubble({
   msg: ChatMessage
   previousSignature?: number[] | null
   notes?: NoteInfo[]
-  onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared", startOffset?: number) => void
+  onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared" | "agent", startOffset?: number) => void
   onDeleteNote?: (noteId: string) => void
-  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   onBranch?: (messageId: number) => void
 }) {
   const isHuman = msg.speaker === "human"
@@ -182,7 +182,7 @@ export const MessageBubble = memo(function MessageBubble({
   const [showSelectionToolbar, setShowSelectionToolbar] = useState(false)
   const [showNoteCreator, setShowNoteCreator] = useState(false)
   const [noteComment, setNoteComment] = useState("")
-  const [noteVisibility, setNoteVisibility] = useState<"personal" | "shared">("personal")
+  const [noteVisibility, setNoteVisibility] = useState<"personal" | "shared" | "agent">("personal")
   const [popupCoords, setPopupCoords] = useState<{ x: number; y: number } | null>(null)
   const [selectedStartOffset, setSelectedStartOffset] = useState<number | undefined>(undefined)
   const [editingNote, setEditingNote] = useState<NoteInfo | null>(null)
@@ -351,7 +351,11 @@ export const MessageBubble = memo(function MessageBubble({
 
   const renderNoteComponent = ({ node, ...props }: any) => {
     // Support both data-note-id (new split marks) and id (legacy marks)
-    const noteId = props["data-note-id"] || props.id;
+    let noteId = props["data-note-id"] || props.id;
+    if (noteId && noteId.startsWith("note-highlight-")) {
+      noteId = noteId.replace("note-highlight-", "");
+    }
+    
     if (!noteId) {
       return <mark {...props} className="bg-yellow-500/20 text-yellow-100 px-0.5 rounded" />;
     }
@@ -363,10 +367,17 @@ export const MessageBubble = memo(function MessageBubble({
         </span>
       );
     }
+    const isAgent = note.visibility === "agent";
     const isShared = note.visibility === "shared";
-    const highlightColorClass = isShared
-      ? "bg-purple-950/50 text-purple-200 border-b border-purple-500/60 cursor-pointer px-0.5 rounded-sm"
-      : "bg-yellow-950/60 text-yellow-100 border-b border-yellow-500/60 cursor-pointer px-0.5 rounded-sm";
+    
+    let highlightColorClass = "";
+    if (isAgent) {
+      highlightColorClass = "bg-cyan-950/60 text-cyan-200 border-b border-cyan-400/80 cursor-pointer px-0.5 rounded-sm hover:bg-cyan-900/60 transition-colors";
+    } else if (isShared) {
+      highlightColorClass = "bg-purple-950/50 text-purple-200 border-b border-purple-500/60 cursor-pointer px-0.5 rounded-sm hover:bg-purple-900/50 transition-colors";
+    } else {
+      highlightColorClass = "bg-yellow-950/60 text-yellow-100 border-b border-yellow-500/60 cursor-pointer px-0.5 rounded-sm hover:bg-yellow-900/60 transition-colors";
+    }
 
     const handleHighlightClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -407,8 +418,10 @@ export const MessageBubble = memo(function MessageBubble({
             transition-opacity duration-150
             pointer-events-none font-sans
           ">
-            <div className={`font-mono text-[8px] mb-1 font-bold ${isShared ? "text-purple-400" : "text-yellow-400"}`}>
-              {isShared ? "SHARED NOTE" : "PERSONAL NOTE"}
+            <div className={`font-mono text-[8px] mb-1 font-bold ${
+              isAgent ? "text-cyan-400" : isShared ? "text-purple-400" : "text-yellow-400"
+            }`}>
+              {isAgent ? "AGENT NOTE" : isShared ? "SHARED NOTE" : "PERSONAL NOTE"}
             </div>
             {note.comment}
           </span>

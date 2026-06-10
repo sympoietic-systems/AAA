@@ -81,13 +81,14 @@ export default function App() {
     addNote,
     editNote,
     removeNote,
+    refreshNotes,
   } = useNotes(activeId || "")
 
   const handleAddNote = async (
     messageId: number,
     selectedText: string,
     comment: string,
-    visibility: "personal" | "shared",
+    visibility: "personal" | "shared" | "agent",
     startOffset?: number
   ) => {
     const res = await addNote(messageId, selectedText, comment, visibility, startOffset)
@@ -101,7 +102,7 @@ export default function App() {
     refreshMessages()
   }
 
-  const handleUpdateNote = async (noteId: string, comment?: string, visibility?: "personal" | "shared") => {
+  const handleUpdateNote = async (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => {
     await editNote(noteId, comment, visibility)
     refreshMessages()
   }
@@ -225,6 +226,7 @@ export default function App() {
         setTimeout(() => refreshTitle(response.conversation_id!), 2000)
       } else {
         refresh()
+        refreshNotes()
         // Auto-generate title when conversation reaches 3+ messages if still untitled
         const conv = conversations.find((c) => c.id === currentActiveId)
         if (conv && !conv.title.trim() && conv.message_count >= 2) {

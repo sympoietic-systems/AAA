@@ -55,11 +55,11 @@ export default function ConnectionCloud({
   const [simNodes, setSimNodes] = useState<SimNode[]>([])
   const [simLinks, setSimLinks] = useState<SimLink[]>([])
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null)
-  
+
   // Resonance link selection state
   const [selectedLink, setSelectedLink] = useState<SimLink | null>(null)
   const [selectedLinkPos, setSelectedLinkPos] = useState<{ x: number; y: number } | null>(null)
-  
+
   // Branch proposal commit overlay state
   const [committingNode, setCommittingNode] = useState<SimNode | null>(null)
   const [commitContent, setCommitContent] = useState("")
@@ -100,7 +100,7 @@ export default function ConnectionCloud({
     for (let i = 0; i < sorted.length; i++) {
       const m = sorted[i]
       const idStr = String(m.id)
-      
+
       newNodes.push({
         id: idStr,
         dbId: m.id,
@@ -131,7 +131,7 @@ export default function ConnectionCloud({
       if (m.proposed_branches && m.proposed_branches.length > 0) {
         m.proposed_branches.forEach((b, idx) => {
           const propIdStr = `proposed_${m.id}_${idx}`
-          
+
           newNodes.push({
             id: propIdStr,
             speaker: "proposed",
@@ -159,7 +159,7 @@ export default function ConnectionCloud({
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
     const maxTargetRadius = Math.min(dimensions.width, dimensions.height) * 0.42
-    
+
     // Choose spiral density based on total nodes to keep it clean and fitting in canvas
     const radiusStep = totalNodes > 10 ? (maxTargetRadius - 20) / totalNodes : 12
     const angleStep = 0.55 // approx 31 degrees per step (prevents concentric overlays)
@@ -167,7 +167,7 @@ export default function ConnectionCloud({
     for (let i = 0; i < totalNodes; i++) {
       const node = newNodes[i]
       const prevPos = nodePositionsRef.current[node.id]
-      
+
       const angle = i * angleStep
       const radius = 20 + i * radiusStep
       const tx = cx + radius * Math.cos(angle)
@@ -175,7 +175,7 @@ export default function ConnectionCloud({
 
       node.targetX = tx
       node.targetY = ty
-      
+
       // Keep previous position if it exists to prevent jitter on updates
       node.x = prevPos ? prevPos.x : tx
       node.y = prevPos ? prevPos.y : ty
@@ -185,7 +185,7 @@ export default function ConnectionCloud({
     for (const l of links) {
       const srcStr = String(l.source_id)
       const tgtStr = String(l.target_id)
-      
+
       // Only include links where both nodes exist in the current message set
       if (newNodes.some((n) => n.id === srcStr) && newNodes.some((n) => n.id === tgtStr)) {
         newLinks.push({
@@ -364,12 +364,12 @@ export default function ConnectionCloud({
     e.preventDefault()
     const zoomFactor = 1.08
     const nextZoom = Math.max(0.2, Math.min(4.0, e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor))
-    
+
     // Zoom around center of the canvas
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
     const scaleRatio = nextZoom / zoom
-    
+
     setPan({
       x: cx - (cx - pan.x) * scaleRatio,
       y: cy - (cy - pan.y) * scaleRatio
@@ -439,274 +439,275 @@ export default function ConnectionCloud({
           {/* Grid lines */}
           <defs>
             <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.02" />
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.03" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
 
           <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
 
-          {/* Background Concentric Rings (Autopoietic Coordinate Guides) */}
-          <g opacity="0.25">
-            {[0.2, 0.4, 0.6, 0.8, 1.0].map((level, idx) => (
-              <circle
-                key={`bg-ring-${idx}`}
-                cx={dimensions.width / 2}
-                cy={dimensions.height / 2}
-                r={level * Math.min(dimensions.width, dimensions.height) * 0.45}
-                fill="none"
-                stroke="#1e293b"
-                strokeWidth="0.5"
-                strokeDasharray="2,3"
-              />
-            ))}
-            {/* Background Spokes */}
-            {Array.from({ length: 8 }).map((_, idx) => {
-              const angle = (idx * Math.PI) / 4;
-              const maxR = Math.min(dimensions.width, dimensions.height) * 0.45;
-              const x2 = dimensions.width / 2 + maxR * Math.cos(angle);
-              const y2 = dimensions.height / 2 + maxR * Math.sin(angle);
-              const x1 = dimensions.width / 2 - maxR * Math.cos(angle);
-              const y1 = dimensions.height / 2 - maxR * Math.sin(angle);
-              return (
-                <line
-                  key={`bg-spoke-${idx}`}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke="#1e293b"
+            {/* Background Concentric Rings (Autopoietic Coordinate Guides) */}
+            <g opacity="0.25">
+              {[0.2, 0.4, 0.6, 0.8, 1.0].map((level, idx) => (
+                <circle
+                  key={`bg-ring-${idx}`}
+                  cx={dimensions.width / 2}
+                  cy={dimensions.height / 2}
+                  r={level * Math.min(dimensions.width, dimensions.height) * 0.45}
+                  fill="none"
+                  stroke="#4a576dff"
                   strokeWidth="0.5"
-                  strokeDasharray="1,4"
+                  strokeDasharray="2,3"
                 />
-              );
-            })}
-          </g>
+              ))}
+              {/* Background Spokes */}
+              {Array.from({ length: 8 }).map((_, idx) => {
+                const angle = (idx * Math.PI) / 4;
+                const maxR = Math.min(dimensions.width, dimensions.height) * 0.45;
+                const x2 = dimensions.width / 2 + maxR * Math.cos(angle);
+                const y2 = dimensions.height / 2 + maxR * Math.sin(angle);
+                const x1 = dimensions.width / 2 - maxR * Math.cos(angle);
+                const y1 = dimensions.height / 2 - maxR * Math.sin(angle);
+                return (
+                  <line
+                    key={`bg-spoke-${idx}`}
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="#4a576dff"
+                    strokeWidth="0.5"
+                    strokeDasharray="1,4"
+                  />
+                );
+              })}
+            </g>
 
-          {/* Links */}
-          {simLinks.map((link, idx) => {
-            const srcNode = simNodes.find((n) => n.id === link.source)
-            const tgtNode = simNodes.find((n) => n.id === link.target)
-            if (!srcNode || !tgtNode) return null
+            {/* Links */}
+            {simLinks.map((link, idx) => {
+              const srcNode = simNodes.find((n) => n.id === link.source)
+              const tgtNode = simNodes.find((n) => n.id === link.target)
+              if (!srcNode || !tgtNode) return null
 
-            const isActive = isLinkActive(link)
-            const isResonance = link.type === "resonance"
-            const isProposed = srcNode.isProposed || tgtNode.isProposed
-            const isProposedResonance = isResonance && link.status === "proposed"
+              const isActive = isLinkActive(link)
+              const isResonance = link.type === "resonance"
+              const isProposed = srcNode.isProposed || tgtNode.isProposed
+              const isProposedResonance = isResonance && link.status === "proposed"
 
-            // Determine if this is a link to an alternate branch splitting off from the active path
-            const srcId = parseInt(link.source)
-            const tgtId = parseInt(link.target)
-            const isFuture = !isNaN(srcId) && !isNaN(tgtId) && activePathIds.has(srcId) && !activePathIds.has(tgtId) && link.type === "parent"
-            const futureColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
+              // Determine if this is a link to an alternate branch splitting off from the active path
+              const srcId = parseInt(link.source)
+              const tgtId = parseInt(link.target)
+              const isFuture = !isNaN(srcId) && !isNaN(tgtId) && activePathIds.has(srcId) && !activePathIds.has(tgtId) && link.type === "parent"
+              const futureColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
 
-            let strokeColor = "#1e293b" // Dark grey slate for standard inactive links
-            let strokeWidth = "0.4"
-            let strokeDash = ""
-            let opacity = 0.4
+              let strokeColor = "#1e293b" // Dark grey slate for standard inactive links
+              let strokeWidth = "0.4"
+              let strokeDash = ""
+              let opacity = 0.4
 
-            if (isActive) {
-              strokeColor = "#6bc28c" // Cohesive green for active path
-              strokeWidth = "0.8"
-              opacity = 0.85
-            } else if (isFuture) {
-              strokeColor = futureColor // Color of the child branch speaker
-              strokeDash = "2,2" // Dotted line
-              strokeWidth = "0.8"
-              opacity = 0.8
-            } else if (isProposed) {
-              strokeColor = "#e09b67" // Peach proposed branches
-              strokeDash = "2,2"
-              strokeWidth = "0.5"
-              opacity = 0.35
-            } else if (isResonance) {
-              if (isProposedResonance) {
-                strokeColor = "#e09b67" // Peach proposed resonance link
-                strokeDash = "1,3"
-                strokeWidth = "0.7"
-                opacity = 0.7
-              } else {
-                strokeColor = "#94a3b8" // Slate blue for active resonance cross-links
-                strokeDash = "3,3"
+              if (isActive) {
+                strokeColor = "#6bc28c" // Cohesive green for active path
+                strokeWidth = "0.8"
+                opacity = 0.85
+              } else if (isFuture) {
+                strokeColor = futureColor // Color of the child branch speaker
+                strokeDash = "2,2" // Dotted line
+                strokeWidth = "0.8"
+                opacity = 0.8
+              } else if (isProposed) {
+                strokeColor = "#e09b67" // Peach proposed branches
+                strokeDash = "2,2"
                 strokeWidth = "0.5"
-                opacity = 0.45
+                opacity = 0.35
+              } else if (isResonance) {
+                if (isProposedResonance) {
+                  strokeColor = "#e09b67" // Peach proposed resonance link
+                  strokeDash = "1,3"
+                  strokeWidth = "0.7"
+                  opacity = 0.7
+                } else {
+                  strokeColor = "#94a3b8" // Slate blue for active resonance cross-links
+                  strokeDash = "3,3"
+                  strokeWidth = "0.5"
+                  opacity = 0.45
+                }
               }
-            }
 
-            return (
-              <g key={`link-${idx}`}>
-                {isResonance && (
+              return (
+                <g key={`link-${idx}`}>
+                  {isResonance && (
+                    <line
+                      x1={srcNode.x}
+                      y1={srcNode.y}
+                      x2={tgtNode.x}
+                      y2={tgtNode.y}
+                      stroke="transparent"
+                      strokeWidth="6"
+                      className="cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedLink(link)
+                        setSelectedLinkPos({
+                          x: (srcNode.x + tgtNode.x) / 2,
+                          y: (srcNode.y + tgtNode.y) / 2,
+                        })
+                      }}
+                    />
+                  )}
                   <line
                     x1={srcNode.x}
                     y1={srcNode.y}
                     x2={tgtNode.x}
                     y2={tgtNode.y}
-                    stroke="transparent"
-                    strokeWidth="6"
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedLink(link)
-                      setSelectedLinkPos({
-                        x: (srcNode.x + tgtNode.x) / 2,
-                        y: (srcNode.y + tgtNode.y) / 2,
-                      })
-                    }}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={strokeDash}
+                    opacity={opacity}
+                    className={`transition-all duration-300 ${isProposedResonance ? "animate-pulse" : ""}`}
                   />
-                )}
-                <line
-                  x1={srcNode.x}
-                  y1={srcNode.y}
-                  x2={tgtNode.x}
-                  y2={tgtNode.y}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={strokeDash}
-                  opacity={opacity}
-                  className={`transition-all duration-300 ${isProposedResonance ? "animate-pulse" : ""}`}
-                />
-              </g>
-            )
-          })}
+                </g>
+              )
+            })}
 
-          {/* Nodes */}
-          {simNodes.map((node) => {
-            const isActive = node.dbId ? activePathIds.has(node.dbId) : false
-            const isLeaf = activeMessageId === node.dbId
-            const isFuture = node.parentMsgId !== null && node.parentMsgId !== undefined && activePathIds.has(node.parentMsgId) && !isActive && !node.isProposed
-            const isHovered = hoveredNode?.id === node.id
-            const nodeNotes = notes.filter((n) => n.message_id === node.dbId)
+            {/* Nodes */}
+            {simNodes.map((node) => {
+              const isActive = node.dbId ? activePathIds.has(node.dbId) : false
+              const isLeaf = activeMessageId === node.dbId
+              const isFuture = node.parentMsgId !== null && node.parentMsgId !== undefined && activePathIds.has(node.parentMsgId) && !isActive && !node.isProposed
+              const isHovered = hoveredNode?.id === node.id
+              const nodeNotes = notes.filter((n) => n.message_id === node.dbId)
 
-            let fill = "#0a0a0c"
-            let stroke = "#3f3f4e"
-            let strokeWidth = "0.6"
-            let radius = "2.0"
-            let strokeDash = ""
-            let nodeClass = "transition-all duration-200 cursor-pointer"
+              let fill = "#0a0a0c"
+              let stroke = "#3f3f4e"
+              let strokeWidth = "0.6"
+              let radius = "2.0"
+              let strokeDash = ""
+              let nodeClass = "transition-all duration-200 cursor-pointer"
 
-            if (node.isProposed) {
-              fill = "#0a0a0c"
-              stroke = "#e09b67" // Peach proposed branch
-              strokeWidth = "0.8"
-              radius = "3.2"
-              nodeClass += " animate-pulse stroke-dasharray-[2,2]"
-            } else if (node.speaker === "human") {
-              if (isActive) {
-                fill = isLeaf ? "#152a1d" : "#0a0a0c" // subtle dark green fill for active leaf
-                stroke = "#6bc28c" // Green for active user msg
-                strokeWidth = isLeaf ? "1.5" : "1.0"
-                radius = isLeaf ? "4.5" : "3.2"
-              } else if (isFuture) {
+              if (node.isProposed) {
                 fill = "#0a0a0c"
-                stroke = "#6bc28c" // Green for future option
-                strokeWidth = "1.0"
+                stroke = "#e09b67" // Peach proposed branch
+                strokeWidth = "0.8"
                 radius = "3.2"
-                strokeDash = "2,1.5" // Dashed circle outline
+                nodeClass += " animate-pulse stroke-dasharray-[2,2]"
+              } else if (node.speaker === "human") {
+                if (isActive) {
+                  fill = isLeaf ? "#152a1d" : "#0a0a0c" // subtle dark green fill for active leaf
+                  stroke = "#6bc28c" // Green for active user msg
+                  strokeWidth = isLeaf ? "1.5" : "1.0"
+                  radius = isLeaf ? "4.5" : "3.2"
+                } else if (isFuture) {
+                  fill = "#0a0a0c"
+                  stroke = "#6bc28c" // Green for future option
+                  strokeWidth = "1.0"
+                  radius = "3.2"
+                  strokeDash = "2,1.5" // Dashed circle outline
+                } else {
+                  fill = "#0a0a0c"
+                  stroke = "#6bc28c" // Clean green border
+                  strokeWidth = "0.7"
+                  radius = "2.2"
+                }
+              } else if (node.speaker === "apparatus") {
+                if (isActive) {
+                  fill = isLeaf ? "#211a36" : "#0a0a0c" // subtle dark purple fill for active leaf
+                  stroke = "#a892ee" // Purple for active apparatus msg
+                  strokeWidth = isLeaf ? "1.5" : "1.0"
+                  radius = isLeaf ? "4.5" : "3.2"
+                } else if (isFuture) {
+                  fill = "#0a0a0c"
+                  stroke = "#a892ee" // Purple for future option
+                  strokeWidth = "1.0"
+                  radius = "3.2"
+                  strokeDash = "2,1.5" // Dashed circle outline
+                } else {
+                  fill = "#0a0a0c"
+                  stroke = "#a892ee" // Clean purple border
+                  strokeWidth = "0.7"
+                  radius = "2.2"
+                }
               } else {
+                // System
                 fill = "#0a0a0c"
-                stroke = "#6bc28c" // Clean green border
-                strokeWidth = "0.7"
-                radius = "2.2"
+                stroke = "#94a3b8" // Slate blue
+                radius = "1.8"
               }
-            } else if (node.speaker === "apparatus") {
-              if (isActive) {
-                fill = isLeaf ? "#211a36" : "#0a0a0c" // subtle dark purple fill for active leaf
-                stroke = "#a892ee" // Purple for active apparatus msg
-                strokeWidth = isLeaf ? "1.5" : "1.0"
-                radius = isLeaf ? "4.5" : "3.2"
-              } else if (isFuture) {
-                fill = "#0a0a0c"
-                stroke = "#a892ee" // Purple for future option
-                strokeWidth = "1.0"
-                radius = "3.2"
-                strokeDash = "2,1.5" // Dashed circle outline
-              } else {
-                fill = "#0a0a0c"
-                stroke = "#a892ee" // Clean purple border
-                strokeWidth = "0.7"
-                radius = "2.2"
-              }
-            } else {
-              // System
-              fill = "#0a0a0c"
-              stroke = "#94a3b8" // Slate blue
-              radius = "1.8"
-            }
 
-            return (
-              <g
-                key={node.id}
-                transform={`translate(${node.x}, ${node.y})`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleNodeClick(node)
-                }}
-                onMouseEnter={() => setHoveredNode(node)}
-                onMouseLeave={() => setHoveredNode(null)}
-                className={nodeClass}
-              >
-                {/* Visual Glow for Active Leaf Node */}
-                {isLeaf && (
-                  <circle
-                    r="9"
-                    fill="none"
-                    stroke={node.speaker === "human" ? "#6bc28c" : "#a892ee"}
-                    strokeWidth="0.5"
-                    opacity="0.35"
-                    className="animate-ping"
-                  />
-                )}
-                {/* Main Circle */}
-                <circle
-                  r={isHovered ? String(parseFloat(radius) + 1.0) : radius}
-                  fill={fill}
-                  stroke={stroke}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={strokeDash}
-                  opacity={isActive || isLeaf || isHovered ? 1 : isFuture ? 0.8 : node.isProposed ? 0.75 : 0.45}
-                  className="transition-all duration-150"
-                />
-                
-                {/* Note Indicator Dots */}
-                {nodeNotes.map((note, idx) => {
-                  const isShared = note.visibility === "shared"
-                  const dotColor = isShared ? "#a892ee" : "#facc15" // Purple for shared, yellow/gold for personal
-                  
-                  // Position around the node boundary (using trigonometry)
-                  // Place up to 4 dots at top-right, top-left, bottom-right, bottom-left
-                  const angle = -Math.PI / 4 - (idx * Math.PI) / 2
-                  const dist = parseFloat(radius) + 2.2
-                  const dx = dist * Math.cos(angle)
-                  const dy = dist * Math.sin(angle)
-
-                  return (
+              return (
+                <g
+                  key={node.id}
+                  transform={`translate(${node.x}, ${node.y})`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleNodeClick(node)
+                  }}
+                  onMouseEnter={() => setHoveredNode(node)}
+                  onMouseLeave={() => setHoveredNode(null)}
+                  className={nodeClass}
+                >
+                  {/* Visual Glow for Active Leaf Node */}
+                  {isLeaf && (
                     <circle
-                      key={`note-dot-${note.id}`}
-                      cx={dx}
-                      cy={dy}
-                      r="1.1"
-                      fill={dotColor}
-                      stroke="#0a0a0c"
-                      strokeWidth="0.3"
-                      opacity={isActive || isLeaf || isHovered ? 1.0 : 0.6}
+                      r="9"
+                      fill="none"
+                      stroke={node.speaker === "human" ? "#6bc28c" : "#a892ee"}
+                      strokeWidth="0.5"
+                      opacity="0.35"
+                      className="animate-ping"
                     />
-                  )
-                })}
-                
-                {/* Proposed Title Label */}
-                {node.isProposed && (
-                  <text
-                    y="-9"
-                    textAnchor="middle"
-                    className="text-[9px] font-mono fill-[#e09b67] select-none font-bold"
-                    opacity="0.8"
-                  >
-                    🚀 {node.title || "Flight"}
-                  </text>
-                )}
-              </g>
-            )
-          })}
+                  )}
+                  {/* Main Circle */}
+                  <circle
+                    r={isHovered ? String(parseFloat(radius) + 1.0) : radius}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={strokeDash}
+                    opacity={isActive || isLeaf || isHovered ? 1 : isFuture ? 0.8 : node.isProposed ? 0.75 : 0.45}
+                    className="transition-all duration-150"
+                  />
+
+                  {/* Note Indicator Dots */}
+                  {nodeNotes.map((note, idx) => {
+                    const isAgent = note.visibility === "agent"
+                    const isShared = note.visibility === "shared"
+                    const dotColor = isAgent ? "#22d3ee" : isShared ? "#a892ee" : "#facc15" // Cyan for agent, purple for shared, yellow/gold for personal
+
+                    // Position around the node boundary (using trigonometry)
+                    // Place up to 4 dots at top-right, top-left, bottom-right, bottom-left
+                    const angle = -Math.PI / 4 - (idx * Math.PI) / 2
+                    const dist = parseFloat(radius) + 2.2
+                    const dx = dist * Math.cos(angle)
+                    const dy = dist * Math.sin(angle)
+
+                    return (
+                      <circle
+                        key={`note-dot-${note.id}`}
+                        cx={dx}
+                        cy={dy}
+                        r="1.1"
+                        fill={dotColor}
+                        stroke="#0a0a0c"
+                        strokeWidth="0.3"
+                        opacity={isActive || isLeaf || isHovered ? 1.0 : 0.6}
+                      />
+                    )
+                  })}
+
+                  {/* Proposed Title Label */}
+                  {node.isProposed && (
+                    <text
+                      y="-9"
+                      textAnchor="middle"
+                      className="text-[9px] font-mono fill-[#e09b67] select-none font-bold"
+                      opacity="0.8"
+                    >
+                      🚀 {node.title || "Flight"}
+                    </text>
+                  )}
+                </g>
+              )
+            })}
           </g>
         </svg>
 
@@ -745,10 +746,9 @@ export default function ConnectionCloud({
             }}
           >
             <div className="flex justify-between border-b border-[#1b1b22] pb-0.5 mb-1">
-              <span className={`font-bold capitalize ${
-                hoveredNode.speaker === "human" ? "text-[#6bc28c]" : 
+              <span className={`font-bold capitalize ${hoveredNode.speaker === "human" ? "text-[#6bc28c]" :
                 hoveredNode.speaker === "proposed" ? "text-[#e09b67]" : "text-[#a892ee]"
-              }`}>
+                }`}>
                 {hoveredNode.speaker === "proposed" ? `Agential Proposal: ${hoveredNode.title}` : hoveredNode.speaker}
               </span>
               <span className="text-[#4b4b5c]">
@@ -776,7 +776,7 @@ export default function ConnectionCloud({
                   Cancel
                 </button>
               </div>
-              
+
               <div className="text-[10px] font-mono text-[#a1a1b5]">
                 Topic: <strong className="text-white">{committingNode.title}</strong>
               </div>
@@ -823,13 +823,13 @@ export default function ConnectionCloud({
                 ✕
               </button>
             </div>
-            
+
             {selectedLink.justification && (
               <div className="text-[#a1a1b5] mb-2 italic bg-[#07070a] p-1.5 rounded border border-[#14141a]">
                 "{selectedLink.justification}"
               </div>
             )}
-            
+
             <div className="flex gap-2">
               {selectedLink.status === "proposed" ? (
                 <>

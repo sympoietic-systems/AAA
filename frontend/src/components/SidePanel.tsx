@@ -57,7 +57,7 @@ export function SidePanel({
   messageCount?: number
   notes?: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
-  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   summary?: string
   humanSummary?: string
   width?: number

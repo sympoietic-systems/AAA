@@ -147,7 +147,7 @@ Symbia cannot know DB UUIDs in advance. She writes tags without `id` attributes:
 The post-processor generates a UUID, creates the DB record, and replaces the tag:
 
 ```html
-<aaa-note id="a1b2c3d4-...">critical point</aaa-note>
+<aaa-note id="note-highlight-a1b2c3d4-..." data-note-id="a1b2c3d4-...">critical point</aaa-note>
 ```
 
 This mirrors the human note creation flow in reverse: human creates via UI (frontend → API → DB → tag injection), Symbia creates via text (LLM → post-processor → DB → tag replacement).

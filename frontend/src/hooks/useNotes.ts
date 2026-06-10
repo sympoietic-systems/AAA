@@ -32,7 +32,7 @@ export function useNotes(conversationId: string) {
     messageId: number,
     selectedText: string,
     comment = "",
-    visibility: "personal" | "shared" = "personal",
+    visibility: "personal" | "shared" | "agent" = "personal",
     startOffset?: number
   ) => {
     if (!conversationId) return null
@@ -51,7 +51,7 @@ export function useNotes(conversationId: string) {
   const editNote = useCallback(async (
     noteId: string,
     comment?: string,
-    visibility?: "personal" | "shared"
+    visibility?: "personal" | "shared" | "agent"
   ) => {
     if (!conversationId) return null
     setError(null)

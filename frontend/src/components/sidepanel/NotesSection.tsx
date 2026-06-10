@@ -4,7 +4,7 @@ import type { NoteInfo } from "../../api/client"
 interface NotesSectionProps {
   notes: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
-  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
 }
 
 export function NotesSection({
@@ -61,9 +61,10 @@ export function NotesSection({
   return (
     <div className="mt-1.5 pt-1.5 space-y-1 font-mono text-xs">
       {notes.map((note) => {
+        const isAgent = note.visibility === "agent"
         const isShared = note.visibility === "shared"
-        const label = isShared ? "SH" : "P"
-        const labelColor = isShared ? "text-purple-400" : "text-yellow-400"
+        const label = isAgent ? "A" : isShared ? "SH" : "P"
+        const labelColor = isAgent ? "text-cyan-400" : isShared ? "text-purple-400" : "text-yellow-400"
         const isFailed = scrollFailed === note.id
 
         return (
