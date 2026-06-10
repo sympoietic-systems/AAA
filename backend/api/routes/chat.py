@@ -11,7 +11,7 @@ router = APIRouter()
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, background_tasks: BackgroundTasks):
     parsed = await _parse_chat_request(request)
-    content, speaker, conversation_id, attachments, include_structural_scoring, max_tokens_override = parsed
+    content, speaker, conversation_id, attachments, include_structural_scoring, max_tokens_override, parent_message_id = parsed
 
     service = ChatService(request.app.state)
     try:
@@ -23,6 +23,7 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
             include_structural_scoring=include_structural_scoring,
             max_tokens_override=max_tokens_override,
             background_tasks=background_tasks,
+            parent_message_id=parent_message_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))

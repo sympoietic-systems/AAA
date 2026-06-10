@@ -7,7 +7,7 @@ from backend.utils.token_counter import estimate_tokens
 from .schemas import AttachmentInfo
 
 
-async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool], Optional[int]]:
+async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool], Optional[int], Optional[int]]:
     content_type = request.headers.get("content-type", "")
 
     if "multipart/form-data" in content_type:
@@ -23,6 +23,9 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
             include_structural_scoring = None
         max_tokens_raw = form.get("max_tokens")
         max_tokens = int(max_tokens_raw) if max_tokens_raw is not None else None
+        
+        parent_message_id_raw = form.get("parent_message_id")
+        parent_message_id = int(parent_message_id_raw) if parent_message_id_raw is not None and str(parent_message_id_raw).strip() != "" else None
 
         attachments: list[dict] = []
         for f in uploaded_files:
@@ -50,7 +53,7 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
                 "content": file_bytes,
             })
 
-        return content, speaker, conversation_id, (attachments if attachments else None), include_structural_scoring, max_tokens
+        return content, speaker, conversation_id, (attachments if attachments else None), include_structural_scoring, max_tokens, parent_message_id
 
     body = await request.json()
     content = body.get("content", "")
@@ -59,6 +62,9 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
     json_attachments = body.get("attachments")
     include_structural_scoring = body.get("include_structural_scoring")
     max_tokens = body.get("max_tokens")
+    parent_message_id_raw = body.get("parent_message_id")
+    parent_message_id = int(parent_message_id_raw) if parent_message_id_raw is not None and str(parent_message_id_raw).strip() != "" else None
+    
     parsed_attachments = None
     if json_attachments:
         parsed_attachments = [
@@ -70,7 +76,7 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
             for a in json_attachments
         ] if isinstance(json_attachments, list) else None
 
-    return content, speaker, conversation_id, parsed_attachments, include_structural_scoring, max_tokens
+    return content, speaker, conversation_id, parsed_attachments, include_structural_scoring, max_tokens, parent_message_id
 
 
 def _build_response_attachments(

@@ -18,6 +18,12 @@ class ChatRequest(BaseModel):
     attachments: list[AttachmentInfo] | None = None
     include_structural_scoring: Optional[bool] = None
     max_tokens: Optional[int] = Field(default=None, description="Override max_tokens for this request")
+    parent_message_id: Optional[int] = Field(default=None, description="Parent message ID for conversation branching")
+
+
+class ProposedBranch(BaseModel):
+    title: str
+    content: str
 
 
 class ChatResponse(BaseModel):
@@ -45,6 +51,8 @@ class ChatResponse(BaseModel):
     finish_reason: Optional[str] = Field(default=None, description="LLM finish reason (stop, length, max_tokens)")
     active_skills: list[str] = Field(default_factory=list, description="Skill names active for this response")
     active_beliefs: list[str] = Field(default_factory=list, description="Belief labels in the attractor window for this response")
+    parent_message_id: Optional[int] = None
+    proposed_branches: Optional[list[ProposedBranch]] = None
 
 
 class HistoryMessage(BaseModel):
@@ -62,6 +70,7 @@ class HistoryMessage(BaseModel):
     provider_used: Optional[str] = None
     structural_signature: Optional[list[float]] = None
     structural_justification: Optional[str] = None
+    parent_message_id: Optional[int] = None
 
 
 class HistoryResponse(BaseModel):
@@ -365,3 +374,29 @@ class SedimentInjectionsResponse(BaseModel):
 
 class TagCreateRequest(BaseModel):
     tag: str
+
+
+class CommitBranchRequest(BaseModel):
+    parent_message_id: int
+    content: str
+    speaker: str = "apparatus"
+
+
+class TreeNode(BaseModel):
+    id: int
+    speaker: str
+    content: str
+    parent_message_id: Optional[int] = None
+    timestamp: datetime
+
+
+class TreeLink(BaseModel):
+    id: str
+    source_id: int
+    target_id: int
+    link_type: str
+
+
+class ConversationTreeResponse(BaseModel):
+    nodes: list[TreeNode]
+    links: list[TreeLink]

@@ -92,6 +92,7 @@ class ChatService:
         include_structural_scoring: Optional[bool] = None,
         max_tokens_override: Optional[int] = None,
         background_tasks: Optional[BackgroundTasks] = None,
+        parent_message_id: Optional[int] = None,
     ) -> ChatResponse:
         state = self._state
         pipeline = state.pipeline
@@ -118,6 +119,7 @@ class ChatService:
                 "speaker": speaker,
                 "conversation_id": conversation_id,
                 "include_structural_scoring": include_structural_scoring,
+                "parent_message_id": parent_message_id,
             }
             if attachments:
                 initial_payload["attachments"] = attachments
@@ -131,6 +133,14 @@ class ChatService:
             result = await pipeline.run(initial_payload)
 
             response_text = result.payload.get("response", "")
+
+            # Parse and strip proposed branches (<line_of_flight>)
+            proposed_branches = []
+            lof_pattern = r'<line_of_flight\s+title="([^"]+)">([\s\S]*?)</line_of_flight>'
+            matches = re.findall(lof_pattern, response_text)
+            for title, body in matches:
+                proposed_branches.append({"title": title, "content": body.strip()})
+            response_text = re.sub(lof_pattern, "", response_text).strip()
             thinking = result.payload.get("thinking")
             embedding = result.payload.get("embedding", b"")
             embedding_model = result.payload.get("embedding_model", "unknown")
@@ -178,6 +188,7 @@ class ChatService:
                 content_tokens=content_tokens,
                 structural_signature=user_sig_blob,
                 structural_justification=user_just,
+                parent_message_id=parent_message_id,
             )
 
             thinking_tokens = estimate_tokens(thinking) if thinking else None
@@ -198,6 +209,7 @@ class ChatService:
                 context_sent=result.payload.get("context_sent"),
                 structural_signature=assistant_sig_blob,
                 structural_justification=assistant_just,
+                parent_message_id=msg.id,
             )
 
             # Self-annotation post-processing: scan for inline <aaa-note>/<mark> tags
@@ -343,6 +355,8 @@ class ChatService:
                 finish_reason=result.payload.get("finish_reason"),
                 active_skills=active_skill_names,
                 active_beliefs=active_belief_labels,
+                parent_message_id=response_msg.parent_message_id,
+                proposed_branches=proposed_branches,
             )
         except ValueError:
             raise

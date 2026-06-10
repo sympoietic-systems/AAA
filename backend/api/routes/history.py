@@ -48,6 +48,7 @@ async def history(limit: int = 50, offset: int = 0, conversation_id: str = "", r
             provider_used=r.get("provider_used"),
             structural_signature=sig_list,
             structural_justification=justification,
+            parent_message_id=r.get("parent_message_id"),
         ))
 
     total_count = repo.count_messages(conversation_id if conversation_id else None)
