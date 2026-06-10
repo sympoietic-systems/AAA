@@ -4,9 +4,9 @@ from typing import Optional
 import numpy as np
 
 from backend.storage.connection import with_connection
-from backend.storage.models import Message
+from backend.storage.models import Message, MessageLink
 from backend.storage.repositories.base import BaseRepository
-from backend.storage.row_mappers import _row_to_message
+from backend.storage.row_mappers import _row_to_message, _row_to_message_link
 
 
 class MessageRepository(BaseRepository):
@@ -28,13 +28,14 @@ class MessageRepository(BaseRepository):
         context_sent: Optional[str] = None,
         structural_signature: bytes = b"",
         structural_justification: Optional[str] = None,
+        parent_message_id: Optional[int] = None,
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification),
+               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id),
         )
         conn.commit()
         row = conn.execute(
@@ -516,3 +517,48 @@ class MessageRepository(BaseRepository):
             (content, message_id),
         )
         conn.commit()
+
+    @with_connection
+    def get_ancestor_path(self, message_id: int, limit: int = 100) -> list[Message]:
+        conn = self._conn()
+        rows = conn.execute(
+            """
+            WITH RECURSIVE ancestors AS (
+                SELECT * FROM conversation_log WHERE id = ?
+                UNION ALL
+                SELECT cl.* FROM conversation_log cl
+                JOIN ancestors a ON cl.id = a.parent_message_id
+            )
+            SELECT * FROM ancestors LIMIT ?
+            """,
+            (message_id, limit),
+        ).fetchall()
+        return [_row_to_message(r) for r in reversed(rows)]
+
+    @with_connection
+    def add_message_link(self, source_id: int, target_id: int, link_type: str = "resonance") -> MessageLink:
+        conn = self._conn()
+        link_id = f"{source_id}_{target_id}_{link_type}"
+        conn.execute(
+            """INSERT OR IGNORE INTO message_links (id, source_id, target_id, link_type)
+               VALUES (?, ?, ?, ?)""",
+            (link_id, source_id, target_id, link_type),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM message_links WHERE id = ?",
+            (link_id,),
+        ).fetchone()
+        return _row_to_message_link(row)
+
+    @with_connection
+    def get_message_links(self, conversation_id: str) -> list[MessageLink]:
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT ml.* FROM message_links ml
+               JOIN conversation_log cl_src ON ml.source_id = cl_src.id
+               JOIN conversation_log cl_tgt ON ml.target_id = cl_tgt.id
+               WHERE cl_src.conversation_id = ? AND cl_tgt.conversation_id = ?""",
+            (conversation_id, conversation_id),
+        ).fetchall()
+        return [_row_to_message_link(r) for r in rows]

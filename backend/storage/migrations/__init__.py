@@ -59,6 +59,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m014_memory_nodes,
         m015_belief_tensions,
         m016_skill_system,
+        m017_conversation_branching,
     )
 
     runner = MigrationRunner(conn)
@@ -80,3 +81,4 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("014_memory_nodes", m014_memory_nodes.up)
     runner.run("015_belief_tensions", m015_belief_tensions.up)
     runner.run("016_skill_system", m016_skill_system.up)
+    runner.run("017_conversation_branching", m017_conversation_branching.up)

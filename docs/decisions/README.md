@@ -55,8 +55,15 @@ What becomes easier/harder?
 | [022](ADR-022-semantic-knots-compaction.md) | Semantic Knots Compaction and Isomorphic Cross-Conversation Retrieval | accepted | 2026-06-03 |
 | [023](ADR-023-autopoietic-dream-daemon.md) | Autopoietic Dream Daemon, Somatic Drift, and Memory Compaction | accepted | 2026-06-03 |
 | [024](ADR-024-notes-and-selection-highlights.md) | Conversational Selection Highlights, Shared Entanglements, and Personal Notes | accepted | 2026-06-04 |
-| [025](ADR-025-cross-conversation-sediment-injection-and-split-tensions.md) | Cross-Conversation Sediment Injection and Markdown Insight Rendering | accepted | 2026-06-04 |
+| [025a](ADR-025-cross-conversation-sediment-injection-and-split-tensions.md) | Cross-Conversation Sediment Injection and Markdown Insight Rendering | accepted | 2026-06-04 |
+| [025b](ADR-025-self-annotation-and-scar-folds.md) | Self-Annotation and Scar Folds | accepted | 2026-06-04 |
 | [026](ADR-026-decoupled-background-document-digestion.md) | Decoupled Background Document Digestion and Non-Blocking Event Loop | accepted | 2026-06-04 |
+| [027](ADR-027-proto-belief-lifecycle-tension-ecology-self-tuning.md) | Proto-Belief Lifecycle, Tension Ecology, and Somatic Self-Tuning | accepted | 2026-06-05 |
+| [028](ADR-028-structured-memory-nodes.md) | Structured Memory Nodes for Conversation Sedimentation | accepted | 2026-06-06 |
+| [029](ADR-029-cross-conversation-sediment-file-fallback.md) | Cross-Conversation Sediment File Fallback | accepted | 2026-06-07 |
+| [030](ADR-030-backend-modularity-refactoring.md) | Backend Modularity Refactoring | accepted | 2026-06-08 |
+| [031](ADR-031-database-native-skill-system.md) | Database Native Skill System | accepted | 2026-06-09 |
+| [032](ADR-032-branching-and-rhizomatic-conversations.md) | Branching and Rhizomatic Conversations | proposed | 2026-06-10 |
 
 ## Creating a New ADR
 

@@ -60,6 +60,16 @@ class Message:
     structural_justification: Optional[str] = None
     note_count: int = 0
     metabolized: int = 0
+    parent_message_id: Optional[int] = None
+
+
+@dataclass
+class MessageLink:
+    id: str
+    source_id: int
+    target_id: int
+    link_type: str = "resonance"
+    created_at: Optional[datetime] = None
 
 
 @dataclass

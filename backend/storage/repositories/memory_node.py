@@ -68,6 +68,24 @@ class MemoryNodeRepository(BaseRepository):
         conn.commit()
 
     @with_connection
+    def delete_by_checkpoint(self, checkpoint_id: int) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM memory_nodes WHERE checkpoint_id = ?",
+            (checkpoint_id,),
+        )
+        conn.commit()
+
+    @with_connection
+    def get_nodes_by_checkpoint(self, checkpoint_id: int) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM memory_nodes WHERE checkpoint_id = ? ORDER BY intensity DESC",
+            (checkpoint_id,),
+        ).fetchall()
+        return [_row_to_memory_node(r) for r in rows]
+
+    @with_connection
     def get_diffractive_keys(self, conversation_id: str) -> list[str]:
         conn = self._conn()
         rows = conn.execute(

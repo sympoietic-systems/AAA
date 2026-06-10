@@ -10,6 +10,7 @@ from .models import (
     Conversation,
     ErrorLogEntry,
     Message,
+    MessageLink,
     MetricsRecord,
     PerceptionSediment,
     SemanticKnot,
@@ -39,6 +40,18 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         structural_justification=row["structural_justification"] if "structural_justification" in row.keys() else None,
         note_count=row["note_count"] if "note_count" in row.keys() else 0,
         metabolized=row["metabolized"] if "metabolized" in row.keys() else 0,
+        parent_message_id=row["parent_message_id"] if "parent_message_id" in row.keys() else None,
+    )
+
+
+def _row_to_message_link(row: sqlite3.Row) -> MessageLink:
+    created = row["created_at"]
+    return MessageLink(
+        id=row["id"],
+        source_id=row["source_id"],
+        target_id=row["target_id"],
+        link_type=row["link_type"],
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
     )
 
 
