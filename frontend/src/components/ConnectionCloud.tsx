@@ -22,6 +22,8 @@ interface SimNode {
   y: number
   vx: number
   vy: number
+  targetX?: number
+  targetY?: number
 }
 
 interface SimLink {
@@ -84,7 +86,6 @@ export default function ConnectionCloud({
     for (let i = 0; i < sorted.length; i++) {
       const m = sorted[i]
       const idStr = String(m.id)
-      const prevPos = nodePositionsRef.current[idStr]
       
       newNodes.push({
         id: idStr,
@@ -93,8 +94,8 @@ export default function ConnectionCloud({
         content: m.content,
         isProposed: false,
         parentMsgId: m.parent_message_id,
-        x: prevPos ? prevPos.x : dimensions.width / 2 + (i - sorted.length / 2) * 12 + (Math.random() - 0.5) * 8,
-        y: prevPos ? prevPos.y : dimensions.height / 2 + (i - sorted.length / 2) * 12 + (Math.random() - 0.5) * 8,
+        x: 0,
+        y: 0,
         vx: 0,
         vy: 0,
       })
@@ -116,7 +117,6 @@ export default function ConnectionCloud({
       if (m.proposed_branches && m.proposed_branches.length > 0) {
         m.proposed_branches.forEach((b, idx) => {
           const propIdStr = `proposed_${m.id}_${idx}`
-          const prevPropPos = nodePositionsRef.current[propIdStr]
           
           newNodes.push({
             id: propIdStr,
@@ -125,8 +125,8 @@ export default function ConnectionCloud({
             title: b.title,
             isProposed: true,
             parentMsgId: m.id,
-            x: prevPropPos ? prevPropPos.x : (prevPos ? prevPos.x : dimensions.width / 2) + (Math.random() - 0.5) * 60,
-            y: prevPropPos ? prevPropPos.y : (prevPos ? prevPos.y : dimensions.height / 2) + (Math.random() - 0.5) * 60,
+            x: 0,
+            y: 0,
             vx: 0,
             vy: 0,
           })
@@ -140,7 +140,34 @@ export default function ConnectionCloud({
       }
     }
 
-    // 2. Add database retroactive links (resonance links)
+    // 2. Calculate spiral target coordinates for sequential nodes
+    const totalNodes = newNodes.length
+    const cx = dimensions.width / 2
+    const cy = dimensions.height / 2
+    const maxTargetRadius = Math.min(dimensions.width, dimensions.height) * 0.42
+    
+    // Choose spiral density based on total nodes to keep it clean and fitting in canvas
+    const radiusStep = totalNodes > 10 ? (maxTargetRadius - 20) / totalNodes : 12
+    const angleStep = 0.55 // approx 31 degrees per step (prevents concentric overlays)
+
+    for (let i = 0; i < totalNodes; i++) {
+      const node = newNodes[i]
+      const prevPos = nodePositionsRef.current[node.id]
+      
+      const angle = i * angleStep
+      const radius = 20 + i * radiusStep
+      const tx = cx + radius * Math.cos(angle)
+      const ty = cy + radius * Math.sin(angle)
+
+      node.targetX = tx
+      node.targetY = ty
+      
+      // Keep previous position if it exists to prevent jitter on updates
+      node.x = prevPos ? prevPos.x : tx
+      node.y = prevPos ? prevPos.y : ty
+    }
+
+    // 3. Add database retroactive links (resonance links)
     for (const l of links) {
       const srcStr = String(l.source_id)
       const tgtStr = String(l.target_id)
@@ -167,7 +194,6 @@ export default function ConnectionCloud({
     let alpha = 1.0 // Simulation temperature
     const decay = 0.965 // Cooling rate
     const friction = 0.78 // Slightly lower friction for faster settling
-    const gravityStrength = 0.05
     const repulseStrength = 180 // Reduced repulsion for smaller nodes
     const springLength = 32 // Shorter links for a more compact structure
     const springStrength = 0.08
@@ -232,10 +258,13 @@ export default function ConnectionCloud({
           b.vy -= fy
         }
 
-        // 3. Centering force (gravity)
+        // 3. Spiral target anchoring force (gravity replacement)
+        const anchorStrength = 0.12 // Gentle anchoring force to preserve spiral layout
         for (const n of nodes) {
-          n.vx += (cx - n.x) * gravityStrength * alpha
-          n.vy += (cy - n.y) * gravityStrength * alpha
+          const tx = n.targetX !== undefined ? n.targetX : cx
+          const ty = n.targetY !== undefined ? n.targetY : cy
+          n.vx += (tx - n.x) * anchorStrength * alpha
+          n.vy += (ty - n.y) * anchorStrength * alpha
 
           // Update positions
           n.x += n.vx
