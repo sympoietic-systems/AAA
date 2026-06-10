@@ -10,6 +10,7 @@ import numpy as np
 
 from backend.modules.belief_engine import compute_cosine_similarity
 from backend.core.sedimentation import store_daemon_metrics
+from backend.modules.llm_client import generate_unified
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,8 @@ class DreamExecutorMixin:
         })
 
         try:
-            res = await provider.generate(
+            res = await generate_unified(
+                provider,
                 messages=messages,
                 temperature=0.9
             )
@@ -365,21 +367,14 @@ class DreamExecutorMixin:
                 )
 
                 try:
-                    res = await provider.generate(
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
+                    res = await generate_unified(
+                        provider,
+                        system_prompt=system_prompt,
+                        user_prompt=user_prompt,
+                        expect_json=True,
                         temperature=0.1
                     )
-                    raw_resp = res.get("content", "").strip()
-                    cleaned_resp = raw_resp
-                    if "```json" in cleaned_resp:
-                        cleaned_resp = cleaned_resp.split("```json")[1].split("```")[0]
-                    elif "```" in cleaned_resp:
-                        cleaned_resp = cleaned_resp.split("```")[1].split("```")[0]
-
-                    decision_data = json.loads(cleaned_resp.strip())
+                    decision_data = res.get("json_data") or {}
                     if decision_data.get("decision") == "reuse" and decision_data.get("conversation_id"):
                         valid_ids = [c["id"] for c in dream_convos]
                         if decision_data["conversation_id"] in valid_ids:

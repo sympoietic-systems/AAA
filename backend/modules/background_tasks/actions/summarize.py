@@ -1,5 +1,5 @@
 import logging
-from backend.modules.llm_client import BaseLLMProvider
+from backend.modules.llm_client import BaseLLMProvider, generate_unified
 
 from ..base import BackgroundAction
 
@@ -191,40 +191,43 @@ class SummarizeAction(BackgroundAction):
             logger.info(f"Digesting plateau {idx+1}/{len(super_chunks)} (start_paragraph_idx={start_p})")
             
             try:
-                res = await provider.generate(
-                    messages=[
-                        {"role": "system", "content": local_digestion_system_prompt},
-                        {"role": "user", "content": user_content}
-                    ],
+                res = await generate_unified(
+                    provider,
+                    system_prompt=local_digestion_system_prompt,
+                    user_prompt=user_content,
+                    expect_json=True,
                     **params,
                 )
                 content = res.get("content", "").strip()
                 model_used = res.get("model", "")
+                data = res.get("json_data")
                 
                 local_summary = ""
                 try:
-                    data = parse_json_safely(content)
-                    local_summary = data.get("local_summary", "")
-                    opacity_map = data.get("opacity_map", [])
-                    for item in opacity_map:
-                        local_p_idx = item.get("paragraph_index")
-                        reason = item.get("reason", "")
-                        shadow_text = item.get("shadow_text", "")
-                        
-                        if isinstance(local_p_idx, int):
-                            # Map block-local index (1-based) to global index (0-based)
-                            global_p_idx = start_p + (local_p_idx - 1)
-                            global_opacity_map.append({
-                                "paragraph_index": global_p_idx,
-                                "reason": reason,
-                                "shadow_text": shadow_text
-                            })
+                    if data:
+                        local_summary = data.get("local_summary", "")
+                        opacity_map = data.get("opacity_map", [])
+                        for item in opacity_map:
+                            local_p_idx = item.get("paragraph_index")
+                            reason = item.get("reason", "")
+                            shadow_text = item.get("shadow_text", "")
+                            
+                            if isinstance(local_p_idx, int):
+                                # Map block-local index (1-based) to global index (0-based)
+                                global_p_idx = start_p + (local_p_idx - 1)
+                                global_opacity_map.append({
+                                    "paragraph_index": global_p_idx,
+                                    "reason": reason,
+                                    "shadow_text": shadow_text
+                                })
 
-                    # Extract collision data if single-plateau with beliefs
-                    if use_beliefs_in_local:
-                        collision_data["interference_score"] = float(data.get("interference_score", 0.0))
-                        collision_data["implicated_nodes"] = data.get("implicated_nodes", [])
-                        collision_data["state_vector_impact"] = self._normalize_vector(data.get("state_vector_impact", []))
+                        # Extract collision data if single-plateau with beliefs
+                        if use_beliefs_in_local:
+                            collision_data["interference_score"] = float(data.get("interference_score", 0.0))
+                            collision_data["implicated_nodes"] = data.get("implicated_nodes", [])
+                            collision_data["state_vector_impact"] = self._normalize_vector(data.get("state_vector_impact", []))
+                    else:
+                        raise ValueError("No JSON data parsed")
 
                 except Exception as je:
                     logger.warning(f"Failed to parse block digestion JSON for block {idx+1}: {je}. Falling back to raw response.")
@@ -255,24 +258,27 @@ class SummarizeAction(BackgroundAction):
                 user_content = f"Here are the residues of the situated encounters:\n\n{compiled_text}"
             
             try:
-                res = await provider.generate(
-                    messages=[
-                        {"role": "system", "content": synthesis_system_prompt},
-                        {"role": "user", "content": user_content}
-                    ],
+                res = await generate_unified(
+                    provider,
+                    system_prompt=synthesis_system_prompt,
+                    user_prompt=user_content,
+                    expect_json=has_beliefs,
                     **params,
                 )
                 raw_content = res.get("content", "").strip()
                 model_used = res.get("model", "")
+                data = res.get("json_data")
 
                 if has_beliefs:
                     # Parse JSON response containing both summary and collision
                     try:
-                        data = parse_json_safely(raw_content)
-                        final_summary = data.get("global_summary", raw_content)
-                        collision_data["interference_score"] = float(data.get("interference_score", 0.0))
-                        collision_data["implicated_nodes"] = data.get("implicated_nodes", [])
-                        collision_data["state_vector_impact"] = self._normalize_vector(data.get("state_vector_impact", []))
+                        if data:
+                            final_summary = data.get("global_summary", raw_content)
+                            collision_data["interference_score"] = float(data.get("interference_score", 0.0))
+                            collision_data["implicated_nodes"] = data.get("implicated_nodes", [])
+                            collision_data["state_vector_impact"] = self._normalize_vector(data.get("state_vector_impact", []))
+                        else:
+                            raise ValueError("No JSON data parsed")
                     except Exception as je:
                         logger.warning(f"Failed to parse synthesis+collision JSON: {je}. Using raw content as summary.")
                         final_summary = raw_content

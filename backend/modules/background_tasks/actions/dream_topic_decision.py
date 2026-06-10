@@ -1,6 +1,5 @@
-import json
 import logging
-from backend.modules.llm_client import BaseLLMProvider
+from backend.modules.llm_client import BaseLLMProvider, generate_unified
 from ..base import BackgroundAction
 
 logger = logging.getLogger(__name__)
@@ -56,13 +55,17 @@ class DreamTopicDecisionAction(BackgroundAction):
 
         params = {**self.default_params(), **payload.get("params", {})}
 
-        result = await provider.generate(
-            messages=[
-                {"role": "system", "content": self.system_prompt()},
-                {"role": "user", "content": user_prompt},
-            ],
+        result = await generate_unified(
+            provider,
+            system_prompt=self.system_prompt(),
+            user_prompt=user_prompt,
+            expect_json=True,
             **params,
         )
 
-        content = result.get("content", "").strip()
-        return {"content": content, "model": result.get("model", "")}
+        return {
+            "content": result.get("content", ""),
+            "model": result.get("model", ""),
+            "json_data": result.get("json_data")
+        }
+

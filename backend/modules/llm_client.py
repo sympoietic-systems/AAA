@@ -32,6 +32,27 @@ class BaseLLMProvider(ABC):
     @abstractmethod
     def provider_name(self) -> str: ...
 
+    async def generate_unified(
+        self,
+        system_prompt: Optional[str] = None,
+        user_prompt: Optional[str] = None,
+        messages: Optional[list[dict]] = None,
+        expect_json: bool = False,
+        fallback_value: Optional[dict] = None,
+        **params
+    ) -> dict:
+        """Standardized interface for LLM calls with robust message compilation, cleaning, and JSON parsing."""
+        return await generate_unified(
+            self,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            messages=messages,
+            expect_json=expect_json,
+            fallback_value=fallback_value,
+            **params
+        )
+
+
 
 class OpenAICompatibleProvider(BaseLLMProvider):
     def __init__(
@@ -590,3 +611,194 @@ def _format_context(messages: list[dict]) -> str:
         lines.append(f"[{i}] {role}: {content}")
         lines.append("")
     return "\n".join(lines)
+
+
+def _parse_json_safely(text: str) -> dict:
+    import json
+    import re
+
+    # 1. Clean think tags
+    cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+
+    # 2. Extract starting from first {
+    first_brace = cleaned.find("{")
+    if first_brace == -1:
+        return json.loads(cleaned)
+    
+    json_part = cleaned[first_brace:]
+
+    # 3. Helper to clean control characters and commas inside string
+    def sanitize(s: str) -> str:
+        s = re.sub(r',\s*([\]\}])', r'\1', s)
+        chars = []
+        in_string = False
+        escape = False
+        for char in s:
+            if char == '"' and not escape:
+                in_string = not in_string
+                chars.append(char)
+            elif in_string:
+                if char == '\n':
+                    chars.append('\\n')
+                elif char == '\t':
+                    chars.append('\\t')
+                elif char == '\r':
+                    chars.append('\\r')
+                else:
+                    chars.append(char)
+            else:
+                chars.append(char)
+                
+            if char == '\\' and in_string:
+                escape = not escape
+            else:
+                escape = False
+        return "".join(chars)
+
+    # 4. Helper to auto-close open structures in truncated string
+    def auto_close(s: str) -> str:
+        stack = []
+        in_string = False
+        escape = False
+        for char in s:
+            if char == '"' and not escape:
+                in_string = not in_string
+            elif in_string:
+                if char == '\\':
+                    escape = not escape
+                else:
+                    escape = False
+            else:
+                if char in ('{', '['):
+                    stack.append(char)
+                elif char in ('}', ']'):
+                    if stack:
+                         top = stack[-1]
+                         if (char == '}' and top == '{') or (char == ']' and top == '['):
+                             stack.pop()
+        
+        repaired = s
+        if in_string:
+            repaired += '"'
+        for item in reversed(stack):
+            if item == '{':
+                repaired += '}'
+            elif item == '[':
+                repaired += ']'
+        return repaired
+
+    # Try standard sanitize and parse
+    sanitized = sanitize(json_part)
+    try:
+        return json.loads(sanitized)
+    except Exception:
+        pass
+
+    # Try auto-closing and parsing
+    try:
+        closed = auto_close(sanitized)
+        return json.loads(closed)
+    except Exception:
+        pass
+
+    # Try finding last brace if any and slice/parse
+    last_brace = sanitized.rfind("}")
+    if last_brace != -1:
+        try:
+            return json.loads(sanitized[:last_brace + 1])
+        except Exception:
+            pass
+
+    return json.loads(cleaned)
+
+
+async def generate_unified(
+    provider,
+    system_prompt: Optional[str] = None,
+    user_prompt: Optional[str] = None,
+    messages: Optional[list[dict]] = None,
+    expect_json: bool = False,
+    fallback_value: Optional[dict] = None,
+    **params
+) -> dict:
+    """Standardized wrapper for LLM calls with automatic message list construction, cleaning, and JSON parsing."""
+    import re
+
+    # 1. Compile messages list
+    formatted_messages = []
+    if messages:
+        formatted_messages = list(messages)
+        if system_prompt:
+            # Prepend system prompt if not already first message
+            if not (formatted_messages and formatted_messages[0].get("role") == "system"):
+                formatted_messages.insert(0, {"role": "system", "content": system_prompt})
+    else:
+        if system_prompt:
+            formatted_messages.append({"role": "system", "content": system_prompt})
+        if user_prompt:
+            formatted_messages.append({"role": "user", "content": user_prompt})
+
+    # 2. Invoke the provider
+    try:
+        res = await provider.generate(messages=formatted_messages, **params)
+        content = res.get("content", "").strip()
+        thinking = res.get("thinking")
+        model = res.get("model", "")
+        # Handle cases where provider does not have provider_name property/attribute
+        p_name = getattr(provider, "provider_name", "unknown")
+        if callable(p_name):
+            try:
+                p_name = p_name()
+            except Exception:
+                p_name = str(p_name)
+        provider_used = res.get("provider_used", p_name)
+        truncated = res.get("truncated", False)
+        finish_reason = res.get("finish_reason")
+    except Exception as e:
+        logger.warning("LLM call via generate_unified failed: %s", e)
+        if fallback_value is not None:
+            return {
+                "content": "",
+                "json_data": fallback_value,
+                "model": "",
+                "provider_used": getattr(provider, "provider_name", "unknown"),
+                "thinking": None,
+                "truncated": False,
+                "finish_reason": None,
+                "error": str(e)
+            }
+        raise e
+
+    # 3. Clean and parse JSON if expected
+    json_data = None
+    if expect_json:
+        # Clean <think>...</think> reasoning tags
+        cleaned = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+        
+        # Strip markdown code fences if any
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+        
+        # Parse JSON
+        try:
+            json_data = _parse_json_safely(cleaned)
+        except Exception as je:
+            logger.warning("Failed standard JSON parse in generate_unified: %s.", je)
+            if fallback_value is not None:
+                json_data = fallback_value
+            else:
+                json_data = None
+
+    return {
+        "content": content,
+        "json_data": json_data,
+        "model": model,
+        "provider_used": provider_used,
+        "thinking": thinking,
+        "truncated": truncated,
+        "finish_reason": finish_reason,
+        "error": None
+    }
+

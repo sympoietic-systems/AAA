@@ -1,8 +1,7 @@
-"""Dream prompt generation mixin for the Dream Daemon."""
-
 import hashlib
 import json
 import logging
+from backend.modules.llm_client import generate_unified
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +21,10 @@ class DreamPromptMixin:
         for attempt in range(max_retries):
             try:
                 if provider:
-                    res = await provider.generate(
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
+                    res = await generate_unified(
+                        provider,
+                        system_prompt=system_prompt,
+                        user_prompt=user_prompt,
                         temperature=0.8
                     )
                     generated = res.get("content", "").strip()

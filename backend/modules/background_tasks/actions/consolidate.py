@@ -1,4 +1,4 @@
-from backend.modules.llm_client import BaseLLMProvider
+from backend.modules.llm_client import BaseLLMProvider, generate_unified
 
 from ..base import BackgroundAction
 
@@ -27,15 +27,13 @@ class ConsolidateAction(BackgroundAction):
 
         params = {**self.default_params(), **payload.get("params", {})}
 
-        result = await provider.generate(
-            messages=[
-                {"role": "system", "content": self.system_prompt()},
-                {
-                    "role": "user",
-                    "content": f"Perform sedimentation on this encounter:\n\n{input_content}",
-                },
-            ],
+        result = await generate_unified(
+            provider,
+            system_prompt=self.system_prompt(),
+            user_prompt=f"Perform sedimentation on this encounter:\n\n{input_content}",
             **params,
         )
 
         return {"content": result.get("content", ""), "model": result.get("model", "")}
+
+

@@ -14,6 +14,7 @@ from backend.modules.base import ProcessingModule, ModuleResult
 from backend.skills.metadata import SkillMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
+from backend.modules.llm_client import generate_unified
 
 logger = logging.getLogger(__name__)
 PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts" / "web_retrieval"
@@ -234,21 +235,22 @@ class RhizomeWebProbe:
                         f"Response format strictly JSON:\n"
                         f'{{\n  "interference_score": 0.5,\n  "implicated_nodes": ["autopoiesis", "cybernetics"],\n  "state_vector_impact": [0.0, 0.1, ...]\n}}'
                     )
-                res = await self.llm.generate([
-                    {"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": prompt}
-                ], temperature=0.1, max_tokens=300)
-                content = res.get("content", "").strip()
-                match = re.search(r'\{.*\}', content, re.DOTALL)
-                if match:
-                    data = json.loads(match.group(0))
-                    interference_score = float(data.get("interference_score", 0.5))
-                    implicated_nodes = data.get("implicated_nodes", [])
-                    raw_impact = data.get("state_vector_impact", [])
-                    if isinstance(raw_impact, list) and len(raw_impact) > 0:
-                        while len(raw_impact) < 16:
-                            raw_impact.append(0.0)
-                        state_vector_impact = [float(v) for v in raw_impact[:16]]
+                res = await generate_unified(
+                    self.llm,
+                    system_prompt=sys_prompt,
+                    user_prompt=prompt,
+                    expect_json=True,
+                    temperature=0.1,
+                    max_tokens=300
+                )
+                data = res.get("json_data") or {}
+                interference_score = float(data.get("interference_score", 0.5))
+                implicated_nodes = data.get("implicated_nodes", [])
+                raw_impact = data.get("state_vector_impact", [])
+                if isinstance(raw_impact, list) and len(raw_impact) > 0:
+                    while len(raw_impact) < 16:
+                        raw_impact.append(0.0)
+                    state_vector_impact = [float(v) for v in raw_impact[:16]]
             except Exception as e:
                 logger.warning("LLM calculation of belief collision failed: %s", e)
 
@@ -402,10 +404,13 @@ class WebRetrievalModule(ProcessingModule):
                         f"Message: '{content}'\n"
                         f"Reply with exactly 'yes' or 'no' followed by a search query if yes. Format: YES: <query> or NO."
                     )
-                res = await self._probe.llm.generate([
-                    {"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": route_prompt}
-                ], temperature=0.1, max_tokens=50)
+                res = await generate_unified(
+                    self._probe.llm,
+                    system_prompt=sys_prompt,
+                    user_prompt=route_prompt,
+                    temperature=0.1,
+                    max_tokens=50
+                )
                 ans = res.get("content", "").strip()
                 if ans.upper().startswith("YES:"):
                     search_query = ans.split(":", 1)[1].strip()

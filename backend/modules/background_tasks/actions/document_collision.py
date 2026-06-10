@@ -1,7 +1,7 @@
 import logging
 import re
 import json
-from backend.modules.llm_client import BaseLLMProvider
+from backend.modules.llm_client import BaseLLMProvider, generate_unified
 from ..base import BackgroundAction
 
 logger = logging.getLogger(__name__)
@@ -141,16 +141,14 @@ class DocumentCollisionAction(BackgroundAction):
         params = {**self.default_params(), **payload.get("params", {})}
 
         try:
-            res = await provider.generate(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+            res = await generate_unified(
+                provider,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                expect_json=True,
                 **params
             )
-            content = res.get("content", "").strip()
-            
-            data = parse_json_safely(content)
+            data = res.get("json_data") or {}
             
             interference_score = float(data.get("interference_score", 0.0))
             implicated_nodes = data.get("implicated_nodes", [])
@@ -169,6 +167,7 @@ class DocumentCollisionAction(BackgroundAction):
                 "state_vector_impact": state_vector_impact,
                 "model": res.get("model", "")
             }
+
         except Exception as e:
             logger.error(f"Failed to execute DocumentCollisionAction for {file_name}: {e}")
             return {

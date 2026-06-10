@@ -1,6 +1,6 @@
 import re
 
-from backend.modules.llm_client import BaseLLMProvider
+from backend.modules.llm_client import BaseLLMProvider, generate_unified
 
 from ..base import BackgroundAction
 
@@ -77,14 +77,10 @@ class GenerateTitleAction(BackgroundAction):
 
         params = {**self.default_params(), **payload.get("params", {})}
 
-        result = await provider.generate(
-            messages=[
-                {"role": "system", "content": self.system_prompt()},
-                {
-                    "role": "user",
-                    "content": f"Name this encounter based on its opening: \"{text[:300]}\"",
-                },
-            ],
+        result = await generate_unified(
+            provider,
+            system_prompt=self.system_prompt(),
+            user_prompt=f"Name this encounter based on its opening: \"{text[:300]}\"",
             **params,
         )
 
@@ -93,3 +89,4 @@ class GenerateTitleAction(BackgroundAction):
         content = self._extract_title(raw, fallback)
 
         return {"content": content, "model": result.get("model", "")}
+

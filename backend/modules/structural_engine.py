@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 import numpy as np
 from typing import Optional, List, Tuple
+from backend.modules.llm_client import generate_unified
 
 logger = logging.getLogger(__name__)
 
@@ -290,20 +291,22 @@ class LLMScorer(StructuralScorer):
             f'{{\n  "scores": [0.1, 0.2, ...],\n  "justification": "reasoning..."\n}}'
         )
 
-        messages = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": prompt}
-        ]
-
         try:
-            res = await self.provider.generate(
-                messages,
+            res = await generate_unified(
+                self.provider,
+                system_prompt=self.system_prompt,
+                user_prompt=prompt,
+                expect_json=True,
                 temperature=0.1,
                 max_tokens=1000
             )
             content = res.get("content", "").strip()
-            
-            scores_list, justification = parse_scorer_response(content)
+            data = res.get("json_data")
+            if data and isinstance(data, dict) and "scores" in data:
+                scores_list = data.get("scores")
+                justification = data.get("justification")
+            else:
+                scores_list, justification = parse_scorer_response(content)
             if justification:
                 set_justification(text, justification)
                 

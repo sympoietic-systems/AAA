@@ -1,4 +1,4 @@
-from backend.modules.llm_client import BaseLLMProvider
+from backend.modules.llm_client import BaseLLMProvider, generate_unified
 
 from ..base import BackgroundAction
 
@@ -15,15 +15,13 @@ class SemanticKnotAction(BackgroundAction):
 
         params = {**self.default_params(), **payload.get("params", {})}
 
-        result = await provider.generate(
-            messages=[
-                {"role": "system", "content": self.system_prompt()},
-                {
-                    "role": "user",
-                    "content": f"Here is the conversation segment to distill:\n\n{text}",
-                },
-            ],
+        result = await generate_unified(
+            provider,
+            system_prompt=self.system_prompt(),
+            user_prompt=f"Here is the conversation segment to distill:\n\n{text}",
             **params,
         )
 
         return {"content": result.get("content", ""), "model": result.get("model", "")}
+
+
