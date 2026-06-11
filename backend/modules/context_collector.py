@@ -9,17 +9,33 @@ from .base import ProcessingModule
 
 def process_inline_notes(content: str, notes_by_id: dict) -> str:
     """Strip personal notes, entangle shared notes, and pass through scar folds untouched."""
+    # Matches <aaa-note ...>...</aaa-note> or <mark ...>...</mark>
+    pattern = r'<(aaa-note|mark)(\s+[^>]*?)?>([\s\S]*?)</\1>'
+
     def replace_tag(match):
-        note_id = match.group(1)
-        text = match.group(2)
+        tag_name = match.group(1)
+        attrs = match.group(2) or ""
+        text = match.group(3)
+
+        # Extract note ID from attributes (try data-note-id first, then id)
+        note_id_match = re.search(r'\bdata-note-id\s*=\s*["\']([^"\']+)["\']', attrs)
+        if not note_id_match:
+            note_id_match = re.search(r'\bid\s*=\s*["\']([^"\']+)["\']', attrs)
+
+        if not note_id_match:
+            return text  # Strip the formatting tag if there's no ID
+
+        note_id = note_id_match.group(1)
+        if note_id.startswith("note-highlight-"):
+            note_id = note_id.replace("note-highlight-", "")
+
         note = notes_by_id.get(note_id)
-        if note and note.get("visibility") == "shared":
+        if note and note.get("visibility") in ("shared", "agent"):
             comment = note.get("comment", "")
             return f'<note_entanglement note_id="{note_id}" comment="{comment}">{text}</note_entanglement>'
         else:
             return text
 
-    pattern = r'<(?:aaa-note|mark) id="([^"]+)">([\s\S]*?)</(?:aaa-note|mark)>'
     content = re.sub(pattern, replace_tag, content)
 
     # Scar folds pass through untouched — they are preserved in Symbia's context

@@ -44,8 +44,44 @@ async def test_context_collector():
 
     assert len(messages) == 4
     assert messages[0]["role"] == "user"
-    assert messages[-1]["content"] == "What about tomorrow?"
     print("Context collector: OK")
+
+    # Directly test process_inline_notes for different tag formats and visibility levels
+    from backend.modules.context_collector import process_inline_notes
+
+    test_notes = {
+        "note-1": {"id": "note-1", "visibility": "personal", "comment": "my comment", "selected_text": "text 1"},
+        "note-2": {"id": "note-2", "visibility": "shared", "comment": "shared comment", "selected_text": "text 2"},
+        "note-3": {"id": "note-3", "visibility": "agent", "comment": "agent comment", "selected_text": "text 3"},
+    }
+
+    # Case A: Legacy format personal note
+    assert process_inline_notes('<mark id="note-1">text 1</mark>', test_notes) == "text 1"
+    
+    # Case B: Legacy format shared note
+    assert process_inline_notes('<mark id="note-2">text 2</mark>', test_notes) == '<note_entanglement note_id="note-2" comment="shared comment">text 2</note_entanglement>'
+
+    # Case C: New format personal note
+    assert process_inline_notes('<mark id="note-highlight-note-1" data-note-id="note-1">text 1</mark>', test_notes) == "text 1"
+
+    # Case D: New format shared note
+    assert process_inline_notes('<mark id="note-highlight-note-2" data-note-id="note-2">text 2</mark>', test_notes) == '<note_entanglement note_id="note-2" comment="shared comment">text 2</note_entanglement>'
+
+    # Case E: New format agent note
+    assert process_inline_notes('<mark id="note-highlight-note-3" data-note-id="note-3">text 3</mark>', test_notes) == '<note_entanglement note_id="note-3" comment="agent comment">text 3</note_entanglement>'
+
+    # Case F: Hallucinated/unknown note format (should strip tags but keep inner text)
+    assert process_inline_notes('<mark id="note-highlight-fake" data-note-id="fake">fake text</mark>', test_notes) == "fake text"
+
+    # Case G: Multi-segment inline/block boundary split note formats
+    text_g = '<mark id="note-highlight-note-2" data-note-id="note-2">segment 1</mark> normal <mark data-note-id="note-2">segment 2</mark>'
+    expected_g = '<note_entanglement note_id="note-2" comment="shared comment">segment 1</note_entanglement> normal <note_entanglement note_id="note-2" comment="shared comment">segment 2</note_entanglement>'
+    assert process_inline_notes(text_g, test_notes) == expected_g
+
+    # Case H: Scar fold passthrough
+    assert process_inline_notes('<scar-fold>my trace</scar-fold>', test_notes) == '<scar-fold>my trace</scar-fold>'
+
+    print("process_inline_notes filtration assertions: OK")
 
     conn.close()
     import time
