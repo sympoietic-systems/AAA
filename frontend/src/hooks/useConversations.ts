@@ -15,9 +15,18 @@ export function useConversations() {
     return params.get("c") || ""
   })
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [totalCount, setTotalCount] = useState(0)
+
+  // Local state cache for the current tags/filters
+  const [tag, setTag] = useState<string | undefined>(undefined)
+  const [search, setSearch] = useState<string | undefined>(undefined)
+  const LIMIT = 20
+
   const initialized = useRef(false)
 
-  // Sync active ID state and URL query parameter in sync
+  // Sync active ID state and URL query parameter
   const updateActiveId = useCallback((id: string) => {
     setActiveId(id)
     const params = new URLSearchParams(window.location.search)
@@ -30,7 +39,7 @@ export function useConversations() {
     window.history.pushState(null, "", newUrl)
   }, [])
 
-  // Sync state on popstate (browser back/forward button clicks)
+  // Sync state on popstate (browser back/forward clicks)
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search)
@@ -41,25 +50,50 @@ export function useConversations() {
     return () => window.removeEventListener("popstate", handlePopState)
   }, [])
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (newTag?: string | null, newSearch?: string) => {
     setLoading(true)
     try {
-      const data = await listConversations()
+      const queryTag = newTag !== undefined ? (newTag === null || newTag === "all" ? undefined : newTag) : tag
+      const querySearch = newSearch !== undefined ? newSearch : search
+
+      if (newTag !== undefined) setTag(newTag === null || newTag === "all" ? undefined : newTag)
+      if (newSearch !== undefined) setSearch(newSearch)
+
+      const data = await listConversations(queryTag, querySearch, LIMIT, 0)
       setConversations(data.conversations)
-      const urlId = new URLSearchParams(window.location.search).get("c")
-      if (!activeId && !urlId && data.conversations.length > 0) {
-        updateActiveId(data.conversations[0].id)
-      }
+      setTotalCount(data.total_count || 0)
+      setHasMore(!!data.has_more)
     } catch {
       // silent
     } finally {
       setLoading(false)
     }
-  }, [activeId, updateActiveId])
+  }, [tag, search])
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return
+    setLoadingMore(true)
+    try {
+      const currentOffset = conversations.length
+      const data = await listConversations(tag, search, LIMIT, currentOffset)
+      setConversations((prev) => {
+        const existingIds = new Set(prev.map((c) => c.id))
+        const filteredNew = data.conversations.filter((c) => !existingIds.has(c.id))
+        return [...prev, ...filteredNew]
+      })
+      setTotalCount(data.total_count || 0)
+      setHasMore(!!data.has_more)
+    } catch {
+      // silent
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [loading, loadingMore, hasMore, conversations.length, tag, search])
 
   useEffect(() => {
     if (!initialized.current) {
       initialized.current = true
+      // On start, load the first page with no filters
       refresh()
     }
   }, [refresh])
@@ -72,14 +106,14 @@ export function useConversations() {
     try {
       await deleteConvApi(id)
       setConversations((prev) => prev.filter((c) => c.id !== id))
+      setTotalCount((prev) => Math.max(0, prev - 1))
       if (activeId === id) {
-        const remaining = conversations.filter((c) => c.id !== id)
-        updateActiveId(remaining.length > 0 ? remaining[0].id : "")
+        updateActiveId("")
       }
     } catch {
       // silent
     }
-  }, [activeId, conversations, updateActiveId])
+  }, [activeId, updateActiveId])
 
   const addConversation = useCallback((conv: ConversationInfo) => {
     setConversations((prev) => {
@@ -87,6 +121,7 @@ export function useConversations() {
       if (exists) return prev.map((c) => (c.id === conv.id ? conv : c))
       return [conv, ...prev]
     })
+    setTotalCount((prev) => prev + 1)
     if (!activeId) {
       updateActiveId(conv.id)
     }
@@ -135,6 +170,10 @@ export function useConversations() {
     activeId,
     setActiveId: selectConversation,
     loading,
+    loadingMore,
+    hasMore,
+    totalCount,
+    loadMore,
     refresh,
     deleteConversation,
     addConversation,

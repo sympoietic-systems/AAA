@@ -32,28 +32,65 @@ class ConversationRepository(BaseRepository):
         return _row_to_conversation(row)
 
     @with_connection
-    def list_all(self, tag: Optional[str] = None) -> list[Conversation]:
+    def list_all(
+        self,
+        tag: Optional[str] = None,
+        search: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> list[Conversation]:
         conn = self._conn()
+        where_clauses = []
+        params = []
+
         if tag:
-            rows = conn.execute(
-                """SELECT c.*, COUNT(cl.id) as message_count
-                   FROM conversations c
-                   LEFT JOIN conversation_log cl ON c.id = cl.conversation_id
-                   JOIN conversation_tags ct ON c.id = ct.conversation_id
-                   WHERE ct.tag = ?
-                   GROUP BY c.id
-                   ORDER BY MAX(cl.timestamp) DESC""",
-                (tag,),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                """SELECT c.*, COUNT(cl.id) as message_count
-                   FROM conversations c
-                   LEFT JOIN conversation_log cl ON c.id = cl.conversation_id
-                   GROUP BY c.id
-                   ORDER BY MAX(cl.timestamp) DESC"""
-            ).fetchall()
+            where_clauses.append("c.id IN (SELECT conversation_id FROM conversation_tags WHERE tag = ?)")
+            params.append(tag)
+
+        if search:
+            where_clauses.append("c.title LIKE ?")
+            params.append(f"%{search}%")
+
+        where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        query = f"""
+            SELECT c.*, COUNT(cl.id) as message_count
+            FROM conversations c
+            LEFT JOIN conversation_log cl ON c.id = cl.conversation_id
+            {where_str}
+            GROUP BY c.id
+            ORDER BY MAX(cl.timestamp) DESC
+        """
+
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+            if offset is not None:
+                query += " OFFSET ?"
+                params.append(offset)
+
+        rows = conn.execute(query, params).fetchall()
         return [_row_to_conversation(r) for r in rows]
+
+    @with_connection
+    def count_all(self, tag: Optional[str] = None, search: Optional[str] = None) -> int:
+        conn = self._conn()
+        where_clauses = []
+        params = []
+
+        if tag:
+            where_clauses.append("c.id IN (SELECT conversation_id FROM conversation_tags WHERE tag = ?)")
+            params.append(tag)
+
+        if search:
+            where_clauses.append("c.title LIKE ?")
+            params.append(f"%{search}%")
+
+        where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        query = f"SELECT COUNT(*) FROM conversations c {where_str}"
+        row = conn.execute(query, params).fetchone()
+        return row[0] if row else 0
 
     @with_connection
     def update_title(self, conversation_id: str, title: str) -> None:

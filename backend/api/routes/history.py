@@ -73,3 +73,52 @@ async def get_message_context(message_id: int, request: Request):
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found")
     return {"context_sent": msg.context_sent}
+
+
+@router.get("/messages/{message_id}/path", response_model=list[HistoryMessage])
+async def get_message_path(message_id: int, request: Request):
+    state = request.app.state
+    repo = state.message_repo
+    # Fetch ancestors in chronological order (from root to message_id)
+    ancestors = repo.get_ancestor_path(message_id, limit=500)
+    if not ancestors:
+        raise HTTPException(status_code=404, detail="Message path not found")
+
+    ancestor_ids = [m.id for m in ancestors if m.id is not None]
+    # Fetch these specific messages along with their metrics
+    rows = repo.get_recent_with_metrics_for_path(ancestor_ids, limit=len(ancestor_ids))
+
+    messages: list[HistoryMessage] = []
+    for r in rows:
+        metrics = MetricsService.build_history(r)
+
+        sig_bytes = r.get("structural_signature")
+        sig_list = None
+        if sig_bytes:
+            try:
+                import numpy as np
+                arr = np.frombuffer(sig_bytes, dtype=np.float32)
+                sig_list = arr.tolist()
+            except Exception:
+                pass
+
+        justification = r.get("structural_justification") or get_justification(r["content"])
+
+        messages.append(HistoryMessage(
+            id=r["id"],
+            timestamp=r["timestamp"],
+            speaker=r["speaker"],
+            content=r["content"],
+            thinking=None,
+            context_sent=None,
+            has_context=bool(r.get("has_context")),
+            content_tokens=r.get("content_tokens", 0),
+            thinking_tokens=r.get("thinking_tokens"),
+            metrics=metrics,
+            model_used=r.get("model_used"),
+            provider_used=r.get("provider_used"),
+            structural_signature=sig_list,
+            structural_justification=justification,
+            parent_message_id=r.get("parent_message_id"),
+        ))
+    return messages

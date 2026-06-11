@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, memo } from "react"
-import type { ChatMessage, NoteInfo } from "../api/client"
-import { confirmResonanceLink, deleteResonanceLink } from "../api/client"
+import { useEffect, useRef, useState, memo, useCallback } from "react"
+import type { ChatMessage, NoteInfo, ConversationTreeNode, ConversationTreeLink } from "../api/client"
+import { confirmResonanceLink, deleteResonanceLink, getConversationTree } from "../api/client"
 
 interface ConnectionCloudProps {
-  messages: ChatMessage[]
-  links: any[]
+  activeLoadedMessages: ChatMessage[]
   notes: NoteInfo[]
   activeMessageId: number | null
   activePathIds: Set<number>
@@ -12,6 +11,7 @@ interface ConnectionCloudProps {
   commitProposedBranch: (parentMsgId: number, content: string) => Promise<any>
   refreshTree: () => void
   conversationId: string
+  onNavigateToMessage?: (messageId: number) => void
 }
 
 interface SimNode {
@@ -39,40 +39,7 @@ interface SimLink {
   justification?: string
 }
 
-function areMessagesEqual(a: ChatMessage[], b: ChatMessage[]): boolean {
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i++) {
-    const ma = a[i]
-    const mb = b[i]
-    if (ma.id !== mb.id) return false
-    if (ma.speaker !== mb.speaker) return false
-    if (ma.content !== mb.content) return false
-    if (ma.parent_message_id !== mb.parent_message_id) return false
-    
-    const aBranches = ma.proposed_branches || []
-    const bBranches = mb.proposed_branches || []
-    if (aBranches.length !== bBranches.length) return false
-    for (let j = 0; j < aBranches.length; j++) {
-      if (aBranches[j].content !== bBranches[j].content) return false
-      if (aBranches[j].title !== bBranches[j].title) return false
-    }
-  }
-  return true
-}
 
-function areLinksEqual(a: any[], b: any[]): boolean {
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i++) {
-    const la = a[i]
-    const lb = b[i]
-    if (la.id !== lb.id) return false
-    if (String(la.source_id) !== String(lb.source_id)) return false
-    if (String(la.target_id) !== String(lb.target_id)) return false
-    if (la.status !== lb.status) return false
-    if (la.justification !== lb.justification) return false
-  }
-  return true
-}
 
 function computeSettledLayout(
   initialNodes: SimNode[],
@@ -190,8 +157,7 @@ function getDistanceToSegment(x: number, y: number, x1: number, y1: number, x2: 
 }
 
 function ConnectionCloud({
-  messages,
-  links,
+  activeLoadedMessages,
   notes,
   activeMessageId,
   activePathIds,
@@ -199,6 +165,7 @@ function ConnectionCloud({
   commitProposedBranch,
   refreshTree,
   conversationId,
+  onNavigateToMessage,
 }: ConnectionCloudProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -221,10 +188,6 @@ function ConnectionCloud({
   // Track positions across renders to prevent layout resetting when messages change
   const nodePositionsRef = useRef<Record<string, { x: number; y: number }>>({})
 
-  // Store previous inputs to prevent infinite loops from parent reference updates
-  const prevMessagesRef = useRef<ChatMessage[]>([])
-  const prevLinksRef = useRef<any[]>([])
-  const prevDimensionsRef = useRef({ width: 0, height: 0 })
   const [simulateSettling, setSimulateSettling] = useState<boolean>(() => {
     try {
       return localStorage.getItem("aaa_simulate_settling") === "true"
@@ -232,13 +195,30 @@ function ConnectionCloud({
       return false
     }
   })
-  const prevSimulateSettlingRef = useRef<boolean>(simulateSettling)
 
   // Zoom and pan state
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef({ x: 0, y: 0 })
+
+  const [treeNodes, setTreeNodes] = useState<ConversationTreeNode[]>([])
+  const [treeLinks, setTreeLinks] = useState<ConversationTreeLink[]>([])
+
+  const fetchTree = useCallback(async () => {
+    if (!conversationId) return
+    try {
+      const data = await getConversationTree(conversationId)
+      setTreeNodes(data.nodes)
+      setTreeLinks(data.links)
+    } catch (err) {
+      console.error("Failed to fetch tree:", err)
+    }
+  }, [conversationId])
+
+  useEffect(() => {
+    fetchTree()
+  }, [conversationId, activeLoadedMessages.length, fetchTree])
 
   const toggleSimulateSettling = () => {
     setSimulateSettling((prev) => {
@@ -330,94 +310,76 @@ function ConnectionCloud({
     transitionTimerRef.current = requestAnimationFrame(animateTransition)
   }
 
-  // Build nodes and links from messages, db links, and inline proposals
+  // Build nodes and links from local treeNodes, treeLinks, and inline proposals
   useEffect(() => {
-    // 1. Core comparison check to prevent layout thrashes and infinite compute loops
-    const messagesChanged = !areMessagesEqual(messages, prevMessagesRef.current)
-    const linksChanged = !areLinksEqual(links, prevLinksRef.current)
-    const dimensionsChanged =
-      dimensions.width !== prevDimensionsRef.current.width ||
-      dimensions.height !== prevDimensionsRef.current.height
-    const simulateSettlingChanged = simulateSettling !== prevSimulateSettlingRef.current
-
-    if (
-      !messagesChanged &&
-      !linksChanged &&
-      !dimensionsChanged &&
-      !simulateSettlingChanged &&
-      simNodes.length > 0
-    ) {
+    if (treeNodes.length === 0) {
+      setSimNodes([])
+      setSimLinks([])
       return
     }
-
-    // Update trace refs
-    prevMessagesRef.current = messages
-    prevLinksRef.current = links
-    prevDimensionsRef.current = dimensions
-    prevSimulateSettlingRef.current = simulateSettling
 
     const newNodes: SimNode[] = []
     const newLinks: SimLink[] = []
 
-    const sorted = [...messages].sort((a, b) => a.id - b.id)
-
-    // 2. Add all message nodes
-    for (let i = 0; i < sorted.length; i++) {
-      const m = sorted[i]
-      const idStr = String(m.id)
+    // 1. Add all fetched tree nodes
+    for (let i = 0; i < treeNodes.length; i++) {
+      const node = treeNodes[i]
+      const idStr = String(node.id)
 
       newNodes.push({
         id: idStr,
-        dbId: m.id,
-        speaker: m.speaker,
-        content: m.content,
+        dbId: node.id,
+        speaker: node.speaker,
+        content: node.content,
         isProposed: false,
-        parentMsgId: m.parent_message_id,
+        parentMsgId: node.parent_message_id,
         x: 0,
         y: 0,
         vx: 0,
         vy: 0,
       })
 
-      // Link to parent message (use chronological fallback if parent_message_id is null/undefined)
-      const parentId = m.parent_message_id !== undefined && m.parent_message_id !== null
-        ? m.parent_message_id
-        : (i > 0 ? sorted[i - 1].id : null)
-
-      if (parentId && sorted.some((msg) => msg.id === parentId)) {
+      // Add parent links from tree nodes parent_message_id
+      if (node.parent_message_id !== null && node.parent_message_id !== undefined) {
         newLinks.push({
-          source: String(parentId),
+          source: String(node.parent_message_id),
           target: idStr,
           type: "parent",
         })
       }
+    }
 
-      // Extract and add any proposed branches (virtual nodes)
+    // 2. Extract and merge proposed branches from activeLoadedMessages in frontend memory
+    activeLoadedMessages.forEach((m) => {
+      const idStr = String(m.id)
       if (m.proposed_branches && m.proposed_branches.length > 0) {
         m.proposed_branches.forEach((b, idx) => {
           const propIdStr = `proposed_${m.id}_${idx}`
 
-          newNodes.push({
-            id: propIdStr,
-            speaker: "proposed",
-            content: b.content,
-            title: b.title,
-            isProposed: true,
-            parentMsgId: m.id,
-            x: 0,
-            y: 0,
-            vx: 0,
-            vy: 0,
-          })
+          // Only add if not already in nodes
+          if (!newNodes.some((n) => n.id === propIdStr)) {
+            newNodes.push({
+              id: propIdStr,
+              speaker: "proposed",
+              content: b.content,
+              title: b.title,
+              isProposed: true,
+              parentMsgId: m.id,
+              x: 0,
+              y: 0,
+              vx: 0,
+              vy: 0,
+            })
 
-          newLinks.push({
-            source: idStr,
-            target: propIdStr,
-            type: "parent",
-          })
+            newLinks.push({
+              source: idStr,
+              target: propIdStr,
+              type: "parent",
+            })
+          }
         })
       }
-    }
+    })
 
     // 3. Calculate spiral target coordinates for sequential nodes
     const totalNodes = newNodes.length
@@ -446,7 +408,7 @@ function ConnectionCloud({
     }
 
     // 4. Add database retroactive links (resonance links)
-    for (const l of links) {
+    for (const l of treeLinks) {
       const srcStr = String(l.source_id)
       const tgtStr = String(l.target_id)
 
@@ -472,7 +434,7 @@ function ConnectionCloud({
       setSimNodes(newNodes)
     }
     setSimLinks(newLinks)
-  }, [messages, links, dimensions.width, dimensions.height, simulateSettling])
+  }, [treeNodes, treeLinks, activeLoadedMessages, dimensions.width, dimensions.height, simulateSettling])
 
   // Run the force simulation loop (Live Mode only)
   useEffect(() => {
@@ -878,7 +840,11 @@ function ConnectionCloud({
       setCommittingNode(node)
       setCommitContent(node.content)
     } else if (node.dbId) {
-      setActiveMessageId(node.dbId)
+      if (onNavigateToMessage) {
+        onNavigateToMessage(node.dbId)
+      } else {
+        setActiveMessageId(node.dbId)
+      }
     }
   }
 
@@ -1064,7 +1030,7 @@ function ConnectionCloud({
             {simulateSettling ? "⚡ Settling: Live" : "🍃 Settling: Static"}
           </button>
           <span className="text-[10px] font-mono text-[#4b4b5c]">
-            {simNodes.filter((n) => !n.isProposed).length} nodes | {links.length} cross-links
+            {simNodes.filter((n) => !n.isProposed).length} nodes | {treeLinks.length} cross-links
           </span>
         </div>
       </div>

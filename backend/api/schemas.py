@@ -267,6 +267,8 @@ class ConversationInfo(BaseModel):
 
 class ConversationListResponse(BaseModel):
     conversations: list[ConversationInfo]
+    total_count: int = 0
+    has_more: bool = False
 
 
 class ConversationUpdateRequest(BaseModel):

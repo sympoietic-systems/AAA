@@ -33,6 +33,7 @@ interface Props {
   onRemoveTag?: (tag: string) => void
   onBranch?: (messageId: number) => void
   fullTreeMessages?: ChatMessage[]
+  onGoHome?: () => void
 }
 
 const EMPTY_ARRAY: NoteInfo[] = []
@@ -67,6 +68,7 @@ export function ChatView({
   onRemoveTag,
   onBranch,
   fullTreeMessages = [],
+  onGoHome,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -196,7 +198,18 @@ export function ChatView({
 
   return (
     <div className={`flex flex-col h-full max-w-5xl mx-auto w-full ${className}`}>
-      <header className="flex items-center gap-1.5 px-4 py-3 border-b border-[#222] text-sm">
+      <header className="flex items-center gap-2 px-4 py-3 border-b border-[#222] text-sm">
+        {onGoHome && (
+          <button
+            onClick={onGoHome}
+            className="
+              text-[#555] hover:text-[#4ade80] text-[10px] font-mono border border-[#333] hover:border-[#4ade80]/30
+              px-1.5 py-0.5 rounded-[3px] transition-all duration-150 mr-2 uppercase cursor-pointer select-none
+            "
+          >
+            [Home]
+          </button>
+        )}
         <span className="text-[#888]">{isPassword ? "authentication" : agentName}</span>
         {conversationId ? (
           <>

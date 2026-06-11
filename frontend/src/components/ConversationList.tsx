@@ -78,7 +78,7 @@ export function ConversationList({
         border-b
         flex flex-col shrink-0
         relative
-        transition-all duration-200
+        transition-[width] duration-200
         ${collapsed ? "md:w-9 w-full" : "w-full"}
       `}
       style={!collapsed && width ? { width: `${width}px` } : undefined}
@@ -103,194 +103,198 @@ export function ConversationList({
         </button>
       )}
 
-      {!collapsed && (
-        <>
-          <div className="flex items-center shrink-0 px-3 py-2 border-b border-[#222]">
-            <button
-              onClick={onToggle}
-              className="flex items-center gap-1.5 text-[10px] text-[#555] hover:text-[#888] transition-colors"
-            >
-              <span>{"\u25C0"}</span>
-              <span>close</span>
-            </button>
-          </div>
-
+      <div
+        className={`flex-1 flex flex-col min-h-0 overflow-hidden transition-opacity duration-150 ${
+          collapsed ? "hidden opacity-0" : "opacity-100"
+        }`}
+      >
+        <div className="flex items-center shrink-0 px-3 py-2 border-b border-[#222]">
           <button
-            onClick={onNew}
-            className="
-              w-full flex items-center gap-2 px-3 py-2
-              text-[11px] text-[#4ade80] hover:bg-[#1a2a1a]
-              border-b border-[#1a1a1a]
-              transition-colors cursor-pointer
-            "
+            onClick={onToggle}
+            className="flex items-center gap-1.5 text-[10px] text-[#555] hover:text-[#888] transition-colors"
           >
-            <span className="text-[13px] leading-none">+</span>
-            <span>new conversation</span>
+            <span>{"\u25C0"}</span>
+            <span>close</span>
           </button>
+        </div>
 
-          {/* Search and Category Filters */}
-          <div className="px-3 py-2 border-b border-[#222] bg-[#090909] flex flex-col gap-1.5 shrink-0">
-            <input
-              type="text"
-              placeholder="Search title or tag..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-[10px] text-[#aaa] bg-[#141414] border border-[#222] px-2 py-1 outline-none focus:border-[#4ade80] placeholder-[#444] rounded-[2px] font-mono"
-            />
-            <div className="flex gap-1">
-              {(["all", "user", "dreams", "agents"] as const).map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`
-                    flex-1 py-0.5 text-[8px] tracking-wider uppercase border rounded-[2px] transition-colors font-mono cursor-pointer
-                    ${activeCategory === cat
-                      ? "bg-[#1a2a1a] text-[#4ade80] border-[#4ade80]"
-                      : "bg-transparent text-[#555] border-[#222] hover:text-[#888]"
-                    }
-                  `}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
+        <button
+          onClick={onNew}
+          className="
+            w-full flex items-center gap-2 px-3 py-2
+            text-[11px] text-[#4ade80] hover:bg-[#1a2a1a]
+            border-b border-[#1a1a1a]
+            transition-colors cursor-pointer
+          "
+        >
+          <span className="text-[13px] leading-none">+</span>
+          <span>new conversation</span>
+        </button>
 
-          <div className="flex-1 overflow-y-auto">
-            {loading && conversations.length === 0 && (
-              <p className="text-[10px] text-[#555] animate-pulse px-3 py-2">
-                loading...
-              </p>
-            )}
-
-            {!loading && conversations.length === 0 && (
-              <p className="text-[10px] text-[#444] px-3 py-2">
-                no conversations yet
-              </p>
-            )}
-
-            {!loading && filteredConversations.length === 0 && conversations.length > 0 && (
-              <p className="text-[10px] text-[#444] px-3 py-2">
-                no matching conversations
-              </p>
-            )}
-
-            {filteredConversations.map((conv) => (
-              <div
-                key={conv.id}
-                onClick={() => onSelect(conv.id)}
-                onMouseEnter={(e) => {
-                  if (outerRef.current) {
-                    const outerRect = outerRef.current.getBoundingClientRect()
-                    const itemRect = e.currentTarget.getBoundingClientRect()
-                    setTooltipInfo({ conv, top: itemRect.top - outerRect.top })
-                  }
-                }}
-                onMouseLeave={() => setTooltipInfo(null)}
+        {/* Search and Category Filters */}
+        <div className="px-3 py-2 border-b border-[#222] bg-[#090909] flex flex-col gap-1.5 shrink-0">
+          <input
+            type="text"
+            placeholder="Search title or tag..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full text-[10px] text-[#aaa] bg-[#141414] border border-[#222] px-2 py-1 outline-none focus:border-[#4ade80] placeholder-[#444] rounded-[2px] font-mono"
+          />
+          <div className="flex gap-1">
+            {(["all", "user", "dreams", "agents"] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
                 className={`
-                  group flex items-center gap-1.5 px-3 py-2 cursor-pointer
-                  border-b border-[#1a1a1a] last:border-b-0
-                  transition-colors
-                  ${activeId === conv.id
-                    ? "bg-[#1a2a1a] border-l-2 border-l-[#4ade80]"
-                    : "hover:bg-[#111] border-l-2 border-l-transparent"
+                  flex-1 py-0.5 text-[8px] tracking-wider uppercase border rounded-[2px] transition-colors font-mono cursor-pointer
+                  ${activeCategory === cat
+                    ? "bg-[#1a2a1a] text-[#4ade80] border-[#4ade80]"
+                    : "bg-transparent text-[#555] border-[#222] hover:text-[#888]"
                   }
                 `}
               >
-                {(() => {
-                  const structural = conv.tags?.find(t => t.tag_type === "structural")
-                  let letterColor = "text-[#6bc28c]"
-                  let letter = "U"
-                  if (structural) {
-                    if (structural.tag === "dreams") { letterColor = "text-[#a892ee]"; letter = "D" }
-                    else if (structural.tag === "other agents") { letterColor = "text-[#e09b67]"; letter = "A" }
-                  }
-                  return (
-                    <span className={`text-[8px] font-mono font-bold shrink-0 ${letterColor}`}>
-                      [{letter}]
-                    </span>
-                  )
-                })()}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-[#aaa] truncate">
-                    {(() => {
-                      const title = conv.title || "untitled"
-                      const structural = conv.tags?.find(t => t.tag_type === "structural")
-                      if (structural?.tag === "dreams") return title.replace(/^Dream Log:\s*/i, "")
-                      return title
-                    })()}
-                  </p>
-                </div>
-                <span className="text-[#444] text-[9px] font-mono select-none shrink-0">{">>"}</span>
-                <span className="text-[9px] text-[#555] font-mono shrink-0">{conv.message_count}msg</span>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDelete(conv.id)
-                  }}
-                  className="
-                    text-[8px] text-[#444] hover:text-[#ef4444]
-                    opacity-0 group-hover:opacity-100
-                    transition-opacity
-                    shrink-0 px-1
-                  "
-                  title="Delete conversation"
-                >
-                  {"\u2715"}
-                </button>
-              </div>
+                {cat}
+              </button>
             ))}
           </div>
-          {tooltipInfo && (
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loading && conversations.length === 0 && (
+            <p className="text-[10px] text-[#555] animate-pulse px-3 py-2">
+              loading...
+            </p>
+          )}
+
+          {!loading && conversations.length === 0 && (
+            <p className="text-[10px] text-[#444] px-3 py-2">
+              no conversations yet
+            </p>
+          )}
+
+          {!loading && filteredConversations.length === 0 && conversations.length > 0 && (
+            <p className="text-[10px] text-[#444] px-3 py-2">
+              no matching conversations
+            </p>
+          )}
+
+          {filteredConversations.map((conv) => (
             <div
-              className="absolute z-50 left-full top-0 ml-1 bg-[#0c0c0c] border border-[#222] px-3 py-2 rounded-[2px] shadow-lg min-w-[280px] max-w-[640px] pointer-events-none"
-              style={{ top: tooltipInfo.top }}
+              key={conv.id}
+              onClick={() => onSelect(conv.id)}
+              onMouseEnter={(e) => {
+                if (outerRef.current) {
+                  const outerRect = outerRef.current.getBoundingClientRect()
+                  const itemRect = e.currentTarget.getBoundingClientRect()
+                  setTooltipInfo({ conv, top: itemRect.top - outerRect.top })
+                }
+              }}
+              onMouseLeave={() => setTooltipInfo(null)}
+              className={`
+                group flex items-center gap-1.5 px-3 py-2 cursor-pointer
+                border-b border-[#1a1a1a] last:border-b-0
+                transition-colors
+                ${activeId === conv.id
+                  ? "bg-[#1a2a1a] border-l-2 border-l-[#4ade80]"
+                  : "hover:bg-[#111] border-l-2 border-l-transparent"
+                }
+              `}
             >
-              <p className="text-[10px] text-[#ccc] font-mono mb-1 leading-relaxed break-words">
-                {tooltipInfo.conv.title || "untitled"}
-              </p>
-              {tooltipInfo.conv.created_at && (
-                <p className="text-[8px] text-[#555] font-mono mb-1">
-                  created {formatDate(tooltipInfo.conv.created_at)}
+              {(() => {
+                const structural = conv.tags?.find(t => t.tag_type === "structural")
+                let letterColor = "text-[#6bc28c]"
+                let letter = "U"
+                if (structural) {
+                  if (structural.tag === "dreams") { letterColor = "text-[#a892ee]"; letter = "D" }
+                  else if (structural.tag === "other agents") { letterColor = "text-[#e09b67]"; letter = "A" }
+                }
+                return (
+                  <span className={`text-[8px] font-mono font-bold shrink-0 ${letterColor}`}>
+                    [{letter}]
+                  </span>
+                )
+              })()}
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-[#aaa] truncate">
+                  {(() => {
+                    const title = conv.title || "untitled"
+                    const structural = conv.tags?.find(t => t.tag_type === "structural")
+                    if (structural?.tag === "dreams") return title.replace(/^Dream Log:\s*/i, "")
+                    return title
+                  })()}
                 </p>
-              )}
-              {tooltipInfo.conv.tags && tooltipInfo.conv.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {tooltipInfo.conv.tags.map((t) => {
-                    let tagStyle = "text-[#888]"
-                    if (t.tag_type === "structural") {
-                      if (t.tag === "dreams") tagStyle = "text-[#a892ee]"
-                      else if (t.tag === "other agents") tagStyle = "text-[#e09b67]"
-                      else tagStyle = "text-[#6bc28c]"
-                    } else if (t.tag_type === "diffractive") {
-                      tagStyle = "text-[#4ec9b0]"
-                    }
-                    return (
-                      <span key={t.tag} className={`text-[8px] ${tagStyle} font-mono`}>
-                        {t.tag}
-                      </span>
-                    )
-                  })}
-                </div>
-              )}
+              </div>
+              <span className="text-[#444] text-[9px] font-mono select-none shrink-0">{">>"}</span>
+              <span className="text-[9px] text-[#555] font-mono shrink-0">{conv.message_count}msg</span>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(conv.id)
+                }}
+                className="
+                  text-[8px] text-[#444] hover:text-[#ef4444]
+                  opacity-0 group-hover:opacity-100
+                  transition-opacity
+                  shrink-0 px-1
+                "
+                title="Delete conversation"
+              >
+                {"\u2715"}
+              </button>
             </div>
-          )}
-          {showLogout && onLogout && (
-            <button
-              onClick={onLogout}
-              className="
-                w-full flex items-center justify-center gap-1.5 px-3 py-2
-                text-[10px] text-[#ef4444] hover:bg-[#221212] hover:text-[#ff6666]
-                border-t border-[#222]
-                transition-colors cursor-pointer mt-auto shrink-0 uppercase tracking-wider font-mono
-              "
-            >
-              <span>logout</span>
-            </button>
-          )}
-        </>
-      )}
+          ))}
+        </div>
+
+        {tooltipInfo && (
+          <div
+            className="absolute z-50 left-full top-0 ml-1 bg-[#0c0c0c] border border-[#222] px-3 py-2 rounded-[2px] shadow-lg min-w-[280px] max-w-[640px] pointer-events-none"
+            style={{ top: tooltipInfo.top }}
+          >
+            <p className="text-[10px] text-[#ccc] font-mono mb-1 leading-relaxed break-words">
+              {tooltipInfo.conv.title || "untitled"}
+            </p>
+            {tooltipInfo.conv.created_at && (
+              <p className="text-[8px] text-[#555] font-mono mb-1">
+                created {formatDate(tooltipInfo.conv.created_at)}
+              </p>
+            )}
+            {tooltipInfo.conv.tags && tooltipInfo.conv.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {tooltipInfo.conv.tags.map((t) => {
+                  let tagStyle = "text-[#888]"
+                  if (t.tag_type === "structural") {
+                    if (t.tag === "dreams") tagStyle = "text-[#a892ee]"
+                    else if (t.tag === "other agents") tagStyle = "text-[#e09b67]"
+                    else tagStyle = "text-[#6bc28c]"
+                  } else if (t.tag_type === "diffractive") {
+                    tagStyle = "text-[#4ec9b0]"
+                  }
+                  return (
+                    <span key={t.tag} className={`text-[8px] ${tagStyle} font-mono`}>
+                      {t.tag}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {showLogout && onLogout && (
+          <button
+            onClick={onLogout}
+            className="
+              w-full flex items-center justify-center gap-1.5 px-3 py-2
+              text-[10px] text-[#ef4444] hover:bg-[#221212] hover:text-[#ff6666]
+              border-t border-[#222]
+              transition-colors cursor-pointer mt-auto shrink-0 uppercase tracking-wider font-mono
+            "
+          >
+            <span>logout</span>
+          </button>
+        )}
+      </div>
     </div>
   )
 }

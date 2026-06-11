@@ -104,3 +104,34 @@ def test_branching_api_integration():
             # Find the committed message in history
             committed_msg = next(m for m in hist_data["messages"] if m["id"] == commit_data["id"])
             assert committed_msg["parent_message_id"] == agent_msg_1_id
+
+            # 6. Test trimmed text in conversation tree
+            long_text = "A" * 150
+            chat_req_long = {
+                "content": long_text,
+                "speaker": "human",
+                "conversation_id": conversation_id,
+                "parent_message_id": agent_msg_2_id
+            }
+            res_long = client.post("/api/chat", json=chat_req_long)
+            assert res_long.status_code == 200
+            user_msg_long_id = res_long.json()["user_message_id"]
+
+            tree_res_2 = client.get(f"/api/conversations/{conversation_id}/tree")
+            assert tree_res_2.status_code == 200
+            nodes_2 = tree_res_2.json()["nodes"]
+            long_node = next(n for n in nodes_2 if n["id"] == user_msg_long_id)
+            assert len(long_node["content"]) == 123  # 120 + "..."
+            assert long_node["content"].endswith("...")
+
+            # 7. Test get message path endpoint
+            path_res = client.get(f"/api/messages/{user_msg_long_id}/path")
+            assert path_res.status_code == 200
+            path_data = path_res.json()
+            path_ids = [m["id"] for m in path_data]
+            assert user_msg_1_id in path_ids
+            assert agent_msg_1_id in path_ids
+            assert user_msg_2_id in path_ids
+            assert agent_msg_2_id in path_ids
+            assert user_msg_long_id in path_ids
+            assert path_ids == sorted(path_ids)

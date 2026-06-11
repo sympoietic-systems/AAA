@@ -3,14 +3,18 @@ import { useChat } from "./hooks/useChat"
 import { useConversations } from "./hooks/useConversations"
 import { useNotes } from "./hooks/useNotes"
 import { ChatView } from "./components/ChatView"
-import { ConversationList } from "./components/ConversationList"
 import { SidePanel } from "./components/SidePanel"
+import { ConversationLandingPage } from "./components/ConversationLandingPage"
+import ConnectionCloud from "./components/ConnectionCloud"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag } from "./api/client"
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isAuthEnabled, setIsAuthEnabled] = useState<boolean>(false)
   const [authError, setAuthError] = useState<string | null>(null)
+
+  // Track if we are in clean/new chat creation workspace mode
+  const [isNewChatMode, setIsNewChatMode] = useState(false)
 
   useEffect(() => {
     checkAuthStatus().then((status) => {
@@ -42,7 +46,11 @@ export default function App() {
     activeId,
     setActiveId,
     loading: convLoading,
-    refresh,
+    loadingMore: convLoadingMore,
+    hasMore: convHasMore,
+    totalCount: convTotalCount,
+    loadMore: loadMoreConvs,
+    refresh: refreshConvs,
     deleteConversation,
     addConversation,
     newConversation,
@@ -54,11 +62,11 @@ export default function App() {
   const {
     messages,
     fullTreeMessages,
-    links,
     activeMessageId,
     setActiveMessageId,
     activePathIds,
     commitProposedBranch,
+    navigateToMessage,
     loading,
     error,
     send,
@@ -108,11 +116,11 @@ export default function App() {
     refreshMessages()
   }
 
-  const [convCollapsed, setConvCollapsed] = useState(true)
-
+  // Collapsible and resizable left panel state (for Connection Cloud DAG)
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
   const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
     const saved = localStorage.getItem("aaa_leftPanelWidth")
-    return saved ? parseInt(saved, 10) : 288
+    return saved ? parseInt(saved, 10) : 320
   })
   const widthRef = useRef(leftPanelWidth)
   widthRef.current = leftPanelWidth
@@ -125,7 +133,7 @@ export default function App() {
     document.body.style.userSelect = "none"
 
     const onMove = (ev: MouseEvent) => {
-      const w = Math.max(200, Math.min(500, startWidth + ev.clientX - startX))
+      const w = Math.max(200, Math.min(600, startWidth + ev.clientX - startX))
       widthRef.current = w
       setLeftPanelWidth(w)
     }
@@ -140,8 +148,8 @@ export default function App() {
     document.addEventListener("mouseup", onUp)
   }
 
+  // Collapsible and resizable right panel state (for SidePanel information)
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(true)
-
   const [rightPanelWidth, setRightPanelWidth] = useState(() => {
     const saved = localStorage.getItem("aaa_rightPanelWidth")
     return saved ? parseInt(saved, 10) : 320
@@ -192,7 +200,7 @@ export default function App() {
     if (activeId) {
       try {
         await addConversationTag(activeId, tag)
-        refresh()
+        refreshConvs()
       } catch (err) {
         console.error("Failed to add tag:", err)
       }
@@ -203,7 +211,7 @@ export default function App() {
     if (activeId) {
       try {
         await removeConversationTag(activeId, tag)
-        refresh()
+        refreshConvs()
       } catch (err) {
         console.error("Failed to remove tag:", err)
       }
@@ -216,6 +224,7 @@ export default function App() {
 
     if (response && response.conversation_id) {
       if (!currentActiveId) {
+        setIsNewChatMode(false)
         setActiveId(response.conversation_id)
         addConversation({
           id: response.conversation_id,
@@ -226,9 +235,8 @@ export default function App() {
         })
         setTimeout(() => refreshTitle(response.conversation_id!), 2000)
       } else {
-        refresh()
+        refreshConvs()
         refreshNotes()
-        // Auto-generate title when conversation reaches 3+ messages if still untitled
         const conv = conversations.find((c) => c.id === currentActiveId)
         if (conv && !conv.title.trim() && conv.message_count >= 2) {
           setTimeout(() => generateTitle(currentActiveId), 3000)
@@ -241,6 +249,7 @@ export default function App() {
     const currentActiveId = activeIdRef.current
     const newId = await upload(files)
     if (newId && !currentActiveId) {
+      setIsNewChatMode(false)
       setActiveId(newId)
       const firstFilename = files[0].name
       const titleBase = firstFilename.substring(0, firstFilename.lastIndexOf('.')) || firstFilename
@@ -253,8 +262,23 @@ export default function App() {
       })
       setTimeout(() => refreshTitle(newId), 3000)
     } else {
-      refresh()
+      refreshConvs()
     }
+  }
+
+  const handleSelectConversation = (id: string) => {
+    setIsNewChatMode(false)
+    setActiveId(id)
+  }
+
+  const handleNewConversation = () => {
+    setIsNewChatMode(true)
+    newConversation()
+  }
+
+  const handleGoHome = () => {
+    setIsNewChatMode(false)
+    setActiveId("")
   }
 
   if (isAuthenticated === null) {
@@ -268,18 +292,6 @@ export default function App() {
   if (isAuthEnabled && !isAuthenticated) {
     return (
       <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
-        <ConversationList
-          conversations={[]}
-          activeId=""
-          loading={false}
-          onSelect={() => {}}
-          onDelete={() => {}}
-          onNew={() => {}}
-          collapsed={convCollapsed}
-          onToggle={() => setConvCollapsed(!convCollapsed)}
-          showLogout={false}
-          width={leftPanelWidth}
-        />
         <ChatView
           messages={[]}
           loading={false}
@@ -301,27 +313,103 @@ export default function App() {
     )
   }
 
-  return (
-    <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
-      <ConversationList
+  // Render the Dedicated Conversation Landing Page if no active chat is loaded
+  if (!activeId && !isNewChatMode) {
+    return (
+      <ConversationLandingPage
         conversations={conversations}
-        activeId={activeId}
         loading={convLoading}
-        onSelect={(id) => setActiveId(id)}
+        loadingMore={convLoadingMore}
+        hasMore={convHasMore}
+        totalCount={convTotalCount}
+        onLoadMore={loadMoreConvs}
+        onSelect={handleSelectConversation}
         onDelete={deleteConversation}
-        onNew={newConversation}
-        collapsed={convCollapsed}
-        onToggle={() => setConvCollapsed(!convCollapsed)}
+        onNew={handleNewConversation}
+        onSearchAndFilter={refreshConvs}
         showLogout={isAuthEnabled}
         onLogout={handleLogout}
-        width={leftPanelWidth}
       />
-      {!convCollapsed && (
+    )
+  }
+
+  // Active chat workspace layout
+  return (
+    <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
+      {/* Sleek, collapsible Left Panel for Connection Cloud DAG */}
+      <div
+        className={`
+          border-[#222] bg-[#0c0c0c]
+          md:border-r md:border-b-0 md:h-full
+          border-b
+          flex flex-col shrink-0
+          overflow-hidden
+          transition-all duration-200
+          ${leftPanelCollapsed ? "md:w-9 w-full" : "w-full"}
+        `}
+        style={!leftPanelCollapsed ? { width: `${leftPanelWidth}px` } : undefined}
+      >
+        {leftPanelCollapsed ? (
+          <button
+            onClick={() => setLeftPanelCollapsed(false)}
+            className="
+              flex items-center gap-1.5 shrink-0
+              text-xs text-[#555] hover:text-[#888]
+              transition-colors
+              md:flex-col md:justify-start md:gap-2 md:py-3 md:px-0
+              md:h-full
+              flex-row justify-start py-2 px-3
+              select-none cursor-pointer
+            "
+          >
+            <span className="text-[10px]">▶</span>
+            <span className="md:[writing-mode:vertical-rl] md:text-[10px] md:tracking-wider text-[11px] font-mono">
+              CONNECTION CLOUD
+            </span>
+          </button>
+        ) : (
+          <>
+            <div className="flex items-center justify-between shrink-0 px-3 py-2 border-b border-[#222]">
+              <span className="text-[10px] font-mono uppercase text-[#666]">Connection Cloud</span>
+              <button
+                onClick={() => setLeftPanelCollapsed(true)}
+                className="flex items-center gap-1 text-[10px] text-[#555] hover:text-[#888] transition-colors cursor-pointer"
+              >
+                <span>◀</span>
+                <span>collapse</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden relative">
+              {activeId ? (
+                <ConnectionCloud
+                  activeLoadedMessages={fullTreeMessages}
+                  notes={notes}
+                  activeMessageId={activeMessageId}
+                  activePathIds={activePathIds}
+                  setActiveMessageId={setActiveMessageId}
+                  commitProposedBranch={commitProposedBranch}
+                  refreshTree={refreshTree}
+                  conversationId={activeId}
+                  onNavigateToMessage={navigateToMessage}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-[#444] text-[10px] font-mono px-4 text-center select-none">
+                  DAG will initialize upon first message inscription
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {!leftPanelCollapsed && (
         <div
           onMouseDown={handleResizeStart}
           className="w-1 cursor-col-resize hover:bg-[#4ade80]/30 active:bg-[#4ade80]/50 transition-colors shrink-0 hidden md:block"
         />
       )}
+
+      {/* Main chat interface */}
       <ChatView
         messages={messages}
         fullTreeMessages={fullTreeMessages}
@@ -349,14 +437,17 @@ export default function App() {
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
         onBranch={setActiveMessageId}
+        onGoHome={handleGoHome}
         className="flex-1 min-w-0"
       />
+
       {!rightPanelCollapsed && (
         <div
           onMouseDown={handleRightResizeStart}
           className="w-1 cursor-col-resize hover:bg-[#4ade80]/30 active:bg-[#4ade80]/50 transition-colors shrink-0 hidden md:block"
         />
       )}
+
       <SidePanel
         uploadedFiles={uploadedFiles}
         conversationId={conversationId}
@@ -371,12 +462,7 @@ export default function App() {
         width={rightPanelWidth}
         panelCollapsed={rightPanelCollapsed}
         onPanelToggle={() => setRightPanelCollapsed(p => !p)}
-        fullTreeMessages={fullTreeMessages}
-        links={links}
         activeMessageId={activeMessageId}
-        activePathIds={activePathIds}
-        setActiveMessageId={setActiveMessageId}
-        commitProposedBranch={commitProposedBranch}
         refreshTree={refreshTree}
       />
     </div>

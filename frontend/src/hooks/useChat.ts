@@ -10,6 +10,7 @@ import {
   reprocessFile,
   commitBranch,
   getConversationTree,
+  getMessagePath,
 } from "../api/client"
 import type { ChatMessage, ConversationFile } from "../api/client"
 
@@ -410,6 +411,27 @@ export function useChat(conversationId: string) {
     }
   }, [conversationId])
 
+  const navigateToMessage = useCallback(async (msgId: number) => {
+    const isLoaded = messages.some((m) => m.id === msgId)
+    if (isLoaded) {
+      setActiveMessageId(msgId)
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const pathMessages = await getMessagePath(msgId)
+      setMessages(pathMessages)
+      setActiveMessageId(msgId)
+    } catch (e) {
+      console.error("Failed to navigate to message path:", e)
+      setError("Failed to navigate to the selected message path.")
+    } finally {
+      setLoading(false)
+    }
+  }, [messages])
+
   return {
     messages: activePathMessages,
     fullTreeMessages: messages,
@@ -418,6 +440,7 @@ export function useChat(conversationId: string) {
     setActiveMessageId,
     activePathIds,
     commitProposedBranch,
+    navigateToMessage,
     loading,
     error,
     send,

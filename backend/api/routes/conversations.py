@@ -25,19 +25,39 @@ router = APIRouter()
 
 
 @router.get("/conversations", response_model=ConversationListResponse)
-async def list_conversations(request: Request, tag: Optional[str] = None):
+async def list_conversations(
+    request: Request,
+    tag: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
+):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     checkpoint_repo = getattr(state, "checkpoint_repo", None)
     if not conv_repo:
-        return ConversationListResponse(conversations=[])
-    convos = conv_repo.list_all(tag=tag)
+        return ConversationListResponse(conversations=[], total_count=0, has_more=False)
+    
+    if limit is not None and offset is None:
+        offset = 0
+
+    convos = conv_repo.list_all(tag=tag, search=search, limit=limit, offset=offset)
+    total_count = conv_repo.count_all(tag=tag, search=search)
 
     res_convos = []
     for c in convos:
         info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, c)
         res_convos.append(ConversationInfo(**info))
-    return ConversationListResponse(conversations=res_convos)
+
+    has_more = False
+    if limit is not None and offset is not None:
+        has_more = (offset + limit) < total_count
+
+    return ConversationListResponse(
+        conversations=res_convos,
+        total_count=total_count,
+        has_more=has_more
+    )
 
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationInfo)
@@ -173,10 +193,11 @@ async def get_conversation_tree(conversation_id: str, request: Request):
     raw_msgs = repo.get_messages_by_conversation(conversation_id)
     nodes = []
     for m in raw_msgs:
+        trimmed_content = m.content[:120] + "..." if len(m.content) > 120 else m.content
         nodes.append(TreeNode(
             id=m.id,
             speaker=m.speaker,
-            content=m.content,
+            content=trimmed_content,
             parent_message_id=m.parent_message_id,
             timestamp=m.timestamp,
         ))

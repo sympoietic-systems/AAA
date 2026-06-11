@@ -277,6 +277,14 @@ export async function getConversationTree(
   return res.json()
 }
 
+export async function getMessagePath(
+  messageId: number
+): Promise<ChatMessage[]> {
+  const res = await fetch(`${BASE}/messages/${messageId}/path`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export interface ImageMetadata {
   id: string
   image_path: string
@@ -544,9 +552,19 @@ export interface ConversationInfo {
   human_summary?: string
 }
 
-export async function listConversations(tag?: string): Promise<{ conversations: ConversationInfo[] }> {
-  const params = tag ? `?tag=${encodeURIComponent(tag)}` : ""
-  const res = await fetch(`${BASE}/conversations${params}`)
+export async function listConversations(
+  tag?: string,
+  search?: string,
+  limit?: number,
+  offset?: number
+): Promise<{ conversations: ConversationInfo[]; total_count?: number; has_more?: boolean }> {
+  const queryParams = new URLSearchParams()
+  if (tag) queryParams.set("tag", tag)
+  if (search) queryParams.set("search", search)
+  if (limit !== undefined) queryParams.set("limit", String(limit))
+  if (offset !== undefined) queryParams.set("offset", String(offset))
+
+  const res = await fetch(`${BASE}/conversations?${queryParams.toString()}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
