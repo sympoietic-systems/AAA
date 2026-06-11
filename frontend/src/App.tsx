@@ -134,7 +134,8 @@ export default function App() {
     document.body.style.userSelect = "none"
 
     const onMove = (ev: MouseEvent) => {
-      const w = Math.max(200, Math.min(600, startWidth + ev.clientX - startX))
+      const maxLeft = Math.floor(window.innerWidth * 0.5)
+      const w = Math.max(200, Math.min(maxLeft, startWidth + ev.clientX - startX))
       widthRef.current = w
       setLeftPanelWidth(w)
     }
@@ -166,8 +167,11 @@ export default function App() {
     document.body.style.userSelect = "none"
 
     const onMove = (ev: MouseEvent) => {
-      const maxW = Math.floor(window.innerWidth * 0.5)
-      const w = Math.max(200, Math.min(maxW, startWidth - (ev.clientX - startX)))
+      const maxRight = Math.floor(window.innerWidth * 0.3)
+      const minChat = Math.floor(window.innerWidth * 0.3)
+      // Right panel can't push chat below its minimum
+      const maxAllowed = Math.min(maxRight, window.innerWidth - leftPanelWidth - minChat)
+      const w = Math.max(200, Math.min(maxAllowed, startWidth - (ev.clientX - startX)))
       rightWidthRef.current = w
       setRightPanelWidth(w)
     }
