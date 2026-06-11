@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, memo } from "react"
 import type { BeliefsResponse, BeliefNodeInfo } from "../../api/client"
 
 interface BeliefsSectionProps {
@@ -288,7 +288,7 @@ function BeliefRow({
   )
 }
 
-export function BeliefsSection({ data, error }: BeliefsSectionProps) {
+function BeliefsSectionComponent({ data, error }: BeliefsSectionProps) {
   const [expandedBelief, setExpandedBelief] = useState<string | null>(null)
   const [showProtos, setShowProtos] = useState(false)
 
@@ -505,3 +505,5 @@ export function BeliefsSection({ data, error }: BeliefsSectionProps) {
     </div>
   )
 }
+
+export const BeliefsSection = memo(BeliefsSectionComponent)

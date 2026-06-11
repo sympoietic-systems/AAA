@@ -26,7 +26,8 @@ interface TelemetryActiveSections {
 export function useTelemetry(
   collapsed: boolean,
   conversationId: string | null,
-  activeSections: TelemetryActiveSections
+  activeSections: TelemetryActiveSections,
+  trigger?: any
 ) {
   // Metrics (Vitality & Diffraction)
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
@@ -155,7 +156,7 @@ export function useTelemetry(
       active = false
       clearTimeout(timeoutId)
     }
-  }, [collapsed, activeSections.health, activeSections.diffraction])
+  }, [collapsed, activeSections.health, activeSections.diffraction, trigger])
 
   // 2. Beliefs - Polls every 15 seconds with jitter
   useEffect(() => {
@@ -190,7 +191,7 @@ export function useTelemetry(
       active = false
       clearTimeout(timeoutId)
     }
-  }, [collapsed, activeSections.beliefs, conversationId])
+  }, [collapsed, activeSections.beliefs, conversationId, trigger])
 
   // 3. Dreaming (Daemon) - Polls every 10 seconds with jitter
   useEffect(() => {
@@ -225,7 +226,7 @@ export function useTelemetry(
       active = false
       clearTimeout(timeoutId)
     }
-  }, [collapsed, activeSections.dreaming])
+  }, [collapsed, activeSections.dreaming, trigger])
 
   // 4. Scheduler (Startup) - Polls every 10 seconds with jitter
   useEffect(() => {
@@ -260,7 +261,7 @@ export function useTelemetry(
       active = false
       clearTimeout(timeoutId)
     }
-  }, [collapsed, activeSections.scheduler])
+  }, [collapsed, activeSections.scheduler, trigger])
 
   // 5. Tokens - Polls every 15 seconds with jitter
   useEffect(() => {
@@ -295,7 +296,7 @@ export function useTelemetry(
       active = false
       clearTimeout(timeoutId)
     }
-  }, [collapsed, activeSections.tokens, conversationId])
+  }, [collapsed, activeSections.tokens, conversationId, trigger])
 
   return {
     metrics,

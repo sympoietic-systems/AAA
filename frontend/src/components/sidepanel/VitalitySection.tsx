@@ -1,3 +1,4 @@
+import { memo } from "react"
 import type { MetricsResponse } from "../../api/client"
 
 interface VitalitySectionProps {
@@ -5,7 +6,7 @@ interface VitalitySectionProps {
   error: string | null
 }
 
-export function VitalitySection({ metrics, error }: VitalitySectionProps) {
+function VitalitySectionComponent({ metrics, error }: VitalitySectionProps) {
   const vitality = metrics?.latest?.conversation_vitality
   const paskHealth = metrics?.latest?.paskian_health
   const state = metrics?.recommendations?.state ?? "unknown"
@@ -136,3 +137,5 @@ export function VitalitySection({ metrics, error }: VitalitySectionProps) {
     </div>
   )
 }
+
+export const VitalitySection = memo(VitalitySectionComponent)

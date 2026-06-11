@@ -158,7 +158,7 @@ export const MessageBubble = memo(function MessageBubble({
   onUpdateNote,
   onBranch,
   onRegenerate,
-  fullTreeMessages = []
+  siblingIds = []
 }: {
   msg: ChatMessage
   previousSignature?: number[] | null
@@ -168,17 +168,14 @@ export const MessageBubble = memo(function MessageBubble({
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   onBranch?: (messageId: number) => void
   onRegenerate?: (userMsgId?: number) => void
-  fullTreeMessages?: ChatMessage[]
+  siblingIds?: number[]
 }) {
   const isHuman = msg.speaker === "human"
   const isSystem = msg.speaker === "system"
 
   // Compute siblings for navigation
-  const siblings = msg.parent_message_id && fullTreeMessages
-    ? fullTreeMessages.filter(m => m.parent_message_id === msg.parent_message_id && m.speaker === msg.speaker).sort((a, b) => a.id - b.id)
-    : []
-  const currentIndex = siblings.findIndex((s) => s.id === msg.id)
-  const hasSiblings = siblings.length > 1
+  const currentIndex = siblingIds.indexOf(msg.id)
+  const hasSiblings = siblingIds.length > 1
   const processedContent = msg.content
     ? msg.content.replace(/<scar_fold>/g, '<scar-fold>').replace(/<\/scar_fold>/g, '</scar-fold>')
     : ""
@@ -490,17 +487,17 @@ export const MessageBubble = memo(function MessageBubble({
           {hasSiblings && currentIndex !== -1 && (
             <div className="flex items-center gap-1 text-[9px] text-[#555] font-mono select-none">
               <button
-                onClick={() => currentIndex > 0 && onBranch && onBranch(siblings[currentIndex - 1].id)}
+                onClick={() => currentIndex > 0 && onBranch && onBranch(siblingIds[currentIndex - 1])}
                 disabled={currentIndex === 0}
                 className="hover:text-[#4ade80] disabled:text-[#222] transition-colors cursor-pointer"
                 title="Previous sibling response"
               >
                 &lt;
               </button>
-              <span className="text-[#666]">{currentIndex + 1}/{siblings.length}</span>
+              <span className="text-[#666]">{currentIndex + 1}/{siblingIds.length}</span>
               <button
-                onClick={() => currentIndex < siblings.length - 1 && onBranch && onBranch(siblings[currentIndex + 1].id)}
-                disabled={currentIndex === siblings.length - 1}
+                onClick={() => currentIndex < siblingIds.length - 1 && onBranch && onBranch(siblingIds[currentIndex + 1])}
+                disabled={currentIndex === siblingIds.length - 1}
                 className="hover:text-[#4ade80] disabled:text-[#222] transition-colors cursor-pointer"
                 title="Next sibling response"
               >
@@ -815,7 +812,7 @@ export const MessageBubble = memo(function MessageBubble({
          areStringArraysEqual(prevProps.msg.active_beliefs, nextProps.msg.active_beliefs) &&
          areNumberArraysEqual(prevProps.msg.structural_signature, nextProps.msg.structural_signature) &&
          areNumberArraysEqual(prevProps.previousSignature, nextProps.previousSignature) &&
-         prevProps.fullTreeMessages === nextProps.fullTreeMessages &&
+         areNumberArraysEqual(prevProps.siblingIds, nextProps.siblingIds) &&
          areNotesEqual(prevProps.notes, nextProps.notes);
 })
 

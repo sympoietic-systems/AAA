@@ -1,3 +1,4 @@
+import { memo } from "react"
 import type { MetricsResponse, DiffractiveInfo } from "../../api/client"
 
 interface DiffractionSectionProps {
@@ -23,7 +24,7 @@ function DiffractiveTooltip({ title, value, desc }: { title: string; value?: str
   )
 }
 
-export function DiffractionSection({ metrics }: DiffractionSectionProps) {
+function DiffractionSectionComponent({ metrics }: DiffractionSectionProps) {
   const diff: DiffractiveInfo | null | undefined = metrics?.diffractive
 
   if (!diff) {
@@ -199,3 +200,5 @@ export function DiffractionSection({ metrics }: DiffractionSectionProps) {
     </div>
   )
 }
+
+export const DiffractionSection = memo(DiffractionSectionComponent)

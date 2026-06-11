@@ -131,12 +131,13 @@ export function SidePanel({
       dreaming: dreamingOpen,
       scheduler: startupOpen,
       tokens: tokensOpen,
-    }
+    },
+    _messageCount
   )
 
-  // DB skills fetch (Symbia's procedural skills) — fetch on mount
+  // DB skills fetch (Symbia's procedural skills) — fetch when panel is open
   useEffect(() => {
-    if (!dbSkillsData && !dbSkillsError) {
+    if (!isCollapsed && dbSkillsOpen && !dbSkillsData && !dbSkillsError) {
       console.log("[Skills] Fetching /api/skills/db...")
       getDbSkills()
         .then(data => {
@@ -151,7 +152,7 @@ export function SidePanel({
           setDbSkillsError(e.message || String(e))
         })
     }
-  }, [dbSkillsData, dbSkillsError])
+  }, [isCollapsed, dbSkillsOpen, dbSkillsData, dbSkillsError])
 
   const handleLoadSkillContent = async (skillName: string) => {
     if (expandedSkill === skillName) {

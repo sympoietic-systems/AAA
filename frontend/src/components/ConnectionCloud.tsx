@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, memo } from "react"
 import type { ChatMessage, NoteInfo } from "../api/client"
 import { confirmResonanceLink, deleteResonanceLink } from "../api/client"
 
@@ -189,7 +189,7 @@ function getDistanceToSegment(x: number, y: number, x1: number, y1: number, x2: 
   return Math.sqrt(dx * dx + dy * dy)
 }
 
-export default function ConnectionCloud({
+function ConnectionCloud({
   messages,
   links,
   notes,
@@ -1268,3 +1268,7 @@ export default function ConnectionCloud({
     </div>
   )
 }
+
+const MemoizedConnectionCloud = memo(ConnectionCloud)
+export default MemoizedConnectionCloud
+

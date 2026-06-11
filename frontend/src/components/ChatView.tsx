@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo } from "../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
@@ -34,6 +34,9 @@ interface Props {
   onBranch?: (messageId: number) => void
   fullTreeMessages?: ChatMessage[]
 }
+
+const EMPTY_ARRAY: NoteInfo[] = []
+const EMPTY_NUM_ARRAY: number[] = []
 
 export function ChatView({
   messages,
@@ -71,6 +74,40 @@ export function ChatView({
   const [editValue, setEditValue] = useState("")
   const [generating, setGenerating] = useState(false)
   const [newTagVal, setNewTagVal] = useState("")
+
+  const notesByMessageId = useMemo(() => {
+    const map = new Map<number, NoteInfo[]>()
+    notes.forEach((note) => {
+      if (note.message_id !== undefined && note.message_id !== null) {
+        if (!map.has(note.message_id)) {
+          map.set(note.message_id, [])
+        }
+        map.get(note.message_id)!.push(note)
+      }
+    })
+    return map
+  }, [notes])
+
+  const siblingsMap = useMemo(() => {
+    const map = new Map<string, number[]>() // Key: `${parent_message_id}_${speaker}`, Value: Array of message IDs sorted chronologically
+    
+    // Group all messages
+    fullTreeMessages.forEach((m) => {
+      const parentId = m.parent_message_id ?? "root"
+      const key = `${parentId}_${m.speaker}`
+      if (!map.has(key)) {
+        map.set(key, [])
+      }
+      map.get(key)!.push(m.id)
+    })
+    
+    // Sort each group
+    map.forEach((ids) => {
+      ids.sort((a, b) => a - b)
+    })
+    
+    return map
+  }, [fullTreeMessages])
 
   const handleAddTagSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -302,7 +339,12 @@ export function ChatView({
             )}
             {messages.map((msg, idx) => {
               const prevMsg = idx > 0 ? messages[idx - 1] : null
-              const msgNotes = notes.filter((n) => n.message_id === msg.id)
+              const msgNotes = notesByMessageId.get(msg.id) || EMPTY_ARRAY
+              
+              const parentId = msg.parent_message_id ?? "root"
+              const key = `${parentId}_${msg.speaker}`
+              const siblingIds = siblingsMap.get(key) || EMPTY_NUM_ARRAY
+
               return (
                 <MessageBubble 
                   key={msg.id} 
@@ -314,7 +356,7 @@ export function ChatView({
                   onUpdateNote={onUpdateNote}
                   onBranch={onBranch}
                   onRegenerate={onRegenerate}
-                  fullTreeMessages={fullTreeMessages}
+                  siblingIds={siblingIds}
                 />
               )
             })}

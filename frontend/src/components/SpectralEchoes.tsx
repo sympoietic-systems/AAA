@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import {
   getSpectralSuggestions,
   createResonanceLink,
@@ -11,7 +11,7 @@ interface SpectralEchoesProps {
   refreshTree: () => void
 }
 
-export function SpectralEchoes({
+function SpectralEchoesComponent({
   conversationId,
   activeMessageId,
   refreshTree,
@@ -194,3 +194,5 @@ export function SpectralEchoes({
     </div>
   )
 }
+
+export const SpectralEchoes = memo(SpectralEchoesComponent)

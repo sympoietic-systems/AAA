@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, memo } from "react"
 import type { TokenResponse } from "../../api/client"
 
 interface TokensSectionProps {
@@ -6,7 +6,7 @@ interface TokensSectionProps {
   error: string | null
 }
 
-export function TokensSection({ tokens, error }: TokensSectionProps) {
+function TokensSectionComponent({ tokens, error }: TokensSectionProps) {
   const [detailOpen, setDetailOpen] = useState(false)
 
   if (error && !tokens) {
@@ -78,3 +78,5 @@ export function TokensSection({ tokens, error }: TokensSectionProps) {
     </div>
   )
 }
+
+export const TokensSection = memo(TokensSectionComponent)

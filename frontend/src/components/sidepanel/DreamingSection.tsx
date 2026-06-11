@@ -1,3 +1,4 @@
+import { memo } from "react"
 import type { DaemonStatusResponse } from "../../api/client"
 import telemetrySchemas from "../../config/telemetry_schemas.json"
 
@@ -25,7 +26,7 @@ function formatRelativeTime(isoString: string): string {
   return `${days}d ago`
 }
 
-export function DreamingSection({ status, error }: DreamingSectionProps) {
+function DreamingSectionComponent({ status, error }: DreamingSectionProps) {
   if (error && !status) {
     return <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>
   }
@@ -176,3 +177,5 @@ export function DreamingSection({ status, error }: DreamingSectionProps) {
     </div>
   )
 }
+
+export const DreamingSection = memo(DreamingSectionComponent)

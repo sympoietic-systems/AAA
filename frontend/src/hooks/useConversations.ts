@@ -10,24 +10,52 @@ import {
 
 export function useConversations() {
   const [conversations, setConversations] = useState<ConversationInfo[]>([])
-  const [activeId, setActiveId] = useState<string>("")
+  const [activeId, setActiveId] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get("c") || ""
+  })
   const [loading, setLoading] = useState(false)
   const initialized = useRef(false)
+
+  // Sync active ID state and URL query parameter in sync
+  const updateActiveId = useCallback((id: string) => {
+    setActiveId(id)
+    const params = new URLSearchParams(window.location.search)
+    if (id) {
+      params.set("c", id)
+    } else {
+      params.delete("c")
+    }
+    const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`
+    window.history.pushState(null, "", newUrl)
+  }, [])
+
+  // Sync state on popstate (browser back/forward button clicks)
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search)
+      const id = params.get("c") || ""
+      setActiveId(id)
+    }
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [])
 
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
       const data = await listConversations()
       setConversations(data.conversations)
-      if (!activeId && data.conversations.length > 0) {
-        setActiveId(data.conversations[0].id)
+      const urlId = new URLSearchParams(window.location.search).get("c")
+      if (!activeId && !urlId && data.conversations.length > 0) {
+        updateActiveId(data.conversations[0].id)
       }
     } catch {
       // silent
     } finally {
       setLoading(false)
     }
-  }, [activeId])
+  }, [activeId, updateActiveId])
 
   useEffect(() => {
     if (!initialized.current) {
@@ -37,8 +65,8 @@ export function useConversations() {
   }, [refresh])
 
   const selectConversation = useCallback((id: string) => {
-    setActiveId(id)
-  }, [])
+    updateActiveId(id)
+  }, [updateActiveId])
 
   const deleteConversation = useCallback(async (id: string) => {
     try {
@@ -46,12 +74,12 @@ export function useConversations() {
       setConversations((prev) => prev.filter((c) => c.id !== id))
       if (activeId === id) {
         const remaining = conversations.filter((c) => c.id !== id)
-        setActiveId(remaining.length > 0 ? remaining[0].id : "")
+        updateActiveId(remaining.length > 0 ? remaining[0].id : "")
       }
     } catch {
       // silent
     }
-  }, [activeId, conversations])
+  }, [activeId, conversations, updateActiveId])
 
   const addConversation = useCallback((conv: ConversationInfo) => {
     setConversations((prev) => {
@@ -60,13 +88,13 @@ export function useConversations() {
       return [conv, ...prev]
     })
     if (!activeId) {
-      setActiveId(conv.id)
+      updateActiveId(conv.id)
     }
-  }, [activeId])
+  }, [activeId, updateActiveId])
 
   const newConversation = useCallback(() => {
-    setActiveId("")
-  }, [])
+    updateActiveId("")
+  }, [updateActiveId])
 
   const refreshTitle = useCallback(async (id: string) => {
     try {

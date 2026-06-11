@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import {
   getAgent,
   getHistory,
@@ -49,7 +49,7 @@ function getAncestorPathIds(messages: ChatMessage[], leafId: number | null): Set
 
 
 export function useChat(conversationId: string) {
-  const PAGE_SIZE = 1000
+  const PAGE_SIZE = 50
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [activeMessageId, setActiveMessageId] = useState<number | null>(null)
   const [links, setLinks] = useState<any[]>([])
@@ -78,7 +78,7 @@ export function useChat(conversationId: string) {
             pollTimerRef.current = null
           }
           // Fetch updated conversation history to display system message after file indexing completes
-          getHistory(1000, 0, convId)
+          getHistory(PAGE_SIZE, 0, convId)
             .then((data) => {
               setMessages(data.messages)
               if (data.messages.length > 0) {
@@ -113,7 +113,7 @@ export function useChat(conversationId: string) {
 
     if (conversationId) {
       setLoading(true)
-      getHistory(1000, 0, conversationId)
+      getHistory(PAGE_SIZE, 0, conversationId)
         .then((data) => {
           setMessages(data.messages)
           if (data.messages.length > 0) {
@@ -383,8 +383,8 @@ export function useChat(conversationId: string) {
     (f) => f.status === "uploading" || f.status === "processing"
   )
 
-  const activePathIds = getAncestorPathIds(messages, activeMessageId)
-  const activePathMessages = messages.filter((m) => activePathIds.has(m.id))
+  const activePathIds = useMemo(() => getAncestorPathIds(messages, activeMessageId), [messages, activeMessageId])
+  const activePathMessages = useMemo(() => messages.filter((m) => activePathIds.has(m.id)), [messages, activePathIds])
 
   const commitProposedBranch = useCallback(async (parentMsgId: number, content: string) => {
     if (!conversationId) return null

@@ -1,3 +1,4 @@
+import { memo } from "react"
 import type { SchedulerStatusResponse } from "../../api/client"
 
 interface StartupSectionProps {
@@ -15,7 +16,7 @@ function getStatusColor(s: string) {
   }
 }
 
-export function StartupSection({ status, error }: StartupSectionProps) {
+function StartupSectionComponent({ status, error }: StartupSectionProps) {
   if (error && !status) {
     return <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>
   }
@@ -105,3 +106,5 @@ export function StartupSection({ status, error }: StartupSectionProps) {
     </div>
   )
 }
+
+export const StartupSection = memo(StartupSectionComponent)
