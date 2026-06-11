@@ -1,4 +1,4 @@
-import { useState, memo } from "react"
+import { useState, useEffect, useRef, memo } from "react"
 import type { BeliefsResponse, BeliefNodeInfo } from "../../api/client"
 
 interface BeliefsSectionProps {
@@ -6,8 +6,10 @@ interface BeliefsSectionProps {
   error: string | null
 }
 
-function getCategoryColor(category: string) {
-  switch (category.toLowerCase()) {
+// ─── Helpers ───────────────────────────────────────────────
+
+function getCategoryColor(c: string) {
+  switch (c.toLowerCase()) {
     case "foundational": return "#4ade80"
     case "ontological": return "#a78bfa"
     case "methodological": return "#facc15"
@@ -15,8 +17,8 @@ function getCategoryColor(category: string) {
   }
 }
 
-function getStageColor(stage: string) {
-  switch (stage) {
+function getStageColor(s: string) {
+  switch (s) {
     case "nucleation": return "#f59e0b"
     case "accretion": return "#fb923c"
     case "crystallized": return "#4ade80"
@@ -26,15 +28,15 @@ function getStageColor(stage: string) {
   }
 }
 
-function getStageLabel(stage: string) {
-  switch (stage) {
+function getStageLabel(s: string) {
+  switch (s) {
     case "nucleation": return "nucleating"
     case "accretion": return "accreting"
     case "crystallized": return "crystallized"
     case "senescence": return "senescing"
     case "collapsed": return "collapsed"
     case "faded": return "faded"
-    default: return stage
+    default: return s
   }
 }
 
@@ -51,254 +53,211 @@ function getCatDesc(cat: string) {
   }
 }
 
-function BeliefTooltip({
-  title,
-  category,
-  mass,
-  confidence,
-  statement,
-  origin,
-  lifecycleStage,
-  lastEvent,
-}: {
-  title: string
-  category: string
-  mass: number
-  confidence: number
-  statement: string
-  origin?: string
-  lifecycleStage?: string
-  lastEvent?: string
-}) {
-  const color = getCategoryColor(category)
-  const stageColor = lifecycleStage ? getStageColor(lifecycleStage) : color
+// ─── Ecosystem Metric ─────────────────────────────────────
 
+function EcoMetric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="
-      absolute bottom-full left-0 mb-2 px-2.5 py-2
-      bg-[#0f0f15] border border-[#2e2e42] rounded
-      text-[10px] text-[#c0caf5] font-sans leading-relaxed
-      whitespace-normal w-64 z-50
-      opacity-0 group-hover:opacity-100
-      transition-opacity duration-150
-      pointer-events-none shadow-xl shadow-black/90
-      backdrop-blur-md
-      text-left
-    ">
-      <div className="flex justify-between items-center border-b border-[#2e2e42]/50 pb-1 mb-1.5">
-        <span className="font-bold text-[#e0e0f0] font-mono text-[9px]">{title}</span>
-        <span
-          className="text-[8px] uppercase font-mono px-1.5 py-px rounded border"
-          style={{ color, borderColor: `${color}40`, backgroundColor: `${color}10` }}
-        >
-          {category}
-        </span>
-      </div>
-      <div className="font-serif italic text-[#a9b1d6] mb-2 leading-relaxed text-[10.5px]">
-        "{statement}"
-      </div>
-      <div className="grid grid-cols-2 gap-1 text-[8px] font-mono text-[#6c6c8a] border-t border-[#2e2e42]/30 pt-1.5">
-        <div>Mass: <span className="text-white">{mass.toFixed(2)}</span></div>
-        <div>Confidence: <span className="text-white">{(confidence * 100).toFixed(0)}%</span></div>
-      </div>
-      {origin && (
-        <div className="text-[8px] font-mono text-[#6c6c8a] mt-1">
-          Origin: <span className="text-[#a9b1d6]">{origin}</span>
-        </div>
-      )}
-      {lifecycleStage && (
-        <div className="text-[8px] font-mono mt-0.5" style={{ color: stageColor }}>
-          Stage: {getStageLabel(lifecycleStage)}
-        </div>
-      )}
-      {lastEvent && (
-        <div className="text-[8px] font-mono text-[#6c6c8a] mt-0.5 leading-snug">
-          Last trace: <span className="text-[#a9b1d6]">{lastEvent}</span>
-        </div>
-      )}
-      <div className="text-[8px] text-[#565f89] mt-1.5 leading-normal">
-        {getCatDesc(category)}
-      </div>
+    <span className="w-[calc(50%-0.5rem)] md:w-auto">
+      <span className="text-[#666]">{label}:</span>{" "}
+      <span className={accent ? "text-[#4ade80] font-bold" : "text-[#ccc]"}>{value}</span>
+    </span>
+  )
+}
+
+// ─── Collapsible Section Wrapper ──────────────────────────
+
+function CollapsibleSection({
+  label, count, icon, iconColor, children, defaultOpen = true,
+}: {
+  label: string; count: number; icon: string; iconColor?: string; children: React.ReactNode; defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 w-full text-left cursor-pointer select-none pb-0.5"
+      >
+        <span className="text-[8px] text-[#666] font-mono leading-none">{open ? "▼" : "▶"}</span>
+        <span style={{ color: iconColor }} className="text-[9px]">{icon}</span>
+        <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider">{label}</span>
+        <span className="text-[8px] text-[#444] ml-0.5">({count})</span>
+      </button>
+      {open && <div className="space-y-0.5">{children}</div>}
     </div>
   )
 }
 
-function BeliefRow({
-  b,
-  isExpanded,
-  onToggle,
+// ─── Compact Node List Item ───────────────────────────────
+
+function NodeListItem({
+  b, isSelected, ghost, stageBadge, stageBadgeColor,
 }: {
-  b: BeliefNodeInfo
-  isExpanded: boolean
-  onToggle: () => void
+  b: BeliefNodeInfo; isSelected: boolean; ghost?: boolean; stageBadge?: string; stageBadgeColor?: string
 }) {
+  const catColor = getCategoryColor(b.category)
+  const stage = b.lifecycle_stage || "crystallized"
+  const isProto = stage === "nucleation" || stage === "accretion"
+  const isGhost = ghost || stage === "collapsed" || stage === "faded"
+
+  return (
+    <div
+      data-belief-id={b.id}
+      data-selected={isSelected ? "true" : undefined}
+      className={`
+        flex items-center gap-1.5 px-1.5 py-1 cursor-pointer
+        border-l-2 transition-colors
+        ${isSelected ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}
+        ${isGhost ? "opacity-50" : isProto ? "opacity-75" : ""}
+      `}
+    >
+      <span className="text-[8px] leading-none shrink-0" style={{ color: isProto ? getStageColor(stage) : isGhost ? "#ef4444" : catColor }}>
+        {isProto ? "◇" : isGhost ? "◆" : "●"}
+      </span>
+      {isGhost && <span className="text-[7px] shrink-0">👻</span>}
+      <span className={`font-mono text-[10px] truncate flex-1 min-w-0 text-[#bbb] ${isGhost ? "line-through" : ""}`}>
+        {b.label}
+      </span>
+      {stageBadge && stageBadgeColor && (
+        <span
+          className="text-[7px] uppercase font-mono px-1 py-px rounded shrink-0"
+          style={{ color: stageBadgeColor, border: `1px solid ${stageBadgeColor}40`, backgroundColor: `${stageBadgeColor}10` }}
+        >
+          {stageBadge}
+        </span>
+      )}
+      <span className="text-[7px] font-mono text-[#555] shrink-0 hidden md:inline">
+        m:{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(1)}
+      </span>
+      <span className="text-[9px] font-mono font-bold text-[#777] shrink-0">
+        {(b.confidence * 100).toFixed(0)}%
+      </span>
+    </div>
+  )
+}
+
+// ─── Belief Detail Panel ──────────────────────────────────
+
+function BeliefDetail({ belief }: { belief: BeliefNodeInfo | null }) {
+  if (!belief) {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50">
+        <span className="text-[10px] text-[#444] italic font-mono">select a node to inspect</span>
+      </div>
+    )
+  }
+
+  const b = belief
   const catColor = getCategoryColor(b.category)
   const stage = b.lifecycle_stage || "crystallized"
   const stageColor = getStageColor(stage)
   const isProto = stage === "nucleation" || stage === "accretion"
   const isGhost = stage === "collapsed" || stage === "faded"
-  const isSenescence = stage === "senescence"
 
   let vec: number[] = []
-  try {
-    if (b.vector_16d) {
-      vec = JSON.parse(b.vector_16d)
-    }
-  } catch { }
+  try { if (b.vector_16d) vec = JSON.parse(b.vector_16d) } catch { }
 
   return (
-    <div
-      key={b.id}
-      className={`border border-[#1f1f2e]/30 bg-[#070709] rounded overflow-hidden transition-all duration-200 ${isGhost ? "opacity-55" : ""} ${isProto ? "opacity-75" : ""} ${isSenescence ? "opacity-85" : ""}`}
-    >
-      <div
-        className="relative group p-1.5 flex items-center justify-between hover:bg-[#12121a] cursor-pointer transition-colors"
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-1.5 truncate min-w-0">
-          <span className="text-[9px] leading-none shrink-0" style={{ color: isProto ? stageColor : isGhost ? stageColor : catColor }}>
-            {isProto ? "◇" : isGhost ? "◆" : "●"}
-          </span>
-          {isGhost && <span className="text-[8px] opacity-60 shrink-0">👻</span>}
-          <span className={`font-mono text-[10px] font-bold truncate text-[#ccc] group-hover:text-[#eee] ${isGhost ? "line-through" : ""}`}>
-            {b.label}
-          </span>
-          {isProto && (
-            <span
-              className="text-[7px] uppercase font-mono px-1 py-px rounded shrink-0"
-              style={{ color: stageColor, border: `1px solid ${stageColor}40`, backgroundColor: `${stageColor}10` }}
-            >
-              {getStageLabel(stage)}
-            </span>
-          )}
+    <div className={`flex-1 min-h-0 flex flex-col border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[10px] font-sans ${isGhost ? "opacity-55" : ""}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[9px] shrink-0" style={{ color: catColor }}>●</span>
+          <span className="font-mono text-[10px] font-bold text-[#ccc] truncate">{b.label}</span>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 pl-2">
-          <span className="text-[8px] font-mono text-[#555]">
-            m:{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(1)}
-          </span>
-          <span className="text-[10px] font-mono font-bold text-[#aaa] group-hover:text-white">
-            {(b.confidence * 100).toFixed(0)}%
-          </span>
-          <span className="text-[8px] text-[#666] font-mono leading-none">
-            {isExpanded ? "▼" : "▶"}
-          </span>
-        </div>
-
-        <BeliefTooltip
-          title={b.label}
-          category={b.category}
-          mass={b.ontological_mass}
-          confidence={b.confidence}
-          statement={b.statement}
-          origin={b.origin}
-          lifecycleStage={stage}
-          lastEvent={b.events[0]?.description}
-        />
+        <span
+          className="text-[7px] uppercase font-mono px-1.5 py-px rounded border shrink-0 ml-2"
+          style={{ color: catColor, borderColor: `${catColor}40`, backgroundColor: `${catColor}10` }}
+        >
+          {b.category}
+        </span>
       </div>
 
-      {isExpanded && (
-        <div className="px-2 pb-2.5 pt-1 border-t border-[#1a1a24] bg-[#0c0c12] space-y-2 text-[10px] font-sans">
-          <div>
-            <div className="text-[#555] font-mono text-[8px] uppercase">[ Statement ]</div>
-            <div className="text-[#ccc] text-[10.5px] italic font-serif leading-relaxed mt-0.5">
-              "{b.statement}"
-            </div>
-          </div>
+      {/* Statement */}
+      <div className="shrink-0">
+        <div className="text-[#555] font-mono text-[8px] uppercase">[ Statement ]</div>
+        <div className="text-[#ccc] text-[10.5px] italic font-serif leading-relaxed mt-0.5">
+          "{b.statement}"
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-2 text-[9px] font-mono text-[#888]">
-            <div>
-              <span className="text-[#444]">Category:</span>{" "}
-              <span style={{ color: catColor }}>{b.category}</span>
-            </div>
-            <div>
-              <span className="text-[#444]">Origin:</span>{" "}
-              <span className="text-[#aaa]">{b.origin}</span>
-            </div>
-            <div>
-              <span className="text-[#444]">Stage:</span>{" "}
-              <span style={{ color: stageColor }}>{getStageLabel(stage)}</span>
-            </div>
-            <div>
-              <span className="text-[#444]">Mass:</span>{" "}
-              <span className="text-[#aaa]">{b.ontological_mass.toFixed(3)}</span>
-            </div>
-          </div>
+      {/* Metadata grid */}
+      <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] font-mono text-[#888]">
+        <div><span className="text-[#444]">Category:</span> <span style={{ color: catColor }}>{b.category}</span></div>
+        <div><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">{b.origin}</span></div>
+        <div><span className="text-[#444]">Stage:</span> <span style={{ color: stageColor }}>{getStageLabel(stage)}</span></div>
+        <div><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(1)}</span></div>
+        <div className="col-span-2"><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa] font-bold">{(b.confidence * 100).toFixed(0)}%</span></div>
+      </div>
 
-          {vec.length > 0 && (
-            <div>
-              <div className="text-[#555] font-mono text-[8px] uppercase mb-1">[ 16D Autopoietic Vector ]</div>
-              <div className="flex items-end gap-0.5 h-4 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit">
-                {vec.map((val: number, idx: number) => {
-                  const heightPercent = Math.min(100, Math.max(10, Math.round(((val + 1.0) / 2.0) * 100)))
-                  return (
-                    <div
-                      key={idx}
-                      style={{ height: `${heightPercent}%` }}
-                      title={`Dimension ${idx + 1}: ${val.toFixed(4)}`}
-                      className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa]"
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          )}
+      <div className="shrink-0 text-[8px] font-mono text-[#6c6c8a] leading-snug">
+        {getCatDesc(b.category)}
+      </div>
 
-          <div>
-            <div className="text-[#555] font-mono text-[8px] uppercase">[ Metabolism Log ]</div>
-            {b.events.length === 0 ? (
-              <div className="text-[9px] text-[#444] italic mt-0.5">No metabolic events logged</div>
-            ) : (
-              <div className="space-y-1.5 mt-1 max-h-24 overflow-y-auto pr-1">
-                {b.events.map((e) => {
-                  const isPositive = e.delta_confidence >= 0
-                  const diffStr = isPositive
-                    ? `+${e.delta_confidence.toFixed(3)}`
-                    : `${e.delta_confidence.toFixed(3)}`
-                  return (
-                    <div
-                      key={e.id}
-                      className="text-[9px] border-b border-[#222]/30 pb-1 last:border-b-0 leading-normal"
-                    >
-                      <div className="flex items-center justify-between text-[#888]">
-                        <span className="font-mono text-[8px]">
-                          {new Date(e.timestamp).toLocaleTimeString()}
-                        </span>
-                        <span
-                          className={`font-mono text-[8px] font-bold ${isPositive ? "text-[#4ade80]" : "text-[#f87171]"
-                            }`}
-                        >
-                          {diffStr}
-                        </span>
-                      </div>
-                      <div className="text-[#ccc] mt-0.5">
-                        <span className="text-[#6c6c8a] font-mono text-[8px] mr-1">
-                          [{e.source_type}:{e.source_id}]
-                        </span>
-                        {e.description}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+      {/* Vector */}
+      {vec.length > 0 && (
+        <div className="shrink-0">
+          <div className="text-[#555] font-mono text-[8px] uppercase mb-1">[ 16D Autopoietic Vector ]</div>
+          <div className="flex items-end gap-0.5 h-4 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit max-w-full overflow-x-auto">
+            {vec.map((val, idx) => {
+              const hp = Math.min(100, Math.max(10, Math.round(((val + 1) / 2) * 100)))
+              return (
+                <div key={idx} style={{ height: `${hp}%`, minWidth: 4 }} title={`D${idx + 1}: ${val.toFixed(4)}`}
+                  className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa] shrink-0"
+                />
+              )
+            })}
           </div>
         </div>
       )}
+
+      {/* Metabolism log — takes remaining height, scrolls internally */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div className="text-[#555] font-mono text-[8px] uppercase shrink-0">[ Metabolism Log ]</div>
+        {b.events.length === 0 ? (
+          <div className="text-[9px] text-[#444] italic mt-0.5">No metabolic events logged</div>
+        ) : (
+          <div className="flex-1 min-h-0 overflow-y-auto mt-1 space-y-1.5">
+            {b.events.map((e) => {
+              const isPos = e.delta_confidence >= 0
+              const diffStr = isPos ? `+${e.delta_confidence.toFixed(3)}` : `${e.delta_confidence.toFixed(3)}`
+              return (
+                <div key={e.id} className="text-[9px] border-b border-[#222]/30 pb-1 last:border-b-0 leading-normal">
+                  <div className="flex items-center justify-between text-[#888]">
+                    <span className="font-mono text-[8px]">{new Date(e.timestamp).toLocaleTimeString()}</span>
+                    <span className={`font-mono text-[8px] font-bold ${isPos ? "text-[#4ade80]" : "text-[#f87171]"}`}>{diffStr}</span>
+                  </div>
+                  <div className="text-[#ccc] mt-0.5">
+                    <span className="text-[#6c6c8a] font-mono text-[8px] mr-1">[{e.source_type}:{e.source_id}]</span>
+                    {e.description}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
+// ─── Main Component ───────────────────────────────────────
+
 function BeliefsSectionComponent({ data, error }: BeliefsSectionProps) {
-  const [expandedBelief, setExpandedBelief] = useState<string | null>(null)
-  const [showProtos, setShowProtos] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const detailRef = useRef<HTMLDivElement>(null)
 
-  if (error && !data) {
-    return <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>
-  }
+  // Scroll to detail on mobile when a belief is selected
+  useEffect(() => {
+    if (!selectedId || !detailRef.current) return
+    const isMobile = window.matchMedia("(max-width: 767px)").matches
+    if (isMobile) {
+      detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }, [selectedId])
 
-  if (!data) {
-    return <p className="text-[9px] text-[#444] font-mono">waiting for data...</p>
-  }
+  if (error && !data) return <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>
+  if (!data) return <p className="text-[9px] text-[#444] font-mono">waiting for data...</p>
 
   const { beliefs: rawBeliefs, proto_beliefs: rawProtos, ghosts: rawGhosts, somatic, ecosystem } = data
 
@@ -307,8 +266,20 @@ function BeliefsSectionComponent({ data, error }: BeliefsSectionProps) {
   const proto_beliefs = (rawProtos || []).filter(b => !isSkillBelief(b))
   const ghosts = (rawGhosts || []).filter(b => !isSkillBelief(b))
 
+  const allBeliefs = [...beliefs, ...proto_beliefs, ...ghosts]
+  const selected = (selectedId ? allBeliefs.find(b => b.id === selectedId) : null) || null
+
+  // Event delegation: click anywhere in the list container
+  const handleListClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = (e.target as HTMLElement).closest("[data-belief-id]") as HTMLElement | null
+    if (!el) return
+    const id = el.getAttribute("data-belief-id")
+    setSelectedId(prev => prev === id ? null : id)
+  }
+
   return (
     <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+      {/* Somatic */}
       {somatic && (
         <div className="mb-3 bg-[#0c0c12] border border-[#222]/40 rounded p-2 font-mono text-[9px] space-y-1">
           <div className="text-[#6c6c8a] uppercase text-[8px] tracking-wider mb-1">[ Somatic Reservoir State ]</div>
@@ -328,108 +299,66 @@ function BeliefsSectionComponent({ data, error }: BeliefsSectionProps) {
         </div>
       )}
 
+      {/* Ecosystem — single line on desktop, 2-column grid on mobile */}
       {ecosystem && (
-        <div className="mb-3 bg-[#0c0c12] border border-[#222]/40 rounded p-2 font-mono text-[9px] space-y-1">
+        <div className="mb-3 bg-[#0c0c12] border border-[#222]/40 rounded p-2 font-mono text-[9px]">
           <div className="text-[#6c6c8a] uppercase text-[8px] tracking-wider mb-1">[ Ecosystem Health ]</div>
-          <div className="grid grid-cols-3 gap-1">
-            <div>
-              <span className="text-[#666]">Diversity:</span>{" "}
-              <span className="text-[#ccc]">{ecosystem.diversity.toFixed(2)}</span>
-            </div>
-            <div>
-              <span className="text-[#666]">Coherence:</span>{" "}
-              <span className="text-[#ccc]">{ecosystem.coherence.toFixed(2)}</span>
-            </div>
-            <div>
-              <span className="text-[#666]">Tension:</span>{" "}
-              <span className="text-[#ccc]">{ecosystem.tension.toFixed(2)}</span>
-            </div>
-            <div>
-              <span className="text-[#666]">Plasticity:</span>{" "}
-              <span className="text-[#ccc]">{ecosystem.plasticity.toFixed(2)}</span>
-            </div>
-            <div>
-              <span className="text-[#666]">Ghosts:</span>{" "}
-              <span className="text-[#ccc]">{ecosystem.ghost_count}/{ecosystem.active_count}</span>
-            </div>
-            <div>
-              <span className="text-[#666]">Vitality:</span>{" "}
-              <span className="text-[#4ade80] font-bold">{ecosystem.eco_vitality.toFixed(3)}</span>
-            </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 md:gap-x-6">
+            <EcoMetric label="Diversity" value={ecosystem.diversity.toFixed(2)} />
+            <EcoMetric label="Coherence" value={ecosystem.coherence.toFixed(2)} />
+            <EcoMetric label="Tension" value={ecosystem.tension.toFixed(2)} />
+            <EcoMetric label="Plasticity" value={ecosystem.plasticity.toFixed(2)} />
+            <EcoMetric label="Ghosts" value={`${ecosystem.ghost_count}/${ecosystem.active_count}`} />
+            <EcoMetric label="Vitality" value={ecosystem.eco_vitality.toFixed(3)} accent />
           </div>
         </div>
       )}
 
+      {/* Category legend */}
       <div className="mb-2 flex items-center justify-between text-[8px] font-mono text-[#555] border-b border-[#222]/30 pb-1.5">
         <span className="text-[#6c6c8a] uppercase tracking-wider">[ Nodes ]</span>
-        <div className="flex gap-2">
-          <span className="text-[#4ade80] flex items-center gap-0.5"><span className="text-[10px]">●</span>found</span>
-          <span className="text-[#a78bfa] flex items-center gap-0.5"><span className="text-[10px]">●</span>ont</span>
-          <span className="text-[#facc15] flex items-center gap-0.5"><span className="text-[10px]">●</span>meth</span>
-          <span className="text-[#f59e0b] flex items-center gap-0.5"><span className="text-[10px]">◇</span>proto</span>
+        <div className="flex gap-1.5 md:gap-2">
+          <span className="text-[#4ade80] flex items-center gap-0.5"><span className="text-[10px]">●</span><span className="hidden md:inline">found</span></span>
+          <span className="text-[#a78bfa] flex items-center gap-0.5"><span className="text-[10px]">●</span><span className="hidden md:inline">ont</span></span>
+          <span className="text-[#facc15] flex items-center gap-0.5"><span className="text-[10px]">●</span><span className="hidden md:inline">meth</span></span>
+          <span className="text-[#f59e0b] flex items-center gap-0.5"><span className="text-[10px]">◇</span><span className="hidden md:inline">proto</span></span>
         </div>
       </div>
 
-      {/* Proto-beliefs (incubating) */}
-      {(proto_beliefs || []).length > 0 && (
-        <div className="mb-2">
-          <div
-            className="flex items-center gap-1.5 cursor-pointer mb-1 group"
-            onClick={() => setShowProtos(!showProtos)}
-          >
-            <span className="text-[8px] text-[#666] font-mono leading-none">
-              {showProtos ? "▼" : "▶"}
-            </span>
-            <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider group-hover:text-[#888]">
-              [ Incubating Proto-Beliefs ] ({proto_beliefs.length})
-            </span>
-          </div>
-          {showProtos && (
-            <div className="space-y-1 ml-3">
-              {proto_beliefs.map((b) => (
-                <BeliefRow
-                  key={b.id}
-                  b={b}
-                  isExpanded={expandedBelief === b.id}
-                  onToggle={() => setExpandedBelief(expandedBelief === b.id ? null : b.id)}
-                />
+      {/* Two-panel layout: list + detail */}
+      <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-300px)]">
+        {/* ── Left: Node list ── */}
+        <div
+          onClick={handleListClick}
+          className="md:w-[38%] shrink-0 w-full space-y-0.5 overflow-y-auto pr-1 select-none"
+        >
+          {proto_beliefs.length > 0 && (
+            <CollapsibleSection label="Incubating Proto-Beliefs" count={proto_beliefs.length} icon="◇" iconColor="#f59e0b">
+              {proto_beliefs.map(b => {
+                const s = b.lifecycle_stage || "accretion"
+                return <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge={getStageLabel(s)} stageBadgeColor={getStageColor(s)} />
+              })}
+            </CollapsibleSection>
+          )}
+
+          {beliefs.map(b => (
+            <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} />
+          ))}
+
+          {ghosts.length > 0 && (
+            <CollapsibleSection label="Spectral Ghosts" count={ghosts.length} icon="👻" defaultOpen={false}>
+              {ghosts.map(b => (
+                <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} ghost />
               ))}
-            </div>
+            </CollapsibleSection>
           )}
         </div>
-      )}
 
-      {/* Active crystallized/senescence beliefs */}
-      <div className="space-y-1">
-        <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block mb-1">
-          [ Active Beliefs ] ({beliefs.length})
-        </span>
-        {beliefs.map((b) => (
-          <BeliefRow
-            key={b.id}
-            b={b}
-            isExpanded={expandedBelief === b.id}
-            onToggle={() => setExpandedBelief(expandedBelief === b.id ? null : b.id)}
-          />
-        ))}
-      </div>
-
-      {/* Ghosts */}
-      {(ghosts || []).length > 0 && (
-        <div className="space-y-1 mt-2">
-          <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block mb-1">
-            [ Spectral Margin Ghosts ] ({ghosts.length})
-          </span>
-          {ghosts.map((b) => (
-            <BeliefRow
-              key={b.id}
-              b={b}
-              isExpanded={expandedBelief === b.id}
-              onToggle={() => setExpandedBelief(expandedBelief === b.id ? null : b.id)}
-            />
-          ))}
+        {/* ── Right: Detail panel ── */}
+        <div ref={detailRef} className="flex-1 min-w-0 w-full md:flex md:flex-col md:min-h-0">
+          <BeliefDetail belief={selected} />
         </div>
-      )}
+      </div>
     </div>
   )
 }
