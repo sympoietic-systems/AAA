@@ -31,6 +31,7 @@ export function SidePanel({
   width,
   panelCollapsed,
   onPanelToggle,
+  onNavigateNode,
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
@@ -45,6 +46,7 @@ export function SidePanel({
   width?: number
   panelCollapsed?: boolean
   onPanelToggle?: () => void
+  onNavigateNode?: (messageId: number) => void
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const isCollapsed = panelCollapsed !== undefined ? panelCollapsed : collapsed
@@ -202,6 +204,7 @@ export function SidePanel({
                     notes={notes}
                     onDeleteNote={onDeleteNote}
                     onUpdateNote={onUpdateNote}
+                    onNavigate={onNavigateNode}
                   />
                 </div>
               )}

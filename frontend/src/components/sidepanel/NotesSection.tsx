@@ -5,22 +5,28 @@ interface NotesSectionProps {
   notes: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
+  onNavigate?: (messageId: number) => void
 }
 
 function NotesSectionComponent({
   notes,
   onDeleteNote,
+  onNavigate,
 }: NotesSectionProps) {
   const [scrollFailed, setScrollFailed] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  const handleGoToNote = (e: React.MouseEvent, noteId: string) => {
+  const handleGoToNote = (e: React.MouseEvent, note: NoteInfo) => {
     e.stopPropagation()
+    if (onNavigate) {
+      onNavigate(note.message_id)
+      return
+    }
     setScrollFailed(null)
 
-    const primaryEl = document.getElementById(`note-highlight-${noteId}`)
-    const legacyEl = !primaryEl ? document.getElementById(noteId) : null
-    const segmentEl = !primaryEl && !legacyEl ? document.querySelector(`[data-note-id="${noteId}"]`) : null
+    const primaryEl = document.getElementById(`note-highlight-${note.id}`)
+    const legacyEl = !primaryEl ? document.getElementById(note.id) : null
+    const segmentEl = !primaryEl && !legacyEl ? document.querySelector(`[data-note-id="${note.id}"]`) : null
 
     const targetEl = primaryEl || legacyEl || segmentEl
 
@@ -37,7 +43,7 @@ function NotesSectionComponent({
 
       targetEl.scrollIntoView({ behavior: 'auto', block: 'center' })
     } else {
-      setScrollFailed(noteId)
+      setScrollFailed(note.id)
       setTimeout(() => setScrollFailed(null), 3000)
     }
   }
@@ -72,7 +78,7 @@ function NotesSectionComponent({
                 "{note.selected_text}"
               </span>
               <button
-                onClick={(e) => handleGoToNote(e, note.id)}
+                onClick={(e) => handleGoToNote(e, note)}
                 className="shrink-0 text-[#555] hover:text-[#4ade80] transition-colors opacity-0 group-hover/note:opacity-100 ml-0.5"
                 title="Go to note in conversation"
               >

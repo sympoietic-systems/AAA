@@ -92,6 +92,7 @@ export default function App() {
     siblingNodes,
     childNodes,
     treeNodes,
+    history,
   } = useChat(activeId)
 
   const {
@@ -487,6 +488,7 @@ export default function App() {
         onNavigateToMessage={navigateToMessage}
         onGoHome={handleGoHome}
         className="flex-1 min-w-0"
+        history={history}
       />
 
       {!rightPanelCollapsed && (
@@ -510,6 +512,7 @@ export default function App() {
         width={rightPanelWidth}
         panelCollapsed={rightPanelCollapsed}
         onPanelToggle={() => setRightPanelCollapsed(p => !p)}
+        onNavigateNode={navigateToMessage}
       />
     </div>
   )

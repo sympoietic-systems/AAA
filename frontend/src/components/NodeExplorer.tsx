@@ -34,6 +34,7 @@ interface Props {
   onRemoveTag?: (tag: string) => void
   onNavigateToMessage: (messageId: number) => void
   onGoHome?: () => void
+  history?: { id: number; speaker: string; snippet: string }[]
 }
 
 const EMPTY_ARRAY: NoteInfo[] = []
@@ -327,6 +328,7 @@ export function NodeExplorer({
   onRemoveTag,
   onNavigateToMessage,
   onGoHome,
+  history = [],
 }: Props) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleVal, setTitleVal] = useState(conversationTitle)
@@ -475,6 +477,25 @@ export function NodeExplorer({
           </div>
         ) : (
           <div className="flex flex-col gap-1">
+            {/* Traversal History Trail */}
+            {history && history.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-[#0c0c0e]/80 border border-[#1b1b20] rounded-sm text-[9px] font-mono mb-3 select-none">
+                <span className="text-[#555] uppercase tracking-wider">Recent:</span>
+                {history.map((item, idx) => (
+                  <div key={item.id} className="flex items-center gap-1.5">
+                    {idx > 0 && <span className="text-[#333]">&gt;</span>}
+                    <button
+                      onClick={() => onNavigateToMessage(item.id)}
+                      className="px-1.5 py-0.5 rounded-sm bg-[#121214] border border-[#222] text-[#888] hover:text-[#4ade80] hover:border-[#4ade80]/40 transition-all cursor-pointer truncate max-w-[130px] font-mono leading-none"
+                      title={`Jump to ${item.speaker === "human" ? "Human" : "Apparatus"} message: ${item.snippet}`}
+                    >
+                      {item.speaker === "human" ? "H" : "A"}: {item.snippet}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* 1. Parent Node Panel */}
             <ParentNodeCard
               parentMsg={parentNode}

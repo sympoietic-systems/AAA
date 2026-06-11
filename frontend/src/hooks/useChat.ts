@@ -70,6 +70,34 @@ export function useChat(conversationId: string) {
   }, [])
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
+  const [history, setHistory] = useState<{ id: number; speaker: string; snippet: string }[]>([])
+
+  const addToHistory = useCallback((msg: ChatMessage) => {
+    setHistory((prev) => {
+      const filtered = prev.filter((item) => item.id !== msg.id)
+      const snippet = msg.content
+        ? msg.content.replace(/<[^>]*>/g, "").substring(0, 30).trim() + (msg.content.length > 30 ? "..." : "")
+        : ""
+      const newEntry = {
+        id: msg.id,
+        speaker: msg.speaker,
+        snippet: snippet || `[${msg.speaker}]`,
+      }
+      return [newEntry, ...filtered].slice(0, 8)
+    })
+  }, [])
+
+  const selectMessage = useCallback((msgId: number) => {
+    setActiveMessageId((prevId) => {
+      if (prevId !== null && prevId !== msgId) {
+        const currentMsg = messages.find((m) => m.id === prevId)
+        if (currentMsg) {
+          addToHistory(currentMsg)
+        }
+      }
+      return msgId
+    })
+  }, [messages, addToHistory])
   const [files, setFiles] = useState<ConversationFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -413,6 +441,13 @@ export function useChat(conversationId: string) {
   }, [conversationId, fetchTree])
 
   const navigateToMessage = useCallback(async (msgId: number) => {
+    if (activeMessageId !== null && activeMessageId !== msgId) {
+      const currentMsg = messages.find((m) => m.id === activeMessageId)
+      if (currentMsg) {
+        addToHistory(currentMsg)
+      }
+    }
+
     const isLoaded = messages.some((m) => m.id === msgId)
     if (isLoaded) {
       setActiveMessageId(msgId)
@@ -431,7 +466,7 @@ export function useChat(conversationId: string) {
     } finally {
       setLoading(false)
     }
-  }, [messages])
+  }, [messages, activeMessageId, addToHistory])
 
   const selectedNode = useMemo(() => {
     return messages.find((m) => m.id === activeMessageId) || null
@@ -460,7 +495,7 @@ export function useChat(conversationId: string) {
     fullTreeMessages: messages,
     links,
     activeMessageId,
-    setActiveMessageId,
+    setActiveMessageId: selectMessage,
     activePathIds,
     commitProposedBranch,
     navigateToMessage,
@@ -485,6 +520,7 @@ export function useChat(conversationId: string) {
     siblingNodes,
     childNodes,
     treeNodes,
+    history,
   }
 }
 
