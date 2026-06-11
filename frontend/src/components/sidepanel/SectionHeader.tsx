@@ -1,3 +1,5 @@
+import { memo } from "react"
+
 interface SectionHeaderProps {
   label: string
   count?: number
@@ -5,7 +7,7 @@ interface SectionHeaderProps {
   onToggle: () => void
 }
 
-export function SectionHeader({
+function SectionHeaderComponent({
   label,
   count,
   open,
@@ -22,3 +24,5 @@ export function SectionHeader({
     </button>
   )
 }
+
+export const SectionHeader = memo(SectionHeaderComponent)

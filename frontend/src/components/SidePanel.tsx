@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import type {
   ConversationFile,
   ImageMetadata,
@@ -7,7 +7,6 @@ import type {
   DocumentMetadata,
 } from "../api/client"
 import { getFileSummary } from "../api/client"
-import { useTelemetry } from "../hooks/useTelemetry"
 import { SectionHeader } from "./sidepanel/SectionHeader"
 import { VitalitySection } from "./sidepanel/VitalitySection"
 import { DiffractionSection } from "./sidepanel/DiffractionSection"
@@ -16,13 +15,14 @@ import { NotesSection } from "./sidepanel/NotesSection"
 import { SedimentSection } from "./sidepanel/SedimentSection"
 import { SummarySection } from "./sidepanel/SummarySection"
 import { MemoryNodesSection } from "./sidepanel/MemoryNodesSection"
+import { AttractorsSection } from "./sidepanel/AttractorsSection"
 
 export function SidePanel({
   uploadedFiles = [],
   conversationId,
   onDeleteFile,
   onReprocessFile,
-  messageCount: _messageCount = 0,
+  messageCount = 0,
   notes = [],
   onDeleteNote,
   onUpdateNote,
@@ -48,10 +48,10 @@ export function SidePanel({
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const isCollapsed = panelCollapsed !== undefined ? panelCollapsed : collapsed
-  const togglePanel = () => {
+  const togglePanel = useCallback(() => {
     if (onPanelToggle) onPanelToggle()
     else setCollapsed(p => !p)
-  }
+  }, [onPanelToggle])
 
   // Section visibility states
   const [healthOpen, setHealthOpen] = useState(false)
@@ -63,7 +63,7 @@ export function SidePanel({
   const [memoryNodesOpen, setMemoryNodesOpen] = useState(false)
   const [attractorsOpen, setAttractorsOpen] = useState(false)
 
-  // Sediment detail state
+  // Sediment detail state (file summary expansion)
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
   const [loadedSummaries, setLoadedSummaries] = useState<Record<string, {
     summary: string | null
@@ -73,28 +73,6 @@ export function SidePanel({
     document_metadata?: DocumentMetadata | null
   }>>({})
   const [loadingSummary, setLoadingSummary] = useState<string | null>(null)
-
-  // Telemetry — only conversation-scoped metrics
-  const {
-    metrics,
-    metricsError,
-    tokens,
-    tokensError,
-    beliefs,
-    beliefsError,
-  } = useTelemetry(
-    isCollapsed,
-    conversationId || null,
-    {
-      health: healthOpen,
-      diffraction: diffractiveOpen,
-      beliefs: attractorsOpen,
-      dreaming: false,
-      scheduler: false,
-      tokens: tokensOpen,
-    },
-    _messageCount
-  )
 
   const handleToggleSummary = async (fileName: string) => {
     if (expandedFile === fileName) {
@@ -123,6 +101,17 @@ export function SidePanel({
       }
     }
   }
+
+  const handleNotesOpenToggle = useCallback(() => setNotesOpen(o => !o), [])
+  const handleSummaryOpenToggle = useCallback(() => setSummaryOpen(o => !o), [])
+  const handleMemoryNodesOpenToggle = useCallback(() => setMemoryNodesOpen(o => !o), [])
+  const handleSedimentOpenToggle = useCallback(() => setSedimentOpen(o => !o), [])
+  const handleTokensOpenToggle = useCallback(() => setTokensOpen(o => !o), [])
+  const handleHealthOpenToggle = useCallback(() => setHealthOpen(o => !o), [])
+  const handleDiffractiveOpenToggle = useCallback(() => setDiffractiveOpen(o => !o), [])
+  const handleAttractorsOpenToggle = useCallback(() => setAttractorsOpen(o => !o), [])
+
+  const panelOpen = !isCollapsed
 
   return (
     <div
@@ -175,7 +164,7 @@ export function SidePanel({
               <SectionHeader
                 label="Summary"
                 open={summaryOpen}
-                onToggle={() => setSummaryOpen(!summaryOpen)}
+                onToggle={handleSummaryOpenToggle}
               />
               {summaryOpen && (
                 <div className="pl-3">
@@ -188,11 +177,14 @@ export function SidePanel({
               <SectionHeader
                 label="Memory Nodes"
                 open={memoryNodesOpen}
-                onToggle={() => setMemoryNodesOpen(!memoryNodesOpen)}
+                onToggle={handleMemoryNodesOpenToggle}
               />
               {memoryNodesOpen && (
                 <div className="pl-3">
-                  <MemoryNodesSection conversationId={conversationId} />
+                  <MemoryNodesSection
+                    conversationId={conversationId}
+                    enabled={panelOpen && memoryNodesOpen}
+                  />
                 </div>
               )}
             </div>
@@ -202,7 +194,7 @@ export function SidePanel({
                 label="Notes"
                 count={notes.length}
                 open={notesOpen}
-                onToggle={() => setNotesOpen(!notesOpen)}
+                onToggle={handleNotesOpenToggle}
               />
               {notesOpen && (
                 <div className="pl-3">
@@ -220,7 +212,7 @@ export function SidePanel({
                 label="Sediment"
                 count={uploadedFiles.length}
                 open={sedimentOpen}
-                onToggle={() => setSedimentOpen(!sedimentOpen)}
+                onToggle={handleSedimentOpenToggle}
               />
               {sedimentOpen && (
                 <SedimentSection
@@ -240,11 +232,15 @@ export function SidePanel({
               <SectionHeader
                 label="Tokens"
                 open={tokensOpen}
-                onToggle={() => setTokensOpen(!tokensOpen)}
+                onToggle={handleTokensOpenToggle}
               />
               {tokensOpen && (
                 <div className="pl-3">
-                  <TokensSection tokens={tokens} error={tokensError} />
+                  <TokensSection
+                    conversationId={conversationId}
+                    enabled={panelOpen && tokensOpen}
+                    messageCount={messageCount}
+                  />
                 </div>
               )}
             </div>
@@ -253,11 +249,14 @@ export function SidePanel({
               <SectionHeader
                 label="Vitality"
                 open={healthOpen}
-                onToggle={() => setHealthOpen(!healthOpen)}
+                onToggle={handleHealthOpenToggle}
               />
               {healthOpen && (
                 <div className="pl-3">
-                  <VitalitySection metrics={metrics} error={metricsError} />
+                  <VitalitySection
+                    enabled={panelOpen && healthOpen}
+                    messageCount={messageCount}
+                  />
                 </div>
               )}
             </div>
@@ -266,11 +265,14 @@ export function SidePanel({
               <SectionHeader
                 label="Diffraction"
                 open={diffractiveOpen}
-                onToggle={() => setDiffractiveOpen(!diffractiveOpen)}
+                onToggle={handleDiffractiveOpenToggle}
               />
               {diffractiveOpen && (
                 <div className="pl-3">
-                  <DiffractionSection metrics={metrics} />
+                  <DiffractionSection
+                    enabled={panelOpen && diffractiveOpen}
+                    messageCount={messageCount}
+                  />
                 </div>
               )}
             </div>
@@ -279,64 +281,15 @@ export function SidePanel({
               <SectionHeader
                 label="Attractors"
                 open={attractorsOpen}
-                onToggle={() => setAttractorsOpen(!attractorsOpen)}
+                onToggle={handleAttractorsOpenToggle}
               />
               {attractorsOpen && (
-                <div className="pl-3 text-[10px] font-mono space-y-2">
-                  {beliefsError ? (
-                    <p className="text-[9px] text-[#ef4444]">{beliefsError}</p>
-                  ) : !beliefs ? (
-                    <p className="text-[9px] text-[#444] animate-pulse">loading...</p>
-                  ) : (
-                    <>
-                      {beliefs.attractor_window.length === 0 ? (
-                        <p className="text-[9px] text-[#444] italic">No active attractors</p>
-                      ) : (
-                        <div>
-                          <span className="text-[#6c6c8a] text-[8px] uppercase tracking-wider block mb-1">
-                            [ Attractor Window ]
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {beliefs.attractor_window.map((label) => {
-                              const b = [...(beliefs.beliefs || []), ...(beliefs.proto_beliefs || []), ...(beliefs.ghosts || [])].find(x => x.label === label)
-                              const catColor =
-                                b?.category === "foundational" ? "#4ade80"
-                                : b?.category === "ontological" ? "#a78bfa"
-                                : b?.category === "methodological" ? "#facc15"
-                                : "#555"
-                              return (
-                                <span
-                                  key={label}
-                                  title={b ? `${b.category} · mass ${b.ontological_mass.toFixed(1)} · ${(b.confidence * 100).toFixed(0)}%` : label}
-                                  className="text-[9px] font-mono bg-[#141414] text-[#aaa] border border-[#222] px-1.5 py-0.5 rounded inline-flex items-center gap-1 cursor-help hover:border-[#444] transition-colors"
-                                >
-                                  <span className="text-[8px] leading-none" style={{ color: catColor }}>●</span>
-                                  {label}
-                                </span>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-                      {beliefs.spectral_margin.length > 0 && (
-                        <div>
-                          <span className="text-[#6c6c8a] text-[8px] uppercase tracking-wider block mb-1">
-                            [ Spectral Margin ]
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {beliefs.spectral_margin.map((label) => (
-                              <span
-                                key={label}
-                                className="text-[9px] font-mono bg-[#141414] text-[#888]/60 border border-[#222]/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 opacity-70 line-through cursor-help hover:border-[#444]/60 transition-colors"
-                              >
-                                👻 {label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
+                <div className="pl-3">
+                  <AttractorsSection
+                    conversationId={conversationId}
+                    enabled={panelOpen && attractorsOpen}
+                    messageCount={messageCount}
+                  />
                 </div>
               )}
             </div>

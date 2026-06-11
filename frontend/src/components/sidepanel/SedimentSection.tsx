@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
@@ -158,7 +158,6 @@ function SedimentInjectionModal({
                         : "hover:bg-[#151515] border border-transparent"
                       }`}
                   >
-                    {/* Checkbox */}
                     <div className={`w-3.5 h-3.5 mt-0.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${isSelected
                         ? "border-[#a78bfa] bg-[#a78bfa]/20"
                         : "border-[#333] bg-[#0a0a0a]"
@@ -213,7 +212,7 @@ function SedimentInjectionModal({
   )
 }
 
-export function SedimentSection({
+function SedimentSectionComponent({
   conversationId,
   uploadedFiles,
   onDeleteFile,
@@ -226,15 +225,37 @@ export function SedimentSection({
   const [showInjectModal, setShowInjectModal] = useState(false)
   const [injections, setInjections] = useState<SedimentInjectionInfo[]>([])
 
-  const loadInjections = () => {
-    if (!conversationId) return
-    getConversationInjections(conversationId)
-      .then((res) => setInjections(res.injections))
-      .catch(() => setInjections([]))
-  }
-
+  // Fetch + poll injections
   useEffect(() => {
-    loadInjections()
+    if (!conversationId) {
+      setInjections([])
+      return
+    }
+
+    let active = true
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    const fetchInjections = async () => {
+      if (!active) return
+      try {
+        const res = await getConversationInjections(conversationId)
+        if (active) setInjections(res.injections)
+      } catch {
+        if (active) setInjections([])
+      }
+
+      if (active) {
+        const delay = 60000 + (Math.random() - 0.5) * 5000 // 60s ± 2.5s
+        timeoutId = setTimeout(fetchInjections, delay)
+      }
+    }
+
+    fetchInjections()
+
+    return () => {
+      active = false
+      clearTimeout(timeoutId)
+    }
   }, [conversationId])
 
   const handleRemoveInjection = async (injectionId: string) => {
@@ -253,6 +274,38 @@ export function SedimentSection({
     if (type === "epub" || type === "mobi") return "📖"
     if (type === "web_probe") return "🌐"
     return "📄"
+  }
+
+  const renderSummaryContent = (fileName: string) => {
+    if (loadingSummary === fileName) {
+      return <div className="p-2 text-[9px] text-[#888] font-mono animate-pulse">Loading summary...</div>
+    }
+
+    const data = loadedSummaries[fileName]
+    if (!data) {
+      return <div className="p-2 text-[9px] text-[#888] font-mono">No summary available.</div>
+    }
+
+    if (data.image_metadata) {
+      return <ImageMetadataCard metadata={data.image_metadata} />
+    }
+    if (data.web_metadata) {
+      return <WebMetadataCard metadata={data.web_metadata} summary={data.summary} />
+    }
+    if (data.document_metadata) {
+      return <DocumentMetadataCard metadata={data.document_metadata} summary={data.summary} />
+    }
+    return (
+      <div className="p-2 text-[9px] text-[#888] font-mono leading-relaxed markdown-body">
+        {data.summary ? (
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>
+            {data.summary}
+          </ReactMarkdown>
+        ) : (
+          "No summary available."
+        )}
+      </div>
+    )
   }
 
   return (
@@ -315,29 +368,7 @@ export function SedimentSection({
 
               {expandedFile === inj.source_file_name && (
                 <div className="mt-1 ml-4 bg-[#141414] border border-[#222] rounded overflow-hidden">
-                  {loadingSummary === inj.source_file_name ? (
-                    <div className="p-2 text-[9px] text-[#888] font-mono animate-pulse">Loading summary...</div>
-                  ) : (
-                    <div>
-                      {loadedSummaries[inj.source_file_name]?.image_metadata ? (
-                        <ImageMetadataCard metadata={loadedSummaries[inj.source_file_name].image_metadata!} />
-                      ) : loadedSummaries[inj.source_file_name]?.web_metadata ? (
-                        <WebMetadataCard metadata={loadedSummaries[inj.source_file_name].web_metadata!} summary={loadedSummaries[inj.source_file_name].summary} />
-                      ) : loadedSummaries[inj.source_file_name]?.document_metadata ? (
-                        <DocumentMetadataCard metadata={loadedSummaries[inj.source_file_name].document_metadata!} summary={loadedSummaries[inj.source_file_name].summary} />
-                      ) : (
-                        <div className="p-2 text-[9px] text-[#888] font-mono leading-relaxed markdown-body">
-                          {loadedSummaries[inj.source_file_name]?.summary ? (
-                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>
-                              {loadedSummaries[inj.source_file_name].summary}
-                            </ReactMarkdown>
-                          ) : (
-                            "No summary available."
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {renderSummaryContent(inj.source_file_name)}
                 </div>
               )}
             </div>
@@ -413,29 +444,7 @@ export function SedimentSection({
 
               {expandedFile === f.file_name && (
                 <div className="mt-1 ml-4 bg-[#141414] border border-[#222] rounded overflow-hidden">
-                  {loadingSummary === f.file_name ? (
-                    <div className="p-2 text-[9px] text-[#888] font-mono animate-pulse">Loading summary...</div>
-                  ) : (
-                    <div>
-                      {loadedSummaries[f.file_name]?.image_metadata ? (
-                        <ImageMetadataCard metadata={loadedSummaries[f.file_name].image_metadata!} />
-                      ) : loadedSummaries[f.file_name]?.web_metadata ? (
-                        <WebMetadataCard metadata={loadedSummaries[f.file_name].web_metadata!} summary={loadedSummaries[f.file_name].summary} />
-                      ) : loadedSummaries[f.file_name]?.document_metadata ? (
-                        <DocumentMetadataCard metadata={loadedSummaries[f.file_name].document_metadata!} summary={loadedSummaries[f.file_name].summary} />
-                      ) : (
-                        <div className="p-2 text-[9px] text-[#888] font-mono leading-relaxed markdown-body">
-                          {loadedSummaries[f.file_name]?.summary ? (
-                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>
-                              {loadedSummaries[f.file_name].summary}
-                            </ReactMarkdown>
-                          ) : (
-                            "No summary available."
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {renderSummaryContent(f.file_name)}
                 </div>
               )}
             </div>
@@ -454,9 +463,16 @@ export function SedimentSection({
         <SedimentInjectionModal
           conversationId={conversationId}
           onClose={() => setShowInjectModal(false)}
-          onInjected={loadInjections}
+          onInjected={() => {
+            // Refetch after injection
+            getConversationInjections(conversationId)
+              .then((res) => setInjections(res.injections))
+              .catch(() => setInjections([]))
+          }}
         />
       )}
     </div>
   )
 }
+
+export const SedimentSection = memo(SedimentSectionComponent)

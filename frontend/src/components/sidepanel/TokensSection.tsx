@@ -1,13 +1,58 @@
-import { useState, memo } from "react"
+import { useState, useEffect, memo } from "react"
+import { getTokens } from "../../api/client"
 import type { TokenResponse } from "../../api/client"
 
 interface TokensSectionProps {
-  tokens: TokenResponse | null
-  error: string | null
+  conversationId?: string
+  enabled?: boolean
+  messageCount?: number
 }
 
-function TokensSectionComponent({ tokens, error }: TokensSectionProps) {
+function TokensSectionComponent({ conversationId, enabled = false, messageCount = 0 }: TokensSectionProps) {
+  const [tokens, setTokens] = useState<TokenResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
+
+  useEffect(() => {
+    if (!enabled) {
+      setTokens(null)
+      return
+    }
+
+    let active = true
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    const tick = async () => {
+      if (!active) return
+      setLoading(prev => !tokens ? true : prev)
+      try {
+        const res = await getTokens(conversationId || undefined)
+        if (active) {
+          setTokens(res)
+          setError(null)
+        }
+      } catch (e: any) {
+        if (active) {
+          setError(e.message || "Failed to fetch tokens")
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+
+      if (active) {
+        const delay = 15000 + (Math.random() - 0.5) * 1000
+        timeoutId = setTimeout(tick, delay)
+      }
+    }
+
+    tick()
+
+    return () => {
+      active = false
+      clearTimeout(timeoutId)
+    }
+  }, [enabled, conversationId, messageCount])
 
   if (error && !tokens) {
     return <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useChat } from "./hooks/useChat"
 import { useConversations } from "./hooks/useConversations"
 import { useNotes } from "./hooks/useNotes"
@@ -113,15 +113,23 @@ export default function App() {
     }
   }
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = useCallback(async (noteId: string) => {
     await removeNote(noteId)
     refreshMessages()
-  }
+  }, [removeNote, refreshMessages])
 
-  const handleUpdateNote = async (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => {
+  const handleUpdateNote = useCallback(async (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => {
     await editNote(noteId, comment, visibility)
     refreshMessages()
-  }
+  }, [editNote, refreshMessages])
+
+  const handleDeleteFile = useCallback((fileName: string) => {
+    deleteFile(fileName)
+  }, [deleteFile])
+
+  const handleReprocessFile = useCallback((fileName: string) => {
+    reprocess(fileName)
+  }, [reprocess])
 
   // Collapsible and resizable left panel state (for Connection Cloud DAG)
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
@@ -484,8 +492,8 @@ export default function App() {
       <SidePanel
         uploadedFiles={uploadedFiles}
         conversationId={conversationId}
-        onDeleteFile={deleteFile}
-        onReprocessFile={reprocess}
+        onDeleteFile={handleDeleteFile}
+        onReprocessFile={handleReprocessFile}
         messageCount={messages.length}
         notes={notes}
         onDeleteNote={handleDeleteNote}

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, memo } from "react"
 import type { NoteInfo } from "../../api/client"
 
 interface NotesSectionProps {
@@ -7,7 +7,7 @@ interface NotesSectionProps {
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
 }
 
-export function NotesSection({
+function NotesSectionComponent({
   notes,
   onDeleteNote,
 }: NotesSectionProps) {
@@ -18,22 +18,16 @@ export function NotesSection({
     e.stopPropagation()
     setScrollFailed(null)
 
-    // Find the highlight element in the chat
-    // Support both: id="note-highlight-{noteId}" (primary) and data-note-id="{noteId}" (all segments)
     const primaryEl = document.getElementById(`note-highlight-${noteId}`)
-    // Also check legacy format: id="{noteId}" directly
     const legacyEl = !primaryEl ? document.getElementById(noteId) : null
-    // Check data-note-id segments as fallback
     const segmentEl = !primaryEl && !legacyEl ? document.querySelector(`[data-note-id="${noteId}"]`) : null
 
     const targetEl = primaryEl || legacyEl || segmentEl
 
     if (targetEl) {
-      // Check if the message is a collapsed user message — if so, expand it first
       const msgContainer = targetEl.closest('.markdown-body')
       const collapsedDiv = msgContainer?.querySelector('.max-h-24.overflow-y-auto')
       if (collapsedDiv) {
-        // Find the expand button and click it
         const bubbleEl = msgContainer?.closest('[class*="mb-3"]')
         const expandBtn = bubbleEl?.querySelector('button') as HTMLElement | null
         if (expandBtn && expandBtn.textContent?.includes('expand')) {
@@ -43,7 +37,6 @@ export function NotesSection({
 
       targetEl.scrollIntoView({ behavior: 'auto', block: 'center' })
     } else {
-      // Note highlight not found — the message might not be loaded (paginated out)
       setScrollFailed(noteId)
       setTimeout(() => setScrollFailed(null), 3000)
     }
@@ -143,3 +136,5 @@ export function NotesSection({
     </div>
   )
 }
+
+export const NotesSection = memo(NotesSectionComponent)

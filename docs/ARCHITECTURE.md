@@ -306,7 +306,7 @@ row at insert time. System prompt token count computed once at startup
 
 ### Display
 - **SidePanel**: "Tokens" section with system prompt, per-conversation
-  breakdown (usr/agt/thk totals), grand total. Polls `/api/tokens` every 5s.
+  breakdown (usr/agt/thk totals), grand total. Polls `/api/tokens` every 15s (owned internally by `TokensSection`).
 - **MessageBubble**: Each message shows `~N tok` (and `+ N thk` for thinking)
   in subdued text.
 - **API**: `GET /api/tokens` returns breakdown per conversation or filtered.
@@ -514,7 +514,18 @@ AAA/
 │           ├── App.tsx           Three-column layout
 │           ├── ConversationList.tsx  Collapsible left sidebar
 │           ├── ChatView.tsx      Main chat container
-│           ├── SidePanel.tsx     Foldable vitality/beliefs/diffraction/dreaming/tokens/pipeline panel
+│           ├── SidePanel.tsx     Thin shell managing collapsible right sidebar sections; delegates data fetching to sub-components
+│           │   └── sidepanel/     Right-sidebar sections (each owns internal polling)
+│           │       ├── SummarySection.tsx       Conversation summary display
+│           │       ├── MemoryNodesSection.tsx   Intra-active memory nodes (30s poll)
+│           │       ├── NotesSection.tsx         Notes/highlights with scroll-to-message
+│           │       ├── SedimentSection.tsx      Uploaded files, sediment injection + modal (60s poll)
+│           │       ├── TokensSection.tsx        Token usage breakdown (15s poll)
+│           │       ├── VitalitySection.tsx      11-dim Paskian vitality metrics (15s poll)
+│           │       ├── DiffractionSection.tsx   Anti-stagnation diffractive telemetry (15s poll)
+│           │       ├── AttractorsSection.tsx    Belief attractor window + spectral margin (15s poll)
+│           │       ├── MetadataCards.tsx        Image/Web/Document metadata cards
+│           │       └── SectionHeader.tsx        Reusable collapsible toggle button
 │           ├── MessageBubble.tsx Markdown + thinking + token counts + structural glyph + debug panels
 │           ├── StructuralAutopoieticGlyph.tsx  16-dim radar/bar visualization of cybernetic signature
 │           └── InputBar.tsx      Terminal prompt input

@@ -33,12 +33,29 @@ We implemented a unified optimization and navigation architecture across three k
 - Lazy-loaded the procedural skills index. The database call is now deferred until the sidebar panel is open and the Skills accordion is manually expanded.
 - Wrapped all sidebar sections (`TokensSection`, `VitalitySection`, `DiffractionSection`, `BeliefsSection`, `DreamingSection`, `StartupSection`) in `React.memo` to skip telemetry draws when the respective metrics have not mutated.
 
+### 4. Decentralized Polling (2026-06-11 Refactor)
+- Removed `useTelemetry` from `SidePanel.tsx` entirely. The hook is no longer the centralized data hub for right-panel sections.
+- Each section now owns its own **data fetching + polling lifecycle** internally:
+  | Section | API Endpoint | Poll Interval |
+  |---|---|---|
+  | `VitalitySection` | `GET /api/metrics` | 15s ± 500ms jitter |
+  | `DiffractionSection` | `GET /api/metrics` | 15s ± 500ms jitter |
+  | `TokensSection` | `GET /api/tokens` | 15s ± 500ms jitter |
+  | `AttractorsSection` | `GET /api/beliefs` | 15s ± 500ms jitter |
+  | `MemoryNodesSection` | `GET /api/conversations/{id}/memory-nodes` | 30s ± 1s jitter |
+  | `SedimentSection` | `GET /api/conversations/{id}/sediment/injections` | 60s ± 2.5s jitter |
+- Each section receives an `enabled` prop (`!panelCollapsed && sectionOpen`). When disabled, the section resets its state and stops polling — no data is fetched for invisible sections.
+- The `messageCount` trigger is passed directly to each polling section, so a new message causes an immediate re-fetch without waiting for the next poll interval.
+- Extracted the inline "Attractors" rendering from `SidePanel` into a dedicated `AttractorsSection` component.
+- All section components are now wrapped in `React.memo` for minimal re-rendering.
+
 ## Consequences
 
 ### Positive
 - **Instant Response Feedback**: Telemetry updates now feel reactive to conversational progress rather than being locked into static polling intervals.
 - **Minimal DOM Burden**: Collapsed side panel sections and scrolled-out chat frames remain static and do not trigger layout calculations.
 - **Navigation Resiliency**: Refreshing the browser or sharing links directly preserves the active conversation context. Back and forward actions work predictably.
+- **Independent Section Lifecycles**: Each sidebar section polls independently. Collapsed sections do zero work. The `SidePanel` itself is a thin shell with no data-fetching responsibilities.
 
 ### Risks
 - **Stable Array Fallbacks**: Passing empty array fallbacks to nested child components can cause reference leaks if declared inline. We mitigated this by declaring stable global array constants (`EMPTY_ARRAY`, `EMPTY_NUM_ARRAY`) outside the component rendering loops.

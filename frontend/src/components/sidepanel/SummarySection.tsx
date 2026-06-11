@@ -1,3 +1,4 @@
+import { memo } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
@@ -7,7 +8,7 @@ interface SummarySectionProps {
   humanSummary?: string
 }
 
-export function SummarySection({ summary, humanSummary }: SummarySectionProps) {
+function SummarySectionComponent({ summary, humanSummary }: SummarySectionProps) {
   if (!summary && !humanSummary) {
     return (
       <div className="text-[10px] text-[#444] py-2 font-mono italic">
@@ -30,3 +31,5 @@ export function SummarySection({ summary, humanSummary }: SummarySectionProps) {
     </div>
   )
 }
+
+export const SummarySection = memo(SummarySectionComponent)

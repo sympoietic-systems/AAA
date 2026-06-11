@@ -1,8 +1,10 @@
-import { memo } from "react"
+import { useState, useEffect, memo } from "react"
+import { getMetrics } from "../../api/client"
 import type { MetricsResponse, DiffractiveInfo } from "../../api/client"
 
 interface DiffractionSectionProps {
-  metrics: MetricsResponse | null
+  enabled?: boolean
+  messageCount?: number
 }
 
 function DiffractiveTooltip({ title, value, desc }: { title: string; value?: string; desc: string }) {
@@ -24,7 +26,51 @@ function DiffractiveTooltip({ title, value, desc }: { title: string; value?: str
   )
 }
 
-function DiffractionSectionComponent({ metrics }: DiffractionSectionProps) {
+function DiffractionSectionComponent({ enabled = false, messageCount = 0 }: DiffractionSectionProps) {
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!enabled) {
+      setMetrics(null)
+      return
+    }
+
+    let active = true
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    const tick = async () => {
+      if (!active) return
+      setLoading(prev => !metrics ? true : prev)
+      try {
+        const res = await getMetrics()
+        if (active) {
+          setMetrics(res)
+          setError(null)
+        }
+      } catch (e: any) {
+        if (active) {
+          setError(e.message || "Failed to fetch metrics")
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+
+      if (active) {
+        const delay = 15000 + (Math.random() - 0.5) * 1000
+        timeoutId = setTimeout(tick, delay)
+      }
+    }
+
+    tick()
+
+    return () => {
+      active = false
+      clearTimeout(timeoutId)
+    }
+  }, [enabled, messageCount])
+
   const diff: DiffractiveInfo | null | undefined = metrics?.diffractive
 
   if (!diff) {
@@ -38,13 +84,11 @@ function DiffractionSectionComponent({ metrics }: DiffractionSectionProps) {
   const isActive = diff.state === "STAGNANT"
   const stateColor = isActive ? "#f43f5e" : "#555"
 
-  // Cohesion timer blocks
   const maxTimer = 3
   const timerBlocks = Array.from({ length: maxTimer }, (_, i) =>
     i < diff.cohesion_timer ? "█" : "░"
   ).join(" ")
 
-  // Goldilocks bar (similarity visualization for first source)
   const firstSim = diff.sources.length > 0 ? diff.sources[0].similarity : 0
   const barWidth = 30
   const memMin = diff.similarity_range_memory[0] ?? 0.45
@@ -73,7 +117,6 @@ function DiffractionSectionComponent({ metrics }: DiffractionSectionProps) {
         </span>
       </div>
 
-      {/* Telemetry block - monospace ASCII style */}
       <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded p-2 font-mono text-[8px] leading-relaxed space-y-px">
         <div className="text-[#555]">
           {"=== STAGNATION TELEMETRY ==="}
