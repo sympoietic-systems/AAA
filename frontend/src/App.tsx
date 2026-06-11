@@ -5,11 +5,17 @@ import { useNotes } from "./hooks/useNotes"
 import { ChatView } from "./components/ChatView"
 import { SidePanel } from "./components/SidePanel"
 import { ConversationLandingPage } from "./components/ConversationLandingPage"
+import { AgentPage } from "./components/AgentPage"
 import ConnectionCloud from "./components/ConnectionCloud"
 import { SpectralEchoes } from "./components/SpectralEchoes"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag } from "./api/client"
 
 export default function App() {
+  // Render agent page standalone if navigated to /agent
+  if (window.location.pathname === "/agent") {
+    return <AgentPage onGoHome={() => window.close()} />
+  }
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isAuthEnabled, setIsAuthEnabled] = useState<boolean>(false)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -318,7 +324,7 @@ export default function App() {
     )
   }
 
-  // Render the Dedicated Conversation Landing Page if no active chat is loaded
+  // Landing page
   if (!activeId && !isNewChatMode) {
     return (
       <ConversationLandingPage

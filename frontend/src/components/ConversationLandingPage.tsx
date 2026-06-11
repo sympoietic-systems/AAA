@@ -99,7 +99,13 @@ export function ConversationLandingPage({
       <div className="flex items-center justify-between px-6 py-3 border-b border-[#1a1a1a] shrink-0">
         <span className="text-[11px] text-[#444] tracking-widest uppercase select-none">
           <span className="text-[#4ade80]">■</span>
-          <span className="ml-2">symbia</span>
+          <button
+            onClick={() => window.open('/agent', '_blank')}
+            className="ml-2 hover:text-[#a892ee] transition-colors cursor-pointer"
+            title="Open agent page"
+          >
+            symbia
+          </button>
           <span className="text-[#333] mx-2">//</span>
           <span>{totalCount} conversations</span>
         </span>

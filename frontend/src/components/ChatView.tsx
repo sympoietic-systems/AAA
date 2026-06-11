@@ -210,7 +210,13 @@ export function ChatView({
             [Home]
           </button>
         )}
-        <span className="text-[#888]">{isPassword ? "authentication" : agentName}</span>
+        <button
+          onClick={() => window.open('/agent', '_blank')}
+          className="text-[#888] hover:text-[#a892ee] transition-colors cursor-pointer select-none font-mono text-sm"
+          title="Open agent page"
+        >
+          {isPassword ? "authentication" : agentName}
+        </button>
         {conversationId ? (
           <>
             <span className="text-[#444]">{">>"}</span>

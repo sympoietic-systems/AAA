@@ -1,7 +1,7 @@
 ## UI
 
-
 ## NOTES
+    [ ] now shared notes often trigger proto-belief, need to check it. also the notes marked by symbia should we check them for the belief also?
 
 
 ## OTHER
