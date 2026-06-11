@@ -6,6 +6,7 @@ import { ChatView } from "./components/ChatView"
 import { SidePanel } from "./components/SidePanel"
 import { ConversationLandingPage } from "./components/ConversationLandingPage"
 import ConnectionCloud from "./components/ConnectionCloud"
+import { SpectralEchoes } from "./components/SpectralEchoes"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag } from "./api/client"
 
 export default function App() {
@@ -379,7 +380,9 @@ export default function App() {
                 <span>collapse</span>
               </button>
             </div>
-            <div className="flex-1 overflow-hidden relative">
+
+            {/* DAG — 2/3 height */}
+            <div className="overflow-hidden relative" style={{ flex: 2 }}>
               {activeId ? (
                 <ConnectionCloud
                   activeLoadedMessages={fullTreeMessages}
@@ -397,6 +400,26 @@ export default function App() {
                   DAG will initialize upon first message inscription
                 </div>
               )}
+            </div>
+
+            {/* Spectral Echoes — 1/3 height, always open */}
+            <div className="flex flex-col shrink-0 border-t border-[#222] overflow-y-auto" style={{ flex: 1 }}>
+              <div className="px-3 py-1.5 shrink-0">
+                <span className="text-[9px] font-mono uppercase tracking-wider text-[#555]">Spectral Echoes</span>
+              </div>
+              <div className="flex-1 overflow-y-auto px-2 pb-2">
+                {activeId ? (
+                  <SpectralEchoes
+                    conversationId={activeId}
+                    activeMessageId={activeMessageId}
+                    refreshTree={refreshTree}
+                  />
+                ) : (
+                  <div className="text-[10px] font-mono text-[#333] px-2 select-none">
+                    no active node
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -462,8 +485,6 @@ export default function App() {
         width={rightPanelWidth}
         panelCollapsed={rightPanelCollapsed}
         onPanelToggle={() => setRightPanelCollapsed(p => !p)}
-        activeMessageId={activeMessageId}
-        refreshTree={refreshTree}
       />
     </div>
   )
