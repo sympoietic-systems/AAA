@@ -1,8 +1,10 @@
-import { useState, useMemo, useCallback, memo } from "react"
-import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, ConversationTreeNode } from "../../../api/client"
+import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, ConversationTreeNode, ConversationInfo } from "../../../api/client"
 import { getMessagePath } from "../../../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
+import { CreasesDropdown } from "./CreasesDropdown"
+
+import { useState, useMemo, useCallback, memo } from "react"
 
 interface Props {
   selectedNode: ChatMessage | null
@@ -35,6 +37,8 @@ interface Props {
   onNavigateToMessage: (messageId: number) => void
   onGoHome?: () => void
   history?: { id: number; speaker: string; snippet: string }[]
+  conversations?: ConversationInfo[]
+  onNavigateToNotification?: (convId: string, msgId: number) => void
 }
 
 const EMPTY_ARRAY: NoteInfo[] = []
@@ -329,6 +333,8 @@ export function NodeExplorer({
   onNavigateToMessage,
   onGoHome,
   history = [],
+  conversations = [],
+  onNavigateToNotification,
 }: Props) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleVal, setTitleVal] = useState(conversationTitle)
@@ -427,6 +433,11 @@ export function NodeExplorer({
             </div>
           )}
         </div>
+
+        <CreasesDropdown
+          conversations={conversations}
+          onNavigateToNotification={onNavigateToNotification}
+        />
       </div>
 
       {/* Tags Bar */}

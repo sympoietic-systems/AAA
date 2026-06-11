@@ -5,14 +5,16 @@ interface ParsedSedimentMemory {
   relTime: string;
   speaker: string;
   content: string;
+  messageId?: number;
+  conversationId?: string;
 }
 
 function parseSedimentContent(content: string): ParsedSedimentMemory[] {
-  const regex = /^\[system\]:\s*\[Memory from "([^"]+)"\s*\|\s*([^|]+)\s*\|\s*Speaker:\s*([^\]]+)\]:\s*[\r\n]+([\s\S]*?)(?=(?:^\[system\]:\s*\[Memory from ")|(?![\s\S]))/gm;
+  const regex = /^\[system\]:\s*\[Memory from "([^"]+)"\s*\|\s*([^|]+)\s*\|\s*Speaker:\s*([^|\]]+?)(?:\s*\|\s*msg:\s*(\d+))?(?:\s*\|\s*conv:\s*([^|\]]+))?\]:\s*[\r\n]+([\s\S]*?)(?=(?:^\[system\]:\s*\[Memory from ")|(?![\s\S]))/gm;
   const matches = [...content.matchAll(regex)];
   
   return matches.map(match => {
-    let memoryContent = match[4].trim();
+    let memoryContent = match[6].trim();
     if (memoryContent.startsWith('"') && memoryContent.endsWith('"')) {
       memoryContent = memoryContent.slice(1, -1);
     }
@@ -20,6 +22,8 @@ function parseSedimentContent(content: string): ParsedSedimentMemory[] {
       title: match[1],
       relTime: match[2].trim(),
       speaker: match[3].trim(),
+      messageId: match[4] ? parseInt(match[4], 10) : undefined,
+      conversationId: match[5] ? match[5].trim() : undefined,
       content: memoryContent
     };
   });
@@ -112,9 +116,21 @@ export const SedimentSectionViewer: React.FC<{ content: string }> = ({ content }
               className="flex flex-col gap-1.5 p-2 rounded border bg-[#050507]/90 hover:bg-[#0b0b12]/80 transition-colors border-[#2563eb]/15"
             >
               <div className="flex flex-wrap items-center justify-between gap-1.5 text-[8px] border-b border-[#2563eb]/10 pb-1">
-                <span className="font-bold text-[#60a5fa] truncate max-w-[190px]" title={item.title}>
-                  🗰 {item.title}
-                </span>
+                {item.conversationId ? (
+                  <a
+                    href={`/?c=${encodeURIComponent(item.conversationId)}${item.messageId ? `&m=${item.messageId}` : ""}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-[#60a5fa] hover:text-[#a78bfa] transition-colors truncate max-w-[190px] hover:underline"
+                    title={`Sediment Fold: Open conversation in new tab`}
+                  >
+                    🗰 {item.title}
+                  </a>
+                ) : (
+                  <span className="font-bold text-[#60a5fa] truncate max-w-[190px]" title={item.title}>
+                    🗰 {item.title}
+                  </span>
+                )}
                 <div className="flex items-center gap-1">
                   <span className="text-[#94a3b8] opacity-75">{item.relTime}</span>
                   <span className="text-[#94a3b8]/40">•</span>

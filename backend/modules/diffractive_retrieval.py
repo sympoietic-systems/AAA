@@ -312,10 +312,12 @@ class DiffractiveRetrievalModule(ProcessingModule):
                     if m:
                         candidates_with_details.append({
                             "type": "nomadic",
-                            "content": m["content"],
+                            "content": m.get("content", ""),
                             "similarity": sim,
-                            "source_title": m["conversation_title"],
-                            "timestamp": m["timestamp"],
+                            "source_title": m.get("conversation_title", "Untitled"),
+                            "timestamp": m.get("timestamp"),
+                            "id": m.get("id"),
+                            "conversation_id": m.get("conversation_id"),
                         })
                 elif ctype == "semantic_knot":
                     k = knots_by_id.get(cid)
@@ -326,6 +328,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
                             "similarity": sim,
                             "source_title": f"Sedimented Knot (Conv {k.conversation_id[:8]})",
                             "timestamp": k.created_at,
+                            "conversation_id": k.conversation_id,
                         })
 
             def parse_date(d):

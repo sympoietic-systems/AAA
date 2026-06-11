@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { useChat } from "./hooks/useChat"
 import { useConversations } from "./hooks/useConversations"
 import { useNotes } from "./hooks/useNotes"
+import { dismissByMatch } from "./stores/notificationStore"
 import { NodeExplorer } from "./components/pages/nodeexplorer/NodeExplorer"
 import { SidePanel } from "./components/panels/sidepanel/SidePanel"
 import { ConversationLandingPage } from "./components/pages/landing/ConversationLandingPage"
@@ -94,6 +95,22 @@ export default function App() {
     treeNodes,
     history,
   } = useChat(activeId)
+
+  const handleNavigateToNotification = useCallback((convId: string, msgId: number) => {
+    dismissByMatch(convId, msgId)
+    if (convId === activeId) {
+      // Same conversation — just navigate to the node
+      navigateToMessage(msgId)
+    } else {
+      // Different conversation — set URL param so useChat loads the right path on mount
+      const params = new URLSearchParams(window.location.search)
+      params.set("m", String(msgId))
+      const newUrl = `${window.location.pathname}?${params.toString()}`
+      window.history.replaceState(null, "", newUrl)
+      setIsNewChatMode(false)
+      setActiveId(convId)
+    }
+  }, [activeId, navigateToMessage, setActiveId])
 
   const {
     notes,
@@ -489,6 +506,8 @@ export default function App() {
         onGoHome={handleGoHome}
         className="flex-1 min-w-0"
         history={history}
+        conversations={conversations}
+        onNavigateToNotification={handleNavigateToNotification}
       />
 
       {!rightPanelCollapsed && (

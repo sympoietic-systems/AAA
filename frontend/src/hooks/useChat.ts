@@ -13,6 +13,7 @@ import {
   getMessagePath,
 } from "../api/client"
 import type { ChatMessage, ConversationFile, ConversationTreeNode, ConversationTreeLink } from "../api/client"
+import { addNotification, dismissByMatch } from "../stores/notificationStore"
 
 function estimateTokens(text: string): number {
   if (!text) return 0
@@ -56,6 +57,17 @@ export function useChat(conversationId: string) {
   const [links, setLinks] = useState<ConversationTreeLink[]>([])
   const [treeNodes, setTreeNodes] = useState<ConversationTreeNode[]>([])
   const [loading, setLoading] = useState(false)
+
+  const activeMessageIdRef = useRef(activeMessageId)
+  useEffect(() => {
+    activeMessageIdRef.current = activeMessageId
+  }, [activeMessageId])
+
+  useEffect(() => {
+    if (conversationId && activeMessageId) {
+      dismissByMatch(conversationId, activeMessageId)
+    }
+  }, [conversationId, activeMessageId])
 
   const fetchTree = useCallback(async (convId: string) => {
     if (!convId) return
@@ -155,23 +167,57 @@ export function useChat(conversationId: string) {
 
     if (conversationId) {
       setLoading(true)
-      getHistory(PAGE_SIZE, 0, conversationId)
-        .then((data) => {
-          setMessages(data.messages)
-          if (data.messages.length > 0) {
-            const newest = data.messages[data.messages.length - 1]
-            setActiveMessageId(newest.id)
-          } else {
+      
+      const params = new URLSearchParams(window.location.search)
+      const urlMsgId = params.get("m")
+      const targetMsgId = urlMsgId ? parseInt(urlMsgId, 10) : null
+
+      if (targetMsgId && !isNaN(targetMsgId)) {
+        getMessagePath(targetMsgId)
+          .then((pathMessages) => {
+            setMessages(pathMessages)
+            setActiveMessageId(targetMsgId)
+            setHasMore(false)
+          })
+          .catch((err) => {
+            console.error("Failed to load message path from URL param 'm':", err)
+            getHistory(PAGE_SIZE, 0, conversationId)
+              .then((data) => {
+                setMessages(data.messages)
+                if (data.messages.length > 0) {
+                  const newest = data.messages[data.messages.length - 1]
+                  setActiveMessageId(newest.id)
+                } else {
+                  setActiveMessageId(null)
+                }
+                setHasMore(false)
+              })
+              .catch(() => {
+                setMessages([])
+                setActiveMessageId(null)
+                setHasMore(false)
+              })
+          })
+          .finally(() => setLoading(false))
+      } else {
+        getHistory(PAGE_SIZE, 0, conversationId)
+          .then((data) => {
+            setMessages(data.messages)
+            if (data.messages.length > 0) {
+              const newest = data.messages[data.messages.length - 1]
+              setActiveMessageId(newest.id)
+            } else {
+              setActiveMessageId(null)
+            }
+            setHasMore(false)
+          })
+          .catch(() => {
+            setMessages([])
             setActiveMessageId(null)
-          }
-          setHasMore(false)
-        })
-        .catch(() => {
-          setMessages([])
-          setActiveMessageId(null)
-          setHasMore(false)
-        })
-        .finally(() => setLoading(false))
+            setHasMore(false)
+          })
+          .finally(() => setLoading(false))
+      }
 
       fetchTree(conversationId)
 
@@ -198,6 +244,44 @@ export function useChat(conversationId: string) {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current)
     }
   }, [])
+
+  // Sync activeMessageId to URL search params in place without pushing a new history entry
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (activeMessageId !== null) {
+      params.set("m", String(activeMessageId))
+    } else {
+      params.delete("m")
+    }
+    const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`
+    window.history.replaceState(null, "", newUrl)
+  }, [activeMessageId])
+
+  // Watch popstate to synchronize active message ID with the URL if it updates via browser back/forward
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search)
+      const urlMsgId = params.get("m")
+      const targetMsgId = urlMsgId ? parseInt(urlMsgId, 10) : null
+      if (targetMsgId && !isNaN(targetMsgId)) {
+        if (activeMessageId !== targetMsgId) {
+          const isLoaded = messages.some((m) => m.id === targetMsgId)
+          if (isLoaded) {
+            setActiveMessageId(targetMsgId)
+          } else {
+            getMessagePath(targetMsgId)
+              .then((pathMessages) => {
+                setMessages(pathMessages)
+                setActiveMessageId(targetMsgId)
+              })
+              .catch(() => {})
+          }
+        }
+      }
+    }
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [messages, activeMessageId])
 
   const loadMoreMessages = useCallback(async () => {
     if (!conversationId || loadingMore || !hasMore) return
@@ -248,58 +332,104 @@ export function useChat(conversationId: string) {
       // 2. Phase 1: Inscribe/persist the message to the DB
       savedMsg = await saveMessage(content, targetConvId || undefined, parentId)
 
-      // Update the message in the list with its real DB ID
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? {
-          ...m,
-          id: savedMsg!.id,
-          parent_message_id: savedMsg!.parent_message_id,
-          structural_signature: savedMsg!.structural_signature,
-          structural_justification: savedMsg!.structural_justification,
-        } : m))
-      )
-      setActiveMessageId(savedMsg.id)
+      // Guard check before changing state of this conversation
+      if (targetConvId && loadedRef.current !== targetConvId) {
+        // User switched conversations, don't update local hook state.
+        targetConvId = savedMsg.conversation_id
+      } else {
+        // Update the message in the list with its real DB ID
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? {
+            ...m,
+            id: savedMsg!.id,
+            parent_message_id: savedMsg!.parent_message_id,
+            structural_signature: savedMsg!.structural_signature,
+            structural_justification: savedMsg!.structural_justification,
+          } : m))
+        )
+        setActiveMessageId(savedMsg.id)
 
-      targetConvId = targetConvId || savedMsg.conversation_id
-      if (targetConvId) {
-        const finalConvId = targetConvId
-        // Fetch/refresh trees and files
-        fetchTree(finalConvId)
+        targetConvId = targetConvId || savedMsg.conversation_id
+        if (targetConvId) {
+          const finalConvId = targetConvId
+          // Fetch/refresh trees and files
+          fetchTree(finalConvId)
 
-        getConversationFiles(finalConvId)
-          .then((res) => {
-            setFiles(res.files)
-            const active = res.files.some(
-              (f) => f.status === "uploading" || f.status === "processing"
-            )
-            if (active) {
-              startPolling(finalConvId)
-            }
-          })
-          .catch(() => {})
+          getConversationFiles(finalConvId)
+            .then((res) => {
+              setFiles(res.files)
+              const active = res.files.some(
+                (f) => f.status === "uploading" || f.status === "processing"
+              )
+              if (active) {
+                startPolling(finalConvId)
+              }
+            })
+            .catch(() => {})
+        }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to persist user message"
-      setError(msg)
-      setLoading(false)
+      if (!targetConvId || loadedRef.current === targetConvId) {
+        setError(msg)
+        setLoading(false)
+      }
       return null
     }
 
     // 3. Phase 2: Metabolize/generate response asynchronously/retryably
     try {
       const response = await generateResponse(targetConvId!, savedMsg.id)
+
+      if (loadedRef.current !== targetConvId) {
+        // User has switched to another conversation. Show notification.
+        addNotification({
+          conversationId: targetConvId!,
+          messageId: response.id,
+          parentMessageId: savedMsg.id,
+          timestamp: response.timestamp || new Date().toISOString(),
+          snippet: response.content || "",
+          speaker: "apparatus"
+        })
+        return response
+      }
+
+      // User is still in the same conversation.
+      // Check if user has navigated to another node in the meantime.
+      const isViewingSameNode = (activeMessageIdRef.current === savedMsg.id || activeMessageIdRef.current === tempId)
+
       setMessages((prev) => {
         if (prev.some((m) => m.id === response.id)) return prev
         return [...prev, response]
       })
-      setActiveMessageId(response.id)
+
+      if (isViewingSameNode) {
+        setActiveMessageId(response.id)
+      } else {
+        // User is viewing a different node, so do not hijack focus. Show notification instead.
+        addNotification({
+          conversationId: targetConvId!,
+          messageId: response.id,
+          parentMessageId: savedMsg.id,
+          timestamp: response.timestamp || new Date().toISOString(),
+          snippet: response.content || "",
+          speaker: "apparatus"
+        })
+      }
+
+      fetchTree(targetConvId!)
+
       return response
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to generate response"
-      setError(msg)
+      if (loadedRef.current === targetConvId) {
+        setError(msg)
+      }
       return savedMsg // Return the user message so App.tsx knows the conversation was created/updated
     } finally {
-      setLoading(false)
+      if (loadedRef.current === targetConvId) {
+        setLoading(false)
+      }
     }
   }, [loading, conversationId, activeMessageId, startPolling, fetchTree])
 
@@ -307,6 +437,7 @@ export function useChat(conversationId: string) {
     if (loading) return
     setError(null)
     setLoading(true)
+    const targetConvId = conversationId
 
     let targetMsgId = userMsgId
     if (!targetMsgId) {
@@ -320,27 +451,57 @@ export function useChat(conversationId: string) {
     }
 
     try {
-      const targetConvId = conversationId
       if (!targetConvId) {
         throw new Error("No active conversation")
       }
 
       const response = await generateResponse(targetConvId, targetMsgId)
+
+      if (loadedRef.current !== targetConvId) {
+        addNotification({
+          conversationId: targetConvId,
+          messageId: response.id,
+          parentMessageId: targetMsgId,
+          timestamp: response.timestamp || new Date().toISOString(),
+          snippet: response.content || "",
+          speaker: "apparatus"
+        })
+        return response
+      }
+
+      const isViewingSameNode = (activeMessageIdRef.current === targetMsgId)
+
       setMessages((prev) => {
         if (prev.some((m) => m.id === response.id)) return prev
         return [...prev, response]
       })
-      setActiveMessageId(response.id)
+
+      if (isViewingSameNode) {
+        setActiveMessageId(response.id)
+      } else {
+        addNotification({
+          conversationId: targetConvId,
+          messageId: response.id,
+          parentMessageId: targetMsgId,
+          timestamp: response.timestamp || new Date().toISOString(),
+          snippet: response.content || "",
+          speaker: "apparatus"
+        })
+      }
 
       fetchTree(targetConvId)
 
       return response
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to generate response"
-      setError(msg)
+      if (loadedRef.current === targetConvId) {
+        setError(msg)
+      }
       return null
     } finally {
-      setLoading(false)
+      if (loadedRef.current === targetConvId) {
+        setLoading(false)
+      }
     }
   }, [loading, conversationId, messages, fetchTree])
 
@@ -422,9 +583,23 @@ export function useChat(conversationId: string) {
     if (!conversationId) return null
     setLoading(true)
     setError(null)
+    const targetConvId = conversationId
     try {
-      const response = await commitBranch(conversationId, parentMsgId, content)
-      fetchTree(conversationId)
+      const response = await commitBranch(targetConvId, parentMsgId, content)
+      
+      if (loadedRef.current !== targetConvId) {
+        addNotification({
+          conversationId: targetConvId,
+          messageId: response.id,
+          parentMessageId: parentMsgId,
+          timestamp: response.timestamp || new Date().toISOString(),
+          snippet: response.content || "",
+          speaker: "apparatus"
+        })
+        return response
+      }
+
+      fetchTree(targetConvId)
       setMessages((prev) => {
         if (prev.some((m) => m.id === response.id)) return prev
         return [...prev, response]
@@ -433,10 +608,14 @@ export function useChat(conversationId: string) {
       return response
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to commit branch"
-      setError(msg)
+      if (loadedRef.current === targetConvId) {
+        setError(msg)
+      }
       return null
     } finally {
-      setLoading(false)
+      if (loadedRef.current === targetConvId) {
+        setLoading(false)
+      }
     }
   }, [conversationId, fetchTree])
 

@@ -173,8 +173,18 @@ class PromptAssemblerModule(ProcessingModule):
                 title = item.get("source_title", "Untitled")
                 sim = item.get("similarity", 0.0)
                 body = item.get("content", "")
+                
+                # Check for message and conversation ids
+                msg_id = item.get("id")
+                conv_id = item.get("conversation_id")
+                id_suffix = ""
+                if msg_id:
+                    id_suffix += f" | msg: {msg_id}"
+                if conv_id:
+                    id_suffix += f" | conv: {conv_id}"
+
                 content_parts.append(
-                    f'[Source: {m_type.capitalize()} Fragment ({title}) | Similarity \u03b4: {sim:.3f}]\n"""\n{body}\n"""'
+                    f'[Source: {m_type.capitalize()} Fragment ({title}) | Similarity \u03b4: {sim:.3f}{id_suffix}]\n"""\n{body}\n"""'
                 )
 
             zone_text = (

@@ -5,6 +5,8 @@ interface ParsedDiffractiveFragment {
   title: string;
   similarity: number;
   content: string;
+  messageId?: number;
+  conversationId?: string;
 }
 
 interface ParsedDiffractiveZone {
@@ -24,16 +26,18 @@ function parseDiffractiveZone(content: string): ParsedDiffractiveZone {
   const fragments: ParsedDiffractiveFragment[] = [];
   let directive = '';
 
-  // Pattern: [Source: Type Fragment (title) | Similarity δ: 0.xxx]\n"""\nbody\n"""
+  // Pattern: [Source: Type Fragment (title) | Similarity δ: 0.xxx | msg: msg_id | conv: conv_id]\n"""\nbody\n"""
   // Source type can be one or more word-ish tokens (e.g. "Nomadic", "Semantic_knot")
-  const fragmentRegex = /\[Source:\s*([\w\s]+?)\s+Fragment\s*\(([^)]*)\)\s*\|\s*Similarity\s*[δd]\s*:\s*([\d.]+)\]\s*\n"""(?:\s*\n)?([\s\S]*?)\n?"""/g;
+  const fragmentRegex = /\[Source:\s*([\w\s]+?)\s+Fragment\s*\(([^)]*)\)\s*\|\s*Similarity\s*[δd]\s*:\s*([\d.]+?)(?:\s*\|\s*msg:\s*(\d+))?(?:\s*\|\s*conv:\s*([^\]|]+))?\]\s*\n"""(?:\s*\n)?([\s\S]*?)\n?"""/g;
   let match;
   while ((match = fragmentRegex.exec(text)) !== null) {
     fragments.push({
       sourceType: match[1].trim(),
       title: match[2].trim(),
       similarity: parseFloat(match[3]),
-      content: match[4].trim(),
+      messageId: match[4] ? parseInt(match[4], 10) : undefined,
+      conversationId: match[5] ? match[5].trim() : undefined,
+      content: match[6].trim(),
     });
   }
 
@@ -144,9 +148,21 @@ export const DiffractiveZoneViewer: React.FC<{ content: string }> = ({ content }
                     <span className="px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider bg-[#f43f5e]/10 text-[#f43f5e] border border-[#f43f5e]/20">
                       {frag.sourceType}
                     </span>
-                    <span className="font-bold text-[#fb7185] truncate max-w-[180px]" title={frag.title}>
-                      {frag.title}
-                    </span>
+                    {frag.conversationId ? (
+                      <a
+                        href={`/?c=${encodeURIComponent(frag.conversationId)}${frag.messageId ? `&m=${frag.messageId}` : ""}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-[#fb7185] hover:text-[#fb923c] transition-colors truncate max-w-[180px] hover:underline"
+                        title={`Sediment Fold: Open conversation in new tab`}
+                      >
+                        {frag.title}
+                      </a>
+                    ) : (
+                      <span className="font-bold text-[#fb7185] truncate max-w-[180px]" title={frag.title}>
+                        {frag.title}
+                      </span>
+                    )}
                   </div>
                   <span className="text-[#f43f5e]/70 font-mono text-[7.5px]">
                     δ={frag.similarity.toFixed(3)}

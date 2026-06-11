@@ -120,9 +120,9 @@ async def test_dynamic_bounds_and_budget(mock_repos, monkeypatch):
         (0.55, 103),
     ]
     msg_repo.get_sediment_messages_with_metadata.return_value = [
-        {"id": 101, "content": "Nomadic message one content details", "conversation_title": "Conv A", "timestamp": "2026-05-23"},
-        {"id": 102, "content": "Nomadic message two content details", "conversation_title": "Conv B", "timestamp": "2026-05-23"},
-        {"id": 103, "content": "Nomadic message three content details", "conversation_title": "Conv C", "timestamp": "2026-05-23"},
+        {"id": 101, "content": "Nomadic message one content details", "conversation_title": "Conv A", "timestamp": "2026-05-23", "conversation_id": "conv_a"},
+        {"id": 102, "content": "Nomadic message two content details", "conversation_title": "Conv B", "timestamp": "2026-05-23", "conversation_id": "conv_b"},
+        {"id": 103, "content": "Nomadic message three content details", "conversation_title": "Conv C", "timestamp": "2026-05-23", "conversation_id": "conv_c"},
     ]
 
     perception_repo.get_chunks_in_similarity_range.return_value = [

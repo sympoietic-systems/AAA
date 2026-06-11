@@ -110,7 +110,7 @@ class SedimentationRetrievalModule(ProcessingModule):
             rel_time = _format_relative_time(msg["timestamp"])
             title = msg["conversation_title"]
             
-            content_formatted = f'[Memory from "{title}" | {rel_time} | Speaker: {original_speaker}]:\n"{msg["content"]}"'
+            content_formatted = f'[Memory from "{title}" | {rel_time} | Speaker: {original_speaker} | msg: {msg["id"]} | conv: {msg["conversation_id"]}]:\n"{msg["content"]}"'
             
             entry = {"role": "system", "content": content_formatted}
             entry_tokens = estimate_message_tokens(entry)

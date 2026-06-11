@@ -67,6 +67,9 @@ What becomes easier/harder?
 | [033](ADR-033-resonance-links.md) | Resonance Links: Agential, Asynchronous, and Spectral Co-Curation | accepted | 2026-06-10 |
 | [034](ADR-034-decoupled-inscription-and-metabolization.md) | Decoupled Inscription and Metabolization | accepted | 2026-06-11 |
 | [035](ADR-035-frontend-state-synchronization-and-render-optimizations.md) | URL State Synchronization, Render Memoization, and Trigger-based Telemetry | accepted | 2026-06-11 |
+| [036](ADR-036-spatial-node-explorer-interface.md) | Spatial Node Explorer Interface | accepted | 2026-06-11 |
+| [037](ADR-037-frontend-component-hierarchy-and-modularity.md) | Frontend Component Hierarchy and Modularity | accepted | 2026-06-11 |
+| [038](ADR-038-creases-background-notifications-store.md) | Creases (Background Sediment Arrivals) and Pure JS Notification Store | accepted | 2026-06-11 |
 
 ## Creating a New ADR
 

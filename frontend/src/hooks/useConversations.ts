@@ -34,6 +34,7 @@ export function useConversations() {
       params.set("c", id)
     } else {
       params.delete("c")
+      params.delete("m")
     }
     const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`
     window.history.pushState(null, "", newUrl)
