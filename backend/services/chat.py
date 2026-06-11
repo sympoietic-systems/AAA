@@ -23,10 +23,20 @@ def process_self_annotations(
     note_repo,
     message_repo,
 ) -> str:
-    """
-    Scan Symbia's response for self-authored <aaa-note>/<mark> tags without IDs,
-    create DB note records, and replace tags with proper ID-bearing versions.
-    Also truncate <scar_fold> content to 200 characters as a safeguard.
+    """Post-process Symbia's response to normalize annotation tags for the frontend.
+
+    Three processing stages run in order:
+
+    1. **Entanglement echo conversion** — ``<note_entanglement>`` tags echoed
+       from the LLM context are converted back to ``<mark>`` tags with proper
+       ``id`` and ``data-note-id`` attributes.  A DB note record is created
+       for any note ID that doesn't already exist.
+    2. **New self-annotation processing** — ``<mark comment="…">`` or
+       ``<aaa-note comment="…">`` tags *without* an ``id`` attribute are
+       treated as new agent annotations: a UUID is generated, a DB record
+       is created, and the tag is rewritten with the new ID.
+    3. **Scar-fold truncation** — ``<scar_fold>`` / ``<scar-fold>`` content
+       is truncated to 200 characters as a safeguard.
     """
     # --- Convert echoed <note_entanglement> tags back to <mark> ---
     # The LLM sometimes copies note_entanglement tags from its context into the response.

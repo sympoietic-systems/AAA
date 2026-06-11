@@ -8,7 +8,20 @@ from .base import ProcessingModule
 
 
 def process_inline_notes(content: str, notes_by_id: dict) -> str:
-    """Strip personal notes, entangle shared notes, and pass through scar folds untouched."""
+    """Prepare inline note tags for LLM context by filtering on visibility.
+
+    Handles both legacy (``<mark id="ID">``) and split
+    (``<mark id="note-highlight-ID" data-note-id="ID">``) tag formats.
+
+    Visibility behaviour:
+      - **personal** → tag stripped, inner text preserved (invisible to LLM).
+      - **shared / agent** → rewritten to ``<note_entanglement note_id="…" comment="…">``
+        so the LLM can see and reference the annotation.
+      - **unknown / hallucinated ID** → tag stripped, inner text preserved.
+
+    ``<scar-fold>`` / ``<scar_fold>`` tags pass through untouched (truncated
+    to 200 chars as a safeguard).
+    """
     # Matches <aaa-note ...>...</aaa-note> or <mark ...>...</mark>
     pattern = r'<(aaa-note|mark)(\s+[^>]*?)?>([\s\S]*?)</\1>'
 
