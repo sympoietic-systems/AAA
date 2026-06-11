@@ -28,6 +28,23 @@ def process_self_annotations(
     create DB note records, and replace tags with proper ID-bearing versions.
     Also truncate <scar_fold> content to 200 characters as a safeguard.
     """
+    # --- Convert echoed <note_entanglement> tags back to <mark> ---
+    # The LLM sometimes copies note_entanglement tags from its context into the response.
+    # Convert them to proper <mark> tags so the frontend can render them as highlights.
+    def convert_entanglement(m):
+        attrs = m.group(1) or ""
+        text = m.group(2)
+        nid_match = re.search(r'\bnote_id\s*=\s*["\']([^"\']+)["\']', attrs)
+        if nid_match:
+            nid = nid_match.group(1)
+            return f'<mark id="note-highlight-{nid}" data-note-id="{nid}">{text}</mark>'
+        return text  # strip if no valid note_id
+
+    response_text = re.sub(
+        r'<note_entanglement(\s+[^>]*?)?>([\s\S]*?)</note_entanglement>',
+        convert_entanglement, response_text,
+    )
+
     # --- Self-annotation processing ---
     # Matches <aaa-note ...>...</aaa-note> or <mark ...>...</mark>
     annotation_pattern = r'<(aaa-note|mark)(\s+[^>]+)?>([\s\S]*?)</\1>'
