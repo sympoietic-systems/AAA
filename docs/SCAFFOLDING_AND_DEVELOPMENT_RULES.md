@@ -35,12 +35,13 @@ AAA/
     ├── src/
     │   ├── api/                # Axios instances & API request definitions
     │   ├── components/         # Reusable React components
-    │   │   ├── ChatView.tsx    # Scrollable chat window and status indicators
-    │   │   ├── SidePanel.tsx   # Control interface for somatic meters & logs
-    │   │   └── ...             # Visual elements and SVGs
-    │   ├── hooks/              # Custom React hooks (polling, scroll containment)
-    │   ├── App.tsx             # Root layout and context propagation
-    │   ├── index.css           # Global themes & Tailwind CSS directives
+    │   │   ├── pages/          # Standing viewport layouts (landing, nodeexplorer, agentpage)
+    │   │   ├── panels/         # Embedded overlay HUDs and sidebar panels (sidepanel, leftpanel, contextviewer)
+    │   │   └── ...             # Core UI visual elements
+    │   ├── hooks/              # Custom React hooks (history state, scroll bounds)
+    │   ├── stores/             # Pure JS pub-sub stores (telemetryStore, notificationStore)
+    │   ├── App.tsx             # Root layout and global state wiring
+    │   ├── index.css           # Global themes, HSL colors, animations
     │   └── main.tsx            # React application entry point
     └── vite.config.ts          # Build configuration and proxy overrides
 ```
@@ -107,11 +108,22 @@ class CustomAnalysisModule(ProcessingModule):
 ## 3. Frontend Scaffolding Rules
 
 ### 3.1. Directory Conventions
-*   `frontend/src/components/`: Modular UI widgets. Break large elements (like SidePanel or ChatView) into sub-components (e.g. `BeliefAttractorCard`, `SomaticMeter`) when they exceed 1000 lines of code.
-*   `frontend/src/hooks/`: Move persistent side effects, polling routines, and layout calculations (such as automatic message window scrolling) into clean custom hooks.
-*   `frontend/src/api/`: All network queries should be located here. Do not make raw fetch/axios calls directly inside visual render components.
+*   `frontend/src/components/pages/`: Standing page-level containers managing navigation and layout.
+*   `frontend/src/components/panels/`: Isolated sidebars, heads-up overlays, and visual drawers.
+*   `frontend/src/stores/`: Pure JS pub-sub data stores representing local state caches, system queues, and notification engines.
+*   `frontend/src/hooks/`: Reactive hooks dealing with window layouts, rendering triggers, history pops, and store subscriptions.
+*   `frontend/src/api/`: Outbound network requests. Never write raw fetch or Axios statements inside visual JSX rendering loops.
 
-### 3.2. Styling & Theme System
+### 3.2. Performance Optimization & React Redraw Control
+To ensure fluid visual rendering and prevent browser thread blockage, frontend developments must align with our optimization requirements.
+*   **Prevent Cascading Re-renders**: Decouple page layout modifications from background processes using pure JS external stores subscribing via `useSyncExternalStore`.
+*   **Lazy Loading & Resource Conservation**: Defer polling triggers and heavy layout mounts until widgets are manually expanded.
+*   **Stable Referencing & Memoization**: Leverage stable external constants (`EMPTY_ARRAY`) and memoize rendering leaf objects (`React.memo`).
+
+> [!TIP]
+> For complete instructions on hooks optimization, array references safety, and subscriber-driven reference-counting loops, read the [Frontend Performance & Architectural Best Practices](FRONTEND_BEST_PRACTICES.md) guide.
+
+### 3.3. Styling & Theme System
 AAA utilizes Tailwind CSS v4 alongside custom HSL color definitions in [frontend/src/index.css](file:///d:/01_GIT/AAA/frontend/src/index.css).
 
 *   **Dark Mode First**: The system defaults to dark mode (`#0c0c0c` background, `#c8c8c8` text color).

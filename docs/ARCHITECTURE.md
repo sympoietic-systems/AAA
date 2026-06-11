@@ -7,20 +7,26 @@ graph TB
     subgraph Frontend ["React Frontend"]
         direction TB
         subgraph Components ["UI Layer"]
+            NE["NodeExplorer<br/>(Page Component)"]
             CL["ConversationList<br/>(Left Sidebar)"]
-            CV["ChatView"]
-            MB["MessageBubble"]
-            IB["InputBar"]
-            SP["SidePanel<br/>(Right Sidebar)"]
+            MB["MessageBubble<br/>(Leaf Component)"]
+            IB["InputBar<br/>(Leaf Component)"]
+            SP["SidePanel<br/>(Right Sidebar Panel)"]
+            CD["CreasesDropdown<br/>(Creases Indicator Panel)"]
         end
-        subgraph Logic ["Logic & API Layer"]
+        subgraph Logic ["Logic & State Layer"]
             UC["useChat hook"]
             UCO["useConversations hook"]
+            TS["telemetryStore<br/>(Vanilla Pub-Sub)"]
+            NS["notificationStore<br/>(Vanilla Pub-Sub)"]
             AC["api/client.ts"]
         end
-        CV <--> MB <--> IB
-        MB -.->|Token Counts| UC
-        UC & UCO --> AC
+        NE <--> MB
+        NE <--> IB
+        NE -.->|activeMessageId| UC
+        SP -.->|Telemetry state hooks| TS
+        CD -.->|Notification updates| NS
+        UC & UCO & TS --> AC
     end
 
     subgraph Backend ["FastAPI Backend (main.py)"]
@@ -507,28 +513,32 @@ AAA/
 ├── frontend/
 │   └── src/
 │       ├── api/client.ts     Backend API calls (chat, history, conversations, tokens, metrics, skills)
-│       ├── hooks/
-│       │   ├── useChat.ts    Chat state (scoped to conversationId)
-│       │   └── useConversations.ts  Conversation list + active ID state
+│       ├── hooks/            Reactive hooks dealing with page state and store updates
+│       │   ├── useChat.ts    Chat state (message path navigation, actions, uploads)
+│       │   ├── useConversations.ts  Conversation CRUD list and browser parameter state sync
+│       │   └── useTelemetry.ts     Subscriber-driven hooks querying the central telemetry store
+│       ├── stores/           Vanilla JavaScript pub-sub external stores
+│       │   ├── telemetryStore.ts     Centralized reference-counted polling timers registry
+│       │   └── notificationStore.ts  Stream manager for sediment, glitch, and trace notifications
 │       └── components/
-│           ├── App.tsx           Three-column layout
-│           ├── ConversationList.tsx  Collapsible left sidebar
-│           ├── ChatView.tsx      Main chat container
-│           ├── SidePanel.tsx     Thin shell managing collapsible right sidebar sections; delegates data fetching to sub-components
-│           │   └── sidepanel/     Right-sidebar sections (each owns internal polling)
-│           │       ├── SummarySection.tsx       Conversation summary display
-│           │       ├── MemoryNodesSection.tsx   Intra-active memory nodes (30s poll)
-│           │       ├── NotesSection.tsx         Notes/highlights with scroll-to-message
-│           │       ├── SedimentSection.tsx      Uploaded files, sediment injection + modal (60s poll)
-│           │       ├── TokensSection.tsx        Token usage breakdown (15s poll)
-│           │       ├── VitalitySection.tsx      11-dim Paskian vitality metrics (15s poll)
-│           │       ├── DiffractionSection.tsx   Anti-stagnation diffractive telemetry (15s poll)
-│           │       ├── AttractorsSection.tsx    Belief attractor window + spectral margin (15s poll)
-│           │       ├── MetadataCards.tsx        Image/Web/Document metadata cards
-│           │       └── SectionHeader.tsx        Reusable collapsible toggle button
-│           ├── MessageBubble.tsx Markdown + thinking + token counts + structural glyph + debug panels
-│           ├── StructuralAutopoieticGlyph.tsx  16-dim radar/bar visualization of cybernetic signature
-│           └── InputBar.tsx      Terminal prompt input
+│           ├── App.tsx           Main root interface layout and state wireframing
+│           ├── ConversationList.tsx Collapsible left history sidebar
+│           ├── pages/            Standing page layout components
+│           │   ├── landing/      ConversationLandingPage default entry layout
+│           │   ├── agentpage/    Decoupled agent telemetry dashboard
+│           │   └── nodeexplorer/ NodeExplorer traversal workspace (includes MessageBubble, InputBar, CreasesDropdown)
+│           └── panels/           Embedded floating overlays and panels
+│               ├── contextviewer/ Collapsible post-processed context debugger overlay
+│               ├── leftpanel/    SVG/Canvas relational graphs and matching echo sidebars
+│               └── sidepanel/    Collapsible telemetry sidebar (SidePanel thin shell)
+│                   └── sidepanel/ Telemetry metrics panels (each maps shared hook values and suspends polling when collapsed)
+│                       ├── VitalitySection.tsx    Paskian conversational vitality metrics
+│                       ├── DiffractionSection.tsx Stagnation and nomadic retrieval telemetry
+│                       ├── AttractorsSection.tsx  Belief metabolism attractor windows
+│                       ├── TokensSection.tsx      Token metrics and budget usage gauges
+│                       ├── MemoryNodesSection.tsx Distilled sedimentation knots list
+│                       ├── NotesSection.tsx       Selection text comments and message markers
+│                       └── SedimentSection.tsx    Uploaded file tables and compaction logs
 ├── docs/
 │   ├── TDD.md                Technical Design Document
 │   ├── Implementation.md     Phase 1–4 roadmap
