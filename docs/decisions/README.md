@@ -72,6 +72,7 @@ What becomes easier/harder?
 | [038](ADR-038-creases-background-notifications-store.md) | Creases (Background Sediment Arrivals) and Pure JS Notification Store | accepted | 2026-06-11 |
 | [039](ADR-039-cross-conversation-retro-links-and-active-message-focus.md) | Cross-Conversation Retro-links and Active Message Focus | accepted | 2026-06-11 |
 | [040](ADR-040-subscriber-driven-telemetry-and-multi-type-notifications.md) | Subscriber-Driven Telemetry Polling and Multi-Type Notifications Store | accepted | 2026-06-11 |
+| [041](ADR-041-robust-metrics-backfill-and-parent-inference.md) | Robust Metrics Backfill and Parent Inference | accepted | 2026-06-12 |
 
 ## Creating a New ADR
 

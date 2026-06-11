@@ -251,6 +251,11 @@ class ChatService:
             else:
                 conv_repo.touch(conversation_id)
 
+        if parent_message_id is None and conversation_id and not is_new:
+            last_msgs = repo.get_recent(limit=1, conversation_id=conversation_id)
+            if last_msgs:
+                parent_message_id = last_msgs[0].id
+
         try:
             initial_payload: dict = {
                 "content": content,
@@ -559,6 +564,11 @@ class ChatService:
                 is_new = True
             else:
                 conv_repo.touch(conversation_id)
+
+        if parent_message_id is None and conversation_id and not is_new:
+            last_msgs = repo.get_recent(limit=1, conversation_id=conversation_id)
+            if last_msgs:
+                parent_message_id = last_msgs[0].id
 
         # Generate embedding for user message
         embedding = b""

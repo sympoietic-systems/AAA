@@ -247,6 +247,18 @@ class BackgroundStartupScheduler:
                             )
                         except Exception as e:
                             logger.warning("Failed to embed assistant msg %d: %s", msg.id, e)
+                    # For non-apparatus messages that are missing an embedding, generate one
+                    elif not embedding_blob and embedder and embedder.service.is_loaded and content.strip():
+                        try:
+                            emb = await embedder.service.encode_async(content)
+                            embedding_blob = embedder.service.serialize(emb)
+                            embedding_dim = embedder.service.dim
+                            self.message_repo.update_embedding(
+                                msg.id, embedding_blob,
+                                embedder.service.model_name, embedder.service.dim,
+                            )
+                        except Exception as e:
+                            logger.warning("Failed to embed message %d: %s", msg.id, e)
 
                     if not embedding_blob:
                         continue
@@ -256,11 +268,12 @@ class BackgroundStartupScheduler:
                         "embedding": embedding_blob,
                         "embedding_dim": embedding_dim,
                         "conversation_id": cid,
+                        "parent_message_id": msg.parent_message_id,
                         "exclude_message_id": msg.id,
                     }
                     result = await metrics_module.process(payload)
                     metrics = result.get("metrics")
-                    if metrics and metrics.get("pairwise_similarity") is not None:
+                    if metrics:
                         _store_metrics_backfill(metrics_repo, msg.id, metrics)
                         count += 1
                 except Exception as e:
@@ -304,8 +317,10 @@ class BackgroundStartupScheduler:
 def _store_metrics_backfill(metrics_repo, message_id: int, metrics: dict) -> None:
     s_t = metrics.get("pairwise_similarity")
     novelty = metrics.get("conceptual_novelty")
-    if s_t is None or novelty is None:
-        return
+    if s_t is None:
+        s_t = 0.0
+    if novelty is None:
+        novelty = 0.0
 
     phase_shifts = metrics.get("phase_shifts")
     phase_shifts_json = None
@@ -317,7 +332,7 @@ def _store_metrics_backfill(metrics_repo, message_id: int, metrics: dict) -> Non
         message_id=message_id,
         s_t=float(s_t),
         novelty=float(novelty),
-        deficit=float(metrics.get("homeostatic_deficit", 0.0)),
+        deficit=float(metrics["homeostatic_deficit"]) if metrics.get("homeostatic_deficit") is not None else 0.0,
         rolling_entropy=float(metrics["rolling_entropy"]) if metrics.get("rolling_entropy") is not None else None,
         coupling=float(metrics["coupling_coherence"]) if metrics.get("coupling_coherence") is not None else None,
         agent_divergence=float(metrics["agent_self_divergence"]) if metrics.get("agent_self_divergence") is not None else None,

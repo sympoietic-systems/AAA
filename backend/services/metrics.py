@@ -8,8 +8,10 @@ class MetricsService:
     def store(metrics_repo, message_id: int, metrics: dict, recommendations: dict | None) -> None:
         s_t = metrics.get("pairwise_similarity")
         novelty = metrics.get("conceptual_novelty")
-        if s_t is None or novelty is None:
-            return
+        if s_t is None:
+            s_t = 0.0
+        if novelty is None:
+            novelty = 0.0
 
         temp_rec = None
         pres_rec = None
@@ -34,7 +36,7 @@ class MetricsService:
             message_id=message_id,
             s_t=float(s_t),
             novelty=float(novelty),
-            deficit=float(metrics.get("homeostatic_deficit", 0.0)),
+            deficit=float(metrics["homeostatic_deficit"]) if metrics.get("homeostatic_deficit") is not None else 0.0,
             rolling_entropy=float(metrics["rolling_entropy"]) if metrics.get("rolling_entropy") is not None else None,
             coupling=float(metrics["coupling_coherence"]) if metrics.get("coupling_coherence") is not None else None,
             agent_divergence=float(metrics["agent_self_divergence"]) if metrics.get("agent_self_divergence") is not None else None,
