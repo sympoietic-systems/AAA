@@ -12,9 +12,9 @@ import type {
   SchedulerStatusResponse,
   DbSkillsResponse,
 } from "../api/client"
-import { BeliefsSection } from "./sidepanel/BeliefsSection"
-import { DreamingSection } from "./sidepanel/DreamingSection"
-import { StartupSection } from "./sidepanel/StartupSection"
+import { BeliefsSection } from "./agentpage/BeliefsSection"
+import { DreamingSection } from "./agentpage/DreamingSection"
+import { StartupSection } from "./agentpage/StartupSection"
 
 type TabId = "beliefs" | "dreaming" | "daemons" | "skills"
 

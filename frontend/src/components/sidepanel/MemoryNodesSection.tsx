@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import type { MemoryNodeInfo } from "../../api/client"
 import { getMemoryNodes } from "../../api/client"
-import { MemoryNodeCard } from "../MemoryNodeCard"
+import { MemoryNodeCard } from "./MemoryNodeCard"
 
 interface MemoryNodesSectionProps {
   conversationId?: string
