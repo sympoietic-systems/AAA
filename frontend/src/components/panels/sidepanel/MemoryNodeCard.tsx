@@ -1,4 +1,4 @@
-import type { MemoryNodeInfo } from "../api/client"
+import type { MemoryNodeInfo } from "../../../api/client"
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   scar: "SCAR",

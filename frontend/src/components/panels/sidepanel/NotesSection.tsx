@@ -1,5 +1,5 @@
 import { useState, memo } from "react"
-import type { NoteInfo } from "../../api/client"
+import type { NoteInfo } from "../../../api/client"
 
 interface NotesSectionProps {
   notes: NoteInfo[]

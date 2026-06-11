@@ -3,7 +3,7 @@ import {
   getSpectralSuggestions,
   createResonanceLink,
   type SpectralSuggestion,
-} from "../api/client"
+} from "../../../api/client"
 
 interface SpectralEchoesProps {
   conversationId: string

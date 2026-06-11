@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from "react"
-import { getSchedulerStatus } from "../../api/client"
-import type { SchedulerStatusResponse } from "../../api/client"
+import { getSchedulerStatus } from "../../../api/client"
+import type { SchedulerStatusResponse } from "../../../api/client"
 
 function getStatusColor(s: string) {
   switch (s) {

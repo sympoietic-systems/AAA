@@ -1,10 +1,10 @@
 import { useState } from "react"
-import type { ImageMetadata, WebMetadata, DocumentMetadata } from "../../api/client"
+import type { ImageMetadata, WebMetadata, DocumentMetadata } from "../../../api/client"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
-import telemetrySchemas from "../../config/telemetry_schemas.json"
+import telemetrySchemas from "../../../config/telemetry_schemas.json"
 
 const { DIMENSIONS_16 } = telemetrySchemas
 

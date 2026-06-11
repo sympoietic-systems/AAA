@@ -87,9 +87,9 @@ export function useChat(conversationId: string) {
     })
   }, [])
 
-  const selectMessage = useCallback((msgId: number) => {
+  const selectMessage = useCallback((msgId: number | null) => {
     setActiveMessageId((prevId) => {
-      if (prevId !== null && prevId !== msgId) {
+      if (prevId !== null && msgId !== null && prevId !== msgId) {
         const currentMsg = messages.find((m) => m.id === prevId)
         if (currentMsg) {
           addToHistory(currentMsg)

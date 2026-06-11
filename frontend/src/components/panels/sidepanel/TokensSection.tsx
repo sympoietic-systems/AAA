@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from "react"
-import { getTokens } from "../../api/client"
-import type { TokenResponse } from "../../api/client"
+import { getTokens } from "../../../api/client"
+import type { TokenResponse } from "../../../api/client"
 
 interface TokensSectionProps {
   conversationId?: string
@@ -56,6 +56,10 @@ function TokensSectionComponent({ conversationId, enabled = false, messageCount 
 
   if (error && !tokens) {
     return <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>
+  }
+
+  if (loading && !tokens) {
+    return <p className="text-[9px] text-[#444] font-mono animate-pulse">loading...</p>
   }
 
   if (!tokens) {

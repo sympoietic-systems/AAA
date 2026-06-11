@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { BeliefsSection } from "./agentpage/BeliefsSection"
-import { DreamingSection } from "./agentpage/DreamingSection"
-import { StartupSection } from "./agentpage/StartupSection"
-import { SkillsSection } from "./agentpage/SkillsSection"
+import { BeliefsSection } from "./BeliefsSection"
+import { DreamingSection } from "./DreamingSection"
+import { StartupSection } from "./StartupSection"
+import { SkillsSection } from "./SkillsSection"
 
 type TabId = "beliefs" | "dreaming" | "daemons" | "skills"
 

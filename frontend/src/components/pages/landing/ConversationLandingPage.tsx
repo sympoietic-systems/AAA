@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import type { ConversationInfo } from "../api/client"
+import type { ConversationInfo } from "../../../api/client"
 
 interface Props {
   conversations: ConversationInfo[]

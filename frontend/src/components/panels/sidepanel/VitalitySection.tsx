@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from "react"
-import { getMetrics } from "../../api/client"
-import type { MetricsResponse } from "../../api/client"
+import { getMetrics } from "../../../api/client"
+import type { MetricsResponse } from "../../../api/client"
 
 interface VitalitySectionProps {
   enabled?: boolean
@@ -146,7 +146,11 @@ function VitalitySectionComponent({ enabled = false, messageCount = 0 }: Vitalit
         </div>
       )}
 
-      {!metrics && !error && (
+      {loading && !metrics && (
+        <p className="text-[9px] text-[#444] font-mono animate-pulse">loading...</p>
+      )}
+
+      {!metrics && !error && !loading && (
         <p className="text-[9px] text-[#444] font-mono">waiting for data...</p>
       )}
 

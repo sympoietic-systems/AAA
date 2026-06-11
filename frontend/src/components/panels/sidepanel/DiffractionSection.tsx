@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from "react"
-import { getMetrics } from "../../api/client"
-import type { MetricsResponse, DiffractiveInfo } from "../../api/client"
+import { getMetrics } from "../../../api/client"
+import type { MetricsResponse, DiffractiveInfo } from "../../../api/client"
 
 interface DiffractionSectionProps {
   enabled?: boolean
@@ -70,6 +70,22 @@ function DiffractionSectionComponent({ enabled = false, messageCount = 0 }: Diff
       clearTimeout(timeoutId)
     }
   }, [enabled, messageCount])
+
+  if (error && !metrics) {
+    return (
+      <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+        <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>
+      </div>
+    )
+  }
+
+  if (loading && !metrics) {
+    return (
+      <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+        <p className="text-[9px] text-[#444] font-mono animate-pulse">loading...</p>
+      </div>
+    )
+  }
 
   const diff: DiffractiveInfo | null | undefined = metrics?.diffractive
 

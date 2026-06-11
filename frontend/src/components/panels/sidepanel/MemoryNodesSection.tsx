@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from "react"
-import type { MemoryNodeInfo } from "../../api/client"
-import { getMemoryNodes } from "../../api/client"
+import type { MemoryNodeInfo } from "../../../api/client"
+import { getMemoryNodes } from "../../../api/client"
 import { MemoryNodeCard } from "./MemoryNodeCard"
 
 interface MemoryNodesSectionProps {

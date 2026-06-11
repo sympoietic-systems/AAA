@@ -3,10 +3,10 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
-import type { ChatMessage, MetricsInfo, NoteInfo } from "../api/client"
-import { getMessageThinking, getMessageContext } from "../api/client"
+import type { ChatMessage, MetricsInfo, NoteInfo } from "../../../api/client"
+import { getMessageThinking, getMessageContext } from "../../../api/client"
 import { StructuralAutopoieticGlyph } from "./StructuralAutopoieticGlyph"
-import { ContextViewer } from "./ContextViewer"
+import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
 const DIMENSION_NAMES = [
   "Homeostatic",
   "Amplifying",

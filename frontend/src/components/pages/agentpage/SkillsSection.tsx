@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, memo } from "react"
-import { getDbSkills, getSkillContent } from "../../api/client"
-import type { DbSkillsResponse, DbSkillInfo } from "../../api/client"
+import { getDbSkills, getSkillContent } from "../../../api/client"
+import type { DbSkillsResponse, DbSkillInfo } from "../../../api/client"
 
 // ─── Skill List Item ─────────────────────────────────────
 

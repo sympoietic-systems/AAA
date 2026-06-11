@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, memo } from "react"
-import { getBeliefs } from "../../api/client"
-import type { BeliefsResponse, BeliefNodeInfo } from "../../api/client"
+import { getBeliefs } from "../../../api/client"
+import type { BeliefsResponse, BeliefNodeInfo } from "../../../api/client"
 
 // ─── Helpers ───────────────────────────────────────────────
 

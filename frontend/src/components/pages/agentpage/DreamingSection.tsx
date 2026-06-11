@@ -1,7 +1,7 @@
 import { useState, useEffect, memo } from "react"
-import { getDaemonStatus } from "../../api/client"
-import type { DaemonStatusResponse } from "../../api/client"
-import telemetrySchemas from "../../config/telemetry_schemas.json"
+import { getDaemonStatus } from "../../../api/client"
+import type { DaemonStatusResponse } from "../../../api/client"
+import telemetrySchemas from "../../../config/telemetry_schemas.json"
 
 const { DREAM_TYPE_LABELS } = telemetrySchemas as {
   DREAM_TYPE_LABELS: Record<string, { code: string; label: string; color: string }>

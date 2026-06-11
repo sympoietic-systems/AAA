@@ -5,17 +5,17 @@ import type {
   NoteInfo,
   WebMetadata,
   DocumentMetadata,
-} from "../api/client"
-import { getFileSummary } from "../api/client"
-import { SectionHeader } from "./sidepanel/SectionHeader"
-import { VitalitySection } from "./sidepanel/VitalitySection"
-import { DiffractionSection } from "./sidepanel/DiffractionSection"
-import { TokensSection } from "./sidepanel/TokensSection"
-import { NotesSection } from "./sidepanel/NotesSection"
-import { SedimentSection } from "./sidepanel/SedimentSection"
-import { SummarySection } from "./sidepanel/SummarySection"
-import { MemoryNodesSection } from "./sidepanel/MemoryNodesSection"
-import { AttractorsSection } from "./sidepanel/AttractorsSection"
+} from "../../../api/client"
+import { getFileSummary } from "../../../api/client"
+import { SectionHeader } from "./SectionHeader"
+import { VitalitySection } from "./VitalitySection"
+import { DiffractionSection } from "./DiffractionSection"
+import { TokensSection } from "./TokensSection"
+import { NotesSection } from "./NotesSection"
+import { SedimentSection } from "./SedimentSection"
+import { SummarySection } from "./SummarySection"
+import { MemoryNodesSection } from "./MemoryNodesSection"
+import { AttractorsSection } from "./AttractorsSection"
 
 export function SidePanel({
   uploadedFiles = [],

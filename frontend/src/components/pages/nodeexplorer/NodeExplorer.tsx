@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, memo } from "react"
-import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, ConversationTreeNode } from "../api/client"
-import { getMessagePath } from "../api/client"
+import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, ConversationTreeNode } from "../../../api/client"
+import { getMessagePath } from "../../../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 

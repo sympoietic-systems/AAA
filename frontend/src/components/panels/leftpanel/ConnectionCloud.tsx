@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, memo, useCallback } from "react"
-import type { ChatMessage, NoteInfo, ConversationTreeNode, ConversationTreeLink } from "../api/client"
-import { confirmResonanceLink, deleteResonanceLink, getConversationTree } from "../api/client"
+import type { ChatMessage, NoteInfo, ConversationTreeNode, ConversationTreeLink } from "../../../api/client"
+import { confirmResonanceLink, deleteResonanceLink, getConversationTree } from "../../../api/client"
 
 interface ConnectionCloudProps {
   activeLoadedMessages: ChatMessage[]

@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from "react"
-import { getBeliefs } from "../../api/client"
-import type { BeliefsResponse } from "../../api/client"
+import { getBeliefs } from "../../../api/client"
+import type { BeliefsResponse } from "../../../api/client"
 
 interface AttractorsSectionProps {
   conversationId?: string

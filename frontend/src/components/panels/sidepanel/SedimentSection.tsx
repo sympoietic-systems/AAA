@@ -8,7 +8,7 @@ import {
   injectSediment,
   getConversationInjections,
   removeSedimentInjection,
-} from "../../api/client"
+} from "../../../api/client"
 import type {
   ConversationFile,
   SedimentFileInfo,
@@ -16,7 +16,7 @@ import type {
   ImageMetadata,
   WebMetadata,
   DocumentMetadata,
-} from "../../api/client"
+} from "../../../api/client"
 import {
   ImageMetadataCard,
   WebMetadataCard,
