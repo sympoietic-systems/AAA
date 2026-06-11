@@ -1,56 +1,13 @@
-import { useState, useEffect, memo } from "react"
-import { getMetrics } from "../../../api/client"
-import type { MetricsResponse } from "../../../api/client"
+import { memo } from "react"
+import { useTelemetryMetrics } from "../../../hooks/useTelemetry"
 
 interface VitalitySectionProps {
   enabled?: boolean
   messageCount?: number
 }
 
-function VitalitySectionComponent({ enabled = false, messageCount = 0 }: VitalitySectionProps) {
-  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (!enabled) {
-      setMetrics(null)
-      return
-    }
-
-    let active = true
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const tick = async () => {
-      if (!active) return
-      setLoading(prev => !metrics ? true : prev)
-      try {
-        const res = await getMetrics()
-        if (active) {
-          setMetrics(res)
-          setError(null)
-        }
-      } catch (e: any) {
-        if (active) {
-          setError(e.message || "Failed to fetch metrics")
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-
-      if (active) {
-        const delay = 15000 + (Math.random() - 0.5) * 1000
-        timeoutId = setTimeout(tick, delay)
-      }
-    }
-
-    tick()
-
-    return () => {
-      active = false
-      clearTimeout(timeoutId)
-    }
-  }, [enabled, messageCount])
+function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
+  const { metrics, metricsLoading: loading, metricsError: error } = useTelemetryMetrics(enabled)
 
   const vitality = metrics?.latest?.conversation_vitality
   const paskHealth = metrics?.latest?.paskian_health

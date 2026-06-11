@@ -1,6 +1,6 @@
-import { useState, useEffect, memo } from "react"
-import { getMetrics } from "../../../api/client"
-import type { MetricsResponse, DiffractiveInfo } from "../../../api/client"
+import { memo } from "react"
+import { useTelemetryMetrics } from "../../../hooks/useTelemetry"
+import type { DiffractiveInfo } from "../../../api/client"
 
 interface DiffractionSectionProps {
   enabled?: boolean
@@ -26,50 +26,8 @@ function DiffractiveTooltip({ title, value, desc }: { title: string; value?: str
   )
 }
 
-function DiffractionSectionComponent({ enabled = false, messageCount = 0 }: DiffractionSectionProps) {
-  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (!enabled) {
-      setMetrics(null)
-      return
-    }
-
-    let active = true
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const tick = async () => {
-      if (!active) return
-      setLoading(prev => !metrics ? true : prev)
-      try {
-        const res = await getMetrics()
-        if (active) {
-          setMetrics(res)
-          setError(null)
-        }
-      } catch (e: any) {
-        if (active) {
-          setError(e.message || "Failed to fetch metrics")
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-
-      if (active) {
-        const delay = 15000 + (Math.random() - 0.5) * 1000
-        timeoutId = setTimeout(tick, delay)
-      }
-    }
-
-    tick()
-
-    return () => {
-      active = false
-      clearTimeout(timeoutId)
-    }
-  }, [enabled, messageCount])
+function DiffractionSectionComponent({ enabled = false }: DiffractionSectionProps) {
+  const { metrics, metricsLoading: loading, metricsError: error } = useTelemetryMetrics(enabled)
 
   if (error && !metrics) {
     return (

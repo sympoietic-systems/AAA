@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { getNotes, createNote, updateNote, deleteNote, type NoteInfo } from "../api/client"
+import { addNotification } from "../stores/notificationStore"
 
 export function useNotes(conversationId: string) {
   const [notes, setNotes] = useState<NoteInfo[]>([])
@@ -16,9 +17,14 @@ export function useNotes(conversationId: string) {
     try {
       const data = await getNotes(conversationId)
       setNotes(data)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load notes:", err)
       setError("Failed to load notes")
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to load notes: ${err.message || "Unknown resistance"}`,
+        source: "Notes.load"
+      })
     } finally {
       setLoading(false)
     }
@@ -41,9 +47,14 @@ export function useNotes(conversationId: string) {
       const newNote = await createNote(conversationId, messageId, selectedText, comment, visibility, startOffset)
       setNotes((prev) => [...prev, newNote])
       return newNote
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to add note:", err)
       setError("Failed to add note")
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to add note: ${err.message || "Unknown resistance"}`,
+        source: "Notes.add"
+      })
       return null
     }
   }, [conversationId])
@@ -59,9 +70,14 @@ export function useNotes(conversationId: string) {
       const updated = await updateNote(conversationId, noteId, comment, visibility)
       setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)))
       return updated
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to edit note:", err)
       setError("Failed to edit note")
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to edit note: ${err.message || "Unknown resistance"}`,
+        source: "Notes.edit"
+      })
       return null
     }
   }, [conversationId])
@@ -72,9 +88,14 @@ export function useNotes(conversationId: string) {
     try {
       await deleteNote(conversationId, noteId)
       setNotes((prev) => prev.filter((n) => n.id !== noteId))
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to delete note:", err)
       setError("Failed to delete note")
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to delete note: ${err.message || "Unknown resistance"}`,
+        source: "Notes.delete"
+      })
     }
   }, [conversationId])
 

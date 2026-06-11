@@ -1,21 +1,21 @@
 import { useSyncExternalStore } from "react"
 
 /**
- * SedimentNotification represents an agent response that arrived while
- * the participant was elsewhere (different conversation or different node).
- *
- * This store is a pure JS module — calling addNotification() causes
- * zero re-renders in the caller. Only components that subscribe via
- * useNotifications() will re-render.
+ * SedimentNotification represents a trace fold on the material interface.
+ * It can be a 'sediment' arrival (agent message elsewhere), a 'glitch' (error),
+ * or a 'trace' (informational system trace).
  */
 export interface SedimentNotification {
   id: string
-  conversationId: string
-  messageId: number
+  type: 'sediment' | 'glitch' | 'trace'
+  conversationId?: string
+  messageId?: number
   parentMessageId?: number
   timestamp: string
   snippet: string
-  speaker: string
+  speaker?: string
+  source?: string
+  read?: boolean
 }
 
 type Listener = () => void
@@ -42,12 +42,27 @@ function getSnapshot(): SedimentNotification[] {
 
 /**
  * Add a notification. Can be called from any hook, callback, or module.
- * Does NOT trigger React re-renders in the caller — only subscribers re-render.
  */
-export function addNotification(notif: Omit<SedimentNotification, "id">) {
-  const id = `${notif.conversationId}-${notif.messageId}`
+export function addNotification(
+  notif: Omit<SedimentNotification, "id" | "type" | "read" | "timestamp"> & {
+    id?: string
+    type?: 'sediment' | 'glitch' | 'trace'
+    timestamp?: string
+  }
+) {
+  const type = notif.type || 'sediment'
+  const timestamp = notif.timestamp || new Date().toISOString()
+  let id = notif.id
+  if (!id) {
+    if (type === 'sediment' && notif.conversationId && notif.messageId) {
+      id = `${notif.conversationId}-${notif.messageId}`
+    } else {
+      id = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+    }
+  }
   if (notifications.some((n) => n.id === id)) return
-  notifications = [{ ...notif, id }, ...notifications]
+  
+  notifications = [{ ...notif, type, id, timestamp, read: false } as SedimentNotification, ...notifications]
   emitChange()
 }
 
@@ -64,7 +79,6 @@ export function dismissNotification(id: string) {
 
 /**
  * Dismiss a notification matching a specific conversation + message pair.
- * Called automatically when the participant navigates to a node that matches.
  */
 export function dismissByMatch(conversationId: string, messageId: number) {
   const matchId = `${conversationId}-${messageId}`
@@ -85,9 +99,37 @@ export function clearAllNotifications() {
 }
 
 /**
+ * Clear notifications of a specific type.
+ */
+export function clearNotificationsByType(type: 'sediment' | 'glitch' | 'trace') {
+  const next = notifications.filter((n) => n.type !== type)
+  if (next.length !== notifications.length) {
+    notifications = next
+    emitChange()
+  }
+}
+
+/**
+ * Mark all notifications of a specific type as read.
+ */
+export function markAllAsRead(type?: 'sediment' | 'glitch' | 'trace') {
+  let changed = false
+  notifications = notifications.map((n) => {
+    if ((!type || n.type === type) && !n.read) {
+      changed = true
+      return { ...n, read: true }
+    }
+    return n
+  })
+  if (changed) {
+    emitChange()
+  }
+}
+
+/**
  * React hook to subscribe to notifications.
- * Only components using this hook re-render when notifications change.
  */
 export function useNotifications(): SedimentNotification[] {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
+

@@ -7,6 +7,7 @@ import {
   renameConversation as renameConvApi,
   generateConversationTitle as generateTitleApi,
 } from "../api/client"
+import { addNotification } from "../stores/notificationStore"
 
 export function useConversations() {
   const [conversations, setConversations] = useState<ConversationInfo[]>([])
@@ -65,8 +66,12 @@ export function useConversations() {
       setConversations(data.conversations)
       setTotalCount(data.total_count || 0)
       setHasMore(!!data.has_more)
-    } catch {
-      // silent
+    } catch (err: any) {
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to load conversations: ${err.message || "Unknown resistance"}`,
+        source: "Conversations.load"
+      })
     } finally {
       setLoading(false)
     }
@@ -85,8 +90,12 @@ export function useConversations() {
       })
       setTotalCount(data.total_count || 0)
       setHasMore(!!data.has_more)
-    } catch {
-      // silent
+    } catch (err: any) {
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to load more conversations: ${err.message || "Unknown resistance"}`,
+        source: "Conversations.loadMore"
+      })
     } finally {
       setLoadingMore(false)
     }
@@ -112,8 +121,12 @@ export function useConversations() {
       if (activeId === id) {
         updateActiveId("")
       }
-    } catch {
-      // silent
+    } catch (err: any) {
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to delete conversation: ${err.message || "Unknown resistance"}`,
+        source: "Conversations.delete"
+      })
     }
   }, [activeId, updateActiveId])
 
@@ -139,8 +152,12 @@ export function useConversations() {
       setConversations((prev) =>
         prev.map((c) => (c.id === id ? { ...c, title: updated.title } : c))
       )
-    } catch {
-      // silent
+    } catch (err: any) {
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to refresh conversation title: ${err.message || "Unknown resistance"}`,
+        source: "Conversations.refreshTitle"
+      })
     }
   }, [])
 
@@ -150,8 +167,12 @@ export function useConversations() {
       setConversations((prev) =>
         prev.map((c) => (c.id === id ? { ...c, title } : c))
       )
-    } catch {
-      // silent
+    } catch (err: any) {
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to rename conversation: ${err.message || "Unknown resistance"}`,
+        source: "Conversations.rename"
+      })
     }
   }, [])
 
@@ -162,7 +183,12 @@ export function useConversations() {
         prev.map((c) => (c.id === id ? { ...c, title: updated.title } : c))
       )
       return updated.title
-    } catch {
+    } catch (err: any) {
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to generate conversation title: ${err.message || "Unknown resistance"}`,
+        source: "Conversations.generateTitle"
+      })
       return null
     }
   }, [])

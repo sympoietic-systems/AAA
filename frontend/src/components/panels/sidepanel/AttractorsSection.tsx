@@ -1,6 +1,5 @@
-import { useState, useEffect, memo } from "react"
-import { getBeliefs } from "../../../api/client"
-import type { BeliefsResponse } from "../../../api/client"
+import { memo } from "react"
+import { useTelemetryBeliefs } from "../../../hooks/useTelemetry"
 
 interface AttractorsSectionProps {
   conversationId?: string
@@ -11,51 +10,8 @@ interface AttractorsSectionProps {
 function AttractorsSectionComponent({
   conversationId,
   enabled = false,
-  messageCount = 0,
 }: AttractorsSectionProps) {
-  const [beliefs, setBeliefs] = useState<BeliefsResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (!enabled || !conversationId) {
-      setBeliefs(null)
-      return
-    }
-
-    let active = true
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const tick = async () => {
-      if (!active) return
-      setLoading(true)
-      try {
-        const res = await getBeliefs(conversationId)
-        if (active) {
-          setBeliefs(res)
-          setError(null)
-        }
-      } catch (e: any) {
-        if (active) {
-          setError(e.message || "Failed to fetch beliefs")
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-
-      if (active) {
-        const delay = 15000 + (Math.random() - 0.5) * 1000 // 15s ± 500ms
-        timeoutId = setTimeout(tick, delay)
-      }
-    }
-
-    tick()
-
-    return () => {
-      active = false
-      clearTimeout(timeoutId)
-    }
-  }, [enabled, conversationId, messageCount])
+  const { beliefs, beliefsLoading: loading, beliefsError: error } = useTelemetryBeliefs(conversationId || null, enabled)
 
   return (
     <div className="text-[10px] font-mono space-y-2">

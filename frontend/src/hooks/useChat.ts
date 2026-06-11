@@ -103,9 +103,14 @@ export function useChat(conversationId: string) {
       const data = await getConversationTree(convId)
       setLinks(data.links)
       setTreeNodes(data.nodes)
-    } catch {
+    } catch (err: any) {
       setLinks([])
       setTreeNodes([])
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to load conversation tree nodes: ${err.message || "Unknown resistance"}`,
+        source: "Chat.fetchTree"
+      })
     }
   }, [])
   const [error, setError] = useState<string | null>(null)
@@ -205,6 +210,11 @@ export function useChat(conversationId: string) {
           })
           .catch((err) => {
             console.error("Failed to load message path from URL param 'm':", err)
+            addNotification({
+              type: "glitch",
+              snippet: `Failed to load message path from URL: ${err.message || "Unknown resistance"}`,
+              source: "Chat.loadPath"
+            })
             getHistory(PAGE_SIZE, 0, conversationId)
               .then((data) => {
                 setMessages(data.messages)
@@ -216,10 +226,15 @@ export function useChat(conversationId: string) {
                 }
                 setHasMore(false)
               })
-              .catch(() => {
+              .catch((errHistory) => {
                 setMessages([])
                 setActiveMessageId(null)
                 setHasMore(false)
+                addNotification({
+                  type: "glitch",
+                  snippet: `Failed to load conversation history fallback: ${errHistory.message || "Unknown resistance"}`,
+                  source: "Chat.loadHistory"
+                })
               })
           })
           .finally(() => setIsHistoryLoading(false))
@@ -235,10 +250,15 @@ export function useChat(conversationId: string) {
             }
             setHasMore(false)
           })
-          .catch(() => {
+          .catch((err) => {
             setMessages([])
             setActiveMessageId(null)
             setHasMore(false)
+            addNotification({
+              type: "glitch",
+              snippet: `Failed to load conversation history: ${err.message || "Unknown resistance"}`,
+              source: "Chat.loadHistory"
+            })
           })
           .finally(() => setIsHistoryLoading(false))
       }
@@ -255,7 +275,14 @@ export function useChat(conversationId: string) {
             startPolling(conversationId)
           }
         })
-        .catch(() => setFiles([]))
+        .catch((err) => {
+          setFiles([])
+          addNotification({
+            type: "glitch",
+            snippet: `Failed to list conversation files: ${err.message || "Unknown resistance"}`,
+            source: "Chat.listFiles"
+          })
+        })
     } else {
       setMessages([])
       setFiles([])
@@ -322,8 +349,13 @@ export function useChat(conversationId: string) {
         const filteredNew = data.messages.filter((m) => !existingIds.has(m.id))
         return [...filteredNew, ...prev]
       })
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to load more messages:", e)
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to load more messages: ${e.message || "Unknown resistance"}`,
+        source: "Chat.loadMore"
+      })
     } finally {
       setLoadingMore(false)
     }
@@ -397,7 +429,7 @@ export function useChat(conversationId: string) {
             .catch(() => {})
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to persist user message"
       if (!targetConvId || loadedRef.current === targetConvId) {
         setError(msg)
@@ -406,6 +438,11 @@ export function useChat(conversationId: string) {
         const next = new Set(prev)
         next.delete(tempId)
         return next
+      })
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to save message: ${msg}`,
+        source: "Chat.saveMessage"
       })
       return null
     }
@@ -453,11 +490,16 @@ export function useChat(conversationId: string) {
       fetchTree(targetConvId!)
 
       return response
-    } catch (e) {
+    } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to generate response"
       if (loadedRef.current === targetConvId) {
         setError(msg)
       }
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to generate response: ${msg}`,
+        source: "Chat.generateResponse"
+      })
       return savedMsg // Return the user message so App.tsx knows the conversation was created/updated
     } finally {
       setGeneratingUserMessageIds((prev) => {
@@ -530,11 +572,16 @@ export function useChat(conversationId: string) {
       fetchTree(targetConvId)
 
       return response
-    } catch (e) {
+    } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to generate response"
       if (loadedRef.current === targetConvId) {
         setError(msg)
       }
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to regenerate response: ${msg}`,
+        source: "Chat.regenerateResponse"
+      })
       return null
     } finally {
       setGeneratingUserMessageIds((prev) => {
@@ -558,9 +605,14 @@ export function useChat(conversationId: string) {
       setFiles(res.files)
       startPolling(res.conversation_id)
       return res.conversation_id
-    } catch (e) {
+    } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to upload files"
       setError(msg)
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to upload files: ${msg}`,
+        source: "Chat.uploadFiles"
+      })
       return null
     } finally {
       setIsUploading(false)
@@ -572,9 +624,14 @@ export function useChat(conversationId: string) {
     try {
       await deleteConversationFile(conversationId, fileName)
       setFiles((prev) => prev.filter((f) => f.file_name !== fileName))
-    } catch (e) {
+    } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to delete file"
       setError(msg)
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to delete file: ${msg}`,
+        source: "Chat.deleteFile"
+      })
     }
   }, [conversationId])
 
@@ -588,9 +645,14 @@ export function useChat(conversationId: string) {
         )
       )
       startPolling(conversationId)
-    } catch (e) {
+    } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to reprocess file"
       setError(msg)
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to reprocess file: ${msg}`,
+        source: "Chat.reprocessFile"
+      })
     }
   }, [conversationId, startPolling])
 
@@ -648,11 +710,16 @@ export function useChat(conversationId: string) {
       })
       setActiveMessageId(response.id)
       return response
-    } catch (e) {
+    } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to commit branch"
       if (loadedRef.current === targetConvId) {
         setError(msg)
       }
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to commit branch: ${msg}`,
+        source: "Chat.commitBranch"
+      })
       return null
     } finally {
       setGeneratingUserMessageIds((prev) => {
@@ -683,9 +750,14 @@ export function useChat(conversationId: string) {
       const pathMessages = await getMessagePath(msgId)
       setMessages(pathMessages)
       setActiveMessageId(msgId)
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to navigate to message path:", e)
       setError("Failed to navigate to the selected message path.")
+      addNotification({
+        type: "glitch",
+        snippet: `Failed to navigate to message path: ${e.message || "Unknown resistance"}`,
+        source: "Chat.navigateToMessage"
+      })
     } finally {
       setIsHistoryLoading(false)
     }
