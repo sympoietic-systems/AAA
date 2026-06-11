@@ -156,7 +156,9 @@ export const MessageBubble = memo(function MessageBubble({
   onAddNote,
   onDeleteNote,
   onUpdateNote,
-  onBranch
+  onBranch,
+  onRegenerate,
+  fullTreeMessages = []
 }: {
   msg: ChatMessage
   previousSignature?: number[] | null
@@ -165,9 +167,18 @@ export const MessageBubble = memo(function MessageBubble({
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   onBranch?: (messageId: number) => void
+  onRegenerate?: (userMsgId?: number) => void
+  fullTreeMessages?: ChatMessage[]
 }) {
   const isHuman = msg.speaker === "human"
   const isSystem = msg.speaker === "system"
+
+  // Compute siblings for navigation
+  const siblings = msg.parent_message_id && fullTreeMessages
+    ? fullTreeMessages.filter(m => m.parent_message_id === msg.parent_message_id && m.speaker === msg.speaker).sort((a, b) => a.id - b.id)
+    : []
+  const currentIndex = siblings.findIndex((s) => s.id === msg.id)
+  const hasSiblings = siblings.length > 1
   const processedContent = msg.content
     ? msg.content.replace(/<scar_fold>/g, '<scar-fold>').replace(/<\/scar_fold>/g, '</scar-fold>')
     : ""
@@ -476,6 +487,27 @@ export const MessageBubble = memo(function MessageBubble({
               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
             </span>
           )}
+          {hasSiblings && currentIndex !== -1 && (
+            <div className="flex items-center gap-1 text-[9px] text-[#555] font-mono select-none">
+              <button
+                onClick={() => currentIndex > 0 && onBranch && onBranch(siblings[currentIndex - 1].id)}
+                disabled={currentIndex === 0}
+                className="hover:text-[#4ade80] disabled:text-[#222] transition-colors cursor-pointer"
+                title="Previous sibling response"
+              >
+                &lt;
+              </button>
+              <span className="text-[#666]">{currentIndex + 1}/{siblings.length}</span>
+              <button
+                onClick={() => currentIndex < siblings.length - 1 && onBranch && onBranch(siblings[currentIndex + 1].id)}
+                disabled={currentIndex === siblings.length - 1}
+                className="hover:text-[#4ade80] disabled:text-[#222] transition-colors cursor-pointer"
+                title="Next sibling response"
+              >
+                &gt;
+              </button>
+            </div>
+          )}
           {msg.id && onBranch && (
             <button
               onClick={() => onBranch(msg.id)}
@@ -483,6 +515,24 @@ export const MessageBubble = memo(function MessageBubble({
               title="Branch from this message"
             >
               #branch
+            </button>
+          )}
+          {isHuman && msg.id && onRegenerate && (
+            <button
+              onClick={() => onRegenerate(msg.id)}
+              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer"
+              title="Regenerate response"
+            >
+              #regen
+            </button>
+          )}
+          {!isHuman && msg.parent_message_id && onRegenerate && (
+            <button
+              onClick={() => onRegenerate(msg.parent_message_id!)}
+              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer"
+              title="Regenerate another response"
+            >
+              #regen
             </button>
           )}
           {!isHuman && (msg.model_used || msg.provider_used) && (
@@ -760,11 +810,12 @@ export const MessageBubble = memo(function MessageBubble({
          prevProps.msg.metrics === nextProps.msg.metrics &&
          prevProps.msg.structural_justification === nextProps.msg.structural_justification &&
          prevProps.msg.truncated === nextProps.msg.truncated &&
-          prevProps.msg.finish_reason === nextProps.msg.finish_reason &&
-          areStringArraysEqual(prevProps.msg.active_skills, nextProps.msg.active_skills) &&
-          areStringArraysEqual(prevProps.msg.active_beliefs, nextProps.msg.active_beliefs) &&
+         prevProps.msg.finish_reason === nextProps.msg.finish_reason &&
+         areStringArraysEqual(prevProps.msg.active_skills, nextProps.msg.active_skills) &&
+         areStringArraysEqual(prevProps.msg.active_beliefs, nextProps.msg.active_beliefs) &&
          areNumberArraysEqual(prevProps.msg.structural_signature, nextProps.msg.structural_signature) &&
          areNumberArraysEqual(prevProps.previousSignature, nextProps.previousSignature) &&
+         prevProps.fullTreeMessages === nextProps.fullTreeMessages &&
          areNotesEqual(prevProps.notes, nextProps.notes);
 })
 

@@ -65,6 +65,7 @@ What becomes easier/harder?
 | [031](ADR-031-database-native-skill-system.md) | Database Native Skill System | accepted | 2026-06-09 |
 | [032](ADR-032-branching-and-rhizomatic-conversations.md) | Branching and Rhizomatic Conversations | accepted | 2026-06-10 |
 | [033](ADR-033-resonance-links.md) | Resonance Links: Agential, Asynchronous, and Spectral Co-Curation | accepted | 2026-06-10 |
+| [034](ADR-034-decoupled-inscription-and-metabolization.md) | Decoupled Inscription and Metabolization | accepted | 2026-06-11 |
 
 ## Creating a New ADR
 

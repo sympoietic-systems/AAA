@@ -15,6 +15,7 @@ interface Props {
   onUploadFiles: (files: File[]) => void
   isIndexing: boolean
   onClearError: () => void
+  onRegenerate?: (userMsgId?: number) => void
   onRenameTitle: (title: string) => void
   onGenerateTitle: () => void
   className?: string
@@ -24,13 +25,14 @@ interface Props {
   onLoadMore?: () => void
   notes?: NoteInfo[]
   isPassword?: boolean
-  onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared", startOffset?: number) => void
+  onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared" | "agent", startOffset?: number) => void
   onDeleteNote?: (noteId: string) => void
-  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared") => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   tags?: ConversationTagInfo[]
   onAddTag?: (tag: string) => void
   onRemoveTag?: (tag: string) => void
   onBranch?: (messageId: number) => void
+  fullTreeMessages?: ChatMessage[]
 }
 
 export function ChatView({
@@ -45,6 +47,7 @@ export function ChatView({
   onUploadFiles,
   isIndexing,
   onClearError,
+  onRegenerate,
   onRenameTitle,
   onGenerateTitle,
   className = "",
@@ -60,6 +63,7 @@ export function ChatView({
   onAddTag,
   onRemoveTag,
   onBranch,
+  fullTreeMessages = [],
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -309,6 +313,8 @@ export function ChatView({
                   onDeleteNote={onDeleteNote}
                   onUpdateNote={onUpdateNote}
                   onBranch={onBranch}
+                  onRegenerate={onRegenerate}
+                  fullTreeMessages={fullTreeMessages}
                 />
               )
             })}
@@ -325,6 +331,14 @@ export function ChatView({
       {error && (
         <div className="mx-4 mb-1 flex items-center gap-2 bg-[#1a1010] border border-[#3a1a1a] px-4 py-2 text-sm text-[#ef4444]">
           <span className="flex-1 truncate">{error}</span>
+          {onRegenerate && (
+            <button
+              onClick={() => onRegenerate()}
+              className="text-[#4ade80] hover:text-[#22c55e] border border-[#276a3e]/50 px-2.5 py-0.5 rounded-sm text-xs tracking-wider font-mono mr-2 bg-[#0d1c12] hover:bg-[#122b1c] transition-colors"
+            >
+              retry
+            </button>
+          )}
           <button onClick={onClearError} className="text-[#884444] hover:text-[#ef4444]">
             dismiss
           </button>

@@ -168,6 +168,48 @@ export async function sendMessage(
   return res.json()
 }
 
+export async function saveMessage(
+  content: string,
+  conversationId?: string,
+  parentMessageId?: number | null
+): Promise<ChatMessage> {
+  const res = await fetch(`${BASE}/chat/message`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      content,
+      speaker: "human",
+      conversation_id: conversationId || "",
+      parent_message_id: parentMessageId !== undefined ? parentMessageId : null,
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Unknown error" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function generateResponse(
+  conversationId: string,
+  userMessageId: number
+): Promise<ChatMessage> {
+  const res = await fetch(`${BASE}/chat/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      user_message_id: userMessageId,
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Unknown error" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+
 export async function getHistory(limit = 50, offset = 0, conversationId?: string): Promise<{ messages: ChatMessage[]; count: number }> {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
   if (conversationId) params.set("conversation_id", conversationId)

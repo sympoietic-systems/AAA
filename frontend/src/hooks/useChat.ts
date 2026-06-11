@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   getAgent,
   getHistory,
-  sendMessage,
+  saveMessage,
+  generateResponse,
   getConversationFiles,
   uploadFiles,
   deleteConversationFile,
@@ -187,8 +188,10 @@ export function useChat(conversationId: string) {
 
     const parentId = activeMessageId
 
+    // 1. Create a local temporary message for immediate UI feedback
+    const tempId = Date.now()
     const userMsg: ChatMessage = {
-      id: Date.now(),
+      id: tempId,
       timestamp: new Date().toISOString(),
       speaker: "human",
       content,
@@ -196,56 +199,115 @@ export function useChat(conversationId: string) {
       parent_message_id: parentId || undefined,
     }
     setMessages((prev) => [...prev, userMsg])
+    setActiveMessageId(tempId)
+
+    let savedMsg: ChatMessage | null = null
+    let targetConvId: string | undefined = conversationId
 
     try {
-      const response = await sendMessage(content, conversationId || undefined, undefined, parentId)
-      setMessages((prev) => {
-        const updated = [...prev]
-        for (let i = updated.length - 1; i >= 0; i--) {
-          if (updated[i].speaker === "human" && updated[i].id === userMsg.id) {
-            updated[i] = {
-              ...updated[i],
-              id: response.user_message_id || updated[i].id,
-              metrics: response.metrics || updated[i].metrics,
-              structural_signature: response.user_structural_signature || undefined,
-              structural_justification: response.user_structural_justification || undefined,
-            }
-            break
-          }
-        }
-        updated.push(response)
-        return updated
-      })
+      // 2. Phase 1: Inscribe/persist the message to the DB
+      savedMsg = await saveMessage(content, targetConvId || undefined, parentId)
 
-      setActiveMessageId(response.id)
-      const targetConvId = conversationId || response.conversation_id
+      // Update the message in the list with its real DB ID
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? {
+          ...m,
+          id: savedMsg!.id,
+          parent_message_id: savedMsg!.parent_message_id,
+          structural_signature: savedMsg!.structural_signature,
+          structural_justification: savedMsg!.structural_justification,
+        } : m))
+      )
+      setActiveMessageId(savedMsg.id)
+
+      targetConvId = targetConvId || savedMsg.conversation_id
       if (targetConvId) {
-        getConversationTree(targetConvId)
+        const finalConvId = targetConvId
+        // Fetch/refresh trees and files
+        getConversationTree(finalConvId)
           .then((data) => setLinks(data.links))
           .catch(() => {})
 
-        getConversationFiles(targetConvId)
+        getConversationFiles(finalConvId)
           .then((res) => {
             setFiles(res.files)
             const active = res.files.some(
               (f) => f.status === "uploading" || f.status === "processing"
             )
             if (active) {
-              startPolling(targetConvId)
+              startPolling(finalConvId)
             }
           })
           .catch(() => {})
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to persist user message"
+      setError(msg)
+      setLoading(false)
+      return null
+    }
+
+    // 3. Phase 2: Metabolize/generate response asynchronously/retryably
+    try {
+      const response = await generateResponse(targetConvId!, savedMsg.id)
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === response.id)) return prev
+        return [...prev, response]
+      })
+      setActiveMessageId(response.id)
+      return response
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to generate response"
+      setError(msg)
+      return savedMsg // Return the user message so App.tsx knows the conversation was created/updated
+    } finally {
+      setLoading(false)
+    }
+  }, [loading, conversationId, activeMessageId, startPolling])
+
+  const regenerate = useCallback(async (userMsgId?: number) => {
+    if (loading) return
+    setError(null)
+    setLoading(true)
+
+    let targetMsgId = userMsgId
+    if (!targetMsgId) {
+      const lastUserMsg = [...messages].reverse().find((m) => m.speaker === "human")
+      if (!lastUserMsg || !lastUserMsg.id) {
+        setError("No user message found to regenerate response for")
+        setLoading(false)
+        return
+      }
+      targetMsgId = lastUserMsg.id
+    }
+
+    try {
+      const targetConvId = conversationId
+      if (!targetConvId) {
+        throw new Error("No active conversation")
+      }
+
+      const response = await generateResponse(targetConvId, targetMsgId)
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === response.id)) return prev
+        return [...prev, response]
+      })
+      setActiveMessageId(response.id)
+
+      getConversationTree(targetConvId)
+        .then((data) => setLinks(data.links))
+        .catch(() => {})
 
       return response
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to send message"
+      const msg = e instanceof Error ? e.message : "Failed to generate response"
       setError(msg)
       return null
     } finally {
       setLoading(false)
     }
-  }, [loading, conversationId, activeMessageId, startPolling])
+  }, [loading, conversationId, messages])
+
 
   const upload = useCallback(async (filesToUpload: File[]) => {
     if (filesToUpload.length === 0) return null
@@ -359,6 +421,7 @@ export function useChat(conversationId: string) {
     loading,
     error,
     send,
+    regenerate,
     clearError,
     agentName,
     uploadedFiles: files,

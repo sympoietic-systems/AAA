@@ -62,6 +62,7 @@ export default function App() {
     loading,
     error,
     send,
+    regenerate,
     clearError,
     agentName,
     uploadedFiles,
@@ -323,6 +324,7 @@ export default function App() {
       )}
       <ChatView
         messages={messages}
+        fullTreeMessages={fullTreeMessages}
         loading={loading}
         error={error}
         agentName={agentName}
@@ -333,6 +335,7 @@ export default function App() {
         onUploadFiles={handleUploadFiles}
         isIndexing={isIndexing}
         onClearError={clearError}
+        onRegenerate={regenerate}
         onRenameTitle={handleRenameTitle}
         onGenerateTitle={handleGenerateTitle}
         hasMore={hasMore}

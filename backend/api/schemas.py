@@ -21,6 +21,14 @@ class ChatRequest(BaseModel):
     parent_message_id: Optional[int] = Field(default=None, description="Parent message ID for conversation branching")
 
 
+class GenerateRequest(BaseModel):
+    conversation_id: str
+    user_message_id: int
+    max_tokens: Optional[int] = Field(default=None, description="Override max_tokens for this request")
+    include_structural_scoring: Optional[bool] = None
+
+
+
 class ProposedBranch(BaseModel):
     title: str
     content: str
