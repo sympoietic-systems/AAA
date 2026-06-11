@@ -83,7 +83,7 @@ export function useChat(conversationId: string) {
         speaker: msg.speaker,
         snippet: snippet || `[${msg.speaker}]`,
       }
-      return [newEntry, ...filtered].slice(0, 8)
+      return [newEntry, ...filtered].slice(0, 5)
     })
   }, [])
 
