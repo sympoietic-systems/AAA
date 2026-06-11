@@ -39,6 +39,156 @@ interface SimLink {
   justification?: string
 }
 
+function areMessagesEqual(a: ChatMessage[], b: ChatMessage[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const ma = a[i]
+    const mb = b[i]
+    if (ma.id !== mb.id) return false
+    if (ma.speaker !== mb.speaker) return false
+    if (ma.content !== mb.content) return false
+    if (ma.parent_message_id !== mb.parent_message_id) return false
+    
+    const aBranches = ma.proposed_branches || []
+    const bBranches = mb.proposed_branches || []
+    if (aBranches.length !== bBranches.length) return false
+    for (let j = 0; j < aBranches.length; j++) {
+      if (aBranches[j].content !== bBranches[j].content) return false
+      if (aBranches[j].title !== bBranches[j].title) return false
+    }
+  }
+  return true
+}
+
+function areLinksEqual(a: any[], b: any[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const la = a[i]
+    const lb = b[i]
+    if (la.id !== lb.id) return false
+    if (String(la.source_id) !== String(lb.source_id)) return false
+    if (String(la.target_id) !== String(lb.target_id)) return false
+    if (la.status !== lb.status) return false
+    if (la.justification !== lb.justification) return false
+  }
+  return true
+}
+
+function computeSettledLayout(
+  initialNodes: SimNode[],
+  links: SimLink[],
+  width: number,
+  height: number
+): SimNode[] {
+  const nodes = initialNodes.map((n) => ({ ...n }))
+  const nodeMap = new Map<string, SimNode>()
+  nodes.forEach((n) => nodeMap.set(n.id, n))
+
+  let alpha = 1.0
+  const decay = 0.965
+  const friction = 0.78
+  const repulseStrength = 180
+  const springLength = 32
+  const springStrength = 0.08
+  const anchorStrength = 0.12
+  const cx = width / 2
+  const cy = height / 2
+
+  while (alpha >= 0.015) {
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i]
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j]
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const distSq = dx * dx + dy * dy + 1e-4
+        const dist = Math.sqrt(distSq)
+
+        if (dist < 120) {
+          const forceFactor = (repulseStrength * alpha) / (distSq * dist)
+          const fx = dx * forceFactor
+          const fy = dy * forceFactor
+
+          a.vx -= fx
+          a.vy -= fy
+          b.vx += fx
+          b.vy += fy
+        }
+      }
+    }
+
+    for (const link of links) {
+      const a = nodeMap.get(link.source)
+      const b = nodeMap.get(link.target)
+      if (!a || !b) continue
+
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4
+
+      const displacement = dist - springLength
+      const forceFactor = (displacement * springStrength * alpha) / dist
+      const fx = dx * forceFactor
+      const fy = dy * forceFactor
+
+      a.vx += fx
+      a.vy += fy
+      b.vx -= fx
+      b.vy -= fy
+    }
+
+    for (const n of nodes) {
+      const tx = n.targetX !== undefined ? n.targetX : cx
+      const ty = n.targetY !== undefined ? n.targetY : cy
+      n.vx += (tx - n.x) * anchorStrength * alpha
+      n.vy += (ty - n.y) * anchorStrength * alpha
+
+      n.x += n.vx
+      n.y += n.vy
+
+      n.x = Math.max(15, Math.min(width - 15, n.x))
+      n.y = Math.max(15, Math.min(height - 15, n.y))
+
+      n.vx *= friction
+      n.vy *= friction
+    }
+
+    alpha *= decay
+  }
+
+  return nodes
+}
+
+function getDistanceToSegment(x: number, y: number, x1: number, y1: number, x2: number, y2: number): number {
+  const A = x - x1
+  const B = y - y1
+  const C = x2 - x1
+  const D = y2 - y1
+
+  const dot = A * C + B * D
+  const lenSq = C * C + D * D
+  let param = -1
+  if (lenSq !== 0) {
+    param = dot / lenSq
+  }
+
+  let xx, yy
+  if (param < 0) {
+    xx = x1
+    yy = y1
+  } else if (param > 1) {
+    xx = x2
+    yy = y2
+  } else {
+    xx = x1 + param * C
+    yy = y1 + param * D
+  }
+
+  const dx = x - xx
+  const dy = y - yy
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
 export default function ConnectionCloud({
   messages,
   links,
@@ -51,6 +201,9 @@ export default function ConnectionCloud({
   conversationId,
 }: ConnectionCloudProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const transitionTimerRef = useRef<number | null>(null)
+
   const [dimensions, setDimensions] = useState({ width: 300, height: 300 })
   const [simNodes, setSimNodes] = useState<SimNode[]>([])
   const [simLinks, setSimLinks] = useState<SimLink[]>([])
@@ -68,11 +221,36 @@ export default function ConnectionCloud({
   // Track positions across renders to prevent layout resetting when messages change
   const nodePositionsRef = useRef<Record<string, { x: number; y: number }>>({})
 
+  // Store previous inputs to prevent infinite loops from parent reference updates
+  const prevMessagesRef = useRef<ChatMessage[]>([])
+  const prevLinksRef = useRef<any[]>([])
+  const prevDimensionsRef = useRef({ width: 0, height: 0 })
+  const [simulateSettling, setSimulateSettling] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("aaa_simulate_settling") === "true"
+    } catch {
+      return false
+    }
+  })
+  const prevSimulateSettlingRef = useRef<boolean>(simulateSettling)
+
   // Zoom and pan state
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef({ x: 0, y: 0 })
+
+  const toggleSimulateSettling = () => {
+    setSimulateSettling((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem("aaa_simulate_settling", String(next))
+      } catch (err) {
+        console.error("Failed to write to localStorage:", err)
+      }
+      return next
+    })
+  }
 
   // Update container dimensions on resize
   useEffect(() => {
@@ -89,14 +267,101 @@ export default function ConnectionCloud({
     return () => resizeObserver.disconnect()
   }, [])
 
+  // Helper to check if a link is part of the active path
+  const isLinkActive = (link: SimLink) => {
+    const srcId = parseInt(link.source)
+    const tgtId = parseInt(link.target)
+    if (isNaN(srcId) || isNaN(tgtId)) return false
+    return activePathIds.has(srcId) && activePathIds.has(tgtId)
+  }
+
+  // Animates transition between layouts in static mode
+  const startLayoutTransition = (targetNodes: SimNode[]) => {
+    if (transitionTimerRef.current) {
+      cancelAnimationFrame(transitionTimerRef.current)
+    }
+
+    if (simNodes.length === 0) {
+      setSimNodes(targetNodes)
+      return
+    }
+
+    const startTime = performance.now()
+    const duration = 400 // 400ms transition time
+
+    const startPositions: Record<string, { x: number; y: number }> = {}
+    simNodes.forEach((node) => {
+      startPositions[node.id] = { x: node.x, y: node.y }
+    })
+
+    const animateTransition = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(1, elapsed / duration)
+      const ease = 1 - Math.pow(1 - progress, 3) // ease-out cubic
+
+      setSimNodes(() => {
+        return targetNodes.map((target) => {
+          const start = startPositions[target.id]
+          if (!start) {
+            const parentPos = target.parentMsgId ? startPositions[String(target.parentMsgId)] : null
+            const startX = parentPos ? parentPos.x : target.targetX || target.x
+            const startY = parentPos ? parentPos.y : target.targetY || target.y
+            return {
+              ...target,
+              x: startX + (target.x - startX) * ease,
+              y: startY + (target.y - startY) * ease,
+            }
+          }
+          return {
+            ...target,
+            x: start.x + (target.x - start.x) * ease,
+            y: start.y + (target.y - start.y) * ease,
+          }
+        })
+      })
+
+      if (progress < 1) {
+        transitionTimerRef.current = requestAnimationFrame(animateTransition)
+      } else {
+        transitionTimerRef.current = null
+      }
+    }
+
+    transitionTimerRef.current = requestAnimationFrame(animateTransition)
+  }
+
   // Build nodes and links from messages, db links, and inline proposals
   useEffect(() => {
+    // 1. Core comparison check to prevent layout thrashes and infinite compute loops
+    const messagesChanged = !areMessagesEqual(messages, prevMessagesRef.current)
+    const linksChanged = !areLinksEqual(links, prevLinksRef.current)
+    const dimensionsChanged =
+      dimensions.width !== prevDimensionsRef.current.width ||
+      dimensions.height !== prevDimensionsRef.current.height
+    const simulateSettlingChanged = simulateSettling !== prevSimulateSettlingRef.current
+
+    if (
+      !messagesChanged &&
+      !linksChanged &&
+      !dimensionsChanged &&
+      !simulateSettlingChanged &&
+      simNodes.length > 0
+    ) {
+      return
+    }
+
+    // Update trace refs
+    prevMessagesRef.current = messages
+    prevLinksRef.current = links
+    prevDimensionsRef.current = dimensions
+    prevSimulateSettlingRef.current = simulateSettling
+
     const newNodes: SimNode[] = []
     const newLinks: SimLink[] = []
 
     const sorted = [...messages].sort((a, b) => a.id - b.id)
 
-    // 1. Add all message nodes
+    // 2. Add all message nodes
     for (let i = 0; i < sorted.length; i++) {
       const m = sorted[i]
       const idStr = String(m.id)
@@ -148,21 +413,20 @@ export default function ConnectionCloud({
           newLinks.push({
             source: idStr,
             target: propIdStr,
-            type: "parent", // Proposed branches are tethered to their parent
+            type: "parent",
           })
         })
       }
     }
 
-    // 2. Calculate spiral target coordinates for sequential nodes
+    // 3. Calculate spiral target coordinates for sequential nodes
     const totalNodes = newNodes.length
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
     const maxTargetRadius = Math.min(dimensions.width, dimensions.height) * 0.42
 
-    // Choose spiral density based on total nodes to keep it clean and fitting in canvas
     const radiusStep = totalNodes > 10 ? (maxTargetRadius - 20) / totalNodes : 12
-    const angleStep = 0.55 // approx 31 degrees per step (prevents concentric overlays)
+    const angleStep = 0.55
 
     for (let i = 0; i < totalNodes; i++) {
       const node = newNodes[i]
@@ -181,12 +445,11 @@ export default function ConnectionCloud({
       node.y = prevPos ? prevPos.y : ty
     }
 
-    // 3. Add database retroactive links (resonance links)
+    // 4. Add database retroactive links (resonance links)
     for (const l of links) {
       const srcStr = String(l.source_id)
       const tgtStr = String(l.target_id)
 
-      // Only include links where both nodes exist in the current message set
       if (newNodes.some((n) => n.id === srcStr) && newNodes.some((n) => n.id === tgtStr)) {
         newLinks.push({
           id: l.id,
@@ -199,39 +462,44 @@ export default function ConnectionCloud({
       }
     }
 
-    setSimNodes(newNodes)
+    if (!simulateSettling && newNodes.length > 0) {
+      const settledNodes = computeSettledLayout(newNodes, newLinks, dimensions.width, dimensions.height)
+      settledNodes.forEach((n) => {
+        nodePositionsRef.current[n.id] = { x: n.x, y: n.y }
+      })
+      startLayoutTransition(settledNodes)
+    } else {
+      setSimNodes(newNodes)
+    }
     setSimLinks(newLinks)
-  }, [messages, links, dimensions.width, dimensions.height])
+  }, [messages, links, dimensions.width, dimensions.height, simulateSettling])
 
-  // Run the force simulation loop
+  // Run the force simulation loop (Live Mode only)
   useEffect(() => {
-    if (simNodes.length === 0) return
+    if (!simulateSettling || simNodes.length === 0) return
 
     let animationFrameId: number
     let alpha = 1.0 // Simulation temperature
     const decay = 0.965 // Cooling rate
-    const friction = 0.78 // Slightly lower friction for faster settling
-    const repulseStrength = 180 // Reduced repulsion for smaller nodes
-    const springLength = 32 // Shorter links for a more compact structure
+    const friction = 0.78
+    const repulseStrength = 180
+    const springLength = 32
     const springStrength = 0.08
 
     const runSimulation = () => {
-      // Stop calculation once the system has cooled/settled
       if (alpha < 0.015) {
         return
       }
 
       setSimNodes((currentNodes) => {
-        // Create local copy to mutate for this step
         const nodes = currentNodes.map((n) => ({ ...n }))
         const nodeMap = new Map<string, SimNode>()
         nodes.forEach((n) => nodeMap.set(n.id, n))
 
-        // Center coordinates
         const cx = dimensions.width / 2
         const cy = dimensions.height / 2
 
-        // 1. Repulsion force between all node pairs
+        // 1. Repulsion force
         for (let i = 0; i < nodes.length; i++) {
           const a = nodes[i]
           for (let j = i + 1; j < nodes.length; j++) {
@@ -242,9 +510,9 @@ export default function ConnectionCloud({
             const dist = Math.sqrt(distSq)
 
             if (dist < 120) {
-              const force = (repulseStrength * alpha) / distSq
-              const fx = (dx / dist) * force
-              const fy = (dy / dist) * force
+              const forceFactor = (repulseStrength * alpha) / (distSq * dist)
+              const fx = dx * forceFactor
+              const fy = dy * forceFactor
 
               a.vx -= fx
               a.vy -= fy
@@ -254,7 +522,7 @@ export default function ConnectionCloud({
           }
         }
 
-        // 2. Attraction spring force along links
+        // 2. Attraction spring force
         for (const link of simLinks) {
           const a = nodeMap.get(link.source)
           const b = nodeMap.get(link.target)
@@ -265,9 +533,9 @@ export default function ConnectionCloud({
           const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4
 
           const displacement = dist - springLength
-          const force = displacement * springStrength * alpha
-          const fx = (dx / dist) * force
-          const fy = (dy / dist) * force
+          const forceFactor = (displacement * springStrength * alpha) / dist
+          const fx = dx * forceFactor
+          const fy = dy * forceFactor
 
           a.vx += fx
           a.vy += fy
@@ -275,27 +543,23 @@ export default function ConnectionCloud({
           b.vy -= fy
         }
 
-        // 3. Spiral target anchoring force (gravity replacement)
-        const anchorStrength = 0.12 // Gentle anchoring force to preserve spiral layout
+        // 3. Anchor force (Spiral layout target)
+        const anchorStrength = 0.12
         for (const n of nodes) {
           const tx = n.targetX !== undefined ? n.targetX : cx
           const ty = n.targetY !== undefined ? n.targetY : cy
           n.vx += (tx - n.x) * anchorStrength * alpha
           n.vy += (ty - n.y) * anchorStrength * alpha
 
-          // Update positions
           n.x += n.vx
           n.y += n.vy
 
-          // Clamp to dimensions to prevent nodes escaping viewport
           n.x = Math.max(15, Math.min(dimensions.width - 15, n.x))
           n.y = Math.max(15, Math.min(dimensions.height - 15, n.y))
 
-          // Apply friction
           n.vx *= friction
           n.vy *= friction
 
-          // Save current positions for persistence
           nodePositionsRef.current[n.id] = { x: n.x, y: n.y }
         }
 
@@ -308,7 +572,306 @@ export default function ConnectionCloud({
 
     animationFrameId = requestAnimationFrame(runSimulation)
     return () => cancelAnimationFrame(animationFrameId)
-  }, [simNodes.length, simLinks, dimensions.width, dimensions.height])
+  }, [simulateSettling, simNodes.length, simLinks, dimensions.width, dimensions.height])
+
+  // Canvas drawing loop
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = dimensions.width * dpr
+    canvas.height = dimensions.height * dpr
+    canvas.style.width = `${dimensions.width}px`
+    canvas.style.height = `${dimensions.height}px`
+
+    ctx.clearRect(0, 0, dimensions.width, dimensions.height)
+    ctx.scale(dpr, dpr)
+
+    // Save state for panning/zooming
+    ctx.save()
+    ctx.translate(pan.x, pan.y)
+    ctx.scale(zoom, zoom)
+
+    // 1. Draw Infinite Grid inside coordinate system
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.025)"
+    ctx.lineWidth = 0.5
+    ctx.setLineDash([])
+    
+    const gridSize = 20
+    const startX = Math.floor((-pan.x / zoom) / gridSize) * gridSize
+    const endX = Math.ceil(((dimensions.width - pan.x) / zoom) / gridSize) * gridSize
+    const startY = Math.floor((-pan.y / zoom) / gridSize) * gridSize
+    const endY = Math.ceil(((dimensions.height - pan.y) / zoom) / gridSize) * gridSize
+
+    for (let x = startX; x <= endX; x += gridSize) {
+      ctx.beginPath()
+      ctx.moveTo(x, startY)
+      ctx.lineTo(x, endY)
+      ctx.stroke()
+    }
+    for (let y = startY; y <= endY; y += gridSize) {
+      ctx.beginPath()
+      ctx.moveTo(startX, y)
+      ctx.lineTo(endX, y)
+      ctx.stroke()
+    }
+
+    // 2. Draw Concentric Rings (Autopoietic Coordinate Guides)
+    ctx.strokeStyle = "#4a576d"
+    ctx.lineWidth = 0.5
+    ctx.globalAlpha = 0.2
+    ctx.setLineDash([2, 3])
+    
+    const cx = dimensions.width / 2
+    const cy = dimensions.height / 2
+    const baseRadius = Math.min(dimensions.width, dimensions.height) * 0.45
+    const ringLevels = [0.2, 0.4, 0.6, 0.8, 1.0]
+    
+    ringLevels.forEach((level) => {
+      ctx.beginPath()
+      ctx.arc(cx, cy, level * baseRadius, 0, 2 * Math.PI)
+      ctx.stroke()
+    })
+
+    // 3. Draw Spokes
+    ctx.setLineDash([1, 4])
+    for (let idx = 0; idx < 8; idx++) {
+      const angle = (idx * Math.PI) / 4
+      const maxR = baseRadius
+      const x2 = cx + maxR * Math.cos(angle)
+      const y2 = cy + maxR * Math.sin(angle)
+      const x1 = cx - maxR * Math.cos(angle)
+      const y1 = cy - maxR * Math.sin(angle)
+
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+    }
+
+    ctx.setLineDash([])
+    ctx.globalAlpha = 1.0
+
+    // PRE-CREATE MAPS FOR O(1) LOOKUPS
+    const nodeMap = new Map<string, SimNode>()
+    simNodes.forEach((n) => nodeMap.set(n.id, n))
+
+    const notesMap = new Map<number, NoteInfo[]>()
+    notes.forEach((note) => {
+      if (note.message_id !== undefined && note.message_id !== null) {
+        if (!notesMap.has(note.message_id)) {
+          notesMap.set(note.message_id, [])
+        }
+        notesMap.get(note.message_id)!.push(note)
+      }
+    })
+
+    // 4. Draw Links
+    simLinks.forEach((link) => {
+      const srcNode = nodeMap.get(link.source)
+      const tgtNode = nodeMap.get(link.target)
+      if (!srcNode || !tgtNode) return
+
+      const isActive = isLinkActive(link)
+      const isResonance = link.type === "resonance"
+      const isProposed = srcNode.isProposed || tgtNode.isProposed
+      const isProposedResonance = isResonance && link.status === "proposed"
+
+      const srcId = parseInt(link.source)
+      const tgtId = parseInt(link.target)
+      const isFuture = !isNaN(srcId) && !isNaN(tgtId) && activePathIds.has(srcId) && !activePathIds.has(tgtId) && link.type === "parent"
+      const futureColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
+
+      let strokeColor = "#1e293b"
+      let strokeWidth = 0.4
+      let strokeDash: number[] = []
+      let opacity = 0.4
+
+      if (isActive) {
+        strokeColor = "#6bc28c"
+        strokeWidth = 0.8
+        opacity = 0.85
+      } else if (isFuture) {
+        strokeColor = futureColor
+        strokeDash = [2, 2]
+        strokeWidth = 0.8
+        opacity = 0.8
+      } else if (isProposed) {
+        strokeColor = "#e09b67"
+        strokeDash = [2, 2]
+        strokeWidth = 0.5
+        opacity = 0.35
+      } else if (isResonance) {
+        if (isProposedResonance) {
+          strokeColor = "#e09b67"
+          strokeDash = [1, 3]
+          strokeWidth = 0.7
+          opacity = 0.7
+        } else {
+          strokeColor = "#94a3b8"
+          strokeDash = [3, 3]
+          strokeWidth = 0.5
+          opacity = 0.45
+        }
+      }
+
+      ctx.strokeStyle = strokeColor
+      ctx.lineWidth = strokeWidth
+      ctx.globalAlpha = opacity
+      if (strokeDash.length > 0) {
+        ctx.setLineDash(strokeDash)
+      } else {
+        ctx.setLineDash([])
+      }
+
+      ctx.beginPath()
+      ctx.moveTo(srcNode.x, srcNode.y)
+      ctx.lineTo(tgtNode.x, tgtNode.y)
+      ctx.stroke()
+    })
+
+    ctx.setLineDash([])
+    ctx.globalAlpha = 1.0
+
+    // 5. Draw Nodes
+    simNodes.forEach((node) => {
+      const isActive = node.dbId ? activePathIds.has(node.dbId) : false
+      const isLeaf = activeMessageId === node.dbId
+      const isFuture = node.parentMsgId !== null && node.parentMsgId !== undefined && activePathIds.has(node.parentMsgId) && !isActive && !node.isProposed
+      const isHovered = hoveredNode?.id === node.id
+      const nodeNotes = notesMap.get(node.dbId || -1) || []
+
+      let fill = "#0a0a0c"
+      let stroke = "#3f3f4e"
+      let strokeWidth = 0.6
+      let radius = 2.0
+      let strokeDash: number[] = []
+
+      if (node.isProposed) {
+        fill = "#0a0a0c"
+        stroke = "#e09b67"
+        strokeWidth = 0.8
+        radius = 3.2
+        strokeDash = [2, 2]
+      } else if (node.speaker === "human") {
+        if (isActive) {
+          fill = isLeaf ? "#152a1d" : "#0a0a0c"
+          stroke = "#6bc28c"
+          strokeWidth = isLeaf ? 1.5 : 1.0
+          radius = isLeaf ? 4.5 : 3.2
+        } else if (isFuture) {
+          fill = "#0a0a0c"
+          stroke = "#6bc28c"
+          strokeWidth = 1.0
+          radius = 3.2
+          strokeDash = [2, 1.5]
+        } else {
+          fill = "#0a0a0c"
+          stroke = "#6bc28c"
+          strokeWidth = 0.7
+          radius = 2.2
+        }
+      } else if (node.speaker === "apparatus") {
+        if (isActive) {
+          fill = isLeaf ? "#211a36" : "#0a0a0c"
+          stroke = "#a892ee"
+          strokeWidth = isLeaf ? 1.5 : 1.0
+          radius = isLeaf ? 4.5 : 3.2
+        } else if (isFuture) {
+          fill = "#0a0a0c"
+          stroke = "#a892ee"
+          strokeWidth = 1.0
+          radius = 3.2
+          strokeDash = [2, 1.5]
+        } else {
+          fill = "#0a0a0c"
+          stroke = "#a892ee"
+          strokeWidth = 0.7
+          radius = 2.2
+        }
+      } else {
+        fill = "#0a0a0c"
+        stroke = "#94a3b8"
+        radius = 1.8
+      }
+
+      const drawRadius = isHovered ? radius + 1.0 : radius
+      const drawOpacity = isActive || isLeaf || isHovered ? 1.0 : isFuture ? 0.8 : node.isProposed ? 0.75 : 0.45
+
+      ctx.globalAlpha = drawOpacity
+
+      // Static premium glowing concentric rings for active leaf node
+      if (isLeaf) {
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
+        ctx.strokeStyle = node.speaker === "human" ? "#6bc28c" : "#a892ee"
+        ctx.lineWidth = 0.8
+        ctx.globalAlpha = 0.3
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, radius + 2.0, 0, 2 * Math.PI)
+        ctx.strokeStyle = node.speaker === "human" ? "#6bc28c" : "#a892ee"
+        ctx.lineWidth = 0.5
+        ctx.globalAlpha = 0.5
+        ctx.stroke()
+
+        ctx.globalAlpha = drawOpacity
+      }
+
+      // Draw node circle
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, drawRadius, 0, 2 * Math.PI)
+      ctx.fillStyle = fill
+      ctx.fill()
+      
+      ctx.strokeStyle = stroke
+      ctx.lineWidth = strokeWidth
+      if (strokeDash.length > 0) {
+        ctx.setLineDash(strokeDash)
+      } else {
+        ctx.setLineDash([])
+      }
+      ctx.stroke()
+      ctx.setLineDash([])
+
+      // Note Indicator Dots
+      nodeNotes.forEach((note, idx) => {
+        const isAgent = note.visibility === "agent"
+        const isShared = note.visibility === "shared"
+        const dotColor = isAgent ? "#22d3ee" : isShared ? "#a892ee" : "#facc15"
+
+        const angle = -Math.PI / 4 - (idx * Math.PI) / 2
+        const dist = drawRadius + 2.2
+        const dx = node.x + dist * Math.cos(angle)
+        const dy = node.y + dist * Math.sin(angle)
+
+        ctx.beginPath()
+        ctx.arc(dx, dy, 1.1, 0, 2 * Math.PI)
+        ctx.fillStyle = dotColor
+        ctx.fill()
+        
+        ctx.strokeStyle = "#0a0a0c"
+        ctx.lineWidth = 0.3
+        ctx.stroke()
+      })
+
+      // Proposed Title Label
+      if (node.isProposed) {
+        ctx.font = "bold 9px monospace"
+        ctx.fillStyle = "#e09b67"
+        ctx.textAlign = "center"
+        ctx.textBaseline = "bottom"
+        ctx.globalAlpha = 0.8
+        ctx.fillText(`🚀 ${node.title || "Flight"}`, node.x, node.y - drawRadius - 4)
+      }
+    })
+
+    ctx.restore()
+  }, [simNodes, simLinks, zoom, pan, hoveredNode, activeMessageId, activePathIds, notes, dimensions])
 
   const handleNodeClick = (node: SimNode) => {
     if (node.isProposed) {
@@ -332,40 +895,50 @@ export default function ConnectionCloud({
     }
   }
 
-  // Helper to check if a link is part of the active path
-  const isLinkActive = (link: SimLink) => {
-    const srcId = parseInt(link.source)
-    const tgtId = parseInt(link.target)
-    if (isNaN(srcId) || isNaN(tgtId)) return false
-    return activePathIds.has(srcId) && activePathIds.has(tgtId)
-  }
-
   // Zoom and pan event handlers
-  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsPanning(true)
     panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
     setSelectedLink(null)
     setSelectedLinkPos(null)
   }
 
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!isPanning) return
-    setPan({
-      x: e.clientX - panStartRef.current.x,
-      y: e.clientY - panStartRef.current.y
-    })
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = (e.clientX - rect.left - pan.x) / zoom
+    const mouseY = (e.clientY - rect.top - pan.y) / zoom
+
+    if (isPanning) {
+      setPan({
+        x: e.clientX - panStartRef.current.x,
+        y: e.clientY - panStartRef.current.y
+      })
+    } else {
+      let found: SimNode | null = null
+      for (const node of simNodes) {
+        const dx = node.x - mouseX
+        const dy = node.y - mouseY
+        const radius = node.dbId === activeMessageId ? 4.5 : 3.2
+        if (dx * dx + dy * dy <= (radius + 6) * (radius + 6)) {
+          found = node
+          break
+        }
+      }
+      setHoveredNode(found)
+    }
   }
 
   const handleMouseUpOrLeave = () => {
     setIsPanning(false)
   }
 
-  const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault()
     const zoomFactor = 1.08
     const nextZoom = Math.max(0.2, Math.min(4.0, e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor))
 
-    // Zoom around center of the canvas
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
     const scaleRatio = nextZoom / zoom
@@ -375,6 +948,61 @@ export default function ConnectionCloud({
       y: cy - (cy - pan.y) * scaleRatio
     })
     setZoom(nextZoom)
+  }
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = (e.clientX - rect.left - pan.x) / zoom
+    const mouseY = (e.clientY - rect.top - pan.y) / zoom
+
+    // 1. Check if clicked a node
+    let clickedNode: SimNode | null = null
+    for (const node of simNodes) {
+      const dx = node.x - mouseX
+      const dy = node.y - mouseY
+      const radius = node.dbId === activeMessageId ? 4.5 : 3.2
+      if (dx * dx + dy * dy <= (radius + 6) * (radius + 6)) {
+        clickedNode = node
+        break
+      }
+    }
+
+    if (clickedNode) {
+      handleNodeClick(clickedNode)
+      return
+    }
+
+    // 2. Check if clicked a resonance link
+    let clickedLink: SimLink | null = null
+    for (const link of simLinks) {
+      if (link.type !== "resonance") continue
+      const srcNode = simNodes.find((n) => n.id === link.source)
+      const tgtNode = simNodes.find((n) => n.id === link.target)
+      if (!srcNode || !tgtNode) return
+
+      const dist = getDistanceToSegment(mouseX, mouseY, srcNode.x, srcNode.y, tgtNode.x, tgtNode.y)
+      if (dist <= 6) {
+        clickedLink = link
+        break
+      }
+    }
+
+    if (clickedLink) {
+      const srcNode = simNodes.find((n) => n.id === clickedLink!.source)
+      const tgtNode = simNodes.find((n) => n.id === clickedLink!.target)
+      if (srcNode && tgtNode) {
+        setSelectedLink(clickedLink)
+        setSelectedLinkPos({
+          x: (srcNode.x + tgtNode.x) / 2,
+          y: (srcNode.y + tgtNode.y) / 2,
+        })
+      }
+    } else {
+      setSelectedLink(null)
+      setSelectedLinkPos(null)
+    }
   }
 
   const handleZoomIn = (e: React.MouseEvent) => {
@@ -419,297 +1047,40 @@ export default function ConnectionCloud({
         <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#79798c]">
           Connection Cloud
         </span>
-        <span className="text-[10px] font-mono text-[#4b4b5c]">
-          {simNodes.filter((n) => !n.isProposed).length} nodes | {links.length} cross-links
-        </span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleSimulateSettling}
+            className={`text-[9px] font-mono px-2 py-0.5 rounded border transition-all cursor-pointer select-none ${
+              simulateSettling
+                ? "bg-[#ec4899]/10 border-[#ec4899]/30 text-[#ec4899] hover:bg-[#ec4899]/20"
+                : "bg-[#1b1b22] border-[#2e2e38] text-[#79798c] hover:bg-[#2e2e38]"
+            }`}
+            title={
+              simulateSettling
+                ? "Simulating settling in real-time (high GPU/CPU usage)"
+                : "Instant static layout (energy efficient, low GPU/CPU)"
+            }
+          >
+            {simulateSettling ? "⚡ Settling: Live" : "🍃 Settling: Static"}
+          </button>
+          <span className="text-[10px] font-mono text-[#4b4b5c]">
+            {simNodes.filter((n) => !n.isProposed).length} nodes | {links.length} cross-links
+          </span>
+        </div>
       </div>
 
-      {/* SVG Canvas */}
+      {/* Canvas viewport */}
       <div className="flex-1 relative cursor-grab active:cursor-grabbing">
-        <svg
-          width={dimensions.width}
-          height={dimensions.height}
-          className="w-full h-full"
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full block"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUpOrLeave}
           onMouseLeave={handleMouseUpOrLeave}
           onWheel={handleWheel}
-        >
-          {/* Grid lines */}
-          <defs>
-            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.03" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-
-          <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-
-            {/* Background Concentric Rings (Autopoietic Coordinate Guides) */}
-            <g opacity="0.25">
-              {[0.2, 0.4, 0.6, 0.8, 1.0].map((level, idx) => (
-                <circle
-                  key={`bg-ring-${idx}`}
-                  cx={dimensions.width / 2}
-                  cy={dimensions.height / 2}
-                  r={level * Math.min(dimensions.width, dimensions.height) * 0.45}
-                  fill="none"
-                  stroke="#4a576dff"
-                  strokeWidth="0.5"
-                  strokeDasharray="2,3"
-                />
-              ))}
-              {/* Background Spokes */}
-              {Array.from({ length: 8 }).map((_, idx) => {
-                const angle = (idx * Math.PI) / 4;
-                const maxR = Math.min(dimensions.width, dimensions.height) * 0.45;
-                const x2 = dimensions.width / 2 + maxR * Math.cos(angle);
-                const y2 = dimensions.height / 2 + maxR * Math.sin(angle);
-                const x1 = dimensions.width / 2 - maxR * Math.cos(angle);
-                const y1 = dimensions.height / 2 - maxR * Math.sin(angle);
-                return (
-                  <line
-                    key={`bg-spoke-${idx}`}
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke="#4a576dff"
-                    strokeWidth="0.5"
-                    strokeDasharray="1,4"
-                  />
-                );
-              })}
-            </g>
-
-            {/* Links */}
-            {simLinks.map((link, idx) => {
-              const srcNode = simNodes.find((n) => n.id === link.source)
-              const tgtNode = simNodes.find((n) => n.id === link.target)
-              if (!srcNode || !tgtNode) return null
-
-              const isActive = isLinkActive(link)
-              const isResonance = link.type === "resonance"
-              const isProposed = srcNode.isProposed || tgtNode.isProposed
-              const isProposedResonance = isResonance && link.status === "proposed"
-
-              // Determine if this is a link to an alternate branch splitting off from the active path
-              const srcId = parseInt(link.source)
-              const tgtId = parseInt(link.target)
-              const isFuture = !isNaN(srcId) && !isNaN(tgtId) && activePathIds.has(srcId) && !activePathIds.has(tgtId) && link.type === "parent"
-              const futureColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
-
-              let strokeColor = "#1e293b" // Dark grey slate for standard inactive links
-              let strokeWidth = "0.4"
-              let strokeDash = ""
-              let opacity = 0.4
-
-              if (isActive) {
-                strokeColor = "#6bc28c" // Cohesive green for active path
-                strokeWidth = "0.8"
-                opacity = 0.85
-              } else if (isFuture) {
-                strokeColor = futureColor // Color of the child branch speaker
-                strokeDash = "2,2" // Dotted line
-                strokeWidth = "0.8"
-                opacity = 0.8
-              } else if (isProposed) {
-                strokeColor = "#e09b67" // Peach proposed branches
-                strokeDash = "2,2"
-                strokeWidth = "0.5"
-                opacity = 0.35
-              } else if (isResonance) {
-                if (isProposedResonance) {
-                  strokeColor = "#e09b67" // Peach proposed resonance link
-                  strokeDash = "1,3"
-                  strokeWidth = "0.7"
-                  opacity = 0.7
-                } else {
-                  strokeColor = "#94a3b8" // Slate blue for active resonance cross-links
-                  strokeDash = "3,3"
-                  strokeWidth = "0.5"
-                  opacity = 0.45
-                }
-              }
-
-              return (
-                <g key={`link-${idx}`}>
-                  {isResonance && (
-                    <line
-                      x1={srcNode.x}
-                      y1={srcNode.y}
-                      x2={tgtNode.x}
-                      y2={tgtNode.y}
-                      stroke="transparent"
-                      strokeWidth="6"
-                      className="cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedLink(link)
-                        setSelectedLinkPos({
-                          x: (srcNode.x + tgtNode.x) / 2,
-                          y: (srcNode.y + tgtNode.y) / 2,
-                        })
-                      }}
-                    />
-                  )}
-                  <line
-                    x1={srcNode.x}
-                    y1={srcNode.y}
-                    x2={tgtNode.x}
-                    y2={tgtNode.y}
-                    stroke={strokeColor}
-                    strokeWidth={strokeWidth}
-                    strokeDasharray={strokeDash}
-                    opacity={opacity}
-                    className={`transition-all duration-300 ${isProposedResonance ? "animate-pulse" : ""}`}
-                  />
-                </g>
-              )
-            })}
-
-            {/* Nodes */}
-            {simNodes.map((node) => {
-              const isActive = node.dbId ? activePathIds.has(node.dbId) : false
-              const isLeaf = activeMessageId === node.dbId
-              const isFuture = node.parentMsgId !== null && node.parentMsgId !== undefined && activePathIds.has(node.parentMsgId) && !isActive && !node.isProposed
-              const isHovered = hoveredNode?.id === node.id
-              const nodeNotes = notes.filter((n) => n.message_id === node.dbId)
-
-              let fill = "#0a0a0c"
-              let stroke = "#3f3f4e"
-              let strokeWidth = "0.6"
-              let radius = "2.0"
-              let strokeDash = ""
-              let nodeClass = "transition-all duration-200 cursor-pointer"
-
-              if (node.isProposed) {
-                fill = "#0a0a0c"
-                stroke = "#e09b67" // Peach proposed branch
-                strokeWidth = "0.8"
-                radius = "3.2"
-                nodeClass += " animate-pulse stroke-dasharray-[2,2]"
-              } else if (node.speaker === "human") {
-                if (isActive) {
-                  fill = isLeaf ? "#152a1d" : "#0a0a0c" // subtle dark green fill for active leaf
-                  stroke = "#6bc28c" // Green for active user msg
-                  strokeWidth = isLeaf ? "1.5" : "1.0"
-                  radius = isLeaf ? "4.5" : "3.2"
-                } else if (isFuture) {
-                  fill = "#0a0a0c"
-                  stroke = "#6bc28c" // Green for future option
-                  strokeWidth = "1.0"
-                  radius = "3.2"
-                  strokeDash = "2,1.5" // Dashed circle outline
-                } else {
-                  fill = "#0a0a0c"
-                  stroke = "#6bc28c" // Clean green border
-                  strokeWidth = "0.7"
-                  radius = "2.2"
-                }
-              } else if (node.speaker === "apparatus") {
-                if (isActive) {
-                  fill = isLeaf ? "#211a36" : "#0a0a0c" // subtle dark purple fill for active leaf
-                  stroke = "#a892ee" // Purple for active apparatus msg
-                  strokeWidth = isLeaf ? "1.5" : "1.0"
-                  radius = isLeaf ? "4.5" : "3.2"
-                } else if (isFuture) {
-                  fill = "#0a0a0c"
-                  stroke = "#a892ee" // Purple for future option
-                  strokeWidth = "1.0"
-                  radius = "3.2"
-                  strokeDash = "2,1.5" // Dashed circle outline
-                } else {
-                  fill = "#0a0a0c"
-                  stroke = "#a892ee" // Clean purple border
-                  strokeWidth = "0.7"
-                  radius = "2.2"
-                }
-              } else {
-                // System
-                fill = "#0a0a0c"
-                stroke = "#94a3b8" // Slate blue
-                radius = "1.8"
-              }
-
-              return (
-                <g
-                  key={node.id}
-                  transform={`translate(${node.x}, ${node.y})`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleNodeClick(node)
-                  }}
-                  onMouseEnter={() => setHoveredNode(node)}
-                  onMouseLeave={() => setHoveredNode(null)}
-                  className={nodeClass}
-                >
-                  {/* Visual Glow for Active Leaf Node */}
-                  {isLeaf && (
-                    <circle
-                      r="9"
-                      fill="none"
-                      stroke={node.speaker === "human" ? "#6bc28c" : "#a892ee"}
-                      strokeWidth="0.5"
-                      opacity="0.35"
-                      className="animate-ping"
-                    />
-                  )}
-                  {/* Main Circle */}
-                  <circle
-                    r={isHovered ? String(parseFloat(radius) + 1.0) : radius}
-                    fill={fill}
-                    stroke={stroke}
-                    strokeWidth={strokeWidth}
-                    strokeDasharray={strokeDash}
-                    opacity={isActive || isLeaf || isHovered ? 1 : isFuture ? 0.8 : node.isProposed ? 0.75 : 0.45}
-                    className="transition-all duration-150"
-                  />
-
-                  {/* Note Indicator Dots */}
-                  {nodeNotes.map((note, idx) => {
-                    const isAgent = note.visibility === "agent"
-                    const isShared = note.visibility === "shared"
-                    const dotColor = isAgent ? "#22d3ee" : isShared ? "#a892ee" : "#facc15" // Cyan for agent, purple for shared, yellow/gold for personal
-
-                    // Position around the node boundary (using trigonometry)
-                    // Place up to 4 dots at top-right, top-left, bottom-right, bottom-left
-                    const angle = -Math.PI / 4 - (idx * Math.PI) / 2
-                    const dist = parseFloat(radius) + 2.2
-                    const dx = dist * Math.cos(angle)
-                    const dy = dist * Math.sin(angle)
-
-                    return (
-                      <circle
-                        key={`note-dot-${note.id}`}
-                        cx={dx}
-                        cy={dy}
-                        r="1.1"
-                        fill={dotColor}
-                        stroke="#0a0a0c"
-                        strokeWidth="0.3"
-                        opacity={isActive || isLeaf || isHovered ? 1.0 : 0.6}
-                      />
-                    )
-                  })}
-
-                  {/* Proposed Title Label */}
-                  {node.isProposed && (
-                    <text
-                      y="-9"
-                      textAnchor="middle"
-                      className="text-[9px] font-mono fill-[#e09b67] select-none font-bold"
-                      opacity="0.8"
-                    >
-                      🚀 {node.title || "Flight"}
-                    </text>
-                  )}
-                </g>
-              )
-            })}
-          </g>
-        </svg>
+          onClick={handleCanvasClick}
+        />
 
         {/* Zoom and Pan Controls Overlay */}
         <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10 select-none">

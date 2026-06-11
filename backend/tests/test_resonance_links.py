@@ -86,7 +86,7 @@ def test_resonance_links_db_and_repo(tmp_path):
     # 4. Test fetch links
     links = msg_repo.get_message_links(conv_id)
     assert len(links) == 1
-    assert links[0].id == f"{msg3.id}_{msg1.id}_resonance"
+    assert links[0].id == f"{min(msg3.id, msg1.id)}_{max(msg3.id, msg1.id)}_resonance"
     assert links[0].status == "proposed"
     assert links[0].justification == "Both discuss Baradian intra-action."
     

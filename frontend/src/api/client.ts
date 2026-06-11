@@ -891,7 +891,7 @@ export async function createResonanceLink(
   sourceId: number,
   targetId: number,
   justification = "",
-  status: "active" | "proposed" = "active"
+  status: "active" | "proposed" | "ignored" = "active"
 ): Promise<ConversationTreeLink> {
   const res = await fetch(`${BASE}/conversations/${conversationId}/links`, {
     method: "POST",

@@ -130,6 +130,14 @@ async def run_background_resonance_scan(
         )
 
         for cand in candidates:
+            # Skip checking if a link (proposed, active, or ignored) already exists
+            if message_repo.link_exists(message_id, cand["message_id"]):
+                logger.info(
+                    "Resonance link already exists or was ignored between %d and %d, skipping comparison",
+                    message_id, cand["message_id"]
+                )
+                continue
+
             # Call the background task engine to execute resonance finder LLM query
             payload = {
                 "message_a": current_msg.content,

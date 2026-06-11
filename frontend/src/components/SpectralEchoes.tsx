@@ -72,6 +72,27 @@ export function SpectralEchoes({
     }
   }
 
+  const handleIgnoreLink = async (targetId: number) => {
+    if (!activeMessageId || isLinking) return
+    setIsLinking(true)
+    try {
+      await createResonanceLink(
+        conversationId,
+        activeMessageId,
+        targetId,
+        "Ignored by user",
+        "ignored"
+      )
+      refreshTree()
+      fetchSuggestions()
+    } catch (err) {
+      console.error("Failed to ignore suggestion", err)
+      alert("Failed to ignore suggestion")
+    } finally {
+      setIsLinking(false)
+    }
+  }
+
   if (!activeMessageId) {
     return (
       <div className="text-[10px] font-mono text-[#4b4b5c] italic p-2 border border-[#14141a] rounded bg-[#07070a] select-none text-center">
@@ -146,15 +167,25 @@ export function SpectralEchoes({
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => {
-                    setLinkingMsgId(sug.message_id)
-                    setJustification("")
-                  }}
-                  className="w-full py-0.5 mt-0.5 text-center bg-[#14141a] border border-[#1e1e26] hover:border-[#a892ee] hover:text-[#a892ee] text-[#79798c] rounded transition-all cursor-pointer select-none"
-                >
-                  Link Node
-                </button>
+                <div className="flex gap-1.5 mt-0.5">
+                  <button
+                    onClick={() => {
+                      setLinkingMsgId(sug.message_id)
+                      setJustification("")
+                    }}
+                    className="flex-1 py-0.5 text-center bg-[#14141a] border border-[#1e1e26] hover:border-[#a892ee] hover:text-[#a892ee] text-[#79798c] rounded transition-all cursor-pointer select-none"
+                  >
+                    Link Node
+                  </button>
+                  <button
+                    onClick={() => handleIgnoreLink(sug.message_id)}
+                    disabled={isLinking}
+                    className="px-2.5 py-0.5 text-center bg-[#14141a] border border-[#1e1e26] hover:border-[#ef4444] hover:text-[#ef4444] text-[#79798c] rounded transition-all cursor-pointer select-none"
+                    title="Ignore this suggestion permanently"
+                  >
+                    Ignore
+                  </button>
+                </div>
               )}
             </div>
           )

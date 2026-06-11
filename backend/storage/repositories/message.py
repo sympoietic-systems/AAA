@@ -10,6 +10,33 @@ from backend.storage.row_mappers import _row_to_message, _row_to_message_link
 
 
 class MessageRepository(BaseRepository):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        self._normalize_legacy_links()
+
+    @with_connection
+    def _normalize_legacy_links(self) -> None:
+        conn = self._conn()
+        try:
+            # Delete duplicates where source_id > target_id and the correctly-ordered version exists
+            conn.execute(
+                """DELETE FROM message_links 
+                   WHERE source_id > target_id 
+                   AND (target_id || '_' || source_id || '_' || link_type) IN (SELECT id FROM message_links)"""
+            )
+            # Update remaining reversed links to be correctly ordered
+            conn.execute(
+                """UPDATE message_links 
+                   SET id = target_id || '_' || source_id || '_' || link_type,
+                       source_id = target_id, 
+                       target_id = source_id
+                   WHERE source_id > target_id"""
+            )
+            conn.commit()
+        except Exception:
+            # Table might not exist yet during migrations, ignore if so
+            pass
+
     @with_connection
     def insert(
         self,
@@ -566,13 +593,32 @@ class MessageRepository(BaseRepository):
         return [_row_to_message(r) for r in reversed(rows)]
 
     @with_connection
+    def link_exists(self, msg_a: int, msg_b: int, link_type: str = "resonance") -> bool:
+        conn = self._conn()
+        link_id = f"{min(msg_a, msg_b)}_{max(msg_a, msg_b)}_{link_type}"
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt FROM message_links WHERE id = ?",
+            (link_id,),
+        ).fetchone()
+        return row["cnt"] > 0 if row else False
+
+    @with_connection
     def add_message_link(self, source_id: int, target_id: int, link_type: str = "resonance", status: str = "active", justification: str = "") -> MessageLink:
         conn = self._conn()
-        link_id = f"{source_id}_{target_id}_{link_type}"
+        # Consistent undirected link_id ordering to prevent duplicates/cross-talk
+        link_id = f"{min(source_id, target_id)}_{max(source_id, target_id)}_{link_type}"
         conn.execute(
             """INSERT INTO message_links (id, source_id, target_id, link_type, status, justification)
                VALUES (?, ?, ?, ?, ?, ?)
-               ON CONFLICT(id) DO UPDATE SET status = excluded.status, justification = excluded.justification""",
+               ON CONFLICT(id) DO UPDATE SET 
+                   status = CASE 
+                       WHEN excluded.status = 'proposed' AND message_links.status IN ('active', 'ignored') THEN message_links.status 
+                       ELSE excluded.status 
+                   END,
+                   justification = CASE 
+                       WHEN excluded.status = 'proposed' AND message_links.status IN ('active', 'ignored') THEN message_links.justification 
+                       ELSE excluded.justification 
+                   END""",
             (link_id, source_id, target_id, link_type, status, justification),
         )
         conn.commit()
@@ -595,7 +641,7 @@ class MessageRepository(BaseRepository):
     def delete_message_link(self, link_id: str) -> None:
         conn = self._conn()
         conn.execute(
-            "DELETE FROM message_links WHERE id = ?",
+            "UPDATE message_links SET status = 'ignored' WHERE id = ?",
             (link_id,),
         )
         conn.commit()
@@ -607,7 +653,8 @@ class MessageRepository(BaseRepository):
             """SELECT ml.* FROM message_links ml
                JOIN conversation_log cl_src ON ml.source_id = cl_src.id
                JOIN conversation_log cl_tgt ON ml.target_id = cl_tgt.id
-               WHERE cl_src.conversation_id = ? AND cl_tgt.conversation_id = ?""",
+               WHERE cl_src.conversation_id = ? AND cl_tgt.conversation_id = ?
+                 AND ml.status != 'ignored'""",
             (conversation_id, conversation_id),
         ).fetchall()
         return [_row_to_message_link(r) for r in rows]
@@ -644,8 +691,13 @@ class MessageRepository(BaseRepository):
             SELECT id, speaker, content, embedding, embedding_dim, timestamp 
             FROM conversation_log 
             WHERE conversation_id = ? AND id != ? AND id NOT IN ({ancestor_placeholders})
+              AND id NOT IN (
+                  SELECT source_id FROM message_links WHERE target_id = ?
+                  UNION
+                  SELECT target_id FROM message_links WHERE source_id = ?
+              )
         """
-        params = [conversation_id, message_id] + ancestor_ids
+        params = [conversation_id, message_id] + ancestor_ids + [message_id, message_id]
         rows = conn.execute(query_str, params).fetchall()
 
         results = []
