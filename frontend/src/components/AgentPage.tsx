@@ -163,7 +163,7 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-2.5 py-0.5 text-[9px] rounded font-bold tracking-wide uppercase transition-all duration-200 border whitespace-nowrap cursor-pointer select-none ${
+            className={`px-2.5 py-0.5 text-[11px] rounded font-bold tracking-wide uppercase transition-all duration-200 border whitespace-nowrap cursor-pointer select-none ${
               activeTab === tab.id
                 ? "bg-[#1e1e2e] text-[#94a3b8] border-[#475569]/40"
                 : "text-[#94a3b8]/40 border-transparent hover:text-[#94a3b8]/70 hover:bg-[#111]"
@@ -186,28 +186,28 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
         {activeTab === "skills" && (
           <>
             {dbSkillsError ? (
-              <p className="text-[10px] text-[#ef4444]">Error: {dbSkillsError}</p>
+              <p className="text-[11px] text-[#ef4444]">Error: {dbSkillsError}</p>
             ) : !dbSkillsData ? (
-              <p className="text-[10px] text-[#555] animate-pulse">loading skills...</p>
+              <p className="text-[11px] text-[#555] animate-pulse">loading skills...</p>
             ) : (
               <>
                 {dbSkillsData.always_active.length > 0 && (
                   <div className="mb-3">
-                    <p className="text-[9px] text-[#555] uppercase tracking-wider mb-2">Baseline Dispositions</p>
+                    <p className="text-[10px] text-[#555] uppercase tracking-wider mb-2">Baseline Dispositions</p>
                     {dbSkillsData.always_active.map((s: any) => (
                       <div key={s.id} className="mb-1">
                         <div
                           className="flex items-center gap-2 cursor-pointer hover:bg-[#111] px-1 py-0.5 transition-colors"
                           onClick={() => handleLoadSkillContent(s.name)}
                         >
-                          <span className="text-[9px] text-[#a78bfa]">◆</span>
-                          <span className="text-[10px] text-[#bbb]">{s.name}</span>
-                          <span className="text-[8px] text-[#444] ml-auto">
+                          <span className="text-[10px] text-[#a78bfa]">◆</span>
+                          <span className="text-[11px] text-[#bbb]">{s.name}</span>
+                          <span className="text-[9px] text-[#444] ml-auto">
                             {loadingSkillContent === s.name ? "..." : expandedSkill === s.name ? "▲" : "▼"}
                           </span>
                         </div>
                         {expandedSkill === s.name && skillContent[s.name] && (
-                          <div className="ml-4 mt-1 p-2 bg-[#0a0a0a] border border-[#1a1a1a] text-[10px] text-[#888] whitespace-pre-wrap max-h-48 overflow-y-auto">
+                          <div className="ml-4 mt-1 p-2 bg-[#0a0a0a] border border-[#1a1a1a] text-[11px] text-[#888] whitespace-pre-wrap max-h-48 overflow-y-auto">
                             {skillContent[s.name]}
                           </div>
                         )}
@@ -217,22 +217,22 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
                 )}
                 {dbSkillsData.on_demand.length > 0 && (
                   <div>
-                    <p className="text-[9px] text-[#555] uppercase tracking-wider mb-2">On-Demand Capabilities</p>
+                    <p className="text-[10px] text-[#555] uppercase tracking-wider mb-2">On-Demand Capabilities</p>
                     {dbSkillsData.on_demand.map((s) => (
                       <div key={s.id} className="mb-1">
                         <div
                           className="flex items-center gap-2 cursor-pointer hover:bg-[#111] px-1 py-0.5 transition-colors"
                           onClick={() => handleLoadSkillContent(s.name)}
                         >
-                          <span className="text-[9px] text-[#4ade80]">◇</span>
-                          <span className="text-[10px] text-[#bbb] flex-1">{s.name}</span>
-                          <span className="text-[9px] text-[#444]">c:{s.confidence.toFixed(1)} m:{s.ontological_mass.toFixed(1)}</span>
-                          <span className="text-[8px] text-[#444]">
+                          <span className="text-[10px] text-[#4ade80]">◇</span>
+                          <span className="text-[11px] text-[#bbb] flex-1">{s.name}</span>
+                          <span className="text-[10px] text-[#444]">c:{s.confidence.toFixed(1)} m:{s.ontological_mass.toFixed(1)}</span>
+                          <span className="text-[9px] text-[#444]">
                             {loadingSkillContent === s.name ? "..." : expandedSkill === s.name ? "▲" : "▼"}
                           </span>
                         </div>
                         {expandedSkill === s.name && skillContent[s.name] && (
-                          <div className="ml-4 mt-1 p-2 bg-[#0a0a0a] border border-[#1a1a1a] text-[10px] text-[#888] whitespace-pre-wrap max-h-48 overflow-y-auto">
+                          <div className="ml-4 mt-1 p-2 bg-[#0a0a0a] border border-[#1a1a1a] text-[11px] text-[#888] whitespace-pre-wrap max-h-48 overflow-y-auto">
                             {skillContent[s.name]}
                           </div>
                         )}

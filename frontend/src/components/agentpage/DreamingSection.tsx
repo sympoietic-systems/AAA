@@ -28,11 +28,11 @@ function formatRelativeTime(isoString: string): string {
 
 function DreamingSectionComponent({ status, error }: DreamingSectionProps) {
   if (error && !status) {
-    return <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>
+    return <p className="text-[10px] text-[#ef4444] font-mono">{error}</p>
   }
 
   if (!status) {
-    return <p className="text-[9px] text-[#444] font-mono">waiting for data...</p>
+    return <p className="text-[10px] text-[#444] font-mono">waiting for data...</p>
   }
 
   // Determine display state
@@ -81,20 +81,20 @@ function DreamingSectionComponent({ status, error }: DreamingSectionProps) {
     <div className="mt-2 border-t border-[#1a1a1a] pt-2">
       <div className="flex items-center gap-1.5 mb-2 font-mono">
         <span
-          className={`text-[8px] leading-none ${stateLabel === "dreaming" ? "animate-pulse" : ""}`}
+          className={`text-[9px] leading-none ${stateLabel === "dreaming" ? "animate-pulse" : ""}`}
           style={{ color: stateColor }}
         >
           {stateLabel === "dreaming" ? "◉" : stateLabel === "resting" ? "●" : "○"}
         </span>
-        <span className="text-[10px]" style={{ color: stateColor }}>
+        <span className="text-[11px]" style={{ color: stateColor }}>
           {stateLabel}
         </span>
-        <span className="text-[9px] ml-auto text-[#888]">
+        <span className="text-[10px] ml-auto text-[#888]">
           {status.dreams_today} / {status.max_daily_dreams}
         </span>
       </div>
 
-      <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded p-2 font-mono text-[8px] leading-relaxed space-y-px">
+      <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded p-2 font-mono text-[9px] leading-relaxed space-y-px">
         <div className="text-[#555]">
           {"=== AUTOPOIETIC PULSE ==="}
         </div>
