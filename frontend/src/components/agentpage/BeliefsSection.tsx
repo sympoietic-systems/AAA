@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef, memo } from "react"
+import { getBeliefs } from "../../api/client"
 import type { BeliefsResponse, BeliefNodeInfo } from "../../api/client"
-
-interface BeliefsSectionProps {
-  data: BeliefsResponse | null
-  error: string | null
-}
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -243,15 +239,22 @@ function BeliefDetail({ belief }: { belief: BeliefNodeInfo | null }) {
 
 // ─── Main Component ───────────────────────────────────────
 
-function BeliefsSectionComponent({ data, error }: BeliefsSectionProps) {
+function BeliefsSectionComponent() {
+  const [data, setData] = useState<BeliefsResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const detailRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    getBeliefs(null as any)
+      .then(setData)
+      .catch(e => setError(e.message || "Failed to fetch beliefs"))
+  }, [])
 
   // Scroll to detail on mobile when a belief is selected
   useEffect(() => {
     if (!selectedId || !detailRef.current) return
-    const isMobile = window.matchMedia("(max-width: 767px)").matches
-    if (isMobile) {
+    if (window.matchMedia("(max-width: 767px)").matches) {
       detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
     }
   }, [selectedId])

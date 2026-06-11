@@ -1,10 +1,6 @@
-import { memo } from "react"
+import { useState, useEffect, memo } from "react"
+import { getSchedulerStatus } from "../../api/client"
 import type { SchedulerStatusResponse } from "../../api/client"
-
-interface StartupSectionProps {
-  status: SchedulerStatusResponse | null
-  error: string | null
-}
 
 function getStatusColor(s: string) {
   switch (s) {
@@ -16,7 +12,22 @@ function getStatusColor(s: string) {
   }
 }
 
-function StartupSectionComponent({ status, error }: StartupSectionProps) {
+function StartupSectionComponent() {
+  const [status, setStatus] = useState<SchedulerStatusResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getSchedulerStatus()
+      .then(setStatus)
+      .catch(e => setError(e.message || "Failed"))
+    const id = setInterval(() => {
+      getSchedulerStatus()
+        .then(setStatus)
+        .catch(() => {})
+    }, 10000)
+    return () => clearInterval(id)
+  }, [])
+
   if (error && !status) {
     return <p className="text-[10px] text-[#ef4444] font-mono">{error}</p>
   }

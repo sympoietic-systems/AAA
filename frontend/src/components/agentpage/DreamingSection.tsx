@@ -1,14 +1,10 @@
-import { memo } from "react"
+import { useState, useEffect, memo } from "react"
+import { getDaemonStatus } from "../../api/client"
 import type { DaemonStatusResponse } from "../../api/client"
 import telemetrySchemas from "../../config/telemetry_schemas.json"
 
 const { DREAM_TYPE_LABELS } = telemetrySchemas as {
   DREAM_TYPE_LABELS: Record<string, { code: string; label: string; color: string }>
-}
-
-interface DreamingSectionProps {
-  status: DaemonStatusResponse | null
-  error: string | null
 }
 
 function formatRelativeTime(isoString: string): string {
@@ -26,7 +22,22 @@ function formatRelativeTime(isoString: string): string {
   return `${days}d ago`
 }
 
-function DreamingSectionComponent({ status, error }: DreamingSectionProps) {
+function DreamingSectionComponent() {
+  const [status, setStatus] = useState<DaemonStatusResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getDaemonStatus()
+      .then(setStatus)
+      .catch(e => setError(e.message || "Failed"))
+    const id = setInterval(() => {
+      getDaemonStatus()
+        .then(setStatus)
+        .catch(() => {})
+    }, 10000)
+    return () => clearInterval(id)
+  }, [])
+
   if (error && !status) {
     return <p className="text-[10px] text-[#ef4444] font-mono">{error}</p>
   }
