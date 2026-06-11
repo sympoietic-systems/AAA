@@ -33,12 +33,19 @@ We implemented a decoupled background notifications system ("Creases") leveragin
 - **`useChat.ts` Guards**: The hook tracks active targets via `loadedRef` and `activeMessageIdRef`. When a generation completes, the callback checks whether the user is still viewing the initiating node/conversation. If not, it registers a notification in the store and keeps current state untouched.
 - **Auto-Dismissal**: An effect in `useChat.ts` automatically calls `dismissByMatch(conversationId, activeMessageId)` when the active message changes, clearing the crease without React state updates.
 
+### 4. Parallel requests via Per-Node Loading Tracking
+- **Decoupled Loading State**: Replaced the global `loading: boolean` state with a set of message IDs currently undergoing response generation (`generatingUserMessageIds: Set<number>`).
+- **Contextual Input Blocking**: The derived `loading` state is now computed contextually: `isHistoryLoading || (activeMessageId !== null && generatingUserMessageIds.has(activeMessageId))`.
+- **Parallel Generations**: The input bar is disabled exclusively for the branch currently waiting for a response. The user can switch to another conversation or a different node in the same conversation and send another message in parallel.
+
 ## Consequences
 
 ### Positive
 - **Zero Layout Thrashing**: Adding background responses generates zero re-render overhead on the main application interface. Input fields, chat lists, and metrics remain fully interactive.
 - **Improved Responsiveness**: Navigation between nodes and conversations feels instantaneous, completely decoupled from background agent response completions.
 - **Clean Component Hierarchy**: Cleaned up the `App.tsx` and `NodeExplorer.tsx` props, removing five separate notification-related states and callback functions.
+- **Multi-Branch Concurrency**: Enabled parallel response generations across different conversations and branches. Switching views immediately unlocks inputs for active, non-generating branches.
 
 ### Risks
 - **Title Mapping Sync**: To display the conversation titles in the dropdown, the `<CreasesDropdown />` must do a lookup on the list of conversations. We resolved this by passing the static list of conversations down from `App` to `<CreasesDropdown />` as a stable reference.
+

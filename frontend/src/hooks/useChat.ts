@@ -56,7 +56,12 @@ export function useChat(conversationId: string) {
   const [activeMessageId, setActiveMessageId] = useState<number | null>(null)
   const [links, setLinks] = useState<ConversationTreeLink[]>([])
   const [treeNodes, setTreeNodes] = useState<ConversationTreeNode[]>([])
-  const [loading, setLoading] = useState(false)
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+  const [generatingUserMessageIds, setGeneratingUserMessageIds] = useState<Set<number>>(new Set())
+
+  const loading = useMemo(() => {
+    return isHistoryLoading || (activeMessageId !== null && generatingUserMessageIds.has(activeMessageId))
+  }, [isHistoryLoading, activeMessageId, generatingUserMessageIds])
 
   const activeMessageIdRef = useRef(activeMessageId)
   useEffect(() => {
@@ -166,7 +171,7 @@ export function useChat(conversationId: string) {
       .catch(() => setAgentName("agent"))
 
     if (conversationId) {
-      setLoading(true)
+      setIsHistoryLoading(true)
       
       const params = new URLSearchParams(window.location.search)
       const urlMsgId = params.get("m")
@@ -198,7 +203,7 @@ export function useChat(conversationId: string) {
                 setHasMore(false)
               })
           })
-          .finally(() => setLoading(false))
+          .finally(() => setIsHistoryLoading(false))
       } else {
         getHistory(PAGE_SIZE, 0, conversationId)
           .then((data) => {
@@ -216,7 +221,7 @@ export function useChat(conversationId: string) {
             setActiveMessageId(null)
             setHasMore(false)
           })
-          .finally(() => setLoading(false))
+          .finally(() => setIsHistoryLoading(false))
       }
 
       fetchTree(conversationId)
@@ -306,14 +311,13 @@ export function useChat(conversationId: string) {
   }, [conversationId, messages.length, loadingMore, hasMore])
 
   const send = useCallback(async (content: string) => {
-    if (!content.trim() || loading) return
     setError(null)
-    setLoading(true)
 
     const parentId = activeMessageId
 
     // 1. Create a local temporary message for immediate UI feedback
     const tempId = Date.now()
+    setGeneratingUserMessageIds((prev) => new Set([...prev, tempId]))
     const userMsg: ChatMessage = {
       id: tempId,
       timestamp: new Date().toISOString(),
@@ -348,6 +352,12 @@ export function useChat(conversationId: string) {
           } : m))
         )
         setActiveMessageId(savedMsg.id)
+        setGeneratingUserMessageIds((prev) => {
+          const next = new Set(prev)
+          next.delete(tempId)
+          next.add(savedMsg!.id)
+          return next
+        })
 
         targetConvId = targetConvId || savedMsg.conversation_id
         if (targetConvId) {
@@ -372,8 +382,12 @@ export function useChat(conversationId: string) {
       const msg = e instanceof Error ? e.message : "Failed to persist user message"
       if (!targetConvId || loadedRef.current === targetConvId) {
         setError(msg)
-        setLoading(false)
       }
+      setGeneratingUserMessageIds((prev) => {
+        const next = new Set(prev)
+        next.delete(tempId)
+        return next
+      })
       return null
     }
 
@@ -427,16 +441,20 @@ export function useChat(conversationId: string) {
       }
       return savedMsg // Return the user message so App.tsx knows the conversation was created/updated
     } finally {
-      if (loadedRef.current === targetConvId) {
-        setLoading(false)
-      }
+      setGeneratingUserMessageIds((prev) => {
+        const next = new Set(prev)
+        next.delete(tempId)
+        if (savedMsg) {
+          next.delete(savedMsg.id)
+        }
+        return next
+      })
     }
   }, [loading, conversationId, activeMessageId, startPolling, fetchTree])
 
   const regenerate = useCallback(async (userMsgId?: number) => {
     if (loading) return
     setError(null)
-    setLoading(true)
     const targetConvId = conversationId
 
     let targetMsgId = userMsgId
@@ -444,11 +462,12 @@ export function useChat(conversationId: string) {
       const lastUserMsg = [...messages].reverse().find((m) => m.speaker === "human")
       if (!lastUserMsg || !lastUserMsg.id) {
         setError("No user message found to regenerate response for")
-        setLoading(false)
         return
       }
       targetMsgId = lastUserMsg.id
     }
+
+    setGeneratingUserMessageIds((prev) => new Set([...prev, targetMsgId!]))
 
     try {
       if (!targetConvId) {
@@ -499,9 +518,13 @@ export function useChat(conversationId: string) {
       }
       return null
     } finally {
-      if (loadedRef.current === targetConvId) {
-        setLoading(false)
-      }
+      setGeneratingUserMessageIds((prev) => {
+        const next = new Set(prev)
+        if (targetMsgId) {
+          next.delete(targetMsgId)
+        }
+        return next
+      })
     }
   }, [loading, conversationId, messages, fetchTree])
 
@@ -581,7 +604,7 @@ export function useChat(conversationId: string) {
 
   const commitProposedBranch = useCallback(async (parentMsgId: number, content: string) => {
     if (!conversationId) return null
-    setLoading(true)
+    setGeneratingUserMessageIds((prev) => new Set([...prev, parentMsgId]))
     setError(null)
     const targetConvId = conversationId
     try {
@@ -613,9 +636,11 @@ export function useChat(conversationId: string) {
       }
       return null
     } finally {
-      if (loadedRef.current === targetConvId) {
-        setLoading(false)
-      }
+      setGeneratingUserMessageIds((prev) => {
+        const next = new Set(prev)
+        next.delete(parentMsgId)
+        return next
+      })
     }
   }, [conversationId, fetchTree])
 
@@ -633,7 +658,7 @@ export function useChat(conversationId: string) {
       return
     }
 
-    setLoading(true)
+    setIsHistoryLoading(true)
     setError(null)
     try {
       const pathMessages = await getMessagePath(msgId)
@@ -643,7 +668,7 @@ export function useChat(conversationId: string) {
       console.error("Failed to navigate to message path:", e)
       setError("Failed to navigate to the selected message path.")
     } finally {
-      setLoading(false)
+      setIsHistoryLoading(false)
     }
   }, [messages, activeMessageId, addToHistory])
 
