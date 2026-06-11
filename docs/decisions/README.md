@@ -70,6 +70,7 @@ What becomes easier/harder?
 | [036](ADR-036-spatial-node-explorer-interface.md) | Spatial Node Explorer Interface | accepted | 2026-06-11 |
 | [037](ADR-037-frontend-component-hierarchy-and-modularity.md) | Frontend Component Hierarchy and Modularity | accepted | 2026-06-11 |
 | [038](ADR-038-creases-background-notifications-store.md) | Creases (Background Sediment Arrivals) and Pure JS Notification Store | accepted | 2026-06-11 |
+| [039](ADR-039-cross-conversation-retro-links-and-active-message-focus.md) | Cross-Conversation Retro-links and Active Message Focus | accepted | 2026-06-11 |
 
 ## Creating a New ADR
 

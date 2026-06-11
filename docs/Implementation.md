@@ -52,3 +52,12 @@ Where:
     *   ✅ Structure-aware memory compaction and LLM-synthesized concept merging
     *   ✅ Exogenous web ingestion using the headless `RhizomeWebProbe` to break stagnation
 
+
+### Phase 6: Rhizomatic Branching, Spatial Exploration & Resonance Retro-links ✅
+*   **Goal:** Enable multi-path dialogue branching (DAG structure), interactive topological network visualization, and precise retro-linking from memory fragments.
+*   **Deliverables:**
+    *   ✅ Multi-branching timeline tree (`parent_message_id` DAG model)
+    *   ✅ Interactive Force-Directed SVG/Canvas Network Visualizer (Connection Cloud)
+    *   ✅ Bidirectional manual and background-scanned Resonance Links with human-in-the-loop ratification
+    *   ✅ Precise Retro-linking allowing dialogue and diffraction memory cards to target, scroll, and highlight specific historic nodes in the active DAG viewport.
+

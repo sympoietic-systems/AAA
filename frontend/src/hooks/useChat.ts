@@ -53,11 +53,34 @@ function getAncestorPathIds(messages: ChatMessage[], leafId: number | null): Set
 export function useChat(conversationId: string) {
   const PAGE_SIZE = 50
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [activeMessageId, setActiveMessageId] = useState<number | null>(null)
+  const [activeMessageId, setActiveMessageId] = useState<number | null>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const urlMsgId = params.get("m")
+    return urlMsgId ? parseInt(urlMsgId, 10) : null
+  })
   const [links, setLinks] = useState<ConversationTreeLink[]>([])
   const [treeNodes, setTreeNodes] = useState<ConversationTreeNode[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [generatingUserMessageIds, setGeneratingUserMessageIds] = useState<Set<number>>(new Set())
+  const [files, setFiles] = useState<ConversationFile[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  // Synchronously reset conversation-specific states when the active thread changes
+  const lastConversationIdRef = useRef(conversationId)
+  if (lastConversationIdRef.current !== conversationId) {
+    lastConversationIdRef.current = conversationId
+    setMessages([])
+    setLinks([])
+    setTreeNodes([])
+    setHasMore(true)
+    const params = new URLSearchParams(window.location.search)
+    const urlMsgId = params.get("m")
+    const targetMsgId = urlMsgId ? parseInt(urlMsgId, 10) : null
+    const nextId = targetMsgId && !isNaN(targetMsgId) ? targetMsgId : null
+    setActiveMessageId(nextId)
+  }
 
   const loading = useMemo(() => {
     return isHistoryLoading || (activeMessageId !== null && generatingUserMessageIds.has(activeMessageId))
@@ -115,10 +138,6 @@ export function useChat(conversationId: string) {
       return msgId
     })
   }, [messages, addToHistory])
-  const [files, setFiles] = useState<ConversationFile[]>([])
-  const [isUploading, setIsUploading] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const loadedRef = useRef<string>("")
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 

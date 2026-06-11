@@ -102,3 +102,18 @@ th, td {
 th {
   background: #141414;
 }
+
+@keyframes active-focus-glow {
+  0% {
+    border-color: rgba(74, 222, 128, 0.8) !important;
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+  }
+  100% {
+    border-color: rgba(42, 42, 53, 1) !important;
+    box-shadow: none;
+  }
+}
+
+.highlight-glow {
+  animation: active-focus-glow 2.5s ease-out;
+}

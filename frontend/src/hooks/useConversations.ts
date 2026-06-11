@@ -32,6 +32,7 @@ export function useConversations() {
     const params = new URLSearchParams(window.location.search)
     if (id) {
       params.set("c", id)
+      params.delete("m")
     } else {
       params.delete("c")
       params.delete("m")

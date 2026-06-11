@@ -4,7 +4,7 @@ import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 import { CreasesDropdown } from "./CreasesDropdown"
 
-import { useState, useMemo, useCallback, memo } from "react"
+import { useState, useMemo, useCallback, memo, useEffect, useRef } from "react"
 
 interface Props {
   selectedNode: ChatMessage | null
@@ -264,6 +264,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   onRegenerate,
   siblingIds = [],
   onBranch,
+  isHighlighted = false,
 }: {
   selectedMsg: ChatMessage | null
   notes: NoteInfo[]
@@ -273,6 +274,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   onRegenerate?: (userMsgId?: number) => void
   siblingIds?: number[]
   onBranch?: (messageId: number) => void
+  isHighlighted?: boolean
 }) {
   if (!selectedMsg) {
     return (
@@ -285,7 +287,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   }
 
   return (
-    <div className="border border-[#2a2a35] bg-[#0f0f13] rounded-sm p-4 relative shadow-inner">
+    <div className={`border bg-[#0f0f13] rounded-sm p-4 relative shadow-inner transition-all duration-300 ${isHighlighted ? "highlight-glow" : "border-[#2a2a35]"}`}>
       <div className="flex items-center justify-between border-b border-[#21212a] pb-2 mb-3 select-none">
         <span className="text-[9px] text-[#888] font-mono uppercase tracking-widest font-semibold text-[#6bc28c]">
           Active Focus Cut : {selectedMsg.speaker === "human" ? "Human" : "Apparatus"}
@@ -340,6 +342,30 @@ export function NodeExplorer({
   const [titleVal, setTitleVal] = useState(conversationTitle)
   const [prevTitle, setPrevTitle] = useState(conversationTitle)
   const [newTagVal, setNewTagVal] = useState("")
+
+  const selectedNodeId = selectedNode ? selectedNode.id : null
+  const selectedNodeRef = useRef<HTMLDivElement>(null)
+  const [highlightedId, setHighlightedId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (selectedNodeId) {
+      const scrollTimer = setTimeout(() => {
+        if (selectedNodeRef.current) {
+          selectedNodeRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
+        }
+      }, 100)
+
+      setHighlightedId(selectedNodeId)
+      const highlightTimer = setTimeout(() => {
+        setHighlightedId(null)
+      }, 2500)
+
+      return () => {
+        clearTimeout(scrollTimer)
+        clearTimeout(highlightTimer)
+      }
+    }
+  }, [selectedNodeId])
 
   if (conversationTitle !== prevTitle) {
     setPrevTitle(conversationTitle)
@@ -524,16 +550,19 @@ export function NodeExplorer({
             />
 
             {/* 3. Selected Node Panel */}
-            <SelectedNodeCard
-              selectedMsg={selectedNode}
-              notes={selectedNotes}
-              onAddNote={onAddNote}
-              onDeleteNote={onDeleteNote}
-              onUpdateNote={onUpdateNote}
-              onRegenerate={onRegenerate}
-              siblingIds={selectedNodeSiblings}
-              onBranch={onNavigateToMessage}
-            />
+            <div ref={selectedNodeRef}>
+              <SelectedNodeCard
+                selectedMsg={selectedNode}
+                notes={selectedNotes}
+                onAddNote={onAddNote}
+                onDeleteNote={onDeleteNote}
+                onUpdateNote={onUpdateNote}
+                onRegenerate={onRegenerate}
+                siblingIds={selectedNodeSiblings}
+                onBranch={onNavigateToMessage}
+                isHighlighted={highlightedId === selectedNodeId}
+              />
+            </div>
 
             {/* 4. Sibling & Child links */}
             <GlimmerLinks
