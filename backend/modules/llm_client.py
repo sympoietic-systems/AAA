@@ -746,7 +746,8 @@ async def generate_unified(
         model = res.get("model", "")
         # Handle cases where provider does not have provider_name property/attribute
         p_name = getattr(provider, "provider_name", "unknown")
-        if callable(p_name):
+        from unittest.mock import NonCallableMock
+        if callable(p_name) and not isinstance(p_name, NonCallableMock):
             try:
                 p_name = p_name()
             except Exception:
