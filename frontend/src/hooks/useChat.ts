@@ -12,7 +12,7 @@ import {
   getConversationTree,
   getMessagePath,
 } from "../api/client"
-import type { ChatMessage, ConversationFile } from "../api/client"
+import type { ChatMessage, ConversationFile, ConversationTreeNode, ConversationTreeLink } from "../api/client"
 
 function estimateTokens(text: string): number {
   if (!text) return 0
@@ -53,8 +53,21 @@ export function useChat(conversationId: string) {
   const PAGE_SIZE = 50
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [activeMessageId, setActiveMessageId] = useState<number | null>(null)
-  const [links, setLinks] = useState<any[]>([])
+  const [links, setLinks] = useState<ConversationTreeLink[]>([])
+  const [treeNodes, setTreeNodes] = useState<ConversationTreeNode[]>([])
   const [loading, setLoading] = useState(false)
+
+  const fetchTree = useCallback(async (convId: string) => {
+    if (!convId) return
+    try {
+      const data = await getConversationTree(convId)
+      setLinks(data.links)
+      setTreeNodes(data.nodes)
+    } catch {
+      setLinks([])
+      setTreeNodes([])
+    }
+  }, [])
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
   const [files, setFiles] = useState<ConversationFile[]>([])
@@ -132,9 +145,7 @@ export function useChat(conversationId: string) {
         })
         .finally(() => setLoading(false))
 
-      getConversationTree(conversationId)
-        .then((data) => setLinks(data.links))
-        .catch(() => setLinks([]))
+      fetchTree(conversationId)
 
       getConversationFiles(conversationId)
         .then((data) => {
@@ -152,7 +163,7 @@ export function useChat(conversationId: string) {
       setFiles([])
       setHasMore(false)
     }
-  }, [conversationId, startPolling])
+  }, [conversationId, startPolling, fetchTree])
 
   useEffect(() => {
     return () => {
@@ -225,9 +236,7 @@ export function useChat(conversationId: string) {
       if (targetConvId) {
         const finalConvId = targetConvId
         // Fetch/refresh trees and files
-        getConversationTree(finalConvId)
-          .then((data) => setLinks(data.links))
-          .catch(() => {})
+        fetchTree(finalConvId)
 
         getConversationFiles(finalConvId)
           .then((res) => {
@@ -264,7 +273,7 @@ export function useChat(conversationId: string) {
     } finally {
       setLoading(false)
     }
-  }, [loading, conversationId, activeMessageId, startPolling])
+  }, [loading, conversationId, activeMessageId, startPolling, fetchTree])
 
   const regenerate = useCallback(async (userMsgId?: number) => {
     if (loading) return
@@ -295,9 +304,7 @@ export function useChat(conversationId: string) {
       })
       setActiveMessageId(response.id)
 
-      getConversationTree(targetConvId)
-        .then((data) => setLinks(data.links))
-        .catch(() => {})
+      fetchTree(targetConvId)
 
       return response
     } catch (e) {
@@ -307,7 +314,7 @@ export function useChat(conversationId: string) {
     } finally {
       setLoading(false)
     }
-  }, [loading, conversationId, messages])
+  }, [loading, conversationId, messages, fetchTree])
 
 
   const upload = useCallback(async (filesToUpload: File[]) => {
@@ -366,19 +373,15 @@ export function useChat(conversationId: string) {
         })
         .catch(() => {})
 
-      getConversationTree(conversationId)
-        .then((data) => setLinks(data.links))
-        .catch(() => setLinks([]))
+      fetchTree(conversationId)
     }
-  }, [conversationId])
+  }, [conversationId, fetchTree])
 
   const refreshTree = useCallback(() => {
     if (conversationId) {
-      getConversationTree(conversationId)
-        .then((data) => setLinks(data.links))
-        .catch(() => {})
+      fetchTree(conversationId)
     }
-  }, [conversationId])
+  }, [conversationId, fetchTree])
 
   const isIndexing = isUploading || files.some(
     (f) => f.status === "uploading" || f.status === "processing"
@@ -393,9 +396,7 @@ export function useChat(conversationId: string) {
     setError(null)
     try {
       const response = await commitBranch(conversationId, parentMsgId, content)
-      getConversationTree(conversationId)
-        .then((data) => setLinks(data.links))
-        .catch(() => {})
+      fetchTree(conversationId)
       setMessages((prev) => {
         if (prev.some((m) => m.id === response.id)) return prev
         return [...prev, response]
@@ -409,7 +410,7 @@ export function useChat(conversationId: string) {
     } finally {
       setLoading(false)
     }
-  }, [conversationId])
+  }, [conversationId, fetchTree])
 
   const navigateToMessage = useCallback(async (msgId: number) => {
     const isLoaded = messages.some((m) => m.id === msgId)
@@ -431,6 +432,28 @@ export function useChat(conversationId: string) {
       setLoading(false)
     }
   }, [messages])
+
+  const selectedNode = useMemo(() => {
+    return messages.find((m) => m.id === activeMessageId) || null
+  }, [messages, activeMessageId])
+
+  const parentNode = useMemo(() => {
+    if (!selectedNode || !selectedNode.parent_message_id) return null
+    return messages.find((m) => m.id === selectedNode.parent_message_id) || null
+  }, [messages, selectedNode])
+
+  const siblingNodes = useMemo(() => {
+    if (!selectedNode) return []
+    const parentId = selectedNode.parent_message_id
+    return treeNodes.filter(
+      (n) => n.parent_message_id === parentId && n.id !== selectedNode.id && n.speaker === selectedNode.speaker
+    )
+  }, [treeNodes, selectedNode])
+
+  const childNodes = useMemo(() => {
+    if (!activeMessageId) return []
+    return treeNodes.filter((n) => n.parent_message_id === activeMessageId)
+  }, [treeNodes, activeMessageId])
 
   return {
     messages: activePathMessages,
@@ -457,6 +480,11 @@ export function useChat(conversationId: string) {
     loadMoreMessages,
     refreshMessages,
     refreshTree,
+    selectedNode,
+    parentNode,
+    siblingNodes,
+    childNodes,
+    treeNodes,
   }
 }
 

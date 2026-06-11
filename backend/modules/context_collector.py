@@ -108,17 +108,14 @@ class ContextCollectorModule(ProcessingModule):
             else:
                 role = "user"
 
-            if position_from_end < self._floating_window:
-                content = row.content
-            elif self._caveman_enabled:
-                content = f"[{role[0].upper()}]: {caveman_compress(row.content)}"
-            else:
-                content = row.content
-
-            # Minimize system messages
             if role == "system":
                 first_line = row.content.split("\n")[0].strip()
                 content = f"[System Notification: {first_line}]"
+            elif position_from_end < self._floating_window:
+                content = row.content
+            else:
+                compressed = caveman_compress(row.content) if self._caveman_enabled else row.content
+                content = f'<sedimented_strata message_id="{row.id}" speaker="{role}" position_from_end="{position_from_end}">{compressed}</sedimented_strata>'
 
             # Parse inline notes (strip personal, replace shared)
             content = process_inline_notes(content, notes_by_id)

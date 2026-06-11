@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { useChat } from "./hooks/useChat"
 import { useConversations } from "./hooks/useConversations"
 import { useNotes } from "./hooks/useNotes"
-import { ChatView } from "./components/ChatView"
+import { NodeExplorer } from "./components/NodeExplorer"
 import { SidePanel } from "./components/SidePanel"
 import { ConversationLandingPage } from "./components/ConversationLandingPage"
 import { AgentPage } from "./components/AgentPage"
@@ -85,11 +85,13 @@ export default function App() {
     upload,
     deleteFile,
     reprocess,
-    hasMore,
-    loadingMore,
-    loadMoreMessages,
     refreshMessages,
     refreshTree,
+    selectedNode,
+    parentNode,
+    siblingNodes,
+    childNodes,
+    treeNodes,
   } = useChat(activeId)
 
   const {
@@ -311,8 +313,12 @@ export default function App() {
   if (isAuthEnabled && !isAuthenticated) {
     return (
       <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
-        <ChatView
-          messages={[]}
+        <NodeExplorer
+          selectedNode={null}
+          parentNode={null}
+          siblingNodes={[]}
+          childNodes={[]}
+          treeNodes={[]}
           loading={false}
           error={authError}
           agentName="..."
@@ -326,6 +332,7 @@ export default function App() {
           onRenameTitle={() => {}}
           onGenerateTitle={async () => {}}
           isPassword={true}
+          onNavigateToMessage={() => {}}
           className="flex-1 min-w-0"
         />
       </div>
@@ -450,10 +457,13 @@ export default function App() {
         />
       )}
 
-      {/* Main chat interface */}
-      <ChatView
-        messages={messages}
-        fullTreeMessages={fullTreeMessages}
+      {/* Main node explorer interface */}
+      <NodeExplorer
+        selectedNode={selectedNode}
+        parentNode={parentNode}
+        siblingNodes={siblingNodes}
+        childNodes={childNodes}
+        treeNodes={treeNodes}
         loading={loading}
         error={error}
         agentName={agentName}
@@ -467,9 +477,6 @@ export default function App() {
         onRegenerate={regenerate}
         onRenameTitle={handleRenameTitle}
         onGenerateTitle={handleGenerateTitle}
-        hasMore={hasMore}
-        loadingMore={loadingMore}
-        onLoadMore={loadMoreMessages}
         notes={notes}
         onAddNote={handleAddNote}
         onDeleteNote={handleDeleteNote}
@@ -477,7 +484,7 @@ export default function App() {
         tags={activeConv?.tags || []}
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
-        onBranch={setActiveMessageId}
+        onNavigateToMessage={navigateToMessage}
         onGoHome={handleGoHome}
         className="flex-1 min-w-0"
       />
