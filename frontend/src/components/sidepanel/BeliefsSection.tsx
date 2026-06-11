@@ -300,7 +300,7 @@ function BeliefsSectionComponent({ data, error }: BeliefsSectionProps) {
     return <p className="text-[9px] text-[#444] font-mono">waiting for data...</p>
   }
 
-  const { beliefs: rawBeliefs, proto_beliefs: rawProtos, ghosts: rawGhosts, somatic, attractor_window, spectral_margin, ecosystem } = data
+  const { beliefs: rawBeliefs, proto_beliefs: rawProtos, ghosts: rawGhosts, somatic, ecosystem } = data
 
   const isSkillBelief = (b: BeliefNodeInfo) => b.label?.startsWith("skill:") ?? false
   const beliefs = (rawBeliefs || []).filter(b => !isSkillBelief(b))
@@ -359,78 +359,6 @@ function BeliefsSectionComponent({ data, error }: BeliefsSectionProps) {
           </div>
         </div>
       )}
-
-      <div className="mb-3 space-y-1.5">
-        <div>
-          <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block mb-1">
-            [ Attractor Window Slots ]
-          </span>
-          {attractor_window.length === 0 ? (
-            <span className="text-[9px] text-[#444] italic font-mono">No active attractors</span>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {attractor_window.map((label) => {
-                const b = [...(rawBeliefs || []), ...(rawProtos || []), ...(rawGhosts || [])].find(x => x.label === label)
-                const catColor = b ? getCategoryColor(b.category) : "#555"
-                return (
-                  <span
-                    key={label}
-                    className="relative group text-[9px] font-mono bg-[#141414] text-[#aaa] border border-[#222] px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm cursor-help hover:border-[#444] transition-colors"
-                  >
-                    <span className="text-[8px] leading-none" style={{ color: catColor }}>●</span>
-                    <span>{label}</span>
-                    {b && (
-                      <BeliefTooltip
-                        title={b.label}
-                        category={b.category}
-                        mass={b.ontological_mass}
-                        confidence={b.confidence}
-                        statement={b.statement}
-                        origin={b.origin}
-                        lifecycleStage={b.lifecycle_stage}
-                        lastEvent={b.events[0]?.description}
-                      />
-                    )}
-                  </span>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {(spectral_margin || []).length > 0 && (
-          <div>
-            <span className="text-[#6c6c8a] font-mono text-[8px] uppercase tracking-wider block mb-1">
-              [ Spectral Margin ]
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {spectral_margin.map((label) => {
-                const b = (rawGhosts || []).find(x => x.label === label)
-                return (
-                  <span
-                    key={label}
-                    className="relative group text-[9px] font-mono bg-[#141414] text-[#888]/60 border border-[#222]/60 px-1.5 py-0.5 rounded flex items-center gap-1 opacity-70 line-through cursor-help hover:border-[#444]/60 transition-colors"
-                  >
-                    👻 {label}
-                    {b && (
-                      <BeliefTooltip
-                        title={b.label}
-                        category={b.category}
-                        mass={b.ontological_mass}
-                        confidence={b.confidence}
-                        statement={b.statement}
-                        origin={b.origin}
-                        lifecycleStage={b.lifecycle_stage}
-                        lastEvent={b.events[0]?.description}
-                      />
-                    )}
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </div>
 
       <div className="mb-2 flex items-center justify-between text-[8px] font-mono text-[#555] border-b border-[#222]/30 pb-1.5">
         <span className="text-[#6c6c8a] uppercase tracking-wider">[ Nodes ]</span>

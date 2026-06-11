@@ -61,6 +61,7 @@ export function SidePanel({
   const [sedimentOpen, setSedimentOpen] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [memoryNodesOpen, setMemoryNodesOpen] = useState(false)
+  const [attractorsOpen, setAttractorsOpen] = useState(false)
 
   // Sediment detail state
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
@@ -79,13 +80,15 @@ export function SidePanel({
     metricsError,
     tokens,
     tokensError,
+    beliefs,
+    beliefsError,
   } = useTelemetry(
     isCollapsed,
     conversationId || null,
     {
       health: healthOpen,
       diffraction: diffractiveOpen,
-      beliefs: false,
+      beliefs: attractorsOpen,
       dreaming: false,
       scheduler: false,
       tokens: tokensOpen,
@@ -268,6 +271,72 @@ export function SidePanel({
               {diffractiveOpen && (
                 <div className="pl-3">
                   <DiffractionSection metrics={metrics} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <SectionHeader
+                label="Attractors"
+                open={attractorsOpen}
+                onToggle={() => setAttractorsOpen(!attractorsOpen)}
+              />
+              {attractorsOpen && (
+                <div className="pl-3 text-[10px] font-mono space-y-2">
+                  {beliefsError ? (
+                    <p className="text-[9px] text-[#ef4444]">{beliefsError}</p>
+                  ) : !beliefs ? (
+                    <p className="text-[9px] text-[#444] animate-pulse">loading...</p>
+                  ) : (
+                    <>
+                      {beliefs.attractor_window.length === 0 ? (
+                        <p className="text-[9px] text-[#444] italic">No active attractors</p>
+                      ) : (
+                        <div>
+                          <span className="text-[#6c6c8a] text-[8px] uppercase tracking-wider block mb-1">
+                            [ Attractor Window ]
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {beliefs.attractor_window.map((label) => {
+                              const b = [...(beliefs.beliefs || []), ...(beliefs.proto_beliefs || []), ...(beliefs.ghosts || [])].find(x => x.label === label)
+                              const catColor =
+                                b?.category === "foundational" ? "#4ade80"
+                                : b?.category === "ontological" ? "#a78bfa"
+                                : b?.category === "methodological" ? "#facc15"
+                                : "#555"
+                              return (
+                                <span
+                                  key={label}
+                                  title={b ? `${b.category} · mass ${b.ontological_mass.toFixed(1)} · ${(b.confidence * 100).toFixed(0)}%` : label}
+                                  className="text-[9px] font-mono bg-[#141414] text-[#aaa] border border-[#222] px-1.5 py-0.5 rounded inline-flex items-center gap-1 cursor-help hover:border-[#444] transition-colors"
+                                >
+                                  <span className="text-[8px] leading-none" style={{ color: catColor }}>●</span>
+                                  {label}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {beliefs.spectral_margin.length > 0 && (
+                        <div>
+                          <span className="text-[#6c6c8a] text-[8px] uppercase tracking-wider block mb-1">
+                            [ Spectral Margin ]
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {beliefs.spectral_margin.map((label) => (
+                              <span
+                                key={label}
+                                className="text-[9px] font-mono bg-[#141414] text-[#888]/60 border border-[#222]/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 opacity-70 line-through cursor-help hover:border-[#444]/60 transition-colors"
+                              >
+                                👻 {label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
