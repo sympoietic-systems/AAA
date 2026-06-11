@@ -31,19 +31,45 @@ def process_self_annotations(
     # --- Convert echoed <note_entanglement> tags back to <mark> ---
     # The LLM sometimes copies note_entanglement tags from its context into the response.
     # Convert them to proper <mark> tags so the frontend can render them as highlights.
+    # Also create DB note records for any IDs that don't already exist.
+    entanglement_ids_created = []
+
     def convert_entanglement(m):
         attrs = m.group(1) or ""
         text = m.group(2)
         nid_match = re.search(r'\bnote_id\s*=\s*["\']([^"\']+)["\']', attrs)
-        if nid_match:
-            nid = nid_match.group(1)
-            return f'<mark id="note-highlight-{nid}" data-note-id="{nid}">{text}</mark>'
-        return text  # strip if no valid note_id
+        if not nid_match:
+            return text  # strip if no valid note_id
+
+        nid = nid_match.group(1)
+        comment_match = re.search(r'\bcomment\s*=\s*["\']([^"\']*)["\']', attrs)
+        comment = comment_match.group(1) if comment_match else ""
+
+        # Ensure a DB record exists for this note ID
+        existing = note_repo.get_note(nid)
+        if not existing:
+            note_repo.create_self_note(
+                id=nid,
+                conversation_id=conversation_id,
+                message_id=message_id,
+                selected_text=text.strip(),
+                comment=comment,
+                visibility="agent",
+            )
+            entanglement_ids_created.append(nid)
+
+        return f'<mark id="note-highlight-{nid}" data-note-id="{nid}">{text}</mark>'
 
     response_text = re.sub(
         r'<note_entanglement(\s+[^>]*?)?>([\s\S]*?)</note_entanglement>',
         convert_entanglement, response_text,
     )
+
+    if entanglement_ids_created:
+        logger.debug(
+            "Entanglement echo: created %d note record(s) for message %d",
+            len(entanglement_ids_created), message_id,
+        )
 
     # --- Self-annotation processing ---
     # Matches <aaa-note ...>...</aaa-note> or <mark ...>...</mark>
