@@ -60,12 +60,13 @@ graph TD
 ### 3. Tier 2: Asynchronous Validation (The Resonance Scanner)
 * Decoupled from the synchronous chat loop to prevent latency overhead.
 * A background task triggers after message writing. It scans parallel branches for messages with cosine similarity $> 0.82$.
+* **Lineage Exclusion**: It queries and excludes both recursive ancestors and descendants (direct linear lineage path) to guarantee similarity calculations are only performed across truly parallel timelines.
 * **Pre-Check Cache**: Before calling the LLM validation API, the background task queries the database index via `message_repo.link_exists(message_a, message_b)`. If a link exists in the database with any status (`proposed`, `active`, or `ignored`), the LLM query is bypassed, guaranteeing each unique pair of messages is compared at most once.
 * If validated, the link is persisted as `status = 'proposed'`.
 
 ### 4. Tier 3: Spectral Suggestions (User-Driven)
 * A side-panel section **Spectral Echoes** appears when a node is selected.
-* It fetches parallel messages with similarity $> 0.70$ (excluding direct ancestors) and displays them.
+* It fetches parallel messages with similarity $> 0.70$ (excluding direct linear ancestors and descendants) and displays them.
 * **Linked/Ignored Filter**: The database query filters out any candidates that are already linked or ignored.
 * **Confirm & Ignore Actions**: The user can click **Link Node** (manual active link) or **Ignore** (writes `status = 'ignored'` to the database, immediately hiding the suggestion from future lists and scans).
 

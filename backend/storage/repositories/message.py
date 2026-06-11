@@ -686,18 +686,35 @@ class MessageRepository(BaseRepository):
         if norm > 0:
             query_vec = query_vec / norm
 
-        ancestor_placeholders = ",".join(["?"] * len(ancestor_ids)) if ancestor_ids else "NULL"
+        # Fetch recursive descendants of message_id to exclude them too (direct lineage check)
+        descendant_rows = conn.execute(
+            """
+            WITH RECURSIVE descendants AS (
+                SELECT id FROM conversation_log WHERE parent_message_id = ?
+                UNION ALL
+                SELECT cl.id FROM conversation_log cl
+                JOIN descendants d ON cl.parent_message_id = d.id
+            )
+            SELECT id FROM descendants
+            """,
+            (message_id,),
+        ).fetchall()
+        descendant_ids = [r["id"] for r in descendant_rows]
+        
+        exclude_ids = list(set((ancestor_ids or []) + descendant_ids))
+        exclude_placeholders = ",".join(["?"] * len(exclude_ids)) if exclude_ids else "NULL"
+
         query_str = f"""
             SELECT id, speaker, content, embedding, embedding_dim, timestamp 
             FROM conversation_log 
-            WHERE conversation_id = ? AND id != ? AND id NOT IN ({ancestor_placeholders})
+            WHERE conversation_id = ? AND id != ? AND id NOT IN ({exclude_placeholders})
               AND id NOT IN (
                   SELECT source_id FROM message_links WHERE target_id = ?
                   UNION
                   SELECT target_id FROM message_links WHERE source_id = ?
               )
         """
-        params = [conversation_id, message_id] + ancestor_ids + [message_id, message_id]
+        params = [conversation_id, message_id] + exclude_ids + [message_id, message_id]
         rows = conn.execute(query_str, params).fetchall()
 
         results = []
