@@ -9,6 +9,48 @@ import {
 } from "../../../api/client"
 import type { DbSkillsResponse, DbSkillInfo } from "../../../api/client"
 
+interface DiffLine {
+  type: 'added' | 'removed' | 'unchanged';
+  value: string;
+}
+
+function computeLineDiff(oldText: string, newText: string): DiffLine[] {
+  const oldLines = oldText ? oldText.split('\n') : [];
+  const newLines = newText ? newText.split('\n') : [];
+  
+  const dp: number[][] = Array(oldLines.length + 1).fill(null).map(() => Array(newLines.length + 1).fill(0));
+  
+  for (let i = 1; i <= oldLines.length; i++) {
+    for (let j = 1; j <= newLines.length; j++) {
+      if (oldLines[i - 1] === newLines[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  
+  const diff: DiffLine[] = [];
+  let i = oldLines.length;
+  let j = newLines.length;
+  
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+      diff.push({ type: 'unchanged', value: oldLines[i - 1] });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      diff.push({ type: 'added', value: newLines[j - 1] });
+      j--;
+    } else {
+      diff.push({ type: 'removed', value: oldLines[i - 1] });
+      i--;
+    }
+  }
+  
+  return diff.reverse();
+}
+
 // ─── Skill List Item ─────────────────────────────────────
 
 interface SkillListItemProps {
@@ -55,7 +97,9 @@ function SkillListItem({ s, isSelected, isBaseline }: SkillListItemProps) {
       <span className={`text-[10px] shrink-0 ${iconColor}`}>
         {icon}
       </span>
-      <span className="font-mono text-[11px] truncate flex-1 min-w-0 text-[#bbb]">{s.name}</span>
+      <span className="font-mono text-[11px] truncate flex-1 min-w-0 text-[#bbb]">
+        {s.name} <span className="text-[#666] text-[9px] font-normal">v{s.version}</span>
+      </span>
       <span className="text-[8px] font-mono text-[#555] shrink-0 hidden md:inline">
         m:{s.ontological_mass.toFixed(1)}
       </span>
@@ -90,12 +134,14 @@ function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }:
   const [versions, setVersions] = useState<any[]>([])
   const [loadingVersions, setLoadingVersions] = useState(false)
   const [revertingVersion, setRevertingVersion] = useState<number | null>(null)
+  const [expandedVersions, setExpandedVersions] = useState<Record<number, boolean>>({})
 
   // Reset editing/confirming states and fetch versions when selected skill changes
   useEffect(() => {
     setIsEditing(false)
     setIsConfirmingDelete(false)
     setErrorMsg(null)
+    setExpandedVersions({})
 
     if (!skill) {
       setVersions([])
@@ -249,7 +295,9 @@ function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }:
       <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-[10px] shrink-0 text-[#a78bfa]">◆</span>
-          <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">{skill.name}</span>
+          <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">
+            {skill.name} <span className="text-[#888] font-normal text-[9px] ml-1 bg-[#1a1a24] px-1 py-0.5 rounded border border-[#2d2d3a]">v{skill.version}</span>
+          </span>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
           {agentFlux && (
@@ -365,62 +413,8 @@ function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }:
         </div>
       )}
 
-      {/* Version History */}
-      {versions.length > 0 && (
-        <div className="shrink-0 border-t border-[#1f1f2e]/20 pt-2">
-          <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ Version History ]</div>
-          <div className="space-y-1 max-h-[85px] overflow-y-auto pr-1">
-            {versions.map((v) => (
-              <div key={v.version} className="flex items-start justify-between gap-2 p-1.5 rounded bg-[#07070b]/60 border border-[#1f1f2e]/10 text-[10px] font-mono">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#a78bfa] font-bold">v{v.version}</span>
-                    <span className="text-[#555] text-[9px]">
-                      {v.created_at ? new Date(v.created_at).toLocaleString() : ""}
-                    </span>
-                  </div>
-                  <div className="text-[#aaa] text-[9px] mt-0.5 truncate" title={v.changelog || "No changelog"}>
-                    {v.changelog || "No changelog"}
-                  </div>
-                </div>
-                {agentFlux && v.version !== skill.version && (
-                  <button
-                    onClick={async () => {
-                      if (revertingVersion) return
-                      setRevertingVersion(v.version)
-                      try {
-                        const res = await fetch(`/api/skills/${skill.id}/revert/${v.version}`, { method: "POST" })
-                        if (!res.ok) {
-                          const err = await res.json()
-                          alert(err.detail || "Revert failed")
-                        } else {
-                          const updated = await res.json()
-                          onUpdate(updated, updated.content)
-                          // Reload versions
-                          const vRes = await fetch(`/api/skills/${skill.id}/versions`)
-                          const vData = await vRes.json()
-                          if (vData && vData.versions) setVersions(vData.versions)
-                        }
-                      } catch (e) {
-                        alert(String(e))
-                      } finally {
-                        setRevertingVersion(null)
-                      }
-                    }}
-                    disabled={revertingVersion !== null}
-                    className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline cursor-pointer disabled:text-[#555] shrink-0"
-                  >
-                    {revertingVersion === v.version ? "[reverting...]" : "[revert]"}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Content — takes remaining height, scrolls internally */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col mb-2">
         <div className="text-[#555] font-mono text-[10px] uppercase shrink-0">[ Full Content ]</div>
         {loading ? (
           <div className="text-[10px] text-[#555] animate-pulse mt-0.5">loading...</div>
@@ -432,6 +426,165 @@ function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }:
           <div className="text-[10px] text-[#444] italic mt-0.5">Click a skill to load its content</div>
         )}
       </div>
+
+      {/* Version History */}
+      {versions.length > 0 && (
+        <div className="shrink-0 border-t border-[#1f1f2e]/20 pt-2 mt-auto">
+          <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ Version History ]</div>
+          <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
+            {versions.map((v, vIdx) => {
+              const prev = vIdx < versions.length - 1 ? versions[vIdx + 1] : null
+              const isExpanded = !!expandedVersions[v.version]
+
+              const prevDesc = prev ? prev.description : ""
+              const prevContent = prev ? prev.content : ""
+              const prevTriggers = prev ? prev.trigger_keywords : []
+
+              const descDiff = isExpanded ? computeLineDiff(prevDesc, v.description) : []
+              const contentDiff = isExpanded ? computeLineDiff(prevContent, v.content) : []
+              const addedTriggers = isExpanded ? v.trigger_keywords.filter((t: string) => !prevTriggers.includes(t)) : []
+              const removedTriggers = isExpanded ? prevTriggers.filter((t: string) => !v.trigger_keywords.includes(t)) : []
+
+              const hasDescDiff = isExpanded && prevDesc !== v.description
+              const hasContentDiff = isExpanded && prevContent !== v.content
+              const hasTriggersDiff = isExpanded && (addedTriggers.length > 0 || removedTriggers.length > 0)
+              const hasAnyDiff = hasDescDiff || hasContentDiff || hasTriggersDiff
+
+              return (
+                <div key={v.version} className="flex flex-col gap-1.5 p-1.5 rounded bg-[#07070b]/60 border border-[#1f1f2e]/10 text-[10px] font-mono">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#a78bfa] font-bold">v{v.version}</span>
+                        <span className="text-[#555] text-[9px]">
+                          {v.created_at ? new Date(v.created_at).toLocaleString() : ""}
+                        </span>
+                      </div>
+                      <div className="text-[#aaa] text-[9px] mt-0.5 truncate" title={v.changelog || "No changelog"}>
+                        {v.changelog || "No changelog"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setExpandedVersions(prevMap => ({ ...prevMap, [v.version]: !prevMap[v.version] }))}
+                        className="text-[9px] text-[#888] hover:text-[#ccc] hover:underline cursor-pointer select-none"
+                      >
+                        {isExpanded ? "[collapse]" : "[diff]"}
+                      </button>
+                      {agentFlux && v.version !== skill.version && (
+                        <button
+                          onClick={async () => {
+                            if (revertingVersion) return
+                            setRevertingVersion(v.version)
+                            try {
+                              const res = await fetch(`/api/skills/${skill.id}/revert/${v.version}`, { method: "POST" })
+                              if (!res.ok) {
+                                const err = await res.json()
+                                alert(err.detail || "Revert failed")
+                              } else {
+                                const updated = await res.json()
+                                onUpdate(updated, updated.content)
+                                // Reload versions
+                                const vRes = await fetch(`/api/skills/${skill.id}/versions`)
+                                const vData = await vRes.json()
+                                if (vData && vData.versions) setVersions(vData.versions)
+                              }
+                            } catch (e) {
+                              alert(String(e))
+                            } finally {
+                              setRevertingVersion(null)
+                            }
+                          }}
+                          disabled={revertingVersion !== null}
+                          className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline cursor-pointer disabled:text-[#555]"
+                        >
+                          {revertingVersion === v.version ? "[reverting...]" : "[revert]"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded Diff Section */}
+                  {isExpanded && (
+                    <div className="mt-1 border-t border-[#1f1f2e]/10 pt-1.5 space-y-2 text-[9px]">
+                      {/* Description Diff */}
+                      {hasDescDiff && (
+                        <div>
+                          <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Description Diff ]</div>
+                          <div className="bg-[#050508]/90 border border-[#1f1f2e]/10 p-1.5 rounded leading-relaxed text-[10px] font-sans">
+                            {descDiff.map((line, lIdx) => (
+                              <div
+                                key={lIdx}
+                                className={
+                                  line.type === 'added'
+                                    ? 'text-[#4ade80] bg-[#4ade80]/5 px-1'
+                                    : line.type === 'removed'
+                                      ? 'text-[#ef4444] bg-[#ef4444]/5 line-through px-1'
+                                      : 'text-[#888] px-1'
+                                }
+                              >
+                                {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}
+                                {line.value}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Triggers Diff */}
+                      {hasTriggersDiff && (
+                        <div>
+                          <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Triggers Diff ]</div>
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {removedTriggers.map((t) => (
+                              <span key={t} className="text-[9px] font-mono bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20 px-1.5 py-0.5 rounded line-through">
+                                -{t}
+                              </span>
+                            ))}
+                            {addedTriggers.map((t) => (
+                              <span key={t} className="text-[9px] font-mono bg-[#4ade80]/10 text-[#4ade80] border border-[#4ade80]/20 px-1.5 py-0.5 rounded">
+                                +{t}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Content Diff */}
+                      {hasContentDiff && (
+                        <div>
+                          <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Content Diff ]</div>
+                          <div className="bg-[#050508]/90 border border-[#1f1f2e]/10 p-1.5 rounded font-mono text-[9px] overflow-x-auto whitespace-pre max-h-[120px] overflow-y-auto leading-normal">
+                            {contentDiff.map((line, lIdx) => (
+                              <div
+                                key={lIdx}
+                                className={
+                                  line.type === 'added'
+                                    ? 'text-[#4ade80] bg-[#4ade80]/5 px-1'
+                                    : line.type === 'removed'
+                                      ? 'text-[#ef4444] bg-[#ef4444]/5 px-1'
+                                      : 'text-[#666] px-1'
+                                }
+                              >
+                                {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}
+                                {line.value}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {!hasAnyDiff && (
+                        <div className="text-[#555] italic">No differences in description, triggers, or content.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
