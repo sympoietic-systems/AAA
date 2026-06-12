@@ -28,6 +28,7 @@ interface SimNode {
   vy: number
   targetX?: number
   targetY?: number
+  targetR?: number
 }
 
 interface SimLink {
@@ -43,87 +44,18 @@ interface SimLink {
 
 function computeSettledLayout(
   initialNodes: SimNode[],
-  links: SimLink[],
   width: number,
   height: number
 ): SimNode[] {
-  const nodes = initialNodes.map((n) => ({ ...n }))
-  const nodeMap = new Map<string, SimNode>()
-  nodes.forEach((n) => nodeMap.set(n.id, n))
-
-  let alpha = 1.0
-  const decay = 0.965
-  const friction = 0.78
-  const repulseStrength = 180
-  const springLength = 32
-  const springStrength = 0.08
-  const anchorStrength = 0.12
   const cx = width / 2
   const cy = height / 2
-
-  while (alpha >= 0.015) {
-    for (let i = 0; i < nodes.length; i++) {
-      const a = nodes[i]
-      for (let j = i + 1; j < nodes.length; j++) {
-        const b = nodes[j]
-        const dx = b.x - a.x
-        const dy = b.y - a.y
-        const distSq = dx * dx + dy * dy + 1e-4
-        const dist = Math.sqrt(distSq)
-
-        if (dist < 120) {
-          const forceFactor = (repulseStrength * alpha) / (distSq * dist)
-          const fx = dx * forceFactor
-          const fy = dy * forceFactor
-
-          a.vx -= fx
-          a.vy -= fy
-          b.vx += fx
-          b.vy += fy
-        }
-      }
-    }
-
-    for (const link of links) {
-      const a = nodeMap.get(link.source)
-      const b = nodeMap.get(link.target)
-      if (!a || !b) continue
-
-      const dx = b.x - a.x
-      const dy = b.y - a.y
-      const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4
-
-      const displacement = dist - springLength
-      const forceFactor = (displacement * springStrength * alpha) / dist
-      const fx = dx * forceFactor
-      const fy = dy * forceFactor
-
-      a.vx += fx
-      a.vy += fy
-      b.vx -= fx
-      b.vy -= fy
-    }
-
-    for (const n of nodes) {
-      const tx = n.targetX !== undefined ? n.targetX : cx
-      const ty = n.targetY !== undefined ? n.targetY : cy
-      n.vx += (tx - n.x) * anchorStrength * alpha
-      n.vy += (ty - n.y) * anchorStrength * alpha
-
-      n.x += n.vx
-      n.y += n.vy
-
-      n.x = Math.max(15, Math.min(width - 15, n.x))
-      n.y = Math.max(15, Math.min(height - 15, n.y))
-
-      n.vx *= friction
-      n.vy *= friction
-    }
-
-    alpha *= decay
-  }
-
-  return nodes
+  return initialNodes.map((n) => ({
+    ...n,
+    x: n.targetX !== undefined ? n.targetX : cx,
+    y: n.targetY !== undefined ? n.targetY : cy,
+    vx: 0,
+    vy: 0,
+  }))
 }
 
 function getDistanceToSegment(x: number, y: number, x1: number, y1: number, x2: number, y2: number): number {
@@ -381,30 +313,146 @@ function ConnectionCloud({
       }
     })
 
-    // 3. Calculate spiral target coordinates for sequential nodes
+    // 3. Calculate concentric target coordinates for radial tree layout
     const totalNodes = newNodes.length
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
-    const maxTargetRadius = Math.min(dimensions.width, dimensions.height) * 0.42
+    const baseRadius = Math.min(dimensions.width, dimensions.height) * 0.45
 
-    const radiusStep = totalNodes > 10 ? (maxTargetRadius - 20) / totalNodes : 12
-    const angleStep = 0.55
+    // Build parent-child mapping for structure
+    const nodeMap = new Map<string, SimNode>()
+    newNodes.forEach((n) => nodeMap.set(n.id, n))
 
+    const childrenMap = new Map<string, string[]>()
+    const childToParent = new Map<string, string>()
+
+    newNodes.forEach((n) => {
+      if (n.parentMsgId !== null && n.parentMsgId !== undefined) {
+        const parentId = String(n.parentMsgId)
+        if (nodeMap.has(parentId)) {
+          childToParent.set(n.id, parentId)
+          if (!childrenMap.has(parentId)) {
+            childrenMap.set(parentId, [])
+          }
+          childrenMap.get(parentId)!.push(n.id)
+        }
+      }
+    })
+
+    // Identify roots
+    const roots = newNodes.filter((n) => !childToParent.has(n.id)).map((n) => n.id)
+
+    // Calculate subtree weights (count of leaf descendants)
+    const subtreeWeights = new Map<string, number>()
+    const calculateWeight = (id: string): number => {
+      const children = childrenMap.get(id) || []
+      if (children.length === 0) {
+        subtreeWeights.set(id, 1)
+        return 1
+      }
+      let weight = 0
+      children.forEach((childId) => {
+        weight += calculateWeight(childId)
+      })
+      subtreeWeights.set(id, weight)
+      return weight
+    }
+    roots.forEach((rootId) => calculateWeight(rootId))
+
+    // Calculate depths
+    const nodeDepths = new Map<string, number>()
+    const calculateDepths = (id: string, depth: number) => {
+      nodeDepths.set(id, depth)
+      const children = childrenMap.get(id) || []
+      children.forEach((childId) => calculateDepths(childId, depth + 1))
+    }
+    roots.forEach((rootId) => calculateDepths(rootId, 0))
+
+    let maxDepth = 0
+    nodeDepths.forEach((d) => {
+      if (d > maxDepth) maxDepth = d
+    })
+
+    // Assign positions recursively with spiral/zigzag layout to prevent overlaps
+    const assignPositions = (
+      id: string,
+      minAngle: number,
+      maxAngle: number,
+      parentAngle: number,
+      direction: 1 | -1
+    ) => {
+      const node = nodeMap.get(id)
+      if (!node) return
+
+      const depth = nodeDepths.get(id) || 0
+      const radius = depth > 0 ? 20 + (depth / (maxDepth || 1)) * (baseRadius - 20) : 0
+
+      let angle = parentAngle
+      let nextDirection = direction
+      const isFullCircle = (maxAngle - minAngle) >= 2 * Math.PI - 0.01
+
+      if (depth > 0) {
+        const targetSpacing = 28
+        const step = radius > 0 ? Math.min(0.6, targetSpacing / radius) : 0.6
+
+        if (isFullCircle) {
+          angle = parentAngle + step
+        } else {
+          angle = parentAngle + direction * step
+          if (angle > maxAngle) {
+            angle = maxAngle - (angle - maxAngle)
+            nextDirection = -1
+          } else if (angle < minAngle) {
+            angle = minAngle + (minAngle - angle)
+            nextDirection = 1
+          }
+        }
+      }
+
+      const clampedAngle = isFullCircle ? angle : Math.max(minAngle, Math.min(maxAngle, angle))
+
+      node.targetX = cx + radius * Math.cos(clampedAngle)
+      node.targetY = cy + radius * Math.sin(clampedAngle)
+
+      const children = childrenMap.get(id) || []
+      if (children.length > 0) {
+        const totalWeight = subtreeWeights.get(id) || 1
+        const angleSpan = maxAngle - minAngle
+        let currentAngle = minAngle
+
+        children.forEach((childId) => {
+          const childWeight = subtreeWeights.get(childId) || 1
+          const childSpan = (childWeight / totalWeight) * angleSpan
+          const nextAngle = currentAngle + childSpan
+          assignPositions(childId, currentAngle, nextAngle, clampedAngle, nextDirection)
+          currentAngle = nextAngle
+        })
+      }
+    }
+
+    // Distribute roots around 360 degrees
+    if (roots.length > 0) {
+      let totalRootWeight = 0
+      roots.forEach((r) => {
+        totalRootWeight += subtreeWeights.get(r) || 1
+      })
+
+      let currentAngle = 0
+      roots.forEach((rootId) => {
+        const rootWeight = subtreeWeights.get(rootId) || 1
+        const rootSpan = (rootWeight / totalRootWeight) * 2 * Math.PI
+        const centerAngle = currentAngle + rootSpan / 2
+        assignPositions(rootId, currentAngle, currentAngle + rootSpan, centerAngle, 1)
+        currentAngle += rootSpan
+      })
+    }
+
+    // Apply target positions to nodes and recover previous positions to prevent jumpiness
     for (let i = 0; i < totalNodes; i++) {
       const node = newNodes[i]
       const prevPos = nodePositionsRef.current[node.id]
-
-      const angle = i * angleStep
-      const radius = 20 + i * radiusStep
-      const tx = cx + radius * Math.cos(angle)
-      const ty = cy + radius * Math.sin(angle)
-
-      node.targetX = tx
-      node.targetY = ty
-
-      // Keep previous position if it exists to prevent jitter on updates
-      node.x = prevPos ? prevPos.x : tx
-      node.y = prevPos ? prevPos.y : ty
+      node.x = prevPos ? prevPos.x : (node.targetX || cx)
+      node.y = prevPos ? prevPos.y : (node.targetY || cy)
     }
 
     // 4. Add database retroactive links (resonance links)
@@ -425,7 +473,7 @@ function ConnectionCloud({
     }
 
     if (!simulateSettling && newNodes.length > 0) {
-      const settledNodes = computeSettledLayout(newNodes, newLinks, dimensions.width, dimensions.height)
+      const settledNodes = computeSettledLayout(newNodes, dimensions.width, dimensions.height)
       settledNodes.forEach((n) => {
         nodePositionsRef.current[n.id] = { x: n.x, y: n.y }
       })
@@ -691,7 +739,23 @@ function ConnectionCloud({
 
       ctx.beginPath()
       ctx.moveTo(srcNode.x, srcNode.y)
-      ctx.lineTo(tgtNode.x, tgtNode.y)
+      if (isResonance) {
+        // Draw curved arc for resonance links to distinguish them from the main tree structure
+        const dx = tgtNode.x - srcNode.x
+        const dy = tgtNode.y - srcNode.y
+        const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4
+        const mx = (srcNode.x + tgtNode.x) / 2
+        const my = (srcNode.y + tgtNode.y) / 2
+        // Normal vector pointing outwards to offset control point
+        const nx = -dy / dist
+        const ny = dx / dist
+        const offset = dist * 0.15 // 15% curvature
+        const ctrlX = mx + nx * offset
+        const ctrlY = my + ny * offset
+        ctx.quadraticCurveTo(ctrlX, ctrlY, tgtNode.x, tgtNode.y)
+      } else {
+        ctx.lineTo(tgtNode.x, tgtNode.y)
+      }
       ctx.stroke()
     })
 
