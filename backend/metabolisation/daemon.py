@@ -19,9 +19,16 @@ from backend.storage.repository import (
     SemanticKnotRepository,
 )
 from backend.modules.structural_engine import CompositeStructuralScorer
-from backend.modules.belief_engine import compute_cosine_similarity
+from backend.utils.similarity import cosine_similarity
 from backend.metabolisation.mass_decay import MassDecayMixin
 from backend.metabolisation.dream_context import DreamContextMixin
+
+def compute_cosine_similarity(vec_a, vec_b) -> float:
+    # We can import numpy inside or use generic/duck-typed array objects
+    import numpy as np
+    if vec_a.shape != vec_b.shape:
+        return 0.0
+    return cosine_similarity(vec_a, vec_b)
 from backend.metabolisation.dream_prompts import DreamPromptMixin
 from backend.metabolisation.dream_executor import DreamExecutorMixin
 from backend.metabolisation.consolidation import ConsolidationMixin

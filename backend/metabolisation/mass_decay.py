@@ -6,8 +6,6 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-from backend.modules.belief_engine import compute_cosine_similarity
-
 logger = logging.getLogger(__name__)
 
 

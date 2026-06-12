@@ -8,9 +8,14 @@ from typing import Optional
 
 import numpy as np
 
-from backend.modules.belief_engine import compute_cosine_similarity
+from backend.utils.similarity import cosine_similarity
 from backend.metabolisation.sedimentation import store_daemon_metrics
 from backend.modules.llm_client import generate_unified
+
+def compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    if vec_a.shape != vec_b.shape:
+        return 0.0
+    return cosine_similarity(vec_a, vec_b)
 
 logger = logging.getLogger(__name__)
 
