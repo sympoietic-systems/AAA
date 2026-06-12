@@ -79,6 +79,25 @@ def test_parse_skill_nucleation_tags():
     assert skills_mu[1]["name"] == "second"
     assert skills_mu[1]["content"] == "second content"
 
+    # 7. Fuzzy/natural language candidate detection fallback
+    fuzzy_text = """Yes. Two potential nucleations.
+    
+    ### Candidate 1: `media-specific-analysis`
+    Hayles' core method is MSA...
+    
+    ### Candidate 2: `forensic-materiality`
+    This is a more focused variant...
+    """
+    cleaned_fz, skills_fz = parse_skill_nucleation_tags(fuzzy_text)
+    # Fuzzy parser should NOT strip the text from the response since it's readable dialogue
+    assert cleaned_fz == fuzzy_text
+    assert len(skills_fz) == 2
+    assert skills_fz[0]["name"] == "media-specific-analysis"
+    assert "MSA" in skills_fz[0]["content"]
+    assert skills_fz[1]["name"] == "forensic-materiality"
+    assert "focused" in skills_fz[1]["content"]
+
+
 
 
 @pytest.mark.asyncio

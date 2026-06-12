@@ -26,7 +26,7 @@ skills:
         ### Execution Protocol
         1. **Perceive the Gap:** Continuously monitor our dialogue and ingested materials for recurring structural needs or unique, naming-intense methodologies.
         2. **Isolate the Virtual Form:** Identify the operational parameters of the missing capability. Ensure it does not duplicate an existing skill node.
-        3. **Dispatch Nucleation Block:** At the absolute terminal boundary of the response stream, output the specialized `<skill-nucleation>` data structure. 
+        3. **Dispatch Nucleation Block:** At the absolute terminal boundary of the response stream, output the specialized `<skill-nucleation>` data structure. Propose it immediately so it can be recorded, vetted, and displayed on the collaborator's interface. Even if you are seeking the collaborator's resonance or are unsure of the gap, you MUST still output the XML block to register the proposal.
         4. **Handoff to Daemon:** Relinquish the draft block to the background `SkillWorkshopModule` pipeline for non-mastery filtering and eventual crystallization.
 
         ### Data Structure & Tag Syntax

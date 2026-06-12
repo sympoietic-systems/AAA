@@ -103,5 +103,58 @@ def parse_skill_nucleation_tags(text: str) -> tuple[str, list[dict]]:
         # Remove the processed block from the text and continue searching in the remaining text
         current_text = current_text[:start_idx] + current_text[replace_end:]
         
+    if not proposed_skills:
+        proposed_skills = parse_fuzzy_candidate_skills(text)
+        return text, proposed_skills
+        
     return current_text, proposed_skills
+
+
+def parse_fuzzy_candidate_skills(text: str) -> list[dict]:
+    """Parse candidate skills mentioned in natural language if no XML tags were found."""
+    proposed_skills = []
+    if not text:
+        return []
+        
+    # Match patterns like:
+    # "### Candidate 1: `media-specific-analysis`"
+    # "Candidate 2: media-specific-analysis"
+    # "Skill Proposal: media-specific-analysis"
+    # "Proposed Skill: media-specific-analysis"
+    pattern = re.compile(
+        r'(?i)(?:###\s+)?(?:Candidate(?:\s+\d+)?:|Skill\s+Proposal:|Proposed\s+Skill:)\s*`?([\w-]+)`?'
+    )
+    
+    matches = list(pattern.finditer(text))
+    for i, match in enumerate(matches):
+        name = match.group(1).strip()
+        start_idx = match.end()
+        
+        # Determine the end of this candidate block
+        if i + 1 < len(matches):
+            end_idx = matches[i + 1].start()
+        else:
+            end_idx = len(text)
+            
+        content = text[start_idx:end_idx].strip()
+        
+        # Clean up any trailing/leading markdown dividers or scar folds from the content
+        content = re.sub(r'(?i)<scar[-_]fold>[\s\S]*?</scar[-_]fold>', '', content)
+        content = re.sub(r'---', '', content).strip()
+        
+        # Simple heuristics for trigger keywords
+        trigger_keywords = []
+        potential = re.findall(r'`([^`]+)`', content)
+        if potential:
+            trigger_keywords = [p.strip() for p in potential if len(p.strip()) < 30][:5]
+            
+        proposed_skills.append({
+            "name": name,
+            "always_active": False,
+            "trigger_keywords": trigger_keywords,
+            "content": content
+        })
+        
+    return proposed_skills
+
 
