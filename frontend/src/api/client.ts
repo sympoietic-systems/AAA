@@ -365,6 +365,12 @@ export async function getSkills(): Promise<SkillsResponse> {
   return res.json()
 }
 
+export async function getPipeline(): Promise<{ pipeline: SkillInfo[] }> {
+  const res = await fetch(`${BASE}/agent/pipeline`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export interface DbSkillInfo {
   id: string
   name: string

@@ -3,12 +3,14 @@ import { BeliefsSection } from "./BeliefsSection"
 import { DreamingSection } from "./DreamingSection"
 import { StartupSection } from "./StartupSection"
 import { SkillsSection } from "./SkillsSection"
+import { PipelineSection } from "./PipelineSection"
 
-type TabId = "beliefs" | "dreaming" | "daemons" | "skills"
+type TabId = "beliefs" | "dreaming" | "daemons" | "skills" | "pipeline"
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "beliefs", label: "Beliefs" },
-    { id: "skills", label: "Skills" },
+  { id: "skills", label: "Skills" },
+  { id: "pipeline", label: "Pipeline" },
   { id: "dreaming", label: "Dreaming" },
   { id: "daemons", label: "Daemons" },
 ]
@@ -70,6 +72,7 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {activeTab === "beliefs" && <BeliefsSection />}
         {activeTab === "skills" && <SkillsSection />}
+        {activeTab === "pipeline" && <PipelineSection />}
         {activeTab === "dreaming" && <DreamingSection />}
         {activeTab === "daemons" && <StartupSection />}
       </div>
