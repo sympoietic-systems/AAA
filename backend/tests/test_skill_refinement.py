@@ -254,3 +254,93 @@ async def test_skill_service_returns_collapsed_and_proposed():
     assert result["collapsed"][0]["name"] == "refused-skill"
 
     assert len(result["all"]) == 4
+
+
+@pytest.mark.asyncio
+async def test_refine_skill_action_updates():
+    db_path = _setup_db("aaa_refine_update_test.db")
+    
+    # Mock configuration loading to use our test db path
+    import backend.modules.background_tasks.actions.refine_skill as refine_mod
+    refine_mod.load_config = lambda: {"database": {"path": f"data/aaa_refine_update_test.db"}}
+
+    # Seed an active skill
+    repo = SkillRepository(db_path)
+    repo.create_skill(
+        id="active-id-123",
+        name="media-specific-analysis",
+        description="original description",
+        content="# media-specific-analysis\nOriginal content.",
+        always_active=False,
+        trigger_keywords=json.dumps(["msa", "reading"]),
+        lifecycle_stage="crystallized",
+        confidence=0.9,
+        vector_16d="[]",
+        source="authored",
+    )
+
+    skill_data = {
+        "name": "media-specific-analysis-extended",
+        "always_active": False,
+        "trigger_keywords": ["forensic", "msa"],
+        "content": "Proposed extension idea."
+    }
+
+    # Mock LLM provider to return update decision
+    provider = MagicMock()
+    
+    refined_markdown = """# media-specific-analysis
+Refined diffracted description integrating material substrates.
+
+## AI Instructions
+1. First rule.
+2. Second rule.
+3. Third rule.
+"""
+    mock_response = {
+        "content": "json text content",
+        "model": "mock-model",
+        "json_data": {
+            "decision": "update",
+            "target_skill_name": "media-specific-analysis",
+            "reason": "Folding in forensic materiality into media specific analysis.",
+            "trigger_keywords": ["msa", "reading", "forensic"],
+            "content": refined_markdown,
+            "changelog": "Merged aspects of forensic materiality."
+        }
+    }
+    
+    async def mock_generate(*args, **kwargs):
+        return mock_response
+    refine_mod.generate_unified = mock_generate
+
+    action = RefineSkillAction()
+    result = await action.execute(provider, {"skill_data": skill_data, "conversation_id": "test-conv"})
+
+    assert result["decision"] == "update"
+    assert result["reason"] == "Folding in forensic materiality into media specific analysis."
+
+    # Verify active skill is updated
+    updated_skill = repo.get_skill_by_name("media-specific-analysis")
+    assert updated_skill is not None
+    assert updated_skill.version == 2
+    assert "Merged aspects of forensic materiality." in updated_skill.changelog
+    assert "forensic" in json.loads(updated_skill.trigger_keywords)
+    assert "Refined diffracted description" in updated_skill.content
+
+    # Verify a revision event was logged for the active skill
+    events = repo.list_events(updated_skill.id)
+    assert len(events) > 0
+    assert any(e.event_type == "revision" and "Daemon integration rationale" in e.rationale for e in events)
+
+    # Verify the proposal itself was recorded as a collapsed trace
+    proposal_trace = repo.get_skill_by_name("media-specific-analysis-extended")
+    assert proposal_trace is not None
+    assert proposal_trace.lifecycle_stage == "collapsed"
+    assert proposal_trace.changelog == "Merged into media-specific-analysis"
+    
+    trace_events = repo.list_events(proposal_trace.id)
+    assert len(trace_events) > 0
+    assert trace_events[0].event_type == "collapse"
+    assert "Merged into active skill 'media-specific-analysis'" in trace_events[0].rationale
+

@@ -471,7 +471,7 @@ class SkillWorkshopModule(ProcessingModule):
             score += 0.1
         if skill.description and len(skill.description) > 20:
             score += 0.1
-        if skill.content and "## AI Instructions" in skill.content:
+        if skill.content and ("## AI Instructions" in skill.content or "Execution Protocol" in skill.content):
             score += 0.1
 
         anti_mastery = self._assess_anti_mastery(skill)

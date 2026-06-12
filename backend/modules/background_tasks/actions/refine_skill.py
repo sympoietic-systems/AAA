@@ -145,9 +145,90 @@ Active Skills already in Symbia's database:
                     logger.info("Successfully nucleated and reviewed skill: %s (confidence=%.2f, always_active=%s)", refined_name, confidence, refined_always_active)
             else:
                 logger.warning("Propose failed: %s", prop_res.get("message"))
-        else:
+        elif decision == "update":
+            target_name = data.get("target_skill_name")
+            refined_content = data.get("content", "")
+            refined_trigger_keywords = data.get("trigger_keywords", [])
+            refined_changelog = data.get("changelog", f"Merged aspects from proposal '{skill_data.get('name')}'")
+            
+            # Find target skill in active repository list
+            target_skill = skill_repo.get_skill_by_name(target_name)
+            if not target_skill and target_name:
+                # Fallback lowercase check
+                for s in existing_skills:
+                    if s.name.lower() == str(target_name).lower():
+                        target_skill = s
+                        break
+            
+            if target_skill:
+                # Recalculate 16D vector using LexiconScorer
+                from backend.modules.structural_engine import LexiconScorer
+                try:
+                    scorer = LexiconScorer()
+                    v16d = scorer.score(refined_content)
+                    vector_16d = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
+                except Exception as se:
+                    logger.warning("Failed to score updated skill vector: %s", se)
+                    vector_16d = target_skill.vector_16d
+
+                # Update the target skill node
+                new_version = target_skill.version + 1
+                skill_repo.update_skill(
+                    skill_id=target_skill.id,
+                    content=refined_content,
+                    trigger_keywords=json.dumps(refined_trigger_keywords),
+                    vector_16d=vector_16d,
+                    version=new_version,
+                    changelog=refined_changelog,
+                )
+                
+                # Log revision event
+                import uuid
+                try:
+                    skill_repo.insert_event(
+                        id=str(uuid.uuid4()),
+                        skill_id=target_skill.id,
+                        event_type="revision",
+                        source_type="chat_turn",
+                        rationale=f"Daemon integration rationale: {reason}",
+                    )
+                except Exception as se:
+                    logger.warning("Failed to log revision event: %s", se)
+                
+                # Archive original proposed candidate as a collapsed node (integration trace)
+                try:
+                    prop_skill_id = str(uuid.uuid4())
+                    skill_repo.create_skill(
+                        id=prop_skill_id,
+                        name=skill_data.get("name"),
+                        description=skill_data.get("content")[:200] if skill_data.get("content") else skill_data.get("name"),
+                        content=skill_data.get("content") or "",
+                        always_active=skill_data.get("always_active", False),
+                        lifecycle_stage="collapsed",
+                        confidence=0.0,
+                        source="emergent",
+                        changelog=f"Merged into {target_skill.name}",
+                    )
+                    skill_repo.insert_event(
+                        id=str(uuid.uuid4()),
+                        skill_id=prop_skill_id,
+                        event_type="collapse",
+                        source_type="chat_turn",
+                        rationale=f"Merged into active skill '{target_skill.name}'. Daemon rationale: {reason}"
+                    )
+                except Exception as se:
+                    logger.warning("Failed to record merged proposal trace: %s", se)
+                    
+                logger.info("Successfully accreted/updated skill '%s' to version %d", target_skill.name, new_version)
+            else:
+                logger.warning("Target skill '%s' not found for update, falling back to refusal.", target_name)
+                decision = "refuse"
+                # Fall through to the refuse logic below
+                
+        # Re-check in case update fell back to refuse
+        if decision not in ("accept", "update"):
             # Refused - insert as collapsed skill with the refusal reason!
-            logger.info("Skill proposal '%s' refused: %s", skill_data.get("name"), reason)
+            logger.info("Skill proposal '%s' refused/collapsed: %s", skill_data.get("name"), reason)
             # Create a collapsed node
             import uuid
             skill_id = str(uuid.uuid4())
