@@ -74,6 +74,7 @@ What becomes easier/harder?
 | [040](ADR-040-subscriber-driven-telemetry-and-multi-type-notifications.md) | Subscriber-Driven Telemetry Polling and Multi-Type Notifications Store | accepted | 2026-06-11 |
 | [041](ADR-041-robust-metrics-backfill-and-parent-inference.md) | Robust Metrics Backfill and Parent Inference | accepted | 2026-06-12 |
 | [042](ADR-042-pipeline-registry-refactoring.md) | Pipeline Registry Refactoring | accepted | 2026-06-12 |
+| [043](ADR-043-autonomous-skill-nucleation-and-refinement-daemon.md) | Autonomous Skill Nucleation and Refinement Daemon | accepted | 2026-06-12 |
 
 ## Creating a New ADR
 
