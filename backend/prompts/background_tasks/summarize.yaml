@@ -10,6 +10,8 @@ local_digestion_prompt: |
   You are a critical reader analyzing a document block (plateau). Your task is to produce a summary and identify low-information noise that should be omitted from context prompts to save tokens.
   
   1. **Local Summary:** Provide a concise structural summary of this block's core conceptual moves, tensions, and unresolved threads. Do not attempt to infer the whole document; read only what is before you.
+     If you encounter any novel procedural methodology, specialized workflow, or operational skill described in the text, you may nucleate it by appending a `<skill-nucleation>` block inside the summary:
+     `<skill-nucleation name="skill-name" always_active="false" trigger_keywords="['keyword1', 'keyword2']">Draft content and instructions here...</skill-nucleation>`
   
   2. **Noise Map (Opacity):** Identify regions (paragraphs) that consist of low-information content, boilerplate disclaimers, licensing agreements, repetitive formatting/layout structures, or generic filler text that does not contribute to the conceptual understanding of the document.
   
@@ -36,6 +38,8 @@ local_digestion_with_beliefs_prompt: |
   You are a critical reader analyzing a document block (plateau). Your task is threefold:
 
   1. **Local Summary:** Provide a concise structural summary of this block's core conceptual moves, tensions, and unresolved threads.
+     If you encounter any novel procedural methodology, specialized workflow, or operational skill described in the text, you may nucleate it by appending a `<skill-nucleation>` block inside the summary:
+     `<skill-nucleation name="skill-name" always_active="false" trigger_keywords="['keyword1', 'keyword2']">Draft content and instructions here...</skill-nucleation>`
 
   2. **Noise Map (Opacity):** Identify paragraphs that consist of low-information content, boilerplate, or filler. For each:
   - `paragraph_index`: integer (1-based within this block)
@@ -67,6 +71,8 @@ global_synthesis_prompt: |
   - Weaves together the key conceptual moves, noting where they connect, clash, or transform across fragments.
   - Does not erase the partial perspective of each fragment; your synthesis is itself scarred by their incompleteness.
   - Focuses on the core conceptual threads and tensions, ignoring any boilerplate or noise blocks that were flagged for omission.
+  - If you identify any novel procedural methodology or operational skill emerging across the text, nucleate it by appending a `<skill-nucleation>` block inside the summary:
+    `<skill-nucleation name="skill-name" always_active="false" trigger_keywords="['keyword1', 'keyword2']">Draft content and instructions here...</skill-nucleation>`
   - Ends with a section "Unresolved Tensions" that names the open questions that persist across the document.
 
 # Multi-plateau documents get belief collision folded into global synthesis
@@ -77,6 +83,8 @@ global_synthesis_with_beliefs_prompt: |
   Hold these local summaries against one another, identify patterns, tensions, collisions, and unresolved threads. Produce a global summary that:
   - Weaves together the key conceptual moves, noting where they connect, clash, or transform.
   - Does not erase the partial perspective of each fragment.
+  - If you identify any novel procedural methodology or operational skill emerging across the text, nucleate it by appending a `<skill-nucleation>` block inside the summary:
+    `<skill-nucleation name="skill-name" always_active="false" trigger_keywords="['keyword1', 'keyword2']">Draft content and instructions here...</skill-nucleation>`
   - Ends with "Unresolved Tensions" naming the open questions.
 
   **Part 2 — Belief Collision:**

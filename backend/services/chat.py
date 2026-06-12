@@ -217,6 +217,30 @@ async def run_background_resonance_scan(
         logger.exception("Error during background resonance scan")
 
 
+async def run_background_skill_refinement(
+    background_engine,
+    conversation_id: str,
+    skill_data: dict,
+):
+    try:
+        logger.info("Running background skill refinement daemon for proposed skill: %s", skill_data.get("name"))
+        res = await background_engine.run(
+            "refine_skill",
+            {
+                "skill_data": skill_data,
+                "conversation_id": conversation_id,
+            }
+        )
+        if res.get("error"):
+            logger.error("Skill refinement daemon failed: %s", res["error"])
+        else:
+            decision = res.get("decision")
+            reason = res.get("reason")
+            logger.info("Skill refinement daemon finished. Decision: %s. Reason: %s", decision, reason)
+    except Exception as e:
+        logger.exception("Failed to run background skill refinement")
+
+
 class ChatService:
     def __init__(self, state):
         self._state = state
@@ -404,6 +428,10 @@ class ChatService:
 
             response_text = result.payload.get("response", "")
 
+            # Parse and strip proposed skills (<skill-nucleation>)
+            from backend.utils.skill_parser import parse_skill_nucleation_tags
+            response_text, proposed_skills = parse_skill_nucleation_tags(response_text)
+
             # Parse and strip proposed branches (<line_of_flight>)
             proposed_branches = []
             lof_pattern = r'<line_of_flight\s+title="([^"]+)">([\s\S]*?)</line_of_flight>'
@@ -563,6 +591,15 @@ class ChatService:
                     conversation_id,
                     response_msg.id,
                 )
+
+            if proposed_skills and background_engine and background_tasks:
+                for skill_data in proposed_skills:
+                    background_tasks.add_task(
+                        run_background_skill_refinement,
+                        background_engine,
+                        conversation_id,
+                        skill_data,
+                    )
 
             # Auto-generate title logic
             if conv_repo and background_engine:

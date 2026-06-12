@@ -30,6 +30,7 @@ from backend.modules.background_tasks.engine import BackgroundTaskEngine
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.document_collision import DocumentCollisionAction
 from backend.modules.background_tasks.actions.dream_topic_decision import DreamTopicDecisionAction
+from backend.modules.background_tasks.actions.refine_skill import RefineSkillAction
 from backend.utils.token_counter import estimate_tokens
 
 # Set up logging for the worker process
@@ -144,6 +145,23 @@ async def process_and_summarize_file(
                     raise RuntimeError(res["error"])
                 summary_text = res.get("content", "").strip()
                 summary_model = res.get("model", "")
+
+                # Trigger background skill refinement if proposed skills found in digestion
+                proposed_skills = res.get("proposed_skills", [])
+                if proposed_skills:
+                    for skill_data in proposed_skills:
+                        try:
+                            logger.info("Found proposed skill in document digestion: %s. Launching refinement.", skill_data.get("name"))
+                            refine_res = await background_engine.run(
+                                "refine_skill",
+                                {
+                                    "skill_data": skill_data,
+                                    "conversation_id": conversation_id,
+                                }
+                            )
+                            logger.info("Skill refinement complete for %s. Decision: %s", skill_data.get("name"), refine_res.get("decision"))
+                        except Exception as re:
+                            logger.error("Failed to run skill refinement daemon for %s: %s", skill_data.get("name"), re)
 
                 # Extract collision metrics returned by the unified summarize action
                 if "interference_score" in res:
@@ -297,6 +315,23 @@ async def reprocess_and_summarize_file_background(
                 raise RuntimeError(res["error"])
             summary_text = res.get("content", "").strip()
             summary_model = res.get("model", "")
+
+            # Trigger background skill refinement if proposed skills found in digestion
+            proposed_skills = res.get("proposed_skills", [])
+            if proposed_skills:
+                for skill_data in proposed_skills:
+                    try:
+                        logger.info("Found proposed skill in document digestion: %s. Launching refinement.", skill_data.get("name"))
+                        refine_res = await background_engine.run(
+                            "refine_skill",
+                            {
+                                "skill_data": skill_data,
+                                "conversation_id": conversation_id,
+                            }
+                        )
+                        logger.info("Skill refinement complete for %s. Decision: %s", skill_data.get("name"), refine_res.get("decision"))
+                    except Exception as re:
+                        logger.error("Failed to run skill refinement daemon for %s: %s", skill_data.get("name"), re)
 
             # Extract collision metrics returned by the unified summarize action
             if "interference_score" in res:
@@ -495,6 +530,7 @@ async def main():
     background_engine.register(SummarizeAction())
     background_engine.register(DocumentCollisionAction())
     background_engine.register(DreamTopicDecisionAction())
+    background_engine.register(RefineSkillAction())
 
     # 8. Dispatch based on reprocess flag
     if args.reprocess:

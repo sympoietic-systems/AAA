@@ -152,6 +152,7 @@ class SummarizeAction(BackgroundAction):
 
         local_summaries = []
         global_opacity_map = []
+        proposed_skills = []
         model_used = ""
 
         # Collision metrics (accumulated from whichever step handles beliefs)
@@ -235,6 +236,12 @@ class SummarizeAction(BackgroundAction):
 
                 if not local_summary:
                     local_summary = f"[Block {idx+1} Summary fallback]"
+                
+                from backend.utils.skill_parser import parse_skill_nucleation_tags
+                local_summary, block_skills = parse_skill_nucleation_tags(local_summary)
+                if block_skills:
+                    proposed_skills.extend(block_skills)
+                    
                 local_summaries.append(f"Plateau {idx+1} (paragraphs {start_p+1} to {s_chunk['end_paragraph_idx']+1}):\n{local_summary}")
 
             except Exception as ce:
@@ -289,10 +296,16 @@ class SummarizeAction(BackgroundAction):
                 logger.error(f"Error during global synthesis: {se}")
                 raise se
 
+        from backend.utils.skill_parser import parse_skill_nucleation_tags
+        final_summary, global_skills = parse_skill_nucleation_tags(final_summary)
+        if global_skills:
+            proposed_skills.extend(global_skills)
+
         result = {
             "content": final_summary,
             "model": model_used,
-            "opacity_map": global_opacity_map
+            "opacity_map": global_opacity_map,
+            "proposed_skills": proposed_skills
         }
 
         # Attach collision data if beliefs were analyzed
