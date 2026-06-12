@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from "react"
-import { getDbSkills, getSkillContent } from "../../../api/client"
+import { getDbSkills, getSkillContent, updateSkill } from "../../../api/client"
 import type { DbSkillsResponse, DbSkillInfo } from "../../../api/client"
 
 // ─── Skill List Item ─────────────────────────────────────
@@ -31,13 +31,137 @@ function SkillListItem({ s, isSelected, isBaseline }: { s: DbSkillInfo; isSelect
 
 // ─── Skill Detail Panel ──────────────────────────────────
 
-function SkillDetail({
-  skill, content, loading,
-}: { skill: DbSkillInfo | null; content?: string; loading: boolean }) {
+interface SkillDetailProps {
+  skill: DbSkillInfo | null
+  content?: string
+  loading: boolean
+  onUpdate: (updatedSkill: DbSkillInfo, updatedContent: string) => void
+}
+
+function SkillDetail({ skill, content, loading, onUpdate }: SkillDetailProps) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editDescription, setEditDescription] = useState("")
+  const [editContent, setEditContent] = useState("")
+  const [editTriggers, setEditTriggers] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Reset editing mode and set state when selected skill changes
+  useEffect(() => {
+    setIsEditing(false)
+    setSaveError(null)
+  }, [skill])
+
   if (!skill) {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50">
         <span className="text-[11px] text-[#444] italic font-mono">select a skill to inspect</span>
+      </div>
+    )
+  }
+
+  const handleStartEdit = () => {
+    setEditDescription(skill.description)
+    setEditContent(content || "")
+    setEditTriggers(skill.trigger_keywords.join(", "))
+    setIsEditing(true)
+    setSaveError(null)
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    setSaveError(null)
+    try {
+      const triggers = editTriggers
+        .split(",")
+        .map(t => t.trim())
+        .filter(t => t.length > 0)
+      
+      const updated = await updateSkill(skill.id, {
+        description: editDescription,
+        content: editContent,
+        trigger_keywords: triggers,
+      })
+      
+      onUpdate(updated, editContent)
+      setIsEditing(false)
+    } catch (e: any) {
+      setSaveError(e.message || String(e))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <div className="flex-1 min-h-0 flex flex-col border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-mono">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[10px] shrink-0 text-[#a78bfa]">◆</span>
+            <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">editing: {skill.name}</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="text-[10px] text-[#4ade80] hover:text-[#4ade80]/80 disabled:text-[#555] transition-colors cursor-pointer select-none"
+            >
+              {isSaving ? "[saving...]" : "[save]"}
+            </button>
+            <button
+              onClick={() => setIsEditing(false)}
+              disabled={isSaving}
+              className="text-[10px] text-[#ef4444] hover:text-[#ef4444]/80 disabled:text-[#555] transition-colors cursor-pointer select-none"
+            >
+              [cancel]
+            </button>
+          </div>
+        </div>
+
+        {saveError && (
+          <div className="text-[10px] text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 p-1.5 rounded shrink-0">
+            {saveError}
+          </div>
+        )}
+
+        {/* Form fields */}
+        <div className="flex-1 flex flex-col gap-2.5 min-h-0 overflow-y-auto pr-1">
+          {/* Description */}
+          <div className="shrink-0 flex flex-col gap-1">
+            <label className="text-[#555] text-[10px] uppercase font-bold">[ Short Description ]</label>
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              disabled={isSaving}
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[50px] resize-y"
+            />
+          </div>
+
+          {/* Trigger keywords */}
+          <div className="shrink-0 flex flex-col gap-1">
+            <label className="text-[#555] text-[10px] uppercase font-bold">[ Triggers (comma-separated) ]</label>
+            <input
+              type="text"
+              value={editTriggers}
+              onChange={(e) => setEditTriggers(e.target.value)}
+              disabled={isSaving}
+              placeholder="e.g. skill workshop, create skill"
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50"
+            />
+          </div>
+
+          {/* Full Content */}
+          <div className="flex-1 flex flex-col gap-1 min-h-[150px]">
+            <label className="text-[#555] text-[10px] uppercase font-bold">[ Full Content ]</label>
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              disabled={isSaving}
+              className="flex-1 bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-mono leading-relaxed w-full focus:outline-none focus:border-[#a78bfa]/50 resize-none overflow-y-auto"
+            />
+          </div>
+        </div>
       </div>
     )
   }
@@ -50,9 +174,17 @@ function SkillDetail({
           <span className="text-[10px] shrink-0 text-[#a78bfa]">◆</span>
           <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">{skill.name}</span>
         </div>
-        <span className="text-[9px] uppercase font-mono px-1.5 py-px rounded border border-[#a78bfa]/40 text-[#a78bfa] bg-[#a78bfa]/10 shrink-0 ml-2">
-          {skill.always_active ? "baseline" : "on-demand"}
-        </span>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <button
+            onClick={handleStartEdit}
+            className="text-[10px] text-[#a78bfa] hover:text-[#c084fc] font-mono transition-colors cursor-pointer select-none"
+          >
+            [edit]
+          </button>
+          <span className="text-[9px] uppercase font-mono px-1.5 py-px rounded border border-[#a78bfa]/40 text-[#a78bfa] bg-[#a78bfa]/10">
+            {skill.always_active ? "baseline" : "on-demand"}
+          </span>
+        </div>
       </div>
 
       {/* Description */}
@@ -166,6 +298,22 @@ function SkillsSectionComponent() {
     }
   }
 
+  const handleUpdate = (updatedSkill: DbSkillInfo, updatedContent: string) => {
+    setData(prev => {
+      if (!prev) return null
+      const updateList = (list: DbSkillInfo[]) =>
+        list.map(s => s.id === updatedSkill.id ? updatedSkill : s)
+      return {
+        always_active: updateList(prev.always_active),
+        on_demand: updateList(prev.on_demand),
+        all: updateList(prev.all),
+      }
+    })
+    if (selectedName) {
+      setSkillContent(prev => ({ ...prev, [selectedName]: updatedContent }))
+    }
+  }
+
   if (error && !data) return <p className="text-[11px] text-[#ef4444] font-mono">{error}</p>
   if (!data) return <p className="text-[11px] text-[#555] font-mono animate-pulse">loading skills...</p>
 
@@ -219,6 +367,7 @@ function SkillsSectionComponent() {
           skill={selected}
           content={selectedName ? skillContent[selectedName] : undefined}
           loading={loadingContent === selectedName}
+          onUpdate={handleUpdate}
         />
       </div>
     </div>

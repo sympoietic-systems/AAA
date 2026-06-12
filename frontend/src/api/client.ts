@@ -422,6 +422,22 @@ export async function getSkillContent(skillName: string): Promise<WorkshopRespon
   return res.json()
 }
 
+export async function updateSkill(
+  skillId: string,
+  data: { description?: string; content?: string; trigger_keywords?: string[] }
+): Promise<DbSkillInfo> {
+  const res = await fetch(`${BASE}/skills/${skillId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to update skill" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
 export interface MetricsResponse {
   window_size: number
   aggregates: Record<string, number | null>
