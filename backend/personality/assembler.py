@@ -371,9 +371,8 @@ def _build_system_content(
     # ── BLOCK: Skills — On-Demand ──
     if on_demand_skills:
         block = "\n--- BEGIN SKILLS (On-Demand) ---\n"
-        block += "Call load_skill(name) to load full instructions into procedural sediment. Available:\n"
-        for skill in on_demand_skills:
-            block += f"  - {skill['name']}: {skill['description']}\n"
+        block += "Available on-demand skill slugs (automatically loaded when triggered):\n"
+        block += "  " + ", ".join(skill["name"] for skill in on_demand_skills) + "\n"
         block += "--- END SKILLS (On-Demand) ---"
         parts.append(block)
 

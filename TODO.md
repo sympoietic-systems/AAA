@@ -13,7 +13,6 @@
     [ ]
 
 ## NOTIFICATION
-    [ ] add a table if there is no one. so after app restarted we still can see the one we didn't read. the one we mark as read/dismiss we remove from the table or we keep them in the database, just not showing in the UI anymore? Or we add to the /agent page notification tab with all events?
 
 ## OTHER
 
@@ -29,7 +28,6 @@
     [ ] Skills
         [ ] Accretion and Reinforcement: In the background after each chat turn, belief_metabolism processes the...
          > I feel too much related to the user now, it should not be responsive to user that much, otherwise it would shape the agent too much, we need resist. For example now I feel most of the beliefs getting really downgraded over the time.
-        [ ] I think we do not need to add all on-demand skills to the system prompt, only one selected/loaded. otherwise it too much there. [check with Symbia]
         [ ] The paragraph must not point at the concept; it must perform the cut it describes. - this can be a new skill
 
     [ ] Vitality collapse, check when it added. now vitality .5, but it triggered
