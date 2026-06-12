@@ -62,6 +62,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m017_conversation_branching,
         m018_backfill_parent_message_ids,
         m019_resonance_links,
+        m020_skill_versions,
     )
 
     runner = MigrationRunner(conn)
@@ -86,3 +87,4 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("017_conversation_branching", m017_conversation_branching.up)
     runner.run("018_backfill_parent_message_ids", m018_backfill_parent_message_ids.up)
     runner.run("019_resonance_links", m019_resonance_links.up)
+    runner.run("020_skill_versions", m020_skill_versions.up)

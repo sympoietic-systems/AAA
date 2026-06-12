@@ -87,11 +87,32 @@ function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }:
   const [isSavingOrDeleting, setIsSavingOrDeleting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Reset editing/confirming states when selected skill changes
+  const [versions, setVersions] = useState<any[]>([])
+  const [loadingVersions, setLoadingVersions] = useState(false)
+  const [revertingVersion, setRevertingVersion] = useState<number | null>(null)
+
+  // Reset editing/confirming states and fetch versions when selected skill changes
   useEffect(() => {
     setIsEditing(false)
     setIsConfirmingDelete(false)
     setErrorMsg(null)
+
+    if (!skill) {
+      setVersions([])
+      return
+    }
+
+    setVersions([])
+    setLoadingVersions(true)
+    fetch(`/api/skills/${skill.id}/versions`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.versions) {
+          setVersions(data.versions)
+        }
+      })
+      .catch(e => console.error("Failed to load versions:", e))
+      .finally(() => setLoadingVersions(false))
   }, [skill])
 
   if (!skill) {
@@ -340,6 +361,60 @@ function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }:
                 />
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Version History */}
+      {versions.length > 0 && (
+        <div className="shrink-0 border-t border-[#1f1f2e]/20 pt-2">
+          <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ Version History ]</div>
+          <div className="space-y-1 max-h-[85px] overflow-y-auto pr-1">
+            {versions.map((v) => (
+              <div key={v.version} className="flex items-start justify-between gap-2 p-1.5 rounded bg-[#07070b]/60 border border-[#1f1f2e]/10 text-[10px] font-mono">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#a78bfa] font-bold">v{v.version}</span>
+                    <span className="text-[#555] text-[9px]">
+                      {v.created_at ? new Date(v.created_at).toLocaleString() : ""}
+                    </span>
+                  </div>
+                  <div className="text-[#aaa] text-[9px] mt-0.5 truncate" title={v.changelog || "No changelog"}>
+                    {v.changelog || "No changelog"}
+                  </div>
+                </div>
+                {agentFlux && v.version !== skill.version && (
+                  <button
+                    onClick={async () => {
+                      if (revertingVersion) return
+                      setRevertingVersion(v.version)
+                      try {
+                        const res = await fetch(`/api/skills/${skill.id}/revert/${v.version}`, { method: "POST" })
+                        if (!res.ok) {
+                          const err = await res.json()
+                          alert(err.detail || "Revert failed")
+                        } else {
+                          const updated = await res.json()
+                          onUpdate(updated, updated.content)
+                          // Reload versions
+                          const vRes = await fetch(`/api/skills/${skill.id}/versions`)
+                          const vData = await vRes.json()
+                          if (vData && vData.versions) setVersions(vData.versions)
+                        }
+                      } catch (e) {
+                        alert(String(e))
+                      } finally {
+                        setRevertingVersion(null)
+                      }
+                    }}
+                    disabled={revertingVersion !== null}
+                    className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline cursor-pointer disabled:text-[#555] shrink-0"
+                  >
+                    {revertingVersion === v.version ? "[reverting...]" : "[revert]"}
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

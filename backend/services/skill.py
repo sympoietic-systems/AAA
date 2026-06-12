@@ -44,6 +44,7 @@ class SkillService:
         description: Optional[str] = None,
         content: Optional[str] = None,
         trigger_keywords: Optional[list[str]] = None,
+        changelog: Optional[str] = None,
     ) -> dict:
         state = self._state
         skill_repo = getattr(state, "skill_repo", None)
@@ -75,7 +76,7 @@ class SkillService:
 
         # Increment version on edit
         updates["version"] = skill.version + 1
-        updates["changelog"] = f"Edited via Agent Page on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        updates["changelog"] = changelog if changelog is not None else f"Edited via Agent Page on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
         # 2. Update the skill in database
         updated_skill = skill_repo.update_skill(skill_id=skill_id, **updates)

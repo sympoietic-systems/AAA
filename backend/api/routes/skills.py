@@ -120,3 +120,50 @@ async def workshop_action(action: str, body: WorkshopActionRequest, request: Req
         raise HTTPException(status_code=400, detail=result.get("message", "Workshop action failed"))
 
     return result
+
+
+@router.get("/skills/{skill_id}/versions")
+async def get_skill_versions(skill_id: str, request: Request):
+    state = request.app.state
+    skill_repo = getattr(state, "skill_repo", None)
+    if not skill_repo:
+        raise HTTPException(status_code=503, detail="Skill repository not available")
+
+    try:
+        versions = skill_repo.list_versions(skill_id)
+        return {"skill_id": skill_id, "versions": versions}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/skills/{skill_id}/revert/{version}")
+async def revert_skill_version(skill_id: str, version: int, request: Request):
+    check_agent_flux()
+    state = request.app.state
+    skill_repo = getattr(state, "skill_repo", None)
+    if not skill_repo:
+        raise HTTPException(status_code=503, detail="Skill repository not available")
+
+    # Find version history record
+    version_data = skill_repo.get_version(skill_id, version)
+    if not version_data:
+        raise HTTPException(status_code=404, detail=f"Version {version} for skill {skill_id} not found")
+
+    content = version_data["content"]
+    description = version_data["description"]
+    triggers = version_data["trigger_keywords"]
+
+    # We call update_skill_details on the SkillService (which recalculates the 16D vector and handles versioning)
+    service = SkillService(state)
+    try:
+        updated = await service.update_skill_details(
+            skill_id=skill_id,
+            description=description,
+            content=content,
+            trigger_keywords=triggers,
+            changelog=f"Reverted to version {version}",
+        )
+        updated["content"] = content
+        return updated
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

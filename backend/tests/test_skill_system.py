@@ -414,3 +414,90 @@ def test_skills_api_flux_control():
             del os.environ["AAA_AGENT_FLUX"]
 
 
+def test_skill_version_history_and_revert():
+    db_path = _setup_db("aaa_skill_versions_test.db")
+    repo = SkillRepository(db_path)
+
+    # 1. Create skill (should write v1 to skill_versions)
+    skill = repo.create_skill(
+        id=str(uuid.uuid4()),
+        name="versioned-skill",
+        description="Version 1 description",
+        content="Version 1 content",
+    )
+    assert skill.version == 1
+
+    versions = repo.list_versions(skill.id)
+    assert len(versions) == 1
+    assert versions[0]["version"] == 1
+    assert versions[0]["content"] == "Version 1 content"
+
+    # 2. Update skill (should write v2 to skill_versions)
+    updated = repo.update_skill(
+        skill_id=skill.id,
+        content="Version 2 content",
+        description="Version 2 description",
+        version=2,
+        changelog="Updated to v2",
+    )
+    assert updated.version == 2
+
+    versions = repo.list_versions(skill.id)
+    assert len(versions) == 2
+    assert versions[0]["version"] == 2
+    assert versions[0]["content"] == "Version 2 content"
+    assert versions[1]["version"] == 1
+    assert versions[1]["content"] == "Version 1 content"
+
+
+def test_skills_version_api():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    
+    db_path = _setup_db("aaa_skill_versions_api_test.db")
+    skill_repo = SkillRepository(db_path)
+    
+    app.state.skill_repo = skill_repo
+    client = TestClient(app)
+    
+    # Create skill and edit it to generate v2
+    skill = skill_repo.create_skill(
+        id=str(uuid.uuid4()), name="revert-skill", description="d1", content="c1"
+    )
+    skill_repo.update_skill(
+        skill_id=skill.id, content="c2", description="d2", version=2, changelog="edited"
+    )
+    
+    # Set agent flux env
+    orig_flux = os.environ.get("AAA_AGENT_FLUX")
+    os.environ["AAA_AGENT_FLUX"] = "true"
+    
+    try:
+        # GET /api/skills/{id}/versions
+        res = client.get(f"/api/skills/{skill.id}/versions")
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data["versions"]) == 2
+        assert data["versions"][0]["version"] == 2
+        assert data["versions"][1]["version"] == 1
+        
+        # POST /api/skills/{id}/revert/1
+        res = client.post(f"/api/skills/{skill.id}/revert/1")
+        assert res.status_code == 200
+        reverted = res.json()
+        assert reverted["version"] == 3
+        assert reverted["content"] == "c1"
+        assert reverted["description"] == "d1"
+        
+        # Verify events logged a revert revision
+        events = skill_repo.list_events(skill.id)
+        assert any("Reverted to version 1" in e.rationale for e in events)
+        
+    finally:
+        if orig_flux is not None:
+            os.environ["AAA_AGENT_FLUX"] = orig_flux
+        elif "AAA_AGENT_FLUX" in os.environ:
+            del os.environ["AAA_AGENT_FLUX"]
+
+
+

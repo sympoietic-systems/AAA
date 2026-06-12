@@ -97,7 +97,21 @@ class SkillRepository(BaseRepository):
         )
         conn.commit()
         row = conn.execute("SELECT * FROM skill_nodes WHERE id = ?", (id,)).fetchone()
-        return _row_to_skill_node(row)
+        node = _row_to_skill_node(row)
+
+        try:
+            import uuid
+            conn.execute(
+                """INSERT OR IGNORE INTO skill_versions
+                   (id, skill_id, version, content, description, trigger_keywords, changelog)
+                   VALUES (?, ?, 1, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), node.id, node.content, node.description, node.trigger_keywords, node.changelog),
+            )
+            conn.commit()
+        except Exception as ve:
+            logger.warning("Failed to insert version history on create: %s", ve)
+
+        return node
 
     @with_connection
     def update_skill(
@@ -151,7 +165,22 @@ class SkillRepository(BaseRepository):
         )
         conn.commit()
         row = conn.execute("SELECT * FROM skill_nodes WHERE id = ?", (skill_id,)).fetchone()
-        return _row_to_skill_node(row)
+        node = _row_to_skill_node(row) if row else None
+
+        if node:
+            try:
+                import uuid
+                conn.execute(
+                    """INSERT OR IGNORE INTO skill_versions
+                       (id, skill_id, version, content, description, trigger_keywords, changelog)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (str(uuid.uuid4()), node.id, node.version, node.content, node.description, node.trigger_keywords, node.changelog),
+                )
+                conn.commit()
+            except Exception as ve:
+                logger.warning("Failed to insert version history on update: %s", ve)
+
+        return node
 
     @with_connection
     def update_skill_mass(
@@ -225,6 +254,41 @@ class SkillRepository(BaseRepository):
             (skill_id,),
         ).fetchall()
         return [_row_to_skill_event(r) for r in rows]
+
+    @with_connection
+    def list_versions(self, skill_id: str) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT version, content, description, trigger_keywords, changelog, created_at FROM skill_versions WHERE skill_id = ? ORDER BY version DESC",
+            (skill_id,),
+        ).fetchall()
+        return [
+            {
+                "version": r[0],
+                "content": r[1],
+                "description": r[2],
+                "trigger_keywords": json.loads(r[3]) if r[3] else [],
+                "changelog": r[4],
+                "created_at": r[5],
+            }
+            for r in rows
+        ]
+
+    @with_connection
+    def get_version(self, skill_id: str, version: int) -> Optional[dict]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT content, description, trigger_keywords, changelog FROM skill_versions WHERE skill_id = ? AND version = ?",
+            (skill_id, version)
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "content": row[0],
+            "description": row[1],
+            "trigger_keywords": json.loads(row[2]) if row[2] else [],
+            "changelog": row[3]
+        }
 
     @with_connection
     def delete_skill(self, skill_id: str) -> None:
