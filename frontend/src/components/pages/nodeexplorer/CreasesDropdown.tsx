@@ -207,7 +207,7 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                         onClick={() => dismissNotification(notif.id)}
                         className="text-[9px] text-[#555] hover:text-[#888] font-mono cursor-pointer transition-colors"
                       >
-                        dismiss
+                        fold
                       </button>
                     </div>
                   </div>
@@ -242,7 +242,7 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                         onClick={() => dismissNotification(notif.id)}
                         className="text-[9px] text-[#884444] hover:text-[#f87171] font-mono cursor-pointer transition-colors"
                       >
-                        dismiss
+                        fold
                       </button>
                     </div>
                   </div>
@@ -277,7 +277,7 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                         onClick={() => dismissNotification(notif.id)}
                         className="text-[9px] text-[#3b82f6] hover:text-[#60a5fa] font-mono cursor-pointer transition-colors"
                       >
-                        dismiss
+                        fold
                       </button>
                     </div>
                   </div>
