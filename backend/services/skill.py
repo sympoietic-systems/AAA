@@ -21,15 +21,20 @@ class SkillService:
         state = self._state
         skill_repo = getattr(state, "skill_repo", None)
         if not skill_repo:
-            return {"always_active": [], "on_demand": [], "all": []}
+            return {"always_active": [], "on_demand": [], "collapsed": [], "proposed": [], "all": []}
 
         always_active = skill_repo.list_always_active()
         on_demand = skill_repo.list_on_demand()
         all_skills = skill_repo.list_skills()
+        
+        collapsed = [s for s in all_skills if s.lifecycle_stage == "collapsed"]
+        proposed = [s for s in all_skills if s.lifecycle_stage == "nucleation"]
 
         return {
             "always_active": [self._format_skill(s) for s in always_active],
             "on_demand": [self._format_skill(s) for s in on_demand],
+            "collapsed": [self._format_skill(s) for s in collapsed],
+            "proposed": [self._format_skill(s) for s in proposed],
             "all": [self._format_skill(s) for s in all_skills],
         }
 

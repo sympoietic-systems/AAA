@@ -139,6 +139,8 @@ class DbSkillInfo(BaseModel):
 class DbSkillsResponse(BaseModel):
     always_active: list[DbSkillInfo]
     on_demand: list[DbSkillInfo]
+    collapsed: list[DbSkillInfo] = []
+    proposed: list[DbSkillInfo] = []
     all: list[DbSkillInfo]
 
 

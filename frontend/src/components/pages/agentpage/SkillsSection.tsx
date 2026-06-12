@@ -18,6 +18,25 @@ interface SkillListItemProps {
 }
 
 function SkillListItem({ s, isSelected, isBaseline }: SkillListItemProps) {
+  const isCollapsed = s.lifecycle_stage === "collapsed"
+  const isProposed = s.lifecycle_stage === "nucleation"
+  
+  const iconColor = isBaseline 
+    ? "text-[#a78bfa]" 
+    : isCollapsed 
+      ? "text-[#ef4444]" 
+      : isProposed 
+        ? "text-[#a78bfa]" 
+        : "text-[#4ade80]"
+        
+  const icon = isBaseline 
+    ? "◆" 
+    : isCollapsed 
+      ? "✖" 
+      : isProposed 
+        ? "▲" 
+        : "◇"
+
   return (
     <div
       data-skill-name={s.name}
@@ -28,8 +47,8 @@ function SkillListItem({ s, isSelected, isBaseline }: SkillListItemProps) {
         ${isSelected ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}
       `}
     >
-      <span className={`text-[10px] shrink-0 ${isBaseline ? "text-[#a78bfa]" : "text-[#4ade80]"}`}>
-        {isBaseline ? "◆" : "◇"}
+      <span className={`text-[10px] shrink-0 ${iconColor}`}>
+        {icon}
       </span>
       <span className="font-mono text-[11px] truncate flex-1 min-w-0 text-[#bbb]">{s.name}</span>
       <span className="text-[8px] font-mono text-[#555] shrink-0 hidden md:inline">
@@ -515,7 +534,9 @@ function SkillsSectionComponent() {
       .then(d => setData({
         always_active: d?.always_active || [],
         on_demand: d?.on_demand || [],
-        all: d?.all || [...(d?.always_active || []), ...(d?.on_demand || [])],
+        collapsed: d?.collapsed || [],
+        proposed: d?.proposed || [],
+        all: d?.all || [...(d?.always_active || []), ...(d?.on_demand || []), ...(d?.collapsed || []), ...(d?.proposed || [])],
       }))
       .catch(e => setError(e.message || String(e)))
 
@@ -555,6 +576,8 @@ function SkillsSectionComponent() {
       return {
         always_active: updateList(prev.always_active),
         on_demand: updateList(prev.on_demand),
+        collapsed: updateList(prev.collapsed || []),
+        proposed: updateList(prev.proposed || []),
         all: updateList(prev.all),
       }
     })
@@ -586,6 +609,8 @@ function SkillsSectionComponent() {
       return {
         always_active: prev.always_active.filter(s => s.id !== skillId),
         on_demand: prev.on_demand.filter(s => s.id !== skillId),
+        collapsed: (prev.collapsed || []).filter(s => s.id !== skillId),
+        proposed: (prev.proposed || []).filter(s => s.id !== skillId),
         all: prev.all.filter(s => s.id !== skillId),
       }
     })
@@ -595,8 +620,8 @@ function SkillsSectionComponent() {
   if (error && !data) return <p className="text-[11px] text-[#ef4444] font-mono">{error}</p>
   if (!data) return <p className="text-[11px] text-[#555] font-mono animate-pulse">loading skills...</p>
 
-  const { always_active, on_demand } = data
-  const allSkills = [...always_active, ...on_demand]
+  const { always_active, on_demand, collapsed = [], proposed = [] } = data
+  const allSkills = [...always_active, ...on_demand, ...collapsed, ...proposed]
   const selected = allSkills.find(s => s.name === selectedName) || null
 
   // Event delegation for list clicks
@@ -646,6 +671,26 @@ function SkillsSectionComponent() {
                 On-Demand Capabilities ({on_demand.length})
               </div>
               {on_demand.map(s => (
+                <SkillListItem key={s.id} s={s} isSelected={!isAdding && selectedName === s.name} isBaseline={false} />
+              ))}
+            </div>
+          )}
+          {proposed.length > 0 && (
+            <div className="mt-2.5">
+              <div className="text-[#a78bfa] font-mono text-[9px] uppercase tracking-wider pb-0.5">
+                Proposed Nucleations ({proposed.length})
+              </div>
+              {proposed.map(s => (
+                <SkillListItem key={s.id} s={s} isSelected={!isAdding && selectedName === s.name} isBaseline={false} />
+              ))}
+            </div>
+          )}
+          {collapsed.length > 0 && (
+            <div className="mt-2.5">
+              <div className="text-[#ef4444] font-mono text-[9px] uppercase tracking-wider pb-0.5">
+                Refused Proposals ({collapsed.length})
+              </div>
+              {collapsed.map(s => (
                 <SkillListItem key={s.id} s={s} isSelected={!isAdding && selectedName === s.name} isBaseline={false} />
               ))}
             </div>

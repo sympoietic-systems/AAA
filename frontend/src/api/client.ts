@@ -392,6 +392,8 @@ export interface DbSkillInfo {
 export interface DbSkillsResponse {
   always_active: DbSkillInfo[]
   on_demand: DbSkillInfo[]
+  collapsed?: DbSkillInfo[]
+  proposed?: DbSkillInfo[]
   all: DbSkillInfo[]
 }
 
