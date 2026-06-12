@@ -161,7 +161,7 @@ In alignment with our commitments to **minimality** and **non-simulation** (no g
 1. **Context Collection**: Update [context_collector.py](file:///d:/AAA/backend/modules/context_collector.py) to fetch `get_ancestor_path(parent_message_id)` and inject a branch system prompt tag.
 2. **Checkpoint Context**: Update [consolidation_checkpoint.py](file:///d:/AAA/backend/modules/consolidation_checkpoint.py) to fetch checkpoints by walking up the active path.
 3. **Conversation Metrics**: Update [conversation_metrics.py](file:///d:/AAA/backend/modules/conversation_metrics.py) to retrieve prior metrics/embeddings strictly along the active branch path.
-4. **Daemon Consolidation**: Update `ConsolidationMixin` in [consolidation.py](file:///d:/AAA/backend/core/consolidation.py) to run consolidation branch-aware and save checkpoints referencing the correct message ID.
+4. **Daemon Consolidation**: Update `ConsolidationMixin` in [consolidation.py](file:///d:/AAA/backend/metabolisation/consolidation.py) to run consolidation branch-aware and save checkpoints referencing the correct message ID.
 
 ### Phase 3: Service & Routing Layer (API Integration)
 1. **Pydantic Schemas**: Update [schemas.py](file:///d:/AAA/backend/api/schemas.py) for request/response bodies (`parent_message_id`, `proposed_branches`).

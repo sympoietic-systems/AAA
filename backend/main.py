@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.router import router
 from backend.config import load_config
-from backend.core.pipeline import ProcessingPipeline
+from backend.metabolisation.pipeline import ProcessingPipeline
 from backend.modules.background_tasks.actions.consolidate import ConsolidateAction
 from backend.modules.background_tasks.actions.conversation_summary import ConversationSummaryAction
 from backend.modules.background_tasks.actions.document_collision import DocumentCollisionAction
@@ -380,14 +380,14 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
 
 
 def _start_background_services(app_state):
-    from backend.core.scheduler import BackgroundStartupScheduler
+    from backend.metabolisation.scheduler import BackgroundStartupScheduler
     from backend.services.file import FileService
 
     scheduler = BackgroundStartupScheduler(app_state, FileService.process_and_summarize)
     app_state.startup_scheduler = scheduler
     scheduler.start()
 
-    from backend.core.daemon import AutopoieticDreamDaemon
+    from backend.metabolisation.daemon import AutopoieticDreamDaemon
     dream_daemon = AutopoieticDreamDaemon(app_state)
     app_state.dream_daemon = dream_daemon
     dream_daemon.start()

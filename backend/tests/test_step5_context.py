@@ -10,7 +10,7 @@ os.chdir(root_path)
 from backend.storage.database import init_db, get_db_path
 from backend.storage.repository import ErrorLogRepository, MessageRepository, NoteRepository
 from backend.modules.context_collector import ContextCollectorModule
-from backend.core.pipeline import ProcessingPipeline
+from backend.metabolisation.pipeline import ProcessingPipeline
 from backend.core.registry import ModuleRegistry
 
 

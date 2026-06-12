@@ -4,7 +4,7 @@ import asyncio
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.core.pipeline import ProcessingPipeline
+from backend.metabolisation.pipeline import ProcessingPipeline
 from backend.core.registry import ModuleRegistry
 from backend.modules.base import ProcessingModule
 

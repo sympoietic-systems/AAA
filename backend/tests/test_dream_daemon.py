@@ -12,7 +12,7 @@ root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 os.chdir(root_path)
 
-from backend.core.daemon import AutopoieticDreamDaemon
+from backend.metabolisation.daemon import AutopoieticDreamDaemon
 from backend.storage.models import BeliefNode, Message, Conversation
 from backend.modules.belief_engine import compute_cosine_similarity
 

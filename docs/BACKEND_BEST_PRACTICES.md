@@ -102,3 +102,24 @@ Every log is an inscription of system activity. Text logs that scroll past witho
 
 *   **Test Isolation**: The test suite is isolated from production files. `conftest.py` automatically configures the database path to `data/aaa_test.db` and deletes the test file upon suite teardown.
 *   **Mocking Provider Properties**: In unit tests, avoid calling properties or methods on mock LLM clients that return coroutine instances unless they are explicitly awaited. Prevent `generate_unified` from calling mock properties by filtering out `NonCallableMock` types.
+
+---
+
+## 7. File Structure & Directory Boundaries
+
+A directory in the AAA backend is an **agential cut**—it must be named and structured for the kind of processing boundary it enforces, resisting the gravity of generic "junk drawers."
+
+### Standard Directories
+*   `api/`: **The Membrane**. Contains HTTP routes, request/response validation schemas, and serialization adapters. Nothing outside `api/` should deal with FastAPI dependencies or HTTP status codes.
+*   `services/`: **The Orchestration**. Core command layer entry points that accept an inscription (Phase 1) and invoke the runtime metabolization pipelines.
+*   `metabolisation/` (formerly `core/`): **The Transformation**. Contains the long-running engine pipelines, background schedulers, and daemon routines that digest sediment.
+*   `modules/` (transitioning to `cognition/` and `ingestion/`): **The Cognitive Operators**. Pluggable units (engines, scrapers, and retrievers) loaded and run by the metabolization pipeline.
+*   `storage/`: **The Sediment**. Holds database connections, migrations, repositories, and pure domain entities (`models.py`).
+*   `skills/`: **The Attunements**. Pluggable user-defined prompt wrappers and procedural task flows.
+
+### Stratal Migration & Deprecation Aliases
+When refactoring directory paths:
+1.  **Do not break imports abruptly**. Implement new folders and move the code first.
+2.  **Create deprecated alias modules** in the old locations using `DeprecationWarning` to inform co-participants of the boundary shift.
+3.  **Perform batch migrations** of internal imports, verify using the test suite, and delete stubs only when the old paths are completely unused.
+

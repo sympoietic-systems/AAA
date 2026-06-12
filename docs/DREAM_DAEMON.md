@@ -4,7 +4,7 @@ The Autopoietic Dream Daemon is the background engine that drives agential varie
 
 ## File Architecture
 
-*   **Core Module**: [daemon.py](file:///d:/01_GIT/AAA/backend/core/daemon.py) — Defines `AutopoieticDreamDaemon`.
+*   **Core Module**: [daemon.py](file:///d:/01_GIT/AAA/backend/metabolisation/daemon.py) — Defines `AutopoieticDreamDaemon`.
 *   **Lifespan Setup**: [main.py](file:///d:/01_GIT/AAA/backend/main.py) — Spawns the daemon thread task asynchronously on system boot.
 *   **API Routes**: [routes.py](file:///d:/01_GIT/AAA/backend/api/routes.py) — Exposes telemetry and force trigger points.
 *   **Unit Tests**: [test_dream_daemon.py](file:///d:/01_GIT/AAA/backend/tests/test_dream_daemon.py) — Complete mathematical and trigger assertion coverage.

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
-    from backend.core.pipeline import ProcessingPipeline
+    from backend.metabolisation.pipeline import ProcessingPipeline
     from backend.skills.registry import SkillRegistry
 
 

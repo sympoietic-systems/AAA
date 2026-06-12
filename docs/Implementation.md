@@ -46,7 +46,7 @@ Where:
 ### Phase 5: Agential Independence & The Autopoietic Dream Daemon ✅
 *   **Goal:** Enable self-directed agency and offline cognitive cycles during inactivity periods.
 *   **Deliverables:**
-    *   ✅ Continuous background thread loop (`AutopoieticDreamDaemon` in `backend/core/daemon.py`)
+    *   ✅ Continuous background thread loop (`AutopoieticDreamDaemon` in `backend/metabolisation/daemon.py`)
     *   ✅ Nonlinear Somatic Drift modeling temporal belief decay with core rigidity
     *   ✅ Autocorrelation-based Somatic Vitality ($V$) and sigmoidal curiosity weighting ($g(V)$)
     *   ✅ Structure-aware memory compaction and LLM-synthesized concept merging

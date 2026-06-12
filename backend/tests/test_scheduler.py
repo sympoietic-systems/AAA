@@ -8,7 +8,7 @@ root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 os.chdir(root_path)
 
-from backend.core.scheduler import BackgroundStartupScheduler
+from backend.metabolisation.scheduler import BackgroundStartupScheduler
 from backend.storage.database import init_db, get_db_path
 from backend.storage.repository import PerceptionSedimentRepository, ConversationRepository
 
