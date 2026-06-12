@@ -11,6 +11,7 @@ class BeliefService:
     async def get_beliefs(self, conversation_id: Optional[str] = None, agent_id: str = "symbia") -> dict:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)
+        engine = getattr(state, "belief_metabolism", None)
         if not belief_repo:
             return {"beliefs": [], "proto_beliefs": [], "ghosts": [], "somatic": None,
                     "attractor_window": [], "spectral_margin": [], "ecosystem": None}
