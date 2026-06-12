@@ -134,6 +134,7 @@ class DbSkillInfo(BaseModel):
     last_used_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    refusal_reason: Optional[str] = None
 
 
 class DbSkillsResponse(BaseModel):

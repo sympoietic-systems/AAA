@@ -221,6 +221,19 @@ class SkillService:
 
         v16d = self._extract_16d_vector(skill.vector_16d)
 
+        # Retrieve refusal reason for collapsed skills
+        refusal_reason = None
+        if skill.lifecycle_stage == "collapsed":
+            skill_repo = getattr(self._state, "skill_repo", None)
+            if skill_repo:
+                try:
+                    events = skill_repo.list_events(skill.id)
+                    collapse_event = next((e for e in events if e.event_type == "collapse"), None)
+                    if collapse_event:
+                        refusal_reason = collapse_event.rationale
+                except Exception as e:
+                    logger.warning("Failed to fetch events for skill %s: %s", skill.id, e)
+
         return {
             "id": skill.id,
             "name": skill.name,
@@ -238,6 +251,7 @@ class SkillService:
             "last_used_at": skill.last_used_at.isoformat() if skill.last_used_at else None,
             "created_at": skill.created_at.isoformat() if skill.created_at else None,
             "updated_at": skill.updated_at.isoformat() if skill.updated_at else None,
+            "refusal_reason": refusal_reason,
         }
 
     def _extract_16d_vector(self, vector_json: str) -> list[float]:

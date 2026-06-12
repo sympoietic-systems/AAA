@@ -284,6 +284,14 @@ function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }:
         </div>
       </div>
 
+      {/* Refusal Reason (if collapsed) */}
+      {skill.lifecycle_stage === "collapsed" && skill.refusal_reason && (
+        <div className="shrink-0 border border-[#ef4444]/20 bg-[#ef4444]/5 p-2 rounded text-[10.5px] leading-relaxed text-[#ef4444]/90 font-serif">
+          <div className="text-[#ef4444]/60 font-mono text-[9px] uppercase font-bold tracking-wider mb-0.5">[ Refusal Rationale ]</div>
+          {skill.refusal_reason}
+        </div>
+      )}
+
       {/* Metadata */}
       <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono text-[#888]">
         <div><span className="text-[#444]">Source:</span> <span className="text-[#aaa]">{skill.source}</span></div>
