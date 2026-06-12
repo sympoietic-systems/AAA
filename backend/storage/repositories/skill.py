@@ -1,10 +1,13 @@
 import json
+import logging
 from typing import Optional
 
 from backend.storage.connection import with_connection
 from backend.storage.models import SkillEvent, SkillNode
 from backend.storage.repositories.base import BaseRepository
 from backend.storage.row_mappers import _row_to_skill_event, _row_to_skill_node
+
+logger = logging.getLogger(__name__)
 
 
 class SkillRepository(BaseRepository):
@@ -245,6 +248,38 @@ class SkillRepository(BaseRepository):
             (id, skill_id, event_type, source_type, rationale, annotation),
         )
         conn.commit()
+
+        # Automatic persistence notification for skill lifecycle events
+        try:
+            skill_row = conn.execute("SELECT name FROM skill_nodes WHERE id = ?", (skill_id,)).fetchone()
+            skill_name = skill_row["name"] if skill_row else "unknown"
+            
+            if event_type == "emergence":
+                snippet = f"New skill '{skill_name}' nucleated (emergence). Source: {source_type}. {rationale}"
+            elif event_type == "crystallization":
+                snippet = f"Skill '{skill_name}' asserted (crystallized). Source: {source_type}. {rationale}"
+            elif event_type == "revision":
+                snippet = f"Skill '{skill_name}' updated (revision). Source: {source_type}. {rationale}"
+            elif event_type == "collapse":
+                snippet = f"Skill '{skill_name}' collapsed. Source: {source_type}. {rationale}"
+            else:
+                snippet = f"Skill '{skill_name}' lifecycle change ({event_type}). {rationale}"
+
+            snippet = snippet.strip()
+            
+            import uuid
+            from datetime import datetime
+            conn.execute(
+                """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
+                   VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
+                (str(uuid.uuid4()), datetime.utcnow().isoformat(), snippet, f"skill:{skill_name}"),
+            )
+            conn.commit()
+        except Exception as ne:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("Failed to automatically insert notification for skill event: %s", ne)
+
         row = conn.execute("SELECT * FROM skill_events WHERE id = ?", (id,)).fetchone()
         return _row_to_skill_event(row)
 

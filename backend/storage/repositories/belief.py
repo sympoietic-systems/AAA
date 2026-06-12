@@ -49,6 +49,21 @@ class BeliefRepository(BaseRepository):
             (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage),
         )
         conn.commit()
+
+        # Automatic persistence notification for new belief creation
+        try:
+            import uuid
+            from datetime import datetime
+            snippet = f"New belief '{label}' crystallized (initial confidence: {confidence:.2f}). Origin: {origin}"
+            conn.execute(
+                """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
+                   VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
+                (str(uuid.uuid4()), datetime.utcnow().isoformat(), snippet, f"belief:{label}"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+
         row = conn.execute(
             "SELECT * FROM belief_nodes WHERE id = ?", (id,)
         ).fetchone()
@@ -172,6 +187,26 @@ class BeliefRepository(BaseRepository):
                 (event_id, belief_id, source_type, source_id, alignment, perturbation, event_type, impact, rationale),
             )
             conn.commit()
+
+            # Automatic notification for belief dynamics events (metabolism updates)
+            try:
+                belief_row = conn.execute("SELECT label FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
+                belief_label = belief_row["label"] if belief_row else "unknown"
+                
+                snippet = f"Belief '{belief_label}' {event_type} (impact: {impact or 0.0:.2f}). {rationale or ''}"
+                snippet = snippet.strip()
+                
+                import uuid
+                from datetime import datetime
+                conn.execute(
+                    """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
+                       VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
+                    (str(uuid.uuid4()), datetime.utcnow().isoformat(), snippet, f"belief:{belief_label}"),
+                )
+                conn.commit()
+            except Exception:
+                pass
+
         except Exception:
             pass
 

@@ -17,6 +17,7 @@ from backend.storage.repository import (
     BeliefRepository,
     MessageRepository,
     ErrorLogRepository,
+    NotificationRepository,
 )
 from backend.modules.embedder import EmbedderModule
 from backend.modules.llm_client import (
@@ -245,6 +246,18 @@ async def process_and_summarize_file(
         system_content = f"Processed file: **{file_name}** ({file_type}).\n\nAccording to {summary_model or 'the system'}, this file appears to be about:\n{summary_text or 'No summary could be generated.'}"
         await insert_system_message(db_path, conversation_id, system_content, embedder, structural_provider, agent_name)
 
+        # Persistence Notification: Successful file indexing
+        try:
+            notif_repo = NotificationRepository(db_path)
+            notif_repo.create(
+                type="trace",
+                snippet=f"File indexing complete: '{file_name}' ({file_type}) digested into semantic sediment.",
+                conversation_id=conversation_id,
+                source=f"perception:{file_name}",
+            )
+        except Exception as ne:
+            logger.error(f"Failed to create file indexing notification: {ne}")
+
     except Exception as e:
         logger.exception("Background processing of %s failed", file_name)
         if error_repo:
@@ -253,6 +266,16 @@ async def process_and_summarize_file(
                 error=e,
                 context={"conversation_id": conversation_id, "file_name": file_name},
             )
+        try:
+            notif_repo = NotificationRepository(db_path)
+            notif_repo.create(
+                type="glitch",
+                snippet=f"File indexing failed for '{file_name}': {str(e)}",
+                conversation_id=conversation_id,
+                source=f"perception:{file_name}",
+            )
+        except Exception as ne:
+            logger.error(f"Failed to create file indexing error notification: {ne}")
         try:
             perception_repo.update_file(
                 conversation_id=conversation_id,
@@ -408,6 +431,18 @@ async def reprocess_and_summarize_file_background(
         system_content = f"Processed file: **{file_name}** ({file_type}).\n\nAccording to {summary_model or 'the system'}, this file appears to be about:\n{summary_text or 'No summary could be generated.'}"
         await insert_system_message(db_path, conversation_id, system_content, embedder, structural_provider, agent_name)
 
+        # Persistence Notification: Successful file reprocessing
+        try:
+            notif_repo = NotificationRepository(db_path)
+            notif_repo.create(
+                type="trace",
+                snippet=f"File reprocessing complete: '{file_name}' ({file_type}) updated in sediment.",
+                conversation_id=conversation_id,
+                source=f"perception:{file_name}",
+            )
+        except Exception as ne:
+            logger.error(f"Failed to create file reprocessing notification: {ne}")
+
     except Exception as e:
         logger.exception("Background reprocessing of %s failed", file_name)
         if error_repo:
@@ -416,6 +451,16 @@ async def reprocess_and_summarize_file_background(
                 error=e,
                 context={"conversation_id": conversation_id, "file_name": file_name},
             )
+        try:
+            notif_repo = NotificationRepository(db_path)
+            notif_repo.create(
+                type="glitch",
+                snippet=f"File reprocessing failed for '{file_name}': {str(e)}",
+                conversation_id=conversation_id,
+                source=f"perception:{file_name}",
+            )
+        except Exception as ne:
+            logger.error(f"Failed to create file reprocessing error notification: {ne}")
         try:
             perception_repo.update_file(
                 conversation_id=conversation_id,
