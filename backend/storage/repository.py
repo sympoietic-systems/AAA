@@ -36,6 +36,7 @@ from backend.storage.repositories import (
     PerceptionSedimentRepository,
     SemanticKnotRepository,
     SkillRepository,
+    NotificationRepository,
 )
 
 __all__ = [
@@ -61,4 +62,5 @@ __all__ = [
     "SemanticKnotRepository",
     "NoteRepository",
     "SkillRepository",
+    "NotificationRepository",
 ]

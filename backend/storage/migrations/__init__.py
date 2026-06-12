@@ -64,6 +64,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m019_resonance_links,
         m020_skill_versions,
         m021_skill_versions_source,
+        m022_notifications,
     )
 
     runner = MigrationRunner(conn)
@@ -90,3 +91,4 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("019_resonance_links", m019_resonance_links.up)
     runner.run("020_skill_versions", m020_skill_versions.up)
     runner.run("021_skill_versions_source", m021_skill_versions_source.up)
+    runner.run("022_notifications", m022_notifications.up)

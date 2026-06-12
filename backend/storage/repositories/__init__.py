@@ -9,6 +9,7 @@ from backend.storage.repositories.note import NoteRepository
 from backend.storage.repositories.perception_sediment import PerceptionSedimentRepository
 from backend.storage.repositories.semantic_knot import SemanticKnotRepository
 from backend.storage.repositories.skill import SkillRepository
+from backend.storage.repositories.notification import NotificationRepository
 
 __all__ = [
     "BeliefRepository",
@@ -22,4 +23,5 @@ __all__ = [
     "PerceptionSedimentRepository",
     "SemanticKnotRepository",
     "SkillRepository",
+    "NotificationRepository",
 ]
