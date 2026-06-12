@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from "react"
 import type { ConversationInfo } from "../../../api/client"
-import { getSkillEvents } from "../../../api/client"
 import {
   useNotifications,
   dismissNotification,
   clearNotificationsByType,
-  markAllAsRead,
-  addNotification
+  markAllAsRead
 } from "../../../stores/notificationStore"
 
 interface Props {
@@ -20,67 +18,7 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
   const [activeTab, setActiveTab] = useState<'sediment' | 'glitch' | 'trace'>('sediment')
   const creasesRef = useRef<HTMLDivElement>(null)
 
-  // Polling for skill events to trigger creases notifications
-  const seenEventIdsRef = useRef<Set<string>>(new Set())
-  const isFirstFetchRef = useRef<boolean>(true)
-
-  useEffect(() => {
-    let active = true
-    const pollEvents = async () => {
-      try {
-        const events = await getSkillEvents(30)
-        if (!active) return
-
-        if (isFirstFetchRef.current) {
-          // Initialize seen IDs so we don't spam notifications for old history
-          events.forEach(e => seenEventIdsRef.current.add(e.id))
-          isFirstFetchRef.current = false
-          return
-        }
-
-        // Process new events in chronological order (oldest first so notifications stack nicely)
-        const reversed = [...events].reverse()
-        for (const e of reversed) {
-          if (!seenEventIdsRef.current.has(e.id)) {
-            seenEventIdsRef.current.add(e.id)
-            
-            // Format a clean, informative snippet based on event_type
-            let snippet = ""
-            if (e.event_type === "emergence") {
-              snippet = `New skill '${e.skill_name}' nucleated (emergence). Source: ${e.source_type}. ${e.rationale || ""}`
-            } else if (e.event_type === "crystallization") {
-              snippet = `Skill '${e.skill_name}' asserted (crystallized). Source: ${e.source_type}. ${e.rationale || ""}`
-            } else if (e.event_type === "revision") {
-              snippet = `Skill '${e.skill_name}' updated (revision). Source: ${e.source_type}. ${e.rationale || ""}`
-            } else if (e.event_type === "collapse") {
-              snippet = `Skill '${e.skill_name}' collapsed. Source: ${e.source_type}. ${e.rationale || ""}`
-            } else {
-              snippet = `Skill '${e.skill_name}' lifecycle change (${e.event_type}). ${e.rationale || ""}`
-            }
-
-            addNotification({
-              id: e.id,
-              type: "trace",
-              source: `skill:${e.skill_name}`,
-              snippet: snippet.trim(),
-              timestamp: e.created_at || new Date().toISOString()
-            })
-          }
-        }
-      } catch (err) {
-        console.error("Failed to poll skill events:", err)
-      }
-    }
-
-    // Initial poll
-    pollEvents()
-
-    const interval = setInterval(pollEvents, 15000)
-    return () => {
-      active = false
-      clearInterval(interval)
-    }
-  }, [])
+  // Poll of notifications is handled centrally by the notificationStore
 
   // Close creases dropdown on click outside
   useEffect(() => {

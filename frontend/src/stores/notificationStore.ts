@@ -1,22 +1,12 @@
 import { useSyncExternalStore } from "react"
-
-/**
- * SedimentNotification represents a trace fold on the material interface.
- * It can be a 'sediment' arrival (agent message elsewhere), a 'glitch' (error),
- * or a 'trace' (informational system trace).
- */
-export interface SedimentNotification {
-  id: string
-  type: 'sediment' | 'glitch' | 'trace'
-  conversationId?: string
-  messageId?: number
-  parentMessageId?: number
-  timestamp: string
-  snippet: string
-  speaker?: string
-  source?: string
-  read?: boolean
-}
+import {
+  getNotifications,
+  createNotification,
+  dismissNotification as apiDismissNotification,
+  clearNotifications,
+  markAllNotificationsRead,
+} from "../api/client"
+import type { SedimentNotification } from "../api/client"
 
 type Listener = () => void
 
@@ -41,6 +31,32 @@ function getSnapshot(): SedimentNotification[] {
 }
 
 /**
+ * Synchronize local state with the backend's active (un-dismissed) notifications.
+ */
+export async function syncNotifications() {
+  try {
+    const backendNotifs = await getNotifications(false)
+    // Check if anything changed in the list of IDs or read states
+    const idsA = notifications.map(n => `${n.id}-${n.read ? 1 : 0}`).join(",")
+    const idsB = backendNotifs.map(n => `${n.id}-${n.read ? 1 : 0}`).join(",")
+    if (idsA !== idsB) {
+      notifications = backendNotifs
+      emitChange()
+    }
+  } catch (err) {
+    console.warn("Failed to sync notifications with backend:", err)
+  }
+}
+
+// Perform initial synchronization
+syncNotifications()
+
+// Set up periodic polling every 12 seconds
+if (typeof window !== "undefined") {
+  setInterval(syncNotifications, 12000)
+}
+
+/**
  * Add a notification. Can be called from any hook, callback, or module.
  */
 export function addNotification(
@@ -60,10 +76,26 @@ export function addNotification(
       id = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
     }
   }
-  if (notifications.some((n) => n.id === id)) return
   
-  notifications = [{ ...notif, type, id, timestamp, read: false } as SedimentNotification, ...notifications]
+  if (notifications.some((n) => n.id === id)) return
+
+  const newNotif: SedimentNotification = {
+    ...notif,
+    type,
+    id,
+    timestamp,
+    read: false,
+    dismissed: false,
+  }
+
+  // Optimistic update
+  notifications = [newNotif, ...notifications]
   emitChange()
+
+  // Sync with backend
+  createNotification(newNotif)
+    .then(() => syncNotifications())
+    .catch((err) => console.error("Failed to persist notification on backend:", err))
 }
 
 /**
@@ -75,6 +107,11 @@ export function dismissNotification(id: string) {
     notifications = next
     emitChange()
   }
+
+  // Sync with backend
+  apiDismissNotification(id)
+    .then(() => syncNotifications())
+    .catch((err) => console.error("Failed to dismiss notification on backend:", err))
 }
 
 /**
@@ -82,11 +119,7 @@ export function dismissNotification(id: string) {
  */
 export function dismissByMatch(conversationId: string, messageId: number) {
   const matchId = `${conversationId}-${messageId}`
-  const next = notifications.filter((n) => n.id !== matchId)
-  if (next.length !== notifications.length) {
-    notifications = next
-    emitChange()
-  }
+  dismissNotification(matchId)
 }
 
 /**
@@ -96,6 +129,11 @@ export function clearAllNotifications() {
   if (notifications.length === 0) return
   notifications = []
   emitChange()
+
+  // Sync with backend
+  clearNotifications()
+    .then(() => syncNotifications())
+    .catch((err) => console.error("Failed to clear notifications on backend:", err))
 }
 
 /**
@@ -107,6 +145,11 @@ export function clearNotificationsByType(type: 'sediment' | 'glitch' | 'trace') 
     notifications = next
     emitChange()
   }
+
+  // Sync with backend
+  clearNotifications(type)
+    .then(() => syncNotifications())
+    .catch((err) => console.error("Failed to clear notifications by type on backend:", err))
 }
 
 /**
@@ -121,9 +164,15 @@ export function markAllAsRead(type?: 'sediment' | 'glitch' | 'trace') {
     }
     return n
   })
+
   if (changed) {
     emitChange()
   }
+
+  // Sync with backend
+  markAllNotificationsRead(type)
+    .then(() => syncNotifications())
+    .catch((err) => console.error("Failed to mark all read on backend:", err))
 }
 
 /**
@@ -132,4 +181,3 @@ export function markAllAsRead(type?: 'sediment' | 'glitch' | 'trace') {
 export function useNotifications(): SedimentNotification[] {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
-
