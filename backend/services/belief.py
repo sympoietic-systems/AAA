@@ -15,13 +15,6 @@ class BeliefService:
             return {"beliefs": [], "proto_beliefs": [], "ghosts": [], "somatic": None,
                     "attractor_window": [], "spectral_margin": [], "ecosystem": None}
 
-        engine = getattr(state, "belief_metabolism", None)
-        if engine:
-            try:
-                engine._seed_initial_beliefs_if_needed(agent_id)
-            except Exception as e:
-                logger.error("Error seeding beliefs: %s", e)
-
         raw_beliefs = belief_repo.list_beliefs(agent_id)
         beliefs_list = []
         proto_beliefs_list = []

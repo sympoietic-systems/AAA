@@ -1,7 +1,14 @@
 from fastapi import APIRouter, HTTPException, Request
 import logging
 
-from backend.api.schemas import DbSkillsResponse, SkillsResponse, WorkshopActionRequest, WorkshopResponse
+from backend.api.schemas import (
+    DbSkillInfo,
+    DbSkillsResponse,
+    SkillsResponse,
+    SkillUpdateRequest,
+    WorkshopActionRequest,
+    WorkshopResponse,
+)
 from backend.services.skill import SkillService
 
 logger = logging.getLogger(__name__)
@@ -33,6 +40,21 @@ async def get_db_skills(request: Request):
                 len(result.get("on_demand", [])),
                 len(result.get("all", [])))
     return result
+
+
+@router.put("/skills/{skill_id}", response_model=DbSkillInfo)
+async def update_skill(skill_id: str, body: SkillUpdateRequest, request: Request):
+    service = SkillService(request.app.state)
+    try:
+        result = await service.update_skill_details(
+            skill_id=skill_id,
+            description=body.description,
+            content=body.content,
+            trigger_keywords=body.trigger_keywords
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/skills/workshop/{action}", response_model=WorkshopResponse)

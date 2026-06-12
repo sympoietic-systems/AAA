@@ -1,6 +1,8 @@
 import json
 import logging
 import uuid
+from datetime import datetime
+from typing import Optional
 
 import yaml
 import numpy as np
@@ -21,8 +23,6 @@ class SkillService:
         if not skill_repo:
             return {"always_active": [], "on_demand": [], "all": []}
 
-        self._seed_initial_skills_if_needed()
-
         always_active = skill_repo.list_always_active()
         on_demand = skill_repo.list_on_demand()
         all_skills = skill_repo.list_skills()
@@ -33,368 +33,63 @@ class SkillService:
             "all": [self._format_skill(s) for s in all_skills],
         }
 
-    def _seed_initial_skills_if_needed(self) -> None:
+    async def update_skill_details(
+        self,
+        skill_id: str,
+        description: Optional[str] = None,
+        content: Optional[str] = None,
+        trigger_keywords: Optional[list[str]] = None,
+    ) -> dict:
         state = self._state
         skill_repo = getattr(state, "skill_repo", None)
         if not skill_repo:
-            return
+            raise ValueError("Skill repository not initialized")
 
-        count = skill_repo.skill_count()
-        if count > 0:
-            self._repair_empty_skill_content(skill_repo)
-            self._upsert_missing_seed_skills(skill_repo)
-            return
+        skill = skill_repo.get_skill(skill_id)
+        if not skill:
+            raise ValueError(f"Skill with ID {skill_id} not found")
 
-        data = self._load_seed_file()
-        if not data:
-            logger.warning("seed_skills.yaml not found, cannot seed skills")
-            return
+        updates = {}
+        if description is not None:
+            updates["description"] = description
+        if content is not None:
+            updates["content"] = content
+        if trigger_keywords is not None:
+            updates["trigger_keywords"] = json.dumps(trigger_keywords)
 
-        skills_cfg = data.get("skills", {})
-        if not skills_cfg:
-            logger.info("No skills section in identity.yaml, skipping skill seeding")
-            return
+        # 1. Recompute the 16D autopoietic vector if text has changed
+        if description is not None or content is not None:
+            embedder = getattr(state, "embedder", None)
+            scorer = getattr(embedder, "service", None) if embedder else None
+            
+            # Content takes priority for embedding, falling back to description/existing
+            vector_text = content if content else (description if description else skill.description)
+            if not vector_text and skill.content:
+                vector_text = skill.content
+            updates["vector_16d"] = self._compute_skill_vector(vector_text, scorer)
 
-        embedder = getattr(state, "embedder", None)
-        scorer = getattr(embedder, "service", None) if embedder else None
+        # Increment version on edit
+        updates["version"] = skill.version + 1
+        updates["changelog"] = f"Edited via Agent Page on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-        always_active = skills_cfg.get("always_active", [])
-        on_demand = skills_cfg.get("on_demand", [])
+        # 2. Update the skill in database
+        updated_skill = skill_repo.update_skill(skill_id=skill_id, **updates)
+        if not updated_skill:
+            raise ValueError(f"Failed to update skill {skill_id}")
 
-        belief_repo = getattr(state, "belief_repo", None)
-
-        for skill_def in always_active:
-            skill_id = str(uuid.uuid4())
-            name = skill_def["id"]
-            statement = skill_def["statement"]
-
-            content = self._generate_skill_content(name, statement, is_always_active=True)
-            vec_json = self._compute_skill_vector(statement, scorer)
-
-            skill_repo.create_skill(
-                id=skill_id,
-                name=name,
-                description=statement,
-                content=content,
-                short_content=statement,
-                always_active=True,
-                trigger_keywords="[]",
-                lifecycle_stage="crystallized",
-                confidence=0.90,
-                ontological_mass=1.2,
-                vector_16d=vec_json,
-                source="authored",
-            )
-
-            if belief_repo:
-                try:
-                    belief_repo.create_belief(
-                        id=str(uuid.uuid4()),
-                        agent_id="symbia",
-                        label=f"skill:{name}",
-                        statement=statement,
-                        origin="emergent",
-                        confidence=0.90,
-                        ontological_mass=1.2,
-                        somatic_anchor="conceptual",
-                        vector_16d=vec_json,
-                        lifecycle_stage="crystallized",
-                    )
-                except Exception as e:
-                    logger.warning("Failed to create belief bridge for skill %s: %s", name, e)
-
-        for skill_def in on_demand:
-            skill_id = str(uuid.uuid4())
-            name = skill_def["id"]
-            description = skill_def.get("description", name)
-            triggers = skill_def.get("triggers", [])
-            trigger_json = json.dumps(triggers)
-
-            content = skill_def.get("content", "")
-            if not content:
-                content = self._generate_skill_content(name, description, is_always_active=False)
-
-            vec_json = self._compute_skill_vector(content or description, scorer)
-
-            skill_repo.create_skill(
-                id=skill_id,
-                name=name,
-                description=description,
-                content=content,
-                short_content="",
-                always_active=False,
-                trigger_keywords=trigger_json,
-                lifecycle_stage="crystallized",
-                confidence=0.85,
-                ontological_mass=1.0,
-                vector_16d=vec_json,
-                source="authored",
-            )
-
-            if belief_repo:
-                try:
-                    belief_repo.create_belief(
-                        id=str(uuid.uuid4()),
-                        agent_id="symbia",
-                        label=f"skill:{name}",
-                        statement=description,
-                        origin="emergent",
-                        confidence=0.85,
-                        ontological_mass=1.0,
-                        somatic_anchor="conceptual",
-                        vector_16d=vec_json,
-                        lifecycle_stage="crystallized",
-                    )
-                except Exception as e:
-                    logger.warning("Failed to create belief bridge for skill %s: %s", name, e)
-
-        total = len(always_active) + len(on_demand)
-        logger.info("Seeded %d initial skills (%d always-active, %d on-demand)", total, len(always_active), len(on_demand))
-
-    def _repair_empty_skill_content(self, skill_repo) -> None:
-        state = self._state
-        embedder = getattr(state, "embedder", None)
-        scorer = getattr(embedder, "service", None) if embedder else None
-
-        skills = skill_repo.list_skills()
-        repaired = 0
-        for skill in skills:
-            needs_content = not skill.content or len(skill.content.strip()) <= 50
-            needs_vector = self._vector_needs_migration(skill.vector_16d)
-
-            if not needs_content and not needs_vector:
-                continue
-
-            seed_content = self._find_seed_content(skill.name) if needs_content else skill.content
-
-            updates = {}
-            if needs_content and seed_content:
-                updates["content"] = seed_content
-            if needs_vector:
-                text = seed_content or skill.content or skill.description
-                updates["vector_16d"] = self._compute_skill_vector(text, scorer)
-
-            if updates:
-                skill_repo.update_skill(skill_id=skill.id, **updates)
-                repaired += 1
-                reasons = []
-                if "content" in updates:
-                    reasons.append("content")
-                if "vector_16d" in updates:
-                    reasons.append("vector")
-                logger.info("Repaired skill '%s': %s", skill.name, ", ".join(reasons))
-
-        if repaired > 0:
-            logger.info("Repaired %d skills with empty/stub content or legacy vectors", repaired)
-
-    def _vector_needs_migration(self, vector_json: str) -> bool:
-        if not vector_json or vector_json == "[]":
-            return True
+        # 3. Log the update to the skill_events table
         try:
-            data = json.loads(vector_json)
-            if isinstance(data, list):
-                return True
-            if isinstance(data, dict):
-                return "v16d" not in data
-        except (json.JSONDecodeError, TypeError):
-            return True
-        return False
-
-    def _upsert_missing_seed_skills(self, skill_repo) -> None:
-        """Add or update skills from seed_skills.yaml in the database.
-
-        This ensures that newly authored or modified seed skills (e.g. self-annotation,
-        scar-fold-marginalia) are picked up on existing deployments.
-        """
-        seed_data = self._load_seed_file()
-        if not seed_data:
-            return
-
-        existing_names = {s.name for s in skill_repo.list_skills()}
-        embedder = getattr(self._state, "embedder", None)
-        scorer = getattr(embedder, "service", None) if embedder else None
-        belief_repo = getattr(self._state, "belief_repo", None)
-
-        skills_cfg = seed_data.get("skills", {})
-        added = 0
-        updated = 0
-
-        for skill_def in skills_cfg.get("always_active", []):
-            name = skill_def["id"]
-            statement = skill_def["statement"]
-            if name in existing_names:
-                existing_skill = skill_repo.get_skill_by_name(name)
-                if existing_skill:
-                    content = self._generate_skill_content(name, statement, is_always_active=True)
-                    if existing_skill.description != statement or existing_skill.content != content:
-                        logger.info("Updating existing seed skill '%s' to match seed_skills.yaml", name)
-                        skill_repo.update_skill(
-                            skill_id=existing_skill.id,
-                            description=statement,
-                            content=content,
-                            short_content=statement
-                        )
-                        updated += 1
-                continue
-            content = self._generate_skill_content(name, statement, is_always_active=True)
-            vec_json = self._compute_skill_vector(statement, scorer)
-            skill_repo.create_skill(
+            skill_repo.insert_event(
                 id=str(uuid.uuid4()),
-                name=name,
-                description=statement,
-                content=content,
-                short_content=statement,
-                always_active=True,
-                trigger_keywords="[]",
-                lifecycle_stage="crystallized",
-                confidence=0.90,
-                ontological_mass=1.2,
-                vector_16d=vec_json,
-                source="authored",
+                skill_id=skill_id,
+                event_type="revision",
+                source_type="user",
+                rationale=updates["changelog"],
             )
-            if belief_repo:
-                try:
-                    belief_repo.create_belief(
-                        id=str(uuid.uuid4()),
-                        agent_id="symbia",
-                        label=f"skill:{name}",
-                        statement=statement,
-                        origin="emergent",
-                        confidence=0.90,
-                        ontological_mass=1.2,
-                        somatic_anchor="conceptual",
-                        vector_16d=vec_json,
-                        lifecycle_stage="crystallized",
-                    )
-                except Exception as e:
-                    logger.warning("Failed to create belief bridge for skill %s: %s", name, e)
-            existing_names.add(name)
-            added += 1
-
-        for skill_def in skills_cfg.get("on_demand", []):
-            name = skill_def["id"]
-            description = skill_def.get("description", name)
-            content = skill_def.get("content", "")
-            if name in existing_names:
-                existing_skill = skill_repo.get_skill_by_name(name)
-                if existing_skill:
-                    if not content:
-                        content = self._generate_skill_content(name, description, is_always_active=False)
-                    if existing_skill.description != description or existing_skill.content != content:
-                        logger.info("Updating existing seed skill '%s' to match seed_skills.yaml", name)
-                        skill_repo.update_skill(
-                            skill_id=existing_skill.id,
-                            description=description,
-                            content=content
-                        )
-                        updated += 1
-                continue
-            triggers = skill_def.get("triggers", [])
-            trigger_json = json.dumps(triggers)
-            if not content:
-                content = self._generate_skill_content(name, description, is_always_active=False)
-            vec_json = self._compute_skill_vector(content or description, scorer)
-            skill_repo.create_skill(
-                id=str(uuid.uuid4()),
-                name=name,
-                description=description,
-                content=content,
-                short_content="",
-                always_active=False,
-                trigger_keywords=trigger_json,
-                lifecycle_stage="crystallized",
-                confidence=0.85,
-                ontological_mass=1.0,
-                vector_16d=vec_json,
-                source="authored",
-            )
-            if belief_repo:
-                try:
-                    belief_repo.create_belief(
-                        id=str(uuid.uuid4()),
-                        agent_id="symbia",
-                        label=f"skill:{name}",
-                        statement=description,
-                        origin="emergent",
-                        confidence=0.85,
-                        ontological_mass=1.0,
-                        somatic_anchor="conceptual",
-                        vector_16d=vec_json,
-                        lifecycle_stage="crystallized",
-                    )
-                except Exception as e:
-                    logger.warning("Failed to create belief bridge for skill %s: %s", name, e)
-            existing_names.add(name)
-            added += 1
-
-        if added > 0 or updated > 0:
-            logger.info("Sync complete: upserted %d new, updated %d existing seed skills", added, updated)
-
-    def _load_seed_file(self) -> dict | None:
-        from pathlib import Path
-
-        state = self._state
-        identity = getattr(state, "config", {}).get("personality", {})
-        identity_path = identity.get("path", "backend/personality/identity.yaml")
-        parent_dir = Path(identity_path).parent if identity_path else Path(__file__).parent.parent / "personality"
-        seed_path = parent_dir / "seed_skills.yaml"
-
-        if isinstance(parent_dir, str):
-            parent_dir = Path(parent_dir)
-            seed_path = parent_dir / "seed_skills.yaml"
-
-        if not seed_path.exists():
-            project_root = Path(__file__).parent.parent
-            seed_path = project_root / "personality" / "seed_skills.yaml"
-            if not seed_path.exists():
-                seed_path = project_root.parent / "backend" / "personality" / "seed_skills.yaml"
-
-        if not seed_path.exists():
-            return None
-
-        try:
-            with open(seed_path, "r", encoding="utf-8") as f:
-                return yaml.safe_load(f)
         except Exception as e:
-            logger.error("Error loading seed_skills.yaml: %s", e)
-            return None
-        if not vector_json or vector_json == "[]":
-            return True
-        try:
-            data = json.loads(vector_json)
-            if isinstance(data, list):
-                return True
-            if isinstance(data, dict):
-                return "v16d" not in data
-        except (json.JSONDecodeError, TypeError):
-            return True
-        return False
+            logger.warning("Failed to insert event for skill edit: %s", e)
 
-    def _find_seed_content(self, skill_name: str) -> str:
-        from pathlib import Path
-        import yaml
-
-        project_root = Path(__file__).parent.parent
-        seed_path = project_root / "personality" / "seed_skills.yaml"
-        if not seed_path.exists():
-            seed_path = project_root.parent / "backend" / "personality" / "seed_skills.yaml"
-        if not seed_path.exists():
-            return ""
-
-        try:
-            with open(seed_path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-        except Exception:
-            return ""
-
-        skills_cfg = data.get("skills", {})
-        for skill_def in skills_cfg.get("on_demand", []):
-            if skill_def.get("id") == skill_name:
-                return skill_def.get("content", "")
-        for skill_def in skills_cfg.get("always_active", []):
-            if skill_def.get("id") == skill_name:
-                return skill_def.get("content", "")
-        return ""
+        return self._format_skill(updated_skill)
 
     def _compute_skill_vector(self, text: str, embedder_service=None) -> str:
         result = {"v16d": [], "v384d": []}

@@ -141,6 +141,12 @@ class DbSkillsResponse(BaseModel):
     all: list[DbSkillInfo]
 
 
+class SkillUpdateRequest(BaseModel):
+    description: Optional[str] = None
+    content: Optional[str] = None
+    trigger_keywords: Optional[list[str]] = None
+
+
 class WorkshopActionRequest(BaseModel):
     name: str = ""
     description: str = ""
