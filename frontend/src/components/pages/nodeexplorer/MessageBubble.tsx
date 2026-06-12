@@ -176,9 +176,15 @@ export const MessageBubble = memo(function MessageBubble({
   // Compute siblings for navigation
   const currentIndex = siblingIds.indexOf(msg.id)
   const hasSiblings = siblingIds.length > 1
-  const processedContent = msg.content
-    ? msg.content.replace(/<scar_fold>/g, '<scar-fold>').replace(/<\/scar_fold>/g, '</scar-fold>')
-    : ""
+  let processedContent = msg.content || "";
+  processedContent = processedContent
+    .replace(/<scar_fold>/g, '<scar-fold>')
+    .replace(/<\/scar_fold>/g, '</scar-fold>')
+    .replace(/<note_entanglement\s+([^>]*?)>/g, (_, attrs) => {
+      const normalizedAttrs = attrs.replace(/\bnote_id=/g, 'data-note-id=');
+      return `<mark ${normalizedAttrs}>`;
+    })
+    .replace(/<\/note_entanglement>/g, '</mark>');
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
@@ -359,7 +365,7 @@ export const MessageBubble = memo(function MessageBubble({
 
   const renderNoteComponent = ({ node, ...props }: any) => {
     // Support both data-note-id (new split marks) and id (legacy marks)
-    let noteId = props["data-note-id"] || props.id;
+    let noteId = props["data-note-id"] || props.id || props["note_id"] || props["note-id"];
     if (noteId && noteId.startsWith("note-highlight-")) {
       noteId = noteId.replace("note-highlight-", "");
     }
@@ -367,7 +373,15 @@ export const MessageBubble = memo(function MessageBubble({
     if (!noteId) {
       return <mark {...props} className="bg-yellow-500/20 text-yellow-100 px-0.5 rounded" />;
     }
-    const note = notes.find((n: any) => n.id === noteId);
+    let note: any = notes.find((n: any) => n.id === noteId);
+    if (!note && props.comment) {
+      note = {
+        id: noteId,
+        comment: props.comment,
+        visibility: "agent",
+        selected_text: props.children ? String(props.children) : ""
+      };
+    }
     if (!note) {
       return (
         <span className="underline decoration-dotted decoration-gray-500 bg-transparent px-0.5 rounded cursor-help" title="Unloaded note">
@@ -451,6 +465,8 @@ export const MessageBubble = memo(function MessageBubble({
                 components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,
+                  'note_entanglement': renderNoteComponent,
+                  'note-entanglement': renderNoteComponent,
                   'scar-fold': () => null,
                   'scar_fold': () => null,
                 } as any}
@@ -467,6 +483,8 @@ export const MessageBubble = memo(function MessageBubble({
               components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,
+                  'note_entanglement': renderNoteComponent,
+                  'note-entanglement': renderNoteComponent,
                   'scar-fold': () => null,
                   'scar_fold': () => null,
                 } as any}

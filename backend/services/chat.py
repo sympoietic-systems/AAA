@@ -38,6 +38,7 @@ def process_self_annotations(
     3. **Scar-fold truncation** — ``<scar_fold>`` / ``<scar-fold>`` content
        is truncated to 200 characters as a safeguard.
     """
+    original_text = response_text
     # --- Convert echoed <note_entanglement> tags back to <mark> ---
     # The LLM sometimes copies note_entanglement tags from its context into the response.
     # Convert them to proper <mark> tags so the frontend can render them as highlights.
@@ -126,8 +127,6 @@ def process_self_annotations(
             "Self-annotation: created %d note(s) for message %d",
             len(annotations_found), message_id,
         )
-        # Update stored message content with ID-bearing tags
-        message_repo.update_content(message_id, processed)
 
     # --- Scar-fold truncation safeguard ---
     def truncate_scar_fold(match):
@@ -139,8 +138,8 @@ def process_self_annotations(
 
     processed = re.sub(r'<(scar_fold|scar-fold)>([\s\S]*?)</\1>', truncate_scar_fold, processed)
 
-    # If scar folds were truncated, update stored content
-    if processed != response_text and not annotations_found:
+    # If any processing modified the original text, save it to database
+    if processed != original_text:
         message_repo.update_content(message_id, processed)
 
     return processed

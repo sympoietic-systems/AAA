@@ -62,6 +62,8 @@ def test_process_self_annotations():
     processed = process_self_annotations(text, "conv-1", 123, note_repo_mock, message_repo_mock)
     assert '<mark id="note-highlight-abc-123" data-note-id="abc-123">some quoted text</mark>' in processed
     assert "<note_entanglement" not in processed
+    assert message_repo_mock.update_content.called
+    message_repo_mock.update_content.assert_called_with(123, processed)
 
     print("All process_self_annotations tests passed!")
 
