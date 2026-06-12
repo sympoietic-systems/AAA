@@ -33,6 +33,44 @@ beliefs:
     confidence: 0.65
 """
 
+def _seed_initial_beliefs_if_needed(engine, agent_id: str) -> None:
+    import uuid
+    seed_path = Path(engine._identity_yaml_path).parent / "seed_beliefs.yaml"
+    with open(seed_path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    config_beliefs = data.get("beliefs", [])
+    for cb in config_beliefs:
+        label = cb.get("id")
+        statement = cb.get("statement")
+        confidence = cb.get("confidence", 0.5)
+        category = cb.get("category", "ontological")
+
+        if category == "foundational":
+            mass = 1.5
+        elif category == "ontological":
+            mass = 1.2
+        elif category == "methodological":
+            mass = 1.0
+        else:
+            mass = 1.0
+
+        vec = engine._scorer.score(statement)
+        vec_json = json.dumps(vec.tolist())
+
+        engine._belief_repo.create_belief(
+            id=str(uuid.uuid4()),
+            agent_id=agent_id,
+            label=label,
+            statement=statement,
+            origin="authored",
+            confidence=confidence,
+            ontological_mass=mass,
+            somatic_anchor="none",
+            vector_16d=vec_json,
+            lifecycle_stage="crystallized",
+        )
+
+
 def test_belief_seeding_and_db_migration():
     db_path = str(get_db_path("data/aaa_belief_test.db"))
     if os.path.exists(db_path):
@@ -58,8 +96,8 @@ def test_belief_seeding_and_db_migration():
             identity_yaml_path=Path(mock_yaml_path),
         )
         
-        # Seed beliefs using internal method
-        engine._seed_initial_beliefs_if_needed("symbia")
+        # Seed beliefs using helper function
+        _seed_initial_beliefs_if_needed(engine, "symbia")
         
         # Check database count
         beliefs = belief_repo.list_beliefs("symbia")
@@ -152,6 +190,8 @@ def test_coordinate_warping():
         finally:
             if os.path.exists(mock_yaml_path):
                 os.remove(mock_yaml_path)
+            if os.path.exists(mock_seed_path):
+                os.remove(mock_seed_path)
             conn.close()
             if os.path.exists(db_path):
                 os.remove(db_path)
@@ -183,7 +223,7 @@ def test_attractor_window_and_spectral_margin():
                 message_repo=message_repo,
                 identity_yaml_path=Path(mock_yaml_path),
             )
-            engine._seed_initial_beliefs_if_needed("symbia")
+            _seed_initial_beliefs_if_needed(engine, "symbia")
             
             # Make one belief collapsed (confidence < 0.20)
             beliefs = belief_repo.list_beliefs("symbia")
@@ -223,6 +263,8 @@ def test_attractor_window_and_spectral_margin():
         finally:
             if os.path.exists(mock_yaml_path):
                 os.remove(mock_yaml_path)
+            if os.path.exists(mock_seed_path):
+                os.remove(mock_seed_path)
             conn.close()
             if os.path.exists(db_path):
                 os.remove(db_path)
@@ -253,7 +295,7 @@ def test_perception_metabolism():
                 message_repo=message_repo,
                 identity_yaml_path=Path(mock_yaml_path),
             )
-            engine._seed_initial_beliefs_if_needed("symbia")
+            _seed_initial_beliefs_if_needed(engine, "symbia")
             
             # Initial confidence of glitch-as-voice is 0.90. Let's update it to 0.50 so we can observe confidence changes
             beliefs = belief_repo.list_beliefs("symbia")
@@ -296,6 +338,8 @@ def test_perception_metabolism():
         finally:
             if os.path.exists(mock_yaml_path):
                 os.remove(mock_yaml_path)
+            if os.path.exists(mock_seed_path):
+                os.remove(mock_seed_path)
             conn.close()
             if os.path.exists(db_path):
                 os.remove(db_path)

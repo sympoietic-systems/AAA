@@ -221,3 +221,46 @@ def test_belief_bridge_creation():
     assert len(skill_beliefs) == 1
     assert skill_beliefs[0].label == "skill:bridge-skill"
     assert skill_beliefs[0].confidence == 0.85
+
+
+async def test_service_update_skill_details():
+    from backend.services.skill import SkillService
+    
+    db_path = _setup_db("aaa_skill_service_test.db")
+    skill_repo = SkillRepository(db_path)
+    
+    class MockState:
+        def __init__(self):
+            self.skill_repo = skill_repo
+            self.embedder = None
+            
+    state = MockState()
+    
+    skill = skill_repo.create_skill(
+        id=str(uuid.uuid4()), name="service-skill", description="Original description",
+        content="Original content", lifecycle_stage="crystallized",
+    )
+    
+    service = SkillService(state)
+    updated = await service.update_skill_details(
+        skill_id=skill.id,
+        description="New description",
+        content="New content",
+        trigger_keywords=["word1", "word2"]
+    )
+    
+    assert updated["description"] == "New description"
+    assert updated["trigger_keywords"] == ["word1", "word2"]
+    
+    # Verify in DB
+    db_skill = skill_repo.get_skill(skill.id)
+    assert db_skill.description == "New description"
+    assert db_skill.content == "New content"
+    assert json.loads(db_skill.trigger_keywords) == ["word1", "word2"]
+    assert db_skill.version == 2
+    
+    # Verify event logged
+    events = skill_repo.list_events(skill.id)
+    assert len(events) == 1
+    assert events[0].event_type == "revision"
+    assert events[0].source_type == "user"

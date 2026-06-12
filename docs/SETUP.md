@@ -63,18 +63,25 @@ When enabled, the UI shows a collapsible `▶ thinking` section under responses.
 
 ## Run
 
-### 1. Seed Foundational Beliefs (one-time setup)
+### 1. Seed Foundational Beliefs & Skills (one-time setup)
 
-Before first run, seed Symbia's core philosophical commitments into the database:
+Before first run, seed Symbia's core philosophical commitments and procedural skills into the database:
 
 ```bash
+# Seed beliefs
 uv run python backend/scripts/seed_beliefs.py
 # → Seeds 8 foundational beliefs (glitch-as-voice, anti-hci, etc.)
 # → Safe to run multiple times — skips if authored beliefs already exist
 # → Use --force to re-seed alongside existing beliefs
+
+# Seed skills
+uv run python backend/scripts/seed_skills.py
+# → Seeds baseline dispositions and on-demand capabilities
+# → Safe to run multiple times — skips if skills already exist by default
+# → Use --force to overwrite/reset database skills to seed defaults
 ```
 
-Beliefs are defined in `backend/personality/seed_beliefs.yaml`. Format:
+Beliefs are defined in `backend/personality/seed_beliefs.yaml` and skills in `backend/personality/seed_skills.yaml`. Format:
 
 ```yaml
 beliefs:
