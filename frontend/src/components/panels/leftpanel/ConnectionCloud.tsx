@@ -647,10 +647,10 @@ function ConnectionCloud({
       const isFuture = !isNaN(srcId) && !isNaN(tgtId) && activePathIds.has(srcId) && !activePathIds.has(tgtId) && link.type === "parent"
       const futureColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
 
-      let strokeColor = "#1e293b"
+      let strokeColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
       let strokeWidth = 0.4
       let strokeDash: number[] = []
-      let opacity = 0.4
+      let opacity = 0.25
 
       if (isActive) {
         strokeColor = "#6bc28c"
