@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 from backend.storage.connection import with_connection
@@ -7,6 +8,42 @@ from backend.storage.row_mappers import _row_to_belief_event, _row_to_belief_nod
 
 
 class BeliefRepository(BaseRepository):
+    def validate_and_format_vector(self, vector_str: str) -> str:
+        fallback = [0.0] * 16
+        if not vector_str:
+            return json.dumps(fallback)
+        try:
+            data = json.loads(vector_str)
+        except Exception:
+            return json.dumps(fallback)
+
+        # Extract 16D array if it's in a dict format
+        if isinstance(data, dict):
+            if "v16d" in data and isinstance(data["v16d"], list):
+                data = data["v16d"]
+            else:
+                return json.dumps(fallback)
+
+        if not isinstance(data, list):
+            return json.dumps(fallback)
+
+        if len(data) == 0:
+            return json.dumps(fallback)
+
+        if len(data) != 16:
+            if len(data) < 16:
+                data = data + [0.0] * (16 - len(data))
+            else:
+                data = data[:16]
+
+        # Ensure all elements are floats/numbers
+        try:
+            data = [float(x) for x in data]
+        except (ValueError, TypeError):
+            return json.dumps(fallback)
+
+        return json.dumps(data)
+
     @with_connection
     def get_belief(self, agent_id: str, belief_id: str) -> Optional[BeliefNode]:
         conn = self._conn()
@@ -41,12 +78,13 @@ class BeliefRepository(BaseRepository):
         vector_16d: str,
         lifecycle_stage: str = "crystallized",
     ) -> BeliefNode:
+        validated_vector = self.validate_and_format_vector(vector_16d)
         conn = self._conn()
         conn.execute(
             """INSERT INTO belief_nodes
                (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage, last_reinforced_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-            (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage),
+            (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, validated_vector, lifecycle_stage),
         )
         conn.commit()
 
@@ -78,20 +116,21 @@ class BeliefRepository(BaseRepository):
         origin: str,
         lifecycle_stage: str | None = None,
     ) -> None:
+        validated_vector = self.validate_and_format_vector(vector_16d)
         conn = self._conn()
         if lifecycle_stage is not None:
             conn.execute(
                 """UPDATE belief_nodes
                    SET confidence = ?, vector_16d = ?, origin = ?, lifecycle_stage = ?, updated_at = CURRENT_TIMESTAMP
                    WHERE id = ?""",
-                (confidence, vector_16d, origin, lifecycle_stage, belief_id),
+                (confidence, validated_vector, origin, lifecycle_stage, belief_id),
             )
         else:
             conn.execute(
                 """UPDATE belief_nodes
                    SET confidence = ?, vector_16d = ?, origin = ?, updated_at = CURRENT_TIMESTAMP
                    WHERE id = ?""",
-                (confidence, vector_16d, origin, belief_id),
+                (confidence, validated_vector, origin, belief_id),
             )
         conn.commit()
 

@@ -98,6 +98,18 @@ class SkillWorkshopModule(ProcessingModule):
         skill_id = str(uuid.uuid4())
         trigger_json = json.dumps(trigger_keywords) if trigger_keywords else "[]"
 
+        vector_16d = "[]"
+        try:
+            from backend.modules.structural_engine import LexiconScorer
+            scorer = LexiconScorer()
+            text_to_score = content or description
+            v16d = scorer.score(text_to_score)
+            vector_dict = {"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d), "v384d": []}
+            vector_16d = json.dumps(vector_dict)
+        except Exception as se:
+            logger.warning("Failed to score proposed skill vector: %s", se)
+            vector_16d = json.dumps({"v16d": [0.0] * 16, "v384d": []})
+
         skill = self._skill_repo.create_skill(
             id=skill_id,
             name=name,
@@ -109,7 +121,7 @@ class SkillWorkshopModule(ProcessingModule):
             lifecycle_stage="nucleation",
             confidence=0.0,
             ontological_mass=0.05,
-            vector_16d="[]",
+            vector_16d=vector_16d,
             source="emergent",
         )
 
@@ -153,12 +165,29 @@ class SkillWorkshopModule(ProcessingModule):
 
         new_version = skill.version + 1
 
+        vector_16d = None
+        if content is not None or description is not None:
+            text_to_score = content if content is not None else skill.content
+            if not text_to_score:
+                text_to_score = description if description is not None else skill.description
+            
+            if text_to_score:
+                try:
+                    from backend.modules.structural_engine import LexiconScorer
+                    scorer = LexiconScorer()
+                    v16d = scorer.score(text_to_score)
+                    vector_dict = {"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d), "v384d": []}
+                    vector_16d = json.dumps(vector_dict)
+                except Exception as se:
+                    logger.warning("Failed to score revised skill vector: %s", se)
+
         updated = self._skill_repo.update_skill(
             skill_id=skill.id,
             content=content,
             description=description,
             version=new_version,
             changelog=changelog,
+            vector_16d=vector_16d,
         )
 
         if not updated:
