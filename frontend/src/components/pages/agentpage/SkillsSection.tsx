@@ -20,22 +20,27 @@ interface SkillListItemProps {
 function SkillListItem({ s, isSelected, isBaseline }: SkillListItemProps) {
   const isCollapsed = s.lifecycle_stage === "collapsed"
   const isProposed = s.lifecycle_stage === "nucleation"
+  const isMerged = isCollapsed && s.changelog?.startsWith("Merged")
   
   const iconColor = isBaseline 
     ? "text-[#a78bfa]" 
-    : isCollapsed 
-      ? "text-[#ef4444]" 
-      : isProposed 
-        ? "text-[#a78bfa]" 
-        : "text-[#4ade80]"
+    : isMerged
+      ? "text-[#c084fc]"
+      : isCollapsed 
+        ? "text-[#ef4444]" 
+        : isProposed 
+          ? "text-[#a78bfa]" 
+          : "text-[#4ade80]"
         
   const icon = isBaseline 
     ? "◆" 
-    : isCollapsed 
-      ? "✖" 
-      : isProposed 
-        ? "▲" 
-        : "◇"
+    : isMerged
+      ? "⎋"
+      : isCollapsed 
+        ? "✖" 
+        : isProposed 
+          ? "▲" 
+          : "◇"
 
   return (
     <div
@@ -286,8 +291,16 @@ function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }:
 
       {/* Refusal Reason (if collapsed) */}
       {skill.lifecycle_stage === "collapsed" && skill.refusal_reason && (
-        <div className="shrink-0 border border-[#ef4444]/20 bg-[#ef4444]/5 p-2 rounded text-[10.5px] leading-relaxed text-[#ef4444]/90 font-serif">
-          <div className="text-[#ef4444]/60 font-mono text-[9px] uppercase font-bold tracking-wider mb-0.5">[ Refusal Rationale ]</div>
+        <div className={`shrink-0 border p-2 rounded text-[10.5px] leading-relaxed font-serif ${
+          skill.changelog?.startsWith("Merged")
+            ? "border-[#a78bfa]/20 bg-[#a78bfa]/5 text-[#a78bfa]/90"
+            : "border-[#ef4444]/20 bg-[#ef4444]/5 text-[#ef4444]/90"
+        }`}>
+          <div className={`font-mono text-[9px] uppercase font-bold tracking-wider mb-0.5 ${
+            skill.changelog?.startsWith("Merged") ? "text-[#a78bfa]/60" : "text-[#ef4444]/60"
+          }`}>
+            {skill.changelog?.startsWith("Merged") ? "[ Integration Rationale ]" : "[ Refusal Rationale ]"}
+          </div>
           {skill.refusal_reason}
         </div>
       )}
@@ -696,7 +709,7 @@ function SkillsSectionComponent() {
           {collapsed.length > 0 && (
             <div className="mt-2.5">
               <div className="text-[#ef4444] font-mono text-[9px] uppercase tracking-wider pb-0.5">
-                Refused Proposals ({collapsed.length})
+                Refused / Integrated Proposals ({collapsed.length})
               </div>
               {collapsed.map(s => (
                 <SkillListItem key={s.id} s={s} isSelected={!isAdding && selectedName === s.name} isBaseline={false} />
