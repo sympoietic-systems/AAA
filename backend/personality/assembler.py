@@ -103,19 +103,27 @@ class PromptAssemblerModule(ProcessingModule):
 
         system_msg = {"role": "system", "content": system_content}
 
-        # Build procedural sediment with full loaded skill instructions
+        # Build procedural sediment with full loaded and always-active skill instructions
         procedural_sediment_block = []
-        if loaded_skills:
-            proc_parts = []
-            for skill in loaded_skills:
-                content = skill.get("content_truncated", skill.get("content", ""))
-                if content:
-                    proc_parts.append(f"### {skill['name']}\n{content}")
-            if proc_parts:
-                procedural_sediment_block = [{
-                    "role": "system",
-                    "content": "--- BEGIN PROCEDURAL SEDIMENT ---\n" + "\n\n".join(proc_parts) + "\n--- END PROCEDURAL SEDIMENT ---"
-                }]
+        proc_parts = []
+
+        # 1. Include always-active skills full instructions
+        for skill in always_active_skills:
+            content = skill.get("content", "")
+            if content:
+                proc_parts.append(f"### {skill['name']} [Always-Active]\n{content}")
+
+        # 2. Include dynamically loaded on-demand skills full instructions
+        for skill in loaded_skills:
+            content = skill.get("content_truncated", skill.get("content", ""))
+            if content:
+                proc_parts.append(f"### {skill['name']} [Loaded Dynamic]\n{content}")
+
+        if proc_parts:
+            procedural_sediment_block = [{
+                "role": "system",
+                "content": "--- BEGIN PROCEDURAL SEDIMENT ---\n" + "\n\n".join(proc_parts) + "\n--- END PROCEDURAL SEDIMENT ---"
+            }]
 
         messages = payload.get("messages", [])
         sediment_messages = payload.get("sediment_messages", [])

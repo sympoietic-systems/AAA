@@ -52,7 +52,11 @@ class SkillActivatorModule(ProcessingModule):
         on_demand_skills = [s for s in all_skills if not s.always_active]
 
         payload["always_active_skills"] = [
-            {"name": s.name, "short_content": s.short_content or s.description}
+            {
+                "name": s.name,
+                "short_content": s.short_content or s.description,
+                "content": s.content or "",
+            }
             for s in always_active_skills
         ]
         payload["on_demand_skills"] = [
