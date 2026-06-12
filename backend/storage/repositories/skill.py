@@ -85,6 +85,7 @@ class SkillRepository(BaseRepository):
         vector_16d: str = "[]",
         source: str = "authored",
         changelog: str = "",
+        version_source: str = "user",
     ) -> SkillNode:
         conn = self._conn()
         conn.execute(
@@ -103,9 +104,9 @@ class SkillRepository(BaseRepository):
             import uuid
             conn.execute(
                 """INSERT OR IGNORE INTO skill_versions
-                   (id, skill_id, version, content, description, trigger_keywords, changelog)
-                   VALUES (?, ?, 1, ?, ?, ?, ?)""",
-                (str(uuid.uuid4()), node.id, node.content, node.description, node.trigger_keywords, node.changelog),
+                   (id, skill_id, version, content, description, trigger_keywords, changelog, source)
+                   VALUES (?, ?, 1, ?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), node.id, node.content, node.description, node.trigger_keywords, node.changelog, version_source),
             )
             conn.commit()
         except Exception as ve:
@@ -128,6 +129,7 @@ class SkillRepository(BaseRepository):
         version: int = None,
         changelog: str = None,
         attunement_notes: str = None,
+        version_source: str = "user",
     ) -> Optional[SkillNode]:
         conn = self._conn()
         row = conn.execute("SELECT * FROM skill_nodes WHERE id = ?", (skill_id,)).fetchone()
@@ -172,9 +174,9 @@ class SkillRepository(BaseRepository):
                 import uuid
                 conn.execute(
                     """INSERT OR IGNORE INTO skill_versions
-                       (id, skill_id, version, content, description, trigger_keywords, changelog)
-                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                    (str(uuid.uuid4()), node.id, node.version, node.content, node.description, node.trigger_keywords, node.changelog),
+                       (id, skill_id, version, content, description, trigger_keywords, changelog, source)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (str(uuid.uuid4()), node.id, node.version, node.content, node.description, node.trigger_keywords, node.changelog, version_source),
                 )
                 conn.commit()
             except Exception as ve:
@@ -256,10 +258,37 @@ class SkillRepository(BaseRepository):
         return [_row_to_skill_event(r) for r in rows]
 
     @with_connection
+    def list_recent_events(self, limit: int = 50) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            """
+            SELECT e.id, e.skill_id, e.event_type, e.source_type, e.rationale, e.annotation, e.created_at, s.name
+            FROM skill_events e
+            JOIN skill_nodes s ON e.skill_id = s.id
+            ORDER BY e.created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [
+            {
+                "id": r[0],
+                "skill_id": r[1],
+                "event_type": r[2],
+                "source_type": r[3],
+                "rationale": r[4],
+                "annotation": r[5],
+                "created_at": r[6] if isinstance(r[6], str) else r[6].isoformat() if r[6] else "",
+                "skill_name": r[7],
+            }
+            for r in rows
+        ]
+
+    @with_connection
     def list_versions(self, skill_id: str) -> list[dict]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT version, content, description, trigger_keywords, changelog, created_at FROM skill_versions WHERE skill_id = ? ORDER BY version DESC",
+            "SELECT version, content, description, trigger_keywords, changelog, created_at, source FROM skill_versions WHERE skill_id = ? ORDER BY version DESC",
             (skill_id,),
         ).fetchall()
         return [
@@ -270,6 +299,7 @@ class SkillRepository(BaseRepository):
                 "trigger_keywords": json.loads(r[3]) if r[3] else [],
                 "changelog": r[4],
                 "created_at": r[5],
+                "source": r[6] if len(r) > 6 else "user",
             }
             for r in rows
         ]

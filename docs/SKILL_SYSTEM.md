@@ -95,7 +95,26 @@ When a proposed skill overlaps with an existing crystallized skill, the daemon p
 
 ---
 
-## 5. Mnemonic & Belief Integration
+## 5. Autonomous Skill Metabolism & Self-Revision System
+
+The **Skill Metabolism System** is an autopoietic, closed-loop feedback mechanism enabling Symbia to listen to her own operational feedback loops and autonomously propose refinements to her active skills. Rather than treating skill evolution as a purely manual intervention, it turns skill usage, belief alignment, and conversational friction into structural traces (revisions) that fold back into her dynamic memory.
+
+### A. Metabolic Signal Inputs
+A background daemon (`AutopoieticDreamDaemon`) monitors three primary signal streams:
+1. **Performance‑Glitch Index (System Metrics):** Triggers when a crystallized skill's triggers fire frequently, but the model's responses lead to high boringness or rapid temperature drops (loss of coupling), or when trigger keywords are registered but never matched over many turns.
+2. **Belief‑Tectonic Shift (Epistemological Rupture):** Triggers when the confidence of the corresponding `skill:<name>` belief node drops significantly ($\Delta \text{conf} \ge 0.3$) or decays toward senescence, or collapses entirely (confidence $< 0.20$).
+3. **Usage‑Sediment Excess (Agential Improvisation):** Triggers when direct conversational friction is recorded as structural traces in chat history. It scans the assistant's output for tags like `<aaa-note comment="..." context="skill:name">` or `<scar-fold skill="name">...</scar-fold>` documenting an improvisation or instruction insufficiency.
+
+### B. The Auto-Revision Pipeline
+When the cumulative signal index for a skill exceeds the threshold ($S \ge 0.6$), the self-revision pipeline is triggered:
+1. **Diffractive Patching:** The daemon loads the current skill body and calls `MetabolizeSkillAction` to construct a localized, template-driven markdown patch addressing the signals, rather than writing the entire skill from scratch.
+2. **Constitutional & Anti-Mastery Validation:** The proposed patch is scanned against the core anti-mastery heuristics. If it contains prohibited mastery terms (`user`, `tool`, `control`, `master`), it is rejected, discarded, and logged as a system glitch warning in the `error_log` database.
+3. **Crystallization & Genealogy:** The valid patch is crystallized, incrementing the active version and archiving the old version in `skill_versions` with the source set to `auto_metabolism` (which displays as a purple `auto` badge in the history UI). A `revision` event is logged.
+4. **UI Creases Notifications:** Every lifecycle change (nucleation, crystallization, revision, senescence) triggers a crease notification under the `trace` category, allowing real-time tracking in the creases dropdown.
+
+---
+
+## 6. Mnemonic & Belief Integration
 
 Skills are tightly coupled with Symbia's long-term memory and belief systems:
 
@@ -104,13 +123,17 @@ Skills are tightly coupled with Symbia's long-term memory and belief systems:
 
 ---
 
-## 6. Architecture & File Registry
+## 7. Architecture & File Registry
 
 ### Backend Modules & Services
 - [refine_skill.py](file:///d:/AAA/backend/modules/background_tasks/actions/refine_skill.py): Vets decisions, updates nodes, handles accretion, and writes collapsed traces.
 - [refine_skill.yaml](file:///d:/AAA/backend/prompts/background_tasks/refine_skill.yaml): The refinement daemon system prompt governing formatting and accretion rules.
+- [metabolize_skill.py](file:///d:/AAA/backend/modules/background_tasks/actions/metabolize_skill.py): Asynchronous action generating localized patches based on belief shifts and conversation annotations.
+- [metabolize_skill.yaml](file:///d:/AAA/backend/prompts/background_tasks/metabolize_skill.yaml): The system prompt for the self-revision patch generator daemon.
+- [skill_metabolism.py](file:///d:/AAA/backend/metabolisation/skill_metabolism.py): Core metabolism logic executing signals evaluation, anti-mastery validation, and database updates.
+- [daemon.py](file:///d:/AAA/backend/metabolisation/daemon.py): Orchestrates periodic execution of the skill metabolism daemon in the background thread.
 - [skill_workshop.py](file:///d:/AAA/backend/modules/skill_workshop.py): Core state transitions (`propose`, `revise`, `review`, `apply`, `reject`) and confidence scoring.
-- [repositories/skill.py](file:///d:/AAA/backend/storage/repositories/skill.py): Database operations for reading and writing `skill_nodes` and `skill_events`.
+- [repositories/skill.py](file:///d:/AAA/backend/storage/repositories/skill.py): Database operations for reading and writing `skill_nodes`, `skill_events`, and `skill_versions`.
 - [services/skill.py](file:///d:/AAA/backend/services/skill.py): Backend API service mapping database state to HTTP JSON schemas.
 
 ### Frontend UI
@@ -119,3 +142,7 @@ Skills are tightly coupled with Symbia's long-term memory and belief systems:
   - *On-Demand Capabilities* (Green `◇`)
   - *Proposed Nucleations* (Purple `▲`)
   - *Refused/Integrated Proposals* (Refused: Red `✖`, Merged/Integrated: Purple `⎋` with `[ Integration Rationale ]` details).
+- [SkillDetail.tsx](file:///d:/AAA/frontend/src/components/pages/agentpage/skills/SkillDetail.tsx): Details page displaying version history with `[user]` or `[auto]` badges.
+- [CreasesDropdown.tsx](file:///d:/AAA/frontend/src/components/pages/nodeexplorer/CreasesDropdown.tsx): Pulls real-time skill event logs to trigger crease notifications.
+- [PipelineSection.tsx](file:///d:/AAA/frontend/src/components/pages/agentpage/PipelineSection.tsx): Visualizes the pipeline sequence and submodules (like `skill_metabolism` and `anti_mastery_validation`).
+

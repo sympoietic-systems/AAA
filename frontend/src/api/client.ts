@@ -1012,3 +1012,20 @@ export async function getSpectralSuggestions(
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+export interface SkillEventInfo {
+  id: string
+  skill_id: string
+  event_type: 'emergence' | 'crystallization' | 'revision' | 'collapse'
+  source_type: string
+  rationale: string
+  annotation: string
+  created_at: string
+  skill_name: string
+}
+
+export async function getSkillEvents(limit = 50): Promise<SkillEventInfo[]> {
+  const res = await fetch(`${BASE}/skills/events?limit=${limit}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}

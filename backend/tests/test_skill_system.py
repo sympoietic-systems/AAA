@@ -500,4 +500,54 @@ def test_skills_version_api():
             del os.environ["AAA_AGENT_FLUX"]
 
 
+def test_list_recent_events():
+    db_path = _setup_db("aaa_skill_recent_events_test.db")
+    repo = SkillRepository(db_path)
+
+    skill = repo.create_skill(
+        id=str(uuid.uuid4()), name="recent-event-skill", description="Recent event test",
+        content="# Recent Events",
+    )
+
+    repo.insert_event(
+        id=str(uuid.uuid4()), skill_id=skill.id,
+        event_type="emergence", source_type="user",
+        rationale="Initial creation",
+    )
+
+    events = repo.list_recent_events(limit=5)
+    assert len(events) == 1
+    assert events[0]["skill_name"] == "recent-event-skill"
+    assert events[0]["event_type"] == "emergence"
+    assert events[0]["source_type"] == "user"
+    assert events[0]["rationale"] == "Initial creation"
+
+
+def test_skills_events_api():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    
+    db_path = _setup_db("aaa_skill_events_api_test.db")
+    skill_repo = SkillRepository(db_path)
+    app.state.skill_repo = skill_repo
+    
+    skill = skill_repo.create_skill(
+        id=str(uuid.uuid4()), name="api-event-skill", description="desc", content="content"
+    )
+    skill_repo.insert_event(
+        id=str(uuid.uuid4()), skill_id=skill.id,
+        event_type="emergence", source_type="user",
+        rationale="Proposed",
+    )
+    
+    client = TestClient(app)
+    res = client.get("/api/skills/events?limit=10")
+    assert res.status_code == 200
+    events = res.json()
+    assert len(events) >= 1
+    assert events[0]["skill_name"] == "api-event-skill"
+    assert events[0]["event_type"] == "emergence"
+
+
+
 

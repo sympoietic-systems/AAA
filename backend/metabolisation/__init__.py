@@ -14,6 +14,7 @@ from backend.metabolisation.mass_decay import MassDecayMixin
 from backend.metabolisation.dream_context import DreamContextMixin
 from backend.metabolisation.dream_prompts import DreamPromptMixin
 from backend.metabolisation.dream_executor import DreamExecutorMixin
+from backend.metabolisation.skill_metabolism import SkillMetabolismMixin
 from backend.metabolisation.daemon import AutopoieticDreamDaemon
 
 __all__ = [
@@ -31,5 +32,6 @@ __all__ = [
     "DreamContextMixin",
     "DreamPromptMixin",
     "DreamExecutorMixin",
+    "SkillMetabolismMixin",
     "AutopoieticDreamDaemon",
 ]

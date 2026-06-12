@@ -76,6 +76,10 @@ def register_all(registry: PipelineRegistry, embedder, modules: dict, belief_met
         name="skill_workshop", description="Propose, revise, review, apply, and reject procedural skills with three-tier approval and diffractive anti-mastery assessment",
         category="action", always_run=False,
         triggers=["skill workshop", "create skill", "new skill", "develop skill", "load skill", "review skill"],
+        children=[
+            ModuleMeta(name="skill_metabolism", description="Asynchronous metabolic loop analyzing performance decay, belief-tectonic shifts, and conversation friction to trigger LLM patches", category="action"),
+            ModuleMeta(name="anti_mastery_validation", description="Heuristic filter rejecting self-revisions containing prohibited master/control/user/tool vocabulary", category="action"),
+        ],
     ))
     reg.register_with_meta("sedimentation_retrieval", lambda: modules["sedimentation_retrieval"], ModuleMeta(
         name="sedimentation_retrieval", description="Retrieves semantically relevant messages from other conversations via embedding similarity",

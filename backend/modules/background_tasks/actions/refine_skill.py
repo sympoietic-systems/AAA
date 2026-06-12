@@ -180,6 +180,7 @@ Active Skills already in Symbia's database:
                     vector_16d=vector_16d,
                     version=new_version,
                     changelog=refined_changelog,
+                    version_source="auto_metabolism",
                 )
                 
                 # Log revision event
@@ -208,6 +209,7 @@ Active Skills already in Symbia's database:
                         confidence=0.0,
                         source="emergent",
                         changelog=f"Merged into {target_skill.name}",
+                        version_source="auto_metabolism",
                     )
                     skill_repo.insert_event(
                         id=str(uuid.uuid4()),
@@ -243,6 +245,7 @@ Active Skills already in Symbia's database:
                     confidence=0.0,
                     source="emergent",
                     changelog="Refused by Workshop Daemon",
+                    version_source="auto_metabolism",
                 )
                 skill_repo.insert_event(
                     id=str(uuid.uuid4()),

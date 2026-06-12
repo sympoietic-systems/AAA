@@ -25,6 +25,7 @@ from backend.metabolisation.dream_context import DreamContextMixin
 from backend.metabolisation.dream_prompts import DreamPromptMixin
 from backend.metabolisation.dream_executor import DreamExecutorMixin
 from backend.metabolisation.consolidation import ConsolidationMixin
+from backend.metabolisation.skill_metabolism import SkillMetabolismMixin
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class AutopoieticDreamDaemon(
     DreamPromptMixin,
     DreamExecutorMixin,
     ConsolidationMixin,
+    SkillMetabolismMixin,
 ):
     """Background daemon that triggers autonomous self-reflection (dream) cycles."""
 
@@ -47,6 +49,7 @@ class AutopoieticDreamDaemon(
         self.semantic_knot_repo = getattr(app_state, "semantic_knot_repo", None)
         self.checkpoint_repo = getattr(app_state, "checkpoint_repo", None)
         self.skill_repo = getattr(app_state, "skill_repo", None)
+        self.background_engine = getattr(app_state, "background_engine", None)
         self.pipeline = app_state.pipeline
 
         # Daemon Configuration
@@ -125,6 +128,10 @@ class AutopoieticDreamDaemon(
                 await self.consolidate_pending_conversations()
             except Exception as e:
                 logger.exception("Error in Autopoietic Dream Daemon consolidation check: %s", e)
+            try:
+                await self.run_skill_metabolism()
+            except Exception as e:
+                logger.exception("Error in Autopoietic Dream Daemon skill metabolism: %s", e)
             try:
                 await self.check_and_trigger_dream()
             except asyncio.CancelledError:

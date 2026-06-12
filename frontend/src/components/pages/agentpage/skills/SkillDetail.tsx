@@ -344,6 +344,15 @@ export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agent
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[#a78bfa] font-bold">v{v.version}</span>
+                        {v.source && (
+                          <span className={`text-[8px] uppercase px-1.5 py-px rounded-sm font-mono border leading-none ${
+                            v.source === "auto_metabolism"
+                              ? "border-[#c084fc]/35 text-[#c084fc] bg-[#c084fc]/5"
+                              : "border-[#444] text-[#888] bg-[#151518]"
+                          }`}>
+                            {v.source === "auto_metabolism" ? "auto" : "user"}
+                          </span>
+                        )}
                         <span className="text-[#555] text-[9px]">
                           {v.created_at ? new Date(v.created_at).toLocaleString() : ""}
                         </span>

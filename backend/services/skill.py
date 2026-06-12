@@ -45,6 +45,7 @@ class SkillService:
         content: Optional[str] = None,
         trigger_keywords: Optional[list[str]] = None,
         changelog: Optional[str] = None,
+        version_source: str = "user",
     ) -> dict:
         state = self._state
         skill_repo = getattr(state, "skill_repo", None)
@@ -79,7 +80,7 @@ class SkillService:
         updates["changelog"] = changelog if changelog is not None else f"Edited via Agent Page on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
         # 2. Update the skill in database
-        updated_skill = skill_repo.update_skill(skill_id=skill_id, **updates)
+        updated_skill = skill_repo.update_skill(skill_id=skill_id, version_source=version_source, **updates)
         if not updated_skill:
             raise ValueError(f"Failed to update skill {skill_id}")
 
@@ -89,7 +90,7 @@ class SkillService:
                 id=str(uuid.uuid4()),
                 skill_id=skill_id,
                 event_type="revision",
-                source_type="user",
+                source_type=version_source,
                 rationale=updates["changelog"],
             )
         except Exception as e:
@@ -104,6 +105,7 @@ class SkillService:
         content: Optional[str] = None,
         always_active: bool = False,
         trigger_keywords: Optional[list[str]] = None,
+        version_source: str = "user",
     ) -> dict:
         state = self._state
         skill_repo = getattr(state, "skill_repo", None)
@@ -140,6 +142,7 @@ class SkillService:
             vector_16d=vector_16d,
             source="authored",
             changelog="Created via Agent Page UI",
+            version_source=version_source,
         )
 
         # 3. Log event
@@ -148,7 +151,7 @@ class SkillService:
                 id=str(uuid.uuid4()),
                 skill_id=skill_id,
                 event_type="emergence",
-                source_type="user",
+                source_type=version_source,
                 rationale="Created via Agent Page UI",
             )
         except Exception as e:

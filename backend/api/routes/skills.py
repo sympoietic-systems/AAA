@@ -167,3 +167,16 @@ async def revert_skill_version(skill_id: str, version: int, request: Request):
         return updated
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/skills/events")
+async def get_recent_skill_events(request: Request, limit: int = 50):
+    state = request.app.state
+    skill_repo = getattr(state, "skill_repo", None)
+    if not skill_repo:
+        raise HTTPException(status_code=503, detail="Skill repository not available")
+    try:
+        events = skill_repo.list_recent_events(limit=limit)
+        return events
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
