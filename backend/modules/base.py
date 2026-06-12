@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from backend.skills.metadata import SkillMeta
+    from backend.pipeline.metadata import ModuleMeta
 
 
 @dataclass
@@ -25,5 +25,5 @@ class ProcessingModule(ABC):
     async def process(self, payload: dict) -> dict: ...
 
     @property
-    def skill_meta(self) -> "SkillMeta | None":
+    def module_meta(self) -> "ModuleMeta | None":
         return None

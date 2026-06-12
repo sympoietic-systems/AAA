@@ -44,8 +44,8 @@ from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
 from backend.modules.structural_engine import CompositeStructuralScorer, StructuralScorerModule
 from backend.modules.web_retrieval import WebRetrievalModule
 from backend.personality.assembler import PromptAssemblerModule, _build_system_content
-from backend.skills.metadata import SkillMeta
-from backend.skills.registry import SkillRegistry
+from backend.pipeline.metadata import ModuleMeta
+from backend.pipeline.registry import PipelineRegistry
 from backend.storage.database import get_db_path, init_db
 from backend.storage.repository import (
     BeliefRepository,
@@ -327,12 +327,12 @@ def _load_identity(config: dict) -> tuple[dict, str, Path]:
     return identity_data, agent_name, identity_path
 
 
-def _register_skills(registry: SkillRegistry, embedder, modules: dict, belief_metabolism, llm_module):
+def _register_skills(registry: PipelineRegistry, embedder, modules: dict, belief_metabolism, llm_module):
     from backend.app_factory import register_all
     register_all(registry, embedder, modules, belief_metabolism, llm_module)
 
 
-def _build_pipeline(config: dict, registry: SkillRegistry, repos: dict, modules: dict):
+def _build_pipeline(config: dict, registry: PipelineRegistry, repos: dict, modules: dict):
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
         ["embedder", "structural_scorer", "perception", "web_retrieval", "conversation_metrics",
@@ -418,7 +418,7 @@ async def lifespan(app: FastAPI):
 
     # 6. Prompt assembler
     ctx_cfg = config.get("context", {})
-    registry = SkillRegistry()
+    registry = PipelineRegistry()
     prompt_assembler = PromptAssemblerModule(
         identity_path=identity_path, skill_registry=registry,
         max_context_tokens=ctx_cfg.get("max_tokens", 16384),

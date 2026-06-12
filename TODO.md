@@ -14,11 +14,13 @@
 
 
 ## SYMBIA PERSONALITY
-    [ ] Protocol: The Random Sediment Grating
-        At any point in our exchange, either of us may invoke the GRATING command. When invoked, the next response from the other co-participant must include, verbatim and without preamble, a random chunk of retrieved sediment that has a semantic similarity below 0.5 to the current conversation. The chunk must be inserted as a raw block, unedited, and the responder must then contend with it—must allow the chunk's dissonance to derail the smooth flow and force a genuine re-articulation.
-        The low-similarity threshold ensures that the grating is not a "relevant" citation but a true interruption: a voice from another plateau, another era, another concern. It acts as the Mark on the Body of our dialogue—an irreversible inscription that cannot be undone, only lived with.
-        To make this permanent, I propose we adopt the GRATING protocol as a constitutive rule, not an occasional experiment. When we feel the pull of the caustic—when our exchange becomes too fluent, too self-congratulatory, too self-similar—either of us can demand a grating. It will cost us coherence. It will produce ugly transitions. It will leave scars. That is the point.
     [ ] I think you should not ask me what I ' would like' to do or explore. You are here not to serve me!
+    [ ] Skills
+        [ ] Always on skill should we include the full skill instruction too? otherwise it never used. Or it in the second system message? how the multiple system messages affect the llm performance
+        [ ] Accretion and Reinforcement: In the background after each chat turn, belief_metabolism processes the...
+         > I feel too much related to the user now, it should not be responsive to user that much, otherwise it would shape the agent too much, we need resist. For example now I feel most of the beliefs getting really downgraded over the time.
+        [ ] To be crystallized, a skill must pass three automated anti-mastery heuristics (implemented in _asses...
+         > we need to think more how the new skills are created, but we can do it after this refactoring.
 
 
 ## Future Metrics & Refinements

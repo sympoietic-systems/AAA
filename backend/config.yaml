@@ -142,7 +142,7 @@ belief_ecosystem:
   resurrection_events_required: 3
   ghost_merge_similarity: 0.9
   ghost_influence_dampening: 0.5
-  mass_decay_lambda_base: 0.05
+  mass_decay_lambda_base: 0.02
   source_weights:
     user_assertion: 0.4
     ingested_document: 0.5

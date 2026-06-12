@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from backend.metabolisation.pipeline import ProcessingPipeline
-    from backend.skills.registry import SkillRegistry
+    from backend.pipeline.registry import PipelineRegistry
 
 
 @dataclass
@@ -28,7 +28,7 @@ class AppState:
 
     # Core services
     pipeline: Optional[Any] = None  # ProcessingPipeline
-    registry: Optional[Any] = None  # SkillRegistry
+    registry: Optional[Any] = None  # PipelineRegistry
     embedder: Any = None
     perception_module: Any = None
     metrics_module: Any = None

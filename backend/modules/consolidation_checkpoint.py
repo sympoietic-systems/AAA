@@ -1,4 +1,4 @@
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import ConsolidationCheckpointRepository
 
 from .base import ProcessingModule
@@ -20,8 +20,8 @@ class ConsolidationCheckpointModule(ProcessingModule):
         return "consolidation_checkpoint"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="consolidation_checkpoint",
             description="Injects LLM-consolidated conversation summaries and triggers new checkpoints every N messages",
             category="memory",

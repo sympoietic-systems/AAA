@@ -11,7 +11,7 @@ import numpy as np
 from backend.modules.digester import FileDigester, SimpleChunkDigester, RhizomaticDigester
 from backend.modules.embedder import EmbeddingService
 from backend.modules.structural_engine import CompositeStructuralScorer
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
 from backend.modules.perception_prompts import TRIPARTITE_IMAGE_ANALYSIS_PROMPT
@@ -59,8 +59,8 @@ class PerceptionModule(ProcessingModule):
         return "perception"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="perception",
             description="Extracts text from uploaded files, chunks, embeds, and retrieves relevant sediment via similarity",
             category="perception",

@@ -3,7 +3,7 @@ from datetime import datetime
 
 import numpy as np
 
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository
 from backend.utils.token_counter import estimate_message_tokens
 
@@ -54,8 +54,8 @@ class SedimentationRetrievalModule(ProcessingModule):
         return "sedimentation_retrieval"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="sedimentation_retrieval",
             description="Retrieves semantically relevant messages from other conversations via embedding similarity",
             category="memory",

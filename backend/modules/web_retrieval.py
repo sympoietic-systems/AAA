@@ -11,7 +11,7 @@ import httpx
 import numpy as np
 
 from backend.modules.base import ProcessingModule, ModuleResult
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
 from backend.modules.llm_client import generate_unified
@@ -441,8 +441,8 @@ class WebRetrievalModule(ProcessingModule):
         return payload
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="web_retrieval",
             description="Exogenous rhizomatic web retrieval and HTML scraping",
             category="perception",

@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository
 
 from .base import ProcessingModule
@@ -46,16 +46,16 @@ class ConversationMetricsModule(ProcessingModule):
         return "conversation_metrics"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="conversation_metrics",
             description="Computes real-time conversational vitality and paskian metrics",
             category="perception",
             always_run=True,
             children=[
-                SkillMeta(name="surprise_index", description="Exponentially decaying weighted surprise (d=0.75)", category="perception"),
-                SkillMeta(name="boringness", description="Joint failure of mutual perturbation: (1 - rP_t) * (1 - MPI_{t-1})", category="perception"),
-                SkillMeta(name="conceptual_velocity", description="Disjoint window centroid drift rate (k=3)", category="perception"),
+                ModuleMeta(name="surprise_index", description="Exponentially decaying weighted surprise (d=0.75)", category="perception"),
+                ModuleMeta(name="boringness", description="Joint failure of mutual perturbation: (1 - rP_t) * (1 - MPI_{t-1})", category="perception"),
+                ModuleMeta(name="conceptual_velocity", description="Disjoint window centroid drift rate (k=3)", category="perception"),
             ]
         )
 

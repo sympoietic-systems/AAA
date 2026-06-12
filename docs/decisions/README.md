@@ -73,6 +73,7 @@ What becomes easier/harder?
 | [039](ADR-039-cross-conversation-retro-links-and-active-message-focus.md) | Cross-Conversation Retro-links and Active Message Focus | accepted | 2026-06-11 |
 | [040](ADR-040-subscriber-driven-telemetry-and-multi-type-notifications.md) | Subscriber-Driven Telemetry Polling and Multi-Type Notifications Store | accepted | 2026-06-11 |
 | [041](ADR-041-robust-metrics-backfill-and-parent-inference.md) | Robust Metrics Backfill and Parent Inference | accepted | 2026-06-12 |
+| [042](ADR-042-pipeline-registry-refactoring.md) | Pipeline Registry Refactoring | accepted | 2026-06-12 |
 
 ## Creating a New ADR
 

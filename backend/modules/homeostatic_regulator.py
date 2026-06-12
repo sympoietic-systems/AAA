@@ -1,6 +1,6 @@
 import logging
 
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 
 from .base import ProcessingModule
 
@@ -39,8 +39,8 @@ class HomeostaticRegulatorModule(ProcessingModule):
         return "homeostatic_regulator"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="homeostatic_regulator",
             description="Maps conversational metrics to allostatic regimes and recommends generation parameters",
             category="reasoning",

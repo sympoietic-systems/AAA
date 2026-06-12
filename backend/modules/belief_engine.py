@@ -8,7 +8,7 @@ from typing import Optional, List, Dict
 import yaml
 
 from backend.modules.base import ProcessingModule
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository, BeliefRepository
 from backend.storage.models import BeliefNode
 from backend.modules.structural_engine import LEXICON_MAPPINGS, LexiconScorer, CompositeStructuralScorer
@@ -73,16 +73,16 @@ class BeliefDynamicsEngine(ProcessingModule):
         return "belief_metabolism"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="belief_metabolism",
             description="Manages dynamic perception-driven belief updates, somatic warping, and immune response",
             category="reasoning",
             always_run=True,
             children=[
-                SkillMeta(name="somatic_warping", description="Warps perceptual vectors under high aesthetic tension", category="reasoning"),
-                SkillMeta(name="attractor_window", description="Filters active beliefs into three attentional slots", category="reasoning"),
-                SkillMeta(name="immune_system", description="Triggers emergency deterritorialization directives under stagnation", category="reasoning"),
+                ModuleMeta(name="somatic_warping", description="Warps perceptual vectors under high aesthetic tension", category="reasoning"),
+                ModuleMeta(name="attractor_window", description="Filters active beliefs into three attentional slots", category="reasoning"),
+                ModuleMeta(name="immune_system", description="Triggers emergency deterritorialization directives under stagnation", category="reasoning"),
             ]
         )
 

@@ -60,12 +60,12 @@ To add a new feature or processing step, follow the sequential implementation pa
 > [!IMPORTANT]
 > The SQLite database must run with Write-Ahead Logging (WAL) enabled: `PRAGMA journal_mode=WAL;`. Always wrap modifications in explicit transactions to prevent concurrent read/write locks.
 
-### 2.2. Creating a Processing Module (Skill)
+### 2.2. Creating a Processing Module
 All modular pipeline steps must subclass `ProcessingModule` defined in [backend/modules/base.py](file:///d:/01_GIT/AAA/backend/modules/base.py).
 
 ```python
 from backend.modules.base import ProcessingModule
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 
 class CustomAnalysisModule(ProcessingModule):
     def __init__(self, some_dependency):
@@ -76,8 +76,8 @@ class CustomAnalysisModule(ProcessingModule):
         return "custom_analysis"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="custom_analysis",
             description="Performs custom cognitive analysis on conversational state",
             category="reasoning",

@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 
 from backend.modules.base import ProcessingModule
-from backend.skills.registry import SkillRegistry
+from backend.pipeline.registry import PipelineRegistry
 from backend.utils.token_counter import estimate_message_tokens
 
 
@@ -11,7 +11,7 @@ class PromptAssemblerModule(ProcessingModule):
     def __init__(
         self,
         identity_path: Path,
-        skill_registry: SkillRegistry,
+        skill_registry: PipelineRegistry,
         max_context_tokens: int = 16384,
     ):
         self._identity_path = identity_path
@@ -214,7 +214,7 @@ class PromptAssemblerModule(ProcessingModule):
 
 def _build_system_content(
     identity: dict,
-    registry: SkillRegistry,
+    registry: PipelineRegistry,
     attractor_window: list[dict] | None = None,
     spectral_margin: list[dict] | None = None,
     loaded_skills: list[dict] | None = None,

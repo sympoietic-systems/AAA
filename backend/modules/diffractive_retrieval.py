@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 import numpy as np
 
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository, PerceptionSedimentRepository, SemanticKnotRepository
 from backend.utils.token_counter import estimate_tokens
 from .base import ProcessingModule
@@ -49,34 +49,34 @@ class DiffractiveRetrievalModule(ProcessingModule):
         return "diffractive_retrieval"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="diffractive_retrieval",
             description="Perturbs conversation loops by retrieving semantically orthogonal Nomadic and Dormant context fragments",
             category="memory",
             always_run=True,
             children=[
-                SkillMeta(
+                ModuleMeta(
                     name="StagnationEvaluator",
                     description="Calculates loop severity via pairwise similarity, novelty, and entropy to trigger intervention",
                     category="memory",
                 ),
-                SkillMeta(
+                ModuleMeta(
                     name="NomadicRetriever",
                     description="Retrieves semantically distant but structurally isomorphic memories from other threads",
                     category="memory",
                 ),
-                SkillMeta(
+                ModuleMeta(
                     name="SemanticKnotRetriever",
                     description="Retrieves distilled concepts from semantic knots to perturb stagnant conversation loops",
                     category="memory",
                 ),
-                SkillMeta(
+                ModuleMeta(
                     name="DormantFileRetriever",
                     description="Retrieves inactive file context segments falling in the dynamic similarity Goldilocks zone",
                     category="memory",
                 ),
-                SkillMeta(
+                ModuleMeta(
                     name="BudgetInterleaver",
                     description="Interleaves retrieved items and enforces token context limits based on loop intensity",
                     category="memory",

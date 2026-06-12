@@ -401,7 +401,7 @@ class CompositeStructuralScorer(StructuralScorer):
 
 # Import elements for the pipeline module
 from backend.modules.base import ProcessingModule
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 
 
 class StructuralScorerModule(ProcessingModule):
@@ -425,8 +425,8 @@ class StructuralScorerModule(ProcessingModule):
         return payload
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="structural_scorer",
             description="Calculates 16-dimensional cybernetic structural signatures of the message text",
             category="perception",

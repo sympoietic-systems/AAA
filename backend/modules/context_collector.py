@@ -1,6 +1,6 @@
 import re
 from typing import Any
-from backend.skills.metadata import SkillMeta
+from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository
 from backend.utils.token_counter import caveman_compress
 
@@ -85,8 +85,8 @@ class ContextCollectorModule(ProcessingModule):
         return "context_collector"
 
     @property
-    def skill_meta(self) -> SkillMeta:
-        return SkillMeta(
+    def module_meta(self) -> ModuleMeta:
+        return ModuleMeta(
             name="context_collector",
             description="Gathers conversation history with tiered compression and processes conversation notes",
             category="memory",

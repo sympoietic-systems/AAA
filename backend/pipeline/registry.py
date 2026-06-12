@@ -3,24 +3,24 @@ from typing import Callable, Optional
 from backend.core.registry import ModuleRegistry
 from backend.modules.base import ProcessingModule
 
-from .metadata import SkillMeta
+from .metadata import ModuleMeta
 
 
-class SkillRegistry(ModuleRegistry):
+class PipelineRegistry(ModuleRegistry):
     def __init__(self):
         super().__init__()
-        self._meta: dict[str, SkillMeta] = {}
+        self._meta: dict[str, ModuleMeta] = {}
 
     def register_with_meta(
         self,
         name: str,
         factory: Callable[[], ProcessingModule],
-        meta: SkillMeta,
+        meta: ModuleMeta,
     ) -> None:
         self.register(name, factory)
         self._meta[name] = meta
 
-    def get_meta(self, name: str) -> Optional[SkillMeta]:
+    def get_meta(self, name: str) -> Optional[ModuleMeta]:
         return self._meta.get(name)
 
     def list_always_on(self) -> list[tuple[str, ProcessingModule]]:
@@ -33,7 +33,7 @@ class SkillRegistry(ModuleRegistry):
                     result.append((name, mod))
         return result
 
-    def list_on_demand(self) -> list[tuple[str, ProcessingModule, SkillMeta]]:
+    def list_on_demand(self) -> list[tuple[str, ProcessingModule, ModuleMeta]]:
         result = []
         for name in self._factories:
             meta = self._meta.get(name)
