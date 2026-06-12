@@ -121,6 +121,7 @@ export interface ChatMessage {
 export interface AgentInfo {
   name: string
   version?: string
+  agent_flux?: boolean
 }
 
 export async function sendMessage(
@@ -436,6 +437,35 @@ export async function updateSkill(
     throw new Error(err.detail || `HTTP ${res.status}`)
   }
   return res.json()
+}
+
+export async function createSkill(data: {
+  name: string
+  description: string
+  content?: string
+  always_active: boolean
+  trigger_keywords: string[]
+}): Promise<DbSkillInfo> {
+  const res = await fetch(`${BASE}/skills`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to create skill" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function deleteSkill(skillId: string): Promise<void> {
+  const res = await fetch(`${BASE}/skills/${skillId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to delete skill" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
 }
 
 export interface MetricsResponse {

@@ -264,3 +264,153 @@ async def test_service_update_skill_details():
     assert len(events) == 1
     assert events[0].event_type == "revision"
     assert events[0].source_type == "user"
+
+
+async def test_service_create_and_delete_skill():
+    from backend.services.skill import SkillService
+    
+    db_path = _setup_db("aaa_skill_service_create_delete_test.db")
+    skill_repo = SkillRepository(db_path)
+    belief_repo = BeliefRepository(db_path)
+    
+    class MockState:
+        def __init__(self):
+            self.skill_repo = skill_repo
+            self.belief_repo = belief_repo
+            self.embedder = None
+            
+    state = MockState()
+    service = SkillService(state)
+    
+    # 1. Create a skill
+    created = await service.create_new_skill(
+        name="test-create",
+        description="A test creation description",
+        content="# Test Content",
+        always_active=True,
+        trigger_keywords=["test", "create"]
+    )
+    
+    assert created["name"] == "test-create"
+    assert created["always_active"] is True
+    assert created["trigger_keywords"] == ["test", "create"]
+    assert created["version"] == 1
+    assert created["lifecycle_stage"] == "crystallized"
+    
+    # Verify DB
+    db_skill = skill_repo.get_skill_by_name("test-create")
+    assert db_skill is not None
+    assert db_skill.id == created["id"]
+    
+    # Verify creation event
+    events = skill_repo.list_events(db_skill.id)
+    assert len(events) == 1
+    assert events[0].event_type == "emergence"
+    assert events[0].source_type == "user"
+    
+    # Try creating duplicate name
+    try:
+        await service.create_new_skill(name="test-create", description="dup")
+        assert False, "Should raise ValueError on duplicate name"
+    except ValueError:
+        pass
+        
+    # 2. Add associated belief to simulate system linking
+    belief_repo.create_belief(
+        id=str(uuid.uuid4()),
+        agent_id="symbia",
+        label="skill:test-create",
+        statement="Test creation description",
+        origin="emergent",
+        confidence=0.8,
+        ontological_mass=0.1,
+        somatic_anchor="conceptual",
+        vector_16d="[]",
+    )
+    
+    assert len(belief_repo.list_beliefs("symbia")) == 1
+    
+    # 3. Delete the skill
+    await service.delete_skill(created["id"])
+    
+    # Verify skill deleted
+    assert skill_repo.get_skill(created["id"]) is None
+    # Verify associated belief deleted
+    assert len(belief_repo.list_beliefs("symbia")) == 0
+
+
+def test_skills_api_flux_control():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    from backend.services.skill import SkillService
+    
+    db_path = _setup_db("aaa_skill_api_test.db")
+    skill_repo = SkillRepository(db_path)
+    belief_repo = BeliefRepository(db_path)
+    
+    # Override app state repos
+    app.state.skill_repo = skill_repo
+    app.state.belief_repo = belief_repo
+    
+    # Create a skill in repo
+    skill = skill_repo.create_skill(
+        id=str(uuid.uuid4()), name="api-skill", description="desc", content="content"
+    )
+    
+    client = TestClient(app)
+    
+    # Save original env state
+    orig_flux = os.environ.get("AAA_AGENT_FLUX")
+    
+    try:
+        # Test 1: When AAA_AGENT_FLUX is False/unset
+        if "AAA_AGENT_FLUX" in os.environ:
+            del os.environ["AAA_AGENT_FLUX"]
+            
+        # GET /api/agent should return agent_flux=False
+        res = client.get("/api/agent")
+        assert res.status_code == 200
+        assert res.json()["agent_flux"] is False
+        
+        # POST /api/skills should return 403 Forbidden
+        res = client.post("/api/skills", json={"name": "new", "description": "desc"})
+        assert res.status_code == 403
+        
+        # PUT /api/skills/{id} should return 403 Forbidden
+        res = client.put(f"/api/skills/{skill.id}", json={"description": "new"})
+        assert res.status_code == 403
+        
+        # DELETE /api/skills/{id} should return 403 Forbidden
+        res = client.delete(f"/api/skills/{skill.id}")
+        assert res.status_code == 403
+        
+        # Test 2: When AAA_AGENT_FLUX is True
+        os.environ["AAA_AGENT_FLUX"] = "true"
+        
+        # GET /api/agent should return agent_flux=True
+        res = client.get("/api/agent")
+        assert res.status_code == 200
+        assert res.json()["agent_flux"] is True
+        
+        # POST /api/skills should succeed and create skill
+        res = client.post("/api/skills", json={"name": "new-api-skill", "description": "desc"})
+        assert res.status_code == 200
+        assert res.json()["name"] == "new-api-skill"
+        
+        # PUT /api/skills/{id} should succeed
+        res = client.put(f"/api/skills/{skill.id}", json={"description": "new-desc"})
+        assert res.status_code == 200
+        assert res.json()["description"] == "new-desc"
+        
+        # DELETE /api/skills/{id} should succeed
+        res = client.delete(f"/api/skills/{skill.id}")
+        assert res.status_code == 200
+        assert res.json()["status"] == "ok"
+    finally:
+        # Restore env
+        if orig_flux is not None:
+            os.environ["AAA_AGENT_FLUX"] = orig_flux
+        elif "AAA_AGENT_FLUX" in os.environ:
+            del os.environ["AAA_AGENT_FLUX"]
+
+

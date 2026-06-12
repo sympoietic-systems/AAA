@@ -99,6 +99,7 @@ class ErrorResponse(BaseModel):
 class AgentInfo(BaseModel):
     name: str
     version: str = ""
+    agent_flux: bool = False
 
 
 class SkillInfo(BaseModel):
@@ -145,6 +146,14 @@ class SkillUpdateRequest(BaseModel):
     description: Optional[str] = None
     content: Optional[str] = None
     trigger_keywords: Optional[list[str]] = None
+
+
+class SkillCreateRequest(BaseModel):
+    name: str
+    description: str
+    content: Optional[str] = None
+    always_active: bool = False
+    trigger_keywords: list[str] = []
 
 
 class WorkshopActionRequest(BaseModel):

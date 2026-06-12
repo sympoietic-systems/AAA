@@ -91,6 +91,86 @@ class SkillService:
 
         return self._format_skill(updated_skill)
 
+    async def create_new_skill(
+        self,
+        name: str,
+        description: str,
+        content: Optional[str] = None,
+        always_active: bool = False,
+        trigger_keywords: Optional[list[str]] = None,
+    ) -> dict:
+        state = self._state
+        skill_repo = getattr(state, "skill_repo", None)
+        if not skill_repo:
+            raise ValueError("Skill repository not initialized")
+
+        # Check for name uniqueness
+        existing = skill_repo.get_skill_by_name(name)
+        if existing:
+            raise ValueError(f"A skill with the name '{name}' already exists.")
+
+        skill_id = str(uuid.uuid4())
+        
+        # Fall back to generated content template if none is provided
+        if not content:
+            content = self._generate_skill_content(name, description, always_active)
+
+        # 1. Compute 16D vector
+        embedder = getattr(state, "embedder", None)
+        scorer = getattr(embedder, "service", None) if embedder else None
+        vector_16d = self._compute_skill_vector(content, scorer)
+
+        # 2. Save in database (initial version is 1, stage is crystallized so it's active immediately)
+        new_skill = skill_repo.create_skill(
+            id=skill_id,
+            name=name,
+            description=description,
+            content=content,
+            always_active=always_active,
+            trigger_keywords=json.dumps(trigger_keywords or []),
+            lifecycle_stage="crystallized",
+            confidence=0.8,
+            ontological_mass=0.1,
+            vector_16d=vector_16d,
+            source="authored",
+            changelog="Created via Agent Page UI",
+        )
+
+        # 3. Log event
+        try:
+            skill_repo.insert_event(
+                id=str(uuid.uuid4()),
+                skill_id=skill_id,
+                event_type="emergence",
+                source_type="user",
+                rationale="Created via Agent Page UI",
+            )
+        except Exception as e:
+            logger.warning("Failed to insert event for skill creation: %s", e)
+
+        return self._format_skill(new_skill)
+
+    async def delete_skill(self, skill_id: str) -> None:
+        state = self._state
+        skill_repo = getattr(state, "skill_repo", None)
+        if not skill_repo:
+            raise ValueError("Skill repository not initialized")
+
+        skill = skill_repo.get_skill(skill_id)
+        if not skill:
+            raise ValueError(f"Skill with ID {skill_id} not found")
+
+        # Delete from repo (foreign key cascade handles events)
+        skill_repo.delete_skill(skill_id)
+
+        # Clean up associated belief (label "skill:<name>")
+        belief_repo = getattr(state, "belief_repo", None)
+        if belief_repo:
+            try:
+                belief_repo.delete_belief_by_label(f"skill:{skill.name}")
+            except Exception as e:
+                logger.warning("Failed to clean up associated belief for skill %s: %s", skill.name, e)
+
     def _compute_skill_vector(self, text: str, embedder_service=None) -> str:
         result = {"v16d": [], "v384d": []}
 

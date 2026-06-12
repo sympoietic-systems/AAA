@@ -252,6 +252,12 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_DIFFRACTIVE_BUDGET` | Any integer | `1500` (from `config.yaml`) |
 | `AAA_DIFFRACTIVE_MAX_COUNT` | Any integer | `3` (from `config.yaml`) |
 
+### Agent Flux
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `AAA_AGENT_FLUX` | `true`, `false` | `false` | Toggle to enable editing, adding, and deleting skills directly in the Agent UI page and backend APIs. |
+
 ## Provider Defaults
 
 Without `AAA_LLM_MODEL` or `AAA_LLM_API_BASE` set, these auto-apply:

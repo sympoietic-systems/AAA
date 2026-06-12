@@ -279,3 +279,9 @@ class BeliefRepository(BaseRepository):
         a, b = sorted([belief_a_id, belief_b_id])
         conn.execute("DELETE FROM belief_tensions WHERE belief_a_id = ? AND belief_b_id = ?", (a, b))
         conn.commit()
+
+    @with_connection
+    def delete_belief_by_label(self, label: str) -> None:
+        conn = self._conn()
+        conn.execute("DELETE FROM belief_nodes WHERE label = ?", (label,))
+        conn.commit()

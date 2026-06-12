@@ -6,6 +6,7 @@ from backend.api.schemas import (
     DbSkillsResponse,
     SkillsResponse,
     SkillUpdateRequest,
+    SkillCreateRequest,
     WorkshopActionRequest,
     WorkshopResponse,
 )
@@ -42,8 +43,32 @@ async def get_db_skills(request: Request):
     return result
 
 
+def check_agent_flux():
+    import os
+    if not os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes"):
+        raise HTTPException(status_code=403, detail="Skill modification is disabled (AAA_AGENT_FLUX is false)")
+
+
+@router.post("/skills", response_model=DbSkillInfo)
+async def create_skill(body: SkillCreateRequest, request: Request):
+    check_agent_flux()
+    service = SkillService(request.app.state)
+    try:
+        result = await service.create_new_skill(
+            name=body.name,
+            description=body.description,
+            content=body.content,
+            always_active=body.always_active,
+            trigger_keywords=body.trigger_keywords
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.put("/skills/{skill_id}", response_model=DbSkillInfo)
 async def update_skill(skill_id: str, body: SkillUpdateRequest, request: Request):
+    check_agent_flux()
     service = SkillService(request.app.state)
     try:
         result = await service.update_skill_details(
@@ -53,6 +78,17 @@ async def update_skill(skill_id: str, body: SkillUpdateRequest, request: Request
             trigger_keywords=body.trigger_keywords
         )
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/skills/{skill_id}")
+async def delete_skill(skill_id: str, request: Request):
+    check_agent_flux()
+    service = SkillService(request.app.state)
+    try:
+        await service.delete_skill(skill_id)
+        return {"status": "ok", "message": f"Skill {skill_id} deleted"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
