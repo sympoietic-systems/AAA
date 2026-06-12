@@ -64,13 +64,13 @@ function parseSystemPrompt(content: string): ParsedSystemPrompt {
     }
   }
 
-  // Parse PROCEDURAL SEDIMENT — separate block without parentheses, contains loaded skills as ### headings
   const sedRegex = /--- BEGIN PROCEDURAL SEDIMENT ---\r?\n([\s\S]*?)--- END PROCEDURAL SEDIMENT ---/;
   const sedMatch = text.match(sedRegex);
   if (sedMatch) {
     const sedBody = sedMatch[1].trim();
     // Split by ### headings — each heading is a skill name, body is the skill content
-    const headingRegex = /^### (.+)$/gm;
+    // Top-level skill headings in procedural sediment always end with a bracketed suffix (e.g. [Always-Active] or [Loaded Dynamic])
+    const headingRegex = /^###\s+(.+?\s+\[[^\]]+\])$/gm;
     const sedSkills: { label: string; items: string[] }[] = [];
     const headings: string[] = [];
     let hMatch: RegExpExecArray | null;

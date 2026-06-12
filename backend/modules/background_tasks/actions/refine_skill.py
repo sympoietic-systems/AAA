@@ -23,7 +23,12 @@ class RefineSkillAction(BackgroundAction):
         return "refine_skill"
 
     async def execute(self, provider: BaseLLMProvider, payload: dict) -> dict:
-        skill_data = payload.get("skill_data", {})
+        skill_data = payload.get("skill_data")
+        if not skill_data and isinstance(payload.get("context"), dict):
+            skill_data = payload["context"].get("skill_data")
+        if not skill_data:
+            skill_data = {}
+            
         conversation_id = payload.get("conversation_id")
         
         if not skill_data or not skill_data.get("name"):
