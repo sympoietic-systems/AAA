@@ -88,6 +88,35 @@ async def dismiss_notification(id: str, request: Request = None):
     return notif
 
 
+@router.patch("/notifications/dismiss-match", response_model=Dict[str, Any])
+async def dismiss_by_match_endpoint(
+    conversation_id: str,
+    message_id: int,
+    request: Request = None,
+) -> Dict[str, Any]:
+    """
+    Dismiss notifications matching a specific conversation and message pair.
+
+    This is used to mark notifications (e.g. sediment notifications) as dismissed
+    when the user views the corresponding message node. It executes an UPDATE
+    query which succeeds without throwing 404s even if no matching notifications exist.
+
+    Args:
+        conversation_id: The unique identifier of the conversation.
+        message_id: The ID of the message.
+        request: The FastAPI request context.
+
+    Returns:
+        dict: A status dictionary indicating successful operation.
+    """
+    state = request.app.state
+    notification_repo = state.notification_repo
+    notification_repo.dismiss_by_match(conversation_id, message_id)
+    return {"status": "ok"}
+
+
+
+
 @router.post("/notifications/clear")
 async def clear_notifications(
     payload: Optional[ClearPayload] = None,

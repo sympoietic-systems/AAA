@@ -3,6 +3,7 @@ import {
   getNotifications,
   createNotification,
   dismissNotification as apiDismissNotification,
+  dismissNotificationByMatch,
   clearNotifications,
   markAllNotificationsRead,
 } from "../api/client"
@@ -118,8 +119,18 @@ export function dismissNotification(id: string) {
  * Dismiss a notification matching a specific conversation + message pair.
  */
 export function dismissByMatch(conversationId: string, messageId: number) {
-  const matchId = `${conversationId}-${messageId}`
-  dismissNotification(matchId)
+  const next = notifications.filter(
+    (n) => !(n.conversationId === conversationId && n.messageId === messageId)
+  )
+  if (next.length !== notifications.length) {
+    notifications = next
+    emitChange()
+  }
+
+  // Sync with backend using the new dismiss-match API
+  dismissNotificationByMatch(conversationId, messageId)
+    .then(() => syncNotifications())
+    .catch((err) => console.error("Failed to dismiss notification by match on backend:", err))
 }
 
 /**

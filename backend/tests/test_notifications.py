@@ -73,6 +73,19 @@ def run_tests():
         assert all_notifs[0]["id"] == n["id"]
         print("Test 5 (List All): Passed")
 
+        # Test 6: Dismiss by match
+        # Create a new active notification with conversation_id and message_id
+        n2 = repo.create(
+            type="sediment",
+            snippet="Resonance message",
+            conversation_id="conv-123",
+            message_id=456
+        )
+        assert repo.get(n2["id"])["dismissed"] == 0
+        repo.dismiss_by_match("conv-123", 456)
+        assert repo.get(n2["id"])["dismissed"] == 1
+        print("Test 6 (Dismiss by Match): Passed")
+
         print("All notification repository tests passed successfully!")
     finally:
         if os.path.exists(db_file):

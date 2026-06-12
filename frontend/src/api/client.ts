@@ -1126,6 +1126,29 @@ export async function dismissNotification(id: string): Promise<SedimentNotificat
   return mapBackendNotification(data)
 }
 
+/**
+ * Dismisses any notifications matching a specific conversation ID and message ID.
+ * Unlike dismissNotification which uses a constructed ID, this uses logical match
+ * fields and won't throw 404s if no matching notification is found on the backend.
+ * 
+ * @param conversationId - The ID of the conversation
+ * @param messageId - The ID of the message
+ */
+export async function dismissNotificationByMatch(
+  conversationId: string,
+  messageId: number
+): Promise<void> {
+  const params = new URLSearchParams({
+    conversation_id: conversationId,
+    message_id: String(messageId),
+  })
+  const res = await fetch(`${BASE}/notifications/dismiss-match?${params}`, {
+    method: "PATCH",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+
 export async function clearNotifications(type?: string): Promise<void> {
   const res = await fetch(`${BASE}/notifications/clear`, {
     method: "POST",
