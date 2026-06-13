@@ -219,3 +219,14 @@ The State Impact Vector measures the perturbational displacement caused by *exog
 2. **Belief Delta Scaling:** The impact values act as multipliers during belief metabolism. Constructive documents (positive impact) reinforce confidence, whereas contradictory documents (negative impact/dialectical conflict) trigger belief updates, eventual decay, or collapse.
 3. **Homeostatic Logging:** Provides operators with a telemetry dashboard representing the metabolic footprint of external inputs on Symbia's overall state space.
 
+---
+
+### D. Are the Signature and Impact Vectors Compared?
+No. The two vector spaces represent completely distinct cybernetic coordinates and are mathematically and conceptually incompatible:
+1. **Mathematical Incompatibility:** The Autopoietic Signature is a positive-only unit vector $[0.0, 1.0]$ representing semi-stable structural properties. The State Impact Vector is a bi-polar delta vector $[-0.5, 0.5]$ representing transient displacement magnitudes.
+2. **Dimensional Incompatibility:** The indices of the two spaces map to completely different systems of meaning (e.g. `s01: Homeostatic` vs. `[0]: Visceral Entropy`).
+3. **Operational Coupling (Not Comparison):** While they are never compared mathematically, they couple dynamically. When an external document is metabolized:
+   - Its **Autopoietic Signature** is compared via cosine similarity against the signatures of existing belief nodes to find *which* beliefs are target nodes.
+   - Its **State Impact Vector** is then applied as a perturbation coefficient to increase or decrease the targeted belief's ontological mass and confidence.
+
+
