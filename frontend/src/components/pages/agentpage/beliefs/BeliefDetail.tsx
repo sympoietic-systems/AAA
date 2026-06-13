@@ -285,7 +285,7 @@ export function BeliefDetail({ belief, onUpdate, onDelete, agentFlux }: BeliefDe
             <input
               type="range"
               min="0"
-              max="1"
+              max="3"
               step="0.05"
               value={editOntologicalMass}
               onChange={(e) => setEditOntologicalMass(parseFloat(e.target.value))}
