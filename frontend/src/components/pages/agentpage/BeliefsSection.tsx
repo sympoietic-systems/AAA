@@ -197,15 +197,29 @@ function BeliefDetail({ belief }: { belief: BeliefNodeInfo | null }) {
       {vec.length > 0 && (
         <div className="shrink-0">
           <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ 16D Autopoietic Vector ]</div>
-          <div className="flex items-end gap-0.5 h-4 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit max-w-full overflow-x-auto">
+          <div className="flex items-end gap-0.5 h-5 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit max-w-full overflow-visible">
             {vec.map((val, idx) => {
               const hp = Math.min(100, Math.max(10, Math.round(((val + 1) / 2) * 100)))
               const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
-              const tooltip = `${dimInfo.label}: ${val.toFixed(4)}\n${dimInfo.desc}`
               return (
-                <div key={idx} style={{ height: `${hp}%`, minWidth: 4 }} title={tooltip}
-                  className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa] shrink-0"
-                />
+                <div key={idx} className="group relative shrink-0 h-full flex items-end">
+                  <div style={{ height: `${hp}%`, minWidth: 4 }}
+                    className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa] transition-colors cursor-crosshair shrink-0"
+                  />
+                  <div className="
+                    absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1
+                    bg-[#1a1a1a] border border-[#333] rounded
+                    text-[10px] text-[#aaa] leading-snug
+                    whitespace-nowrap z-50 shadow-2xl
+                    opacity-0 group-hover:opacity-100
+                    transition-opacity duration-150
+                    pointer-events-none font-sans
+                  ">
+                    <div className="text-[#a78bfa] text-[11px] font-bold">{dimInfo.label}</div>
+                    <div className="text-[#888] font-mono">{val.toFixed(4)}</div>
+                    <div className="text-[#666] max-w-48 whitespace-normal">{dimInfo.desc}</div>
+                  </div>
+                </div>
               )
             })}
           </div>
