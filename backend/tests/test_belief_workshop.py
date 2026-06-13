@@ -181,3 +181,88 @@ async def test_belief_service_adoption_and_editing():
         conn.close()
         if os.path.exists(db_path):
             os.remove(db_path)
+
+
+@pytest.mark.anyio
+async def test_belief_direct_crud_flux():
+    db_path = str(get_db_path("data/aaa_flux_test.db"))
+    if os.path.exists(db_path):
+        os.remove(db_path)
+        
+    conn = init_db(db_path)
+    try:
+        state = MockState(db_path)
+        service = BeliefService(state)
+        
+        # 1. Create a belief directly
+        res = await service.create_new_belief(
+            label="flux-belief",
+            statement="Flux allows for direct conceptual rewriting.",
+            confidence=0.75,
+            ontological_mass=0.6,
+            lifecycle_stage="crystallized",
+            agent_id="symbia"
+        )
+        assert res["status"] == "ok"
+        belief_id = res["belief_id"]
+        
+        # Verify node created
+        beliefs = state.belief_repo.list_beliefs("symbia")
+        assert len(beliefs) == 1
+        b = beliefs[0]
+        assert b.id == belief_id
+        assert b.label == "flux-belief"
+        assert b.statement == "Flux allows for direct conceptual rewriting."
+        assert b.confidence == 0.75
+        assert b.ontological_mass == 0.6
+        assert b.lifecycle_stage == "crystallized"
+        assert b.version == 1
+        
+        # Verify version archive
+        versions = await service.get_statement_versions(belief_id)
+        assert len(versions) == 1
+        assert versions[0]["version"] == 1
+        assert versions[0]["statement"] == "Flux allows for direct conceptual rewriting."
+        
+        # 2. Update details
+        up_res = await service.update_belief_details(
+            belief_id=belief_id,
+            label="flux-belief-mutated",
+            statement="Flux allows for total cybernetic rewriting of the core agent.",
+            confidence=0.9,
+            ontological_mass=0.8,
+            lifecycle_stage="crystallized"
+        )
+        assert up_res["status"] == "ok"
+        
+        # Verify node updated
+        beliefs_updated = state.belief_repo.list_beliefs("symbia")
+        b_up = beliefs_updated[0]
+        assert b_up.label == "flux-belief-mutated"
+        assert b_up.statement == "Flux allows for total cybernetic rewriting of the core agent."
+        assert b_up.confidence == 0.9
+        assert b_up.ontological_mass == 0.8
+        assert b_up.version == 2
+        
+        # Verify version archive has v2
+        versions_up = await service.get_statement_versions(belief_id)
+        assert len(versions_up) == 2
+        assert versions_up[1]["version"] == 2
+        assert versions_up[1]["statement"] == "Flux allows for total cybernetic rewriting of the core agent."
+        
+        # 3. Delete belief
+        del_res = await service.delete_belief(belief_id)
+        assert del_res["status"] == "ok"
+        
+        # Verify node deleted
+        beliefs_deleted = state.belief_repo.list_beliefs("symbia")
+        assert len(beliefs_deleted) == 0
+        
+        # Verify version history deleted too
+        versions_del = await service.get_statement_versions(belief_id)
+        assert len(versions_del) == 0
+        
+    finally:
+        conn.close()
+        if os.path.exists(db_path):
+            os.remove(db_path)

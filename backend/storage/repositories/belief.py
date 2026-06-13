@@ -404,8 +404,49 @@ class BeliefRepository(BaseRepository):
         conn.commit()
 
     @with_connection
+    def update_belief_details(
+        self,
+        belief_id: str,
+        label: str,
+        statement: str,
+        confidence: float,
+        ontological_mass: float,
+        lifecycle_stage: str,
+        vector_16d: str,
+        version: int,
+    ) -> None:
+        validated_vector = self.validate_and_format_vector(vector_16d)
+        conn = self._conn()
+        
+        # Check for stage transition
+        try:
+            row = conn.execute("SELECT label, lifecycle_stage FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
+            if row and row["lifecycle_stage"] != lifecycle_stage:
+                old_stage = row["lifecycle_stage"]
+                snippet = f"Belief '{row['label']}' transitioned stage: {old_stage} \u2192 {lifecycle_stage}."
+                import uuid
+                from datetime import datetime, timezone
+                conn.execute(
+                    """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
+                       VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
+                    (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{row['label']}"),
+                )
+        except Exception:
+            pass
+
+        conn.execute(
+            """UPDATE belief_nodes
+               SET label = ?, statement = ?, confidence = ?, ontological_mass = ?, lifecycle_stage = ?, vector_16d = ?, version = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (label, statement, confidence, ontological_mass, lifecycle_stage, validated_vector, version, belief_id),
+        )
+        conn.commit()
+
+    @with_connection
     def delete_belief(self, belief_id: str) -> None:
         conn = self._conn()
+        conn.execute("DELETE FROM belief_statement_versions WHERE belief_id = ?", (belief_id,))
+        conn.execute("DELETE FROM belief_events WHERE belief_id = ?", (belief_id,))
         conn.execute("DELETE FROM belief_nodes WHERE id = ?", (belief_id,))
         conn.commit()
 

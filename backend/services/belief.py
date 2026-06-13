@@ -427,3 +427,215 @@ class BeliefService:
             }
             for v in versions
         ]
+
+    async def create_new_belief(
+        self,
+        label: str,
+        statement: str,
+        confidence: float = 0.5,
+        ontological_mass: float = 0.5,
+        lifecycle_stage: str = "crystallized",
+        agent_id: str = "symbia",
+    ) -> dict:
+        state = self._state
+        belief_repo = getattr(state, "belief_repo", None)
+        if not belief_repo:
+            return {"status": "error", "message": "Belief repository not initialized"}
+
+        import uuid
+        import json
+        from backend.modules.structural_engine import LexiconScorer
+        
+        belief_id = str(uuid.uuid4())
+        
+        # 1. Compute 16D vector
+        try:
+            scorer = LexiconScorer()
+            v16d = scorer.score(statement)
+            v16d_json = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
+        except Exception as e:
+            return {"status": "error", "message": f"Failed to score statement: {str(e)}"}
+
+        # 2. Save in database (initial version is 1)
+        belief_repo.create_belief(
+            id=belief_id,
+            agent_id=agent_id,
+            label=label,
+            statement=statement,
+            origin="authored",
+            confidence=confidence,
+            ontological_mass=ontological_mass,
+            somatic_anchor="conceptual",
+            vector_16d=v16d_json,
+            lifecycle_stage=lifecycle_stage,
+        )
+
+        # 3. Create initial statement version record
+        belief_repo.create_statement_version(
+            id=str(uuid.uuid4()),
+            belief_id=belief_id,
+            version=1,
+            statement=statement,
+            vector_16d=v16d_json,
+            change_reason="Created manually via Agent FLUX API",
+        )
+
+        # 4. Log event
+        try:
+            belief_repo.insert_belief_event(
+                event_id=str(uuid.uuid4()),
+                belief_id=belief_id,
+                source_type="user_assertion",
+                source_id=None,
+                alignment=1.0,
+                perturbation=1.0,
+                event_type="emergence",
+                impact=ontological_mass,
+                rationale="Created manually via Agent FLUX API",
+            )
+        except Exception as e:
+            logger.warning("Failed to insert event for belief creation: %s", e)
+
+        # 5. Log notification
+        notif_repo = getattr(state, "notification_repo", None)
+        if notif_repo:
+            notif_repo.create(
+                type="trace",
+                snippet=f"Belief '{label}' was manually created.",
+                source=f"belief:{label}"
+            )
+
+        return {"status": "ok", "belief_id": belief_id, "label": label}
+
+    async def update_belief_details(
+        self,
+        belief_id: str,
+        label: str,
+        statement: str,
+        confidence: float,
+        ontological_mass: float,
+        lifecycle_stage: str,
+    ) -> dict:
+        state = self._state
+        belief_repo = getattr(state, "belief_repo", None)
+        if not belief_repo:
+            return {"status": "error", "message": "Belief repository not initialized"}
+
+        # Find existing belief
+        target_belief = belief_repo.get_belief("symbia", belief_id)
+        if not target_belief:
+            return {"status": "error", "message": "Belief not found"}
+
+        import uuid
+        import json
+        from backend.modules.structural_engine import LexiconScorer
+        from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+
+        # 1. Compute 16D vector
+        try:
+            scorer = LexiconScorer()
+            v16d = scorer.score(statement)
+            new_v16d_json = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
+        except Exception as e:
+            return {"status": "error", "message": f"Failed to score statement: {str(e)}"}
+
+        statement_changed = (target_belief.statement != statement)
+        new_version = target_belief.version
+        speciation_triggered = False
+
+        if statement_changed:
+            new_version = target_belief.version + 1
+            # Archive new statement version
+            belief_repo.create_statement_version(
+                id=str(uuid.uuid4()),
+                belief_id=target_belief.id,
+                version=new_version,
+                statement=statement,
+                vector_16d=new_v16d_json,
+                change_reason="Statement edited via Agent FLUX API",
+            )
+
+            # Check speciation
+            old_vec = parse_vector_16d(target_belief.vector_16d)
+            new_vec = parse_vector_16d(new_v16d_json)
+            if old_vec is not None and new_vec is not None:
+                sim = compute_cosine_similarity(old_vec, new_vec)
+                dist = 1.0 - sim
+                if dist > 0.4:
+                    speciation_triggered = True
+                    notif_repo = getattr(state, "notification_repo", None)
+                    if notif_repo:
+                        notif_repo.create(
+                            type="glitch",
+                            snippet=f"Speciation Alert: Belief '{label}' has drifted significantly (distance={dist:.2f}) after edit.",
+                            source=f"belief:{label}"
+                        )
+
+        # 2. Save in database
+        belief_repo.update_belief_details(
+            belief_id=belief_id,
+            label=label,
+            statement=statement,
+            confidence=confidence,
+            ontological_mass=ontological_mass,
+            lifecycle_stage=lifecycle_stage,
+            vector_16d=new_v16d_json,
+            version=new_version,
+        )
+
+        # 3. Log event
+        try:
+            belief_repo.insert_belief_event(
+                event_id=str(uuid.uuid4()),
+                belief_id=belief_id,
+                source_type="user_assertion",
+                source_id=None,
+                alignment=1.0,
+                perturbation=0.5,
+                event_type="revision",
+                impact=0.1,
+                rationale="Updated details via Agent FLUX API",
+            )
+        except Exception as e:
+            logger.warning("Failed to insert event for belief update: %s", e)
+
+        # 4. Log notification
+        notif_repo = getattr(state, "notification_repo", None)
+        if notif_repo and not speciation_triggered:
+            notif_repo.create(
+                type="trace",
+                snippet=f"Belief '{label}' details were updated.",
+                source=f"belief:{label}"
+            )
+
+        return {
+            "status": "ok",
+            "belief_id": belief_id,
+            "version": new_version,
+            "speciation_alert": speciation_triggered
+        }
+
+    async def delete_belief(self, belief_id: str) -> dict:
+        state = self._state
+        belief_repo = getattr(state, "belief_repo", None)
+        if not belief_repo:
+            return {"status": "error", "message": "Belief repository not initialized"}
+
+        # Retrieve the belief to verify it exists
+        target_belief = belief_repo.get_belief("symbia", belief_id)
+        if not target_belief:
+            return {"status": "error", "message": "Belief not found"}
+
+        label = target_belief.label
+        belief_repo.delete_belief(belief_id)
+
+        # Log notification
+        notif_repo = getattr(state, "notification_repo", None)
+        if notif_repo:
+            notif_repo.create(
+                type="trace",
+                snippet=f"Belief '{label}' was manually deleted.",
+                source=f"belief:{label}"
+            )
+
+        return {"status": "ok", "message": f"Belief {belief_id} deleted"}
