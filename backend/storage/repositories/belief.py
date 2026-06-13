@@ -591,3 +591,14 @@ class BeliefRepository(BaseRepository):
             (belief_id,),
         ).fetchall()
         return [_row_to_belief_statement_version(r) for r in rows]
+
+    @with_connection
+    def get_statement_version(self, belief_id: str, version: int) -> Optional[BeliefStatementVersion]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT * FROM belief_statement_versions WHERE belief_id = ? AND version = ?",
+            (belief_id, version),
+        ).fetchone()
+        if row is None:
+            return None
+        return _row_to_belief_statement_version(row)

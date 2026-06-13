@@ -250,6 +250,23 @@ async def test_belief_direct_crud_flux():
         assert versions_up[1]["version"] == 2
         assert versions_up[1]["statement"] == "Flux allows for total cybernetic rewriting of the core agent."
         
+        # 2b. Revert belief statement back to version 1
+        revert_res = await service.revert_belief_version(belief_id, 1)
+        assert revert_res["status"] == "ok"
+        assert revert_res["version"] == 3
+
+        # Verify node reverted
+        beliefs_reverted = state.belief_repo.list_beliefs("symbia")
+        b_rev = beliefs_reverted[0]
+        assert b_rev.statement == "Flux allows for direct conceptual rewriting."
+        assert b_rev.version == 3
+
+        # Verify version history now has 3 versions
+        versions_rev = await service.get_statement_versions(belief_id)
+        assert len(versions_rev) == 3
+        assert versions_rev[2]["version"] == 3
+        assert versions_rev[2]["statement"] == "Flux allows for direct conceptual rewriting."
+
         # 3. Delete belief
         del_res = await service.delete_belief(belief_id)
         assert del_res["status"] == "ok"

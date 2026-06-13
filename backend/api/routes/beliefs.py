@@ -179,3 +179,14 @@ async def delete_belief(belief_id: str, request: Request):
     if res.get("status") == "error":
         raise HTTPException(status_code=400, detail=res.get("message"))
     return res
+
+
+@router.post("/beliefs/{belief_id}/revert/{version}")
+async def revert_belief_version(belief_id: str, version: int, request: Request):
+    check_agent_flux()
+    state = request.app.state
+    service = BeliefService(state)
+    res = await service.revert_belief_version(belief_id, version)
+    if res.get("status") == "error":
+        raise HTTPException(status_code=400, detail=res.get("message"))
+    return res

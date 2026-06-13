@@ -37,6 +37,7 @@ class BeliefService:
                 "category": cat,
                 "confidence": b.confidence,
                 "ontological_mass": b.ontological_mass,
+                "version": b.version,
                 "vector_16d": b.vector_16d,
                 "origin": b.origin,
                 "lifecycle_stage": b.lifecycle_stage,
@@ -639,3 +640,99 @@ class BeliefService:
             )
 
         return {"status": "ok", "message": f"Belief {belief_id} deleted"}
+
+    async def revert_belief_version(self, belief_id: str, version: int) -> dict:
+        state = self._state
+        belief_repo = getattr(state, "belief_repo", None)
+        if not belief_repo:
+            return {"status": "error", "message": "Belief repository not initialized"}
+
+        # Fetch the version from DB
+        version_data = belief_repo.get_statement_version(belief_id, version)
+        if not version_data:
+            return {"status": "error", "message": f"Version {version} for belief {belief_id} not found"}
+
+        # Retrieve the current belief
+        target_belief = belief_repo.get_belief("symbia", belief_id)
+        if not target_belief:
+            return {"status": "error", "message": "Belief not found"}
+
+        import uuid
+        from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+
+        label = target_belief.label
+        statement = version_data.statement
+        vector_16d_str = version_data.vector_16d
+
+        new_version = target_belief.version + 1
+
+        # Check speciation
+        speciation_triggered = False
+        old_vec = parse_vector_16d(target_belief.vector_16d)
+        new_vec = parse_vector_16d(vector_16d_str)
+        if old_vec is not None and new_vec is not None:
+            sim = compute_cosine_similarity(old_vec, new_vec)
+            dist = 1.0 - sim
+            if dist > 0.4:
+                speciation_triggered = True
+                notif_repo = getattr(state, "notification_repo", None)
+                if notif_repo:
+                    notif_repo.create(
+                        type="glitch",
+                        snippet=f"Speciation Alert: Belief '{label}' has drifted significantly (distance={dist:.2f}) after reverting to version {version}.",
+                        source=f"belief:{label}"
+                    )
+
+        # Archive new statement version
+        belief_repo.create_statement_version(
+            id=str(uuid.uuid4()),
+            belief_id=belief_id,
+            version=new_version,
+            statement=statement,
+            vector_16d=vector_16d_str,
+            change_reason=f"Reverted to version {version}",
+        )
+
+        # Save in database
+        belief_repo.update_belief_details(
+            belief_id=belief_id,
+            label=label,
+            statement=statement,
+            confidence=target_belief.confidence,
+            ontological_mass=target_belief.ontological_mass,
+            lifecycle_stage=target_belief.lifecycle_stage,
+            vector_16d=vector_16d_str,
+            version=new_version,
+        )
+
+        # Log event
+        try:
+            belief_repo.insert_belief_event(
+                event_id=str(uuid.uuid4()),
+                belief_id=belief_id,
+                source_type="user_assertion",
+                source_id=None,
+                alignment=1.0,
+                perturbation=0.5,
+                event_type="revision",
+                impact=0.1,
+                rationale=f"Reverted statement to version {version} via Agent FLUX API",
+            )
+        except Exception as e:
+            logger.warning("Failed to insert event for belief revert: %s", e)
+
+        # Log notification
+        notif_repo = getattr(state, "notification_repo", None)
+        if notif_repo and not speciation_triggered:
+            notif_repo.create(
+                type="trace",
+                snippet=f"Belief '{label}' reverted statement to version {version}.",
+                source=f"belief:{label}"
+            )
+
+        return {
+            "status": "ok",
+            "belief_id": belief_id,
+            "version": new_version,
+            "speciation_alert": speciation_triggered
+        }
