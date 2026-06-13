@@ -7,7 +7,7 @@ from typing import Optional
 import yaml
 import numpy as np
 
-from backend.modules.structural_engine import LexiconScorer
+from backend.modules.structural_engine import LexiconScorer, CompositeStructuralScorer
 from backend.storage.models import SkillNode
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class SkillService:
             vector_text = content if content else (description if description else skill.description)
             if not vector_text and skill.content:
                 vector_text = skill.content
-            updates["vector_16d"] = self._compute_skill_vector(vector_text, scorer)
+            updates["vector_16d"] = await self._compute_skill_vector(vector_text, scorer)
 
         # Increment version on edit
         updates["version"] = skill.version + 1
@@ -126,7 +126,7 @@ class SkillService:
         # 1. Compute 16D vector
         embedder = getattr(state, "embedder", None)
         scorer = getattr(embedder, "service", None) if embedder else None
-        vector_16d = self._compute_skill_vector(content, scorer)
+        vector_16d = await self._compute_skill_vector(content, scorer)
 
         # 2. Save in database (initial version is 1, stage is crystallized so it's active immediately)
         new_skill = skill_repo.create_skill(
@@ -180,16 +180,23 @@ class SkillService:
             except Exception as e:
                 logger.warning("Failed to clean up associated belief for skill %s: %s", skill.name, e)
 
-    def _compute_skill_vector(self, text: str, embedder_service=None) -> str:
+    async def _compute_skill_vector(self, text: str, embedder_service=None) -> str:
         result = {"v16d": [], "v384d": []}
 
         try:
-            scorer = LexiconScorer()
-            v16d = scorer.score(text)
+            structural_provider = getattr(self._state, "structural_provider", None)
+            scorer = CompositeStructuralScorer(llm_provider=structural_provider)
+            v16d = await scorer.score_async(text, use_llm_scorer=True)
             result["v16d"] = v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)
         except Exception as e:
-            logger.warning("Failed to compute 16D structural vector: %s", e)
-            result["v16d"] = [0.0] * 16
+            logger.warning("Failed to compute 16D structural vector with LLM: %s", e)
+            try:
+                lex_scorer = LexiconScorer()
+                v16d = lex_scorer.score(text)
+                result["v16d"] = v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)
+            except Exception as e_lex:
+                logger.warning("Failed fallback 16D structural vector computation: %s", e_lex)
+                result["v16d"] = [0.0] * 16
 
         if embedder_service:
             try:

@@ -557,6 +557,7 @@ async def main():
         belief_repo=belief_repo,
         message_repo=message_repo,
         identity_yaml_path=identity_path,
+        llm_provider=structural_provider,
     )
 
     # 7. Initialize Background task engine

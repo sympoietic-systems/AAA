@@ -73,12 +73,14 @@ class BeliefDynamicsEngine(ProcessingModule):
         message_repo: MessageRepository,
         identity_yaml_path: Path,
         learning_rate_beta: float = 0.05,
+        llm_provider: Optional[any] = None,
     ):
         self._belief_repo = belief_repo
         self._message_repo = message_repo
         self._identity_yaml_path = identity_yaml_path
         self._beta = learning_rate_beta
         self._scorer = LexiconScorer()
+        self._llm_provider = llm_provider
         self._source_weights = {
             "chat_turn": 0.4,
             "user_assertion": 0.4,
@@ -120,16 +122,27 @@ class BeliefDynamicsEngine(ProcessingModule):
         if not content.strip():
             return b""
         try:
-            scorer = CompositeStructuralScorer(llm_provider=None)
-            sig = await scorer.score_async(content, use_llm_scorer=False)
+            scorer = CompositeStructuralScorer(llm_provider=self._llm_provider)
+            sig = await scorer.score_async(content, use_llm_scorer=True)
             sig_bytes = sig.tobytes()
+        except Exception as e:
+            logger.warning("Failed LLM-based signature computation for message %d, falling back to empirical: %s", getattr(msg, 'id', None), e)
+            try:
+                scorer = CompositeStructuralScorer(llm_provider=None)
+                sig = await scorer.score_async(content, use_llm_scorer=False)
+                sig_bytes = sig.tobytes()
+            except Exception as e2:
+                logger.warning("Failed fallback signature computation for message %d: %s", getattr(msg, 'id', None), e2)
+                return b""
+
+        try:
             if hasattr(msg, 'id') and msg.id:
                 self._message_repo.update_signature(msg.id, sig_bytes)
-            logger.info("Lazy-computed structural signature for message %d", msg.id)
+            logger.info("Lazy-computed structural signature for message %d (LLM enabled)", msg.id)
             return sig_bytes
         except Exception as e:
-            logger.warning("Failed lazy signature computation for message %d: %s", getattr(msg, 'id', None), e)
-            return b""
+            logger.warning("Failed updating lazy signature database record for message %d: %s", getattr(msg, 'id', None), e)
+            return sig_bytes
 
     def _nucleate_proto_belief(
         self,

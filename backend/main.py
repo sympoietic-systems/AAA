@@ -306,12 +306,13 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
     }
 
 
-def _init_belief_engine(repos: dict, identity_path: Path):
+def _init_belief_engine(repos: dict, identity_path: Path, llm_provider=None):
     from backend.modules.belief_engine import BeliefDynamicsEngine
     return BeliefDynamicsEngine(
         belief_repo=repos["belief_repo"],
         message_repo=repos["message_repo"],
         identity_yaml_path=identity_path,
+        llm_provider=llm_provider,
     )
 
 
@@ -420,7 +421,7 @@ async def lifespan(app: FastAPI):
 
     # 5. Identity + beliefs
     identity_data, agent_name, identity_path = _load_identity(config)
-    belief_metabolism = _init_belief_engine(repos, identity_path)
+    belief_metabolism = _init_belief_engine(repos, identity_path, structural_provider)
 
     # 6. Prompt assembler
     ctx_cfg = config.get("context", {})

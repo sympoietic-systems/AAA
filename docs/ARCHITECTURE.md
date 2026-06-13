@@ -398,6 +398,14 @@ Collapsible panels appear under each apparatus message in `MessageBubble`:
 3. **structural signature** — `StructuralAutopoieticGlyph` radar/bar visualization
 4. **notes** — inline text annotation system (select → create → render as highlights)
 
+### Belief & Skill Autopoietic Signatures
+
+To ensure that the agent's core beliefs and skills reflect rich semantic intelligence rather than simple word counts, their 16-dimensional autopoietic vectors are calculated using the LLM-backed `CompositeStructuralScorer` (invoked with `use_llm_scorer=True`). 
+- **Belief Dynamics Engine (`belief_engine.py`)**: Lazily scores metabolized beliefs using the application's injected `structural_provider` model pool.
+- **Skill Service (`skill.py`)**: Computes skill vectors asynchronously using the `structural_provider` model pool.
+- **Lexicon Fallback**: Both pathways feature a nested try-except fallback mechanism that immediately defaults back to the fast empirical `LexiconScorer` signature if the LLM provider times out or fails, ensuring maximum reliability.
+- **Batch Maintenance**: A batch script (`backend/scripts/recalculate_autopoietic_vectors.py`) can be executed to retroactively rebuild 16D vectors for all database records of `belief_nodes` and `skill_nodes` using the LLM.
+
 Config: `AAA_LLM_SCORER_ENABLED`, `AAA_STRUCTURAL_MODELS`, `AAA_STRUCTURAL_FALLBACK_MODEL`.
 
 ## Sedimentation
@@ -602,7 +610,7 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | Tiered context compression | Done | Caveman (mid-tier) + LLM checkpoints (deep); see ADR-007 |
 | Consolidation checkpoint module | Done | Pipeline step: inject checkpoints, trigger background consolidation |
 | SidePanel hierarchy | Done | Collapsible parent-child skill display in right sidebar |
-| Structural signature (16-dim) | Done | LexiconScorer + TopologyScorer + LLMScorer; stored as BLOB per message |
+| Structural signature (16-dim) | Done | Stored as BLOB in conversation log and JSON on skills/beliefs; computed via LLM-backed scorer with lexicon fallback |
 | LLM structural scorer | Done | JSON schema analysis via `structural_llm` model pool; `AAA_LLM_SCORER_ENABLED` toggle |
 | Structural justification cache | Done | In-memory SHA256-keyed cache; surfaced in UI debug panel |
 | Structural payload JSON panel | Done | Collapsible per-message debug view with named dimension scores |

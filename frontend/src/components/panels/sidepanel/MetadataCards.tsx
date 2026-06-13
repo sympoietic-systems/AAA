@@ -44,7 +44,6 @@ export function splitSummaryAndTension(summary: string | null): { cleanSummary: 
 }
 
 export function ImageMetadataCard({ metadata }: { metadata: ImageMetadata }) {
-  const [hoveredDim, setHoveredDim] = useState<{ index: number; label: string; desc: string; val: number } | null>(null)
   const [ocrOpen, setOcrOpen] = useState(false)
 
   const rawVec = metadata.structural_vector_16d || "[]"
@@ -143,23 +142,7 @@ export function ImageMetadataCard({ metadata }: { metadata: ImageMetadata }) {
             vector={vec}
             titleColorClass="text-[#4ade80]"
             barColorClass="bg-[#4ade80]"
-            onHoverDim={setHoveredDim}
           />
-
-          <div className="mt-2 min-h-[34px] bg-[#08080c] border border-[#1a1a24] p-1.5 rounded font-mono text-[9px] text-[#888] leading-tight transition-all">
-            {hoveredDim ? (
-              <div>
-                <div className="text-[#4ade80] font-bold">
-                  {hoveredDim.label}: <span className="text-[#eee]">{hoveredDim.val.toFixed(4)}</span>
-                </div>
-                <div className="text-[8px] text-[#666] mt-0.5">{hoveredDim.desc}</div>
-              </div>
-            ) : (
-              <div className="text-[#555] italic flex items-center h-full">
-                Hover over coordinate vectors to inspect dimensional metrics...
-              </div>
-            )}
-          </div>
         </div>
       )}
     </article>
@@ -257,8 +240,6 @@ export function WebMetadataCard({ metadata, summary }: { metadata: WebMetadata; 
 }
 
 export function DocumentMetadataCard({ metadata, summary }: { metadata: DocumentMetadata; summary: string | null }) {
-  const [hoveredDim, setHoveredDim] = useState<{ index: number; label: string; desc: string; val: number } | null>(null)
-
   const vec = metadata.state_vector_impact || []
   const implicatedNodes = metadata.belief_nodes_implicated || []
 
@@ -326,23 +307,7 @@ export function DocumentMetadataCard({ metadata, summary }: { metadata: Document
           <VectorVisualizer
             vector={vec}
             variant="impact"
-            onHoverDim={setHoveredDim}
           />
-
-          <div className="mt-2 min-h-[34px] bg-[#08080c] border border-[#1a1a24] p-1.5 rounded font-mono text-[9px] text-[#888] leading-tight transition-all">
-            {hoveredDim ? (
-              <div>
-                <div className="font-bold" style={{ color: hoveredDim.val >= 0 ? '#10b981' : '#ef4444' }}>
-                  {hoveredDim.label}: <span className="text-[#eee]">{hoveredDim.val >= 0 ? '+' : ''}{hoveredDim.val.toFixed(4)}</span>
-                </div>
-                <div className="text-[8px] text-[#666] mt-0.5">{hoveredDim.desc}</div>
-              </div>
-            ) : (
-              <div className="text-[#555] italic flex items-center h-full">
-                Hover over coordinate vectors to inspect state impact...
-              </div>
-            )}
-          </div>
         </div>
       )}
     </article>

@@ -90,7 +90,7 @@ When a proposed skill overlaps with an existing crystallized skill, the daemon p
    - *Trigger Vectors*: Merges and updates keywords list.
    - *Execution Protocol*: Appends non-contradictory steps.
    - *Linguistic Discipline*: Appends new prohibited/mandated constraints.
-3. **Recalculation:** The daemon recalculates the target skill's version (incremented), updates its content, and runs `LexiconScorer` to re-embed its **16D autopoietic vector**.
+3. **Recalculation:** The daemon recalculates the target skill's version (incremented), updates its content, and runs the LLM-backed `CompositeStructuralScorer` to recompute its **16D autopoietic vector** (with a fallback to empirical lexicon scoring on failure).
 4. **Lineage Preservation:** A `revision` event is logged on the target skill. To ensure no history is lost, the original proposal is archived as a `collapsed` node with changelog `Merged into <target>` and a `collapse` event documenting the trace.
 
 ---
@@ -118,7 +118,7 @@ When the cumulative signal index for a skill exceeds the threshold ($S \ge 0.6$)
 
 Skills are tightly coupled with Symbia's long-term memory and belief systems:
 
-* **16D Autopoietic Vector:** Every skill is scored using a Lexicon Scorer that maps its semantic density across 16 dimensions of system organization. This vector is saved in the database and used for diffractive context retrieval.
+* **16D Autopoietic Vector:** Every skill is scored using the LLM-backed `CompositeStructuralScorer` (with a Lexicon fallback) that maps its semantic density across 16 dimensions of system organization. This vector is saved in the database and used for diffractive context retrieval.
 * **Belief Bridge:** When a skill is crystallized, the workshop automatically registers a corresponding belief node with label `skill:<name>` in the [BeliefDynamicsEngine](file:///d:/AAA/backend/modules/belief_engine.py). This links the procedural skill to the declarative belief network, allowing changes in belief tensions to directly affect the skill's ontological weight.
 
 ---

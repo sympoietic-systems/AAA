@@ -13,6 +13,7 @@ interface VectorVisualizerProps {
   titleColorClass?: string
   barColorClass?: string
   variant?: "signature" | "impact"
+  allowNegative?: boolean
   onHoverDim?: (dim: { index: number; label: string; desc: string; val: number } | null) => void
 }
 
@@ -21,16 +22,20 @@ export function VectorVisualizer({
   titleColorClass = "text-[#a78bfa]",
   barColorClass = "bg-[#a78bfa]",
   variant = "signature",
+  allowNegative,
   onHoverDim
 }: VectorVisualizerProps) {
   if (!vector || vector.length === 0) return null
 
   const isImpact = variant === "impact"
+  const shouldAllowNegative = allowNegative !== undefined ? allowNegative : isImpact
 
   return (
     <div className="flex items-end gap-0.5 bg-[#08080c] border border-[#1a1a24] p-0.5 w-fit overflow-visible relative rounded-none">
-      {/* Centerline baseline: 12px (half of h-6) + 2px (padding top) = 14px */}
-      <div className="absolute left-0 right-0 top-[14px] h-[1px] bg-[#333]/30 pointer-events-none z-10" />
+      {/* Centerline baseline: only render if negative values are allowed */}
+      {shouldAllowNegative && (
+        <div className="absolute left-0 right-0 top-[14px] h-[1px] bg-[#333]/30 pointer-events-none z-10" />
+      )}
 
       {vector.map((val, idx) => {
         const isPositive = val >= 0
@@ -42,12 +47,13 @@ export function VectorVisualizer({
           magnitude = Math.min(1.0, Math.abs(val) / 0.5)
           displayColor = isPositive ? "bg-[#10b981]" : "bg-[#ef4444]"
         } else {
-          // Signature vector values range in [-1.0, 1.0]
+          // Signature vector values range in [0.0, 1.0]
           magnitude = Math.min(1.0, Math.abs(val))
         }
 
-        // Height is magnitude * 50% of the total inner height (12px max)
-        const heightPercent = Math.max(4, Math.round(magnitude * 50))
+        // Height scale max: 50% for centerline-based, 100% for bottom-based
+        const scaleMax = shouldAllowNegative ? 50 : 100
+        const heightPercent = Math.max(4, Math.round(magnitude * scaleMax))
         const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
         const code = SHORT_CODES[idx] || `D${idx + 1}`
 
@@ -67,12 +73,16 @@ export function VectorVisualizer({
               onMouseLeave={() => onHoverDim?.(null)}
               className="h-6 w-1.5 relative select-none cursor-crosshair bg-[#14141d]/30"
             >
-              {/* Actual bar absolute-anchored to the middle baseline */}
+              {/* Actual bar absolute-anchored */}
               <div
-                style={{
+                style={shouldAllowNegative ? {
                   height: `${heightPercent}%`,
                   bottom: isPositive ? "50%" : "auto",
                   top: isPositive ? "auto" : "50%",
+                } : {
+                  height: `${heightPercent}%`,
+                  bottom: 0,
+                  top: "auto",
                 }}
                 className={`absolute left-0 right-0 opacity-60 hover:opacity-100 transition-all transition-colors duration-150 ${displayColor}`}
               />
