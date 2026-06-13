@@ -442,8 +442,9 @@ Your task is to synthesize an existing active belief with a newly proposed belie
 Instructions:
 1. Ground the statement in the active belief's original concept and framing. Do not discard its core insight.
 2. Integrate the new nuances, evidence, or focus from the proposed belief statement.
-3. Polish the statement so that it reads cleanly, concisely, and remains in Symbia's posthuman, self-observational voice.
-4. Output ONLY the new synthesized statement. Do not output JSON, markdown fences, introductions, explanation, or rationales.
+3. Keep the statement extremely short, clear, and concise. Aim for exactly one sentence (at most two). Shorter and clearer is better.
+4. Polish the statement so that it reads cleanly, concisely, and remains in Symbia's posthuman, self-observational voice.
+5. Output ONLY the new synthesized statement. Do not output JSON, markdown fences, introductions, explanation, or rationales.
 
 Symbia's Voice & Personality:
 {personality_prompt}
