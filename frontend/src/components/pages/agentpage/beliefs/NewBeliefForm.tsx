@@ -50,6 +50,7 @@ export function NewBeliefForm({ onCancel, onCreate }: NewBeliefFormProps) {
           category: "general",
           confidence,
           ontological_mass: ontologicalMass,
+          version: 1,
           vector_16d: "[]",
           origin: "authored",
           lifecycle_stage: lifecycleStage,

@@ -526,6 +526,7 @@ export interface BeliefNodeInfo {
   category: string
   confidence: number
   ontological_mass: number
+  version: number
   vector_16d: string
   origin: string
   lifecycle_stage: string
@@ -620,6 +621,20 @@ export async function deleteBelief(beliefId: string): Promise<void> {
     const err = await res.json().catch(() => ({ detail: "Failed to delete belief" }))
     throw new Error(err.detail || `HTTP ${res.status}`)
   }
+}
+
+export async function revertBelief(
+  beliefId: string,
+  version: number
+): Promise<{ status: string; belief_id: string; version: number; speciation_alert: boolean }> {
+  const res = await fetch(`${BASE}/beliefs/${beliefId}/revert/${version}`, {
+    method: "POST",
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to revert belief version" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
 }
 
 

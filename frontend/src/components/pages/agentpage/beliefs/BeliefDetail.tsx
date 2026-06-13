@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { updateBelief, deleteBelief } from "../../../../api/client"
+import { updateBelief, deleteBelief, revertBelief } from "../../../../api/client"
 import type { BeliefNodeInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
 import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
@@ -165,6 +165,40 @@ export function BeliefDetail({ belief, onUpdate, onDelete, agentFlux }: BeliefDe
       setErrorMsg(e.message || String(e))
       setIsSavingOrDeleting(false)
       setIsConfirmingDelete(false)
+    }
+  }
+
+  const handleRevert = async (targetVersion: number) => {
+    setIsSavingOrDeleting(true)
+    setErrorMsg(null)
+    try {
+      const result = await revertBelief(b.id, targetVersion)
+      if (result.status === "ok") {
+        const vRes = await fetch(`/api/beliefs/${b.id}/versions`)
+        const vData = await vRes.json()
+        if (Array.isArray(vData)) {
+          setVersions(vData)
+          const targetVerObj = vData.find((x: any) => x.version === targetVersion)
+          if (targetVerObj) {
+            const updatedB: BeliefNodeInfo = {
+              ...b,
+              statement: targetVerObj.statement,
+              vector_16d: JSON.stringify(targetVerObj.vector_16d),
+              version: result.version,
+            }
+            onUpdate(updatedB)
+          }
+        }
+        if (result.speciation_alert) {
+          alert(`Speciation Alert: Belief signature has drifted significantly after reverting to version ${targetVersion}!`)
+        }
+      } else {
+        setErrorMsg("Failed to revert belief statement version")
+      }
+    } catch (e: any) {
+      setErrorMsg(e.message || String(e))
+    } finally {
+      setIsSavingOrDeleting(false)
     }
   }
 
@@ -425,6 +459,15 @@ export function BeliefDetail({ belief, onUpdate, onDelete, agentFlux }: BeliefDe
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {agentFlux && v.version !== b.version && (
+                        <button
+                          onClick={() => handleRevert(v.version)}
+                          disabled={isSavingOrDeleting}
+                          className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline disabled:text-[#555] cursor-pointer select-none font-bold mr-1"
+                        >
+                          [revert]
+                        </button>
+                      )}
                       <button
                         onClick={() => setExpandedVersions(prevMap => ({ ...prevMap, [v.version]: !prevMap[v.version] }))}
                         className="text-[9px] text-[#888] hover:text-[#ccc] hover:underline cursor-pointer select-none font-bold"
