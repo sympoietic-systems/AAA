@@ -1,48 +1,5 @@
 import React, { useState, memo } from 'react';
-
-// Define the 16 dimensions grouped into 4 cybernetic sectors with explanations
-export const SECTORS = [
-  {
-    name: "Behavioral Dynamics",
-    color: "#a78bfa",
-    dimensions: [
-      { index: 0, label: "Homeostatic", explanation: "Stabilizing feedback. Maintains system consistency, recovering from perturbations." },
-      { index: 1, label: "Amplifying", explanation: "Runaway feedback. Cascading expansion, growth, and positive feedback loops." },
-      { index: 2, label: "Cyclic", explanation: "Recursive loops. Periodic oscillations and repeating rhythms of dialogue topics." },
-      { index: 3, label: "Bifurcated", explanation: "Phase state bifurcation. Sudden transitions and threshold-triggered changes." }
-    ]
-  },
-  {
-    name: "Structural Topology",
-    color: "#60a5fa",
-    dimensions: [
-      { index: 4, label: "Decentralized", explanation: "Mesh structure. Non-hierarchical distribution of control across topics." },
-      { index: 5, label: "Rhizomatic", explanation: "Network complexity. Multiple redundant paths and horizontal connections." },
-      { index: 6, label: "Boundary Permeability", explanation: "Environmental coupling. Ingestion and openness to outside files/inputs." },
-      { index: 7, label: "Recursion Depth", explanation: "Depth of nesting. Embedding level of internal meta-reasoning loops." }
-    ]
-  },
-  {
-    name: "Informational Flow",
-    color: "#34d399",
-    dimensions: [
-      { index: 8, label: "Variety Filtering", explanation: "Cybernetic control. Selecting clean relevance out of high cognitive variety." },
-      { index: 9, label: "Negentropic Complexity", explanation: "Order creation. Generating structured coherence from semantic noise." },
-      { index: 10, label: "Temporal Latency", explanation: "Response delay. Time lag and processing weight of responses." },
-      { index: 11, label: "Attractor Depth", explanation: "Conceptual confinement. Locking into stable focus zones or cognitive basins." }
-    ]
-  },
-  {
-    name: "Relational Coupling",
-    color: "#fbbf24",
-    dimensions: [
-      { index: 12, label: "Symbiotic", explanation: "Structural coupling. Reciprocal co-evolution between human and agent systems." },
-      { index: 13, label: "Nomadic", explanation: "Deterritorialization. Thematic drifts, leaps, and exploratory migrations." },
-      { index: 14, label: "Conversational", explanation: "Interlocutor co-orientation. Direct conversational grounding and dialogic alignment." },
-      { index: 15, label: "Substrate Materiality", explanation: "Hardware reflexivity. System awareness of hosts, memory limits, and runs." }
-    ]
-  }
-];
+import { SECTORS, AutopoieticCoordinates } from './AutopoieticCoordinates';
 
 export const DIMENSION_NAMES = SECTORS.flatMap(s => s.dimensions).map(d => d.label);
 
@@ -225,46 +182,12 @@ export const StructuralAutopoieticGlyph = memo<GlyphProps>(({
         </div>
 
         {/* Legend */}
-        <div className="flex flex-col gap-2 flex-1 min-w-[200px] w-full">
-          <div className="text-[9px] font-bold tracking-wider uppercase text-slate-500 font-mono flex items-center justify-between">
-            <span>Autopoietic Coordinates</span>
-            {isStagnant && (
-              <span className="text-red-400 animate-pulse text-[8px] border border-red-500/30 px-1 rounded bg-red-950/20">
-                Stagnation Warn
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-x-2 sm:gap-x-3 gap-y-1.5 text-[8.5px] font-mono w-full">
-            {SECTORS.map((sector) => (
-              <div key={sector.name} className="flex flex-col gap-1 col-span-1 border-t border-[#1a1a24] pt-1.5">
-                <span className="text-[8px] font-semibold text-slate-600 truncate uppercase tracking-tight mb-0.5">
-                  {sector.name.split(" ")[0]}
-                </span>
-                {sector.dimensions.map((dim) => {
-                  const isHovered = hoveredIndex === dim.index;
-                  const value = signature[dim.index];
-                  return (
-                    <div
-                      key={dim.index}
-                      onMouseEnter={() => setHoveredIndex(dim.index)}
-                      onMouseLeave={() => setHoveredIndex(null)}
-                      className="flex items-start justify-between cursor-help py-0.5 px-0.5 rounded transition-colors duration-150"
-                      style={{
-                        backgroundColor: isHovered ? `${sector.color}15` : 'transparent',
-                        color: isHovered ? sector.color : '#94a3b8'
-                      }}
-                    >
-                      <span className="text-[7.5px] sm:text-[8px] leading-tight pr-1" title={dim.label}>{dim.label}</span>
-                      <span className="font-mono text-[7.5px] sm:text-[8px] font-bold opacity-80 mt-[1px]">
-                        {value != null ? value.toFixed(1) : '0.0'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
+        <AutopoieticCoordinates
+          signature={signature}
+          hoveredIndex={hoveredIndex}
+          onHoverChange={setHoveredIndex}
+          isStagnant={isStagnant}
+        />
       </div>
 
       {/* Floating Tooltip Panel */}
