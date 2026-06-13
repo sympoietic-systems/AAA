@@ -2,9 +2,14 @@ import json
 from typing import Optional
 
 from backend.storage.connection import with_connection
-from backend.storage.models import BeliefEvent, BeliefNode
+from backend.storage.models import BeliefEvent, BeliefNode, BeliefProposal, BeliefStatementVersion
 from backend.storage.repositories.base import BaseRepository
-from backend.storage.row_mappers import _row_to_belief_event, _row_to_belief_node
+from backend.storage.row_mappers import (
+    _row_to_belief_event,
+    _row_to_belief_node,
+    _row_to_belief_proposal,
+    _row_to_belief_statement_version,
+)
 
 
 class BeliefRepository(BaseRepository):
@@ -77,14 +82,17 @@ class BeliefRepository(BaseRepository):
         somatic_anchor: str,
         vector_16d: str,
         lifecycle_stage: str = "crystallized",
+        evolved_from_proposal: Optional[str] = None,
+        genesis_materials: Optional[str] = None,
+        version: int = 1,
     ) -> BeliefNode:
         validated_vector = self.validate_and_format_vector(vector_16d)
         conn = self._conn()
         conn.execute(
             """INSERT INTO belief_nodes
-               (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage, last_reinforced_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-            (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, validated_vector, lifecycle_stage),
+               (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage, evolved_from_proposal, genesis_materials, version, last_reinforced_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+            (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, validated_vector, lifecycle_stage, evolved_from_proposal, genesis_materials, version),
         )
         conn.commit()
 
@@ -118,6 +126,25 @@ class BeliefRepository(BaseRepository):
     ) -> None:
         validated_vector = self.validate_and_format_vector(vector_16d)
         conn = self._conn()
+        
+        # Check for stage transition
+        if lifecycle_stage is not None:
+            try:
+                row = conn.execute("SELECT label, lifecycle_stage FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
+                if row and row["lifecycle_stage"] != lifecycle_stage:
+                    old_stage = row["lifecycle_stage"]
+                    label = row["label"]
+                    snippet = f"Belief '{label}' transitioned stage: {old_stage} \u2192 {lifecycle_stage}."
+                    import uuid
+                    from datetime import datetime, timezone
+                    conn.execute(
+                        """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
+                           VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
+                        (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{label}"),
+                    )
+            except Exception:
+                pass
+
         if lifecycle_stage is not None:
             conn.execute(
                 """UPDATE belief_nodes
@@ -146,6 +173,22 @@ class BeliefRepository(BaseRepository):
     @with_connection
     def update_belief_stage(self, belief_id: str, lifecycle_stage: str) -> None:
         conn = self._conn()
+        try:
+            row = conn.execute("SELECT label, lifecycle_stage FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
+            if row and row["lifecycle_stage"] != lifecycle_stage:
+                old_stage = row["lifecycle_stage"]
+                label = row["label"]
+                snippet = f"Belief '{label}' transitioned stage: {old_stage} \u2192 {lifecycle_stage}."
+                import uuid
+                from datetime import datetime, timezone
+                conn.execute(
+                    """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
+                       VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
+                    (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{label}"),
+                )
+        except Exception:
+            pass
+
         conn.execute(
             "UPDATE belief_nodes SET lifecycle_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (lifecycle_stage, belief_id),
@@ -359,3 +402,151 @@ class BeliefRepository(BaseRepository):
         conn = self._conn()
         conn.execute("DELETE FROM belief_nodes WHERE label = ?", (label,))
         conn.commit()
+
+    @with_connection
+    def delete_belief(self, belief_id: str) -> None:
+        conn = self._conn()
+        conn.execute("DELETE FROM belief_nodes WHERE id = ?", (belief_id,))
+        conn.commit()
+
+    @with_connection
+    def update_belief_statement(self, belief_id: str, statement: str, vector_16d: str, version: int) -> None:
+        validated_vector = self.validate_and_format_vector(vector_16d)
+        conn = self._conn()
+        conn.execute(
+            """UPDATE belief_nodes
+               SET statement = ?, vector_16d = ?, version = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (statement, validated_vector, version, belief_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def create_proposal(
+        self,
+        id: str,
+        agent_id: str,
+        provisional_statement: str,
+        source_trace: str,
+        initial_signature: str,
+        nucleation_mass: float = 0.1,
+        confidence: float = 0.15,
+        status: str = "pending",
+        potential_merge_target: Optional[str] = None,
+    ) -> BeliefProposal:
+        validated_vector = self.validate_and_format_vector(initial_signature)
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO belief_proposals
+               (id, agent_id, provisional_statement, source_trace, initial_signature, nucleation_mass, confidence, status, potential_merge_target, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+            (id, agent_id, provisional_statement, source_trace, validated_vector, nucleation_mass, confidence, status, potential_merge_target),
+        )
+        
+        # Automatic notification insertion
+        import uuid
+        from datetime import datetime, timezone
+        snippet = f"A new belief proposal has emerged in the workshop ('{provisional_statement[:60]}...')"
+        conn.execute(
+            """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
+               VALUES (?, 'trace', ?, ?, 'belief_workshop', 0, 0)""",
+            (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet),
+        )
+        
+        conn.commit()
+        row = conn.execute("SELECT * FROM belief_proposals WHERE id = ?", (id,)).fetchone()
+        return _row_to_belief_proposal(row)
+
+    @with_connection
+    def get_proposal(self, proposal_id: str) -> Optional[BeliefProposal]:
+        conn = self._conn()
+        row = conn.execute("SELECT * FROM belief_proposals WHERE id = ?", (proposal_id,)).fetchone()
+        if row is None:
+            return None
+        return _row_to_belief_proposal(row)
+
+    @with_connection
+    def list_proposals(self, agent_id: str) -> list[BeliefProposal]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_proposals WHERE agent_id = ? ORDER BY created_at DESC",
+            (agent_id,),
+        ).fetchall()
+        return [_row_to_belief_proposal(r) for r in rows]
+
+    @with_connection
+    def list_pending_proposals(self, agent_id: str) -> list[BeliefProposal]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_proposals WHERE agent_id = ? AND status IN ('pending', 'refined') ORDER BY created_at DESC",
+            (agent_id,),
+        ).fetchall()
+        return [_row_to_belief_proposal(r) for r in rows]
+
+    @with_connection
+    def update_proposal_status(self, proposal_id: str, status: str, rejection_rationale: Optional[str] = None) -> None:
+        conn = self._conn()
+        if rejection_rationale is not None:
+            conn.execute(
+                "UPDATE belief_proposals SET status = ?, rejection_rationale = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (status, rejection_rationale, proposal_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE belief_proposals SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (status, proposal_id),
+            )
+        conn.commit()
+
+    @with_connection
+    def update_proposal_suggestions(self, proposal_id: str, suggested_label: str, suggested_statement: str, potential_merge_target: Optional[str] = None, status: str = "refined") -> None:
+        conn = self._conn()
+        conn.execute(
+            """UPDATE belief_proposals
+               SET suggested_label = ?, suggested_statement = ?, potential_merge_target = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (suggested_label, suggested_statement, potential_merge_target, status, proposal_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def update_proposal_symbia_reflection(self, proposal_id: str, symbia_reflection: str, symbia_friction_rationale: Optional[str] = None) -> None:
+        conn = self._conn()
+        conn.execute(
+            """UPDATE belief_proposals
+               SET symbia_reflection = ?, symbia_friction_rationale = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (symbia_reflection, symbia_friction_rationale, proposal_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def create_statement_version(
+        self,
+        id: str,
+        belief_id: str,
+        version: int,
+        statement: str,
+        vector_16d: str,
+        change_reason: Optional[str] = None,
+    ) -> BeliefStatementVersion:
+        validated_vector = self.validate_and_format_vector(vector_16d)
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO belief_statement_versions
+               (id, belief_id, version, statement, vector_16d, change_reason, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+            (id, belief_id, version, statement, validated_vector, change_reason),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM belief_statement_versions WHERE id = ?", (id,)).fetchone()
+        return _row_to_belief_statement_version(row)
+
+    @with_connection
+    def list_statement_versions(self, belief_id: str) -> list[BeliefStatementVersion]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM belief_statement_versions WHERE belief_id = ? ORDER BY version ASC",
+            (belief_id,),
+        ).fetchall()
+        return [_row_to_belief_statement_version(r) for r in rows]

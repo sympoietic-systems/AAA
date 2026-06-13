@@ -154,17 +154,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         source_weight: float,
     ) -> Optional[str]:
         existing = self._belief_repo.list_beliefs(agent_id)
-        all_labels = {b.label for b in existing}
-
-        words = [w for w in statement.split() if w.isalnum()]
-        label_words = words[:3] if words else ["proto"]
-        label_base = "_".join(label_words).lower()
-        label = label_base
-        counter = 1
-        while label in all_labels:
-            label = f"{label_base}_{counter}"
-            counter += 1
-
+        
         initial_mass = 0.05 * source_weight / 0.5
 
         ghosts = [b for b in existing if b.lifecycle_stage == "collapsed"]
@@ -189,35 +179,21 @@ class BeliefDynamicsEngine(ProcessingModule):
             except Exception:
                 pass
 
-        belief_id = str(uuid.uuid4())
-        stage = "nucleation" if initial_mass < 0.5 else "accretion"
-        self._belief_repo.create_belief(
-            id=belief_id,
+        proposal_id = str(uuid.uuid4())
+        source_trace_list = [{"type": source_type, "id": source_id}]
+        self._belief_repo.create_proposal(
+            id=proposal_id,
             agent_id=agent_id,
-            label=label,
-            statement=statement,
-            origin="emergent",
+            provisional_statement=statement,
+            source_trace=json.dumps(source_trace_list),
+            initial_signature=json.dumps(vector.tolist() if hasattr(vector, "tolist") else list(vector)),
+            nucleation_mass=initial_mass,
             confidence=0.10,
-            ontological_mass=initial_mass,
-            somatic_anchor="conceptual",
-            vector_16d=json.dumps(vector.tolist()),
-            lifecycle_stage=stage,
+            status="pending"
         )
 
-        self._belief_repo.insert_belief_event(
-            event_id=str(uuid.uuid4()),
-            belief_id=belief_id,
-            source_type=source_type,
-            source_id=source_id,
-            alignment=1.0,
-            perturbation=1.0,
-            event_type="emergence",
-            impact=initial_mass,
-            rationale=f"Proto-belief nucleated from {source_type}:{source_id} with mass={initial_mass:.3f}, stage={stage}",
-        )
-
-        logger.info(f"Nucleated proto-belief '{label}' (mass={initial_mass:.3f}, stage={stage})")
-        return belief_id
+        logger.info(f"Created pending belief proposal '{proposal_id}' in the workshop (nucleation mass={initial_mass:.3f})")
+        return proposal_id
 
     def _accrete_belief(
         self,
@@ -634,6 +610,7 @@ class BeliefDynamicsEngine(ProcessingModule):
             agent_id = "symbia"
             all_beliefs = self._belief_repo.list_beliefs(agent_id)
 
+            best_sim = -1.0
             # 1. Update all non-collapsed beliefs by similarity against perception signature
             for b in all_beliefs:
                 if b.lifecycle_stage in ("collapsed", "faded"):
@@ -644,6 +621,8 @@ class BeliefDynamicsEngine(ProcessingModule):
                     logger.warning(f"Skipping belief '{b.label}' with invalid or malformed vector_16d: {b.vector_16d[:80]}")
                     continue
                 alignment = compute_cosine_similarity(structural_signature, b_vec)
+                if alignment > best_sim:
+                    best_sim = alignment
 
                 dc = 0.80
                 plasticity = dc * ((1.0 - alignment) / 2.0)
@@ -657,6 +636,18 @@ class BeliefDynamicsEngine(ProcessingModule):
                 source_weight = self._get_source_weight("ingested_document")
                 self._accrete_belief(b, structural_signature, source_weight, alignment, perturbation,
                                      source_type=source_type, source_id=source_id)
+
+            # 2. Draft proposal if this is a completely new concept (similarity < 0.3)
+            if best_sim < 0.3:
+                statement = f"Emergent concept from ingested perception '{source_id}'."
+                self._nucleate_proto_belief(
+                    agent_id=agent_id,
+                    statement=statement,
+                    vector=structural_signature,
+                    source_type=source_type,
+                    source_id=source_id,
+                    source_weight=self._get_source_weight("ingested_document"),
+                )
 
             logger.info(f"Successfully metabolized perception '{source_id}' of type '{source_type}'.")
 

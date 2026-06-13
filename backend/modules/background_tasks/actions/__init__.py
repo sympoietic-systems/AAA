@@ -5,3 +5,4 @@ from backend.modules.background_tasks.actions.semantic_knot import SemanticKnotA
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.title import GenerateTitleAction
 from backend.modules.background_tasks.actions.dream_topic_decision import DreamTopicDecisionAction
+from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction

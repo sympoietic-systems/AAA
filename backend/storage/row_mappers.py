@@ -7,6 +7,8 @@ import numpy as np
 from .models import (
     BeliefEvent,
     BeliefNode,
+    BeliefProposal,
+    BeliefStatementVersion,
     Conversation,
     ErrorLogEntry,
     Message,
@@ -77,11 +79,11 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
     return MetricsRecord(
         message_id=row["message_id"],
         s_t=row["s_t"],
-        novelty=row["novelty"],
-        rolling_entropy=row["rolling_entropy"],
-        coupling=row["coupling"],
-        agent_divergence=row["agent_divergence"],
-        deficit=row["deficit"],
+        rolling_entropy=row["rolling_entropy"] if "rolling_entropy" in row.keys() else None,
+        novelty=row["novelty"] if "novelty" in row.keys() else 0.0,
+        coupling=row["coupling"] if "coupling" in row.keys() else None,
+        agent_divergence=row["agent_divergence"] if "agent_divergence" in row.keys() else None,
+        deficit=row["deficit"] if "deficit" in row.keys() else 0.0,
         reverse_perturbation=row["reverse_perturbation"] if "reverse_perturbation" in row.keys() else None,
         surprise_index=row["surprise_index"] if "surprise_index" in row.keys() else None,
         mutual_perturbation=row["mutual_perturbation"] if "mutual_perturbation" in row.keys() else None,
@@ -91,10 +93,10 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
         conceptual_velocity=row["conceptual_velocity"] if "conceptual_velocity" in row.keys() else None,
         divergence_resolution_ratio=row["divergence_resolution_ratio"] if "divergence_resolution_ratio" in row.keys() else None,
         paskian_health=row["paskian_health"] if "paskian_health" in row.keys() else None,
-        temperature_rec=row["temperature_rec"],
-        presence_penalty_rec=row["presence_penalty_rec"],
-        frequency_penalty_rec=row["frequency_penalty_rec"],
-        homeostatic_state=row["homeostatic_state"],
+        temperature_rec=row["temperature_rec"] if "temperature_rec" in row.keys() else None,
+        presence_penalty_rec=row["presence_penalty_rec"] if "presence_penalty_rec" in row.keys() else None,
+        frequency_penalty_rec=row["frequency_penalty_rec"] if "frequency_penalty_rec" in row.keys() else None,
+        homeostatic_state=row["homeostatic_state"] if "homeostatic_state" in row.keys() else None,
     )
 
 
@@ -167,6 +169,24 @@ def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
     except (IndexError, KeyError):
         pass
 
+    evolved_from = None
+    try:
+        evolved_from = row["evolved_from_proposal"]
+    except (IndexError, KeyError):
+        pass
+
+    genesis_mats = None
+    try:
+        genesis_mats = row["genesis_materials"]
+    except (IndexError, KeyError):
+        pass
+
+    version = 1
+    try:
+        version = row["version"] or 1
+    except (IndexError, KeyError):
+        pass
+
     return BeliefNode(
         id=row["id"],
         agent_id=row["agent_id"],
@@ -178,10 +198,56 @@ def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
         somatic_anchor=row["somatic_anchor"],
         vector_16d=row["vector_16d"],
         lifecycle_stage=lifecycle,
+        evolved_from_proposal=evolved_from,
+        genesis_materials=genesis_mats,
+        version=version,
         last_reinforced_at=last_reinforced,
         last_dreamed_at=last_dreamed,
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
         updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
+    )
+
+
+def _row_to_belief_proposal(row: sqlite3.Row) -> BeliefProposal:
+    created = row["created_at"]
+    updated = row["updated_at"]
+    
+    potential_target = None
+    try:
+        potential_target = row["potential_merge_target"]
+    except (IndexError, KeyError):
+        pass
+
+    return BeliefProposal(
+        id=row["id"],
+        agent_id=row["agent_id"],
+        provisional_statement=row["provisional_statement"],
+        source_trace=row["source_trace"],
+        initial_signature=row["initial_signature"],
+        nucleation_mass=row["nucleation_mass"],
+        confidence=row["confidence"],
+        status=row["status"],
+        suggested_label=row["suggested_label"],
+        suggested_statement=row["suggested_statement"],
+        potential_merge_target=potential_target,
+        symbia_reflection=row["symbia_reflection"],
+        symbia_friction_rationale=row["symbia_friction_rationale"],
+        rejection_rationale=row["rejection_rationale"],
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
+        updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
+    )
+
+
+def _row_to_belief_statement_version(row: sqlite3.Row) -> BeliefStatementVersion:
+    created = row["created_at"]
+    return BeliefStatementVersion(
+        id=row["id"],
+        belief_id=row["belief_id"],
+        version=row["version"],
+        statement=row["statement"],
+        vector_16d=row["vector_16d"],
+        change_reason=row["change_reason"],
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
     )
 
 

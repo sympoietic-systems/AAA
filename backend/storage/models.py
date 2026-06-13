@@ -138,10 +138,44 @@ class BeliefNode:
     somatic_anchor: str
     vector_16d: str  # JSON list
     lifecycle_stage: str = "crystallized"
+    evolved_from_proposal: Optional[str] = None
+    genesis_materials: Optional[str] = None  # JSON list
+    version: int = 1
     last_reinforced_at: Optional[datetime] = None
     last_dreamed_at: Optional[datetime] = None
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
+
+
+@dataclass
+class BeliefProposal:
+    id: str
+    agent_id: str
+    provisional_statement: str
+    source_trace: str  # JSON string representation of source list
+    initial_signature: str  # JSON string representation of 16D vector
+    nucleation_mass: float
+    confidence: float
+    status: str
+    suggested_label: Optional[str] = None
+    suggested_statement: Optional[str] = None
+    potential_merge_target: Optional[str] = None
+    symbia_reflection: Optional[str] = None
+    symbia_friction_rationale: Optional[str] = None
+    rejection_rationale: Optional[str] = None
+    created_at: datetime = datetime.min
+    updated_at: datetime = datetime.min
+
+
+@dataclass
+class BeliefStatementVersion:
+    id: str
+    belief_id: str
+    version: int
+    statement: str
+    vector_16d: str  # JSON string representation of 16D vector
+    change_reason: Optional[str] = None
+    created_at: datetime = datetime.min
 
 
 @dataclass

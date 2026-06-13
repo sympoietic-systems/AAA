@@ -28,6 +28,7 @@ from backend.modules.background_tasks.actions.dream_topic_decision import DreamT
 from backend.modules.background_tasks.actions.resonance_finder import ResonanceFinderAction
 from backend.modules.background_tasks.actions.refine_skill import RefineSkillAction
 from backend.modules.background_tasks.actions.metabolize_skill import MetabolizeSkillAction
+from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
 from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
 from backend.modules.context_collector import ContextCollectorModule
@@ -382,6 +383,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     engine.register(ResonanceFinderAction())
     engine.register(RefineSkillAction())
     engine.register(MetabolizeSkillAction())
+    engine.register(RefineBeliefAction())
     logger.info("Background task engine initialized with actions: %s", engine.list_actions())
     return engine, background_provider
 

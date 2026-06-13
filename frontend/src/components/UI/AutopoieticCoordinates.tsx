@@ -77,7 +77,7 @@ export const AutopoieticCoordinates: React.FC<AutopoieticCoordinatesProps> = ({
                 >
                   <span className="text-[7.5px] sm:text-[8px] leading-tight pr-1" title={dim.label}>{dim.label}</span>
                   <span className="font-mono text-[7.5px] sm:text-[8px] font-bold opacity-80 mt-[1px]">
-                    {value != null ? value.toFixed(1) : '0.0'}
+                    {value != null ? value.toFixed(3) : '0.0'}
                   </span>
                 </div>
               );
