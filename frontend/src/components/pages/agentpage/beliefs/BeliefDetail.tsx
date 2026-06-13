@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal } from "../../../../api/client"
 import type { BeliefNodeInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
@@ -69,6 +69,13 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
   const [targetBeliefId, setTargetBeliefId] = useState("")
   const [isRefining, setIsRefining] = useState(false)
   const [isVetting, setIsVetting] = useState(false)
+  const workshopRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (vetMode !== "none" && workshopRef.current) {
+      workshopRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }
+  }, [vetMode])
 
   // Reset editing/confirming states and fetch versions when selected belief changes
   useEffect(() => {
@@ -252,15 +259,134 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
 
         {/* Symbia's Reflection / Friction Rationale */}
         {b.symbia_reflection && (
-          <div className="shrink-0 border border-[#a78bfa]/20 bg-[#a78bfa]/5 p-2 rounded text-[10.5px] leading-relaxed text-[#ccc] font-serif">
-            <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider mb-0.5">[ Symbia's Reflection ]</div>
-            {b.symbia_reflection}
-            {b.symbia_friction_rationale && (
-              <div className="mt-1.5 pt-1.5 border-t border-[#a78bfa]/10 text-[10px] text-[#fb7185] italic font-sans">
-                <span className="font-mono uppercase font-bold mr-1">[ Friction Warning ]:</span>
-                {b.symbia_friction_rationale}
-              </div>
-            )}
+          <div className="shrink-0 border border-[#a78bfa]/20 bg-[#a78bfa]/5 p-2 rounded text-[10.5px] leading-relaxed text-[#ccc] font-serif flex flex-col gap-2">
+            <div>
+              <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider mb-0.5">[ Symbia's Reflection ]</div>
+              {b.symbia_reflection}
+              {b.symbia_friction_rationale && (
+                <div className="mt-1.5 pt-1.5 border-t border-[#a78bfa]/10 text-[10px] text-[#fb7185] italic font-sans">
+                  <span className="font-mono uppercase font-bold mr-1">[ Friction Warning ]:</span>
+                  {b.symbia_friction_rationale}
+                </div>
+              )}
+            </div>
+            {agentFlux && (status === "pending" || status === "refined") && (() => {
+              const recommendsRejection = !!b.symbia_reflection?.toLowerCase().includes("reject");
+              const recommendsMerge = !recommendsRejection && !!b.potential_merge_target;
+              const recommendsAdoption = !recommendsRejection && !b.potential_merge_target;
+              
+              const targetBelief = b.potential_merge_target
+                ? activeBeliefs.find(ab => ab.id === b.potential_merge_target)
+                : null;
+              
+              return (
+                <div className="mt-1 flex flex-wrap gap-2 pt-2 border-t border-[#a78bfa]/10 font-mono text-[9.5px]">
+                  {recommendsRejection && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setVetMode("reject");
+                          setRejectionRationale(b.symbia_reflection || "");
+                        }}
+                        className="px-2 py-1 border border-[#ef4444]/50 hover:border-[#ef4444]/80 bg-[#ef4444]/20 hover:bg-[#ef4444]/30 text-[#ef5f5f] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                      >
+                        [ Reject Proposal (Symbia Recommended) ]
+                      </button>
+                      {targetBelief ? (
+                        <button
+                          onClick={() => {
+                            setVetMode("merge");
+                            setTargetBeliefId(targetBelief.id);
+                          }}
+                          className="px-2 py-1 border border-[#facc15]/20 hover:border-[#facc15]/40 bg-[#facc15]/5 hover:bg-[#facc15]/10 text-[#facc15] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                        >
+                          [ Merge into: "{targetBelief.label}" ]
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setVetMode("adopt");
+                            setAdoptLabel(b.suggested_label || b.label || "");
+                            setAdoptStatement(b.suggested_statement || b.statement || "");
+                          }}
+                          className="px-2 py-1 border border-[#4ade80]/20 hover:border-[#4ade80]/40 bg-[#4ade80]/5 hover:bg-[#4ade80]/10 text-[#4ade80] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                        >
+                          [ Adopt as: "{b.suggested_label || b.label}" ]
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {recommendsMerge && targetBelief && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setVetMode("merge");
+                          setTargetBeliefId(targetBelief.id);
+                        }}
+                        className="px-2 py-1 border border-[#facc15]/50 hover:border-[#facc15]/80 bg-[#facc15]/20 hover:bg-[#facc15]/30 text-[#facc15] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                      >
+                        [ Merge into: "{targetBelief.label}" (Symbia Recommended) ]
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVetMode("adopt");
+                          setAdoptLabel(b.suggested_label || b.label || "");
+                          setAdoptStatement(b.suggested_statement || b.statement || "");
+                        }}
+                        className="px-2 py-1 border border-[#4ade80]/20 hover:border-[#4ade80]/40 bg-[#4ade80]/5 hover:bg-[#4ade80]/10 text-[#4ade80] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                      >
+                        [ Adopt as: "{b.suggested_label || b.label}" ]
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVetMode("reject");
+                          setRejectionRationale(b.symbia_reflection || "");
+                        }}
+                        className="px-2 py-1 border border-[#ef4444]/20 hover:border-[#ef4444]/40 bg-[#ef4444]/5 hover:bg-[#ef4444]/10 text-[#ef4444] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                      >
+                        [ Reject ]
+                      </button>
+                    </>
+                  )}
+
+                  {recommendsAdoption && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setVetMode("adopt");
+                          setAdoptLabel(b.suggested_label || b.label || "");
+                          setAdoptStatement(b.suggested_statement || b.statement || "");
+                        }}
+                        className="px-2 py-1 border border-[#4ade80]/50 hover:border-[#4ade80]/80 bg-[#4ade80]/20 hover:bg-[#4ade80]/30 text-[#4ade80] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                      >
+                        [ Adopt Proposal (Symbia Recommended) ]
+                      </button>
+                      {targetBelief ? (
+                        <button
+                          onClick={() => {
+                            setVetMode("merge");
+                            setTargetBeliefId(targetBelief.id);
+                          }}
+                          className="px-2 py-1 border border-[#facc15]/20 hover:border-[#facc15]/40 bg-[#facc15]/5 hover:bg-[#facc15]/10 text-[#facc15] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                        >
+                          [ Merge into: "{targetBelief.label}" ]
+                        </button>
+                      ) : null}
+                      <button
+                        onClick={() => {
+                          setVetMode("reject");
+                          setRejectionRationale(b.symbia_reflection || "");
+                        }}
+                        className="px-2 py-1 border border-[#ef4444]/20 hover:border-[#ef4444]/40 bg-[#ef4444]/5 hover:bg-[#ef4444]/10 text-[#ef4444] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
+                      >
+                        [ Reject ]
+                      </button>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -299,7 +425,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
 
         {/* Vetting Workshop section */}
         {agentFlux && (status === "pending" || status === "refined") && (
-          <div className="border-t border-[#1f1f2e]/20 pt-2 flex flex-col gap-2 mt-2">
+          <div ref={workshopRef} className="border-t border-[#1f1f2e]/20 pt-2 flex flex-col gap-2 mt-2">
             <div className="text-[#a78bfa] font-mono text-[10px] uppercase font-bold tracking-wider">[ Workshop Actions ]</div>
             
             {vetMode === "none" ? (
