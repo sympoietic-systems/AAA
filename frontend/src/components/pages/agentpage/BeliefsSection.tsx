@@ -101,7 +101,7 @@ function NodeListItem({
       </span>
       {isGhost && <span className="text-[8px] shrink-0">👻</span>}
       <span className={`font-mono text-[11px] truncate flex-1 min-w-0 text-[#bbb] ${isGhost ? "line-through" : ""}`}>
-        {b.label}
+        {b.label} <span className="text-[#555] text-[9px] font-normal">v{b.version}</span>
       </span>
       {stageBadge && stageBadgeColor && (
         <span

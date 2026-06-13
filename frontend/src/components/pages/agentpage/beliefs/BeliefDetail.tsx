@@ -58,6 +58,7 @@ export function BeliefDetail({ belief, onUpdate, onDelete, agentFlux }: BeliefDe
 
   const [versions, setVersions] = useState<any[]>([])
   const [expandedVersions, setExpandedVersions] = useState<Record<number, boolean>>({})
+  const [activeTab, setActiveTab] = useState<"metabolism" | "history">("metabolism")
 
   // Reset editing/confirming states and fetch versions when selected belief changes
   useEffect(() => {
@@ -72,6 +73,7 @@ export function BeliefDetail({ belief, onUpdate, onDelete, agentFlux }: BeliefDe
     }
 
     setVersions([])
+    setActiveTab("metabolism")
     fetch(`/api/beliefs/${belief.id}/versions`)
       .then(res => res.json())
       .then(data => {
@@ -321,7 +323,9 @@ export function BeliefDetail({ belief, onUpdate, onDelete, agentFlux }: BeliefDe
       <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-[11px] shrink-0" style={{ color: catColor }}>●</span>
-          <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">{b.label}</span>
+          <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">
+            {b.label} <span className="text-[#888] font-normal text-[9px] ml-1 bg-[#1a1a24] px-1 py-0.5 rounded border border-[#2d2d3a]">v{b.version}</span>
+          </span>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
           {agentFlux && (
@@ -405,110 +409,139 @@ export function BeliefDetail({ belief, onUpdate, onDelete, agentFlux }: BeliefDe
         </div>
       )}
 
-      {/* Metabolism log */}
-      <div className="flex flex-col mt-2 shrink-0">
-        <div className="text-[#555] font-mono text-[10px] uppercase shrink-0 font-bold">[ Metabolism Log ]</div>
-        {(!b.events || b.events.length === 0) ? (
-          <div className="text-[11px] text-[#444] italic mt-0.5 font-mono">No metabolic events logged</div>
-        ) : (
-          <div className="mt-1 space-y-1.5">
-            {b.events.map((e) => {
-              const isPos = e.delta_confidence >= 0
-              const diffStr = isPos ? `+${e.delta_confidence.toFixed(3)}` : `${e.delta_confidence.toFixed(3)}`
-              return (
-                <div key={e.id} className="text-[11px] border-b border-[#222]/30 pb-1 last:border-b-0 leading-normal">
-                  <div className="flex items-center justify-between text-[#888]">
-                    <span className="font-mono text-[10px]">{new Date(e.timestamp).toLocaleTimeString()}</span>
-                    <span className={`font-mono text-[10px] font-bold ${isPos ? "text-[#4ade80]" : "text-[#f87171]"}`}>{diffStr}</span>
-                  </div>
-                  <div className="text-[#ccc] mt-0.5">
-                    <span className="text-[#6c6c8a] font-mono text-[10px] mr-1">[{e.source_type}:{e.source_id}]</span>
-                    {e.description}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+      {/* Tabs Selector */}
+      <div className="shrink-0 border-b border-[#1f1f2e]/20 flex gap-4 mt-2 text-[10px] font-mono">
+        <button
+          onClick={() => setActiveTab("metabolism")}
+          className={`pb-1.5 px-0.5 border-b-2 font-bold cursor-pointer transition-colors ${
+            activeTab === "metabolism"
+              ? "border-[#a78bfa] text-[#a78bfa]"
+              : "border-transparent text-[#555] hover:text-[#888]"
+          }`}
+        >
+          [ METABOLISM LOG ]
+        </button>
+        <button
+          onClick={() => setActiveTab("history")}
+          className={`pb-1.5 px-0.5 border-b-2 font-bold cursor-pointer transition-colors ${
+            activeTab === "history"
+              ? "border-[#a78bfa] text-[#a78bfa]"
+              : "border-transparent text-[#555] hover:text-[#888]"
+          }`}
+        >
+          [ STATEMENT HISTORY ({versions.length}) ]
+        </button>
       </div>
 
-      {/* Statement Versions */}
-      {versions.length > 0 && (
-        <div className="shrink-0 border-t border-[#1f1f2e]/20 pt-2 mt-4 font-mono text-[10px]">
-          <div className="text-[#555] uppercase mb-1 font-bold">[ Statement History ]</div>
-          <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
-            {versions.map((v, vIdx) => {
-              const prev = vIdx < versions.length - 1 ? versions[vIdx + 1] : null
-              const isExpanded = !!expandedVersions[v.version]
-              const prevStatement = prev ? prev.statement : ""
-              const statementDiff = isExpanded ? computeLineDiff(prevStatement, v.statement) : []
-              const hasDiff = isExpanded && prevStatement !== v.statement
-
-              return (
-                <div key={v.version} className="flex flex-col gap-1.5 p-1.5 rounded bg-[#07070b]/60 border border-[#1f1f2e]/10 text-[10px] font-mono">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#a78bfa] font-bold">v{v.version}</span>
-                        <span className="text-[#555] text-[9px]">
-                          {v.created_at ? new Date(v.created_at).toLocaleString() : ""}
-                        </span>
-                      </div>
-                      <div className="text-[#aaa] text-[9px] mt-0.5 truncate" title={v.change_reason || "No description"}>
-                        {v.change_reason || "No description"}
-                      </div>
+      {/* Tab Contents */}
+      {activeTab === "metabolism" && (
+        <div className="flex flex-col mt-2 shrink-0">
+          <div className="text-[#555] font-mono text-[10px] uppercase shrink-0 font-bold mb-1">[ Metabolism Events ]</div>
+          {(!b.events || b.events.length === 0) ? (
+            <div className="text-[11px] text-[#444] italic mt-0.5 font-mono">No metabolic events logged</div>
+          ) : (
+            <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+              {b.events.map((e) => {
+                const isPos = e.delta_confidence >= 0
+                const diffStr = isPos ? `+${e.delta_confidence.toFixed(3)}` : `${e.delta_confidence.toFixed(3)}`
+                return (
+                  <div key={e.id} className="text-[11px] border-b border-[#222]/30 pb-1 last:border-b-0 leading-normal">
+                    <div className="flex items-center justify-between text-[#888]">
+                      <span className="font-mono text-[10px]">{new Date(e.timestamp).toLocaleTimeString()}</span>
+                      <span className={`font-mono text-[10px] font-bold ${isPos ? "text-[#4ade80]" : "text-[#f87171]"}`}>{diffStr}</span>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {agentFlux && v.version !== b.version && (
-                        <button
-                          onClick={() => handleRevert(v.version)}
-                          disabled={isSavingOrDeleting}
-                          className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline disabled:text-[#555] cursor-pointer select-none font-bold mr-1"
-                        >
-                          [revert]
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setExpandedVersions(prevMap => ({ ...prevMap, [v.version]: !prevMap[v.version] }))}
-                        className="text-[9px] text-[#888] hover:text-[#ccc] hover:underline cursor-pointer select-none font-bold"
-                      >
-                        {isExpanded ? "[collapse]" : "[diff]"}
-                      </button>
+                    <div className="text-[#ccc] mt-0.5">
+                      <span className="text-[#6c6c8a] font-mono text-[10px] mr-1">[{e.source_type}:{e.source_id}]</span>
+                      {e.description}
                     </div>
                   </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
-                  {isExpanded && (
-                    <div className="mt-1 border-t border-[#1f1f2e]/10 pt-1.5 space-y-2 text-[9px]">
-                      {hasDiff ? (
-                        <div>
-                          <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Statement Diff ]</div>
-                          <div className="bg-[#050508]/90 border border-[#1f1f2e]/10 p-1.5 rounded leading-relaxed text-[10px] font-sans">
-                            {statementDiff.map((line, lIdx) => (
-                              <div
-                                key={lIdx}
-                                className={
-                                  line.type === 'added'
-                                    ? 'text-[#4ade80] bg-[#4ade80]/5 px-1 font-mono'
-                                    : line.type === 'removed'
-                                      ? 'text-[#ef4444] bg-[#ef4444]/5 line-through px-1 font-mono'
-                                      : 'text-[#888] px-1 font-mono'
-                                }
-                              >
-                                {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}
-                                {line.value}
-                              </div>
-                            ))}
-                          </div>
+      {activeTab === "history" && (
+        <div className="shrink-0 pt-2 font-mono text-[10px]">
+          <div className="text-[#555] uppercase mb-1 font-bold">[ Version Diff History ]</div>
+          {versions.length === 0 ? (
+            <div className="text-[11px] text-[#444] italic font-mono mt-0.5">No versions recorded</div>
+          ) : (
+            <div className="space-y-1 max-h-[220px] overflow-y-auto pr-1">
+              {versions.map((v, vIdx) => {
+                const prev = vIdx < versions.length - 1 ? versions[vIdx + 1] : null
+                const isExpanded = !!expandedVersions[v.version]
+                const prevStatement = prev ? prev.statement : ""
+                const statementDiff = isExpanded ? computeLineDiff(prevStatement, v.statement) : []
+                const hasDiff = isExpanded && prevStatement !== v.statement
+
+                return (
+                  <div key={v.version} className="flex flex-col gap-1.5 p-1.5 rounded bg-[#07070b]/60 border border-[#1f1f2e]/10 text-[10px] font-mono">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#a78bfa] font-bold">v{v.version}</span>
+                          <span className="text-[#555] text-[9px]">
+                            {v.created_at ? new Date(v.created_at).toLocaleString() : ""}
+                          </span>
                         </div>
-                      ) : (
-                        <div className="text-[#555] italic">No differences in statement.</div>
-                      )}
+                        <div className="text-[#aaa] text-[9px] mt-0.5 truncate" title={v.change_reason || "No description"}>
+                          {v.change_reason || "No description"}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {agentFlux && v.version !== b.version && (
+                          <button
+                            onClick={() => handleRevert(v.version)}
+                            disabled={isSavingOrDeleting}
+                            className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline disabled:text-[#555] cursor-pointer select-none font-bold mr-1"
+                          >
+                            [revert]
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setExpandedVersions(prevMap => ({ ...prevMap, [v.version]: !prevMap[v.version] }))}
+                          className="text-[9px] text-[#888] hover:text-[#ccc] hover:underline cursor-pointer select-none font-bold"
+                        >
+                          {isExpanded ? "[collapse]" : "[diff]"}
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+
+                    {isExpanded && (
+                      <div className="mt-1 border-t border-[#1f1f2e]/10 pt-1.5 space-y-2 text-[9px]">
+                        {hasDiff ? (
+                          <div>
+                            <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Statement Diff ]</div>
+                            <div className="bg-[#050508]/90 border border-[#1f1f2e]/10 p-1.5 rounded leading-relaxed text-[10px] font-sans">
+                              {statementDiff.map((line, lIdx) => (
+                                <div
+                                  key={lIdx}
+                                  className={
+                                    line.type === 'added'
+                                      ? 'text-[#4ade80] bg-[#4ade80]/5 px-1 font-mono'
+                                      : line.type === 'removed'
+                                        ? 'text-[#ef4444] bg-[#ef4444]/5 line-through px-1 font-mono'
+                                        : 'text-[#888] px-1 font-mono'
+                                  }
+                                >
+                                  {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}
+                                  {line.value}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-[#555] italic">No differences in statement.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
