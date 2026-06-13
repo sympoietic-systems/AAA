@@ -80,14 +80,18 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
 
   useEffect(() => {
     if (vetMode === "merge" && targetBeliefId) {
-      const tb = activeBeliefs.find(ab => ab.id === targetBeliefId);
-      if (tb) {
-        setMergedStatement(tb.statement);
+      if (targetBeliefId === belief.potential_merge_target && belief.statement) {
+        setMergedStatement(belief.statement);
+      } else {
+        const tb = activeBeliefs.find(ab => ab.id === targetBeliefId);
+        if (tb) {
+          setMergedStatement(tb.statement);
+        }
       }
     } else {
       setMergedStatement("");
     }
-  }, [vetMode, targetBeliefId, activeBeliefs])
+  }, [vetMode, targetBeliefId, activeBeliefs, belief])
 
   // Reset editing/confirming states and fetch versions when selected belief changes
   useEffect(() => {
