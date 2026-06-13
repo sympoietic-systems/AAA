@@ -184,6 +184,89 @@ async def test_belief_service_adoption_and_editing():
 
 
 @pytest.mark.anyio
+async def test_belief_service_merge_synthesized():
+    db_path = str(get_db_path("data/aaa_merge_test.db"))
+    if os.path.exists(db_path):
+        os.remove(db_path)
+        
+    conn = init_db(db_path)
+    try:
+        state = MockState(db_path)
+        service = BeliefService(state)
+        
+        # 1. Seed target active belief
+        belief_id = str(uuid.uuid4())
+        initial_sig = json.dumps({"v16d": [0.1] * 16})
+        state.belief_repo.create_belief(
+            id=belief_id,
+            agent_id="symbia",
+            label="rhizome-core",
+            statement="Rhizomes are decentralized networks.",
+            origin="emergent",
+            confidence=0.6,
+            ontological_mass=0.5,
+            somatic_anchor="none",
+            vector_16d=initial_sig,
+            lifecycle_stage="crystallized",
+            version=1
+        )
+        state.belief_repo.create_statement_version(
+            id=str(uuid.uuid4()),
+            belief_id=belief_id,
+            version=1,
+            statement="Rhizomes are decentralized networks.",
+            vector_16d=initial_sig,
+            change_reason="Genesis"
+        )
+        
+        # 2. Seed proposal
+        prop_id = str(uuid.uuid4())
+        state.belief_repo.create_proposal(
+            id=prop_id,
+            agent_id="symbia",
+            provisional_statement="Rhizomes are decentralized, non-hierarchical networks.",
+            source_trace="[]",
+            initial_signature=initial_sig,
+            nucleation_mass=0.4,
+            confidence=0.5,
+            status="pending"
+        )
+        
+        # 3. Perform merge WITH a new synthesized statement
+        res = await service.merge_proposal(
+            proposal_id=prop_id,
+            target_belief_id=belief_id,
+            merged_statement="Rhizomes are decentralized, non-hierarchical networks (synthesized)."
+        )
+        
+        assert res["status"] == "ok"
+        assert res["belief_id"] == belief_id
+        
+        # Verify proposal status was updated to adopted
+        p = state.belief_repo.get_proposal(prop_id)
+        assert p.status == "adopted"
+        
+        # Verify active belief confidence, mass, and statement are updated
+        beliefs = state.belief_repo.list_beliefs("symbia")
+        b = [x for x in beliefs if x.id == belief_id][0]
+        assert b.confidence == 0.7  # 0.6 + 0.1
+        assert b.ontological_mass == 0.9  # 0.5 + 0.4
+        assert b.statement == "Rhizomes are decentralized, non-hierarchical networks (synthesized)."
+        assert b.version == 2
+        
+        # Verify version archive is present
+        versions = await service.get_statement_versions(belief_id)
+        assert len(versions) == 2
+        assert versions[1]["version"] == 2
+        assert versions[1]["statement"] == "Rhizomes are decentralized, non-hierarchical networks (synthesized)."
+        
+    finally:
+        conn.close()
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+
+@pytest.mark.anyio
 async def test_belief_direct_crud_flux():
     db_path = str(get_db_path("data/aaa_flux_test.db"))
     if os.path.exists(db_path):

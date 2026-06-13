@@ -67,6 +67,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
   const [adoptStatement, setAdoptStatement] = useState("")
   const [rejectionRationale, setRejectionRationale] = useState("")
   const [targetBeliefId, setTargetBeliefId] = useState("")
+  const [mergedStatement, setMergedStatement] = useState("")
   const [isRefining, setIsRefining] = useState(false)
   const [isVetting, setIsVetting] = useState(false)
   const workshopRef = useRef<HTMLDivElement>(null)
@@ -76,6 +77,17 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
       workshopRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
     }
   }, [vetMode])
+
+  useEffect(() => {
+    if (vetMode === "merge" && targetBeliefId) {
+      const tb = activeBeliefs.find(ab => ab.id === targetBeliefId);
+      if (tb) {
+        setMergedStatement(tb.statement);
+      }
+    } else {
+      setMergedStatement("");
+    }
+  }, [vetMode, targetBeliefId, activeBeliefs])
 
   // Reset editing/confirming states and fetch versions when selected belief changes
   useEffect(() => {
@@ -88,6 +100,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
     setAdoptStatement("")
     setRejectionRationale("")
     setTargetBeliefId("")
+    setMergedStatement("")
     setIsRefining(false)
     setIsVetting(false)
 
@@ -189,6 +202,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
           return
         }
         payload.target_belief_id = targetBeliefId
+        payload.merged_statement = mergedStatement.trim()
       }
 
       const result = await vetBeliefProposal(b.id, payload)
@@ -508,18 +522,34 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
                 )}
 
                 {vetMode === "merge" && (
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[#555] text-[9px] uppercase font-bold">[ Target Active Belief ]</label>
-                    <select
-                      value={targetBeliefId}
-                      onChange={(e) => setTargetBeliefId(e.target.value)}
-                      className="bg-[#050508] border border-[#222] text-[#ccc] px-1 py-1 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50"
-                    >
-                      {activeBeliefs.map(ab => (
-                        <option key={ab.id} value={ab.id}>{ab.label} (v{ab.version})</option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[#555] text-[9px] uppercase font-bold">[ Target Active Belief ]</label>
+                      <select
+                        value={targetBeliefId}
+                        onChange={(e) => setTargetBeliefId(e.target.value)}
+                        className="bg-[#050508] border border-[#222] text-[#ccc] px-1 py-1 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50"
+                      >
+                        <option value="">-- select target --</option>
+                        {activeBeliefs.map(ab => (
+                          <option key={ab.id} value={ab.id}>{ab.label} (v{ab.version})</option>
+                        ))}
+                      </select>
+                    </div>
+                    {targetBeliefId && (
+                      <div className="flex flex-col gap-1 mt-1">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[#555] text-[9px] uppercase font-bold">[ Synthesized Statement ]</label>
+                          <span className="text-[#666] text-[8.5px] italic">modify to refine during merge</span>
+                        </div>
+                        <textarea
+                          value={mergedStatement}
+                          onChange={(e) => setMergedStatement(e.target.value)}
+                          className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[50px] resize-y font-serif"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <button

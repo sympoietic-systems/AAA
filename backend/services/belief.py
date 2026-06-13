@@ -307,7 +307,7 @@ class BeliefService:
 
         return {"status": "ok"}
 
-    async def merge_proposal(self, proposal_id: str, target_belief_id: str) -> dict:
+    async def merge_proposal(self, proposal_id: str, target_belief_id: str, merged_statement: Optional[str] = None) -> dict:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)
         if not belief_repo:
@@ -331,16 +331,51 @@ class BeliefService:
 
         new_mass = target_belief.ontological_mass + p.nucleation_mass
         new_conf = min(1.0, target_belief.confidence + 0.1)
+
+        import uuid
+        import json
+        from backend.modules.structural_engine import LexiconScorer
+
+        statement_updated = False
+        new_v16d = target_belief.vector_16d
+        new_version = target_belief.version
+
+        if merged_statement and merged_statement.strip() and merged_statement.strip() != target_belief.statement.strip():
+            statement_updated = True
+            new_version = target_belief.version + 1
+            try:
+                scorer = LexiconScorer()
+                v16d_scores = scorer.score(merged_statement)
+                new_v16d = json.dumps({"v16d": v16d_scores.tolist() if hasattr(v16d_scores, "tolist") else list(v16d_scores)})
+            except Exception as e:
+                logger.error("Failed to score merged statement: %s", e)
+
+        if statement_updated:
+            belief_repo.update_belief_statement(
+                belief_id=target_belief.id,
+                statement=merged_statement.strip(),
+                vector_16d=new_v16d,
+                version=new_version
+            )
+            # Create statement version
+            belief_repo.create_statement_version(
+                id=str(uuid.uuid4()),
+                belief_id=target_belief.id,
+                version=new_version,
+                statement=merged_statement.strip(),
+                vector_16d=new_v16d,
+                change_reason=f"Synthesized merge of proposal: '{p.provisional_statement}'"
+            )
+
         belief_repo.update_belief(
             belief_id=target_belief.id,
             confidence=new_conf,
-            vector_16d=target_belief.vector_16d,
+            vector_16d=new_v16d,
             origin=target_belief.origin,
             lifecycle_stage=target_belief.lifecycle_stage
         )
         belief_repo.update_belief_mass(target_belief.id, new_mass)
 
-        import uuid
         belief_repo.insert_belief_event(
             event_id=str(uuid.uuid4()),
             belief_id=target_belief.id,

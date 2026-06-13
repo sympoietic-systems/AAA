@@ -37,6 +37,7 @@ class VetProposalRequest(BaseModel):
     suggested_statement: Optional[str] = None
     rejection_rationale: Optional[str] = None
     target_belief_id: Optional[str] = None
+    merged_statement: Optional[str] = None
 
 
 class EditStatementRequest(BaseModel):
@@ -102,7 +103,8 @@ async def vet_proposal(proposal_id: str, payload: VetProposalRequest, request: R
             raise HTTPException(status_code=400, detail="target_belief_id required for merge action")
         res = await service.merge_proposal(
             proposal_id,
-            target_belief_id=payload.target_belief_id
+            target_belief_id=payload.target_belief_id,
+            merged_statement=payload.merged_statement
         )
     else:
         raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
