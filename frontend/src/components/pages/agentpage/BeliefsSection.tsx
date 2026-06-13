@@ -320,8 +320,14 @@ function BeliefsSectionComponent() {
           ) : (
             <BeliefDetail
               belief={selected}
+              activeBeliefs={beliefs}
               onUpdate={handleUpdate}
               onDelete={handleDeleteSuccess}
+              onReload={() => {
+                getBeliefs(null as any)
+                  .then(setData)
+                  .catch(e => setError(e.message || "Failed to fetch beliefs"))
+              }}
               agentFlux={agentFlux}
             />
           )}

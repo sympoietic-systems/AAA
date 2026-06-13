@@ -533,6 +533,15 @@ export interface BeliefNodeInfo {
   last_reinforced_at: string | null
   updated_at: string | null
   events: BeliefEventInfo[]
+  is_proposal?: boolean
+  proposal_status?: string
+  suggested_label?: string | null
+  suggested_statement?: string | null
+  symbia_reflection?: string | null
+  symbia_friction_rationale?: string | null
+  rejection_rationale?: string | null
+  potential_merge_target?: string | null
+  source_trace?: any[]
 }
 
 export interface SomaticStateInfo {
@@ -563,6 +572,62 @@ export interface BeliefsResponse {
   spectral_margin: string[]
   ecosystem: EcosystemSnapshot | null
 }
+
+export interface BeliefProposalInfo {
+  id: string
+  agent_id: string
+  provisional_statement: string
+  source_trace: any[]
+  initial_signature: number[]
+  nucleation_mass: number
+  confidence: number
+  status: string
+  suggested_label: string | null
+  suggested_statement: string | null
+  potential_merge_target: string | null
+  symbia_reflection: string | null
+  symbia_friction_rationale: string | null
+  rejection_rationale: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export async function getBeliefProposals(agentId: string = "symbia"): Promise<BeliefProposalInfo[]> {
+  const res = await fetch(`${BASE}/beliefs/proposals?agent_id=${agentId}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function vetBeliefProposal(
+  proposalId: string,
+  payload: {
+    action: "adopt" | "reject" | "merge"
+    suggested_label?: string
+    suggested_statement?: string
+    rejection_rationale?: string
+    target_belief_id?: string
+  }
+): Promise<any> {
+  const res = await fetch(`${BASE}/beliefs/proposals/${proposalId}/vet`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to vet proposal" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function refineBeliefProposal(proposalId: string): Promise<any> {
+  const res = await fetch(`${BASE}/beliefs/proposals/${proposalId}/refine`, {
+    method: "POST",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 
 export async function getBeliefs(conversationId?: string): Promise<BeliefsResponse> {
   const params = conversationId ? `?conversation_id=${conversationId}` : ""
