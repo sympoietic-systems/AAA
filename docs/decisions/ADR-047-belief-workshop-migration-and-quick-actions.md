@@ -33,12 +33,17 @@ Updated `frontend/src/components/pages/agentpage/beliefs/BeliefDetail.tsx` to dy
 * **Reject Option**: Renders `[ Reject ]` (or `[ Reject Proposal (Symbia Recommended) ]` if the reflection recommends rejection). Clicking it pre-fills the rejection rationale box with Symbia's reflection.
 * **Auto-Scroll Focus**: Binds a React `useRef` to the Vetting form container. Activating any quick-action button automatically smooth-scrolls the workshop form directly into view.
 
+### 3. Synthesized Merge Statements
+* **Editable Synthesis**: When merging, the UI displays a text area initialized with the target belief's statement. The collaborator can edit/synthesize the wording to merge the proposal's specific nuances.
+* **Versioned Tracking**: If the statement is updated, the backend scores the new text to compute a new 16D signature, bumps the target belief's version, and logs a historical statement version. If unchanged, the system updates only the mass and confidence.
+
 ## Consequences
 
 ### Positive
 * **Operationalized Workshop**: Legacy proto-beliefs and spectral ghosts have successfully run through the real background pipeline, enabling Symbia's vetting dashboard.
 * **Complete Metadata**: All 42 proposals now have high-quality kebab-case labels, refined statements, reflections, and mathematical similarity links.
 * **Reduced UX Friction**: Users can accept, merge, or reject proposals with a single click, without manually searching through long select lists or typing out rationales.
+* **True Semantic Synthesis**: Merging is no longer a purely mathematical accretion of mass; it allows for actual diffractive refinement of the belief's text with versioned tracking.
 
 ### Negative
 * **One-Time Migration Cost**: Running LLM cycles on all 42 proposals took approximately 4 minutes of API execution.
