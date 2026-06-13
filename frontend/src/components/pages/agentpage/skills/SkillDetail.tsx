@@ -297,19 +297,19 @@ export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agent
               const hp = Math.min(100, Math.max(10, Math.round(((val + 1) / 2) * 100)))
               const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
               return (
-                <div key={idx} className="shrink-0 h-full flex items-end">
-                  <Tooltip
-                    title={dimInfo.label}
-                    subtitle={val.toFixed(4)}
-                    description={dimInfo.desc}
-                    titleColorClass="text-[#a78bfa]"
-                    position="top-center"
-                  >
-                    <div style={{ height: `${hp}%`, minWidth: 4 }}
-                      className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa] transition-colors cursor-crosshair shrink-0"
-                    />
-                  </Tooltip>
-                </div>
+                <Tooltip
+                  key={idx}
+                  title={dimInfo.label}
+                  subtitle={val.toFixed(4)}
+                  description={dimInfo.desc}
+                  titleColorClass="text-[#a78bfa]"
+                  position="top-center"
+                  className="shrink-0 h-full flex items-end"
+                >
+                  <div style={{ height: `${hp}%`, minWidth: 4 }}
+                    className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa] transition-colors cursor-crosshair shrink-0"
+                  />
+                </Tooltip>
               )
             })}
           </div>
