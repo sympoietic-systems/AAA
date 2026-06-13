@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, memo } from "react"
 import { getBeliefs } from "../../../api/client"
 import type { BeliefsResponse, BeliefNodeInfo } from "../../../api/client"
+import telemetrySchemas from "../../../config/telemetry_schemas.json"
+
+const { DIMENSIONS_16 } = telemetrySchemas
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -197,8 +200,10 @@ function BeliefDetail({ belief }: { belief: BeliefNodeInfo | null }) {
           <div className="flex items-end gap-0.5 h-4 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit max-w-full overflow-x-auto">
             {vec.map((val, idx) => {
               const hp = Math.min(100, Math.max(10, Math.round(((val + 1) / 2) * 100)))
+              const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
+              const tooltip = `${dimInfo.label}: ${val.toFixed(4)}\n${dimInfo.desc}`
               return (
-                <div key={idx} style={{ height: `${hp}%`, minWidth: 4 }} title={`D${idx + 1}: ${val.toFixed(4)}`}
+                <div key={idx} style={{ height: `${hp}%`, minWidth: 4 }} title={tooltip}
                   className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa] shrink-0"
                 />
               )
