@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
-import { VectorVisualizer } from "../../VectorVisualizer"
+import { VectorVisualizer } from "../../UI/VectorVisualizer"
 
 export function splitSummaryAndTension(summary: string | null): { cleanSummary: string | null; unresolvedTensions: string | null } {
   if (!summary) return { cleanSummary: null, unresolvedTensions: null }

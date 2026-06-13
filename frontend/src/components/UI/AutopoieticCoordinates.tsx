@@ -1,5 +1,5 @@
 import React from 'react';
-import telemetrySchemas from '../../../config/telemetry_schemas.json';
+import telemetrySchemas from '../../config/telemetry_schemas.json';
 
 const { SIGNATURE_DIMENSIONS_16 } = telemetrySchemas;
 

@@ -1,6 +1,6 @@
 import { memo } from "react"
 import { useTelemetryMetrics } from "../../../hooks/useTelemetry"
-import { Tooltip } from "../../Tooltip"
+import { Tooltip } from "../../UI/Tooltip"
 
 interface VitalitySectionProps {
   enabled?: boolean

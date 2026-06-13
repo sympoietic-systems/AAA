@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, memo } from "react"
 import { getBeliefs } from "../../../api/client"
 import type { BeliefsResponse, BeliefNodeInfo } from "../../../api/client"
-import { StructuralAutopoieticGlyph } from "../nodeexplorer/StructuralAutopoieticGlyph"
+import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 
 // ─── Helpers ───────────────────────────────────────────────
 

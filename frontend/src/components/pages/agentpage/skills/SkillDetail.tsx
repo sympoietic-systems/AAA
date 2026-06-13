@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { updateSkill, deleteSkill } from "../../../../api/client"
 import type { DbSkillInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
-import { StructuralAutopoieticGlyph } from "../../nodeexplorer/StructuralAutopoieticGlyph"
+import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
 
 interface SkillDetailProps {
   skill: DbSkillInfo | null

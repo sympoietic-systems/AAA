@@ -172,8 +172,8 @@ The following files are the authoritative substrates of these systems:
 - [belief_collision.yaml](file:///d:/01_GIT/AAA/backend/prompts/web_retrieval/belief_collision.yaml): Defines state impact dimensions for exogenous web results.
 
 ### User Interface
-- [VectorVisualizer.tsx](file:///d:/01_GIT/AAA/frontend/src/components/VectorVisualizer.tsx): Renders the 16D bar chart (used for State Impact Vector).
-- [StructuralAutopoieticGlyph.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/nodeexplorer/StructuralAutopoieticGlyph.tsx): Renders the interactive 16D radial coordinates glyph (used for Autopoietic Signature).
-- [AutopoieticCoordinates.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/nodeexplorer/AutopoieticCoordinates.tsx): Renders the responsive coordinates legend grid for the autopoietic signature.
+- [VectorVisualizer.tsx](file:///d:/01_GIT/AAA/frontend/src/components/UI/VectorVisualizer.tsx): Renders the 16D bar chart (used for State Impact Vector).
+- [StructuralAutopoieticGlyph.tsx](file:///d:/01_GIT/AAA/frontend/src/components/UI/StructuralAutopoieticGlyph.tsx): Renders the interactive 16D radial coordinates glyph (used for Autopoietic Signature).
+- [AutopoieticCoordinates.tsx](file:///d:/01_GIT/AAA/frontend/src/components/UI/AutopoieticCoordinates.tsx): Renders the responsive coordinates legend grid for the autopoietic signature.
 - [MetadataCards.tsx](file:///d:/01_GIT/AAA/frontend/src/components/panels/sidepanel/MetadataCards.tsx): Defines `DocumentMetadataCard`, `ImageMetadataCard`, and `WebMetadataCard` which display the vectors.
 - [telemetry_schemas.json](file:///d:/01_GIT/AAA/frontend/src/config/telemetry_schemas.json): Stores metadata dictionary for vector labels.

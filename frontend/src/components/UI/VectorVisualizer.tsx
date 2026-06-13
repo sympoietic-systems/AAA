@@ -1,4 +1,4 @@
-import telemetrySchemas from "../config/telemetry_schemas.json"
+import telemetrySchemas from "../../config/telemetry_schemas.json"
 import { Tooltip } from "./Tooltip"
 
 const { SIGNATURE_DIMENSIONS_16, IMPACT_DIMENSIONS_16 } = telemetrySchemas
