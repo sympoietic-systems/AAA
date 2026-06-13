@@ -112,7 +112,7 @@ function NodeListItem({
         </span>
       )}
       <span className="text-[8px] font-mono text-[#555] shrink-0 hidden md:inline">
-        m:{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(1)}
+        m:{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(3)}
       </span>
       <span className="text-[10px] font-mono font-bold text-[#777] shrink-0">
         {(b.confidence * 100).toFixed(0)}%
@@ -131,6 +131,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   const [agentFlux, setAgentFlux] = useState<boolean>(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
+  const [sortBy, setSortBy] = useState<"mass" | "confidence" | "default">("mass")
   const detailRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -175,6 +176,20 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   const proto_beliefs = (rawProtos || []).filter(b => !isSkillBelief(b))
   const ghosts = (rawGhosts || []).filter(b => !isSkillBelief(b))
 
+  const sortFunc = (a: BeliefNodeInfo, b: BeliefNodeInfo) => {
+    if (sortBy === "mass") {
+      return b.ontological_mass - a.ontological_mass
+    }
+    if (sortBy === "confidence") {
+      return b.confidence - a.confidence
+    }
+    return 0
+  }
+
+  const sortedBeliefs = sortBy === "default" ? beliefs : [...beliefs].sort(sortFunc)
+  const sortedProtos = sortBy === "default" ? proto_beliefs : [...proto_beliefs].sort(sortFunc)
+  const sortedGhosts = sortBy === "default" ? ghosts : [...ghosts].sort(sortFunc)
+
   const allBeliefs = [...beliefs, ...proto_beliefs, ...ghosts]
   const selected = (selectedId ? allBeliefs.find(b => b.id === selectedId) : null) || null
 
@@ -183,7 +198,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
       if (!prev) return null
       const updateList = (list: BeliefNodeInfo[]) =>
         (list || []).map(b => b.id === updatedBelief.id ? updatedBelief : b)
-      
+
       return {
         ...prev,
         beliefs: updateList(prev.beliefs),
@@ -198,7 +213,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
       if (!prev) return null
       const isProto = newBelief.lifecycle_stage === "nucleation" || newBelief.lifecycle_stage === "accretion"
       const isGhost = newBelief.lifecycle_stage === "collapsed" || newBelief.lifecycle_stage === "faded"
-      
+
       return {
         ...prev,
         beliefs: !isProto && !isGhost ? [...(prev.beliefs || []), newBelief] : (prev.beliefs || []),
@@ -273,9 +288,31 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
         </div>
       )}
 
-      {/* Category legend */}
-      <div className="mb-2 flex items-center justify-between text-[9px] font-mono text-[#555] border-b border-[#222]/30 pb-1.5">
-        <span className="text-[#6c6c8a] uppercase tracking-wider">[ Nodes ]</span>
+      {/* Category legend & Sorting */}
+      <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[9px] font-mono text-[#555] border-b border-[#222]/30 pb-1.5">
+        <div className="flex items-center gap-3">
+          <span className="text-[#6c6c8a] uppercase tracking-wider">[ Nodes ]</span>
+          <span className="text-[#444]">|</span>
+          <span className="text-[#444] uppercase">sort:</span>
+          <button
+            onClick={() => setSortBy("default")}
+            className={`cursor-pointer transition-colors hover:text-[#ccc] ${sortBy === "default" ? "text-[#a78bfa] font-bold" : "text-[#555]"}`}
+          >
+            [default]
+          </button>
+          <button
+            onClick={() => setSortBy("mass")}
+            className={`cursor-pointer transition-colors hover:text-[#ccc] ${sortBy === "mass" ? "text-[#a78bfa] font-bold" : "text-[#555]"}`}
+          >
+            [mass]
+          </button>
+          <button
+            onClick={() => setSortBy("confidence")}
+            className={`cursor-pointer transition-colors hover:text-[#ccc] ${sortBy === "confidence" ? "text-[#a78bfa] font-bold" : "text-[#555]"}`}
+          >
+            [confidence]
+          </button>
+        </div>
         <div className="flex gap-1.5 md:gap-2">
           <span className="text-[#4ade80] flex items-center gap-0.5"><span className="text-[11px]">●</span><span className="hidden md:inline">found</span></span>
           <span className="text-[#a78bfa] flex items-center gap-0.5"><span className="text-[11px]">●</span><span className="hidden md:inline">ont</span></span>
@@ -303,22 +340,22 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
             onClick={handleListClick}
             className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none"
           >
-            {proto_beliefs.length > 0 && (
-              <CollapsibleSection label="Incubating Proto-Beliefs" count={proto_beliefs.length} icon="◇" iconColor="#f59e0b">
-                {proto_beliefs.map(b => {
+            {sortedProtos.length > 0 && (
+              <CollapsibleSection label="Incubating Proto-Beliefs" count={sortedProtos.length} icon="◇" iconColor="#f59e0b">
+                {sortedProtos.map(b => {
                   const s = b.lifecycle_stage || "accretion"
                   return <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge={getStageLabel(s)} stageBadgeColor={getStageColor(s)} />
                 })}
               </CollapsibleSection>
             )}
 
-            {beliefs.map(b => (
+            {sortedBeliefs.map(b => (
               <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} />
             ))}
 
-            {ghosts.length > 0 && (
-              <CollapsibleSection label="Spectral Ghosts" count={ghosts.length} icon="👻" defaultOpen={false}>
-                {ghosts.map(b => (
+            {sortedGhosts.length > 0 && (
+              <CollapsibleSection label="Spectral Ghosts" count={sortedGhosts.length} icon="👻" defaultOpen={false}>
+                {sortedGhosts.map(b => (
                   <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} ghost />
                 ))}
               </CollapsibleSection>

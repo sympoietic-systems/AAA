@@ -254,15 +254,14 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-2">
             <span
-              className={`text-[9px] uppercase font-mono px-1.5 py-px rounded border shrink-0 font-bold ${
-                status === "pending"
-                  ? "border-[#f59e0b]/40 text-[#f59e0b] bg-[#f59e0b]/10"
-                  : status === "refined"
+              className={`text-[9px] uppercase font-mono px-1.5 py-px rounded border shrink-0 font-bold ${status === "pending"
+                ? "border-[#f59e0b]/40 text-[#f59e0b] bg-[#f59e0b]/10"
+                : status === "refined"
                   ? "border-[#a78bfa]/40 text-[#a78bfa] bg-[#a78bfa]/10"
                   : status === "rejected"
-                  ? "border-[#ef4444]/40 text-[#ef4444] bg-[#ef4444]/10"
-                  : "border-[#4ade80]/40 text-[#4ade80] bg-[#4ade80]/10"
-              }`}
+                    ? "border-[#ef4444]/40 text-[#ef4444] bg-[#ef4444]/10"
+                    : "border-[#4ade80]/40 text-[#4ade80] bg-[#4ade80]/10"
+                }`}
             >
               {status}
             </span>
@@ -308,11 +307,11 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
               const recommendsRejection = !!b.symbia_reflection?.toLowerCase().includes("reject");
               const recommendsMerge = !recommendsRejection && !!b.potential_merge_target;
               const recommendsAdoption = !recommendsRejection && !b.potential_merge_target;
-              
+
               const targetBelief = b.potential_merge_target
                 ? activeBeliefs.find(ab => ab.id === b.potential_merge_target)
                 : null;
-              
+
               return (
                 <div className="mt-1 flex flex-wrap gap-2 pt-2 border-t border-[#a78bfa]/10 font-mono text-[9.5px]">
                   {recommendsRejection && (
@@ -461,7 +460,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
         {agentFlux && (status === "pending" || status === "refined") && (
           <div ref={workshopRef} className="border-t border-[#1f1f2e]/20 pt-2 flex flex-col gap-2 mt-2">
             <div className="text-[#a78bfa] font-mono text-[10px] uppercase font-bold tracking-wider">[ Workshop Actions ]</div>
-            
+
             {vetMode === "none" ? (
               <div className="flex gap-2 text-[10px] font-mono">
                 <button
@@ -595,13 +594,12 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
                 <button
                   onClick={() => handleVet(vetMode)}
                   disabled={isVetting}
-                  className={`w-full py-1 text-center font-bold uppercase tracking-wider rounded border text-[10px] cursor-pointer ${
-                    vetMode === "adopt"
-                      ? "border-[#4ade80]/30 hover:border-[#4ade80]/50 bg-[#4ade80]/5 hover:bg-[#4ade80]/10 text-[#4ade80]"
-                      : vetMode === "reject"
+                  className={`w-full py-1 text-center font-bold uppercase tracking-wider rounded border text-[10px] cursor-pointer ${vetMode === "adopt"
+                    ? "border-[#4ade80]/30 hover:border-[#4ade80]/50 bg-[#4ade80]/5 hover:bg-[#4ade80]/10 text-[#4ade80]"
+                    : vetMode === "reject"
                       ? "border-[#ef4444]/30 hover:border-[#ef4444]/50 bg-[#ef4444]/5 hover:bg-[#ef4444]/10 text-[#ef4444]"
                       : "border-[#facc15]/30 hover:border-[#facc15]/50 bg-[#facc15]/5 hover:bg-[#facc15]/10 text-[#facc15]"
-                  }`}
+                    }`}
                 >
                   {isVetting ? "[ processing... ]" : `[ confirm ${vetMode} ]`}
                 </button>
@@ -793,7 +791,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
           {/* Ontological Mass slider */}
           <div className="shrink-0 flex flex-col gap-1">
             <label className="text-[#555] text-[10px] uppercase font-bold">
-              [ Ontological Mass: {editOntologicalMass.toFixed(2)} ]
+              [ Ontological Mass: {editOntologicalMass.toFixed(3)} ]
             </label>
             <input
               type="range"
@@ -905,7 +903,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
         <div><span className="text-[#444]">Category:</span> <span style={{ color: catColor }}>{b.category}</span></div>
         <div><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">{b.origin === "emergent" ? "agent" : b.origin === "authored" ? "user" : b.origin}</span></div>
         <div><span className="text-[#444]">Stage:</span> <span style={{ color: stageColor }}>{getStageLabel(stage)}</span></div>
-        <div><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(1)}</span></div>
+        <div><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(3)}</span></div>
         <div className="col-span-2"><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa] font-bold">{(b.confidence * 100).toFixed(0)}%</span></div>
       </div>
 
@@ -924,21 +922,19 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
       <div className="shrink-0 border-b border-[#1f1f2e]/20 flex gap-4 mt-2 text-[10px] font-mono">
         <button
           onClick={() => setActiveTab("metabolism")}
-          className={`pb-1.5 px-0.5 border-b-2 font-bold cursor-pointer transition-colors ${
-            activeTab === "metabolism"
-              ? "border-[#a78bfa] text-[#a78bfa]"
-              : "border-transparent text-[#555] hover:text-[#888]"
-          }`}
+          className={`pb-1.5 px-0.5 border-b-2 font-bold cursor-pointer transition-colors ${activeTab === "metabolism"
+            ? "border-[#a78bfa] text-[#a78bfa]"
+            : "border-transparent text-[#555] hover:text-[#888]"
+            }`}
         >
           [ METABOLISM LOG ]
         </button>
         <button
           onClick={() => setActiveTab("history")}
-          className={`pb-1.5 px-0.5 border-b-2 font-bold cursor-pointer transition-colors ${
-            activeTab === "history"
-              ? "border-[#a78bfa] text-[#a78bfa]"
-              : "border-transparent text-[#555] hover:text-[#888]"
-          }`}
+          className={`pb-1.5 px-0.5 border-b-2 font-bold cursor-pointer transition-colors ${activeTab === "history"
+            ? "border-[#a78bfa] text-[#a78bfa]"
+            : "border-transparent text-[#555] hover:text-[#888]"
+            }`}
         >
           [ STATEMENT HISTORY ({versions.length}) ]
         </button>
