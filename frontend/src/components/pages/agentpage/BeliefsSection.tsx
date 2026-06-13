@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, memo } from "react"
-import { getBeliefs } from "../../../api/client"
+import { getBeliefs, getAgent } from "../../../api/client"
 import type { BeliefsResponse, BeliefNodeInfo } from "../../../api/client"
-import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
+import { NewBeliefForm } from "./beliefs/NewBeliefForm"
+import { BeliefDetail } from "./beliefs/BeliefDetail"
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -34,19 +35,6 @@ function getStageLabel(s: string) {
     case "collapsed": return "collapsed"
     case "faded": return "faded"
     default: return s
-  }
-}
-
-function getCatDesc(cat: string) {
-  switch (cat.toLowerCase()) {
-    case "foundational":
-      return "Core stabilizing beliefs. High ontological mass, resistant to perturbation."
-    case "ontological":
-      return "Beliefs regarding the nature of being, reality, and conceptual definitions."
-    case "methodological":
-      return "Operational rules, reasoning patterns, and system methodologies."
-    default:
-      return "Epistemological or general perceptual beliefs."
   }
 }
 
@@ -133,126 +121,33 @@ function NodeListItem({
   )
 }
 
-// ─── Belief Detail Panel ──────────────────────────────────
-
-function BeliefDetail({ belief }: { belief: BeliefNodeInfo | null }) {
-  if (!belief) {
-    return (
-      <div className="flex-1 min-h-0 flex items-center justify-center border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50">
-        <span className="text-[11px] text-[#444] italic font-mono">select a node to inspect</span>
-      </div>
-    )
-  }
-
-  const b = belief
-  const catColor = getCategoryColor(b.category)
-  const stage = b.lifecycle_stage || "crystallized"
-  const stageColor = getStageColor(stage)
-  const isProto = stage === "nucleation" || stage === "accretion"
-  const isGhost = stage === "collapsed" || stage === "faded"
-
-  let vec: number[] = []
-  try { if (b.vector_16d) vec = JSON.parse(b.vector_16d) } catch { }
-
-  return (
-    <div className={`flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-sans ${isGhost ? "opacity-55" : ""}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[11px] shrink-0" style={{ color: catColor }}>●</span>
-          <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">{b.label}</span>
-        </div>
-        <span
-          className="text-[9px] uppercase font-mono px-1.5 py-px rounded border shrink-0 ml-2"
-          style={{ color: catColor, borderColor: `${catColor}40`, backgroundColor: `${catColor}10` }}
-        >
-          {b.category}
-        </span>
-      </div>
-
-      {/* Statement */}
-      <div className="shrink-0">
-        <div className="text-[#555] font-mono text-[10px] uppercase">[ Statement ]</div>
-        <div className="text-[#ccc] text-[11px] italic font-serif leading-relaxed mt-0.5">
-          "{b.statement}"
-        </div>
-      </div>
-
-      {/* Metadata grid */}
-      <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-mono text-[#888]">
-        <div><span className="text-[#444]">Category:</span> <span style={{ color: catColor }}>{b.category}</span></div>
-        <div><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">{b.origin === "emergent" ? "agent" : b.origin === "authored" ? "user" : b.origin}</span></div>
-        <div><span className="text-[#444]">Stage:</span> <span style={{ color: stageColor }}>{getStageLabel(stage)}</span></div>
-        <div><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(1)}</span></div>
-        <div className="col-span-2"><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa] font-bold">{(b.confidence * 100).toFixed(0)}%</span></div>
-      </div>
-
-      <div className="shrink-0 text-[10px] font-mono text-[#6c6c8a] leading-snug">
-        {getCatDesc(b.category)}
-      </div>
-
-      {/* Vector */}
-      {vec.length > 0 && (
-        <div className="shrink-0 mb-1">
-          <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ 16D Autopoietic Signature ]</div>
-          <StructuralAutopoieticGlyph
-            signature={vec}
-            isStagnant={false}
-          />
-        </div>
-      )}
-
-      {/* Metabolism log — scrolls naturally in parent container */}
-      <div className="flex flex-col mt-2 shrink-0">
-        <div className="text-[#555] font-mono text-[10px] uppercase shrink-0">[ Metabolism Log ]</div>
-        {b.events.length === 0 ? (
-          <div className="text-[11px] text-[#444] italic mt-0.5">No metabolic events logged</div>
-        ) : (
-          <div className="mt-1 space-y-1.5">
-            {b.events.map((e) => {
-              const isPos = e.delta_confidence >= 0
-              const diffStr = isPos ? `+${e.delta_confidence.toFixed(3)}` : `${e.delta_confidence.toFixed(3)}`
-              return (
-                <div key={e.id} className="text-[11px] border-b border-[#222]/30 pb-1 last:border-b-0 leading-normal">
-                  <div className="flex items-center justify-between text-[#888]">
-                    <span className="font-mono text-[10px]">{new Date(e.timestamp).toLocaleTimeString()}</span>
-                    <span className={`font-mono text-[10px] font-bold ${isPos ? "text-[#4ade80]" : "text-[#f87171]"}`}>{diffStr}</span>
-                  </div>
-                  <div className="text-[#ccc] mt-0.5">
-                    <span className="text-[#6c6c8a] font-mono text-[10px] mr-1">[{e.source_type}:{e.source_id}]</span>
-                    {e.description}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ─── Main Component ───────────────────────────────────────
 
 function BeliefsSectionComponent() {
   const [data, setData] = useState<BeliefsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [agentFlux, setAgentFlux] = useState<boolean>(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [isAdding, setIsAdding] = useState(false)
   const detailRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     getBeliefs(null as any)
       .then(setData)
       .catch(e => setError(e.message || "Failed to fetch beliefs"))
+
+    getAgent()
+      .then(info => setAgentFlux(!!info.agent_flux))
+      .catch(() => setAgentFlux(false))
   }, [])
 
-  // Scroll to detail on mobile when a belief is selected
+  // Scroll to detail on mobile when a belief is selected or is adding
   useEffect(() => {
-    if (!selectedId || !detailRef.current) return
+    if ((!selectedId && !isAdding) || !detailRef.current) return
     if (window.matchMedia("(max-width: 767px)").matches) {
       detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
     }
-  }, [selectedId])
+  }, [selectedId, isAdding])
 
   if (error && !data) return <p className="text-[10px] text-[#ef4444] font-mono">{error}</p>
   if (!data) return <p className="text-[10px] text-[#444] font-mono">waiting for data...</p>
@@ -267,12 +162,62 @@ function BeliefsSectionComponent() {
   const allBeliefs = [...beliefs, ...proto_beliefs, ...ghosts]
   const selected = (selectedId ? allBeliefs.find(b => b.id === selectedId) : null) || null
 
+  const handleUpdate = (updatedBelief: BeliefNodeInfo) => {
+    setData(prev => {
+      if (!prev) return null
+      const updateList = (list: BeliefNodeInfo[]) =>
+        (list || []).map(b => b.id === updatedBelief.id ? updatedBelief : b)
+      
+      return {
+        ...prev,
+        beliefs: updateList(prev.beliefs),
+        proto_beliefs: updateList(prev.proto_beliefs),
+        ghosts: updateList(prev.ghosts),
+      }
+    })
+  }
+
+  const handleCreateSuccess = (newBelief: BeliefNodeInfo) => {
+    setData(prev => {
+      if (!prev) return null
+      const isProto = newBelief.lifecycle_stage === "nucleation" || newBelief.lifecycle_stage === "accretion"
+      const isGhost = newBelief.lifecycle_stage === "collapsed" || newBelief.lifecycle_stage === "faded"
+      
+      return {
+        ...prev,
+        beliefs: !isProto && !isGhost ? [...(prev.beliefs || []), newBelief] : (prev.beliefs || []),
+        proto_beliefs: isProto ? [...(prev.proto_beliefs || []), newBelief] : (prev.proto_beliefs || []),
+        ghosts: isGhost ? [...(prev.ghosts || []), newBelief] : (prev.ghosts || []),
+      }
+    })
+    setIsAdding(false)
+    setSelectedId(newBelief.id)
+  }
+
+  const handleDeleteSuccess = (beliefId: string) => {
+    setData(prev => {
+      if (!prev) return null
+      const filterList = (list: BeliefNodeInfo[]) =>
+        (list || []).filter(b => b.id !== beliefId)
+      return {
+        ...prev,
+        beliefs: filterList(prev.beliefs),
+        proto_beliefs: filterList(prev.proto_beliefs),
+        ghosts: filterList(prev.ghosts),
+      }
+    })
+    setSelectedId(null)
+  }
+
   // Event delegation: click anywhere in the list container
   const handleListClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = (e.target as HTMLElement).closest("[data-belief-id]") as HTMLElement | null
     if (!el) return
     const id = el.getAttribute("data-belief-id")
-    setSelectedId(prev => prev === id ? null : id)
+    if (id) {
+      setIsAdding(false)
+      setSelectedId(prev => prev === id ? null : id)
+    }
   }
 
   return (
@@ -326,35 +271,60 @@ function BeliefsSectionComponent() {
       {/* Two-panel layout: list + detail */}
       <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-300px)]">
         {/* ── Left: Node list ── */}
-        <div
-          onClick={handleListClick}
-          className="md:w-[450px] shrink-0 w-full space-y-0.5 overflow-y-auto pr-1 select-none"
-        >
-          {proto_beliefs.length > 0 && (
-            <CollapsibleSection label="Incubating Proto-Beliefs" count={proto_beliefs.length} icon="◇" iconColor="#f59e0b">
-              {proto_beliefs.map(b => {
-                const s = b.lifecycle_stage || "accretion"
-                return <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge={getStageLabel(s)} stageBadgeColor={getStageColor(s)} />
-              })}
-            </CollapsibleSection>
+        <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0">
+          {agentFlux && (
+            <button
+              onClick={() => {
+                setSelectedId(null)
+                setIsAdding(true)
+              }}
+              className="w-full mb-2.5 py-1 px-3 border border-[#a78bfa]/20 hover:border-[#a78bfa]/40 bg-[#a78bfa]/5 hover:bg-[#a78bfa]/10 text-[#a78bfa] text-[10px] font-mono transition-all text-center cursor-pointer select-none uppercase tracking-wider rounded font-bold"
+            >
+              + add new belief
+            </button>
           )}
+          <div
+            onClick={handleListClick}
+            className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none"
+          >
+            {proto_beliefs.length > 0 && (
+              <CollapsibleSection label="Incubating Proto-Beliefs" count={proto_beliefs.length} icon="◇" iconColor="#f59e0b">
+                {proto_beliefs.map(b => {
+                  const s = b.lifecycle_stage || "accretion"
+                  return <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge={getStageLabel(s)} stageBadgeColor={getStageColor(s)} />
+                })}
+              </CollapsibleSection>
+            )}
 
-          {beliefs.map(b => (
-            <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} />
-          ))}
+            {beliefs.map(b => (
+              <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} />
+            ))}
 
-          {ghosts.length > 0 && (
-            <CollapsibleSection label="Spectral Ghosts" count={ghosts.length} icon="👻" defaultOpen={false}>
-              {ghosts.map(b => (
-                <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} ghost />
-              ))}
-            </CollapsibleSection>
-          )}
+            {ghosts.length > 0 && (
+              <CollapsibleSection label="Spectral Ghosts" count={ghosts.length} icon="👻" defaultOpen={false}>
+                {ghosts.map(b => (
+                  <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} ghost />
+                ))}
+              </CollapsibleSection>
+            )}
+          </div>
         </div>
 
         {/* ── Right: Detail panel ── */}
         <div ref={detailRef} className="flex-1 min-w-0 w-full md:flex md:flex-col md:min-h-0">
-          <BeliefDetail belief={selected} />
+          {isAdding ? (
+            <NewBeliefForm
+              onCancel={() => setIsAdding(false)}
+              onCreate={handleCreateSuccess}
+            />
+          ) : (
+            <BeliefDetail
+              belief={selected}
+              onUpdate={handleUpdate}
+              onDelete={handleDeleteSuccess}
+              agentFlux={agentFlux}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -570,6 +570,58 @@ export async function getBeliefs(conversationId?: string): Promise<BeliefsRespon
   return res.json()
 }
 
+export async function createBelief(data: {
+  label: string
+  statement: string
+  confidence: number
+  ontological_mass: number
+  lifecycle_stage: string
+  agent_id: string
+}): Promise<{ status: string; belief_id: string; label: string }> {
+  const res = await fetch(`${BASE}/beliefs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to create belief" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function updateBelief(
+  beliefId: string,
+  data: {
+    label: string
+    statement: string
+    confidence: number
+    ontological_mass: number
+    lifecycle_stage: string
+  }
+): Promise<{ status: string; belief_id: string; version: number; speciation_alert: boolean }> {
+  const res = await fetch(`${BASE}/beliefs/${beliefId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to update belief" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function deleteBelief(beliefId: string): Promise<void> {
+  const res = await fetch(`${BASE}/beliefs/${beliefId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to delete belief" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+}
+
 
 export async function getMetrics(window = 20): Promise<MetricsResponse> {
   const res = await fetch(`${BASE}/metrics?window=${window}`)
