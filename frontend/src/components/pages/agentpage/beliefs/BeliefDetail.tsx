@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal } from "../../../../api/client"
+import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement } from "../../../../api/client"
 import type { BeliefNodeInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
 import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
@@ -70,6 +70,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
   const [mergedStatement, setMergedStatement] = useState("")
   const [isRefining, setIsRefining] = useState(false)
   const [isVetting, setIsVetting] = useState(false)
+  const [isSynthesizing, setIsSynthesizing] = useState(false)
   const workshopRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -103,6 +104,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
     setMergedStatement("")
     setIsRefining(false)
     setIsVetting(false)
+    setIsSynthesizing(false)
 
     if (!belief) {
       setVersions([])
@@ -217,6 +219,24 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
       setErrorMsg(e.message || String(e))
     } finally {
       setIsVetting(false)
+    }
+  }
+
+  const handleSynthesize = async () => {
+    if (!targetBeliefId) return
+    setIsSynthesizing(true)
+    setErrorMsg(null)
+    try {
+      const result = await synthesizeMergeStatement(b.id, targetBeliefId)
+      if (result.status === "ok") {
+        setMergedStatement(result.synthesized_statement)
+      } else {
+        setErrorMsg("Synthesis failed")
+      }
+    } catch (e: any) {
+      setErrorMsg(e.message || "Synthesis failed")
+    } finally {
+      setIsSynthesizing(false)
     }
   }
 
@@ -540,7 +560,14 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
                       <div className="flex flex-col gap-1 mt-1">
                         <div className="flex justify-between items-center">
                           <label className="text-[#555] text-[9px] uppercase font-bold">[ Synthesized Statement ]</label>
-                          <span className="text-[#666] text-[8.5px] italic">modify to refine during merge</span>
+                          <button
+                            type="button"
+                            disabled={isSynthesizing}
+                            onClick={handleSynthesize}
+                            className="text-[8.5px] font-mono text-[#a78bfa] hover:text-[#c084fc] font-bold cursor-pointer underline bg-transparent border-none p-0 disabled:text-[#555] disabled:cursor-not-allowed"
+                          >
+                            {isSynthesizing ? "[ synthesizing... ]" : "[ ask symbia to synthesize ]"}
+                          </button>
                         </div>
                         <textarea
                           value={mergedStatement}

@@ -400,6 +400,81 @@ class BeliefService:
 
         return {"status": "ok", "belief_id": target_belief.id, "label": target_belief.label}
 
+    async def synthesize_merge_statement(self, proposal_id: str, target_belief_id: str) -> dict:
+        state = self._state
+        belief_repo = getattr(state, "belief_repo", None)
+        if not belief_repo:
+            return {"status": "error", "message": "Belief repository not initialized"}
+
+        p = belief_repo.get_proposal(proposal_id)
+        if not p:
+            return {"status": "error", "message": "Proposal not found"}
+
+        target_belief = belief_repo.get_belief(p.agent_id, target_belief_id)
+        if not target_belief:
+            return {"status": "error", "message": "Target active belief not found"}
+
+        llm_provider = getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
+        if not llm_provider:
+            return {"status": "error", "message": "LLM provider not available"}
+
+        from backend.modules.llm_client import generate_unified
+        import yaml
+        from pathlib import Path
+
+        # Load personality if available
+        personality_prompt = ""
+        try:
+            identity_path = Path(__file__).resolve().parents[2] / "personality" / "identity.yaml"
+            if identity_path.exists():
+                with open(identity_path, "r", encoding="utf-8") as f:
+                    identity_data = yaml.safe_load(f) or {}
+                    personality_prompt = identity_data.get("personality", {}).get("system_prompt", "")
+        except Exception as e:
+            logger.warning("Failed to load Symbia identity for synthesis: %s", e)
+
+        system_prompt = f"""You are Symbia's Belief Integration Daemon.
+Your task is to synthesize an existing active belief with a newly proposed belief into a single, cohesive, refined statement.
+
+Instructions:
+1. Ground the statement in the active belief's original concept and framing. Do not discard its core insight.
+2. Integrate the new nuances, evidence, or focus from the proposed belief statement.
+3. Polish the statement so that it reads cleanly, concisely, and remains in Symbia's posthuman, self-observational voice.
+4. Output ONLY the new synthesized statement. Do not output JSON, markdown fences, introductions, explanation, or rationales.
+
+Symbia's Voice & Personality:
+{personality_prompt}
+"""
+
+        user_prompt = f"""Active Target Belief Statement:
+"{target_belief.statement}"
+
+Proposed Belief Statement:
+"{p.suggested_statement or p.provisional_statement}"
+"""
+
+        try:
+            res = await generate_unified(
+                llm_provider,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                expect_json=False,
+                temperature=0.3,
+                max_tokens=256
+            )
+            synthesized = res.get("content", "").strip()
+            # Clean up potential leading/trailing quotes from LLM
+            if (synthesized.startswith('"') and synthesized.endswith('"')) or (synthesized.startswith("'") and synthesized.endswith("'")):
+                synthesized = synthesized[1:-1].strip()
+            
+            return {
+                "status": "ok",
+                "synthesized_statement": synthesized
+            }
+        except Exception as e:
+            logger.error("Failed to generate synthesized statement: %s", e)
+            return {"status": "error", "message": f"Synthesis failed: {str(e)}"}
+
     async def update_belief_statement(self, belief_id: str, statement: str, change_reason: Optional[str] = None) -> dict:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)

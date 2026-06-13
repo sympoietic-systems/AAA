@@ -628,6 +628,23 @@ export async function refineBeliefProposal(proposalId: string): Promise<any> {
   return res.json()
 }
 
+export async function synthesizeMergeStatement(
+  proposalId: string,
+  targetBeliefId: string
+): Promise<{ status: string; synthesized_statement: string }> {
+  const res = await fetch(`${BASE}/beliefs/proposals/${proposalId}/synthesize-merge`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target_belief_id: targetBeliefId }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to synthesize statement" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+
 
 export async function getBeliefs(conversationId?: string): Promise<BeliefsResponse> {
   const params = conversationId ? `?conversation_id=${conversationId}` : ""

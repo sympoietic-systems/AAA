@@ -418,3 +418,63 @@ def test_belief_legacy_migration():
         conn.close()
         if os.path.exists(db_path):
             os.remove(db_path)
+
+
+@pytest.mark.anyio
+async def test_belief_service_synthesize_merge_statement():
+    db_path = str(get_db_path("data/aaa_synthesis_test.db"))
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    conn = init_db(db_path)
+    try:
+        state = MockState(db_path)
+        class MockLLMProvider:
+            async def generate(self, messages, **kwargs):
+                return {"content": "Synthesized: Rhizomatic deterritorialization connects all nodes."}
+
+        state.llm_provider = MockLLMProvider()
+        service = BeliefService(state)
+
+        # Create target active belief
+        belief_id = str(uuid.uuid4())
+        state.belief_repo.create_belief(
+            id=belief_id,
+            agent_id="symbia",
+            label="rhizome-connections",
+            statement="Rhizomatic connections are decentralized.",
+            origin="authored",
+            confidence=0.8,
+            ontological_mass=1.0,
+            somatic_anchor="none",
+            vector_16d=json.dumps({"v16d": [0.1] * 16}),
+            lifecycle_stage="crystallized"
+        )
+
+        # Create proposal
+        proposal_id = str(uuid.uuid4())
+        state.belief_repo.create_proposal(
+            id=proposal_id,
+            agent_id="symbia",
+            provisional_statement="New connectivity patterns emerge via deterritorialization.",
+            source_trace="[]",
+            initial_signature=json.dumps({"v16d": [0.1] * 16}),
+            nucleation_mass=0.5,
+            confidence=0.6,
+            status="pending"
+        )
+
+        # Call synthesize_merge_statement
+        res = await service.synthesize_merge_statement(
+            proposal_id=proposal_id,
+            target_belief_id=belief_id
+        )
+
+        assert res["status"] == "ok"
+        assert res["synthesized_statement"] == "Synthesized: Rhizomatic deterritorialization connects all nodes."
+
+    finally:
+        conn.close()
+        if os.path.exists(db_path):
+            os.remove(db_path)
+

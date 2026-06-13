@@ -45,6 +45,10 @@ class EditStatementRequest(BaseModel):
     change_reason: Optional[str] = None
 
 
+class SynthesizeMergeRequest(BaseModel):
+    target_belief_id: str
+
+
 @router.get("/beliefs")
 async def get_beliefs(request: Request, conversation_id: Optional[str] = None, agent_id: str = "symbia"):
     state = request.app.state
@@ -78,6 +82,19 @@ async def refine_proposal(proposal_id: str, request: Request):
     state = request.app.state
     service = BeliefService(state)
     res = await service.refine_proposal_sync(proposal_id)
+    return res
+
+
+@router.post("/beliefs/proposals/{proposal_id}/synthesize-merge")
+async def synthesize_merge(proposal_id: str, payload: SynthesizeMergeRequest, request: Request):
+    state = request.app.state
+    service = BeliefService(state)
+    res = await service.synthesize_merge_statement(
+        proposal_id=proposal_id,
+        target_belief_id=payload.target_belief_id
+    )
+    if res.get("status") == "error":
+        raise HTTPException(status_code=400, detail=res.get("message"))
     return res
 
 
