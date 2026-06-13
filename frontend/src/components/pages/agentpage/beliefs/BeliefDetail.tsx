@@ -980,8 +980,8 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
             <div className="text-[11px] text-[#444] italic font-mono mt-0.5">No versions recorded</div>
           ) : (
             <div className="space-y-1 max-h-[220px] overflow-y-auto pr-1">
-              {versions.map((v, vIdx) => {
-                const prev = vIdx < versions.length - 1 ? versions[vIdx + 1] : null
+              {[...versions].sort((a, b) => b.version - a.version).map((v, vIdx, arr) => {
+                const prev = vIdx < arr.length - 1 ? arr[vIdx + 1] : null
                 const isExpanded = !!expandedVersions[v.version]
                 const prevStatement = prev ? prev.statement : ""
                 const statementDiff = isExpanded ? computeLineDiff(prevStatement, v.statement) : []
