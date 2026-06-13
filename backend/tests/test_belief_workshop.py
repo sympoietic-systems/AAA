@@ -97,6 +97,18 @@ async def test_belief_service_adoption_and_editing():
     conn = init_db(db_path)
     try:
         state = MockState(db_path)
+        class MockScorerProvider:
+            def __init__(self):
+                self.calls = 0
+            async def generate(self, messages, **kwargs):
+                self.calls += 1
+                if self.calls == 1:
+                    return {"content": json.dumps({"scores": [0.8] + [0.0]*15, "justification": "test"})}
+                elif self.calls == 2:
+                    return {"content": json.dumps({"scores": [0.7] + [0.0]*15, "justification": "test"})}
+                else:
+                    return {"content": json.dumps({"scores": [0.0, 0.8] + [0.0]*14, "justification": "test"})}
+        state.structural_provider = MockScorerProvider()
         service = BeliefService(state)
         
         # Seed a proposal
