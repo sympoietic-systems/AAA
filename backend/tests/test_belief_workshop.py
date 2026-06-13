@@ -291,7 +291,8 @@ def test_belief_legacy_migration():
         os.remove(db_path)
 
     # Establish db and insert legacy nodes directly to database
-    from backend.storage.database import init_db, _migrate_legacy_beliefs
+    from backend.storage.database import init_db
+    from backend.scripts.migrate_legacy_beliefs import migrate_legacy_beliefs
     
     conn = init_db(db_path)
     try:
@@ -311,7 +312,7 @@ def test_belief_legacy_migration():
         conn.commit()
 
         # Run migration function
-        _migrate_legacy_beliefs(conn)
+        migrate_legacy_beliefs(conn)
         conn.commit()
 
         # Check nodes are deleted from belief_nodes
