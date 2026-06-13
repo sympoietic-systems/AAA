@@ -254,25 +254,37 @@ class SkillRepository(BaseRepository):
             skill_row = conn.execute("SELECT name FROM skill_nodes WHERE id = ?", (skill_id,)).fetchone()
             skill_name = skill_row["name"] if skill_row else "unknown"
             
+            source_label = "agent" if source_type in ("agent", "symbia", "emergent") else ("system" if source_type == "auto_metabolism" else "user")
+            
             if event_type == "emergence":
-                snippet = f"New skill '{skill_name}' nucleated (emergence). Source: {source_type}. {rationale}"
+                snippet = f"New skill '{skill_name}' nucleated (emergence) by {source_label}."
+                if rationale:
+                    snippet += f" Rationale: {rationale}"
             elif event_type == "crystallization":
-                snippet = f"Skill '{skill_name}' asserted (crystallized). Source: {source_type}. {rationale}"
+                snippet = f"Skill '{skill_name}' crystallized (asserted) by {source_label}."
+                if rationale:
+                    snippet += f" Rationale: {rationale}"
             elif event_type == "revision":
-                snippet = f"Skill '{skill_name}' updated (revision). Source: {source_type}. {rationale}"
+                snippet = f"Skill '{skill_name}' revised to new version by {source_label}."
+                if rationale:
+                    snippet += f" Changelog: {rationale}"
             elif event_type == "collapse":
-                snippet = f"Skill '{skill_name}' collapsed. Source: {source_type}. {rationale}"
+                snippet = f"Skill '{skill_name}' collapsed/refused by {source_label}."
+                if rationale:
+                    snippet += f" Reason: {rationale}"
             else:
-                snippet = f"Skill '{skill_name}' lifecycle change ({event_type}). {rationale}"
+                snippet = f"Skill '{skill_name}' lifecycle change ({event_type}) by {source_label}."
+                if rationale:
+                    snippet += f" Context: {rationale}"
 
             snippet = snippet.strip()
             
             import uuid
-            from datetime import datetime
+            from datetime import datetime, timezone
             conn.execute(
                 """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                    VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
-                (str(uuid.uuid4()), datetime.utcnow().isoformat(), snippet, f"skill:{skill_name}"),
+                (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"skill:{skill_name}"),
             )
             conn.commit()
         except Exception as ne:

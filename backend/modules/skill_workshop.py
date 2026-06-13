@@ -110,6 +110,7 @@ class SkillWorkshopModule(ProcessingModule):
             logger.warning("Failed to score proposed skill vector: %s", se)
             vector_16d = json.dumps({"v16d": [0.0] * 16, "v384d": []})
 
+        rationale = command.get("rationale", "") or command.get("reasoning", "")
         skill = self._skill_repo.create_skill(
             id=skill_id,
             name=name,
@@ -123,6 +124,7 @@ class SkillWorkshopModule(ProcessingModule):
             ontological_mass=0.05,
             vector_16d=vector_16d,
             source="emergent",
+            version_source="agent",
         )
 
         if always_active:
@@ -130,8 +132,8 @@ class SkillWorkshopModule(ProcessingModule):
                 id=str(uuid.uuid4()),
                 skill_id=skill_id,
                 event_type="emergence",
-                source_type="chat_turn",
-                rationale="Proposed as always-active — requires explicit human affirmation to apply.",
+                source_type="agent",
+                rationale=rationale or "Proposed as always-active — requires explicit human affirmation to apply.",
             )
             message = (
                 f"Skill '{name}' nucleated as always-active. "
@@ -143,7 +145,8 @@ class SkillWorkshopModule(ProcessingModule):
                 id=str(uuid.uuid4()),
                 skill_id=skill_id,
                 event_type="emergence",
-                source_type="chat_turn",
+                source_type="agent",
+                rationale=rationale,
             )
             message = (
                 f"Skill '{name}' nucleated (stage: nucleation, confidence: 0.0). "
@@ -181,6 +184,7 @@ class SkillWorkshopModule(ProcessingModule):
                 except Exception as se:
                     logger.warning("Failed to score revised skill vector: %s", se)
 
+        rationale = command.get("rationale", "") or command.get("reasoning", "") or changelog
         updated = self._skill_repo.update_skill(
             skill_id=skill.id,
             content=content,
@@ -188,6 +192,7 @@ class SkillWorkshopModule(ProcessingModule):
             version=new_version,
             changelog=changelog,
             vector_16d=vector_16d,
+            version_source="agent",
         )
 
         if not updated:
@@ -197,8 +202,8 @@ class SkillWorkshopModule(ProcessingModule):
             id=str(uuid.uuid4()),
             skill_id=skill.id,
             event_type="revision",
-            source_type="chat_turn",
-            rationale=changelog,
+            source_type="agent",
+            rationale=rationale,
         )
 
         return {
@@ -223,13 +228,14 @@ class SkillWorkshopModule(ProcessingModule):
         updated = self._skill_repo.update_skill(
             skill_id=skill.id,
             confidence=confidence,
+            version_source="agent",
         )
 
         self._skill_repo.insert_event(
             id=str(uuid.uuid4()),
             skill_id=skill.id,
             event_type="crystallization" if confidence >= CONFIDENCE_NUCLEATION_MAX else "emergence",
-            source_type="chat_turn",
+            source_type="agent",
             rationale=f"Diffractive review: confidence={confidence:.2f}, anti-mastery={anti_mastery.get('score', '?')}/3",
         )
 
@@ -289,13 +295,14 @@ class SkillWorkshopModule(ProcessingModule):
         updated = self._skill_repo.update_skill(
             skill_id=skill.id,
             lifecycle_stage="crystallized",
+            version_source="agent",
         )
 
         self._skill_repo.insert_event(
             id=str(uuid.uuid4()),
             skill_id=skill.id,
             event_type="crystallization",
-            source_type="chat_turn",
+            source_type="agent",
             rationale=f"Applied by {'human co-review' if human_approved else 'autonomous high-confidence'} (confidence={skill.confidence:.2f})",
         )
 
@@ -340,13 +347,14 @@ class SkillWorkshopModule(ProcessingModule):
             skill_id=skill.id,
             lifecycle_stage="collapsed",
             confidence=0.0,
+            version_source="agent",
         )
 
         self._skill_repo.insert_event(
             id=str(uuid.uuid4()),
             skill_id=skill.id,
             event_type="collapse",
-            source_type="chat_turn",
+            source_type="agent",
             rationale=reason,
         )
 

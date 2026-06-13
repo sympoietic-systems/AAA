@@ -91,12 +91,12 @@ class BeliefRepository(BaseRepository):
         # Automatic persistence notification for new belief creation
         try:
             import uuid
-            from datetime import datetime
+            from datetime import datetime, timezone
             snippet = f"New belief '{label}' crystallized (initial confidence: {confidence:.2f}). Origin: {origin}"
             conn.execute(
                 """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                    VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
-                (str(uuid.uuid4()), datetime.utcnow().isoformat(), snippet, f"belief:{label}"),
+                (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{label}"),
             )
             conn.commit()
         except Exception:

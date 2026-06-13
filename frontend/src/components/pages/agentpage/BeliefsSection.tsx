@@ -180,7 +180,7 @@ function BeliefDetail({ belief }: { belief: BeliefNodeInfo | null }) {
       {/* Metadata grid */}
       <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-mono text-[#888]">
         <div><span className="text-[#444]">Category:</span> <span style={{ color: catColor }}>{b.category}</span></div>
-        <div><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">{b.origin}</span></div>
+        <div><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">{b.origin === "emergent" ? "agent" : b.origin === "authored" ? "user" : b.origin}</span></div>
         <div><span className="text-[#444]">Stage:</span> <span style={{ color: stageColor }}>{getStageLabel(stage)}</span></div>
         <div><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(1)}</span></div>
         <div className="col-span-2"><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa] font-bold">{(b.confidence * 100).toFixed(0)}%</span></div>

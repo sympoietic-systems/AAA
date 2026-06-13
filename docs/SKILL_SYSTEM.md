@@ -142,7 +142,7 @@ Skills are tightly coupled with Symbia's long-term memory and belief systems:
   - *On-Demand Capabilities* (Green `◇`)
   - *Proposed Nucleations* (Purple `▲`)
   - *Refused/Integrated Proposals* (Refused: Red `✖`, Merged/Integrated: Purple `⎋` with `[ Integration Rationale ]` details).
-- [SkillDetail.tsx](file:///d:/AAA/frontend/src/components/pages/agentpage/skills/SkillDetail.tsx): Details page displaying version history with `[user]` or `[auto]` badges.
+- [SkillDetail.tsx](file:///d:/AAA/frontend/src/components/pages/agentpage/skills/SkillDetail.tsx): Details page displaying version history with `[agent]`, `[auto]`, or `[user]` badges.
 - [CreasesDropdown.tsx](file:///d:/AAA/frontend/src/components/pages/nodeexplorer/CreasesDropdown.tsx): Pulls real-time skill event logs to trigger crease notifications.
 - [PipelineSection.tsx](file:///d:/AAA/frontend/src/components/pages/agentpage/PipelineSection.tsx): Visualizes the pipeline sequence and submodules (like `skill_metabolism` and `anti_mastery_validation`).
 

@@ -348,9 +348,16 @@ export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agent
                           <span className={`text-[8px] uppercase px-1.5 py-px rounded-sm font-mono border leading-none ${
                             v.source === "auto_metabolism"
                               ? "border-[#c084fc]/35 text-[#c084fc] bg-[#c084fc]/5"
-                              : "border-[#444] text-[#888] bg-[#151518]"
+                              : v.source === "agent" || v.source === "emergent"
+                                ? "border-[#38bdf8]/35 text-[#38bdf8] bg-[#38bdf8]/5"
+                                : "border-[#444] text-[#888] bg-[#151518]"
                           }`}>
-                            {v.source === "auto_metabolism" ? "auto" : "user"}
+                            {v.source === "auto_metabolism"
+                              ? "auto"
+                              : v.source === "agent" || v.source === "emergent"
+                                ? "agent"
+                                : "user"
+                            }
                           </span>
                         )}
                         <span className="text-[#555] text-[9px]">

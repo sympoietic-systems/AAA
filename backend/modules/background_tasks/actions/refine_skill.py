@@ -190,7 +190,7 @@ Active Skills already in Symbia's database:
                         id=str(uuid.uuid4()),
                         skill_id=target_skill.id,
                         event_type="revision",
-                        source_type="chat_turn",
+                        source_type="agent",
                         rationale=f"Daemon integration rationale: {reason}",
                     )
                 except Exception as se:
@@ -215,7 +215,7 @@ Active Skills already in Symbia's database:
                         id=str(uuid.uuid4()),
                         skill_id=prop_skill_id,
                         event_type="collapse",
-                        source_type="chat_turn",
+                        source_type="agent",
                         rationale=f"Merged into active skill '{target_skill.name}'. Daemon rationale: {reason}"
                     )
                 except Exception as se:
@@ -251,7 +251,7 @@ Active Skills already in Symbia's database:
                     id=str(uuid.uuid4()),
                     skill_id=skill_id,
                     event_type="collapse",
-                    source_type="chat_turn",
+                    source_type="agent",
                     rationale=reason
                 )
             except Exception as se:
