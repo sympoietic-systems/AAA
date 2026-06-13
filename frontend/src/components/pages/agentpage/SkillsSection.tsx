@@ -133,7 +133,7 @@ function SkillsSectionComponent() {
   return (
     <div className="mt-2 border-t border-[#1a1a1a] pt-2 flex flex-col md:flex-row gap-3 md:h-[calc(100vh-300px)]">
       {/* ── Left: Skill list ── */}
-      <div className="md:w-[38%] shrink-0 w-full flex flex-col min-h-0">
+      <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0">
         {agentFlux && (
           <button
             onClick={() => {

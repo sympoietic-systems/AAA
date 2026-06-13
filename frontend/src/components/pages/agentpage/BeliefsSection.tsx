@@ -328,7 +328,7 @@ function BeliefsSectionComponent() {
         {/* ── Left: Node list ── */}
         <div
           onClick={handleListClick}
-          className="md:w-[38%] shrink-0 w-full space-y-0.5 overflow-y-auto pr-1 select-none"
+          className="md:w-[450px] shrink-0 w-full space-y-0.5 overflow-y-auto pr-1 select-none"
         >
           {proto_beliefs.length > 0 && (
             <CollapsibleSection label="Incubating Proto-Beliefs" count={proto_beliefs.length} icon="◇" iconColor="#f59e0b">
