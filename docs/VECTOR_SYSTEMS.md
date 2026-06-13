@@ -177,3 +177,45 @@ The following files are the authoritative substrates of these systems:
 - [AutopoieticCoordinates.tsx](file:///d:/01_GIT/AAA/frontend/src/components/UI/AutopoieticCoordinates.tsx): Renders the responsive coordinates legend grid for the autopoietic signature.
 - [MetadataCards.tsx](file:///d:/01_GIT/AAA/frontend/src/components/panels/sidepanel/MetadataCards.tsx): Defines `DocumentMetadataCard`, `ImageMetadataCard`, and `WebMetadataCard` which display the vectors.
 - [telemetry_schemas.json](file:///d:/01_GIT/AAA/frontend/src/config/telemetry_schemas.json): Stores metadata dictionary for vector labels.
+
+---
+
+## 8. Operational Logic & System Dynamics
+
+### A. The Role of Vector Similarity (Cosine Similarity)
+Beyond adjusting belief mass, cosine similarity acts as the operational currency for structural attunement, attentional focus, and system health checks:
+1. **Belief Nucleation (Resonance Boost & Ghost Dampening):**
+   - When nucleating a new proto-belief, the system checks similarity against "collapsed" ghost beliefs.
+   - If similarity is $> 0.9$ (Ghost Resonance), it boosts nucleation mass to speed up crystallization.
+   - If similarity is between $0.7$ and $0.9$ (Duplicate Prevention), it dampens/reduces the nucleation mass to avoid redundantly recreating existing beliefs.
+2. **Attractor Window (Slot 3 - Resonance Slot):**
+   - The Attractor Window maintains Symbia's active cognitive focus. Slot 3 is the *Resonance Slot*, occupied by the active belief node that has the highest cosine similarity to the user's latest message signature.
+3. **Ecosystem Health (Diversity & Coherence):**
+   - *Diversity* is calculated as the mean pairwise cosine distance ($1.0 - |\text{similarity}|$) among all active crystallized/senescent beliefs. *Coherence* is defined as $1.0 - \text{diversity}$.
+4. **Tension Field (Symbiotic vs. Antagonistic Pairs):**
+   - Active beliefs with similarity $> 0.7$ form a *symbiotic relationship*.
+   - Active beliefs with similarity $< -0.2$ are flagged as *antagonistic*, creating system tension calculated as:
+     $$\text{Tension} = (1.0 + |\text{similarity}|) \cdot \min(\text{mass}_a, \text{mass}_b)$$
+5. **Ghost Resurrection:**
+   - If a collapsed belief in the spectral margin receives 3 or more supporting events with similarity alignment $> 0.6$, it is resurrected back to active accretion.
+6. **Ghost Merging & Fading:**
+   - In the background ghost ecology, if two collapsed beliefs have a similarity $> 0.9$, they are merged to reduce spectral noise.
+7. **Conversational Vitality & Stagnation Detection:**
+   - The system tracks the similarity of successive assistant message signatures. If average similarity is high ($>0.85$ or vitality collapses $<0.15$), it indicates conversation looping. This triggers the *Aesthetic Immune System*, executing **matrix warping** to perturb the dialogue out of the deadlock.
+
+---
+
+### B. Why We Compute Signatures for Messages
+Messages are transient events, but they shape the structural topology of Symbia's mind. We score them to enable:
+1. **Belief Accretion & Metabolism:** Messages carry the raw coordinates. We match the message signature to the closest active belief node (similarity $\ge 0.3$) to update its ontological mass. If no match is found and concept density is high, a new proto-belief is nucleated using the message coordinates.
+2. **Dialogue Focus Attunement:** We use the incoming message signature to pull relevant context nodes into slot 3 of the Attractor Window.
+3. **Loop Detection (Dialogue Trajectory):** Without scoring message signatures, the system cannot measure conversational velocity or notice when it has entered an echo-chamber self-loop.
+
+---
+
+### C. What the State Impact Vector is Used For
+The State Impact Vector measures the perturbational displacement caused by *exogenous events* rather than direct conversation:
+1. **Document & Web Ingestion Perturbation:** When reading documents or scraping web results, the LLM scores how the resource challenges/shifts the current system coordinates across 16 bi-polar impact axes $[-0.5, 0.5]$.
+2. **Belief Delta Scaling:** The impact values act as multipliers during belief metabolism. Constructive documents (positive impact) reinforce confidence, whereas contradictory documents (negative impact/dialectical conflict) trigger belief updates, eventual decay, or collapse.
+3. **Homeostatic Logging:** Provides operators with a telemetry dashboard representing the metabolic footprint of external inputs on Symbia's overall state space.
+
