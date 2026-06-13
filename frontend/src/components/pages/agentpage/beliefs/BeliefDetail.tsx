@@ -80,18 +80,14 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
 
   useEffect(() => {
     if (vetMode === "merge" && targetBeliefId) {
-      if (targetBeliefId === belief.potential_merge_target && belief.statement) {
-        setMergedStatement(belief.statement);
-      } else {
-        const tb = activeBeliefs.find(ab => ab.id === targetBeliefId);
-        if (tb) {
-          setMergedStatement(tb.statement);
-        }
+      const tb = activeBeliefs.find(ab => ab.id === targetBeliefId);
+      if (tb) {
+        setMergedStatement(tb.statement);
       }
     } else {
       setMergedStatement("");
     }
-  }, [vetMode, targetBeliefId, activeBeliefs, belief])
+  }, [vetMode, targetBeliefId, activeBeliefs])
 
   // Reset editing/confirming states and fetch versions when selected belief changes
   useEffect(() => {
@@ -551,6 +547,19 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
                           onChange={(e) => setMergedStatement(e.target.value)}
                           className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[50px] resize-y font-serif"
                         />
+                        {targetBeliefId === belief.potential_merge_target && belief.statement && (
+                          <div className="mt-1.5 p-2 bg-[#a78bfa]/5 border border-[#a78bfa]/20 rounded text-[10px] leading-normal font-sans">
+                            <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider mb-1">[ Symbia's Suggested Synthesis ]</div>
+                            <p className="italic font-serif text-[#ccc] mb-1.5">"{belief.statement}"</p>
+                            <button
+                              type="button"
+                              onClick={() => setMergedStatement(belief.statement)}
+                              className="text-[9px] font-mono text-[#a78bfa] hover:text-[#c084fc] font-bold cursor-pointer underline bg-transparent border-none p-0"
+                            >
+                              [ Apply suggestion ]
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </>
