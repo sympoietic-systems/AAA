@@ -4,9 +4,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
-import telemetrySchemas from "../../../config/telemetry_schemas.json"
-
-const { DIMENSIONS_16 } = telemetrySchemas
+import { VectorVisualizer } from "../../VectorVisualizer"
 
 export function splitSummaryAndTension(summary: string | null): { cleanSummary: string | null; unresolvedTensions: string | null } {
   if (!summary) return { cleanSummary: null, unresolvedTensions: null }
@@ -141,22 +139,12 @@ export function ImageMetadataCard({ metadata }: { metadata: ImageMetadata }) {
         <div className="mt-3 pt-2.5 border-t border-[#222]/50">
           <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1.5">[ 16D Autopoietic Signature ]</span>
 
-          <div className="flex items-end gap-0.5 h-7 mt-1 border border-[#1a1a24] bg-[#08080c] p-1 rounded w-fit">
-            {vec.map((val: number, idx: number) => {
-              const heightPercent = Math.min(100, Math.max(5, Math.round(((val + 1.0) / 2.0) * 100)))
-              const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx}`, desc: "" }
-              const isHovered = hoveredDim?.index === idx
-              return (
-                <div
-                  key={idx}
-                  style={{ height: `${heightPercent}%` }}
-                  onMouseEnter={() => setHoveredDim({ index: idx, label: dimInfo.label, desc: dimInfo.desc, val })}
-                  onMouseLeave={() => setHoveredDim(null)}
-                  className={`w-2 transition-all cursor-crosshair ${isHovered ? 'bg-[#4ade80]' : 'bg-[#4ade80]/40 hover:bg-[#4ade80]/80'}`}
-                />
-              )
-            })}
-          </div>
+          <VectorVisualizer
+            vector={vec}
+            titleColorClass="text-[#4ade80]"
+            barColorClass="bg-[#4ade80]"
+            onHoverDim={setHoveredDim}
+          />
 
           <div className="mt-2 min-h-[34px] bg-[#08080c] border border-[#1a1a24] p-1.5 rounded font-mono text-[9px] text-[#888] leading-tight transition-all">
             {hoveredDim ? (
@@ -335,32 +323,11 @@ export function DocumentMetadataCard({ metadata, summary }: { metadata: Document
         <div className="mt-3 pt-2.5 border-t border-[#222]/50">
           <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1.5">[ 16D State Vector Impact ]</span>
 
-          <div className="flex items-center gap-0.5 h-12 mt-1 border border-[#1a1a24] bg-[#08080c] p-1 rounded w-fit relative">
-            <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-[#333]/50 pointer-events-none" />
-
-            {vec.map((val: number, idx: number) => {
-              const heightPercent = Math.min(100, Math.max(5, Math.round((val + 0.5) * 100)))
-              const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx}`, desc: "" }
-              const isHovered = hoveredDim?.index === idx
-              const barColor = val >= 0 ? '#10b981' : '#ef4444'
-              return (
-                <div
-                  key={idx}
-                  style={{ height: `${heightPercent}%` }}
-                  onMouseEnter={() => setHoveredDim({ index: idx, label: dimInfo.label, desc: dimInfo.desc, val })}
-                  onMouseLeave={() => setHoveredDim(null)}
-                  className="w-2 transition-all cursor-crosshair relative"
-                >
-                  <div
-                    className="absolute bottom-0 left-0 right-0 top-0 transition-colors"
-                    style={{
-                      backgroundColor: isHovered ? barColor : `${barColor}60`
-                    }}
-                  />
-                </div>
-              )
-            })}
-          </div>
+          <VectorVisualizer
+            vector={vec}
+            variant="impact"
+            onHoverDim={setHoveredDim}
+          />
 
           <div className="mt-2 min-h-[34px] bg-[#08080c] border border-[#1a1a24] p-1.5 rounded font-mono text-[9px] text-[#888] leading-tight transition-all">
             {hoveredDim ? (

@@ -2,10 +2,7 @@ import { useState, useEffect } from "react"
 import { updateSkill, deleteSkill } from "../../../../api/client"
 import type { DbSkillInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
-import telemetrySchemas from "../../../../config/telemetry_schemas.json"
-import { Tooltip } from "../../../Tooltip"
-
-const { DIMENSIONS_16 } = telemetrySchemas
+import { VectorVisualizer } from "../../../VectorVisualizer"
 
 interface SkillDetailProps {
   skill: DbSkillInfo | null
@@ -290,29 +287,13 @@ export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agent
 
       {/* Vector */}
       {skill.vector_16d?.length > 0 && (
-        <div className="shrink-0">
+        <div className="shrink-0 mb-1">
           <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ 16D Autopoietic Vector ]</div>
-          <div className="flex items-end gap-0.5 h-5 bg-[#08080c] border border-[#1a1a24] p-0.5 rounded w-fit max-w-full overflow-visible">
-            {skill.vector_16d.map((val, idx) => {
-              const hp = Math.min(100, Math.max(10, Math.round(((val + 1) / 2) * 100)))
-              const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
-              return (
-                <Tooltip
-                  key={idx}
-                  title={dimInfo.label}
-                  subtitle={val.toFixed(4)}
-                  description={dimInfo.desc}
-                  titleColorClass="text-[#a78bfa]"
-                  position="top-center"
-                  className="shrink-0 h-full flex items-end"
-                >
-                  <div style={{ height: `${hp}%`, minWidth: 4 }}
-                    className="w-1 bg-[#a78bfa]/50 hover:bg-[#a78bfa] transition-colors cursor-crosshair shrink-0"
-                  />
-                </Tooltip>
-              )
-            })}
-          </div>
+          <VectorVisualizer
+            vector={skill.vector_16d}
+            titleColorClass="text-[#a78bfa]"
+            barColorClass="bg-[#a78bfa]"
+          />
         </div>
       )}
 
