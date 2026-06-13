@@ -28,9 +28,9 @@ export function VectorVisualizer({
   const isImpact = variant === "impact"
 
   return (
-    <div className="flex items-end gap-1 bg-[#08080c] border border-[#1a1a24] p-1.5 rounded w-fit overflow-visible relative">
+    <div className="flex items-end gap-0.5 bg-[#08080c] border border-[#1a1a24] p-0.5 w-fit overflow-visible relative rounded-none">
       {isImpact && (
-        <div className="absolute left-0 right-0 top-[22px] h-[1px] bg-[#333]/50 pointer-events-none z-10" />
+        <div className="absolute left-0 right-0 top-[14px] h-[1px] bg-[#333]/40 pointer-events-none z-10" />
       )}
       {vector.map((val, idx) => {
         let hp = 0
@@ -40,7 +40,7 @@ export function VectorVisualizer({
           hp = Math.min(100, Math.max(5, Math.round((val + 0.5) * 100)))
           displayColor = val >= 0 ? "bg-[#10b981]" : "bg-[#ef4444]"
         } else {
-          hp = Math.min(100, Math.max(8, Math.round(((val + 1) / 2) * 100)))
+          hp = Math.min(100, Math.max(10, Math.round(((val + 1) / 2) * 100)))
         }
 
         const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
@@ -60,15 +60,15 @@ export function VectorVisualizer({
             <div 
               onMouseEnter={() => onHoverDim?.({ index: idx, label: dimInfo.label, desc: dimInfo.desc, val })}
               onMouseLeave={() => onHoverDim?.(null)}
-              className="h-10 w-2.5 bg-[#14141d]/50 border border-[#222]/30 rounded-sm relative overflow-hidden flex items-end"
+              className="h-6 w-1.5 relative flex items-end select-none cursor-crosshair"
             >
               <div
                 style={{ height: `${hp}%` }}
-                className={`w-full opacity-60 hover:opacity-100 transition-all transition-colors duration-200 cursor-crosshair ${displayColor}`}
+                className={`w-full opacity-60 hover:opacity-100 transition-all transition-colors duration-150 ${displayColor}`}
               />
             </div>
             {/* Short code label */}
-            <span className="text-[7px] text-[#555] font-mono select-none mt-1 tracking-tighter leading-none">
+            <span className="text-[5.5px] text-[#445] font-mono select-none mt-0.5 tracking-tighter leading-none scale-90">
               {code}
             </span>
           </Tooltip>
