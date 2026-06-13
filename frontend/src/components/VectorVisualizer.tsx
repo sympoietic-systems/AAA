@@ -29,20 +29,25 @@ export function VectorVisualizer({
 
   return (
     <div className="flex items-end gap-0.5 bg-[#08080c] border border-[#1a1a24] p-0.5 w-fit overflow-visible relative rounded-none">
-      {isImpact && (
-        <div className="absolute left-0 right-0 top-[14px] h-[1px] bg-[#333]/40 pointer-events-none z-10" />
-      )}
+      {/* Centerline baseline: 12px (half of h-6) + 2px (padding top) = 14px */}
+      <div className="absolute left-0 right-0 top-[14px] h-[1px] bg-[#333]/30 pointer-events-none z-10" />
+
       {vector.map((val, idx) => {
-        let hp = 0
+        const isPositive = val >= 0
         let displayColor = barColorClass
+        let magnitude = 0
 
         if (isImpact) {
-          hp = Math.min(100, Math.max(5, Math.round((val + 0.5) * 100)))
-          displayColor = val >= 0 ? "bg-[#10b981]" : "bg-[#ef4444]"
+          // Impact vector values range roughly in [-0.5, 0.5]
+          magnitude = Math.min(1.0, Math.abs(val) / 0.5)
+          displayColor = isPositive ? "bg-[#10b981]" : "bg-[#ef4444]"
         } else {
-          hp = Math.min(100, Math.max(10, Math.round(((val + 1) / 2) * 100)))
+          // Signature vector values range in [-1.0, 1.0]
+          magnitude = Math.min(1.0, Math.abs(val))
         }
 
+        // Height is magnitude * 50% of the total inner height (12px max)
+        const heightPercent = Math.max(4, Math.round(magnitude * 50))
         const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
         const code = SHORT_CODES[idx] || `D${idx + 1}`
 
@@ -56,19 +61,24 @@ export function VectorVisualizer({
             position="top-center"
             className="flex flex-col items-center shrink-0"
           >
-            {/* The Bar wrapper */}
+            {/* The Bar container (h-6 = 24px) */}
             <div 
               onMouseEnter={() => onHoverDim?.({ index: idx, label: dimInfo.label, desc: dimInfo.desc, val })}
               onMouseLeave={() => onHoverDim?.(null)}
-              className="h-6 w-1.5 relative flex items-end select-none cursor-crosshair"
+              className="h-6 w-1.5 relative select-none cursor-crosshair bg-[#14141d]/30"
             >
+              {/* Actual bar absolute-anchored to the middle baseline */}
               <div
-                style={{ height: `${hp}%` }}
-                className={`w-full opacity-60 hover:opacity-100 transition-all transition-colors duration-150 ${displayColor}`}
+                style={{
+                  height: `${heightPercent}%`,
+                  bottom: isPositive ? "50%" : "auto",
+                  top: isPositive ? "auto" : "50%",
+                }}
+                className={`absolute left-0 right-0 opacity-60 hover:opacity-100 transition-all transition-colors duration-150 ${displayColor}`}
               />
             </div>
             {/* Short code label */}
-            <span className="text-[5.5px] text-[#445] font-mono select-none mt-0.5 tracking-tighter leading-none scale-90">
+            <span className="text-[4.5px] text-[#445] font-mono select-none mt-0.5 tracking-tighter leading-none scale-90">
               {code}
             </span>
           </Tooltip>
