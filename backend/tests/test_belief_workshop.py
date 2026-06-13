@@ -283,3 +283,54 @@ async def test_belief_direct_crud_flux():
         conn.close()
         if os.path.exists(db_path):
             os.remove(db_path)
+
+
+def test_belief_legacy_migration():
+    db_path = str(get_db_path("data/aaa_migration_test.db"))
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    # Establish db and insert legacy nodes directly to database
+    from backend.storage.database import init_db, _migrate_legacy_beliefs
+    
+    conn = init_db(db_path)
+    try:
+        # Create an accretion (proto-belief) node and a collapsed (ghost) node in belief_nodes
+        conn.execute(
+            """INSERT INTO belief_nodes
+               (id, agent_id, label, statement, origin, confidence, ontological_mass, vector_16d, lifecycle_stage, genesis_materials, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+            ("node-proto", "symbia", "proto-node", "This is proto.", "emergent", 0.4, 0.2, json.dumps([0.1]*16), "accretion", json.dumps([{"id": "msg-1"}]))
+        )
+        conn.execute(
+            """INSERT INTO belief_nodes
+               (id, agent_id, label, statement, origin, confidence, ontological_mass, vector_16d, lifecycle_stage, genesis_materials, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+            ("node-collapsed", "symbia", "ghost-node", "This is collapsed.", "emergent", 0.1, 0.0, json.dumps([0.1]*16), "collapsed", "[]")
+        )
+        conn.commit()
+
+        # Run migration function
+        _migrate_legacy_beliefs(conn)
+        conn.commit()
+
+        # Check nodes are deleted from belief_nodes
+        assert conn.execute("SELECT COUNT(*) FROM belief_nodes").fetchone()[0] == 0
+
+        # Check nodes are inserted into belief_proposals
+        props = conn.execute("SELECT id, status, nucleation_mass, rejection_rationale FROM belief_proposals ORDER BY id ASC").fetchall()
+        assert len(props) == 2
+        
+        # ID sorted: node-collapsed is first
+        assert props[0][0] == "node-collapsed"
+        assert props[0][1] == "rejected"
+        assert "collapsed" in props[0][3]
+
+        assert props[1][0] == "node-proto"
+        assert props[1][1] == "pending"
+        assert props[1][2] == 0.2
+
+    finally:
+        conn.close()
+        if os.path.exists(db_path):
+            os.remove(db_path)

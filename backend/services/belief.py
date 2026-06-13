@@ -18,10 +18,11 @@ class BeliefService:
 
         raw_beliefs = belief_repo.list_beliefs(agent_id)
         beliefs_list = []
-        proto_beliefs_list = []
-        ghosts_list = []
 
         for b in raw_beliefs:
+            if b.lifecycle_stage not in ("crystallized", "senescence"):
+                continue
+
             events = belief_repo.get_events_for_belief(b.id)
             if b.ontological_mass >= 1.5:
                 cat = "foundational"
@@ -30,7 +31,7 @@ class BeliefService:
             else:
                 cat = "methodological"
 
-            belief_data = {
+            beliefs_list.append({
                 "id": b.id,
                 "label": b.label,
                 "statement": b.statement,
@@ -51,15 +52,47 @@ class BeliefService:
                     }
                     for e in events
                 ],
-            }
+            })
 
-            stage = b.lifecycle_stage
-            if stage in ("crystallized", "senescence"):
-                beliefs_list.append(belief_data)
-            elif stage in ("nucleation", "accretion"):
-                proto_beliefs_list.append(belief_data)
-            elif stage == "collapsed":
-                ghosts_list.append(belief_data)
+        import json
+        raw_proposals = belief_repo.list_proposals(agent_id)
+        proto_beliefs_list = []
+        ghosts_list = []
+
+        for p in raw_proposals:
+            source_trace = []
+            if p.source_trace:
+                try:
+                    source_trace = json.loads(p.source_trace)
+                except Exception:
+                    pass
+
+            proposal_data = {
+                "id": p.id,
+                "label": p.suggested_label or "emergent-belief",
+                "statement": p.suggested_statement or p.provisional_statement,
+                "category": "methodological",
+                "confidence": p.confidence,
+                "ontological_mass": p.nucleation_mass,
+                "version": 1,
+                "vector_16d": p.initial_signature,
+                "origin": "emergent",
+                "lifecycle_stage": "nucleation" if p.status in ("pending", "refined") else "collapsed",
+                "last_reinforced_at": p.created_at.isoformat() if p.created_at else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+                "events": [],
+                "is_proposal": True,
+                "proposal_status": p.status,
+                "symbia_reflection": p.symbia_reflection,
+                "symbia_friction_rationale": p.symbia_friction_rationale,
+                "rejection_rationale": p.rejection_rationale,
+                "potential_merge_target": p.potential_merge_target,
+                "source_trace": source_trace,
+            }
+            if p.status in ("pending", "refined"):
+                proto_beliefs_list.append(proposal_data)
+            elif p.status == "rejected":
+                ghosts_list.append(proposal_data)
 
         somatic_state = None
         attractor_window = []

@@ -220,14 +220,32 @@ class BeliefDynamicsEngine(ProcessingModule):
 
         new_stage = self._compute_lifecycle_stage(belief, new_mass, new_confidence)
 
-        self._belief_repo.update_belief(
-            belief_id=belief.id,
-            confidence=new_confidence,
-            vector_16d=belief.vector_16d,
-            origin=belief.origin,
-            lifecycle_stage=new_stage,
-        )
-        self._belief_repo.update_belief_mass(belief.id, new_mass)
+        if new_stage in ("collapsed", "faded"):
+            self._belief_repo.delete_belief(belief.id)
+            self._belief_repo.create_proposal(
+                id=belief.id,
+                agent_id=belief.agent_id,
+                provisional_statement=belief.statement,
+                source_trace=belief.genesis_materials or "[]",
+                initial_signature=belief.vector_16d,
+                nucleation_mass=new_mass,
+                confidence=new_confidence,
+                status="rejected",
+            )
+            self._belief_repo.update_proposal_status(
+                belief.id,
+                "rejected",
+                rejection_rationale=f"Belief collapsed during autopoietic metabolism. Final Mass: {new_mass:.3f}, Final Confidence: {new_confidence:.3f}"
+            )
+        else:
+            self._belief_repo.update_belief(
+                belief_id=belief.id,
+                confidence=new_confidence,
+                vector_16d=belief.vector_16d,
+                origin=belief.origin,
+                lifecycle_stage=new_stage,
+            )
+            self._belief_repo.update_belief_mass(belief.id, new_mass)
 
         event_type = "support" if alignment >= 0.0 else "collision"
         if new_stage != belief.lifecycle_stage:

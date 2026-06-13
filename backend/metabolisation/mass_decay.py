@@ -61,10 +61,29 @@ class MassDecayMixin:
             if abs(new_mass - b.ontological_mass) < 1e-5 and new_stage == b.lifecycle_stage:
                 continue
 
-            self.belief_repo.update_belief_mass(b.id, new_mass)
-            if new_stage != b.lifecycle_stage:
-                self.belief_repo.update_belief_stage(b.id, new_stage)
-                logger.info(f"Belief '{b.label}' mass decay: {b.lifecycle_stage} -> {new_stage} (mass={new_mass:.4f})")
+            if new_stage in ("collapsed", "faded"):
+                self.belief_repo.delete_belief(b.id)
+                self.belief_repo.create_proposal(
+                    id=b.id,
+                    agent_id=b.agent_id,
+                    provisional_statement=b.statement,
+                    source_trace=b.genesis_materials or "[]",
+                    initial_signature=b.vector_16d,
+                    nucleation_mass=new_mass,
+                    confidence=b.confidence,
+                    status="rejected",
+                )
+                self.belief_repo.update_proposal_status(
+                    b.id,
+                    "rejected",
+                    rejection_rationale=f"Belief collapsed during autopoietic mass decay. Final Mass: {new_mass:.3f}"
+                )
+                logger.info(f"Belief '{b.label}' decayed to collapsed/faded: moved to belief_proposals as rejected.")
+            else:
+                self.belief_repo.update_belief_mass(b.id, new_mass)
+                if new_stage != b.lifecycle_stage:
+                    self.belief_repo.update_belief_stage(b.id, new_stage)
+                    logger.info(f"Belief '{b.label}' mass decay: {b.lifecycle_stage} -> {new_stage} (mass={new_mass:.4f})")
 
         logger.debug("Applied mass decay to %d beliefs over %.0fs idle", len(active_beliefs), elapsed)
         await self._apply_skill_ecology(idle_duration)
