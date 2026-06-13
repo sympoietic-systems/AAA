@@ -1,5 +1,6 @@
 import { memo } from "react"
 import { useTelemetryMetrics } from "../../../hooks/useTelemetry"
+import { Tooltip } from "../../Tooltip"
 
 interface VitalitySectionProps {
   enabled?: boolean
@@ -29,33 +30,29 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
     const display = value != null ? (value < 0.01 ? value.toFixed(4) : value.toFixed(3)) : "—"
 
     return (
-      <div className="flex items-center gap-1.5 group relative" key={label}>
-        <span className="w-7 text-[9px] text-[#555] text-right font-mono">{label}</span>
-        <div className="w-12 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
-          <div
-            className="h-full rounded-sm bg-[#444] group-hover:bg-[#4ade80] transition-all transition-colors duration-200"
-            style={{
-              width: `${pct}%`,
-              opacity: 0.6,
-              animation: "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-            }}
-          />
+      <Tooltip
+        key={label}
+        title={fullName}
+        subtitle={`${display} / ${max}`}
+        description={hint}
+        titleColorClass="text-[#4ade80]"
+        position="top-left"
+      >
+        <div className="flex items-center gap-1.5 cursor-help w-full">
+          <span className="w-7 text-[9px] text-[#555] text-right font-mono">{label}</span>
+          <div className="w-12 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
+            <div
+              className="h-full rounded-sm bg-[#444] transition-all transition-colors duration-200"
+              style={{
+                width: `${pct}%`,
+                opacity: 0.6,
+                animation: "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+              }}
+            />
+          </div>
+          <span className="text-[9px] text-[#666] transition-colors w-10 text-right font-mono">{display}</span>
         </div>
-        <span className="text-[9px] text-[#666] group-hover:text-[#aaa] transition-colors w-10 text-right font-mono">{display}</span>
-        <div className="
-          absolute bottom-full left-0 mb-1 px-2 py-1
-          bg-[#1a1a1a] border border-[#333] rounded
-          text-[10px] text-[#aaa] leading-snug
-          whitespace-nowrap z-50
-          opacity-0 group-hover:opacity-100
-          transition-opacity duration-150
-          pointer-events-none
-        ">
-          <div className="text-[#4ade80] text-[11px] font-bold">{fullName}</div>
-          <div className="text-[#888] font-mono">{display} / {max}</div>
-          <div className="text-[#666] max-w-48 whitespace-normal">{hint}</div>
-        </div>
-      </div>
+      </Tooltip>
     )
   }
 

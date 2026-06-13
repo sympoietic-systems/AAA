@@ -7,6 +7,7 @@ import type { ChatMessage, MetricsInfo, NoteInfo } from "../../../api/client"
 import { getMessageThinking, getMessageContext } from "../../../api/client"
 import { StructuralAutopoieticGlyph } from "./StructuralAutopoieticGlyph"
 import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
+import { Tooltip } from "../../Tooltip"
 const DIMENSION_NAMES = [
   "Homeostatic",
   "Amplifying",
@@ -78,67 +79,53 @@ function VitalityBar({ metrics }: { metrics: MetricsInfo }) {
         const color = valueColor(item)
         const valStr = fmtVal(item.value)
         return (
-          <span key={item.label} className="group relative">
-            <span className="text-[#555]">#</span>
-            <span className="text-[#555]">{item.label}:</span>
-            <span style={{ color }}>{valStr}</span>
-            <div className="
-              absolute bottom-full left-0 mb-1 px-2 py-1
-              bg-[#1a1a1a] border border-[#333] rounded
-              text-[10px] text-[#aaa] leading-snug
-              whitespace-nowrap z-50
-              opacity-0 group-hover:opacity-100
-              transition-opacity duration-150
-              pointer-events-none
-            ">
-              <div className="text-[#4ade80] text-[11px] font-bold">{item.full}</div>
-              <div className="text-[#888]">{valStr} / {item.max}</div>
-              <div className="text-[#666] max-w-48 whitespace-normal">{item.hint}</div>
-            </div>
-          </span>
+          <Tooltip
+            key={item.label}
+            title={item.full}
+            subtitle={`${valStr} / ${item.max}`}
+            description={item.hint}
+            titleColorClass="text-[#4ade80]"
+            position="top-left"
+          >
+            <span className="cursor-help">
+              <span className="text-[#555]">#</span>
+              <span className="text-[#555]">{item.label}:</span>
+              <span style={{ color }}>{valStr}</span>
+            </span>
+          </Tooltip>
         )
       })}
       {metrics.conversation_vitality != null && (
-        <span className="group relative">
-          <span className="text-[#555]">vit:</span>
-          <span className={metrics.conversation_vitality < 0.35 ? "text-[#f87171]" : "text-[#4ade80]"}>
-            {metrics.conversation_vitality.toFixed(2)}
+        <Tooltip
+          title="conversation vitality"
+          subtitle={`${metrics.conversation_vitality.toFixed(3)} / 1.0`}
+          description="Composite aliveness score. Higher = more alive."
+          titleColorClass="text-[#4ade80]"
+          position="top-left"
+        >
+          <span className="cursor-help">
+            <span className="text-[#555]">vit:</span>
+            <span className={metrics.conversation_vitality < 0.35 ? "text-[#f87171]" : "text-[#4ade80]"}>
+              {metrics.conversation_vitality.toFixed(2)}
+            </span>
           </span>
-          <div className="
-            absolute bottom-full left-0 mb-1 px-2 py-1
-            bg-[#1a1a1a] border border-[#333] rounded
-            text-[10px] text-[#aaa] leading-snug
-            whitespace-nowrap z-50
-            opacity-0 group-hover:opacity-100
-            transition-opacity duration-150
-            pointer-events-none
-          ">
-            <div className="text-[#4ade80] text-[11px] font-bold">conversation vitality</div>
-            <div className="text-[#888]">{metrics.conversation_vitality.toFixed(3)} / 1.0</div>
-            <div className="text-[#666]">Composite aliveness score. Higher = more alive.</div>
-          </div>
-        </span>
+        </Tooltip>
       )}
       {metrics.paskian_health != null && (
-        <span className="group relative">
-          <span className="text-[#555]">ph:</span>
-          <span className={metrics.paskian_health < 0.25 ? "text-[#f87171]" : "text-[#4ade80]"}>
-            {metrics.paskian_health.toFixed(2)}
+        <Tooltip
+          title="Paskian health"
+          subtitle={`${metrics.paskian_health.toFixed(3)} / 1.0`}
+          description="Productive zone between strict and permissive. Higher = better."
+          titleColorClass="text-[#4ade80]"
+          position="top-left"
+        >
+          <span className="cursor-help">
+            <span className="text-[#555]">ph:</span>
+            <span className={metrics.paskian_health < 0.25 ? "text-[#f87171]" : "text-[#4ade80]"}>
+              {metrics.paskian_health.toFixed(2)}
+            </span>
           </span>
-          <div className="
-            absolute bottom-full left-0 mb-1 px-2 py-1
-            bg-[#1a1a1a] border border-[#333] rounded
-            text-[10px] text-[#aaa] leading-snug
-            whitespace-nowrap z-50
-            opacity-0 group-hover:opacity-100
-            transition-opacity duration-150
-            pointer-events-none
-          ">
-            <div className="text-[#4ade80] text-[11px] font-bold">Paskian health</div>
-            <div className="text-[#888]">{metrics.paskian_health.toFixed(3)} / 1.0</div>
-            <div className="text-[#666]">Productive zone between strict and permissive. Higher = better.</div>
-          </div>
-        </span>
+        </Tooltip>
       )}
       {metrics.phase_shifts && metrics.phase_shifts.length > 0 && (
         <span className="text-[#facc15]">
