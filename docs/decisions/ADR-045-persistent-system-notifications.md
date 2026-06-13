@@ -40,6 +40,16 @@ Connected the repository to the primary asynchronous worker and database pipelin
 - Introduced a new **Traces** tab in the `/agent` interface powered by the `<TracesSection />` component.
 - Styled as a monospaced geological core-sample, this section allows full search queries, type filtering, reading, and dismissing archived (folded) notifications directly.
 
+### 6. Polymorphic Object Links for Deep-Linking
+To support navigation from notifications directly to the source objects (beliefs, skills, or conversations):
+- **Polymorphic Database Fields:** Added `source_type` and `source_id` columns to the `notifications` table (migrated in `m024_notification_links.py`).
+- **Pydantic & API Mapping:** Updated `NotificationCreatePayload` and frontend serialization interfaces (`SedimentNotification`) to transmit `source_type` and `source_id`.
+- **Backend Instrumentation:** Instrumented the backend event generation (adoption, rejection, speciation alerts, manual creation/updates, and digest indexer status) to write matching `source_type` and `source_id` keys.
+- **Frontend Navigation & Deep-Linking:**
+  - Integrated `onNavigateToEntity` prop callback in `TracesSection`.
+  - Added unified `handleJump` handler in `CreasesDropdown` and `TracesSection` that navigates to the targeted belief or skill tab in the Agent detail view, or switches conversation contexts automatically.
+  - Updated `AgentPage` to parse `tab` and `id` parameters from URL query strings on initialization and update search parameters reactively during tab switching and detail focus.
+
 ## Consequences
 
 ### Positive

@@ -3,7 +3,11 @@ import { getNotifications, dismissNotification, markNotificationRead, clearNotif
 import type { SedimentNotification } from "../../../api/client"
 import { syncNotifications } from "../../../stores/notificationStore"
 
-export function TracesSection() {
+interface Props {
+  onNavigateToEntity?: (type: string, id: string) => void
+}
+
+export function TracesSection({ onNavigateToEntity }: Props) {
   const [notifications, setNotifications] = useState<SedimentNotification[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -51,6 +55,26 @@ export function TracesSection() {
       syncNotifications()
     } catch (err) {
       console.error("Failed to mark trace read:", err)
+    }
+  }
+
+  const handleJump = (n: SedimentNotification) => {
+    if (!n.read) {
+      handleMarkRead(n.id)
+    }
+
+    if (onNavigateToEntity && (n.sourceType === "belief" || n.sourceType === "skill")) {
+      if (n.sourceId) {
+        onNavigateToEntity(n.sourceType, n.sourceId)
+      }
+    } else if (n.sourceType === "belief" || n.sourceType === "skill") {
+      window.open(`/agent?tab=${n.sourceType}s&id=${n.sourceId || ""}`, "_blank")
+    } else if (n.sourceType === "conversation" || n.conversationId) {
+      const convId = n.sourceId || n.conversationId
+      if (convId) {
+        const url = `/?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`
+        window.open(url, "_blank")
+      }
     }
   }
 
@@ -216,8 +240,17 @@ export function TracesSection() {
                     </div>
                   </div>
 
-                  {/* Actions (mark read / dismiss) */}
+                  {/* Actions (jump / mark read / dismiss) */}
                   <div className="flex items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity self-center shrink-0">
+                    {(n.sourceType === "belief" || n.sourceType === "skill" || n.sourceType === "conversation" || !!n.conversationId) && (
+                      <button
+                        onClick={() => handleJump(n)}
+                        className="text-[9px] text-[#4ade80] hover:text-[#4ade80] hover:bg-[#4ade80]/10 border border-[#222] hover:border-[#4ade80]/30 px-1.5 py-0.5 rounded bg-[#0c0c0e] cursor-pointer transition-all duration-200"
+                        title="Jump to linked entity"
+                      >
+                        [↳ jump]
+                      </button>
+                    )}
                     {!n.read && (
                       <button
                         onClick={() => handleMarkRead(n.id)}

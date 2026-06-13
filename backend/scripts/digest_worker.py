@@ -254,6 +254,8 @@ async def process_and_summarize_file(
                 snippet=f"File indexing complete: '{file_name}' ({file_type}) digested into semantic sediment.",
                 conversation_id=conversation_id,
                 source=f"perception:{file_name}",
+                source_type="conversation",
+                source_id=conversation_id,
             )
         except Exception as ne:
             logger.error(f"Failed to create file indexing notification: {ne}")
@@ -273,6 +275,8 @@ async def process_and_summarize_file(
                 snippet=f"File indexing failed for '{file_name}': {str(e)}",
                 conversation_id=conversation_id,
                 source=f"perception:{file_name}",
+                source_type="conversation",
+                source_id=conversation_id,
             )
         except Exception as ne:
             logger.error(f"Failed to create file indexing error notification: {ne}")
@@ -439,6 +443,8 @@ async def reprocess_and_summarize_file_background(
                 snippet=f"File reprocessing complete: '{file_name}' ({file_type}) updated in sediment.",
                 conversation_id=conversation_id,
                 source=f"perception:{file_name}",
+                source_type="conversation",
+                source_id=conversation_id,
             )
         except Exception as ne:
             logger.error(f"Failed to create file reprocessing notification: {ne}")
@@ -458,6 +464,8 @@ async def reprocess_and_summarize_file_background(
                 snippet=f"File reprocessing failed for '{file_name}': {str(e)}",
                 conversation_id=conversation_id,
                 source=f"perception:{file_name}",
+                source_type="conversation",
+                source_id=conversation_id,
             )
         except Exception as ne:
             logger.error(f"Failed to create file reprocessing error notification: {ne}")

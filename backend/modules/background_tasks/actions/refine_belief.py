@@ -140,6 +140,11 @@ Active beliefs already in Symbia's database:
             potential_merge_target=resolved_target_id,
             status="refined"
         )
+        if data.get("rationale"):
+            belief_repo.update_proposal_symbia_reflection(
+                proposal_id=proposal_id,
+                symbia_reflection=data.get("rationale").strip()
+            )
         logger.info(f"Successfully refined belief proposal {proposal_id} with label: {suggested_label}")
 
         return {

@@ -121,9 +121,11 @@ function NodeListItem({
   )
 }
 
-// ─── Main Component ───────────────────────────────────────
+interface BeliefsSectionProps {
+  initialSelectedId?: string
+}
 
-function BeliefsSectionComponent() {
+function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   const [data, setData] = useState<BeliefsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [agentFlux, setAgentFlux] = useState<boolean>(false)
@@ -140,6 +142,20 @@ function BeliefsSectionComponent() {
       .then(info => setAgentFlux(!!info.agent_flux))
       .catch(() => setAgentFlux(false))
   }, [])
+
+  // Auto-select belief when initialSelectedId changes or data is loaded
+  useEffect(() => {
+    if (initialSelectedId && data) {
+      const rawBeliefs = data.beliefs || []
+      const rawProtos = data.proto_beliefs || []
+      const rawGhosts = data.ghosts || []
+      const all = [...rawBeliefs, ...rawProtos, ...rawGhosts]
+      const matched = all.find(b => b.id === initialSelectedId || b.label === initialSelectedId)
+      if (matched) {
+        setSelectedId(matched.id)
+      }
+    }
+  }, [initialSelectedId, data])
 
   // Scroll to detail on mobile when a belief is selected or is adding
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { BeliefsSection } from "./BeliefsSection"
 import { DreamingSection } from "./DreamingSection"
 import { StartupSection } from "./StartupSection"
@@ -23,7 +23,38 @@ interface Props {
 }
 
 export function AgentPage({ onGoHome, onGoConversation }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>("beliefs")
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const params = new URLSearchParams(window.location.search)
+    let tab = params.get("tab")
+    if (tab) {
+      if (tab.endsWith("s")) {
+        tab = tab.slice(0, -1)
+      }
+      if (tab === "belief") return "beliefs"
+      if (tab === "skill") return "skills"
+      if (tab === "trace") return "traces"
+      if (TABS.some((t) => t.id === tab)) return tab as TabId
+    }
+    return "beliefs"
+  })
+
+  const [initialSelectedId, setInitialSelectedId] = useState<string | undefined>(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get("id") || undefined
+  })
+
+  // Sync state changes back to search parameters for refreshing/bookmarking
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    params.set("tab", activeTab)
+    if (initialSelectedId) {
+      params.set("id", initialSelectedId)
+    } else {
+      params.delete("id")
+    }
+    const newUrl = `${window.location.pathname}?${params.toString()}`
+    window.history.replaceState(null, "", newUrl)
+  }, [activeTab, initialSelectedId])
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
@@ -58,7 +89,10 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id)
+              setInitialSelectedId(undefined) // Reset focus ID when switching tab manually
+            }}
             className={`px-2.5 py-0.5 text-[11px] rounded font-bold tracking-wide uppercase transition-all duration-200 border whitespace-nowrap cursor-pointer select-none ${
               activeTab === tab.id
                 ? "bg-[#1e1e2e] text-[#94a3b8] border-[#475569]/40"
@@ -72,12 +106,22 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
-        {activeTab === "beliefs" && <BeliefsSection />}
-        {activeTab === "skills" && <SkillsSection />}
+        {activeTab === "beliefs" && <BeliefsSection initialSelectedId={initialSelectedId} />}
+        {activeTab === "skills" && <SkillsSection initialSelectedId={initialSelectedId} />}
         {activeTab === "pipeline" && <PipelineSection />}
         {activeTab === "dreaming" && <DreamingSection />}
         {activeTab === "daemons" && <StartupSection />}
-        {activeTab === "traces" && <TracesSection />}
+        {activeTab === "traces" && (
+          <TracesSection
+            onNavigateToEntity={(type, id) => {
+              let tabId: TabId = "beliefs"
+              if (type.startsWith("skill")) tabId = "skills"
+              else if (type.startsWith("belief")) tabId = "beliefs"
+              setActiveTab(tabId)
+              setInitialSelectedId(id)
+            }}
+          />
+        )}
       </div>
     </div>
   )

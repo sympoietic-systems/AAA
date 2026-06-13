@@ -17,6 +17,8 @@ class NotificationCreatePayload(BaseModel):
     source: Optional[str] = None
     read: int = 0
     dismissed: int = 0
+    source_type: Optional[str] = None
+    source_id: Optional[str] = None
 
 
 class ClearPayload(BaseModel):
@@ -63,6 +65,8 @@ async def create_notification(
             source=payload.source,
             read=payload.read,
             dismissed=payload.dismissed,
+            source_type=payload.source_type,
+            source_id=payload.source_id,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -207,14 +207,12 @@ class BeliefService:
         state = self._state
         bg_engine = getattr(state, "background_engine", None)
         llm_provider = getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
-        if not bg_engine or not llm_provider:
-            from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction
-            action = RefineBeliefAction()
-            return await action.execute(llm_provider, {"proposal_id": proposal_id})
+        if bg_engine and llm_provider:
+            return await bg_engine.run("refine_belief", {"proposal_id": proposal_id})
         
-        task_id = await bg_engine.dispatch("refine_belief", {"proposal_id": proposal_id})
-        res = await bg_engine.wait_for_task(task_id)
-        return res
+        from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction
+        action = RefineBeliefAction()
+        return await action.execute(llm_provider, {"proposal_id": proposal_id})
 
     async def adopt_proposal(self, proposal_id: str, suggested_label: Optional[str] = None, suggested_statement: Optional[str] = None) -> dict:
         state = self._state
@@ -278,7 +276,9 @@ class BeliefService:
             notif_repo.create(
                 type="trace",
                 snippet=f"Belief '{label}' has crystallized in the network from proposed insights.",
-                source=f"belief:{label}"
+                source=f"belief:{label}",
+                source_type="belief",
+                source_id=p.id
             )
 
         return {"status": "ok", "belief_id": p.id, "label": label}
@@ -300,7 +300,9 @@ class BeliefService:
             notif_repo.create(
                 type="trace",
                 snippet=f"Belief proposal was rejected by the system.",
-                source="belief_workshop"
+                source="belief_workshop",
+                source_type="belief",
+                source_id=proposal_id
             )
 
         return {"status": "ok"}
@@ -356,7 +358,9 @@ class BeliefService:
             notif_repo.create(
                 type="trace",
                 snippet=f"Belief proposal was diffractively merged into '{target_belief.label}'. Mass increased to {new_mass:.2f}.",
-                source=f"belief:{target_belief.label}"
+                source=f"belief:{target_belief.label}",
+                source_type="belief",
+                source_id=target_belief.id
             )
 
         return {"status": "ok", "belief_id": target_belief.id, "label": target_belief.label}
@@ -423,7 +427,9 @@ class BeliefService:
                     notif_repo.create(
                         type="glitch",
                         snippet=f"Speciation Alert: Belief '{target_belief.label}' has drifted significantly (distance={dist:.2f}). Consider forking into multiple concepts.",
-                        source=f"belief:{target_belief.label}"
+                        source=f"belief:{target_belief.label}",
+                        source_type="belief",
+                        source_id=target_belief.id
                     )
 
         notif_repo = getattr(state, "notification_repo", None)
@@ -431,7 +437,9 @@ class BeliefService:
             notif_repo.create(
                 type="trace",
                 snippet=f"Belief '{target_belief.label}' updated statement to version {new_version}.",
-                source=f"belief:{target_belief.label}"
+                source=f"belief:{target_belief.label}",
+                source_type="belief",
+                source_id=target_belief.id
             )
 
         return {
@@ -536,7 +544,9 @@ class BeliefService:
             notif_repo.create(
                 type="trace",
                 snippet=f"Belief '{label}' was manually created.",
-                source=f"belief:{label}"
+                source=f"belief:{label}",
+                source_type="belief",
+                source_id=belief_id
             )
 
         return {"status": "ok", "belief_id": belief_id, "label": label}
@@ -602,7 +612,9 @@ class BeliefService:
                         notif_repo.create(
                             type="glitch",
                             snippet=f"Speciation Alert: Belief '{label}' has drifted significantly (distance={dist:.2f}) after edit.",
-                            source=f"belief:{label}"
+                            source=f"belief:{label}",
+                            source_type="belief",
+                            source_id=belief_id
                         )
 
         # 2. Save in database
@@ -639,7 +651,9 @@ class BeliefService:
             notif_repo.create(
                 type="trace",
                 snippet=f"Belief '{label}' details were updated.",
-                source=f"belief:{label}"
+                source=f"belief:{label}",
+                source_type="belief",
+                source_id=belief_id
             )
 
         return {
@@ -669,7 +683,9 @@ class BeliefService:
             notif_repo.create(
                 type="trace",
                 snippet=f"Belief '{label}' was manually deleted.",
-                source=f"belief:{label}"
+                source=f"belief:{label}",
+                source_type="belief",
+                source_id=belief_id
             )
 
         return {"status": "ok", "message": f"Belief {belief_id} deleted"}
@@ -713,7 +729,9 @@ class BeliefService:
                     notif_repo.create(
                         type="glitch",
                         snippet=f"Speciation Alert: Belief '{label}' has drifted significantly (distance={dist:.2f}) after reverting to version {version}.",
-                        source=f"belief:{label}"
+                        source=f"belief:{label}",
+                        source_type="belief",
+                        source_id=belief_id
                     )
 
         # Archive new statement version
@@ -760,7 +778,9 @@ class BeliefService:
             notif_repo.create(
                 type="trace",
                 snippet=f"Belief '{label}' reverted statement to version {version}.",
-                source=f"belief:{label}"
+                source=f"belief:{label}",
+                source_type="belief",
+                source_id=belief_id
             )
 
         return {

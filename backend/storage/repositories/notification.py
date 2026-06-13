@@ -21,6 +21,8 @@ class NotificationRepository(BaseRepository):
         source: Optional[str] = None,
         read: int = 0,
         dismissed: int = 0,
+        source_type: Optional[str] = None,
+        source_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         conn = self._conn()
         notif_id = id or str(uuid.uuid4())
@@ -29,8 +31,9 @@ class NotificationRepository(BaseRepository):
         conn.execute(
             """INSERT INTO notifications (
                 id, type, timestamp, snippet, conversation_id, message_id,
-                parent_message_id, speaker, source, read, dismissed
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                parent_message_id, speaker, source, read, dismissed,
+                source_type, source_id
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 notif_id,
                 type,
@@ -43,6 +46,8 @@ class NotificationRepository(BaseRepository):
                 source,
                 read,
                 dismissed,
+                source_type,
+                source_id,
             ),
         )
         conn.commit()

@@ -11,7 +11,11 @@ import { NewSkillForm } from "./skills/NewSkillForm"
 
 export const SkillsSection = memo(SkillsSectionComponent)
 
-function SkillsSectionComponent() {
+interface SkillsSectionProps {
+  initialSelectedId?: string
+}
+
+function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
   const [data, setData] = useState<DbSkillsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [agentFlux, setAgentFlux] = useState<boolean>(false)
@@ -61,6 +65,17 @@ function SkillsSectionComponent() {
       setLoadingContent(null)
     }
   }
+
+  // Auto-select skill when initialSelectedId changes or data is loaded
+  useEffect(() => {
+    if (initialSelectedId && data?.all) {
+      const matched = data.all.find(s => s.id === initialSelectedId || s.name === initialSelectedId)
+      if (matched) {
+        setSelectedName(matched.name)
+        handleLoadContent(matched.name)
+      }
+    }
+  }, [initialSelectedId, data])
 
   const handleUpdate = (updatedSkill: DbSkillInfo, updatedContent: string) => {
     setData(prev => {

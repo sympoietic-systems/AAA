@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react"
-import type { ConversationInfo } from "../../../api/client"
+import type { ConversationInfo, SedimentNotification } from "../../../api/client"
 import {
   useNotifications,
   dismissNotification,
@@ -38,6 +38,24 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
       markAllAsRead(activeTab)
     }
   }, [creasesOpen, activeTab])
+
+  const handleJump = (n: SedimentNotification) => {
+    dismissNotification(n.id)
+    setCreasesOpen(false)
+
+    if (n.sourceType === "belief" || n.sourceType === "skill") {
+      window.open(`/agent?tab=${n.sourceType}s&id=${n.sourceId || ""}`, "_blank")
+    } else if (n.sourceType === "conversation" || n.conversationId) {
+      const convId = n.sourceId || n.conversationId
+      if (convId) {
+        if (onNavigateToNotification && n.messageId) {
+          onNavigateToNotification(convId, n.messageId)
+        } else {
+          window.open(`/?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`, "_blank")
+        }
+      }
+    }
+  }
 
   // Filter and enrich sediment notifications with conversation titles for display
   const enrichedSediment = useMemo(() => {
@@ -192,12 +210,9 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                       </p>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
-                      {onNavigateToNotification && (
+                      {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
                         <button
-                          onClick={() => {
-                            onNavigateToNotification(notif.conversationId!, notif.messageId!)
-                            setCreasesOpen(false)
-                          }}
+                          onClick={() => handleJump(notif)}
                           className="text-[9px] text-[#888] hover:text-[#4ade80] font-mono border border-[#222] hover:border-[#4ade80]/50 px-1.5 py-0.5 rounded-sm bg-[#0c0c0e] transition-all cursor-pointer"
                         >
                           [↳ Jump]
@@ -238,6 +253,14 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                       {notif.snippet}
                     </p>
                     <div className="flex justify-end gap-2 mt-1.5">
+                      {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
+                        <button
+                          onClick={() => handleJump(notif)}
+                          className="text-[9px] text-[#884444] hover:text-[#f87171] font-mono border border-[#2a1313] hover:border-[#f87171]/50 px-1.5 py-0.5 rounded-sm bg-[#0c0c0e] transition-all cursor-pointer mr-auto"
+                        >
+                          [↳ Jump]
+                        </button>
+                      )}
                       <button
                         onClick={() => dismissNotification(notif.id)}
                         className="text-[9px] text-[#884444] hover:text-[#f87171] font-mono cursor-pointer transition-colors"
@@ -273,6 +296,14 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                       {notif.snippet}
                     </p>
                     <div className="flex justify-end gap-2 mt-1.5">
+                      {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
+                        <button
+                          onClick={() => handleJump(notif)}
+                          className="text-[9px] text-[#3b82f6] hover:text-[#60a5fa] font-mono border border-[#0f172a] hover:border-[#60a5fa]/50 px-1.5 py-0.5 rounded-sm bg-[#0c0c0e] transition-all cursor-pointer mr-auto"
+                        >
+                          [↳ Jump]
+                        </button>
+                      )}
                       <button
                         onClick={() => dismissNotification(notif.id)}
                         className="text-[9px] text-[#3b82f6] hover:text-[#60a5fa] font-mono cursor-pointer transition-colors"

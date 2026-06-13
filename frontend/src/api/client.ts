@@ -1172,6 +1172,8 @@ export interface SedimentNotification {
   snippet: string
   speaker?: string
   source?: string
+  sourceType?: string
+  sourceId?: string
   read?: boolean
   dismissed?: boolean
 }
@@ -1187,6 +1189,8 @@ function mapBackendNotification(n: any): SedimentNotification {
     snippet: n.snippet,
     speaker: n.speaker || undefined,
     source: n.source || undefined,
+    sourceType: n.source_type || undefined,
+    sourceId: n.source_id || undefined,
     read: n.read === 1 || n.read === true,
     dismissed: n.dismissed === 1 || n.dismissed === true,
   }
@@ -1203,6 +1207,8 @@ function mapFrontendNotification(n: Partial<SedimentNotification>): any {
     snippet: n.snippet,
     speaker: n.speaker,
     source: n.source,
+    source_type: n.sourceType,
+    source_id: n.sourceId,
     read: n.read ? 1 : 0,
     dismissed: n.dismissed ? 1 : 0,
   }
