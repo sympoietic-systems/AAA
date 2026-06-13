@@ -76,9 +76,9 @@ export const StructuralAutopoieticGlyph = memo<GlyphProps>(({
   const [payloadOpen, setPayloadOpen] = useState(false);
   const [justificationOpen, setJustificationOpen] = useState(false);
 
-  const SIZE = 140;
+  const SIZE = 120;
   const CENTER = SIZE / 2;
-  const MAX_RADIUS = 60;
+  const MAX_RADIUS = 50;
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -125,9 +125,9 @@ export const StructuralAutopoieticGlyph = memo<GlyphProps>(({
       onMouseMove={handleMouseMove}
     >
       {/* Upper section: chart + coordinates */}
-      <div className="flex flex-col sm:flex-row items-center gap-6 w-full">
+      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full">
         {/* SVG Radial Glyph */}
-        <div className="relative w-[140px] h-[140px] flex-shrink-0">
+        <div className="relative w-[120px] h-[120px] flex-shrink-0">
           <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-full h-full overflow-visible">
             {/* Concentric Reference Rings */}
             {[0.33, 0.66, 1.0].map((level, i) => (
@@ -227,14 +227,14 @@ export const StructuralAutopoieticGlyph = memo<GlyphProps>(({
         {/* Legend */}
         <div className="flex flex-col gap-2 flex-1 min-w-[200px] w-full">
           <div className="text-[9px] font-bold tracking-wider uppercase text-slate-500 font-mono flex items-center justify-between">
-            <span>Structural Coordinates</span>
+            <span>Autopoietic Coordinates</span>
             {isStagnant && (
               <span className="text-red-400 animate-pulse text-[8px] border border-red-500/30 px-1 rounded bg-red-950/20">
                 Stagnation Warn
               </span>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px] font-mono">
+          <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-x-2 sm:gap-x-3 gap-y-1.5 text-[8.5px] font-mono w-full">
             {SECTORS.map((sector) => (
               <div key={sector.name} className="flex flex-col gap-1 col-span-1 border-t border-[#1a1a24] pt-1.5">
                 <span className="text-[8px] font-semibold text-slate-600 truncate uppercase tracking-tight mb-0.5">
@@ -248,15 +248,15 @@ export const StructuralAutopoieticGlyph = memo<GlyphProps>(({
                       key={dim.index}
                       onMouseEnter={() => setHoveredIndex(dim.index)}
                       onMouseLeave={() => setHoveredIndex(null)}
-                      className="flex items-center justify-between cursor-help py-0.5 px-1 rounded transition-colors duration-150"
+                      className="flex items-start justify-between cursor-help py-0.5 px-0.5 rounded transition-colors duration-150"
                       style={{
                         backgroundColor: isHovered ? `${sector.color}15` : 'transparent',
                         color: isHovered ? sector.color : '#94a3b8'
                       }}
                     >
-                      <span className="truncate max-w-[85px] text-[9px]">{dim.label}</span>
-                      <span className="font-mono text-[9px] font-bold opacity-80">
-                        {value != null ? value.toFixed(2) : '0.00'}
+                      <span className="text-[7.5px] sm:text-[8px] leading-tight pr-1" title={dim.label}>{dim.label}</span>
+                      <span className="font-mono text-[7.5px] sm:text-[8px] font-bold opacity-80 mt-[1px]">
+                        {value != null ? value.toFixed(1) : '0.0'}
                       </span>
                     </div>
                   );
@@ -311,7 +311,7 @@ export const StructuralAutopoieticGlyph = memo<GlyphProps>(({
                 className="text-[9px] text-[#eab308]/60 hover:text-[#eab308]/90 transition-colors flex items-center gap-1.5 font-mono"
               >
                 <span>{justificationOpen ? "▼" : "▶"}</span>
-                <span>structural justification (debug)</span>
+                <span>autopoietic justification (debug)</span>
               </button>
               {justificationOpen && (
                 <div className="mt-1 pl-3 border-l border-[#eab308]/20 text-[10px] text-[#888] leading-relaxed whitespace-pre-wrap font-mono bg-[#050507] py-1.5 pr-2 rounded">
@@ -328,7 +328,7 @@ export const StructuralAutopoieticGlyph = memo<GlyphProps>(({
                 className="text-[9px] text-[#06b6d4]/60 hover:text-[#06b6d4]/90 transition-colors flex items-center gap-1.5 font-mono"
               >
                 <span>{payloadOpen ? "▼" : "▶"}</span>
-                <span>structural payload (JSON)</span>
+                <span>autopoietic payload (JSON)</span>
               </button>
               {payloadOpen && (
                 <div className="mt-1 pl-3 border-l border-[#06b6d4]/20 text-[9px] text-[#888] font-mono bg-[#050507] py-1.5 pr-2 rounded overflow-x-auto">

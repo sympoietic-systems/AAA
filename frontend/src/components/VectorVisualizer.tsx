@@ -1,11 +1,16 @@
 import telemetrySchemas from "../config/telemetry_schemas.json"
 import { Tooltip } from "./Tooltip"
 
-const { DIMENSIONS_16 } = telemetrySchemas
+const { SIGNATURE_DIMENSIONS_16, IMPACT_DIMENSIONS_16 } = telemetrySchemas
 
 const SHORT_CODES = [
   "HO", "AM", "CY", "BI", "DE", "RH", "BP", "RD",
   "VF", "NC", "TL", "AD", "SY", "NO", "CO", "SM"
+]
+
+const IMPACT_SHORT_CODES = [
+  "VE", "ID", "RC", "AT", "AB", "RhC", "BP", "DT",
+  "VF", "DC", "LT", "OM", "SA", "ND", "EP", "HD"
 ]
 
 interface VectorVisualizerProps {
@@ -54,8 +59,12 @@ export function VectorVisualizer({
         // Height scale max: 50% for centerline-based, 100% for bottom-based
         const scaleMax = shouldAllowNegative ? 50 : 100
         const heightPercent = Math.max(4, Math.round(magnitude * scaleMax))
-        const dimInfo = DIMENSIONS_16[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
-        const code = SHORT_CODES[idx] || `D${idx + 1}`
+        
+        const dimensions = isImpact ? IMPACT_DIMENSIONS_16 : SIGNATURE_DIMENSIONS_16
+        const shortCodes = isImpact ? IMPACT_SHORT_CODES : SHORT_CODES
+        
+        const dimInfo = dimensions[idx] || { label: `Dimension ${idx + 1}`, desc: "" }
+        const code = shortCodes[idx] || `D${idx + 1}`
 
         return (
           <Tooltip

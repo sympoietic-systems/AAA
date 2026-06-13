@@ -140,6 +140,7 @@ export function ImageMetadataCard({ metadata }: { metadata: ImageMetadata }) {
 
           <VectorVisualizer
             vector={vec}
+            variant="signature"
             titleColorClass="text-[#4ade80]"
             barColorClass="bg-[#4ade80]"
           />
@@ -302,7 +303,7 @@ export function DocumentMetadataCard({ metadata, summary }: { metadata: Document
 
       {vec.length > 0 && (
         <div className="mt-3 pt-2.5 border-t border-[#222]/50">
-          <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1.5">[ 16D State Vector Impact ]</span>
+          <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider block mb-1.5">[ 16D State Impact Vector ]</span>
 
           <VectorVisualizer
             vector={vec}

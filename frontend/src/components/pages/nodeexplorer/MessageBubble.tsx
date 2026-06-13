@@ -788,7 +788,7 @@ export const MessageBubble = memo(function MessageBubble({
             className="text-[10px] text-[#555] hover:text-[#888] transition-colors flex items-center gap-1 font-mono mb-1.5"
           >
             <span>{sigOpen ? "▼" : "▶"}</span>
-            <span>structural signature</span>
+            <span>autopoietic signature</span>
           </button>
           {sigOpen && (
             <StructuralAutopoieticGlyph

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, memo } from "react"
 import { getBeliefs } from "../../../api/client"
 import type { BeliefsResponse, BeliefNodeInfo } from "../../../api/client"
-import { VectorVisualizer } from "../../VectorVisualizer"
+import { StructuralAutopoieticGlyph } from "../nodeexplorer/StructuralAutopoieticGlyph"
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -155,7 +155,7 @@ function BeliefDetail({ belief }: { belief: BeliefNodeInfo | null }) {
   try { if (b.vector_16d) vec = JSON.parse(b.vector_16d) } catch { }
 
   return (
-    <div className={`flex-1 min-h-0 flex flex-col border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-sans ${isGhost ? "opacity-55" : ""}`}>
+    <div className={`flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-sans ${isGhost ? "opacity-55" : ""}`}>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -194,22 +194,21 @@ function BeliefDetail({ belief }: { belief: BeliefNodeInfo | null }) {
       {/* Vector */}
       {vec.length > 0 && (
         <div className="shrink-0 mb-1">
-          <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ 16D Autopoietic Vector ]</div>
-          <VectorVisualizer
-            vector={vec}
-            titleColorClass="text-[#a78bfa]"
-            barColorClass="bg-[#a78bfa]"
+          <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ 16D Autopoietic Signature ]</div>
+          <StructuralAutopoieticGlyph
+            signature={vec}
+            isStagnant={false}
           />
         </div>
       )}
 
-      {/* Metabolism log — takes remaining height, scrolls internally */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      {/* Metabolism log — scrolls naturally in parent container */}
+      <div className="flex flex-col mt-2 shrink-0">
         <div className="text-[#555] font-mono text-[10px] uppercase shrink-0">[ Metabolism Log ]</div>
         {b.events.length === 0 ? (
           <div className="text-[11px] text-[#444] italic mt-0.5">No metabolic events logged</div>
         ) : (
-          <div className="flex-1 min-h-0 overflow-y-auto mt-1 space-y-1.5">
+          <div className="mt-1 space-y-1.5">
             {b.events.map((e) => {
               const isPos = e.delta_confidence >= 0
               const diffStr = isPos ? `+${e.delta_confidence.toFixed(3)}` : `${e.delta_confidence.toFixed(3)}`

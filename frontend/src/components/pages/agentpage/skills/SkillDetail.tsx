@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { updateSkill, deleteSkill } from "../../../../api/client"
 import type { DbSkillInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
-import { VectorVisualizer } from "../../../VectorVisualizer"
+import { StructuralAutopoieticGlyph } from "../../nodeexplorer/StructuralAutopoieticGlyph"
 
 interface SkillDetailProps {
   skill: DbSkillInfo | null
@@ -179,7 +179,7 @@ export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agent
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-sans">
+    <div className="flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-sans">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -288,22 +288,21 @@ export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agent
       {/* Vector */}
       {skill.vector_16d?.length > 0 && (
         <div className="shrink-0 mb-1">
-          <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ 16D Autopoietic Vector ]</div>
-          <VectorVisualizer
-            vector={skill.vector_16d}
-            titleColorClass="text-[#a78bfa]"
-            barColorClass="bg-[#a78bfa]"
+          <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ 16D Autopoietic Signature ]</div>
+          <StructuralAutopoieticGlyph
+            signature={skill.vector_16d}
+            isStagnant={false}
           />
         </div>
       )}
 
-      {/* Content — takes remaining height, scrolls internally */}
-      <div className="flex-1 min-h-0 flex flex-col mb-2">
+      {/* Content — scrolls naturally in the parent container */}
+      <div className="flex flex-col mb-2 shrink-0">
         <div className="text-[#555] font-mono text-[10px] uppercase shrink-0">[ Full Content ]</div>
         {loading ? (
           <div className="text-[10px] text-[#555] animate-pulse mt-0.5">loading...</div>
         ) : content ? (
-          <div className="flex-1 min-h-0 overflow-y-auto mt-1 text-[10px] text-[#888] whitespace-pre-wrap leading-relaxed">
+          <div className="mt-1 text-[10px] text-[#888] whitespace-pre-wrap leading-relaxed">
             {content}
           </div>
         ) : (
@@ -313,7 +312,7 @@ export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agent
 
       {/* Version History */}
       {versions.length > 0 && (
-        <div className="shrink-0 border-t border-[#1f1f2e]/20 pt-2 mt-auto">
+        <div className="shrink-0 border-t border-[#1f1f2e]/20 pt-2 mt-4">
           <div className="text-[#555] font-mono text-[10px] uppercase mb-1">[ Version History ]</div>
           <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
             {versions.map((v, vIdx) => {
