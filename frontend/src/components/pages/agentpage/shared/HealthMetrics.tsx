@@ -1,5 +1,6 @@
 import { memo } from "react"
 import type { SomaticStateInfo, EcosystemSnapshot } from "../../../../api/client"
+import { TerminalHeader } from "../../../UI"
 
 /* ── Single Metric Display ── */
 const EcoMetric = memo(function EcoMetric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
@@ -30,9 +31,7 @@ export const HealthMetrics = memo(function HealthMetrics({ somatic, ecosystem }:
       {/* Somatic Reservoir */}
       {somatic && (
         <div className="font-mono text-[10px] space-y-1">
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
-            [ Somatic Reservoir State ]
-          </div>
+          <TerminalHeader>[ Somatic Reservoir State ]</TerminalHeader>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
             <span><span className="text-[#888]">Somatic Shock (Ad):</span> <span className="text-[#ccc] font-bold">{somatic.somatic_reservoir_ad.toFixed(3)}</span></span>
             <span><span className="text-[#888]">Matrix Warping:</span> <span className="text-[#ccc] font-bold">{somatic.matrix_warping.toFixed(3)}</span></span>
@@ -48,9 +47,7 @@ export const HealthMetrics = memo(function HealthMetrics({ somatic, ecosystem }:
       {/* Ecosystem Health */}
       {ecosystem && (
         <div className="font-mono text-[10px]">
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
-            [ Ecosystem Health ]
-          </div>
+          <TerminalHeader>[ Ecosystem Health ]</TerminalHeader>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 md:gap-x-6 mt-0.5">
             <EcoMetric label="Diversity" value={ecosystem.diversity.toFixed(2)} />
             <EcoMetric label="Coherence" value={ecosystem.coherence.toFixed(2)} />

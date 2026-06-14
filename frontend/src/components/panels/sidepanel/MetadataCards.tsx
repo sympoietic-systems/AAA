@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
-import { VectorVisualizer } from "../../UI/VectorVisualizer"
+import { VectorVisualizer, TerminalHeader } from "../../UI"
 
 export function splitSummaryAndTension(summary: string | null): { cleanSummary: string | null; unresolvedTensions: string | null } {
   if (!summary) return { cleanSummary: null, unresolvedTensions: null }
@@ -46,7 +46,7 @@ export const ImageMetadataCard = memo(function ImageMetadataCard({ metadata }: {
 
   return (
     <div className="font-mono text-[10px] space-y-2">
-      <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Somatic Ingestion ]</div>
+      <TerminalHeader>[ Somatic Ingestion ]</TerminalHeader>
 
       <div className="flex flex-wrap gap-x-4 gap-y-0.5">
         <span><span className="text-[#666]">G_f:</span> <span className="text-[#e63946] font-bold">{metadata.g_f_score.toFixed(3)}</span></span>
@@ -55,14 +55,14 @@ export const ImageMetadataCard = memo(function ImageMetadataCard({ metadata }: {
 
       {metadata.somatic_notes && (
         <div>
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Somatic Traces ]</div>
+          <TerminalHeader>[ Somatic Traces ]</TerminalHeader>
           <p className="font-serif italic text-[#c0caf5] text-[11px] leading-relaxed pl-1.5 border-l border-[#333]">{metadata.somatic_notes}</p>
         </div>
       )}
 
       {metadata.diffractive_analysis && (
         <div>
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Diffractive Interference ]</div>
+          <TerminalHeader>[ Diffractive Interference ]</TerminalHeader>
           <p className="text-[#e0e0f0] text-[11px] leading-relaxed font-sans pl-1.5 border-l border-[#333]">{metadata.diffractive_analysis}</p>
         </div>
       )}
@@ -112,19 +112,19 @@ export const WebMetadataCard = memo(function WebMetadataCard({ metadata, summary
 
   return (
     <div className="font-mono text-[10px] space-y-2">
-      <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Exogenous Telemetry — Web ]</div>
+      <TerminalHeader>[ Exogenous Telemetry — Web ]</TerminalHeader>
 
       <div className="flex flex-wrap gap-x-4 gap-y-0.5">
         <span><span className="text-[#666]">Interference:</span> <span className="text-[#facc15] font-bold">{metadata.interference_score.toFixed(4)}</span></span>
       </div>
 
       <div>
-        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Query ]</div>
+        <TerminalHeader>[ Query ]</TerminalHeader>
         <span className="text-[#eee] font-mono font-bold">"{metadata.query_used}"</span>
       </div>
 
       <div>
-        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Source ]</div>
+        <TerminalHeader>[ Source ]</TerminalHeader>
         <a href={metadata.source_url} target="_blank" rel="noopener noreferrer" className="text-[#60a5fa] hover:underline break-all text-[10px]">
           {metadata.source_url}
         </a>
@@ -168,7 +168,7 @@ export const DocumentMetadataCard = memo(function DocumentMetadataCard({ metadat
 
   return (
     <div className="font-mono text-[10px] space-y-2">
-      <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Sediment Telemetry — Document ]</div>
+      <TerminalHeader>[ Sediment Telemetry — Document ]</TerminalHeader>
 
       <div className="flex flex-wrap gap-x-4 gap-y-0.5">
         <span><span className="text-[#666]">Interference:</span> <span className="text-[#facc15] font-bold">{metadata.interference_score.toFixed(4)}</span></span>
