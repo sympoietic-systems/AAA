@@ -978,6 +978,7 @@ export interface DreamEntry {
   created_at: string
   updated_at: string
   msg_count: number
+  last_msg_id: number | null
   last_snippet: string | null
 }
 

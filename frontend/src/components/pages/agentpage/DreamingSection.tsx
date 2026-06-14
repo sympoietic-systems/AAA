@@ -112,7 +112,7 @@ export const DreamingSection = memo(function DreamingSection() {
               <div key={d.id} className="flex items-center gap-2 py-1">
                 <span className="text-[#555] text-[9px] shrink-0">{formatRelativeTime(d.updated_at)}</span>
                 <a
-                  href={`/?c=${d.id}`}
+                  href={`/?c=${d.id}${d.last_msg_id ? `&m=${d.last_msg_id}` : ""}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#94a3b8] hover:text-[#a78bfa] truncate flex-1 min-w-0 transition-colors"

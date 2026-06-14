@@ -206,11 +206,12 @@ class ConversationRepository(BaseRepository):
 
     @with_connection
     def get_recent_dreams(self, hours: int = 48) -> list[dict]:
-        """Return recent dream conversations with their last message snippet."""
+        """Return recent dream conversations with their last message snippet and ID."""
         conn = self._conn()
         rows = conn.execute(
             """SELECT c.id, c.title, c.created_at, c.updated_at,
                       (SELECT COUNT(*) FROM conversation_log WHERE conversation_id = c.id) as msg_count,
+                      (SELECT id FROM conversation_log WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) as last_msg_id,
                       (SELECT content FROM conversation_log WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) as last_snippet
                FROM conversations c
                LEFT JOIN conversation_tags t ON c.id = t.conversation_id AND t.tag_type = 'structural' AND t.tag = 'dreams'
