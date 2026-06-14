@@ -1,4 +1,6 @@
 import { memo } from "react"
+
+const EMPTY_BELIEF_ARRAY: any[] = []
 import { useTelemetryBeliefs } from "../../../hooks/useTelemetry"
 
 interface AttractorsSectionProps {
@@ -32,7 +34,7 @@ function AttractorsSectionComponent({
               </span>
               <div className="flex flex-wrap gap-1">
                 {beliefs.attractor_window.map((label) => {
-                  const b = [...(beliefs.beliefs || []), ...(beliefs.proto_beliefs || []), ...(beliefs.ghosts || [])].find(x => x.label === label)
+                  const b = [...(beliefs.beliefs ?? EMPTY_BELIEF_ARRAY), ...(beliefs.proto_beliefs ?? EMPTY_BELIEF_ARRAY), ...(beliefs.ghosts ?? EMPTY_BELIEF_ARRAY)].find(x => x.label === label)
                   const catColor =
                     b?.category === "foundational" ? "#4ade80"
                     : b?.category === "ontological" ? "#a78bfa"

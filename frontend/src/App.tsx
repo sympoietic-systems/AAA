@@ -11,6 +11,8 @@ import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag, getAgent, deleteMessage } from "./api/client"
 
+const EMPTY_STRING_ARRAY: string[] = []
+
 export default function App() {
   // Render agent page standalone if navigated to /agent
   if (window.location.pathname === "/agent") {
@@ -512,7 +514,7 @@ export default function App() {
         onAddNote={handleAddNote}
         onDeleteNote={handleDeleteNote}
         onUpdateNote={handleUpdateNote}
-        tags={activeConv?.tags || []}
+        tags={activeConv?.tags ?? EMPTY_STRING_ARRAY}
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
         onNavigateToMessage={navigateToMessage}

@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, memo, useMemo } from "react"
+
+const EMPTY_ARRAY: any[] = []
 import { getPipeline } from "../../../api/client"
 import type { SkillInfo } from "../../../api/client"
 import { CollapsibleSection } from "./shared/CollapsibleSection"
@@ -92,7 +94,7 @@ export const PipelineSection = memo(function PipelineSection() {
       <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0">
         <div className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none" onClick={handleListClick}>
           {CATEGORIES.map(cat => {
-            const items = grouped[cat.key] || []
+            const items = grouped[cat.key] ?? EMPTY_ARRAY
             if (items.length === 0) return null
             return (
               <CollapsibleSection key={cat.key} label={cat.label} count={items.length} icon="●" iconColor={cat.color}>

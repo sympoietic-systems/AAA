@@ -1,4 +1,6 @@
 import { useState, memo } from "react"
+
+const EMPTY_NUMBER_ARRAY: number[] = []
 import type { ImageMetadata, WebMetadata, DocumentMetadata } from "../../../api/client"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -160,8 +162,8 @@ export const WebMetadataCard = memo(function WebMetadataCard({ metadata, summary
 
 /* ── Document Metadata ── */
 export const DocumentMetadataCard = memo(function DocumentMetadataCard({ metadata, summary }: { metadata: DocumentMetadata; summary: string | null }) {
-  const vec = metadata.state_vector_impact || []
-  const implicatedNodes = metadata.belief_nodes_implicated || []
+  const vec = metadata.state_vector_impact ?? EMPTY_NUMBER_ARRAY
+  const implicatedNodes = metadata.belief_nodes_implicated ?? EMPTY_NUMBER_ARRAY
   const { cleanSummary, unresolvedTensions } = splitSummaryAndTension(summary)
 
   return (

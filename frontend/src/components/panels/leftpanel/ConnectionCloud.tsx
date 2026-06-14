@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, memo, useCallback } from "react"
+
+const EMPTY_NOTES: any[] = []
 import type { ChatMessage, NoteInfo, ConversationTreeNode, ConversationTreeLink } from "../../../api/client"
 import { confirmResonanceLink, deleteResonanceLink, getConversationTree } from "../../../api/client"
 
@@ -775,7 +777,7 @@ function ConnectionCloud({
       const isLeaf = activeMessageId === node.dbId
       const isFuture = node.parentMsgId !== null && node.parentMsgId !== undefined && activePathIds.has(node.parentMsgId) && !isActive && !node.isProposed
       const isHovered = hoveredNode?.id === node.id
-      const nodeNotes = notesMap.get(node.dbId || -1) || []
+      const nodeNotes = notesMap.get(node.dbId ?? -1) ?? EMPTY_NOTES
 
       let fill = "#0a0a0c"
       let stroke = "#3f3f4e"

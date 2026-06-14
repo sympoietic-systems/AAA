@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, memo } from "react"
+
+const EMPTY_ARRAY: any[] = []
 import { getAgent, getPersonality, updateExpertise, recalculateExpertiseVector } from "../../../api/client"
 import type { PersonalityExpertise } from "../../../api/client"
 import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
@@ -146,7 +148,7 @@ export const ExpertisePanel = memo(function ExpertisePanel() {
       <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0" onClick={handleListClick}>
         <div className="flex-1 space-y-0.5 overflow-y-auto pr-1">
         {levelOrder.map(level => {
-          const items = grouped[level] || []
+          const items = grouped[level] ?? EMPTY_ARRAY
           if (items.length === 0) return null
           const cfg = LEVEL_CONFIG[level]
           const isDormant = level === "dormant"
