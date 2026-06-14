@@ -102,13 +102,9 @@ export default function App() {
       // Same conversation — just navigate to the node
       navigateToMessage(msgId)
     } else {
-      // Different conversation — set URL param so useChat loads the right path on mount
-      const params = new URLSearchParams(window.location.search)
-      params.set("m", String(msgId))
-      const newUrl = `${window.location.pathname}?${params.toString()}`
-      window.history.replaceState(null, "", newUrl)
+      // Different conversation — preserve target message ID so useChat loads the right path
       setIsNewChatMode(false)
-      setActiveId(convId)
+      setActiveId(convId, msgId)
     }
   }, [activeId, navigateToMessage, setActiveId])
 

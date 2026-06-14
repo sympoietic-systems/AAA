@@ -49,6 +49,17 @@ We implemented the `AutopoieticDreamDaemon` in `backend/metabolisation/daemon.py
 7. **Conversation Metrics Storage (2026-06-05)**:
     Both the dream prompt (human) and assistant response now receive full conversation metrics. The assistant response is embedded independently (using its own response text rather than the prompt's embedding), enabling meaningful coupling_coherence, agent_self_divergence, and reverse_perturbation metrics for self-conversations. Metrics are stored via `_store_daemon_metrics()` immediately after message insertion, ensuring the dream conversation has complete metrics coverage for downstream belief metabolism and somatic vitality computation.
 
+8. **Dream Node Parent Chaining (2026-06-14)**:
+    Dream messages were previously inserted without `parent_message_id`, making them orphaned in the conversation tree. This caused the Connection Cloud graph to show dream nodes disconnected from the main conversation, and the ancestor-path computation to diverge from the real tree structure.
+    
+    The dream executor now:
+    - Accepts an optional `parent_message_id` parameter in `_execute_single_dream_turn`
+    - Sets the dream assistant message's `parent_message_id` to its paired user message's ID
+    - The daemon loop resolves the parent for the first turn by querying the last existing message in the conversation
+    - Subsequent dream turns chain to the previous turn's assistant message
+    
+    This ensures dream nodes form a properly connected tree, making them navigable via the Node Explorer and correctly rendered in the Connection Cloud DAG.
+
 ## Consequences
 
 ### What becomes easier?

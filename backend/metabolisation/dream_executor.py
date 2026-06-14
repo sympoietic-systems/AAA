@@ -111,8 +111,16 @@ class DreamExecutorMixin:
         self,
         payload: dict,
         dream_convo_id: str,
+        parent_message_id: Optional[int] = None,
     ) -> Optional[dict]:
         """Execute one turn of the dream pipeline and store messages + metrics.
+
+        Args:
+            payload: Pipeline payload with content, speaker, etc.
+            dream_convo_id: The dream conversation ID.
+            parent_message_id: Optional parent message ID for chaining dream turns.
+                The user message of this turn will be parented to this ID.
+                The assistant message will be parented to the user message.
 
         Returns dict with keys: response_text, user_msg, assistant_msg,
         assistant_sig_blob, content_tokens, embedding, embedding_model,
@@ -168,7 +176,7 @@ class DreamExecutorMixin:
         user_just = get_justification(content)
         assistant_just = get_justification(response_text)
 
-        # Insert user-side message
+        # Insert user-side message (chained to previous turn's assistant or root)
         user_msg = self.message_repo.insert(
             speaker="human",
             content=content,
@@ -180,9 +188,10 @@ class DreamExecutorMixin:
             content_tokens=estimate_tokens(content),
             structural_signature=user_sig_blob,
             structural_justification=user_just,
+            parent_message_id=parent_message_id,
         )
 
-        # Insert assistant message
+        # Insert assistant message (parented to this turn's user message)
         assistant_msg = self.message_repo.insert(
             speaker="apparatus",
             content=response_text,
@@ -199,6 +208,7 @@ class DreamExecutorMixin:
             context_sent=result.payload.get("context_sent"),
             structural_signature=assistant_sig_blob,
             structural_justification=assistant_just,
+            parent_message_id=user_msg.id,
         )
 
         # Embed assistant response

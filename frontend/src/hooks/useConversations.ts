@@ -28,12 +28,16 @@ export function useConversations() {
   const initialized = useRef(false)
 
   // Sync active ID state and URL query parameter
-  const updateActiveId = useCallback((id: string) => {
+  const updateActiveId = useCallback((id: string, preserveMessageId?: number) => {
     setActiveId(id)
     const params = new URLSearchParams(window.location.search)
     if (id) {
       params.set("c", id)
-      params.delete("m")
+      if (preserveMessageId !== undefined) {
+        params.set("m", String(preserveMessageId))
+      } else {
+        params.delete("m")
+      }
     } else {
       params.delete("c")
       params.delete("m")
@@ -47,6 +51,17 @@ export function useConversations() {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search)
       const id = params.get("c") || ""
+      // Clean up stale `m` param so useChat opens the last-created node by default.
+      // `m` only persists because useChat syncs activeMessageId to the URL;
+      // on back/forward we want a fresh load that defaults to the newest node.
+      if (params.has("m")) {
+        params.delete("m")
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`
+        )
+      }
       setActiveId(id)
     }
     window.addEventListener("popstate", handlePopState)
@@ -109,8 +124,8 @@ export function useConversations() {
     }
   }, [refresh])
 
-  const selectConversation = useCallback((id: string) => {
-    updateActiveId(id)
+  const selectConversation = useCallback((id: string, preserveMessageId?: number) => {
+    updateActiveId(id, preserveMessageId)
   }, [updateActiveId])
 
   const deleteConversation = useCallback(async (id: string) => {

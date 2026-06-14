@@ -302,15 +302,29 @@ class AutopoieticDreamDaemon(
             cumulative_tokens = 0
             stopped_early = False
             stop_reason = ""
+            # Resolve parent for the first dream turn: chain to the last message
+            # in the conversation if it already has messages; otherwise start a new root.
+            current_parent: Optional[int] = None
+            if self.message_repo:
+                try:
+                    last_msgs = self.message_repo.get_recent(limit=1, conversation_id=dream_convo_id)
+                    if last_msgs:
+                        current_parent = last_msgs[0].id
+                except Exception:
+                    pass
 
             for turn in range(1, max_turns + 1):
-                turn_result = await self._execute_single_dream_turn(payload, dream_convo_id)
+                turn_result = await self._execute_single_dream_turn(
+                    payload, dream_convo_id, parent_message_id=current_parent
+                )
                 if not turn_result:
                     logger.warning("Dream turn %d/%d failed. Stopping resonance.", turn, max_turns)
                     stop_reason = "turn_failed"
                     break
 
                 turns_data.append(turn_result)
+                # Next turn should chain to this turn's assistant message
+                current_parent = turn_result["assistant_msg"].id
 
                 # Check intra-dream stagnation (need at least 2 assistant sigs to compare)
                 if len(turns_data) >= 2:

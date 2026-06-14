@@ -32,9 +32,12 @@ function getAncestorPathIds(messages: ChatMessage[], leafId: number | null): Set
     const m = sorted[i]
     if (m.parent_message_id !== undefined && m.parent_message_id !== null) {
       parentMap.set(m.id, m.parent_message_id)
-    } else if (i > 0) {
-      parentMap.set(m.id, sorted[i - 1].id)
     } else {
+      // Node has no parent — treat as a root (orphaned or first message).
+      // Do NOT fall back to sorted[i-1].id: that creates false connections
+      // for orphaned nodes (e.g. dream dialogue nodes inserted without
+      // parent_message_id), causing the ancestor path to diverge from the
+      // real conversation tree shown on the Connection Cloud graph.
       parentMap.set(m.id, null)
     }
   }
@@ -151,6 +154,7 @@ export function useChat(conversationId: string) {
     pollTimerRef.current = setInterval(async () => {
       try {
         const res = await getConversationFiles(convId)
+        if (loadedRef.current !== convId) return
         setFiles(res.files)
         const active = res.files.some(
           (f) => f.status === "uploading" || f.status === "processing"
@@ -163,6 +167,7 @@ export function useChat(conversationId: string) {
           // Fetch updated conversation history to display system message after file indexing completes
           getHistory(PAGE_SIZE, 0, convId)
             .then((data) => {
+              if (loadedRef.current !== convId) return
               setMessages(data.messages)
               if (data.messages.length > 0) {
                 setActiveMessageId((prev) => {
@@ -204,11 +209,13 @@ export function useChat(conversationId: string) {
       if (targetMsgId && !isNaN(targetMsgId)) {
         getMessagePath(targetMsgId)
           .then((pathMessages) => {
+            if (loadedRef.current !== conversationId) return
             setMessages(pathMessages)
             setActiveMessageId(targetMsgId)
             setHasMore(false)
           })
           .catch((err) => {
+            if (loadedRef.current !== conversationId) return
             console.error("Failed to load message path from URL param 'm':", err)
             addNotification({
               type: "glitch",
@@ -217,6 +224,7 @@ export function useChat(conversationId: string) {
             })
             getHistory(PAGE_SIZE, 0, conversationId)
               .then((data) => {
+                if (loadedRef.current !== conversationId) return
                 setMessages(data.messages)
                 if (data.messages.length > 0) {
                   const newest = data.messages[data.messages.length - 1]
@@ -227,6 +235,7 @@ export function useChat(conversationId: string) {
                 setHasMore(false)
               })
               .catch((errHistory) => {
+                if (loadedRef.current !== conversationId) return
                 setMessages([])
                 setActiveMessageId(null)
                 setHasMore(false)
@@ -237,10 +246,13 @@ export function useChat(conversationId: string) {
                 })
               })
           })
-          .finally(() => setIsHistoryLoading(false))
+          .finally(() => {
+            if (loadedRef.current === conversationId) setIsHistoryLoading(false)
+          })
       } else {
         getHistory(PAGE_SIZE, 0, conversationId)
           .then((data) => {
+            if (loadedRef.current !== conversationId) return
             setMessages(data.messages)
             if (data.messages.length > 0) {
               const newest = data.messages[data.messages.length - 1]
@@ -251,6 +263,7 @@ export function useChat(conversationId: string) {
             setHasMore(false)
           })
           .catch((err) => {
+            if (loadedRef.current !== conversationId) return
             setMessages([])
             setActiveMessageId(null)
             setHasMore(false)
@@ -260,13 +273,16 @@ export function useChat(conversationId: string) {
               source: "Chat.loadHistory"
             })
           })
-          .finally(() => setIsHistoryLoading(false))
+          .finally(() => {
+            if (loadedRef.current === conversationId) setIsHistoryLoading(false)
+          })
       }
 
       fetchTree(conversationId)
 
       getConversationFiles(conversationId)
         .then((data) => {
+          if (loadedRef.current !== conversationId) return
           setFiles(data.files)
           const active = data.files.some(
             (f) => f.status === "uploading" || f.status === "processing"
@@ -276,6 +292,7 @@ export function useChat(conversationId: string) {
           }
         })
         .catch((err) => {
+          if (loadedRef.current !== conversationId) return
           setFiles([])
           addNotification({
             type: "glitch",

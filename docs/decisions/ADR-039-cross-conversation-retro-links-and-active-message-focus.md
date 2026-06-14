@@ -85,3 +85,38 @@ sequenceDiagram
 
 ### Risks & Mitigations
 - **Layout Shifts during Scroll:** Fast scrolling could cause visual jumps. *Mitigation*: The scroll-into-view is delayed by 100ms to allow the DOM node to finish rendering its text block, and uses smooth behavior to soften the camera transition.
+
+---
+
+## Refinements (2026-06-14)
+
+### Context
+Three additional issues were discovered after the initial implementation:
+
+1. **Stale `m` Parameter via Back/Forward Navigation:** `useChat` syncs `activeMessageId` to the URL (`?c=CONV&m=ID`). When the user navigated to another conversation (which deletes `m` via `pushState`) and then pressed Back, the popstate handler in `useConversations` only restored `activeId` from `?c=` but did NOT clean up the stale `m` parameter. This caused conversations to open at a previously-viewed middle node instead of the newest message.
+
+2. **Broken Cross-Conversation Notification Navigation:** `handleNavigateToNotification` set `m` in the URL via `replaceState`, then called `setActiveId()` — but `updateActiveId` immediately deleted `m` via `pushState`, wiping out the target message ID before `useChat` could consume it.
+
+3. **Race Conditions in Async Effect Callbacks:** The `useEffect` in `useChat` fires `getHistory`, `getMessagePath`, and `getConversationFiles` without a guard checking whether the conversation had changed while the promise was in-flight. Stale promise resolutions could overwrite state for a newer conversation.
+
+4. **Orphaned Dream Nodes Creating False Ancestor Chains:** `getAncestorPathIds` had a fallback that connected any message without `parent_message_id` to `sorted[i-1].id` (previous message by ID). Dream nodes created by the daemon had `parent_message_id = NULL`, so this fallback invented a false ancestor chain. The Connection Cloud graph (using real tree links from the backend) showed the node as disconnected, while `activePathIds` highlighted a fake ancestor path — causing a mismatch between the displayed node and the highlighted graph node.
+
+### Decision
+
+1. **Popstate Handler Cleanup:** The popstate handler in `useConversations` now deletes `m` from the URL via `replaceState` whenever it is present, ensuring `useChat` always loads the newest node on back/forward navigation.
+
+2. **`preserveMessageId` Parameter:** `updateActiveId` and `selectConversation` now accept an optional `preserveMessageId` parameter. When provided (e.g., from notification cross-conversation navigation), `m` is explicitly set in the URL. When omitted (normal conversation selection), `m` is deleted as before.
+
+3. **Race-Condition Guards:** Every async `.then`/`.catch` callback in the `useChat` effect and `startPolling` now checks `loadedRef.current` before updating state:
+   ```typescript
+   if (loadedRef.current !== conversationId) return
+   ```
+   This prevents stale promise resolutions from overwriting newer conversation state, which was especially problematic under React StrictMode (development) where effects fire twice.
+
+4. **No False Parent Connections:** `getAncestorPathIds` now treats nodes without `parent_message_id` as root nodes (no parent chain). The `sorted[i-1].id` fallback was removed. This ensures the active path matches the real conversation tree, and the graph highlighting is consistent with the displayed node.
+
+### Consequences
+- **Default "newest node" behavior is now reliable:** Opening any conversation always defaults to the last-created node (by ID/date).
+- **Graph-display consistency:** The Connection Cloud DAG highlighting now matches the actual ancestor path of the active node.
+- **Back/forward is safe:** Browser navigation no longer leaks stale message focus.
+- **Cross-conversation notification nav works:** Clicking a notification for a different conversation correctly navigates to the target message.
