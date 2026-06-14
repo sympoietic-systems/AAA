@@ -285,6 +285,7 @@ class ExpertiseNode:
     id: str
     agent_id: str = "symbia"
     domain: str = ""
+    description: str = ""
     lifecycle_stage: str = "proto"     # proto | active | dormant
     ontological_mass: float = 0.05
     level_label: str = "nascent"       # nascent | developing | advanced | dormant

@@ -376,10 +376,16 @@ def _row_to_expertise_node(row: sqlite3.Row) -> ExpertiseNode:
             last_signal = datetime.fromisoformat(raw) if isinstance(raw, str) else raw
     except (IndexError, KeyError):
         pass
+    description = ""
+    try:
+        description = row["description"] or ""
+    except (IndexError, KeyError):
+        pass
     return ExpertiseNode(
         id=row["id"],
         agent_id=row["agent_id"] if "agent_id" in row.keys() else "symbia",
         domain=row["domain"],
+        description=description,
         lifecycle_stage=row["lifecycle_stage"] or "proto",
         ontological_mass=row["ontological_mass"] or 0.05,
         level_label=row["level_label"] or "nascent",

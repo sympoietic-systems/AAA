@@ -208,6 +208,7 @@ async def get_personality(request: Request):
             for e in all_exp:
                 entry = {
                     "id": e.id, "domain": e.domain,
+                    "description": e.description or "",
                     "lifecycle_stage": e.lifecycle_stage,
                     "ontological_mass": e.ontological_mass,
                     "level_label": e.level_label,

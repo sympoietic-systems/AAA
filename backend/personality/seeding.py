@@ -236,6 +236,7 @@ def seed_dynamic_personality(
             id=node_id,
             agent_id=agent_id,
             domain=domain,
+            description=description,
             lifecycle_stage="active",
             ontological_mass=mass,
             level_label=level_label,

@@ -343,7 +343,11 @@ def _build_system_content(
             mass = getattr(exp, "ontological_mass", 0)
             domain = getattr(exp, "domain", "unknown")
             level = getattr(exp, "level_label", "nascent")
-            parts.append(f"  - {domain} ({level}, mass={mass:.2f})")
+            description = getattr(exp, "description", "")
+            if description:
+                parts.append(f"  - {domain} ({level}, mass={mass:.2f}): {description}")
+            else:
+                parts.append(f"  - {domain} ({level}, mass={mass:.2f})")
     else:
         # Fallback: static expertise from YAML
         expertise = persona.get("expertise", [])

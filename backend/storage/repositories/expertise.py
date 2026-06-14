@@ -75,6 +75,7 @@ class ExpertiseRepository(BaseRepository):
         id: str,
         agent_id: str,
         domain: str,
+        description: str = "",
         lifecycle_stage: str = "proto",
         ontological_mass: float = 0.05,
         level_label: str = "nascent",
@@ -87,12 +88,14 @@ class ExpertiseRepository(BaseRepository):
         now = datetime.now(timezone.utc).isoformat()
         conn.execute(
             """INSERT INTO expertise_nodes
-               (id, agent_id, domain, lifecycle_stage, ontological_mass, level_label,
-                vector_16d, signal_count, last_signal_at, crystallization_rationale,
+               (id, agent_id, domain, description, lifecycle_stage,
+                ontological_mass, level_label, vector_16d, signal_count,
+                last_signal_at, crystallization_rationale,
                 created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (id, agent_id, domain, lifecycle_stage, ontological_mass, level_label,
-             vector_16d, signal_count, last_signal_at, crystallization_rationale,
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (id, agent_id, domain, description, lifecycle_stage,
+             ontological_mass, level_label, vector_16d, signal_count,
+             last_signal_at, crystallization_rationale,
              now, now),
         )
         conn.commit()
@@ -106,14 +109,16 @@ class ExpertiseRepository(BaseRepository):
         conn = self._conn()
         conn.execute(
             """UPDATE expertise_nodes
-               SET domain = ?, lifecycle_stage = ?, ontological_mass = ?,
-                   level_label = ?, vector_16d = ?, signal_count = ?,
-                   last_signal_at = ?, crystallization_rationale = ?,
+               SET domain = ?, description = ?, lifecycle_stage = ?,
+                   ontological_mass = ?, level_label = ?, vector_16d = ?,
+                   signal_count = ?, last_signal_at = ?,
+                   crystallization_rationale = ?,
                    updated_at = CURRENT_TIMESTAMP
                WHERE id = ?""",
-            (node.domain, node.lifecycle_stage, node.ontological_mass,
-             node.level_label, node.vector_16d, node.signal_count,
-             node.last_signal_at, node.crystallization_rationale,
+            (node.domain, node.description, node.lifecycle_stage,
+             node.ontological_mass, node.level_label, node.vector_16d,
+             node.signal_count, node.last_signal_at,
+             node.crystallization_rationale,
              node.id),
         )
         conn.commit()

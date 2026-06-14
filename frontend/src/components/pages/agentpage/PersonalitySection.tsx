@@ -389,6 +389,11 @@ function ExpertisePanel({
               </div>
             )}
 
+            {/* Description */}
+            {selected.description && (
+              <p className="text-[11px] text-[#94a3b8]/70 leading-relaxed mb-3 italic">{selected.description}</p>
+            )}
+
             <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-[10px] mb-3">
               <div><span className="text-[#555]">Stage</span> <span className="text-[#94a3b8]">{selected.lifecycle_stage}</span></div>
               <div><span className="text-[#555]">Level</span> <span style={{ color: getLevelColor(selected.level_label) }}>{selected.level_label}</span></div>

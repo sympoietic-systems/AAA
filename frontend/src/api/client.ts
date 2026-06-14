@@ -1354,6 +1354,7 @@ export interface PersonalityCommitment {
 export interface PersonalityExpertise {
   id: string
   domain: string
+  description?: string
   lifecycle_stage: string
   ontological_mass: number
   level_label: string
