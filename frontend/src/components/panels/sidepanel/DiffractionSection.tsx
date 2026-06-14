@@ -208,6 +208,7 @@ function DiffractionSectionComponent({ enabled = false }: DiffractionSectionProp
             desc="Maximum number of diffractive candidate slots allowed to be injected during this turn, scaled dynamically based on stagnation index."
           />
         </div>
+      </div>
     </div>
   )
 }
