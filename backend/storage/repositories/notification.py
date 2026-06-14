@@ -119,15 +119,24 @@ class NotificationRepository(BaseRepository):
         return self.get(id)
 
     @with_connection
+    def mark_as_unread(self, id: str) -> Optional[Dict[str, Any]]:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE notifications SET read = 0 WHERE id = ?", (id,)
+        )
+        conn.commit()
+        return self.get(id)
+
+    @with_connection
     def mark_all_as_read(self, type_filter: Optional[str] = None) -> None:
         conn = self._conn()
         if type_filter:
             conn.execute(
-                "UPDATE notifications SET read = 1 WHERE type = ? AND dismissed = 0",
+                "UPDATE notifications SET read = 1 WHERE type = ?",
                 (type_filter,),
             )
         else:
-            conn.execute("UPDATE notifications SET read = 1 WHERE dismissed = 0")
+            conn.execute("UPDATE notifications SET read = 1")
         conn.commit()
 
     @with_connection

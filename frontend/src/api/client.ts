@@ -1236,6 +1236,13 @@ function mapFrontendNotification(n: Partial<SedimentNotification>): any {
   }
 }
 
+export async function getNotification(id: string): Promise<SedimentNotification> {
+  const res = await fetch(`${BASE}/notifications/${id}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  return mapBackendNotification(data)
+}
+
 export async function getNotifications(
   dismissed?: boolean,
   limit = 100,
@@ -1270,6 +1277,15 @@ export async function createNotification(
 
 export async function markNotificationRead(id: string): Promise<SedimentNotification> {
   const res = await fetch(`${BASE}/notifications/${id}/read`, {
+    method: "PATCH",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  return mapBackendNotification(data)
+}
+
+export async function markNotificationUnread(id: string): Promise<SedimentNotification> {
+  const res = await fetch(`${BASE}/notifications/${id}/unread`, {
     method: "PATCH",
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

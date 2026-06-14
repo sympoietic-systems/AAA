@@ -45,6 +45,16 @@ async def list_notifications(
     )
 
 
+@router.get("/notifications/{id}", response_model=Dict[str, Any])
+async def get_notification(id: str, request: Request = None):
+    state = request.app.state
+    notification_repo = state.notification_repo
+    notif = notification_repo.get(id)
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return notif
+
+
 @router.post("/notifications", response_model=Dict[str, Any])
 async def create_notification(
     payload: NotificationCreatePayload,
@@ -77,6 +87,16 @@ async def mark_read(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
     notif = notification_repo.mark_as_read(id)
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return notif
+
+
+@router.patch("/notifications/{id}/unread", response_model=Dict[str, Any])
+async def mark_unread(id: str, request: Request = None):
+    state = request.app.state
+    notification_repo = state.notification_repo
+    notif = notification_repo.mark_as_unread(id)
     if not notif:
         raise HTTPException(status_code=404, detail="Notification not found")
     return notif

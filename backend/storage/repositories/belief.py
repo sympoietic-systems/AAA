@@ -487,7 +487,7 @@ class BeliefRepository(BaseRepository):
         # Automatic notification insertion
         import uuid
         from datetime import datetime, timezone
-        snippet = f"A new belief proposal has emerged in the workshop ('{provisional_statement[:60]}...')"
+        snippet = f"A new belief proposal has emerged in the workshop ('{provisional_statement}')"
         conn.execute(
             """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                VALUES (?, 'trace', ?, ?, 'belief_workshop', 0, 0)""",

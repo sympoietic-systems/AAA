@@ -6,6 +6,7 @@ import {
   dismissNotificationByMatch,
   clearNotifications,
   markAllNotificationsRead,
+  markNotificationRead,
 } from "../api/client"
 import type { SedimentNotification } from "../api/client"
 
@@ -100,7 +101,7 @@ export function addNotification(
 }
 
 /**
- * Dismiss a single notification by its ID.
+ * Dismiss a single notification by its ID (also marks as read).
  */
 export function dismissNotification(id: string) {
   const next = notifications.filter((n) => n.id !== id)
@@ -109,8 +110,11 @@ export function dismissNotification(id: string) {
     emitChange()
   }
 
-  // Sync with backend
-  apiDismissNotification(id)
+  // Sync with backend — dismiss and also mark as read
+  Promise.all([
+    apiDismissNotification(id),
+    markNotificationRead(id),
+  ])
     .then(() => syncNotifications())
     .catch((err) => console.error("Failed to dismiss notification on backend:", err))
 }
