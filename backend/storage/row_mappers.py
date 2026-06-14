@@ -9,12 +9,16 @@ from .models import (
     BeliefNode,
     BeliefProposal,
     BeliefStatementVersion,
+    CommitmentEvent,
+    CommitmentNode,
     Conversation,
     ErrorLogEntry,
+    ExpertiseNode,
     Message,
     MessageLink,
     MetricsRecord,
     PerceptionSediment,
+    PersonalityState,
     SemanticKnot,
     SkillEvent,
     SkillNode,
@@ -325,4 +329,84 @@ def _row_to_semantic_knot(row: sqlite3.Row) -> SemanticKnot:
         embedding_model=row["embedding_model"],
         token_count=row["token_count"],
         structural_signature=row["structural_signature"] or b"",
+    )
+
+
+def _row_to_commitment_node(row: sqlite3.Row) -> CommitmentNode:
+    created = row["created_at"]
+    updated = row["updated_at"]
+    return CommitmentNode(
+        id=row["id"],
+        agent_id=row["agent_id"] if "agent_id" in row.keys() else "symbia",
+        label=row["label"],
+        statement=row["statement"],
+        lifecycle_stage=row["lifecycle_stage"] or "active",
+        confidence=row["confidence"] or 0.0,
+        ontological_mass=row["ontological_mass"] or 1.0,
+        vector_16d=row["vector_16d"] or "[]",
+        nucleation_rationale=row["nucleation_rationale"] if "nucleation_rationale" in row.keys() else None,
+        collapse_rationale=row["collapse_rationale"] if "collapse_rationale" in row.keys() else None,
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
+        updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
+    )
+
+
+def _row_to_commitment_event(row: sqlite3.Row) -> CommitmentEvent:
+    created = row["created_at"]
+    return CommitmentEvent(
+        id=row["id"],
+        commitment_id=row["commitment_id"],
+        event_type=row["event_type"] or "",
+        rationale=row["rationale"] if "rationale" in row.keys() else None,
+        mass_before=row["mass_before"] if "mass_before" in row.keys() else None,
+        mass_after=row["mass_after"] if "mass_after" in row.keys() else None,
+        confidence_before=row["confidence_before"] if "confidence_before" in row.keys() else None,
+        confidence_after=row["confidence_after"] if "confidence_after" in row.keys() else None,
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
+    )
+
+
+def _row_to_expertise_node(row: sqlite3.Row) -> ExpertiseNode:
+    created = row["created_at"]
+    updated = row["updated_at"]
+    last_signal = None
+    try:
+        raw = row["last_signal_at"]
+        if raw:
+            last_signal = datetime.fromisoformat(raw) if isinstance(raw, str) else raw
+    except (IndexError, KeyError):
+        pass
+    return ExpertiseNode(
+        id=row["id"],
+        agent_id=row["agent_id"] if "agent_id" in row.keys() else "symbia",
+        domain=row["domain"],
+        lifecycle_stage=row["lifecycle_stage"] or "proto",
+        ontological_mass=row["ontological_mass"] or 0.05,
+        level_label=row["level_label"] or "nascent",
+        vector_16d=row["vector_16d"] or "[]",
+        signal_count=row["signal_count"] or 0,
+        last_signal_at=last_signal,
+        crystallization_rationale=row["crystallization_rationale"] if "crystallization_rationale" in row.keys() else None,
+        created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
+        updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
+    )
+
+
+def _row_to_personality_state(row: sqlite3.Row) -> PersonalityState:
+    updated = row["updated_at"]
+    last_rec = None
+    try:
+        raw = row["last_recomputed_at"]
+        if raw:
+            last_rec = datetime.fromisoformat(raw) if isinstance(raw, str) else raw
+    except (IndexError, KeyError):
+        pass
+    return PersonalityState(
+        id=row["id"],
+        agent_id=row["agent_id"] if "agent_id" in row.keys() else "symbia",
+        aspirational_traits_json=row["aspirational_traits_json"] or "{}",
+        active_commitment_ids_json=row["active_commitment_ids_json"] or "[]",
+        trait_computation_version=row["trait_computation_version"] or 1,
+        last_recomputed_at=last_rec,
+        updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
     )

@@ -1,7 +1,6 @@
 ## UI
 
 ## NOTES
-    [ ] now shared notes often trigger proto-belief, need to check it. also the notes marked by symbia should we check them for the belief also?
 
 ## NOTIFICATION
 
@@ -17,9 +16,6 @@
 
 ## SYMBIA PERSONALITY
     [ ] I think you should not ask me what I ' would like' to do or explore. You are here not to serve me!
-    [ ] Skills
-        [ ] Accretion and Reinforcement: In the background after each chat turn, belief_metabolism processes the...
-         > I feel too much related to the user now, it should not be responsive to user that much, otherwise it would shape the agent too much, we need resist. For example now I feel most of the beliefs getting really downgraded over the time.
         [ ] The paragraph must not point at the concept; it must perform the cut it describes. - this can be a new skill
 
     [ ] Vitality collapse, check when it added. now vitality .5, but it triggered

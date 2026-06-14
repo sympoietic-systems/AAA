@@ -249,6 +249,66 @@ class SkillEvent:
 
 
 @dataclass
+class CommitmentNode:
+    """Theoretical commitment in the personality cascade."""
+    id: str
+    agent_id: str = "symbia"
+    label: str = ""
+    statement: str = ""
+    lifecycle_stage: str = "active"   # proto | active | spectral
+    confidence: float = 0.0
+    ontological_mass: float = 1.0
+    vector_16d: str = "[]"
+    nucleation_rationale: Optional[str] = None
+    collapse_rationale: Optional[str] = None
+    created_at: datetime = datetime.min
+    updated_at: datetime = datetime.min
+
+
+@dataclass
+class CommitmentEvent:
+    """Audit trail for commitment lifecycle transitions."""
+    id: str
+    commitment_id: str
+    event_type: str = ""  # nucleation | crystallization | mass_update | statement_refinement | collapse
+    rationale: Optional[str] = None
+    mass_before: Optional[float] = None
+    mass_after: Optional[float] = None
+    confidence_before: Optional[float] = None
+    confidence_after: Optional[float] = None
+    created_at: datetime = datetime.min
+
+
+@dataclass
+class ExpertiseNode:
+    """Domain expertise accretion state from structural coupling signals."""
+    id: str
+    agent_id: str = "symbia"
+    domain: str = ""
+    lifecycle_stage: str = "proto"     # proto | active | dormant
+    ontological_mass: float = 0.05
+    level_label: str = "nascent"       # nascent | developing | advanced | dormant
+    vector_16d: str = "[]"
+    signal_count: int = 0
+    last_signal_at: Optional[datetime] = None
+    crystallization_rationale: Optional[str] = None
+    created_at: datetime = datetime.min
+    updated_at: datetime = datetime.min
+
+
+@dataclass
+class PersonalityState:
+    """Single-row table holding aspirational trait attractors and metadata."""
+    id: int = 1
+    agent_id: str = "symbia"
+    aspirational_traits_json: str = "{}"
+    active_commitment_ids_json: str = "[]"
+    trait_computation_version: int = 1
+    last_recomputed_at: Optional[datetime] = None
+    updated_at: datetime = datetime.min
+
+
+@dataclass
 class SemanticKnot:
     id: str
     conversation_id: str
