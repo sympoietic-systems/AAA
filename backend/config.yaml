@@ -205,6 +205,42 @@ web_retrieval:
   enabled: true
   autonomous_routing: false  # Change to true to let the model decide when to search
 
+# ── Dynamic Personality Cascade ──────────────────
+# See ADR-048 and docs/systems/DYNAMIC_PERSONALITY_SYSTEM.md
+dynamic_personality:
+  enabled: true
+
+  trait_computer:
+    eta_curiosity: 0.8
+    eta_skepticism: 0.7
+    eta_creativity: 0.6
+    eta_precision: 0.9
+    eta_critical_rigor: 0.8
+    eta_playfulness: 0.5
+    eta_reserve: 0.6
+    alpha_ema: 0.3           # EMA smoothing (0=no history, 1=no update)
+    agreement_threshold: 0.7  # Trigger anti-erosion when agreement > this
+    anti_erosion_strength: 0.15
+
+  expertise:
+    eta_accretion: 0.1       # Base learning rate
+    proto_threshold: 0.3     # Mass to crystallize proto → active
+    dormancy_turns: 50       # No signal for N turns → dormant
+    signal_weights:
+      aaa_note_domain: 0.6
+      skill_nucleation: 0.5
+      unprompted_return: 0.4
+      shared_note_match: 0.3
+      document_match: 0.2
+
+  commitments:
+    min_cluster_mass: 1.5
+    min_sustained_turns: 50
+    commitment_distance_threshold: 0.5
+    collapse_confidence_threshold: 0.15
+    ghost_similarity_block: 0.9
+    daemon_interval: 50
+
 # ── Server ───────────────────────────────────────
 server:
   host: "127.0.0.1"

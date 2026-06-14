@@ -30,6 +30,15 @@ def register_all(registry: PipelineRegistry, embedder, modules: dict, belief_met
             ModuleMeta(name="conceptual_velocity", description="Disjoint window centroid drift rate (k=3)", category="perception"),
         ],
     ))
+    reg.register_with_meta("trait_computer", lambda: modules["trait_computer"], ModuleMeta(
+        name="trait_computer", description="Computes descriptive personality traits from conversation metrics with anti-erosion guard and aspirational gap",
+        category="reasoning", always_run=True,
+        children=[
+            ModuleMeta(name="descriptive_trait_computation", description="Maps 8 conversation metrics to 7 personality traits via sigmoid-weighted formulas", category="reasoning"),
+            ModuleMeta(name="anti_erosion_resistance", description="Boosts skepticism when agreement patterns exceed threshold to resist user-pleasing drift", category="reasoning"),
+            ModuleMeta(name="aspirational_gap", description="Measures Euclidean distance between descriptive traits and commitment-derived aspirational attractors", category="reasoning"),
+        ],
+    ))
     reg.register_with_meta("context_collector", lambda: modules["context_collector"], ModuleMeta(
         name="context_collector", description="Gathers conversation history",
         category="memory", always_run=True,

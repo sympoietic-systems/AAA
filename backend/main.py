@@ -45,6 +45,7 @@ from backend.modules.llm_client import (
 from backend.modules.perception import PerceptionModule
 from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
 from backend.modules.structural_engine import CompositeStructuralScorer, StructuralScorerModule
+from backend.modules.trait_computer import TraitComputer
 from backend.modules.web_retrieval import WebRetrievalModule
 from backend.personality.assembler import PromptAssemblerModule, _build_system_content
 from backend.pipeline.metadata import ModuleMeta
@@ -247,6 +248,13 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
 
     homeostatic_regulator = HomeostaticRegulatorModule()
 
+    # Dynamic personality — trait computer
+    trait_cfg = config.get("dynamic_personality", {}).get("trait_computer", {})
+    trait_computer = TraitComputer(
+        personality_state_repo=repos["personality_state_repo"],
+        config=trait_cfg,
+    )
+
     sediment_cfg = config.get("sedimentation", {})
     sedimentation_retrieval = SedimentationRetrievalModule(
         message_repo=repos["message_repo"],
@@ -303,6 +311,7 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
     return {
         "context_collector": context_collector,
         "conversation_metrics": conversation_metrics,
+        "trait_computer": trait_computer,
         "homeostatic_regulator": homeostatic_regulator,
         "sedimentation_retrieval": sedimentation_retrieval,
         "diffractive_retrieval": diffractive_retrieval,
@@ -348,6 +357,7 @@ def _build_pipeline(config: dict, registry: PipelineRegistry, repos: dict, modul
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
         ["embedder", "structural_scorer", "perception", "web_retrieval", "conversation_metrics",
+         "trait_computer",
          "context_collector", "consolidation_checkpoint", "sedimentation_retrieval",
          "diffractive_retrieval", "belief_metabolism", "skill_activator",
          "skill_workshop", "prompt_assembler", "homeostatic_regulator",
