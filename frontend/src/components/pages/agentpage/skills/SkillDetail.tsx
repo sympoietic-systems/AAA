@@ -3,6 +3,7 @@ import { updateSkill, deleteSkill } from "../../../../api/client"
 import type { DbSkillInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
 import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
+import { TerminalTabs } from "../../../UI"
 
 type DetailTab = "details" | "version"
 
@@ -205,17 +206,14 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
 
       {/* Tab bar: Details • Version */}
       {versions.length > 0 && (
-        <div className="flex gap-x-2 text-[10px] select-none font-mono">
-          {(["details", "version"] as DetailTab[]).map((tab, i) => (
-            <span key={tab} className="flex items-center gap-x-2">
-              {i > 0 && <span className="text-[#333]">•</span>}
-              <button onClick={() => setActiveTab(tab)}
-                className={`cursor-pointer transition-colors font-bold ${activeTab === tab ? "text-[#94a3b8]" : "text-[#444] hover:text-[#777]"}`}>
-                {tab === "details" ? "Details" : `Version History (${versions.length})`}
-              </button>
-            </span>
-          ))}
-        </div>
+        <TerminalTabs
+          tabs={[
+            { key: "details", label: "Details" },
+            { key: "version", label: "Version History", badge: versions.length },
+          ]}
+          active={activeTab}
+          onChange={(key) => setActiveTab(key as DetailTab)}
+        />
       )}
 
       {/* Details tab */}

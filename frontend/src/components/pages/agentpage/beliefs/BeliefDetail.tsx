@@ -4,6 +4,7 @@ import type { BeliefNodeInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
 import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
 import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "../shared/helpers"
+import { TerminalTabs } from "../../../UI"
 
 /* ── Module-level constants ── */
 
@@ -459,20 +460,15 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       {errorMsg && <div className="text-[#ef4444]">{errorMsg}</div>}
 
       {/* Tab bar: Details • Log • Version */}
-      <div className="flex gap-x-2 text-[10px] select-none font-mono">
-        {(["details", "log", "version"] as DetailTab[]).map((tab, i) => {
-          const label = tab === "details" ? "Details" : tab === "log" ? `Log (${b.events?.length ?? 0})` : `Version History (${versions.length})`
-          return (
-            <span key={tab} className="flex items-center gap-x-2">
-              {i > 0 && <span className="text-[#333]">•</span>}
-              <button onClick={() => setActiveTab(tab)}
-                className={`cursor-pointer transition-colors font-bold ${activeTab === tab ? "text-[#94a3b8]" : "text-[#444] hover:text-[#777]"}`}>
-                {label}
-              </button>
-            </span>
-          )
-        })}
-      </div>
+      <TerminalTabs
+        tabs={[
+          { key: "details", label: "Details" },
+          { key: "log", label: "Log", badge: b.events?.length ?? 0 },
+          { key: "version", label: "Version History", badge: versions.length },
+        ]}
+        active={activeTab}
+        onChange={(key) => setActiveTab(key as DetailTab)}
+      />
 
       {/* Details tab */}
       {activeTab === "details" && (

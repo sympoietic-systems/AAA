@@ -4,6 +4,7 @@ import { PersonalitySection } from "./PersonalitySection"
 import { StartupSection } from "./StartupSection"
 import { PipelineSection } from "./PipelineSection"
 import { TracesSection } from "./TracesSection"
+import { TerminalTabs, TerminalButton } from "../../UI"
 
 type TabId = "personality" | "dreaming" | "daemons" | "pipeline" | "traces"
 
@@ -79,43 +80,20 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
           <span>agent</span>
         </span>
         <div className="flex items-center gap-4">
-          <button
-            onClick={onGoHome}
-            className="text-[11px] text-[#444] hover:text-[#888] transition-colors cursor-pointer select-none"
-          >
-            [home]
-          </button>
+          <TerminalButton onClick={onGoHome} className="text-[11px]">home</TerminalButton>
           {onGoConversation && (
-            <button
-              onClick={onGoConversation}
-              className="text-[11px] text-[#444] hover:text-[#888] transition-colors cursor-pointer select-none"
-            >
-              [back to chat]
-            </button>
+            <TerminalButton onClick={onGoConversation} className="text-[11px]">back to chat</TerminalButton>
           )}
         </div>
       </div>
 
       {/* Tab bar — terminal-like, minimal, wraps on mobile */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-2 shrink-0 text-[11px] select-none">
-        {TABS.map((tab, i) => (
-          <span key={tab.id} className="flex items-center gap-x-3">
-            {i > 0 && <span className="text-[#333]">•</span>}
-            <button
-              onClick={() => {
-                setActiveTab(tab.id)
-                setInitialSelectedId(undefined)
-              }}
-              className={`cursor-pointer transition-colors ${
-                activeTab === tab.id
-                  ? "text-[#94a3b8]"
-                  : "text-[#444] hover:text-[#777]"
-              }`}
-            >
-              {tab.label}
-            </button>
-          </span>
-        ))}
+      <TerminalTabs
+        tabs={TABS}
+        active={activeTab}
+        onChange={(key) => { setActiveTab(key as TabId); setInitialSelectedId(undefined) }}
+        className="px-4 py-2 shrink-0 text-[11px] select-none"
+      />
       </div>
 
       {/* Tab content */}
