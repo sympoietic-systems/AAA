@@ -42,7 +42,7 @@ function AttractorsSectionComponent({
                     <span
                       key={label}
                       title={b ? `${b.category} · mass ${b.ontological_mass.toFixed(1)} · ${(b.confidence * 100).toFixed(0)}%` : label}
-                      className="text-[9px] font-mono bg-[#141414] text-[#aaa] border border-[#222] px-1.5 py-0.5 rounded inline-flex items-center gap-1 cursor-help hover:border-[#444] transition-colors"
+                      className="text-[9px] font-mono text-[#aaa] inline-flex items-center gap-1 cursor-help hover:text-[#ccc] transition-colors"
                     >
                       <span className="text-[8px] leading-none" style={{ color: catColor }}>●</span>
                       {label}
@@ -61,7 +61,7 @@ function AttractorsSectionComponent({
                 {beliefs.spectral_margin.map((label) => (
                   <span
                     key={label}
-                    className="text-[9px] font-mono bg-[#141414] text-[#888]/60 border border-[#222]/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 opacity-70 line-through cursor-help hover:border-[#444]/60 transition-colors"
+                    className="text-[9px] font-mono text-[#888]/60 inline-flex items-center gap-1 opacity-70 line-through cursor-help hover:text-[#aaa] transition-colors"
                   >
                     👻 {label}
                   </span>

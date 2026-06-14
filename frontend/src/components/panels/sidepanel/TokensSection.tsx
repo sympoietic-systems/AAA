@@ -26,7 +26,7 @@ function TokensSectionComponent({ conversationId, enabled = false }: TokensSecti
   const { conversations, system_prompt_tokens, grand_total_tokens } = tokens
 
   return (
-    <div className="mt-2 border-t border-[#1a1a1a] pt-2 font-mono">
+    <div className="mt-2 pt-2 font-mono">
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-[8px] leading-none text-[#60a5fa]">●</span>
         <span className="text-[10px] text-[#888]">tokens</span>

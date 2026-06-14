@@ -57,7 +57,7 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
   }
 
   return (
-    <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+    <div className="mt-2 pt-2">
       <div className="flex items-center gap-1.5 mb-1.5 font-mono">
         <span
           className="text-[8px] leading-none"
@@ -113,7 +113,7 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
           <span className="text-[9px] text-[#facc15]">phase shifts:</span>
           <div className="flex flex-wrap gap-1 mt-0.5">
             {metrics.latest.phase_shifts.map((s, i) => (
-              <span key={i} className="text-[8px] text-[#facc15] border border-[#332200] px-1 rounded">
+              <span key={i} className="text-[8px] text-[#facc15]">
                 {s.event} {s.direction === "rise" ? "↑" : "↓"}{s.delta.toFixed(2)}
               </span>
             ))}
@@ -124,7 +124,7 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
       {metrics?.recommendations?.triggered_flags && metrics.recommendations.triggered_flags.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1 font-mono">
           {metrics.recommendations.triggered_flags.map((f) => (
-            <span key={f} className="text-[8px] text-[#f87171] border border-[#3a1a1a] px-1 rounded">
+            <span key={f} className="text-[8px] text-[#f87171]">
               {f}
             </span>
           ))}

@@ -28,16 +28,6 @@ interface SedimentSectionProps {
   uploadedFiles: ConversationFile[]
   onDeleteFile?: (fileName: string) => void
   onReprocessFile?: (fileName: string) => void
-  expandedFile: string | null
-  loadingSummary: string | null
-  loadedSummaries: Record<string, {
-    summary: string | null
-    summary_model: string | null
-    image_metadata?: ImageMetadata | null
-    web_metadata?: WebMetadata | null
-    document_metadata?: DocumentMetadata | null
-  }>
-  onToggleSummary: (fileName: string) => void
 }
 
 function SedimentInjectionModal({
@@ -217,13 +207,48 @@ function SedimentSectionComponent({
   uploadedFiles,
   onDeleteFile,
   onReprocessFile,
-  expandedFile,
-  loadingSummary,
-  loadedSummaries,
-  onToggleSummary,
 }: SedimentSectionProps) {
   const [showInjectModal, setShowInjectModal] = useState(false)
   const [injections, setInjections] = useState<SedimentInjectionInfo[]>([])
+
+  // File summary expansion — owned by SedimentSection itself
+  const [expandedFile, setExpandedFile] = useState<string | null>(null)
+  const [loadedSummaries, setLoadedSummaries] = useState<Record<string, {
+    summary: string | null
+    summary_model: string | null
+    image_metadata?: ImageMetadata | null
+    web_metadata?: WebMetadata | null
+    document_metadata?: DocumentMetadata | null
+  }>>({})
+  const [loadingSummary, setLoadingSummary] = useState<string | null>(null)
+
+  const handleToggleSummary = async (fileName: string) => {
+    if (expandedFile === fileName) {
+      setExpandedFile(null)
+      return
+    }
+    setExpandedFile(fileName)
+    if (!loadedSummaries[fileName] && conversationId) {
+      setLoadingSummary(fileName)
+      try {
+        const res = await getFileSummary(conversationId, fileName)
+        setLoadedSummaries((prev) => ({
+          ...prev,
+          [fileName]: {
+            summary: res.summary,
+            summary_model: res.summary_model,
+            image_metadata: res.image_metadata,
+            web_metadata: res.web_metadata,
+            document_metadata: res.document_metadata,
+          },
+        }))
+      } catch (err) {
+        console.error("Failed to load file summary:", err)
+      } finally {
+        setLoadingSummary(null)
+      }
+    }
+  }
 
   // Fetch + poll injections
   useEffect(() => {
@@ -315,9 +340,9 @@ function SedimentSectionComponent({
         <div className="mt-2 mb-1 flex items-center gap-2">
           <button
             onClick={() => setShowInjectModal(true)}
-            className="text-[8px] font-mono text-[#a78bfa] border border-[#a78bfa]/30 bg-[#a78bfa]/5 hover:bg-[#a78bfa]/15 hover:border-[#a78bfa]/50 px-2 py-0.5 rounded transition-all duration-200"
+            className="text-[9px] font-mono text-[#666] hover:text-[#a78bfa] cursor-pointer select-none transition-colors"
           >
-            ◈ inject
+            [+ inject]
           </button>
           {injections.length > 0 && (
             <span className="text-[7px] text-[#666] font-mono">
@@ -351,7 +376,7 @@ function SedimentSectionComponent({
                 </span>
 
                 <button
-                  onClick={() => onToggleSummary(inj.source_file_name)}
+                  onClick={() => handleToggleSummary(inj.source_file_name)}
                   className="text-[8px] text-[#4ade80] hover:underline"
                 >
                   {expandedFile === inj.source_file_name ? "hide" : "sum"}
@@ -367,7 +392,7 @@ function SedimentSectionComponent({
               </div>
 
               {expandedFile === inj.source_file_name && (
-                <div className="mt-1 ml-4 bg-[#141414] border border-[#222] rounded overflow-hidden">
+                <div className="mt-1 ml-4">
                   {renderSummaryContent(inj.source_file_name)}
                 </div>
               )}
@@ -424,7 +449,7 @@ function SedimentSectionComponent({
 
                 {f.status === "ready" && (
                   <button
-                    onClick={() => onToggleSummary(f.file_name)}
+                    onClick={() => handleToggleSummary(f.file_name)}
                     className="text-[8px] text-[#4ade80] hover:underline"
                   >
                     {expandedFile === f.file_name ? "hide" : "sum"}
@@ -443,7 +468,7 @@ function SedimentSectionComponent({
               </div>
 
               {expandedFile === f.file_name && (
-                <div className="mt-1 ml-4 bg-[#141414] border border-[#222] rounded overflow-hidden">
+                <div className="mt-1 ml-4">
                   {renderSummaryContent(f.file_name)}
                 </div>
               )}

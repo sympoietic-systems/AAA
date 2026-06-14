@@ -230,10 +230,41 @@ Action buttons and edit controls are visible **only when `AAA_AGENT_FLUX` is ena
 
 ---
 
-## File Map
+## 11. Conversation Right Panel (SidePanel)
+
+The right panel in the conversation workspace follows the same terminal-aesthetic and self-supporting principles as the `/agent` page.
+
+### Architecture
 
 ```
-agentpage/
+SidePanel (memo'd, collapse router only)
+├── SectionHeader (▼/▶ toggle per section)
+├── SummarySection                ← Props: summary, humanSummary (from App-level conversation load)
+├── MemoryNodesSection            ← Self-fetching via getMemoryNodes(enabled)
+│   └── MemoryNodeCard            ← memo'd, no bg/border container
+├── NotesSection                  ← Props: notes[], onDeleteNote (from App state)
+├── SedimentSection               ← Self-fetching file summaries + injection polling
+│   ├── SedimentInjectionModal    ← Modal for cross-conversation sediment injection
+│   ├── ImageMetadataCard         ← memo'd, chrome-free
+│   ├── WebMetadataCard           ← memo'd, chrome-free
+│   └── DocumentMetadataCard      ← memo'd, chrome-free
+├── TokensSection                 ← Self-fetching via useTelemetryTokens(enabled)
+├── VitalitySection               ← Self-fetching via useTelemetryMetrics(enabled)
+├── DiffractionSection            ← Self-fetching via useTelemetryMetrics(enabled)
+│   └── DiffractiveTooltip        ← memo'd
+└── AttractorsSection             ← Self-fetching via useTelemetryBeliefs(enabled)
+```
+
+### Design Rules
+*   **Section collapse state**: Single `Record<string, boolean>` instead of N separate `useState` booleans
+*   **Self-supporting where possible**: Tokens, Vitality, Diffraction, MemoryNodes, Attractors, Sediment (file summaries) all manage their own data fetching
+*   **Prop-receiving only when justified**: Summary and Notes receive data from the App-level conversation load (single source of truth, no duplicate API calls)
+*   **No container chrome**: Sections use `mt-2 pt-2` spacing, NOT `border-t bg-[...] rounded` dividers
+*   **Terminal-style inputs**: Search uses `border-b border-[#222]/40 bg-transparent`, not full bordered rectangles
+*   **Filter tabs**: `•` dot-separated terminal-style buttons, not background-box chip buttons
+*   **Badges stripped**: Attractor labels, phase shifts, flagged triggers display as plain colored text — no `bg-[...]/border/rounded/px/py` wrappers
+*   **`enabled` gating**: Telemetry sections use `enabled={panelOpen && sectionOpen}` to pause polling when collapsed (per §4 Lazy Loading)
+*   **All components memo'd**: SidePanel, SummarySection, NotesSection, SedimentSection, MemoryNodesSection, MemoryNodeCard, TokensSection, VitalitySection, DiffractionSection, DiffractiveTooltip, AttractorsSection, MetadataCards (all 3)
 ├── AgentPage.tsx              ← Tab router (Personality|Pipeline|Dreaming|Daemons|Traces)
 ├── PersonalitySection.tsx     ← Sub-tab router (Traits|Commitments|Expertise|Beliefs|Skills)
 │

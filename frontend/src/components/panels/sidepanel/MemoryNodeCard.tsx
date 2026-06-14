@@ -1,3 +1,4 @@
+import { memo } from "react"
 import type { MemoryNodeInfo } from "../../../api/client"
 
 const NODE_TYPE_LABELS: Record<string, string> = {
@@ -8,12 +9,12 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   bifurcation: "BIFURCATION",
 }
 
-const NODE_TYPE_COLORS: Record<string, string> = {
-  scar: "bg-[#7f1d1d]/20 text-[#f87171] border-[#7f1d1d]/40",
-  concept: "bg-[#1e3a5f]/20 text-[#6fafe2] border-[#1e3a5f]/40",
-  tension: "bg-[#713f12]/20 text-[#fbbf24] border-[#713f12]/40",
-  pattern: "bg-[#3b1f6e]/20 text-[#a892ee] border-[#3b1f6e]/40",
-  bifurcation: "bg-[#1f4a3b]/20 text-[#4ade80] border-[#1f4a3b]/40",
+const NODE_TYPE_COLORS: Record<string, { text: string; bg: string }> = {
+  scar: { text: "#f87171", bg: "bg-[#7f1d1d]/20" },
+  concept: { text: "#6fafe2", bg: "bg-[#1e3a5f]/20" },
+  tension: { text: "#fbbf24", bg: "bg-[#713f12]/20" },
+  pattern: { text: "#a892ee", bg: "bg-[#3b1f6e]/20" },
+  bifurcation: { text: "#4ade80", bg: "bg-[#1f4a3b]/20" },
 }
 
 function IntensityBar({ value }: { value: number }) {
@@ -42,15 +43,15 @@ interface Props {
   node: MemoryNodeInfo
 }
 
-export function MemoryNodeCard({ node }: Props) {
+export const MemoryNodeCard = memo(function MemoryNodeCard({ node }: Props) {
   const typeLabel = NODE_TYPE_LABELS[node.node_type] || node.node_type.toUpperCase()
-  const typeColor = NODE_TYPE_COLORS[node.node_type] || "bg-[#141414] text-[#888] border-[#222]"
+  const typeColor = NODE_TYPE_COLORS[node.node_type] || { text: "#888" }
 
   return (
-    <div className="border border-[#1a1a1a] bg-[#0c0c0c] rounded-[3px] p-3 font-mono">
+    <div className="font-mono">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className={`text-[8px] px-1.5 py-[1px] rounded-[2px] border font-mono uppercase tracking-wider ${typeColor}`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-[8px] font-mono uppercase tracking-wider" style={{ color: typeColor.text }}>
           {typeLabel}
         </span>
         {node.diffractive_key && (
@@ -102,4 +103,4 @@ export function MemoryNodeCard({ node }: Props) {
       )}
     </div>
   )
-}
+})

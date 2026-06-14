@@ -87,7 +87,7 @@ function NotesSectionComponent({
             placeholder="search notes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#0c0c0e] border border-[#222] text-[#eee] pl-2 pr-6 py-1 rounded-[2px] text-[10px] focus:outline-none focus:border-[#444] transition-colors font-mono"
+            className="w-full bg-transparent border-b border-[#222]/40 text-[#eee] pl-0 pr-6 py-1 text-[10px] focus:outline-none focus:border-[#444] transition-colors font-mono"
           />
           {searchTerm && (
             <button
@@ -100,27 +100,24 @@ function NotesSectionComponent({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1 text-[9px] select-none">
-          <span className="text-[#555] mr-1">visibility:</span>
-          {(['all', 'personal', 'shared', 'agent'] as const).map((v) => {
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] select-none">
+          <span className="text-[#555]">visibility:</span>
+          {(['all', 'personal', 'shared', 'agent'] as const).map((v, i) => {
             const isSelected = visibilityFilter === v
-            let activeStyle = ""
-            if (isSelected) {
-              if (v === 'personal') activeStyle = "bg-yellow-950/30 text-yellow-400 border-yellow-900/50"
-              else if (v === 'shared') activeStyle = "bg-purple-950/30 text-purple-400 border-purple-900/50"
-              else if (v === 'agent') activeStyle = "bg-cyan-950/30 text-cyan-400 border-cyan-900/50"
-              else activeStyle = "bg-[#18181c] text-[#eee] border-[#444]"
-            } else {
-              activeStyle = "bg-transparent text-[#555] border-transparent hover:text-[#888]"
-            }
+            const color =
+              v === 'personal' ? 'text-yellow-400' :
+              v === 'shared' ? 'text-purple-400' :
+              v === 'agent' ? 'text-cyan-400' : ''
             return (
-              <button
-                key={v}
-                onClick={() => setVisibilityFilter(v)}
-                className={`px-1.5 py-0.5 rounded-[2px] border cursor-pointer transition-all ${activeStyle}`}
-              >
-                {v}
-              </button>
+              <span key={v} className="flex items-center gap-x-2">
+                {i > 0 && <span className="text-[#333]">•</span>}
+                <button
+                  onClick={() => setVisibilityFilter(v)}
+                  className={`cursor-pointer transition-colors ${isSelected ? `text-[#94a3b8] ${color || ''}`.replace(/\s+$/, '') : "text-[#444] hover:text-[#777]"}`}
+                >
+                  {v}
+                </button>
+              </span>
             )
           })}
         </div>

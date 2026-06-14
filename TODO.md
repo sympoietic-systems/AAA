@@ -21,6 +21,16 @@
     [x] /agent page: React.memo on all leaf components (per FRONTEND_BEST_PRACTICES.md §3)
     [x] docs: FRONTEND_DESIGN_PRINCIPLES.md created
 
+## RIGHT PANEL (SidePanel) REFACTOR
+    [x] Move file summary fetching into SedimentSection (was in SidePanel — data-broker antipattern)
+    [x] SidePanel collapse state: 8 useState → single Record<string, boolean>
+    [x] React.memo: SidePanel, MemoryNodeCard, DiffractiveTooltip, MetadataCards (Image/Web/Document)
+    [x] Strip chrome: remove bg/border/rounded from SidePanel container, DiffractionSection telemetry block, MemoryNodeCard, TokenSection dividers, VitalitySection dividers+badges, AttractorsSection badges
+    [x] MetadataCards: remove border-l-2 bg-[...] p-3 containers from Image/Web/Document cards
+    [x] NotesSection: terminal-style search (border-b, no bg), filter tabs → • dot separator
+    [x] SedimentSection: inject button → terminal [+ inject], summary expansion no bg-container
+    [x] docs: FRONTEND_DESIGN_PRINCIPLES.md updated with §11 Conversation Right Panel
+
 
 
 ## SYMBIA PERSONALITY

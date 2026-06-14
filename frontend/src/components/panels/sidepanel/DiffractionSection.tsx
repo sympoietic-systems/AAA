@@ -7,11 +7,11 @@ interface DiffractionSectionProps {
   messageCount?: number
 }
 
-function DiffractiveTooltip({ title, value, desc }: { title: string; value?: string; desc: string }) {
+const DiffractiveTooltip = memo(function DiffractiveTooltip({ title, value, desc }: { title: string; value?: string; desc: string }) {
   return (
     <div className="
       absolute bottom-full left-0 mb-1.5 px-2 py-1.5
-      bg-[#111] border border-[#262626] rounded
+      bg-[#111] border border-[#262626]
       text-[9px] text-[#aaa] font-sans leading-relaxed
       whitespace-normal w-56 z-50
       opacity-0 group-hover:opacity-100
@@ -24,7 +24,7 @@ function DiffractiveTooltip({ title, value, desc }: { title: string; value?: str
       <div className="text-[#888] mt-1 font-normal leading-normal">{desc}</div>
     </div>
   )
-}
+})
 
 function DiffractionSectionComponent({ enabled = false }: DiffractionSectionProps) {
   const { metrics, metricsLoading: loading, metricsError: error } = useTelemetryMetrics(enabled)
@@ -77,21 +77,16 @@ function DiffractionSectionComponent({ enabled = false }: DiffractionSectionProp
   const barStr = barChars.join("")
 
   return (
-    <div className="mt-2 border-t border-[#1a1a1a] pt-2">
+    <div className="mt-2 pt-2">
       <div className="flex items-center gap-1.5 mb-1.5 font-mono">
-        <span
-          className="text-[8px] leading-none"
-          style={{ color: stateColor }}
-        >
+        <span className="text-[8px] leading-none" style={{ color: stateColor }}>
           {isActive ? "●" : "○"}
         </span>
         <span className="text-[10px] text-[#888]">diffraction</span>
-        <span className="text-[9px] ml-auto" style={{ color: stateColor }}>
-          {diff.state}
-        </span>
+        <span className="text-[9px] ml-auto" style={{ color: stateColor }}>{diff.state}</span>
       </div>
 
-      <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded p-2 font-mono text-[8px] leading-relaxed space-y-px">
+      <div className="font-mono text-[8px] leading-relaxed space-y-px">
         <div className="text-[#555]">
           {"=== STAGNATION TELEMETRY ==="}
         </div>
@@ -213,7 +208,6 @@ function DiffractionSectionComponent({ enabled = false }: DiffractionSectionProp
             desc="Maximum number of diffractive candidate slots allowed to be injected during this turn, scaled dynamically based on stagnation index."
           />
         </div>
-      </div>
     </div>
   )
 }
