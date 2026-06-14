@@ -1323,3 +1323,89 @@ export async function markAllNotificationsRead(type?: string): Promise<void> {
 }
 
 
+/* ── Dynamic Personality API ── */
+
+export interface PersonalityCommitment {
+  id: string
+  label: string
+  statement: string
+  lifecycle_stage: string
+  confidence: number
+  ontological_mass: number
+  vector_16d?: string
+  nucleation_rationale?: string
+  collapse_rationale?: string
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface PersonalityExpertise {
+  id: string
+  domain: string
+  lifecycle_stage: string
+  ontological_mass: number
+  level_label: string
+  signal_count: number
+  last_signal_at?: string | null
+  crystallization_rationale?: string
+  created_at?: string | null
+}
+
+export interface PersonalityResponse {
+  traits: Record<string, number> | null
+  aspirational_traits: Record<string, number>
+  aspirational_gap: number
+  anti_erosion_boost: number
+  source_metrics: Record<string, number>
+  commitments: {
+    active: PersonalityCommitment[]
+    proto: PersonalityCommitment[]
+    spectral: PersonalityCommitment[]
+  }
+  expertise: {
+    active: PersonalityExpertise[]
+    proto: PersonalityExpertise[]
+    dormant: PersonalityExpertise[]
+  }
+}
+
+export async function getPersonality(): Promise<PersonalityResponse> {
+  const res = await fetch(`${BASE}/agent/personality`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function updateCommitment(
+  id: string,
+  data: { statement?: string; lifecycle_stage?: string; confidence?: number; ontological_mass?: number }
+): Promise<void> {
+  const res = await fetch(`${BASE}/agent/personality/commitment/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export async function updateExpertise(
+  id: string,
+  data: { lifecycle_stage?: string; ontological_mass?: number; level_label?: string }
+): Promise<void> {
+  const res = await fetch(`${BASE}/agent/personality/expertise/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export async function updateAspirationalTraits(
+  traits: Record<string, number>
+): Promise<void> {
+  const res = await fetch(`${BASE}/agent/personality/aspirational`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ traits }),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}

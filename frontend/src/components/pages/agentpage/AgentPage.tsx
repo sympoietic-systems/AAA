@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react"
 import { BeliefsSection } from "./BeliefsSection"
 import { DreamingSection } from "./DreamingSection"
+import { PersonalitySection } from "./PersonalitySection"
 import { StartupSection } from "./StartupSection"
 import { SkillsSection } from "./SkillsSection"
 import { PipelineSection } from "./PipelineSection"
 import { TracesSection } from "./TracesSection"
 
-type TabId = "beliefs" | "dreaming" | "daemons" | "skills" | "pipeline" | "traces"
+type TabId = "beliefs" | "personality" | "dreaming" | "daemons" | "skills" | "pipeline" | "traces"
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "beliefs", label: "Beliefs" },
+  { id: "personality", label: "Personality" },
   { id: "skills", label: "Skills" },
   { id: "pipeline", label: "Pipeline" },
   { id: "dreaming", label: "Dreaming" },
@@ -107,6 +109,7 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {activeTab === "beliefs" && <BeliefsSection initialSelectedId={initialSelectedId} />}
+        {activeTab === "personality" && <PersonalitySection />}
         {activeTab === "skills" && <SkillsSection initialSelectedId={initialSelectedId} />}
         {activeTab === "pipeline" && <PipelineSection />}
         {activeTab === "dreaming" && <DreamingSection />}
@@ -117,6 +120,9 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
               let tabId: TabId = "beliefs"
               if (type.startsWith("skill")) tabId = "skills"
               else if (type.startsWith("belief")) tabId = "beliefs"
+              else if (type.startsWith("commitment") || type.startsWith("expertise") || type === "personality") {
+                tabId = "personality"
+              }
               setActiveTab(tabId)
               setInitialSelectedId(id)
             }}
