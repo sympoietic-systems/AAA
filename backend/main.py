@@ -454,16 +454,8 @@ async def lifespan(app: FastAPI):
     # 1. Database + repos
     repos = _init_repos(config)
 
-    # 1b. Seed dynamic personality tables from identity.yaml on first run
+    # 1b. Load identity (for agent name + assembler)
     identity_data, agent_name, identity_path = _load_identity(config)
-    from backend.personality.seeding import seed_dynamic_personality
-    seed_dynamic_personality(
-        commitment_repo=repos["commitment_repo"],
-        expertise_repo=repos["expertise_repo"],
-        personality_state_repo=repos["personality_state_repo"],
-        identity_path=identity_path,
-        agent_id=agent_name,
-    )
 
     # 2. Embedder
     embedder = _init_embedder(config)
@@ -475,7 +467,7 @@ async def lifespan(app: FastAPI):
     # 4. Processing modules
     modules = _init_modules(config, repos, embedder, structural_provider, vision_provider)
 
-    # 5. Identity + beliefs (identity_data already loaded for seeding)
+    # 5. Beliefs
     belief_metabolism = _init_belief_engine(repos, identity_path, structural_provider)
 
     # 6. Prompt assembler
