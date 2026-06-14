@@ -1325,6 +1325,15 @@ export async function markAllNotificationsRead(type?: string): Promise<void> {
 
 /* ── Dynamic Personality API ── */
 
+export interface BasinBelief {
+  label: string
+  statement: string
+  confidence: number
+  mass: number
+  stage: string
+  similarity: number
+}
+
 export interface PersonalityCommitment {
   id: string
   label: string
@@ -1332,9 +1341,12 @@ export interface PersonalityCommitment {
   lifecycle_stage: string
   confidence: number
   ontological_mass: number
-  vector_16d?: string
-  nucleation_rationale?: string
-  collapse_rationale?: string
+  vector_16d?: number[] | null
+  basin_belief_count?: number
+  basin_belief_labels?: string[]
+  basin_beliefs?: BasinBelief[]
+  nucleation_rationale?: string | null
+  collapse_rationale?: string | null
   created_at?: string | null
   updated_at?: string | null
 }
@@ -1346,8 +1358,9 @@ export interface PersonalityExpertise {
   ontological_mass: number
   level_label: string
   signal_count: number
+  vector_16d?: number[] | null
   last_signal_at?: string | null
-  crystallization_rationale?: string
+  crystallization_rationale?: string | null
   created_at?: string | null
 }
 

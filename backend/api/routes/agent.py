@@ -78,39 +78,102 @@ def _node_to_dict(node, extra: dict = None) -> dict:
     return d
 
 
+def _parse_vector_16d(vector_json: str):
+    """Parse a JSON 16D vector string into a list of floats, or None."""
+    import numpy as np
+    if not vector_json or vector_json == "[]":
+        return None
+    try:
+        data = json.loads(vector_json)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if isinstance(data, dict):
+        for key in ("v16d", "v384d"):
+            if key in data and data[key]:
+                return [float(x) for x in data[key]]
+        return None
+    if isinstance(data, list) and len(data) == 16:
+        return [float(x) for x in data]
+    return None
+
+
+def _cosine_sim(a, b) -> float:
+    """Cosine similarity between two float lists."""
+    import numpy as np
+    va = np.array(a, dtype=np.float32)
+    vb = np.array(b, dtype=np.float32)
+    dot = float(np.dot(va, vb))
+    na = float(np.linalg.norm(va))
+    nb = float(np.linalg.norm(vb))
+    return dot / (na * nb) if na > 0 and nb > 0 else 0.0
+
+
+def _find_basin_beliefs(commit_vector_json: str, belief_repo, min_similarity: float = 0.6) -> dict:
+    """Find beliefs within a commitment's attractor basin."""
+    commit_vec = _parse_vector_16d(commit_vector_json)
+    if commit_vec is None or belief_repo is None:
+        return {"count": 0, "labels": []}
+
+    try:
+        active_beliefs = belief_repo.list_active_beliefs("symbia")
+    except Exception:
+        return {"count": 0, "labels": []}
+
+    basin = []
+    for b in active_beliefs:
+        b_vec = _parse_vector_16d(b.vector_16d)
+        if b_vec is None:
+            continue
+        sim = _cosine_sim(commit_vec, b_vec)
+        if sim > min_similarity:
+            basin.append({
+                "label": b.label,
+                "statement": b.statement[:120],
+                "confidence": b.confidence,
+                "mass": b.ontological_mass,
+                "stage": b.lifecycle_stage,
+                "similarity": round(sim, 3),
+            })
+
+    # Sort by similarity descending
+    basin.sort(key=lambda x: x["similarity"], reverse=True)
+    return {
+        "count": len(basin),
+        "labels": [b["label"] for b in basin],
+        "beliefs": basin[:10],  # Top 10
+    }
+
+
 @router.get("/agent/personality")
 async def get_personality(request: Request):
     """Return full dynamic personality state."""
     state = request.app.state
 
     # ── Traits ──
-    traits = None
-    aspirational_traits = {}
-    aspirational_gap = 0.0
-    anti_erosion_boost = 0.0
-    source_metrics = {}
-
     try:
         personality_repo = getattr(state, "personality_state_repo", None)
         if personality_repo:
             aspirational_traits = personality_repo.get_aspirational_traits()
     except Exception:
-        pass
+        aspirational_traits = {}
 
     # ── Commitments ──
     commitments = {"active": [], "proto": [], "spectral": []}
     try:
         commit_repo = getattr(state, "commitment_repo", None)
+        belief_repo = getattr(state, "belief_repo", None)
         if commit_repo:
             for c in commit_repo.get_active():
+                basin = _find_basin_beliefs(c.vector_16d, belief_repo)
                 commitments["active"].append({
-                    "id": c.id,
-                    "label": c.label,
-                    "statement": c.statement,
+                    "id": c.id, "label": c.label, "statement": c.statement,
                     "lifecycle_stage": c.lifecycle_stage,
                     "confidence": c.confidence,
                     "ontological_mass": c.ontological_mass,
-                    "vector_16d": c.vector_16d,
+                    "vector_16d": _parse_vector_16d(c.vector_16d),
+                    "basin_belief_count": basin["count"],
+                    "basin_belief_labels": basin["labels"],
+                    "basin_beliefs": basin.get("beliefs", []),
                     "nucleation_rationale": c.nucleation_rationale,
                     "collapse_rationale": c.collapse_rationale,
                     "created_at": c.created_at.isoformat() if c.created_at else None,
@@ -118,20 +181,17 @@ async def get_personality(request: Request):
                 })
             for c in commit_repo.get_proto():
                 commitments["proto"].append({
-                    "id": c.id,
-                    "label": c.label,
-                    "statement": c.statement,
+                    "id": c.id, "label": c.label, "statement": c.statement,
                     "lifecycle_stage": c.lifecycle_stage,
                     "confidence": c.confidence,
                     "ontological_mass": c.ontological_mass,
+                    "vector_16d": _parse_vector_16d(c.vector_16d),
                     "nucleation_rationale": c.nucleation_rationale,
                     "created_at": c.created_at.isoformat() if c.created_at else None,
                 })
             for c in commit_repo.get_spectral():
                 commitments["spectral"].append({
-                    "id": c.id,
-                    "label": c.label,
-                    "statement": c.statement,
+                    "id": c.id, "label": c.label, "statement": c.statement,
                     "lifecycle_stage": c.lifecycle_stage,
                     "collapse_rationale": c.collapse_rationale,
                     "created_at": c.created_at.isoformat() if c.created_at else None,
@@ -147,12 +207,12 @@ async def get_personality(request: Request):
             all_exp = exp_repo.get_all()
             for e in all_exp:
                 entry = {
-                    "id": e.id,
-                    "domain": e.domain,
+                    "id": e.id, "domain": e.domain,
                     "lifecycle_stage": e.lifecycle_stage,
                     "ontological_mass": e.ontological_mass,
                     "level_label": e.level_label,
                     "signal_count": e.signal_count,
+                    "vector_16d": _parse_vector_16d(e.vector_16d),
                     "last_signal_at": e.last_signal_at.isoformat() if e.last_signal_at else None,
                     "crystallization_rationale": e.crystallization_rationale,
                     "created_at": e.created_at.isoformat() if e.created_at else None,
@@ -167,11 +227,11 @@ async def get_personality(request: Request):
         logger.debug("Failed to load expertise: %s", e)
 
     return {
-        "traits": traits,
+        "traits": None,
         "aspirational_traits": aspirational_traits,
-        "aspirational_gap": aspirational_gap,
-        "anti_erosion_boost": anti_erosion_boost,
-        "source_metrics": source_metrics,
+        "aspirational_gap": 0.0,
+        "anti_erosion_boost": 0.0,
+        "source_metrics": {},
         "commitments": commitments,
         "expertise": expertise,
     }
