@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 
 interface ParsedFileManifest {
   isNew: boolean;
@@ -62,7 +62,7 @@ function parseFileSedimentContent(content: string): ParsedFileSediment {
   return { manifests, chunks };
 }
 
-export const FileSectionViewer: React.FC<{ content: string }> = ({ content }) => {
+export const FileSectionViewer: React.FC<{ content: string }> = memo(({ content }) => {
   const { manifests, chunks } = parseFileSedimentContent(content);
 
   const fileTabs: { id: string; label: string; count: number }[] = [];
@@ -179,4 +179,4 @@ export const FileSectionViewer: React.FC<{ content: string }> = ({ content }) =>
       </div>
     </div>
   );
-};
+});

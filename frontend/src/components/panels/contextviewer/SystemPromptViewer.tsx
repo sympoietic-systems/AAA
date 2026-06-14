@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 
 interface ParsedSystemPrompt {
   identity: string;
@@ -146,7 +146,7 @@ function parseSystemPrompt(content: string): ParsedSystemPrompt {
   return result;
 }
 
-export const SystemPromptViewer: React.FC<{ content: string }> = ({ content }) => {
+export const SystemPromptViewer: React.FC<{ content: string }> = memo(({ content }) => {
   const parsed = parseSystemPrompt(content);
 
   const tabs: { id: string; label: string; count?: number }[] = [];
@@ -318,4 +318,4 @@ export const SystemPromptViewer: React.FC<{ content: string }> = ({ content }) =
       </div>
     </div>
   );
-};
+});

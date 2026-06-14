@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import type { ConversationInfo } from "../../../api/client"
 
 interface Props {
@@ -56,7 +56,7 @@ function Tags({ tags }: { tags?: any[] }) {
   )
 }
 
-export function ConversationLandingPage({
+export const ConversationLandingPage = memo(function ConversationLandingPage({
   conversations,
   loading,
   loadingMore,
@@ -271,4 +271,4 @@ export function ConversationLandingPage({
       </div>
     </div>
   )
-}
+});

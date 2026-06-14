@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 
 interface ParsedSedimentMemory {
   title: string;
@@ -29,7 +29,7 @@ function parseSedimentContent(content: string): ParsedSedimentMemory[] {
   });
 }
 
-export const SedimentSectionViewer: React.FC<{ content: string }> = ({ content }) => {
+export const SedimentSectionViewer: React.FC<{ content: string }> = memo(({ content }) => {
   const parsed = parseSedimentContent(content);
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
   const [loadedFiles, setLoadedFiles] = useState<Record<string, {
@@ -254,4 +254,4 @@ export const SedimentSectionViewer: React.FC<{ content: string }> = ({ content }
       </div>
     </div>
   );
-};
+});

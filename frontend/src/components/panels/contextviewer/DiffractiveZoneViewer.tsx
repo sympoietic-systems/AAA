@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, memo } from 'react';
 
 interface ParsedDiffractiveFragment {
   sourceType: string;
@@ -74,7 +74,7 @@ function extractSystemBlocks(content: string): { skills: { label: string; items:
   return { skills, beliefs };
 }
 
-export const DiffractiveZoneViewer: React.FC<{ content: string }> = ({ content }) => {
+export const DiffractiveZoneViewer: React.FC<{ content: string }> = memo(({ content }) => {
   const parsed = useMemo(() => parseDiffractiveZone(content), [content]);
 
   // Fallback: if no fragments/directive found but content has system prompt blocks, extract them
@@ -286,4 +286,4 @@ export const DiffractiveZoneViewer: React.FC<{ content: string }> = ({ content }
       </div>
     </div>
   );
-};
+});

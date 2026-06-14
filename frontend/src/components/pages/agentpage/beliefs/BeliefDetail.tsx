@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, memo } from "react"
 import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement } from "../../../../api/client"
 import type { BeliefNodeInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
@@ -65,7 +65,7 @@ interface BeliefDetailProps {
   agentFlux: boolean
 }
 
-export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, onReload, agentFlux }: BeliefDetailProps) {
+export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, onReload, agentFlux }: BeliefDetailProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editLabel, setEditLabel] = useState("")
   const [editStatement, setEditStatement] = useState("")
@@ -584,4 +584,4 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
       )}
     </div>
   )
-}
+});

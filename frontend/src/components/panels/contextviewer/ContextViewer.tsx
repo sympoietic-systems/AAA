@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { SECTION_STYLES } from './types';
 import { parseContextSent } from './parsers';
 import { HistorySectionViewer } from './HistorySectionViewer';
@@ -7,7 +7,7 @@ import { FileSectionViewer } from './FileSectionViewer';
 import { SystemPromptViewer } from './SystemPromptViewer';
 import { DiffractiveZoneViewer } from './DiffractiveZoneViewer';
 
-export const ContextViewer: React.FC<{ contextText: string }> = ({ contextText }) => {
+export const ContextViewer: React.FC<{ contextText: string }> = memo(({ contextText }) => {
   const sections = parseContextSent(contextText);
   const [openSections, setOpenSections] = useState<Record<number, boolean>>(() => {
     const initial: Record<number, boolean> = {};
@@ -97,4 +97,4 @@ export const ContextViewer: React.FC<{ contextText: string }> = ({ contextText }
       })}
     </div>
   );
-};
+});

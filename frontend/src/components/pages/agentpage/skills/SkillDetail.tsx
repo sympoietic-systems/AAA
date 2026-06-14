@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { updateSkill, deleteSkill } from "../../../../api/client"
 import type { DbSkillInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
@@ -67,7 +67,7 @@ interface SkillDetailProps {
   agentFlux: boolean
 }
 
-export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }: SkillDetailProps) {
+export const SkillDetail = memo(function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }: SkillDetailProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editDescription, setEditDescription] = useState("")
   const [editContent, setEditContent] = useState("")
@@ -349,4 +349,4 @@ export function SkillDetail({ skill, content, loading, onUpdate, onDelete, agent
       )}
     </div>
   )
-}
+});

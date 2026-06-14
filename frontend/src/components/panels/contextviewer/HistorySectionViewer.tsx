@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import type { SectionColors } from './types';
 
 interface ParsedHistoryMessage {
@@ -36,7 +36,7 @@ function parseHistoryContent(content: string): ParsedHistoryMessage[] {
   });
 }
 
-export const HistorySectionViewer: React.FC<{ content: string; style: SectionColors }> = ({ content }) => {
+export const HistorySectionViewer: React.FC<{ content: string; style: SectionColors }> = memo(({ content }) => {
   const parsed = parseHistoryContent(content);
   const consolidated = parsed.filter(m => m.isConsolidated);
   const compressed = parsed.filter(m => m.isCompressed);
@@ -103,4 +103,4 @@ export const HistorySectionViewer: React.FC<{ content: string; style: SectionCol
       </div>
     </div>
   );
-};
+});
