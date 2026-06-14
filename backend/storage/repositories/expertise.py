@@ -15,7 +15,7 @@ class ExpertiseRepository(BaseRepository):
     def get_all(self, agent_id: str = "symbia") -> list[ExpertiseNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM expertise_nodes WHERE agent_id = ? ORDER BY ontological_mass DESC",
+            "SELECT * FROM expertise_nodes WHERE LOWER(agent_id) = LOWER(?) ORDER BY ontological_mass DESC",
             (agent_id,),
         ).fetchall()
         return [_row_to_expertise_node(r) for r in rows]
@@ -24,7 +24,7 @@ class ExpertiseRepository(BaseRepository):
     def get_active(self, agent_id: str = "symbia") -> list[ExpertiseNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM expertise_nodes WHERE agent_id = ? AND lifecycle_stage = 'active'",
+            "SELECT * FROM expertise_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage = 'active'",
             (agent_id,),
         ).fetchall()
         return [_row_to_expertise_node(r) for r in rows]
@@ -44,7 +44,7 @@ class ExpertiseRepository(BaseRepository):
     def get_by_domain(self, domain: str, agent_id: str = "symbia") -> Optional[ExpertiseNode]:
         conn = self._conn()
         row = conn.execute(
-            "SELECT * FROM expertise_nodes WHERE agent_id = ? AND domain = ?",
+            "SELECT * FROM expertise_nodes WHERE LOWER(agent_id) = LOWER(?) AND domain = ?",
             (agent_id, domain),
         ).fetchone()
         if row is None:
@@ -55,7 +55,7 @@ class ExpertiseRepository(BaseRepository):
     def get_dormant(self, agent_id: str = "symbia") -> list[ExpertiseNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM expertise_nodes WHERE agent_id = ? AND lifecycle_stage = 'dormant'",
+            "SELECT * FROM expertise_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage = 'dormant'",
             (agent_id,),
         ).fetchall()
         return [_row_to_expertise_node(r) for r in rows]
@@ -64,7 +64,7 @@ class ExpertiseRepository(BaseRepository):
     def count(self, agent_id: str = "symbia") -> int:
         conn = self._conn()
         row = conn.execute(
-            "SELECT COUNT(*) FROM expertise_nodes WHERE agent_id = ?",
+            "SELECT COUNT(*) FROM expertise_nodes WHERE LOWER(agent_id) = LOWER(?)",
             (agent_id,),
         ).fetchone()
         return int(row[0]) if row else 0
@@ -93,7 +93,7 @@ class ExpertiseRepository(BaseRepository):
                 last_signal_at, crystallization_rationale,
                 created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (id, agent_id, domain, description, lifecycle_stage,
+            (id, agent_id.lower(), domain, description, lifecycle_stage,
              ontological_mass, level_label, vector_16d, signal_count,
              last_signal_at, crystallization_rationale,
              now, now),

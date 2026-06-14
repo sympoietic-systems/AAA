@@ -53,7 +53,7 @@ class BeliefRepository(BaseRepository):
     def get_belief(self, agent_id: str, belief_id: str) -> Optional[BeliefNode]:
         conn = self._conn()
         row = conn.execute(
-            "SELECT * FROM belief_nodes WHERE agent_id = ? AND id = ?",
+            "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND id = ?",
             (agent_id, belief_id),
         ).fetchone()
         if row is None:
@@ -64,7 +64,7 @@ class BeliefRepository(BaseRepository):
     def list_beliefs(self, agent_id: str) -> list[BeliefNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM belief_nodes WHERE agent_id = ?",
+            "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?)",
             (agent_id,),
         ).fetchall()
         return [_row_to_belief_node(r) for r in rows]
@@ -92,7 +92,7 @@ class BeliefRepository(BaseRepository):
             """INSERT INTO belief_nodes
                (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage, evolved_from_proposal, genesis_materials, version, last_reinforced_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-            (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, validated_vector, lifecycle_stage, evolved_from_proposal, genesis_materials, version),
+            (id, agent_id.lower(), label, statement, origin, confidence, ontological_mass, somatic_anchor, validated_vector, lifecycle_stage, evolved_from_proposal, genesis_materials, version),
         )
         conn.commit()
 
@@ -199,7 +199,7 @@ class BeliefRepository(BaseRepository):
     def list_active_beliefs(self, agent_id: str) -> list[BeliefNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM belief_nodes WHERE agent_id = ? AND lifecycle_stage IN ('crystallized', 'senescence')",
+            "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage IN ('crystallized', 'senescence')",
             (agent_id,),
         ).fetchall()
         return [_row_to_belief_node(r) for r in rows]
@@ -208,7 +208,7 @@ class BeliefRepository(BaseRepository):
     def list_proto_beliefs(self, agent_id: str) -> list[BeliefNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM belief_nodes WHERE agent_id = ? AND lifecycle_stage IN ('nucleation', 'accretion')",
+            "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage IN ('nucleation', 'accretion')",
             (agent_id,),
         ).fetchall()
         return [_row_to_belief_node(r) for r in rows]
@@ -217,7 +217,7 @@ class BeliefRepository(BaseRepository):
     def list_ghosts(self, agent_id: str) -> list[BeliefNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM belief_nodes WHERE agent_id = ? AND lifecycle_stage = 'collapsed'",
+            "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage = 'collapsed'",
             (agent_id,),
         ).fetchall()
         return [_row_to_belief_node(r) for r in rows]
@@ -481,7 +481,7 @@ class BeliefRepository(BaseRepository):
             """INSERT INTO belief_proposals
                (id, agent_id, provisional_statement, source_trace, initial_signature, nucleation_mass, confidence, status, potential_merge_target, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
-            (id, agent_id, provisional_statement, source_trace, validated_vector, nucleation_mass, confidence, status, potential_merge_target),
+            (id, agent_id.lower(), provisional_statement, source_trace, validated_vector, nucleation_mass, confidence, status, potential_merge_target),
         )
         
         # Automatic notification insertion
@@ -510,7 +510,7 @@ class BeliefRepository(BaseRepository):
     def list_proposals(self, agent_id: str) -> list[BeliefProposal]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM belief_proposals WHERE agent_id = ? ORDER BY created_at DESC",
+            "SELECT * FROM belief_proposals WHERE LOWER(agent_id) = LOWER(?) ORDER BY created_at DESC",
             (agent_id,),
         ).fetchall()
         return [_row_to_belief_proposal(r) for r in rows]
@@ -519,7 +519,7 @@ class BeliefRepository(BaseRepository):
     def list_pending_proposals(self, agent_id: str) -> list[BeliefProposal]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM belief_proposals WHERE agent_id = ? AND status IN ('pending', 'refined') ORDER BY created_at DESC",
+            "SELECT * FROM belief_proposals WHERE LOWER(agent_id) = LOWER(?) AND status IN ('pending', 'refined') ORDER BY created_at DESC",
             (agent_id,),
         ).fetchall()
         return [_row_to_belief_proposal(r) for r in rows]

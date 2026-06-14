@@ -53,8 +53,8 @@ with patch(
             print(f"  DB row {r['id']}: agent_id={r['agent_id']!r}, speaker={r['speaker']}, model_used={r['model_used']!r}, provider_used={r['provider_used']!r}")
         conn.close()
 
-        assert rows[-2]["agent_id"] == "Symbia"
-        assert rows[-1]["agent_id"] == "Symbia"
+        assert rows[-2]["agent_id"].lower() == "symbia"
+        assert rows[-1]["agent_id"].lower() == "symbia"
         assert rows[-1]["model_used"] == "mock-gemini-model"
         assert rows[-1]["provider_used"] == "mock-provider"
         print("\nAll tests passed!")

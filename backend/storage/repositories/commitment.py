@@ -28,7 +28,7 @@ class CommitmentRepository(BaseRepository):
     def get_all(self, agent_id: str = "symbia") -> list[CommitmentNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM commitment_nodes WHERE agent_id = ? ORDER BY created_at",
+            "SELECT * FROM commitment_nodes WHERE LOWER(agent_id) = LOWER(?) ORDER BY created_at",
             (agent_id,),
         ).fetchall()
         return [_row_to_commitment_node(r) for r in rows]
@@ -37,7 +37,7 @@ class CommitmentRepository(BaseRepository):
     def get_active(self, agent_id: str = "symbia") -> list[CommitmentNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM commitment_nodes WHERE agent_id = ? AND lifecycle_stage = 'active'",
+            "SELECT * FROM commitment_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage = 'active'",
             (agent_id,),
         ).fetchall()
         return [_row_to_commitment_node(r) for r in rows]
@@ -46,7 +46,7 @@ class CommitmentRepository(BaseRepository):
     def get_proto(self, agent_id: str = "symbia") -> list[CommitmentNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM commitment_nodes WHERE agent_id = ? AND lifecycle_stage = 'proto'",
+            "SELECT * FROM commitment_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage = 'proto'",
             (agent_id,),
         ).fetchall()
         return [_row_to_commitment_node(r) for r in rows]
@@ -55,7 +55,7 @@ class CommitmentRepository(BaseRepository):
     def get_spectral(self, agent_id: str = "symbia") -> list[CommitmentNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM commitment_nodes WHERE agent_id = ? AND lifecycle_stage = 'spectral'",
+            "SELECT * FROM commitment_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage = 'spectral'",
             (agent_id,),
         ).fetchall()
         return [_row_to_commitment_node(r) for r in rows]
@@ -64,7 +64,7 @@ class CommitmentRepository(BaseRepository):
     def count(self, agent_id: str = "symbia") -> int:
         conn = self._conn()
         row = conn.execute(
-            "SELECT COUNT(*) FROM commitment_nodes WHERE agent_id = ?",
+            "SELECT COUNT(*) FROM commitment_nodes WHERE LOWER(agent_id) = LOWER(?)",
             (agent_id,),
         ).fetchone()
         return int(row[0]) if row else 0
@@ -90,7 +90,7 @@ class CommitmentRepository(BaseRepository):
                 ontological_mass, vector_16d, nucleation_rationale,
                 created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (id, agent_id, label, statement, lifecycle_stage, confidence,
+            (id, agent_id.lower(), label, statement, lifecycle_stage, confidence,
              ontological_mass, vector_16d, nucleation_rationale,
              now, now),
         )

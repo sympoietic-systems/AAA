@@ -104,7 +104,7 @@ Provides chronological sequencing of physical transactions. Scoped to `conversat
 | :--- | :--- | :--- | :--- |
 | `id` | INTEGER | PRIMARY KEY, AUTOINCREMENT | Unique record ID. |
 | `timestamp` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Temporal registration of the event. |
-| `agent_id` | TEXT | NOT NULL, DEFAULT '' | Agent identity from `identity.yaml` (e.g., `"Symbia"`). |
+| `agent_id` | TEXT | NOT NULL, DEFAULT '' | Agent identity from `identity.yaml` (e.g., `"symbia"`). Stored and queried case-insensitively. |
 | `conversation_id` | TEXT | NOT NULL, DEFAULT '' | FK to `conversations.id`. |
 | `speaker` | TEXT | NOT NULL (human / apparatus) | Categorizes origin of the signal. |
 | `content` | TEXT | NOT NULL | Raw text token sequence. |

@@ -152,7 +152,7 @@ Legacy migration: a "Legacy" conversation (UUID `00000000-...`) is auto-created 
 |--------|------|-------------|
 | `id` | INTEGER PK | Auto-increment |
 | `timestamp` | DATETIME | Default CURRENT_TIMESTAMP |
-| `agent_id` | TEXT | Agent identity (e.g., `"Symbia"`) |
+| `agent_id` | TEXT | Agent identity (e.g., `"symbia"`). Stored and queried case-insensitively via `LOWER()`. |
 | `conversation_id` | TEXT | FK to `conversations.id` |
 | `speaker` | TEXT | `human` or `apparatus` |
 | `content` | TEXT | Raw message text (re-embeddable) |

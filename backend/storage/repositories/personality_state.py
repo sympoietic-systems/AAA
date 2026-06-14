@@ -15,7 +15,7 @@ class PersonalityStateRepository(BaseRepository):
     def get(self, agent_id: str = "symbia") -> Optional[PersonalityState]:
         conn = self._conn()
         row = conn.execute(
-            "SELECT * FROM personality_state WHERE agent_id = ?",
+            "SELECT * FROM personality_state WHERE LOWER(agent_id) = LOWER(?)",
             (agent_id,),
         ).fetchone()
         if row is None:
@@ -26,27 +26,27 @@ class PersonalityStateRepository(BaseRepository):
     def upsert(self, state: PersonalityState) -> None:
         conn = self._conn()
         existing = conn.execute(
-            "SELECT id FROM personality_state WHERE agent_id = ?",
+            "SELECT id FROM personality_state WHERE LOWER(agent_id) = LOWER(?)",
             (state.agent_id,),
         ).fetchone()
         now = datetime.now(timezone.utc).isoformat()
 
         if existing:
             conn.execute(
-                """UPDATE personality_state
-                   SET aspirational_traits_json = ?,
-                       active_commitment_ids_json = ?,
-                       trait_computation_version = ?,
-                       last_recomputed_at = ?,
-                       updated_at = ?
-                   WHERE agent_id = ?""",
-                (state.aspirational_traits_json,
-                 state.active_commitment_ids_json,
-                 state.trait_computation_version,
-                 state.last_recomputed_at,
-                 now,
-                 state.agent_id),
-            )
+                    """UPDATE personality_state
+                       SET aspirational_traits_json = ?,
+                           active_commitment_ids_json = ?,
+                           trait_computation_version = ?,
+                           last_recomputed_at = ?,
+                           updated_at = ?
+                       WHERE LOWER(agent_id) = LOWER(?)""",
+                    (state.aspirational_traits_json,
+                     state.active_commitment_ids_json,
+                     state.trait_computation_version,
+                     state.last_recomputed_at,
+                     now,
+                     state.agent_id),
+                )
         else:
             conn.execute(
                 """INSERT OR REPLACE INTO personality_state
@@ -54,7 +54,7 @@ class PersonalityStateRepository(BaseRepository):
                     active_commitment_ids_json, trait_computation_version,
                     last_recomputed_at, updated_at)
                    VALUES (1, ?, ?, ?, ?, ?, ?)""",
-                (state.agent_id, state.aspirational_traits_json,
+                (state.agent_id.lower(), state.aspirational_traits_json,
                  state.active_commitment_ids_json,
                  state.trait_computation_version,
                  state.last_recomputed_at, now),
