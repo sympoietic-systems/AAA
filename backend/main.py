@@ -35,6 +35,7 @@ from backend.modules.context_collector import ContextCollectorModule
 from backend.modules.conversation_metrics import ConversationMetricsModule
 from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
 from backend.modules.embedder import EmbedderModule
+from backend.modules.expertise_engine import ExpertiseEngine
 from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
 from backend.modules.llm_client import (
     LLMClientModule,
@@ -255,6 +256,15 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         config=trait_cfg,
     )
 
+    # Dynamic personality — expertise engine
+    from backend.modules.structural_engine import LexiconScorer
+    expertise_cfg = config.get("dynamic_personality", {}).get("expertise", {})
+    expertise_engine = ExpertiseEngine(
+        expertise_repo=repos["expertise_repo"],
+        config=expertise_cfg,
+        lexicon_scorer=LexiconScorer(),
+    )
+
     sediment_cfg = config.get("sedimentation", {})
     sedimentation_retrieval = SedimentationRetrievalModule(
         message_repo=repos["message_repo"],
@@ -312,6 +322,7 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         "context_collector": context_collector,
         "conversation_metrics": conversation_metrics,
         "trait_computer": trait_computer,
+        "expertise_engine": expertise_engine,
         "homeostatic_regulator": homeostatic_regulator,
         "sedimentation_retrieval": sedimentation_retrieval,
         "diffractive_retrieval": diffractive_retrieval,
@@ -357,7 +368,7 @@ def _build_pipeline(config: dict, registry: PipelineRegistry, repos: dict, modul
     pipeline_order = config.get("pipeline", {}).get(
         "modules",
         ["embedder", "structural_scorer", "perception", "web_retrieval", "conversation_metrics",
-         "trait_computer",
+         "trait_computer", "expertise_engine",
          "context_collector", "consolidation_checkpoint", "sedimentation_retrieval",
          "diffractive_retrieval", "belief_metabolism", "skill_activator",
          "skill_workshop", "prompt_assembler", "homeostatic_regulator",

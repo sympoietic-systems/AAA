@@ -39,6 +39,15 @@ def register_all(registry: PipelineRegistry, embedder, modules: dict, belief_met
             ModuleMeta(name="aspirational_gap", description="Measures Euclidean distance between descriptive traits and commitment-derived aspirational attractors", category="reasoning"),
         ],
     ))
+    reg.register_with_meta("expertise_engine", lambda: modules["expertise_engine"], ModuleMeta(
+        name="expertise_engine", description="Accretes domain expertise mass from demonstrable structural coupling signals (aaa-note tags, skill nucleations, cross-conversation returns)",
+        category="reasoning", always_run=True,
+        children=[
+            ModuleMeta(name="signal_detection", description="Scans assistant messages for aaa-note domain tags, skill nucleations, and external note/document matches", category="reasoning"),
+            ModuleMeta(name="mass_accretion", description="Applies diminishing-returns accretion formula with weighted signal sources (self-generated > ingested)", category="reasoning"),
+            ModuleMeta(name="domain_lifecycle", description="Manages proto→active→dormant transitions based on accretion thresholds and inactivity periods", category="reasoning"),
+        ],
+    ))
     reg.register_with_meta("context_collector", lambda: modules["context_collector"], ModuleMeta(
         name="context_collector", description="Gathers conversation history",
         category="memory", always_run=True,
