@@ -514,7 +514,7 @@ export default function App() {
         onAddNote={handleAddNote}
         onDeleteNote={handleDeleteNote}
         onUpdateNote={handleUpdateNote}
-        tags={activeConv?.tags ?? EMPTY_STRING_ARRAY}
+        tags={(activeConv?.tags ?? EMPTY_STRING_ARRAY) as any}
         onAddTag={handleAddTag}
         onRemoveTag={handleRemoveTag}
         onNavigateToMessage={navigateToMessage}

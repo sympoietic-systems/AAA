@@ -8,12 +8,12 @@ import { TerminalTabs, TerminalButton } from "../../UI"
 
 type TabId = "personality" | "dreaming" | "daemons" | "pipeline" | "traces"
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "personality", label: "Personality" },
-  { id: "pipeline", label: "Pipeline" },
-  { id: "dreaming", label: "Dreaming" },
-  { id: "daemons", label: "Daemons" },
-  { id: "traces", label: "Traces" },
+const TABS: { key: TabId; label: string }[] = [
+  { key: "personality", label: "Personality" },
+  { key: "pipeline", label: "Pipeline" },
+  { key: "dreaming", label: "Dreaming" },
+  { key: "daemons", label: "Daemons" },
+  { key: "traces", label: "Traces" },
 ]
 
 interface Props {
@@ -30,7 +30,7 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
       if (tab === "beliefs" || tab === "belief") return "personality"
       if (tab === "skills" || tab === "skill") return "personality"
       if (tab === "trace") return "traces"
-      if (TABS.some((t) => t.id === tab)) return tab as TabId
+      if (TABS.some((t) => t.key === tab)) return tab as TabId
     }
     return "personality"
   })
@@ -94,7 +94,6 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
         onChange={(key) => { setActiveTab(key as TabId); setInitialSelectedId(undefined) }}
         className="px-4 py-2 shrink-0 text-[11px] select-none"
       />
-      </div>
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto px-4 py-4">

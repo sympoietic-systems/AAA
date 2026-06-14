@@ -17,10 +17,11 @@ interface TerminalButtonProps {
   onClick?: () => void
   disabled?: boolean
   className?: string
+  title?: string
 }
 
 function TerminalButtonComponent({
-  children, intent = "neutral", onClick, disabled, className = ""
+  children, intent = "neutral", onClick, disabled, className = "", title
 }: TerminalButtonProps) {
   const hoverColor = INTENT_HOVER[intent]
 
@@ -28,6 +29,7 @@ function TerminalButtonComponent({
     <button
       onClick={onClick}
       disabled={disabled}
+      title={title}
       className={`text-[10px] text-[#666] font-mono cursor-pointer select-none transition-colors disabled:text-[#333] disabled:cursor-not-allowed ${className}`}
       style={{ color: "#666" }}
       onMouseEnter={e => { if (!disabled) (e.target as HTMLElement).style.color = hoverColor }}
