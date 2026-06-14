@@ -4,7 +4,6 @@ import {
   useNotifications,
   dismissNotification,
   clearNotificationsByType,
-  markAllAsRead
 } from "../../../stores/notificationStore"
 
 interface Props {
@@ -31,13 +30,6 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [creasesOpen])
-
-  // Automatically mark notifications of the active tab as read when open
-  useEffect(() => {
-    if (creasesOpen) {
-      markAllAsRead(activeTab)
-    }
-  }, [creasesOpen, activeTab])
 
   const handleJump = (n: SedimentNotification) => {
     dismissNotification(n.id)
