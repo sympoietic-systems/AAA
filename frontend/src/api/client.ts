@@ -1422,3 +1422,25 @@ export async function updateAspirationalTraits(
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
+
+export async function recalculateCommitmentVector(
+  id: string
+): Promise<number[]> {
+  const res = await fetch(`${BASE}/agent/personality/commitment/${id}/recalculate`, {
+    method: "PUT",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  return data.vector_16d
+}
+
+export async function recalculateExpertiseVector(
+  id: string
+): Promise<number[]> {
+  const res = await fetch(`${BASE}/agent/personality/expertise/${id}/recalculate`, {
+    method: "PUT",
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  return data.vector_16d
+}

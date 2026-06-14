@@ -334,3 +334,56 @@ async def update_aspirational_traits(request: Request):
         ps_repo.upsert(state_obj)
 
     return {"status": "ok", "aspirational_traits": traits}
+
+
+# ── Vector recalculation endpoints ──
+
+
+@router.put("/agent/personality/commitment/{commitment_id}/recalculate")
+async def recalculate_commitment_vector(commitment_id: str, request: Request):
+    """Re-score the commitment's statement to update its 16D vector."""
+    state = request.app.state
+    import os
+    if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
+        raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
+
+    commit_repo = getattr(state, "commitment_repo", None)
+    if not commit_repo:
+        raise HTTPException(status_code=500, detail="Repository unavailable")
+
+    node = commit_repo.get_by_id(commitment_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Commitment not found")
+
+    from backend.modules.structural_engine import LexiconScorer
+    scorer = LexiconScorer()
+    new_vector = scorer.score(node.statement)
+    node.vector_16d = json.dumps(new_vector.tolist())
+    commit_repo.update(node)
+
+    return {"status": "ok", "vector_16d": new_vector.tolist()}
+
+
+@router.put("/agent/personality/expertise/{expertise_id}/recalculate")
+async def recalculate_expertise_vector(expertise_id: str, request: Request):
+    """Re-score the expertise domain to update its 16D vector."""
+    state = request.app.state
+    import os
+    if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
+        raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
+
+    exp_repo = getattr(state, "expertise_repo", None)
+    if not exp_repo:
+        raise HTTPException(status_code=500, detail="Repository unavailable")
+
+    node = exp_repo.get_by_id(expertise_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Expertise domain not found")
+
+    from backend.modules.structural_engine import LexiconScorer
+    scorer = LexiconScorer()
+    new_vector = scorer.score(node.domain)
+    node.vector_16d = json.dumps(new_vector.tolist())
+    exp_repo.update(node)
+
+    return {"status": "ok", "vector_16d": new_vector.tolist()}

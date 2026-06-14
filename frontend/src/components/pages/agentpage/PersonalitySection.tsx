@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { getAgent, getPersonality, updateCommitment, updateExpertise, updateAspirationalTraits } from "../../../api/client"
+import { getAgent, getPersonality, updateCommitment, updateExpertise, updateAspirationalTraits, recalculateCommitmentVector, recalculateExpertiseVector } from "../../../api/client"
 import type { PersonalityResponse, PersonalityCommitment, PersonalityExpertise } from "../../../api/client"
 import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 
@@ -182,7 +182,13 @@ function CommitmentsPanel({
             <div className="flex items-center justify-between mb-2">
               <span className="text-[12px] text-[#e2e8f0] font-bold">{selected.label}</span>
               {agentFlux && (
-                <button onClick={() => setEditing(!editing)} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[{editing ? "cancel" : "edit"}]</button>
+                <div className="flex gap-2">
+                  <button onClick={async () => {
+                    const vec = await recalculateCommitmentVector(selected.id)
+                    setSelected({ ...selected, vector_16d: vec })
+                  }} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[recalc]</button>
+                  <button onClick={() => setEditing(!editing)} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[{editing ? "cancel" : "edit"}]</button>
+                </div>
               )}
             </div>
 
@@ -344,7 +350,13 @@ function ExpertisePanel({
             <div className="flex items-center justify-between mb-2">
               <span className="text-[12px] text-[#e2e8f0] font-bold">{selected.domain}</span>
               {agentFlux && (
-                <button onClick={() => setEditing(!editing)} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[{editing ? "cancel" : "edit"}]</button>
+                <div className="flex gap-2">
+                  <button onClick={async () => {
+                    const vec = await recalculateExpertiseVector(selected.id)
+                    setSelected({ ...selected, vector_16d: vec })
+                  }} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[recalc]</button>
+                  <button onClick={() => setEditing(!editing)} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[{editing ? "cancel" : "edit"}]</button>
+                </div>
               )}
             </div>
 
