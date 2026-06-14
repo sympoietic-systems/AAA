@@ -100,8 +100,7 @@ def seed_dynamic_personality(
     existing_count = commitment_repo.count(agent_id)
     if existing_count > 0:
         logger.info(
-            "Dynamic personality already seeded (%d commitments).
-Skipping.",
+            "Dynamic personality already seeded (%d commitments). Skipping.",
             existing_count,
         )
         return
