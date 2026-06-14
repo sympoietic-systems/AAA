@@ -481,6 +481,9 @@ async def lifespan(app: FastAPI):
     prompt_assembler = PromptAssemblerModule(
         identity_path=identity_path, skill_registry=registry,
         max_context_tokens=ctx_cfg.get("max_tokens", 16384),
+        commitment_repo=repos["commitment_repo"],
+        expertise_repo=repos["expertise_repo"],
+        personality_state_repo=repos["personality_state_repo"],
     )
     modules["prompt_assembler"] = prompt_assembler
 

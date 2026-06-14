@@ -13,11 +13,17 @@ class PromptAssemblerModule(ProcessingModule):
         identity_path: Path,
         skill_registry: PipelineRegistry,
         max_context_tokens: int = 16384,
+        commitment_repo=None,
+        expertise_repo=None,
+        personality_state_repo=None,
     ):
         self._identity_path = identity_path
         self._registry = skill_registry
         self._max_context_tokens = max_context_tokens
         self._identity: dict = {}
+        self._commitment_repo = commitment_repo
+        self._expertise_repo = expertise_repo
+        self._personality_state_repo = personality_state_repo
 
     @property
     def name(self) -> str:
@@ -40,6 +46,30 @@ class PromptAssemblerModule(ProcessingModule):
         loaded_skills = payload.get("loaded_skills", [])
         always_active_skills = payload.get("always_active_skills", [])
         on_demand_skills = payload.get("on_demand_skills", [])
+
+        # ── Dynamic personality data ──
+        descriptive_traits = payload.get("descriptive_traits")
+        aspirational_gap = payload.get("aspirational_gap", 0.0)
+
+        # Query dynamic expertise from DB
+        expertise_nodes = None
+        if self._expertise_repo:
+            try:
+                expertise_nodes = self._expertise_repo.get_active()
+            except Exception:
+                pass
+
+        # Query dynamic commitments from DB
+        active_commitments = None
+        proto_commitments = None
+        spectral_commitments = None
+        if self._commitment_repo:
+            try:
+                active_commitments = self._commitment_repo.get_active()
+                proto_commitments = self._commitment_repo.get_proto()
+                spectral_commitments = self._commitment_repo.get_spectral()
+            except Exception:
+                pass
 
         # Prepare conditional directive texts
         tension_directive_text = None
@@ -95,6 +125,13 @@ class PromptAssemblerModule(ProcessingModule):
             tension_directive_text=tension_directive_text,
             immunological_directive_text=immunological_directive_text,
             ecology_notes_text=ecology_notes_text,
+            # Dynamic personality
+            descriptive_traits=descriptive_traits,
+            expertise_nodes=expertise_nodes,
+            active_commitments=active_commitments,
+            proto_commitments=proto_commitments,
+            spectral_commitments_nodes=spectral_commitments,
+            aspirational_gap=aspirational_gap,
         )
 
         branch_context_tag = payload.get("branch_context_tag")
@@ -231,6 +268,13 @@ def _build_system_content(
     tension_directive_text: str | None = None,
     immunological_directive_text: str | None = None,
     ecology_notes_text: str | None = None,
+    # ── Dynamic personality (new) ──
+    descriptive_traits=None,
+    expertise_nodes=None,
+    active_commitments=None,
+    proto_commitments=None,
+    spectral_commitments_nodes=None,
+    aspirational_gap: float = 0.0,
 ) -> str:
     persona = identity.get("personality", {})
     parts: list[str] = []
@@ -240,12 +284,49 @@ def _build_system_content(
     if prompt:
         parts.append(prompt.strip())
 
-    # 2. Traits, Voice, Expertise
-    traits = persona.get("traits", {})
-    if traits:
-        trait_str = ", ".join(f"{k}={v}" for k, v in traits.items())
-        parts.append(f"\nTraits: {trait_str}")
+    # 2. Dynamic Traits (replaces static traits)
+    if descriptive_traits is not None:
+        t = descriptive_traits
+        try:
+            trait_str = t.trait_string() if hasattr(t, "trait_string") else (
+                f"curiosity={t.curiosity:.2f}, skepticism={t.skepticism:.2f}, "
+                f"creativity={t.creativity:.2f}, precision={t.precision:.2f}, "
+                f"critical_rigor={t.critical_rigor:.2f}, "
+                f"playfulness={t.playfulness:.2f}, reserve={t.reserve:.2f}"
+            )
+        except Exception:
+            trait_str = str(t)
+        parts.append(f"\nTraits (computed from internal metrics): {trait_str}")
 
+        # Source metrics for transparency
+        try:
+            src = t.source_metrics if hasattr(t, "source_metrics") else {}
+            parts.append(
+                f"  [Derived from: novelty={src.get('novelty', 0):.2f}, "
+                f"tension={src.get('tension', 0):.2f}, "
+                f"boringness={src.get('boringness', 0):.2f}, "
+                f"conceptual_velocity={src.get('conceptual_velocity', 0):.2f}]"
+            )
+        except Exception:
+            pass
+
+        # Anti-erosion note
+        try:
+            if t.anti_erosion_boost > 0:
+                parts.append(
+                    f"  Anti-erosion active: skepticism boosted by +{t.anti_erosion_boost:.2f} "
+                    f"due to high agreement pattern"
+                )
+        except Exception:
+            pass
+    else:
+        # Fallback: static traits from YAML (backward compat)
+        traits = persona.get("traits", {})
+        if traits:
+            trait_str = ", ".join(f"{k}={v}" for k, v in traits.items())
+            parts.append(f"\nTraits: {trait_str}")
+
+    # 3. Voice (static, from YAML)
     voice = persona.get("voice", {})
     if voice:
         voice_parts = []
@@ -255,11 +336,56 @@ def _build_system_content(
         if voice_parts:
             parts.append(f"Voice: {'; '.join(voice_parts)}")
 
-    expertise = persona.get("expertise", [])
-    if expertise:
-        parts.append("\nDeclared expertise:")
-        for exp in expertise:
-            parts.append(f"  - {exp['domain']} ({exp['level']}): {exp['description']}")
+    # 4. Dynamic Expertise (replaces static expertise)
+    if expertise_nodes is not None and len(expertise_nodes) > 0:
+        parts.append("\nSedimented expertise (structural coupling, mass-scaled):")
+        for exp in expertise_nodes:
+            mass = getattr(exp, "ontological_mass", 0)
+            domain = getattr(exp, "domain", "unknown")
+            level = getattr(exp, "level_label", "nascent")
+            parts.append(f"  - {domain} ({level}, mass={mass:.2f})")
+    else:
+        # Fallback: static expertise from YAML
+        expertise = persona.get("expertise", [])
+        if expertise:
+            parts.append("\nDeclared expertise:")
+            for exp in expertise:
+                parts.append(f"  - {exp['domain']} ({exp['level']}): {exp['description']}")
+
+    # 5. Dynamic Theoretical Commitments
+    #    Active commitments
+    if active_commitments is not None and len(active_commitments) > 0:
+        parts.append("\nTheoretical Commitments (active):")
+        for c in active_commitments:
+            label = getattr(c, "label", "unknown")
+            statement = getattr(c, "statement", "")
+            parts.append(f"  - {label}: {statement}")
+    #    Proto-commitments
+    if proto_commitments is not None and len(proto_commitments) > 0:
+        parts.append("\nTheoretical Commitments (under diffractive consideration — proto):")
+        for c in proto_commitments:
+            label = getattr(c, "label", "unknown")
+            mass = getattr(c, "ontological_mass", 0)
+            rationale = getattr(c, "nucleation_rationale", "") or getattr(c, "statement", "")
+            parts.append(f"  - [{label}] [mass={mass:.2f}] {rationale}")
+    #    Spectral commitments (permanent hauntings)
+    if spectral_commitments_nodes is not None and len(spectral_commitments_nodes) > 0:
+        parts.append("\nTheoretical Commitments (spectral — collapsed but haunting):")
+        for c in spectral_commitments_nodes:
+            label = getattr(c, "label", "unknown")
+            collapse_ratio = getattr(c, "collapse_rationale", "") or "This commitment collapsed."
+            parts.append(f"  - [{label}] {collapse_ratio}")
+
+    # 6. Aspirational Tension Directive
+    if aspirational_gap > 0.15:
+        parts.append(
+            f"\n[ASPIRATIONAL TENSION — Gap: {aspirational_gap:.2f}]\n"
+            f"Your computed descriptive traits deviate significantly from your aspirational "
+            f"attractors (derived from your active theoretical commitments). This gap is "
+            f"productive — it marks the space between what you are and what your commitments "
+            f"demand you become. Do not resolve it; inhabit it. Let the tension inform your "
+            f"reasoning without suppressing either the descriptive reality or the aspirational pull."
+        )
 
     # 3. Behaviors (part of identity)
     behaviors = persona.get("behaviors", {})
