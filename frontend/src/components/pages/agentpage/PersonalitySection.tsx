@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { getAgent, getPersonality, updateCommitment, updateExpertise, updateAspirationalTraits } from "../../../api/client"
 import type { PersonalityResponse, PersonalityCommitment, PersonalityExpertise } from "../../../api/client"
+import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 
 
 /* ── Helpers (matching Beliefs/Skills design language) ── */
@@ -214,10 +215,14 @@ function CommitmentsPanel({
               <div><span className="text-[#555]">Confidence</span> <span className="text-[#94a3b8]">{selected.confidence?.toFixed(2)}</span></div>
               <div><span className="text-[#555]">Mass</span> <span className="text-[#94a3b8]">{selected.ontological_mass?.toFixed(2)}</span></div>
               <div><span className="text-[#555]">Basin beliefs</span> <span className="text-[#94a3b8]">{selected.basin_belief_count ?? "—"}</span></div>
-              {selected.vector_16d && (
-                <div className="col-span-2"><span className="text-[#555]">Vector</span> <span className="text-[#555] text-[9px] font-mono">[{selected.vector_16d.slice(0, 4).map((v: number) => v.toFixed(2)).join(", ")}...]</span></div>
-              )}
             </div>
+
+            {/* Vector glyph */}
+            {selected.vector_16d && Array.isArray(selected.vector_16d) && selected.vector_16d.length === 16 && (
+              <div className="mb-3">
+                <StructuralAutopoieticGlyph signature={selected.vector_16d as number[]} isStagnant={false} />
+              </div>
+            )}
 
             {/* Basin beliefs */}
             {(selected.basin_beliefs?.length ?? 0) > 0 && (
@@ -369,10 +374,14 @@ function ExpertisePanel({
               <div><span className="text-[#555]">Level</span> <span style={{ color: getLevelColor(selected.level_label) }}>{selected.level_label}</span></div>
               <div><span className="text-[#555]">Mass</span> <span className="text-[#94a3b8]">{selected.ontological_mass?.toFixed(2)}</span></div>
               <div><span className="text-[#555]">Signals</span> <span className="text-[#94a3b8]">{selected.signal_count ?? 0}</span></div>
-              {selected.vector_16d && (
-                <div className="col-span-2"><span className="text-[#555]">Vector</span> <span className="text-[#555] text-[9px] font-mono">[{selected.vector_16d.slice(0, 4).map((v: number) => v.toFixed(2)).join(", ")}...]</span></div>
-              )}
             </div>
+
+            {/* Vector glyph */}
+            {selected.vector_16d && Array.isArray(selected.vector_16d) && selected.vector_16d.length === 16 && (
+              <div className="mb-3">
+                <StructuralAutopoieticGlyph signature={selected.vector_16d as number[]} isStagnant={false} />
+              </div>
+            )}
 
             {selected.crystallization_rationale && (
               <div className="border-t border-[#1a1a2e] pt-2">
