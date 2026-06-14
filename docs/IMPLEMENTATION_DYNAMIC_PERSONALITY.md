@@ -3,7 +3,7 @@
 > **ADR**: [ADR-048](./decisions/ADR-048-dynamic-autopoietic-personality-cascade.md)  
 > **Design**: [DYNAMIC_PERSONALITY_SYSTEM.md](./systems/DYNAMIC_PERSONALITY_SYSTEM.md)  
 > **Date**: 2026-06-14  
-> **Status**: Planning — Implementation NOT Started
+> **Status**: Implemented — 15 commits on `feature/dynamic-personality-cascade`
 
 ---
 
@@ -334,3 +334,71 @@ After all 6 steps complete:
 - [ ] Disabling dynamic personality falls back to static YAML
 - [ ] No regression in existing belief/skill behavior
 - [ ] Symbia consulted on philosophical alignment of trait formulas and thresholds
+
+---
+
+## Actual Implementation (15 commits, branch `feature/dynamic-personality-cascade`)
+
+The implementation followed the 6-step plan closely, with 9 additional commits for notifications, API, frontend, vector recalculation, and bug fixes.
+
+### Commit History
+
+```
+83ca645 Add description field to expertise_nodes
+6504ad4 Fix: use score_async() instead of score() — avoids nest_asyncio error
+e3d1d81 Fix: let LLM scorer run during vector recalc
+b77c7b2 Fix: use shared pipeline CompositeStructuralScorer for vector recalc
+f41f2ce Fix: bypass CompositeStructuralScorer — use Lexicon+Topology directly
+b4cb51c Fix: use CompositeStructuralScorer for vector scoring (not bare LexiconScorer)
+e1cb699 Use StructuralAutopoieticGlyph in personality detail panels
+f902957 Fix: add recalculating... feedback to vector recalc buttons
+69764f2 Add manual vector recalculation for commitments and expertise
+6223b4a Refactor Personality UX: match Beliefs/Skills design + basin beliefs + vectors
+f95e186 Personality tab: 3 sub-tabs (Traits | Commitments | Expertise)
+0ae7c8d Fix: move seeding out of engine into one-time script
+55f1c4d Add /agent/personality API + flux edit endpoints
+1d0b3a7 Notification traces for personality events
+aa2dc96 Fix: unterminated string literal in seeding.py
+e3953c7 Frontend Personality tab
+55f1c4d API endpoint + flux edit
+1d0b3a7 Notification traces
+2e0a96d Prompt Assembler integration
+63199fb CommitmentStore
+f0de7d0 ExpertiseEngine
+107967b TraitComputer
+2f69133 Seeding & YAML trim
+bac340d Schema + Models
+```
+
+### Key Deviations from Original Plan
+
+1. **Seeding is a standalone script** (`backend/scripts/seed_dynamic_personality.py`), not auto-run in `main.py`. Run once manually after migration: `python -m backend.scripts.seed_dynamic_personality` (with `--force` to re-seed).
+
+2. **Canonical seed data is hardcoded** in `SEED_COMMITMENTS` and `SEED_EXPERTISE` — the trimmed `identity.yaml` no longer contains these sections, so the seeding module carries the original baseline.
+
+3. **Vector scoring uses shared pipeline scorer**: `[recalc]` button on commitments/expertise uses `app.state.structural_scorer._scorer.score_async()` — the same `CompositeStructuralScorer` as beliefs/skills/messages, ensuring consistent 16D vectors.
+
+4. **Expertise has a `description` field** (m026 migration) — stores the canonical descriptions from the original identity.yaml (e.g., "Karen Barad, Jane Bennett, agential realism..."). Rendered in both the system prompt and the frontend detail panel.
+
+5. **Basin beliefs** are computed in the API endpoint: for each commitment, `_find_basin_beliefs()` finds beliefs within cosine similarity > 0.6 of the commitment vector. Displayed in the frontend detail panel with similarity scores.
+
+6. **Personality tab uses 3 sub-tabs** (Traits | Commitments | Expertise) with count badges (`7a·0p·0s`). Commitments/Expertise panels follow the Beliefs/Skills two-column list+detail design pattern with compact list items, stage badges, and `StructuralAutopoieticGlyph`.
+
+7. **Notification traces** fire on: commitment nucleation/collapse/mass growth, expertise crystallization/dormancy, anti-erosion activation, aspirational gap crossing. Trace `source_type` enables navigation from Traces tab to Personality tab.
+
+8. **Frontend flux-edit mode** (`AAA_AGENT_FLUX=true`): `[edit]` on commitments/expertise for inline editing, `[recalc]` to re-score vectors via LLM-powered scorer.
+
+### Files: Final Count
+
+| Category | Count | Files |
+|----------|-------|-------|
+| New modules | 3 | `trait_computer.py`, `expertise_engine.py`, `commitment_store.py` |
+| New scripts | 1 | `scripts/seed_dynamic_personality.py` |
+| New migrations | 2 | `m025_dynamic_personality.py`, `m026_expertise_description.py` |
+| New repositories | 3 | `commitment.py`, `expertise.py`, `personality_state.py` |
+| New seeding | 1 | `personality/seeding.py` |
+| New frontend | 1 | `PersonalitySection.tsx` |
+| New docs | 3 | ADR-048, DYNAMIC_PERSONALITY_SYSTEM.md, IMPLEMENTATION_DYNAMIC_PERSONALITY.md |
+| Modified backend | 7 | `models.py`, `row_mappers.py`, `repository.py`, `assembler.py`, `identity.yaml`, `main.py`, `config.yaml` |
+| Modified frontend | 2 | `client.ts`, `AgentPage.tsx` |
+| **Unchanged** | 3 | `belief_engine.py`, `conversation_metrics.py`, `skill_workshop.py` |

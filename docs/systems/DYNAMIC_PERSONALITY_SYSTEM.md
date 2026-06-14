@@ -2,7 +2,7 @@
 
 > **ADR**: [ADR-048](./decisions/ADR-048-dynamic-autopoietic-personality-cascade.md)  
 > **Date**: 2026-06-14  
-> **Status**: Design Phase — Implementation NOT Started
+> **Status**: Implemented — on `feature/dynamic-personality-cascade` branch
 
 ---
 
@@ -160,12 +160,13 @@ CREATE TABLE IF NOT EXISTS expertise_nodes (
     id TEXT PRIMARY KEY,
     agent_id TEXT NOT NULL DEFAULT 'symbia',
     domain TEXT NOT NULL,                      -- e.g., "systems_theory", "new_materialism"
+    description TEXT NOT NULL DEFAULT '',      -- e.g., "Karen Barad, Jane Bennett, agential realism..."
     lifecycle_stage TEXT NOT NULL DEFAULT 'proto'
         CHECK(lifecycle_stage IN ('proto', 'active', 'dormant')),
     ontological_mass REAL NOT NULL DEFAULT 0.05, -- 0.05 (proto) → up to ~3.0 (deeply coupled)
     level_label TEXT NOT NULL DEFAULT 'nascent'  -- computed: nascent/developing/advanced/dormant
         CHECK(level_label IN ('nascent', 'developing', 'advanced', 'dormant')),
-    vector_16d TEXT NOT NULL DEFAULT '[]',    -- LexiconScorer structural signature
+    vector_16d TEXT NOT NULL DEFAULT '[]',    -- CompositeStructuralScorer signature
     signal_count INTEGER NOT NULL DEFAULT 0,  -- total structural coupling events
     last_signal_at DATETIME,                  -- for dormancy check
     crystallization_rationale TEXT,           -- why proto → active
@@ -177,6 +178,10 @@ CREATE TABLE IF NOT EXISTS expertise_nodes (
 CREATE INDEX IF NOT EXISTS idx_expertise_agent ON expertise_nodes(agent_id);
 CREATE INDEX IF NOT EXISTS idx_expertise_stage ON expertise_nodes(agent_id, lifecycle_stage);
 ```
+
+> **Note**: `description` was added via `m026_expertise_description` migration (ALTER TABLE ADD COLUMN).
+> Vector scoring uses `LexiconScorer + TopologyScorer` blend (50/50) during seeding, and the full
+> `CompositeStructuralScorer` (shared pipeline instance) during manual `[recalc]` — same scorer as beliefs/skills.
 
 ### 2.4 `personality_state`
 

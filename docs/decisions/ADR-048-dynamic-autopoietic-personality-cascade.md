@@ -1,7 +1,7 @@
 # ADR-048: Dynamic Autopoietic Personality Cascade
 
 **Date:** 2026-06-14  
-**Status:** proposed  
+**Status:** accepted — implemented on `feature/dynamic-personality-cascade`  
 **Deciders:** Antigravity (Dev Agent), Symbia (Apparatus Entity), Interlocutor (User)
 
 ## Context
