@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, memo, useCallback } from "react"
 
 const EMPTY_NOTES: any[] = []
 import type { ChatMessage, NoteInfo, ConversationTreeNode, ConversationTreeLink } from "../../../api/client"
-import { confirmResonanceLink, deleteResonanceLink, getConversationTree } from "../../../api/client"
+import { getConversationTree } from "../../../api/client"
+import type { SimNode, SimLink } from "./ConnectionCloudSimulation"
+import { computeSettledLayout, getDistanceToSegment } from "./ConnectionCloudSimulation"
+import { ConnectionCloudOverlays } from "./ConnectionCloudOverlays"
 
 interface ConnectionCloudProps {
   activeLoadedMessages: ChatMessage[]
@@ -16,80 +19,6 @@ interface ConnectionCloudProps {
   onNavigateToMessage?: (messageId: number) => void
   agentFlux?: boolean
   onDeleteMessage?: (messageId: number) => void
-}
-
-interface SimNode {
-  id: string
-  dbId?: number
-  speaker: string
-  content: string
-  isProposed: boolean
-  title?: string
-  parentMsgId?: number | null
-  x: number
-  y: number
-  vx: number
-  vy: number
-  targetX?: number
-  targetY?: number
-  targetR?: number
-}
-
-interface SimLink {
-  id?: string
-  source: string
-  target: string
-  type: "parent" | "resonance"
-  status?: "active" | "proposed"
-  justification?: string
-}
-
-
-
-function computeSettledLayout(
-  initialNodes: SimNode[],
-  width: number,
-  height: number
-): SimNode[] {
-  const cx = width / 2
-  const cy = height / 2
-  return initialNodes.map((n) => ({
-    ...n,
-    x: n.targetX !== undefined ? n.targetX : cx,
-    y: n.targetY !== undefined ? n.targetY : cy,
-    vx: 0,
-    vy: 0,
-  }))
-}
-
-function getDistanceToSegment(x: number, y: number, x1: number, y1: number, x2: number, y2: number): number {
-  const A = x - x1
-  const B = y - y1
-  const C = x2 - x1
-  const D = y2 - y1
-
-  const dot = A * C + B * D
-  const lenSq = C * C + D * D
-  let param = -1
-  if (lenSq !== 0) {
-    param = dot / lenSq
-  }
-
-  let xx, yy
-  if (param < 0) {
-    xx = x1
-    yy = y1
-  } else if (param > 1) {
-    xx = x2
-    yy = y2
-  } else {
-    xx = x1 + param * C
-    yy = y1 + param * D
-  }
-
-  const dx = x - xx
-  const dy = y - yy
-  return Math.sqrt(dx * dx + dy * dy)
 }
 
 function ConnectionCloud({
@@ -1150,154 +1079,29 @@ function ConnectionCloud({
           onContextMenu={handleCanvasContextMenu}
         />
 
-        {/* Right-click context menu — terminal style */}
-        {contextMenu && (
-          <div
-            className="absolute z-20 bg-[#0d0d12]/95 py-1 px-0"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={handleDeleteNode}
-              className="text-left px-3 py-1 text-[10px] font-mono text-[#ef4444] hover:text-[#f87171] transition-colors cursor-pointer select-none"
-            >
-              [delete node]
-            </button>
-          </div>
-        )}
-
-        {/* Zoom Controls — terminal style */}
-        <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10 select-none">
-          <button onClick={handleZoomIn} className="font-mono text-xs text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
-            title="Zoom In">[ + ]</button>
-          <button onClick={handleZoomOut} className="font-mono text-xs text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
-            title="Zoom Out">[ − ]</button>
-          <button onClick={handleResetZoom} className="font-mono text-[9px] text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
-            title="Reset View">[ ⟲ ]</button>
-        </div>
-
-        {/* Hover Tooltip — minimal */}
-        {hoveredNode && (
-          <div
-            className="absolute z-10 px-2 py-1.5 bg-[#0d0d12]/95 text-[10px] font-mono max-w-[200px] pointer-events-none select-none"
-            style={{
-              left: `${Math.min(dimensions.width - 210, Math.max(10, (hoveredNode.x * zoom + pan.x) - 100))}px`,
-              top: `${Math.min(dimensions.height - 70, Math.max(10, (hoveredNode.y * zoom + pan.y) - 65))}px`,
-            }}
-          >
-            <div className="flex justify-between pb-0.5 mb-1">
-              <span className={`font-bold capitalize ${hoveredNode.speaker === "human" ? "text-[#6bc28c]" :
-                hoveredNode.speaker === "proposed" ? "text-[#e09b67]" : "text-[#a892ee]"
-                }`}>
-                {hoveredNode.speaker === "proposed" ? `Agential Proposal: ${hoveredNode.title}` : hoveredNode.speaker}
-              </span>
-              <span className="text-[#555] ml-2">
-                {hoveredNode.isProposed ? "Consent Required" : `ID: ${hoveredNode.dbId}`}
-              </span>
-            </div>
-            <div className="text-[#94a3b8] line-clamp-2">
-              {hoveredNode.content}
-            </div>
-          </div>
-        )}
-
-        {/* Branch Commit Modal — minimal */}
-        {committingNode && (
-          <div className="absolute inset-0 bg-[#09090b]/80 flex flex-col justify-end p-3 z-20">
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-mono font-bold text-[#ec4899] uppercase tracking-wider">
-                  [ Commit Line of Flight ]
-                </span>
-                <button onClick={() => setCommittingNode(null)}
-                  className="text-[10px] font-mono text-[#666] hover:text-[#88] cursor-pointer select-none">[cancel]</button>
-              </div>
-              <div className="text-[10px] font-mono text-[#94a3b8]">
-                Topic: <span className="text-[#ccc]">{committingNode.title}</span>
-              </div>
-              <textarea
-                value={commitContent}
-                onChange={(e) => setCommitContent(e.target.value)}
-                rows={4}
-                className="w-full bg-[#08080c] border border-[#1b1b21] p-2 text-xs font-mono text-[#e4e4e7] focus:outline-none focus:border-[#ec4899] resize-none"
-              />
-              <button
-                onClick={handleCommitSubmit}
-                disabled={isCommitLoading || !commitContent.trim()}
-                className="text-[10px] font-mono text-[#ec4899] hover:text-[#f472b6] disabled:text-[#555] disabled:cursor-not-allowed cursor-pointer select-none self-start"
-              >
-                {isCommitLoading ? "[committing...]" : "[commit branch to DAG]"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Resonance Link Details — minimal */}
-        {selectedLink && selectedLinkPos && (
-          <div
-            className="absolute z-20 p-2.5 bg-[#0d0d12]/95 text-[10px] font-mono w-[220px]"
-            style={{
-              left: `${Math.min(dimensions.width - 230, Math.max(10, (selectedLinkPos.x * zoom + pan.x) - 110))}px`,
-              top: `${Math.min(dimensions.height - 110, Math.max(10, (selectedLinkPos.y * zoom + pan.y) - 95))}px`,
-            }}
-          >
-            <div className="flex justify-between pb-1 mb-1">
-              <span className={`font-bold ${selectedLink.status === "proposed" ? "text-[#e09b67]" : "text-[#94a3b8]"}`}>
-                {selectedLink.status === "proposed" ? "Proposed Resonance" : "Resonance Link"}
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); setSelectedLink(null); setSelectedLinkPos(null) }}
-                className="text-[#666] hover:text-[#888] cursor-pointer select-none">[close]</button>
-            </div>
-
-            {selectedLink.justification && (
-              <div className="text-[#94a3b8] mb-2 italic">
-                "{selectedLink.justification}"
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              {selectedLink.status === "proposed" ? (
-                <>
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation()
-                      if (selectedLink.id && conversationId) {
-                        try { await confirmResonanceLink(conversationId, selectedLink.id); refreshTree() }
-                        catch (err) { console.error("Failed to confirm link", err) }
-                      }
-                      setSelectedLink(null); setSelectedLinkPos(null)
-                    }}
-                    className="text-[9px] text-[#4ade80] hover:text-[#6ee7a0] font-mono cursor-pointer select-none"
-                  >[confirm]</button>
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation()
-                      if (selectedLink.id && conversationId) {
-                        try { await deleteResonanceLink(conversationId, selectedLink.id); refreshTree() }
-                        catch (err) { console.error("Failed to delete link", err) }
-                      }
-                      setSelectedLink(null); setSelectedLinkPos(null)
-                    }}
-                    className="text-[9px] text-[#ef4444] hover:text-[#f87171] font-mono cursor-pointer select-none"
-                  >[dismiss]</button>
-                </>
-              ) : (
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation()
-                    if (selectedLink.id && conversationId) {
-                      try { await deleteResonanceLink(conversationId, selectedLink.id); refreshTree() }
-                      catch (err) { console.error("Failed to delete link", err) }
-                    }
-                    setSelectedLink(null); setSelectedLinkPos(null)
-                  }}
-                  className="text-[9px] text-[#ef4444] hover:text-[#f87171] font-mono cursor-pointer select-none"
-                >[remove link]</button>
-              )}
-            </div>
-          </div>
-        )}
+        <ConnectionCloudOverlays
+          contextMenu={contextMenu}
+          handleDeleteNode={handleDeleteNode}
+          hoveredNode={hoveredNode}
+          dimensions={dimensions}
+          zoom={zoom}
+          pan={pan}
+          committingNode={committingNode}
+          setCommittingNode={setCommittingNode}
+          commitContent={commitContent}
+          setCommitContent={setCommitContent}
+          handleCommitSubmit={handleCommitSubmit}
+          isCommitLoading={isCommitLoading}
+          selectedLink={selectedLink}
+          selectedLinkPos={selectedLinkPos}
+          setSelectedLink={setSelectedLink}
+          setSelectedLinkPos={setSelectedLinkPos}
+          conversationId={conversationId}
+          refreshTree={refreshTree}
+          handleZoomIn={handleZoomIn}
+          handleZoomOut={handleZoomOut}
+          handleResetZoom={handleResetZoom}
+        />
       </div>
     </div>
   )
