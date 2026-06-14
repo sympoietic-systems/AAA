@@ -48,6 +48,16 @@ def register_all(registry: PipelineRegistry, embedder, modules: dict, belief_met
             ModuleMeta(name="domain_lifecycle", description="Manages proto→active→dormant transitions based on accretion thresholds and inactivity periods", category="reasoning"),
         ],
     ))
+    reg.register_with_meta("commitment_store", lambda: modules["commitment_store"], ModuleMeta(
+        name="commitment_store", description="Manages theoretical commitment lifecycle — post-hoc belief filter, daemon-driven nucleation/collapse, mass recalculation",
+        category="reasoning", always_run=True,
+        children=[
+            ModuleMeta(name="belief_filter", description="Blocks proto-belief proposals that contradict active commitments or re-adopt spectral territory", category="reasoning"),
+            ModuleMeta(name="nucleation_scanner", description="Background daemon scans belief tension field for orphan clusters with sustained diffractive tension to nucleate proto-commitments", category="reasoning"),
+            ModuleMeta(name="collapse_detector", description="Detects commitment collapse when all basin beliefs have collapsed and confidence drops below threshold", category="reasoning"),
+            ModuleMeta(name="mass_recalculator", description="Periodically recalculates commitment ontological mass as sum of in-basin belief masses", category="reasoning"),
+        ],
+    ))
     reg.register_with_meta("context_collector", lambda: modules["context_collector"], ModuleMeta(
         name="context_collector", description="Gathers conversation history",
         category="memory", always_run=True,

@@ -30,6 +30,7 @@ from backend.modules.background_tasks.actions.refine_skill import RefineSkillAct
 from backend.modules.background_tasks.actions.metabolize_skill import MetabolizeSkillAction
 from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
+from backend.modules.commitment_store import CommitmentStore
 from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
 from backend.modules.context_collector import ContextCollectorModule
 from backend.modules.conversation_metrics import ConversationMetricsModule
@@ -259,10 +260,20 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
     # Dynamic personality — expertise engine
     from backend.modules.structural_engine import LexiconScorer
     expertise_cfg = config.get("dynamic_personality", {}).get("expertise", {})
+    expert_lexicon = LexiconScorer()
     expertise_engine = ExpertiseEngine(
         expertise_repo=repos["expertise_repo"],
         config=expertise_cfg,
-        lexicon_scorer=LexiconScorer(),
+        lexicon_scorer=expert_lexicon,
+    )
+
+    # Dynamic personality — commitment store
+    commitment_cfg = config.get("dynamic_personality", {}).get("commitments", {})
+    commitment_store = CommitmentStore(
+        commitment_repo=repos["commitment_repo"],
+        belief_repo=repos["belief_repo"],
+        config=commitment_cfg,
+        lexicon_scorer=expert_lexicon,
     )
 
     sediment_cfg = config.get("sedimentation", {})
@@ -323,6 +334,7 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         "conversation_metrics": conversation_metrics,
         "trait_computer": trait_computer,
         "expertise_engine": expertise_engine,
+        "commitment_store": commitment_store,
         "homeostatic_regulator": homeostatic_regulator,
         "sedimentation_retrieval": sedimentation_retrieval,
         "diffractive_retrieval": diffractive_retrieval,
@@ -369,6 +381,7 @@ def _build_pipeline(config: dict, registry: PipelineRegistry, repos: dict, modul
         "modules",
         ["embedder", "structural_scorer", "perception", "web_retrieval", "conversation_metrics",
          "trait_computer", "expertise_engine",
+         "commitment_store",
          "context_collector", "consolidation_checkpoint", "sedimentation_retrieval",
          "diffractive_retrieval", "belief_metabolism", "skill_activator",
          "skill_workshop", "prompt_assembler", "homeostatic_regulator",
