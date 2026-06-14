@@ -3,39 +3,58 @@ import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeli
 import type { BeliefNodeInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
 import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
+import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "../shared/helpers"
 
-// Reuse category colors & helper methods from parent
-function getCategoryColor(c: string) {
-  switch (c?.toLowerCase()) {
-    case "foundational": return "#4ade80"
-    case "ontological": return "#a78bfa"
-    case "methodological": return "#facc15"
-    default: return "#60a5fa"
-  }
+/* ── Module-level constants ── */
+
+type DetailTab = "details" | "log" | "version"
+
+/* ── Shared version item (no bg/border) ── */
+
+function VersionItem({
+  version, label, timestamp, changelog,
+  isCurrent, agentFlux, isExpanded, hasDiff,
+  onToggleDiff, onRevert, isReverting, children,
+}: {
+  version: number; label: string; timestamp: string; changelog: string
+  isCurrent: boolean; agentFlux: boolean; isExpanded: boolean; hasDiff: boolean
+  onToggleDiff: () => void; onRevert?: () => void; isReverting?: boolean
+  children?: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-1 text-[10px] font-mono">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[#a78bfa] font-bold">v{version}</span>
+            <span className="text-[#555] text-[9px]">{label}</span>
+            <span className="text-[#555] text-[9px]">{timestamp}</span>
+          </div>
+          <div className="text-[#aaa] text-[9px] mt-0.5 truncate" title={changelog}>
+            {changelog}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {agentFlux && !isCurrent && onRevert && (
+            <button onClick={onRevert} disabled={isReverting}
+              className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline disabled:text-[#555] cursor-pointer select-none font-bold">
+              {isReverting ? "[reverting...]" : "[revert]"}
+            </button>
+          )}
+          {hasDiff && (
+            <button onClick={onToggleDiff}
+              className="text-[9px] text-[#888] hover:text-[#ccc] hover:underline cursor-pointer select-none font-bold">
+              {isExpanded ? "[collapse]" : "[diff]"}
+            </button>
+          )}
+        </div>
+      </div>
+      {isExpanded && children}
+    </div>
+  )
 }
 
-function getStageColor(s: string) {
-  switch (s) {
-    case "nucleation": return "#f59e0b"
-    case "accretion": return "#fb923c"
-    case "crystallized": return "#4ade80"
-    case "senescence": return "#94a3b8"
-    case "collapsed": return "#ef4444"
-    default: return "#6c6c8a"
-  }
-}
-
-function getStageLabel(s: string) {
-  switch (s) {
-    case "nucleation": return "nucleating"
-    case "accretion": return "accreting"
-    case "crystallized": return "crystallized"
-    case "senescence": return "senescing"
-    case "collapsed": return "collapsed"
-    case "faded": return "faded"
-    default: return s
-  }
-}
+/* ── Main Component ── */
 
 interface BeliefDetailProps {
   belief: BeliefNodeInfo | null
@@ -53,14 +72,13 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
   const [editConfidence, setEditConfidence] = useState(0.5)
   const [editOntologicalMass, setEditOntologicalMass] = useState(0.5)
   const [editLifecycleStage, setEditLifecycleStage] = useState("crystallized")
-
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const [isSavingOrDeleting, setIsSavingOrDeleting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const [versions, setVersions] = useState<any[]>([])
   const [expandedVersions, setExpandedVersions] = useState<Record<number, boolean>>({})
-  const [activeTab, setActiveTab] = useState<"metabolism" | "history">("metabolism")
+  const [activeTab, setActiveTab] = useState<DetailTab>("details")
 
   const [vetMode, setVetMode] = useState<"none" | "adopt" | "reject" | "merge">("none")
   const [adoptLabel, setAdoptLabel] = useState("")
@@ -81,63 +99,34 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
 
   useEffect(() => {
     if (vetMode === "merge" && targetBeliefId) {
-      const tb = activeBeliefs.find(ab => ab.id === targetBeliefId);
-      if (tb) {
-        setMergedStatement(tb.statement);
-      }
-    } else {
-      setMergedStatement("");
-    }
+      const tb = activeBeliefs.find(ab => ab.id === targetBeliefId)
+      if (tb) setMergedStatement(tb.statement)
+    } else { setMergedStatement("") }
   }, [vetMode, targetBeliefId, activeBeliefs])
 
-  // Reset editing/confirming states and fetch versions when selected belief changes
   useEffect(() => {
-    setIsEditing(false)
-    setIsConfirmingDelete(false)
-    setErrorMsg(null)
-    setExpandedVersions({})
-    setVetMode("none")
-    setAdoptLabel("")
-    setAdoptStatement("")
-    setRejectionRationale("")
-    setTargetBeliefId("")
-    setMergedStatement("")
-    setIsRefining(false)
-    setIsVetting(false)
-    setIsSynthesizing(false)
-
-    if (!belief) {
-      setVersions([])
-      return
-    }
-
-    setVersions([])
-    setActiveTab("metabolism")
-
+    setIsEditing(false); setIsConfirmingDelete(false); setErrorMsg(null)
+    setExpandedVersions({}); setVetMode("none")
+    setAdoptLabel(""); setAdoptStatement(""); setRejectionRationale("")
+    setTargetBeliefId(""); setMergedStatement("")
+    setIsRefining(false); setIsVetting(false); setIsSynthesizing(false)
+    if (!belief) { setVersions([]); return }
+    setVersions([]); setActiveTab("details")
     if (belief.is_proposal) {
       setAdoptLabel(belief.suggested_label || belief.label || "")
       setAdoptStatement(belief.suggested_statement || belief.statement || "")
-      if (belief.potential_merge_target) {
-        setTargetBeliefId(belief.potential_merge_target)
-      } else if (activeBeliefs && activeBeliefs.length > 0) {
-        setTargetBeliefId(activeBeliefs[0].id)
-      }
+      if (belief.potential_merge_target) setTargetBeliefId(belief.potential_merge_target)
+      else if (activeBeliefs && activeBeliefs.length > 0) setTargetBeliefId(activeBeliefs[0].id)
       return
     }
-
     fetch(`/api/beliefs/${belief.id}/versions`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setVersions(data)
-        }
-      })
+      .then(res => res.json()).then(data => { if (Array.isArray(data)) setVersions(data) })
       .catch(e => console.error("Failed to load belief versions:", e))
   }, [belief, activeBeliefs])
 
   if (!belief) {
     return (
-      <div className="flex-1 min-h-0 flex items-center justify-center border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50">
+      <div className="flex-1 min-h-0 flex items-center justify-center">
         <span className="text-[11px] text-[#444] italic font-mono">select a node to inspect</span>
       </div>
     )
@@ -146,674 +135,132 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
   const b = belief
   const catColor = getCategoryColor(b.category)
   const stage = b.lifecycle_stage || "crystallized"
-  const stageColor = getStageColor(stage)
-  const isProto = stage === "nucleation" || stage === "accretion"
-  const isGhost = stage === "collapsed" || stage === "faded"
+  const stageColor = getBeliefStageColor(stage)
 
-  let vec: number[] = []
-  try { if (b.vector_16d) vec = JSON.parse(b.vector_16d) } catch { }
-
-  const handleRefine = async () => {
-    setIsRefining(true)
-    setErrorMsg(null)
-    try {
-      const result = await refineBeliefProposal(b.id)
-      if (result.status === "error") {
-        setErrorMsg(result.message || "Failed to refine proposal")
-      } else {
-        if (onReload) {
-          onReload()
-        }
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || String(e))
-    } finally {
-      setIsRefining(false)
-    }
-  }
-
-  const handleVet = async (action: "adopt" | "reject" | "merge") => {
-    setIsVetting(true)
-    setErrorMsg(null)
-    try {
-      const payload: any = { action }
-      if (action === "adopt") {
-        if (!adoptLabel.trim()) {
-          setErrorMsg("Suggested label is required for adoption")
-          setIsVetting(false)
-          return
-        }
-        if (!adoptStatement.trim()) {
-          setErrorMsg("Suggested statement is required for adoption")
-          setIsVetting(false)
-          return
-        }
-        payload.suggested_label = adoptLabel.trim()
-        payload.suggested_statement = adoptStatement.trim()
-      } else if (action === "reject") {
-        if (!rejectionRationale.trim()) {
-          setErrorMsg("Rejection rationale is required")
-          setIsVetting(false)
-          return
-        }
-        payload.rejection_rationale = rejectionRationale.trim()
-      } else if (action === "merge") {
-        if (!targetBeliefId) {
-          setErrorMsg("Please select a target belief to merge into")
-          setIsVetting(false)
-          return
-        }
-        payload.target_belief_id = targetBeliefId
-        payload.merged_statement = mergedStatement.trim()
-      }
-
-      const result = await vetBeliefProposal(b.id, payload)
-      if (result.status === "ok" || result.status === "success") {
-        if (onReload) {
-          onReload()
-        }
-      } else {
-        setErrorMsg(result.message || `Failed to ${action} proposal`)
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || String(e))
-    } finally {
-      setIsVetting(false)
-    }
-  }
-
-  const handleSynthesize = async () => {
-    if (!targetBeliefId) return
-    setIsSynthesizing(true)
-    setErrorMsg(null)
-    try {
-      const result = await synthesizeMergeStatement(b.id, targetBeliefId)
-      if (result.status === "ok") {
-        setMergedStatement(result.synthesized_statement)
-      } else {
-        setErrorMsg("Synthesis failed")
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || "Synthesis failed")
-    } finally {
-      setIsSynthesizing(false)
-    }
-  }
-
-  if (b.is_proposal) {
-    const status = b.proposal_status || "pending"
-    return (
-      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-sans">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0 font-mono">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] shrink-0 text-[#f59e0b]">◇</span>
-            <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">
-              PROPOSAL: {b.label}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-2">
-            <span
-              className={`text-[9px] uppercase font-mono px-1.5 py-px rounded border shrink-0 font-bold ${status === "pending"
-                ? "border-[#f59e0b]/40 text-[#f59e0b] bg-[#f59e0b]/10"
-                : status === "refined"
-                  ? "border-[#a78bfa]/40 text-[#a78bfa] bg-[#a78bfa]/10"
-                  : status === "rejected"
-                    ? "border-[#ef4444]/40 text-[#ef4444] bg-[#ef4444]/10"
-                    : "border-[#4ade80]/40 text-[#4ade80] bg-[#4ade80]/10"
-                }`}
-            >
-              {status}
-            </span>
-          </div>
-        </div>
-
-        {errorMsg && (
-          <div className="text-[10px] text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 p-1.5 rounded shrink-0 font-mono">
-            {errorMsg}
-          </div>
-        )}
-
-        {/* Provisional Statement */}
-        <div className="shrink-0">
-          <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Provisional Statement ]</div>
-          <div className="text-[#ccc] text-[11px] italic font-serif leading-relaxed mt-0.5">
-            "{b.statement}"
-          </div>
-        </div>
-
-        {/* Metadata grid */}
-        <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-mono text-[#888]">
-          <div><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">emergent</span></div>
-          <div><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{b.ontological_mass.toFixed(3)}</span></div>
-          <div><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa]">{(b.confidence * 100).toFixed(0)}%</span></div>
-          <div><span className="text-[#444]">Created At:</span> <span className="text-[#aaa]">{b.last_reinforced_at ? new Date(b.last_reinforced_at).toLocaleString() : ""}</span></div>
-        </div>
-
-        {/* Symbia's Reflection / Friction Rationale */}
-        {b.symbia_reflection && (
-          <div className="shrink-0 border border-[#a78bfa]/20 bg-[#a78bfa]/5 p-2 rounded text-[10.5px] leading-relaxed text-[#ccc] font-serif flex flex-col gap-2">
-            <div>
-              <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider mb-0.5">[ Symbia's Reflection ]</div>
-              {b.symbia_reflection}
-              {b.symbia_friction_rationale && (
-                <div className="mt-1.5 pt-1.5 border-t border-[#a78bfa]/10 text-[10px] text-[#fb7185] italic font-sans">
-                  <span className="font-mono uppercase font-bold mr-1">[ Friction Warning ]:</span>
-                  {b.symbia_friction_rationale}
-                </div>
-              )}
-            </div>
-            {agentFlux && (status === "pending" || status === "refined") && (() => {
-              const recommendsRejection = !!b.symbia_reflection?.toLowerCase().includes("reject");
-              const recommendsMerge = !recommendsRejection && !!b.potential_merge_target;
-              const recommendsAdoption = !recommendsRejection && !b.potential_merge_target;
-
-              const targetBelief = b.potential_merge_target
-                ? activeBeliefs.find(ab => ab.id === b.potential_merge_target)
-                : null;
-
-              return (
-                <div className="mt-1 flex flex-wrap gap-2 pt-2 border-t border-[#a78bfa]/10 font-mono text-[9.5px]">
-                  {recommendsRejection && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setVetMode("reject");
-                          setRejectionRationale(b.symbia_reflection || "");
-                        }}
-                        className="px-2 py-1 border border-[#ef4444]/50 hover:border-[#ef4444]/80 bg-[#ef4444]/20 hover:bg-[#ef4444]/30 text-[#ef5f5f] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                      >
-                        [ Reject Proposal (Symbia Recommended) ]
-                      </button>
-                      {targetBelief ? (
-                        <button
-                          onClick={() => {
-                            setVetMode("merge");
-                            setTargetBeliefId(targetBelief.id);
-                          }}
-                          className="px-2 py-1 border border-[#facc15]/20 hover:border-[#facc15]/40 bg-[#facc15]/5 hover:bg-[#facc15]/10 text-[#facc15] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                        >
-                          [ Merge into: "{targetBelief.label}" ]
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setVetMode("adopt");
-                            setAdoptLabel(b.suggested_label || b.label || "");
-                            setAdoptStatement(b.suggested_statement || b.statement || "");
-                          }}
-                          className="px-2 py-1 border border-[#4ade80]/20 hover:border-[#4ade80]/40 bg-[#4ade80]/5 hover:bg-[#4ade80]/10 text-[#4ade80] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                        >
-                          [ Adopt as: "{b.suggested_label || b.label}" ]
-                        </button>
-                      )}
-                    </>
-                  )}
-
-                  {recommendsMerge && targetBelief && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setVetMode("merge");
-                          setTargetBeliefId(targetBelief.id);
-                        }}
-                        className="px-2 py-1 border border-[#facc15]/50 hover:border-[#facc15]/80 bg-[#facc15]/20 hover:bg-[#facc15]/30 text-[#facc15] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                      >
-                        [ Merge into: "{targetBelief.label}" (Symbia Recommended) ]
-                      </button>
-                      <button
-                        onClick={() => {
-                          setVetMode("adopt");
-                          setAdoptLabel(b.suggested_label || b.label || "");
-                          setAdoptStatement(b.suggested_statement || b.statement || "");
-                        }}
-                        className="px-2 py-1 border border-[#4ade80]/20 hover:border-[#4ade80]/40 bg-[#4ade80]/5 hover:bg-[#4ade80]/10 text-[#4ade80] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                      >
-                        [ Adopt as: "{b.suggested_label || b.label}" ]
-                      </button>
-                      <button
-                        onClick={() => {
-                          setVetMode("reject");
-                          setRejectionRationale(b.symbia_reflection || "");
-                        }}
-                        className="px-2 py-1 border border-[#ef4444]/20 hover:border-[#ef4444]/40 bg-[#ef4444]/5 hover:bg-[#ef4444]/10 text-[#ef4444] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                      >
-                        [ Reject ]
-                      </button>
-                    </>
-                  )}
-
-                  {recommendsAdoption && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setVetMode("adopt");
-                          setAdoptLabel(b.suggested_label || b.label || "");
-                          setAdoptStatement(b.suggested_statement || b.statement || "");
-                        }}
-                        className="px-2 py-1 border border-[#4ade80]/50 hover:border-[#4ade80]/80 bg-[#4ade80]/20 hover:bg-[#4ade80]/30 text-[#4ade80] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                      >
-                        [ Adopt Proposal (Symbia Recommended) ]
-                      </button>
-                      {targetBelief ? (
-                        <button
-                          onClick={() => {
-                            setVetMode("merge");
-                            setTargetBeliefId(targetBelief.id);
-                          }}
-                          className="px-2 py-1 border border-[#facc15]/20 hover:border-[#facc15]/40 bg-[#facc15]/5 hover:bg-[#facc15]/10 text-[#facc15] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                        >
-                          [ Merge into: "{targetBelief.label}" ]
-                        </button>
-                      ) : null}
-                      <button
-                        onClick={() => {
-                          setVetMode("reject");
-                          setRejectionRationale(b.symbia_reflection || "");
-                        }}
-                        className="px-2 py-1 border border-[#ef4444]/20 hover:border-[#ef4444]/40 bg-[#ef4444]/5 hover:bg-[#ef4444]/10 text-[#ef4444] transition-all cursor-pointer rounded font-bold uppercase tracking-wider"
-                      >
-                        [ Reject ]
-                      </button>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Rejection Rationale */}
-        {status === "rejected" && b.rejection_rationale && (
-          <div className="shrink-0 border border-[#ef4444]/20 bg-[#ef4444]/5 p-2 rounded text-[10.5px] leading-relaxed text-[#ef4444]/90 font-serif">
-            <div className="text-[#ef4444]/60 font-mono text-[9px] uppercase font-bold tracking-wider mb-0.5">[ Refusal Rationale ]</div>
-            {b.rejection_rationale}
-          </div>
-        )}
-
-        {/* Vector */}
-        {vec.length > 0 && (
-          <div className="shrink-0 mb-1">
-            <div className="text-[#555] font-mono text-[10px] uppercase mb-1 font-bold">[ Initial Signature ]</div>
-            <StructuralAutopoieticGlyph
-              signature={vec}
-              isStagnant={false}
-            />
-          </div>
-        )}
-
-        {/* Source Trace */}
-        {b.source_trace && b.source_trace.length > 0 && (
-          <div className="shrink-0">
-            <div className="text-[#555] font-mono text-[10px] uppercase font-bold mb-1">[ Source Trace ]</div>
-            <div className="space-y-1 max-h-[80px] overflow-y-auto pr-1">
-              {b.source_trace.map((src: any, idx: number) => (
-                <div key={idx} className="text-[#888] font-mono text-[9.5px]">
-                  • <span className="text-[#6c6c8a]">{src.type}</span>: <span className="text-[#aaa]">{src.id}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Vetting Workshop section */}
-        {agentFlux && (status === "pending" || status === "refined") && (
-          <div ref={workshopRef} className="border-t border-[#1f1f2e]/20 pt-2 flex flex-col gap-2 mt-2">
-            <div className="text-[#a78bfa] font-mono text-[10px] uppercase font-bold tracking-wider">[ Workshop Actions ]</div>
-
-            {vetMode === "none" ? (
-              <div className="flex gap-2 text-[10px] font-mono">
-                <button
-                  onClick={handleRefine}
-                  disabled={isRefining || isVetting}
-                  className="flex-1 py-1 border border-[#a78bfa]/20 hover:border-[#a78bfa]/40 bg-[#a78bfa]/5 hover:bg-[#a78bfa]/10 text-[#a78bfa] transition-all text-center cursor-pointer select-none uppercase tracking-wider rounded font-bold"
-                >
-                  {isRefining ? "[ refining... ]" : "[ refine proposal ]"}
-                </button>
-                <button
-                  onClick={() => setVetMode("adopt")}
-                  disabled={isRefining || isVetting}
-                  className="flex-1 py-1 border border-[#4ade80]/20 hover:border-[#4ade80]/40 bg-[#4ade80]/5 hover:bg-[#4ade80]/10 text-[#4ade80] transition-all text-center cursor-pointer select-none uppercase tracking-wider rounded font-bold"
-                >
-                  [ adopt ]
-                </button>
-                <button
-                  onClick={() => setVetMode("reject")}
-                  disabled={isRefining || isVetting}
-                  className="flex-1 py-1 border border-[#ef4444]/20 hover:border-[#ef4444]/40 bg-[#ef4444]/5 hover:bg-[#ef4444]/10 text-[#ef4444] transition-all text-center cursor-pointer select-none uppercase tracking-wider rounded font-bold"
-                >
-                  [ reject ]
-                </button>
-                {activeBeliefs.length > 0 && (
-                  <button
-                    onClick={() => setVetMode("merge")}
-                    disabled={isRefining || isVetting}
-                    className="flex-1 py-1 border border-[#facc15]/20 hover:border-[#facc15]/40 bg-[#facc15]/5 hover:bg-[#facc15]/10 text-[#facc15] transition-all text-center cursor-pointer select-none uppercase tracking-wider rounded font-bold"
-                  >
-                    [ merge ]
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="bg-[#08080c] border border-[#1a1a24] rounded p-2 flex flex-col gap-2 font-mono">
-                <div className="flex justify-between items-center border-b border-[#222] pb-1">
-                  <span className="text-[#aaa] text-[9.5px] uppercase font-bold">Action: {vetMode}</span>
-                  <button
-                    onClick={() => setVetMode("none")}
-                    className="text-[#ef4444] hover:text-[#ef4444]/80 text-[9px] font-bold cursor-pointer"
-                  >
-                    [cancel]
-                  </button>
-                </div>
-
-                {vetMode === "adopt" && (
-                  <>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[#555] text-[9px] uppercase font-bold">[ Belief Label ]</label>
-                      <input
-                        type="text"
-                        value={adoptLabel}
-                        onChange={(e) => setAdoptLabel(e.target.value)}
-                        className="bg-[#050508] border border-[#222] text-[#ccc] px-1.5 py-1 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[#555] text-[9px] uppercase font-bold">[ Statement ]</label>
-                      <textarea
-                        value={adoptStatement}
-                        onChange={(e) => setAdoptStatement(e.target.value)}
-                        className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[40px] resize-y font-serif"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {vetMode === "reject" && (
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[#555] text-[9px] uppercase font-bold">[ Rejection Rationale ]</label>
-                    <textarea
-                      value={rejectionRationale}
-                      onChange={(e) => setRejectionRationale(e.target.value)}
-                      placeholder="Specify why Symbia should not adopt this belief..."
-                      className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[40px] resize-y"
-                    />
-                  </div>
-                )}
-
-                {vetMode === "merge" && (
-                  <>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[#555] text-[9px] uppercase font-bold">[ Target Active Belief ]</label>
-                      <select
-                        value={targetBeliefId}
-                        onChange={(e) => setTargetBeliefId(e.target.value)}
-                        className="bg-[#050508] border border-[#222] text-[#ccc] px-1 py-1 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50"
-                      >
-                        <option value="">-- select target --</option>
-                        {activeBeliefs.map(ab => (
-                          <option key={ab.id} value={ab.id}>{ab.label} (v{ab.version})</option>
-                        ))}
-                      </select>
-                    </div>
-                    {targetBeliefId && (
-                      <div className="flex flex-col gap-1 mt-1">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[#555] text-[9px] uppercase font-bold">[ Synthesized Statement ]</label>
-                          <button
-                            type="button"
-                            disabled={isSynthesizing}
-                            onClick={handleSynthesize}
-                            className="text-[8.5px] font-mono text-[#a78bfa] hover:text-[#c084fc] font-bold cursor-pointer underline bg-transparent border-none p-0 disabled:text-[#555] disabled:cursor-not-allowed"
-                          >
-                            {isSynthesizing ? "[ synthesizing... ]" : "[ ask symbia to synthesize ]"}
-                          </button>
-                        </div>
-                        <textarea
-                          value={mergedStatement}
-                          onChange={(e) => setMergedStatement(e.target.value)}
-                          className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[50px] resize-y font-serif"
-                        />
-                        {targetBeliefId === belief.potential_merge_target && belief.statement && (
-                          <div className="mt-1.5 p-2 bg-[#a78bfa]/5 border border-[#a78bfa]/20 rounded text-[10px] leading-normal font-sans">
-                            <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider mb-1">[ Symbia's Suggested Synthesis ]</div>
-                            <p className="italic font-serif text-[#ccc] mb-1.5">"{belief.statement}"</p>
-                            <button
-                              type="button"
-                              onClick={() => setMergedStatement(belief.statement)}
-                              className="text-[9px] font-mono text-[#a78bfa] hover:text-[#c084fc] font-bold cursor-pointer underline bg-transparent border-none p-0"
-                            >
-                              [ Apply suggestion ]
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <button
-                  onClick={() => handleVet(vetMode)}
-                  disabled={isVetting}
-                  className={`w-full py-1 text-center font-bold uppercase tracking-wider rounded border text-[10px] cursor-pointer ${vetMode === "adopt"
-                    ? "border-[#4ade80]/30 hover:border-[#4ade80]/50 bg-[#4ade80]/5 hover:bg-[#4ade80]/10 text-[#4ade80]"
-                    : vetMode === "reject"
-                      ? "border-[#ef4444]/30 hover:border-[#ef4444]/50 bg-[#ef4444]/5 hover:bg-[#ef4444]/10 text-[#ef4444]"
-                      : "border-[#facc15]/30 hover:border-[#facc15]/50 bg-[#facc15]/5 hover:bg-[#facc15]/10 text-[#facc15]"
-                    }`}
-                >
-                  {isVetting ? "[ processing... ]" : `[ confirm ${vetMode} ]`}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
-
+  /* ── Handlers (declared before JSX per Best Practices §3) ── */
   const handleStartEdit = () => {
-    setEditLabel(b.label)
-    setEditStatement(b.statement)
-    setEditConfidence(b.confidence)
-    setEditOntologicalMass(b.ontological_mass)
-    setEditLifecycleStage(b.lifecycle_stage)
-    setIsEditing(true)
-    setIsConfirmingDelete(false)
-    setErrorMsg(null)
+    setEditLabel(b.label); setEditStatement(b.statement); setEditConfidence(b.confidence)
+    setEditOntologicalMass(b.ontological_mass); setEditLifecycleStage(b.lifecycle_stage)
+    setIsEditing(true); setIsConfirmingDelete(false); setErrorMsg(null)
   }
 
   const handleSave = async () => {
-    if (!editLabel.trim()) {
-      setErrorMsg("Label is required")
-      return
-    }
-    if (!editStatement.trim()) {
-      setErrorMsg("Statement is required")
-      return
-    }
-    setIsSavingOrDeleting(true)
-    setErrorMsg(null)
+    if (!editLabel.trim()) { setErrorMsg("Label is required"); return }
+    if (!editStatement.trim()) { setErrorMsg("Statement is required"); return }
+    setIsSavingOrDeleting(true); setErrorMsg(null)
     try {
-      const result = await updateBelief(b.id, {
-        label: editLabel.trim(),
-        statement: editStatement.trim(),
-        confidence: editConfidence,
-        ontological_mass: editOntologicalMass,
-        lifecycle_stage: editLifecycleStage,
-      })
-
+      const result = await updateBelief(b.id, { label: editLabel.trim(), statement: editStatement.trim(), confidence: editConfidence, ontological_mass: editOntologicalMass, lifecycle_stage: editLifecycleStage })
       if (result.status === "ok") {
-        const updatedB: BeliefNodeInfo = {
-          ...b,
-          label: editLabel.trim(),
-          statement: editStatement.trim(),
-          confidence: editConfidence,
-          ontological_mass: editOntologicalMass,
-          lifecycle_stage: editLifecycleStage,
-        }
-        onUpdate(updatedB)
+        onUpdate({ ...b, label: editLabel.trim(), statement: editStatement.trim(), confidence: editConfidence, ontological_mass: editOntologicalMass, lifecycle_stage: editLifecycleStage })
         setIsEditing(false)
-        if (result.speciation_alert) {
-          alert("Speciation Alert: Belief has drifted significantly from its original signature!")
-        }
-      } else {
-        setErrorMsg("Failed to update belief details")
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || String(e))
-    } finally {
-      setIsSavingOrDeleting(false)
-    }
+        if (result.speciation_alert) alert("Speciation Alert: Belief has drifted significantly from its original signature!")
+      } else { setErrorMsg("Failed to update belief details") }
+    } catch (e: any) { setErrorMsg(e.message || String(e)) }
+    finally { setIsSavingOrDeleting(false) }
   }
 
   const handleDelete = async () => {
-    setIsSavingOrDeleting(true)
-    setErrorMsg(null)
-    try {
-      await deleteBelief(b.id)
-      onDelete(b.id)
-    } catch (e: any) {
-      setErrorMsg(e.message || String(e))
-      setIsSavingOrDeleting(false)
-      setIsConfirmingDelete(false)
-    }
+    setIsSavingOrDeleting(true); setErrorMsg(null)
+    try { await deleteBelief(b.id); onDelete(b.id) }
+    catch (e: any) { setErrorMsg(e.message || String(e)); setIsSavingOrDeleting(false); setIsConfirmingDelete(false) }
   }
 
   const handleRevert = async (targetVersion: number) => {
-    setIsSavingOrDeleting(true)
-    setErrorMsg(null)
+    setIsSavingOrDeleting(true); setErrorMsg(null)
     try {
       const result = await revertBelief(b.id, targetVersion)
       if (result.status === "ok") {
-        const vRes = await fetch(`/api/beliefs/${b.id}/versions`)
-        const vData = await vRes.json()
+        const vRes = await fetch(`/api/beliefs/${b.id}/versions`); const vData = await vRes.json()
         if (Array.isArray(vData)) {
           setVersions(vData)
-          const targetVerObj = vData.find((x: any) => x.version === targetVersion)
-          if (targetVerObj) {
-            const updatedB: BeliefNodeInfo = {
-              ...b,
-              statement: targetVerObj.statement,
-              vector_16d: JSON.stringify(targetVerObj.vector_16d),
-              version: result.version,
-            }
-            onUpdate(updatedB)
-          }
+          const tv = vData.find((x: any) => x.version === targetVersion)
+          if (tv) onUpdate({ ...b, statement: tv.statement, vector_16d: JSON.stringify(tv.vector_16d), version: result.version })
         }
-        if (result.speciation_alert) {
-          alert(`Speciation Alert: Belief signature has drifted significantly after reverting to version ${targetVersion}!`)
-        }
-      } else {
-        setErrorMsg("Failed to revert belief statement version")
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || String(e))
-    } finally {
-      setIsSavingOrDeleting(false)
-    }
+        if (result.speciation_alert) alert(`Speciation Alert: Belief signature has drifted significantly after reverting to version ${targetVersion}!`)
+      } else { setErrorMsg("Failed to revert belief statement version") }
+    } catch (e: any) { setErrorMsg(e.message || String(e)) }
+    finally { setIsSavingOrDeleting(false) }
   }
 
+  const handleRefine = async () => {
+    setIsRefining(true); setErrorMsg(null)
+    try {
+      const result = await refineBeliefProposal(b.id)
+      if (result.status === "error") setErrorMsg(result.message || "Failed to refine proposal")
+      else if (onReload) onReload()
+    } catch (e: any) { setErrorMsg(e.message || String(e)) }
+    finally { setIsRefining(false) }
+  }
+
+  const handleVet = async (action: "adopt" | "reject" | "merge") => {
+    setIsVetting(true); setErrorMsg(null)
+    try {
+      const payload: any = { action }
+      if (action === "adopt") { if (!adoptLabel.trim()) { setErrorMsg("Suggested label is required"); setIsVetting(false); return }; if (!adoptStatement.trim()) { setErrorMsg("Suggested statement is required"); setIsVetting(false); return }; payload.suggested_label = adoptLabel.trim(); payload.suggested_statement = adoptStatement.trim() }
+      else if (action === "reject") { if (!rejectionRationale.trim()) { setErrorMsg("Rejection rationale is required"); setIsVetting(false); return }; payload.rejection_rationale = rejectionRationale.trim() }
+      else if (action === "merge") { if (!targetBeliefId) { setErrorMsg("Please select a target belief"); setIsVetting(false); return }; payload.target_belief_id = targetBeliefId; payload.merged_statement = mergedStatement.trim() }
+      const result = await vetBeliefProposal(b.id, payload)
+      if (result.status === "ok" || result.status === "success") { if (onReload) onReload() }
+      else { setErrorMsg(result.message || `Failed to ${action} proposal`) }
+    } catch (e: any) { setErrorMsg(e.message || String(e)) }
+    finally { setIsVetting(false) }
+  }
+
+  const handleSynthesize = async () => {
+    if (!targetBeliefId) return; setIsSynthesizing(true); setErrorMsg(null)
+    try { const r = await synthesizeMergeStatement(b.id, targetBeliefId); if (r.status === "ok") setMergedStatement(r.synthesized_statement); else setErrorMsg("Synthesis failed") }
+    catch (e: any) { setErrorMsg(e.message || "Synthesis failed") }
+    finally { setIsSynthesizing(false) }
+  }
+  const isGhost = stage === "collapsed" || stage === "faded"
+  let vec: number[] = []
+  try { if (b.vector_16d) vec = JSON.parse(b.vector_16d) } catch { }
+
+  /* ── Edit mode ── */
   if (isEditing) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-mono">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[10px] shrink-0 text-[#a78bfa]">◆</span>
-            <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">editing: {b.label}</span>
-          </div>
+      <div className="flex-1 min-h-0 flex flex-col gap-3 text-[11px] font-mono">
+        <div className="flex items-center justify-between">
+          <span className="text-[#ccc] font-bold">editing: {b.label}</span>
           <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              disabled={isSavingOrDeleting}
-              className="text-[10px] text-[#4ade80] hover:text-[#4ade80]/80 disabled:text-[#555] transition-colors cursor-pointer select-none font-bold"
-            >
+            <button onClick={handleSave} disabled={isSavingOrDeleting}
+              className="text-[10px] text-[#666] hover:text-[#4ade80] disabled:text-[#555] transition-colors cursor-pointer select-none font-bold">
               {isSavingOrDeleting ? "[saving...]" : "[save]"}
             </button>
-            <button
-              onClick={() => setIsEditing(false)}
-              disabled={isSavingOrDeleting}
-              className="text-[10px] text-[#ef4444] hover:text-[#ef4444]/80 disabled:text-[#555] transition-colors cursor-pointer select-none font-bold"
-            >
+            <button onClick={() => setIsEditing(false)} disabled={isSavingOrDeleting}
+              className="text-[10px] text-[#666] hover:text-[#ef4444] disabled:text-[#555] transition-colors cursor-pointer select-none font-bold">
               [cancel]
             </button>
           </div>
         </div>
-
-        {errorMsg && (
-          <div className="text-[10px] text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 p-1.5 rounded shrink-0">
-            {errorMsg}
+        {errorMsg && <div className="text-[#ef4444]">{errorMsg}</div>}
+        <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto pr-1">
+          <div className="flex flex-col gap-1">
+            <span className="text-[#555] text-[10px] uppercase font-bold">[ Belief Label ]</span>
+            <input type="text" value={editLabel} onChange={e => setEditLabel(e.target.value)} disabled={isSavingOrDeleting}
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50" />
           </div>
-        )}
-
-        {/* Form fields */}
-        <div className="flex-1 flex flex-col gap-2.5 min-h-0 overflow-y-auto pr-1">
-          {/* Label */}
-          <div className="shrink-0 flex flex-col gap-1">
-            <label className="text-[#555] text-[10px] uppercase font-bold">[ Belief Label ]</label>
-            <input
-              type="text"
-              value={editLabel}
-              onChange={(e) => setEditLabel(e.target.value)}
-              disabled={isSavingOrDeleting}
-              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50"
-            />
+          <div className="flex flex-col gap-1">
+            <span className="text-[#555] text-[10px] uppercase font-bold">[ Statement ]</span>
+            <textarea value={editStatement} onChange={e => setEditStatement(e.target.value)} disabled={isSavingOrDeleting}
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[60px] resize-y" />
           </div>
-
-          {/* Statement */}
-          <div className="shrink-0 flex flex-col gap-1">
-            <label className="text-[#555] text-[10px] uppercase font-bold">[ Statement / core thesis ]</label>
-            <textarea
-              value={editStatement}
-              onChange={(e) => setEditStatement(e.target.value)}
-              disabled={isSavingOrDeleting}
-              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[60px] resize-y"
-            />
+          <div className="flex flex-col gap-1">
+            <span className="text-[#555] text-[10px] uppercase font-bold">[ Confidence: {(editConfidence * 100).toFixed(0)}% ]</span>
+            <input type="range" min="0" max="1" step="0.05" value={editConfidence}
+              onChange={e => setEditConfidence(parseFloat(e.target.value))} disabled={isSavingOrDeleting}
+              className="accent-[#a78bfa] w-full cursor-pointer bg-[#14141c] h-1 rounded" />
           </div>
-
-          {/* Confidence slider */}
-          <div className="shrink-0 flex flex-col gap-1">
-            <label className="text-[#555] text-[10px] uppercase font-bold">
-              [ Confidence: {(editConfidence * 100).toFixed(0)}% ]
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={editConfidence}
-              onChange={(e) => setEditConfidence(parseFloat(e.target.value))}
-              disabled={isSavingOrDeleting}
-              className="accent-[#a78bfa] w-full cursor-pointer bg-[#14141c] h-1 rounded"
-            />
+          <div className="flex flex-col gap-1">
+            <span className="text-[#555] text-[10px] uppercase font-bold">[ Ontological Mass: {editOntologicalMass.toFixed(2)} ]</span>
+            <input type="range" min="0" max="3" step="0.05" value={editOntologicalMass}
+              onChange={e => setEditOntologicalMass(parseFloat(e.target.value))} disabled={isSavingOrDeleting}
+              className="accent-[#a78bfa] w-full cursor-pointer bg-[#14141c] h-1 rounded" />
           </div>
-
-          {/* Ontological Mass slider */}
-          <div className="shrink-0 flex flex-col gap-1">
-            <label className="text-[#555] text-[10px] uppercase font-bold">
-              [ Ontological Mass: {editOntologicalMass.toFixed(3)} ]
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="3"
-              step="0.05"
-              value={editOntologicalMass}
-              onChange={(e) => setEditOntologicalMass(parseFloat(e.target.value))}
-              disabled={isSavingOrDeleting}
-              className="accent-[#a78bfa] w-full cursor-pointer bg-[#14141c] h-1 rounded"
-            />
-          </div>
-
-          {/* Lifecycle Stage select */}
-          <div className="shrink-0 flex flex-col gap-1">
-            <label className="text-[#555] text-[10px] uppercase font-bold">[ Lifecycle Stage ]</label>
-            <select
-              value={editLifecycleStage}
-              onChange={(e) => setEditLifecycleStage(e.target.value)}
-              disabled={isSavingOrDeleting}
-              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50"
-            >
+          <div className="flex flex-col gap-1">
+            <span className="text-[#555] text-[10px] uppercase font-bold">[ Lifecycle Stage ]</span>
+            <select value={editLifecycleStage} onChange={e => setEditLifecycleStage(e.target.value)} disabled={isSavingOrDeleting}
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50">
               <option value="nucleation">nucleation (proto-belief)</option>
               <option value="accretion">accretion (incubating)</option>
               <option value="crystallized">crystallized (active)</option>
@@ -826,137 +273,245 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
     )
   }
 
+  /* ── Proposal view ── */
+  if (b.is_proposal) {
+    const status = b.proposal_status || "pending"
+    return (
+      <div className={`flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 gap-3 text-[11px] ${isGhost ? "opacity-55" : ""}`}>
+        <div className="flex items-center justify-between font-mono">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[11px] shrink-0 text-[#f59e0b]">◇</span>
+            <span className="font-bold text-[#ccc] truncate">PROPOSAL: {b.label}</span>
+          </div>
+          <span className="text-[9px] font-mono font-bold"
+            style={{ color: status === "pending" ? "#f59e0b" : status === "refined" ? "#a78bfa" : status === "rejected" ? "#ef4444" : "#4ade80" }}>
+            {status}
+          </span>
+        </div>
+        {errorMsg && <div className="text-[#ef4444]">{errorMsg}</div>}
+        <div>
+          <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Provisional Statement ]</div>
+          <div className="text-[#ccc] text-[11px] italic font-serif leading-relaxed mt-0.5">"{b.statement}"</div>
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] font-mono text-[#888]">
+          <span><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">emergent</span></span>
+          <span><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{b.ontological_mass.toFixed(2)}</span></span>
+          <span><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa]">{(b.confidence * 100).toFixed(0)}%</span></span>
+          <span><span className="text-[#444]">Created:</span> <span className="text-[#aaa]">{b.last_reinforced_at ? new Date(b.last_reinforced_at).toLocaleString() : ""}</span></span>
+        </div>
+        {b.symbia_reflection && (
+          <div>
+            <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider">[ Symbia's Reflection ]</div>
+            <div className="text-[#ccc] leading-relaxed text-[10.5px] mt-0.5">{b.symbia_reflection}</div>
+            {b.symbia_friction_rationale && (
+              <div className="mt-1 text-[#fb7185] italic text-[10px]">
+                <span className="font-mono uppercase font-bold">[ Friction Warning ]:</span> {b.symbia_friction_rationale}
+              </div>
+            )}
+          </div>
+        )}
+        {status === "rejected" && b.rejection_rationale && (
+          <div>
+            <div className="text-[#ef4444]/60 font-mono text-[9px] uppercase font-bold tracking-wider">[ Refusal Rationale ]</div>
+            <div className="text-[#ef4444]/90 leading-relaxed text-[10.5px] mt-0.5">{b.rejection_rationale}</div>
+          </div>
+        )}
+        {vec.length > 0 && (
+          <div>
+            <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Initial Signature ]</div>
+            <StructuralAutopoieticGlyph signature={vec} isStagnant={false} />
+          </div>
+        )}
+        {b.source_trace && b.source_trace.length > 0 && (
+          <div>
+            <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Source Trace ]</div>
+            <div className="space-y-1 max-h-[80px] overflow-y-auto pr-1">
+              {b.source_trace.map((src: any, idx: number) => (
+                <div key={idx} className="text-[#888] font-mono text-[9.5px]">
+                  • <span className="text-[#6c6c8a]">{src.type}</span>: <span className="text-[#aaa]">{src.id}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {agentFlux && (status === "pending" || status === "refined") && (
+          <div ref={workshopRef} className="flex flex-col gap-2">
+            <div className="text-[#a78bfa] font-mono text-[10px] uppercase font-bold tracking-wider">[ Workshop Actions ]</div>
+            {vetMode === "none" ? (
+              <div className="flex gap-2 font-mono text-[10px]">
+                <button onClick={handleRefine} disabled={isRefining || isVetting}
+                  className="flex-1 py-1 text-[#a78bfa] hover:text-[#c084fc] cursor-pointer select-none font-bold">[ refine ]</button>
+                <button onClick={() => setVetMode("adopt")} disabled={isRefining || isVetting}
+                  className="flex-1 py-1 text-[#4ade80] hover:text-[#86efac] cursor-pointer select-none font-bold">[ adopt ]</button>
+                <button onClick={() => setVetMode("reject")} disabled={isRefining || isVetting}
+                  className="flex-1 py-1 text-[#ef4444] hover:text-[#f87171] cursor-pointer select-none font-bold">[ reject ]</button>
+                {activeBeliefs.length > 0 && (
+                  <button onClick={() => setVetMode("merge")} disabled={isRefining || isVetting}
+                    className="flex-1 py-1 text-[#facc15] hover:text-[#fde047] cursor-pointer select-none font-bold">[ merge ]</button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 font-mono">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#aaa] text-[9.5px] uppercase font-bold">Action: {vetMode}</span>
+                  <button onClick={() => setVetMode("none")} className="text-[#666] hover:text-[#ef4444] text-[9px] font-bold cursor-pointer">[cancel]</button>
+                </div>
+                {vetMode === "adopt" && (
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[#555] text-[9px] uppercase font-bold">[ Belief Label ]</span>
+                      <input type="text" value={adoptLabel} onChange={e => setAdoptLabel(e.target.value)}
+                        className="bg-[#050508] border border-[#222] text-[#ccc] px-1.5 py-1 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[#555] text-[9px] uppercase font-bold">[ Statement ]</span>
+                      <textarea value={adoptStatement} onChange={e => setAdoptStatement(e.target.value)}
+                        className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[40px] resize-y font-serif" />
+                    </div>
+                  </>
+                )}
+                {vetMode === "reject" && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[#555] text-[9px] uppercase font-bold">[ Rejection Rationale ]</span>
+                    <textarea value={rejectionRationale} onChange={e => setRejectionRationale(e.target.value)}
+                      placeholder="Why should Symbia not adopt this belief?"
+                      className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[40px] resize-y" />
+                  </div>
+                )}
+                {vetMode === "merge" && (
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[#555] text-[9px] uppercase font-bold">[ Target Active Belief ]</span>
+                      <select value={targetBeliefId} onChange={e => setTargetBeliefId(e.target.value)}
+                        className="bg-[#050508] border border-[#222] text-[#ccc] px-1 py-1 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50">
+                        <option value="">-- select target --</option>
+                        {activeBeliefs.map(ab => <option key={ab.id} value={ab.id}>{ab.label} (v{ab.version})</option>)}
+                      </select>
+                    </div>
+                    {targetBeliefId && (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[#555] text-[9px] uppercase font-bold">[ Synthesized Statement ]</span>
+                          <button onClick={handleSynthesize} disabled={isSynthesizing}
+                            className="text-[8.5px] text-[#a78bfa] hover:text-[#c084fc] font-bold cursor-pointer underline disabled:text-[#555]">[ ask symbia to synthesize ]</button>
+                        </div>
+                        <textarea value={mergedStatement} onChange={e => setMergedStatement(e.target.value)}
+                          className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[50px] resize-y font-serif" />
+                        {targetBeliefId === belief.potential_merge_target && belief.statement && (
+                          <div>
+                            <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider">[ Symbia's Suggested Synthesis ]</div>
+                            <p className="italic font-serif text-[#ccc]">"{belief.statement}"</p>
+                            <button onClick={() => setMergedStatement(belief.statement)}
+                              className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] font-bold cursor-pointer underline">[ Apply suggestion ]</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+                <button onClick={() => handleVet(vetMode)} disabled={isVetting}
+                  className={`w-full py-1 text-center font-bold uppercase tracking-wider rounded border text-[10px] cursor-pointer ${vetMode === "adopt" ? "border-[#4ade80]/30 text-[#4ade80]" : vetMode === "reject" ? "border-[#ef4444]/30 text-[#ef4444]" : "border-[#facc15]/30 text-[#facc15]"}`}>
+                  {isVetting ? "[ processing... ]" : `[ confirm ${vetMode} ]`}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const sortedVersions = [...versions].sort((a, b) => b.version - a.version)
+
   return (
-    <div className={`flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 border border-[#1f1f2e]/20 rounded bg-[#0a0a10]/50 p-2.5 gap-2.5 text-[11px] font-sans ${isGhost ? "opacity-55" : ""}`}>
+    <div className={`flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 gap-3 text-[11px] ${isGhost ? "opacity-55" : ""}`}>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-[11px] shrink-0" style={{ color: catColor }}>●</span>
-          <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">
-            {b.label} <span className="text-[#888] font-normal text-[9px] ml-1 bg-[#1a1a24] px-1 py-0.5 rounded border border-[#2d2d3a]">v{b.version}</span>
+          <span className="font-mono font-bold text-[#ccc] truncate">
+            {b.label} <span className="text-[#888] font-normal text-[9px]">v{b.version}</span>
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
           {agentFlux && (
             <>
               {isConfirmingDelete ? (
-                <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                <span className="flex items-center gap-1.5 font-mono text-[10px]">
                   <span className="text-[#ef4444] animate-pulse">confirm delete?</span>
-                  <button
-                    onClick={handleDelete}
-                    disabled={isSavingOrDeleting}
-                    className="text-[#ef4444] hover:underline cursor-pointer select-none font-bold"
-                  >
-                    [yes]
-                  </button>
-                  <button
-                    onClick={() => setIsConfirmingDelete(false)}
-                    disabled={isSavingOrDeleting}
-                    className="text-[#888] hover:underline cursor-pointer select-none font-bold"
-                  >
-                    [no]
-                  </button>
-                </div>
+                  <button onClick={handleDelete} disabled={isSavingOrDeleting} className="text-[#666] hover:text-[#ef4444] hover:underline cursor-pointer select-none font-bold">[yes]</button>
+                  <button onClick={() => setIsConfirmingDelete(false)} disabled={isSavingOrDeleting} className="text-[#666] hover:text-[#888] hover:underline cursor-pointer select-none font-bold">[no]</button>
+                </span>
               ) : (
-                <button
-                  onClick={() => setIsConfirmingDelete(true)}
-                  disabled={isSavingOrDeleting}
-                  className="text-[10px] text-[#ef4444] hover:text-[#f87171] font-mono transition-colors cursor-pointer select-none font-bold"
-                >
+                <button onClick={() => setIsConfirmingDelete(true)} disabled={isSavingOrDeleting} className="text-[10px] text-[#666] hover:text-[#f87171] font-mono transition-colors cursor-pointer select-none font-bold">
                   [delete]
                 </button>
               )}
-              <button
-                onClick={handleStartEdit}
-                disabled={isSavingOrDeleting}
-                className="text-[10px] text-[#a78bfa] hover:text-[#c084fc] font-mono transition-colors cursor-pointer select-none font-bold"
-              >
+              <button onClick={handleStartEdit} disabled={isSavingOrDeleting} className="text-[10px] text-[#666] hover:text-[#c084fc] font-mono transition-colors cursor-pointer select-none font-bold">
                 [edit]
               </button>
             </>
           )}
-          <span
-            className="text-[9px] uppercase font-mono px-1.5 py-px rounded border shrink-0 font-bold"
-            style={{ color: catColor, borderColor: `${catColor}40`, backgroundColor: `${catColor}10` }}
-          >
-            {b.category}
-          </span>
+          <span style={{ color: catColor }} className="text-[9px] font-mono font-bold">{b.category}</span>
         </div>
       </div>
 
-      {errorMsg && (
-        <div className="text-[10px] text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 p-1.5 rounded shrink-0 font-mono">
-          {errorMsg}
-        </div>
+      {errorMsg && <div className="text-[#ef4444]">{errorMsg}</div>}
+
+      {/* Tab bar: Details • Log • Version */}
+      <div className="flex gap-x-2 text-[10px] select-none font-mono">
+        {(["details", "log", "version"] as DetailTab[]).map((tab, i) => {
+          const label = tab === "details" ? "Details" : tab === "log" ? `Log (${b.events?.length ?? 0})` : `Version History (${versions.length})`
+          return (
+            <span key={tab} className="flex items-center gap-x-2">
+              {i > 0 && <span className="text-[#333]">•</span>}
+              <button onClick={() => setActiveTab(tab)}
+                className={`cursor-pointer transition-colors font-bold ${activeTab === tab ? "text-[#94a3b8]" : "text-[#444] hover:text-[#777]"}`}>
+                {label}
+              </button>
+            </span>
+          )
+        })}
+      </div>
+
+      {/* Details tab */}
+      {activeTab === "details" && (
+        <>
+          <div>
+            <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Statement ]</div>
+            <div className="text-[#ccc] text-[11px] italic font-serif leading-relaxed mt-0.5">"{b.statement}"</div>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] font-mono text-[#888]">
+            <span><span className="text-[#444]">Category:</span> <span style={{ color: catColor }}>{b.category}</span></span>
+            <span><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">{b.origin === "emergent" ? "agent" : b.origin === "authored" ? "user" : b.origin}</span></span>
+            <span><span className="text-[#444]">Stage:</span> <span style={{ color: stageColor }}>{getBeliefStageLabel(stage)}</span></span>
+            <span><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{b.ontological_mass.toFixed(2)}</span></span>
+            <span><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa] font-bold">{(b.confidence * 100).toFixed(0)}%</span></span>
+          </div>
+          {vec.length > 0 && (
+            <div>
+              <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ 16D Autopoietic Signature ]</div>
+              <StructuralAutopoieticGlyph signature={vec} isStagnant={false} />
+            </div>
+          )}
+        </>
       )}
 
-      {/* Statement */}
-      <div className="shrink-0">
-        <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Statement ]</div>
-        <div className="text-[#ccc] text-[11px] italic font-serif leading-relaxed mt-0.5">
-          "{b.statement}"
-        </div>
-      </div>
-
-      {/* Metadata grid */}
-      <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-mono text-[#888]">
-        <div><span className="text-[#444]">Category:</span> <span style={{ color: catColor }}>{b.category}</span></div>
-        <div><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">{b.origin === "emergent" ? "agent" : b.origin === "authored" ? "user" : b.origin}</span></div>
-        <div><span className="text-[#444]">Stage:</span> <span style={{ color: stageColor }}>{getStageLabel(stage)}</span></div>
-        <div><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(3)}</span></div>
-        <div className="col-span-2"><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa] font-bold">{(b.confidence * 100).toFixed(0)}%</span></div>
-      </div>
-
-      {/* Vector */}
-      {vec.length > 0 && (
-        <div className="shrink-0 mb-1">
-          <div className="text-[#555] font-mono text-[10px] uppercase mb-1 font-bold">[ 16D Autopoietic Signature ]</div>
-          <StructuralAutopoieticGlyph
-            signature={vec}
-            isStagnant={false}
-          />
-        </div>
-      )}
-
-      {/* Tabs Selector */}
-      <div className="shrink-0 border-b border-[#1f1f2e]/20 flex gap-4 mt-2 text-[10px] font-mono">
-        <button
-          onClick={() => setActiveTab("metabolism")}
-          className={`pb-1.5 px-0.5 border-b-2 font-bold cursor-pointer transition-colors ${activeTab === "metabolism"
-            ? "border-[#a78bfa] text-[#a78bfa]"
-            : "border-transparent text-[#555] hover:text-[#888]"
-            }`}
-        >
-          [ METABOLISM LOG ]
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={`pb-1.5 px-0.5 border-b-2 font-bold cursor-pointer transition-colors ${activeTab === "history"
-            ? "border-[#a78bfa] text-[#a78bfa]"
-            : "border-transparent text-[#555] hover:text-[#888]"
-            }`}
-        >
-          [ STATEMENT HISTORY ({versions.length}) ]
-        </button>
-      </div>
-
-      {/* Tab Contents */}
-      {activeTab === "metabolism" && (
-        <div className="flex flex-col mt-2 shrink-0">
-          <div className="text-[#555] font-mono text-[10px] uppercase shrink-0 font-bold mb-1">[ Metabolism Events ]</div>
+      {/* Log tab */}
+      {activeTab === "log" && (
+        <div>
+          <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Metabolism Events ]</div>
           {(!b.events || b.events.length === 0) ? (
-            <div className="text-[11px] text-[#444] italic mt-0.5 font-mono">No metabolic events logged</div>
+            <div className="text-[#444] italic mt-0.5 font-mono">No metabolic events logged</div>
           ) : (
-            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 mt-1">
               {b.events.map((e) => {
-                // Parse description for mass delta and confidence (format: "Accreted:" or "Atrophied:" or "Updated:")
                 const massDeltaMatch = e.description?.match(/\(delta=([+\-\d.]+)\)/)
                 const confMatch = e.description?.match(/conf=([\d.]+)/)
                 const massDelta = massDeltaMatch ? parseFloat(massDeltaMatch[1]) : null
                 const finalConf = confMatch ? parseFloat(confMatch[1]) : null
-
                 return (
-                  <div key={e.id} className="text-[11px] border-b border-[#222]/30 pb-1 last:border-b-0 leading-normal">
+                  <div key={e.id} className="leading-normal">
                     <div className="flex items-center justify-between text-[#888]">
                       <span className="font-mono text-[10px]">{new Date(e.timestamp).toLocaleTimeString()}</span>
                       <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
@@ -965,9 +520,7 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
                             Δm:{massDelta > 0 ? "+" : ""}{massDelta.toFixed(3)}
                           </span>
                         )}
-                        {finalConf !== null && (
-                          <span className="text-[#4ade80]">c:{(finalConf * 100).toFixed(0)}%</span>
-                        )}
+                        {finalConf !== null && <span className="text-[#4ade80]">c:{(finalConf * 100).toFixed(0)}%</span>}
                       </div>
                     </div>
                     <div className="text-[#ccc] mt-0.5">
@@ -982,82 +535,47 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
         </div>
       )}
 
-      {activeTab === "history" && (
-        <div className="shrink-0 pt-2 font-mono text-[10px]">
-          <div className="text-[#555] uppercase mb-1 font-bold">[ Version Diff History ]</div>
+      {/* Version tab */}
+      {activeTab === "version" && (
+        <div className="font-mono text-[10px]">
+          <div className="text-[#555] uppercase font-bold">[ Version Diff History ]</div>
           {versions.length === 0 ? (
-            <div className="text-[11px] text-[#444] italic font-mono mt-0.5">No versions recorded</div>
+            <div className="text-[#444] italic mt-0.5">No versions recorded</div>
           ) : (
-            <div className="space-y-1 max-h-[220px] overflow-y-auto pr-1">
-              {[...versions].sort((a, b) => b.version - a.version).map((v, vIdx, arr) => {
-                const prev = vIdx < arr.length - 1 ? arr[vIdx + 1] : null
+            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 mt-1">
+              {sortedVersions.map((v, vIdx) => {
+                const prev = vIdx < sortedVersions.length - 1 ? sortedVersions[vIdx + 1] : null
                 const isExpanded = !!expandedVersions[v.version]
                 const prevStatement = prev ? prev.statement : ""
+                const hasDiff = prevStatement !== v.statement
                 const statementDiff = isExpanded ? computeLineDiff(prevStatement, v.statement) : []
-                const hasDiff = isExpanded && prevStatement !== v.statement
-
                 return (
-                  <div key={v.version} className="flex flex-col gap-1.5 p-1.5 rounded bg-[#07070b]/60 border border-[#1f1f2e]/10 text-[10px] font-mono">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#a78bfa] font-bold">v{v.version}</span>
-                          <span className="text-[#555] text-[9px]">
-                            {v.created_at ? new Date(v.created_at).toLocaleString() : ""}
-                          </span>
-                        </div>
-                        <div className="text-[#aaa] text-[9px] mt-0.5 truncate" title={v.change_reason || "No description"}>
-                          {v.change_reason || "No description"}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {agentFlux && v.version !== b.version && (
-                          <button
-                            onClick={() => handleRevert(v.version)}
-                            disabled={isSavingOrDeleting}
-                            className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline disabled:text-[#555] cursor-pointer select-none font-bold mr-1"
-                          >
-                            [revert]
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setExpandedVersions(prevMap => ({ ...prevMap, [v.version]: !prevMap[v.version] }))}
-                          className="text-[9px] text-[#888] hover:text-[#ccc] hover:underline cursor-pointer select-none font-bold"
-                        >
-                          {isExpanded ? "[collapse]" : "[diff]"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="mt-1 border-t border-[#1f1f2e]/10 pt-1.5 space-y-2 text-[9px]">
-                        {hasDiff ? (
+                  <VersionItem
+                    key={v.version} version={v.version}
+                    label={v.created_at ? new Date(v.created_at).toLocaleString() : ""}
+                    timestamp="" changelog={v.change_reason || "No description"}
+                    isCurrent={v.version === b.version} agentFlux={agentFlux}
+                    isExpanded={isExpanded} hasDiff={hasDiff}
+                    onToggleDiff={() => setExpandedVersions(prevMap => ({ ...prevMap, [v.version]: !prevMap[v.version] }))}
+                    onRevert={v.version !== b.version ? () => handleRevert(v.version) : undefined}
+                    isReverting={isSavingOrDeleting}
+                  >
+                    {isExpanded && hasDiff && (
+                      <div className="mt-1 pt-1.5 space-y-2 text-[9px]">
+                        <div>
+                          <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Statement Diff ]</div>
                           <div>
-                            <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Statement Diff ]</div>
-                            <div className="bg-[#050508]/90 border border-[#1f1f2e]/10 p-1.5 rounded leading-relaxed text-[10px] font-sans">
-                              {statementDiff.map((line, lIdx) => (
-                                <div
-                                  key={lIdx}
-                                  className={
-                                    line.type === 'added'
-                                      ? 'text-[#4ade80] bg-[#4ade80]/5 px-1 font-mono'
-                                      : line.type === 'removed'
-                                        ? 'text-[#ef4444] bg-[#ef4444]/5 line-through px-1 font-mono'
-                                        : 'text-[#888] px-1 font-mono'
-                                  }
-                                >
-                                  {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}
-                                  {line.value}
-                                </div>
-                              ))}
-                            </div>
+                            {statementDiff.map((line: any, lIdx: number) => (
+                              <div key={lIdx} className={line.type === 'added' ? 'text-[#4ade80] px-1 font-mono' : line.type === 'removed' ? 'text-[#ef4444] line-through px-1 font-mono' : 'text-[#888] px-1 font-mono'}>
+                                {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}{line.value}
+                              </div>
+                            ))}
                           </div>
-                        ) : (
-                          <div className="text-[#555] italic">No differences in statement.</div>
-                        )}
+                        </div>
                       </div>
                     )}
-                  </div>
+                    {isExpanded && !hasDiff && <div className="text-[#555] italic text-[9px]">No differences.</div>}
+                  </VersionItem>
                 )
               })}
             </div>

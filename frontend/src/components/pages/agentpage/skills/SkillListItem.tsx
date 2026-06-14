@@ -1,3 +1,4 @@
+import { memo } from "react"
 import type { DbSkillInfo } from "../../../../api/client"
 
 interface SkillListItemProps {
@@ -6,7 +7,7 @@ interface SkillListItemProps {
   isBaseline: boolean
 }
 
-export function SkillListItem({ s, isSelected, isBaseline }: SkillListItemProps) {
+export const SkillListItem = memo(function SkillListItem({ s, isSelected, isBaseline }: SkillListItemProps) {
   const isCollapsed = s.lifecycle_stage === "collapsed"
   const isProposed = s.lifecycle_stage === "nucleation"
   const isMerged = isCollapsed && s.changelog?.startsWith("Merged")
@@ -48,11 +49,11 @@ export function SkillListItem({ s, isSelected, isBaseline }: SkillListItemProps)
         {s.name} <span className="text-[#666] text-[9px] font-normal">v{s.version}</span>
       </span>
       <span className="text-[8px] font-mono text-[#555] shrink-0 hidden md:inline">
-        m:{s.ontological_mass.toFixed(1)}
+        m:{s.ontological_mass.toFixed(2)}
       </span>
       <span className="text-[10px] font-mono font-bold text-[#777] shrink-0">
         {(s.confidence * 100).toFixed(0)}%
       </span>
     </div>
   )
-}
+})

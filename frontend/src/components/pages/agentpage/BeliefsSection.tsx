@@ -3,79 +3,11 @@ import { getBeliefs, getAgent } from "../../../api/client"
 import type { BeliefsResponse, BeliefNodeInfo } from "../../../api/client"
 import { NewBeliefForm } from "./beliefs/NewBeliefForm"
 import { BeliefDetail } from "./beliefs/BeliefDetail"
+import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "./shared/helpers"
+import { CollapsibleSection } from "./shared/CollapsibleSection"
 
-// ─── Helpers ───────────────────────────────────────────────
-
-function getCategoryColor(c: string) {
-  switch (c.toLowerCase()) {
-    case "foundational": return "#4ade80"
-    case "ontological": return "#a78bfa"
-    case "methodological": return "#facc15"
-    default: return "#60a5fa"
-  }
-}
-
-function getStageColor(s: string) {
-  switch (s) {
-    case "nucleation": return "#f59e0b"
-    case "accretion": return "#fb923c"
-    case "crystallized": return "#4ade80"
-    case "senescence": return "#94a3b8"
-    case "collapsed": return "#ef4444"
-    default: return "#6c6c8a"
-  }
-}
-
-function getStageLabel(s: string) {
-  switch (s) {
-    case "nucleation": return "nucleating"
-    case "accretion": return "accreting"
-    case "crystallized": return "crystallized"
-    case "senescence": return "senescing"
-    case "collapsed": return "collapsed"
-    case "faded": return "faded"
-    default: return s
-  }
-}
-
-// ─── Ecosystem Metric ─────────────────────────────────────
-
-function EcoMetric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <span className="w-[calc(50%-0.5rem)] md:w-auto">
-      <span className="text-[#666]">{label}:</span>{" "}
-      <span className={accent ? "text-[#4ade80] font-bold" : "text-[#ccc]"}>{value}</span>
-    </span>
-  )
-}
-
-// ─── Collapsible Section Wrapper ──────────────────────────
-
-function CollapsibleSection({
-  label, count, icon, iconColor, children, defaultOpen = true,
-}: {
-  label: string; count: number; icon: string; iconColor?: string; children: React.ReactNode; defaultOpen?: boolean
-}) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <div>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 w-full text-left cursor-pointer select-none pb-0.5"
-      >
-        <span className="text-[9px] text-[#666] font-mono leading-none">{open ? "▼" : "▶"}</span>
-        <span style={{ color: iconColor }} className="text-[10px]">{icon}</span>
-        <span className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider">{label}</span>
-        <span className="text-[9px] text-[#444] ml-0.5">({count})</span>
-      </button>
-      {open && <div className="space-y-0.5">{children}</div>}
-    </div>
-  )
-}
-
-// ─── Compact Node List Item ───────────────────────────────
-
-function NodeListItem({
+/* ── Compact Node List Item ── */
+const NodeListItem = memo(function NodeListItem({
   b, isSelected, ghost, stageBadge, stageBadgeColor,
 }: {
   b: BeliefNodeInfo; isSelected: boolean; ghost?: boolean; stageBadge?: string; stageBadgeColor?: string
@@ -96,7 +28,7 @@ function NodeListItem({
         ${isGhost ? "opacity-50" : isProto ? "opacity-75" : ""}
       `}
     >
-      <span className="text-[9px] leading-none shrink-0" style={{ color: isProto ? getStageColor(stage) : isGhost ? "#ef4444" : catColor }}>
+      <span className="text-[9px] leading-none shrink-0" style={{ color: isProto ? getBeliefStageColor(stage) : isGhost ? "#ef4444" : catColor }}>
         {isProto ? "◇" : isGhost ? "◆" : "●"}
       </span>
       {isGhost && <span className="text-[8px] shrink-0">👻</span>}
@@ -112,14 +44,14 @@ function NodeListItem({
         </span>
       )}
       <span className="text-[8px] font-mono text-[#555] shrink-0 hidden md:inline">
-        m:{isProto ? b.ontological_mass.toFixed(3) : b.ontological_mass.toFixed(3)}
+        m:{b.ontological_mass.toFixed(2)}
       </span>
       <span className="text-[10px] font-mono font-bold text-[#777] shrink-0">
         {(b.confidence * 100).toFixed(0)}%
       </span>
     </div>
   )
-}
+})
 
 interface BeliefsSectionProps {
   initialSelectedId?: string
@@ -169,7 +101,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   if (error && !data) return <p className="text-[10px] text-[#ef4444] font-mono">{error}</p>
   if (!data) return <p className="text-[10px] text-[#444] font-mono">waiting for data...</p>
 
-  const { beliefs: rawBeliefs, proto_beliefs: rawProtos, ghosts: rawGhosts, somatic, ecosystem } = data
+  const { beliefs: rawBeliefs, proto_beliefs: rawProtos, ghosts: rawGhosts } = data
 
   const isSkillBelief = (b: BeliefNodeInfo) => b.label?.startsWith("skill:") ?? false
   const beliefs = (rawBeliefs || []).filter(b => !isSkillBelief(b))
@@ -252,54 +184,13 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   }
 
   return (
-    <div className="mt-2 border-t border-[#1a1a1a] pt-2">
-      {/* Somatic */}
-      {somatic && (
-        <div className="mb-3 bg-[#0c0c12] border border-[#222]/40 rounded p-2 font-mono text-[10px] space-y-1">
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1">[ Somatic Reservoir State ]</div>
-          <div className="flex justify-between items-center">
-            <span className="text-[#888]">Somatic Shock (Ad):</span>
-            <span className="text-[#ccc] font-bold">{somatic.somatic_reservoir_ad.toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-[#888]">Matrix Warping:</span>
-            <span className="text-[#ccc] font-bold">{somatic.matrix_warping.toFixed(3)}</span>
-          </div>
-          {somatic.immunological_directive_active && (
-            <div className="mt-1 px-1.5 py-0.5 bg-[#ef4444]/15 border border-[#ef4444]/40 text-[#ef4444] text-[9px] font-bold uppercase tracking-wider rounded animate-pulse text-center">
-              Immunological Response Triggered
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Ecosystem — single line on desktop, 2-column grid on mobile */}
-      {ecosystem && (
-        <div className="mb-3 bg-[#0c0c12] border border-[#222]/40 rounded p-2 font-mono text-[10px]">
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1">[ Ecosystem Health ]</div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 md:gap-x-6">
-            <EcoMetric label="Diversity" value={ecosystem.diversity.toFixed(2)} />
-            <EcoMetric label="Coherence" value={ecosystem.coherence.toFixed(2)} />
-            <EcoMetric label="Tension" value={ecosystem.tension.toFixed(2)} />
-            <EcoMetric label="Plasticity" value={ecosystem.plasticity.toFixed(2)} />
-            <EcoMetric label="Ghosts" value={`${ecosystem.ghost_count}/${ecosystem.active_count}`} />
-            <EcoMetric label="Vitality" value={ecosystem.eco_vitality.toFixed(3)} accent />
-          </div>
-        </div>
-      )}
+    <div className="pt-2">
+      {/* Somatic & Ecosystem health metrics moved to Traits & Health tab */}
 
       {/* Category legend & Sorting */}
       <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[9px] font-mono text-[#555] border-b border-[#222]/30 pb-1.5">
         <div className="flex items-center gap-3">
-          <span className="text-[#6c6c8a] uppercase tracking-wider">[ Nodes ]</span>
-          <span className="text-[#444]">|</span>
           <span className="text-[#444] uppercase">sort:</span>
-          <button
-            onClick={() => setSortBy("default")}
-            className={`cursor-pointer transition-colors hover:text-[#ccc] ${sortBy === "default" ? "text-[#a78bfa] font-bold" : "text-[#555]"}`}
-          >
-            [default]
-          </button>
           <button
             onClick={() => setSortBy("mass")}
             className={`cursor-pointer transition-colors hover:text-[#ccc] ${sortBy === "mass" ? "text-[#a78bfa] font-bold" : "text-[#555]"}`}
@@ -331,9 +222,9 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
                 setSelectedId(null)
                 setIsAdding(true)
               }}
-              className="w-full mb-2.5 py-1 px-3 border border-[#a78bfa]/20 hover:border-[#a78bfa]/40 bg-[#a78bfa]/5 hover:bg-[#a78bfa]/10 text-[#a78bfa] text-[10px] font-mono transition-all text-center cursor-pointer select-none uppercase tracking-wider rounded font-bold"
+              className="self-start text-[10px] text-[#666] hover:text-[#a78bfa] font-mono cursor-pointer select-none mb-2"
             >
-              + add new belief
+              [+ add]
             </button>
           )}
           <div
@@ -344,14 +235,18 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
               <CollapsibleSection label="Incubating Proto-Beliefs" count={sortedProtos.length} icon="◇" iconColor="#f59e0b">
                 {sortedProtos.map(b => {
                   const s = b.lifecycle_stage || "accretion"
-                  return <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge={getStageLabel(s)} stageBadgeColor={getStageColor(s)} />
+                  return <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge={getBeliefStageLabel(s)} stageBadgeColor={getBeliefStageColor(s)} />
                 })}
               </CollapsibleSection>
             )}
 
-            {sortedBeliefs.map(b => (
-              <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} />
-            ))}
+            {sortedBeliefs.length > 0 && (
+              <CollapsibleSection label="Crystallized Beliefs" count={sortedBeliefs.length} icon="●" iconColor="#4ade80">
+                {sortedBeliefs.map(b => (
+                  <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} />
+                ))}
+              </CollapsibleSection>
+            )}
 
             {sortedGhosts.length > 0 && (
               <CollapsibleSection label="Spectral Ghosts" count={sortedGhosts.length} icon="◇" defaultOpen={false}>

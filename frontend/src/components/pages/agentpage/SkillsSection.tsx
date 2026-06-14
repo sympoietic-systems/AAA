@@ -8,6 +8,7 @@ import type { DbSkillsResponse, DbSkillInfo } from "../../../api/client"
 import { SkillListItem } from "./skills/SkillListItem"
 import { SkillDetail } from "./skills/SkillDetail"
 import { NewSkillForm } from "./skills/NewSkillForm"
+import { CollapsibleSection } from "./shared/CollapsibleSection"
 
 export const SkillsSection = memo(SkillsSectionComponent)
 
@@ -146,7 +147,7 @@ function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
   }
 
   return (
-    <div className="mt-2 border-t border-[#1a1a1a] pt-2 flex flex-col md:flex-row gap-3 md:h-[calc(100vh-300px)]">
+    <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-300px)]">
       {/* ── Left: Skill list ── */}
       <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0">
         {agentFlux && (
@@ -155,9 +156,9 @@ function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
               setSelectedName(null)
               setIsAdding(true)
             }}
-            className="w-full mb-2.5 py-1 px-3 border border-[#a78bfa]/20 hover:border-[#a78bfa]/40 bg-[#a78bfa]/5 hover:bg-[#a78bfa]/10 text-[#a78bfa] text-[10px] font-mono transition-all text-center cursor-pointer select-none uppercase tracking-wider rounded"
+            className="self-start text-[10px] text-[#666] hover:text-[#a78bfa] font-mono cursor-pointer select-none mb-2"
           >
-            + add new skill
+            [+ add]
           </button>
         )}
         <div
@@ -165,44 +166,32 @@ function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
           className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none"
         >
           {always_active.length > 0 && (
-            <div>
-              <div className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider pb-0.5">
-                Baseline Dispositions ({always_active.length})
-              </div>
+            <CollapsibleSection label="Baseline Dispositions" count={always_active.length} icon="◆" iconColor="#a78bfa">
               {always_active.map(s => (
                 <SkillListItem key={s.id} s={s} isSelected={!isAdding && selectedName === s.name} isBaseline />
               ))}
-            </div>
+            </CollapsibleSection>
           )}
           {on_demand.length > 0 && (
-            <div className={always_active.length > 0 ? "mt-2.5" : ""}>
-              <div className="text-[#6c6c8a] font-mono text-[9px] uppercase tracking-wider pb-0.5">
-                On-Demand Capabilities ({on_demand.length})
-              </div>
+            <CollapsibleSection label="On-Demand Capabilities" count={on_demand.length} icon="◇" iconColor="#4ade80">
               {on_demand.map(s => (
                 <SkillListItem key={s.id} s={s} isSelected={!isAdding && selectedName === s.name} isBaseline={false} />
               ))}
-            </div>
+            </CollapsibleSection>
           )}
           {proposed.length > 0 && (
-            <div className="mt-2.5">
-              <div className="text-[#a78bfa] font-mono text-[9px] uppercase tracking-wider pb-0.5">
-                Proposed Nucleations ({proposed.length})
-              </div>
+            <CollapsibleSection label="Proposed Nucleations" count={proposed.length} icon="▲" iconColor="#a78bfa">
               {proposed.map(s => (
                 <SkillListItem key={s.id} s={s} isSelected={!isAdding && selectedName === s.name} isBaseline={false} />
               ))}
-            </div>
+            </CollapsibleSection>
           )}
           {collapsed.length > 0 && (
-            <div className="mt-2.5">
-              <div className="text-[#ef4444] font-mono text-[9px] uppercase tracking-wider pb-0.5">
-                Refused / Integrated Proposals ({collapsed.length})
-              </div>
+            <CollapsibleSection label="Refused / Integrated" count={collapsed.length} icon="✖" iconColor="#ef4444" defaultOpen={false}>
               {collapsed.map(s => (
                 <SkillListItem key={s.id} s={s} isSelected={!isAdding && selectedName === s.name} isBaseline={false} />
               ))}
-            </div>
+            </CollapsibleSection>
           )}
         </div>
       </div>

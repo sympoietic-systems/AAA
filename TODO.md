@@ -15,6 +15,11 @@
     [x] Conversation list [x] delete button hidden when agentFlux=false
     [x] #del button on messages in NodeExplorer (only when agentFlux=true)
     [x] Right-click "Delete Node" on ConnectionCloud canvas (only when agentFlux=true)
+    [x] /agent page refactor: terminal aesthetics, self-supporting panels, unified component patterns
+    [x] /agent page: extract shared helpers (getCategoryColor, getStageColor, etc.), CollapsibleSection, HealthMetrics
+    [x] /agent page: all list items + detail panels unified to shared patterns
+    [x] /agent page: React.memo on all leaf components (per FRONTEND_BEST_PRACTICES.md §3)
+    [x] docs: FRONTEND_DESIGN_PRINCIPLES.md created
 
 
 
@@ -23,8 +28,6 @@
         [ ] The paragraph must not point at the concept; it must perform the cut it describes. - this can be a new skill
 
     [ ] Vitality collapse, check when it added. now vitality .5, but it triggered
-
-    [] beliefs metabolic log do not show event where the mass changes
     
 
 
