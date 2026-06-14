@@ -354,7 +354,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
             ))}
 
             {sortedGhosts.length > 0 && (
-              <CollapsibleSection label="Spectral Ghosts" count={sortedGhosts.length} icon="👻" defaultOpen={false}>
+              <CollapsibleSection label="Spectral Ghosts" count={sortedGhosts.length} icon="◇" defaultOpen={false}>
                 {sortedGhosts.map(b => (
                   <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} ghost />
                 ))}
