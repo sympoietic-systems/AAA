@@ -203,3 +203,22 @@ class ConversationRepository(BaseRepository):
             (conversation_id,),
         )
         conn.commit()
+
+    @with_connection
+    def get_recent_dreams(self, hours: int = 48) -> list[dict]:
+        """Return recent dream conversations with their last message snippet."""
+        conn = self._conn()
+        rows = conn.execute(
+            """SELECT c.id, c.title, c.created_at, c.updated_at,
+                      (SELECT COUNT(*) FROM conversation_log WHERE conversation_id = c.id) as msg_count,
+                      (SELECT content FROM conversation_log WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) as last_snippet
+               FROM conversations c
+               LEFT JOIN conversation_tags t ON c.id = t.conversation_id AND t.tag_type = 'structural' AND t.tag = 'dreams'
+               WHERE (t.tag IS NOT NULL OR c.title LIKE 'Dream Log:%' OR c.title LIKE 'Internal Diary:%')
+                 AND (c.created_at > datetime('now', '-' || ? || ' hours')
+                      OR c.updated_at > datetime('now', '-' || ? || ' hours'))
+               ORDER BY c.updated_at DESC
+               LIMIT 50""",
+            (hours, hours),
+        ).fetchall()
+        return [dict(r) for r in rows]

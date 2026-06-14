@@ -474,15 +474,6 @@ export const NodeExplorer = memo(function NodeExplorer({
               <span key={t.tag} className="text-[9px] text-[#6bc28c] font-mono flex items-center gap-0.5">
                 {i > 0 && <span className="text-[#444] select-none">{" // "}</span>}
                 {t.tag}
-                {onRemoveTag && (
-                  <button
-                    onClick={() => onRemoveTag(t.tag)}
-                    className="text-[9px] text-[#666] hover:text-[#ef4444] cursor-pointer select-none"
-                    title="Remove tag"
-                  >
-                    &times;
-                  </button>
-                )}
               </span>
             )
           })}

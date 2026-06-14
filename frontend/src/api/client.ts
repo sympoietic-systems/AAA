@@ -972,6 +972,26 @@ export async function getDaemonStatus(): Promise<DaemonStatusResponse> {
   return res.json()
 }
 
+export interface DreamEntry {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  msg_count: number
+  last_snippet: string | null
+}
+
+export interface DreamHistoryResponse {
+  dreams: DreamEntry[]
+  count: number
+}
+
+export async function getRecentDreams(hours: number = 48): Promise<DreamHistoryResponse> {
+  const res = await fetch(`${BASE}/daemon/dreams?hours=${hours}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 
 export interface NoteInfo {
   id: string

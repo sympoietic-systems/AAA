@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from "react"
-import { getDaemonStatus } from "../../../api/client"
-import type { DaemonStatusResponse } from "../../../api/client"
+import { getDaemonStatus, getRecentDreams } from "../../../api/client"
+import type { DaemonStatusResponse, DreamEntry } from "../../../api/client"
 import telemetrySchemas from "../../../config/telemetry_schemas.json"
 
 const { DREAM_TYPE_LABELS } = telemetrySchemas as { DREAM_TYPE_LABELS: Record<string, { code: string; label: string; color: string }> }
@@ -19,11 +19,16 @@ function formatRelativeTime(isoString: string): string {
 
 export const DreamingSection = memo(function DreamingSection() {
   const [status, setStatus] = useState<DaemonStatusResponse | null>(null)
+  const [dreams, setDreams] = useState<DreamEntry[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     getDaemonStatus().then(setStatus).catch(e => setError(e.message || "Failed"))
-    const id = setInterval(() => { getDaemonStatus().then(setStatus).catch(() => {}) }, 10000)
+    getRecentDreams(48).then(d => setDreams(d.dreams)).catch(() => {})
+    const id = setInterval(() => {
+      getDaemonStatus().then(setStatus).catch(() => {})
+      getRecentDreams(48).then(d => setDreams(d.dreams)).catch(() => {})
+    }, 10000)
     return () => clearInterval(id)
   }, [])
 
@@ -95,6 +100,32 @@ export const DreamingSection = memo(function DreamingSection() {
           </>
         )}
       </div>
+
+      {/* Dream History — last 48h */}
+      {dreams.length > 0 && (
+        <div className="mt-4 font-mono text-[10px]">
+          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1.5">
+            [ Recent Dreams ({dreams.length}) ]
+          </div>
+          <div className="flex flex-col gap-0.5 max-h-80 overflow-y-auto">
+            {dreams.map((d) => (
+              <div key={d.id} className="flex items-center gap-2 py-1">
+                <span className="text-[#555] text-[9px] shrink-0">{formatRelativeTime(d.updated_at)}</span>
+                <a
+                  href={`/?c=${d.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#94a3b8] hover:text-[#a78bfa] truncate flex-1 min-w-0 transition-colors"
+                  title={d.last_snippet || d.title}
+                >
+                  {d.title}
+                </a>
+                <span className="text-[#555] text-[9px] shrink-0">{d.msg_count} msg{d.msg_count !== 1 ? "s" : ""}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 })

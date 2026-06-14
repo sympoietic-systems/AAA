@@ -19,3 +19,13 @@ async def trigger_daemon_dream(request: Request):
     if result is None:
         raise HTTPException(status_code=503, detail="Dream Daemon not initialized")
     return result
+
+
+@router.get("/daemon/dreams")
+async def get_recent_dreams(request: Request, hours: int = 48):
+    """Return recent dream conversations from the last N hours."""
+    daemon = getattr(request.app.state, "dream_daemon", None)
+    if not daemon:
+        raise HTTPException(status_code=503, detail="Dream Daemon not initialized")
+    dreams = DaemonService.get_recent_dreams(request.app.state, hours)
+    return {"dreams": dreams, "count": len(dreams)}
