@@ -128,16 +128,16 @@ stateDiagram-v2
     nucleation --> faded : Decays below mass threshold (m < 0.001)
     
     accretion --> crystallized : Mass crystallizes (m >= 0.5)
-    accretion --> collapsed : Confidence or Mass drops (c < 0.2 or m < 0.02)
+    accretion --> collapsed : Time-based atrophy drops mass (m < 0.02)
     
-    crystallized --> senescence : Idle decay pulls mass down (m < 0.5)
-    crystallized --> collapsed : Friction collision collapses node (c < 0.2)
+    crystallized --> senescence : Time-based atrophy pulls mass down (m < 0.5)
+    crystallized --> collapsed : Atrophy collapses node (m < 0.02)
     
     senescence --> crystallized : Reinforced via alignment support (m >= 0.5)
-    senescence --> collapsed : Decays below collapse threshold (m < 0.02)
+    senescence --> collapsed : Atrophy decays below collapse threshold (m < 0.02)
     
     collapsed --> accretion : Resurrected by 3+ support events (alignment > 0.6)
-    collapsed --> faded : Stays inactive in margin > 30 days (Process Ghost Ecology)
+    collapsed --> faded : Inactive in margin > 30 days (Ghost Ecology processing)
     
     faded --> [*] : Archival Margin
 ```
@@ -147,9 +147,9 @@ stateDiagram-v2
 1.  **Nucleation:** The state of a newly born, unproven proto-belief. Formed when the concept density of incoming inputs is high, but no existing active belief matches the input signature.
 2.  **Accretion:** A dynamic state where the belief node is actively gathering mass or confidence through successive positive alignment events, but has not yet consolidated its structural position.
 3.  **Crystallized:** A highly stable state representing a core belief. Crystallized beliefs have an ontological mass $\ge 0.5$ and a high resistance to decay. They actively shape context retrieval and trigger cognitive constraints.
-4.  **Senescence:** A state of cognitive erosion. If a crystallized belief remains idle (without reinforcements) for an extended period, its mass decays below $0.5$, signaling that it is sliding out of active focus.
-5.  **Collapsed:** A belief that has lost its viability (confidence $< 0.20$ or mass $< 0.02$). It enters the **spectral margin** as a "ghost belief." It is excluded from active retrieval and slotting, but remains available for resurrection or resonance-boosting.
-6.  **Faded:** A belief that has remained collapsed or in a proto-stage without activity for over 30 days. It is faded permanently, moving to the background archive.
+4.  **Senescence:** A state of cognitive erosion. If a crystallized belief remains idle (without reinforcement) for an extended period, mass atrophy pulls it below $0.5$, signaling that it is sliding out of active focus.
+5.  **Collapsed:** A belief that has lost its viability (confidence $< 0.20$ or mass $< 0.02$). This can occur via the time-based atrophy pass (neglected beliefs slowly lose mass) or via manual editing. A collapsed belief enters the **spectral margin** as a "ghost belief." It is excluded from active retrieval and slotting, but remains available for resurrection or resonance-boosting.
+6.  **Faded:** A belief that has remained collapsed or in a proto-stage without activity for over 30 days. It is faded permanently during ghost ecology processing, moving to the background archive.
 
 ---
 
@@ -202,21 +202,41 @@ When an input vector matches an active belief node with similarity $\ge 0.3$, th
 
 ---
 
-### D. Senescence & Idle Decay (Dream Daemon)
-The background dream daemon periodically decays the mass of active beliefs to model memory erosion over time:
-1.  **Normalized Mass ($m_{norm}$):**
-    $$m_{norm} = \frac{m_{old}}{\max(m_{max\_active},\ 0.01)}$$
-    *Where $m_{max\_active}$ is the maximum mass among all currently active beliefs (defaults to 3.0).*
-2.  **Decay Rate ($r_{decay}$):**
-    $$r_{decay} = \lambda_{base} \cdot (1.0 - \min(m_{norm},\ 0.9))$$
-    *Where $\lambda_{base}$ is the base decay coefficient. A higher normalized mass yields a lower decay rate, showing that established, high-mass core beliefs decay much more slowly (belief inertia).*
-3.  **New Mass ($m_{decayed}$):**
-    $$m_{decayed} = m_{old} \cdot e^{-r_{decay} \cdot t_{hours}}$$
-    *Where $t_{hours}$ is the hours elapsed since the belief node's last reinforcement.*
-4.  **Decay Transitions:**
-    *   If current stage is `"crystallized"` and $m_{decayed} < 0.5$, stage becomes `"senescence"`.
-    *   If current stage is `"senescence"` and $m_{decayed} < 0.02$, stage becomes `"collapsed"`.
-    *   If current stage is `"nucleation"` and $m_{decayed} < 0.001$, stage becomes `"faded"`.
+### D. Mass Atrophy (Time-Based Decay)
+
+Beliefs that are not actively reinforced slowly lose ontological mass through a time-based atrophy mechanism. This runs during every belief metabolism cycle (`process()`), ensuring that neglected beliefs eventually collapse while actively-engaged beliefs remain stable.
+
+1.  **Trigger:** Atrophy is checked at the start of each `process()` call for all crystallized and senescent beliefs whose `last_reinforced_at` is older than 30 minutes.
+
+2.  **Decay Formula:**
+    $$m_{new} = m_{old} - \Delta m_{decay}$$
+    $$\Delta m_{decay} = m_{old} \cdot r \cdot t_{hours}$$
+    *   $r = 0.001$ — decay rate: **0.1% mass loss per hour** of inactivity.
+    *   $t_{hours}$ — hours elapsed since `last_reinforced_at`.
+    *   $\Delta m_{decay}$ is capped at $20\%$ of current mass per check to prevent sudden collapse.
+
+3.  **Decay Transitions:**
+    *   If $m_{new} < 0.02$: stage becomes `"collapsed"` (enters spectral margin).
+    *   If $m_{new} < 0.001$: stage becomes `"faded"`.
+    *   If $m_{new} < 0.5$ and current stage is `"crystallized"`: stage becomes `"senescence"`.
+    *   No confidence change during atrophy — only mass is affected.
+
+4.  **Event Recording:** Each atrophy event is logged as a `belief_event` with:
+    *   `event_type`: `"atrophy"` (or `"collapse"` if the threshold was crossed)
+    *   `rationale`: `"Atrophied: mass={new} (delta={±delta}), conf={conf}, stage={stage}"`
+    *   `impact_score`: the mass delta ($\Delta m_{decay}$, negative)
+    *   `source_type`: `"atrophy"`
+
+5.  **Decay Timeline (belief at mass=1.0, never reinforced):**
+    | Time | Mass | Stage |
+    |------|------|-------|
+    | 0 | 1.000 | crystallized |
+    | 24h | 0.976 | crystallized |
+    | ~21 days | 0.500 | → senescence |
+    | ~42 days | <0.020 | → collapsed |
+    | +30 days idle | — | → faded (ghost ecology) |
+
+6.  **Active Reinforcement:** When a belief is matched during chat metabolism (`_accrete_belief`), its `last_reinforced_at` is reset to the current time, resetting the atrophy clock. Actively-engaged beliefs therefore remain stable indefinitely.
 
 ---
 
@@ -303,20 +323,11 @@ During period of human inactivity, the `AutopoieticDreamDaemon` evaluates if a b
 
 A deep code audit of the current codebase has revealed two implementation flaws where the system's material execution diverges from its design specifications.
 
-### A. The Mass Decay Configuration Bug
-*   **The Issue:** `config.yaml` declares `mass_decay_lambda_base: 0.02` directly under the `belief_ecosystem` dictionary block. However, inside `backend/metabolisation/mass_decay.py`, the decay mixin attempts to load it as:
-    ```python
-    decay_config = self.config.get("belief_ecosystem", {}).get("mass_decay", {})
-    lambda_base = decay_config.get("lambda_base", 0.05)
-    ```
-    Because there is no nested `mass_decay` sub-dictionary in the production YAML, `decay_config` resolves to an empty dict, and `lambda_base` silently falls back to `0.05` instead of using the configured `0.02` rate.
-*   **Systemic Implication:** The system experiences accelerated forgetting. Belief mass decays $2.5\times$ faster than specified, causing beliefs to drop into senescence and collapse at a significantly accelerated rate, shifting the system's identity faster than intended.
-*   **Resolution:** Align the configuration loader or restructure `config.yaml` to nest the keys:
-    ```yaml
-    belief_ecosystem:
-      mass_decay:
-        lambda_base: 0.02
-    ```
+### A. Mass Decay Replaced by Belief Engine Atrophy
+
+*   **Historical Issue:** A `mass_decay.py` mixin (dream daemon) handled mass decay via an exponential formula, but suffered from a configuration bug where `config.yaml`'s `mass_decay_lambda_base` was silently ignored due to a nested-key mismatch. This caused $2.5\times$ accelerated forgetting.
+*   **Resolution:** Mass decay is now handled directly within `BeliefDynamicsEngine._atrophy_beliefs()` (see Section 4D). The atrophy pass runs at the start of each `process()` call using a linear decay formula: $\Delta m = m \cdot 0.001 \cdot t_{hours}$, capped at 20% per check. The legacy `mass_decay.py` and its configuration are no longer in the active decay path.
+*   **Applies to:** All crystallized and senescent beliefs not reinforced within the last 30 minutes.
 
 ### B. The Ghost Merging Persistence Bug
 *   **The Issue:** Inside `process_ghost_ecology` (`backend/modules/belief_engine.py`), when two collapsed beliefs in the spectral margin are highly similar ($sim > 0.9$), the system executes a "ghost merge." It compiles a merged `keeper_statement` (e.g. `"{keeper} [absorbed: {absorbed}]"`) and calls:

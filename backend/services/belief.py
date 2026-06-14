@@ -746,18 +746,25 @@ Proposed Belief Statement:
             version=new_version,
         )
 
-        # 3. Log event
+        # 3. Log event with actual deltas
         try:
+            mass_delta = ontological_mass - target_belief.ontological_mass
+            conf_delta = confidence - target_belief.confidence
+            rationale = (
+                f"Updated: mass={ontological_mass:.3f} (delta={mass_delta:+.3f}), "
+                f"conf={confidence:.3f} (delta={conf_delta:+.3f}), "
+                f"stage={lifecycle_stage}"
+            )
             belief_repo.insert_belief_event(
                 event_id=str(uuid.uuid4()),
                 belief_id=belief_id,
                 source_type="user_assertion",
                 source_id=None,
-                alignment=1.0,
-                perturbation=0.5,
+                alignment=1.0 if mass_delta >= 0 else -1.0,
+                perturbation=abs(mass_delta),
                 event_type="revision",
-                impact=0.1,
-                rationale="Updated details via Agent FLUX API",
+                impact=mass_delta,
+                rationale=rationale,
             )
         except Exception as e:
             logger.warning("Failed to insert event for belief update: %s", e)

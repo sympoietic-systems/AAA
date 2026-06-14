@@ -265,6 +265,94 @@ class BeliefDynamicsEngine(ProcessingModule):
 
         return new_mass
 
+    async def _atrophy_beliefs(self, agent_id: str) -> dict:
+        """Apply time-based mass decay to active beliefs that haven't been reinforced recently.
+        
+        Decay rate: ~0.1% per hour of inactivity. Beliefs that are actively engaged
+        (frequently matched in metabolism) stay stable; neglected beliefs slowly lose mass
+        and can eventually collapse.
+        """
+        all_beliefs = self._belief_repo.list_beliefs(agent_id)
+        active = [b for b in all_beliefs if b.lifecycle_stage in ("crystallized", "senescence")]
+        
+        now = datetime.now(timezone.utc)
+        decay_rate_per_hour = 0.001  # 0.1% mass loss per hour of inactivity
+        atrophied = 0
+        collapsed = 0
+
+        for belief in active:
+            last_reinforced = belief.last_reinforced_at
+            if not last_reinforced:
+                continue
+
+            try:
+                if isinstance(last_reinforced, str):
+                    last_dt = datetime.fromisoformat(last_reinforced.replace("Z", "+00:00"))
+                else:
+                    last_dt = last_reinforced
+
+                # Ensure both are offset-aware for comparison
+                if last_dt.tzinfo is None:
+                    last_dt = last_dt.replace(tzinfo=timezone.utc)
+
+                hours_since = (now - last_dt).total_seconds() / 3600.0
+                if hours_since <= 0.5:  # Skip if reinforced within last 30 minutes
+                    continue
+
+                current_mass = belief.ontological_mass
+                decay = current_mass * decay_rate_per_hour * hours_since
+                decay = min(decay, current_mass * 0.20)  # Cap at 20% per check
+                new_mass = max(0.0, current_mass - decay)
+
+                if abs(new_mass - current_mass) < 0.0001:
+                    continue
+
+                # Check if belief collapses
+                new_stage = belief.lifecycle_stage
+                if new_mass < 0.02:
+                    new_stage = "collapsed"
+                    collapsed += 1
+                elif new_mass < 0.001:
+                    new_stage = "faded"
+
+                self._belief_repo.update_belief(
+                    belief_id=belief.id,
+                    confidence=belief.confidence,
+                    vector_16d=belief.vector_16d,
+                    origin=belief.origin,
+                    lifecycle_stage=new_stage,
+                )
+                self._belief_repo.update_belief_mass(belief.id, new_mass)
+
+                self._belief_repo.insert_belief_event(
+                    event_id=str(uuid.uuid4()),
+                    belief_id=belief.id,
+                    source_type="atrophy",
+                    source_id=None,
+                    alignment=0.0,
+                    perturbation=decay,
+                    event_type="collapse" if new_stage != belief.lifecycle_stage else "atrophy",
+                    impact=round(new_mass - current_mass, 6),
+                    rationale=(
+                        f"Atrophied: mass={new_mass:.3f} (delta={new_mass - current_mass:+.3f}), "
+                        f"conf={belief.confidence:.3f}, stage={new_stage}"
+                    ),
+                )
+                atrophied += 1
+
+            except Exception:
+                logger.debug("Failed to atrophy belief '%s'", belief.label, exc_info=True)
+                continue
+
+        if atrophied > 0:
+            logger.info(
+                "Belief atrophy: %d beliefs decayed%s",
+                atrophied,
+                f" ({collapsed} collapsed)" if collapsed > 0 else "",
+            )
+
+        return {"atrophied": atrophied, "collapsed": collapsed}
+
     def _compute_lifecycle_stage(
         self,
         belief: BeliefNode,
@@ -331,6 +419,12 @@ class BeliefDynamicsEngine(ProcessingModule):
         agent_id = payload.get("agent_id", "symbia")
         if not agent_id:
             agent_id = "symbia"
+
+        # 1. Apply time-based mass atrophy to decay neglected beliefs
+        try:
+            await self._atrophy_beliefs(agent_id)
+        except Exception as e:
+            logger.error("Belief atrophy pass failed: %s", e)
 
         # 2. Load Conversation somatic variables
         somatic_reservoir = 0.0

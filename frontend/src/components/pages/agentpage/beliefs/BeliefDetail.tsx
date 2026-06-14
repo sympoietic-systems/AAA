@@ -947,15 +947,28 @@ export function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, o
           {(!b.events || b.events.length === 0) ? (
             <div className="text-[11px] text-[#444] italic mt-0.5 font-mono">No metabolic events logged</div>
           ) : (
-            <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
               {b.events.map((e) => {
-                const isPos = e.delta_confidence >= 0
-                const diffStr = isPos ? `+${e.delta_confidence.toFixed(3)}` : `${e.delta_confidence.toFixed(3)}`
+                // Parse description for mass delta and confidence (format: "Accreted:" or "Atrophied:" or "Updated:")
+                const massDeltaMatch = e.description?.match(/\(delta=([+\-\d.]+)\)/)
+                const confMatch = e.description?.match(/conf=([\d.]+)/)
+                const massDelta = massDeltaMatch ? parseFloat(massDeltaMatch[1]) : null
+                const finalConf = confMatch ? parseFloat(confMatch[1]) : null
+
                 return (
                   <div key={e.id} className="text-[11px] border-b border-[#222]/30 pb-1 last:border-b-0 leading-normal">
                     <div className="flex items-center justify-between text-[#888]">
                       <span className="font-mono text-[10px]">{new Date(e.timestamp).toLocaleTimeString()}</span>
-                      <span className={`font-mono text-[10px] font-bold ${isPos ? "text-[#4ade80]" : "text-[#f87171]"}`}>{diffStr}</span>
+                      <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
+                        {massDelta !== null && massDelta !== 0 && (
+                          <span className={massDelta > 0 ? "text-[#60a5fa]" : massDelta < 0 ? "text-[#f87171]" : "text-[#555]"}>
+                            Δm:{massDelta > 0 ? "+" : ""}{massDelta.toFixed(3)}
+                          </span>
+                        )}
+                        {finalConf !== null && (
+                          <span className="text-[#4ade80]">c:{(finalConf * 100).toFixed(0)}%</span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-[#ccc] mt-0.5">
                       <span className="text-[#6c6c8a] font-mono text-[10px] mr-1">[{e.source_type}:{e.source_id}]</span>
