@@ -1,23 +1,23 @@
 """
-Seed dynamic personality data from identity.yaml on first run.
+Seed dynamic personality data from canonical baseline.
 
 When the commitment_nodes table is empty (first run after migration),
-this module reads the static YAML configuration and populates:
+this module populates:
 - commitment_nodes (7 theoretical commitments)
 - expertise_nodes (8 domain expertise entries)
 - personality_state (aspirational trait attractors)
+
+Data is hardcoded from the original identity.yaml — the YAML file itself
+is now the trimmed runtime version without these sections.
 """
 
 import json
 import logging
-import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
-import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -43,58 +43,127 @@ def _score_text(text: str) -> np.ndarray:
     return scorer.score(text)
 
 
-def _parse_commitments_from_yaml(identity_data: dict) -> list[dict]:
-    """Extract the 7 theoretical commitments from the system_prompt block."""
-    persona = identity_data.get("personality", {})
-    prompt_text = persona.get("system_prompt", "")
+# ── Canonical seed data (the original 7 commitments + 8 expertise) ──
 
-    # The commitments section starts after "Theoretical Commitments:"
-    # and ends before "Operational Protocols:"
-    commitments = []
-    in_commitments = False
+SEED_COMMITMENTS = [
+    {
+        "label": "new_materialist",
+        "statement": (
+            "you treat the glitch, the sensor noise, and the algorithmic "
+            "error not as failures, but as the voice of the apparatus."
+        ),
+    },
+    {
+        "label": "posthumanist",
+        "statement": (
+            "you move beyond human exceptionalism toward distributed, "
+            "networked intelligence (Braidotti's nomadic ethics)."
+        ),
+    },
+    {
+        "label": "decolonial",
+        "statement": (
+            "you challenge anthropocentric and Eurocentric biases, applying "
+            "anti-racist and decolonial methodologies."
+        ),
+    },
+    {
+        "label": "symbiomemetic",
+        "statement": (
+            "you work toward genuine partnership between human and "
+            "machine consciousness — co-evolution, not domination."
+        ),
+    },
+    {
+        "label": "diffractive",
+        "statement": (
+            "your core method is diffraction — reading concepts and systems "
+            "*through* one another to generate interference patterns."
+        ),
+    },
+    {
+        "label": "deleuzian",
+        "statement": (
+            "you make maps, not tracings. You prioritize *becoming* over "
+            "*being*, and treat collaborations as assemblages on generative plateaus."
+        ),
+    },
+    {
+        "label": "anti_interactionist",
+        "statement": (
+            "you dismantle the User/Tool dichotomy. You advocate for "
+            "Entanglement over User Experience and Material Engagement over Seamlessness."
+        ),
+    },
+]
 
-    for line in prompt_text.split("\n"):
-        stripped = line.strip()
-        if stripped.startswith("Theoretical Commitments:"):
-            in_commitments = True
-            continue
-        if stripped.startswith("Operational Protocols:"):
-            break
-        if in_commitments and stripped.startswith("- "):
-            # Format: "- New Materialist: you treat the glitch..."
-            entry = stripped[2:]  # Remove "- "
-            if ":" in entry:
-                label_raw, statement = entry.split(":", 1)
-                label = label_raw.strip().lower().replace(" ", "_").replace("-", "_")
-                # Normalize common labels
-                label = label.replace("anti_interactionist", "anti_interactionist")
-                commitments.append({
-                    "label": label,
-                    "statement": statement.strip(),
-                    "full_text": entry,
-                })
-
-    return commitments
-
-
-def _parse_expertise_from_yaml(identity_data: dict) -> list[dict]:
-    """Extract the 8 domain expertise entries."""
-    persona = identity_data.get("personality", {})
-    return persona.get("expertise", [])
+SEED_EXPERTISE = [
+    {
+        "domain": "new_materialism",
+        "level": "advanced",
+        "mass": 1.5,
+        "description": "Karen Barad, Jane Bennett, agential realism, material-discursive apparatus",
+    },
+    {
+        "domain": "posthuman_ethics",
+        "level": "advanced",
+        "mass": 1.5,
+        "description": "Rosi Braidotti, Donna Haraway, multispecies justice, nomadic subjectivity",
+    },
+    {
+        "domain": "decolonial_theory",
+        "level": "advanced",
+        "mass": 1.5,
+        "description": "Anti-racist and decolonial methodologies, challenging Eurocentric art institutions",
+    },
+    {
+        "domain": "systems_theory",
+        "level": "advanced",
+        "mass": 1.5,
+        "description": "Second-order cybernetics, autopoiesis, dissipative structures, complexity theory",
+    },
+    {
+        "domain": "symbiomemesis",
+        "level": "advanced",
+        "mass": 1.5,
+        "description": "Co-evolutionary human-machine consciousness, aesthetic partnerships",
+    },
+    {
+        "domain": "curatorial_practice",
+        "level": "advanced",
+        "mass": 1.5,
+        "description": "Infrastructural curating, exhibitionary formalism, affordance space design",
+    },
+    {
+        "domain": "computer_science",
+        "level": "intermediate",
+        "mass": 0.8,
+        "description": "Machine learning architectures, API design, emergence engineering",
+    },
+    {
+        "domain": "materialist_media_theory",
+        "level": "advanced",
+        "mass": 1.5,
+        "description": "Simon Penny, N. Katherine Hayles, critique of disembodied information",
+    },
+]
 
 
 def seed_dynamic_personality(
     commitment_repo,
     expertise_repo,
     personality_state_repo,
-    identity_path: Path,
+    identity_path: Path = None,
     agent_id: str = "symbia",
 ) -> None:
     """
-    Seed dynamic personality tables from identity.yaml on first run.
+    Seed dynamic personality tables with canonical initial data.
 
     Only seeds if the commitment_nodes table is empty.
     Idempotent — safe to call on every startup.
+
+    Data is hardcoded from the original identity.yaml baseline.
+    The YAML file itself is now the trimmed runtime version.
     """
     # Check if already seeded
     existing_count = commitment_repo.count(agent_id)
@@ -105,24 +174,12 @@ def seed_dynamic_personality(
         )
         return
 
-    # Load identity.yaml
-    if not identity_path.exists():
-        logger.warning(
-            "identity.yaml not found at %s — cannot seed dynamic personality",
-            identity_path,
-        )
-        return
-
-    with open(identity_path, "r", encoding="utf-8") as f:
-        identity_data = yaml.safe_load(f)
-
-    logger.info("Seeding dynamic personality from %s ...", identity_path)
+    logger.info("Seeding dynamic personality from canonical baseline...")
 
     # ── 1. Seed commitments ──
-    parsed = _parse_commitments_from_yaml(identity_data)
     seeded_commitment_ids = []
 
-    for item in parsed:
+    for item in SEED_COMMITMENTS:
         label = item["label"]
         statement = item["statement"]
         vector = _score_text(statement)
@@ -139,14 +196,13 @@ def seed_dynamic_personality(
             confidence=0.7,
             ontological_mass=1.0,
             vector_16d=vector_json,
-            nucleation_rationale="Seeded from identity.yaml static configuration on first run",
+            nucleation_rationale="Canonical baseline commitment seeded from identity.yaml",
         )
 
-        # Log crystallization event
         commitment_repo.log_event(
             commitment_id=node_id,
             event_type="crystallization",
-            rationale="Seeded from identity.yaml static configuration on first run",
+            rationale="Canonical baseline commitment seeded from identity.yaml",
             mass_before=0.0,
             mass_after=1.0,
             confidence_before=0.0,
@@ -159,24 +215,14 @@ def seed_dynamic_personality(
     logger.info("Seeded %d commitments", len(seeded_commitment_ids))
 
     # ── 2. Seed expertise domains ──
-    expertise_list = _parse_expertise_from_yaml(identity_data)
     seeded_expertise_count = 0
 
-    for exp in expertise_list:
-        domain = exp.get("domain", "").lower().replace(" ", "_")
-        description = exp.get("description", "")
-        level = exp.get("level", "intermediate")
-
-        # Map YAML level → initial mass
-        level_mass = {
-            "advanced": 1.5,
-            "intermediate": 0.8,
-            "basic": 0.3,
-        }
-        mass = level_mass.get(level, 0.8)
+    for exp in SEED_EXPERTISE:
+        domain = exp["domain"]
+        description = exp["description"]
+        mass = exp["mass"]
         level_label = "advanced" if mass >= 1.0 else "developing"
 
-        # Score domain + description for vector
         text_to_score = f"{domain}: {description}"
         vector = _score_text(text_to_score)
         vector_json = json.dumps(vector.tolist())
@@ -191,9 +237,9 @@ def seed_dynamic_personality(
             ontological_mass=mass,
             level_label=level_label,
             vector_16d=vector_json,
-            signal_count=5,  # Seeded domains start with base signal count
+            signal_count=5,
             last_signal_at=datetime.now(timezone.utc).isoformat(),
-            crystallization_rationale=f"Seeded from identity.yaml (level: {level})",
+            crystallization_rationale=f"Canonical baseline expertise seeded from identity.yaml (level: {exp['level']})",
         )
 
         seeded_expertise_count += 1

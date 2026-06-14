@@ -76,23 +76,12 @@ def main():
         conn.close()
         logger.info("Cleared existing dynamic personality data (--force)")
 
-    # Find identity.yaml
-    personality_cfg = config.get("personality", {})
-    identity_path = Path(personality_cfg.get("path", "backend/personality/identity.yaml"))
-    if not identity_path.is_absolute():
-        identity_path = Path(__file__).resolve().parent.parent.parent / identity_path
-
-    agent_id = config.get("agent", {}).get("name", "symbia")
-    if isinstance(agent_id, dict):
-        agent_id = agent_id.get("name", "symbia")
-
-    logger.info("Seeding dynamic personality from: %s", identity_path)
+    logger.info("Seeding dynamic personality from canonical baseline...")
     seed_dynamic_personality(
         commitment_repo=commitment_repo,
         expertise_repo=expertise_repo,
         personality_state_repo=personality_state_repo,
-        identity_path=identity_path,
-        agent_id=agent_id,
+        agent_id="symbia",
     )
 
     logger.info("Seeding complete.")
