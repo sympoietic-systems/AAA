@@ -52,17 +52,20 @@ from backend.pipeline.registry import PipelineRegistry
 from backend.storage.database import get_db_path, init_db
 from backend.storage.repository import (
     BeliefRepository,
+    CommitmentRepository,
     ConsolidationCheckpointRepository,
     ConversationRepository,
     ErrorLogRepository,
+    ExpertiseRepository,
     MemoryNodeRepository,
     MessageRepository,
     MetricsRepository,
     NoteRepository,
+    NotificationRepository,
     PerceptionSedimentRepository,
+    PersonalityStateRepository,
     SemanticKnotRepository,
     SkillRepository,
-    NotificationRepository,
 )
 from backend.utils.token_counter import estimate_tokens
 
@@ -182,6 +185,9 @@ def _init_repos(config: dict) -> dict:
         "note_repo": NoteRepository(path),
         "skill_repo": SkillRepository(path),
         "notification_repo": NotificationRepository(path),
+        "commitment_repo": CommitmentRepository(path),
+        "expertise_repo": ExpertiseRepository(path),
+        "personality_state_repo": PersonalityStateRepository(path),
     }
 
 
@@ -411,6 +417,17 @@ async def lifespan(app: FastAPI):
     # 1. Database + repos
     repos = _init_repos(config)
 
+    # 1b. Seed dynamic personality tables from identity.yaml on first run
+    identity_data, agent_name, identity_path = _load_identity(config)
+    from backend.personality.seeding import seed_dynamic_personality
+    seed_dynamic_personality(
+        commitment_repo=repos["commitment_repo"],
+        expertise_repo=repos["expertise_repo"],
+        personality_state_repo=repos["personality_state_repo"],
+        identity_path=identity_path,
+        agent_id=agent_name,
+    )
+
     # 2. Embedder
     embedder = _init_embedder(config)
 
@@ -421,8 +438,7 @@ async def lifespan(app: FastAPI):
     # 4. Processing modules
     modules = _init_modules(config, repos, embedder, structural_provider, vision_provider)
 
-    # 5. Identity + beliefs
-    identity_data, agent_name, identity_path = _load_identity(config)
+    # 5. Identity + beliefs (identity_data already loaded for seeding)
     belief_metabolism = _init_belief_engine(repos, identity_path, structural_provider)
 
     # 6. Prompt assembler
@@ -474,6 +490,9 @@ async def lifespan(app: FastAPI):
     app.state.note_repo = repos["note_repo"]
     app.state.skill_repo = repos["skill_repo"]
     app.state.notification_repo = repos["notification_repo"]
+    app.state.commitment_repo = repos["commitment_repo"]
+    app.state.expertise_repo = repos["expertise_repo"]
+    app.state.personality_state_repo = repos["personality_state_repo"]
     app.state.belief_metabolism = belief_metabolism
     app.state.registry = registry
     app.state.pipeline = pipeline
