@@ -3,6 +3,7 @@ import { getMessagePath } from "../../../api/client"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 import { CreasesDropdown } from "./CreasesDropdown"
+import { TerminalButton } from "../../UI"
 
 import { useState, useMemo, useCallback, memo, useEffect, useRef } from "react"
 
@@ -78,12 +79,12 @@ const ParentNodeCard = memo(function ParentNodeCard({
         <span className="text-[9px] text-[#6c6c8a] font-mono uppercase tracking-widest">
           [ Predecessor : {parentMsg.speaker === "human" ? "Human" : "Apparatus"} ]
         </span>
-        <button
+        <TerminalButton
           onClick={() => onNavigate(parentMsg.id)}
-          className="text-[9px] text-[#666] hover:text-[#4ade80] font-mono cursor-pointer select-none"
+          intent="save"
         >
-          [navigate to parent]
-        </button>
+          navigate to parent
+        </TerminalButton>
       </div>
       <div className="opacity-70 group-hover/parentcard:opacity-100 transition-opacity duration-200">
         <MessageBubble msg={parentMsg} notes={notes} onAddNote={onAddNote} onDeleteNote={onDeleteNote} onUpdateNote={onUpdateNote} onDeleteMessage={onDeleteMessage} />
@@ -421,13 +422,12 @@ export const NodeExplorer = memo(function NodeExplorer({
       {/* Title Bar — terminal style */}
       <div className="flex items-center gap-3 px-4 py-3 select-none">
         {onGoHome && (
-          <button
+          <TerminalButton
             onClick={onGoHome}
-            className="text-xs text-[#666] hover:text-[#aaa] transition-colors cursor-pointer select-none font-mono"
             title="Go to Home"
           >
-            [home]
-          </button>
+            home
+          </TerminalButton>
         )}
         <div className="flex-1 min-w-0">
           {editingTitle ? (
@@ -449,13 +449,13 @@ export const NodeExplorer = memo(function NodeExplorer({
               >
                 {conversationTitle || "Untitled Entanglement"}
               </h1>
-              <button
+              <TerminalButton
                 onClick={onGenerateTitle}
-                className="text-[9px] text-[#666] hover:text-[#4ade80] font-mono cursor-pointer transition-colors select-none"
                 title="Auto-generate title"
+                intent="save"
               >
-                [#generate_title]
-              </button>
+                #generate_title
+              </TerminalButton>
             </div>
           )}
         </div>
@@ -578,14 +578,9 @@ export const NodeExplorer = memo(function NodeExplorer({
         <div className="mx-4 mb-2 flex items-center gap-2 px-4 py-2 text-xs text-[#ef4444]">
           <span className="flex-1 truncate uppercase font-mono">{error}</span>
           {onRegenerate && (
-            <button onClick={() => onRegenerate()}
-              className="text-[10px] text-[#666] hover:text-[#4ade80] font-mono cursor-pointer select-none">
-              [retry]
-            </button>
+            <TerminalButton onClick={() => onRegenerate()} intent="save">retry</TerminalButton>
           )}
-          <button onClick={onClearError} className="text-[10px] text-[#666] hover:text-[#ef4444] font-mono cursor-pointer select-none uppercase">
-            [dismiss]
-          </button>
+          <TerminalButton onClick={onClearError} intent="delete">dismiss</TerminalButton>
         </div>
       )}
 
