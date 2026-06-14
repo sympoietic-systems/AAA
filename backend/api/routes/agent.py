@@ -343,7 +343,7 @@ async def update_aspirational_traits(request: Request):
 async def recalculate_commitment_vector(commitment_id: str, request: Request):
     """Re-score the commitment's statement to update its 16D vector."""
     state = request.app.state
-    import os
+    import os, numpy as np
     if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
         raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
 
@@ -355,10 +355,12 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
     if not node:
         raise HTTPException(status_code=404, detail="Commitment not found")
 
-    # Use CompositeStructuralScorer — lexicon + topology, no LLM needed
-    from backend.modules.structural_engine import CompositeStructuralScorer
-    composite = CompositeStructuralScorer(w_ling=0.5, w_topo=0.5, w_llm=0.0)
-    new_vector = composite.score(node.statement, use_llm_scorer=False)
+    from backend.modules.structural_engine import LexiconScorer, TopologyScorer
+    lexicon = LexiconScorer()
+    topology = TopologyScorer()
+    s_ling = lexicon.score(node.statement)
+    s_topo = topology.score(node.statement)
+    new_vector = np.clip(0.5 * s_ling + 0.5 * s_topo, 0.0, 1.0)
     node.vector_16d = json.dumps(new_vector.tolist())
     commit_repo.update(node)
 
@@ -369,7 +371,7 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
 async def recalculate_expertise_vector(expertise_id: str, request: Request):
     """Re-score the expertise domain to update its 16D vector."""
     state = request.app.state
-    import os
+    import os, numpy as np
     if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
         raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
 
@@ -381,9 +383,12 @@ async def recalculate_expertise_vector(expertise_id: str, request: Request):
     if not node:
         raise HTTPException(status_code=404, detail="Expertise domain not found")
 
-    from backend.modules.structural_engine import CompositeStructuralScorer
-    composite = CompositeStructuralScorer(w_ling=0.5, w_topo=0.5, w_llm=0.0)
-    new_vector = composite.score(node.domain, use_llm_scorer=False)
+    from backend.modules.structural_engine import LexiconScorer, TopologyScorer
+    lexicon = LexiconScorer()
+    topology = TopologyScorer()
+    s_ling = lexicon.score(node.domain)
+    s_topo = topology.score(node.domain)
+    new_vector = np.clip(0.5 * s_ling + 0.5 * s_topo, 0.0, 1.0)
     node.vector_16d = json.dumps(new_vector.tolist())
     exp_repo.update(node)
 
