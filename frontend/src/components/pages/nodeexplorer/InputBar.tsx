@@ -182,5 +182,5 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
       </form>
     </div>
   )
-}
+})
 
