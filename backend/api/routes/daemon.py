@@ -23,9 +23,9 @@ async def trigger_daemon_dream(request: Request):
 
 @router.get("/daemon/dreams")
 async def get_recent_dreams(request: Request, hours: int = 48):
-    """Return recent dream conversations from the last N hours."""
-    daemon = getattr(request.app.state, "dream_daemon", None)
-    if not daemon:
-        raise HTTPException(status_code=503, detail="Dream Daemon not initialized")
-    dreams = DaemonService.get_recent_dreams(request.app.state, hours)
+    """Return recent dream cycles from the dream_log table."""
+    repo = getattr(request.app.state, "dream_log_repo", None)
+    if not repo:
+        raise HTTPException(status_code=503, detail="Dream Log not available")
+    dreams = repo.get_recent(hours)
     return {"dreams": dreams, "count": len(dreams)}

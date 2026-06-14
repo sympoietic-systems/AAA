@@ -973,12 +973,14 @@ export async function getDaemonStatus(): Promise<DaemonStatusResponse> {
 }
 
 export interface DreamEntry {
-  id: string
+  id: number
+  conversation_id: string
+  action: string
+  response_msg_id: number | null
+  turns: number
+  timestamp: string
   title: string
-  created_at: string
-  updated_at: string
   msg_count: number
-  last_msg_id: number | null
   last_snippet: string | null
 }
 

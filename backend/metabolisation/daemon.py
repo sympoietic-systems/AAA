@@ -56,6 +56,7 @@ class AutopoieticDreamDaemon(
         self.semantic_knot_repo = getattr(app_state, "semantic_knot_repo", None)
         self.checkpoint_repo = getattr(app_state, "checkpoint_repo", None)
         self.skill_repo = getattr(app_state, "skill_repo", None)
+        self.dream_log_repo = getattr(app_state, "dream_log_repo", None)
         self.background_engine = getattr(app_state, "background_engine", None)
         self.pipeline = app_state.pipeline
 
@@ -373,6 +374,22 @@ class AutopoieticDreamDaemon(
                     )
 
             first_response = turns_data[0]["response_text"] if turns_data else ""
+
+            # Log dream to persistent history
+            if self.dream_log_repo and turns_data:
+                try:
+                    first_turn = turns_data[0]
+                    last_turn = turns_data[-1]
+                    self.dream_log_repo.log_dream(
+                        conversation_id=dream_convo_id,
+                        action=action,
+                        prompt_msg_id=first_turn["user_msg"].id,
+                        response_msg_id=last_turn["assistant_msg"].id,
+                        turns=actual_turns,
+                    )
+                except Exception as e:
+                    logger.warning("Failed to log dream: %s", e)
+
             return {
                 "action": action,
                 "prompt": prompt_text,

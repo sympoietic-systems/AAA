@@ -13,6 +13,7 @@ from backend.storage.repositories.perception_sediment import PerceptionSedimentR
 from backend.storage.repositories.personality_state import PersonalityStateRepository
 from backend.storage.repositories.semantic_knot import SemanticKnotRepository
 from backend.storage.repositories.skill import SkillRepository
+from backend.storage.repositories.dream_log import DreamLogRepository
 
 __all__ = [
     "BeliefRepository",

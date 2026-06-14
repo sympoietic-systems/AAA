@@ -58,6 +58,7 @@ from backend.storage.repository import (
     CommitmentRepository,
     ConsolidationCheckpointRepository,
     ConversationRepository,
+    DreamLogRepository,
     ErrorLogRepository,
     ExpertiseRepository,
     MemoryNodeRepository,
@@ -191,6 +192,7 @@ def _init_repos(config: dict) -> dict:
         "commitment_repo": CommitmentRepository(path),
         "expertise_repo": ExpertiseRepository(path),
         "personality_state_repo": PersonalityStateRepository(path),
+        "dream_log_repo": DreamLogRepository(path),
     }
 
 
@@ -525,6 +527,7 @@ async def lifespan(app: FastAPI):
     app.state.commitment_repo = repos["commitment_repo"]
     app.state.expertise_repo = repos["expertise_repo"]
     app.state.personality_state_repo = repos["personality_state_repo"]
+    app.state.dream_log_repo = repos["dream_log_repo"]
     app.state.belief_metabolism = belief_metabolism
     app.state.registry = registry
     app.state.pipeline = pipeline

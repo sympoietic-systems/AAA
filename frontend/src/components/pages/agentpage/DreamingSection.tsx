@@ -110,9 +110,10 @@ export const DreamingSection = memo(function DreamingSection() {
           <div className="flex flex-col gap-0.5 max-h-80 overflow-y-auto">
             {dreams.map((d) => (
               <div key={d.id} className="flex items-center gap-2 py-1">
-                <span className="text-[#555] text-[9px] shrink-0">{formatRelativeTime(d.updated_at)}</span>
+                <span className="text-[#555] text-[9px] shrink-0">{formatRelativeTime(d.timestamp)}</span>
+                <span className="text-[#555] text-[9px] shrink-0">{d.action}</span>
                 <a
-                  href={`/?c=${d.id}${d.last_msg_id ? `&m=${d.last_msg_id}` : ""}`}
+                  href={`/?c=${d.conversation_id}${d.response_msg_id ? `&m=${d.response_msg_id}` : ""}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#94a3b8] hover:text-[#a78bfa] truncate flex-1 min-w-0 transition-colors"
@@ -120,7 +121,7 @@ export const DreamingSection = memo(function DreamingSection() {
                 >
                   {d.title}
                 </a>
-                <span className="text-[#555] text-[9px] shrink-0">{d.msg_count} msg{d.msg_count !== 1 ? "s" : ""}</span>
+                <span className="text-[#555] text-[9px] shrink-0">{d.turns}t · {d.msg_count}m</span>
               </div>
             ))}
           </div>
