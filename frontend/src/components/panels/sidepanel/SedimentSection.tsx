@@ -8,6 +8,7 @@ import {
   injectSediment,
   getConversationInjections,
   removeSedimentInjection,
+  getFileSummary,
 } from "../../../api/client"
 import type {
   ConversationFile,
