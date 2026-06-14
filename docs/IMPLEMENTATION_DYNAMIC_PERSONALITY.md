@@ -382,7 +382,7 @@ bac340d Schema + Models
 
 5. **Basin beliefs** are computed in the API endpoint: for each commitment, `_find_basin_beliefs()` finds beliefs within cosine similarity > 0.6 of the commitment vector. Displayed in the frontend detail panel with similarity scores.
 
-6. **Personality tab uses 3 sub-tabs** (Traits | Commitments | Expertise) with count badges (`7a·0p·0s`). Commitments/Expertise panels follow the Beliefs/Skills two-column list+detail design pattern with compact list items, stage badges, and `StructuralAutopoieticGlyph`.
+6. **Personality tab uses 5 sub-tabs** (Traits | Commitments | Expertise | Beliefs | Skills). Beliefs and Skills were merged into Personality as sub-tabs from the main tab bar. Commitments/Expertise panels follow the Beliefs/Skills two-column list+detail design pattern with compact list items, stage badges, and `StructuralAutopoieticGlyph`.
 
 7. **Notification traces** fire on: commitment nucleation/collapse/mass growth, expertise crystallization/dormancy, anti-erosion activation, aspirational gap crossing. Trace `source_type` enables navigation from Traces tab to Personality tab.
 

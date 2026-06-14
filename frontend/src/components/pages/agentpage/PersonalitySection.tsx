@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react"
 import { getAgent, getPersonality, updateCommitment, updateExpertise, updateAspirationalTraits, recalculateCommitmentVector, recalculateExpertiseVector } from "../../../api/client"
 import type { PersonalityResponse, PersonalityCommitment, PersonalityExpertise } from "../../../api/client"
 import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
+import { BeliefsSection } from "./BeliefsSection"
+import { SkillsSection } from "./SkillsSection"
 
 
 /* ── Helpers (matching Beliefs/Skills design language) ── */
@@ -428,20 +430,32 @@ function ExpertisePanel({
 
 /* ── Main Personality Section — with sub-tabs ── */
 
-type SubTabId = "traits" | "commitments" | "expertise"
+type SubTabId = "traits" | "commitments" | "expertise" | "beliefs" | "skills"
 
 const SUB_TABS: { id: SubTabId; label: string; count?: string }[] = [
   { id: "traits", label: "Traits" },
   { id: "commitments", label: "Commitments" },
   { id: "expertise", label: "Expertise" },
+  { id: "beliefs", label: "Beliefs" },
+  { id: "skills", label: "Skills" },
 ]
 
-export function PersonalitySection() {
+interface PersonalitySectionProps {
+  initialSelectedId?: string
+  initialSubTab?: string
+}
+
+export function PersonalitySection({ initialSelectedId, initialSubTab }: PersonalitySectionProps) {
   const [data, setData] = useState<PersonalityResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [agentFlux, setAgentFlux] = useState(false)
-  const [subTab, setSubTab] = useState<SubTabId>("traits")
+  const [subTab, setSubTab] = useState<SubTabId>(() => {
+    if (initialSubTab && SUB_TABS.some(t => t.id === initialSubTab)) {
+      return initialSubTab as SubTabId
+    }
+    return "traits"
+  })
 
   useEffect(() => {
     Promise.all([
@@ -478,6 +492,8 @@ export function PersonalitySection() {
     traits: "",
     commitments: `${activeCount}a·${protoCount}p·${spectralCount}s`,
     expertise: `${expActive}a·${expProto}p·${expDormant}d`,
+    beliefs: "",
+    skills: "",
   }
 
   return (
@@ -520,6 +536,12 @@ export function PersonalitySection() {
             expertise={data.expertise ?? { active: [], proto: [], dormant: [] }}
             agentFlux={agentFlux}
           />
+        )}
+        {subTab === "beliefs" && (
+          <BeliefsSection initialSelectedId={initialSelectedId} />
+        )}
+        {subTab === "skills" && (
+          <SkillsSection initialSelectedId={initialSelectedId} />
         )}
       </div>
     </div>
