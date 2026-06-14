@@ -355,9 +355,10 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
     if not node:
         raise HTTPException(status_code=404, detail="Commitment not found")
 
-    from backend.modules.structural_engine import LexiconScorer
-    scorer = LexiconScorer()
-    new_vector = scorer.score(node.statement)
+    # Use CompositeStructuralScorer — lexicon + topology, no LLM needed
+    from backend.modules.structural_engine import CompositeStructuralScorer
+    composite = CompositeStructuralScorer(w_ling=0.5, w_topo=0.5, w_llm=0.0)
+    new_vector = composite.score(node.statement, use_llm_scorer=False)
     node.vector_16d = json.dumps(new_vector.tolist())
     commit_repo.update(node)
 
@@ -380,9 +381,9 @@ async def recalculate_expertise_vector(expertise_id: str, request: Request):
     if not node:
         raise HTTPException(status_code=404, detail="Expertise domain not found")
 
-    from backend.modules.structural_engine import LexiconScorer
-    scorer = LexiconScorer()
-    new_vector = scorer.score(node.domain)
+    from backend.modules.structural_engine import CompositeStructuralScorer
+    composite = CompositeStructuralScorer(w_ling=0.5, w_topo=0.5, w_llm=0.0)
+    new_vector = composite.score(node.domain, use_llm_scorer=False)
     node.vector_16d = json.dumps(new_vector.tolist())
     exp_repo.update(node)
 
