@@ -331,7 +331,6 @@ export const NodeExplorer = memo(function NodeExplorer({
   onUpdateNote,
   tags = [],
   onAddTag,
-  onRemoveTag,
   onNavigateToMessage,
   onGoHome,
   history = [],

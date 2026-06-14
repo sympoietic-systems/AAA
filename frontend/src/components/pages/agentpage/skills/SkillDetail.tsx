@@ -19,9 +19,6 @@ function VersionItem({
   onToggleDiff: () => void; onRevert?: () => void; isReverting?: boolean
   children?: React.ReactNode
 }) {
-  const sourceStyle = source === "auto_metabolism"
-    ? "text-[#c084fc]" : (source === "agent" || source === "emergent")
-    ? "text-[#38bdf8]" : "text-[#888]"
   const sourceLabel = source === "auto_metabolism" ? "auto" : (source === "agent" || source === "emergent") ? "agent" : "user"
 
   return (
@@ -99,6 +96,29 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
     )
   }
 
+  /* ── Handlers (after null guard, before JSX) ── */
+  const handleStartEdit = () => {
+    setEditDescription(skill.description); setEditContent(content || "")
+    setEditTriggers(skill.trigger_keywords.join(", ")); setIsEditing(true)
+    setIsConfirmingDelete(false); setErrorMsg(null)
+  }
+
+  const handleSave = async () => {
+    setIsSavingOrDeleting(true); setErrorMsg(null)
+    try {
+      const triggers = editTriggers.split(",").map(t => t.trim()).filter(t => t.length > 0)
+      const updated = await updateSkill(skill.id, { description: editDescription, content: editContent, trigger_keywords: triggers })
+      onUpdate(updated, editContent); setIsEditing(false)
+    } catch (e: any) { setErrorMsg(e.message || String(e)) }
+    finally { setIsSavingOrDeleting(false) }
+  }
+
+  const handleDelete = async () => {
+    setIsSavingOrDeleting(true); setErrorMsg(null)
+    try { await deleteSkill(skill.id); onDelete(skill.id) }
+    catch (e: any) { setErrorMsg(e.message || String(e)); setIsSavingOrDeleting(false); setIsConfirmingDelete(false) }
+  }
+
   /* ── Edit mode ── */
   if (isEditing) {
     return (
@@ -133,28 +153,6 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
         </div>
       </div>
     )
-  }
-
-  const handleStartEdit = () => {
-    setEditDescription(skill.description); setEditContent(content || "")
-    setEditTriggers(skill.trigger_keywords.join(", ")); setIsEditing(true)
-    setIsConfirmingDelete(false); setErrorMsg(null)
-  }
-
-  const handleSave = async () => {
-    setIsSavingOrDeleting(true); setErrorMsg(null)
-    try {
-      const triggers = editTriggers.split(",").map(t => t.trim()).filter(t => t.length > 0)
-      const updated = await updateSkill(skill.id, { description: editDescription, content: editContent, trigger_keywords: triggers })
-      onUpdate(updated, editContent); setIsEditing(false)
-    } catch (e: any) { setErrorMsg(e.message || String(e)) }
-    finally { setIsSavingOrDeleting(false) }
-  }
-
-  const handleDelete = async () => {
-    setIsSavingOrDeleting(true); setErrorMsg(null)
-    try { await deleteSkill(skill.id); onDelete(skill.id) }
-    catch (e: any) { setErrorMsg(e.message || String(e)); setIsSavingOrDeleting(false); setIsConfirmingDelete(false) }
   }
 
   const revertSkill = async (targetVersion: number) => {

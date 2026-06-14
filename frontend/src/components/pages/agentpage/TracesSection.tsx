@@ -15,7 +15,7 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
   const [viewFilter, setViewFilter] = useState<'all' | 'unread' | 'read'>('unread')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detailTrace, setDetailTrace] = useState<SedimentNotification | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
+  const [, setDetailLoading] = useState(false)
   const detailRef = useRef<HTMLDivElement>(null)
 
   // Lazy-load full trace detail when selected
@@ -194,7 +194,7 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
           </span>
         ))}
         <span className="text-[#555] ml-3">state:</span>
-        {(['all', 'unread', 'read'] as const).map((v, i) => (
+        {(['all', 'unread', 'read'] as const).map((v) => (
           <span key={v} className="flex items-center gap-x-2">
             {true && <span className="text-[#333]">•</span>}
             <button onClick={() => setViewFilter(v)}
