@@ -531,13 +531,22 @@ function ExpertisePanel({
 }
 
 
-/* ── Main Personality Section ── */
+/* ── Main Personality Section — with sub-tabs ── */
+
+type SubTabId = "traits" | "commitments" | "expertise"
+
+const SUB_TABS: { id: SubTabId; label: string; count?: string }[] = [
+  { id: "traits", label: "Traits" },
+  { id: "commitments", label: "Commitments" },
+  { id: "expertise", label: "Expertise" },
+]
 
 export function PersonalitySection() {
   const [data, setData] = useState<PersonalityResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [agentFlux, setAgentFlux] = useState(false)
+  const [subTab, setSubTab] = useState<SubTabId>("traits")
 
   useEffect(() => {
     Promise.all([
@@ -570,43 +579,53 @@ export function PersonalitySection() {
   const expProto = (data.expertise?.proto ?? []).length
   const expDormant = (data.expertise?.dormant ?? []).length
 
+  const subTabCounts: Record<SubTabId, string> = {
+    traits: "",
+    commitments: `${activeCount}a·${protoCount}p·${spectralCount}s`,
+    expertise: `${expActive}a·${expProto}p·${expDormant}d`,
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Traits Section */}
-      <div className="bg-[#0a0a0f] border border-[#1a1a2e] rounded-lg p-5">
-        <TraitsPanel aspirationalTraits={data.aspirational_traits ?? {}} agentFlux={agentFlux} />
+    <div>
+      {/* Sub-tab bar */}
+      <div className="flex gap-1 mb-4 border-b border-[#1a1a2e] pb-2">
+        {SUB_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSubTab(tab.id)}
+            className={`px-3 py-1 text-[10px] rounded font-bold tracking-wide uppercase transition-all cursor-pointer select-none ${
+              subTab === tab.id
+                ? "bg-[#1e1e2e] text-[#94a3b8] border border-[#475569]/40"
+                : "text-[#666] border border-transparent hover:text-[#94a3b8]/70 hover:bg-[#111]"
+            }`}
+          >
+            {tab.label}
+            {subTabCounts[tab.id] && (
+              <span className="ml-1.5 text-[9px] text-[#555] font-normal normal-case">
+                {subTabCounts[tab.id]}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Commitments Section */}
+      {/* Sub-tab content */}
       <div className="bg-[#0a0a0f] border border-[#1a1a2e] rounded-lg p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-[10px] text-[#a78bfa] font-bold uppercase tracking-wider">
-            Theoretical Commitments
-          </span>
-          <span className="text-[9px] text-[#555]">
-            {activeCount} active · {protoCount} proto · {spectralCount} spectral
-          </span>
-        </div>
-        <CommitmentsPanel
-          commitments={data.commitments ?? { active: [], proto: [], spectral: [] }}
-          agentFlux={agentFlux}
-        />
-      </div>
-
-      {/* Expertise Section */}
-      <div className="bg-[#0a0a0f] border border-[#1a1a2e] rounded-lg p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-[10px] text-[#a78bfa] font-bold uppercase tracking-wider">
-            Sedimented Expertise
-          </span>
-          <span className="text-[9px] text-[#555]">
-            {expActive} active · {expProto} proto · {expDormant} dormant
-          </span>
-        </div>
-        <ExpertisePanel
-          expertise={data.expertise ?? { active: [], proto: [], dormant: [] }}
-          agentFlux={agentFlux}
-        />
+        {subTab === "traits" && (
+          <TraitsPanel aspirationalTraits={data.aspirational_traits ?? {}} agentFlux={agentFlux} />
+        )}
+        {subTab === "commitments" && (
+          <CommitmentsPanel
+            commitments={data.commitments ?? { active: [], proto: [], spectral: [] }}
+            agentFlux={agentFlux}
+          />
+        )}
+        {subTab === "expertise" && (
+          <ExpertisePanel
+            expertise={data.expertise ?? { active: [], proto: [], dormant: [] }}
+            agentFlux={agentFlux}
+          />
+        )}
       </div>
     </div>
   )
