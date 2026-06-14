@@ -52,6 +52,7 @@ class ExpertiseEngine(ProcessingModule):
         expertise_repo=None,
         config: Optional[dict] = None,
         lexicon_scorer=None,
+        notification_repo=None,
     ):
         cfg = config or {}
         self._repo = expertise_repo
@@ -59,6 +60,7 @@ class ExpertiseEngine(ProcessingModule):
         self._proto_threshold: float = cfg.get("proto_threshold", 0.3)
         self._dormancy_turns: int = cfg.get("dormancy_turns", 50)
         self._scorer = lexicon_scorer
+        self._notif_repo = notification_repo
 
         # Allow config to override signal weights
         cfg_weights = cfg.get("signal_weights", {})
@@ -203,12 +205,29 @@ class ExpertiseEngine(ProcessingModule):
 
         # Check crystallization threshold
         if node.lifecycle_stage == "proto" and node.ontological_mass >= self._proto_threshold:
+            was_proto = True
             node.lifecycle_stage = "active"
             node.level_label = "developing"
             node.crystallization_rationale = (
                 f"Crystallized from proto-domain after {node.signal_count} "
                 f"structural coupling signals (mass={node.ontological_mass:.3f})"
             )
+
+            # Notification for crystallization
+            if self._notif_repo:
+                try:
+                    self._notif_repo.create(
+                        type="trace",
+                        snippet=(
+                            f"Expertise domain '{domain}' crystallized to active "
+                            f"(mass={node.ontological_mass:.3f}, {node.signal_count} signals)"
+                        ),
+                        source=f"expertise:{domain}",
+                        source_type="expertise",
+                        source_id=node.id,
+                    )
+                except Exception:
+                    pass
 
         # Update level label from mass
         node.level_label = self._compute_level_label(node)
@@ -245,6 +264,18 @@ class ExpertiseEngine(ProcessingModule):
                     "Expertise '%s' marked dormant (no signal for ~%.1f hours)",
                     node.domain, hours_since,
                 )
+                # Notification for dormancy
+                if self._notif_repo:
+                    try:
+                        self._notif_repo.create(
+                            type="trace",
+                            snippet=f"Expertise domain '{node.domain}' went dormant (no signals for {self._dormancy_turns}+ turns)",
+                            source=f"expertise:{node.domain}",
+                            source_type="expertise",
+                            source_id=node.id,
+                        )
+                    except Exception:
+                        pass
 
     # ── Helpers ──
 

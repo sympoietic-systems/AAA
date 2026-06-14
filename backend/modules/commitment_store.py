@@ -46,12 +46,14 @@ class CommitmentStore(ProcessingModule):
         belief_repo=None,
         config: Optional[dict] = None,
         lexicon_scorer=None,
+        notification_repo=None,
     ):
         cfg = config or {}
 
         self._repo = commitment_repo
         self._belief_repo = belief_repo
         self._scorer = lexicon_scorer
+        self._notif_repo = notification_repo
 
         # Nucleation parameters
         self._min_cluster_mass: float = cfg.get("min_cluster_mass", 1.5)
@@ -338,6 +340,16 @@ class CommitmentStore(ProcessingModule):
             label, candidate["cluster_mass"], len(candidate["supporting_belief_ids"]),
         )
 
+        # Notification trace
+        self._emit_trace(
+            f"Proto-commitment '{label}' nucleated from "
+            f"{len(candidate['supporting_belief_ids'])} beliefs "
+            f"(mass={candidate['cluster_mass']:.2f}, sustained tension)",
+            source=f"commitment:{label}",
+            source_type="commitment",
+            source_id=node_id,
+        )
+
     # ═══════════════════════════════════════════════════════════════
     #  DAEMON: COLLAPSE CHECK
     # ═══════════════════════════════════════════════════════════════
@@ -405,6 +417,15 @@ class CommitmentStore(ProcessingModule):
             "Commitment collapsed → spectral: '%s' (was %s)", commitment.label, old_stage,
         )
 
+        # Notification trace
+        self._emit_trace(
+            f"Commitment '{commitment.label}' collapsed to spectral margin "
+            f"— all basin beliefs collapsed, confidence fell below threshold",
+            source=f"commitment:{commitment.label}",
+            source_type="commitment",
+            source_id=commitment.id,
+        )
+
     # ═══════════════════════════════════════════════════════════════
     #  DAEMON: MASS RECALCULATION
     # ═══════════════════════════════════════════════════════════════
@@ -451,6 +472,37 @@ class CommitmentStore(ProcessingModule):
                     "Commitment '%s' mass updated: %.2f → %.2f",
                     commitment.label, old_mass, commitment.ontological_mass,
                 )
+
+                # Notification for significant mass changes
+                if basin_mass - old_mass > 0.5:
+                    self._emit_trace(
+                        f"Commitment '{commitment.label}' mass grew: "
+                        f"{old_mass:.2f} → {commitment.ontological_mass:.2f}",
+                        source=f"commitment:{commitment.label}",
+                        source_type="commitment",
+                        source_id=commitment.id,
+                    )
+
+    # ═══════════════════════════════════════════════════════════════
+    #  NOTIFICATIONS
+    # ═══════════════════════════════════════════════════════════════
+
+    def _emit_trace(
+        self, snippet: str, source: str = "", source_type: str = "", source_id: str = ""
+    ) -> None:
+        """Emit a trace notification for significant commitment events."""
+        if self._notif_repo is None:
+            return
+        try:
+            self._notif_repo.create(
+                type="trace",
+                snippet=snippet,
+                source=source,
+                source_type=source_type,
+                source_id=source_id,
+            )
+        except Exception:
+            logger.debug("Failed to emit commitment notification", exc_info=True)
 
     # ═══════════════════════════════════════════════════════════════
     #  HELPERS

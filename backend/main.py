@@ -255,6 +255,7 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
     trait_computer = TraitComputer(
         personality_state_repo=repos["personality_state_repo"],
         config=trait_cfg,
+        notification_repo=repos["notification_repo"],
     )
 
     # Dynamic personality — expertise engine
@@ -265,6 +266,7 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         expertise_repo=repos["expertise_repo"],
         config=expertise_cfg,
         lexicon_scorer=expert_lexicon,
+        notification_repo=repos["notification_repo"],
     )
 
     # Dynamic personality — commitment store
@@ -274,6 +276,7 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         belief_repo=repos["belief_repo"],
         config=commitment_cfg,
         lexicon_scorer=expert_lexicon,
+        notification_repo=repos["notification_repo"],
     )
 
     sediment_cfg = config.get("sedimentation", {})

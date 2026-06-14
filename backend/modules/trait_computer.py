@@ -72,6 +72,7 @@ class TraitComputer(ProcessingModule):
         self,
         personality_state_repo=None,
         config: Optional[dict] = None,
+        notification_repo=None,
     ):
         cfg = config or {}
 
@@ -91,8 +92,10 @@ class TraitComputer(ProcessingModule):
         # EMA smoothing (prevents jitter)
         self._alpha_ema: float = cfg.get("alpha_ema", 0.3)
         self._last_traits: Optional[DescriptiveTraits] = None
+        self._last_gap_notified: float = 0.0  # Throttle gap notifications
 
         self._state_repo = personality_state_repo
+        self._notif_repo = notification_repo
 
     # ── ProcessingModule interface ──
 
@@ -145,6 +148,23 @@ class TraitComputer(ProcessingModule):
             traits.anti_erosion_boost,
             gap,
         )
+
+        # Notify on crossing aspirational gap threshold
+        if self._notif_repo and gap > 0.20 and (gap - self._last_gap_notified) > 0.05:
+            try:
+                self._notif_repo.create(
+                    type="trace",
+                    snippet=(
+                        f"Aspirational tension: descriptive traits deviate from "
+                        f"commitment-derived attractors (gap={gap:.3f})"
+                    ),
+                    source="trait_computer",
+                    source_type="personality",
+                )
+                self._last_gap_notified = gap
+            except Exception:
+                pass
+
         return payload
 
     # ── Core computation ──
@@ -193,6 +213,21 @@ class TraitComputer(ProcessingModule):
                 "Anti-erosion: agreement=%.3f > %.2f, skepticism boosted +%.3f → %.3f",
                 agreement_rate, self._agreement_threshold, boost, traits.skepticism,
             )
+
+            # Notification trace (throttled: only if boost > 0.05)
+            if self._notif_repo and boost > 0.05:
+                try:
+                    self._notif_repo.create(
+                        type="trace",
+                        snippet=(
+                            f"Anti-erosion activated: skepticism boosted +{boost:.3f} "
+                            f"→ {traits.skepticism:.2f} (agreement rate {agreement_rate:.2f})"
+                        ),
+                        source="trait_computer",
+                        source_type="personality",
+                    )
+                except Exception:
+                    pass
 
         return traits
 
