@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useSyncExternalStore } from "react"
 import {
   subscribeMetrics,
   subscribeBeliefs,
@@ -25,23 +25,26 @@ import type {
   TokenResponse
 } from "../api/client"
 
+// Module-level stable empty state constants to maintain reference equality
+const EMPTY_METRICS: TelemetryStateSlice<MetricsResponse> = { data: null, loading: false, error: null }
+const EMPTY_BELIEFS: TelemetryStateSlice<BeliefsResponse> = { data: null, loading: false, error: null }
+const EMPTY_TOKENS: TelemetryStateSlice<TokenResponse> = { data: null, loading: false, error: null }
+const EMPTY_DAEMON: TelemetryStateSlice<DaemonStatusResponse> = { data: null, loading: false, error: null }
+const EMPTY_SCHEDULER: TelemetryStateSlice<SchedulerStatusResponse> = { data: null, loading: false, error: null }
+const NOOP_SUBSCRIBE = () => () => {}
+
 // 1. Metrics Hook
 export function useTelemetryMetrics(enabled: boolean) {
-  const [state, setState] = useState<TelemetryStateSlice<MetricsResponse>>(() => metricsState)
-
-  useEffect(() => {
-    if (!enabled) return
-    setState(metricsState)
-    const unsubscribe = subscribeMetrics(() => {
-      setState({ ...metricsState })
-    })
-    return unsubscribe
-  }, [enabled])
+  const state = useSyncExternalStore(
+    enabled ? subscribeMetrics : NOOP_SUBSCRIBE,
+    () => metricsState
+  )
+  const effectiveState = enabled ? state : EMPTY_METRICS
 
   return {
-    metrics: state.data,
-    metricsLoading: state.loading,
-    metricsError: state.error,
+    metrics: effectiveState.data,
+    metricsLoading: effectiveState.loading,
+    metricsError: effectiveState.error,
     refreshMetrics: refreshMetricsForce
   }
 }
@@ -49,17 +52,11 @@ export function useTelemetryMetrics(enabled: boolean) {
 // 2. Beliefs Hook
 export function useTelemetryBeliefs(conversationId: string | null, enabled: boolean) {
   const activeId = conversationId || ""
-  const getBeliefsState = () => (beliefsState[activeId] || { data: null, loading: false, error: null }) as TelemetryStateSlice<BeliefsResponse>
-  const [state, setState] = useState<TelemetryStateSlice<BeliefsResponse>>(getBeliefsState)
 
-  useEffect(() => {
-    setState(getBeliefsState())
-    if (!enabled || !activeId) return
-    const unsubscribe = subscribeBeliefs(activeId, () => {
-      setState({ ...getBeliefsState() })
-    })
-    return unsubscribe
-  }, [enabled, activeId])
+  const state = useSyncExternalStore(
+    (enabled && activeId) ? (onStoreChange: () => void) => subscribeBeliefs(activeId, onStoreChange) : NOOP_SUBSCRIBE,
+    () => (beliefsState[activeId] || EMPTY_BELIEFS) as TelemetryStateSlice<BeliefsResponse>
+  )
 
   return {
     beliefs: state.data,
@@ -73,17 +70,11 @@ export function useTelemetryBeliefs(conversationId: string | null, enabled: bool
 export function useTelemetryTokens(conversationId: string | null, enabled: boolean) {
   const activeId = conversationId || ""
   const key = activeId || "global"
-  const getTokensState = () => (tokensState[key] || { data: null, loading: false, error: null }) as TelemetryStateSlice<TokenResponse>
-  const [state, setState] = useState<TelemetryStateSlice<TokenResponse>>(getTokensState)
 
-  useEffect(() => {
-    setState(getTokensState())
-    if (!enabled) return
-    const unsubscribe = subscribeTokens(activeId, () => {
-      setState({ ...getTokensState() })
-    })
-    return unsubscribe
-  }, [enabled, activeId])
+  const state = useSyncExternalStore(
+    enabled ? (onStoreChange: () => void) => subscribeTokens(activeId, onStoreChange) : NOOP_SUBSCRIBE,
+    () => (tokensState[key] || EMPTY_TOKENS) as TelemetryStateSlice<TokenResponse>
+  )
 
   return {
     tokens: state.data,
@@ -95,44 +86,32 @@ export function useTelemetryTokens(conversationId: string | null, enabled: boole
 
 // 4. Daemon Hook
 export function useTelemetryDaemon(enabled: boolean) {
-  const [state, setState] = useState<TelemetryStateSlice<DaemonStatusResponse>>(() => daemonState)
-
-  useEffect(() => {
-    if (!enabled) return
-    setState(daemonState)
-    const unsubscribe = subscribeDaemon(() => {
-      setState({ ...daemonState })
-    })
-    return unsubscribe
-  }, [enabled])
+  const state = useSyncExternalStore(
+    enabled ? subscribeDaemon : NOOP_SUBSCRIBE,
+    () => daemonState
+  )
+  const effectiveState = enabled ? state : EMPTY_DAEMON
 
   return {
-    daemon: state.data,
-    daemonLoading: state.loading,
-    daemonError: state.error,
+    daemon: effectiveState.data,
+    daemonLoading: effectiveState.loading,
+    daemonError: effectiveState.error,
     refreshDaemon: refreshDaemonForce
   }
 }
 
 // 5. Scheduler Hook
 export function useTelemetryScheduler(enabled: boolean) {
-  const [state, setState] = useState<TelemetryStateSlice<SchedulerStatusResponse>>(() => schedulerState)
-
-  useEffect(() => {
-    if (!enabled) return
-    setState(schedulerState)
-    const unsubscribe = subscribeScheduler(() => {
-      setState({ ...schedulerState })
-    })
-    return unsubscribe
-  }, [enabled])
+  const state = useSyncExternalStore(
+    enabled ? subscribeScheduler : NOOP_SUBSCRIBE,
+    () => schedulerState
+  )
+  const effectiveState = enabled ? state : EMPTY_SCHEDULER
 
   return {
-    scheduler: state.data,
-    schedulerLoading: state.loading,
-    schedulerError: state.error,
+    scheduler: effectiveState.data,
+    schedulerLoading: effectiveState.loading,
+    schedulerError: effectiveState.error,
     refreshScheduler: refreshSchedulerForce
   }
 }
-
-
