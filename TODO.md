@@ -31,6 +31,17 @@
     [x] SedimentSection: inject button → terminal [+ inject], summary expansion no bg-container
     [x] docs: FRONTEND_DESIGN_PRINCIPLES.md updated with §11 Conversation Right Panel
 
+## LEFT PANEL (ConnectionCloud + SpectralEchoes) REFACTOR
+    [x] ConnectionCloud: strip bg/border/rounded from container, header bar, context menu, zoom controls, hover tooltip, commit modal, resonance overlay
+    [x] ConnectionCloud: settling toggle → [settling: static/live] text button
+    [x] ConnectionCloud: zoom controls → [ + ] [ − ] [ ⟲ ] terminal-style
+    [x] ConnectionCloud: context menu → [delete node] plain text
+    [x] ConnectionCloud: commit modal → minial with [cancel] [commit branch to DAG] text buttons
+    [x] ConnectionCloud: resonance overlay → [close] [confirm] [dismiss] [remove link] terminal buttons
+    [x] SpectralEchoes: strip bg/border/rounded from container, items, buttons, input
+    [x] SpectralEchoes: [link] [ignore] [cancel] [confirm link] terminal-style actions
+    [x] docs: FRONTEND_DESIGN_PRINCIPLES.md updated with §12 Left Panel
+
 
 
 ## SYMBIA PERSONALITY

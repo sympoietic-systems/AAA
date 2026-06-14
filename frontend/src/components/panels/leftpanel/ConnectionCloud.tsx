@@ -1109,30 +1109,26 @@ function ConnectionCloud({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full bg-[#0a0a0c] border border-[#1b1b21] rounded-lg overflow-hidden flex flex-col"
+      className="relative w-full h-full flex flex-col"
     >
-      {/* Header */}
-      <div className="px-3 py-2 border-b border-[#1b1b21] flex justify-between items-center bg-[#0d0d11]">
-        <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#79798c]">
+      {/* Header — terminal style */}
+      <div className="px-3 py-2 flex justify-between items-center select-none">
+        <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#6c6c8a]">
           Connection Cloud
         </span>
         <div className="flex items-center gap-3">
           <button
             onClick={toggleSimulateSettling}
-            className={`text-[9px] font-mono px-2 py-0.5 rounded border transition-all cursor-pointer select-none ${
+            className={`text-[9px] font-mono cursor-pointer select-none transition-colors ${
               simulateSettling
-                ? "bg-[#ec4899]/10 border-[#ec4899]/30 text-[#ec4899] hover:bg-[#ec4899]/20"
-                : "bg-[#1b1b22] border-[#2e2e38] text-[#79798c] hover:bg-[#2e2e38]"
+                ? "text-[#ec4899]"
+                : "text-[#666] hover:text-[#888]"
             }`}
-            title={
-              simulateSettling
-                ? "Simulating settling in real-time (high GPU/CPU usage)"
-                : "Instant static layout (energy efficient, low GPU/CPU)"
-            }
+            title={simulateSettling ? "Simulating settling in real-time" : "Instant static layout"}
           >
-            {simulateSettling ? "⚡ Settling: Live" : "🍃 Settling: Static"}
+            [{simulateSettling ? "live" : "static"}]
           </button>
-          <span className="text-[10px] font-mono text-[#4b4b5c]">
+          <span className="text-[10px] font-mono text-[#555]">
             {simNodes.filter((n) => !n.isProposed).length} nodes | {treeLinks.length} cross-links
           </span>
         </div>
@@ -1152,137 +1148,108 @@ function ConnectionCloud({
           onContextMenu={handleCanvasContextMenu}
         />
 
-        {/* Right-click context menu for node deletion */}
+        {/* Right-click context menu — terminal style */}
         {contextMenu && (
           <div
-            className="absolute z-20 bg-[#141418] border border-[#333] rounded shadow-lg py-1 px-0 min-w-[120px]"
+            className="absolute z-20 bg-[#0d0d12]/95 py-1 px-0"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={handleDeleteNode}
-              className="w-full text-left px-3 py-1.5 text-[10px] font-mono text-[#ef4444] hover:bg-[#1a1a22] transition-colors"
+              className="text-left px-3 py-1 text-[10px] font-mono text-[#ef4444] hover:text-[#f87171] transition-colors cursor-pointer select-none"
             >
-              Delete Node
+              [delete node]
             </button>
           </div>
         )}
 
-        {/* Zoom and Pan Controls Overlay */}
+        {/* Zoom Controls — terminal style */}
         <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10 select-none">
-          <button
-            onClick={handleZoomIn}
-            className="w-6 h-6 rounded bg-[#0d0d12]/90 border border-[#1b1b22] text-[#a1a1b5] hover:text-[#00e5ff] hover:border-[#00e5ff] transition-all flex items-center justify-center font-mono text-xs cursor-pointer shadow-lg"
-            title="Zoom In"
-          >
-            +
-          </button>
-          <button
-            onClick={handleZoomOut}
-            className="w-6 h-6 rounded bg-[#0d0d12]/90 border border-[#1b1b22] text-[#a1a1b5] hover:text-[#00e5ff] hover:border-[#00e5ff] transition-all flex items-center justify-center font-mono text-xs cursor-pointer shadow-lg"
-            title="Zoom Out"
-          >
-            −
-          </button>
-          <button
-            onClick={handleResetZoom}
-            className="w-6 h-6 rounded bg-[#0d0d12]/90 border border-[#1b1b22] text-[#a1a1b5] hover:text-[#00e5ff] hover:border-[#00e5ff] transition-all flex items-center justify-center font-mono text-[9px] cursor-pointer shadow-lg"
-            title="Reset View"
-          >
-            ⟲
-          </button>
+          <button onClick={handleZoomIn} className="font-mono text-xs text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
+            title="Zoom In">[ + ]</button>
+          <button onClick={handleZoomOut} className="font-mono text-xs text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
+            title="Zoom Out">[ − ]</button>
+          <button onClick={handleResetZoom} className="font-mono text-[9px] text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
+            title="Reset View">[ ⟲ ]</button>
         </div>
 
-        {/* Hover Tooltip Overlay */}
+        {/* Hover Tooltip — minimal */}
         {hoveredNode && (
           <div
-            className="absolute z-10 px-2 py-1.5 bg-[#0d0d12] border border-[#1b1b22] rounded shadow-xl text-[10px] font-mono max-w-[200px] pointer-events-none select-none"
+            className="absolute z-10 px-2 py-1.5 bg-[#0d0d12]/95 text-[10px] font-mono max-w-[200px] pointer-events-none select-none"
             style={{
               left: `${Math.min(dimensions.width - 210, Math.max(10, (hoveredNode.x * zoom + pan.x) - 100))}px`,
               top: `${Math.min(dimensions.height - 70, Math.max(10, (hoveredNode.y * zoom + pan.y) - 65))}px`,
             }}
           >
-            <div className="flex justify-between border-b border-[#1b1b22] pb-0.5 mb-1">
+            <div className="flex justify-between pb-0.5 mb-1">
               <span className={`font-bold capitalize ${hoveredNode.speaker === "human" ? "text-[#6bc28c]" :
                 hoveredNode.speaker === "proposed" ? "text-[#e09b67]" : "text-[#a892ee]"
                 }`}>
                 {hoveredNode.speaker === "proposed" ? `Agential Proposal: ${hoveredNode.title}` : hoveredNode.speaker}
               </span>
-              <span className="text-[#4b4b5c]">
+              <span className="text-[#555] ml-2">
                 {hoveredNode.isProposed ? "Consent Required" : `ID: ${hoveredNode.dbId}`}
               </span>
             </div>
-            <div className="text-[#a1a1b5] line-clamp-2">
+            <div className="text-[#94a3b8] line-clamp-2">
               {hoveredNode.content}
             </div>
           </div>
         )}
 
-        {/* Branch Commit Modal Overlay */}
+        {/* Branch Commit Modal — minimal */}
         {committingNode && (
-          <div className="absolute inset-0 bg-[#09090b]/80 flex flex-col justify-end p-3 z-20 animate-fade-in">
-            <div className="bg-[#0e0e12] border border-[#ec4899]/30 rounded-lg p-3 shadow-2xl flex flex-col gap-2">
-              <div className="flex justify-between items-center border-b border-[#1b1b21] pb-1">
+          <div className="absolute inset-0 bg-[#09090b]/80 flex flex-col justify-end p-3 z-20">
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
                 <span className="text-[10px] font-mono font-bold text-[#ec4899] uppercase tracking-wider">
-                  Commit Line of Flight
+                  [ Commit Line of Flight ]
                 </span>
-                <button
-                  onClick={() => setCommittingNode(null)}
-                  className="text-xs font-mono text-[#4b4b5c] hover:text-[#a1a1b5]"
-                >
-                  Cancel
-                </button>
+                <button onClick={() => setCommittingNode(null)}
+                  className="text-[10px] font-mono text-[#666] hover:text-[#88] cursor-pointer select-none">[cancel]</button>
               </div>
-
-              <div className="text-[10px] font-mono text-[#a1a1b5]">
-                Topic: <strong className="text-white">{committingNode.title}</strong>
+              <div className="text-[10px] font-mono text-[#94a3b8]">
+                Topic: <span className="text-[#ccc]">{committingNode.title}</span>
               </div>
-
               <textarea
                 value={commitContent}
                 onChange={(e) => setCommitContent(e.target.value)}
                 rows={4}
-                className="w-full bg-[#07070a] border border-[#1b1b21] rounded p-2 text-xs font-mono text-[#e4e4e7] focus:outline-none focus:border-[#ec4899] resize-none"
+                className="w-full bg-[#08080c] border border-[#1b1b21] p-2 text-xs font-mono text-[#e4e4e7] focus:outline-none focus:border-[#ec4899] resize-none"
               />
-
               <button
                 onClick={handleCommitSubmit}
                 disabled={isCommitLoading || !commitContent.trim()}
-                className="w-full py-1.5 rounded text-xs font-mono font-bold text-white bg-[#ec4899] hover:bg-[#db2777] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="text-[10px] font-mono text-[#ec4899] hover:text-[#f472b6] disabled:text-[#555] disabled:cursor-not-allowed cursor-pointer select-none self-start"
               >
-                {isCommitLoading ? "Committing..." : "Commit Branch to DAG"}
+                {isCommitLoading ? "[committing...]" : "[commit branch to DAG]"}
               </button>
             </div>
           </div>
         )}
 
-        {/* Resonance Link Details Overlay */}
+        {/* Resonance Link Details — minimal */}
         {selectedLink && selectedLinkPos && (
           <div
-            className="absolute z-20 p-2.5 bg-[#0d0d12]/95 border border-[#1b1b22] rounded-lg shadow-2xl text-[10px] font-mono w-[220px]"
+            className="absolute z-20 p-2.5 bg-[#0d0d12]/95 text-[10px] font-mono w-[220px]"
             style={{
               left: `${Math.min(dimensions.width - 230, Math.max(10, (selectedLinkPos.x * zoom + pan.x) - 110))}px`,
               top: `${Math.min(dimensions.height - 110, Math.max(10, (selectedLinkPos.y * zoom + pan.y) - 95))}px`,
             }}
           >
-            <div className="flex justify-between border-b border-[#1b1b22] pb-1 mb-1">
+            <div className="flex justify-between pb-1 mb-1">
               <span className={`font-bold ${selectedLink.status === "proposed" ? "text-[#e09b67]" : "text-[#94a3b8]"}`}>
                 {selectedLink.status === "proposed" ? "Proposed Resonance" : "Resonance Link"}
               </span>
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedLink(null)
-                  setSelectedLinkPos(null)
-                }}
-                className="text-[#4b4b5c] hover:text-[#a1a1b5] cursor-pointer"
-              >
-                ✕
-              </button>
+                onClick={(e) => { e.stopPropagation(); setSelectedLink(null); setSelectedLinkPos(null) }}
+                className="text-[#666] hover:text-[#888] cursor-pointer select-none">[close]</button>
             </div>
 
             {selectedLink.justification && (
-              <div className="text-[#a1a1b5] mb-2 italic bg-[#07070a] p-1.5 rounded border border-[#14141a]">
+              <div className="text-[#94a3b8] mb-2 italic">
                 "{selectedLink.justification}"
               </div>
             )}
@@ -1294,58 +1261,37 @@ function ConnectionCloud({
                     onClick={async (e) => {
                       e.stopPropagation()
                       if (selectedLink.id && conversationId) {
-                        try {
-                          await confirmResonanceLink(conversationId, selectedLink.id)
-                          refreshTree()
-                        } catch (err) {
-                          console.error("Failed to confirm link", err)
-                        }
+                        try { await confirmResonanceLink(conversationId, selectedLink.id); refreshTree() }
+                        catch (err) { console.error("Failed to confirm link", err) }
                       }
-                      setSelectedLink(null)
-                      setSelectedLinkPos(null)
+                      setSelectedLink(null); setSelectedLinkPos(null)
                     }}
-                    className="flex-1 py-1 rounded bg-[#6bc28c] hover:bg-[#5bb27c] text-black font-bold font-mono text-[9px] cursor-pointer text-center"
-                  >
-                    Confirm
-                  </button>
+                    className="text-[9px] text-[#4ade80] hover:text-[#6ee7a0] font-mono cursor-pointer select-none"
+                  >[confirm]</button>
                   <button
                     onClick={async (e) => {
                       e.stopPropagation()
                       if (selectedLink.id && conversationId) {
-                        try {
-                          await deleteResonanceLink(conversationId, selectedLink.id)
-                          refreshTree()
-                        } catch (err) {
-                          console.error("Failed to delete link", err)
-                        }
+                        try { await deleteResonanceLink(conversationId, selectedLink.id); refreshTree() }
+                        catch (err) { console.error("Failed to delete link", err) }
                       }
-                      setSelectedLink(null)
-                      setSelectedLinkPos(null)
+                      setSelectedLink(null); setSelectedLinkPos(null)
                     }}
-                    className="flex-1 py-1 rounded bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold font-mono text-[9px] cursor-pointer text-center"
-                  >
-                    Dismiss
-                  </button>
+                    className="text-[9px] text-[#ef4444] hover:text-[#f87171] font-mono cursor-pointer select-none"
+                  >[dismiss]</button>
                 </>
               ) : (
                 <button
                   onClick={async (e) => {
                     e.stopPropagation()
                     if (selectedLink.id && conversationId) {
-                      try {
-                        await deleteResonanceLink(conversationId, selectedLink.id)
-                        refreshTree()
-                      } catch (err) {
-                        console.error("Failed to delete link", err)
-                      }
+                      try { await deleteResonanceLink(conversationId, selectedLink.id); refreshTree() }
+                      catch (err) { console.error("Failed to delete link", err) }
                     }
-                    setSelectedLink(null)
-                    setSelectedLinkPos(null)
+                    setSelectedLink(null); setSelectedLinkPos(null)
                   }}
-                  className="w-full py-1 rounded bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold font-mono text-[9px] cursor-pointer text-center"
-                >
-                  Remove Link
-                </button>
+                  className="text-[9px] text-[#ef4444] hover:text-[#f87171] font-mono cursor-pointer select-none"
+                >[remove link]</button>
               )}
             </div>
           </div>

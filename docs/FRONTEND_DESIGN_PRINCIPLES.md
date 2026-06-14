@@ -292,3 +292,33 @@ SidePanel (memo'd, collapse router only)
     ├── SkillListItem.tsx       ← Unified list item (memo'd)
     └── NewSkillForm.tsx
 ```
+
+---
+
+## 12. Left Panel (ConnectionCloud + SpectralEchoes)
+
+The left panel renders the conversation's DAG as an interactive canvas force graph. The design follows terminal aesthetics for all UI chrome surrounding the canvas — the graph rendering itself is left untouched.
+
+### Architecture
+
+```
+App.tsx
+├── ConnectionCloud (memo'd, self-fetching via getConversationTree)
+│   └── Canvas: node/link drawing, force simulation, zoom/pan, click/tooltip
+│   └── Overlays: tooltip, context menu, commit modal, resonance details
+│   └── Controls: zoom [+]/[−]/[⟲], settling toggle
+└── SpectralEchoes (memo'd, self-fetching via getSpectralSuggestions)
+    └── Suggestion list: [link] [ignore] actions, justification input
+```
+
+### Design Rules
+*   **Canvas untouched**: All graph rendering, force simulation, zoom/pan math, node click handling, tree fetching — zero changes. Only UI chrome around the canvas is modified.
+*   **No container chrome**: Outer wrapper uses bare `relative w-full h-full flex flex-col` — no `bg/border/rounded`
+*   **Terminal header**: `text-[#6c6c8a] uppercase text-[9px]` label, settling toggle as `[settling: static]` / `[settling: live]` text button (dim default, colored when live), node count in `text-[#555]`
+*   **Zoom controls**: `[ + ]` `[ − ]` `[ ⟲ ]` — plain text, `text-[#666]` → hover `text-[#00e5ff]`
+*   **Hover tooltip**: `bg-[#0d0d12]/95` for readability over canvas, no border/rounded/shadow
+*   **Context menu**: `[delete node]` text over semi-transparent backdrop — no bg/border box
+*   **Commit modal**: `[ Commit Line of Flight ]` header, `[cancel]`/`[commit branch to DAG]` text buttons, textarea with minimal border
+*   **Resonance overlay**: `[close]`/`[confirm]`/`[dismiss]`/`[remove link]` — all terminal-style bracket text
+*   **SpectralEchoes**: No `bg/border/rounded` on container/items, `[link]` `[ignore]` `[cancel]` `[confirm link]` text actions, `border-b` input
+*   **All action buttons**: `text-[#666]` default, colored on hover — matching all other panels

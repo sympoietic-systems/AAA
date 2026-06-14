@@ -20,7 +20,6 @@ function SpectralEchoesComponent({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  // Link justification input state
   const [linkingMsgId, setLinkingMsgId] = useState<number | null>(null)
   const [justification, setJustification] = useState("")
   const [isLinking, setIsLinking] = useState(false)
@@ -54,11 +53,8 @@ function SpectralEchoesComponent({
     setIsLinking(true)
     try {
       await createResonanceLink(
-        conversationId,
-        activeMessageId,
-        targetId,
-        justification.trim() || "Manual resonance connection",
-        "active"
+        conversationId, activeMessageId, targetId,
+        justification.trim() || "Manual resonance connection", "active"
       )
       refreshTree()
       fetchSuggestions()
@@ -77,11 +73,8 @@ function SpectralEchoesComponent({
     setIsLinking(true)
     try {
       await createResonanceLink(
-        conversationId,
-        activeMessageId,
-        targetId,
-        "Ignored by user",
-        "ignored"
+        conversationId, activeMessageId, targetId,
+        "Ignored by user", "ignored"
       )
       refreshTree()
       fetchSuggestions()
@@ -95,25 +88,25 @@ function SpectralEchoesComponent({
 
   if (!activeMessageId) {
     return (
-      <div className="text-[10px] font-mono text-[#4b4b5c] italic p-2 border border-[#14141a] rounded bg-[#07070a] select-none text-center">
+      <div className="text-[10px] font-mono text-[#555] italic p-2 select-none text-center">
         Select a node in the Connection Cloud to detect spectral echoes.
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2 p-2 border border-[#1b1b22] rounded-lg bg-[#07070a] font-mono">
-      <div className="flex justify-between items-center border-b border-[#14141a] pb-1">
-        <span className="text-[9px] font-bold text-[#a892ee] uppercase tracking-wider">
-          Spectral Echoes (Parallel Similarity)
+    <div className="flex flex-col gap-2 p-2 font-mono">
+      <div className="flex justify-between items-center">
+        <span className="text-[9px] font-bold text-[#6c6c8a] uppercase tracking-wider">
+          Spectral Echoes
         </span>
-        {loading && <span className="text-[9px] text-[#4b4b5c] animate-pulse">Scanning...</span>}
+        {loading && <span className="text-[9px] text-[#555] animate-pulse">scanning...</span>}
       </div>
 
-      {error && <div className="text-[9px] text-red-400">{error}</div>}
+      {error && <div className="text-[9px] text-[#ef4444]">{error}</div>}
 
       {!loading && suggestions.length === 0 && (
-        <div className="text-[9px] text-[#4b4b5c] italic text-center py-2">
+        <div className="text-[9px] text-[#555] italic text-center py-2">
           No parallel echoes detected above 70% similarity.
         </div>
       )}
@@ -124,67 +117,42 @@ function SpectralEchoesComponent({
           const simPercent = (sug.similarity * 100).toFixed(0)
 
           return (
-            <div
-              key={sug.message_id}
-              className="p-1.5 border border-[#14141a] rounded bg-[#0b0b0e] hover:border-[#1b1b22] transition-colors flex flex-col gap-1 text-[9px]"
-            >
+            <div key={sug.message_id} className="flex flex-col gap-1 text-[9px]">
               <div className="flex justify-between items-center text-[8px]">
                 <span className={sug.speaker === "human" ? "text-[#6bc28c]" : "text-[#a892ee]"}>
                   {sug.speaker === "human" ? "Human" : "Symbia"} (ID: {sug.message_id})
                 </span>
-                <span className="text-[#4ade80] font-bold">
-                  {simPercent}% resonance
-                </span>
+                <span className="text-[#4ade80] font-bold">{simPercent}%</span>
               </div>
 
-              <div className="text-[#a1a1b5] line-clamp-3 italic">
+              <div className="text-[#94a3b8] line-clamp-3 italic">
                 "{sug.content}"
               </div>
 
               {isLinkingThis ? (
-                <div className="flex flex-col gap-1 mt-1 border-t border-[#14141a] pt-1.5">
+                <div className="flex flex-col gap-1 pt-1">
                   <input
                     type="text"
                     value={justification}
                     onChange={(e) => setJustification(e.target.value)}
                     placeholder="justification (optional)..."
-                    className="w-full bg-[#07070a] border border-[#1b1b21] rounded p-1 text-[8px] text-white focus:outline-none focus:border-[#a892ee]"
+                    className="w-full bg-transparent border-b border-[#222]/40 text-[#ccc] text-[8px] focus:outline-none focus:border-[#a892ee] font-mono"
                   />
-                  <div className="flex gap-1.5 justify-end">
-                    <button
-                      onClick={() => setLinkingMsgId(null)}
-                      className="px-1.5 py-0.5 rounded text-[8px] bg-[#14141a] text-[#79798c] hover:text-white cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => handleCreateLink(sug.message_id)}
-                      disabled={isLinking}
-                      className="px-1.5 py-0.5 rounded text-[8px] bg-[#a892ee] hover:bg-[#9079d6] text-black font-bold cursor-pointer"
-                    >
-                      {isLinking ? "Linking..." : "Confirm Link"}
+                  <div className="flex gap-2">
+                    <button onClick={() => setLinkingMsgId(null)}
+                      className="text-[8px] text-[#666] hover:text-[#888] cursor-pointer select-none font-mono">[cancel]</button>
+                    <button onClick={() => handleCreateLink(sug.message_id)} disabled={isLinking}
+                      className="text-[8px] text-[#a78bfa] hover:text-[#c084fc] disabled:text-[#555] cursor-pointer select-none font-mono">
+                      {isLinking ? "[linking...]" : "[confirm link]"}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-1.5 mt-0.5">
-                  <button
-                    onClick={() => {
-                      setLinkingMsgId(sug.message_id)
-                      setJustification("")
-                    }}
-                    className="flex-1 py-0.5 text-center bg-[#14141a] border border-[#1e1e26] hover:border-[#a892ee] hover:text-[#a892ee] text-[#79798c] rounded transition-all cursor-pointer select-none"
-                  >
-                    Link Node
-                  </button>
-                  <button
-                    onClick={() => handleIgnoreLink(sug.message_id)}
-                    disabled={isLinking}
-                    className="px-2.5 py-0.5 text-center bg-[#14141a] border border-[#1e1e26] hover:border-[#ef4444] hover:text-[#ef4444] text-[#79798c] rounded transition-all cursor-pointer select-none"
-                    title="Ignore this suggestion permanently"
-                  >
-                    Ignore
-                  </button>
+                <div className="flex gap-2">
+                  <button onClick={() => { setLinkingMsgId(sug.message_id); setJustification("") }}
+                    className="text-[8px] text-[#666] hover:text-[#a78bfa] cursor-pointer select-none font-mono">[link]</button>
+                  <button onClick={() => handleIgnoreLink(sug.message_id)} disabled={isLinking}
+                    className="text-[8px] text-[#666] hover:text-[#ef4444] cursor-pointer select-none font-mono">[ignore]</button>
                 </div>
               )}
             </div>
