@@ -638,6 +638,31 @@ class MessageRepository(BaseRepository):
         conn.commit()
 
     @with_connection
+    def delete_message(self, message_id: int) -> None:
+        """Delete a single message and its related data (cascade).
+        Child messages are reparented to the deleted message's parent."""
+        conn = self._conn()
+
+        # Get the parent of the message being deleted
+        row = conn.execute(
+            "SELECT parent_message_id FROM conversation_log WHERE id = ?", (message_id,)
+        ).fetchone()
+        grandparent_id = row["parent_message_id"] if row else None
+
+        # Reparent direct children to the deleted message's parent
+        conn.execute(
+            "UPDATE conversation_log SET parent_message_id = ? WHERE parent_message_id = ?",
+            (grandparent_id, message_id),
+        )
+
+        # Clean up related records
+        conn.execute("DELETE FROM conversation_metrics WHERE message_id = ?", (message_id,))
+        conn.execute("DELETE FROM message_links WHERE source_id = ? OR target_id = ?", (message_id, message_id))
+        conn.execute("DELETE FROM conversation_notes WHERE message_id = ?", (message_id,))
+        conn.execute("DELETE FROM conversation_log WHERE id = ?", (message_id,))
+        conn.commit()
+
+    @with_connection
     def delete_message_link(self, link_id: str) -> None:
         conn = self._conn()
         conn.execute(

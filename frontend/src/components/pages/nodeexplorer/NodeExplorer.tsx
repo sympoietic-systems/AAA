@@ -39,6 +39,7 @@ interface Props {
   history?: { id: number; speaker: string; snippet: string }[]
   conversations?: ConversationInfo[]
   onNavigateToNotification?: (convId: string, msgId: number) => void
+  onDeleteMessage?: (messageId: number) => void
 }
 
 const EMPTY_ARRAY: NoteInfo[] = []
@@ -51,6 +52,7 @@ const ParentNodeCard = memo(function ParentNodeCard({
   onAddNote,
   onDeleteNote,
   onUpdateNote,
+  onDeleteMessage,
 }: {
   parentMsg: ChatMessage | null
   onNavigate: (id: number) => void
@@ -58,6 +60,7 @@ const ParentNodeCard = memo(function ParentNodeCard({
   onAddNote?: (messageId: number, selectedText: string, comment: string, visibility: "personal" | "shared" | "agent", startOffset?: number) => void
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
+  onDeleteMessage?: (messageId: number) => void
 }) {
   if (!parentMsg) {
     return (
@@ -89,6 +92,7 @@ const ParentNodeCard = memo(function ParentNodeCard({
           onAddNote={onAddNote}
           onDeleteNote={onDeleteNote}
           onUpdateNote={onUpdateNote}
+          onDeleteMessage={onDeleteMessage}
         />
       </div>
     </div>
@@ -264,6 +268,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   onRegenerate,
   siblingIds = [],
   onBranch,
+  onDeleteMessage,
   isHighlighted = false,
 }: {
   selectedMsg: ChatMessage | null
@@ -274,6 +279,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   onRegenerate?: (userMsgId?: number) => void
   siblingIds?: number[]
   onBranch?: (messageId: number) => void
+  onDeleteMessage?: (messageId: number) => void
   isHighlighted?: boolean
 }) {
   if (!selectedMsg) {
@@ -301,6 +307,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
         onUpdateNote={onUpdateNote}
         onBranch={onBranch}
         onRegenerate={onRegenerate}
+        onDeleteMessage={onDeleteMessage}
         siblingIds={siblingIds}
       />
     </div>
@@ -337,6 +344,7 @@ export function NodeExplorer({
   history = [],
   conversations = [],
   onNavigateToNotification,
+  onDeleteMessage,
 }: Props) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleVal, setTitleVal] = useState(conversationTitle)
@@ -541,6 +549,7 @@ export function NodeExplorer({
               onAddNote={onAddNote}
               onDeleteNote={onDeleteNote}
               onUpdateNote={onUpdateNote}
+              onDeleteMessage={onDeleteMessage}
             />
 
             {/* 2. Sediment Fold Divider */}
@@ -558,6 +567,7 @@ export function NodeExplorer({
                 onDeleteNote={onDeleteNote}
                 onUpdateNote={onUpdateNote}
                 onRegenerate={onRegenerate}
+                onDeleteMessage={onDeleteMessage}
                 siblingIds={selectedNodeSiblings}
                 onBranch={onNavigateToMessage}
                 isHighlighted={highlightedId === selectedNodeId}

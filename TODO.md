@@ -8,9 +8,13 @@
 
 
 ## BACKEND
-
+    [x] AAA_AGENT_FLUX gate on DELETE /conversations/{id} (403 when off)
+    [x] DELETE /conversations/{id}/messages/{mid} endpoint (AAA_AGENT_FLUX gated, reparents children)
 
 ## FRONTEND
+    [x] Conversation list [x] delete button hidden when agentFlux=false
+    [x] #del button on messages in NodeExplorer (only when agentFlux=true)
+    [x] Right-click "Delete Node" on ConnectionCloud canvas (only when agentFlux=true)
 
 
 
@@ -19,6 +23,9 @@
         [ ] The paragraph must not point at the concept; it must perform the cut it describes. - this can be a new skill
 
     [ ] Vitality collapse, check when it added. now vitality .5, but it triggered
+
+    [] beliefs metabolic log do not show event where the mass changes
+    
 
 
 ## Future Metrics & Refinements

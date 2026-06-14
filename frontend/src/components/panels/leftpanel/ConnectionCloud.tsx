@@ -12,6 +12,8 @@ interface ConnectionCloudProps {
   refreshTree: () => void
   conversationId: string
   onNavigateToMessage?: (messageId: number) => void
+  agentFlux?: boolean
+  onDeleteMessage?: (messageId: number) => void
 }
 
 interface SimNode {
@@ -98,6 +100,8 @@ function ConnectionCloud({
   refreshTree,
   conversationId,
   onNavigateToMessage,
+  agentFlux,
+  onDeleteMessage,
 }: ConnectionCloudProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -131,6 +135,9 @@ function ConnectionCloud({
   // Zoom and pan state
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
+
+  // Right-click context menu for message deletion
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: SimNode } | null>(null)
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef({ x: 0, y: 0 })
 
@@ -981,6 +988,8 @@ function ConnectionCloud({
   }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Dismiss context menu on any click
+    setContextMenu(null)
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
@@ -1033,6 +1042,36 @@ function ConnectionCloud({
       setSelectedLink(null)
       setSelectedLinkPos(null)
     }
+  }
+
+  const handleCanvasContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!agentFlux || !onDeleteMessage) return
+    e.preventDefault()
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = (e.clientX - rect.left - pan.x) / zoom
+    const mouseY = (e.clientY - rect.top - pan.y) / zoom
+
+    // Find node under cursor
+    for (const node of simNodes) {
+      const dx = node.x - mouseX
+      const dy = node.y - mouseY
+      const radius = node.dbId === activeMessageId ? 4.5 : 3.2
+      if (dx * dx + dy * dy <= (radius + 6) * (radius + 6)) {
+        if (node.dbId) {
+          setContextMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top, node })
+        }
+        break
+      }
+    }
+  }
+
+  const handleDeleteNode = () => {
+    if (contextMenu?.node.dbId && onDeleteMessage) {
+      onDeleteMessage(contextMenu.node.dbId)
+    }
+    setContextMenu(null)
   }
 
   const handleZoomIn = (e: React.MouseEvent) => {
@@ -1110,7 +1149,24 @@ function ConnectionCloud({
           onMouseLeave={handleMouseUpOrLeave}
           onWheel={handleWheel}
           onClick={handleCanvasClick}
+          onContextMenu={handleCanvasContextMenu}
         />
+
+        {/* Right-click context menu for node deletion */}
+        {contextMenu && (
+          <div
+            className="absolute z-20 bg-[#141418] border border-[#333] rounded shadow-lg py-1 px-0 min-w-[120px]"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={handleDeleteNode}
+              className="w-full text-left px-3 py-1.5 text-[10px] font-mono text-[#ef4444] hover:bg-[#1a1a22] transition-colors"
+            >
+              Delete Node
+            </button>
+          </div>
+        )}
 
         {/* Zoom and Pan Controls Overlay */}
         <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10 select-none">

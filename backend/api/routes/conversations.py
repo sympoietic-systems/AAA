@@ -94,6 +94,10 @@ async def update_conversation(
 
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(conversation_id: str, request: Request):
+    import os
+    if not os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes"):
+        raise HTTPException(status_code=403, detail="Conversation deletion is disabled (AAA_AGENT_FLUX is false)")
+
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     if not conv_repo:
@@ -103,6 +107,32 @@ async def delete_conversation(conversation_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Conversation not found")
     conv_repo.delete(conversation_id)
     return {"status": "deleted", "id": conversation_id}
+
+
+@router.delete("/conversations/{conversation_id}/messages/{message_id}")
+async def delete_message(conversation_id: str, message_id: int, request: Request):
+    import os
+    if not os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes"):
+        raise HTTPException(status_code=403, detail="Message deletion is disabled (AAA_AGENT_FLUX is false)")
+
+    state = request.app.state
+    msg_repo = state.message_repo
+    conv_repo = getattr(state, "conversation_repo", None)
+
+    if conv_repo:
+        conv = conv_repo.get(conversation_id)
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+    msg = msg_repo.get_by_id(message_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if msg.conversation_id != conversation_id:
+        raise HTTPException(status_code=404, detail="Message not found in this conversation")
+
+    msg_repo.delete_message(message_id)
+    conv_repo.touch(conversation_id)
+    return {"status": "deleted", "id": message_id}
 
 
 @router.post("/conversations/{conversation_id}/generate-title", response_model=ConversationInfo)

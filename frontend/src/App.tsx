@@ -9,7 +9,7 @@ import { ConversationLandingPage } from "./components/pages/landing/Conversation
 import { AgentPage } from "./components/pages/agentpage/AgentPage"
 import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
-import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag } from "./api/client"
+import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag, getAgent, deleteMessage } from "./api/client"
 
 export default function App() {
   // Render agent page standalone if navigated to /agent
@@ -20,6 +20,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isAuthEnabled, setIsAuthEnabled] = useState<boolean>(false)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [agentFlux, setAgentFlux] = useState<boolean>(false)
 
   // Track if we are in clean/new chat creation workspace mode
   const [isNewChatMode, setIsNewChatMode] = useState(false)
@@ -29,6 +30,7 @@ export default function App() {
       setIsAuthenticated(status.authenticated)
       setIsAuthEnabled(status.authEnabled)
     })
+    getAgent().then(info => setAgentFlux(!!info.agent_flux)).catch(() => setAgentFlux(false))
   }, [])
 
   const handlePasswordSubmit = async (password: string) => {
@@ -142,6 +144,18 @@ export default function App() {
   const handleDeleteFile = useCallback((fileName: string) => {
     deleteFile(fileName)
   }, [deleteFile])
+
+  const handleDeleteMessage = useCallback(async (messageId: number) => {
+    if (!activeId) return
+    if (!confirm("Delete this node permanently?")) return
+    try {
+      await deleteMessage(activeId, messageId)
+      refreshMessages()
+      refreshTree()
+    } catch (err: any) {
+      console.error("Failed to delete message:", err)
+    }
+  }, [activeId, refreshMessages, refreshTree])
 
   const handleReprocessFile = useCallback((fileName: string) => {
     reprocess(fileName)
@@ -369,6 +383,7 @@ export default function App() {
         onSearchAndFilter={refreshConvs}
         showLogout={isAuthEnabled}
         onLogout={handleLogout}
+        agentFlux={agentFlux}
       />
     )
   }
@@ -433,6 +448,8 @@ export default function App() {
                   refreshTree={refreshTree}
                   conversationId={activeId}
                   onNavigateToMessage={navigateToMessage}
+                  agentFlux={agentFlux}
+                  onDeleteMessage={handleDeleteMessage}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-[#444] text-[10px] font-mono px-4 text-center select-none">
@@ -504,6 +521,7 @@ export default function App() {
         history={history}
         conversations={conversations}
         onNavigateToNotification={handleNavigateToNotification}
+        onDeleteMessage={agentFlux ? handleDeleteMessage : undefined}
       />
 
       {!rightPanelCollapsed && (

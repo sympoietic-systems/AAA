@@ -14,6 +14,7 @@ interface Props {
   onSearchAndFilter: (tag?: string | null, search?: string) => void
   showLogout?: boolean
   onLogout?: () => void
+  agentFlux?: boolean
 }
 
 function formatDate(dateStr?: string | null): string {
@@ -68,6 +69,7 @@ export function ConversationLandingPage({
   onSearchAndFilter,
   showLogout,
   onLogout,
+  agentFlux,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState<"all" | "user" | "dreams" | "agents">("all")
@@ -208,15 +210,17 @@ export function ConversationLandingPage({
                       >
                         {isExpanded ? "[-]" : "[+]"}
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (confirm("Delete?")) onDelete(conv.id)
-                        }}
-                        className="text-[10px] text-[#444] hover:text-red-500 transition-colors"
-                      >
-                        [x]
-                      </button>
+                      {agentFlux && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (confirm("Delete?")) onDelete(conv.id)
+                          }}
+                          className="text-[10px] text-[#444] hover:text-red-500 transition-colors"
+                        >
+                          [x]
+                        </button>
+                      )}
                     </span>
                   </div>
 

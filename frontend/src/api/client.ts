@@ -784,6 +784,11 @@ export async function deleteConversation(id: string): Promise<void> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
+export async function deleteMessage(conversationId: string, messageId: number): Promise<void> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/messages/${messageId}`, { method: "DELETE" })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
 export async function renameConversation(id: string, title: string): Promise<ConversationInfo> {
   const res = await fetch(`${BASE}/conversations/${id}`, {
     method: "PATCH",

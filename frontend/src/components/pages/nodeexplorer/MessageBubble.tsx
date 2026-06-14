@@ -145,6 +145,7 @@ export const MessageBubble = memo(function MessageBubble({
   onUpdateNote,
   onBranch,
   onRegenerate,
+  onDeleteMessage,
   siblingIds = []
 }: {
   msg: ChatMessage
@@ -155,6 +156,7 @@ export const MessageBubble = memo(function MessageBubble({
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   onBranch?: (messageId: number) => void
   onRegenerate?: (userMsgId?: number) => void
+  onDeleteMessage?: (messageId: number) => void
   siblingIds?: number[]
 }) {
   const isHuman = msg.speaker === "human"
@@ -537,6 +539,19 @@ export const MessageBubble = memo(function MessageBubble({
               #regen
             </button>
           )}
+          {msg.id && onDeleteMessage && (
+            <button
+              onClick={() => {
+                if (confirm("Delete this message permanently? Child messages will be reconnected to parent.")) {
+                  onDeleteMessage(msg.id)
+                }
+              }}
+              className="text-[#555] hover:text-[#ef4444] transition-colors font-mono text-[9px] cursor-pointer"
+              title="Delete this message"
+            >
+              #del
+            </button>
+          )}
           {!isHuman && (msg.model_used || msg.provider_used) && (
             <span className="text-[#555] font-mono">
               [{msg.provider_used || "unknown"} :: {msg.model_used || "unknown"}]
@@ -818,7 +833,8 @@ export const MessageBubble = memo(function MessageBubble({
          areNumberArraysEqual(prevProps.msg.structural_signature, nextProps.msg.structural_signature) &&
          areNumberArraysEqual(prevProps.previousSignature, nextProps.previousSignature) &&
          areNumberArraysEqual(prevProps.siblingIds, nextProps.siblingIds) &&
-         areNotesEqual(prevProps.notes, nextProps.notes);
+         areNotesEqual(prevProps.notes, nextProps.notes) &&
+         prevProps.onDeleteMessage === nextProps.onDeleteMessage;
 })
 
 function areNumberArraysEqual(a?: number[] | null, b?: number[] | null) {
