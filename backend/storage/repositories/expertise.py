@@ -30,6 +30,17 @@ class ExpertiseRepository(BaseRepository):
         return [_row_to_expertise_node(r) for r in rows]
 
     @with_connection
+    def get_by_id(self, expertise_id: str) -> Optional[ExpertiseNode]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT * FROM expertise_nodes WHERE id = ?",
+            (expertise_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return _row_to_expertise_node(row)
+
+    @with_connection
     def get_by_domain(self, domain: str, agent_id: str = "symbia") -> Optional[ExpertiseNode]:
         conn = self._conn()
         row = conn.execute(
