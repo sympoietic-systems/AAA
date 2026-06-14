@@ -42,6 +42,20 @@
     [x] SpectralEchoes: [link] [ignore] [cancel] [confirm link] terminal-style actions
     [x] docs: FRONTEND_DESIGN_PRINCIPLES.md updated with §12 Left Panel
 
+## CENTER COLUMN (NodeExplorer) REFACTOR
+    [x] NodeExplorer: wrap in React.memo
+    [x] NodeExplorer: strip chrome from wrapper, title bar, home button, title input, generate title button, tags bar, password lock, history trail, error bar
+    [x] ParentNodeCard: strip chrome (empty state, card, header, nav button → terminal style)
+    [x] SedimentFold: strip chrome (toggle button, content box, ancestor items → terminal style)
+    [x] GlimmerLinks: strip chrome (sibling/child buttons → [Alt N] [Cut →] bracket text)
+    [x] SelectedNodeCard: strip chrome (empty state, card, header → terminal style)
+    [x] CreasesDropdown: wrap in React.memo
+    [x] CreasesDropdown: strip chrome (toggle button, dropdown container, tabs → • dot separator, items, jump/read buttons → terminal style)
+    [x] InputBar: wrap in React.memo
+    [x] InputBar: strip chrome (form bg, send button → plain text)
+    [x] MessageBubble: NOT modified (separate pass planned due to complex note/tooltip/selection logic)
+    [x] docs: FRONTEND_DESIGN_PRINCIPLES.md updated with §13 Center Column
+
 
 
 ## SYMBIA PERSONALITY

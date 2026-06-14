@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, type ChangeEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react"
+import { useRef, useState, useCallback, memo, type ChangeEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react"
 
 const ACCEPTED_EXTENSIONS = ".pdf,.txt,.md,.docx,.epub,.mobi,.py,.json,.yaml,.yml,.csv,.xml,.html,.css,.js,.ts,.tsx,.jsx,.rs,.go,.java,.c,.h,.cpp,.hpp,.sh,.bat,.ps1,.toml,.ini,.cfg,.env,.log"
 
@@ -10,7 +10,7 @@ interface Props {
   isPassword?: boolean
 }
 
-export function InputBar({ onSend, onUploadFiles, disabled, isIndexing, isPassword }: Props) {
+export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled, isIndexing, isPassword }: Props) {
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -88,8 +88,8 @@ export function InputBar({ onSend, onUploadFiles, disabled, isIndexing, isPasswo
         onDragOver={isPassword ? undefined : handleDragOver}
         onDragLeave={isPassword ? undefined : handleDragLeave}
         onDrop={isPassword ? undefined : handleDrop}
-        className={`flex items-end border-t border-[#222] bg-[#0f0f0f] px-4 py-3 transition-colors ${
-          !isPassword && dragOver ? "border-[#4ade80] bg-[#111]" : isIndexing ? "border-[#eab308]/40 bg-[#0f0f0c]" : ""
+        className={`flex items-end border-t border-[#222]/40 px-4 py-3 transition-colors ${
+          !isPassword && dragOver ? "border-[#4ade80]/60" : isIndexing ? "border-[#eab308]/40" : ""
         }`}
       >
         <span className={`mr-2 select-none text-sm font-mono self-start mt-0.5 ${
@@ -162,9 +162,9 @@ export function InputBar({ onSend, onUploadFiles, disabled, isIndexing, isPasswo
         <button
           type="submit"
           disabled={!canSubmit}
-          className={`ml-2 text-xs uppercase px-2 py-1 rounded transition-colors self-end ${
+          className={`ml-2 text-xs uppercase transition-colors self-end cursor-pointer select-none ${
             canSubmit
-              ? "text-[#4ade80] hover:bg-[#1f2937]"
+              ? "text-[#4ade80] hover:text-[#6ee7a0]"
               : "text-[#333] cursor-not-allowed"
           }`}
           title={isPassword ? "Unlock application" : "Send message"}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useEffect, useMemo, memo } from "react"
 import type { ConversationInfo, SedimentNotification } from "../../../api/client"
 import {
   useNotifications,
@@ -11,7 +11,7 @@ interface Props {
   onNavigateToNotification?: (convId: string, msgId: number) => void
 }
 
-export function CreasesDropdown({ conversations, onNavigateToNotification }: Props) {
+export const CreasesDropdown = memo(function CreasesDropdown({ conversations, onNavigateToNotification }: Props) {
   const notifications = useNotifications()
   const [creasesOpen, setCreasesOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'sediment' | 'glitch' | 'trace'>('sediment')
@@ -81,10 +81,10 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
     <div className="relative shrink-0" ref={creasesRef}>
       <button
         onClick={() => setCreasesOpen((p) => !p)}
-        className={`relative text-[10px] font-mono px-2 py-1 rounded-sm border transition-all duration-200 cursor-pointer ${
+        className={`relative text-[10px] font-mono transition-colors cursor-pointer select-none ${
           enrichedSediment.length > 0
-            ? "text-[#e09b67] border-[#e09b67]/40 bg-[#1a1410] hover:border-[#e09b67]/70 hover:text-[#f0b080]"
-            : "text-[#444] border-[#222] bg-[#0c0c0e] hover:text-[#666]"
+            ? "text-[#e09b67] hover:text-[#f0b080]"
+            : "text-[#666] hover:text-[#888]"
         }`}
         title={
           unreadGlitchesCount > 0
@@ -111,11 +111,11 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
 
       {/* Creases Dropdown */}
       {creasesOpen && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-85 max-h-96 overflow-hidden flex flex-col border border-[#2a2a35] bg-[#0c0c0e]/95 backdrop-blur-md rounded-sm shadow-2xl">
+        <div         className="absolute right-0 top-full mt-1 z-50 w-85 max-h-96 overflow-hidden flex flex-col bg-[#0c0c0e]/95 backdrop-blur-md">
           {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-[#1b1b20] select-none shrink-0">
-            <span className="text-[9px] font-mono uppercase tracking-widest text-[#666]">
-              Crease Folds
+          <div className="flex items-center justify-between px-3 py-2 select-none shrink-0">
+            <span className="text-[9px] font-mono uppercase tracking-widest text-[#6c6c8a]">
+              [ Crease Folds ]
             </span>
             {notifications.filter((n) => n.type === activeTab || (activeTab === 'sediment' && (!n.type || n.type === 'sediment'))).length > 0 && (
               <button
@@ -129,43 +129,23 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
             )}
           </div>
 
-          {/* Tabs Nav */}
-          <div className="flex border-b border-[#1b1b20] text-[9px] font-mono shrink-0">
-            <button
-              onClick={() => setActiveTab('sediment')}
-              className={`flex-1 py-1.5 text-center border-b transition-colors cursor-pointer ${
-                activeTab === 'sediment'
-                  ? 'text-[#e09b67] border-[#e09b67] bg-[#15120f]'
-                  : 'text-[#555] border-transparent hover:text-[#888]'
-              }`}
-            >
+          {/* Tabs Nav — terminal style */}
+          <div className="flex gap-x-3 px-3 py-1.5 text-[9px] font-mono shrink-0 select-none">
+            <button onClick={() => setActiveTab('sediment')}
+              className={`cursor-pointer transition-colors ${activeTab === 'sediment' ? 'text-[#e09b67]' : 'text-[#555] hover:text-[#888]'}`}>
               arrivals ({enrichedSediment.length})
             </button>
-            <button
-              onClick={() => setActiveTab('glitch')}
-              className={`flex-1 py-1.5 text-center border-b transition-colors cursor-pointer relative ${
-                activeTab === 'glitch'
-                  ? 'text-[#f43f5e] border-[#f43f5e] bg-[#1a0e0e]'
-                  : 'text-[#555] border-transparent hover:text-[#888]'
-              }`}
-            >
+            <span className="text-[#333]">•</span>
+            <button onClick={() => setActiveTab('glitch')}
+              className={`cursor-pointer transition-colors relative ${activeTab === 'glitch' ? 'text-[#f43f5e]' : 'text-[#555] hover:text-[#888]'}`}>
               glitches ({glitches.length})
-              {unreadGlitchesCount > 0 && (
-                <span className="w-1 h-1 rounded-full bg-[#f43f5e] absolute top-1.5 right-2 animate-pulse" />
-              )}
+              {unreadGlitchesCount > 0 && <span className="ml-1 text-[#f43f5e] animate-pulse">●</span>}
             </button>
-            <button
-              onClick={() => setActiveTab('trace')}
-              className={`flex-1 py-1.5 text-center border-b transition-colors cursor-pointer relative ${
-                activeTab === 'trace'
-                  ? 'text-[#60a5fa] border-[#60a5fa] bg-[#0c131c]'
-                  : 'text-[#555] border-transparent hover:text-[#888]'
-              }`}
-            >
+            <span className="text-[#333]">•</span>
+            <button onClick={() => setActiveTab('trace')}
+              className={`cursor-pointer transition-colors relative ${activeTab === 'trace' ? 'text-[#60a5fa]' : 'text-[#555] hover:text-[#888]'}`}>
               traces ({traces.length})
-              {unreadTracesCount > 0 && (
-                <span className="w-1 h-1 rounded-full bg-[#60a5fa] absolute top-1.5 right-2 animate-pulse" />
-              )}
+              {unreadTracesCount > 0 && <span className="ml-1 text-[#60a5fa] animate-pulse">●</span>}
             </button>
           </div>
 
@@ -180,7 +160,7 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                 enrichedSediment.map((notif) => (
                   <div
                     key={notif.id}
-                    className="group/notif px-3 py-2 border-b border-[#151518] hover:bg-[#121216] transition-colors"
+                    className="group/notif px-3 py-2 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[9px] font-mono text-[#666] truncate max-w-[180px]" title={notif.conversationTitle}>
@@ -203,18 +183,14 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
                       {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
-                        <button
-                          onClick={() => handleJump(notif)}
-                          className="text-[9px] text-[#888] hover:text-[#4ade80] font-mono border border-[#222] hover:border-[#4ade80]/50 px-1.5 py-0.5 rounded-sm bg-[#0c0c0e] transition-all cursor-pointer"
-                        >
-                          [↳ Jump]
+                        <button onClick={() => handleJump(notif)}
+                          className="text-[9px] text-[#666] hover:text-[#4ade80] font-mono cursor-pointer select-none">
+                          [jump]
                         </button>
                       )}
-                      <button
-                        onClick={() => dismissNotification(notif.id)}
-                        className="text-[9px] text-[#555] hover:text-[#888] font-mono cursor-pointer transition-colors"
-                      >
-                        read
+                      <button onClick={() => dismissNotification(notif.id)}
+                        className="text-[9px] text-[#666] hover:text-[#888] font-mono cursor-pointer select-none">
+                        [read]
                       </button>
                     </div>
                   </div>
@@ -231,7 +207,7 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                 glitches.map((notif) => (
                   <div
                     key={notif.id}
-                    className="px-3 py-2.5 border-b border-[#2a1313] bg-[#120707]/60 hover:bg-[#1a0c0c]/70 transition-colors"
+                    className="px-3 py-2.5 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[9px] font-mono text-[#f87171] uppercase tracking-wider truncate max-w-[200px]" title={notif.source}>
@@ -248,16 +224,13 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                       {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
                         <button
                           onClick={() => handleJump(notif)}
-                          className="text-[9px] text-[#884444] hover:text-[#f87171] font-mono border border-[#2a1313] hover:border-[#f87171]/50 px-1.5 py-0.5 rounded-sm bg-[#0c0c0e] transition-all cursor-pointer mr-auto"
-                        >
-                          [↳ Jump]
+                          className="text-[9px] text-[#666] hover:text-[#f87171] font-mono cursor-pointer select-none mr-auto">
+                          [jump]
                         </button>
                       )}
-                      <button
-                        onClick={() => dismissNotification(notif.id)}
-                        className="text-[9px] text-[#884444] hover:text-[#f87171] font-mono cursor-pointer transition-colors"
-                      >
-                        read
+                      <button onClick={() => dismissNotification(notif.id)}
+                        className="text-[9px] text-[#666] hover:text-[#888] font-mono cursor-pointer select-none">
+                        [read]
                       </button>
                     </div>
                   </div>
@@ -274,7 +247,7 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                 traces.map((notif) => (
                   <div
                     key={notif.id}
-                    className="px-3 py-2.5 border-b border-[#0f172a] bg-[#090d16]/60 hover:bg-[#0f172a]/70 transition-colors"
+                    className="px-3 py-2.5 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[9px] font-mono text-[#60a5fa] uppercase tracking-wider truncate max-w-[200px]" title={notif.source}>
@@ -291,16 +264,13 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
                       {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
                         <button
                           onClick={() => handleJump(notif)}
-                          className="text-[9px] text-[#3b82f6] hover:text-[#60a5fa] font-mono border border-[#0f172a] hover:border-[#60a5fa]/50 px-1.5 py-0.5 rounded-sm bg-[#0c0c0e] transition-all cursor-pointer mr-auto"
-                        >
-                          [↳ Jump]
+                          className="text-[9px] text-[#666] hover:text-[#60a5fa] font-mono cursor-pointer select-none mr-auto">
+                          [jump]
                         </button>
                       )}
-                      <button
-                        onClick={() => dismissNotification(notif.id)}
-                        className="text-[9px] text-[#3b82f6] hover:text-[#60a5fa] font-mono cursor-pointer transition-colors"
-                      >
-                        read
+                      <button onClick={() => dismissNotification(notif.id)}
+                        className="text-[9px] text-[#666] hover:text-[#888] font-mono cursor-pointer select-none">
+                        [read]
                       </button>
                     </div>
                   </div>
@@ -312,5 +282,5 @@ export function CreasesDropdown({ conversations, onNavigateToNotification }: Pro
       )}
     </div>
   )
-}
+})
 

@@ -322,3 +322,41 @@ App.tsx
 *   **Resonance overlay**: `[close]`/`[confirm]`/`[dismiss]`/`[remove link]` — all terminal-style bracket text
 *   **SpectralEchoes**: No `bg/border/rounded` on container/items, `[link]` `[ignore]` `[cancel]` `[confirm link]` text actions, `border-b` input
 *   **All action buttons**: `text-[#666]` default, colored on hover — matching all other panels
+
+---
+
+## 13. Center Column (NodeExplorer + MessageBubble)
+
+The center column renders the conversation node explorer with message cards, navigation links, and the input bar. The NodeExplorer receives data as props from App.tsx (single conversation loader).
+
+### Architecture
+
+```
+NodeExplorer (memo'd)
+├── Title Bar (editable title, [#generate_title], [home], CreasesDropdown)
+├── Tags Bar (terminal-style text, no bg/border badge wrappers)
+├── Explorer Space
+│   ├── History Trail (breadcrumb-style text links)
+│   ├── ParentNodeCard (memo'd) → MessageBubble (memo'd, custom comparator)
+│   ├── SedimentFold (memo'd, lazy-loads ancestors via getMessagePath)
+│   ├── SelectedNodeCard (memo'd) → MessageBubble
+│   ├── GlimmerLinks (memo'd, sibling/child [Alt N] [Cut →] buttons)
+│   └── Loading indicator (plain text pulse)
+├── Error Bar (plain text, [retry] [dismiss] buttons)
+└── InputBar (memo'd, textarea + file upload)
+```
+
+### Design Rules
+*   **NodeExplorer memo'd**: Wraps entire center column — prevents re-renders on unrelated state changes
+*   **No container chrome**: Outer wrapper `flex flex-col h-full` — no `bg/border`; Explorerspace `flex-1 overflow-y-auto px-4 py-4` — bare
+*   **Title bar**: `text-[#6c6c8a]` label, `[home]` `[#generate_title]` as bracket text, title input `bg-transparent border-b`
+*   **Tags bar**: Plain text `text-[#6bc28c]` separated by `//`, `×` remove button — no `bg/border/rounded` badge wrappers
+*   **History trail**: `[H: snippet]` / `[A: snippet]` bracket text, `>` separator — no `bg/border` pill wrappers
+*   **Error bar**: Plain `text-[#ef4444]` text, `[retry]` `[dismiss]` terminal buttons — no `bg/border` box
+*   **ParentNodeCard**: `[ Predecessor : Human/Apparatus ]` header, `[navigate to parent]` text button — no `border/bg/rounded`
+*   **SelectedNodeCard**: `[ Active Focus Cut : Human/Apparatus ]` header — no `border/bg/rounded`
+*   **SedimentFold**: `[ Sediment Fold — Expand/Collapse ]` text toggle, ancestor items as plain rows — no `bg/border/rounded` wrappers
+*   **GlimmerLinks**: `[Alt N: "snippet"]` / `[Cut → "snippet"]` bracket text buttons — no `bg/border/rounded` pill buttons
+*   **CreasesDropdown**: `[creases: N ◆]` text toggle, tabs as `•` dot-separated text, items as plain rows, `[jump]` `[read]` terminal buttons — no `bg/border/rounded` anywhere
+*   **InputBar**: `border-t border-[#222]/40` divider only, send button `text-[#4ade80]` plain text — no `bg`
+*   **MessageBubble kept as-is**: Complex note/tooltip/selection interactions not yet simplified (separate pass planned)

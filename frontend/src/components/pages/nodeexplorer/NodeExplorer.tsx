@@ -64,36 +64,29 @@ const ParentNodeCard = memo(function ParentNodeCard({
 }) {
   if (!parentMsg) {
     return (
-      <div className="border border-dashed border-[#222] bg-[#070708]/40 rounded-sm p-4 text-center select-none">
-        <span className="text-[10px] text-[#444] uppercase font-mono tracking-wider">
-          Origin Cut (No Predecessor Strata)
+      <div className="p-4 text-center select-none">
+        <span className="text-[10px] text-[#555] uppercase font-mono tracking-wider">
+          [ Origin Cut — No Predecessor Strata ]
         </span>
       </div>
     )
   }
 
   return (
-    <div className="border border-[#1f1f24] bg-[#0c0c0e]/80 rounded-sm p-4 hover:border-[#333] transition-all relative group/parentcard">
-      <div className="flex items-center justify-between border-b border-[#1b1b20] pb-2 mb-3 select-none">
-        <span className="text-[9px] text-[#666] font-mono uppercase tracking-widest">
-          Predecessor Node : {parentMsg.speaker === "human" ? "Human" : "Apparatus"}
+    <div className="p-4 relative group/parentcard">
+      <div className="flex items-center justify-between pb-2 mb-3 select-none">
+        <span className="text-[9px] text-[#6c6c8a] font-mono uppercase tracking-widest">
+          [ Predecessor : {parentMsg.speaker === "human" ? "Human" : "Apparatus"} ]
         </span>
         <button
           onClick={() => onNavigate(parentMsg.id)}
-          className="text-[9px] text-[#888] hover:text-[#4ade80] font-mono border border-[#333] hover:border-[#4ade80]/50 px-2 py-0.5 rounded-sm bg-[#121214] transition-all duration-150 cursor-pointer"
+          className="text-[9px] text-[#666] hover:text-[#4ade80] font-mono cursor-pointer select-none"
         >
-          [^ Navigate to Parent]
+          [navigate to parent]
         </button>
       </div>
       <div className="opacity-70 group-hover/parentcard:opacity-100 transition-opacity duration-200">
-        <MessageBubble
-          msg={parentMsg}
-          notes={notes}
-          onAddNote={onAddNote}
-          onDeleteNote={onDeleteNote}
-          onUpdateNote={onUpdateNote}
-          onDeleteMessage={onDeleteMessage}
-        />
+        <MessageBubble msg={parentMsg} notes={notes} onAddNote={onAddNote} onDeleteNote={onDeleteNote} onUpdateNote={onUpdateNote} onDeleteMessage={onDeleteMessage} />
       </div>
     </div>
   )
@@ -148,16 +141,16 @@ const SedimentFold = memo(function SedimentFold({
 
       <button
         onClick={handleToggle}
-        className="relative z-10 flex items-center gap-1.5 px-3 py-1 text-[9px] font-mono text-[#555] hover:text-[#aaa] bg-[#0c0c0e] border border-[#1b1b20] hover:border-[#3f3f46] rounded-full transition-all duration-150 cursor-pointer shadow-lg uppercase tracking-wider"
+        className="relative z-10 flex items-center gap-1.5 text-[9px] font-mono text-[#666] hover:text-[#aaa] cursor-pointer select-none uppercase tracking-wider"
       >
         <span>{isOpen ? "▼" : "▶"}</span>
-        <span>Sediment Fold ({isOpen ? "Collapse" : "Expand Enfolded Strata"})</span>
+        <span>[ Sediment Fold {isOpen ? "— Collapse" : "— Expand Enfolded Strata"} ]</span>
       </button>
 
       {isOpen && (
-        <div className="w-full mt-3 border border-[#1b1b20] bg-[#09090b]/90 rounded-sm p-3 z-20 max-h-60 overflow-y-auto shadow-2xl flex flex-col gap-2">
-          <div className="text-[9px] text-[#444] uppercase font-mono tracking-wider border-b border-[#18181b] pb-1.5 mb-1 select-none">
-            Deep Memory Strata Chain
+        <div className="w-full mt-3 z-20 max-h-60 overflow-y-auto flex flex-col gap-1.5">
+          <div className="text-[9px] text-[#6c6c8a] uppercase font-mono tracking-wider pb-1 mb-1 select-none">
+            [ Deep Memory Strata Chain ]
           </div>
           {loading ? (
             <div className="text-[10px] text-[#555] font-mono animate-pulse py-2">
@@ -172,7 +165,7 @@ const SedimentFold = memo(function SedimentFold({
               <div
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
-                className="group/item flex items-start justify-between p-2 rounded-sm bg-[#121214]/60 hover:bg-[#18181c] border border-transparent hover:border-[#222]/80 cursor-pointer transition-all duration-150"
+                className="group/item flex items-start justify-between py-1 cursor-pointer"
               >
                 <div className="flex-1 min-w-0 pr-4">
                   <div className="flex items-center gap-2 mb-1 select-none">
@@ -222,34 +215,33 @@ const GlimmerLinks = memo(function GlimmerLinks({
   if (!hasSiblings && !hasChildren) return null
 
   return (
-    <div className="mt-4 border-t border-[#18181b] pt-3 flex flex-col gap-2.5 select-none">
+    <div className="mt-4 pt-3 flex flex-col gap-2.5 select-none">
       {hasSiblings && (
         <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
-          <span className="text-[#555] uppercase tracking-wider text-[9px]">Lateral Strata (Siblings):</span>
+          <span className="text-[#555] uppercase tracking-wider text-[9px]">[ Lateral Strata (Siblings) ]:</span>
           {siblingNodes.map((sib, index) => (
             <button
               key={sib.id}
               onClick={() => onNavigate(sib.id)}
-              className="px-2 py-0.5 border border-[#222] hover:border-[#e09b67]/60 hover:text-[#e09b67] bg-[#0c0c0e] hover:bg-[#141210] rounded-sm text-[#888] transition-all duration-150 cursor-pointer max-w-48 truncate"
+              className="text-[#888] hover:text-[#e09b67] transition-colors cursor-pointer"
               title={`Jump to sibling: ${sib.content}`}
             >
-              Alternative {index + 1}: "{sib.content || "..."}"
+              [Alt {index + 1}: "{sib.content || "..."}"]
             </button>
           ))}
         </div>
       )}
-
       {hasChildren && (
         <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
-          <span className="text-[#555] uppercase tracking-wider text-[9px]">Forward Flight (Children):</span>
+          <span className="text-[#555] uppercase tracking-wider text-[9px]">[ Forward Flight (Children) ]:</span>
           {childNodes.map((child) => (
             <button
               key={child.id}
               onClick={() => onNavigate(child.id)}
-              className="px-2 py-0.5 border border-[#222] hover:border-[#4ade80]/60 hover:text-[#4ade80] bg-[#0c0c0e] hover:bg-[#0e1410] rounded-sm text-[#888] transition-all duration-150 cursor-pointer max-w-64 truncate"
+              className="text-[#888] hover:text-[#4ade80] transition-colors cursor-pointer"
               title={`Jump to child: ${child.content}`}
             >
-              Cut -&gt; "{child.content || "..."}"
+              [Cut → "{child.content || "..."}"]
             </button>
           ))}
         </div>
@@ -284,19 +276,19 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
 }) {
   if (!selectedMsg) {
     return (
-      <div className="border border-dashed border-[#222] bg-[#0c0c0e] rounded-sm p-10 text-center select-none">
-        <span className="text-xs text-[#555] uppercase font-mono tracking-widest animate-pulse">
-          Awaiting Observation Target...
+      <div className="p-10 text-center select-none">
+        <span className="text-xs text-[#555] uppercase font-mono tracking-widest">
+          [ Awaiting Observation Target ]
         </span>
       </div>
     )
   }
 
   return (
-    <div className={`border bg-[#0f0f13] rounded-sm p-4 relative shadow-inner transition-all duration-300 ${isHighlighted ? "highlight-glow" : "border-[#2a2a35]"}`}>
-      <div className="flex items-center justify-between border-b border-[#21212a] pb-2 mb-3 select-none">
-        <span className="text-[9px] text-[#888] font-mono uppercase tracking-widest font-semibold text-[#6bc28c]">
-          Active Focus Cut : {selectedMsg.speaker === "human" ? "Human" : "Apparatus"}
+    <div className={`p-4 relative transition-all duration-300 ${isHighlighted ? "highlight-glow" : ""}`}>
+      <div className="flex items-center justify-between pb-2 mb-3 select-none">
+        <span className="text-[9px] text-[#6c6c8a] font-mono uppercase tracking-widest">
+          [ Active Focus Cut : {selectedMsg.speaker === "human" ? "Human" : "Apparatus"} ]
         </span>
       </div>
       <MessageBubble
@@ -314,7 +306,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   )
 })
 
-export function NodeExplorer({
+export const NodeExplorer = memo(function NodeExplorer({
   selectedNode,
   parentNode,
   siblingNodes,
@@ -425,16 +417,16 @@ export function NodeExplorer({
   const selectedNotes = selectedNode ? (notesByMessageId.get(selectedNode.id) || EMPTY_ARRAY) : EMPTY_ARRAY
 
   return (
-    <div className={`flex flex-col h-full bg-[#070709] border-r border-[#1a1a1a] ${className}`}>
-      {/* Title Bar */}
-      <div className="flex items-center gap-3 border-b border-[#151515] px-4 py-3 select-none">
+    <div className={`flex flex-col h-full ${className}`}>
+      {/* Title Bar — terminal style */}
+      <div className="flex items-center gap-3 px-4 py-3 select-none">
         {onGoHome && (
           <button
             onClick={onGoHome}
-            className="text-xs text-[#555] hover:text-[#aaa] transition-colors border border-[#222] px-2 py-1 rounded-sm bg-[#0c0c0e] cursor-pointer"
+            className="text-xs text-[#666] hover:text-[#aaa] transition-colors cursor-pointer select-none font-mono"
             title="Go to Home"
           >
-            home
+            [home]
           </button>
         )}
         <div className="flex-1 min-w-0">
@@ -445,7 +437,7 @@ export function NodeExplorer({
                 value={titleVal}
                 onChange={(e) => setTitleVal(e.target.value)}
                 onBlur={handleTitleSubmit}
-                className="bg-[#0f0f11] border border-[#333] px-2 py-0.5 text-xs text-[#ddd] font-mono rounded-sm outline-none focus:border-[#4ade80] w-full"
+                className="bg-transparent border-b border-[#222]/40 px-1 py-0.5 text-xs text-[#ddd] font-mono outline-none focus:border-[#4ade80] w-full"
                 autoFocus
               />
             </form>
@@ -453,16 +445,16 @@ export function NodeExplorer({
             <div className="flex items-center gap-2">
               <h1
                 onClick={() => setEditingTitle(true)}
-                className="text-xs font-mono font-bold tracking-wider text-[#aaa] hover:text-[#fff] cursor-pointer truncate max-w-xs uppercase"
+                className="text-xs font-mono font-bold tracking-wider text-[#6c6c8a] hover:text-[#aaa] cursor-pointer truncate max-w-xs uppercase"
               >
                 {conversationTitle || "Untitled Entanglement"}
               </h1>
               <button
                 onClick={onGenerateTitle}
-                className="text-[9px] text-[#444] hover:text-[#4ade80] font-mono cursor-pointer transition-colors"
+                className="text-[9px] text-[#666] hover:text-[#4ade80] font-mono cursor-pointer transition-colors select-none"
                 title="Auto-generate title"
               >
-                #generate_title
+                [#generate_title]
               </button>
             </div>
           )}
@@ -476,18 +468,16 @@ export function NodeExplorer({
 
       {/* Tags Bar */}
       {tags.length > 0 || onAddTag ? (
-        <div className="px-4 py-1.5 border-b border-[#121212] bg-[#09090b] flex flex-wrap items-center gap-x-2 gap-y-1 select-none">
+        <div className="px-4 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 select-none">
           {tags.map((t, i) => {
-            const tagStyle = "text-[#6bc28c] bg-[#0f1b13] border border-[#1a3f28]/60 px-1 rounded-[2px]"
-            const isDeletable = true
             return (
-              <span key={t.tag} className={`text-[9px] ${tagStyle} font-mono flex items-center gap-0.5`}>
+              <span key={t.tag} className="text-[9px] text-[#6bc28c] font-mono flex items-center gap-0.5">
                 {i > 0 && <span className="text-[#444] select-none">{" // "}</span>}
                 {t.tag}
-                {isDeletable && onRemoveTag && (
+                {onRemoveTag && (
                   <button
                     onClick={() => onRemoveTag(t.tag)}
-                    className="text-[9px] text-[#888] hover:text-[#ef4444] cursor-pointer font-bold select-none"
+                    className="text-[9px] text-[#666] hover:text-[#ef4444] cursor-pointer select-none"
                     title="Remove tag"
                   >
                     &times;
@@ -513,9 +503,9 @@ export function NodeExplorer({
       {/* Explorer Space */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col justify-start">
         {isPassword ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 select-none max-w-sm mx-auto my-auto border border-[#222] bg-[#0c0c0c] rounded-sm">
+          <div className="flex flex-col items-center justify-center h-full text-center p-6 select-none max-w-sm mx-auto my-auto">
             <span className="text-2xl text-[#ef4444] mb-3 animate-pulse">⚙</span>
-            <h2 className="text-[#ddd] text-xs font-mono tracking-widest mb-1.5 uppercase">SYSTEM LOCK</h2>
+            <h2 className="text-[#888] text-xs font-mono tracking-widest mb-1.5 uppercase">[ System Lock ]</h2>
             <p className="text-[#555] text-[10px] font-mono leading-relaxed uppercase">
               Authentication required. Enter credentials in prompt below.
             </p>
@@ -524,19 +514,19 @@ export function NodeExplorer({
           <div className="flex flex-col gap-1">
             {/* Traversal History Trail */}
             {history && history.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-[#0c0c0e]/80 border border-[#1b1b20] rounded-sm text-[9px] font-mono mb-3 select-none">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] font-mono mb-3 select-none">
                 <span className="text-[#555] uppercase tracking-wider">Recent:</span>
                 {history.map((item, idx) => (
-                  <div key={item.id} className="flex items-center gap-1.5">
+                  <span key={item.id} className="flex items-center gap-x-1.5">
                     {idx > 0 && <span className="text-[#333]">&gt;</span>}
                     <button
                       onClick={() => onNavigateToMessage(item.id)}
-                      className="px-1.5 py-0.5 rounded-sm bg-[#121214] border border-[#222] text-[#888] hover:text-[#4ade80] hover:border-[#4ade80]/40 transition-all cursor-pointer truncate max-w-[130px] font-mono leading-none"
+                      className="text-[#888] hover:text-[#4ade80] transition-colors cursor-pointer font-mono"
                       title={`Jump to ${item.speaker === "human" ? "Human" : "Apparatus"} message: ${item.snippet}`}
                     >
-                      {item.speaker === "human" ? "H" : "A"}: {item.snippet}
+                      [{item.speaker === "human" ? "H" : "A"}: {item.snippet}]
                     </button>
-                  </div>
+                  </span>
                 ))}
               </div>
             )}
@@ -594,18 +584,16 @@ export function NodeExplorer({
 
       {/* Error Bar */}
       {error && (
-        <div className="mx-4 mb-2 flex items-center gap-2 bg-[#1a1010] border border-[#3a1a1a] px-4 py-2 text-xs text-[#ef4444]">
+        <div className="mx-4 mb-2 flex items-center gap-2 px-4 py-2 text-xs text-[#ef4444]">
           <span className="flex-1 truncate uppercase font-mono">{error}</span>
           {onRegenerate && (
-            <button
-              onClick={() => onRegenerate()}
-              className="text-[#4ade80] hover:text-[#22c55e] border border-[#276a3e]/50 px-2.5 py-0.5 rounded-sm text-[10px] tracking-wider font-mono mr-2 bg-[#0d1c12] hover:bg-[#122b1c] transition-colors cursor-pointer"
-            >
-              retry
+            <button onClick={() => onRegenerate()}
+              className="text-[10px] text-[#666] hover:text-[#4ade80] font-mono cursor-pointer select-none">
+              [retry]
             </button>
           )}
-          <button onClick={onClearError} className="text-[#884444] hover:text-[#ef4444] font-mono uppercase cursor-pointer">
-            dismiss
+          <button onClick={onClearError} className="text-[10px] text-[#666] hover:text-[#ef4444] font-mono cursor-pointer select-none uppercase">
+            [dismiss]
           </button>
         </div>
       )}
@@ -620,4 +608,4 @@ export function NodeExplorer({
       />
     </div>
   )
-}
+})
