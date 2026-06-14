@@ -55,7 +55,7 @@ AgentPage (tab router only)
 │   ├── BeliefsSection      → fetches: beliefs + agent
 │   └── SkillsSection       → fetches: skills + agent
 ├── PipelineSection          → fetches: pipeline
-├── DreamingSection          → fetches: daemon status (self-polling)
+├── DreamingSection          → fetches: daemon status + dream history (self-polling)
 ├── StartupSection           → fetches: scheduler status (self-polling)
 └── TracesSection            → fetches: notifications
 ```
@@ -274,7 +274,7 @@ SidePanel (memo'd, collapse router only)
 ├── BeliefsSection.tsx         ← Self-fetching: beliefs + agent
 ├── SkillsSection.tsx          ← Self-fetching: skills + agent
 ├── PipelineSection.tsx        ← Self-fetching: pipeline
-├── DreamingSection.tsx        ← Self-fetching: daemon status (10s poll)
+├── DreamingSection.tsx        ← Self-fetching: daemon status + dream history (10s poll)
 ├── StartupSection.tsx         ← Self-fetching: scheduler status (10s poll)
 ├── TracesSection.tsx          ← Self-fetching: notifications
 │

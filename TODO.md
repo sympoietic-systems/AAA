@@ -56,6 +56,13 @@
     [x] MessageBubble: NOT modified (separate pass planned due to complex note/tooltip/selection logic)
     [x] docs: FRONTEND_DESIGN_PRINCIPLES.md updated with §13 Center Column
 
+## DAEMON / DREAMING
+    [x] Backend: dream_log table (migration m027) with action, prompt/response msg IDs, turns, timestamp
+    [x] Backend: DreamLogRepository — log_dream() on each completed dream cycle
+    [x] Backend: /daemon/dreams endpoint queries dream_log for last 48h
+    [x] Frontend: DreamingSection shows [ Recent Dreams (N) ] list with links to exact response messages
+    [x] Each entry: relative time, action type, title → &m=<response_msg_id>, turns · msg count
+
 
 
 ## SYMBIA PERSONALITY
