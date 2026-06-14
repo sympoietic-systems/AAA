@@ -184,9 +184,13 @@ function CommitmentsPanel({
               {agentFlux && (
                 <div className="flex gap-2">
                   <button onClick={async () => {
+                    setSaving(true)
                     const vec = await recalculateCommitmentVector(selected.id)
                     setSelected({ ...selected, vector_16d: vec })
-                  }} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[recalc]</button>
+                    setSaving(false)
+                  }} disabled={saving} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none disabled:opacity-50">
+                    [{saving ? "recalculating..." : "recalc"}]
+                  </button>
                   <button onClick={() => setEditing(!editing)} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[{editing ? "cancel" : "edit"}]</button>
                 </div>
               )}
@@ -352,9 +356,13 @@ function ExpertisePanel({
               {agentFlux && (
                 <div className="flex gap-2">
                   <button onClick={async () => {
+                    setSaving(true)
                     const vec = await recalculateExpertiseVector(selected.id)
                     setSelected({ ...selected, vector_16d: vec })
-                  }} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[recalc]</button>
+                    setSaving(false)
+                  }} disabled={saving} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none disabled:opacity-50">
+                    [{saving ? "recalculating..." : "recalc"}]
+                  </button>
                   <button onClick={() => setEditing(!editing)} className="text-[10px] text-[#666] hover:text-[#a892ee] cursor-pointer select-none">[{editing ? "cancel" : "edit"}]</button>
                 </div>
               )}
