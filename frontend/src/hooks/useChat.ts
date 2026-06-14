@@ -14,43 +14,7 @@ import {
 } from "../api/client"
 import type { ChatMessage, ConversationFile, ConversationTreeNode, ConversationTreeLink } from "../api/client"
 import { addNotification, dismissByMatch } from "../stores/notificationStore"
-
-function estimateTokens(text: string): number {
-  if (!text) return 0
-  return Math.max(1, Math.floor(text.length / 4))
-}
-
-function getAncestorPathIds(messages: ChatMessage[], leafId: number | null): Set<number> {
-  const path = new Set<number>()
-  if (!leafId) return path
-
-  const sorted = [...messages].sort((a, b) => a.id - b.id)
-
-  let currentId: number | null = leafId
-  const parentMap = new Map<number, number | null>()
-  for (let i = 0; i < sorted.length; i++) {
-    const m = sorted[i]
-    if (m.parent_message_id !== undefined && m.parent_message_id !== null) {
-      parentMap.set(m.id, m.parent_message_id)
-    } else {
-      // Node has no parent — treat as a root (orphaned or first message).
-      // Do NOT fall back to sorted[i-1].id: that creates false connections
-      // for orphaned nodes (e.g. dream dialogue nodes inserted without
-      // parent_message_id), causing the ancestor path to diverge from the
-      // real conversation tree shown on the Connection Cloud graph.
-      parentMap.set(m.id, null)
-    }
-  }
-
-  const visited = new Set<number>()
-  while (currentId !== null && !visited.has(currentId)) {
-    visited.add(currentId)
-    path.add(currentId)
-    currentId = parentMap.get(currentId) || null
-  }
-
-  return path
-}
+import { estimateTokens, getAncestorPathIds } from "./useChatHelpers"
 
 
 export function useChat(conversationId: string) {
