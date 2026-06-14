@@ -356,8 +356,8 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
     if not node:
         raise HTTPException(status_code=404, detail="Commitment not found")
 
-    # Use the same scorer as beliefs/skills/messages — no LLM for speed
-    new_vector = structural_scorer._scorer.score(node.statement, use_llm_scorer=False)
+    # Use the same scorer as beliefs/skills/messages — with LLM for accuracy
+    new_vector = structural_scorer._scorer.score(node.statement)
     node.vector_16d = json.dumps(new_vector.tolist())
     commit_repo.update(node)
 
@@ -381,7 +381,7 @@ async def recalculate_expertise_vector(expertise_id: str, request: Request):
     if not node:
         raise HTTPException(status_code=404, detail="Expertise domain not found")
 
-    new_vector = structural_scorer._scorer.score(node.domain, use_llm_scorer=False)
+    new_vector = structural_scorer._scorer.score(node.domain)
     node.vector_16d = json.dumps(new_vector.tolist())
     exp_repo.update(node)
 
