@@ -532,6 +532,7 @@ async def lifespan(app: FastAPI):
     app.state.embedder = embedder
     app.state.llm_provider = llm_provider
     app.state.structural_provider = structural_provider
+    app.state.structural_scorer = modules["structural_scorer"]
     app.state.system_prompt_tokens = system_prompt_tokens
 
     # 11. Background engine

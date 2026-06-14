@@ -341,26 +341,23 @@ async def update_aspirational_traits(request: Request):
 
 @router.put("/agent/personality/commitment/{commitment_id}/recalculate")
 async def recalculate_commitment_vector(commitment_id: str, request: Request):
-    """Re-score the commitment's statement to update its 16D vector."""
+    """Re-score the commitment's statement via the pipeline's structural scorer."""
     state = request.app.state
     import os, numpy as np
     if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
         raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
 
     commit_repo = getattr(state, "commitment_repo", None)
-    if not commit_repo:
-        raise HTTPException(status_code=500, detail="Repository unavailable")
+    structural_scorer = getattr(state, "structural_scorer", None)
+    if not commit_repo or not structural_scorer:
+        raise HTTPException(status_code=500, detail="Repository or scorer unavailable")
 
     node = commit_repo.get_by_id(commitment_id)
     if not node:
         raise HTTPException(status_code=404, detail="Commitment not found")
 
-    from backend.modules.structural_engine import LexiconScorer, TopologyScorer
-    lexicon = LexiconScorer()
-    topology = TopologyScorer()
-    s_ling = lexicon.score(node.statement)
-    s_topo = topology.score(node.statement)
-    new_vector = np.clip(0.5 * s_ling + 0.5 * s_topo, 0.0, 1.0)
+    # Use the same scorer as beliefs/skills/messages — no LLM for speed
+    new_vector = structural_scorer._scorer.score(node.statement, use_llm_scorer=False)
     node.vector_16d = json.dumps(new_vector.tolist())
     commit_repo.update(node)
 
@@ -369,26 +366,22 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
 
 @router.put("/agent/personality/expertise/{expertise_id}/recalculate")
 async def recalculate_expertise_vector(expertise_id: str, request: Request):
-    """Re-score the expertise domain to update its 16D vector."""
+    """Re-score the expertise domain via the pipeline's structural scorer."""
     state = request.app.state
     import os, numpy as np
     if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
         raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
 
     exp_repo = getattr(state, "expertise_repo", None)
-    if not exp_repo:
-        raise HTTPException(status_code=500, detail="Repository unavailable")
+    structural_scorer = getattr(state, "structural_scorer", None)
+    if not exp_repo or not structural_scorer:
+        raise HTTPException(status_code=500, detail="Repository or scorer unavailable")
 
     node = exp_repo.get_by_id(expertise_id)
     if not node:
         raise HTTPException(status_code=404, detail="Expertise domain not found")
 
-    from backend.modules.structural_engine import LexiconScorer, TopologyScorer
-    lexicon = LexiconScorer()
-    topology = TopologyScorer()
-    s_ling = lexicon.score(node.domain)
-    s_topo = topology.score(node.domain)
-    new_vector = np.clip(0.5 * s_ling + 0.5 * s_topo, 0.0, 1.0)
+    new_vector = structural_scorer._scorer.score(node.domain, use_llm_scorer=False)
     node.vector_16d = json.dumps(new_vector.tolist())
     exp_repo.update(node)
 
