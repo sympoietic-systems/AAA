@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from pathlib import Path
 from typing import Optional
@@ -20,8 +21,16 @@ def get_connection(db_path: str) -> sqlite3.Connection:
 
 
 def init_db(db_path: str) -> sqlite3.Connection:
-    """Initialize database with all migrations and legacy data migration."""
+    """Initialize database with all migrations and legacy data migration.
+
+    Set AAA_SKIP_MIGRATIONS=true to skip auto-migration on startup
+    (useful when restoring backups — run migrations manually instead).
+    """
     conn = get_connection(db_path)
+
+    if os.environ.get("AAA_SKIP_MIGRATIONS", "").lower() in ("true", "1", "yes"):
+        return conn
+
     from backend.storage.migrations import run_all_migrations
     run_all_migrations(conn)
     _migrate_legacy_conversation(conn)
