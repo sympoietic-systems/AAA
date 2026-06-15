@@ -2,6 +2,7 @@ import { useState, useEffect, memo, useCallback, useRef } from "react"
 import type { ConversationInfo, NoteInfo } from "../../../api/client"
 import { getConversation } from "../../../api/conversations"
 import { getNotes, deleteNote, updateNote } from "../../../api/notes"
+import { generateHumanSummary } from "../../../api/conversations"
 import { NotesSection } from "../../shared/NotesSection"
 import { MemoryNodesSection } from "../../shared/MemoryNodesSection"
 
@@ -84,11 +85,13 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
   const [detailLoading, setDetailLoading] = useState(false)
   const detailRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const updatedConvIds = useRef<Set<string>>(new Set())
 
   // Tab state
   const [activeTab, setActiveTab] = useState<DetailTab>("summary")
   const [notes, setNotes] = useState<NoteInfo[] | null>(null)
   const [notesLoading, setNotesLoading] = useState(false)
+  const [generatingSummary, setGeneratingSummary] = useState(false)
   const visitedTabs = useRef<Set<string>>(new Set())
 
   const getTagForCategory = (cat: typeof activeCategory): string | undefined => {
@@ -116,10 +119,13 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
     setNotes(null)
     visitedTabs.current = new Set()
 
-    const cached = conversations.find(c => c.id === selectedId)
-    if (cached && cached.summary !== undefined) {
-      setDetailConv(cached)
-      return
+    // Skip cache for conversations we've locally updated (e.g. generated human summary)
+    if (!updatedConvIds.current.has(selectedId)) {
+      const cached = conversations.find(c => c.id === selectedId)
+      if (cached && cached.summary !== undefined) {
+        setDetailConv(cached)
+        return
+      }
     }
     setDetailLoading(true)
     getConversation(selectedId)
@@ -147,6 +153,20 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
     setActiveTab(tab)
     if (selectedId) ensureTab(tab, selectedId)
   }, [selectedId, ensureTab])
+
+  const handleGenerateHumanSummary = useCallback(async () => {
+    if (!selectedId || generatingSummary) return
+    setGeneratingSummary(true)
+    try {
+      const updated = await generateHumanSummary(selectedId)
+      setDetailConv(updated)
+      updatedConvIds.current.add(selectedId)
+    } catch (e) {
+      console.error("Failed to generate human summary:", e)
+    } finally {
+      setGeneratingSummary(false)
+    }
+  }, [selectedId, generatingSummary])
 
   // Scroll into view on mobile
   useEffect(() => {
@@ -423,14 +443,21 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                       <p className="text-[11px] text-[#aaa] leading-relaxed whitespace-pre-line font-mono">
                         {displayConv.human_summary}
                       </p>
-                    ) : displayConv.summary ? (
-                      <p className="text-[10px] text-[#444] italic font-mono">
-                        no human-readable summary yet
-                      </p>
                     ) : (
-                      <p className="text-[10px] text-[#444] font-mono">
-                        no summary available
-                      </p>
+                      <div>
+                        <p className="text-[10px] text-[#444] italic font-mono mb-2">
+                          {displayConv.summary
+                            ? "no human-readable summary yet"
+                            : "no summary available yet"}
+                        </p>
+                        <button
+                          onClick={handleGenerateHumanSummary}
+                          disabled={generatingSummary}
+                          className="text-[10px] text-[#4ade80] hover:text-white transition-colors cursor-pointer disabled:text-[#2a2a2a] font-mono"
+                        >
+                          {generatingSummary ? "[ generating summary... ]" : "[ generate summary ]"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}

@@ -139,6 +139,15 @@ export async function generateConversationTitle(id: string): Promise<Conversatio
   return res.json()
 }
 
+export async function generateHumanSummary(id: string): Promise<ConversationInfo> {
+  const res = await fetch(`${BASE}/conversations/${id}/generate-human-summary`, { method: "POST" })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Unknown error" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function addConversationTag(conversationId: string, tag: string): Promise<void> {
   const res = await fetch(`${BASE}/conversations/${conversationId}/tags`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tag }) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
