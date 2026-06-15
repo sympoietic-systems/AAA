@@ -106,5 +106,5 @@ global_synthesis_with_beliefs_prompt: |
   }
 
 parameters:
-  temperature: 0.4
+  temperature: 0.1
   max_tokens: 4096
