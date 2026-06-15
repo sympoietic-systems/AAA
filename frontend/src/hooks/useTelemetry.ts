@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react"
+import { useSyncExternalStore, useCallback } from "react"
 import {
   subscribeMetrics,
   subscribeBeliefs,
@@ -53,8 +53,17 @@ export function useTelemetryMetrics(enabled: boolean) {
 export function useTelemetryBeliefs(conversationId: string | null, enabled: boolean) {
   const activeId = conversationId || ""
 
+  // Stable subscribe reference to avoid infinite resubscribe → poll → emit → render loop
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!enabled || !activeId) return NOOP_SUBSCRIBE()
+      return subscribeBeliefs(activeId, onStoreChange)
+    },
+    [enabled, activeId]
+  )
+
   const state = useSyncExternalStore(
-    (enabled && activeId) ? (onStoreChange: () => void) => subscribeBeliefs(activeId, onStoreChange) : NOOP_SUBSCRIBE,
+    subscribe,
     () => (beliefsState[activeId] || EMPTY_BELIEFS) as TelemetryStateSlice<BeliefsResponse>
   )
 
@@ -71,8 +80,17 @@ export function useTelemetryTokens(conversationId: string | null, enabled: boole
   const activeId = conversationId || ""
   const key = activeId || "global"
 
+  // Stable subscribe reference to avoid infinite resubscribe → poll → emit → render loop
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!enabled) return NOOP_SUBSCRIBE()
+      return subscribeTokens(activeId, onStoreChange)
+    },
+    [enabled, activeId]
+  )
+
   const state = useSyncExternalStore(
-    enabled ? (onStoreChange: () => void) => subscribeTokens(activeId, onStoreChange) : NOOP_SUBSCRIBE,
+    subscribe,
     () => (tokensState[key] || EMPTY_TOKENS) as TelemetryStateSlice<TokenResponse>
   )
 

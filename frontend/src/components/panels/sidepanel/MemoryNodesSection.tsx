@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react"
+import { useState, useEffect, useRef, memo } from "react"
 import type { MemoryNodeInfo } from "../../../api/client"
 import { getMemoryNodes } from "../../../api/client"
 import { MemoryNodeCard } from "./MemoryNodeCard"
@@ -12,6 +12,10 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false }: Memory
   const [memoryNodes, setMemoryNodes] = useState<MemoryNodeInfo[]>([])
   const [loadingNodes, setLoadingNodes] = useState(false)
   const [hasFetched, setHasFetched] = useState(false)
+  const hasFetchedRef = useRef(false)
+
+  // Keep ref in sync with state for the polling closure
+  hasFetchedRef.current = hasFetched
 
   // Reset when conversation changes
   useEffect(() => {
@@ -30,7 +34,7 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false }: Memory
 
     const tick = async () => {
       if (!active) return
-      setLoadingNodes(prev => !hasFetched || prev) // Only show initial loading
+      setLoadingNodes(prev => !hasFetchedRef.current || prev) // Only show loading on first fetch
       try {
         const data = await getMemoryNodes(conversationId)
         if (active) {

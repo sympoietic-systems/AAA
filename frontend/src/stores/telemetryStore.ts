@@ -19,7 +19,7 @@ export interface TelemetryStateSlice<T> {
   error: string | null
 }
 
-export const metricsState: TelemetryStateSlice<MetricsResponse> = {
+export let metricsState: TelemetryStateSlice<MetricsResponse> = {
   data: null,
   loading: false,
   error: null
@@ -28,13 +28,13 @@ export const metricsState: TelemetryStateSlice<MetricsResponse> = {
 export const beliefsState: Record<string, TelemetryStateSlice<BeliefsResponse>> = {}
 export const tokensState: Record<string, TelemetryStateSlice<TokenResponse>> = {}
 
-export const daemonState: TelemetryStateSlice<DaemonStatusResponse> = {
+export let daemonState: TelemetryStateSlice<DaemonStatusResponse> = {
   data: null,
   loading: false,
   error: null
 }
 
-export const schedulerState: TelemetryStateSlice<SchedulerStatusResponse> = {
+export let schedulerState: TelemetryStateSlice<SchedulerStatusResponse> = {
   data: null,
   loading: false,
   error: null
@@ -62,23 +62,21 @@ function emitMetricsChange() {
 }
 
 async function pollMetrics() {
-  metricsState.loading = !metricsState.data
+  metricsState = { data: metricsState.data, loading: !metricsState.data, error: metricsState.error }
   emitMetricsChange()
   try {
     const res = await getMetrics()
-    metricsState.data = res
-    metricsState.error = null
+    metricsState = { data: res, loading: false, error: null }
   } catch (err: any) {
-    metricsState.error = err.message || "Failed to fetch metrics"
+    const errorMsg = err.message || "Failed to fetch metrics"
+    metricsState = { data: metricsState.data, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Metrics polling failure: ${metricsState.error}`,
+      snippet: `Telemetry: Metrics polling failure: ${errorMsg}`,
       source: 'Telemetry.metrics'
     })
-  } finally {
-    metricsState.loading = false
-    emitMetricsChange()
   }
+  emitMetricsChange()
 
   if (metricsListeners.size > 0) {
     const delay = 15000 + (Math.random() - 0.5) * 1000
@@ -103,23 +101,21 @@ export function subscribeMetrics(listener: Listener) {
 }
 
 export async function refreshMetricsForce() {
-  metricsState.loading = true
+  metricsState = { data: metricsState.data, loading: true, error: metricsState.error }
   emitMetricsChange()
   try {
     const res = await getMetrics()
-    metricsState.data = res
-    metricsState.error = null
+    metricsState = { data: res, loading: false, error: null }
   } catch (err: any) {
-    metricsState.error = err.message || "Failed to fetch metrics"
+    const errorMsg = err.message || "Failed to fetch metrics"
+    metricsState = { data: metricsState.data, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Metrics force refresh failure: ${metricsState.error}`,
+      snippet: `Telemetry: Metrics force refresh failure: ${errorMsg}`,
       source: 'Telemetry.metrics'
     })
-  } finally {
-    metricsState.loading = false
-    emitMetricsChange()
   }
+  emitMetricsChange()
 }
 
 // --- Beliefs Pub-Sub ---
@@ -135,26 +131,23 @@ async function pollBeliefs(convId: string) {
   if (!state) {
     state = { data: null, loading: true, error: null }
     beliefsState[convId] = state
-  } else {
-    state.loading = !state.data
   }
+  beliefsState[convId] = { data: state.data, loading: !state.data, error: state.error }
   emitBeliefsChange(convId)
 
   try {
     const res = await getBeliefs(convId)
-    state.data = res
-    state.error = null
+    beliefsState[convId] = { data: res, loading: false, error: null }
   } catch (err: any) {
-    state.error = err.message || "Failed to fetch beliefs"
+    const errorMsg = err.message || "Failed to fetch beliefs"
+    beliefsState[convId] = { data: beliefsState[convId]?.data ?? null, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Beliefs polling failure for conversation ${convId.slice(0, 8)}: ${state.error}`,
+      snippet: `Telemetry: Beliefs polling failure for conversation ${convId.slice(0, 8)}: ${errorMsg}`,
       source: 'Telemetry.beliefs'
     })
-  } finally {
-    state.loading = false
-    emitBeliefsChange(convId)
   }
+  emitBeliefsChange(convId)
 
   const list = beliefsListeners.get(convId)
   if (list && list.size > 0) {
@@ -199,26 +192,23 @@ export async function refreshBeliefsForce(convId: string) {
   if (!state) {
     state = { data: null, loading: true, error: null }
     beliefsState[convId] = state
-  } else {
-    state.loading = true
   }
+  beliefsState[convId] = { data: state.data, loading: true, error: state.error }
   emitBeliefsChange(convId)
 
   try {
     const res = await getBeliefs(convId)
-    state.data = res
-    state.error = null
+    beliefsState[convId] = { data: res, loading: false, error: null }
   } catch (err: any) {
-    state.error = err.message || "Failed to fetch beliefs"
+    const errorMsg = err.message || "Failed to fetch beliefs"
+    beliefsState[convId] = { data: beliefsState[convId]?.data ?? null, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Beliefs force refresh failure for conversation ${convId.slice(0, 8)}: ${state.error}`,
+      snippet: `Telemetry: Beliefs force refresh failure for conversation ${convId.slice(0, 8)}: ${errorMsg}`,
       source: 'Telemetry.beliefs'
     })
-  } finally {
-    state.loading = false
-    emitBeliefsChange(convId)
   }
+  emitBeliefsChange(convId)
 }
 
 // --- Tokens Pub-Sub ---
@@ -234,26 +224,23 @@ async function pollTokens(convId: string) {
   if (!state) {
     state = { data: null, loading: true, error: null }
     tokensState[convId] = state
-  } else {
-    state.loading = !state.data
   }
+  tokensState[convId] = { data: state.data, loading: !state.data, error: state.error }
   emitTokensChange(convId)
 
   try {
     const res = await getTokens(convId || undefined)
-    state.data = res
-    state.error = null
+    tokensState[convId] = { data: res, loading: false, error: null }
   } catch (err: any) {
-    state.error = err.message || "Failed to fetch tokens"
+    const errorMsg = err.message || "Failed to fetch tokens"
+    tokensState[convId] = { data: tokensState[convId]?.data ?? null, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Tokens polling failure: ${state.error}`,
+      snippet: `Telemetry: Tokens polling failure: ${errorMsg}`,
       source: 'Telemetry.tokens'
     })
-  } finally {
-    state.loading = false
-    emitTokensChange(convId)
   }
+  emitTokensChange(convId)
 
   const list = tokensListeners.get(convId)
   if (list && list.size > 0) {
@@ -298,26 +285,23 @@ export async function refreshTokensForce(convId: string) {
   if (!state) {
     state = { data: null, loading: true, error: null }
     tokensState[key] = state
-  } else {
-    state.loading = true
   }
+  tokensState[key] = { data: state.data, loading: true, error: state.error }
   emitTokensChange(key)
 
   try {
     const res = await getTokens(convId || undefined)
-    state.data = res
-    state.error = null
+    tokensState[key] = { data: res, loading: false, error: null }
   } catch (err: any) {
-    state.error = err.message || "Failed to fetch tokens"
+    const errorMsg = err.message || "Failed to fetch tokens"
+    tokensState[key] = { data: tokensState[key]?.data ?? null, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Tokens force refresh failure: ${state.error}`,
+      snippet: `Telemetry: Tokens force refresh failure: ${errorMsg}`,
       source: 'Telemetry.tokens'
     })
-  } finally {
-    state.loading = false
-    emitTokensChange(key)
   }
+  emitTokensChange(key)
 }
 
 // --- Daemon Pub-Sub ---
@@ -326,23 +310,21 @@ function emitDaemonChange() {
 }
 
 async function pollDaemon() {
-  daemonState.loading = !daemonState.data
+  daemonState = { data: daemonState.data, loading: !daemonState.data, error: daemonState.error }
   emitDaemonChange()
   try {
     const res = await getDaemonStatus()
-    daemonState.data = res
-    daemonState.error = null
+    daemonState = { data: res, loading: false, error: null }
   } catch (err: any) {
-    daemonState.error = err.message || "Failed to fetch daemon status"
+    const errorMsg = err.message || "Failed to fetch daemon status"
+    daemonState = { data: daemonState.data, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Daemon polling failure: ${daemonState.error}`,
+      snippet: `Telemetry: Daemon polling failure: ${errorMsg}`,
       source: 'Telemetry.daemon'
     })
-  } finally {
-    daemonState.loading = false
-    emitDaemonChange()
   }
+  emitDaemonChange()
 
   if (daemonListeners.size > 0) {
     const delay = 10000 + (Math.random() - 0.5) * 1000
@@ -367,23 +349,21 @@ export function subscribeDaemon(listener: Listener) {
 }
 
 export async function refreshDaemonForce() {
-  daemonState.loading = true
+  daemonState = { data: daemonState.data, loading: true, error: daemonState.error }
   emitDaemonChange()
   try {
     const res = await getDaemonStatus()
-    daemonState.data = res
-    daemonState.error = null
+    daemonState = { data: res, loading: false, error: null }
   } catch (err: any) {
-    daemonState.error = err.message || "Failed to fetch daemon status"
+    const errorMsg = err.message || "Failed to fetch daemon status"
+    daemonState = { data: daemonState.data, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Daemon force refresh failure: ${daemonState.error}`,
+      snippet: `Telemetry: Daemon force refresh failure: ${errorMsg}`,
       source: 'Telemetry.daemon'
     })
-  } finally {
-    daemonState.loading = false
-    emitDaemonChange()
   }
+  emitDaemonChange()
 }
 
 // --- Scheduler Pub-Sub ---
@@ -392,23 +372,21 @@ function emitSchedulerChange() {
 }
 
 async function pollScheduler() {
-  schedulerState.loading = !schedulerState.data
+  schedulerState = { data: schedulerState.data, loading: !schedulerState.data, error: schedulerState.error }
   emitSchedulerChange()
   try {
     const res = await getSchedulerStatus()
-    schedulerState.data = res
-    schedulerState.error = null
+    schedulerState = { data: res, loading: false, error: null }
   } catch (err: any) {
-    schedulerState.error = err.message || "Failed to fetch scheduler status"
+    const errorMsg = err.message || "Failed to fetch scheduler status"
+    schedulerState = { data: schedulerState.data, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Scheduler polling failure: ${schedulerState.error}`,
+      snippet: `Telemetry: Scheduler polling failure: ${errorMsg}`,
       source: 'Telemetry.scheduler'
     })
-  } finally {
-    schedulerState.loading = false
-    emitSchedulerChange()
   }
+  emitSchedulerChange()
 
   if (schedulerListeners.size > 0) {
     const delay = 10000 + (Math.random() - 0.5) * 1000
@@ -433,21 +411,19 @@ export function subscribeScheduler(listener: Listener) {
 }
 
 export async function refreshSchedulerForce() {
-  schedulerState.loading = true
+  schedulerState = { data: schedulerState.data, loading: true, error: schedulerState.error }
   emitSchedulerChange()
   try {
     const res = await getSchedulerStatus()
-    schedulerState.data = res
-    schedulerState.error = null
+    schedulerState = { data: res, loading: false, error: null }
   } catch (err: any) {
-    schedulerState.error = err.message || "Failed to fetch scheduler status"
+    const errorMsg = err.message || "Failed to fetch scheduler status"
+    schedulerState = { data: schedulerState.data, loading: false, error: errorMsg }
     addNotification({
       type: 'glitch',
-      snippet: `Telemetry: Scheduler force refresh failure: ${schedulerState.error}`,
+      snippet: `Telemetry: Scheduler force refresh failure: ${errorMsg}`,
       source: 'Telemetry.scheduler'
     })
-  } finally {
-    schedulerState.loading = false
-    emitSchedulerChange()
   }
+  emitSchedulerChange()
 }
