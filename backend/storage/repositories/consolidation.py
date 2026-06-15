@@ -41,6 +41,15 @@ class ConsolidationCheckpointRepository(BaseRepository):
         }
 
     @with_connection
+    def update_human_summary(self, checkpoint_id: int, human_summary: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE consolidation_checkpoints SET human_summary = ? WHERE id = ?",
+            (human_summary, checkpoint_id),
+        )
+        conn.commit()
+
+    @with_connection
     def delete_by_conversation(self, conversation_id: str) -> None:
         conn = self._conn()
         conn.execute(

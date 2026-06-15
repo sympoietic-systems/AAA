@@ -12,6 +12,25 @@ from backend.metabolisation.sedimentation import (
 logger = logging.getLogger(__name__)
 
 
+def format_messages_text(messages: list) -> str:
+    """Format message objects into 'Human: ...' / 'Agent: ...' text blocks."""
+    formatted_lines = []
+    for msg in messages:
+        speaker_label = "Human" if msg.speaker == "human" else "Agent"
+        formatted_lines.append(f"{speaker_label}: {msg.content}")
+    return "\n".join(formatted_lines)
+
+
+async def generate_human_summary_text(bg_engine, messages: list) -> str:
+    """Run the conversation_summary action on formatted messages and return prose summary.
+
+    Shared by the daemon (during full consolidation) and the on-demand API endpoint.
+    """
+    messages_text = format_messages_text(messages)
+    result = await bg_engine.run("conversation_summary", {"text": messages_text})
+    return result.get("content", "").strip()
+
+
 class ConsolidationMixin:
     """Handles pending conversation consolidation, re-consolidation, and diffractive tag syncing."""
 
@@ -204,9 +223,7 @@ class ConsolidationMixin:
             return
 
         # ── Call 2: Human-readable summary (prose) ──
-        summary_result = await bg_engine.run("conversation_summary", {"text": new_messages_text})
-        human_summary = summary_result.get("content", "").strip()
-        summary_model = summary_result.get("model", model_used)
+        human_summary = await generate_human_summary_text(bg_engine, new_messages)
         if human_summary:
             logger.info("Generated human summary for %s (%d chars)", conversation_id, len(human_summary))
         else:

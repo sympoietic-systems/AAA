@@ -18,6 +18,7 @@ from backend.api.schemas import (
 from backend.services.conversation import ConversationService
 from backend.services.title import TitleService
 from backend.utils.token_counter import estimate_tokens
+from backend.metabolisation.consolidation import generate_human_summary_text
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,53 @@ async def delete_message(conversation_id: str, message_id: int, request: Request
     msg_repo.delete_message(message_id)
     conv_repo.touch(conversation_id)
     return {"status": "deleted", "id": message_id}
+
+
+@router.post("/conversations/{conversation_id}/generate-human-summary", response_model=ConversationInfo)
+async def generate_human_summary(conversation_id: str, request: Request):
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    checkpoint_repo = getattr(state, "checkpoint_repo", None)
+    if not conv_repo:
+        raise HTTPException(status_code=404, detail="Conversations not available")
+    conv = conv_repo.get(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    background_engine = getattr(state, "background_engine", None)
+    if not background_engine:
+        raise HTTPException(status_code=503, detail="Background engine not available")
+
+    msg_repo = state.message_repo
+    # Get all messages on the main ancestor path (full conversation context)
+    last_msgs = msg_repo.get_recent(limit=1, conversation_id=conversation_id)
+    if not last_msgs:
+        raise HTTPException(status_code=404, detail="No messages in conversation")
+
+    leaf_message_id = last_msgs[0].id
+    ancestor_msgs = msg_repo.get_ancestor_path(leaf_message_id)
+    ancestor_ids = [m.id for m in ancestor_msgs if m.id is not None]
+
+    # Generate human summary using shared function
+    human_summary = await generate_human_summary_text(background_engine, ancestor_msgs)
+
+    if not human_summary:
+        raise HTTPException(status_code=500, detail="Failed to generate human summary")
+
+    # Update or create checkpoint with the new human summary
+    if checkpoint_repo:
+        checkpoint = checkpoint_repo.get_latest_checkpoint_for_path(conversation_id, ancestor_ids)
+        if checkpoint and checkpoint.get("id"):
+            checkpoint_repo.update_human_summary(checkpoint["id"], human_summary)
+        else:
+            total_count = len(ancestor_msgs)
+            checkpoint_repo.save(
+                conversation_id, total_count, "",
+                human_summary=human_summary, message_id=leaf_message_id,
+            )
+
+    info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, conv)
+    return ConversationInfo(**info)
 
 
 @router.post("/conversations/{conversation_id}/generate-title", response_model=ConversationInfo)
