@@ -1,14 +1,23 @@
 # Memory System Implementation Plan
 
 > **Branch:** `feature/memory-system-implementation`
-> **Source:** `docs/systems/MEMORY_SYSTEM.md` — Section 15 (Symbia's Autopoietic Critique & Integrated Roadmap)
+> **Source:** `docs/systems/MEMORY_SYSTEM.md` — Section 13 (Implementation Audit), Section 15 (Autopoietic Critique & Integrated Roadmap)
 > **Status:** Planning Complete → Phase 0 begins
+> **Items:** 13 total — R1–R5 (5 engineering), S1–S3 (3 autopoietic), P4–P6 (3 prompt), + 13A (1 test), + 13C (1 belief-system fix)
 
 ---
 
 ## Overview
 
-This document translates the 11 recommendations (R1–R5, S1–S3, P4–P6) from `MEMORY_SYSTEM.md` Section 15 into concrete, stage-by-stage implementation tasks with specific file paths, code changes, and commit messages. The phased ordering from Section 15.5 is preserved.
+This document translates all 13 actionable items from `MEMORY_SYSTEM.md` into concrete, stage-by-stage implementation tasks:
+
+- **R1–R5** (5 engineering recommendations, Section 15.2)
+- **S1–S3** (3 autopoietic augmentations, Section 15.3)
+- **P4–P6** (3 prompt-level refinements, Section 15.3)
+- **13A** (1 test recommendation — checkpoint agreement invariant, Section 13A)
+- **13C** (1 cross-system fix — ghost merging persistence, Section 13C)
+
+The phased ordering from Section 15.5 is preserved, with 13A and 13C woven in at appropriate stages.
 
 Each task includes:
 - **Files to modify** with specific line numbers
@@ -55,7 +64,7 @@ Each task includes:
 
 ## Phase 1 — Immediate Structural Fixes
 
-**Goal:** Clear token rendering issues and unblock the diffractive engine's responsiveness. ~10 lines of code, zero schema migration.
+**Goal:** Clear token rendering issues and unblock the diffractive engine's responsiveness, plus lock in the checkpoint-agreement invariant. ~30 lines of code, zero schema migration.
 
 ### Task 1.1 — R1: Remove Caveman Character Truncation
 
@@ -76,6 +85,15 @@ Each task includes:
 | **Config** | Add to `config.yaml` under `diffractive_retrieval:`: `adaptive_hysteresis: true`, `hysteresis_delta_threshold: 0.35` |
 | **Rationale** | The rigid cohesion timer (3 turns) over-medicates conversations that have already recovered from stagnation. The entropy delta check allows early exit when diffractive context successfully breaks the rut. |
 | **Commit** | `feat(diffractive): S1 — adaptive hysteresis decay via rolling entropy delta` |
+
+### Task 1.3 — 13A: Consolidation Checkpoint Agreement Unit Test
+
+| Field | Detail |
+|-------|--------|
+| **Files** | `backend/tests/test_consolidation_checkpoint_agreement.py` (new), may reference `backend/modules/consolidation_checkpoint.py` and `backend/metabolisation/consolidation.py` |
+| **Change** | Write a unit test that constructs a multi-branch conversation tree in the test database, then calls both the inline trigger path (`ConsolidationCheckpointModule.process()`) and the daemon trigger path (`ConsolidationMixin.consolidate_pending_conversations()`), asserting that both paths converge on the same checkpoint for any given leaf message. |
+| **Rationale** | The inline module and daemon recompute the active branch path independently. A divergence would cause the inline module to inject one checkpoint while the daemon consolidates against a different one, producing inconsistent context. This invariant should be locked by a test. |
+| **Commit** | `test(consolidation): 13A — unit test for checkpoint agreement across inline and daemon trigger paths` |
 
 ---
 
@@ -113,6 +131,17 @@ Each task includes:
 | **Config** | Add to `context:` section: `max_memory_nodes: 6`, `guaranteed_node_types: [scar, concept, tension]` |
 | **Rationale** | Current top-3-by-intensity produces cognitive monoculture — scar-heavy conversations show only scars. The type-diverse strategy ensures simultaneous awareness of wounds, ideas, and frictions. |
 | **Commit** | `feat(context): R2 — 6-node type-diverse memory node injection with configurable slots` |
+
+### Task 2.4 — 13C: Ghost Merging Persistence Fix (Cross-System)
+
+| Field | Detail |
+|-------|--------|
+| **Files** | `backend/storage/models.py` (add `merged_from`, `merged_into`, `folded` lifecycle to `BeliefNode`), `backend/metabolisation/beliefs.py` (update ghost merge logic), `backend/storage/repositories/belief.py` (persist merged state) |
+| **Change** | Redesign the database to support spectral folding: add `merged_from` (JSON list of parent ghost IDs) and `merged_into` (target keeper ID) fields to the `belief_nodes` table. Update `update_belief()` to correctly persist the merged statement and flag the absorbed ghost as folded. Delete absorbed ghost records from the database entirely or mark them with a `folded` lifecycle stage. |
+| **Migration** | Add `merged_from TEXT` (JSON), `merged_into TEXT`, and optionally a `lifecycle_stage` column to `belief_nodes`. |
+| **Rationale** | Ghost beliefs that should have been merged during the dream daemon's ghost ecology cycle are not properly folded in the database. Uncleaned ghosts accumulate in the spectral margin, distorting nucleation calculations and degrading memory system health. |
+| **Context** | This is a **belief-system fix** that indirectly benefits memory system health. See also `BELIEF_SYSTEM.md` Section 6B for full context. Included here because Section 13C of MEMORY_SYSTEM.md flags it as "Fix Required" with memory-system impact. |
+| **Commit** | `fix(beliefs): 13C — persist ghost merging with merged_from/merged_into and folded lifecycle` |
 
 ---
 
@@ -168,9 +197,11 @@ Each task includes:
 | 0 | P6: Vocabulary guideline | P6 | 3 lines | No | `fix(prompts): P6 — add intra-active vocabulary guideline to identity.yaml` |
 | 1 | R1: Remove truncation | R1 | ~3 lines deleted | No | `fix(compression): R1 — remove 250-char truncation from caveman_compress()` |
 | 1 | S1: Adaptive hysteresis | S1 | ~15 lines | No | `feat(diffractive): S1 — adaptive hysteresis decay via rolling entropy delta` |
-| 2 | R4: Merge notification | R4 | ~20 lines | **Yes** (2 columns) | `feat(memory): R4 — add revision_count and last_merged_at to memory_nodes with merge logging` |
+| 1 | 13A: Checkpoint agreement test | 13A | ~30 lines | No | `test(consolidation): 13A — unit test for checkpoint agreement across inline and daemon trigger paths` |
+| 2 | R4: Merge notification | R4 | ~20 lines | **Yes** (2 cols) | `feat(memory): R4 — add revision_count and last_merged_at to memory_nodes with merge logging` |
 | 2 | S3: Agonistic index | S3 | ~40 lines | No | `feat(personality): S3 — agonistic index for dynamic critical friction injection` |
 | 2 | R2: 6-node injection | R2 | ~60 lines | No | `feat(context): R2 — 6-node type-diverse memory node injection with configurable slots` |
+| 2 | 13C: Ghost merge persistence | 13C | ~50 lines | **Yes** (3 cols) | `fix(beliefs): 13C — persist ghost merging with merged_from/merged_into and folded lifecycle` |
 | 3 | R3: Cross-branch retrieval | R3 | ~80 lines | No | `feat(context): R3 — cross-branch sibling memory node retrieval with similarity threshold` |
 | 4 | R5: LLM compression | R5 | ~200 lines | **Yes** (new table) | `feat(compression): R5 — LLM-based batch message compression for Tier 2 strata` |
 | 4 | S2: Knot warping | S2 | ~100 lines | No | `feat(sedimentation): S2 — non-Euclidean latent warping via semantic knot gravitational mass` |
@@ -228,3 +259,5 @@ agonistic_friction:
 3. **R5 background LLM cost**: Batch compression calls a lightweight LLM on every 8+ messages exiting the floating window. In active conversations, this could mean one compression call per ~8 user messages. The `AAA_LLM_COMPRESSION_ENABLED` env var provides an emergency off-switch.
 4. **S2 knot loading**: `SedimentationRetrievalModule` will gain a dependency on `SemanticKnotRepository`. Validate that the repository is available in the pipeline wire-up code before deploying.
 5. **S1 entropy storage**: Adaptive hysteresis requires storing `previous_rolling_entropy` per conversation. A simple in-memory dictionary is sufficient; no database changes needed.
+6. **13C crosses belief system boundary**: Ghost merging persistence is primarily a belief-system fix (`BELIEF_SYSTEM.md` Section 6B). Coordinate with any active belief-system work to avoid merge conflicts on `models.py`, `beliefs.py`, and `belief.py` repository.
+7. **13A test isolation**: The checkpoint agreement test requires a populated multi-branch conversation tree in the test database. Use the existing test infrastructure's conversation/message factories if available, or add a lightweight fixture.
