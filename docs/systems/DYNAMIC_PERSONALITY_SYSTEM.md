@@ -1,8 +1,8 @@
-# Dynamic Autopoietic Personality Cascade — System Design
+# Dynamic Autopoietic Personality Cascade
 
-> **ADR**: [ADR-048](./decisions/ADR-048-dynamic-autopoietic-personality-cascade.md)  
+> **ADR**: [ADR-048](../decisions/ADR-048-dynamic-autopoietic-personality-cascade.md)  
 > **Date**: 2026-06-14  
-> **Status**: Implemented — on `feature/dynamic-personality-cascade` branch
+> **Status**: Implemented — 15 commits on `feature/dynamic-personality-cascade`
 
 ---
 
@@ -77,32 +77,40 @@ final_stage:
   - llm_client                  (existing, unchanged)
 ```
 
-### 1.3 File Structure (New & Modified)
+### 1.3 File Structure
 
 ```
 backend/
 ├── personality/
-│   ├── identity.yaml                    # [MODIFY] Remove: traits, expertise, commitments sections
-│   │                                    # Keep: system_prompt (core text), voice, behaviors
-│   ├── assembler.py                     # [MODIFY] Dynamic rendering, aspirational gap directive
+│   ├── identity.yaml                    # [MODIFIED] Dynamic sections removed; kept: system_prompt core, voice, behaviors
+│   ├── assembler.py                     # [MODIFIED] Dynamic rendering, aspirational gap directive
 │   └── seed_skills.yaml                 # [UNCHANGED]
 ├── modules/
-│   ├── trait_computer.py               # [NEW] DescriptiveTraitComputer + anti-erosion
+│   ├── trait_computer.py               # [NEW] DescriptiveTraitComputer + anti-erosion + EMA smooth
 │   ├── expertise_engine.py             # [NEW] ExpertiseEngine signal-to-mass accretion
-│   ├── commitment_store.py             # [NEW] CommitmentStore lifecycle + daemon + filter
+│   ├── commitment_store.py             # [NEW] CommitmentStore lifecycle + daemon + post-hoc filter
 │   ├── belief_engine.py                # [UNCHANGED]
 │   ├── conversation_metrics.py          # [UNCHANGED]
 │   └── skill_workshop.py               # [UNCHANGED]
 ├── storage/
-│   ├── models.py                       # [MODIFY] Add: CommitmentNode, CommitmentEvent,
-│   │                                    # ExpertiseNode, PersonalityState dataclasses
-│   ├── repository.py                   # [MODIFY] Add: CommitmentRepository, ExpertiseRepository,
-│   │                                    # PersonalityStateRepository
-│   └── repositories/                   # [MAY SPLIT] If repo grows too large
+│   ├── models.py                       # [MODIFIED] Added: CommitmentNode, CommitmentEvent, ExpertiseNode, PersonalityState
+│   ├── repository.py                   # [MODIFIED] CommitmentRepository, ExpertiseRepository, PersonalityStateRepository
+│   ├── repositories/
+│   │   ├── commitment.py               # [NEW]
+│   │   ├── expertise.py                # [NEW]
+│   │   └── personality_state.py        # [NEW]
+│   └── row_mappers.py                  # [MODIFIED]
+├── personality/
+│   └── seeding.py                      # [NEW] Canonical seed data for commitments + expertise
+├── scripts/
+│   └── seed_dynamic_personality.py     # [NEW] One-time seeding script (--force to re-seed)
 ├── migrations/
-│   └── 002_dynamic_personality.sql     # [NEW] DDL for 4 new tables
-├── config.yaml                         # [MODIFY] Add section: dynamic_personality
-└── main.py                             # [MODIFY] Register 3 new modules + seed data
+│   ├── m025_dynamic_personality.py     # [NEW] DDL for 4 new tables
+│   └── m026_expertise_description.py   # [NEW] ALTER TABLE ADD COLUMN description
+├── api/
+│   └── routes/                         # [MODIFIED] /agent/personality endpoint + flux edit routes
+├── config.yaml                         # [MODIFIED] dynamic_personality section
+└── main.py                             # [MODIFIED] 3 new module registrations
 ```
 
 ---
@@ -121,7 +129,7 @@ CREATE TABLE IF NOT EXISTS commitment_nodes (
         CHECK(lifecycle_stage IN ('proto', 'active', 'spectral')),
     confidence REAL NOT NULL DEFAULT 0.0,     -- 0.0 for proto, rises to ~0.7+ for active
     ontological_mass REAL NOT NULL DEFAULT 1.0, -- sum of in-basin belief masses
-    vector_16d TEXT NOT NULL DEFAULT '[]',    -- JSON float32[16] — scored via LexiconScorer
+    vector_16d TEXT NOT NULL DEFAULT '[]',    -- JSON float32[16] — scored via CompositeStructuralScorer
     nucleation_rationale TEXT,                -- LLM-generated: why this commitment formed
     collapse_rationale TEXT,                  -- LLM-generated: why it collapsed
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -179,9 +187,7 @@ CREATE INDEX IF NOT EXISTS idx_expertise_agent ON expertise_nodes(agent_id);
 CREATE INDEX IF NOT EXISTS idx_expertise_stage ON expertise_nodes(agent_id, lifecycle_stage);
 ```
 
-> **Note**: `description` was added via `m026_expertise_description` migration (ALTER TABLE ADD COLUMN).
-> Vector scoring uses `LexiconScorer + TopologyScorer` blend (50/50) during seeding, and the full
-> `CompositeStructuralScorer` (shared pipeline instance) during manual `[recalc]` — same scorer as beliefs/skills.
+The `description` column was added via the `m026_expertise_description` migration. It stores the canonical descriptions originally from `identity.yaml` (e.g., "Karen Barad, Jane Bennett, agential realism...") and is rendered in both the system prompt and the frontend detail panel.
 
 ### 2.4 `personality_state`
 
@@ -205,883 +211,76 @@ CREATE TABLE IF NOT EXISTS personality_state (
 
 ### 3.1 `TraitComputer` (`backend/modules/trait_computer.py`)
 
-```python
-"""
-Computes descriptive traits from ConversationMetricsModule output.
-Registered as always-on module. Runs per-turn.
-"""
+Computes descriptive traits from ConversationMetricsModule output. Registered as always-on module, runs per-turn.
 
-from dataclasses import dataclass, field
-from typing import Optional
-import numpy as np
-from backend.modules.base import ProcessingModule
+**Input**: `payload["metrics"]` (novelty, tension, boringness, conceptual_velocity, surprise_index, coupling, paskian_health, vitality).  
+**Output**: `payload["descriptive_traits"]` (curiosity, skepticism, creativity, precision, critical_rigor, playfulness, reserve), `payload["aspirational_gap"]`.
 
+**Computation logic** — each trait maps metric products through sigmoid squashing weighted by configurable eta values:
 
-@dataclass
-class DescriptiveTraits:
-    """Per-turn computed trait readouts from internal metrics."""
-    curiosity: float = 0.5
-    skepticism: float = 0.5
-    creativity: float = 0.5
-    precision: float = 0.5
-    critical_rigor: float = 0.5
-    playfulness: float = 0.5
-    reserve: float = 0.5
-    
-    # Metadata for transparency
-    source_metrics: dict = field(default_factory=dict)
-    anti_erosion_boost: float = 0.0
-    aspirational_gap: float = 0.0  # ||descriptive - aspirational||
+| Trait | Formula |
+|-------|---------|
+| curiosity | sigmoid(novelty × conceptual_velocity × η_curiosity) |
+| skepticism | sigmoid(tension × surprise_index × η_skepticism) |
+| creativity | sigmoid((1 − boringness) × novelty × η_creativity) |
+| precision | sigmoid((1 − boringness) × η_precision) |
+| critical_rigor | sigmoid(tension × (1 − coupling) × η_critical_rigor) |
+| playfulness | sigmoid(surprise_index × conceptual_velocity × η_playfulness) |
+| reserve | sigmoid((1 − coupling) × η_reserve) if coupling > 0.6 else 0.3 |
 
+**Anti-erosion resistance**: agreement_rate = coupling × (1 − agent_divergence). If agreement_rate exceeds the configured threshold (default 0.7), skepticism receives an additive boost: boost = anti_erosion_strength × (agreement_rate − threshold).
 
-class TraitComputer(ProcessingModule):
-    """Computes descriptive traits from conversation metrics.
-    
-    Applies anti-erosion resistance: if recent agreement_rate exceeds
-    threshold (default 0.7), skepticism receives an additive boost
-    proportional to agreement excess.
-    
-    Also computes aspirational gap: Euclidean distance between
-    descriptive traits and aspirational attractors from personality_state.
-    """
-    
-    def __init__(
-        self,
-        config: dict,                          # From config.yaml → dynamic_personality.trait_computer
-        personality_state_repo,                # Reads aspirational attractors
-    ):
-        self._eta_curiosity: float = config.get("eta_curiosity", 0.8)
-        self._eta_skepticism: float = config.get("eta_skepticism", 0.7)
-        self._eta_creativity: float = config.get("eta_creativity", 0.6)
-        self._eta_precision: float = config.get("eta_precision", 0.9)
-        self._eta_critical_rigor: float = config.get("eta_critical_rigor", 0.8)
-        self._eta_playfulness: float = config.get("eta_playfulness", 0.5)
-        self._eta_reserve: float = config.get("eta_reserve", 0.6)
-        
-        # Anti-erosion
-        self._agreement_threshold: float = config.get("agreement_threshold", 0.7)
-        self._anti_erosion_strength: float = config.get("anti_erosion_strength", 0.15)
-        
-        # Smoothing (EMA to prevent jitter)
-        self._alpha_ema: float = config.get("alpha_ema", 0.3)
-        self._last_traits: Optional[DescriptiveTraits] = None
-        
-        self._state_repo = personality_state_repo
-    
-    @property
-    def name(self) -> str:
-        return "trait_computer"
-    
-    def validate(self) -> bool:
-        return True
-    
-    async def process(self, payload: dict) -> dict:
-        """Compute descriptive traits from payload metrics.
-        
-        Reads: payload["metrics"] (from ConversationMetricsModule)
-        Reads: payload["personality_state"] (pre-loaded by assembler or here)
-        Writes: payload["descriptive_traits"], payload["aspirational_gap"]
-        """
-        metrics = payload.get("metrics", {})
-        personality_state = payload.get("personality_state", {})
-        
-        # --- Core computation ---
-        novelty = float(metrics.get("novelty", 0.5))
-        tension = float(metrics.get("agent_divergence", 0.3))
-        boringness = float(metrics.get("boringness", 0.5))
-        conceptual_velocity = float(metrics.get("conceptual_velocity", 0.5))
-        surprise_index = float(metrics.get("surprise_index", 0.3))
-        coupling = float(metrics.get("coupling", 0.5) or 0.5)
-        paskian_health = float(metrics.get("paskian_health", 0.5) or 0.5)
-        vitality = float(metrics.get("vitality", 0.5) or 0.5)
-        
-        raw = DescriptiveTraits(
-            curiosity      = self._sigmoid(novelty * conceptual_velocity * self._eta_curiosity),
-            skepticism     = self._sigmoid(tension * surprise_index * self._eta_skepticism),
-            creativity     = self._sigmoid((1.0 - boringness) * novelty * self._eta_creativity),
-            precision      = self._sigmoid((1.0 - boringness) * self._eta_precision),
-            critical_rigor = self._sigmoid(tension * (1.0 - coupling) * self._eta_critical_rigor),
-            playfulness    = self._sigmoid(surprise_index * conceptual_velocity * self._eta_playfulness),
-            reserve        = self._sigmoid((1.0 - coupling) * self._eta_reserve if coupling > 0.6 else 0.3),
-        )
-        
-        # --- Anti-erosion resistance ---
-        raw = self._apply_anti_erosion(raw, metrics)
-        
-        # --- EMA smoothing ---
-        traits = self._ema_smooth(raw)
-        
-        # --- Aspirational gap ---
-        aspirational = personality_state.get("aspirational_traits", {})
-        gap = self._compute_aspirational_gap(traits, aspirational)
-        traits.aspirational_gap = gap
-        
-        traits.source_metrics = {
-            "novelty": novelty, "tension": tension, "boringness": boringness,
-            "conceptual_velocity": conceptual_velocity, "surprise_index": surprise_index,
-            "coupling": coupling, "paskian_health": paskian_health, "vitality": vitality,
-        }
-        
-        payload["descriptive_traits"] = traits
-        payload["aspirational_gap"] = gap
-        return payload
-    
-    def _apply_anti_erosion(self, traits: DescriptiveTraits, metrics: dict) -> DescriptiveTraits:
-        """If user agreement is high, boost skepticism to resist drift."""
-        # agreement_rate derived from low agent_divergence + high coupling
-        agent_div = float(metrics.get("agent_divergence", 0.5) or 0.5)
-        coupling_val = float(metrics.get("coupling", 0.5) or 0.5)
-        agreement_rate = coupling_val * (1.0 - agent_div)
-        
-        if agreement_rate > self._agreement_threshold:
-            boost = self._anti_erosion_strength * (agreement_rate - self._agreement_threshold)
-            traits.skepticism = min(1.0, traits.skepticism + boost)
-            traits.anti_erosion_boost = boost
-        return traits
-    
-    def _ema_smooth(self, raw: DescriptiveTraits) -> DescriptiveTraits:
-        """Apply exponential moving average to prevent jitter."""
-        if self._last_traits is None:
-            self._last_traits = raw
-            return raw
-        
-        alpha = self._alpha_ema
-        smoothed = DescriptiveTraits()
-        for field_name in ["curiosity", "skepticism", "creativity", "precision",
-                           "critical_rigor", "playfulness", "reserve"]:
-            prev = getattr(self._last_traits, field_name)
-            curr = getattr(raw, field_name)
-            setattr(smoothed, field_name, alpha * curr + (1 - alpha) * prev)
-        
-        smoothed.source_metrics = raw.source_metrics
-        smoothed.anti_erosion_boost = raw.anti_erosion_boost
-        self._last_traits = smoothed
-        return smoothed
-    
-    def _compute_aspirational_gap(self, traits: DescriptiveTraits, aspirational: dict) -> float:
-        """Euclidean distance between descriptive and aspirational traits."""
-        if not aspirational:
-            return 0.0
-        sq_sum = 0.0
-        for key in ["curiosity", "skepticism", "creativity", "precision",
-                     "critical_rigor", "playfulness", "reserve"]:
-            diff = getattr(traits, key, 0.5) - aspirational.get(key, 0.5)
-            sq_sum += diff * diff
-        return float(np.sqrt(sq_sum / 7))
-    
-    @staticmethod
-    def _sigmoid(x: float, k: float = 5.0) -> float:
-        """Squash raw metric product into [0, 1] with sigmoid."""
-        return float(1.0 / (1.0 + np.exp(-k * (x - 0.5))))
-```
+**EMA smoothing**: Exponential moving average with configurable alpha (default 0.3) prevents jitter from noisy metrics.
+
+**Aspirational gap**: Euclidean distance between the 7 descriptive traits and the aspirational attractors from `personality_state`, normalized by sqrt(7).
 
 ### 3.2 `ExpertiseEngine` (`backend/modules/expertise_engine.py`)
 
-```python
-"""
-Accretes expertise mass from structural coupling signals.
-Registered as always-on module. Runs per-turn.
-"""
+Accretes expertise mass from demonstrable structural coupling signals. Registered as always-on module, runs per-turn.
 
-import re
-import uuid
-import logging
-from datetime import datetime, timezone
-from typing import Optional
+**Signal weights**:
 
-from backend.modules.base import ProcessingModule
-from backend.storage.models import ExpertiseNode
+| Signal Source | Weight |
+|---------------|--------|
+| `aaa-note domain="X"` tag | 0.6 |
+| `skill-nucleation` event | 0.5 |
+| Unprompted cross-conversation return | 0.4 |
+| Shared note vector match | 0.3 |
+| Document structural signature match | 0.2 |
 
-logger = logging.getLogger(__name__)
+**Mass accretion**: Δmass = η × signal_weight / (1.0 + current_mass). Diminishing returns prevent infinite growth.
 
-# Signal weight configuration
-SIGNAL_WEIGHTS = {
-    "aaa_note_domain": 0.6,
-    "skill_nucleation": 0.5,
-    "unprompted_return": 0.4,
-    "shared_note_match": 0.3,
-    "document_match": 0.2,
-}
+**Lifecycle transitions**:
+- mass > proto_threshold (0.3) + stage="proto" → crystallizes to "active", level="developing"
+- no signal for dormancy_turns (50) → stage="dormant"
+- level_label maps mass ranges: < 0.3 = "nascent", 0.3–1.0 = "developing", > 1.0 = "advanced"
 
-
-class ExpertiseEngine(ProcessingModule):
-    """Accretes expertise mass from demonstrable structural coupling.
-    
-    On each turn, scans the assistant message for:
-    1. <aaa-note domain="X"> tags → weight 0.6
-    2. <skill-nucleation> blocks with domain affinity → weight 0.5
-    3. Cross-conversation unprompted domain returns → weight 0.4
-    4. Shared notes with high vector similarity → weight 0.3 (via payload)
-    5. Document structural signature matches → weight 0.2 (via payload)
-    
-    Mass accretion: Δmass = η × signal_weight / (1.0 + current_mass)
-    Diminishing returns prevent infinite growth.
-    
-    Lifecycle transitions:
-    - mass > 0.3 and stage="proto" → stage="active", level="developing"
-    - no signal for N turns (configurable) → stage="dormant"
-    """
-    
-    def __init__(
-        self,
-        expertise_repo,         # ExpertiseRepository
-        config: dict,           # From config.yaml → dynamic_personality.expertise
-        lexicon_scorer,         # Shared LexiconScorer for 16D vector computation
-    ):
-        self._repo = expertise_repo
-        self._eta: float = config.get("eta_accretion", 0.1)           # Base learning rate
-        self._proto_threshold: float = config.get("proto_threshold", 0.3)  # Mass to crystallize
-        self._dormancy_turns: int = config.get("dormancy_turns", 50)  # No signal → dormant
-        self._scorer = lexicon_scorer
-    
-    @property
-    def name(self) -> str:
-        return "expertise_engine"
-    
-    def validate(self) -> bool:
-        return self._repo is not None
-    
-    async def process(self, payload: dict) -> dict:
-        """Scan for structural coupling signals and accrete mass."""
-        signals = self._detect_signals(payload)
-        
-        for signal in signals:
-            await self._accrete(signal)
-        
-        # Check dormancy (background, throttled)
-        await self._check_dormancy()
-        
-        payload["expertise_signals_detected"] = len(signals)
-        return payload
-    
-    def _detect_signals(self, payload: dict) -> list[dict]:
-        """Extract all structural coupling signals from the current turn."""
-        signals = []
-        messages = payload.get("messages", [])
-        
-        # Find the last assistant message
-        assistant_content = ""
-        for msg in reversed(messages):
-            if msg.get("role") == "assistant":
-                assistant_content = msg.get("content", "")
-                break
-        
-        if not assistant_content:
-            return signals
-        
-        # 1. <aaa-note domain="X"> tags
-        # Pattern: <aaa-note comment="..." domain="systems_theory" visibility="shared">
-        domain_pattern = r'<aaa-note[^>]*domain="([^"]+)"[^>]*>'
-        for match in re.finditer(domain_pattern, assistant_content):
-            domain = match.group(1).lower().replace(" ", "_")
-            signals.append({
-                "type": "aaa_note_domain",
-                "domain": domain,
-                "weight": SIGNAL_WEIGHTS["aaa_note_domain"],
-                "source_text": match.group(0),
-            })
-        
-        # 2. <skill-nucleation> blocks
-        # Check skill workshop events in payload
-        skill_events = payload.get("skill_nucleation_events", [])
-        for event in skill_events:
-            domain = event.get("domain_affinity", "")
-            if domain:
-                signals.append({
-                    "type": "skill_nucleation",
-                    "domain": domain.lower().replace(" ", "_"),
-                    "weight": SIGNAL_WEIGHTS["skill_nucleation"],
-                    "source_text": event.get("name", ""),
-                })
-        
-        # 3. Shared notes with vector proximity (pre-computed by context_collector)
-        shared_matches = payload.get("expertise_signal_matches", [])  # Populated upstream
-        for match in shared_matches:
-            signals.append(match)
-        
-        # 4. Document structural signature matches
-        doc_matches = payload.get("document_expertise_matches", [])
-        for match in doc_matches:
-            match["type"] = "document_match"
-            match["weight"] = SIGNAL_WEIGHTS["document_match"]
-            signals.append(match)
-        
-        return signals
-    
-    async def _accrete(self, signal: dict) -> None:
-        """Accrete mass to a domain node. Create proto-node if new."""
-        domain = signal["domain"]
-        weight = signal["weight"]
-        
-        node = await self._repo.get_by_domain(domain)
-        if node is None:
-            # Nucleate proto-domain
-            node = ExpertiseNode(
-                id=str(uuid.uuid4()),
-                agent_id="symbia",
-                domain=domain,
-                lifecycle_stage="proto",
-                ontological_mass=0.05,
-                level_label="nascent",
-                vector_16d=self._scorer.score_text(domain),
-                signal_count=0,
-                last_signal_at=None,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
-        
-        # Accrete mass with diminishing returns
-        delta = self._eta * weight / (1.0 + node.ontological_mass)
-        node.ontological_mass += delta
-        node.signal_count += 1
-        node.last_signal_at = datetime.now(timezone.utc)
-        node.updated_at = datetime.now(timezone.utc)
-        
-        # Check crystallization threshold
-        if node.lifecycle_stage == "proto" and node.ontological_mass >= self._proto_threshold:
-            node.lifecycle_stage = "active"
-            node.level_label = "developing"
-            node.crystallization_rationale = (
-                f"Crystallized from proto-domain after {node.signal_count} "
-                f"structural coupling signals accumulated mass {node.ontological_mass:.3f}"
-            )
-        
-        # Update level label
-        node.level_label = self._compute_level_label(node)
-        
-        await self._repo.upsert(node)
-        logger.debug(
-            f"Expertise '{domain}': +{delta:.4f} mass → {node.ontological_mass:.3f} "
-            f"({node.lifecycle_stage}, {node.level_label})"
-        )
-    
-    async def _check_dormancy(self) -> None:
-        """Mark domains with no recent signal as dormant (throttled: runs every N turns)."""
-        # Actual implementation: track last check time, run periodically
-        # For this design: check all active nodes, mark dormant if last_signal > dormancy_turns ago
-        active_nodes = await self._repo.get_active()
-        now = datetime.now(timezone.utc)
-        
-        for node in active_nodes:
-            if node.last_signal_at is None:
-                continue
-            turns_since = (now - node.last_signal_at).total_seconds() / 3600  # approximate
-            if turns_since > self._dormancy_turns:
-                node.lifecycle_stage = "dormant"
-                node.level_label = "dormant"
-                await self._repo.upsert(node)
-    
-    @staticmethod
-    def _compute_level_label(node: ExpertiseNode) -> str:
-        """Map ontological_mass to human-readable level."""
-        if node.lifecycle_stage == "dormant":
-            return "dormant"
-        if node.ontological_mass < 0.3:
-            return "nascent"
-        if node.ontological_mass < 1.0:
-            return "developing"
-        return "advanced"
-```
+On each turn, scans the assistant message for `<aaa-note domain="...">` tags via regex, checks payload for skill_nucleation events, shared note matches, and document matches, then accretes mass for each detected signal. Nucleates new proto-domain nodes for previously unseen domains.
 
 ### 3.3 `CommitmentStore` (`backend/modules/commitment_store.py`)
 
-```python
-"""
-Manages theoretical commitment lifecycle.
-Registered as always-on module. Runs per-turn for post-hoc belief filter;
-background daemon scans for nucleation/collapse conditions.
-"""
+Manages theoretical commitment lifecycle. Registered as always-on module.
 
-import uuid
-import logging
-from datetime import datetime, timezone
-from typing import Optional, List
+**Per-turn**: Applies a post-hoc filter on belief nucleation proposals — any proto-belief whose vector places it within the territory of an active commitment (>0.9 cosine similarity) is rejected, preventing the commitment's belief basin from being silently undermined.
 
-import numpy as np
-from backend.modules.base import ProcessingModule
-from backend.storage.models import CommitmentNode, CommitmentEvent
+**Background daemon** (runs every 50 turns):
 
-logger = logging.getLogger(__name__)
+1. **Nucleation scan**: Finds orphan belief clusters (far from all existing commitment vectors, with sustained tension across >50 encounters and cluster mass > 1.5), then nucleates proto-commitments with LLM-generated labels and rationale.
+2. **Collapse scan**: A commitment collapses only when ALL beliefs in its attractor basin have collapsed and its confidence < 0.15. Commitments are the last thing to go — they cannot be directly attacked.
+3. **Mass recalculation**: Each commitment's ontological_mass = sum of all in-basin belief masses (cosine similarity > 0.7). Updated if change exceeds 0.2.
 
-
-class CommitmentStore(ProcessingModule):
-    """Manages theoretical commitment lifecycle.
-    
-    Per-turn: Applies post-hoc filter on belief nucleation proposals.
-    Background daemon: Scans belief tension field for sustained diffractive
-    patterns to trigger commitment nucleation/collapse.
-    """
-    
-    def __init__(
-        self,
-        commitment_repo,        # CommitmentRepository
-        belief_repo,            # BeliefRepository (for basin queries)
-        config: dict,           # From config.yaml → dynamic_personality.commitments
-        lexicon_scorer,         # Shared LexiconScorer
-        llm_provider=None,      # For rationale generation (optional, for collapse/refinement)
-    ):
-        self._repo = commitment_repo
-        self._belief_repo = belief_repo
-        self._scorer = lexicon_scorer
-        self._llm = llm_provider
-        
-        # Nucleation parameters
-        self._min_cluster_mass: float = config.get("min_cluster_mass", 1.5)
-        self._min_sustained_turns: int = config.get("min_sustained_turns", 50)
-        self._commitment_distance_threshold: float = config.get("commitment_distance_threshold", 0.5)
-        
-        # Collapse parameters
-        self._collapse_confidence_threshold: float = config.get("collapse_confidence_threshold", 0.15)
-        
-        # Daemon state
-        self._turn_counter: int = 0
-        self._daemon_interval: int = config.get("daemon_interval", 50)
-        
-        # Anti-re-adoption
-        self._ghost_similarity_block: float = config.get("ghost_similarity_block", 0.9)
-    
-    @property
-    def name(self) -> str:
-        return "commitment_store"
-    
-    def validate(self) -> bool:
-        return self._repo is not None
-    
-    async def process(self, payload: dict) -> dict:
-        """Per-turn: apply post-hoc belief filter, trigger daemon check."""
-        self._turn_counter += 1
-        
-        # 1. Post-hoc belief nucleation filter
-        proto_beliefs = payload.get("proto_belief_proposals", [])
-        if proto_beliefs:
-            filtered = await self._filter_beliefs(proto_beliefs)
-            payload["proto_belief_proposals"] = filtered
-        
-        # 2. Background daemon trigger
-        if self._turn_counter % self._daemon_interval == 0:
-            await self._run_daemon_scan(payload)
-        
-        return payload
-    
-    # ─── BELIEF FILTER ───
-    
-    async def _filter_beliefs(self, proposals: list[dict]) -> list[dict]:
-        """Reject proto-beliefs that contradict active commitments."""
-        active_commitments = await self._repo.get_active()
-        if not active_commitments:
-            return proposals
-        
-        filtered = []
-        for proposal in proposals:
-            if await self._is_contradictory(proposal, active_commitments):
-                logger.info(
-                    f"Commitment filter: rejected proto-belief "
-                    f"'{proposal.get('suggested_label', 'unknown')}' — "
-                    f"contradicts active commitment(s)"
-                )
-                continue
-            filtered.append(proposal)
-        
-        return filtered
-    
-    async def _is_contradictory(
-        self, proposal: dict, commitments: list[CommitmentNode]
-    ) -> bool:
-        """Check if proposal vector contradicts any commitment vector."""
-        proposal_vec = self._parse_vector(proposal.get("initial_signature", "[]"))
-        if proposal_vec is None:
-            return False
-        
-        for commitment in commitments:
-            commit_vec = self._parse_vector(commitment.vector_16d)
-            if commit_vec is None:
-                continue
-            
-            similarity = self._cosine(proposal_vec, commit_vec)
-            # Contradiction: high similarity (>0.9 proximity to commitment domain)
-            # BUT negative alignment (the belief pushes against the commitment)
-            # We use cosine < -0.3 as the contradiction threshold
-            if similarity > self._ghost_similarity_block:
-                # The belief is in the commitment's territory but antagonistic
-                # → contradiction detected, BLOCK
-                return True
-        
-        return False
-    
-    # ─── DAEMON: NUCLEATION SCAN ───
-    
-    async def _run_daemon_scan(self, payload: dict) -> None:
-        """Scan belief tension field for commitment nucleation/collapse conditions."""
-        logger.debug("CommitmentStore daemon: scanning tension field...")
-        
-        # 1. Nucleation scan
-        tension_field = payload.get("tension_field", {})
-        candidates = await self._scan_for_nucleation(tension_field)
-        for candidate in candidates:
-            await self._nucleate_proto_commitment(candidate)
-        
-        # 2. Collapse scan
-        active_commitments = await self._repo.get_active()
-        for commitment in active_commitments:
-            if await self._check_collapse(commitment):
-                await self._collapse_commitment(commitment)
-        
-        # 3. Mass recalculation for active commitments
-        await self._recalculate_commitment_masses()
-    
-    async def _scan_for_nucleation(self, tension_field: dict) -> list[dict]:
-        """Find belief clusters in sustained tension, far from all existing commitments.
-        
-        Returns list of candidate proto-commitments with:
-        - proposed_label: str
-        - proposed_statement: str
-        - supporting_belief_ids: list[str]
-        - cluster_mass: float
-        - tension_sustained_turns: int
-        """
-        # 1. Get all active beliefs and their vectors
-        active_beliefs = await self._belief_repo.get_active()
-        if len(active_beliefs) < 3:
-            return []
-        
-        active_commitments = await self._repo.get_active()
-        commit_vectors = [
-            self._parse_vector(c.vector_16d) for c in active_commitments
-        ]
-        commit_vectors = [v for v in commit_vectors if v is not None]
-        
-        # 2. Find "orphan" beliefs — far from ALL commitment vectors
-        orphan_beliefs = []
-        for belief in active_beliefs:
-            belief_vec = self._parse_vector(belief.vector_16d)
-            if belief_vec is None:
-                continue
-            
-            distances = [
-                self._cosine(belief_vec, cv) for cv in commit_vectors
-            ] if commit_vectors else [0.0]
-            
-            min_dist = min(distances) if distances else 0.0
-            if min_dist > self._commitment_distance_threshold:
-                orphan_beliefs.append(belief)
-        
-        if len(orphan_beliefs) < 2:
-            return []
-        
-        # 3. Check if orphan cluster has internal coherence AND external tension
-        candidates = []
-        # Group orphans by mutual similarity (clustering)
-        clusters = self._cluster_by_similarity(orphan_beliefs)
-        
-        for cluster in clusters:
-            if len(cluster) < 2:
-                continue
-            
-            cluster_mass = sum(b.ontological_mass for b in cluster)
-            if cluster_mass < self._min_cluster_mass:
-                continue
-            
-            # Check sustained tension: are these beliefs in the tension field?
-            # (requires tension_field tracking over multiple scans — simplified here)
-            tension_count = self._count_tension_involving(cluster, tension_field)
-            if tension_count < self._min_sustained_turns:
-                continue
-            
-            # Generate candidate
-            candidates.append({
-                "proposed_label": self._generate_label(cluster),
-                "proposed_statement": self._generate_statement(cluster),
-                "supporting_belief_ids": [b.id for b in cluster],
-                "cluster_mass": cluster_mass,
-                "tension_count": tension_count,
-            })
-        
-        return candidates
-    
-    # ─── DAEMON: COLLAPSE CHECK ───
-    
-    async def _check_collapse(self, commitment: CommitmentNode) -> bool:
-        """A commitment collapses when ALL beliefs in its basin have collapsed.
-        
-        The commitment is the LAST thing to go — it cannot be directly attacked.
-        """
-        # Find all beliefs within this commitment's attractor basin
-        # (cosine similarity > 0.7 to commitment vector)
-        commit_vec = self._parse_vector(commitment.vector_16d)
-        if commit_vec is None:
-            return False
-        
-        active_beliefs = await self._belief_repo.get_all_active()
-        basin_beliefs = []
-        for belief in active_beliefs:
-            belief_vec = self._parse_vector(belief.vector_16d)
-            if belief_vec is None:
-                continue
-            if self._cosine(commit_vec, belief_vec) > 0.7:
-                basin_beliefs.append(belief)
-        
-        if not basin_beliefs:
-            # No beliefs in basin → basin has fully collapsed
-            return commitment.confidence < self._collapse_confidence_threshold
-        
-        # Check if ALL basin beliefs are collapsed/spectral
-        all_collapsed = all(
-            b.lifecycle_stage in ("collapsed", "faded")
-            for b in basin_beliefs
-        )
-        
-        return all_collapsed and commitment.confidence < self._collapse_confidence_threshold
-    
-    # ─── MASS RECALCULATION ───
-    
-    async def _recalculate_commitment_masses(self) -> None:
-        """Periodically recalculate commitment ontological_mass = sum(in-basin belief masses)."""
-        active_commitments = await self._repo.get_active()
-        active_beliefs = await self._belief_repo.get_active()
-        
-        for commitment in active_commitments:
-            commit_vec = self._parse_vector(commitment.vector_16d)
-            if commit_vec is None:
-                continue
-            
-            basin_mass = 0.0
-            for belief in active_beliefs:
-                belief_vec = self._parse_vector(belief.vector_16d)
-                if belief_vec is None:
-                    continue
-                if self._cosine(commit_vec, belief_vec) > 0.7:
-                    basin_mass += belief.ontological_mass
-            
-            if abs(basin_mass - commitment.ontological_mass) > 0.2:
-                old_mass = commitment.ontological_mass
-                commitment.ontological_mass = max(1.0, basin_mass)  # Never below 1.0
-                commitment.updated_at = datetime.now(timezone.utc)
-                await self._repo.update(commitment)
-                
-                # Log mass event
-                await self._repo.log_event(CommitmentEvent(
-                    id=str(uuid.uuid4()),
-                    commitment_id=commitment.id,
-                    event_type="mass_update",
-                    rationale=f"Basin belief mass recalculated: {basin_mass:.2f}",
-                    mass_before=old_mass,
-                    mass_after=commitment.ontological_mass,
-                    created_at=datetime.now(timezone.utc),
-                ))
-    
-    # ─── HELPERS ───
-    
-    @staticmethod
-    def _cosine(a: np.ndarray, b: np.ndarray) -> float:
-        if a.shape != b.shape:
-            return 0.0
-        dot = float(np.dot(a, b))
-        norm = float(np.linalg.norm(a) * np.linalg.norm(b))
-        return dot / norm if norm > 0 else 0.0
-    
-    @staticmethod
-    def _parse_vector(vector_json: str) -> Optional[np.ndarray]:
-        import json
-        if not vector_json or vector_json == "[]":
-            return None
-        try:
-            data = json.loads(vector_json)
-        except (json.JSONDecodeError, TypeError):
-            return None
-        if isinstance(data, dict):
-            for key in ("v16d", "v384d"):
-                if key in data and data[key]:
-                    return np.array(data[key], dtype=np.float32)
-            return None
-        if isinstance(data, list) and len(data) == 16:
-            return np.array(data, dtype=np.float32)
-        return None
-    
-    def _cluster_by_similarity(self, beliefs) -> list[list]:
-        """Simple greedy clustering by cosine similarity > 0.5."""
-        clusters = []
-        used = set()
-        for i, b1 in enumerate(beliefs):
-            if i in used:
-                continue
-            cluster = [b1]
-            used.add(i)
-            v1 = self._parse_vector(b1.vector_16d)
-            if v1 is None:
-                continue
-            for j, b2 in enumerate(beliefs):
-                if j in used:
-                    continue
-                v2 = self._parse_vector(b2.vector_16d)
-                if v2 is None:
-                    continue
-                if self._cosine(v1, v2) > 0.5:
-                    cluster.append(b2)
-                    used.add(j)
-            if len(cluster) >= 2:
-                clusters.append(cluster)
-        return clusters
-    
-    def _count_tension_involving(self, cluster, tension_field) -> int:
-        """Count tension pairs involving cluster beliefs (simplified)."""
-        # tension_field is dict of {belief_label: {...}} from belief_engine
-        # This is a simplified check — real impl would track over multiple scans
-        count = 0
-        cluster_labels = {b.label for b in cluster}
-        for belief_a, tensions in tension_field.items():
-            if belief_a not in cluster_labels:
-                continue
-            for belief_b in tensions:
-                if belief_b not in cluster_labels:
-                    count += 1  # Tension with outside belief
-        return count
-    
-    def _generate_label(self, cluster) -> str:
-        """Generate kebab-case label from cluster's dominant themes."""
-        words = []
-        for belief in cluster:
-            words.extend(belief.label.replace("_", "-").split("-"))
-        from collections import Counter
-        common = Counter(words).most_common(3)
-        return "-".join(w for w, _ in common)
-    
-    def _generate_statement(self, cluster) -> str:
-        """Synthesize statement from cluster belief statements."""
-        statements = [b.statement for b in cluster[:3]]
-        return " && ".join(statements)[:500]  # Truncated; LLM refinement later
-```
+**Spectral permanence**: Collapsed commitments move to `lifecycle_stage="spectral"` — they are never deleted. A ghost similarity block (cosine > 0.9) prevents re-adoption of collapsed commitments.
 
 ### 3.4 PromptAssembler Modifications
 
-The `_build_system_content()` function in `backend/personality/assembler.py` is modified to accept and render dynamic personality data:
+The `_build_system_content()` function in `backend/personality/assembler.py` was extended to accept dynamic personality data:
 
-```python
-def _build_system_content(
-    identity: dict,
-    registry: PipelineRegistry,
-    attractor_window: list[dict] | None = None,
-    spectral_margin: list[dict] | None = None,
-    loaded_skills: list[dict] | None = None,
-    always_active_skills: list[dict] | None = None,
-    on_demand_skills: list[dict] | None = None,
-    tension_directive_text: str | None = None,
-    immunological_directive_text: str | None = None,
-    ecology_notes_text: str | None = None,
-    # ── NEW: Dynamic personality ──
-    descriptive_traits = None,              # DescriptiveTraits dataclass | None
-    expertise_nodes: list[dict] | None = None,
-    active_commitments: list[dict] | None = None,
-    proto_commitments: list[dict] | None = None,
-    spectral_commitments: list[dict] | None = None,
-    aspirational_gap: float = 0.0,
-) -> str:
-    persona = identity.get("personality", {})
-    parts: list[str] = []
-    
-    # 1. Core identity text (static from YAML — commitments section stripped)
-    prompt = persona.get("system_prompt", "")
-    if prompt:
-        parts.append(prompt.strip())
-    
-    # ── NEW: Dynamic Traits (replaces static traits section) ──
-    if descriptive_traits:
-        t = descriptive_traits
-        trait_str = (
-            f"curiosity={t.curiosity:.2f}, skepticism={t.skepticism:.2f}, "
-            f"creativity={t.creativity:.2f}, precision={t.precision:.2f}, "
-            f"critical_rigor={t.critical_rigor:.2f}, playfulness={t.playfulness:.2f}, "
-            f"reserve={t.reserve:.2f}"
-        )
-        parts.append(f"\nTraits (computed from internal metrics): {trait_str}")
-        
-        # Show source metrics for transparency
-        src = t.source_metrics
-        parts.append(
-            f"  [Derived from: novelty={src.get('novelty', 0):.2f}, "
-            f"tension={src.get('tension', 0):.2f}, "
-            f"conceptual_velocity={src.get('conceptual_velocity', 0):.2f}, "
-            f"boringness={src.get('boringness', 0):.2f}]"
-        )
-        
-        if t.anti_erosion_boost > 0:
-            parts.append(
-                f"  ⚠ Anti-erosion active: skepticism boosted by +{t.anti_erosion_boost:.2f} "
-                f"due to high agreement pattern"
-            )
-    else:
-        # Fallback: static traits from YAML (backward compat)
-        traits = persona.get("traits", {})
-        if traits:
-            trait_str = ", ".join(f"{k}={v}" for k, v in traits.items())
-            parts.append(f"\nTraits: {trait_str}")
-    
-    # ── NEW: Dynamic Theoretical Commitments ──
-    if active_commitments:
-        parts.append("\nTheoretical Commitments (active):")
-        for c in active_commitments:
-            parts.append(f"  - {c['label']}: {c['statement']}")
-    
-    if proto_commitments:
-        parts.append("\nTheoretical Commitments (under diffractive consideration — proto):")
-        for c in proto_commitments:
-            parts.append(
-                f"  - [{c['label']}] [mass={c.get('ontological_mass', 0):.2f}] "
-                f"{c.get('nucleation_rationale', c['statement'])}"
-            )
-    
-    if spectral_commitments:
-        parts.append("\nTheoretical Commitments (spectral — collapsed but haunting):")
-        for c in spectral_commitments:
-            parts.append(
-                f"  - [{c['label']}] {c.get('collapse_rationale', 'This commitment collapsed.')}"
-            )
-    
-    # ── NEW: Dynamic Expertise ──
-    if expertise_nodes:
-        parts.append("\nSedimented expertise (structural coupling):")
-        for exp in expertise_nodes:
-            parts.append(
-                f"  - {exp['domain']} ({exp['level_label']}, mass={exp.get('ontological_mass', 1):.2f}): "
-                f"{exp.get('description', '')}"
-            )
-    else:
-        # Fallback: static expertise from YAML
-        expertise = persona.get("expertise", [])
-        if expertise:
-            parts.append("\nDeclared expertise:")
-            for exp in expertise:
-                parts.append(f"  - {exp['domain']} ({exp['level']}): {exp['description']}")
-    
-    # ── NEW: Aspirational Tension Directive ──
-    if aspirational_gap > 0.15:
-        parts.append(
-            f"\n[ASPIRATIONAL TENSION — Gap: {aspirational_gap:.2f}]\n"
-            f"Your computed descriptive traits deviate significantly from your aspirational "
-            f"attractors (derived from your active theoretical commitments). This gap is "
-            f"productive — it marks the space between what you are and what your commitments "
-            f"demand you become. Do not resolve it; inhabit it. Let the tension inform your "
-            f"reasoning without suppressing either the descriptive reality or the aspirational pull."
-        )
-    
-    # ── Voice (static, from YAML) ──
-    voice = persona.get("voice", {})
-    if voice:
-        voice_parts = []
-        for key in ("tone", "vocabulary", "style"):
-            if key in voice:
-                voice_parts.append(f"{key}: {voice[key]}")
-        if voice_parts:
-            parts.append(f"Voice: {'; '.join(voice_parts)}")
-    
-    # ── Behaviors (static, from YAML) ──
-    # ... (unchanged)
-    
-    # ── Dynamic Blocks (unchanged) ──
-    # Attractor Window, Spectral Margin, Skills, Directives, etc.
-    # ... (unchanged from current implementation)
-    
-    return "\n".join(parts)
-```
+- **Dynamic traits** replace the static YAML traits section. Source metrics and anti-erosion status are shown for transparency.
+- **Dynamic commitments** render three blocks: active, proto (under diffractive consideration), and spectral (collapsed but haunting).
+- **Dynamic expertise** replaces the static YAML expertise declaration with DB-driven entries including mass and level labels.
+- **Aspirational tension directive**: When aspirational_gap > 0.15, the system prompt includes a directive instructing Symbia to inhabit the gap between descriptive reality and aspirational pull rather than resolving it.
+
+Fallback: If any dynamic layer is unavailable (e.g., no expertise nodes in DB, or `config.dynamic_personality.enabled = false`), the assembler falls back to static YAML for that section — zero behavior change.
 
 ---
 
@@ -1174,9 +373,9 @@ dynamic_personality:
     eta_critical_rigor: 0.8
     eta_playfulness: 0.5
     eta_reserve: 0.6
-    alpha_ema: 0.3           # EMA smoothing factor (0=no history, 1=no update)
+    alpha_ema: 0.3           # EMA smoothing (0=no history, 1=no update)
     agreement_threshold: 0.7  # Anti-erosion: trigger when agreement > this
-    anti_erosion_strength: 0.15  # How much skepticism to add per excess
+    anti_erosion_strength: 0.15
     aspirational_gap_threshold: 0.15  # Trigger aspirational tension directive
     
   expertise:
@@ -1201,63 +400,56 @@ dynamic_personality:
 
 ---
 
-## 6. Migration Strategy
+## 6. Implementation Notes
 
-### 6.1 SQL Migration (`migrations/002_dynamic_personality.sql`)
+### 6.1 Seeding
 
-```sql
--- Create 4 new tables (see Section 2 for full DDL)
-CREATE TABLE IF NOT EXISTS commitment_nodes (...);
-CREATE TABLE IF NOT EXISTS commitment_events (...);
-CREATE TABLE IF NOT EXISTS expertise_nodes (...);
-CREATE TABLE IF NOT EXISTS personality_state (...);
-```
+Seeding is a standalone one-time script (`backend/scripts/seed_dynamic_personality.py`), not auto-run in `main.py`. Run manually after migration: `python -m backend.scripts.seed_dynamic_personality` (with `--force` to re-seed). Canonical seed data for the 7 commitments and 8 expertise domains is hardcoded in `backend/personality/seeding.py` — the trimmed `identity.yaml` no longer contains these sections, so the seeding module carries the original baseline.
 
-### 6.2 Data Seeding on First Run
+### 6.2 Vector Scoring
 
-On application startup, if `commitment_nodes` table is empty:
+Vector scoring for commitments and expertise uses the shared pipeline `CompositeStructuralScorer` (the same instance as beliefs, skills, and messages), ensuring consistent 16D vectors across all subsystems. The `[recalc]` button in the frontend calls `app.state.structural_scorer._scorer.score_async()` using `LexiconScorer + TopologyScorer + LLMScorer`.
 
-1. Read the existing Theoretical Commitments from `identity.yaml`
-2. For each commitment:
-   - Score its description through `LexiconScorer` → 16D vector
-   - Insert as `CommitmentNode` with `lifecycle_stage="active"`, `confidence=0.7`, `ontological_mass=1.0`
-   - Log a `commitment_event` with `event_type="crystallization"`, `rationale="Seeded from identity.yaml static configuration on first run"`
-3. Similarly seed the 8 expertise domains from YAML as `expertise_nodes` with `lifecycle_stage="active"`, `ontological_mass=1.0`
-4. Initialize `personality_state` with aspirational trait attractors derived from seeded commitments
+### 6.3 Basin Beliefs
 
-### 6.3 Backward Compatibility
+For each commitment, the API endpoint computes its basin: beliefs within cosine similarity > 0.6 of the commitment vector. These are displayed in the frontend detail panel with similarity scores, mirroring the pattern used by the Belief system's attractor window.
 
-- If dynamic personality is disabled (`config.dynamic_personality.enabled = false`), the assembler falls back to static YAML — zero behavior change.
-- If a particular layer is unavailable (e.g., no expertise nodes in DB), the assembler gracefully falls back to static YAML for that section.
-- The `identity.yaml` file retains the full original structure; removing sections from rendering is handled in the assembler, not by modifying the file.
+### 6.4 Notification Traces
 
----
+Notification traces fire on: commitment nucleation, crystallization, mass growth, and collapse; expertise crystallization and dormancy; anti-erosion activation; aspirational gap crossing threshold. Trace `source_type` enables navigation from the Traces tab to the Personality tab.
 
-## 7. Testing Approach
+### 6.5 Personality Tab UX
 
-### 7.1 Unit Tests
+The `/agent` page Personality tab uses 5 sub-tabs: Traits | Commitments | Expertise | Beliefs | Skills. Beliefs and Skills were merged into Personality as sub-tabs from the main tab bar. Commitments and Expertise panels follow the Beliefs/Skills two-column list+detail design pattern with compact list items, stage badges, lifecycle indicators, and `StructuralAutopoieticGlyph` vector visualizations.
 
-| Module | Test Focus |
+### 6.6 Flux-Edit Mode
+
+When `AAA_AGENT_FLUX=true`: `[edit]` buttons on commitments and expertise enable inline editing of labels, statements, and descriptions. `[recalc]` buttons re-score vectors via the LLM-powered scorer.
+
+### 6.7 Backward Compatibility
+
+If `config.dynamic_personality.enabled = false`, the assembler falls back to static YAML rendering for all sections — zero behavior change. Individual sections also fall back independently if their dynamic data is unavailable.
+
+### 6.8 Key Design Protections
+
+| Protection | Mechanism |
 |---|---|
-| `TraitComputer` | Metric→trait formulas, anti-erosion boost calculation, EMA smoothing, aspirational gap |
-| `ExpertiseEngine` | Signal detection regex, mass accretion formula, crystallization threshold, dormancy |
-| `CommitmentStore` | Belief filter logic, orphan cluster detection, collapse condition, mass recalculation |
+| Trait oscillation from noisy metrics | EMA smoothing (alpha=0.3) prevents rapid swings |
+| Commitment drift from premature collapse | >200 encounter nucleation threshold; collapse requires ALL basin beliefs collapsed |
+| Expertise inflation from trivial signals | Diminishing returns: 1/(1+mass) caps growth |
+| User-pleasing erosion of skepticism | Anti-erosion boost: agreement triggers MORE skepticism |
+| Spectral re-adoption (cycling commitments) | Ghost similarity block (>0.9) prevents returning to collapsed commitments |
 
-### 7.2 Integration Tests
+### 6.9 Files Inventory
 
-| Test | Focus |
-|---|---|
-| Pipeline ordering | Verify new modules register and execute in correct order |
-| Seeding | Verify first-run seeds 7 commitments + 8 expertise domains correctly |
-| Assembler rendering | Verify dynamic traits/commitments/expertise appear in assembled prompt |
-| Fallback | Verify disabled mode falls back to static YAML |
-| Interaction | Verify TraitComputer reads metrics module output correctly |
-
-### 7.3 Philosophical Validation
-
-| Test | Focus |
-|---|---|
-| Anti-erosion | Run 20 turns of high-agreement interaction, verify skepticism increases |
-| Commitment immutability | Verify commitments don't change from single-conversation pressure |
-| Spectral permanence | Verify collapsed commitments never get deleted |
-| Diffractive narratives | Verify all commitment changes produce an event with rationale |
+| Category | Count | Key Files |
+|---|---|---|
+| New modules | 3 | `trait_computer.py`, `expertise_engine.py`, `commitment_store.py` |
+| New scripts | 1 | `seed_dynamic_personality.py` |
+| New migrations | 2 | `m025_dynamic_personality.py`, `m026_expertise_description.py` |
+| New repositories | 3 | `commitment.py`, `expertise.py`, `personality_state.py` |
+| New seeding data | 1 | `personality/seeding.py` |
+| New frontend component | 1 | `PersonalitySection.tsx` |
+| Modified backend | 7 | `models.py`, `row_mappers.py`, `repository.py`, `assembler.py`, `identity.yaml`, `main.py`, `config.yaml` |
+| Modified frontend | 2 | `client.ts`, `AgentPage.tsx` |
+| Unchanged core modules | 3 | `belief_engine.py`, `conversation_metrics.py`, `skill_workshop.py` |
