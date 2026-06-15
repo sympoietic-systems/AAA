@@ -471,8 +471,10 @@ AAA/
 │   │   ├── deps.py           Auth, feature gates, repo/service FastAPI Depends
 │   │   ├── exceptions.py     ServiceException, raise_if_error(), global handlers
 │   │   └── routes/           20 domain route files (thin, delegate to services)
-│   ├── services/             13 service classes (business logic layer)
+│   ├── services/             16 service modules (business logic layer)
 │   │   ├── chat.py           ChatService — pipeline orchestration + response assembly
+│   │   ├── annotations.py    Self-annotation post-processing (extracted from chat.py)
+│   │   ├── background_tasks.py Post-response background runners (extracted from chat.py)
 │   │   ├── belief.py         BeliefService — ecosystem health, attractor windows
 │   │   ├── conversation.py   ConversationService — CRUD, tags, consolidation flag
 │   │   ├── file.py           FileService — upload, process, digest worker orchestration

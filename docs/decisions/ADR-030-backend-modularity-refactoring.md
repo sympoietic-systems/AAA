@@ -154,7 +154,7 @@ backend/
 │   ├── exceptions.py ServiceException + global handlers (new)
 │   └── routes/      all migrated to Depends injection
 ├── modules/         14 processing modules
-├── services/        14 service classes
+├── services/        16 service modules
 ├── storage/         repos (10) + migrations (15)
 ├── pipeline/        PipelineRegistry + ModuleMeta
 ├── metabolisation/  pipeline, daemon, dreams, scheduler
