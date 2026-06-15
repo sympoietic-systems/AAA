@@ -58,6 +58,7 @@ def caveman_compress(text: str, max_chars: int = 250) -> str:
         return text
     compressed = [w for w in words if w.lower() not in STOP_WORDS]
     result = " ".join(compressed)
-    if len(result) > max_chars:
-        result = result[:max_chars - 3] + "..."
+    # Character truncation removed (R1): stop-word filtering alone provides
+    # ~50% token reduction. Downstream token budgets at the sedimentation
+    # (4000 tokens) and diffractive (6000 tokens) layers handle capping.
     return result

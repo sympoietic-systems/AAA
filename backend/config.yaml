@@ -92,6 +92,8 @@ diffractive_retrieval:
   file_range_max: 0.75
   max_diffractive_count: 3
   token_budget: 6000
+  adaptive_hysteresis: true          # S1: enable adaptive cohesion timer decay via entropy delta
+  hysteresis_delta_threshold: 0.35   # S1: ΔE_rolling threshold for instant FLOWING return
 
 
 # ── Structural Signature ────────────────────────

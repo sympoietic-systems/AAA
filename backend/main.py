@@ -301,6 +301,8 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         file_range_max=diffractive_cfg.get("file_range_max", 0.45),
         max_diffractive_count=diffractive_cfg.get("max_diffractive_count", 3),
         token_budget=diffractive_cfg.get("token_budget", 1500),
+        adaptive_hysteresis=diffractive_cfg.get("adaptive_hysteresis", True),
+        hysteresis_delta_threshold=diffractive_cfg.get("hysteresis_delta_threshold", 0.35),
     )
 
     structural_scorer = StructuralScorerModule(

@@ -42,6 +42,7 @@ async def test_diffractive_retrieval_disabled(mock_repos):
 
 @pytest.mark.anyio
 async def test_hysteresis_state_machine(mock_repos, monkeypatch):
+    """Test the basic hysteresis lock behavior with adaptive hysteresis disabled."""
     monkeypatch.setattr(np.random, "uniform", lambda a, b: 0.0)
     msg_repo, perception_repo = mock_repos
     module = DiffractiveRetrievalModule(
@@ -49,6 +50,7 @@ async def test_hysteresis_state_machine(mock_repos, monkeypatch):
         perception_repo=perception_repo,
         enabled=True,
         cohesion_length=3,
+        adaptive_hysteresis=False,  # Disable S1 for basic lock test
     )
 
     # Initial state is FLOWING. Let's trigger STAGNANT.
@@ -89,6 +91,89 @@ async def test_hysteresis_state_machine(mock_repos, monkeypatch):
     # Fifth turn: timer is 0. Since low_stagnation_payload has low P_diffract, state should return to FLOWING
     res5 = await module.process(low_stagnation_payload)
     assert res5["diffractive_state"] == "FLOWING"
+
+
+@pytest.mark.anyio
+async def test_adaptive_hysteresis_decay(mock_repos, monkeypatch):
+    """S1: Adaptive hysteresis should break the cohesion lock when entropy spikes."""
+    monkeypatch.setattr(np.random, "uniform", lambda a, b: 0.0)
+    msg_repo, perception_repo = mock_repos
+    module = DiffractiveRetrievalModule(
+        message_repo=msg_repo,
+        perception_repo=perception_repo,
+        enabled=True,
+        cohesion_length=3,
+        adaptive_hysteresis=True,
+        hysteresis_delta_threshold=0.35,
+    )
+
+    # Turn 1: Enter STAGNANT with low entropy
+    stagnant_payload = {
+        "conversation_id": "test_adaptive",
+        "embedding": np.zeros(384, dtype="float32").tobytes(),
+        "conversation_vitality": 0.0,
+        "metrics": {"boringness": 1.0, "rolling_entropy": 0.0},
+    }
+    res1 = await module.process(stagnant_payload)
+    assert res1["diffractive_state"] == "STAGNANT"
+    assert module._timers["test_adaptive"] == 3
+
+    # Turn 2: Large entropy spike (0.0 → 0.8, delta=0.8 > 0.35)
+    # Adaptive hysteresis should detect this and return to FLOWING immediately
+    high_entropy_payload = {
+        "conversation_id": "test_adaptive",
+        "embedding": np.zeros(384, dtype="float32").tobytes(),
+        "conversation_vitality": 1.0,
+        "metrics": {"boringness": 0.0, "rolling_entropy": 0.8},
+    }
+    res2 = await module.process(high_entropy_payload)
+    assert res2["diffractive_state"] == "FLOWING", (
+        "Adaptive hysteresis should return to FLOWING when entropy spikes"
+    )
+    assert module._timers["test_adaptive"] == 0, (
+        "Timer should be reset to 0 on adaptive decay"
+    )
+
+
+@pytest.mark.anyio
+async def test_adaptive_hysteresis_no_spike_stays_stagnant(mock_repos, monkeypatch):
+    """S1: Small entropy deltas should NOT trigger the adaptive decay."""
+    monkeypatch.setattr(np.random, "uniform", lambda a, b: 0.0)
+    msg_repo, perception_repo = mock_repos
+    module = DiffractiveRetrievalModule(
+        message_repo=msg_repo,
+        perception_repo=perception_repo,
+        enabled=True,
+        cohesion_length=3,
+        adaptive_hysteresis=True,
+        hysteresis_delta_threshold=0.35,
+    )
+
+    # Turn 1: Enter STAGNANT
+    payload1 = {
+        "conversation_id": "test_no_spike",
+        "embedding": np.zeros(384, dtype="float32").tobytes(),
+        "conversation_vitality": 0.0,
+        "metrics": {"boringness": 1.0, "rolling_entropy": 0.1},
+    }
+    res1 = await module.process(payload1)
+    assert res1["diffractive_state"] == "STAGNANT"
+
+    # Turn 2: Small entropy bump (0.1 → 0.3, delta=0.2 < 0.35)
+    # Should NOT trigger adaptive decay — remains STAGNANT with timer decremented
+    payload2 = {
+        "conversation_id": "test_no_spike",
+        "embedding": np.zeros(384, dtype="float32").tobytes(),
+        "conversation_vitality": 0.5,
+        "metrics": {"boringness": 0.5, "rolling_entropy": 0.3},
+    }
+    res2 = await module.process(payload2)
+    assert res2["diffractive_state"] == "STAGNANT", (
+        "Small entropy delta should not trigger adaptive decay"
+    )
+    assert module._timers["test_no_spike"] == 2, (
+        "Timer should decrement normally when no spike detected"
+    )
 
 
 @pytest.mark.anyio

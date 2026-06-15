@@ -28,6 +28,8 @@ class DiffractiveRetrievalModule(ProcessingModule):
         max_diffractive_count: int = 3,
         token_budget: int = 1500,
         cohesion_length: int = 3,
+        adaptive_hysteresis: bool = True,
+        hysteresis_delta_threshold: float = 0.35,
     ):
         self._message_repo = message_repo
         self._perception_repo = perception_repo
@@ -43,6 +45,12 @@ class DiffractiveRetrievalModule(ProcessingModule):
 
         self._states: dict[str, str] = {}  # conversation_id -> "FLOWING" | "STAGNANT"
         self._timers: dict[str, int] = {}  # conversation_id -> countdown
+
+        # S1: Adaptive hysteresis decay — store previous rolling entropy per conversation
+        # to detect entropy spikes that indicate stagnation has been broken
+        self._adaptive_hysteresis = adaptive_hysteresis
+        self._hysteresis_delta_threshold = hysteresis_delta_threshold
+        self._prev_entropy: dict[str, float] = {}
 
     @property
     def name(self) -> str:
@@ -134,9 +142,24 @@ class DiffractiveRetrievalModule(ProcessingModule):
         start_time = datetime.now()
 
         if timer > 0:
-            timer -= 1
-            self._timers[conversation_id] = timer
-            target_state = current_state
+            # S1: Adaptive hysteresis decay — if rolling entropy has spiked
+            # significantly while in STAGNANT state, the diffractive context has
+            # likely broken stagnation; return to FLOWING immediately
+            if self._adaptive_hysteresis and current_state == "STAGNANT":
+                prev_entropy = self._prev_entropy.get(conversation_id, rolling_entropy)
+                delta_entropy = rolling_entropy - prev_entropy
+                if delta_entropy > self._hysteresis_delta_threshold:
+                    timer = 0
+                    self._timers[conversation_id] = 0
+                    target_state = "FLOWING"
+                else:
+                    timer -= 1
+                    self._timers[conversation_id] = timer
+                    target_state = current_state
+            else:
+                timer -= 1
+                self._timers[conversation_id] = timer
+                target_state = current_state
         else:
             if current_state == "FLOWING":
                 if p_diffract >= 0.75:
@@ -449,6 +472,9 @@ class DiffractiveRetrievalModule(ProcessingModule):
             "duration_ms": round(duration_ms, 1),
             "sources": sources,
         }
+
+        # S1: Store rolling entropy for next turn's adaptive hysteresis delta check
+        self._prev_entropy[conversation_id] = rolling_entropy
 
         _log_telemetry(
             boringness=boringness,
