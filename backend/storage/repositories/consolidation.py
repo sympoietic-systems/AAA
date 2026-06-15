@@ -29,16 +29,7 @@ class ConsolidationCheckpointRepository(BaseRepository):
         ).fetchone()
         if row is None:
             return None
-        return {
-            "id": row["id"],
-            "conversation_id": row["conversation_id"],
-            "message_count": row["message_count"],
-            "summary": row["summary"],
-            "model": row["model"],
-            "human_summary": row["human_summary"] if "human_summary" in row.keys() else "",
-            "message_id": row["message_id"] if "message_id" in row.keys() else None,
-            "created_at": row["created_at"],
-        }
+        return _row_to_checkpoint(row)
 
     @with_connection
     def update_human_summary(self, checkpoint_id: int, human_summary: str) -> None:
@@ -72,13 +63,47 @@ class ConsolidationCheckpointRepository(BaseRepository):
         ).fetchone()
         if row is None:
             return None
-        return {
-            "id": row["id"],
-            "conversation_id": row["conversation_id"],
-            "message_count": row["message_count"],
-            "summary": row["summary"],
-            "model": row["model"],
-            "human_summary": row["human_summary"] if "human_summary" in row.keys() else "",
-            "message_id": row["message_id"] if "message_id" in row.keys() else None,
-            "created_at": row["created_at"],
-        }
+        return _row_to_checkpoint(row)
+
+    @with_connection
+    def get_sibling_checkpoints(
+        self, conversation_id: str, exclude_message_ids: list[int]
+    ) -> list[dict]:
+        """R3: Get checkpoints from sibling branches (same conversation, different paths).
+
+        Returns checkpoints whose message_id is NOT in the current ancestor path,
+        enabling cross-branch memory node retrieval.
+        """
+        conn = self._conn()
+        if not exclude_message_ids:
+            rows = conn.execute(
+                """SELECT * FROM consolidation_checkpoints
+                   WHERE conversation_id = ? AND message_id IS NOT NULL
+                   ORDER BY id DESC""",
+                (conversation_id,),
+            ).fetchall()
+        else:
+            placeholders = ",".join("?" * len(exclude_message_ids))
+            rows = conn.execute(
+                f"""SELECT * FROM consolidation_checkpoints
+                   WHERE conversation_id = ?
+                     AND message_id IS NOT NULL
+                     AND message_id NOT IN ({placeholders})
+                   ORDER BY id DESC""",
+                [conversation_id] + exclude_message_ids,
+            ).fetchall()
+
+        return [_row_to_checkpoint(row) for row in rows]
+
+
+def _row_to_checkpoint(row) -> dict:
+    return {
+        "id": row["id"],
+        "conversation_id": row["conversation_id"],
+        "message_count": row["message_count"],
+        "summary": row["summary"],
+        "model": row["model"],
+        "human_summary": row["human_summary"] if "human_summary" in row.keys() else "",
+        "message_id": row["message_id"] if "message_id" in row.keys() else None,
+        "created_at": row["created_at"],
+    }

@@ -15,12 +15,14 @@ class ConsolidationCheckpointModule(ProcessingModule):
         memory_node_repo=None,
         max_memory_nodes: int = 6,
         guaranteed_node_types: list[str] | None = None,
+        cross_branch_similarity_threshold: float = 0.4,
     ):
         self._checkpoint_repo = checkpoint_repo
         self._consolidate_threshold = consolidate_threshold
         self._memory_node_repo = memory_node_repo
         self._max_memory_nodes = max_memory_nodes
         self._guaranteed_node_types = guaranteed_node_types or ["scar", "concept", "tension"]
+        self._cross_branch_similarity_threshold = cross_branch_similarity_threshold
 
     @property
     def name(self) -> str:
@@ -80,8 +82,16 @@ class ConsolidationCheckpointModule(ProcessingModule):
         if self._memory_node_repo and checkpoint_id:
             try:
                 nodes = self._memory_node_repo.get_nodes_by_checkpoint(checkpoint_id)
-                if nodes:
-                    selected = self._select_nodes_type_diverse(nodes, current_embedding)
+
+                # R3: Fetch sibling-branch nodes for cross-branch retrieval
+                sibling_nodes = self._fetch_sibling_nodes(
+                    conversation_id, checkpoint, current_embedding
+                )
+
+                if nodes or sibling_nodes:
+                    selected = self._select_nodes_type_diverse(
+                        nodes or [], current_embedding, sibling_nodes
+                    )
 
                     parts = []
                     for n in selected:
@@ -94,7 +104,7 @@ class ConsolidationCheckpointModule(ProcessingModule):
 
                     keys = [
                         n.get("diffractive_key", "")
-                        for n in nodes
+                        for n in (nodes or [])
                         if n.get("diffractive_key", "").strip()
                     ]
                     keys_str = ", ".join(keys[:5])
@@ -121,21 +131,88 @@ class ConsolidationCheckpointModule(ProcessingModule):
 
         return f"[Consolidated memory: {checkpoint['summary']}]"
 
-    def _select_nodes_type_diverse(
-        self, nodes: list[dict], current_embedding: bytes | None = None
+    def _fetch_sibling_nodes(
+        self, conversation_id: str, current_checkpoint: dict,
+        current_embedding: bytes | None = None,
     ) -> list[dict]:
-        """R2: 6-node type-diverse selection.
+        """R3: Fetch memory nodes from sibling-branch checkpoints.
 
-        Slot 1 → highest-intensity scar
-        Slot 2 → highest-intensity concept
-        Slot 3 → highest-intensity tension
-        Slots 4–N → best-by-embedding-similarity to current message (any type)
+        Queries other checkpoints for the same conversation that are NOT on the
+        current branch, loads their memory nodes, and filters by embedding
+        similarity to the current message.
+        """
+        if not self._memory_node_repo or not current_embedding:
+            return []
+
+        try:
+            # Current checkpoint's message_id is in the current path
+            current_msg_id = current_checkpoint.get("message_id")
+            exclude_ids = [current_msg_id] if current_msg_id else []
+
+            sibling_checkpoints = self._checkpoint_repo.get_sibling_checkpoints(
+                conversation_id, exclude_ids
+            )
+
+            if not sibling_checkpoints:
+                return []
+
+            sibling_nodes = []
+            for scp in sibling_checkpoints:
+                scp_id = scp.get("id")
+                if not scp_id or scp_id == current_checkpoint.get("id"):
+                    continue
+                sn = self._memory_node_repo.get_nodes_by_checkpoint(scp_id)
+                if sn:
+                    sibling_nodes.extend(sn)
+
+            if not sibling_nodes:
+                return []
+
+            # Filter by embedding similarity
+            current_vec = np.frombuffer(current_embedding, dtype="float32")
+            scored = []
+            for node in sibling_nodes:
+                emb = node.get("embedding")
+                if emb is not None and isinstance(emb, bytes):
+                    try:
+                        node_vec = np.frombuffer(emb, dtype="float32")
+                        if len(node_vec) == len(current_vec):
+                            sim = float(cosine_similarity(current_vec, node_vec))
+                            if sim >= self._cross_branch_similarity_threshold:
+                                node_copy = dict(node)
+                                node_copy["_origin_tag"] = " [sibling branch]"
+                                node_copy["_similarity"] = sim
+                                scored.append((sim, node_copy))
+                                continue
+                    except ValueError:
+                        pass
+
+            scored.sort(key=lambda x: x[0], reverse=True)
+            return [n for _, n in scored]
+        except Exception:
+            return []
+
+    def _select_nodes_type_diverse(
+        self,
+        nodes: list[dict],
+        current_embedding: bytes | None = None,
+        sibling_nodes: list[dict] | None = None,
+    ) -> list[dict]:
+        """R2+R3: 6-node type-diverse selection with cross-branch sibling nodes.
+
+        Slot 1 → highest-intensity scar (from current branch)
+        Slot 2 → highest-intensity concept (from current branch)
+        Slot 3 → highest-intensity tension (from current branch)
+        Slots 4–N → best-by-embedding-similarity (current branch + sibling nodes)
 
         If a type has zero nodes, its slot is filled by next-best similarity.
         If fewer than max_memory_nodes total nodes exist, all are returned.
         """
-        if len(nodes) <= self._max_memory_nodes:
-            return nodes
+        sibling_nodes = sibling_nodes or []
+        total_nodes = len(nodes) + len(sibling_nodes)
+
+        if total_nodes <= self._max_memory_nodes:
+            return nodes + sibling_nodes
 
         selected: dict[str, dict] = {}  # keyed by node id
 
@@ -151,11 +228,18 @@ class ConsolidationCheckpointModule(ProcessingModule):
                 best = max(pool, key=lambda n: n.get("intensity", 0))
                 selected[best.get("id", "")] = best
 
-        # ── Similarity-ranked slots (fill remaining) ──
+        # ── Similarity-ranked slots (fill remaining, R3: includes sibling nodes) ──
         remaining_slots = self._max_memory_nodes - len(selected)
         if remaining_slots > 0:
-            # Candidates: nodes not already selected
-            candidates = [n for n in nodes if n.get("id") not in selected]
+            # Candidates: nodes not already selected, plus sibling nodes
+            branch_candidates = [n for n in nodes if n.get("id") not in selected]
+            # Deduplicate sibling nodes against already-selected IDs
+            seen_ids = set(selected.keys())
+            unique_siblings = [
+                sn for sn in sibling_nodes
+                if sn.get("id", "") not in seen_ids and sn.get("id", "") not in seen_ids
+            ]
+            candidates = branch_candidates + unique_siblings
 
             if current_embedding is not None and candidates:
                 # Score by embedding similarity to current message

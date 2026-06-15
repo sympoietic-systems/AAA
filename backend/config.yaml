@@ -71,6 +71,7 @@ context:
     - scar
     - concept
     - tension
+  cross_branch_similarity_threshold: 0.4  # R3: min embedding similarity for sibling-branch nodes
 
 # ── Sedimentation ───────────────────────────────
 sedimentation:

@@ -336,6 +336,7 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         memory_node_repo=repos["memory_node_repo"],
         max_memory_nodes=ctx_cfg.get("max_memory_nodes", 6),
         guaranteed_node_types=ctx_cfg.get("guaranteed_node_types", ["scar", "concept", "tension"]),
+        cross_branch_similarity_threshold=ctx_cfg.get("cross_branch_similarity_threshold", 0.4),
     )
 
     return {
