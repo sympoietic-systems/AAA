@@ -111,6 +111,7 @@ A directory in the AAA backend is an **agential cut**—it must be named and str
 
 ### Standard Directories
 *   `api/`: **The Membrane**. Contains HTTP routes, request/response validation schemas, and serialization adapters. Nothing outside `api/` should deal with FastAPI dependencies or HTTP status codes.
+*   `bootstrap/`: **The Assembly**. Modular app initialization factories (providers, repositories, embedder, modules, pipeline, background engine, lifecycle). Each file handles one concern; `lifecycle.py` orchestrates them in `lifespan()`. This was split from the original monolithic `main.py` to improve testability and maintainability.
 *   `services/`: **The Orchestration**. Core command layer entry points that accept an inscription (Phase 1) and invoke the runtime metabolization pipelines.
 *   `metabolisation/` (formerly `core/`): **The Transformation**. Contains the long-running engine pipelines, background schedulers, and daemon routines that digest sediment.
 *   `modules/` (transitioning to `cognition/` and `ingestion/`): **The Cognitive Operators**. Pluggable units (engines, scrapers, and retrievers) loaded and run by the metabolization pipeline.

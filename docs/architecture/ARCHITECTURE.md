@@ -452,14 +452,24 @@ graph TD
 ```
 AAA/
 ├── backend/
-│   ├── main.py              FastAPI app + lifespan (factory-orchestrated startup)
-│   ├── config.py             YAML + env config loader
+│   ├── main.py              Slim entry point (~50 lines); delegates to bootstrap/
+│   ├── config.py             YAML + env config loader (uses config_schema.py overrides)
+│   ├── config_schema.py      Declarative EnvOverride dataclass for AAA_* env vars
 │   ├── config.yaml           Default configuration
+│   ├── bootstrap/            Application initialization (split from monolithic main.py)
+│   │   ├── providers.py      LLM provider factory (OpenRouter, DeepSeek, Google, model pools)
+│   │   ├── repositories.py   Database + all 16 repository instances
+│   │   ├── embedder.py       Sentence-transformers loading and pre-warming
+│   │   ├── modules.py        Pipeline module construction + identity loading
+│   │   ├── pipeline.py       Pipeline registry wiring + skill registration
+│   │   ├── background.py     BackgroundTaskEngine + daemon/scheduler startup
+│   │   └── lifecycle.py      FastAPI lifespan() and create_app() factory
 │   ├── api/
 │   │   ├── router.py         Main router (includes all sub-routers)
 │   │   ├── schemas.py        Pydantic request/response models
 │   │   ├── helpers.py        Shared request parsing + response assembly helpers
-│   │   ├── deps.py           Authentication dependencies
+│   │   ├── deps.py           Auth, feature gates, repo/service FastAPI Depends
+│   │   ├── exceptions.py     ServiceException, raise_if_error(), global handlers
 │   │   └── routes/           20 domain route files (thin, delegate to services)
 │   ├── services/             13 service classes (business logic layer)
 │   │   ├── chat.py           ChatService — pipeline orchestration + response assembly
@@ -477,18 +487,24 @@ AAA/
 │   │   └── skill.py          SkillService — registry queries
 │   ├── core/
 │   │   ├── app_state.py      Typed AppState dataclass
-│   │   ├── pipeline.py       ProcessingPipeline orchestrator
+│   │   ├── registry.py       ModuleRegistry — lazy factory registry
 │   │   ├── scheduler.py      Background startup task scheduler and recovery loop
 │   │   ├── daemon.py         AutopoieticDreamDaemon — background dreaming engine
 │   │   └── context.py        PipelineResult dataclass
+│   ├── metabolisation/       Core pipeline processing (formerly split across core/)
+│   │   ├── pipeline.py       ProcessingPipeline orchestrator
+│   │   ├── consolidation.py  Conversation consolidation
+│   │   ├── daemon.py         Dream daemon
+│   │   ├── scheduler.py      Background startup scheduler
+│   │   └── ...               Dream context, executor, prompts, mass decay, sedimentation
 │   ├── app_factory/
 │   │   └── __init__.py       register_all() — skill registration factory
 │   ├── personality/
 │   │   ├── identity.yaml      Agent self-definition (name, prompt, traits, beliefs)
 │   │   └── assembler.py       PromptAssemblerModule — context assembly
-│   ├── skills/
-│   │   ├── metadata.py        SkillMeta dataclass
-│   │   └── registry.py        SkillRegistry — extends ModuleRegistry
+│   ├── pipeline/
+│   │   ├── metadata.py        ModuleMeta dataclass
+│   │   └── registry.py        PipelineRegistry — extends ModuleRegistry
 │   ├── prompts/              Centralized system, tool, and background prompts
 │   │   ├── perception/       vision_tripartite.yaml
 │   │   ├── web_retrieval/    query_routing.yaml, belief_collision.yaml
@@ -515,12 +531,16 @@ AAA/
 │   │   ├── models.py         Conversation, Message, MetricsRecord, ErrorLogEntry
 │   │   ├── connection.py     ConnectionTracker, with_connection decorator
 │   │   ├── row_mappers.py    All _row_to_* conversion functions
+│   │   ├── repository.py     Backward-compat shim → storage/repositories/
 │   │   ├── repositories/     10 repository files (one per entity)
 │   │   └── migrations/       15 numbered migration files + runner
 │   ├── utils/
 │   │   ├── token_counter.py  TokenBudget dataclass, estimate_tokens()
-│   │   ├── similarity.py     Shared cosine_similarity()
-│   │   └── filesystem.py     UPLOAD_DIR constant, get_upload_path(), to_utc()
+│   │   ├── similarity.py     Delegates to vector.py for cosine_similarity()
+│   │   ├── vector.py         Consolidated 16D vector parsing, cosine similarity,
+│   │   │                     structural-signature deserialization, HistoryMessage builder
+│   │   ├── filesystem.py     UPLOAD_DIR constant, get_upload_path(), to_utc()
+│   │   └── skill_parser.py   Skill nucleation tag parsing
 │   └── tests/
 ├── frontend/
 │   └── src/

@@ -85,15 +85,30 @@ class SentimentModule(ProcessingModule):
 
 ### Step 2 — Register in the app lifespan
 
-Open `backend/main.py`. In the `lifespan` function:
+Register the module in `backend/bootstrap/modules.py` (module construction)
+and `backend/bootstrap/lifecycle.py` (app wiring).
+
+In `bootstrap/modules.py`, add your module creation inside `_init_modules()`:
 
 ```python
 from backend.modules.sentiment import SentimentModule
 
 # After other module creation:
 sentiment = SentimentModule()
+modules["sentiment"] = sentiment
+```
+
+In `bootstrap/lifecycle.py`, register with the pipeline registry in the `lifespan`:
+
+```python
+from backend.modules.sentiment import SentimentModule
+
+sentiment = modules.get("sentiment") or SentimentModule()
 registry.register("sentiment", lambda: sentiment)
 ```
+
+> **Note:** Module registration was previously done directly in `backend/main.py`.
+> It has been refactored into `backend/bootstrap/` for maintainability.
 
 ### Step 3 — Add to the pipeline order
 
