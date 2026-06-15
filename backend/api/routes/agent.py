@@ -4,7 +4,19 @@ import logging
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.api.deps import agent_flux_enabled, require_agent_flux
+from backend.api.deps import (
+    agent_flux_enabled,
+    require_agent_flux,
+    get_app_state,
+    get_agent_name,
+    get_registry,
+    get_pipeline_order,
+    get_personality_state_repo,
+    get_commitment_repo,
+    get_belief_repo,
+    get_expertise_repo,
+    get_structural_scorer,
+)
 from backend.api.schemas import AgentInfo
 from backend.utils.vector import parse_vector_16d, cosine_similarity
 
@@ -13,20 +25,15 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/agent", response_model=AgentInfo)
-async def get_agent(request: Request):
-    state = request.app.state
+async def get_agent(agent_name=Depends(get_agent_name)):
     return AgentInfo(
-        name=getattr(state, "agent_name", "symbia"),
+        name=agent_name,
         agent_flux=agent_flux_enabled(),
     )
 
 
 @router.get("/agent/pipeline")
-async def get_pipeline(request: Request):
-    state = request.app.state
-    registry = getattr(state, "registry", None)
-    pipeline_order = getattr(state, "pipeline_order", [])
-
+async def get_pipeline(registry=Depends(get_registry), pipeline_order=Depends(get_pipeline_order)):
     pipeline_list = []
     seen = set()
 
@@ -106,33 +113,31 @@ def _find_basin_beliefs(commit_vector_json: str, belief_repo, min_similarity: fl
                 "similarity": round(sim, 3),
             })
 
-    # Sort by similarity descending
     basin.sort(key=lambda x: x["similarity"], reverse=True)
     return {
         "count": len(basin),
         "labels": [b["label"] for b in basin],
-        "beliefs": basin[:10],  # Top 10
+        "beliefs": basin[:10],
     }
 
 
 @router.get("/agent/personality")
-async def get_personality(request: Request):
+async def get_personality(
+    personality_repo=Depends(get_personality_state_repo),
+    commit_repo=Depends(get_commitment_repo),
+    belief_repo=Depends(get_belief_repo),
+    exp_repo=Depends(get_expertise_repo),
+):
     """Return full dynamic personality state."""
-    state = request.app.state
-
     # ── Traits ──
     try:
-        personality_repo = getattr(state, "personality_state_repo", None)
-        if personality_repo:
-            aspirational_traits = personality_repo.get_aspirational_traits()
+        aspirational_traits = personality_repo.get_aspirational_traits() if personality_repo else {}
     except Exception:
         aspirational_traits = {}
 
     # ── Commitments ──
     commitments = {"active": [], "proto": [], "spectral": []}
     try:
-        commit_repo = getattr(state, "commitment_repo", None)
-        belief_repo = getattr(state, "belief_repo", None)
         if commit_repo:
             for c in commit_repo.get_active():
                 basin = _find_basin_beliefs(c.vector_16d, belief_repo)
@@ -173,7 +178,6 @@ async def get_personality(request: Request):
     # ── Expertise ──
     expertise = {"active": [], "proto": [], "dormant": []}
     try:
-        exp_repo = getattr(state, "expertise_repo", None)
         if exp_repo:
             all_exp = exp_repo.get_all()
             for e in all_exp:
@@ -213,11 +217,8 @@ async def get_personality(request: Request):
 
 
 @router.put("/agent/personality/commitment/{commitment_id}", dependencies=[Depends(require_agent_flux)])
-async def update_commitment(commitment_id: str, request: Request):
+async def update_commitment(commitment_id: str, request: Request, commit_repo=Depends(get_commitment_repo)):
     """Edit a commitment (AAA_AGENT_FLUX only)."""
-    state = request.app.state
-
-    commit_repo = getattr(state, "commitment_repo", None)
     if not commit_repo:
         raise HTTPException(status_code=500, detail="Repository unavailable")
 
@@ -244,11 +245,8 @@ async def update_commitment(commitment_id: str, request: Request):
 
 
 @router.put("/agent/personality/expertise/{expertise_id}", dependencies=[Depends(require_agent_flux)])
-async def update_expertise(expertise_id: str, request: Request):
+async def update_expertise(expertise_id: str, request: Request, exp_repo=Depends(get_expertise_repo)):
     """Edit an expertise domain (AAA_AGENT_FLUX only)."""
-    state = request.app.state
-
-    exp_repo = getattr(state, "expertise_repo", None)
     if not exp_repo:
         raise HTTPException(status_code=500, detail="Repository unavailable")
 
@@ -273,11 +271,8 @@ async def update_expertise(expertise_id: str, request: Request):
 
 
 @router.put("/agent/personality/aspirational", dependencies=[Depends(require_agent_flux)])
-async def update_aspirational_traits(request: Request):
+async def update_aspirational_traits(request: Request, ps_repo=Depends(get_personality_state_repo)):
     """Update aspirational trait attractors (AAA_AGENT_FLUX only)."""
-    state = request.app.state
-
-    ps_repo = getattr(state, "personality_state_repo", None)
     if not ps_repo:
         raise HTTPException(status_code=500, detail="Repository unavailable")
 
@@ -303,12 +298,12 @@ async def update_aspirational_traits(request: Request):
 
 
 @router.put("/agent/personality/commitment/{commitment_id}/recalculate", dependencies=[Depends(require_agent_flux)])
-async def recalculate_commitment_vector(commitment_id: str, request: Request):
+async def recalculate_commitment_vector(
+    commitment_id: str,
+    commit_repo=Depends(get_commitment_repo),
+    structural_scorer=Depends(get_structural_scorer),
+):
     """Re-score the commitment's statement via the pipeline's structural scorer."""
-    state = request.app.state
-
-    commit_repo = getattr(state, "commitment_repo", None)
-    structural_scorer = getattr(state, "structural_scorer", None)
     if not commit_repo or not structural_scorer:
         raise HTTPException(status_code=500, detail="Repository or scorer unavailable")
 
@@ -316,7 +311,6 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
     if not node:
         raise HTTPException(status_code=404, detail="Commitment not found")
 
-    # Use async scoring (same as pipeline) — avoids nest_asyncio issue
     new_vector = await structural_scorer._scorer.score_async(node.statement)
     node.vector_16d = json.dumps(new_vector.tolist())
     commit_repo.update(node)
@@ -325,12 +319,12 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
 
 
 @router.put("/agent/personality/expertise/{expertise_id}/recalculate", dependencies=[Depends(require_agent_flux)])
-async def recalculate_expertise_vector(expertise_id: str, request: Request):
+async def recalculate_expertise_vector(
+    expertise_id: str,
+    exp_repo=Depends(get_expertise_repo),
+    structural_scorer=Depends(get_structural_scorer),
+):
     """Re-score the expertise domain via the pipeline's structural scorer."""
-    state = request.app.state
-
-    exp_repo = getattr(state, "expertise_repo", None)
-    structural_scorer = getattr(state, "structural_scorer", None)
     if not exp_repo or not structural_scorer:
         raise HTTPException(status_code=500, detail="Repository or scorer unavailable")
 

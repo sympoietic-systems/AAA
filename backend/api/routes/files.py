@@ -3,8 +3,9 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
+from backend.api.deps import get_app_state, get_conversation_repo, get_perception_repo, get_agent_name
 from backend.api.schemas import ConversationFile, ConversationFilesResponse
 from backend.services.file import FileService
 from backend.utils.filesystem import ensure_upload_dir, get_upload_path
@@ -30,12 +31,11 @@ async def upload_conversation_files(
     conversation_id: str,
     request: Request,
     background_tasks: BackgroundTasks,
+    state=Depends(get_app_state),
+    perception_repo=Depends(get_perception_repo),
+    conv_repo=Depends(get_conversation_repo),
+    agent_id=Depends(get_agent_name),
 ):
-    state = request.app.state
-    perception_repo = state.perception_repo
-    conv_repo = getattr(state, "conversation_repo", None)
-    agent_id = getattr(state, "agent_name", "symbia")
-
     form = await request.form()
     uploaded_files = form.getlist("files")
     if not uploaded_files:
@@ -86,9 +86,7 @@ async def upload_conversation_files(
 
 
 @router.get("/conversations/{conversation_id}/files", response_model=ConversationFilesResponse)
-async def get_conversation_files(conversation_id: str, request: Request):
-    state = request.app.state
-    perception_repo = state.perception_repo
+async def get_conversation_files(conversation_id: str, perception_repo=Depends(get_perception_repo)):
     files = perception_repo.get_files_by_conversation(conversation_id)
     schema_files = []
     for f in files:
@@ -104,9 +102,7 @@ async def get_conversation_files(conversation_id: str, request: Request):
 
 
 @router.delete("/conversations/{conversation_id}/files/{file_name}")
-async def delete_conversation_file(conversation_id: str, file_name: str, request: Request):
-    state = request.app.state
-    perception_repo = state.perception_repo
+async def delete_conversation_file(conversation_id: str, file_name: str, perception_repo=Depends(get_perception_repo)):
     files = perception_repo.get_files_by_conversation(conversation_id)
     exists = any(f["file_name"] == file_name for f in files)
     if not exists:
@@ -128,9 +124,9 @@ async def delete_conversation_file(conversation_id: str, file_name: str, request
 async def reprocess_conversation_file(
     conversation_id: str, file_name: str,
     request: Request, background_tasks: BackgroundTasks,
+    state=Depends(get_app_state),
+    perception_repo=Depends(get_perception_repo),
 ):
-    state = request.app.state
-    perception_repo = state.perception_repo
     files = perception_repo.get_files_by_conversation(conversation_id)
     target_file = None
     for f in files:
@@ -148,9 +144,7 @@ async def reprocess_conversation_file(
 
 
 @router.get("/conversations/{conversation_id}/files/{file_name:path}/summary")
-async def get_file_summary_endpoint(conversation_id: str, file_name: str, request: Request):
-    state = request.app.state
-    perception_repo = state.perception_repo
+async def get_file_summary_endpoint(conversation_id: str, file_name: str, perception_repo=Depends(get_perception_repo)):
     target_conv_id = conversation_id
     injections = perception_repo.get_injections_for_conversation(conversation_id)
     for inj in injections:
@@ -188,9 +182,7 @@ async def get_file_summary_endpoint(conversation_id: str, file_name: str, reques
 
 
 @router.get("/files/by-name")
-async def get_file_by_name_endpoint(file_name: str, request: Request):
-    state = request.app.state
-    perception_repo = state.perception_repo
+async def get_file_by_name_endpoint(file_name: str, perception_repo=Depends(get_perception_repo)):
     file_info = perception_repo.find_file_by_name(file_name)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")

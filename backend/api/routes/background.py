@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
+from backend.api.deps import get_background_engine
 from backend.api.exceptions import ServiceException
 from backend.api.schemas import BackgroundTaskRequest, BackgroundTaskResponse
 
@@ -11,9 +12,7 @@ router = APIRouter()
 
 
 @router.post("/background", response_model=BackgroundTaskResponse)
-async def run_background_task(body: BackgroundTaskRequest, request: Request):
-    state = request.app.state
-    engine = getattr(state, "background_engine", None)
+async def run_background_task(body: BackgroundTaskRequest, engine=Depends(get_background_engine)):
     if not engine:
         raise HTTPException(status_code=503, detail="Background engine not initialized")
 

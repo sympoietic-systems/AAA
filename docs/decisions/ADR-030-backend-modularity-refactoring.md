@@ -110,3 +110,68 @@ backend/
 - **Option 1: Do nothing** — Technical debt would compound as dynamic skills, belief extensions, and new modules are added. The frontend just completed the same journey successfully.
 - **Option 2: Refactor after dynamic skills** — Would make the skill system harder to implement on a monolithic backend and require deeper changes later.
 - **Option 3: Full rewrite** — Unnecessary; the code is well-structured, just poorly organized. Decomposition preserves all logic and API contracts.
+
+## Post-Implementation Update (2026-06-15)
+
+After the initial refactoring, additional quality improvements were applied:
+
+### Phase 8: Bootstrap Package
+- Extracted `main.py`'s 597-line startup into `backend/bootstrap/` (7 focused modules):
+  `providers.py`, `repositories.py`, `embedder.py`, `modules.py`, `pipeline.py`,
+  `background.py`, `lifecycle.py`
+- `main.py`: 597 → **52 lines** (91% reduction)
+
+### Phase 9: Dependency Injection
+- Centralized auth, feature gates, and 27 repo/module/service getters in `api/deps.py`
+- All 19 route files now use `Depends(get_*_repo)` and `Depends(get_*_service)`
+- Replaced 40+ `getattr(request.app.state, ...)` calls with FastAPI DI
+
+### Phase 10: Unified Error Handling
+- Created `api/exceptions.py` with `ServiceException` + `raise_if_error()`
+- Registered global error handlers in `create_app()`
+- Eliminated 7 raw `try/except ValueError → HTTPException` blocks
+- 7 `if res.get("status") == "error"` → replaced with `raise_if_error()`
+
+### Phase 11: Consolidated Utilities
+- Created `utils/vector.py`: unified `parse_vector_16d`, `cosine_similarity`,
+  `deserialize_structural_signature`, `build_history_message`
+- Created `utils/prompt_loader.py`: shared YAML prompt loading utility
+- 13 repeated conversation guard blocks → single `require_conversation()` helper
+
+### Phase 12: Declarative Config & Prompt Extraction
+- Created `config_schema.py`: 36 `EnvOverride` dataclass entries
+- `config.py` `_apply_env_overrides()`: 171 → 69 lines (60% reduction)
+- Extracted 5 hardcoded LLM prompt templates (~90 lines) into `backend/prompts/dreams/`
+  and `backend/prompts/structural_engine/classification.yaml`
+- Moved 3 YAML config files from `backend/personality/` → `config/personality/`
+
+### Architecture after Phase 12:
+```
+backend/
+├── bootstrap/      7 focused startup modules (new)
+├── api/
+│   ├── deps.py      auth + 27 getters + guards + service factories
+│   ├── exceptions.py ServiceException + global handlers (new)
+│   └── routes/      all migrated to Depends injection
+├── modules/         14 processing modules
+├── services/        14 service classes
+├── storage/         repos (10) + migrations (15)
+├── pipeline/        PipelineRegistry + ModuleMeta
+├── metabolisation/  pipeline, daemon, dreams, scheduler
+├── prompts/         18 YAML files (4 new dreams/)
+├── utils/           6 modules (2 new: vector, prompt_loader)
+├── config_schema.py declarative env overrides (new)
+└── main.py          slim 52-line entry point
+```
+
+### Scorecard:
+| Metric | ADR-030 Baseline | After Phase 12 |
+|---|---|---|
+| `main.py` lines | 663 → 516 | **52** |
+| `getattr(state, ...)` calls | 42 | **~3** (only in non-route code) |
+| Duplicate guard patterns | 13 | **0** |
+| Hardcoded prompts | ~90 lines | **0** (all in YAML) |
+| `except ValueError → HTTPException` | 7 | **0** |
+| Inline imports | 58 → 0 | **0** |
+| Deprecated files | 0 | **0** |
+| Total files | 168 | **~230** |

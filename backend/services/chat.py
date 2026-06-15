@@ -16,6 +16,41 @@ from backend.utils.token_counter import estimate_tokens
 logger = logging.getLogger(__name__)
 
 
+# ── Response artifact parsing ───────────────────────────────────────────
+
+def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list[dict], list[tuple[int, str]]]:
+    """Extract skill nucleations, branch proposals, and resonance links from response text.
+
+    Returns: (cleaned_text, proposed_skills, proposed_branches, proposed_resonances)
+    """
+    from backend.utils.skill_parser import parse_skill_nucleation_tags
+
+    # Parse and strip proposed skills (<skill-nucleation>)
+    response_text, proposed_skills = parse_skill_nucleation_tags(response_text)
+
+    # Parse and strip proposed branches (<line_of_flight>)
+    proposed_branches = []
+    lof_pattern = r'<line_of_flight\s+title="([^"]+)">([\s\S]*?)</line_of_flight>'
+    matches = re.findall(lof_pattern, response_text)
+    for title, body in matches:
+        proposed_branches.append({"title": title, "content": body.strip()})
+    response_text = re.sub(lof_pattern, "", response_text).strip()
+
+    # Parse and strip proposed resonance links (<resonance target="ID">Reason</resonance>)
+    proposed_resonances = []
+    res_pattern = r'<resonance\s+target=["\']([^"\']+)["\']\s*>([\s\S]*?)</resonance>'
+    res_matches = re.findall(res_pattern, response_text)
+    for target_id_str, justification in res_matches:
+        try:
+            target_id = int(target_id_str)
+            proposed_resonances.append((target_id, justification.strip()))
+        except ValueError:
+            logger.warning("Invalid resonance target ID: %s", target_id_str)
+    response_text = re.sub(res_pattern, "", response_text).strip()
+
+    return response_text, proposed_skills, proposed_branches, proposed_resonances
+
+
 def process_self_annotations(
     response_text: str,
     conversation_id: str,
@@ -427,29 +462,11 @@ class ChatService:
 
             response_text = result.payload.get("response", "")
 
-            # Parse and strip proposed skills (<skill-nucleation>)
-            from backend.utils.skill_parser import parse_skill_nucleation_tags
-            response_text, proposed_skills = parse_skill_nucleation_tags(response_text)
+            # Parse embedded artifact tags from response text
+            response_text, proposed_skills, proposed_branches, proposed_resonances = (
+                _parse_response_artifacts(response_text)
+            )
 
-            # Parse and strip proposed branches (<line_of_flight>)
-            proposed_branches = []
-            lof_pattern = r'<line_of_flight\s+title="([^"]+)">([\s\S]*?)</line_of_flight>'
-            matches = re.findall(lof_pattern, response_text)
-            for title, body in matches:
-                proposed_branches.append({"title": title, "content": body.strip()})
-            response_text = re.sub(lof_pattern, "", response_text).strip()
-
-            # Parse and strip proposed resonance links (<resonance target="ID">Reason</resonance>)
-            proposed_resonances = []
-            res_pattern = r'<resonance\s+target=["\']([^"\']+)["\']\s*>([\s\S]*?)</resonance>'
-            res_matches = re.findall(res_pattern, response_text)
-            for target_id_str, justification in res_matches:
-                try:
-                    target_id = int(target_id_str)
-                    proposed_resonances.append((target_id, justification.strip()))
-                except ValueError:
-                    logger.warning("Invalid resonance target ID: %s", target_id_str)
-            response_text = re.sub(res_pattern, "", response_text).strip()
             thinking = result.payload.get("thinking")
             embedding = result.payload.get("embedding", b"")
             embedding_model = result.payload.get("embedding_model", "unknown")

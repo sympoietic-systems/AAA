@@ -40,3 +40,10 @@ Additionally, we adjusted `mass_decay_lambda_base` in [config.yaml](file:///d:/A
 - **Separation of Concerns:** Clear distinction between processing components (`ModuleMeta` and `PipelineRegistry`) and runtime procedural actions (`SkillNode` in database).
 - **Maintainability:** New developers/agents can easily identify where pipeline modules reside without conflating them with user/system procedural skills.
 - **Backward Compatibility:** All existing DB schemas, tables, and API contracts remain intact and fully functional.
+
+## Post-Implementation Update (2026-06-15)
+
+The pipeline registry was further integrated into the dep injection system:
+- All 19 route files now use `Depends(get_registry)` and `Depends(get_pipeline_order)`
+  from `api/deps.py` instead of `getattr(request.app.state, "registry", None)`
+- The `backend/pipeline/` directory structure confirmed stable — no further renames needed

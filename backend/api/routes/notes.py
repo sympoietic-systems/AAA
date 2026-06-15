@@ -1,5 +1,6 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
+from backend.api.deps import get_app_state, get_note_repo
 from backend.services.note import NoteService
 
 from backend.api.schemas import NoteCreateRequest, NoteResponse, NoteUpdateRequest
@@ -9,11 +10,13 @@ router = APIRouter()
 
 @router.post("/conversations/{conversation_id}/notes", response_model=NoteResponse)
 async def create_note(
-    conversation_id: str, req: NoteCreateRequest,
-    request: Request, background_tasks: BackgroundTasks,
+    conversation_id: str,
+    req: NoteCreateRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    state=Depends(get_app_state),
+    note_repo=Depends(get_note_repo),
 ):
-    state = request.app.state
-    note_repo = getattr(state, "note_repo", None)
     if not note_repo:
         raise HTTPException(status_code=500, detail="Note repository not configured")
 
@@ -36,9 +39,7 @@ async def create_note(
 
 
 @router.get("/conversations/{conversation_id}/notes", response_model=list[NoteResponse])
-async def get_notes(conversation_id: str, request: Request):
-    state = request.app.state
-    note_repo = getattr(state, "note_repo", None)
+async def get_notes(conversation_id: str, note_repo=Depends(get_note_repo)):
     if not note_repo:
         raise HTTPException(status_code=500, detail="Note repository not configured")
     notes = NoteService.list_by_conversation(note_repo, conversation_id)
@@ -47,11 +48,13 @@ async def get_notes(conversation_id: str, request: Request):
 
 @router.patch("/conversations/{conversation_id}/notes/{note_id}", response_model=NoteResponse)
 async def update_note_route(
-    conversation_id: str, note_id: str,
-    req: NoteUpdateRequest, request: Request, background_tasks: BackgroundTasks,
+    conversation_id: str,
+    note_id: str,
+    req: NoteUpdateRequest,
+    background_tasks: BackgroundTasks,
+    state=Depends(get_app_state),
+    note_repo=Depends(get_note_repo),
 ):
-    state = request.app.state
-    note_repo = getattr(state, "note_repo", None)
     if not note_repo:
         raise HTTPException(status_code=500, detail="Note repository not configured")
 
@@ -77,9 +80,7 @@ async def update_note_route(
 
 
 @router.delete("/conversations/{conversation_id}/notes/{note_id}")
-async def delete_note(conversation_id: str, note_id: str, request: Request):
-    state = request.app.state
-    note_repo = getattr(state, "note_repo", None)
+async def delete_note(conversation_id: str, note_id: str, note_repo=Depends(get_note_repo)):
     if not note_repo:
         raise HTTPException(status_code=500, detail="Note repository not configured")
     NoteService.delete(note_repo, note_id)
