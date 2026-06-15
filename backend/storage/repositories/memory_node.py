@@ -41,12 +41,28 @@ class MemoryNodeRepository(BaseRepository):
 
     @with_connection
     def get_nodes(self, conversation_id: str) -> list[dict]:
+        """Return memory nodes, deduplicated by id across checkpoints.
+
+        When the same node id exists under multiple checkpoints (each consolidation
+        re-writes nodes with the same id), prefer the version with the highest
+        revision_count, then highest intensity, then newest last_merged_at.
+        """
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM memory_nodes WHERE conversation_id = ? ORDER BY intensity DESC",
+            "SELECT * FROM memory_nodes WHERE conversation_id = ? "
+            "ORDER BY revision_count DESC, intensity DESC, last_merged_at DESC",
             (conversation_id,),
         ).fetchall()
-        return [_row_to_memory_node(r) for r in rows]
+
+        seen: set[str] = set()
+        result: list[dict] = []
+        for r in rows:
+            node = _row_to_memory_node(r)
+            nid = node.get("id", "")
+            if nid and nid not in seen:
+                seen.add(nid)
+                result.append(node)
+        return result
 
     @with_connection
     def get_node(self, node_id: str) -> dict | None:

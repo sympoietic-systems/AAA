@@ -81,13 +81,17 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false, classNam
     )
   }
 
+  const uniqueNodes = memoryNodes.filter(
+    (n, i, a) => a.findIndex(x => x.id === n.id) === i
+  )
+
   return (
     <div className="mt-1.5 pt-1.5">
       <div className="text-[8px] text-[#555] mb-1.5 uppercase tracking-wider select-none font-bold">
-        Intra-Active Memory Nodes ({memoryNodes.length})
+        Intra-Active Memory Nodes ({uniqueNodes.length})
       </div>
       <div className={className || "flex flex-col gap-1.5"} style={style}>
-        {memoryNodes.filter((n, i, a) => a.findIndex(x => x.id === n.id) === i).map((node) => (
+        {uniqueNodes.map((node) => (
           <MemoryNodeCard key={node.id} node={node} />
         ))}
       </div>
