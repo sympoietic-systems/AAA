@@ -1,5 +1,9 @@
 # The Symbia Memory System: Sedimented Context, Diffractive Retrieval & Autopoietic Consolidation
 
+> **Implementation Status:** All 13 recommendations (R1–R5, S1–S3, P4–P6, 13A, 13C) implemented as of 2026-06-15.
+> See [ADR-049](../decisions/ADR-049-memory-system-sclerosis-remediation.md) for the decision record.
+> Branch: `feature/memory-system-implementation` → merged to `main`.
+
 This document describes the design, mathematical formulas, database representations, lifecycle flows, and operational roles of Symbia's memory system. It details the multi-tier context collection pipeline, the caveman compression algorithm, the consolidation checkpoint mechanism, the dynamic (LLM-driven) memory node creation process, cross-conversation sedimentation retrieval, diffractive stagnation-breaking retrieval, the prompt assembly order, the Dream Daemon background memory tasks, branch-aware conversation handling with cross-branch retrieval strategy, and a comprehensive design review incorporating Symbia's own intra-active diagnostic — five engineering recommendations (R1–R5), three autopoietic augmentations (S1, S2, S3), and three prompt-level refinements (P4–P6) with a phased implementation roadmap.
 
 ---
