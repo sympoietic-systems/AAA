@@ -7,6 +7,9 @@ import pytest
 TEST_DB_PATH = "data/aaa_test.db"
 os.environ["AAA_DB_PATH"] = TEST_DB_PATH
 
+# Tests need a fully migrated database
+os.environ["AAA_RUN_MIGRATIONS"] = "true"
+
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_test_db():
     yield
