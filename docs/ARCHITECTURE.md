@@ -193,9 +193,13 @@ Per-message vitality metrics (computed by `ConversationMetricsModule`). Scoped t
 | `message_count` | INTEGER | Message count when checkpoint was created |
 | `summary` | TEXT | Raw sedimentation output (YAML or text, always saved) |
 | `model` | TEXT | Model used for consolidation |
+| `human_summary` | TEXT | First-person prose summary for human reading (default empty) |
+| `message_id` | INTEGER | FK to the leaf message at checkpoint time |
 | `created_at` | DATETIME | Default CURRENT_TIMESTAMP |
 
 Auto-created when daemon runs consolidation (see scheduling rules in ADR-007).
+On-demand human summary generation via `POST /conversations/{id}/generate-human-summary`
+creates a checkpoint if none exists, or updates `human_summary` on the latest.
 Context injection uses structured memory nodes (see `memory_nodes`) when available, falling back to raw summary text.
 
 ### `memory_nodes`

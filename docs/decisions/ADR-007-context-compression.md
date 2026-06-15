@@ -97,6 +97,14 @@ Both outputs are stored in the checkpoint: `summary` (raw YAML) and
 `human_summary` (prose). The context injection layer prefers `human_summary`
 when available, falling back to the raw YAML if the summary call failed.
 
+An on-demand endpoint `POST /conversations/{id}/generate-human-summary` allows
+users to manually trigger prose summary generation for conversations where the
+daemon hasn't run consolidation yet, or where the summary call was missed. The
+endpoint uses the same `conversation_summary` action and shared
+`generate_human_summary_text()` function as the daemon, ensuring consistent
+output regardless of trigger path. If no checkpoint exists, one is created with
+an empty `summary` and the generated `human_summary`.
+
 This IS the **sedimentation** layer — the "scar tissue" that persists as the
 conversation grows beyond the floating window.
 

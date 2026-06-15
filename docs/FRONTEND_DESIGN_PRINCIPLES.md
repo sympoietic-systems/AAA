@@ -385,6 +385,7 @@ ConversationLandingPage (memo'd, prop-driven from App.tsx)
     ├── Meta: created: ... updated: ... messages: ... tags: ...
     └── Tab bar: Summary • Notes (N) • Memory Nodes
         ├── Summary tab   → displayConv.human_summary (data from list or getConversation)
+        │                    If missing: [ generate summary ] button → calls POST generate-human-summary
         ├── Notes tab     → <NotesSection notes={notes} /> (shared component, lazy-loaded)
         └── Memory Nodes tab → <MemoryNodesSection conversationId={id} enabled /> (shared component, self-fetching + polling)
 ```

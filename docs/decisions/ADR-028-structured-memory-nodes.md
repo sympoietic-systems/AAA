@@ -140,8 +140,8 @@ New table `memory_nodes` stores individual parsed nodes separately from the raw 
 | `storage/repository.py` | `save()` accepts and `get_latest()` returns `human_summary` |
 | `core/daemon.py` | `_extract_human_summary()` regex parser, passes to `save()` |
 | `modules/consolidation_checkpoint.py` | Context injection prepends prose summary before node list |
-| `api/routes.py` | All conversation endpoints return `human_summary` |
+| `api/routes.py` | All conversation endpoints return `human_summary`; `POST /conversations/{id}/generate-human-summary` for on-demand generation |
 | `api/schemas.py` | `ConversationInfo.human_summary` field |
-| `frontend/src/api/client.ts` | `ConversationInfo.human_summary` field |
-| `frontend/src/components/ChatView.tsx` | Summary toggle shows human-readable prose (falls back to raw) |
+| `frontend/src/api/conversations.ts` | `ConversationInfo.human_summary` field; `generateHumanSummary()` function |
+| `frontend/src/components/pages/landing/ConversationLandingPage.tsx` | Summary tab: shows prose (falls back to raw), "generate summary" button when absent |
 | `frontend/src/App.tsx` | Passes `humanSummary` prop to ChatView |
