@@ -497,31 +497,49 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       {/* Log tab */}
       {activeTab === "log" && (
         <div>
-          <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Metabolism Events ]</div>
+          <div className="text-[#555] font-mono text-[10px] uppercase">[ Metabolism Events ]</div>
           {(!b.events || b.events.length === 0) ? (
             <div className="text-[#444] italic mt-0.5 font-mono">No metabolic events logged</div>
           ) : (
-            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 mt-1">
+            <div className="space-y-2 max-h-[320px] overflow-y-auto mt-1">
               {b.events.map((e) => {
+                // Use parsed values from backend if available, fall back to regex
+                const massVal = e.mass ?? (() => { const m = e.description?.match(/mass=([\d.]+)/); return m ? parseFloat(m[1]) : null; })()
+                const confVal = e.confidence ?? (() => { const c = e.description?.match(/conf=([\d.]+)/); return c ? parseFloat(c[1]) : null; })()
                 const massDeltaMatch = e.description?.match(/\(delta=([+\-\d.]+)\)/)
-                const confMatch = e.description?.match(/conf=([\d.]+)/)
-                const massDelta = massDeltaMatch ? parseFloat(massDeltaMatch[1]) : null
-                const finalConf = confMatch ? parseFloat(confMatch[1]) : null
+                const massDelta = massDeltaMatch ? parseFloat(massDeltaMatch[1]) : e.delta_confidence || null
+
+                const evType = e.event_type || "event"
+                const evTypeColor =
+                  evType === "atrophy" ? "text-[#f59e0b]" :
+                  evType === "collapse" ? "text-[#ef4444]" :
+                  evType === "emergence" ? "text-[#22c55e]" :
+                  evType === "crystallization" ? "text-[#60a5fa]" :
+                  evType === "support" ? "text-[#a78bfa]" :
+                  evType === "revision" ? "text-[#f472b6]" :
+                  evType === "accretion" ? "text-[#2dd4bf]" :
+                  "text-[#888]"
+
                 return (
-                  <div key={e.id} className="leading-normal">
-                    <div className="flex items-center justify-between text-[#888]">
-                      <span className="font-mono text-[10px]">{formatTime(e.timestamp)}</span>
-                      <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
-                        {massDelta !== null && massDelta !== 0 && (
-                          <span className={massDelta > 0 ? "text-[#60a5fa]" : massDelta < 0 ? "text-[#f87171]" : "text-[#555]"}>
-                            Δm:{massDelta > 0 ? "+" : ""}{massDelta.toFixed(3)}
-                          </span>
-                        )}
-                        {finalConf !== null && <span className="text-[#4ade80]">c:{(finalConf * 100).toFixed(0)}%</span>}
-                      </div>
+                  <div key={e.id}>
+                    <div className="flex items-center gap-x-2 font-mono text-[10px]">
+                      <span className="text-[#555]">{formatTime(e.timestamp)}</span>
+                      {massVal !== null && (
+                        <span className="text-[#93c5fd]">
+                          m:<span>{massVal.toFixed(3)}</span>
+                          {massDelta !== null && massDelta !== 0 && (
+                            <span className={massDelta > 0 ? "text-[#4ade80]" : "text-[#f87171]"}>
+                              ({massDelta > 0 ? "+" : ""}{massDelta.toFixed(3)})
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {confVal !== null && (
+                        <span className="text-[#4ade80]">c:{(confVal * 100).toFixed(0)}%</span>
+                      )}
+                      <span className={`${evTypeColor} uppercase tracking-wider`}>[{evType}]</span>
                     </div>
-                    <div className="text-[#ccc] mt-0.5">
-                      <span className="text-[#6c6c8a] font-mono text-[10px] mr-1">[{e.source_type}:{e.source_id}]</span>
+                    <div className="text-[10px] text-[#777] font-mono mt-0.5 ml-2 break-words">
                       {e.description}
                     </div>
                   </div>

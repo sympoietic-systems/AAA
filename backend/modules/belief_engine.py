@@ -351,6 +351,17 @@ class BeliefDynamicsEngine(ProcessingModule):
                 f" ({collapsed} collapsed)" if collapsed > 0 else "",
             )
 
+            # Create a batch summary trace notification for the UI
+            collapsed_str = f" ({collapsed} collapsed)" if collapsed > 0 else ""
+            snippet = f"Belief atrophy cycle: {atrophied} belief(s) decayed{collapsed_str}."
+            self._belief_repo.create_notification(
+                snippet=snippet,
+                notif_type="trace",
+                source="belief_engine:atrophy",
+                source_type=None,
+                source_id=None,
+            )
+
         return {"atrophied": atrophied, "collapsed": collapsed}
 
     def _compute_lifecycle_stage(

@@ -197,6 +197,31 @@ class BeliefRepository(BaseRepository):
         conn.commit()
 
     @with_connection
+    def create_notification(
+        self,
+        snippet: str,
+        notif_type: str = "trace",
+        source: str | None = None,
+        source_type: str | None = None,
+        source_id: str | None = None,
+    ) -> None:
+        """Create a notification entry in the notifications table."""
+        try:
+            import uuid
+            from datetime import datetime, timezone
+            conn = self._conn()
+            conn.execute(
+                """INSERT INTO notifications (id, type, timestamp, snippet, source, source_type, source_id, read, dismissed)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)""",
+                (str(uuid.uuid4()), notif_type, datetime.now(timezone.utc).isoformat(), snippet, source, source_type, source_id),
+            )
+            conn.commit()
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "Failed to create notification: type=%s source=%s", notif_type, source, exc_info=True,
+            )
+
+    @with_connection
     def fold_ghost_into(self, ghost_id: str, keeper_id: str) -> None:
         """13C: Mark a ghost belief as folded and record which keeper absorbed it."""
         conn = self._conn()
@@ -292,18 +317,24 @@ class BeliefRepository(BaseRepository):
                 snippet = snippet.strip()
                 
                 import uuid
-                from datetime import datetime
+                from datetime import datetime, timezone
                 conn.execute(
-                    """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
-                       VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
-                    (str(uuid.uuid4()), datetime.utcnow().isoformat(), snippet, f"belief:{belief_label}"),
+                    """INSERT INTO notifications (id, type, timestamp, snippet, source, source_type, source_id, read, dismissed)
+                       VALUES (?, 'trace', ?, ?, ?, ?, ?, 0, 0)""",
+                    (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{belief_label}", source_type, belief_id),
                 )
                 conn.commit()
             except Exception:
-                pass
+                logging.getLogger(__name__).warning(
+                    "Failed to create notification for belief event %s on belief '%s'",
+                    event_type, belief_id, exc_info=True,
+                )
 
         except Exception:
-            pass
+            logging.getLogger(__name__).warning(
+                "Failed to insert belief event %s for belief '%s'",
+                event_type, belief_id, exc_info=True,
+            )
 
     @with_connection
     def get_events_for_belief(self, belief_id: str, limit: int = 100) -> list[BeliefEvent]:

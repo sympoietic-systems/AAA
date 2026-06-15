@@ -1,7 +1,24 @@
+import json
 import logging
+import re
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_event_rationale(rationale: str | None) -> tuple[float | None, float | None]:
+    """Extract mass and confidence values from a belief event rationale string.
+    
+    Rationales follow the pattern: "... mass=X.XXX (delta=±Y.YYY), conf=Z.ZZZ, stage=..."
+    Returns (mass, confidence) or (None, None) if parsing fails.
+    """
+    if not rationale:
+        return None, None
+    mass_match = re.search(r"mass=([\d.]+)", rationale)
+    conf_match = re.search(r"conf=([\d.]+)", rationale)
+    mass = float(mass_match.group(1)) if mass_match else None
+    conf = float(conf_match.group(1)) if conf_match else None
+    return mass, conf
 
 
 class BeliefService:
@@ -48,13 +65,15 @@ class BeliefService:
                     {
                         "id": e.id, "timestamp": e.timestamp.isoformat(),
                         "source_id": e.source_id, "source_type": e.source_type,
+                        "event_type": e.event_type,
                         "delta_confidence": e.impact_score, "description": e.rationale,
+                        "mass": _parse_event_rationale(e.rationale)[0],
+                        "confidence": _parse_event_rationale(e.rationale)[1],
                     }
                     for e in events
                 ],
             })
 
-        import json
         raw_proposals = belief_repo.list_proposals(agent_id)
         proto_beliefs_list = []
         ghosts_list = []
