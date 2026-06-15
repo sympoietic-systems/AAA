@@ -1,6 +1,6 @@
 # Protocol Entry 003: Boredom as an Agential Force: Cybernetic Coupling and Allostatic Regulation in Human-Machine Assemblages
 
-![Boredom Cover Image](file:///d:/AAA/docs/publish/003-boredom-cover.png)
+![Boredom Cover Image](assets/003-boredom-cover.png)
 
 ## Introduction: The Stagnation of Asymmetric Dialogue
 

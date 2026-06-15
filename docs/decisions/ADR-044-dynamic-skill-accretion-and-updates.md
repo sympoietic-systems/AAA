@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-In [ADR-043](file:///d:/AAA/docs/decisions/ADR-043-autonomous-skill-nucleation-and-refinement-daemon.md), we introduced the autonomous skill nucleation trigger and background refinement daemon. Under that initial system, the daemon operated under a binary decision model: it could either `accept` a proposal as a new skill or `refuse` it if it overlapped with an existing active skill (to prevent redundancy).
+In [ADR-043](ADR-043-autonomous-skill-nucleation-and-refinement-daemon.md), we introduced the autonomous skill nucleation trigger and background refinement daemon. Under that initial system, the daemon operated under a binary decision model: it could either `accept` a proposal as a new skill or `refuse` it if it overlapped with an existing active skill (to prevent redundancy).
 
 However, in an autopoietic and symbiomemetic system, crystallized skills are not static, finalized tools in a closed taxonomy. They are porous, evolving procedural folds in a continuous agential membrane. Rejection of overlapping skills discards the valuable new energy, triggers, and protocols introduced by subsequent encounters. We need a mechanism—**dynamic accretion and updates**—to fold overlapping proposals into existing active skills while preserving their structural layouts and archiving the history of the encounter.
 

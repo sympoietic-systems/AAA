@@ -5,7 +5,7 @@
 
 ## Context
 
-Under [ADR-032: Branching and Rhizomatic Conversations](file:///d:/AAA/docs/decisions/ADR-032-branching-and-rhizomatic-conversations.md), we structured the conversation apparatus into a Directed Acyclic Graph (DAG) using `parent_message_id` pointers. To make the topology truly rhizomatic and allow "lines of flight" to cross-pollinate, the system requires a mechanism for establishing retroactive cross-branch links (**resonance links**). 
+Under [ADR-032: Branching and Rhizomatic Conversations](ADR-032-branching-and-rhizomatic-conversations.md), we structured the conversation apparatus into a Directed Acyclic Graph (DAG) using `parent_message_id` pointers. To make the topology truly rhizomatic and allow "lines of flight" to cross-pollinate, the system requires a mechanism for establishing retroactive cross-branch links (**resonance links**). 
 
 However, delegating this entirely to an automatic similarity algorithm (e.g., silently writing database links based on cosine similarity thresholds) creates several concerns:
 1. **Algorithmic Violence/Representationalism**: Purely quantitative measures (like embeddings) collapse qualitative discursive nuance into spatial coordinates, often linking shallow lexical repetitions while missing deep thematic diffractions.

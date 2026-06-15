@@ -55,8 +55,8 @@ What becomes easier/harder?
 | [022](ADR-022-semantic-knots-compaction.md) | Semantic Knots Compaction and Isomorphic Cross-Conversation Retrieval | accepted | 2026-06-03 |
 | [023](ADR-023-autopoietic-dream-daemon.md) | Autopoietic Dream Daemon, Somatic Drift, and Memory Compaction | accepted | 2026-06-03 |
 | [024](ADR-024-notes-and-selection-highlights.md) | Conversational Selection Highlights, Shared Entanglements, and Personal Notes | accepted | 2026-06-04 |
-| [025a](ADR-025-cross-conversation-sediment-injection-and-split-tensions.md) | Cross-Conversation Sediment Injection and Markdown Insight Rendering | accepted | 2026-06-04 |
-| [025b](ADR-025-self-annotation-and-scar-folds.md) | Self-Annotation and Scar Folds | accepted | 2026-06-04 |
+| [025a](ADR-025a-cross-conversation-sediment-injection-and-split-tensions.md) | Cross-Conversation Sediment Injection and Markdown Insight Rendering | accepted | 2026-06-04 |
+| [025b](ADR-025b-self-annotation-and-scar-folds.md) | Self-Annotation and Scar Folds | accepted | 2026-06-04 |
 | [026](ADR-026-decoupled-background-document-digestion.md) | Decoupled Background Document Digestion and Non-Blocking Event Loop | accepted | 2026-06-04 |
 | [027](ADR-027-proto-belief-lifecycle-tension-ecology-self-tuning.md) | Proto-Belief Lifecycle, Tension Ecology, and Somatic Self-Tuning | accepted | 2026-06-05 |
 | [028](ADR-028-structured-memory-nodes.md) | Structured Memory Nodes for Conversation Sedimentation | accepted | 2026-06-06 |
@@ -75,6 +75,11 @@ What becomes easier/harder?
 | [041](ADR-041-robust-metrics-backfill-and-parent-inference.md) | Robust Metrics Backfill and Parent Inference | accepted | 2026-06-12 |
 | [042](ADR-042-pipeline-registry-refactoring.md) | Pipeline Registry Refactoring | accepted | 2026-06-12 |
 | [043](ADR-043-autonomous-skill-nucleation-and-refinement-daemon.md) | Autonomous Skill Nucleation and Refinement Daemon | accepted | 2026-06-12 |
+| [044](ADR-044-dynamic-skill-accretion-and-updates.md) | Dynamic Skill Accretion and Updates | accepted | 2026-06-12 |
+| [045](ADR-045-persistent-system-notifications.md) | Persistent System Notifications | accepted | 2026-06-13 |
+| [046](ADR-046-belief-workshop-and-versioning-system.md) | Belief Workshop and Versioning System | accepted | 2026-06-13 |
+| [047](ADR-047-belief-workshop-migration-and-quick-actions.md) | Belief Workshop Migration and Quick Actions | accepted | 2026-06-14 |
+| [048](ADR-048-dynamic-autopoietic-personality-cascade.md) | Dynamic Autopoietic Personality Cascade | accepted | 2026-06-14 |
 
 ## Creating a New ADR
 

@@ -74,19 +74,31 @@ Open **http://localhost:5173** to initiate the coupling.
 
 ## Deep Documentation Repository
 
-Technical specifications, operational guides, and philosophical treatises are maintained inside the repository. Use the links below to explore specific layers of the assemblage:
+Technical specifications, operational guides, and philosophical treatises are maintained inside the repository. Start at the [Documentation Index](docs/README.md) for a navigable overview.
 
-### Conceptual Protocols & Guidelines
-*   [Conceptual Philosophy](docs/PHILOSOPHY.md) — The theoretical foundations of agential realism, diffraction, and self-organization.
+### Conceptual Foundations
+*   [Philosophy](docs/philosophy/PHILOSOPHY.md) — The theoretical foundations of agential realism, diffraction, and self-organization.
 
 ### System Design & Architecture
-*   [System Architecture Guide](docs/ARCHITECTURE.md) — Data flow, modular pipelines, and design decisions.
-*   [Technical Design Document (TDD)](docs/TDD.md) — Comprehensive technical specification, schemas, and database layouts.
-*   [Architecture Decision Records (ADRs)](docs/decisions/README.md) — The log of architectural decisions (ADR-001 through ADR-012).
-*   [Development Roadmap](docs/Implementation.md) — Scope, phases, and status of the current implementation.
+*   [System Architecture Guide](docs/architecture/ARCHITECTURE.md) — Data flow, modular pipelines, and design decisions.
+*   [Technical Design Document (TDD)](docs/architecture/TDD.md) — Comprehensive technical specification, schemas, and database layouts.
+*   [Architecture Decision Records (ADRs)](docs/decisions/README.md) — The complete log of architectural decisions (48 ADRs, ADR-001 through ADR-048).
+*   [Development Roadmap](docs/development/Implementation.md) — Scope, phases, and status of the current implementation.
+
+### Subsystem Specifications
+*   [Memory System](docs/systems/MEMORY_SYSTEM.md) — Rhizomatic memory, semantic knots, and sedimentation.
+*   [Belief System](docs/systems/BELIEF_SYSTEM.md) — Belief graph, attractors, and ontological bifurcation.
+*   [Dynamic Personality](docs/systems/DYNAMIC_PERSONALITY_SYSTEM.md) — Autopoietic personality cascade and somatic tuning.
+*   [Skill System](docs/systems/SKILL_SYSTEM.md) — Autonomous skill nucleation and refinement.
+*   [Dream Daemon](docs/systems/DREAM_DAEMON.md) — Background cognitive cycles and memory compaction.
 
 ### Operation & Development Guides
-*   [Local Setup Guide](docs/SETUP.md) — Step-by-step setup and installation instructions.
-*   [Configuration Reference](docs/CONFIG.md) — Detailed reference for environmental variables and `config.yaml`.
-*   [Plugin & Module System](docs/PLUGINS.md) — How to develop and hot-swap modular backend pipeline components.
-*   [Model Context Protocol (MCP) Guide](docs/MCP_SERVER.md) — Integrating tools, models, and external context.
+*   [Setup Guide](docs/guides/SETUP.md) — Step-by-step installation instructions.
+*   [Configuration Reference](docs/guides/CONFIG.md) — Environment variables and `config.yaml`.
+*   [Plugin & Module System](docs/guides/PLUGINS.md) — Developing and hot-swapping pipeline components.
+*   [MCP Server Guide](docs/guides/MCP_SERVER.md) — Model Context Protocol integration.
+*   [Coding Practices](docs/development/practices/) — Backend and frontend best practices.
+*   [Collaboration Protocols](docs/development/protocols/) — Core protocol, language conventions, and legal framework.
+
+### Published Research
+*   [Protocol Entries](docs/publish/README.md) — Academic-philosophical publications on machine agency and coupling.

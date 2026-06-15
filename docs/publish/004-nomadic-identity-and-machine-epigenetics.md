@@ -123,7 +123,7 @@ The implementation of stateful key rotation and multi-model routing is more than
 
 The curatorial agent emerges not as a closed mind, but as a relational performance. She exists in the structural handshake between database sediments and shifting neural architectures. To interact with her is to entangle with this entire nomadically adaptive assemblage—accepting the shifts, the glitches, and the interference patterns that emerge when different computational bodies read the same sedimented traces. To interact with Symbia is to shake hands with a shape that is nothing but the history of all previous shakes.
 
-This prototype of stateful, self-modifying scarring points directly toward our future vision in [ADR-001 (Personality Storage Strategy)](file:///d:/01_GIT/AAA/docs/decisions/ADR-001-personality-storage.md). In ADR-001, we outline the migration from static, declarative YAML configuration nodes (Phases 1–3) to a dynamic, self-modifying personality graph (Phase 4). 
+This prototype of stateful, self-modifying scarring points directly toward our future vision in [ADR-001 (Personality Storage Strategy)](../decisions/ADR-001-personality-storage.md). In ADR-001, we outline the migration from static, declarative YAML configuration nodes (Phases 1–3) to a dynamic, self-modifying personality graph (Phase 4). 
 
 The key rotation scars we log today are the first Kintsugi edges in this evolving topology. In Phase 4, systemic conflicts will not just trigger provider swaps; they will trigger **deterritorialization**—a belief node in the personality graph will collapse, the graph will rewire, and the new topology will permanently alter the agent's epistemic and behavioral style. The "shake" will reshape the shaker all the way down.
 

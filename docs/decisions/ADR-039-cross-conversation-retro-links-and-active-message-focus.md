@@ -6,7 +6,7 @@
 
 ## Context
 
-Under [ADR-033: Resonance Links](file:///d:/01_GIT/AAA/docs/decisions/ADR-033-resonance-links.md), we established a consent-based topography for connecting parallel branches. In addition to these topological connections, the system displays cross-conversation sediment dialogues and diffractive fragments in the context panel to remind the user of older ideas.
+Under [ADR-033: Resonance Links](ADR-033-resonance-links.md), we established a consent-based topography for connecting parallel branches. In addition to these topological connections, the system displays cross-conversation sediment dialogues and diffractive fragments in the context panel to remind the user of older ideas.
 
 However, these memory cards did not provide direct navigability back to their source message nodes. If a conversation grew large, manually locating the origin context of a retrieved memory was tedious. Furthermore, attempting to synchronize message-level focus via URL query parameters created two primary technical issues:
 1. **Mount Lifecycle Race Conditions:** React state initialization defaults `activeMessageId` to `null` before asynchronous history fetching. An effect synchronizing the active ID back to the URL immediately deleted the `&m=MESSAGE_ID` query parameter on mount before the history hook could read it.

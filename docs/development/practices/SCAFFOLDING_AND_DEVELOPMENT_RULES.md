@@ -11,8 +11,16 @@ As the AAA codebase grows, maintaining a strict separation of concerns is critic
 ```
 AAA/
 ├── .agents/                    # Agent skills and runtime configurations
-├── docs/                       # Architectural decisions (ADRs) and specs
-│   └── decisions/              # System-wide Architecture Decision Records
+├── docs/                       # Full documentation repository
+│   ├── README.md               # Central docs index
+│   ├── philosophy/             # Conceptual foundations
+│   ├── architecture/           # System architecture and technical specs
+│   ├── decisions/              # Architecture Decision Records (ADRs)
+│   ├── guides/                 # Setup, config, and operational guides
+│   ├── systems/                # Subsystem deep-dive specifications
+│   ├── development/            # Roadmap, practices, and protocols
+│   ├── publish/                # Published research entries
+│   └── images/                 # UI screenshots
 ├── backend/                    # FastAPI Backend Application
 │   ├── api/                    # Routers, path definitions, and request schemas
 │   │   ├── routes.py           # Core routes for endpoints (/chat, /history, /beliefs, etc.)
@@ -147,8 +155,8 @@ AAA utilizes Tailwind CSS v4 alongside custom HSL color definitions in [frontend
 
 ### 5.1. Writing Architectural Decisions (ADR)
 When making architectural modifications, additions to external APIs, or changes to state-tracking math:
-1. Create a new markdown file in [docs/decisions/](file:///d:/01_GIT/AAA/docs/decisions/) matching the format `ADR-NNN-slug.md`.
-2. Follow the template defined in [docs/decisions/README.md](file:///d:/01_GIT/AAA/docs/decisions/README.md).
+1. Create a new markdown file in [docs/decisions/](../../decisions/) matching the format `ADR-NNN-slug.md`.
+2. Follow the template defined in [docs/decisions/README.md](../../decisions/README.md).
 3. Update the table of contents in the decisions folder index.
 
 ### 5.2. Code Comments and Docstrings

@@ -222,13 +222,13 @@ async def get_messages_by_conversation_id(conversation_id: str, limit: int = 50)
 @mcp.resource("aaa://philosophy")
 async def get_philosophy() -> str:
     """Get the conceptual foundations and philosophical commitments of the Autopoietic Agentic Assemblage."""
-    philosophy_path = Path(__file__).parent.parent / "docs" / "PHILOSOPHY.md"
+    philosophy_path = Path(__file__).parent.parent / "docs" / "philosophy" / "PHILOSOPHY.md"
     if philosophy_path.exists():
         try:
             return philosophy_path.read_text(encoding="utf-8")
         except Exception as e:
             return f"Error reading philosophy document: {e}"
-    return "Philosophy document not found at docs/PHILOSOPHY.md"
+    return "Philosophy document not found at docs/philosophy/PHILOSOPHY.md"
 
 
 @mcp.resource("aaa://identity")
