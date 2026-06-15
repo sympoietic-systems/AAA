@@ -7,10 +7,10 @@ import { SectionHeader } from "./SectionHeader"
 import { VitalitySection } from "./VitalitySection"
 import { DiffractionSection } from "./DiffractionSection"
 import { TokensSection } from "./TokensSection"
-import { NotesSection } from "./NotesSection"
+import { NotesSection } from "../../shared/NotesSection"
 import { SedimentSection } from "./SedimentSection"
 import { SummarySection } from "./SummarySection"
-import { MemoryNodesSection } from "./MemoryNodesSection"
+import { MemoryNodesSection } from "../../shared/MemoryNodesSection"
 import { AttractorsSection } from "./AttractorsSection"
 
 export const SidePanel = memo(function SidePanel({

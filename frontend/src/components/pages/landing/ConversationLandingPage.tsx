@@ -1,5 +1,9 @@
-import { useState, useEffect, memo } from "react"
-import type { ConversationInfo } from "../../../api/client"
+import { useState, useEffect, memo, useCallback, useRef } from "react"
+import type { ConversationInfo, NoteInfo } from "../../../api/client"
+import { getConversation } from "../../../api/conversations"
+import { getNotes, deleteNote, updateNote } from "../../../api/notes"
+import { NotesSection } from "../../shared/NotesSection"
+import { MemoryNodesSection } from "../../shared/MemoryNodesSection"
 
 interface Props {
   conversations: ConversationInfo[]
@@ -16,6 +20,8 @@ interface Props {
   onLogout?: () => void
   agentFlux?: boolean
 }
+
+type DetailTab = "summary" | "notes" | "memory_nodes"
 
 function formatDate(dateStr?: string | null): string {
   if (!dateStr) return ""
@@ -73,7 +79,17 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState<"all" | "user" | "dreams" | "agents">("all")
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({})
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [detailConv, setDetailConv] = useState<ConversationInfo | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const detailRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<DetailTab>("summary")
+  const [notes, setNotes] = useState<NoteInfo[] | null>(null)
+  const [notesLoading, setNotesLoading] = useState(false)
+  const visitedTabs = useRef<Set<string>>(new Set())
 
   const getTagForCategory = (cat: typeof activeCategory): string | undefined => {
     if (cat === "dreams") return "dreams"
@@ -89,10 +105,85 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
     return () => clearTimeout(handler)
   }, [searchQuery, activeCategory])
 
-  const toggleExpand = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation()
-    setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }))
-  }
+  // Fetch detail when a conversation is selected
+  useEffect(() => {
+    if (!selectedId) {
+      setDetailConv(null)
+      return
+    }
+    // Reset tab data on selection change
+    setActiveTab("summary")
+    setNotes(null)
+    visitedTabs.current = new Set()
+
+    const cached = conversations.find(c => c.id === selectedId)
+    if (cached && cached.summary !== undefined) {
+      setDetailConv(cached)
+      return
+    }
+    setDetailLoading(true)
+    getConversation(selectedId)
+      .then(c => setDetailConv(c))
+      .catch(() => setDetailConv(null))
+      .finally(() => setDetailLoading(false))
+  }, [selectedId, conversations])
+
+  // Lazy load tab content (notes — memory nodes are self-fetching via MemoryNodesSection)
+  const ensureTab = useCallback((tab: DetailTab, convId: string) => {
+    const key = `${convId}:${tab}`
+    if (visitedTabs.current.has(key)) return
+    visitedTabs.current.add(key)
+
+    if (tab === "notes") {
+      setNotesLoading(true)
+      getNotes(convId)
+        .then(n => setNotes(n))
+        .catch(() => setNotes([]))
+        .finally(() => setNotesLoading(false))
+    }
+  }, [])
+
+  const handleTabClick = useCallback((tab: DetailTab) => {
+    setActiveTab(tab)
+    if (selectedId) ensureTab(tab, selectedId)
+  }, [selectedId, ensureTab])
+
+  // Scroll into view on mobile
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 768px)").matches) return
+    if (selectedId && detailRef.current) {
+      detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+    } else if (!selectedId && listRef.current) {
+      listRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }, [selectedId])
+
+  // Event delegation: click anywhere in the list container
+  const handleListClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = (e.target as HTMLElement).closest("[data-conv-id]") as HTMLElement | null
+    if (!el) return
+    const id = el.getAttribute("data-conv-id")
+    if (id) {
+      setSelectedId(prev => prev === id ? null : id)
+    }
+  }, [])
+
+  // Double-click to enter conversation
+  const handleListDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = (e.target as HTMLElement).closest("[data-conv-id]") as HTMLElement | null
+    if (!el) return
+    const id = el.getAttribute("data-conv-id")
+    if (id) onSelect(id)
+  }, [onSelect])
+
+  const selectedConv = selectedId ? conversations.find(c => c.id === selectedId) : null
+  const displayConv = detailConv || selectedConv || null
+
+  const structural = displayConv?.tags?.find(t => t.tag_type === "structural")
+  let letter = "U"
+  let letterColor = "text-[#6bc28c]"
+  if (structural?.tag === "dreams") { letter = "D"; letterColor = "text-[#a892ee]" }
+  else if (structural?.tag === "other agents") { letter = "A"; letterColor = "text-[#e09b67]" }
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666] selection:bg-[#4ade80]/20">
@@ -129,146 +220,267 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
         </div>
       </div>
 
-      {/* Filter bar — inline, no boxes */}
-      <div className="flex items-center gap-4 px-6 py-2 border-b border-[#1a1a1a] shrink-0">
-        <span className="text-[10px] text-[#333] select-none">filter:</span>
-        {(["all", "user", "dreams", "agents"] as const).map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`text-[10px] transition-colors cursor-pointer select-none ${
-              activeCategory === cat ? "text-[#ccc]" : "text-[#444] hover:text-[#888]"
-            }`}
+      {/* Two-panel body */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 md:overflow-hidden overflow-auto">
+
+        {/* LEFT: Conversation list */}
+        <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0 md:overflow-hidden border-r border-[#1a1a1a] max-h-[45vh] md:max-h-none">
+          {/* Filter bar */}
+          <div className="flex items-center gap-4 px-5 py-2 border-b border-[#1a1a1a] shrink-0">
+            <span className="text-[10px] text-[#333] select-none">filter:</span>
+            {(["all", "user", "dreams", "agents"] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`text-[10px] transition-colors cursor-pointer select-none ${
+                  activeCategory === cat ? "text-[#ccc]" : "text-[#444] hover:text-[#888]"
+                }`}
+              >
+                {activeCategory === cat ? `[${cat}]` : cat}
+              </button>
+            ))}
+            <span className="text-[#333] select-none mx-1">//</span>
+            <input
+              type="text"
+              placeholder="search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 max-w-xs text-[10px] bg-transparent text-[#aaa] outline-none placeholder-[#333] border-b border-[#222] focus:border-[#444] pb-px transition-colors"
+            />
+          </div>
+
+          {/* List */}
+          <div
+            ref={listRef}
+            onClick={handleListClick}
+            onDoubleClick={handleListDoubleClick}
+            className="flex-1 overflow-y-auto py-2 select-none"
           >
-            {activeCategory === cat ? `[${cat}]` : cat}
-          </button>
-        ))}
-        <span className="text-[#333] select-none mx-1">//</span>
-        <input
-          type="text"
-          placeholder="search..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 max-w-xs text-[10px] bg-transparent text-[#aaa] outline-none placeholder-[#333] border-b border-[#222] focus:border-[#444] pb-px transition-colors"
-        />
-      </div>
+            {loading && conversations.length === 0 ? (
+              <p className="text-[10px] text-[#444] animate-pulse px-5">loading...</p>
+            ) : conversations.length === 0 ? (
+              <p className="text-[10px] text-[#333] px-5">no results</p>
+            ) : (
+              <div className="flex flex-col">
+                {conversations.map((conv) => {
+                  const s = conv.tags?.find(t => t.tag_type === "structural")
 
-      {/* Log list */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
-        {loading && conversations.length === 0 ? (
-          <p className="text-[10px] text-[#444] animate-pulse mt-4">loading...</p>
-        ) : conversations.length === 0 ? (
-          <p className="text-[10px] text-[#333] mt-4">no results</p>
-        ) : (
-          <div className="flex flex-col">
-            {conversations.map((conv) => {
-              const isExpanded = !!expandedIds[conv.id]
-              const structural = conv.tags?.find(t => t.tag_type === "structural")
+                  let l = "U"
+                  let lc = "text-[#6bc28c]"
+                  if (s?.tag === "dreams") { l = "D"; lc = "text-[#a892ee]" }
+                  else if (s?.tag === "other agents") { l = "A"; lc = "text-[#e09b67]" }
 
-              let letter = "U"
-              let letterColor = "text-[#6bc28c]"
-              if (structural?.tag === "dreams") { letter = "D"; letterColor = "text-[#a892ee]" }
-              else if (structural?.tag === "other agents") { letter = "A"; letterColor = "text-[#e09b67]" }
+                  const title = (() => {
+                    const t = conv.title || "untitled"
+                    if (s?.tag === "dreams") return t.replace(/^Dream Log:\s*/i, "")
+                    return t
+                  })()
 
-              const title = (() => {
-                const t = conv.title || "untitled"
-                if (structural?.tag === "dreams") return t.replace(/^Dream Log:\s*/i, "")
-                return t
-              })()
-
-              return (
-                <div key={conv.id} className="group py-2 border-b border-[#111] last:border-0">
-                  {/* Main row */}
-                  <div
-                    className="flex items-baseline gap-2 cursor-pointer select-none"
-                    onClick={() => onSelect(conv.id)}
-                  >
-                    {/* Date */}
-                    <span className="text-[10px] text-[#444] shrink-0 w-28">
-                      {formatDate(conv.updated_at || conv.created_at)}
-                    </span>
-
-                    {/* Type letter */}
-                    <span className={`text-[10px] font-bold shrink-0 ${letterColor}`}>[{letter}]</span>
-
-                    {/* Separator */}
-                    <span className="text-[#333] shrink-0">&gt;&gt;</span>
-
-                    {/* Title */}
-                    <span className="text-[11px] text-[#bbb] group-hover:text-white transition-colors truncate flex-1 min-w-0">
-                      {title}
-                    </span>
-
-                    {/* Node count */}
-                    <span className="text-[10px] text-[#333] shrink-0">[{conv.message_count}]</span>
-
-                    {/* Actions — only visible on hover */}
-                    <span className="hidden group-hover:inline-flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={(e) => toggleExpand(e, conv.id)}
-                        className="text-[10px] text-[#555] hover:text-[#888] transition-colors"
-                      >
-                        {isExpanded ? "[-]" : "[+]"}
-                      </button>
-                      {agentFlux && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (confirm("Delete?")) onDelete(conv.id)
-                          }}
-                          className="text-[10px] text-[#444] hover:text-red-500 transition-colors"
-                        >
-                          [x]
-                        </button>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Tags row */}
-                  {conv.tags && conv.tags.length > 0 && (
-                    <div className="pl-32 mt-0.5">
-                      <Tags tags={conv.tags} />
-                    </div>
-                  )}
-
-                  {/* Expanded summary */}
-                  {isExpanded && (
+                  return (
                     <div
-                      className="pl-32 mt-2 flex flex-col gap-1.5 pb-1"
-                      onClick={(e) => e.stopPropagation()}
+                      key={conv.id}
+                      data-conv-id={conv.id}
+                      data-selected={selectedId === conv.id ? "true" : undefined}
+                      className={`
+                        flex items-baseline gap-1.5 px-5 py-1.5 cursor-pointer
+                        border-l-2 transition-colors
+                        ${selectedId === conv.id ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}
+                      `}
                     >
-                      {conv.summary && (
-                        <p className="text-[10px] text-[#555] leading-relaxed whitespace-pre-line">
-                          {conv.summary}
-                        </p>
-                      )}
-                      {conv.human_summary && (
-                        <p className="text-[10px] text-[#6bc28c] leading-relaxed whitespace-pre-line">
-                          &gt; {conv.human_summary}
-                        </p>
-                      )}
-                      {!conv.summary && !conv.human_summary && (
-                        <p className="text-[10px] text-[#333]">no summary available</p>
-                      )}
+                      <span className="text-[10px] text-[#444] shrink-0 w-24">
+                        {formatDate(conv.updated_at || conv.created_at)}
+                      </span>
+                      <span className={`text-[10px] font-bold shrink-0 ${lc}`}>[{l}]</span>
+                      <span className="text-[#333] shrink-0">&gt;&gt;</span>
+                      <span className="flex items-baseline gap-2 truncate min-w-0 flex-1">
+                        <span className="text-[11px] text-[#bbb] truncate">
+                          {title}
+                        </span>
+                        <span className="text-[10px] text-[#333] shrink-0">[{conv.message_count}]</span>
+                      </span>
                     </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {hasMore && (
+              <button
+                onClick={onLoadMore}
+                disabled={loadingMore}
+                className="mt-3 px-5 text-[10px] text-[#444] hover:text-[#888] transition-colors cursor-pointer disabled:text-[#2a2a2a]"
+              >
+                {loadingMore ? "loading..." : "// load more"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT: Detail panel */}
+        <div ref={detailRef} className="flex-1 md:min-h-0 min-w-0 w-full md:overflow-hidden md:flex md:flex-col">
+          {!displayConv ? (
+            <div className="flex-1 flex items-center justify-center select-none">
+              <span className="text-[10px] text-[#444] italic font-mono">
+                [ select a conversation to inspect ]
+              </span>
+            </div>
+          ) : detailLoading ? (
+            <div className="flex-1 flex items-center justify-center select-none">
+              <span className="text-[10px] text-[#444] animate-pulse font-mono">loading...</span>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
+              {/* Header row */}
+              <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-[#1a1a1a] shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <button
+                    onClick={() => {
+                      setSelectedId(null)
+                      listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }}
+                    className="md:hidden text-[10px] text-[#555] hover:text-[#aaa] transition-colors cursor-pointer shrink-0"
+                  >
+                    [◀ list]
+                  </button>
+                  <span className={`text-[14px] font-bold shrink-0 ${letterColor}`}>[{letter}]</span>
+                  <h2 className="text-[13px] text-[#ccc] font-mono font-bold tracking-wide truncate uppercase">
+                    {displayConv.title || "untitled"}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => onSelect(displayConv.id)}
+                    className="text-[11px] text-[#4ade80] hover:text-white transition-colors cursor-pointer"
+                  >
+                    [enter]
+                  </button>
+                  {agentFlux && (
+                    <button
+                      onClick={() => {
+                        if (confirm("Delete?")) onDelete(displayConv.id)
+                      }}
+                      className="text-[11px] text-[#666] hover:text-[#ef4444] transition-colors cursor-pointer"
+                    >
+                      [delete]
+                    </button>
                   )}
                 </div>
-              )
-            })}
-          </div>
-        )}
+              </div>
 
-        {/* Load more */}
-        {hasMore && (
-          <button
-            onClick={onLoadMore}
-            disabled={loadingMore}
-            className="mt-4 text-[10px] text-[#444] hover:text-[#888] transition-colors cursor-pointer disabled:text-[#2a2a2a]"
-          >
-            {loadingMore ? "loading..." : "// load more"}
-          </button>
-        )}
+              {/* Meta */}
+              <div className="flex flex-wrap gap-x-4 gap-y-0.5 px-6 py-2 text-[10px] font-mono shrink-0">
+                <span>
+                  <span className="text-[#555]">created: </span>
+                  <span className="text-[#94a3b8]">{formatDate(displayConv.created_at)}</span>
+                </span>
+                <span>
+                  <span className="text-[#555]">updated: </span>
+                  <span className="text-[#94a3b8]">{formatDate(displayConv.updated_at)}</span>
+                </span>
+                <span>
+                  <span className="text-[#555]">messages: </span>
+                  <span className="text-[#94a3b8]">{displayConv.message_count}</span>
+                </span>
+                {displayConv.tags && displayConv.tags.length > 0 && (
+                  <span className="w-full">
+                    <span className="text-[#555]">tags: </span>
+                    <Tags tags={displayConv.tags} />
+                  </span>
+                )}
+              </div>
+
+              {/* Tab bar */}
+              <div className="flex items-center gap-2 px-6 py-2 border-b border-[#1a1a1a] text-[10px] font-mono select-none shrink-0">
+                {(["summary", "notes", "memory_nodes"] as const).map((tab, i) => {
+                  let label = tab === "memory_nodes" ? "memory nodes" : tab
+                  let countStr = ""
+                  if (tab === "notes" && notes !== null) countStr = ` (${notes.length})`
+                  return (
+                    <span key={tab} className="flex items-center gap-2">
+                      {i > 0 && <span className="text-[#333]">•</span>}
+                      <button
+                        onClick={() => handleTabClick(tab)}
+                        className={`transition-colors cursor-pointer ${
+                          activeTab === tab ? "text-[#94a3b8]" : "text-[#444] hover:text-[#777]"
+                        }`}
+                      >
+                        {label}{countStr}
+                      </button>
+                    </span>
+                  )
+                })}
+              </div>
+
+              {/* Tab content */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                {/* Summary tab */}
+                {activeTab === "summary" && (
+                  <div>
+                    <div className="text-[9px] text-[#6c6c8a] uppercase tracking-wider mb-2">
+                      [ Summary ]
+                    </div>
+                    {displayConv.human_summary ? (
+                      <p className="text-[11px] text-[#aaa] leading-relaxed whitespace-pre-line font-mono">
+                        {displayConv.human_summary}
+                      </p>
+                    ) : displayConv.summary ? (
+                      <p className="text-[10px] text-[#444] italic font-mono">
+                        no human-readable summary yet
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-[#444] font-mono">
+                        no summary available
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Notes tab */}
+                {activeTab === "notes" && (
+                  <div>
+                    <div className="text-[9px] text-[#6c6c8a] uppercase tracking-wider mb-2">
+                      [ Notes ]
+                    </div>
+                    {notesLoading ? (
+                      <p className="text-[10px] text-[#444] animate-pulse font-mono">loading notes...</p>
+                    ) : (
+                      <NotesSection
+                        notes={notes || []}
+                        onNavigate={(_messageId) => window.open(`/?c=${displayConv.id}&m=${_messageId}`, '_blank')}
+                        onDeleteNote={(noteId) => {
+                          deleteNote(displayConv.id, noteId).then(() => {
+                            setNotes(prev => (prev || []).filter(n => n.id !== noteId))
+                          }).catch(() => {})
+                        }}
+                        onUpdateNote={(noteId, comment, visibility) => {
+                          updateNote(displayConv.id, noteId, comment, visibility).then((updated) => {
+                            setNotes(prev => (prev || []).map(n => n.id === noteId ? updated : n))
+                          }).catch(() => {})
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Memory Nodes tab */}
+                {activeTab === "memory_nodes" && (
+                  <div>
+                    <div className="text-[9px] text-[#6c6c8a] uppercase tracking-wider mb-2">
+                      [ Memory Nodes ]
+                    </div>
+                    <MemoryNodesSection
+                      conversationId={displayConv.id}
+                      enabled={activeTab === "memory_nodes"}
+                      className="grid gap-3"
+                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 420px), 1fr))" }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
-});
+})

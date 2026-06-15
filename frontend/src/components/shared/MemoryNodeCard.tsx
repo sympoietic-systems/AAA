@@ -1,5 +1,5 @@
 import { memo } from "react"
-import type { MemoryNodeInfo } from "../../../api/client"
+import type { MemoryNodeInfo } from "../../api/client"
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   scar: "SCAR",
@@ -48,33 +48,33 @@ export const MemoryNodeCard = memo(function MemoryNodeCard({ node }: Props) {
   const typeColor = NODE_TYPE_COLORS[node.node_type] || { text: "#888" }
 
   return (
-    <div className="font-mono">
+    <div className="font-mono min-w-0">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className="text-[8px] font-mono uppercase tracking-wider" style={{ color: typeColor.text }}>
+      <div className="flex items-center gap-2 mb-1.5 min-w-0">
+        <span className="text-[8px] font-mono uppercase tracking-wider shrink-0" style={{ color: typeColor.text }}>
           {typeLabel}
         </span>
         {node.diffractive_key && (
-          <span className="text-[9px] text-[#4ec9b0]/85 italic">{node.diffractive_key}</span>
+          <span className="text-[9px] text-[#4ec9b0]/85 italic truncate">{node.diffractive_key}</span>
         )}
-        <span className="ml-auto text-[8px] text-[#444]">{node.id}</span>
+        <span className="ml-auto text-[8px] text-[#444] shrink-0">{node.id}</span>
       </div>
 
       {/* Intensity + glitch potential */}
-      <div className="flex items-center gap-4 mb-2">
+      <div className="flex items-center gap-4 mb-2 flex-wrap">
         <IntensityBar value={node.intensity} />
         {node.glitch_potential > 0 && (
-          <span className="text-[8px] text-[#555]">
+          <span className="text-[8px] text-[#555] shrink-0">
             glitch: {(node.glitch_potential * 100).toFixed(0)}%
           </span>
         )}
-        <span className="text-[8px] text-[#555] ml-auto">
+        <span className="text-[8px] text-[#555] ml-auto shrink-0">
           {node.agential_symmetry}
         </span>
       </div>
 
       {/* Intra-active text */}
-      <div className="text-[10px] text-[#ccc] leading-relaxed mb-2">
+      <div className="text-[10px] text-[#ccc] leading-relaxed mb-2 break-words">
         {node.intra_active_text}
       </div>
 

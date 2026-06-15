@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, memo } from "react"
-import type { MemoryNodeInfo } from "../../../api/client"
-import { getMemoryNodes } from "../../../api/client"
+import type { MemoryNodeInfo } from "../../api/client"
+import { getMemoryNodes } from "../../api/client"
 import { MemoryNodeCard } from "./MemoryNodeCard"
 
 interface MemoryNodesSectionProps {
   conversationId?: string
   enabled?: boolean
+  className?: string
+  style?: React.CSSProperties
 }
 
-function MemoryNodesSectionComponent({ conversationId, enabled = false }: MemoryNodesSectionProps) {
+function MemoryNodesSectionComponent({ conversationId, enabled = false, className, style }: MemoryNodesSectionProps) {
   const [memoryNodes, setMemoryNodes] = useState<MemoryNodeInfo[]>([])
   const [loadingNodes, setLoadingNodes] = useState(false)
   const [hasFetched, setHasFetched] = useState(false)
@@ -84,8 +86,8 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false }: Memory
       <div className="text-[8px] text-[#555] mb-1.5 uppercase tracking-wider select-none font-bold">
         Intra-Active Memory Nodes ({memoryNodes.length})
       </div>
-      <div className="flex flex-col gap-1.5">
-        {memoryNodes.map((node) => (
+      <div className={className || "flex flex-col gap-1.5"} style={style}>
+        {memoryNodes.filter((n, i, a) => a.findIndex(x => x.id === n.id) === i).map((node) => (
           <MemoryNodeCard key={node.id} node={node} />
         ))}
       </div>

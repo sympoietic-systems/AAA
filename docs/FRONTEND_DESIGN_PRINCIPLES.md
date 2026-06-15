@@ -1,7 +1,7 @@
 # Frontend Design Principles
 **System:** Autopoietic Agentic Assemblage (AAA)
 **Classification:** Visual & Structural Design Guide
-**Last Updated:** 2026-06-14
+**Last Updated:** 2026-06-15
 
 ---
 
@@ -240,9 +240,9 @@ The right panel in the conversation workspace follows the same terminal-aestheti
 SidePanel (memo'd, collapse router only)
 ├── SectionHeader (▼/▶ toggle per section)
 ├── SummarySection                ← Props: summary, humanSummary (from App-level conversation load)
-├── MemoryNodesSection            ← Self-fetching via getMemoryNodes(enabled)
-│   └── MemoryNodeCard            ← memo'd, no bg/border container
-├── NotesSection                  ← Props: notes[], onDeleteNote (from App state)
+├── MemoryNodesSection            ← Self-fetching via getMemoryNodes(enabled) — lives in shared/
+│   └── MemoryNodeCard            ← memo'd, no bg/border container — lives in shared/
+├── NotesSection                  ← Props: notes[], onDeleteNote (from App state) — lives in shared/
 ├── SedimentSection               ← Self-fetching file summaries + injection polling
 │   ├── SedimentInjectionModal    ← Modal for cross-conversation sediment injection
 │   ├── ImageMetadataCard         ← memo'd, chrome-free
@@ -278,10 +278,13 @@ SidePanel (memo'd, collapse router only)
 ├── StartupSection.tsx         ← Self-fetching: scheduler status (10s poll)
 ├── TracesSection.tsx          ← Self-fetching: notifications
 │
-├── shared/
+├── shared/ (components/shared/ — reusable across pages and panels)
 │   ├── CollapsibleSection.tsx  ← Reusable ▼/▶ section (memo'd)
 │   ├── HealthMetrics.tsx       ← Somatic + Ecosystem display (memo'd)
-│   └── helpers.ts             ← getCategoryColor, getStageColor, getLevelColor, etc.
+│   ├── helpers.ts             ← getCategoryColor, getStageColor, getLevelColor, etc.
+│   ├── NotesSection.tsx       ← Props: notes[], onDeleteNote, onUpdateNote, onNavigate (memo'd)
+│   ├── MemoryNodesSection.tsx ← Self-fetching + polling, className/style overridable (memo'd)
+│   └── MemoryNodeCard.tsx     ← Single memory node card with intensity bar (memo'd)
 │
 ├── beliefs/
 │   ├── BeliefDetail.tsx        ← 3-tab detail: Details|Log|Version
@@ -360,3 +363,43 @@ NodeExplorer (memo'd)
 *   **CreasesDropdown**: `[creases: N ◆]` text toggle, tabs as `•` dot-separated text, items as plain rows, `[jump]` `[read]` terminal buttons — no `bg/border/rounded` anywhere
 *   **InputBar**: `border-t border-[#222]/40` divider only, send button `text-[#4ade80]` plain text — no `bg`
 *   **MessageBubble kept as-is**: Complex note/tooltip/selection interactions not yet simplified (separate pass planned)
+
+---
+
+## 14. Conversation Landing Page
+
+The conversation list page uses the same two-panel List + Detail pattern as the `/agent` page (see §3 and §4).
+
+### Architecture
+
+```
+ConversationLandingPage (memo'd, prop-driven from App.tsx)
+├── Header: symbia // N conversations  [+ new]  [logout]
+├── LEFT PANEL (450px, border-right)
+│   ├── Filter bar: filter: all • user • dreams • agents // search...
+│   └── Conversation list
+│       └── Row: date [U] >> title [N]          ← border-l-2 selection highlight
+└── RIGHT PANEL (flex-1)
+    ├── [◀ list] (mobile only)
+    ├── [U] TITLE               [enter] [delete]
+    ├── Meta: created: ... updated: ... messages: ... tags: ...
+    └── Tab bar: Summary • Notes (N) • Memory Nodes
+        ├── Summary tab   → displayConv.human_summary (data from list or getConversation)
+        ├── Notes tab     → <NotesSection notes={notes} /> (shared component, lazy-loaded)
+        └── Memory Nodes tab → <MemoryNodesSection conversationId={id} enabled /> (shared component, self-fetching + polling)
+```
+
+### Design Rules
+*   **Two-panel layout**: Left `md:w-[450px] shrink-0`, right `flex-1 min-w-0` — matches §3 pattern exactly
+*   **Selection state**: `border-l-2 border-[#a78bfa] bg-[#1a1a2e]/50` selected, `border-transparent hover:bg-[#111]` unselected — matches §4
+*   **Event delegation**: `data-conv-id` attributes with toggle-on-reclick (`prev === id ? null : id`)
+*   **Double-click to enter**: Navigates into the conversation via `onSelect(id)`
+*   **Delete gated**: `[delete]` and per-row `[x]` only visible when `agentFlux` is true (§9)
+*   **Tab lazy loading**: Summary is instant (from list cache), Notes loads on first tab click, Memory Nodes self-fetches when `enabled=true`
+*   **Shared components**: `NotesSection`, `MemoryNodesSection`, and `MemoryNodeCard` live in `components/shared/` — used by both SidePanel (§11) and ConversationLandingPage
+*   **Mobile scrolling**: Body uses `overflow-auto` on mobile (allows natural page scroll + `scrollIntoView`), left column capped at `max-h-[45vh]`, `md:overflow-hidden` restores desktop two-panel scroll
+*   **Memory nodes multi-column**: Grid layout via `MemoryNodesSection.className` + `style` — `repeat(auto-fill, minmax(min(100%, 420px), 1fr))` on desktop, single column on narrow screens
+*   **Notes navigation**: `↗` link opens `/?c=convId&m=msgId` in a new tab — URL scheme already handled by `useConversations` (`?c=`) and `useChat` (`?m=`)
+*   **No container chrome**: Sections use bracket-delimited labels in `text-[#6c6c8a] uppercase text-[9px]` — never `bg/border/rounded`
+*   **Terminal-style inputs**: Search input uses `bg-transparent border-b focus:border-[#444]`
+*   **Empty state**: `[ select a conversation to inspect ]` italic placeholder in the right panel
