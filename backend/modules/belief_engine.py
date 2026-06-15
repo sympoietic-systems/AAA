@@ -470,57 +470,71 @@ class BeliefDynamicsEngine(ProcessingModule):
         active_beliefs = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
         collapsed_beliefs = [b for b in all_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20]
 
-        # Attractor Window (3 slots)
-        slot1: Optional[BeliefNode] = None
-        slot2: Optional[BeliefNode] = None
-        slot3: Optional[BeliefNode] = None
+        # Attractor Window (6 slots: 2×mass, 2×stress, 2×resonance)
+        slots: list[Optional[BeliefNode]] = [None] * 6
+        used_ids: set[str] = set()
 
         if active_beliefs:
-            # Slot 1: Highest-mass core/foundational belief
-            slot1 = max(active_beliefs, key=lambda b: b.ontological_mass)
+            # Slots 1-2: Top 2 by ontological mass (foundational anchors)
+            sorted_by_mass = sorted(active_beliefs, key=lambda b: b.ontological_mass, reverse=True)
+            for i, b in enumerate(sorted_by_mass[:2]):
+                slots[i] = b
+                used_ids.add(b.id)
 
-            # Slot 2: Lowest confidence active belief (stress slot: 0.20 <= c_i < 0.50)
-            stressed_beliefs = [b for b in active_beliefs if b.confidence < 0.50]
-            if stressed_beliefs:
-                slot2 = min(stressed_beliefs, key=lambda b: b.confidence)
-            else:
-                # Fallback: second highest mass or next lowest confidence active belief excluding slot 1
-                remaining = [b for b in active_beliefs if b.id != slot1.id]
+            # Slots 3-4: Bottom 2 by confidence among stressed beliefs
+            stressed_beliefs = [b for b in active_beliefs if b.confidence < 0.50 and b.id not in used_ids]
+            if len(stressed_beliefs) >= 2:
+                sorted_stressed = sorted(stressed_beliefs, key=lambda b: b.confidence)
+                for i, b in enumerate(sorted_stressed[:2]):
+                    slots[2 + i] = b
+                    used_ids.add(b.id)
+            elif len(stressed_beliefs) == 1:
+                slots[2] = stressed_beliefs[0]
+                used_ids.add(stressed_beliefs[0].id)
+                # Fill slot 4 from remaining lowest-confidence
+                remaining = [b for b in active_beliefs if b.id not in used_ids]
                 if remaining:
-                    slot2 = min(remaining, key=lambda b: b.confidence)
+                    chosen = min(remaining, key=lambda b: b.confidence)
+                    slots[3] = chosen
+                    used_ids.add(chosen.id)
+            else:
+                # No stressed beliefs: pick 2 lowest-confidence from remaining
+                remaining = [b for b in active_beliefs if b.id not in used_ids]
+                sorted_remaining = sorted(remaining, key=lambda b: b.confidence)
+                for i, b in enumerate(sorted_remaining[:2]):
+                    slots[2 + i] = b
+                    used_ids.add(b.id)
 
-            # Slot 3: Highest similarity active belief against current user input (resonance slot)
+            # Slots 5-6: Top 2 by cosine similarity to user input (resonance)
             sig_bytes = payload.get("structural_signature")
             if sig_bytes:
                 try:
                     user_vec = np.frombuffer(sig_bytes, dtype=np.float32)
                     if len(user_vec) == 16:
-                        # Exclude slot1 and slot2 if possible
-                        candidate_pool = [b for b in active_beliefs if b.id != slot1.id and (not slot2 or b.id != slot2.id)]
-                        if not candidate_pool:
-                            candidate_pool = active_beliefs
-                        
                         def sim_score(b: BeliefNode) -> float:
                             try:
                                 b_vec = parse_vector_16d(b.vector_16d)
                                 if b_vec is None:
-                                    logger.warning(f"Belief '{b.label}' (ID: {b.id}) has invalid or empty vector_16d: {b.vector_16d[:80]}")
                                     return -1.0
                                 return compute_cosine_similarity(user_vec, b_vec)
                             except Exception:
                                 return -1.0
 
-                        if candidate_pool:
-                            slot3 = max(candidate_pool, key=sim_score)
+                        resonance_pool = [b for b in active_beliefs if b.id not in used_ids]
+                        if resonance_pool:
+                            sorted_by_sim = sorted(resonance_pool, key=sim_score, reverse=True)
+                            for i, b in enumerate(sorted_by_sim[:2]):
+                                slots[4 + i] = b
+                                used_ids.add(b.id)
                 except Exception as e:
-                    logger.error(f"Error calculating resonance slot: {e}")
+                    logger.error(f"Error calculating resonance slots: {e}")
 
         # Construct Attractor Window dicts
         attractor_window = []
-        for i, slot in enumerate([slot1, slot2, slot3]):
+        for idx, slot in enumerate(slots):
             if slot:
                 attractor_window.append({
-                    "slot": i + 1,
+                    "slot": idx + 1,
                     "id": slot.id,
                     "label": slot.label,
                     "statement": slot.statement,

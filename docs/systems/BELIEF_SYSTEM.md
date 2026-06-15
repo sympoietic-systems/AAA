@@ -298,10 +298,10 @@ The `belief_metabolism` engine uses these health indexes to adjust system-wide c
 The system maintains cognitive stability and drives autonomous ideation using two structural concepts:
 
 ### A. The Attractor Window (Attentional Slots)
-To prevent context overflow, the main assistant context does not load all beliefs. Instead, it maintains a 3-slot **Attractor Window** populated dynamically:
-1.  **Slot 1 (Core Slot):** The active belief node with the highest `ontological_mass`.
-2.  **Slot 2 (Stress Slot):** The active belief node with the lowest `confidence` (focusing attention on beliefs under pressure: $0.20 \le c < 0.50$).
-3.  **Slot 3 (Resonance Slot):** The active belief node with the highest cosine similarity to the user's latest 16D signature.
+To prevent context overflow, the main assistant context does not load all beliefs. Instead, it maintains a 6-slot **Attractor Window** populated dynamically with no duplicate beliefs:
+1.  **Slots 1-2 (Core Slots):** The two active belief nodes with the highest `ontological_mass`.
+2.  **Slots 3-4 (Stress Slots):** The two active belief nodes with the lowest `confidence` (focusing attention on beliefs under pressure: $0.20 \le c < 0.50$).
+3.  **Slots 5-6 (Resonance Slots):** The two active belief nodes (not already selected) with the highest cosine similarity to the user's latest 16D signature.
 
 ### B. The Spectral Margin
 Houses collapsed nodes (`collapsed` stage, confidence $< 0.20$ or mass $< 0.02$). Although dormant, these beliefs remain in the database as "spectral scars." They are retrieved to check for nucleation resonance or to trigger resurrection.

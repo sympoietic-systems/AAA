@@ -112,16 +112,30 @@ class BeliefService:
                         active = [b for b in raw_beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
                         collapsed = [b for b in raw_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20]
 
+                        attractors = []
+                        used_ids = set()
+
                         if active:
-                            slot1 = max(active, key=lambda b: b.ontological_mass)
-                            attractors = [slot1]
-                            stressed = [b for b in active if b.confidence < 0.50]
-                            slot2 = min(stressed, key=lambda b: b.confidence) if stressed else None
-                            if slot2:
-                                attractors.append(slot2)
-                            remaining = [b for b in active if b.id != slot1.id and b.id != (slot2.id if slot2 else None)]
-                            if remaining:
-                                attractors.append(remaining[0])
+                            # Top 2 by mass
+                            sorted_mass = sorted(active, key=lambda b: b.ontological_mass, reverse=True)
+                            for b in sorted_mass[:2]:
+                                attractors.append(b)
+                                used_ids.add(b.id)
+
+                            # Bottom 2 by confidence among stressed
+                            stressed = [b for b in active if b.confidence < 0.50 and b.id not in used_ids]
+                            sorted_stressed = sorted(stressed, key=lambda b: b.confidence)
+                            for b in sorted_stressed[:2]:
+                                attractors.append(b)
+                                used_ids.add(b.id)
+
+                            # Top 2 remaining by confidence (no user vector available for UI view)
+                            remaining = [b for b in active if b.id not in used_ids]
+                            sorted_remaining = sorted(remaining, key=lambda b: b.confidence)
+                            for b in sorted_remaining[:2]:
+                                attractors.append(b)
+                                used_ids.add(b.id)
+
                             attractor_window = [a.label for a in attractors]
 
                         spectral_margin = [b.label for b in collapsed]
