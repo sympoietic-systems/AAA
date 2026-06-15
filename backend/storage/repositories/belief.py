@@ -293,7 +293,7 @@ class BeliefRepository(BaseRepository):
             pass
 
     @with_connection
-    def get_events_for_belief(self, belief_id: str, limit: int = 20) -> list[BeliefEvent]:
+    def get_events_for_belief(self, belief_id: str, limit: int = 100) -> list[BeliefEvent]:
         conn = self._conn()
         rows = conn.execute(
             "SELECT * FROM belief_events WHERE belief_id = ? ORDER BY timestamp DESC LIMIT ?",

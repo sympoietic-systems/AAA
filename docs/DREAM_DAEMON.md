@@ -1,6 +1,6 @@
 # Autopoietic Dream Daemon (Machine Sleep Engine)
 
-The Autopoietic Dream Daemon is the background engine that drives agential variety, curiosity, memory health, and autonomous search probes during periods of inactivity.
+The Autopoietic Dream Daemon is the background engine that drives agential variety, curiosity, memory health, autonomous search probes, and belief mass atrophy during both active and idle periods.
 
 ## File Architecture
 
@@ -8,6 +8,17 @@ The Autopoietic Dream Daemon is the background engine that drives agential varie
 *   **Lifespan Setup**: [main.py](file:///d:/01_GIT/AAA/backend/main.py) — Spawns the daemon thread task asynchronously on system boot.
 *   **API Routes**: [routes.py](file:///d:/01_GIT/AAA/backend/api/routes.py) — Exposes telemetry and force trigger points.
 *   **Unit Tests**: [test_dream_daemon.py](file:///d:/01_GIT/AAA/backend/tests/test_dream_daemon.py) — Complete mathematical and trigger assertion coverage.
+
+---
+
+## Daemon Loop Responsibilities
+
+The daemon runs its check loop every 30 seconds (configurable) regardless of user activity. Each cycle executes:
+
+1. **Conversation consolidation** — compacts stale conversations
+2. **Skill metabolism** — refreshes skill-to-belief bridge states
+3. **Belief mass atrophy** (every 15 min) — applies linear time-based decay to all non-ghost beliefs via `BeliefDynamicsEngine._atrophy_beliefs()`. This is the single source of truth for belief decay, replacing the old dual-path design (pipeline `process()` atrophy + daemon `_apply_mass_decay()`). All decay events are logged as `belief_events` with `source_type: "atrophy"`, visible in the frontend Belief Log tab.
+4. **Dream trigger check** — evaluates stagnation, tension hotspots, and somatic drift; launches autonomous monologues, web harvesting, or memory compaction when idle thresholds are met
 
 ---
 

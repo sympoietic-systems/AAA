@@ -91,7 +91,7 @@ Maintains a chronological trace of all modifications to belief states.
 *   `id` (TEXT, PK): Event UUID.
 *   `timestamp` (DATETIME): Time of event.
 *   `belief_id` (TEXT, FK): Target belief node.
-*   `source_type` (TEXT): Trigger action type (`"chat_turn"`, `"shared_note"`, `"ingested_document"`, `"web_retrieval"`, `"dream_turn"`).
+*   `source_type` (TEXT): Trigger action type (`"chat_turn"`, `"shared_note"`, `"ingested_document"`, `"web_retrieval"`, `"dream_turn"`, `"atrophy"`, `"ghost_ecology"`).
 *   `source_id` (TEXT): Reference ID of the triggering entity (e.g. message ID, note ID).
 *   `alignment_coefficient` (REAL): Measures alignment of triggering signature with the belief vector.
 *   `perturbation_magnitude` (REAL): Scale of the immediate system surprise/stress during update.
@@ -204,9 +204,9 @@ When an input vector matches an active belief node with similarity $\ge 0.3$, th
 
 ### D. Mass Atrophy (Time-Based Decay)
 
-Beliefs that are not actively reinforced slowly lose ontological mass through a time-based atrophy mechanism. This runs during every belief metabolism cycle (`process()`), ensuring that neglected beliefs eventually collapse while actively-engaged beliefs remain stable.
+Beliefs that are not actively reinforced slowly lose ontological mass through a time-based atrophy mechanism. This runs exclusively in the Dream Daemon's main loop every 15 minutes (not on every pipeline `process()` call), ensuring consistent decay coverage during both active and idle periods while avoiding redundant events.
 
-1.  **Trigger:** Atrophy is checked at the start of each `process()` call for all crystallized and senescent beliefs whose `last_reinforced_at` is older than 30 minutes.
+1.  **Trigger:** Atrophy is checked by the Dream Daemon every 15 minutes for all non-collapsed, non-faded beliefs whose `last_reinforced_at` is older than 30 minutes.
 
 2.  **Decay Formula:**
     $$m_{new} = m_{old} - \Delta m_{decay}$$
@@ -221,13 +221,15 @@ Beliefs that are not actively reinforced slowly lose ontological mass through a 
     *   If $m_{new} < 0.5$ and current stage is `"crystallized"`: stage becomes `"senescence"`.
     *   No confidence change during atrophy — only mass is affected.
 
-4.  **Event Recording:** Each atrophy event is logged as a `belief_event` with:
+4.  **Event Recording:** Every atrophy event is logged as a `belief_event` with:
     *   `event_type`: `"atrophy"` (or `"collapse"` if the threshold was crossed)
     *   `rationale`: `"Atrophied: mass={new} (delta={±delta}), conf={conf}, stage={stage}"`
     *   `impact_score`: the mass delta ($\Delta m_{decay}$, negative)
     *   `source_type`: `"atrophy"`
 
-5.  **Decay Timeline (belief at mass=1.0, never reinforced):**
+5.  **Clock Reset:** When `update_belief_mass()` is called (by atrophy, accretion, or any other pathway), `last_reinforced_at` is reset to the current timestamp. This prevents the daemon from applying the same idle hours repeatedly — after the first decay application, only genuinely new idle time accumulates.
+
+6.  **Decay Timeline (belief at mass=1.0, never reinforced):**
     | Time | Mass | Stage |
     |------|------|-------|
     | 0 | 1.000 | crystallized |
@@ -236,7 +238,9 @@ Beliefs that are not actively reinforced slowly lose ontological mass through a 
     | ~42 days | <0.020 | → collapsed |
     | +30 days idle | — | → faded (ghost ecology) |
 
-6.  **Active Reinforcement:** When a belief is matched during chat metabolism (`_accrete_belief`), its `last_reinforced_at` is reset to the current time, resetting the atrophy clock. Actively-engaged beliefs therefore remain stable indefinitely.
+7.  **Active Reinforcement:** When a belief is matched during chat metabolism (`_accrete_belief`), `update_belief_mass()` resets `last_reinforced_at` to the current time, resetting the atrophy clock. Actively-engaged beliefs therefore remain stable indefinitely.
+
+8.  **Event Visibility:** All mass changes — accretion, atrophy, ghost merging, dream metabolism, and user edits — produce properly logged `belief_events` visible in the frontend Log tab (up to 100 most recent events per belief). Negative mass deltas are displayed in red; positive deltas in blue.
 
 ---
 
@@ -323,11 +327,11 @@ During period of human inactivity, the `AutopoieticDreamDaemon` evaluates if a b
 
 A deep code audit of the current codebase has revealed two implementation flaws where the system's material execution diverges from its design specifications.
 
-### A. Mass Decay Replaced by Belief Engine Atrophy
+### A. Mass Decay Consolidated into Belief Engine Atrophy
 
-*   **Historical Issue:** A `mass_decay.py` mixin (dream daemon) handled mass decay via an exponential formula, but suffered from a configuration bug where `config.yaml`'s `mass_decay_lambda_base` was silently ignored due to a nested-key mismatch. This caused $2.5\times$ accelerated forgetting.
-*   **Resolution:** Mass decay is now handled directly within `BeliefDynamicsEngine._atrophy_beliefs()` (see Section 4D). The atrophy pass runs at the start of each `process()` call using a linear decay formula: $\Delta m = m \cdot 0.001 \cdot t_{hours}$, capped at 20% per check. The legacy `mass_decay.py` and its configuration are no longer in the active decay path.
-*   **Applies to:** All crystallized and senescent beliefs not reinforced within the last 30 minutes.
+*   **Historical Issue:** A `mass_decay.py` mixin (dream daemon) handled mass decay via an exponential formula, but suffered from a configuration bug where `config.yaml`'s `mass_decay_lambda_base` was silently ignored due to a nested-key mismatch. This caused $2.5\times$ accelerated forgetting. Additionally, this decay path did not log `belief_events`, making mass decreases invisible in the frontend Log tab.
+*   **Resolution:** Mass decay is now unified into a single pathway: `BeliefDynamicsEngine._atrophy_beliefs()`, called exclusively from the Dream Daemon's main loop every 15 minutes. The `_apply_mass_decay()` call was removed from `check_and_trigger_dream()`, and the pipeline's `process()` no longer runs atrophy (which was redundant with the daemon). The atrophy pass uses a linear decay formula: $\Delta m = m \cdot 0.001 \cdot t_{hours}$, capped at 20% per check. Every decay event is logged as a `belief_event` with `source_type: "atrophy"`.
+*   **Applies to:** All non-collapsed, non-faded beliefs not reinforced within the last 30 minutes.
 
 ### B. The Ghost Merging Persistence Bug
 *   **The Issue:** Inside `process_ghost_ecology` (`backend/modules/belief_engine.py`), when two collapsed beliefs in the spectral margin are highly similar ($sim > 0.9$), the system executes a "ghost merge." It compiles a merged `keeper_statement` (e.g. `"{keeper} [absorbed: {absorbed}]"`) and calls:
@@ -355,7 +359,7 @@ The following files represent the physical substrate of the belief metabolism sy
 
 ### Core Logic & Metabolism
 *   [belief_engine.py](file:///d:/01_GIT/AAA/backend/modules/belief_engine.py): Contains the `BeliefDynamicsEngine`, nucleation, accretion calculations, ecosystem health metrics, tension fields, and coordinates warping.
-*   [mass_decay.py](file:///d:/01_GIT/AAA/backend/metabolisation/mass_decay.py): Defines the `MassDecayMixin` which runs mass decay and skill-to-belief bridge validation.
+*   [mass_decay.py](file:///d:/01_GIT/AAA/backend/metabolisation/mass_decay.py): Defines the `MassDecayMixin` with legacy exponential decay methods (`_apply_mass_decay`, `_apply_skill_ecology`). No longer called from the active daemon loop — all decay is now handled via `_atrophy_beliefs()`.
 *   [daemon.py](file:///d:/01_GIT/AAA/backend/metabolisation/daemon.py): Orchestrates the background thread checks, evaluations, and resonance execution.
 
 ### Database Repositories & Schemas

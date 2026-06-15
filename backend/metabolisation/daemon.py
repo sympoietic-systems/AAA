@@ -131,6 +131,8 @@ class AutopoieticDreamDaemon(
     async def _run_loop(self) -> None:
         # Give server time to settle
         await asyncio.sleep(5)
+        _last_atrophy_time = 0.0
+        _atrophy_interval = 900.0  # Run belief atrophy every 15 minutes
         while self.is_running:
             try:
                 await self.consolidate_pending_conversations()
@@ -140,6 +142,19 @@ class AutopoieticDreamDaemon(
                 await self.run_skill_metabolism()
             except Exception as e:
                 logger.exception("Error in Autopoietic Dream Daemon skill metabolism: %s", e)
+            # Periodic belief atrophy (logged, covers all non-ghost stages)
+            now_ts = __import__("time").time()
+            if now_ts - _last_atrophy_time >= _atrophy_interval:
+                _last_atrophy_time = now_ts
+                try:
+                    engine = getattr(self.app_state, "belief_metabolism", None)
+                    if engine:
+                        result = await engine._atrophy_beliefs("symbia")
+                        if result.get("atrophied", 0) > 0:
+                            logger.info("Daemon atrophy cycle: %d beliefs decayed (%d collapsed)",
+                                        result["atrophied"], result.get("collapsed", 0))
+                except Exception as e:
+                    logger.exception("Error in daemon atrophy cycle: %s", e)
             try:
                 await self.check_and_trigger_dream()
             except asyncio.CancelledError:
@@ -192,9 +207,6 @@ class AutopoieticDreamDaemon(
 
         # We are triggered! Execute dream cycle
         logger.info("Autopoietic Dream Daemon triggered! Inactivity duration: %.1fs", idle_duration)
-
-        # Apply Mass Decay
-        await self._apply_mass_decay(idle_duration)
 
         # Process Ghost Ecology (merging, fading, resurrection)
         try:

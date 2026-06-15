@@ -270,10 +270,10 @@ class BeliefDynamicsEngine(ProcessingModule):
         
         Decay rate: ~0.1% per hour of inactivity. Beliefs that are actively engaged
         (frequently matched in metabolism) stay stable; neglected beliefs slowly lose mass
-        and can eventually collapse.
+        and can eventually collapse. Covers all non-collapsed, non-faded stages.
         """
         all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        active = [b for b in all_beliefs if b.lifecycle_stage in ("crystallized", "senescence")]
+        active = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
         
         now = datetime.now(timezone.utc)
         decay_rate_per_hour = 0.001  # 0.1% mass loss per hour of inactivity
@@ -420,13 +420,11 @@ class BeliefDynamicsEngine(ProcessingModule):
         if not agent_id:
             agent_id = "symbia"
 
-        # 1. Apply time-based mass atrophy to decay neglected beliefs
-        try:
-            await self._atrophy_beliefs(agent_id)
-        except Exception as e:
-            logger.error("Belief atrophy pass failed: %s", e)
+        # Atrophy now runs exclusively via the Dream Daemon loop (every 15 min),
+        # not on every pipeline pass. During active chat, beliefs stay fresh
+        # through metabolic accretion; the daemon covers idle-period decay.
 
-        # 2. Load Conversation somatic variables
+        # 1. Load Conversation somatic variables
         somatic_reservoir = 0.0
         matrix_warping = 0.0
         immunological_directive_active = 0
@@ -1056,6 +1054,8 @@ class BeliefDynamicsEngine(ProcessingModule):
                         merged_ids.add(absorbed.id)
                         merged += 1
                         keeper_statement = f"{keeper.statement} [absorbed: {absorbed.statement}]"
+                        new_keeper_mass = min(keeper.ontological_mass + 0.1, 1.5)
+                        mass_delta = new_keeper_mass - keeper.ontological_mass
                         self._belief_repo.update_belief(
                             belief_id=keeper.id,
                             confidence=keeper.confidence,
@@ -1063,7 +1063,22 @@ class BeliefDynamicsEngine(ProcessingModule):
                             origin=keeper.origin,
                             lifecycle_stage=keeper.lifecycle_stage,
                         )
-                        self._belief_repo.update_belief_mass(keeper.id, min(keeper.ontological_mass + 0.1, 1.5))
+                        self._belief_repo.update_belief_mass(keeper.id, new_keeper_mass)
+                        self._belief_repo.insert_belief_event(
+                            event_id=str(uuid.uuid4()),
+                            belief_id=keeper.id,
+                            source_type="ghost_ecology",
+                            source_id=absorbed.id,
+                            alignment=sim,
+                            perturbation=0.1,
+                            event_type="support",
+                            impact=round(mass_delta, 6),
+                            rationale=(
+                                f"Ghost merged: absorbed '{absorbed.label}' "
+                                f"mass={new_keeper_mass:.3f} (delta={mass_delta:+.3f}), "
+                                f"conf={keeper.confidence:.3f}, stage={keeper.lifecycle_stage}"
+                            ),
+                        )
                         logger.info(f"Merged ghost '{absorbed.label}' into '{keeper.label}' (sim={sim:.2f})")
                 except Exception:
                     continue
