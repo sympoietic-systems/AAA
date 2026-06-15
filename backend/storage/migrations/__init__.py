@@ -70,6 +70,9 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m025_dynamic_personality,
         m026_expertise_description,
         m027_dream_log,
+        m028_memory_node_revisions,
+        m029_ghost_merge_persistence,
+        m030_compressed_messages,
     )
 
     runner = MigrationRunner(conn)
@@ -102,3 +105,6 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("025_dynamic_personality", m025_dynamic_personality.up)
     runner.run("026_expertise_description", m026_expertise_description.up)
     runner.run("027_dream_log", m027_dream_log.up)
+    runner.run("028_memory_node_revisions", m028_memory_node_revisions.up)
+    runner.run("029_ghost_merge_persistence", m029_ghost_merge_persistence.up)
+    runner.run("030_compressed_messages", m030_compressed_messages.up)
