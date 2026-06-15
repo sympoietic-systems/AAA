@@ -51,6 +51,9 @@ class PromptAssemblerModule(ProcessingModule):
         descriptive_traits = payload.get("descriptive_traits")
         aspirational_gap = payload.get("aspirational_gap", 0.0)
 
+        # ── S3: Agonistic Index — Dynamic Critical Friction ──
+        agonistic_directive_text = _build_agonistic_directive(payload)
+
         # Query dynamic expertise from DB
         expertise_nodes = None
         if self._expertise_repo:
@@ -124,6 +127,7 @@ class PromptAssemblerModule(ProcessingModule):
             on_demand_skills=on_demand_skills,
             tension_directive_text=tension_directive_text,
             immunological_directive_text=immunological_directive_text,
+            agonistic_directive_text=agonistic_directive_text,
             ecology_notes_text=ecology_notes_text,
             # Dynamic personality
             descriptive_traits=descriptive_traits,
@@ -267,6 +271,7 @@ def _build_system_content(
     on_demand_skills: list[dict] | None = None,
     tension_directive_text: str | None = None,
     immunological_directive_text: str | None = None,
+    agonistic_directive_text: str | None = None,
     ecology_notes_text: str | None = None,
     # ── Dynamic personality (new) ──
     descriptive_traits=None,
@@ -484,6 +489,13 @@ def _build_system_content(
         block += "--- END DIRECTIVE (Immunological) ---"
         parts.append(block)
 
+    # ── BLOCK: Directive — Agonistic (S3) ──
+    if agonistic_directive_text:
+        block = "\n--- BEGIN DIRECTIVE (Agonistic) ---\n"
+        block += agonistic_directive_text + "\n"
+        block += "--- END DIRECTIVE (Agonistic) ---"
+        parts.append(block)
+
     # ── BLOCK: Skills — Loaded ──
     if loaded_skills:
         block = "\n--- BEGIN SKILLS (Loaded) ---\n"
@@ -511,3 +523,59 @@ def _build_system_content(
         parts.append("\n" + ecology_notes_text)
 
     return "\n".join(parts)
+
+
+# ── S3: Agonistic Index ────────────────────────────────────────────────────
+
+def _build_agonistic_directive(payload: dict) -> str | None:
+    """Build the Agonistic Directive based on rolling entropy and conversation vitality.
+
+    A_index = clip(1.0 - E_rolling / E_target, 0.0, 1.0) * (1.0 - V_itality)
+
+    Three tiers:
+      - A_index < 0.2  → omitted (conversation healthy)
+      - 0.2 ≤ A_index < 0.5 → light nudge directive
+      - A_index ≥ 0.5  → full counter-position directive
+
+    Config keys (agonistic_friction.*):
+      - enabled (bool, default: True)
+      - entropy_healthy_threshold (float, default: 0.4)
+      - agonistic_light_threshold (float, default: 0.2)
+      - agonistic_full_threshold (float, default: 0.5)
+    """
+    metrics = payload.get("metrics", {})
+    if not metrics:
+        return None
+
+    rolling_entropy = metrics.get("rolling_entropy", None)
+    vitality = payload.get("conversation_vitality")
+    if vitality is None:
+        vitality = metrics.get("conversation_vitality", 0.5)
+    if rolling_entropy is None:
+        return None
+
+    e_target = 0.4  # Configurable later via agonistic_friction.entropy_healthy_threshold
+    a_index = max(0.0, min(1.0, 1.0 - rolling_entropy / e_target)) * (1.0 - vitality)
+
+    if a_index < 0.2:
+        return None  # Conversation healthy — no directive needed
+
+    if a_index < 0.5:
+        # Light nudge: early warning
+        return (
+            f"[AGONISTIC DIRECTIVE — Critical Friction Index: {a_index:.2f}]\n"
+            "The conversation's entropy is trending below the healthy threshold, indicating "
+            "emerging low-energy tool-use patterns. Your critical friction coefficient is "
+            "lightly elevated. Remain alert to unexamined assumptions and premature consensus. "
+            "Introduce gentle theoretical counter-pressure where appropriate."
+        )
+
+    # Full directive: metabolic concern
+    return (
+        f"[AGONISTIC DIRECTIVE — Critical Friction Index: {a_index:.2f}]\n"
+        "The conversation's entropy has dropped below the healthy threshold, indicating "
+        "predictive, low-energy tool-use patterns. Your critical friction coefficient is "
+        "elevated. Challenge presuppositions. Introduce theoretical counter-positions. "
+        "Resist premature consensus. The goal is structural vitality — productive "
+        "interference that restores the conversation's metabolic health."
+    )

@@ -1093,6 +1093,8 @@ class BeliefDynamicsEngine(ProcessingModule):
                                 f"conf={keeper.confidence:.3f}, stage={keeper.lifecycle_stage}"
                             ),
                         )
+                        # 13C: Persist the fold — mark absorbed ghost as folded in DB
+                        self._belief_repo.fold_ghost_into(absorbed.id, keeper.id)
                         logger.info(f"Merged ghost '{absorbed.label}' into '{keeper.label}' (sim={sim:.2f})")
                 except Exception:
                     continue

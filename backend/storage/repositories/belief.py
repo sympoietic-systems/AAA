@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Optional
 
 from backend.storage.connection import with_connection
@@ -196,6 +197,18 @@ class BeliefRepository(BaseRepository):
         conn.commit()
 
     @with_connection
+    def fold_ghost_into(self, ghost_id: str, keeper_id: str) -> None:
+        """13C: Mark a ghost belief as folded and record which keeper absorbed it."""
+        conn = self._conn()
+        conn.execute(
+            "UPDATE belief_nodes SET lifecycle_stage = 'folded', merged_into = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (keeper_id, ghost_id),
+        )
+        conn.commit()
+        logger = logging.getLogger(__name__)
+        logger.info("Ghost '%s' folded into '%s'", ghost_id, keeper_id)
+
+    @with_connection
     def list_active_beliefs(self, agent_id: str) -> list[BeliefNode]:
         conn = self._conn()
         rows = conn.execute(
@@ -217,7 +230,7 @@ class BeliefRepository(BaseRepository):
     def list_ghosts(self, agent_id: str) -> list[BeliefNode]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage = 'collapsed'",
+            "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND lifecycle_stage = 'collapsed' AND (merged_into IS NULL OR merged_into = '')",
             (agent_id,),
         ).fetchall()
         return [_row_to_belief_node(r) for r in rows]

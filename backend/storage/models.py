@@ -33,6 +33,9 @@ class MemoryNode:
     diffractive_key: str = ""
     tendril_ids: list[str] | None = None
     created_at: Optional[datetime] = None
+    # R4: Merge observability — track when and how many times a node has been revised
+    revision_count: int = 0
+    last_merged_at: Optional[datetime] = None
 
     def __post_init__(self):
         if self.tendril_ids is None:
@@ -145,6 +148,9 @@ class BeliefNode:
     last_dreamed_at: Optional[datetime] = None
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
+    # 13C: Ghost merging persistence — track which belief absorbed this one
+    merged_from: Optional[str] = None  # JSON list of absorbed ghost IDs
+    merged_into: Optional[str] = None  # ID of the keeper belief that absorbed this ghost
 
 
 @dataclass

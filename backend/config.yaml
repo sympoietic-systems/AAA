@@ -66,6 +66,11 @@ context:
   floating_window: 8             # env: AAA_CONTEXT_FLOATING_WINDOW — last N msgs kept raw
   caveman_enabled: true          # env: AAA_CONTEXT_CAVEMAN — strip filler words for tier 2
   consolidate_threshold: 15      # env: AAA_CONTEXT_CONSOLIDATE_THRESHOLD — trigger consolidation every N msgs
+  max_memory_nodes: 6            # R2: total nodes injected into context (type-diverse)
+  guaranteed_node_types:         # R2: one slot each, filled by highest intensity
+    - scar
+    - concept
+    - tension
 
 # ── Sedimentation ───────────────────────────────
 sedimentation:
@@ -159,6 +164,13 @@ belief_ecosystem:
   self_tuning:
     enabled: true
     max_adjustment_pct: 0.30
+
+# ── Agonistic Friction (S3) ─────────────────────
+agonistic_friction:
+  enabled: true                   # S3: enable dynamic critical friction injection
+  entropy_healthy_threshold: 0.4  # E_target — below this, A_index starts rising
+  agonistic_light_threshold: 0.2  # A_index >= this: inject light nudge directive
+  agonistic_full_threshold: 0.5   # A_index >= this: inject full counter-position directive
 
 # ── Homeostasis ──────────────────────────────────
 homeostasis:

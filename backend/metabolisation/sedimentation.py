@@ -1,10 +1,14 @@
 """Sedimentation parsing, merging, and metrics utilities for the Dream Daemon."""
 
 import json
+import logging
 import re
 import uuid
+from datetime import datetime, timezone
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 def generate_node_id() -> str:
@@ -202,18 +206,34 @@ def parse_sedimentation_yaml(raw_output: str) -> tuple[list[dict], int]:
 
 
 def merge_nodes(existing_nodes: list[dict], new_nodes: list[dict]) -> list[dict]:
-    """Merge new parsed nodes into existing nodes by ID."""
+    """Merge new parsed nodes into existing nodes by ID.
+
+    R4: Tracks revision_count and last_merged_at for merge observability.
+    Logs a console notification when an existing node is updated.
+    """
     existing_by_id: dict[str, dict] = {n["id"]: n for n in existing_nodes if n.get("id")}
     merged = dict(existing_by_id)
 
     for node in new_nodes:
         node_id = node.get("id", "")
         if node_id and node_id in merged:
-            merged[node_id].update(node)
+            existing = merged[node_id]
+            old_intensity = existing.get("intensity", 0)
+            new_intensity = node.get("intensity", old_intensity)
+            # R4: Increment revision count and set merge timestamp
+            existing["revision_count"] = existing.get("revision_count", 0) + 1
+            existing["last_merged_at"] = datetime.now(timezone.utc).isoformat()
+            existing.update(node)
+            logger.info(
+                "[mem] node %s revised (v%d) — intensity %.2f→%.2f",
+                node_id, existing["revision_count"], old_intensity, new_intensity,
+            )
         elif node_id:
             merged[node_id] = node
+            node.setdefault("revision_count", 0)
         else:
             node["id"] = generate_node_id()
+            node.setdefault("revision_count", 0)
             merged[node["id"]] = node
 
     return sorted(merged.values(), key=lambda n: n.get("intensity", 0), reverse=True)

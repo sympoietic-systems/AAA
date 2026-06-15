@@ -334,6 +334,8 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         checkpoint_repo=repos["checkpoint_repo"],
         consolidate_threshold=ctx_cfg.get("consolidate_threshold", 15),
         memory_node_repo=repos["memory_node_repo"],
+        max_memory_nodes=ctx_cfg.get("max_memory_nodes", 6),
+        guaranteed_node_types=ctx_cfg.get("guaranteed_node_types", ["scar", "concept", "tension"]),
     )
 
     return {

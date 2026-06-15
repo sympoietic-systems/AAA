@@ -1,5 +1,8 @@
+import numpy as np
+
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import ConsolidationCheckpointRepository
+from backend.utils.similarity import cosine_similarity
 
 from .base import ProcessingModule
 
@@ -10,10 +13,14 @@ class ConsolidationCheckpointModule(ProcessingModule):
         checkpoint_repo: ConsolidationCheckpointRepository,
         consolidate_threshold: int = 15,
         memory_node_repo=None,
+        max_memory_nodes: int = 6,
+        guaranteed_node_types: list[str] | None = None,
     ):
         self._checkpoint_repo = checkpoint_repo
         self._consolidate_threshold = consolidate_threshold
         self._memory_node_repo = memory_node_repo
+        self._max_memory_nodes = max_memory_nodes
+        self._guaranteed_node_types = guaranteed_node_types or ["scar", "concept", "tension"]
 
     @property
     def name(self) -> str:
@@ -43,7 +50,8 @@ class ConsolidationCheckpointModule(ProcessingModule):
 
         if checkpoint:
             messages = payload.get("messages", [])
-            context_text = self._build_context_text(conversation_id, checkpoint)
+            current_embedding = payload.get("embedding")
+            context_text = self._build_context_text(conversation_id, checkpoint, current_embedding)
             checkpoint_msg = {
                 "role": "system",
                 "content": context_text,
@@ -63,7 +71,9 @@ class ConsolidationCheckpointModule(ProcessingModule):
 
         return payload
 
-    def _build_context_text(self, conversation_id: str, checkpoint: dict) -> str:
+    def _build_context_text(
+        self, conversation_id: str, checkpoint: dict, current_embedding: bytes | None = None
+    ) -> str:
         human_summary = checkpoint.get("human_summary", "").strip()
         checkpoint_id = checkpoint.get("id")
 
@@ -71,16 +81,16 @@ class ConsolidationCheckpointModule(ProcessingModule):
             try:
                 nodes = self._memory_node_repo.get_nodes_by_checkpoint(checkpoint_id)
                 if nodes:
-                    top_nodes = sorted(
-                        nodes, key=lambda n: n.get("intensity", 0), reverse=True
-                    )[:3]
+                    selected = self._select_nodes_type_diverse(nodes, current_embedding)
 
                     parts = []
-                    for n in top_nodes:
+                    for n in selected:
                         ntype = n.get("node_type", n.get("type", "concept"))
+                        tag = n.get("_origin_tag", "")
                         text = n.get("intra_active_text", "")
                         if text:
-                            parts.append(f"- [{ntype.upper()}] {text}")
+                            prefix = f"- [{ntype.upper()}]{tag} "
+                            parts.append(prefix + text)
 
                     keys = [
                         n.get("diffractive_key", "")
@@ -89,7 +99,6 @@ class ConsolidationCheckpointModule(ProcessingModule):
                     ]
                     keys_str = ", ".join(keys[:5])
 
-                    # Build context: prose summary first (if available), then node list
                     memory_block = "[Memory sedimentation — "
                     if human_summary:
                         memory_block += (
@@ -111,3 +120,75 @@ class ConsolidationCheckpointModule(ProcessingModule):
             return f"[Consolidation summary: {human_summary}]"
 
         return f"[Consolidated memory: {checkpoint['summary']}]"
+
+    def _select_nodes_type_diverse(
+        self, nodes: list[dict], current_embedding: bytes | None = None
+    ) -> list[dict]:
+        """R2: 6-node type-diverse selection.
+
+        Slot 1 → highest-intensity scar
+        Slot 2 → highest-intensity concept
+        Slot 3 → highest-intensity tension
+        Slots 4–N → best-by-embedding-similarity to current message (any type)
+
+        If a type has zero nodes, its slot is filled by next-best similarity.
+        If fewer than max_memory_nodes total nodes exist, all are returned.
+        """
+        if len(nodes) <= self._max_memory_nodes:
+            return nodes
+
+        selected: dict[str, dict] = {}  # keyed by node id
+
+        # ── Guaranteed-type slots (by intensity) ──
+        grouped: dict[str, list[dict]] = {}
+        for n in nodes:
+            ntype = n.get("node_type", n.get("type", "concept"))
+            grouped.setdefault(ntype, []).append(n)
+
+        for gtype in self._guaranteed_node_types:
+            pool = grouped.get(gtype, [])
+            if pool:
+                best = max(pool, key=lambda n: n.get("intensity", 0))
+                selected[best.get("id", "")] = best
+
+        # ── Similarity-ranked slots (fill remaining) ──
+        remaining_slots = self._max_memory_nodes - len(selected)
+        if remaining_slots > 0:
+            # Candidates: nodes not already selected
+            candidates = [n for n in nodes if n.get("id") not in selected]
+
+            if current_embedding is not None and candidates:
+                # Score by embedding similarity to current message
+                try:
+                    current_vec = np.frombuffer(current_embedding, dtype="float32")
+                    scored = []
+                    for n in candidates:
+                        emb = n.get("embedding")
+                        if emb is not None and isinstance(emb, bytes):
+                            try:
+                                node_vec = np.frombuffer(emb, dtype="float32")
+                                if len(node_vec) == len(current_vec):
+                                    sim = float(cosine_similarity(current_vec, node_vec))
+                                    scored.append((sim, n))
+                                    continue
+                            except ValueError:
+                                pass
+                        # Fallback: use intensity as proxy when embedding unavailable
+                        scored.append((n.get("intensity", 0), n))
+                    scored.sort(key=lambda x: x[0], reverse=True)
+                    for _, n in scored[:remaining_slots]:
+                        selected[n.get("id", "")] = n
+                except Exception:
+                    # Embedding parse failed — fall back to intensity
+                    candidates.sort(key=lambda n: n.get("intensity", 0), reverse=True)
+                    for n in candidates[:remaining_slots]:
+                        selected[n.get("id", "")] = n
+            else:
+                # No embedding available — fall back to intensity
+                candidates.sort(key=lambda n: n.get("intensity", 0), reverse=True)
+                for n in candidates[:remaining_slots]:
+                    selected[n.get("id", "")] = n
+
+        # Return in guaranteed-type order, then similarity order
+        result = list(selected.values())
+        return result
