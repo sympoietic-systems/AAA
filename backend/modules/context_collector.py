@@ -73,12 +73,16 @@ class ContextCollectorModule(ProcessingModule):
         max_history: int = 20,
         floating_window: int = 8,
         caveman_enabled: bool = True,
+        compressed_message_repo: Any = None,
+        llm_compression_enabled: bool = False,
     ):
         self._repo = message_repo
         self._note_repo = note_repo
         self._max_history = max_history
         self._floating_window = floating_window
         self._caveman_enabled = caveman_enabled
+        self._compressed_message_repo = compressed_message_repo
+        self._llm_compression_enabled = llm_compression_enabled
 
     @property
     def name(self) -> str:
@@ -124,6 +128,30 @@ class ContextCollectorModule(ProcessingModule):
         for n in notes:
             notes_by_msg_id.setdefault(n["message_id"], []).append(n)
 
+        # R5: Load compressed blocks for middle history if LLM compression enabled
+        compressed_blocks: dict[int, str] = {}
+        if (
+            self._llm_compression_enabled
+            and self._compressed_message_repo
+            and conversation_id
+        ):
+            try:
+                tier2_msg_ids = [
+                    row.id for row in raw_msgs
+                    if row.id is not None
+                    and (len(raw_msgs) - 1 - raw_msgs.index(row)) >= self._floating_window
+                ]
+                if tier2_msg_ids:
+                    blocks = self._compressed_message_repo.get_for_messages(
+                        conversation_id, tier2_msg_ids
+                    )
+                    for block in blocks:
+                        # Map each message ID in range to the compressed block
+                        for mid in range(block["first_message_id"], block["last_message_id"] + 1):
+                            compressed_blocks[mid] = block["compressed_block"]
+            except Exception:
+                pass
+
         messages: list[dict] = []
 
         total = len(raw_msgs)
@@ -143,8 +171,17 @@ class ContextCollectorModule(ProcessingModule):
             elif position_from_end < self._floating_window:
                 content = row.content
             else:
-                compressed = caveman_compress(row.content) if self._caveman_enabled else row.content
-                content = f'<sedimented_strata message_id="{row.id}" speaker="{role}" position_from_end="{position_from_end}">{compressed}</sedimented_strata>'
+                # R5: Prefer LLM-compressed block over caveman compression
+                compressed_block = compressed_blocks.get(row.id)
+                if compressed_block:
+                    content = (
+                        f'<sedimented_strata message_id="{row.id}" speaker="{role}" '
+                        f'position_from_end="{position_from_end}" compressed="llm">'
+                        f'{compressed_block}</sedimented_strata>'
+                    )
+                else:
+                    compressed = caveman_compress(row.content) if self._caveman_enabled else row.content
+                    content = f'<sedimented_strata message_id="{row.id}" speaker="{role}" position_from_end="{position_from_end}">{compressed}</sedimented_strata>'
 
             # Parse inline notes (strip personal, replace shared)
             content = process_inline_notes(content, notes_by_id)

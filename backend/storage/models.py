@@ -326,3 +326,14 @@ class SemanticKnot:
     embedding_model: str
     token_count: int
     structural_signature: bytes = b""
+
+
+@dataclass
+class CompressedMessageBlock:
+    """R5: LLM-compressed batch of messages that exited the floating window."""
+    id: int | None = None
+    conversation_id: str = ""
+    first_message_id: int = 0
+    last_message_id: int = 0
+    compressed_block: str = ""
+    created_at: datetime | None = None

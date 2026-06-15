@@ -235,11 +235,14 @@ def _init_providers(config: dict):
 
 def _init_modules(config: dict, repos: dict, embedder, structural_provider, vision_provider):
     ctx_cfg = config.get("context", {})
+    llm_compression_cfg = config.get("llm_compression", {})
     context_collector = ContextCollectorModule(
         message_repo=repos["message_repo"], note_repo=repos["note_repo"],
         max_history=ctx_cfg.get("max_history", 20),
         floating_window=ctx_cfg.get("floating_window", 8),
         caveman_enabled=ctx_cfg.get("caveman_enabled", True),
+        compressed_message_repo=repos.get("compressed_message_repo"),
+        llm_compression_enabled=llm_compression_cfg.get("enabled", False),
     )
 
     metrics_cfg = config.get("homeostasis", {})
@@ -287,6 +290,9 @@ def _init_modules(config: dict, repos: dict, embedder, structural_provider, visi
         sediment_token_budget=sediment_cfg.get("sediment_token_budget", 2000),
         sediment_count=sediment_cfg.get("sediment_count", 10),
         similarity_threshold=sediment_cfg.get("similarity_threshold", 0.3),
+        semantic_knot_repo=repos.get("semantic_knot_repo"),
+        knot_warping_enabled=sediment_cfg.get("knot_warping_enabled", True),
+        knot_warping_weight=sediment_cfg.get("knot_warping_weight", 1.0),
     )
 
     diffractive_cfg = config.get("diffractive_retrieval", {})

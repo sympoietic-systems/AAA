@@ -79,6 +79,8 @@ sedimentation:
   sediment_token_budget: 4000
   sediment_count: 10
   similarity_threshold: 0.3
+  knot_warping_enabled: true       # S2: enable knot-mass gravitational warping for retrieval
+  knot_warping_weight: 1.0         # S2: global multiplier for knot-gravity term
 
 # ── Perception ──────────────────────────────────
 perception:
@@ -195,6 +197,22 @@ daemon:
   consolidate_cooldown_hours: 12      # hours before re-consolidating an already-summarized conversation
   consolidate_min_new_messages: 4     # minimum new messages since last checkpoint to trigger re-consolidation
   consolidate_first_time_threshold: 12  # minimum messages for first-ever consolidation (no prior checkpoint)
+
+# ── LLM Compression (R5) ────────────────────────
+# Tier 2 batch compression using lightweight LLM.
+# Falls back to caveman compression when disabled or LLM unavailable.
+# Env override: AAA_LLM_COMPRESSION_ENABLED
+llm_compression:
+  enabled: true
+  batch_threshold: 8             # Compress when N messages exit floating window
+  max_compressed_tokens: 200     # Max tokens per compressed block
+  model: "google/gemma-4-26b-a4b-it:free"  # Lightweight model for compression
+  focus_areas:                   # What the LLM should preserve
+    - key_decisions
+    - novel_concepts
+    - tonal_shifts
+    - unresolved_tensions
+    - factual_claims
 
 # ── Background Tasks ──────────────────────────────
 # Models are tried in order. If one is rate-limited, the next is used.

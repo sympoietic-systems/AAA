@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime
+from typing import Optional
 
 import numpy as np
 
 from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import MessageRepository
+from backend.storage.repository import MessageRepository, SemanticKnotRepository
 from backend.utils.token_counter import estimate_message_tokens
 
 from .base import ProcessingModule
@@ -43,11 +44,17 @@ class SedimentationRetrievalModule(ProcessingModule):
         sediment_token_budget: int = 2000,
         sediment_count: int = 10,
         similarity_threshold: float = 0.3,
+        semantic_knot_repo: Optional[SemanticKnotRepository] = None,
+        knot_warping_enabled: bool = True,
+        knot_warping_weight: float = 1.0,
     ):
         self._repo = message_repo
         self._sediment_token_budget = sediment_token_budget
         self._sediment_count = sediment_count
         self._similarity_threshold = similarity_threshold
+        self._semantic_knot_repo = semantic_knot_repo
+        self._knot_warping_enabled = knot_warping_enabled
+        self._knot_warping_weight = knot_warping_weight
 
     @property
     def name(self) -> str:
@@ -84,9 +91,34 @@ class SedimentationRetrievalModule(ProcessingModule):
             payload["sediment_messages"] = []
             return payload
 
+        # S2: Load active semantic knots for gravitational warping
+        knot_embeddings: list[tuple[float, np.ndarray]] = []
+        if self._knot_warping_enabled and self._semantic_knot_repo:
+            try:
+                raw_knots = self._semantic_knot_repo.get_embeddings_and_signatures_except(
+                    exclude_conversation_id=conversation_id, limit=100
+                )
+                for _knot_id, emb_vec, _sig_vec, _payload in raw_knots:
+                    if emb_vec is not None and len(emb_vec) == len(current_vec):
+                        # Fetch weight from repo (default to 0.5 if unavailable)
+                        knot_embeddings.append((0.5, emb_vec))
+            except Exception:
+                pass
+
         scored: list[tuple[float, int]] = []
         for msg_id, _speaker, vec in embeddings:
+            if len(vec) != len(current_vec):
+                continue
             sim = float(np.dot(current_vec, vec))
+
+            # S2: Add knot gravitational pull to the base similarity score
+            if knot_embeddings:
+                gravity_sum = 0.0
+                for knot_weight, knot_vec in knot_embeddings:
+                    dist_sq = float(np.sum((vec - knot_vec) ** 2))
+                    gravity_sum += knot_weight * np.exp(-dist_sq)
+                sim += self._knot_warping_weight * gravity_sum
+
             if sim >= self._similarity_threshold:
                 scored.append((sim, msg_id))
 
