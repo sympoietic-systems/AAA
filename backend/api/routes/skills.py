@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 
+from backend.api.deps import require_agent_flux
 from backend.api.schemas import (
     DbSkillInfo,
     DbSkillsResponse,
@@ -43,15 +44,8 @@ async def get_db_skills(request: Request):
     return result
 
 
-def check_agent_flux():
-    import os
-    if not os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="Skill modification is disabled (AAA_AGENT_FLUX is false)")
-
-
-@router.post("/skills", response_model=DbSkillInfo)
+@router.post("/skills", response_model=DbSkillInfo, dependencies=[Depends(require_agent_flux)])
 async def create_skill(body: SkillCreateRequest, request: Request):
-    check_agent_flux()
     service = SkillService(request.app.state)
     try:
         result = await service.create_new_skill(
@@ -66,9 +60,8 @@ async def create_skill(body: SkillCreateRequest, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/skills/{skill_id}", response_model=DbSkillInfo)
+@router.put("/skills/{skill_id}", response_model=DbSkillInfo, dependencies=[Depends(require_agent_flux)])
 async def update_skill(skill_id: str, body: SkillUpdateRequest, request: Request):
-    check_agent_flux()
     service = SkillService(request.app.state)
     try:
         result = await service.update_skill_details(
@@ -82,9 +75,8 @@ async def update_skill(skill_id: str, body: SkillUpdateRequest, request: Request
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/skills/{skill_id}")
+@router.delete("/skills/{skill_id}", dependencies=[Depends(require_agent_flux)])
 async def delete_skill(skill_id: str, request: Request):
-    check_agent_flux()
     service = SkillService(request.app.state)
     try:
         await service.delete_skill(skill_id)
@@ -136,9 +128,8 @@ async def get_skill_versions(skill_id: str, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/skills/{skill_id}/revert/{version}")
+@router.post("/skills/{skill_id}/revert/{version}", dependencies=[Depends(require_agent_flux)])
 async def revert_skill_version(skill_id: str, version: int, request: Request):
-    check_agent_flux()
     state = request.app.state
     skill_repo = getattr(state, "skill_repo", None)
     if not skill_repo:

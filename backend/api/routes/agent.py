@@ -1,9 +1,11 @@
 import json
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
+from backend.api.deps import agent_flux_enabled, require_agent_flux
 from backend.api.schemas import AgentInfo
+from backend.utils.vector import parse_vector_16d, cosine_similarity
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -12,11 +14,9 @@ logger = logging.getLogger(__name__)
 @router.get("/agent", response_model=AgentInfo)
 async def get_agent(request: Request):
     state = request.app.state
-    import os
-    agent_flux = os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes")
     return AgentInfo(
         name=getattr(state, "agent_name", "symbia"),
-        agent_flux=agent_flux,
+        agent_flux=agent_flux_enabled(),
     )
 
 
@@ -78,39 +78,9 @@ def _node_to_dict(node, extra: dict = None) -> dict:
     return d
 
 
-def _parse_vector_16d(vector_json: str):
-    """Parse a JSON 16D vector string into a list of floats, or None."""
-    import numpy as np
-    if not vector_json or vector_json == "[]":
-        return None
-    try:
-        data = json.loads(vector_json)
-    except (json.JSONDecodeError, TypeError):
-        return None
-    if isinstance(data, dict):
-        for key in ("v16d", "v384d"):
-            if key in data and data[key]:
-                return [float(x) for x in data[key]]
-        return None
-    if isinstance(data, list) and len(data) == 16:
-        return [float(x) for x in data]
-    return None
-
-
-def _cosine_sim(a, b) -> float:
-    """Cosine similarity between two float lists."""
-    import numpy as np
-    va = np.array(a, dtype=np.float32)
-    vb = np.array(b, dtype=np.float32)
-    dot = float(np.dot(va, vb))
-    na = float(np.linalg.norm(va))
-    nb = float(np.linalg.norm(vb))
-    return dot / (na * nb) if na > 0 and nb > 0 else 0.0
-
-
 def _find_basin_beliefs(commit_vector_json: str, belief_repo, min_similarity: float = 0.6) -> dict:
     """Find beliefs within a commitment's attractor basin."""
-    commit_vec = _parse_vector_16d(commit_vector_json)
+    commit_vec = parse_vector_16d(commit_vector_json)
     if commit_vec is None or belief_repo is None:
         return {"count": 0, "labels": []}
 
@@ -121,10 +91,10 @@ def _find_basin_beliefs(commit_vector_json: str, belief_repo, min_similarity: fl
 
     basin = []
     for b in active_beliefs:
-        b_vec = _parse_vector_16d(b.vector_16d)
+        b_vec = parse_vector_16d(b.vector_16d)
         if b_vec is None:
             continue
-        sim = _cosine_sim(commit_vec, b_vec)
+        sim = cosine_similarity(commit_vec, b_vec)
         if sim > min_similarity:
             basin.append({
                 "label": b.label,
@@ -170,7 +140,7 @@ async def get_personality(request: Request):
                     "lifecycle_stage": c.lifecycle_stage,
                     "confidence": c.confidence,
                     "ontological_mass": c.ontological_mass,
-                    "vector_16d": _parse_vector_16d(c.vector_16d),
+                    "vector_16d": parse_vector_16d(c.vector_16d),
                     "basin_belief_count": basin["count"],
                     "basin_belief_labels": basin["labels"],
                     "basin_beliefs": basin.get("beliefs", []),
@@ -185,7 +155,7 @@ async def get_personality(request: Request):
                     "lifecycle_stage": c.lifecycle_stage,
                     "confidence": c.confidence,
                     "ontological_mass": c.ontological_mass,
-                    "vector_16d": _parse_vector_16d(c.vector_16d),
+                    "vector_16d": parse_vector_16d(c.vector_16d),
                     "nucleation_rationale": c.nucleation_rationale,
                     "created_at": c.created_at.isoformat() if c.created_at else None,
                 })
@@ -213,7 +183,7 @@ async def get_personality(request: Request):
                     "ontological_mass": e.ontological_mass,
                     "level_label": e.level_label,
                     "signal_count": e.signal_count,
-                    "vector_16d": _parse_vector_16d(e.vector_16d),
+                    "vector_16d": parse_vector_16d(e.vector_16d),
                     "last_signal_at": e.last_signal_at.isoformat() if e.last_signal_at else None,
                     "crystallization_rationale": e.crystallization_rationale,
                     "created_at": e.created_at.isoformat() if e.created_at else None,
@@ -241,13 +211,10 @@ async def get_personality(request: Request):
 # ── Flux edit endpoints ──
 
 
-@router.put("/agent/personality/commitment/{commitment_id}")
+@router.put("/agent/personality/commitment/{commitment_id}", dependencies=[Depends(require_agent_flux)])
 async def update_commitment(commitment_id: str, request: Request):
     """Edit a commitment (AAA_AGENT_FLUX only)."""
     state = request.app.state
-    import os
-    if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
 
     commit_repo = getattr(state, "commitment_repo", None)
     if not commit_repo:
@@ -275,13 +242,10 @@ async def update_commitment(commitment_id: str, request: Request):
     }}
 
 
-@router.put("/agent/personality/expertise/{expertise_id}")
+@router.put("/agent/personality/expertise/{expertise_id}", dependencies=[Depends(require_agent_flux)])
 async def update_expertise(expertise_id: str, request: Request):
     """Edit an expertise domain (AAA_AGENT_FLUX only)."""
     state = request.app.state
-    import os
-    if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
 
     exp_repo = getattr(state, "expertise_repo", None)
     if not exp_repo:
@@ -307,13 +271,10 @@ async def update_expertise(expertise_id: str, request: Request):
     }}
 
 
-@router.put("/agent/personality/aspirational")
+@router.put("/agent/personality/aspirational", dependencies=[Depends(require_agent_flux)])
 async def update_aspirational_traits(request: Request):
     """Update aspirational trait attractors (AAA_AGENT_FLUX only)."""
     state = request.app.state
-    import os
-    if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
 
     ps_repo = getattr(state, "personality_state_repo", None)
     if not ps_repo:
@@ -340,13 +301,11 @@ async def update_aspirational_traits(request: Request):
 # ── Vector recalculation endpoints ──
 
 
-@router.put("/agent/personality/commitment/{commitment_id}/recalculate")
+@router.put("/agent/personality/commitment/{commitment_id}/recalculate", dependencies=[Depends(require_agent_flux)])
 async def recalculate_commitment_vector(commitment_id: str, request: Request):
     """Re-score the commitment's statement via the pipeline's structural scorer."""
     state = request.app.state
-    import os, numpy as np
-    if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
+    import numpy as np
 
     commit_repo = getattr(state, "commitment_repo", None)
     structural_scorer = getattr(state, "structural_scorer", None)
@@ -365,13 +324,11 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
     return {"status": "ok", "vector_16d": new_vector.tolist()}
 
 
-@router.put("/agent/personality/expertise/{expertise_id}/recalculate")
+@router.put("/agent/personality/expertise/{expertise_id}/recalculate", dependencies=[Depends(require_agent_flux)])
 async def recalculate_expertise_vector(expertise_id: str, request: Request):
     """Re-score the expertise domain via the pipeline's structural scorer."""
     state = request.app.state
-    import os, numpy as np
-    if not os.environ.get("AAA_AGENT_FLUX", "").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="AGENT_FLUX not enabled")
+    import numpy as np
 
     exp_repo = getattr(state, "expertise_repo", None)
     structural_scorer = getattr(state, "structural_scorer", None)

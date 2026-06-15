@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from datetime import datetime, timezone
 
@@ -8,6 +9,7 @@ from backend.api.schemas import ConversationFile, ConversationFilesResponse
 from backend.services.file import FileService
 from backend.utils.filesystem import ensure_upload_dir, get_upload_path
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -103,8 +105,6 @@ async def get_conversation_files(conversation_id: str, request: Request):
 
 @router.delete("/conversations/{conversation_id}/files/{file_name}")
 async def delete_conversation_file(conversation_id: str, file_name: str, request: Request):
-    import logging
-    logger = logging.getLogger(__name__)
     state = request.app.state
     perception_repo = state.perception_repo
     files = perception_repo.get_files_by_conversation(conversation_id)

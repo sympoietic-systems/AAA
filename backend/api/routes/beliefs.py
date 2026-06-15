@@ -1,17 +1,12 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from backend.api.deps import require_agent_flux
 from backend.services.belief import BeliefService
 
 router = APIRouter()
-
-
-def check_agent_flux():
-    import os
-    if not os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="Belief modification is disabled (AAA_AGENT_FLUX is false)")
 
 
 class BeliefCreateRequest(BaseModel):
@@ -153,9 +148,8 @@ async def get_belief_versions(belief_id: str, request: Request):
     return await service.get_statement_versions(belief_id)
 
 
-@router.post("/beliefs")
+@router.post("/beliefs", dependencies=[Depends(require_agent_flux)])
 async def create_belief(payload: BeliefCreateRequest, request: Request):
-    check_agent_flux()
     state = request.app.state
     service = BeliefService(state)
     res = await service.create_new_belief(
@@ -171,9 +165,8 @@ async def create_belief(payload: BeliefCreateRequest, request: Request):
     return res
 
 
-@router.put("/beliefs/{belief_id}")
+@router.put("/beliefs/{belief_id}", dependencies=[Depends(require_agent_flux)])
 async def update_belief(belief_id: str, payload: BeliefUpdateRequest, request: Request):
-    check_agent_flux()
     state = request.app.state
     service = BeliefService(state)
     res = await service.update_belief_details(
@@ -189,9 +182,8 @@ async def update_belief(belief_id: str, payload: BeliefUpdateRequest, request: R
     return res
 
 
-@router.delete("/beliefs/{belief_id}")
+@router.delete("/beliefs/{belief_id}", dependencies=[Depends(require_agent_flux)])
 async def delete_belief(belief_id: str, request: Request):
-    check_agent_flux()
     state = request.app.state
     service = BeliefService(state)
     res = await service.delete_belief(belief_id)
@@ -200,9 +192,8 @@ async def delete_belief(belief_id: str, request: Request):
     return res
 
 
-@router.post("/beliefs/{belief_id}/revert/{version}")
+@router.post("/beliefs/{belief_id}/revert/{version}", dependencies=[Depends(require_agent_flux)])
 async def revert_belief_version(belief_id: str, version: int, request: Request):
-    check_agent_flux()
     state = request.app.state
     service = BeliefService(state)
     res = await service.revert_belief_version(belief_id, version)

@@ -1,8 +1,9 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
+from backend.api.deps import require_agent_flux
 from backend.api.schemas import (
     ConversationInfo,
     ConversationListResponse,
@@ -93,11 +94,8 @@ async def update_conversation(
     return ConversationInfo(**info)
 
 
-@router.delete("/conversations/{conversation_id}")
+@router.delete("/conversations/{conversation_id}", dependencies=[Depends(require_agent_flux)])
 async def delete_conversation(conversation_id: str, request: Request):
-    import os
-    if not os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="Conversation deletion is disabled (AAA_AGENT_FLUX is false)")
 
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
@@ -110,11 +108,8 @@ async def delete_conversation(conversation_id: str, request: Request):
     return {"status": "deleted", "id": conversation_id}
 
 
-@router.delete("/conversations/{conversation_id}/messages/{message_id}")
+@router.delete("/conversations/{conversation_id}/messages/{message_id}", dependencies=[Depends(require_agent_flux)])
 async def delete_message(conversation_id: str, message_id: int, request: Request):
-    import os
-    if not os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes"):
-        raise HTTPException(status_code=403, detail="Message deletion is disabled (AAA_AGENT_FLUX is false)")
 
     state = request.app.state
     msg_repo = state.message_repo

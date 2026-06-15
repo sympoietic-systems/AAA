@@ -1,15 +1,39 @@
+"""FastAPI dependencies — auth, guards, app-state, and repo injection.
+
+Provides reusable FastAPI Depends callables so route handlers don't need
+to manually pull repos from request.app.state with getattr(...).
+
+Usage in route files:
+    from backend.api.deps import require_agent_flux, get_app_state, get_message_repo
+
+    @router.post("/endpoint")
+    async def handler(
+        state = Depends(get_app_state),
+        repo = Depends(get_message_repo),
+    ):
+        ...
+"""
+
 import logging
 import os
 from typing import Optional
 
-from fastapi import Header, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request
 
 logger = logging.getLogger(__name__)
 
-AAA_PASSWORD = os.environ.get("AAA_PASSWORD", "").strip()
+# ── Auth ───────────────────────────────────────────────────────────────
+
+AAA_PASSWORD: str = os.environ.get("AAA_PASSWORD", "").strip()
 
 
 async def verify_password(authorization: Optional[str] = Header(None)):
+    """FastAPI dependency: verify Bearer token against AAA_PASSWORD env var.
+
+    If AAA_PASSWORD is not set, authentication is bypassed.
+
+    Attached to the API router via dependencies=[Depends(verify_password)].
+    """
     if not AAA_PASSWORD:
         return
 
@@ -20,7 +44,7 @@ async def verify_password(authorization: Optional[str] = Header(None)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = None
+    token: Optional[str] = None
     if authorization.startswith("Bearer "):
         token = authorization[7:]
 
@@ -30,3 +54,139 @@ async def verify_password(authorization: Optional[str] = Header(None)):
             detail="Invalid credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+# ── Feature gate ───────────────────────────────────────────────────────
+
+def require_agent_flux():
+    """FastAPI dependency: require AAA_AGENT_FLUX=true.
+
+    Use as a route dependency to guard mutation endpoints:
+        @router.post("/skills", dependencies=[Depends(require_agent_flux)])
+
+    Centralizes the previously duplicated check_agent_flux() pattern from
+    beliefs.py:11 and skills.py:46 with a consistent default value.
+    """
+    if not os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes"):
+        raise HTTPException(
+            status_code=403,
+            detail="Agent modification is disabled (AAA_AGENT_FLUX is false)",
+        )
+
+
+def agent_flux_enabled() -> bool:
+    """Non-raising check: return whether AAA_AGENT_FLUX is enabled.
+
+    For use in non-guard contexts (e.g., returning flux status in API responses).
+    Replaces the inline os.environ.get(...) pattern in agent.py:16.
+    """
+    return os.environ.get("AAA_AGENT_FLUX", "false").lower() in ("true", "1", "yes")
+
+
+# ── App state access ───────────────────────────────────────────────────
+
+def get_app_state(request: Request):
+    """FastAPI dependency: provide the full app.state object."""
+    return request.app.state
+
+
+# ── Repository getters ─────────────────────────────────────────────────
+
+def get_message_repo(state=Depends(get_app_state)):
+    return getattr(state, "message_repo", None)
+
+def get_error_repo(state=Depends(get_app_state)):
+    return getattr(state, "error_repo", None)
+
+def get_metrics_repo(state=Depends(get_app_state)):
+    return getattr(state, "metrics_repo", None)
+
+def get_conversation_repo(state=Depends(get_app_state)):
+    return getattr(state, "conversation_repo", None)
+
+def get_perception_repo(state=Depends(get_app_state)):
+    return getattr(state, "perception_repo", None)
+
+def get_checkpoint_repo(state=Depends(get_app_state)):
+    return getattr(state, "checkpoint_repo", None)
+
+def get_memory_node_repo(state=Depends(get_app_state)):
+    return getattr(state, "memory_node_repo", None)
+
+def get_belief_repo(state=Depends(get_app_state)):
+    return getattr(state, "belief_repo", None)
+
+def get_semantic_knot_repo(state=Depends(get_app_state)):
+    return getattr(state, "semantic_knot_repo", None)
+
+def get_note_repo(state=Depends(get_app_state)):
+    return getattr(state, "note_repo", None)
+
+def get_skill_repo(state=Depends(get_app_state)):
+    return getattr(state, "skill_repo", None)
+
+def get_notification_repo(state=Depends(get_app_state)):
+    return getattr(state, "notification_repo", None)
+
+def get_commitment_repo(state=Depends(get_app_state)):
+    return getattr(state, "commitment_repo", None)
+
+def get_expertise_repo(state=Depends(get_app_state)):
+    return getattr(state, "expertise_repo", None)
+
+def get_personality_state_repo(state=Depends(get_app_state)):
+    return getattr(state, "personality_state_repo", None)
+
+def get_dream_log_repo(state=Depends(get_app_state)):
+    return getattr(state, "dream_log_repo", None)
+
+
+# ── Module / engine getters ────────────────────────────────────────────
+
+def get_registry(state=Depends(get_app_state)):
+    return getattr(state, "registry", None)
+
+def get_embedder(state=Depends(get_app_state)):
+    return getattr(state, "embedder", None)
+
+def get_background_engine(state=Depends(get_app_state)):
+    return getattr(state, "background_engine", None)
+
+def get_structural_scorer(state=Depends(get_app_state)):
+    return getattr(state, "structural_scorer", None)
+
+def get_metrics_module(state=Depends(get_app_state)):
+    return getattr(state, "metrics_module", None)
+
+def get_perception_module(state=Depends(get_app_state)):
+    return getattr(state, "perception_module", None)
+
+def get_pipeline(state=Depends(get_app_state)):
+    return getattr(state, "pipeline", None)
+
+def get_pipeline_order(state=Depends(get_app_state)):
+    return getattr(state, "pipeline_order", None)
+
+def get_agent_name(state=Depends(get_app_state)):
+    return getattr(state, "agent_name", "symbia")
+
+
+# ── Composite helpers ──────────────────────────────────────────────────
+
+def get_conversation_or_404(
+    conv_repo=Depends(get_conversation_repo),
+) -> callable:
+    """Return a callable that fetches a conversation or raises 404.
+
+    Usage:
+        conv_guard = Depends(get_conversation_or_404)
+        conv = conv_guard(conversation_id)
+    """
+    def _get(conversation_id: str):
+        if not conv_repo:
+            raise HTTPException(status_code=503, detail="Conversation repository not initialized")
+        conv = conv_repo.get(conversation_id)
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return conv
+    return _get

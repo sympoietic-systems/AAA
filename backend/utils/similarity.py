@@ -1,9 +1,7 @@
-import numpy as np
+"""Backward-compatibility shim — delegates to backend.utils.vector.
 
+The canonical cosine_similarity now lives in backend.utils.vector to
+consolidate all vector-related utilities in one module.
+"""
 
-def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    norm_a = np.linalg.norm(a)
-    norm_b = np.linalg.norm(b)
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return float(np.dot(a, b) / (norm_a * norm_b))
+from backend.utils.vector import cosine_similarity  # noqa: F401
