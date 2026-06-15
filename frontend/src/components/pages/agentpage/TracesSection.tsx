@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, memo, useRef } from "react"
 import { getNotification, getNotifications, dismissNotification, markNotificationRead, markNotificationUnread, clearNotifications, markAllNotificationsRead } from "../../../api/client"
 import type { SedimentNotification } from "../../../api/client"
 import { syncNotifications } from "../../../stores/notificationStore"
+import { formatTimestamp } from "../../../utils/dateFormat"
 
 interface Props {
   onNavigateToEntity?: (type: string, id: string) => void
@@ -140,10 +141,6 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
       }
       syncNotifications()
     } catch (err) { console.error("Failed to mark all read:", err) }
-  }
-
-  const formatTimestamp = (ts: string) => {
-    try { return new Date(ts).toISOString().replace("T", " ").substring(0, 19) } catch { return ts }
   }
 
   const typeColor = (t: string) => t === "glitch" ? "#f43f5e" : t === "sediment" ? "#e09b67" : "#38bdf8"

@@ -1,21 +1,10 @@
 import { useState, useEffect, memo } from "react"
 import { getDaemonStatus, getRecentDreams } from "../../../api/client"
 import type { DaemonStatusResponse, DreamEntry } from "../../../api/client"
+import { formatRelativeTime } from "../../../utils/dateFormat"
 import telemetrySchemas from "../../../config/telemetry_schemas.json"
 
 const { DREAM_TYPE_LABELS } = telemetrySchemas as { DREAM_TYPE_LABELS: Record<string, { code: string; label: string; color: string }> }
-
-function formatRelativeTime(isoString: string): string {
-  const now = Date.now(); const then = new Date(isoString).getTime(); const diffMs = now - then
-  if (diffMs < 0) return "just now"
-  const seconds = Math.floor(diffMs / 1000)
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
-}
 
 export const DreamingSection = memo(function DreamingSection() {
   const [status, setStatus] = useState<DaemonStatusResponse | null>(null)

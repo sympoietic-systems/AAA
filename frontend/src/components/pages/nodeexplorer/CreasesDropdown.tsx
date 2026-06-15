@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, memo } from "react"
 import type { ConversationInfo, SedimentNotification } from "../../../api/client"
+import { formatTime, formatTimeShort } from "../../../utils/dateFormat"
 import {
   useNotifications,
   dismissNotification,
@@ -167,7 +168,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
                         {notif.conversationTitle}
                       </span>
                       <span className="text-[8px] font-mono text-[#3c3c44]">
-                        {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        {formatTimeShort(notif.timestamp)}
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
@@ -214,7 +215,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
                         {notif.source || "system glitch"}
                       </span>
                       <span className="text-[8px] font-mono text-[#884444]">
-                        {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                        {formatTime(notif.timestamp)}
                       </span>
                     </div>
                     <p className="text-[10px] text-[#fca5a5]/90 font-mono leading-normal break-words whitespace-pre-wrap select-text">
@@ -254,7 +255,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
                         {notif.source || "system trace"}
                       </span>
                       <span className="text-[8px] font-mono text-[#3b82f6]">
-                        {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                        {formatTime(notif.timestamp)}
                       </span>
                     </div>
                     <p className="text-[10px] text-[#93c5fd]/90 font-mono leading-normal break-words select-text">

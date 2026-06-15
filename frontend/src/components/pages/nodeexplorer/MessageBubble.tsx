@@ -5,6 +5,7 @@ import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
 import type { ChatMessage, NoteInfo } from "../../../api/client"
 import { getMessageThinking, getMessageContext } from "../../../api/client"
+import { formatTime } from "../../../utils/dateFormat"
 import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
 import { VitalityBar } from "./VitalityBar"
@@ -362,7 +363,7 @@ export const MessageBubble = memo(function MessageBubble({
         <div className="flex items-center gap-2">
           {msg.timestamp && (
             <span className="text-[#555] font-mono">
-              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+              {formatTime(msg.timestamp)}
             </span>
           )}
           {hasSiblings && currentIndex !== -1 && (

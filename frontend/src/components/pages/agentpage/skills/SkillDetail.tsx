@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from "react"
 import { updateSkill, deleteSkill } from "../../../../api/client"
 import type { DbSkillInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
+import { formatDateTimeFull } from "../../../../utils/dateFormat"
 import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
 import { TerminalTabs } from "../../../UI"
 
@@ -287,7 +288,7 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
               return (
                 <VersionItem
                   key={v.version} version={v.version} source={v.source}
-                  timestamp={v.created_at ? new Date(v.created_at).toLocaleString() : ""}
+                  timestamp={v.created_at ? formatDateTimeFull(v.created_at) : ""}
                   changelog={v.changelog || "No changelog"}
                   isCurrent={v.version === skill.version} agentFlux={agentFlux}
                   isExpanded={isExpanded} hasDiff={hasAnyDiff}

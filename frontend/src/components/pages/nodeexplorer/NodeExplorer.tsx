@@ -1,5 +1,6 @@
 import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, ConversationTreeNode, ConversationInfo } from "../../../api/client"
 import { getMessagePath } from "../../../api/client"
+import { formatTime } from "../../../utils/dateFormat"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 import { CreasesDropdown } from "./CreasesDropdown"
@@ -180,7 +181,7 @@ const SedimentFold = memo(function SedimentFold({
                     </span>
                     {item.timestamp && (
                       <span className="text-[8px] text-[#3c3c44] font-mono">
-                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                        {formatTime(item.timestamp)}
                       </span>
                     )}
                   </div>

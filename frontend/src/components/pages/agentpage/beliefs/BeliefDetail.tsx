@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, memo } from "react"
 import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement } from "../../../../api/client"
 import type { BeliefNodeInfo } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
+import { formatTime, formatDateTimeFull } from "../../../../utils/dateFormat"
 import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
 import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "../shared/helpers"
 import { TerminalTabs } from "../../../UI"
@@ -298,7 +299,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
           <span><span className="text-[#444]">Origin:</span> <span className="text-[#aaa]">emergent</span></span>
           <span><span className="text-[#444]">Mass:</span> <span className="text-[#aaa]">{b.ontological_mass.toFixed(2)}</span></span>
           <span><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa]">{(b.confidence * 100).toFixed(0)}%</span></span>
-          <span><span className="text-[#444]">Created:</span> <span className="text-[#aaa]">{b.last_reinforced_at ? new Date(b.last_reinforced_at).toLocaleString() : ""}</span></span>
+          <span><span className="text-[#444]">Created:</span> <span className="text-[#aaa]">{b.last_reinforced_at ? formatDateTimeFull(b.last_reinforced_at) : ""}</span></span>
         </div>
         {b.symbia_reflection && (
           <div>
@@ -509,7 +510,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                 return (
                   <div key={e.id} className="leading-normal">
                     <div className="flex items-center justify-between text-[#888]">
-                      <span className="font-mono text-[10px]">{new Date(e.timestamp).toLocaleTimeString()}</span>
+                      <span className="font-mono text-[10px]">{formatTime(e.timestamp)}</span>
                       <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
                         {massDelta !== null && massDelta !== 0 && (
                           <span className={massDelta > 0 ? "text-[#60a5fa]" : massDelta < 0 ? "text-[#f87171]" : "text-[#555]"}>
@@ -548,7 +549,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                 return (
                   <VersionItem
                     key={v.version} version={v.version}
-                    label={v.created_at ? new Date(v.created_at).toLocaleString() : ""}
+                    label={v.created_at ? formatDateTimeFull(v.created_at) : ""}
                     timestamp="" changelog={v.change_reason || "No description"}
                     isCurrent={v.version === b.version} agentFlux={agentFlux}
                     isExpanded={isExpanded} hasDiff={hasDiff}

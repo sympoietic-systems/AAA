@@ -3,6 +3,7 @@ import type { ConversationInfo, NoteInfo } from "../../../api/client"
 import { getConversation } from "../../../api/conversations"
 import { getNotes, deleteNote, updateNote } from "../../../api/notes"
 import { generateHumanSummary } from "../../../api/conversations"
+import { formatDateTime } from "../../../utils/dateFormat"
 import { NotesSection } from "../../shared/NotesSection"
 import { MemoryNodesSection } from "../../shared/MemoryNodesSection"
 
@@ -23,22 +24,6 @@ interface Props {
 }
 
 type DetailTab = "summary" | "notes" | "memory_nodes"
-
-function formatDate(dateStr?: string | null): string {
-  if (!dateStr) return ""
-  try {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    })
-  } catch {
-    return dateStr
-  }
-}
 
 function Tags({ tags }: { tags?: any[] }) {
   if (!tags || tags.length === 0) return null
@@ -308,7 +293,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                       `}
                     >
                       <span className="text-[10px] text-[#444] shrink-0 w-24">
-                        {formatDate(conv.updated_at || conv.created_at)}
+                        {formatDateTime(conv.updated_at || conv.created_at)}
                       </span>
                       <span className={`text-[10px] font-bold shrink-0 ${lc}`}>[{l}]</span>
                       <span className="text-[#333] shrink-0">&gt;&gt;</span>
@@ -391,11 +376,11 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 px-6 py-2 text-[10px] font-mono shrink-0">
                 <span>
                   <span className="text-[#555]">created: </span>
-                  <span className="text-[#94a3b8]">{formatDate(displayConv.created_at)}</span>
+                  <span className="text-[#94a3b8]">{formatDateTime(displayConv.created_at)}</span>
                 </span>
                 <span>
                   <span className="text-[#555]">updated: </span>
-                  <span className="text-[#94a3b8]">{formatDate(displayConv.updated_at)}</span>
+                  <span className="text-[#94a3b8]">{formatDateTime(displayConv.updated_at)}</span>
                 </span>
                 <span>
                   <span className="text-[#555]">messages: </span>
