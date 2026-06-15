@@ -234,13 +234,13 @@ async def get_philosophy() -> str:
 @mcp.resource("aaa://identity")
 async def get_identity() -> str:
     """Get the identity, voice, traits, and belief configuration of Symbia."""
-    identity_path = Path(__file__).parent / "personality" / "identity.yaml"
+    identity_path = Path(__file__).parent.parent / "config" / "personality" / "identity.yaml"
     if identity_path.exists():
         try:
             return identity_path.read_text(encoding="utf-8")
         except Exception as e:
             return f"Error reading identity configuration: {e}"
-    return "Identity configuration not found at backend/personality/identity.yaml"
+    return "Identity configuration not found at config/personality/identity.yaml"
 
 
 @mcp.resource("aaa://metrics")

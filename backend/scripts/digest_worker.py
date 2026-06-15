@@ -550,7 +550,7 @@ async def main():
 
     # 6. Initialize Belief Dynamics
     personality_cfg = config.get("personality", {})
-    identity_path = Path(personality_cfg.get("path", "backend/personality/identity.yaml"))
+    identity_path = Path(personality_cfg.get("path", "config/personality/identity.yaml"))
     if not identity_path.is_absolute():
         identity_path = Path(__file__).resolve().parents[2] / identity_path
 

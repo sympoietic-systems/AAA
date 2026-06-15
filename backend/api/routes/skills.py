@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 
-from backend.api.deps import require_agent_flux
+from backend.api.deps import require_agent_flux, get_skill_service, get_skill_repo, get_belief_repo, get_app_state
+from backend.api.exceptions import ServiceException
 from backend.api.schemas import (
     DbSkillInfo,
     DbSkillsResponse,
@@ -11,15 +12,13 @@ from backend.api.schemas import (
     WorkshopActionRequest,
     WorkshopResponse,
 )
-from backend.services.skill import SkillService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.get("/skills", response_model=SkillsResponse)
-async def get_skills(request: Request):
-    service = SkillService(request.app.state)
+async def get_skills(request: Request, service=Depends(get_skill_service)):
     result = await service.get_skills()
 
     return SkillsResponse(
@@ -34,8 +33,7 @@ async def get_skills(request: Request):
 
 
 @router.get("/skills/db")
-async def get_db_skills(request: Request):
-    service = SkillService(request.app.state)
+async def get_db_skills(request: Request, service=Depends(get_skill_service)):
     result = await service.get_skills()
     logger.info("GET /skills/db: always_active=%d, on_demand=%d, all=%d",
                 len(result.get("always_active", [])),
@@ -45,57 +43,53 @@ async def get_db_skills(request: Request):
 
 
 @router.post("/skills", response_model=DbSkillInfo, dependencies=[Depends(require_agent_flux)])
-async def create_skill(body: SkillCreateRequest, request: Request):
-    service = SkillService(request.app.state)
+async def create_skill(body: SkillCreateRequest, service=Depends(get_skill_service)):
     try:
-        result = await service.create_new_skill(
+        return await service.create_new_skill(
             name=body.name,
             description=body.description,
             content=body.content,
             always_active=body.always_active,
-            trigger_keywords=body.trigger_keywords
+            trigger_keywords=body.trigger_keywords,
         )
-        return result
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise ServiceException(str(e))
 
 
 @router.put("/skills/{skill_id}", response_model=DbSkillInfo, dependencies=[Depends(require_agent_flux)])
-async def update_skill(skill_id: str, body: SkillUpdateRequest, request: Request):
-    service = SkillService(request.app.state)
+async def update_skill(skill_id: str, body: SkillUpdateRequest, service=Depends(get_skill_service)):
     try:
-        result = await service.update_skill_details(
+        return await service.update_skill_details(
             skill_id=skill_id,
             description=body.description,
             content=body.content,
-            trigger_keywords=body.trigger_keywords
+            trigger_keywords=body.trigger_keywords,
         )
-        return result
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise ServiceException(str(e))
 
 
 @router.delete("/skills/{skill_id}", dependencies=[Depends(require_agent_flux)])
-async def delete_skill(skill_id: str, request: Request):
-    service = SkillService(request.app.state)
+async def delete_skill(skill_id: str, service=Depends(get_skill_service)):
     try:
         await service.delete_skill(skill_id)
         return {"status": "ok", "message": f"Skill {skill_id} deleted"}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise ServiceException(str(e))
 
 
 @router.post("/skills/workshop/{action}", response_model=WorkshopResponse)
-async def workshop_action(action: str, body: WorkshopActionRequest, request: Request):
+async def workshop_action(
+    action: str,
+    body: WorkshopActionRequest,
+    skill_repo=Depends(get_skill_repo),
+    belief_repo=Depends(get_belief_repo),
+):
     valid_actions = {"propose", "revise", "review", "apply", "reject", "load", "list", "inspect"}
     if action not in valid_actions:
         raise HTTPException(status_code=400, detail=f"Invalid action: {action}. Valid: {', '.join(sorted(valid_actions))}")
 
     from backend.modules.skill_workshop import SkillWorkshopModule
-
-    state = request.app.state
-    skill_repo = getattr(state, "skill_repo", None)
-    belief_repo = getattr(state, "belief_repo", None)
 
     if not skill_repo:
         raise HTTPException(status_code=503, detail="Skill repository not available")
@@ -109,15 +103,13 @@ async def workshop_action(action: str, body: WorkshopActionRequest, request: Req
     result = result_payload.get("skill_workshop_result", {"status": "error", "message": "No result"})
 
     if result.get("status") == "error":
-        raise HTTPException(status_code=400, detail=result.get("message", "Workshop action failed"))
+        raise ServiceException(result.get("message", "Workshop action failed"))
 
     return result
 
 
 @router.get("/skills/{skill_id}/versions")
-async def get_skill_versions(skill_id: str, request: Request):
-    state = request.app.state
-    skill_repo = getattr(state, "skill_repo", None)
+async def get_skill_versions(skill_id: str, skill_repo=Depends(get_skill_repo)):
     if not skill_repo:
         raise HTTPException(status_code=503, detail="Skill repository not available")
 
@@ -125,17 +117,20 @@ async def get_skill_versions(skill_id: str, request: Request):
         versions = skill_repo.list_versions(skill_id)
         return {"skill_id": skill_id, "versions": versions}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise ServiceException(str(e))
 
 
 @router.post("/skills/{skill_id}/revert/{version}", dependencies=[Depends(require_agent_flux)])
-async def revert_skill_version(skill_id: str, version: int, request: Request):
-    state = request.app.state
-    skill_repo = getattr(state, "skill_repo", None)
+async def revert_skill_version(
+    skill_id: str,
+    version: int,
+    state=Depends(get_app_state),
+    skill_repo=Depends(get_skill_repo),
+    service=Depends(get_skill_service),
+):
     if not skill_repo:
         raise HTTPException(status_code=503, detail="Skill repository not available")
 
-    # Find version history record
     version_data = skill_repo.get_version(skill_id, version)
     if not version_data:
         raise HTTPException(status_code=404, detail=f"Version {version} for skill {skill_id} not found")
@@ -144,8 +139,6 @@ async def revert_skill_version(skill_id: str, version: int, request: Request):
     description = version_data["description"]
     triggers = version_data["trigger_keywords"]
 
-    # We call update_skill_details on the SkillService (which recalculates the 16D vector and handles versioning)
-    service = SkillService(state)
     try:
         updated = await service.update_skill_details(
             skill_id=skill_id,
@@ -157,17 +150,15 @@ async def revert_skill_version(skill_id: str, version: int, request: Request):
         updated["content"] = content
         return updated
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise ServiceException(str(e))
 
 
 @router.get("/skills/events")
-async def get_recent_skill_events(request: Request, limit: int = 50):
-    state = request.app.state
-    skill_repo = getattr(state, "skill_repo", None)
+async def get_recent_skill_events(request: Request, limit: int = 50, skill_repo=Depends(get_skill_repo)):
     if not skill_repo:
         raise HTTPException(status_code=503, detail="Skill repository not available")
     try:
         events = skill_repo.list_recent_events(limit=limit)
         return events
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise ServiceException(str(e))

@@ -67,7 +67,7 @@ def main() -> None:
     db_path = str(get_db_path(args.db))
     init_db(db_path)
 
-    seed_file = Path(__file__).resolve().parent.parent / "personality" / "seed_skills.yaml"
+    seed_file = Path(__file__).resolve().parent.parent.parent / "config" / "personality" / "seed_skills.yaml"
     if not seed_file.exists():
         logger.error(f"Seed file not found: {seed_file}")
         sys.exit(1)

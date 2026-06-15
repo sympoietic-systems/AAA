@@ -21,7 +21,7 @@ def _load_identity(config: dict) -> tuple[dict, str, Path]:
     Returns: (identity_data, agent_name, identity_path)
     """
     personality_cfg = config.get("personality", {})
-    identity_path = Path(personality_cfg.get("path", "backend/personality/identity.yaml"))
+    identity_path = Path(personality_cfg.get("path", "config/personality/identity.yaml"))
     if not identity_path.is_absolute():
         # __file__ is backend/bootstrap/modules.py → 3 levels up = project root
         identity_path = Path(__file__).parent.parent.parent / identity_path

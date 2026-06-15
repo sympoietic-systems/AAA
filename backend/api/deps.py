@@ -171,22 +171,39 @@ def get_agent_name(state=Depends(get_app_state)):
     return getattr(state, "agent_name", "symbia")
 
 
+# ── Service getters ────────────────────────────────────────────────────
+
+def get_chat_service(state=Depends(get_app_state)):
+    from backend.services.chat import ChatService
+    return ChatService(state)
+
+def get_belief_service(state=Depends(get_app_state)):
+    from backend.services.belief import BeliefService
+    return BeliefService(state)
+
+def get_skill_service(state=Depends(get_app_state)):
+    from backend.services.skill import SkillService
+    return SkillService(state)
+
+def get_conversation_service(state=Depends(get_app_state)):
+    from backend.services.conversation import ConversationService
+    return ConversationService()
+
+
 # ── Composite helpers ──────────────────────────────────────────────────
 
-def get_conversation_or_404(
-    conv_repo=Depends(get_conversation_repo),
-) -> callable:
-    """Return a callable that fetches a conversation or raises 404.
+def require_conversation(conv_repo, conversation_id: str):
+    """Fetch a conversation or raise HTTPException(404).
+
+    Replaces the duplicated 5-line guard pattern in conversations.py,
+    tags.py, and files.py (13 occurrences).
 
     Usage:
-        conv_guard = Depends(get_conversation_or_404)
-        conv = conv_guard(conversation_id)
+        conv = require_conversation(conv_repo, conversation_id)
     """
-    def _get(conversation_id: str):
-        if not conv_repo:
-            raise HTTPException(status_code=503, detail="Conversation repository not initialized")
-        conv = conv_repo.get(conversation_id)
-        if not conv:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-        return conv
-    return _get
+    if not conv_repo:
+        raise HTTPException(status_code=503, detail="Conversation repository not initialized")
+    conv = conv_repo.get(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return conv

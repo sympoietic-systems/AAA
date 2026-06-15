@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.api.deps import require_agent_flux
+from backend.api.deps import require_agent_flux, require_conversation, get_conversation_repo, get_app_state
 from backend.api.schemas import (
     ConversationInfo,
     ConversationListResponse,
@@ -67,11 +67,7 @@ async def get_conversation(conversation_id: str, request: Request):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    if not conv_repo:
-        raise HTTPException(status_code=404, detail="Conversations not available")
-    conv = conv_repo.get(conversation_id)
-    if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv = require_conversation(conv_repo, conversation_id)
     info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, conv)
     return ConversationInfo(**info)
 
@@ -83,11 +79,7 @@ async def update_conversation(
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    if not conv_repo:
-        raise HTTPException(status_code=404, detail="Conversations not available")
-    conv = conv_repo.get(conversation_id)
-    if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv = require_conversation(conv_repo, conversation_id)
     conv_repo.update_title(conversation_id, body.title)
     conv = conv_repo.get(conversation_id)
     info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, conv)
@@ -99,11 +91,7 @@ async def delete_conversation(conversation_id: str, request: Request):
 
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
-    if not conv_repo:
-        raise HTTPException(status_code=404, detail="Conversations not available")
-    conv = conv_repo.get(conversation_id)
-    if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv = require_conversation(conv_repo, conversation_id)
     conv_repo.delete(conversation_id)
     return {"status": "deleted", "id": conversation_id}
 
@@ -136,11 +124,7 @@ async def generate_human_summary(conversation_id: str, request: Request):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    if not conv_repo:
-        raise HTTPException(status_code=404, detail="Conversations not available")
-    conv = conv_repo.get(conversation_id)
-    if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv = require_conversation(conv_repo, conversation_id)
 
     background_engine = getattr(state, "background_engine", None)
     if not background_engine:
@@ -183,11 +167,7 @@ async def generate_conversation_title(conversation_id: str, request: Request):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    if not conv_repo:
-        raise HTTPException(status_code=404, detail="Conversations not available")
-    conv = conv_repo.get(conversation_id)
-    if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv = require_conversation(conv_repo, conversation_id)
 
     background_engine = getattr(state, "background_engine", None)
     if not background_engine:

@@ -1,6 +1,7 @@
 import json
 import logging
 
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import agent_flux_enabled, require_agent_flux
@@ -305,7 +306,6 @@ async def update_aspirational_traits(request: Request):
 async def recalculate_commitment_vector(commitment_id: str, request: Request):
     """Re-score the commitment's statement via the pipeline's structural scorer."""
     state = request.app.state
-    import numpy as np
 
     commit_repo = getattr(state, "commitment_repo", None)
     structural_scorer = getattr(state, "structural_scorer", None)
@@ -328,7 +328,6 @@ async def recalculate_commitment_vector(commitment_id: str, request: Request):
 async def recalculate_expertise_vector(expertise_id: str, request: Request):
     """Re-score the expertise domain via the pipeline's structural scorer."""
     state = request.app.state
-    import numpy as np
 
     exp_repo = getattr(state, "expertise_repo", None)
     structural_scorer = getattr(state, "structural_scorer", None)

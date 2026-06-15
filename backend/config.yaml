@@ -57,7 +57,7 @@ pipeline:
 
 # ── Personality ──────────────────────────────────
 personality:
-  path: "backend/personality/identity.yaml"
+  path: "config/personality/identity.yaml"
 
 # ── Context ──────────────────────────────────────
 context:
