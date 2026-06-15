@@ -226,6 +226,7 @@ Beliefs that are not actively reinforced slowly lose ontological mass through a 
     *   `rationale`: `"Atrophied: mass={new} (delta={±delta}), conf={conf}, stage={stage}"`
     *   `impact_score`: the mass delta ($\Delta m_{decay}$, negative)
     *   `source_type`: `"atrophy"`
+    *   **UI Notification:** Each atrophy cycle also produces a batch `trace` notification (type: `trace`, source: `belief_engine:atrophy`) visible in the Creases dropdown under the Traces tab. Per-belief event notifications are also created via `insert_belief_event()` for each decayed belief.
 
 5.  **Clock Reset:** When `update_belief_mass()` is called (by atrophy, accretion, or any other pathway), `last_reinforced_at` is reset to the current timestamp. This prevents the daemon from applying the same idle hours repeatedly — after the first decay application, only genuinely new idle time accumulates.
 
@@ -240,7 +241,12 @@ Beliefs that are not actively reinforced slowly lose ontological mass through a 
 
 7.  **Active Reinforcement:** When a belief is matched during chat metabolism (`_accrete_belief`), `update_belief_mass()` resets `last_reinforced_at` to the current time, resetting the atrophy clock. Actively-engaged beliefs therefore remain stable indefinitely.
 
-8.  **Event Visibility:** All mass changes — accretion, atrophy, ghost merging, dream metabolism, and user edits — produce properly logged `belief_events` visible in the frontend Log tab (up to 100 most recent events per belief). Negative mass deltas are displayed in red; positive deltas in blue.
+8.  **Event Visibility:** All mass changes — accretion, atrophy, ghost merging, dream metabolism, and user edits — produce properly logged `belief_events` visible in the frontend **Log tab** (up to 100 most recent events per belief, under the Belief Detail panel on the Agent page). Each event shows:
+    *   **Timestamp** and **[event_type]** bracket label (colored: amber for `atrophy`, red for `collapse`, green for `emergence`, etc.)
+    *   **Mass:** absolute value with delta in parentheses, e.g. `m:7.327 (-0.068)` — negative deltas in red, positive in green
+    *   **Confidence:** `c:100%`
+    *   **Description:** the full rationale text
+    *   The API response includes `event_type`, `mass`, and `confidence` fields (parsed from the rationale on the backend) alongside the legacy `delta_confidence` and `description` fields.
 
 ---
 
@@ -330,7 +336,7 @@ A deep code audit of the current codebase has revealed two implementation flaws 
 ### A. Mass Decay Consolidated into Belief Engine Atrophy
 
 *   **Historical Issue:** A `mass_decay.py` mixin (dream daemon) handled mass decay via an exponential formula, but suffered from a configuration bug where `config.yaml`'s `mass_decay_lambda_base` was silently ignored due to a nested-key mismatch. This caused $2.5\times$ accelerated forgetting. Additionally, this decay path did not log `belief_events`, making mass decreases invisible in the frontend Log tab.
-*   **Resolution:** Mass decay is now unified into a single pathway: `BeliefDynamicsEngine._atrophy_beliefs()`, called exclusively from the Dream Daemon's main loop every 15 minutes. The `_apply_mass_decay()` call was removed from `check_and_trigger_dream()`, and the pipeline's `process()` no longer runs atrophy (which was redundant with the daemon). The atrophy pass uses a linear decay formula: $\Delta m = m \cdot 0.001 \cdot t_{hours}$, capped at 20% per check. Every decay event is logged as a `belief_event` with `source_type: "atrophy"`.
+*   **Resolution:** Mass decay is now unified into a single pathway: `BeliefDynamicsEngine._atrophy_beliefs()`, called exclusively from the Dream Daemon's main loop every 15 minutes. The `_apply_mass_decay()` call was removed from `check_and_trigger_dream()`, and the pipeline's `process()` no longer runs atrophy (which was redundant with the daemon). The atrophy pass uses a linear decay formula: $\Delta m = m \cdot 0.001 \cdot t_{hours}$, capped at 20% per check. Every decay event is logged as a `belief_event` with `source_type: "atrophy"` and a batch `trace` notification is created for UI visibility. Migration `m031` relaxed the original CHECK constraints on `belief_events` to allow the full set of event types used in practice (`atrophy`, `revision`, `accretion`, `ghost_ecology`).
 *   **Applies to:** All non-collapsed, non-faded beliefs not reinforced within the last 30 minutes.
 
 ### B. The Ghost Merging Persistence Bug

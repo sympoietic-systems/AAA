@@ -112,6 +112,8 @@ CREATE TABLE belief_events (
 );
 ```
 
+> **Historical note (2026-06-15):** The CHECK constraints shown above were relaxed by **migration m031** to allow additional event types used in practice (`atrophy`, `revision`, `accretion`) and source types (`atrophy`, `ghost_ecology`). The current production table has no CHECK constraints on `source_type` or `event_type`.
+
 ### 6. Self-Tuning Ecosystem Health
 
 **Metrics:** Diversity, Coherence, Tension, Plasticity, Ghost Burden, Eco-vitality.

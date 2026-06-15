@@ -17,7 +17,7 @@ The daemon runs its check loop every 30 seconds (configurable) regardless of use
 
 1. **Conversation consolidation** — compacts stale conversations
 2. **Skill metabolism** — refreshes skill-to-belief bridge states
-3. **Belief mass atrophy** (every 15 min) — applies linear time-based decay to all non-ghost beliefs via `BeliefDynamicsEngine._atrophy_beliefs()`. This is the single source of truth for belief decay, replacing the old dual-path design (pipeline `process()` atrophy + daemon `_apply_mass_decay()`). All decay events are logged as `belief_events` with `source_type: "atrophy"`, visible in the frontend Belief Log tab.
+3. **Belief mass atrophy** (every 15 min) — applies linear time-based decay to all non-ghost beliefs via `BeliefDynamicsEngine._atrophy_beliefs()`. This is the single source of truth for belief decay, replacing the old dual-path design (pipeline `process()` atrophy + daemon `_apply_mass_decay()`). All decay events are logged as `belief_events` with `source_type: "atrophy"`, visible in the frontend Belief Log tab. Each atrophy cycle also produces a batch `trace` notification in the Creases dropdown.
 4. **Dream trigger check** — evaluates stagnation, tension hotspots, and somatic drift; launches autonomous monologues, web harvesting, or memory compaction when idle thresholds are met
 
 ---

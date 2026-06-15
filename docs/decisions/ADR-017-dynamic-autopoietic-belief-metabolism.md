@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS belief_events (
 );
 ```
 
+> **Historical note (2026-06-15):** The CHECK constraints shown above were later relaxed. ADR-027 expanded the allowed types. Migration **m031** (2026-06-15) fully removed both CHECK constraints to support all runtime event types (`atrophy`, `revision`, `accretion`, `ghost_ecology`).
+```
+
 ### 2. Purely Dynamic State (No Code-Level Hardcoding)
 To maintain complete epistemological mobility, beliefs are treated as dynamic database records rather than configuration values:
 - There is no code-level seeding from `identity.yaml` or any other static file at module startup.
