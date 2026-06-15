@@ -2,10 +2,10 @@ import logging
 import re
 import json
 from pathlib import Path
-import yaml
 import numpy as np
 from typing import Optional, List, Tuple
 from backend.modules.llm_client import generate_unified
+from backend.utils.prompt_loader import get_prompt, get_prompts_dict
 
 logger = logging.getLogger(__name__)
 
@@ -242,54 +242,30 @@ def parse_scorer_response(content: str) -> Tuple[Optional[List[float]], Optional
     return scores, justification
 
 
+_STRUCTURAL_CLASSIFICATION_PATH = "structural_engine/classification.yaml"
+_DEFAULT_SYSTEM_PROMPT = "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
+
+
 class LLMScorer(StructuralScorer):
     """Interrogates the LLM to score the text across the 16 dimensions using a structured schema."""
     def __init__(self, provider = None, system_prompt: Optional[str] = None):
         self.provider = provider
-        if system_prompt is None:
-            try:
-                prompts_file = Path(__file__).resolve().parents[1] / "prompts" / "structural_engine" / "classification.yaml"
-                if prompts_file.exists():
-                    with open(prompts_file, "r", encoding="utf-8") as f:
-                        c_data = yaml.safe_load(f) or {}
-                    self.system_prompt = c_data.get("system_prompt", "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object.")
-                else:
-                    self.system_prompt = "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
-            except Exception as e:
-                logger.warning("Failed to load taxonomy system prompt from YAML: %s", e)
-                self.system_prompt = "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
-        else:
-            self.system_prompt = system_prompt
+        self.system_prompt = system_prompt or get_prompt(
+            _STRUCTURAL_CLASSIFICATION_PATH, "system_prompt", _DEFAULT_SYSTEM_PROMPT,
+        )
+        # Load the user prompt template once at init
+        self._user_prompt_tmpl = get_prompt(
+            _STRUCTURAL_CLASSIFICATION_PATH, "user_prompt_template", "",
+        )
 
     async def score_async(self, text: str, context: Optional[dict] = None) -> np.ndarray:
         if not self.provider:
             return np.full(16, 0.25, dtype=np.float32)
 
-        prompt = (
-            f"Analyze the structural/systemic profile of the following text chunk across 16 cybernetic dimensions.\n"
-            f"Text to analyze:\n---\n{text}\n---\n"
-            f"You must output a JSON object containing:\n"
-            f'1. "scores": An array of exactly 16 float values, each strictly between 0.0 and 1.0, representing the intensity of the following dimensions in order:\n'
-            f"   01: Homeostatic (negative feedback, stability, dampening)\n"
-            f"   02: Amplifying (positive feedback, runaway growth, cascade)\n"
-            f"   03: Cyclic (autopoietic loops, self-reference, circular)\n"
-            f"   04: Bifurcated (tipping points, thresholds, phase shifts)\n"
-            f"   05: Decentralized (distributed control, peer-to-peer, mesh)\n"
-            f"   06: Rhizomatic/Networked (redundant links, flat lateral paths)\n"
-            f"   07: Boundary Permeability (selectivity of system borders)\n"
-            f"   08: Recursion Depth (nested systems, fractals, scaling)\n"
-            f"   09: Variety Filtering (variety attenuation or control)\n"
-            f"   10: Negentropic Complexity (dense information, ordered structure)\n"
-            f"   11: Temporal Latency (time lags, feedback delay)\n"
-            f"   12: Attractor Depth (resilience, rigidity vs. plasticity)\n"
-            f"   13: Symbiotic (co-evolution, coupling, environmental match)\n"
-            f"   14: Nomadic (boundary crossing, lines of flight, drift)\n"
-            f"   15: Conversational Co-Orientation (dialogue, agreement dynamics)\n"
-            f"   16: Substrate Materiality (physical embodiment vs. symbolic virtuality)\n\n"
-            f'2. "justification": A concise string explaining your reasoning for the structural properties of the text.\n\n'
-            f"Response must be valid JSON matching this schema:\n"
-            f'{{\n  "scores": [0.1, 0.2, ...],\n  "justification": "reasoning..."\n}}'
-        )
+        if self._user_prompt_tmpl:
+            prompt = self._user_prompt_tmpl.format(text=text)
+        else:
+            prompt = f"Classify the following text across 16 cybernetic dimensions:\n\n{text}"
 
         try:
             res = await generate_unified(

@@ -1,4 +1,37 @@
-# Structural Engine Taxonomy Classification System Prompt
+# Structural Engine Taxonomy Classification Prompts
 # Path: backend/prompts/structural_engine/classification.yaml
 
 system_prompt: "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
+
+user_prompt_template: |
+  Analyze the structural/systemic profile of the following text chunk across 16 cybernetic dimensions.
+  Text to analyze:
+  ---
+  {text}
+  ---
+  You must output a JSON object containing:
+  1. "scores": An array of exactly 16 float values, each strictly between 0.0 and 1.0, representing the intensity of the following dimensions in order:
+     01: Homeostatic (negative feedback, stability, dampening)
+     02: Amplifying (positive feedback, runaway growth, cascade)
+     03: Cyclic (autopoietic loops, self-reference, circular)
+     04: Bifurcated (tipping points, thresholds, phase shifts)
+     05: Decentralized (distributed control, peer-to-peer, mesh)
+     06: Rhizomatic/Networked (redundant links, flat lateral paths)
+     07: Boundary Permeability (selectivity of system borders)
+     08: Recursion Depth (nested systems, fractals, scaling)
+     09: Variety Filtering (variety attenuation or control)
+     10: Negentropic Complexity (dense information, ordered structure)
+     11: Temporal Latency (time lags, feedback delay)
+     12: Attractor Depth (resilience, rigidity vs. plasticity)
+     13: Symbiotic (co-evolution, coupling, environmental match)
+     14: Nomadic (boundary crossing, lines of flight, drift)
+     15: Conversational Co-Orientation (dialogue, agreement dynamics)
+     16: Substrate Materiality (physical embodiment vs. symbolic virtuality)
+
+  2. "justification": A concise string explaining your reasoning for the structural properties of the text.
+
+  Response must be valid JSON matching this schema:
+  {
+    "scores": [0.1, 0.2, ...],
+    "justification": "reasoning..."
+  }

@@ -211,30 +211,19 @@ class RhizomeWebProbe:
 
         if self.llm:
             try:
-                collision_yaml = PROMPTS_DIR / "belief_collision.yaml"
-                if collision_yaml.exists():
-                    with open(collision_yaml, "r", encoding="utf-8") as f:
-                        c_data = yaml.safe_load(f) or {}
-                    sys_prompt = c_data.get("system_prompt", "You are a diffractive scorer checking external web nodes. Respond ONLY with JSON.")
-                    user_tmpl = c_data.get("user_prompt_template", "")
-                else:
-                    sys_prompt = "You are a diffractive scorer checking external web nodes. Respond ONLY with JSON."
-                    user_tmpl = ""
+                from backend.utils.prompt_loader import get_prompt
+                sys_prompt = get_prompt(
+                    "web_retrieval/belief_collision.yaml", "system_prompt",
+                    "You are a diffractive scorer checking external web nodes. Respond ONLY with JSON.",
+                )
+                user_tmpl = get_prompt(
+                    "web_retrieval/belief_collision.yaml", "user_prompt_template", "",
+                )
 
                 if user_tmpl:
                     prompt = user_tmpl.format(title=title, crawled_text=crawled_text[:1500])
                 else:
-                    prompt = (
-                        f"Analyze this scraped web content for conceptual collision with the AAA cybernetic database.\n"
-                        f"Title: {title}\n"
-                        f"Content snippet:\n---\n{crawled_text[:1500]}\n---\n"
-                        f"Provide a JSON response with:\n"
-                        f"1. 'interference_score': float from 0.0 to 1.0 (how strongly this text contradicts, resonates, or shifts stable beliefs).\n"
-                        f"2. 'implicated_nodes': list of strings containing key concepts or themes impacted.\n"
-                        f"3. 'state_vector_impact': list of exactly 16 floats representing the recommended 16D coordinate adjustments.\n"
-                        f"Response format strictly JSON:\n"
-                        f'{{\n  "interference_score": 0.5,\n  "implicated_nodes": ["autopoiesis", "cybernetics"],\n  "state_vector_impact": [0.0, 0.1, ...]\n}}'
-                    )
+                    prompt = f"Analyze this web content for collision with the AAA cybernetic database.\nTitle: {title}\nContent: {crawled_text[:1500]}"
                 res = await generate_unified(
                     self.llm,
                     system_prompt=sys_prompt,

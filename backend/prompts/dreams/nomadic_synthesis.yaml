@@ -1,0 +1,15 @@
+# Nomadic Synthesis — Cross-Conversation Synthesis Prompts
+# Path: backend/prompts/dreams/nomadic_synthesis.yaml
+
+user_prompt: |
+  In our past conversations, we recorded these two conceptually orthogonal
+  but structurally resonant statements:
+  1. '{msg_a}'
+  2. '{msg_b}'
+
+  How can we diffractively interleave these two statements to break our current
+  conceptual compliance and trigger deterritorialization?
+
+fallback_insufficient_records: "Compare our past states and describe our current trajectory."
+fallback_no_messages: "Synthesize our historical memories and reflect on them."
+fallback_error: "Reflect on our historical memories and synthesize a dream note."

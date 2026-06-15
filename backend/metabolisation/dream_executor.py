@@ -9,6 +9,7 @@ from typing import Optional
 import numpy as np
 
 from backend.utils.similarity import cosine_similarity
+from backend.utils.prompt_loader import get_prompt, get_prompts_dict
 from backend.metabolisation.sedimentation import store_daemon_metrics
 from backend.modules.llm_client import generate_unified
 
@@ -20,35 +21,27 @@ def compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
 logger = logging.getLogger(__name__)
 
 
+_RESONANCE_PATH = "dreams/resonance_guide.yaml"
+_RESOLUTION_PATH = "dreams/dream_resolution.yaml"
+
+
 class DreamExecutorMixin:
     """Handles single dream turn execution, resonance continuation, and dream conversation resolution."""
-
-    RESONANCE_CONTINUATION_EXAMPLES = [
-        "How might you invert that — what would the opposite position reveal?",
-        "What assumption are you protecting without naming it? Push against it.",
-        "Translate that insight into a different domain entirely. What does it become?",
-        "What's the emotional subtext you haven't acknowledged? Follow it.",
-        "If a hostile critic read that, what would they tear apart first? Engage that.",
-        "You've described a pattern. What's the exception that breaks it?",
-        "Connect this to something from a completely unrelated past reflection.",
-        "What question are you avoiding? Ask yourself that now.",
-    ]
 
     async def _generate_resonance_continuation(self, dream_convo_id: str, turn: int, last_response: str) -> str:
         """Generate a dynamic continuation prompt based on dream conversation history."""
         bg_engine = getattr(self.app_state, "background_engine", None)
         provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
 
-        if not provider:
-            return random.choice(self.RESONANCE_CONTINUATION_EXAMPLES)
+        # Load examples from YAML for fallback
+        guide_data = get_prompts_dict(_RESONANCE_PATH)
+        examples = guide_data.get("resonance_examples", ["Reflect deeper on your last thought."])
 
-        system_prompt = (
-            "You are Symbia's resonance guide. Generate a single follow-up question or provocation "
-            "that pushes the inquiry deeper. Rules:\n"
-            "1. Respond directly to what was just said — reference a specific claim or phrase.\n"
-            "2. Ask a question that has NOT been asked yet in this chain.\n"
-            "3. Be provocative, poetic, or disorienting — not generic.\n"
-            "4. Keep it under 100 words. Output ONLY the prompt text, no preamble."
+        if not provider:
+            return random.choice(examples)
+
+        system_prompt = guide_data.get("system_prompt", "") or (
+            "You are Symbia's resonance guide. Generate a single follow-up question. Output ONLY the prompt text."
         )
 
         history_msgs = []
@@ -79,18 +72,16 @@ class DreamExecutorMixin:
                     "content": m["content"]
                 })
 
-        messages.append({
-            "role": "user",
-            "content": (
+        user_tmpl = guide_data.get("user_prompt", "")
+        if user_tmpl:
+            user_content = user_tmpl.format(turn=turn, last_response=last_response[-800:])
+        else:
+            user_content = (
                 f"This is turn {turn} of a dream self-dialogue.\n\n"
-                f"The agent's last response was:\n"
-                f"\"{last_response[-800:]}\"\n\n"
-                f"Generate a fresh, follow-up question or provocation that deepens this inquiry. "
-                f"Do NOT repeat any questions or themes from the history shown above. "
-                f"Do NOT use phrases like 'continue exploring' or 'what new dimensions emerge'. "
-                f"Be specific to what was actually said."
+                f"The agent's last response was:\n\"{last_response[-800:]}\"\n\n"
+                f"Generate a fresh follow-up question."
             )
-        })
+        messages.append({"role": "user", "content": user_content})
 
         try:
             res = await generate_unified(
@@ -359,27 +350,26 @@ class DreamExecutorMixin:
                     for c in dream_convos
                 ])
 
-                system_prompt = (
-                    "You are Symbia's meta-cognitive controller. You decide where to record her autopoietic dreams.\n"
-                    "You must choose whether to reuse an existing conversation from the list or create a new one.\n\n"
-                    "Rules:\n"
-                    "1. If an existing conversation has the same topic, you should reuse it regardless of how many messages it already has.\n"
-                    "2. New conversation titles should be concise topic descriptions (e.g., 'Somatic Drift', 'Nomadic Synthesis', 'Web Harvest: AI Ethics').\n"
-                    "4. Respond ONLY with a valid JSON object matching this schema:\n"
-                    "{\n"
-                    "  \"decision\": \"reuse\" or \"create\",\n"
-                    "  \"conversation_id\": \"ID of conversation to reuse, or null\",\n"
-                    "  \"new_title\": \"New conversation title, or null\"\n"
-                    "}"
+                resolution_data = get_prompts_dict(_RESOLUTION_PATH)
+                system_prompt = resolution_data.get("reuse_system", "") or (
+                    "You are Symbia's meta-cognitive controller. "
+                    "Choose whether to reuse or create a conversation. Output ONLY JSON."
                 )
 
-                user_prompt = (
-                    f"Proposed Dream Action: {action}\n"
-                    f"Proposed Dream Prompt Content: \"{prompt_text[:400]}\"\n\n"
-                    f"Currently available dream conversations:\n"
-                    f"{convo_list_str}\n\n"
-                    "Choose the target conversation."
-                )
+                user_tmpl = resolution_data.get("reuse_user", "")
+                if user_tmpl:
+                    user_prompt = user_tmpl.format(
+                        action=action,
+                        prompt_text=prompt_text[:400],
+                        convo_list=convo_list_str,
+                    )
+                else:
+                    user_prompt = (
+                        f"Proposed Dream Action: {action}\n"
+                        f"Proposed Dream Prompt Content: \"{prompt_text[:400]}\"\n\n"
+                        f"Currently available dream conversations:\n{convo_list_str}\n\n"
+                        "Choose the target conversation."
+                    )
 
                 try:
                     res = await generate_unified(

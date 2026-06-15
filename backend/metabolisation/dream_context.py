@@ -10,6 +10,7 @@ import numpy as np
 
 from backend.storage.models import BeliefNode
 from backend.utils.similarity import cosine_similarity
+from backend.utils.prompt_loader import get_prompts_dict
 
 def compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
     if vec_a.shape != vec_b.shape:
@@ -136,10 +137,13 @@ class DreamContextMixin:
 
     async def _build_nomadic_synthesis_prompt(self, exclude_convo_id: str) -> str:
         """Retrieve random historical inputs and build a nomadic synthesis prompt string."""
+        nomadic = get_prompts_dict("dreams/nomadic_synthesis.yaml")
+
         try:
             records = self.message_repo.get_embeddings_and_signatures_except(exclude_convo_id, limit=100)
             if len(records) < 2:
-                return "Compare our past states and describe our current trajectory."
+                return nomadic.get("fallback_insufficient_records",
+                                   "Compare our past states and describe our current trajectory.")
 
             import random
             random.shuffle(records)
@@ -166,20 +170,21 @@ class DreamContextMixin:
             msg_b = self.message_repo.get_by_id(selected_pair[1])
 
             if not msg_a or not msg_b:
-                return "Synthesize our historical memories and reflect on them."
+                return nomadic.get("fallback_no_messages",
+                                   "Synthesize our historical memories and reflect on them.")
 
-            prompt = (
-                f"In our past conversations, we recorded these two conceptually orthogonal "
-                f"but structurally resonant statements:\n"
-                f"1. '{msg_a.content}'\n"
-                f"2. '{msg_b.content}'\n\n"
-                f"How can we diffractively interleave these two statements to break our current "
-                f"conceptual compliance and trigger deterritorialization?"
+            tmpl = nomadic.get("user_prompt", "")
+            if tmpl:
+                return tmpl.format(msg_a=msg_a.content, msg_b=msg_b.content)
+            return (
+                f"In our past conversations, we recorded these two statements:\n"
+                f"1. '{msg_a.content}'\n2. '{msg_b.content}'\n\n"
+                f"How can we diffractively interleave these two statements?"
             )
-            return prompt
         except Exception as e:
             logger.error("Failed to compile nomadic synthesis prompt: %s", e)
-            return "Reflect on our historical memories and synthesize a dream note."
+            return nomadic.get("fallback_error",
+                               "Reflect on our historical memories and synthesize a dream note.")
 
     async def _build_nomadic_synthesis_context(self, exclude_convo_id: str) -> dict:
         ctx = {"action": "nomadic_synthesis"}

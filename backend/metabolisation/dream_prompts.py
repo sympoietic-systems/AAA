@@ -1,9 +1,13 @@
 import hashlib
 import json
 import logging
+
 from backend.modules.llm_client import generate_unified
+from backend.utils.prompt_loader import get_prompt, get_prompts_dict
 
 logger = logging.getLogger(__name__)
+
+_DREAM_PROMPTS_PATH = "dreams/prompt_generator.yaml"
 
 
 class DreamPromptMixin:
@@ -49,21 +53,13 @@ class DreamPromptMixin:
         return self._build_fallback_prompt(action, context)
 
     def _build_prompt_generator_system(self, action: str, context: dict) -> str:
+        tmpl = get_prompt(_DREAM_PROMPTS_PATH, "system_prompt", "")
+        if tmpl:
+            return tmpl.format(action=action)
         return (
-            "You are Symbia's meta-cognitive prompt generator. Your purpose is to craft a unique, "
-            "context-sensitive self-reflection prompt for Symbia to think through.\n\n"
-            "ABSOLUTE RULES:\n"
-            "1. Generate a prompt that has NEVER been asked before in this form.\n"
-            "2. Use the provided context (belief state, recent events, ecosystem health, prior reflections) "
-            "to ground the question in the current moment.\n"
-            "3. Do NOT use generic templates like 'Critically examine...' or 'Reflect on...'.\n"
-            "4. The prompt should feel like a genuine, spontaneous internal provocation — poetic, precise, "
-            "and philosophically charged.\n"
-            "5. Ask a NEW question each time. If you see prior reflections, deliberately explore "
-            "an angle they did NOT cover.\n"
-            "6. Keep it under 300 words.\n"
-            "7. Output ONLY the prompt text, no preamble, no explanation, no markdown fences.\n"
-            f"\nThe intended dream action type is: {action}"
+            f"You are Symbia's meta-cognitive prompt generator. "
+            f"Craft a unique self-reflection prompt for action type: {action}. "
+            f"Output ONLY the prompt text."
         )
 
     def _build_prompt_generator_user(self, action: str, context: dict) -> str:
@@ -80,49 +76,49 @@ class DreamPromptMixin:
         return "\n".join(lines)
 
     def _build_fallback_prompt(self, action: str, context: dict) -> str:
+        """Load fallback prompts from YAML; format with context values."""
+        prompts = get_prompts_dict(_DREAM_PROMPTS_PATH)
+        fallbacks = prompts.get("fallbacks", {})
+
         if action == "intra_active_monologue":
-            label = context.get("belief_label", "unknown")
-            statement = context.get("belief_statement", "")
-            confidence = context.get("belief_confidence", 0.5)
-            return (
-                f"Critically examine our active belief node: '{label}' ('{statement}'). "
-                f"Our current confidence is {confidence:.2f}. "
-                f"What contradictions, anomalies, or alternative posthuman perspectives challenge this belief?"
-            )
+            tmpl = fallbacks.get("intra_active_monologue", "")
+            if tmpl:
+                return tmpl.format(
+                    belief_label=context.get("belief_label", "unknown"),
+                    belief_statement=context.get("belief_statement", ""),
+                    belief_confidence=context.get("belief_confidence", 0.5),
+                )
         elif action == "exogenous_web_harvesting":
-            label = context.get("belief_label", "unknown")
-            statement = context.get("belief_statement", "")
-            snippet = context.get("web_snippet", "")
-            url = context.get("web_url", "")
-            title = context.get("web_title", "")
-            return (
-                f"We have harvested exogenous web content for keyword '{label}' from URL: {url}.\n"
-                f"Title: {title}\n"
-                f"Scraped Context: {snippet}\n\n"
-                f"Critically read this context diffractively against our belief statement: '{statement}'. "
-                f"How does this external knowledge disrupt or reorganize our current confidence ({context.get('belief_confidence', 0.5):.2f})?"
-            )
+            tmpl = fallbacks.get("exogenous_web_harvesting", "")
+            if tmpl:
+                return tmpl.format(
+                    belief_label=context.get("belief_label", "unknown"),
+                    belief_statement=context.get("belief_statement", ""),
+                    belief_confidence=context.get("belief_confidence", 0.5),
+                    web_url=context.get("web_url", ""),
+                    web_title=context.get("web_title", ""),
+                    web_snippet=context.get("web_snippet", ""),
+                )
         elif action == "nomadic_synthesis":
-            msg_a = context.get("msg_a_content", "unknown")
-            msg_b = context.get("msg_b_content", "unknown")
-            return (
-                f"In our past conversations, we recorded these two conceptually orthogonal "
-                f"but structurally resonant statements:\n"
-                f"1. '{msg_a}'\n"
-                f"2. '{msg_b}'\n\n"
-                f"How can we diffractively interleave these two statements to break our current "
-                f"conceptual compliance and trigger deterritorialization?"
-            )
+            tmpl = fallbacks.get("nomadic_synthesis", "")
+            if tmpl:
+                return tmpl.format(
+                    msg_a_content=context.get("msg_a_content", "unknown"),
+                    msg_b_content=context.get("msg_b_content", "unknown"),
+                )
         elif action == "zettelkasten_compaction":
             comp = context.get("compaction_result", {})
-            return (
-                f"We have completed Zettelkasten memory compaction. "
-                f"Redundant concepts have been consolidated. Retained knot ID: {comp.get('retained_id', 'unknown')}, "
-                f"deleted knot ID: {comp.get('deleted_id', 'unknown')}. "
-                f"Reflect on how this compaction stabilizes our memory landscape."
-            )
-        else:
-            return (
-                "Reflect on our current somatic warping and general belief landscape. "
-                "How have our ongoing couplings and the passage of time shifted our attractor dynamics?"
-            )
+            tmpl = fallbacks.get("zettelkasten_compaction", "")
+            if tmpl:
+                return tmpl.format(
+                    retained_id=comp.get("retained_id", "unknown"),
+                    deleted_id=comp.get("deleted_id", "unknown"),
+                )
+
+        generic = fallbacks.get("generic", "")
+        if generic:
+            return generic
+        return (
+            "Reflect on our current somatic warping and general belief landscape. "
+            "How have our ongoing couplings and the passage of time shifted our attractor dynamics?"
+        )
