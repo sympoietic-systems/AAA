@@ -7,7 +7,7 @@ root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 os.chdir(root_path)
 
-from backend.services.chat import process_self_annotations
+from backend.services.annotations import process_self_annotations
 
 def test_process_self_annotations():
     # Setup mocks

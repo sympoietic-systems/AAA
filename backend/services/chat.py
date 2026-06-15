@@ -7,6 +7,11 @@ from fastapi import BackgroundTasks
 
 from backend.api.schemas import ChatResponse
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
+from backend.services.annotations import process_self_annotations
+from backend.services.background_tasks import (
+    run_background_resonance_scan,
+    run_background_skill_refinement,
+)
 from backend.services.consolidation import ConsolidationService
 from backend.services.metrics import MetricsService
 from backend.services.semantic_knot import SemanticKnotService
@@ -25,10 +30,8 @@ def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list
     """
     from backend.utils.skill_parser import parse_skill_nucleation_tags
 
-    # Parse and strip proposed skills (<skill-nucleation>)
     response_text, proposed_skills = parse_skill_nucleation_tags(response_text)
 
-    # Parse and strip proposed branches (<line_of_flight>)
     proposed_branches = []
     lof_pattern = r'<line_of_flight\s+title="([^"]+)">([\s\S]*?)</line_of_flight>'
     matches = re.findall(lof_pattern, response_text)
@@ -36,7 +39,6 @@ def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list
         proposed_branches.append({"title": title, "content": body.strip()})
     response_text = re.sub(lof_pattern, "", response_text).strip()
 
-    # Parse and strip proposed resonance links (<resonance target="ID">Reason</resonance>)
     proposed_resonances = []
     res_pattern = r'<resonance\s+target=["\']([^"\']+)["\']\s*>([\s\S]*?)</resonance>'
     res_matches = re.findall(res_pattern, response_text)
@@ -49,230 +51,6 @@ def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list
     response_text = re.sub(res_pattern, "", response_text).strip()
 
     return response_text, proposed_skills, proposed_branches, proposed_resonances
-
-
-def process_self_annotations(
-    response_text: str,
-    conversation_id: str,
-    message_id: int,
-    note_repo,
-    message_repo,
-) -> str:
-    """Post-process Symbia's response to normalize annotation tags for the frontend.
-
-    Three processing stages run in order:
-
-    1. **Entanglement echo conversion** — ``<note_entanglement>`` tags echoed
-       from the LLM context are converted back to ``<mark>`` tags with proper
-       ``id`` and ``data-note-id`` attributes.  A DB note record is created
-       for any note ID that doesn't already exist.
-    2. **New self-annotation processing** — ``<mark comment="…">`` or
-       ``<aaa-note comment="…">`` tags *without* an ``id`` attribute are
-       treated as new agent annotations: a UUID is generated, a DB record
-       is created, and the tag is rewritten with the new ID.
-    3. **Scar-fold truncation** — ``<scar_fold>`` / ``<scar-fold>`` content
-       is truncated to 200 characters as a safeguard.
-    """
-    original_text = response_text
-    # --- Convert echoed <note_entanglement> tags back to <mark> ---
-    # The LLM sometimes copies note_entanglement tags from its context into the response.
-    # Convert them to proper <mark> tags so the frontend can render them as highlights.
-    # Also create DB note records for any IDs that don't already exist.
-    entanglement_ids_created = []
-
-    def convert_entanglement(m):
-        attrs = m.group(1) or ""
-        text = m.group(2)
-        nid_match = re.search(r'\bnote_id\s*=\s*["\']([^"\']+)["\']', attrs)
-        if not nid_match:
-            return text  # strip if no valid note_id
-
-        nid = nid_match.group(1)
-        comment_match = re.search(r'\bcomment\s*=\s*["\']([^"\']*)["\']', attrs)
-        comment = comment_match.group(1) if comment_match else ""
-
-        # Ensure a DB record exists for this note ID
-        existing = note_repo.get_note(nid)
-        if not existing:
-            note_repo.create_self_note(
-                id=nid,
-                conversation_id=conversation_id,
-                message_id=message_id,
-                selected_text=text.strip(),
-                comment=comment,
-                visibility="agent",
-            )
-            entanglement_ids_created.append(nid)
-
-        return f'<mark id="note-highlight-{nid}" data-note-id="{nid}">{text}</mark>'
-
-    response_text = re.sub(
-        r'<note_entanglement(\s+[^>]*?)?>([\s\S]*?)</note_entanglement>',
-        convert_entanglement, response_text,
-    )
-
-    if entanglement_ids_created:
-        logger.debug(
-            "Entanglement echo: created %d note record(s) for message %d",
-            len(entanglement_ids_created), message_id,
-        )
-
-    # --- Self-annotation processing ---
-    # Matches <aaa-note ...>...</aaa-note> or <mark ...>...</mark>
-    annotation_pattern = r'<(aaa-note|mark)(\s+[^>]+)?>([\s\S]*?)</\1>'
-
-    annotations_found = []
-
-    def replace_and_create(match):
-        tag_name = match.group(1)
-        attrs = match.group(2) or ""
-        text = match.group(3)
-
-        # Skip if it already has an id attribute (meaning it was already processed)
-        if re.search(r'\bid\s*=\s*["\']', attrs):
-            return match.group(0)
-
-        # Extract comment attribute (supporting single/double quotes, spaces, newlines)
-        comment_match = re.search(r'\bcomment\s*=\s*["\']([\s\S]*?)["\']', attrs)
-        if not comment_match:
-            return match.group(0)
-
-        comment = comment_match.group(1)
-
-        # Agent notes have 'agent' visibility to distinguish them from human notes in UI
-        visibility = "agent"
-
-        note_id = str(uuid.uuid4())
-        annotations_found.append(note_id)
-
-        note_repo.create_self_note(
-            id=note_id,
-            conversation_id=conversation_id,
-            message_id=message_id,
-            selected_text=text.strip(),
-            comment=comment,
-            visibility=visibility,
-        )
-        return f'<{tag_name} id="note-highlight-{note_id}" data-note-id="{note_id}">{text}</{tag_name}>'
-
-    processed = re.sub(annotation_pattern, replace_and_create, response_text)
-
-    if annotations_found:
-        logger.debug(
-            "Self-annotation: created %d note(s) for message %d",
-            len(annotations_found), message_id,
-        )
-
-    # --- Scar-fold truncation safeguard ---
-    def truncate_scar_fold(match):
-        tag = match.group(1)
-        content = match.group(2)
-        if len(content) > 200:
-            return f"<{tag}>{content[:200]}</{tag}>"
-        return match.group(0)
-
-    processed = re.sub(r'<(scar_fold|scar-fold)>([\s\S]*?)</\1>', truncate_scar_fold, processed)
-
-    # If any processing modified the original text, save it to database
-    if processed != original_text:
-        message_repo.update_content(message_id, processed)
-
-    return processed
-
-
-async def run_background_resonance_scan(
-    background_engine,
-    message_repo,
-    conversation_id: str,
-    message_id: int,
-):
-    try:
-        # Get ancestor path to find parallel nodes
-        path_msgs = message_repo.get_ancestor_path(message_id)
-        ancestor_ids = [m.id for m in path_msgs]
-
-        # Get the current message content/speaker
-        current_msg = None
-        for m in path_msgs:
-            if m.id == message_id:
-                current_msg = m
-                break
-        if not current_msg:
-            # Fallback if not found in path
-            msgs = message_repo.get_by_ids([message_id])
-            if msgs:
-                current_msg = msgs[0]
-        
-        if not current_msg or not current_msg.embedding:
-            return
-
-        # Find parallel messages with similarity > 0.82
-        # (Exclude ancestor path to only find cross-branch resonances)
-        candidates = message_repo.get_parallel_messages_by_similarity(
-            conversation_id=conversation_id,
-            message_id=message_id,
-            ancestor_ids=ancestor_ids,
-            threshold=0.82,
-            limit=5,
-        )
-
-        for cand in candidates:
-            # Skip checking if a link (proposed, active, or ignored) already exists
-            if message_repo.link_exists(message_id, cand["message_id"]):
-                logger.info(
-                    "Resonance link already exists or was ignored between %d and %d, skipping comparison",
-                    message_id, cand["message_id"]
-                )
-                continue
-
-            # Call the background task engine to execute resonance finder LLM query
-            payload = {
-                "message_a": current_msg.content,
-                "speaker_a": current_msg.speaker,
-                "message_b": cand["content"],
-                "speaker_b": cand["speaker"],
-            }
-            res = await background_engine.run("resonance_finder", payload)
-            if res.get("has_resonance"):
-                reason = res.get("reason", "")
-                # Create proposed link
-                message_repo.add_message_link(
-                    source_id=message_id,
-                    target_id=cand["message_id"],
-                    link_type="resonance",
-                    status="proposed",
-                    justification=reason,
-                )
-                logger.info(
-                    "Background resonance link proposed: %d -> %d (reason: %s)",
-                    message_id, cand["message_id"], reason
-                )
-    except Exception:
-        logger.exception("Error during background resonance scan")
-
-
-async def run_background_skill_refinement(
-    background_engine,
-    conversation_id: str,
-    skill_data: dict,
-):
-    try:
-        logger.info("Running background skill refinement daemon for proposed skill: %s", skill_data.get("name"))
-        res = await background_engine.run(
-            "refine_skill",
-            {
-                "skill_data": skill_data,
-                "conversation_id": conversation_id,
-            }
-        )
-        if res.get("error"):
-            logger.error("Skill refinement daemon failed: %s", res["error"])
-        else:
-            decision = res.get("decision")
-            reason = res.get("reason")
-            logger.info("Skill refinement daemon finished. Decision: %s. Reason: %s", decision, reason)
-    except Exception as e:
-        logger.exception("Failed to run background skill refinement")
 
 
 class ChatService:
