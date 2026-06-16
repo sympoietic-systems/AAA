@@ -187,7 +187,9 @@ function AssetsTab({ task }: { task: ResearchTask }) {
 function BranchesTab({ task }: { task: ResearchTask }) {
   const branches = task.branches ?? []
   if (branches.length === 0) {
-    return <div className="text-[#444] italic text-xs text-center mt-8 select-none">[ no branches recorded ]</div>
+    return <div className="text-[#444] italic text-xs text-center mt-8 select-none">
+      [ no branches recorded — orchestrator uses Steps instead ]
+    </div>
   }
   return (
     <div className="space-y-1">

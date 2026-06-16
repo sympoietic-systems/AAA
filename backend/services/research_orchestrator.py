@@ -739,6 +739,21 @@ class SomaticResearchOrchestrator:
                         "raw_content": content[:20000],
                         "raw_file_path": file_path,
                     })
+                    # Also create a scraped_asset so Assets tab shows it
+                    try:
+                        asset_repo = getattr(self._state, "scraped_asset_repo", None)
+                        if asset_repo:
+                            asset_repo.create({
+                                "id": str(uuid.uuid4()),
+                                "branch_id": step_id,  # use step_id as branch_id for linkage
+                                "task_id": task_id,
+                                "url": url,
+                                "raw_markdown": content[:10000],
+                                "relevance_score": 0.5,
+                                "novelty_score": 0.3,
+                            })
+                    except Exception:
+                        pass
                     return {"id": result_id, "url": url, "title": title, "content": content}
                 except Exception as e:
                     logger.warning("Fetch failed for %s: %s", url[:80], e)
