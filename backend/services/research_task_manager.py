@@ -196,7 +196,7 @@ class ResearchTaskManager:
         logger.info("Research task %s activated (%d/%d slots)", task_id, len(self._active_tasks), self.max_concurrent)
 
     async def _execute_task(self, task_id: str) -> None:
-        """Execute a research task via SomaticResearchEngine."""
+        """Execute a research task — orchestrator or legacy engine based on config."""
         semaphore = self._get_semaphore()
         async with semaphore:
             try:
@@ -206,10 +206,18 @@ class ResearchTaskManager:
                     task_id, task.get("title", "")[:80],
                 )
 
-                from backend.services.somatic_research import SomaticResearchEngine
-                engine = SomaticResearchEngine(self._app_state)
+                # Check if orchestrator is enabled
+                orch_config = self._app_state.config.get("research_orchestrator", {})
+                use_orchestrator = orch_config.get("enabled", False)
 
-                result = await engine.execute(task_id)
+                if use_orchestrator:
+                    from backend.services.research_orchestrator import SomaticResearchOrchestrator
+                    orchestrator = SomaticResearchOrchestrator(self._app_state)
+                    result = await orchestrator.execute(task_id)
+                else:
+                    from backend.services.somatic_research import SomaticResearchEngine
+                    engine = SomaticResearchEngine(self._app_state)
+                    result = await engine.execute(task_id)
 
                 summary = result.get("result_summary", "")
                 if not summary:

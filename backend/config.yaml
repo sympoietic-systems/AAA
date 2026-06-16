@@ -307,7 +307,18 @@ research_tasks:
   auto_approve:
     symbia_dream: false
     symbia_belief_conflict: false
-    symbia_stagnation: false
+
+# ── Somatic Research Orchestrator ────────────────
+# See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8
+research_orchestrator:
+  enabled: true                                    # Use orchestrator instead of legacy engine
+  max_reflect_rounds: 3                            # Reflection rounds per iteration
+  default_top_n: 3                                 # Sources to fetch per search query
+  satisfaction_threshold: 0.7                      # Completeness score to stop
+  early_stop_threshold: 0.8                        # Break reflection early if reached
+  max_concurrent_parses: 3                         # Async semaphore for source fetching
+  upload_dir: "data/uploads/research"              # Downloaded HTML storage
+  html_archive: true                               # Save HTML copies of fetched pages
 
 # ── Research Proposal Skill ────────────────────
 research_proposal_skill:

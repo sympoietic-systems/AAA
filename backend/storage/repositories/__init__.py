@@ -18,6 +18,9 @@ from backend.storage.repositories.research_task import ResearchTaskRepository
 from backend.storage.repositories.research_branch import ResearchBranchRepository
 from backend.storage.repositories.scraped_asset import ScrapedAssetRepository
 from backend.storage.repositories.research_meta_log import ResearchMetaLogRepository
+from backend.storage.repositories.research_plan import ResearchPlanRepository
+from backend.storage.repositories.research_step import ResearchStepRepository
+from backend.storage.repositories.research_step_result import ResearchStepResultRepository
 
 __all__ = [
     "BeliefRepository",
@@ -40,4 +43,7 @@ __all__ = [
     "ResearchBranchRepository",
     "ScrapedAssetRepository",
     "ResearchMetaLogRepository",
+    "ResearchPlanRepository",
+    "ResearchStepRepository",
+    "ResearchStepResultRepository",
 ]

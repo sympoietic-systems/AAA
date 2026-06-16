@@ -1,17 +1,18 @@
 // ResearchDetailPanel — detail view for a selected research task.
-// Tabs: Info, Assets, Branches, Actions, Meta Log.
-// Fetches full task detail + meta log on selection (§2: self-supporting).
+// Tabs: Info, Steps, Assets, Branches, Meta Log, Actions.
+// Fetches full task detail + meta log + steps on selection (§2: self-supporting).
 // Follows FRONTEND_DESIGN_PRINCIPLES.md §6: tabbed content, inline metadata, bracket headers.
 
 import React, { memo, useState, useEffect } from "react"
-import type { ResearchTask, MetaLogEntry, MetaLogResponse } from "../../../api/research"
-import { getResearchTask, getTaskMetaLog } from "../../../api/research"
+import type { ResearchTask, MetaLogEntry, MetaLogResponse, TaskStepsResponse, ResearchStep } from "../../../api/research"
+import { getResearchTask, getTaskMetaLog, getTaskSteps } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
 
-type TabId = "info" | "assets" | "branches" | "meta_log" | "actions"
+type TabId = "info" | "steps" | "assets" | "branches" | "meta_log" | "actions"
 
 const TABS: { key: TabId; label: string }[] = [
   { key: "info",     label: "Info" },
+  { key: "steps",    label: "Steps" },
   { key: "assets",   label: "Assets" },
   { key: "branches", label: "Branches" },
   { key: "meta_log", label: "Meta Log" },
@@ -176,6 +177,127 @@ function BranchesTab({ task }: { task: ResearchTask }) {
   )
 }
 
+/* ── Steps Tab (Orchestrator) ── */
+const STEP_TYPE_LABELS: Record<string, string> = {
+  search: "Search",
+  parallel_parse: "Parse Sources",
+  digest: "Digest",
+  reflect: "Reflect",
+  synthesize: "Synthesize",
+  evaluate: "Evaluate",
+}
+const STEP_TYPE_COLORS: Record<string, string> = {
+  search: "#3b82f6",
+  parallel_parse: "#f59e0b",
+  digest: "#a892ee",
+  reflect: "#c084fc",
+  synthesize: "#4ade80",
+  evaluate: "#22d3ee",
+}
+
+const EMPTY_STEPS: TaskStepsResponse = { task_id: "", plan: null, steps: [], results_by_step: {} }
+
+function StepsTab({ taskId }: { taskId: string }) {
+  const [data, setData] = useState<TaskStepsResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [expandedStep, setExpandedStep] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    getTaskSteps(taskId)
+      .then(d => { if (!cancelled) setData(d) })
+      .catch(() => { if (!cancelled) setData(EMPTY_STEPS) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [taskId])
+
+  if (loading) {
+    return <div className="text-[#555] animate-pulse text-xs font-mono mt-4">[ loading steps… ]</div>
+  }
+
+  if (!data || data.steps.length === 0) {
+    return <div className="text-[#444] italic text-xs text-center mt-8 select-none">[ no orchestrator steps — legacy engine ]</div>
+  }
+
+  // Show plan info if available
+  const planParsed = data.plan ? (() => { try { return JSON.parse(data.plan.plan_json) } catch { return null } })() : null
+
+  return (
+    <div className="space-y-2">
+      {planParsed && (
+        <div className="text-[#555] text-[9px] pb-1 border-b border-[#1a1a1a]">
+          goal: {planParsed.goal || "—"} · queries: {(planParsed.search_queries || []).length} · est. depth: {planParsed.estimated_depth || "—"}
+        </div>
+      )}
+
+      {data.steps.map((step) => {
+        const sc = STEP_TYPE_COLORS[step.step_type] || "#666"
+        const label = STEP_TYPE_LABELS[step.step_type] || step.step_type
+        const isExpanded = expandedStep === step.id
+        const results = data.results_by_step[step.id] || []
+
+        return (
+          <div key={step.id} className="border-l-2 border-[#222]/40 pl-2 py-1">
+            <div
+              className="flex items-center gap-1.5 cursor-pointer select-none"
+              onClick={() => setExpandedStep(isExpanded ? null : step.id)}
+            >
+              <span style={{ color: sc }} className="text-[8px] shrink-0">●</span>
+              <span className="text-[#bbb] text-[10px]">
+                #{step.step_number} {label}
+              </span>
+              <span style={{ color: sc }} className="text-[8px] ml-auto uppercase">{step.status}</span>
+              {results.length > 0 && (
+                <span className="text-[#555] text-[8px]">{isExpanded ? "▼" : "▶"}</span>
+              )}
+            </div>
+
+            {step.result_summary && (
+              <div className="text-[#555] text-[9px] ml-3.5">{step.result_summary}</div>
+            )}
+
+            {isExpanded && results.length > 0 && (
+              <div className="ml-3.5 mt-1 space-y-1">
+                {results.map((r, i) => {
+                  let analysis: any = null
+                  try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
+                  return (
+                    <div key={r.id || i} className="text-[9px]">
+                      <div className="text-[#777] break-all">
+                        <a
+                          href={r.source_url || "#"}
+                          target="_blank" rel="noopener noreferrer"
+                          className="text-[#4ade80] hover:text-[#6ee7b0] underline"
+                        >
+                          {r.source_title || r.source_url?.slice(0, 60) || "—"}
+                        </a>
+                      </div>
+                      {analysis?.learnings && (
+                        <div className="text-[#888] mt-0.5 space-y-0.5">
+                          {(analysis.learnings as string[]).slice(0, 3).map((l, li) => (
+                            <div key={li} className="pl-2">· {l}</div>
+                          ))}
+                          {analysis.learnings.length > 3 && (
+                            <div className="text-[#555]">…{analysis.learnings.length - 3} more</div>
+                          )}
+                        </div>
+                      )}
+                      {r.raw_file_path && (
+                        <div className="text-[#555] text-[8px]">saved: {r.raw_file_path}</div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /* ── Meta Log Tab ── */
 const EMPTY_META: MetaLogResponse = { task_id: "", title: "", status: "", entries: [], count: 0 }
 
@@ -286,7 +408,10 @@ function ActionsTab({
             <TerminalButton onClick={() => onCancel(task.id)} intent="delete">✕ cancel task</TerminalButton>
           )}
           {task.status === "failed" && (
-            <TerminalButton onClick={retry} intent="edit">↻ retry task</TerminalButton>
+            <>
+              <TerminalButton onClick={retry} intent="edit">↻ retry task</TerminalButton>
+              <TerminalButton onClick={continueResearch} intent="cyan">▶ continue deeper</TerminalButton>
+            </>
           )}
           {task.status === "completed" && (
             <>
@@ -294,8 +419,14 @@ function ActionsTab({
               <TerminalButton onClick={continueResearch} intent="cyan">▶ continue deeper</TerminalButton>
             </>
           )}
-          {["cancelled", "rejected"].includes(task.status) && (
-            <span className="text-[#555] italic text-[10px]">no actions — task is {task.status}</span>
+          {task.status === "cancelled" && (
+            <>
+              <TerminalButton onClick={retry} intent="edit">↻ retry task</TerminalButton>
+              <TerminalButton onClick={continueResearch} intent="cyan">▶ continue deeper</TerminalButton>
+            </>
+          )}
+          {task.status === "rejected" && (
+            <span className="text-[#555] italic text-[10px]">no actions — task is rejected</span>
           )}
         </div>
       </div>
@@ -355,6 +486,7 @@ export const ResearchDetailPanel = memo(function ResearchDetailPanel({
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto pr-1">
         {tab === "info"     && <InfoTab task={task} />}
+        {tab === "steps"    && <StepsTab taskId={task.id} />}
         {tab === "assets"   && <AssetsTab task={task} />}
         {tab === "branches" && <BranchesTab task={task} />}
         {tab === "meta_log" && <MetaLogTab taskId={task.id} />}

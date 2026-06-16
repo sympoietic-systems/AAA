@@ -1,0 +1,72 @@
+"""Repository for research_steps table."""
+
+from datetime import datetime, timezone
+from typing import Optional
+
+from backend.storage.connection import with_connection
+from backend.storage.repositories.base import BaseRepository
+
+
+class ResearchStepRepository(BaseRepository):
+    @with_connection
+    def create(self, step: dict) -> str:
+        conn = self._conn()
+        conn.execute(
+            """INSERT INTO research_steps (
+                id, task_id, plan_id, step_number, step_type,
+                step_data, status, result_summary, started_at, completed_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                step["id"],
+                step["task_id"],
+                step["plan_id"],
+                step["step_number"],
+                step["step_type"],
+                step.get("step_data", "{}"),
+                step.get("status", "pending"),
+                step.get("result_summary"),
+                step.get("started_at"),
+                step.get("completed_at"),
+                step.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+        )
+        conn.commit()
+        return step["id"]
+
+    @with_connection
+    def get(self, step_id: str) -> Optional[dict]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT * FROM research_steps WHERE id = ?", (step_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+    @with_connection
+    def get_by_task(self, task_id: str) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM research_steps WHERE task_id = ? ORDER BY step_number ASC",
+            (task_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    @with_connection
+    def get_by_plan(self, plan_id: str) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM research_steps WHERE plan_id = ? ORDER BY step_number ASC",
+            (plan_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    @with_connection
+    def update(self, step_id: str, **kwargs) -> None:
+        allowed = {"status", "result_summary", "started_at", "completed_at", "step_data"}
+        updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
+        if not updates:
+            return
+        conn = self._conn()
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [step_id]
+        conn.execute(f"UPDATE research_steps SET {set_clause} WHERE id = ?", values)
+        conn.commit()

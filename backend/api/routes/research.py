@@ -227,3 +227,52 @@ async def get_task_meta_log(task_id: str, limit: int = 200, request: Request = N
         "entries": entries,
         "count": len(entries),
     }
+
+
+# ── Orchestrator Steps ────────────────────────────────────────────────
+
+@router.get("/research/tasks/{task_id}/steps")
+async def get_task_steps(task_id: str, request: Request = None):
+    """Orchestrator pipeline steps — plan, search, parse, digest, reflect, evaluate."""
+    state = request.app.state
+    step_repo = getattr(state, "research_step_repo", None)
+    result_repo = getattr(state, "research_step_result_repo", None)
+    plan_repo = getattr(state, "research_plan_repo", None)
+
+    # Get the plan
+    plan = None
+    if plan_repo:
+        plan = plan_repo.get_by_task(task_id)
+
+    # Get all steps
+    steps = []
+    if step_repo:
+        steps = step_repo.get_by_task(task_id)
+
+    # Get all step results
+    all_results = []
+    if result_repo:
+        all_results = result_repo.get_by_task(task_id)
+
+    # Group results by step_id
+    results_by_step: dict = {}
+    for r in all_results:
+        sid = r.get("step_id", "")
+        if sid not in results_by_step:
+            results_by_step[sid] = []
+        results_by_step[sid].append({
+            "id": r.get("id"),
+            "source_url": r.get("source_url"),
+            "source_title": r.get("source_title"),
+            "analyzed_json": r.get("analyzed_json"),
+            "relevance_score": r.get("relevance_score"),
+            "novelty_score": r.get("novelty_score"),
+            "raw_file_path": r.get("raw_file_path"),
+        })
+
+    return {
+        "task_id": task_id,
+        "plan": plan,
+        "steps": steps,
+        "results_by_step": results_by_step,
+    }

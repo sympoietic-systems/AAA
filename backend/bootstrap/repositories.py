@@ -41,6 +41,9 @@ def _init_repos(config: dict) -> dict:
         ResearchBranchRepository,
         ResearchTaskRepository,
         ResearchMetaLogRepository,
+        ResearchPlanRepository,
+        ResearchStepRepository,
+        ResearchStepResultRepository,
         ScrapedAssetRepository,
         SemanticKnotRepository,
         SkillRepository,
@@ -67,4 +70,7 @@ def _init_repos(config: dict) -> dict:
         "research_branch_repo": ResearchBranchRepository(path),
         "scraped_asset_repo": ScrapedAssetRepository(path),
         "research_meta_log_repo": ResearchMetaLogRepository(path),
+        "research_plan_repo": ResearchPlanRepository(path),
+        "research_step_repo": ResearchStepRepository(path),
+        "research_step_result_repo": ResearchStepResultRepository(path),
     }

@@ -140,6 +140,52 @@ export async function getTaskMetaLog(taskId: string): Promise<MetaLogResponse> {
   return res.json()
 }
 
+// ── Orchestrator Steps ──────────────────────────────────────────────
+
+export interface ResearchStepResult {
+  id: string
+  source_url: string | null
+  source_title: string | null
+  analyzed_json: string | null
+  relevance_score: number
+  novelty_score: number
+  raw_file_path: string | null
+}
+
+export interface ResearchStep {
+  id: string
+  task_id: string
+  plan_id: string
+  step_number: number
+  step_type: string
+  step_data: string
+  status: string
+  result_summary: string | null
+  started_at: string | null
+  completed_at: string | null
+}
+
+export interface ResearchPlanInfo {
+  id: string
+  task_id: string
+  plan_json: string
+  status: string
+  created_at: string | null
+}
+
+export interface TaskStepsResponse {
+  task_id: string
+  plan: ResearchPlanInfo | null
+  steps: ResearchStep[]
+  results_by_step: Record<string, ResearchStepResult[]>
+}
+
+export async function getTaskSteps(taskId: string): Promise<TaskStepsResponse> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/steps`)
+  if (!res.ok) throw new Error(`Steps fetch failed: ${res.status}`)
+  return res.json()
+}
+
 // ── Assets ──────────────────────────────────────────────────────────
 
 export interface ScrapedAsset {
