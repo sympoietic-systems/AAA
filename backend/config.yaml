@@ -274,6 +274,89 @@ dynamic_personality:
     ghost_similarity_block: 0.9
     daemon_interval: 50
 
+# ── Rhizomatic Research Engine ──────────────────
+# See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md
+rhizome_research:
+  enabled: true                                   # Master toggle
+  max_depth: 3                                     # Default recursion depth
+  max_breadth: 4                                   # Default parallel search paths per level
+  max_concurrent_probes: 3                         # Async semaphore limit
+  lateral_flight_threshold: 0.72                   # S_diff trigger for line-of-flight
+  detour_interpolation_alpha: 0.5                  # Query blending on detour
+  min_curiosity_to_probe: 0.3                      # Skip probes below this curiosity
+  agonistic_stagnation_threshold: 0.7              # Switch to counter-positional queries
+  weights:
+    relevance: 0.40                                # w1
+    novelty: 0.25                                  # w2
+    cost: 0.20                                     # w3
+    diffractive: 0.15                              # w4
+
+# ── Research Task Manager ──────────────────────
+research_tasks:
+  enabled: true
+  max_concurrent: 2
+  conversation_proposal_timeout_minutes: 60
+  daemon_proposal_timeout_minutes: 600
+  startup_proposal_timeout_minutes: 600
+  default_max_depth: 3
+  default_max_breadth: 4
+  daemon_max_depth: 2
+  daemon_max_breadth: 2
+  queue_max_size: 10
+  max_startup_proposals: 3
+  auto_approve:
+    symbia_dream: false
+    symbia_belief_conflict: false
+    symbia_stagnation: false
+
+# ── Research Proposal Skill ────────────────────
+research_proposal_skill:
+  enabled: true
+  knowledge_gap_confidence_threshold: 0.4
+  belief_tension_threshold: 0.3
+  stagnation_threshold: 0.7
+  max_per_conversation: 3
+  min_turns_between: 5
+  cooldown_after_rejection: 10
+  cooldown_after_completion: 8
+  grace_turns_at_start: 3
+
+# ── Sensory Affordances ─────────────────────────
+sensory_affordances:
+  jina_reader:
+    enabled: true
+    api_base: "https://r.jina.ai"
+    timeout_seconds: 15
+  firecrawl:
+    enabled: false
+    api_base: "https://api.firecrawl.dev/v1"
+    timeout_seconds: 20
+  crawl4ai:
+    enabled: false
+    timeout_seconds: 30
+  strategy: "tiered"
+  task_type_routing:
+    single_url: ["jina_reader", "crawl4ai"]
+    deep_crawl: ["crawl4ai"]
+    web_search: ["crawl4ai"]
+
+# ── Metabolic Budgets ───────────────────────────
+metabolic_budgets:
+  per_session_usd: 1.00                        # Hard cap per research session
+  per_branch_usd: 0.25                         # Hard cap per branch node
+  dream_research_usd: 0.50                     # Separate cap for daemon-initiated research
+  warning_threshold_pct: 80                    # Log warning at this utilization
+  reasoning_effort_dynamic: true               # Scale by Curiosity/Boredom
+
+# ── Research Consolidation ─────────────────────
+research_consolidation:
+  max_nodes_per_batch: 5
+  min_intensity_for_knot: 0.7
+  max_concurrent_batches: 4
+  min_assets_per_batch: 2
+  skip_pruned_branches: true
+  consolidate_synthesis: true
+
 # ── Server ───────────────────────────────────────
 server:
   host: "127.0.0.1"

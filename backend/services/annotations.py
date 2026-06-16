@@ -127,3 +127,46 @@ def process_self_annotations(
         message_repo.update_content(message_id, processed)
 
     return processed
+
+
+# ── Research Proposal Extraction ───────────────────────────────────────
+
+RESEARCH_PROPOSAL_PATTERN = re.compile(
+    r'<research-proposal>(.*?)</research-proposal>', re.DOTALL
+)
+
+
+def extract_research_proposals(message_content: str) -> list[dict]:
+    """Extract <research-proposal> XML blocks from Symbia's response.
+
+    Parses the XML-encoded proposal data for frontend rendering
+    as interactive approval cards.
+
+    Returns a list of proposal dicts with keys:
+        id, objective, rationale, suggested_depth, suggested_breadth, is_agonistic
+    """
+    import xml.etree.ElementTree as ET
+
+    proposals = []
+    for match in RESEARCH_PROPOSAL_PATTERN.finditer(message_content):
+        xml_str = match.group(0)
+        try:
+            root = ET.fromstring(xml_str)
+            proposal = {
+                "id": str(uuid.uuid4()),
+                "objective": (root.findtext("objective") or "").strip(),
+                "rationale": (root.findtext("rationale") or "").strip(),
+                "suggested_depth": int(root.findtext("suggested_depth") or "2"),
+                "suggested_breadth": int(root.findtext("suggested_breadth") or "3"),
+                "is_agonistic": (root.findtext("is_agonistic") or "false").lower() == "true",
+            }
+            proposals.append(proposal)
+        except ET.ParseError:
+            logger.warning("Failed to parse <research-proposal> XML block")
+            continue
+    return proposals
+
+
+def strip_research_proposals(message_content: str) -> str:
+    """Remove <research-proposal> blocks from message content for clean display."""
+    return RESEARCH_PROPOSAL_PATTERN.sub("", message_content).strip()
