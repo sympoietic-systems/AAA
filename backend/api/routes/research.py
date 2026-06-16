@@ -57,15 +57,27 @@ async def list_tasks(
     limit: int = 50,
     request: Request = None,
 ):
-    """List all research tasks with optional filters."""
+    """List all research tasks with optional filters. Includes lightweight asset summaries."""
     state = request.app.state
     manager = state.research_task_manager
-    return manager.list_tasks(
+    tasks = manager.list_tasks(
         status=status,
         trigger_source=trigger_source,
         conversation_id=conversation_id,
         limit=limit,
     )
+
+    # Enrich tasks with lightweight asset summaries (no raw_markdown)
+    task_ids = [t["id"] for t in tasks]
+    if task_ids:
+        assets_by_task = state.scraped_asset_repo.get_lightweight_by_task_ids(task_ids)
+        for task in tasks:
+            tid = task["id"]
+            task_assets = assets_by_task.get(tid, [])
+            task["assets"] = task_assets
+            task["asset_count"] = len(task_assets)
+
+    return tasks
 
 
 @router.get("/research/tasks/active/summary")

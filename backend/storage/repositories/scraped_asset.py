@@ -76,3 +76,29 @@ class ScrapedAssetRepository(BaseRepository):
             (task_id,),
         ).fetchone()
         return row[0] if row else 0
+
+    @with_connection
+    def get_lightweight_by_task_ids(self, task_ids: list[str]) -> dict[str, list[dict]]:
+        """Batch-fetch lightweight assets (no raw_markdown) for multiple tasks.
+        Returns {task_id: [asset_dict, ...]}.
+        """
+        if not task_ids:
+            return {}
+        conn = self._conn()
+        placeholders = ",".join("?" for _ in task_ids)
+        rows = conn.execute(
+            f"""SELECT id, branch_id, task_id, url, relevance_score, novelty_score,
+                diffractive_score, created_at
+                FROM scraped_assets
+                WHERE task_id IN ({placeholders})
+                ORDER BY relevance_score DESC
+                LIMIT 50""",
+            task_ids,
+        ).fetchall()
+        result: dict[str, list[dict]] = {tid: [] for tid in task_ids}
+        for r in rows:
+            d = dict(r)
+            tid = d["task_id"]
+            if tid in result:
+                result[tid].append(d)
+        return result

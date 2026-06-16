@@ -285,10 +285,12 @@ class SomaticResearchEngine:
         async with sem:
             # 1. Fetch web content via sensory affordances
             scraped_text = ""
+            fetched_url = query  # Track what was actually fetched
             try:
                 from backend.services.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
                 # Convert search phrases to URLs if needed
                 if query.startswith("http://") or query.startswith("https://"):
+                    fetched_url = query
                     scraped_text = await select_and_fetch(
                         url_or_query=query, task_type="single_url", config=self._state.config,
                     )
@@ -296,6 +298,7 @@ class SomaticResearchEngine:
                     # Use Crawl4AI browser to scrape search results
                     import urllib.parse
                     search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+                    fetched_url = search_url
                     try:
                         scraped_text = await fetch_via_crawl4ai(search_url, config=self._state.config)
                         if not scraped_text:
@@ -310,6 +313,7 @@ class SomaticResearchEngine:
                 else:
                     import urllib.parse
                     search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+                    fetched_url = search_url
                     scraped_text = await select_and_fetch(
                         url_or_query=search_url, task_type="single_url", config=self._state.config,
                     )
@@ -345,7 +349,7 @@ class SomaticResearchEngine:
                 "id": asset_id,
                 "branch_id": branch_id,
                 "task_id": task_id,
-                "url": query,  # In practice, this would be the actual URL
+                "url": fetched_url,
                 "raw_markdown": scraped_text[:10000],
                 "relevance_score": 0.7,  # Placeholder — compute with embedder
                 "novelty_score": 0.5,
