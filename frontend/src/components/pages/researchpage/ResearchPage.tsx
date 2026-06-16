@@ -32,8 +32,15 @@ export const ResearchPage = memo(function ResearchPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <span className="text-[#ddd] text-sm font-mono">symbia // research console</span>
-          <span className="text-[#555] text-[10px] ml-2">
+          <span className="text-[11px] text-[#444] tracking-widest uppercase select-none">
+            <span className="text-[#4ade80]">■</span>
+            <button onClick={() => window.location.href = '/'} className="ml-2 hover:text-[#777] transition-colors cursor-pointer">home</button>
+            <span className="text-[#333] mx-1">//</span>
+            <button onClick={() => window.open('/agent', '_blank')} className="hover:text-[#a892ee] transition-colors cursor-pointer">agent</button>
+            <span className="text-[#333] mx-1">//</span>
+            <span className="text-[#eab308]">research</span>
+          </span>
+          <span className="text-[#555] text-[10px] ml-3">
             {summary.active_count} active · {summary.queued_count} queued · {summary.pending_proposals} proposals
           </span>
         </div>

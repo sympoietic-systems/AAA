@@ -206,7 +206,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
           </button>
           <span className="text-[#333] mx-1">//</span>
           <button
-            onClick={() => window.open('/research', '_self')}
+            onClick={() => window.open('/research', '_blank')}
             className="hover:text-[#eab308] transition-colors cursor-pointer"
             title="Research console"
           >
