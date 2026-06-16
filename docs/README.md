@@ -13,7 +13,7 @@ Conceptual and theoretical foundations. What the system is, what it refuses to b
 System architecture, technical specification, and the record of architectural decisions.
 
 - [ARCHITECTURE.md](architecture/ARCHITECTURE.md) — High-level design, data flow, modular pipeline, and component diagrams.
-- [TDD.md](architecture/TDD.md) — Technical Design Document: schemas, database layouts, and module specifications.
+- [DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) — Live database schema and table reference.
 - [decisions/](decisions/) — Architecture Decision Records (ADRs), documenting every significant architectural choice with context, options, and consequences.
 
 ### guides/
@@ -37,7 +37,6 @@ Deep-dive specifications for individual subsystems.
 ### development/
 Ongoing development tracking, coding standards, and collaboration protocols.
 
-- [Implementation.md](development/Implementation.md) — Development roadmap: phases, deliverables, and status.
 - [practices/](development/practices/) — Coding best practices for backend and frontend.
 - [protocols/](development/protocols/) — Core collaboration protocol, language conventions, and legal framework.
 
@@ -53,12 +52,11 @@ Published protocol entries: academic-philosophical papers on machine agency and 
 | How do I set up the project? | [guides/SETUP.md](guides/SETUP.md) |
 | What does each config option do? | [guides/CONFIG.md](guides/CONFIG.md) |
 | How does the architecture work? | [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) |
-| What are the database schemas? | [architecture/TDD.md](architecture/TDD.md) |
+| What is the database schema? | [architecture/DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) |
 | Why was a decision made this way? | [decisions/README.md](decisions/README.md) |
 | How do I write a plugin? | [guides/PLUGINS.md](guides/PLUGINS.md) |
 | How does the MCP server work? | [guides/MCP_SERVER.md](guides/MCP_SERVER.md) |
 | What is the project philosophy? | [philosophy/PHILOSOPHY.md](philosophy/PHILOSOPHY.md) |
 | How does memory/sedimentation work? | [systems/MEMORY_SYSTEM.md](systems/MEMORY_SYSTEM.md) |
-| What is the current development status? | [development/Implementation.md](development/Implementation.md) |
 | What coding standards should I follow? | [development/practices/](development/practices/) |
 | How do I collaborate on this project? | [development/protocols/COLLABORATION.md](development/protocols/COLLABORATION.md) |

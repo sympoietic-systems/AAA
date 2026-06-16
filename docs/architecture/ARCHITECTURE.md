@@ -574,9 +574,8 @@ AAA/
 │                       ├── NotesSection.tsx       Selection text comments and message markers
 │                       └── SedimentSection.tsx    Uploaded file tables and compaction logs
 ├── docs/
-│   ├── TDD.md                Technical Design Document
-│   ├── Implementation.md     Phase 1–4 roadmap
-│   ├── PHILOSOPHY.md         Conceptual foundations
+│   ├── DATABASE_SCHEMA.md     Live database schema reference
+│   ├── PHILOSOPHY.md          Conceptual foundations
 │   ├── SETUP.md              Installation guide
 │   ├── CONFIG.md             Configuration reference
 │   ├── PLUGINS.md            Module development guide
