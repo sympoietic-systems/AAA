@@ -416,16 +416,8 @@ class SomaticResearchEngine:
             analysis = await self._analyze_scraped_content(
                 query=query, goal=goal, depth=depth, max_depth=max_depth,
                 scraped_content=scraped_text[:8000], persona_context=context,
+                task_id=task_id, branch_id=branch_id,
             )
-            self._log_meta(task_id, "llm_analysis", {
-                "query": query[:200],
-                "goal": goal[:200],
-                "depth": depth,
-                "learnings_count": len(analysis.get("learnings", [])),
-                "followups_count": len(analysis.get("followups", [])),
-                "diffractive_score": analysis.get("diffractive_score", 0),
-                "learnings": analysis.get("learnings", [])[:5],
-            }, branch_id=branch_id)
 
             # 4. Store asset
             asset_id = str(uuid.uuid4())
@@ -457,6 +449,8 @@ class SomaticResearchEngine:
         max_depth: int,
         scraped_content: str,
         persona_context: str,
+        task_id: str = "",
+        branch_id: str = "",
     ) -> dict:
         """Analyze scraped web content through Symbia's lens via LLM."""
         prompt_data = get_prompts_dict("research/node_analyzer.yaml")
@@ -481,10 +475,22 @@ class SomaticResearchEngine:
         if prompt_data.get("anti_mastery"):
             user_text = self._anti_mastery(user_text)
 
+        # Log the LLM prompt
+        self._log_meta(task_id, "llm_prompt", {
+            "query": query[:200],
+            "goal": goal[:200],
+            "depth": depth,
+            "system_prompt": system_text,
+            "user_prompt": user_text,
+            "temperature": prompt_data.get("temperature", 0.3),
+            "max_tokens": prompt_data.get("max_tokens", 2048),
+        }, branch_id=branch_id)
+
         try:
             llm_provider = getattr(self._state, "llm_provider", None)
             if llm_provider is None:
                 logger.error("No LLM provider available for research analysis")
+                self._log_meta(task_id, "llm_error", {"error": "No LLM provider available"}, branch_id=branch_id)
                 return {"learnings": [], "gaps": [], "followups": [], "diffractive_notes": []}
 
             from backend.modules.llm_client import generate_unified
@@ -503,9 +509,24 @@ class SomaticResearchEngine:
                     result = json.loads(result)
                 except json.JSONDecodeError:
                     result = {}
+
+            # Log the LLM response
+            self._log_meta(task_id, "llm_response", {
+                "query": query[:200],
+                "raw_response": json.dumps(response, default=str, ensure_ascii=False)[:8000],
+                "learnings_count": len(result.get("learnings", [])) if isinstance(result, dict) else 0,
+                "followups_count": len(result.get("followups", [])) if isinstance(result, dict) else 0,
+                "diffractive_score": result.get("diffractive_score", 0) if isinstance(result, dict) else 0,
+                "learnings": (result.get("learnings", []) if isinstance(result, dict) else [])[:5],
+            }, branch_id=branch_id)
+
             return result if isinstance(result, dict) else {}
         except Exception as e:
             logger.error("LLM analysis failed for node: %s", e)
+            self._log_meta(task_id, "llm_error", {
+                "query": query[:200],
+                "error": str(e),
+            }, branch_id=branch_id)
             return {}
 
     # ── Query Generation ─────────────────────────────────────────────
