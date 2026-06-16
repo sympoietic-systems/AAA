@@ -172,6 +172,10 @@ def _init_modules(
         config=config,
     )
 
+    # ── Rhizome Web Probe (autonomous deep research) ──
+    from backend.modules.rhizome_web_probe import RhizomeWebProbeModule
+    rhizome_web_probe = RhizomeWebProbeModule(config=config)
+
     # ── Consolidation Checkpoint ──
     from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
     consolidation_checkpoint = ConsolidationCheckpointModule(
@@ -199,6 +203,7 @@ def _init_modules(
         "structural_scorer": structural_scorer,
         "perception_module": perception_module,
         "web_retrieval": web_retrieval,
+        "rhizome_web_probe": rhizome_web_probe,
         "consolidation_checkpoint": consolidation_checkpoint,
     }
 

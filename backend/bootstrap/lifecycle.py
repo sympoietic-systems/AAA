@@ -156,6 +156,10 @@ async def lifespan(app: FastAPI):
     from backend.services.research_task_manager import ResearchTaskManager
     app.state.research_task_manager = ResearchTaskManager(app.state)
 
+    # Wire app_state into the rhizome web probe module (created before app_state existed)
+    if "rhizome_web_probe" in modules:
+        modules["rhizome_web_probe"]._set_app_state(app.state)
+
     # 11. Background engine
     background_engine, background_provider = _init_background_engine(
         config, llm_provider, vision_provider,

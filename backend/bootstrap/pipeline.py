@@ -22,6 +22,7 @@ def _build_pipeline(config: dict, registry, repos: dict, modules: dict):
             "embedder",
             "structural_scorer",
             "perception",
+            "rhizome_web_probe",
             "web_retrieval",
             "conversation_metrics",
             "trait_computer",
