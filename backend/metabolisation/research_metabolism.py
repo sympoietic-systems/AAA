@@ -126,14 +126,18 @@ class ResearchMetabolismEngine:
             system_text = apply_anti_mastery_filter(system_text)
             user_text = apply_anti_mastery_filter(user_text)
 
-            response = await llm_provider.generate(
-                system=system_text,
-                prompt=user_text,
+            from backend.modules.llm_client import generate_unified
+            response = await generate_unified(
+                provider=llm_provider,
+                system_prompt=system_text,
+                user_prompt=user_text,
+                expect_json=True,
                 temperature=prompt_data.get("temperature", 0.4),
                 max_tokens=prompt_data.get("max_tokens", 3072),
-                response_format=prompt_data.get("response_format"),
             )
-            result = json.loads(response) if isinstance(response, str) else response
+            result = response.get("json_data") or response.get("content") or {}
+            if isinstance(result, str):
+                result = json.loads(result)
             return result.get("summary", "") if isinstance(result, dict) else str(result)[:2000]
         except Exception as e:
             logger.error("Synthesis failed: %s", e)

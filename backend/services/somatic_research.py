@@ -347,14 +347,18 @@ class SomaticResearchEngine:
                 logger.error("No LLM provider available for research analysis")
                 return {"learnings": [], "gaps": [], "followups": [], "diffractive_notes": []}
 
-            response = await llm_provider.generate(
-                system=system_text,
-                prompt=user_text,
+            from backend.modules.llm_client import generate_unified
+            response = await generate_unified(
+                provider=llm_provider,
+                system_prompt=system_text,
+                user_prompt=user_text,
+                expect_json=True,
                 temperature=prompt_data.get("temperature", 0.3),
                 max_tokens=prompt_data.get("max_tokens", 2048),
-                response_format=prompt_data.get("response_format"),
             )
-            result = json.loads(response) if isinstance(response, str) else response
+            result = response.get("json_data") or {}
+            if isinstance(result, str):
+                result = json.loads(result)
             return result if isinstance(result, dict) else {}
         except Exception as e:
             logger.error("LLM analysis failed for node: %s", e)

@@ -99,14 +99,18 @@ class AgonisticPlanner:
         max_tokens = prompt_data.get("max_tokens", 1024)
 
         try:
-            response = await self._llm.generate(
-                system=system_text,
-                prompt=user_text,
+            from backend.modules.llm_client import generate_unified
+            response = await generate_unified(
+                provider=self._llm,
+                system_prompt=system_text,
+                user_prompt=user_text,
+                expect_json=True,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                response_format=prompt_data.get("response_format"),
             )
-            result = json.loads(response) if isinstance(response, str) else response
+            result = response.get("json_data") or response.get("content")
+            if isinstance(result, str):
+                result = json.loads(result)
             if isinstance(result, list):
                 return result
             return [{"query": objective, "goal": "Investigate the core objective"}]
@@ -153,14 +157,18 @@ class AgonisticPlanner:
             user_text = self._anti_mastery(user_text)
 
         try:
-            response = await self._llm.generate(
-                system=system_text,
-                prompt=user_text,
+            from backend.modules.llm_client import generate_unified
+            response = await generate_unified(
+                provider=self._llm,
+                system_prompt=system_text,
+                user_prompt=user_text,
+                expect_json=True,
                 temperature=prompt_data.get("temperature", 0.4),
                 max_tokens=prompt_data.get("max_tokens", 1024),
-                response_format=prompt_data.get("response_format"),
             )
-            result = json.loads(response) if isinstance(response, str) else response
+            result = response.get("json_data") or response.get("content")
+            if isinstance(result, str):
+                result = json.loads(result)
             return result if isinstance(result, list) else []
         except (json.JSONDecodeError, Exception) as e:
             logger.error("Query generation failed: %s", e)
