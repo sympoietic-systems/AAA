@@ -8,6 +8,7 @@ import { SidePanel } from "./components/panels/sidepanel/SidePanel"
 import { ConversationLandingPage } from "./components/pages/landing/ConversationLandingPage"
 import { AgentPage } from "./components/pages/agentpage/AgentPage"
 import { ResearchPage } from "./components/pages/researchpage/ResearchPage"
+import { ResearchTaskPage } from "./components/pages/researchpage/ResearchTaskPage"
 import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag, getAgent, deleteMessage } from "./api/client"
@@ -20,8 +21,17 @@ export default function App() {
     return <AgentPage onGoHome={() => window.close()} />
   }
 
-  // Render research console standalone if navigated to /research
+  // Render research console or task detail
   if (window.location.pathname === "/research") {
+    const params = new URLSearchParams(window.location.search)
+    const taskId = params.get("id")
+    const isNew = params.get("id") === "new"
+    if (taskId && !isNew) {
+      return <ResearchTaskPage taskId={taskId} />
+    }
+    if (isNew) {
+      return <ResearchTaskPage taskId="" isNew />
+    }
     return <ResearchPage />
   }
 
