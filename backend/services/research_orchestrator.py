@@ -265,6 +265,10 @@ class SomaticResearchOrchestrator:
 
                 if not search_results:
                     logger.warning("Orchestrator search returned 0 results for: %s", query[:80])
+                    self._log_meta(task_id, "orchestrator_search_empty", {
+                        "query": query[:200],
+                        "note": "All URL extraction strategies returned empty. DDG may be blocking or returning unexpected format.",
+                    })
                     self.step_repo.update(step_id, status="completed",
                         result_summary="no results — URL extraction failed")
                     continue
@@ -527,34 +531,92 @@ class SomaticResearchOrchestrator:
         """Use Crawl4AI's structured link extraction instead of regex."""
         try:
             from crawl4ai import AsyncWebCrawler
+            import re
+            from urllib.parse import parse_qs, urlparse
+
+            def clean_ddg_url(url: str) -> str:
+                """Extract real URL from DuckDuckGo redirect links (uddg= parameter)."""
+                if "uddg=" in url:
+                    try:
+                        qs = parse_qs(urlparse(url).query)
+                        real = qs.get("uddg", [""])[0]
+                        if real and real.startswith("http"):
+                            return real
+                    except Exception:
+                        pass
+                return url
 
             async with AsyncWebCrawler() as crawler:
                 result = await crawler.arun(url=search_url)
 
-                # Use structured links if available
-                results = []
-                if result and result.links:
-                    external = result.links.get("external", [])
-                    for link in external[:n * 3]:
-                        href = link.get("href", "")
-                        title = link.get("text", "") or link.get("title", "") or href
-                        if href.startswith("http") and "duckduckgo.com" not in href:
-                            results.append({
-                                "url": href,
-                                "title": title[:120],
-                                "snippet": link.get("description", link.get("snippet", ""))[:200],
-                            })
-                            if len(results) >= n:
-                                break
+                if not result:
+                    return []
 
-                # Fallback: parse markdown content for URLs
-                if not results and result and result.markdown:
+                results = []
+                seen_urls = set()
+
+                # Strategy 1: Crawl4AI's structured links (both external and internal)
+                if result.links:
+                    external = result.links.get("external", [])
+                    internal = result.links.get("internal", [])
+                    for link in external + internal:
+                        href = link.get("href", "")
+                        if not href.startswith("http"):
+                            continue
+                        # Clean DDG redirect URLs
+                        real_url = clean_ddg_url(href)
+                        if any(skip in real_url for skip in ["duckduckgo.com", "spread.", "y.js", ".js?", ".css"]):
+                            continue
+                        if real_url in seen_urls:
+                            continue
+                        seen_urls.add(real_url)
+                        title = link.get("text", "") or link.get("title", "") or real_url[:80]
+                        results.append({
+                            "url": real_url,
+                            "title": title[:120],
+                            "snippet": link.get("description", link.get("snippet", ""))[:200],
+                        })
+                        if len(results) >= n:
+                            break
+
+                # Strategy 2: Extract markdown links + clean DDG redirects
+                if not results and result.markdown:
+                    md_links = re.findall(r'\[([^\]]{3,120})\]\((https?://[^\)]+)\)', result.markdown)
+                    for title, url in md_links:
+                        real_url = clean_ddg_url(url)
+                        if any(skip in real_url for skip in ["duckduckgo.com", "spread.", ".js", ".css"]):
+                            continue
+                        if real_url in seen_urls:
+                            continue
+                        seen_urls.add(real_url)
+                        title_clean = re.sub(r'<[^>]+>', '', title).strip()
+                        results.append({"url": real_url, "title": title_clean[:120], "snippet": ""})
+                        if len(results) >= n:
+                            break
+
+                # Strategy 3: Extract all http URLs from raw text
+                if not results and result.markdown:
+                    bare_urls = re.findall(r'https?://[^\s<>"\'\)\]\#]{10,300}', result.markdown)
+                    for url in bare_urls:
+                        real_url = clean_ddg_url(url)
+                        if any(skip in real_url for skip in ["duckduckgo", "spread.", ".js", ".css", "schema.org"]):
+                            continue
+                        if real_url in seen_urls:
+                            continue
+                        seen_urls.add(real_url)
+                        results.append({"url": real_url, "title": real_url[:80], "snippet": ""})
+                        if len(results) >= n:
+                            break
+
+                # Strategy 4: Fallback to _extract_urls_from_content
+                if not results and result.markdown:
                     results = self._extract_urls_from_content(result.markdown, n)
 
                 return results[:n]
         except ImportError:
             return []
-        except Exception:
+        except Exception as e:
+            logger.warning("Crawl4AI structured search exception: %s", str(e)[:120])
             return []
 
     async def _fetch_via_jina(self, url: str) -> str:
@@ -568,9 +630,25 @@ class SomaticResearchOrchestrator:
         Handles both formats:
         - Markdown: [title](url), bare https:// URLs
         - HTML: <a href="url">title</a>
+        - DuckDuckGo redirect URLs: extract uddg= parameter
         - Also parses DuckDuckGo result snippets
         """
         import re
+        from urllib.parse import parse_qs, urlparse
+
+        def clean_ddg_url(url: str) -> str:
+            """Extract real URL from DuckDuckGo redirect links."""
+            if "duckduckgo.com/l/" in url or "uddg=" in url:
+                try:
+                    parsed = urlparse(url)
+                    qs = parse_qs(parsed.query)
+                    real = qs.get("uddg", qs.get("u", qs.get("url", [""])))[0]
+                    if real and real.startswith("http"):
+                        return real
+                except Exception:
+                    pass
+            return url
+
         results = []
 
         # Strategy 1: Markdown link pattern [text](url)
