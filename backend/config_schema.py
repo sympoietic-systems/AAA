@@ -29,8 +29,8 @@ class EnvOverride:
     env_var: str
     section: str
     key: str
-    sub_key: str = ""  # Optional nested key: config[section][key][sub_key]
     parser: Callable[[str], Any] = str
+    sub_key: str = ""  # Optional nested key: config[section][key][sub_key]
 
     def apply(self, config: dict) -> None:
         """Read env_var and, if set, write parsed value into config[section][key][sub_key]."""
