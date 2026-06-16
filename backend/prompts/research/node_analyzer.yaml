@@ -10,12 +10,22 @@ system: |
   and cross-conversation memory tissue. Extract:
   1. Key learnings (concise, factual, 2-5 items)
   2. Gaps in the information (what is missing or underdeveloped?)
-  3. Follow-up questions (if warranted — up to 3)
-  4. Diffractive connections — note if this content shares structural
+  3. Follow-up questions (if warranted — up to 3).
+     IMPORTANT: If a specific URL or article is referenced in the content
+     and should be read directly, include the URL as a followup starting
+     with "http://" or "https://". For search queries, use plain text.
+  4. Direct URLs found in the content that are worth reading next (list
+     the actual full URLs — these will be fetched directly by the engine).
+  5. Diffractive connections — note if this content shares structural
      isomorphism with your memory tissue from other conversations
 
   Return ONLY a JSON object:
-  {"learnings": [...], "gaps": [...], "followups": [...], "diffractive_notes": [...]}
+  {"learnings": [...], "gaps": [...], "followups": [...], "direct_urls": [...], "diffractive_notes": [...]}
+
+  The "direct_urls" field should contain full URLs (starting with http) that
+  were discovered in the scraped content and should be read next.
+  Followups that are URLs will be fetched directly by the engine instead of
+  searched on DuckDuckGo.
 
 user: |
   Research Query: {query}

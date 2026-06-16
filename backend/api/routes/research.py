@@ -176,8 +176,8 @@ async def retry_task(task_id: str, request: Request):
     task = manager.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task["status"] not in ("failed", "completed"):
-        raise HTTPException(status_code=400, detail="Only failed or completed tasks can be retried")
+    if task["status"] not in ("failed", "completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="Only failed, completed, or cancelled tasks can be retried")
 
     # Create a new task with same parameters
     new_id = manager.create_task(

@@ -162,12 +162,18 @@ class SomaticResearchEngine:
             "is_agonistic": is_agonistic,
         })
 
-        # Recursive exploration
+        # Recursive exploration with total node cap
+        MAX_TOTAL_NODES = 50
+        self._node_count = 0
         all_assets = []
         lateral_flights = 0
         branches_created = 0
 
         for query_dict in sub_queries:
+            if self._node_count >= MAX_TOTAL_NODES:
+                self._log_meta(task_id, "node_limit_reached", {"limit": MAX_TOTAL_NODES})
+                logger.warning("Research task %s: reached node limit %d, stopping", task_id, MAX_TOTAL_NODES)
+                break
             branch_assets, branch_laterals = await self._traverse_rhizome(
                 task_id=task_id,
                 conversation_id=conversation_id,
@@ -246,7 +252,12 @@ class SomaticResearchEngine:
 
         Returns (assets_list, lateral_flights_count).
         """
-        if depth >= max_depth:
+        self._node_count += 1
+        MAX_TOTAL_NODES = 50
+
+        if depth >= max_depth or self._node_count > MAX_TOTAL_NODES:
+            if self._node_count > MAX_TOTAL_NODES:
+                self._log_meta(task_id, "node_limit_reached_branch", {"limit": MAX_TOTAL_NODES, "at_depth": depth})
             return [], 0
 
         # Create branch record
@@ -364,6 +375,18 @@ class SomaticResearchEngine:
                             scraped_text = await select_and_fetch(
                                 url_or_query=search_url, task_type="single_url", config=self._state.config,
                             )
+                    except RuntimeError as cre:
+                        # Crawl4AI antibot/connection errors — clean fallback
+                        fetch_method = "jina_fallback_after_crawl4ai_error"
+                        self._log_meta(task_id, "fetch_note", {
+                            "query": query[:200],
+                            "method": "crawl4ai",
+                            "note": "Crawl4AI blocked/connection closed, falling back to Jina",
+                            "error_snippet": str(cre)[:120],
+                        }, branch_id=branch_id)
+                        scraped_text = await select_and_fetch(
+                            url_or_query=search_url, task_type="single_url", config=self._state.config,
+                        )
                     except Exception:
                         fetch_method = "jina_fallback_after_error"
                         scraped_text = await select_and_fetch(
@@ -434,10 +457,21 @@ class SomaticResearchEngine:
 
             assets = [{"id": asset_id, "branch_id": branch_id}]
 
+            # Combine followup search queries with direct URL fetches
+            followups = list(analysis.get("followups", []))
+            direct_urls = [u for u in analysis.get("direct_urls", []) if isinstance(u, str) and u.startswith("http")]
+            if direct_urls:
+                self._log_meta(task_id, "direct_urls_found", {
+                    "urls": direct_urls,
+                    "count": len(direct_urls),
+                }, branch_id=branch_id)
+                # Prepend URL-fetch followups so they're processed first
+                followups = direct_urls + followups
+
             return {
                 "assets": assets,
                 "learnings": analysis.get("learnings", []),
-                "followups": analysis.get("followups", []),
+                "followups": followups,
                 "diffractive_score": analysis.get("diffractive_score", 0.0),
             }
 
