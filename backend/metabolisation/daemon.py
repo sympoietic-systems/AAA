@@ -33,6 +33,7 @@ from backend.metabolisation.dream_prompts import DreamPromptMixin
 from backend.metabolisation.dream_executor import DreamExecutorMixin
 from backend.metabolisation.consolidation import ConsolidationMixin
 from backend.metabolisation.skill_metabolism import SkillMetabolismMixin
+from backend.metabolisation.dream_research import DreamResearchMixin
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class AutopoieticDreamDaemon(
     DreamExecutorMixin,
     ConsolidationMixin,
     SkillMetabolismMixin,
+    DreamResearchMixin,
 ):
     """Background daemon that triggers autonomous self-reflection (dream) cycles."""
 
@@ -137,7 +139,20 @@ class AutopoieticDreamDaemon(
             try:
                 await self.consolidate_pending_conversations()
             except Exception as e:
-                logger.exception("Error in Autopoietic Dream Daemon consolidation check: %s", e)
+                logger.error("Error in Autopoietic Dream Daemon consolidation check: %s", e)
+
+            # Autonomous research proposal scanning (Phase 4)
+            try:
+                await self._scan_and_propose_research()
+            except Exception as e:
+                logger.debug("Research proposal scan skipped: %s", e)
+
+            # Post-research metabolism for completed tasks
+            try:
+                await self.metabolize_research_on_idle()
+            except Exception as e:
+                logger.debug("Research metabolism skipped: %s", e)
+
             try:
                 await self.run_skill_metabolism()
             except Exception as e:
