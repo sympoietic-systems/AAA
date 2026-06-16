@@ -87,9 +87,17 @@ async def get_task(task_id: str, request: Request):
 
     # Enrich with branches and assets
     branches = state.research_branch_repo.get_by_task(task_id)
-    asset_count = state.scraped_asset_repo.count_by_task(task_id)
+    assets = state.scraped_asset_repo.get_by_task(task_id)
     task["branches"] = branches
-    task["asset_count"] = asset_count
+    task["asset_count"] = len(assets)
+    task["assets"] = [{
+        "id": a["id"],
+        "url": a.get("url", ""),
+        "relevance_score": a.get("relevance_score", 0),
+        "novelty_score": a.get("novelty_score", 0),
+        "diffractive_score": a.get("diffractive_score", 0),
+        "created_at": a.get("created_at"),
+    } for a in assets]
     return task
 
 

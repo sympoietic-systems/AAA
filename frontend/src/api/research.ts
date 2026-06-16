@@ -29,6 +29,7 @@ export interface ResearchTask {
   started_at: string | null
   completed_at: string | null
   branches?: any[]
+  assets?: { id: string; url: string; relevance_score: number; novelty_score: number; diffractive_score: number; created_at: string | null }[]
   asset_count?: number
 }
 
@@ -112,4 +113,25 @@ export async function retryTask(taskId: string): Promise<{ task_id: string; stat
   const res = await fetch(`${BASE}/research/tasks/${taskId}/retry`, { method: "POST" })
   if (!res.ok) throw new Error(`Task retry failed: ${res.status}`)
   return res.json()
+}
+
+// ── Assets ──────────────────────────────────────────────────────────
+
+export interface ScrapedAsset {
+  id: string
+  branch_id: string
+  task_id: string
+  url: string
+  raw_markdown: string
+  relevance_score: number
+  novelty_score: number
+  diffractive_score: number
+  created_at: string | null
+}
+
+export async function getTaskAssets(taskId: string): Promise<ScrapedAsset[]> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}`)
+  if (!res.ok) throw new Error(`Task fetch failed: ${res.status}`)
+  const task = await res.json()
+  return task.assets || []
 }

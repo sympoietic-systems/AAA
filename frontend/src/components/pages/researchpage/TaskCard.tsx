@@ -5,7 +5,7 @@ import React, { memo, useState } from "react"
 import type { ResearchTask } from "../../../api/research"
 
 interface Props {
-  task: ResearchTask
+  task: ResearchTask & { assets?: { id: string; url: string; relevance_score: number }[] }
   onApprove?: (id: string) => Promise<void>
   onReject?: (id: string) => Promise<void>
   onCancel?: (id: string) => Promise<void>
@@ -70,6 +70,21 @@ export const TaskCard = memo(function TaskCard({ task, onApprove, onReject, onCa
           )}
           {task.result_summary && (
             <div className="text-[#94a3b8] mt-1 max-h-32 overflow-y-auto">{task.result_summary}</div>
+          )}
+
+          {/* Scraped assets / results */}
+          {task.assets && task.assets.length > 0 && (
+            <div className="mt-1">
+              <div className="text-[#555] text-[9px] uppercase mb-1">[harvested assets ({task.assets.length})]</div>
+              <div className="space-y-0.5 max-h-40 overflow-y-auto">
+                {task.assets.map(a => (
+                  <div key={a.id} className="text-[#666] text-[9px]">
+                    <span className="text-[#4ade80]">{a.relevance_score.toFixed(2)}</span>
+                    {" "}{a.url.slice(0, 80)}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Proposal actions */}

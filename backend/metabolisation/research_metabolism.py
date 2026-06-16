@@ -132,10 +132,13 @@ class ResearchMetabolismEngine:
                 system_prompt=system_text,
                 user_prompt=user_text,
                 expect_json=True,
-                fallback_value={"summary": "Research task completed but synthesis unavailable."},
+                fallback_value={"summary": "Synthesis LLM call failed — see server logs."},
                 temperature=prompt_data.get("temperature", 0.4),
                 max_tokens=prompt_data.get("max_tokens", 3072),
             )
+            # Log if fallback was used
+            if response.get("error"):
+                logger.warning("Synthesis LLM call fell back: %s", response["error"])
             result = response.get("json_data") or response.get("content") or {}
             if isinstance(result, str):
                 try:
