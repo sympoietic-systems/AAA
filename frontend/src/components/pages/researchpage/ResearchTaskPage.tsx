@@ -144,6 +144,10 @@ function InfoTab({ task }: { task: ResearchTask }) {
 }
 
 /* ── Steps Tab (§3: left list + right detail) ── */
+const STEP_LABELS: Record<string, string> = {
+  search: "Search", parallel_parse: "Parse Sources", digest: "Digest",
+  reflect: "Reflect", synthesize: "Synthesize", evaluate: "Evaluate",
+}
 const STEP_COLORS: Record<string, string> = {
   search: "#3b82f6", parallel_parse: "#f59e0b", digest: "#a892ee",
   reflect: "#c084fc", synthesize: "#4ade80", evaluate: "#22d3ee",
@@ -176,14 +180,26 @@ function StepsTab({ taskId }: { taskId: string }) {
         <div className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none">
           {steps.map(s => {
             const sc = STEP_COLORS[s.step_type] || "#666"
+            const resultCount = (data?.results_by_step[s.id] || []).length
+            let learnCount = 0
+            for (const r of (data?.results_by_step[s.id] || [])) {
+              try { const a = r.analyzed_json ? JSON.parse(r.analyzed_json) : null; learnCount += (a?.learnings?.length || 0) } catch {}
+            }
             return (
               <div key={s.id} data-sid={s.id}
-                className={`flex items-center gap-1.5 px-1.5 py-1 cursor-pointer border-l-2 transition-colors text-[10px]
+                className={`cursor-pointer border-l-2 transition-colors px-1.5 py-1
                   ${selectedId === s.id ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}`}
               >
-                <span style={{ color: sc }} className="text-[8px] shrink-0">●</span>
-                <span className="text-[#bbb] font-mono">#{s.step_number} {s.step_type}</span>
-                <span style={{ color: sc }} className="text-[8px] ml-auto uppercase">{s.status}</span>
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <span style={{ color: sc }} className="text-[8px] shrink-0">●</span>
+                  <span className="text-[#bbb] font-mono">#{s.step_number} {STEP_LABELS[s.step_type] || s.step_type}</span>
+                  <span style={{ color: sc }} className="text-[8px] ml-auto uppercase">{s.status}</span>
+                </div>
+                <div className="text-[#555] text-[8px] ml-3.5 mt-0.5">
+                  {s.result_summary ? s.result_summary.split(" — ")[0] : ""}
+                  {resultCount > 0 && <span className="ml-1">· {resultCount} source{resultCount !== 1 ? "s" : ""}</span>}
+                  {learnCount > 0 && <span className="ml-1">· {learnCount} finding{learnCount !== 1 ? "s" : ""}</span>}
+                </div>
               </div>
             )
           })}
@@ -194,27 +210,110 @@ function StepsTab({ taskId }: { taskId: string }) {
       <div className="flex-1 min-w-0 w-full md:flex md:flex-col md:min-h-0 overflow-y-auto">
         {selected ? (
           <div className="space-y-2 text-[10px]">
-            <div className="flex items-center gap-2 text-[#6c6c8a] uppercase text-[9px] tracking-wider">
-              [ Step #{selected.step_number}: {selected.step_type} ]
+            <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
+              [ Step #{selected.step_number}: {STEP_LABELS[selected.step_type] || selected.step_type} ]
             </div>
-            {selected.result_summary && <div className="text-[#94a3b8]">{selected.result_summary}</div>}
+
+            {/* Step summary */}
+            {selected.result_summary && (
+              <div className="text-[#94a3b8]">{selected.result_summary}</div>
+            )}
+
+            {/* Step data (JSON) */}
+            {selected.step_data && (() => {
+              try {
+                const sd = JSON.parse(selected.step_data)
+                if (sd && Object.keys(sd).length > 0) {
+                  return (
+                    <div>
+                      <div className="text-[#555] text-[9px] mb-0.5">step config:</div>
+                      <KeyValueGrid items={Object.entries(sd).map(([k, v]) => ({ key: k, value: String(v).slice(0, 120) }))} />
+                    </div>
+                  )
+                }
+              } catch {}
+              return null
+            })()}
+
+            {/* Source results */}
             {selectedResults.map(r => {
               let analysis: any = null
               try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
               return (
-                <div key={r.id} className="py-1">
+                <div key={r.id} className="border-t border-[#1a1a1a] pt-2">
+                  {/* Source link */}
                   <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
-                    className="text-[#4ade80] hover:text-[#6ee7b0] underline text-[10px] break-all"
-                  >{r.source_title || r.source_url?.slice(0, 80) || "—"}</a>
-                  {analysis?.learnings && (
-                    <div className="text-[#888] text-[9px] mt-0.5 space-y-0.5">
-                      {(analysis.learnings as string[]).map((l, li) => <div key={li} className="pl-2">· {l}</div>)}
+                    className="text-[#4ade80] hover:text-[#6ee7b0] underline text-[10px] break-all font-bold"
+                  >{r.source_title || r.source_url?.slice(0, 100) || "—"}</a>
+                  <KeyValueGrid className="text-[9px] mt-0.5" items={[
+                    { key: "relevance", value: (r.relevance_score ?? 0).toFixed(2), valueColor: "#4ade80" },
+                    { key: "novelty", value: (r.novelty_score ?? 0).toFixed(2) },
+                  ]} />
+
+                  {/* Analysis: learnings */}
+                  {analysis?.learnings && analysis.learnings.length > 0 && (
+                    <div className="mt-1">
+                      <div className="text-[#555] text-[9px] mb-0.5">learnings:</div>
+                      {analysis.learnings.map((l: string, li: number) => (
+                        <div key={li} className="text-[#888] text-[9px] pl-2 leading-relaxed">· {l}</div>
+                      ))}
                     </div>
                   )}
-                  {r.raw_file_path && <div className="text-[#555] text-[8px] mt-0.5">saved: {r.raw_file_path}</div>}
+
+                  {/* Analysis: gaps */}
+                  {analysis?.gaps && analysis.gaps.length > 0 && (
+                    <div className="mt-1">
+                      <div className="text-[#555] text-[9px] mb-0.5">gaps:</div>
+                      {analysis.gaps.map((g: string, gi: number) => (
+                        <div key={gi} className="text-[#f59e0b] text-[9px] pl-2 leading-relaxed">◇ {g}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Analysis: followups */}
+                  {analysis?.followups && analysis.followups.length > 0 && (
+                    <div className="mt-1">
+                      <div className="text-[#555] text-[9px] mb-0.5">followups:</div>
+                      {analysis.followups.map((f: string, fi: number) => (
+                        <div key={fi} className="text-[#a78bfa] text-[9px] pl-2 leading-relaxed">→ {f}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Analysis: direct_urls */}
+                  {analysis?.direct_urls && analysis.direct_urls.length > 0 && (
+                    <div className="mt-1">
+                      <div className="text-[#555] text-[9px] mb-0.5">referenced URLs:</div>
+                      {analysis.direct_urls.map((u: string, ui: number) => (
+                        <div key={ui} className="text-[#4ade80] text-[9px] pl-2 break-all">
+                          <a href={u} target="_blank" rel="noopener noreferrer" className="hover:underline">{u}</a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Diffractive notes */}
+                  {analysis?.diffractive_notes && analysis.diffractive_notes.length > 0 && (
+                    <div className="mt-1">
+                      <div className="text-[#555] text-[9px] mb-0.5">diffractive connections:</div>
+                      {analysis.diffractive_notes.map((d: string, di: number) => (
+                        <div key={di} className="text-[#a892ee] text-[9px] pl-2 leading-relaxed">~ {d}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* File path */}
+                  {r.raw_file_path && (
+                    <div className="text-[#555] text-[8px] mt-1">saved: {r.raw_file_path}</div>
+                  )}
                 </div>
               )
             })}
+
+            {/* Empty results */}
+            {selectedResults.length === 0 && (
+              <div className="text-[#555] italic text-[10px]">no source results for this step</div>
+            )}
           </div>
         ) : (
           <div className="flex items-center justify-center h-full text-[#444] italic text-xs select-none">[ select a step ]</div>
