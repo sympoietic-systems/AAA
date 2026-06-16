@@ -139,6 +139,9 @@ async def lifespan(app: FastAPI):
     app.state.expertise_repo = repos["expertise_repo"]
     app.state.personality_state_repo = repos["personality_state_repo"]
     app.state.dream_log_repo = repos["dream_log_repo"]
+    app.state.research_task_repo = repos["research_task_repo"]
+    app.state.research_branch_repo = repos["research_branch_repo"]
+    app.state.scraped_asset_repo = repos["scraped_asset_repo"]
     app.state.belief_metabolism = belief_metabolism
     app.state.registry = registry
     app.state.pipeline = pipeline
@@ -148,6 +151,10 @@ async def lifespan(app: FastAPI):
     app.state.structural_provider = structural_provider
     app.state.structural_scorer = modules["structural_scorer"]
     app.state.system_prompt_tokens = system_prompt_tokens
+
+    # 10.5. Research Task Manager (autonomous research engine lifecycle)
+    from backend.services.research_task_manager import ResearchTaskManager
+    app.state.research_task_manager = ResearchTaskManager(app.state)
 
     # 11. Background engine
     background_engine, background_provider = _init_background_engine(

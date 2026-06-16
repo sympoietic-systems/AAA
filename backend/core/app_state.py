@@ -40,6 +40,12 @@ class AppState:
     startup_scheduler: Any = None
     dream_daemon: Any = None
 
+    # Research engine
+    research_task_manager: Any = None
+    research_task_repo: Any = None
+    research_branch_repo: Any = None
+    scraped_asset_repo: Any = None
+
     # LLM providers
     llm_provider: Any = None
     structural_provider: Any = None
