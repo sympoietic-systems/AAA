@@ -125,6 +125,27 @@ export const ResearchPage = memo(function ResearchPage() {
     return () => window.removeEventListener("research-retry", handler)
   }, [])
 
+  // Continue (deeper) via CustomEvent from ActionsTab
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const detail = (e as CustomEvent).detail as ResearchTask
+      if (detail?.objective) {
+        try {
+          await dispatch({
+            objective: detail.objective,
+            title: detail.title,
+            max_depth: (detail.max_depth || 2) + 1,
+            max_breadth: detail.max_breadth || 2,
+            is_agonistic: !!detail.is_agonistic,
+            budget_limit_usd: detail.budget_limit_usd || 0.50,
+          })
+        } catch { /* silent */ }
+      }
+    }
+    window.addEventListener("research-continue", handler)
+    return () => window.removeEventListener("research-continue", handler)
+  }, [dispatch])
+
   // ── Group tasks by status ──
   const groups: Record<string, ResearchTask[]> = {}
   for (const g of STATUS_GROUPS) {

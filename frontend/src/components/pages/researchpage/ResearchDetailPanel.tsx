@@ -205,7 +205,7 @@ function MetaLogTab({ taskId }: { taskId: string }) {
   const toggle = (id: string) => {
     setExpanded(prev => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id) else next.add(id)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
       return next
     })
   }
@@ -240,15 +240,13 @@ function MetaLogTab({ taskId }: { taskId: string }) {
               </div>
             )}
             {isExpanded && hasData && (
-              <div className="ml-3.5 mt-1 text-[9px] text-[#777] max-h-40 overflow-y-auto font-mono whitespace-pre-wrap break-all leading-relaxed">
+              <div className="ml-3.5 mt-1 text-[9px] text-[#777] max-h-96 overflow-y-auto font-mono whitespace-pre-wrap break-all leading-relaxed">
                 {Object.entries(entry.event_data).map(([k, v]) => {
                   const val = typeof v === "string" ? v : JSON.stringify(v, null, 1)
-                  // Truncate very large content previews
-                  const display = val.length > 300 ? val.slice(0, 300) + "…" : val
                   return (
                     <div key={k} className="mb-0.5">
                       <span className="text-[#555]">{k}: </span>
-                      <span className="text-[#888]">{display}</span>
+                      <span className="text-[#888]">{val}</span>
                     </div>
                   )
                 })}
@@ -271,6 +269,7 @@ function ActionsTab({
   onCancel?: (id: string) => Promise<void>
 }) {
   const retry = () => window.dispatchEvent(new CustomEvent("research-retry", { detail: task }))
+  const continueResearch = () => window.dispatchEvent(new CustomEvent("research-continue", { detail: task }))
 
   return (
     <div className="space-y-3">
@@ -290,7 +289,10 @@ function ActionsTab({
             <TerminalButton onClick={retry} intent="edit">↻ retry task</TerminalButton>
           )}
           {task.status === "completed" && (
-            <TerminalButton onClick={retry} intent="save">↻ retry research</TerminalButton>
+            <>
+              <TerminalButton onClick={retry} intent="save">↻ retry research</TerminalButton>
+              <TerminalButton onClick={continueResearch} intent="cyan">▶ continue deeper</TerminalButton>
+            </>
           )}
           {["cancelled", "rejected"].includes(task.status) && (
             <span className="text-[#555] italic text-[10px]">no actions — task is {task.status}</span>
