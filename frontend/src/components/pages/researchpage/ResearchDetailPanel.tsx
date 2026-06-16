@@ -4,6 +4,7 @@
 // Follows FRONTEND_DESIGN_PRINCIPLES.md §6: tabbed content, inline metadata, bracket headers.
 
 import React, { memo, useState, useEffect } from "react"
+import ReactMarkdown from "react-markdown"
 import type { ResearchTask, MetaLogEntry, MetaLogResponse, TaskStepsResponse, ResearchStep } from "../../../api/research"
 import { getResearchTask, getTaskMetaLog, getTaskSteps } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
@@ -147,7 +148,9 @@ function InfoTab({ task }: { task: ResearchTask }) {
       {task.result_summary && (
         <div>
           <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1">[ Result Summary ]</div>
-          <div className="text-[#94a3b8] text-[10px] leading-relaxed max-h-48 overflow-y-auto">{task.result_summary}</div>
+          <div className="text-[#94a3b8] text-[10px] leading-relaxed max-h-48 overflow-y-auto prose prose-invert prose-xs max-w-none">
+            <ReactMarkdown>{task.result_summary}</ReactMarkdown>
+          </div>
         </div>
       )}
     </div>
