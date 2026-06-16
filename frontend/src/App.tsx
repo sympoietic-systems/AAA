@@ -7,6 +7,7 @@ import { NodeExplorer } from "./components/pages/nodeexplorer/NodeExplorer"
 import { SidePanel } from "./components/panels/sidepanel/SidePanel"
 import { ConversationLandingPage } from "./components/pages/landing/ConversationLandingPage"
 import { AgentPage } from "./components/pages/agentpage/AgentPage"
+import { ResearchPage } from "./components/pages/researchpage/ResearchPage"
 import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag, getAgent, deleteMessage } from "./api/client"
@@ -17,6 +18,11 @@ export default function App() {
   // Render agent page standalone if navigated to /agent
   if (window.location.pathname === "/agent") {
     return <AgentPage onGoHome={() => window.close()} />
+  }
+
+  // Render research console standalone if navigated to /research
+  if (window.location.pathname === "/research") {
+    return <ResearchPage />
   }
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)

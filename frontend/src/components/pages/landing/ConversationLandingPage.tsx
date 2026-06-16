@@ -200,9 +200,17 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
           <button
             onClick={() => window.open('/agent', '_blank')}
             className="ml-2 hover:text-[#a892ee] transition-colors cursor-pointer"
-            title="Open agent page"
+            title="Agent configuration"
           >
             symbia
+          </button>
+          <span className="text-[#333] mx-1">//</span>
+          <button
+            onClick={() => window.open('/research', '_self')}
+            className="hover:text-[#eab308] transition-colors cursor-pointer"
+            title="Research console"
+          >
+            research
           </button>
           <span className="text-[#333] mx-2">//</span>
           <span>{totalCount} conversations</span>
