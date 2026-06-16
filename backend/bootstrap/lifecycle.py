@@ -33,10 +33,27 @@ from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+
+class _ColorFormatter(logging.Formatter):
+    """ANSI color-coded log formatter: red for ERROR, yellow for WARNING, reset for others."""
+    _COLORS = {
+        "ERROR":    "\033[31;1m",   # bold red
+        "WARNING":  "\033[33;1m",   # bold yellow
+        "CRITICAL": "\033[41;97m",  # white on red background
+    }
+    _RESET = "\033[0m"
+
+    def format(self, record: logging.LogRecord) -> str:
+        color = self._COLORS.get(record.levelname, "")
+        if color:
+            record.levelname = f"{color}{record.levelname}{self._RESET}"
+            record.msg = f"{color}{record.msg}{self._RESET}"
+        return super().format(record)
+
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(_ColorFormatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
 
 
 # ── App lifecycle ──────────────────────────────────────────────────────
