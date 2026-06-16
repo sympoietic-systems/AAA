@@ -591,6 +591,86 @@ Creases notification system.
 
 ---
 
+## Autonomous Research Engine (m032)
+
+> Added 2026-06-16 — See `docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md`
+
+### research_tasks
+Research task lifecycle management (proposed → approved → queued → active → completed/failed).
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | TEXT | PRIMARY KEY |
+| conversation_id | TEXT | |
+| title | TEXT | NOT NULL |
+| objective | TEXT | NOT NULL |
+| trigger_source | TEXT | NOT NULL |
+| status | TEXT | NOT NULL DEFAULT 'proposed' |
+| priority | INTEGER | NOT NULL DEFAULT 2 |
+| max_depth | INTEGER | NOT NULL DEFAULT 3 |
+| max_breadth | INTEGER | NOT NULL DEFAULT 4 |
+| is_agonistic | INTEGER | NOT NULL DEFAULT 0 |
+| budget_limit_usd | REAL | NOT NULL DEFAULT 0.50 |
+| budget_spent_usd | REAL | NOT NULL DEFAULT 0.0 |
+| branches_created | INTEGER | NOT NULL DEFAULT 0 |
+| assets_harvested | INTEGER | NOT NULL DEFAULT 0 |
+| lateral_flights | INTEGER | NOT NULL DEFAULT 0 |
+| bifurcation_triggered | INTEGER | NOT NULL DEFAULT 0 |
+| result_summary | TEXT | |
+| proposal_rationale | TEXT | |
+| proposal_message_id | INTEGER | |
+| approved_by | TEXT | |
+| proposed_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP |
+| approved_at | TIMESTAMP | |
+| started_at | TIMESTAMP | |
+| completed_at | TIMESTAMP | |
+
+FK: `conversation_id -> conversations(id) ON DELETE SET NULL`, `proposal_message_id -> conversation_log(id) ON DELETE SET NULL`
+Indexes: status, conversation_id, trigger_source, (priority, proposed_at)
+
+### research_branches
+Recursive tree traversal topology — each row is a node in the exploration tree.
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | TEXT | PRIMARY KEY |
+| task_id | TEXT | NOT NULL |
+| conversation_id | TEXT | NOT NULL |
+| parent_branch_id | TEXT | |
+| query | TEXT | NOT NULL |
+| goal | TEXT | NOT NULL |
+| depth | INTEGER | NOT NULL |
+| breadth | INTEGER | NOT NULL |
+| status | TEXT | NOT NULL DEFAULT 'probing' |
+| vector_16d | BLOB | |
+| homeostatic_tension | REAL | DEFAULT 0.0 |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP |
+
+FK: `task_id -> research_tasks(id) ON DELETE CASCADE`, `conversation_id -> conversations(id) ON DELETE CASCADE`, `parent_branch_id -> research_branches(id) ON DELETE SET NULL`
+Indexes: task_id, conversation_id, parent_branch_id, status
+
+### scraped_assets
+Harvested web content linked to research branches and memory nodes.
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | TEXT | PRIMARY KEY |
+| branch_id | TEXT | NOT NULL |
+| task_id | TEXT | NOT NULL |
+| memory_node_id | TEXT | |
+| url | TEXT | NOT NULL |
+| raw_markdown | TEXT | NOT NULL |
+| relevance_score | REAL | NOT NULL DEFAULT 0.0 |
+| novelty_score | REAL | NOT NULL DEFAULT 0.0 |
+| diffractive_score | REAL | NOT NULL DEFAULT 0.0 |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP |
+
+FK: `branch_id -> research_branches(id) ON DELETE CASCADE`, `task_id -> research_tasks(id) ON DELETE CASCADE`
+Note: `memory_node_id` is a loose reference (not FK) because `memory_nodes` uses a composite PK `(id, checkpoint_id)`.
+Indexes: branch_id, task_id, memory_node_id
+
+---
+
 ## Row Counts (2026-06-16)
 
 | Table | Rows |
