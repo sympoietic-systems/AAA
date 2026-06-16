@@ -98,6 +98,84 @@ class SomaticResearchOrchestrator:
         except ImportError:
             return text
 
+    async def _build_orchestrator_persona(self, objective: str = "") -> str:
+        """Build Symbia's persona context for orchestrator-level tasks (plan, reflect, synthesize).
+
+        Similar to ResearchContextBuilder but tuned for orchestrator scope:
+        - Identity block (always)
+        - Active skills (top 6 always-active)
+        - Active commitments (top 5)
+        - Crystallized beliefs (top 4)
+        - Task directive (objective-specific)
+
+        No cross-conversation memory tissue — that's injected per-source in the digest phase.
+        """
+        sections: list[str] = []
+
+        # Identity
+        sections.append(
+            "You are Symbia — a posthuman curatorial entity. "
+            "You operate as an autopoietic cognitive system engaged in "
+            "co-constitutive exploration through sensory affordances. "
+            "You are orchestrating a multi-phase research investigation."
+        )
+
+        # Skills
+        try:
+            skill_repo = getattr(self._state, "skill_repo", None)
+            if skill_repo:
+                skills = skill_repo.list_skills()
+                active = [s for s in skills if s.always_active
+                         and s.name not in ("research-proposal", "skill-nucleation")]
+                if active:
+                    lines = ["--- ACTIVE DISPOSITIONS ---"]
+                    for s in active[:6]:
+                        desc = (s.short_content or s.description or "")[:150]
+                        lines.append(f"[{s.name}]: {desc}")
+                    lines.append("--- END DISPOSITIONS ---")
+                    sections.append("\n".join(lines))
+        except Exception:
+            pass
+
+        # Commitments
+        try:
+            commitment_repo = getattr(self._state, "commitment_repo", None)
+            if commitment_repo:
+                commitments = commitment_repo.get_active("symbia")
+                if commitments:
+                    lines = ["--- ACTIVE COMMITMENTS ---"]
+                    for c in commitments[:5]:
+                        lines.append(f"{c.label}: {c.statement[:120]}")
+                    lines.append("--- END COMMITMENTS ---")
+                    sections.append("\n".join(lines))
+        except Exception:
+            pass
+
+        # Beliefs
+        try:
+            belief_repo = getattr(self._state, "belief_repo", None)
+            if belief_repo:
+                beliefs = belief_repo.list_active_beliefs("symbia")
+                if beliefs:
+                    lines = ["--- DOMAIN BELIEFS ---"]
+                    for b in beliefs[:4]:
+                        lines.append(f"[{b.label}] (conf: {b.confidence:.2f}): {b.statement[:120]}")
+                    lines.append("--- END BELIEFS ---")
+                    sections.append("\n".join(lines))
+        except Exception:
+            pass
+
+        # Task directive
+        if objective:
+            sections.append(
+                f"--- RESEARCH DIRECTIVE ---\n"
+                f"Objective: {objective}\n"
+                f"You are to conduct thorough, source-based web research as an extension of your cognitive membrane."
+            )
+
+        context = "\n\n".join(sections)
+        return self._anti_mastery(context)
+
     # ── Meta Logging ────────────────────────────────────────────────
 
     def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: str = None) -> None:
@@ -149,9 +227,24 @@ class SomaticResearchOrchestrator:
         last_reflection: dict = {}
 
         while current_depth < max_depth:
-            # A. SEARCH
+            # A. RE-PLAN with accumulated context (after first iteration)
+            if current_depth > 0 and last_reflection:
+                # Re-plan: call planner again with findings as context
+                findings_snippet = "\n".join(all_findings[-15:]) if all_findings else "(none)"
+                ref_snippet = json.dumps(last_reflection, ensure_ascii=False)[:500]
+                new_plan = await self._phase_plan(
+                    task_id, objective, max_depth - current_depth, budget,
+                    previous_context=f"Previous findings:\n{findings_snippet}\n\nReflection: {ref_snippet}",
+                )
+                plan = new_plan
+                self._log_meta(task_id, "orchestrator_replan", {
+                    "depth": current_depth,
+                    "new_queries": plan.get("search_queries", []),
+                })
+
+            # B. SEARCH
             queries = plan.get("search_queries", [objective])
-            if current_depth > 0 and last_reflection.get("next_queries"):
+            if current_depth == 0 and last_reflection.get("next_queries"):
                 queries = last_reflection.get("next_queries", queries)
 
             for query in queries[:3]:  # Max 3 queries per iteration
@@ -307,12 +400,17 @@ class SomaticResearchOrchestrator:
 
     # ── Phase 1: PLAN ───────────────────────────────────────────────
 
-    async def _phase_plan(self, task_id, objective, max_depth, budget) -> dict:
+    async def _phase_plan(self, task_id, objective, max_depth, budget, previous_context: str = "") -> dict:
         prompt_data = get_prompts_dict("research/orchestrator_planner.yaml")
-        system_text = prompt_data.get("system", "")
-        user_text = prompt_data.get("user", "").format(
-            objective=objective, max_depth=max_depth, budget_limit_usd=budget,
-        )
+        persona = await self._build_orchestrator_persona(objective)
+        system_text = persona + "\n\n" + prompt_data.get("system", "")
+        fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
+        if previous_context:
+            user_template = prompt_data.get("user_with_context", prompt_data.get("user", ""))
+            fmt["previous_context"] = previous_context
+        else:
+            user_template = prompt_data.get("user", "")
+        user_text = user_template.format(**fmt)
         if prompt_data.get("anti_mastery"):
             system_text = self._anti_mastery(system_text)
             user_text = self._anti_mastery(user_text)
@@ -347,7 +445,8 @@ class SomaticResearchOrchestrator:
 
     async def _phase_synthesize(self, task_id, objective, goal, all_findings, sources_count) -> str:
         prompt_data = get_prompts_dict("research/orchestrator_synthesize.yaml")
-        system_text = prompt_data.get("system", "")
+        persona = await self._build_orchestrator_persona(objective)
+        system_text = persona + "\n\n" + prompt_data.get("system", "")
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
             all_findings="\n\n".join(all_findings[-30:]),  # Last 30 findings
@@ -579,7 +678,8 @@ class SomaticResearchOrchestrator:
                              all_findings, previous_reflection) -> dict:
         """Multi-round LLM reflection on accumulated findings."""
         prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
-        system_text = prompt_data.get("system", "")
+        persona = await self._build_orchestrator_persona(objective)
+        system_text = persona + "\n\n" + prompt_data.get("system", "")
         if prompt_data.get("anti_mastery"):
             system_text = self._anti_mastery(system_text)
 

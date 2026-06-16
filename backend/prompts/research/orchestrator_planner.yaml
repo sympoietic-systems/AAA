@@ -30,6 +30,18 @@ user: |
 
   Generate a research plan for this objective.
 
+user_with_context: |
+  Research Objective: {objective}
+
+  Current depth limit: {max_depth}
+  Available budget: ${budget_limit_usd}
+
+  Previous Research Findings:
+  {previous_context}
+
+  Based on what has been found so far, generate the NEXT research plan step.
+  Focus on the most promising gap or follow-up direction.
+
 response_format: "json"
 temperature: 0.4
 max_tokens: 1024
