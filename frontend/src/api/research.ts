@@ -109,6 +109,12 @@ export async function cancelTask(taskId: string): Promise<{ task_id: string; sta
   return res.json()
 }
 
+export async function deleteTask(taskId: string): Promise<{ task_id: string; deleted: boolean }> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}`, { method: "DELETE" })
+  if (!res.ok) throw new Error(`Task deletion failed: ${res.status}`)
+  return res.json()
+}
+
 export async function retryTask(taskId: string): Promise<{ task_id: string; status: string; retried_from: string }> {
   const res = await fetch(`${BASE}/research/tasks/${taskId}/retry`, { method: "POST" })
   if (!res.ok) throw new Error(`Task retry failed: ${res.status}`)

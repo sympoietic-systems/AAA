@@ -163,6 +163,21 @@ class ResearchTaskManager:
         if task_id in self._active_tasks:
             self._active_tasks[task_id].cancel()
 
+    def delete(self, task_id: str) -> None:
+        """Delete a task and all associated data (CASCADE)."""
+        task = self.task_repo.get(task_id)
+        if task is None:
+            return
+        # Cancel active task first if running
+        if task_id in self._active_tasks:
+            try:
+                self._active_tasks[task_id].cancel()
+            except Exception:
+                pass
+            self._active_tasks.pop(task_id, None)
+        self.task_repo.delete(task_id)
+        logger.info("Research task %s deleted", task_id)
+
     def complete(self, task_id: str, result_summary: str = "") -> None:
         self.task_repo.update(task_id, result_summary=result_summary)
         self.transition(task_id, "completed")

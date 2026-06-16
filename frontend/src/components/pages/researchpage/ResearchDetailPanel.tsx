@@ -459,10 +459,16 @@ function ActionsTab({
             <>
               <TerminalButton onClick={retry} intent="edit">↻ retry task</TerminalButton>
               <TerminalButton onClick={continueResearch} intent="cyan">▶ continue deeper</TerminalButton>
+              <TerminalButton onClick={() => window.dispatchEvent(new CustomEvent("research-delete", { detail: task }))} intent="delete">✕ delete</TerminalButton>
             </>
           )}
           {task.status === "rejected" && (
-            <span className="text-[#555] italic text-[10px]">no actions — task is rejected</span>
+            <>
+              <TerminalButton onClick={() => window.dispatchEvent(new CustomEvent("research-delete", { detail: task }))} intent="delete">✕ delete</TerminalButton>
+            </>
+          )}
+          {["completed", "failed"].includes(task.status) && (
+            <TerminalButton onClick={() => window.dispatchEvent(new CustomEvent("research-delete", { detail: task }))} intent="delete">✕ delete</TerminalButton>
           )}
         </div>
       </div>

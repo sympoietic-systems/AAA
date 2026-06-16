@@ -158,3 +158,10 @@ class ResearchTaskRepository(BaseRepository):
         )
         conn.commit()
         return cursor.rowcount
+
+    @with_connection
+    def delete(self, task_id: str) -> None:
+        """Delete a task. CASCADE handles branches, assets, plans, steps, meta log."""
+        conn = self._conn()
+        conn.execute("DELETE FROM research_tasks WHERE id = ?", (task_id,))
+        conn.commit()

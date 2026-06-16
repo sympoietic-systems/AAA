@@ -167,6 +167,21 @@ async def cancel_task(task_id: str, request: Request):
     return {"task_id": task_id, "status": "cancelled"}
 
 
+@router.delete("/research/tasks/{task_id}")
+async def delete_task(task_id: str, request: Request):
+    """Delete a research task and all associated data permanently."""
+    state = request.app.state
+    manager = state.research_task_manager
+
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # CASCADE deletes branches, assets, plans, steps, step results, meta log
+    manager.delete(task_id)
+    return {"task_id": task_id, "deleted": True}
+
+
 @router.post("/research/tasks/{task_id}/retry")
 async def retry_task(task_id: str, request: Request):
     """Retry a failed or completed task with same parameters."""

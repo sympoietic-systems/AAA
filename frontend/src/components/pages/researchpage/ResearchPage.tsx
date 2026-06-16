@@ -5,7 +5,7 @@
 import React, { memo, useState, useCallback, useEffect, useRef } from "react"
 import { useResearch } from "../../../hooks/useResearch"
 import type { ResearchTask } from "../../../api/research"
-import { retryTask } from "../../../api/research"
+import { retryTask, deleteTask } from "../../../api/research"
 import { NewResearchForm } from "./NewResearchForm"
 import { ResearchDetailPanel } from "./ResearchDetailPanel"
 import { CollapsibleSection } from "../agentpage/shared/CollapsibleSection"
@@ -145,6 +145,18 @@ export const ResearchPage = memo(function ResearchPage() {
     window.addEventListener("research-continue", handler)
     return () => window.removeEventListener("research-continue", handler)
   }, [dispatch])
+
+  // Delete via CustomEvent from ActionsTab
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const detail = (e as CustomEvent).detail as ResearchTask
+      if (detail?.id) {
+        try { await deleteTask(detail.id); await refreshRef.current(); setSelectedId(null) } catch { /* silent */ }
+      }
+    }
+    window.addEventListener("research-delete", handler)
+    return () => window.removeEventListener("research-delete", handler)
+  }, [])
 
   // ── Group tasks by status ──
   const groups: Record<string, ResearchTask[]> = {}
