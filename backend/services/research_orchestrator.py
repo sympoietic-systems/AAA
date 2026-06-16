@@ -260,10 +260,13 @@ class SomaticResearchOrchestrator:
                 self._log_meta(task_id, "orchestrator_search", {
                     "query": query[:200],
                     "results_count": len(search_results),
+                    "results": [{r["url"]: r.get("title", "")} for r in search_results[:5]],
                 })
 
                 if not search_results:
-                    self.step_repo.update(step_id, status="completed", result_summary="no results")
+                    logger.warning("Orchestrator search returned 0 results for: %s", query[:80])
+                    self.step_repo.update(step_id, status="completed",
+                        result_summary="no results — URL extraction failed")
                     continue
 
                 # B. PARALLEL PARSE — fetch all result URLs concurrently
@@ -478,23 +481,66 @@ class SomaticResearchOrchestrator:
     # ── Tools ───────────────────────────────────────────────────────
 
     async def _tool_web_search(self, query: str, n: int = 3) -> list[dict]:
-        """Search DuckDuckGo and return top N result URLs + snippets."""
+        """Search DuckDuckGo and return top N result URLs + snippets.
+
+        Strategy: Crawl4AI → extract structured links from result object.
+        Falls back to Jina + markdown URL pattern extraction.
+        """
         try:
-            from backend.services.sensory_affordances import is_crawl4ai_available, fetch_via_crawl4ai
-            if is_crawl4ai_available():
-                search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-                try:
-                    raw = await fetch_via_crawl4ai(search_url, config=self._state.config)
-                except RuntimeError:
-                    raw = await self._fetch_via_jina(search_url)
-                if raw:
-                    return self._extract_urls_from_html(raw, n)
-            # Jina fallback
+            from backend.services.sensory_affordances import is_crawl4ai_available
+
             search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+
+            if is_crawl4ai_available():
+                try:
+                    results = await self._search_via_crawl4ai_structured(search_url, n)
+                    if results:
+                        return results
+                except (RuntimeError, Exception) as e:
+                    logger.warning("Crawl4AI search failed, falling back: %s", str(e)[:80])
+
+            # Jina fallback — get raw content and extract URLs
             raw = await self._fetch_via_jina(search_url)
-            return self._extract_urls_from_html(raw, n) if raw else []
+            if raw:
+                return self._extract_urls_from_content(raw, n, query)
+
+            return []
         except Exception as e:
             logger.warning("Web search failed for '%s': %s", query[:60], e)
+            return []
+
+    async def _search_via_crawl4ai_structured(self, search_url: str, n: int) -> list[dict]:
+        """Use Crawl4AI's structured link extraction instead of regex."""
+        try:
+            from crawl4ai import AsyncWebCrawler
+
+            async with AsyncWebCrawler() as crawler:
+                result = await crawler.arun(url=search_url)
+
+                # Use structured links if available
+                results = []
+                if result and result.links:
+                    external = result.links.get("external", [])
+                    for link in external[:n * 3]:
+                        href = link.get("href", "")
+                        title = link.get("text", "") or link.get("title", "") or href
+                        if href.startswith("http") and "duckduckgo.com" not in href:
+                            results.append({
+                                "url": href,
+                                "title": title[:120],
+                                "snippet": link.get("description", link.get("snippet", ""))[:200],
+                            })
+                            if len(results) >= n:
+                                break
+
+                # Fallback: parse markdown content for URLs
+                if not results and result and result.markdown:
+                    results = self._extract_urls_from_content(result.markdown, n)
+
+                return results[:n]
+        except ImportError:
+            return []
+        except Exception:
             return []
 
     async def _fetch_via_jina(self, url: str) -> str:
@@ -502,40 +548,62 @@ class SomaticResearchOrchestrator:
         return (await select_and_fetch(url_or_query=url, task_type="single_url",
                                        config=self._state.config)) or ""
 
-    def _extract_urls_from_html(self, html: str, n: int) -> list[dict]:
-        """Extract result URLs and snippets from DuckDuckGo HTML results page."""
+    def _extract_urls_from_content(self, content: str, n: int, query: str = "") -> list[dict]:
+        """Extract URLs from markdown or HTML content.
+
+        Handles both formats:
+        - Markdown: [title](url), bare https:// URLs
+        - HTML: <a href="url">title</a>
+        - Also parses DuckDuckGo result snippets
+        """
         import re
         results = []
-        # Match DDG result links: <a class="result__a" href="URL">Title</a>
-        link_pattern = re.findall(
-            r'<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>(.*?)</a>',
-            html, re.IGNORECASE | re.DOTALL,
-        )
-        # Also try result__snippet for descriptions
-        snippet_pattern = re.findall(
-            r'<a[^>]+class="result__snippet"[^>]*>(.*?)</a>',
-            html, re.IGNORECASE | re.DOTALL,
-        )
 
-        for i, (url, title) in enumerate(link_pattern[:n]):
-            title_clean = re.sub(r'<[^>]+>', '', title).strip()
-            snippet = ""
-            if i < len(snippet_pattern):
-                snippet = re.sub(r'<[^>]+>', '', snippet_pattern[i]).strip()
-            if url.startswith("http"):
-                results.append({
-                    "url": url, "title": title_clean or url[:80],
-                    "snippet": snippet[:200],
-                })
+        # Strategy 1: Markdown link pattern [text](url)
+        md_links = re.findall(r'\[([^\]]+)\]\((https?://[^\)]+)\)', content)
+        for title, url in md_links[:n * 3]:
+            if "duckduckgo.com" not in url and "localhost" not in url:
+                # Clean title — remove HTML/MD artifacts
+                title_clean = re.sub(r'<[^>]+>', '', title).strip()
+                results.append({"url": url, "title": title_clean[:120], "snippet": ""})
 
-        # Fallback: generic href extraction if DDG-specific patterns fail
+        # Strategy 2: HTML <a href="url"> pattern
         if not results:
-            hrefs = re.findall(r'href="(https?://[^"]+)"', html)
-            titles = re.findall(r'<a[^>]*>([^<]{10,100})</a>', html)
-            for i, url in enumerate(hrefs[:n]):
-                title = titles[i] if i < len(titles) else url[:80]
+            html_links = re.findall(r'<a[^>]+href="(https?://[^"]+)"[^>]*>(.*?)</a>', content, re.IGNORECASE | re.DOTALL)
+            for url, title in html_links[:n * 3]:
                 if "duckduckgo.com" not in url and "localhost" not in url:
-                    results.append({"url": url, "title": re.sub(r'<[^>]+>', '', title).strip()[:80], "snippet": ""})
+                    results.append({
+                        "url": url,
+                        "title": re.sub(r'<[^>]+>', '', title).strip()[:120],
+                        "snippet": "",
+                    })
+
+        # Strategy 3: Bare URLs in text (last resort)
+        if not results:
+            bare_urls = re.findall(r'(?:^|\s)(https?://[^\s<>"]+?)(?:$|\s|[,.?!;:])', content)
+            for url in bare_urls[:n]:
+                if "duckduckgo.com" not in url and "localhost" not in url:
+                    results.append({"url": url, "title": url[:80], "snippet": ""})
+
+        # Strategy 4: DuckDuckGo result snippet lines — "Title" followed by description then URL
+        if not results:
+            # DDG in markdown often produces lines like:
+            # ### [Title](redirect-url) or **Title** followed by link
+            lines = content.split("\n")
+            for i, line in enumerate(lines):
+                if line.strip() and not line.startswith("#") and "http" not in line:
+                    # Look ahead for URL in next 3 lines
+                    for j in range(i + 1, min(i + 4, len(lines))):
+                        url_match = re.search(r'(https?://[^\s<>"]+)', lines[j])
+                        if url_match and "duckduckgo" not in url_match.group(1):
+                            title = re.sub(r'^[\d.\s*#>-]+', '', line).strip()[:120]
+                            if title and title != query:
+                                results.append({
+                                    "url": url_match.group(1),
+                                    "title": title,
+                                    "snippet": "",
+                                })
+                            break
 
         return results[:n]
 
