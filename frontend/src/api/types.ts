@@ -69,6 +69,9 @@ export interface EcosystemSnapshot { diversity: number; coherence: number; tensi
 export interface BeliefsResponse { beliefs: BeliefNodeInfo[]; proto_beliefs: BeliefNodeInfo[]; ghosts: BeliefNodeInfo[]; somatic: SomaticStateInfo | null; attractor_window: string[]; spectral_margin: string[]; ecosystem: EcosystemSnapshot | null }
 export interface BeliefProposalInfo { id: string; agent_id: string; provisional_statement: string; source_trace: any[]; initial_signature: number[]; nucleation_mass: number; confidence: number; status: string; suggested_label: string | null; suggested_statement: string | null; potential_merge_target: string | null; symbia_reflection: string | null; symbia_friction_rationale: string | null; rejection_rationale: string | null; created_at: string | null; updated_at: string | null }
 
+export interface BeliefTimeseriesPoint { timestamp: string; mass: number | null; confidence: number | null }
+export interface BeliefTimeseriesResponse { belief_id: string; label: string; points: BeliefTimeseriesPoint[]; span_days: number; bucket_size: string }
+
 export interface ConversationTagInfo { tag: string; tag_type: string }
 export interface MemoryNodeInfo { id: string; node_type: string; intensity: number; scar: string; glitch_potential: number; intra_active_text: string; surface_fragment: string; agential_symmetry: string; diffractive_key: string; tendril_ids: string[]; created_at: string | null }
 export interface ConversationInfo { id: string; title: string; created_at: string | null; updated_at: string | null; message_count: number; tags?: ConversationTagInfo[]; summary?: string; human_summary?: string }

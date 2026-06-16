@@ -946,3 +946,91 @@ Proposed Belief Statement:
             "version": new_version,
             "speciation_alert": speciation_triggered
         }
+
+    async def get_belief_timeseries(
+        self,
+        belief_id: str,
+        days: int = 30,
+    ) -> dict:
+        """Return bucketed mass/confidence timeseries for a belief chart.
+        
+        Bucketing: hourly if span <= 7 days, daily if span > 7 days.
+        Within each bucket, the latest event's parsed mass/confidence is used.
+        """
+        state = self._state
+        belief_repo = getattr(state, "belief_repo", None)
+        if not belief_repo:
+            return {"status": "error", "message": "Belief repository not initialized"}
+
+        from datetime import datetime, timedelta, timezone
+
+        belief = belief_repo.get_belief("symbia", belief_id)
+        if not belief:
+            return {"status": "error", "message": "Belief not found"}
+
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=days)
+
+        # Fetch events in the time window
+        raw_events = belief_repo.get_events_for_belief(belief_id, limit=5000)
+
+        # Parse events to extract mass/confidence from rationale
+        parsed = []
+        for event in raw_events:
+            ts = event.timestamp
+            if isinstance(ts, str):
+                ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            if ts < cutoff:
+                continue
+            mass, conf = _parse_event_rationale(event.rationale)
+            parsed.append((ts, mass, conf))
+
+        if not parsed:
+            return {
+                "belief_id": belief_id,
+                "label": belief.label,
+                "points": [],
+                "span_days": 0,
+                "bucket_size": "none",
+            }
+
+        # Sort by timestamp ascending
+        parsed.sort(key=lambda x: x[0])
+
+        span = parsed[-1][0] - parsed[0][0]
+        span_days = span.total_seconds() / 86400.0
+
+        # Choose bucket: hourly for <=7 days, daily for >7 days
+        if span_days <= 7:
+            bucket_seconds = 3600  # 1 hour
+            bucket_size = "hour"
+        else:
+            bucket_seconds = 86400  # 1 day
+            bucket_size = "day"
+
+        # Assign each event to a bucket (integer floor of seconds since epoch / bucket_seconds)
+        buckets: dict[int, tuple[datetime, float | None, float | None]] = {}
+        for ts, mass, conf in parsed:
+            bucket_key = int(ts.timestamp() / bucket_seconds)
+            if bucket_key not in buckets or ts > buckets[bucket_key][0]:
+                buckets[bucket_key] = (ts, mass, conf)
+
+        # Build sorted output
+        points = [
+            {
+                "timestamp": ts.isoformat(),
+                "mass": mass,
+                "confidence": conf,
+            }
+            for _k, (ts, mass, conf) in sorted(buckets.items())
+        ]
+
+        return {
+            "belief_id": belief_id,
+            "label": belief.label,
+            "points": points,
+            "span_days": round(span_days, 2),
+            "bucket_size": bucket_size,
+        }

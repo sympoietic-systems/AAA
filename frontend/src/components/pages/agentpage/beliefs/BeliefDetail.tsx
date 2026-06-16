@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef, memo } from "react"
-import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement } from "../../../../api/client"
-import type { BeliefNodeInfo } from "../../../../api/client"
+import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement, getBeliefTimeseries } from "../../../../api/client"
+import type { BeliefNodeInfo, BeliefTimeseriesPoint } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
 import { formatTime, formatDateTimeFull } from "../../../../utils/dateFormat"
 import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGlyph"
 import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "../shared/helpers"
 import { TerminalTabs } from "../../../UI"
+import { BeliefTimelineChart } from "../../../UI/BeliefTimelineChart"
 
 /* ── Module-level constants ── */
 
-type DetailTab = "details" | "log" | "version"
+type DetailTab = "details" | "log" | "version" | "chart"
 
 /* ── Shared version item (no bg/border) ── */
 
@@ -81,6 +82,9 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
   const [versions, setVersions] = useState<any[]>([])
   const [expandedVersions, setExpandedVersions] = useState<Record<number, boolean>>({})
   const [activeTab, setActiveTab] = useState<DetailTab>("details")
+  const [timeseriesPoints, setTimeseriesPoints] = useState<BeliefTimeseriesPoint[]>([])
+  const [timeseriesSpanDays, setTimeseriesSpanDays] = useState(0)
+  const [timeseriesBucket, setTimeseriesBucket] = useState("none")
 
   const [vetMode, setVetMode] = useState<"none" | "adopt" | "reject" | "merge">("none")
   const [adoptLabel, setAdoptLabel] = useState("")
@@ -125,6 +129,19 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       .then(res => res.json()).then(data => { if (Array.isArray(data)) setVersions(data) })
       .catch(e => console.error("Failed to load belief versions:", e))
   }, [belief, activeBeliefs])
+
+  // Fetch timeseries when belief changes or chart tab selected
+  useEffect(() => {
+    setTimeseriesPoints([]); setTimeseriesSpanDays(0); setTimeseriesBucket("none")
+    if (!belief || belief.is_proposal) return
+    getBeliefTimeseries(belief.id, 30)
+      .then(data => {
+        setTimeseriesPoints(data.points)
+        setTimeseriesSpanDays(data.span_days)
+        setTimeseriesBucket(data.bucket_size)
+      })
+      .catch(e => console.error("Failed to load belief timeseries:", e))
+  }, [belief?.id])
 
   if (!belief) {
     return (
@@ -460,12 +477,13 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
 
       {errorMsg && <div className="text-[#ef4444]">{errorMsg}</div>}
 
-      {/* Tab bar: Details • Log • Version */}
+      {/* Tab bar: Details • Log • Version • Chart */}
       <TerminalTabs
         tabs={[
           { key: "details", label: "Details" },
           { key: "log", label: "Log", badge: b.events?.length ?? 0 },
           { key: "version", label: "Version History", badge: versions.length },
+          { key: "chart", label: "Chart", badge: timeseriesPoints.length || undefined },
         ]}
         active={activeTab}
         onChange={(key) => setActiveTab(key as DetailTab)}
@@ -596,6 +614,16 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
             </div>
           )}
         </div>
+      )}
+
+      {/* Chart tab */}
+      {activeTab === "chart" && (
+        <BeliefTimelineChart
+          points={timeseriesPoints}
+          spanDays={timeseriesSpanDays}
+          bucketSize={timeseriesBucket}
+          beliefLabel={b.label}
+        />
       )}
     </div>
   )

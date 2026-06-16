@@ -177,3 +177,20 @@ async def delete_belief(belief_id: str, request: Request, service=Depends(get_be
 @router.post("/beliefs/{belief_id}/revert/{version}", dependencies=[Depends(require_agent_flux)])
 async def revert_belief_version(belief_id: str, version: int, request: Request, service=Depends(get_belief_service)):
     return raise_if_error(await service.revert_belief_version(belief_id, version))
+
+
+@router.get("/beliefs/{belief_id}/timeseries")
+async def get_belief_timeseries(
+    belief_id: str,
+    request: Request,
+    days: int = 30,
+    service=Depends(get_belief_service),
+):
+    """Return bucketed mass/confidence timeseries for charting.
+    
+    Bucketing is automatic: hourly if span <= 7 days, daily if > 7 days.
+    """
+    result = await service.get_belief_timeseries(belief_id, days=days)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=404 if "not found" in result.get("message", "").lower() else 503, detail=result["message"])
+    return result

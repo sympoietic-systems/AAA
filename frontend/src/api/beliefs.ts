@@ -1,7 +1,7 @@
 import { BASE } from "./http"
-import type { BeliefsResponse, BeliefNodeInfo, BeliefEventInfo, BeliefProposalInfo } from "./types"
+import type { BeliefsResponse, BeliefNodeInfo, BeliefEventInfo, BeliefProposalInfo, BeliefTimeseriesResponse } from "./types"
 
-export { type BeliefsResponse, type BeliefNodeInfo, type BeliefEventInfo, type BeliefProposalInfo }
+export { type BeliefsResponse, type BeliefNodeInfo, type BeliefEventInfo, type BeliefProposalInfo, type BeliefTimeseriesResponse }
 
 export async function getBeliefProposals(agentId: string = "symbia"): Promise<BeliefProposalInfo[]> {
   const res = await fetch(`${BASE}/beliefs/proposals?agent_id=${agentId}`)
@@ -54,5 +54,11 @@ export async function deleteBelief(beliefId: string): Promise<void> {
 export async function revertBelief(beliefId: string, version: number): Promise<{ status: string; belief_id: string; version: number; speciation_alert: boolean }> {
   const res = await fetch(`${BASE}/beliefs/${beliefId}/revert/${version}`, { method: "POST" })
   if (!res.ok) { const err = await res.json().catch(() => ({ detail: "Failed to revert belief version" })); throw new Error(err.detail || `HTTP ${res.status}`) }
+  return res.json()
+}
+
+export async function getBeliefTimeseries(beliefId: string, days: number = 30): Promise<BeliefTimeseriesResponse> {
+  const res = await fetch(`${BASE}/beliefs/${beliefId}/timeseries?days=${days}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

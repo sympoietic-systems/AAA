@@ -321,6 +321,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                     vector_16d=belief.vector_16d,
                     origin=belief.origin,
                     lifecycle_stage=new_stage,
+                    suppress_stage_notification=True,
                 )
                 self._belief_repo.update_belief_mass(belief.id, new_mass)
 
@@ -337,6 +338,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                         f"Atrophied: mass={new_mass:.3f} (delta={new_mass - current_mass:+.3f}), "
                         f"conf={belief.confidence:.3f}, stage={new_stage}"
                     ),
+                    suppress_notification=True,
                 )
                 atrophied += 1
 
@@ -349,17 +351,6 @@ class BeliefDynamicsEngine(ProcessingModule):
                 "Belief atrophy: %d beliefs decayed%s",
                 atrophied,
                 f" ({collapsed} collapsed)" if collapsed > 0 else "",
-            )
-
-            # Create a batch summary trace notification for the UI
-            collapsed_str = f" ({collapsed} collapsed)" if collapsed > 0 else ""
-            snippet = f"Belief atrophy cycle: {atrophied} belief(s) decayed{collapsed_str}."
-            self._belief_repo.create_notification(
-                snippet=snippet,
-                notif_type="trace",
-                source="belief_engine:atrophy",
-                source_type=None,
-                source_id=None,
             )
 
         return {"atrophied": atrophied, "collapsed": collapsed}

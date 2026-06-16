@@ -124,12 +124,13 @@ class BeliefRepository(BaseRepository):
         vector_16d: str,
         origin: str,
         lifecycle_stage: str | None = None,
+        suppress_stage_notification: bool = False,
     ) -> None:
         validated_vector = self.validate_and_format_vector(vector_16d)
         conn = self._conn()
         
         # Check for stage transition
-        if lifecycle_stage is not None:
+        if lifecycle_stage is not None and not suppress_stage_notification:
             try:
                 row = conn.execute("SELECT label, lifecycle_stage FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
                 if row and row["lifecycle_stage"] != lifecycle_stage:
@@ -297,6 +298,7 @@ class BeliefRepository(BaseRepository):
         event_type: str,
         impact: float,
         rationale: Optional[str],
+        suppress_notification: bool = False,
     ) -> None:
         try:
             conn = self._conn()
@@ -308,27 +310,28 @@ class BeliefRepository(BaseRepository):
             )
             conn.commit()
 
-            # Automatic notification for belief dynamics events (metabolism updates)
-            try:
-                belief_row = conn.execute("SELECT label FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
-                belief_label = belief_row["label"] if belief_row else "unknown"
-                
-                snippet = f"Belief '{belief_label}' {event_type} (impact: {impact or 0.0:.2f}). {rationale or ''}"
-                snippet = snippet.strip()
-                
-                import uuid
-                from datetime import datetime, timezone
-                conn.execute(
-                    """INSERT INTO notifications (id, type, timestamp, snippet, source, source_type, source_id, read, dismissed)
-                       VALUES (?, 'trace', ?, ?, ?, ?, ?, 0, 0)""",
-                    (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{belief_label}", source_type, belief_id),
-                )
-                conn.commit()
-            except Exception:
-                logging.getLogger(__name__).warning(
-                    "Failed to create notification for belief event %s on belief '%s'",
-                    event_type, belief_id, exc_info=True,
-                )
+            if not suppress_notification:
+                # Automatic notification for belief dynamics events (metabolism updates)
+                try:
+                    belief_row = conn.execute("SELECT label FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
+                    belief_label = belief_row["label"] if belief_row else "unknown"
+                    
+                    snippet = f"Belief '{belief_label}' {event_type} (impact: {impact or 0.0:.2f}). {rationale or ''}"
+                    snippet = snippet.strip()
+                    
+                    import uuid
+                    from datetime import datetime, timezone
+                    conn.execute(
+                        """INSERT INTO notifications (id, type, timestamp, snippet, source, source_type, source_id, read, dismissed)
+                           VALUES (?, 'trace', ?, ?, ?, ?, ?, 0, 0)""",
+                        (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{belief_label}", source_type, belief_id),
+                    )
+                    conn.commit()
+                except Exception:
+                    logging.getLogger(__name__).warning(
+                        "Failed to create notification for belief event %s on belief '%s'",
+                        event_type, belief_id, exc_info=True,
+                    )
 
         except Exception:
             logging.getLogger(__name__).warning(
