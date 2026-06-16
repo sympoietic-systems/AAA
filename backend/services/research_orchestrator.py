@@ -732,11 +732,12 @@ class SomaticResearchOrchestrator:
                     if not content:
                         return None
 
-                    # Save HTML to disk
+                    # Save HTML to disk (relative to backend/ directory)
                     file_path = ""
                     if self.html_archive:
                         try:
-                            task_dir = Path(self.upload_dir) / task_id
+                            base = Path(__file__).resolve().parent.parent  # backend/
+                            task_dir = base / "data" / "uploads" / "research" / task_id
                             task_dir.mkdir(parents=True, exist_ok=True)
                             safe_name = f"page_{uuid.uuid4().hex[:8]}.html"
                             file_path = str(task_dir / safe_name)

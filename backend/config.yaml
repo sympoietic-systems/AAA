@@ -317,7 +317,7 @@ research_orchestrator:
   satisfaction_threshold: 0.7                      # Completeness score to stop
   early_stop_threshold: 0.8                        # Break reflection early if reached
   max_concurrent_parses: 3                         # Async semaphore for source fetching
-  upload_dir: "data/uploads/research"              # Downloaded HTML storage
+  upload_dir: "backend/data/uploads/research"      # Downloaded HTML storage (resolved from data_dir)
   html_archive: true                               # Save HTML copies of fetched pages
 
 # ── Research Proposal Skill ────────────────────
