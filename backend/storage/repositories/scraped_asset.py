@@ -69,6 +69,15 @@ class ScrapedAssetRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     @with_connection
+    def url_exists_for_task(self, task_id: str, url: str) -> bool:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT 1 FROM scraped_assets WHERE task_id = ? AND url = ? LIMIT 1",
+            (task_id, url),
+        ).fetchone()
+        return row is not None
+
+    @with_connection
     def count_by_task(self, task_id: str) -> int:
         conn = self._conn()
         row = conn.execute(

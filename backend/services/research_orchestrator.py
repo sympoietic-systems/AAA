@@ -700,8 +700,21 @@ class SomaticResearchOrchestrator:
         return results[:n]
 
     async def _tool_parallel_parse(self, task_id, step_id, search_results, plan_id) -> list[dict]:
-        """Fetch all search result URLs in parallel, saving HTML to disk."""
+        """Fetch all search result URLs in parallel, saving HTML to disk. Skips already-fetched URLs."""
         sem = self._get_semaphore()
+
+        # Dedup: skip URLs already fetched for this task
+        asset_repo = getattr(self._state, "scraped_asset_repo", None)
+        new_urls = []
+        skipped = 0
+        for r in search_results:
+            url = r.get("url", "")
+            if asset_repo and asset_repo.url_exists_for_task(task_id, url):
+                skipped += 1
+                continue
+            new_urls.append(r)
+        if skipped:
+            logger.info("Skipping %d already-fetched URLs for task %s", skipped, task_id[:8])
 
         async def fetch_one(url: str, title: str) -> Optional[dict]:
             async with sem:
@@ -759,7 +772,7 @@ class SomaticResearchOrchestrator:
                     logger.warning("Fetch failed for %s: %s", url[:80], e)
                     return None
 
-        tasks = [fetch_one(r["url"], r.get("title", r["url"])) for r in search_results]
+        tasks = [fetch_one(r["url"], r.get("title", r["url"])) for r in new_urls]
         gathered = await asyncio.gather(*tasks)
         return [g for g in gathered if g is not None]
 
