@@ -93,8 +93,11 @@ CREATE TABLE IF NOT EXISTS scraped_assets (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (branch_id) REFERENCES research_branches(id) ON DELETE CASCADE,
-    FOREIGN KEY (task_id) REFERENCES research_tasks(id) ON DELETE CASCADE,
-    FOREIGN KEY (memory_node_id) REFERENCES memory_nodes(id) ON DELETE SET NULL
+    FOREIGN KEY (task_id) REFERENCES research_tasks(id) ON DELETE CASCADE
+    -- Note: memory_node_id is a loose reference — FK to memory_nodes(id)
+    -- is not possible because memory_nodes has a composite PK (id, checkpoint_id).
+    -- The column is kept for logical linking; referential integrity is handled
+    -- at the application layer.
 );
 
 CREATE INDEX IF NOT EXISTS idx_scraped_assets_branch ON scraped_assets(branch_id);
