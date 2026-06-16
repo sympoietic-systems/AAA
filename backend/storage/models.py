@@ -337,3 +337,64 @@ class CompressedMessageBlock:
     last_message_id: int = 0
     compressed_block: str = ""
     created_at: datetime | None = None
+
+
+@dataclass
+class ResearchTask:
+    """Autonomous deep web research task (Somatic Research Engine)."""
+    id: str
+    title: str
+    objective: str
+    trigger_source: str
+    status: str = "proposed"
+    conversation_id: Optional[str] = None
+    priority: int = 2
+    max_depth: int = 3
+    max_breadth: int = 4
+    is_agonistic: bool = False
+    budget_limit_usd: float = 0.50
+    budget_spent_usd: float = 0.0
+    branches_created: int = 0
+    assets_harvested: int = 0
+    lateral_flights: int = 0
+    bifurcation_triggered: bool = False
+    result_summary: Optional[str] = None
+    proposal_rationale: Optional[str] = None
+    proposal_message_id: Optional[int] = None
+    approved_by: Optional[str] = None
+    proposed_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+@dataclass
+class ResearchBranch:
+    """A node in the recursive research tree traversal."""
+    id: str
+    task_id: str
+    conversation_id: str
+    query: str
+    goal: str
+    depth: int
+    breadth: int
+    status: str = "probing"
+    parent_branch_id: Optional[str] = None
+    vector_16d: Optional[bytes] = None
+    homeostatic_tension: float = 0.0
+    created_at: Optional[datetime] = None
+
+
+@dataclass
+class ScrapedAsset:
+    """Raw markdown content harvested by sensory affordances."""
+    id: str
+    branch_id: str
+    task_id: str
+    url: str
+    raw_markdown: str
+    memory_node_id: Optional[str] = None
+    relevance_score: float = 0.0
+    novelty_score: float = 0.0
+    diffractive_score: float = 0.0
+    created_at: Optional[datetime] = None

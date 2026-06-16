@@ -38,6 +38,9 @@ def _init_repos(config: dict) -> dict:
         NotificationRepository,
         PerceptionSedimentRepository,
         PersonalityStateRepository,
+        ResearchBranchRepository,
+        ResearchTaskRepository,
+        ScrapedAssetRepository,
         SemanticKnotRepository,
         SkillRepository,
     )
@@ -59,4 +62,7 @@ def _init_repos(config: dict) -> dict:
         "expertise_repo": ExpertiseRepository(path),
         "personality_state_repo": PersonalityStateRepository(path),
         "dream_log_repo": DreamLogRepository(path),
+        "research_task_repo": ResearchTaskRepository(path),
+        "research_branch_repo": ResearchBranchRepository(path),
+        "scraped_asset_repo": ScrapedAssetRepository(path),
     }

@@ -14,6 +14,9 @@ from backend.storage.repositories.personality_state import PersonalityStateRepos
 from backend.storage.repositories.semantic_knot import SemanticKnotRepository
 from backend.storage.repositories.skill import SkillRepository
 from backend.storage.repositories.dream_log import DreamLogRepository
+from backend.storage.repositories.research_task import ResearchTaskRepository
+from backend.storage.repositories.research_branch import ResearchBranchRepository
+from backend.storage.repositories.scraped_asset import ScrapedAssetRepository
 
 __all__ = [
     "BeliefRepository",
@@ -31,4 +34,8 @@ __all__ = [
     "PersonalityStateRepository",
     "SemanticKnotRepository",
     "SkillRepository",
+    "DreamLogRepository",
+    "ResearchTaskRepository",
+    "ResearchBranchRepository",
+    "ScrapedAssetRepository",
 ]
