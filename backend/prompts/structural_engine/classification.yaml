@@ -9,11 +9,5 @@ user_prompt_template: |
 
   Dimensions: 01:Homeostatic(stability,dampening) 02:Amplifying(positive feedback,cascade) 03:Cyclic(loops,self-ref) 04:Bifurcated(thresholds,phase shifts) 05:Decentralized(distributed,mesh) 06:Rhizomatic(lateral network links) 07:BoundaryPerm(border selectivity) 08:Recursion(nested systems,fractals) 09:VarietyFilter(attenuation,control) 10:Negentropic(ordered complexity) 11:TemporalLag(feedback delay) 12:AttractorDepth(resilience vs plasticity) 13:Symbiotic(co-evolution,coupling) 14:Nomadic(boundary crossing,drift) 15:Conversational(dialogue dynamics) 16:SubstrateMaterial(physical vs virtual)
 
-  Response must be valid JSON matching this schema:
-  {
-    "scores": [0.1, 0.2, ...],
-    "justification": "reasoning..."
-  }
-  
   TEXT:
   {text}

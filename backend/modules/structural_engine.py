@@ -262,14 +262,13 @@ class LLMScorer(StructuralScorer):
         if not self.provider:
             return np.full(16, 0.25, dtype=np.float32)
 
-        if self._user_prompt_tmpl:
-            prompt = self._user_prompt_tmpl.format(text=text)
-        else:
-            prompt = f"Classify the following text across 16 cybernetic dimensions:\n\n{text}"
-
         _FALLBACK_SCORES = {"scores": [0.25] * 16, "justification": "scorer fallback"}
 
         try:
+            if self._user_prompt_tmpl:
+                prompt = self._user_prompt_tmpl.format(text=text)
+            else:
+                prompt = f"Classify the following text across 16 cybernetic dimensions:\n\n{text}"
             res = await generate_unified(
                 self.provider,
                 system_prompt=self.system_prompt,
