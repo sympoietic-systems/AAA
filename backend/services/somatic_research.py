@@ -107,6 +107,20 @@ class SomaticResearchEngine:
         is_agonistic = bool(task["is_agonistic"])
         conversation_id = task.get("conversation_id") or f"research_{task_id}"
 
+        # Auto-create conversation if it doesn't exist (console-initiated research)
+        if not task.get("conversation_id"):
+            try:
+                conv_repo = getattr(self._state, "conversation_repo", None)
+                if conv_repo and not conv_repo.get(conversation_id):
+                    conv_repo.create(
+                        conversation_id=conversation_id,
+                        title=task.get("title", "Research Task"),
+                        agent_id="symbia",
+                    )
+                    logger.info("Created research conversation: %s", conversation_id)
+            except Exception as e:
+                logger.warning("Could not create research conversation: %s", e)
+
         # Initialize: generate root-level sub-queries
         sub_queries = await self._generate_sub_queries(
             objective, is_agonistic, 0, max_depth, max_breadth
