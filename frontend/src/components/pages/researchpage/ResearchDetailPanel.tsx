@@ -267,7 +267,7 @@ function StepsTab({ taskId }: { taskId: string }) {
         </div>
       )}
 
-      {data.steps.map((step) => {
+      {[...data.steps].reverse().map((step) => {
         const sc = STEP_TYPE_COLORS[step.step_type] || "#666"
         const label = STEP_TYPE_LABELS[step.step_type] || step.step_type
         const isExpanded = expandedStep === step.id
@@ -373,7 +373,7 @@ function MetaLogTab({ taskId }: { taskId: string }) {
       <div className="text-[#555] text-[9px] pb-1 flex items-center gap-2">
         {meta.count} event{meta.count !== 1 ? "s" : ""}
       </div>
-      {meta.entries.map((entry) => {
+      {[...meta.entries].reverse().map((entry) => {
         const label = EVENT_TYPE_LABELS[entry.event_type] || entry.event_type
         const ec = EVENT_TYPE_COLORS[entry.event_type] || "#666"
         const isExpanded = expanded.has(entry.id)
