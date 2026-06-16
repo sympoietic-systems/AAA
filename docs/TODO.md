@@ -50,16 +50,23 @@
     [x] Config toggle: research_orchestrator.enabled switches between engine v1 & orchestrator
     [x] API: GET /research/tasks/{id}/steps endpoint
     [x] API: DELETE /research/tasks/{id} endpoint (cascade deletes all related data)
+    [x] Frontend: two-page architecture (/research list + /research?id=xxx detail)
+    [x] Frontend: /research list — two-column (left list + right preview), matches landing page
+    [x] Frontend: /research?id=xxx — full detail with Info·Steps·Assets·Branches·Meta Log tabs
+    [x] Frontend: Actions merged into Info tab (no separate tab)
+    [x] Frontend: Steps tab shows inline results + full per-step detail on right
+    [x] Frontend: Markdown-rendered result summary
+    [x] Frontend: Meta log + Steps sorted newest-first
+    [x] Frontend: Unified design matching /agent page patterns + FRONTEND_DESIGN_PRINCIPLES.md
 
 ### Pending
+    [ ] Search: extract actual article URLs from DDG results (not just search page snippets)
+    [ ] Document download tool (PDF/DOCX → digestion → index/vectorize)
+    [ ] Memory node creation from research findings (cross-conversation recall)
     [ ] Budget tracking (increment budget_spent_usd per LLM call)
     [ ] In-conversation research button (InputBar split Research ▼)
     [ ] SidePanel ResearchSummarySection
     [ ] Research proposal inline cards (<research-proposal> XML in chat)
-    [ ] Memory node creation from research findings
-    [ ] Document download tool (PDF/DOCX → digestion → index)
-    [ ] Search result limit: extract actual article URLs from DDG (not just search page)
-    [ ] Prompt: node_analyzer should return raw page content snapshots for debugging
 
 
 ## BACKEND
@@ -144,5 +151,4 @@
 
 
 ## RESEARCH
-    [ ] split to pages. like home page. list and basic info, after we can go to the each research pag
     [ ] think of memeory
