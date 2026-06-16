@@ -43,9 +43,21 @@ We chose **Option 3 (Two-Speed Brain Architecture)**.
 - **API-Level Suppression:**
   - OpenRouter is instructed via `"reasoning": {"exclude": true}` and `"include_reasoning": false`.
   - Google Gemini is instructed via `"thinking_config": {"thinking_budget": 0}`.
-- **Prompt-Level Guardrails:** Modified instructions to demand raw JSON directly and forbid reasoning.
+  - Anthropic/DeepSeek-Anthropic is instructed via `"thinking": {"type": "disabled"}`.
+  - Generic OpenAI-compatible endpoints support `thinking_budget=0` per-call opt-in.
+- **Prompt-Level Guardrails:** Compact instructions demand raw JSON directly and forbid reasoning.
 - **JSON Order Swap:** Swapped the schema keys to place `"scores"` first and `"justification"` second so that coordinates are generated immediately.
 - **Robust Fallback Parsing:** Implemented a regex-based parser that handles incomplete JSON, cleans trailing commas, and extracts scores from truncated streams.
+- **Token Budget:** `max_tokens` increased to 3000 to prevent truncation even with verbose justifications.
+- **Fallback Value:** `generate_unified` receives a `fallback_value` so JSON parse failures return default scores instead of propagating exceptions.
+
+### 2026-06-16 Update — Prompt Compaction & Token Budget Hardening
+
+Despite API-level thinking suppression, truncated scorer responses (`'\n  "scores"'`) were observed. Root cause: `max_tokens=1000` was insufficient for verbose model output. Changes:
+1. **Prompt shortened ~55%** — dimension descriptions compacted from verbose multi-line to single-line `01:Homeostatic(stability,dampening) 02:Amplifying(...)` format. System prompt hardened to "Output ONLY raw JSON, no markdown".
+2. **`max_tokens` 1000 → 3000** — tripled response budget.
+3. **`fallback_value` added** — `generate_unified` now gets `{"scores": [0.25]*16}` default, preventing exception propagation through `CompositeStructuralScorer`.
+4. **Per-call `thinking_budget` opt-in** — generic OpenAI-compatible endpoints now support `thinking_budget=0` as a per-call parameter. For known providers (OpenRouter/Google/Anthropic), suppression already works via global `thinking: enabled: false` config. No change to normal chat calls.
 
 ---
 

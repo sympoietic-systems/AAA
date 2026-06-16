@@ -287,11 +287,18 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             elif is_anthropic:
                 body["thinking"] = {"type": "disabled"}
 
+            # Per-call thinking suppression: when caller passes thinking_budget=0,
+            # suppress thinking for generic OpenAI-compatible endpoints too
+            if not is_openrouter and not is_google and not is_anthropic:
+                if merged_params.get("thinking_budget") == 0:
+                    body["thinking"] = {"type": "disabled"}
+
             # Clean merged_params from keys that could conflict
             merged_params.pop("thinking", None)
             merged_params.pop("thinking_config", None)
             merged_params.pop("reasoning", None)
             merged_params.pop("include_reasoning", None)
+            merged_params.pop("thinking_budget", None)
             merged_params.pop("max_tokens", None)
 
             body.update(merged_params)

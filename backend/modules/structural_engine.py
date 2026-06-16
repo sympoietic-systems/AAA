@@ -267,14 +267,18 @@ class LLMScorer(StructuralScorer):
         else:
             prompt = f"Classify the following text across 16 cybernetic dimensions:\n\n{text}"
 
+        _FALLBACK_SCORES = {"scores": [0.25] * 16, "justification": "scorer fallback"}
+
         try:
             res = await generate_unified(
                 self.provider,
                 system_prompt=self.system_prompt,
                 user_prompt=prompt,
                 expect_json=True,
+                fallback_value=_FALLBACK_SCORES,
                 temperature=0.1,
-                max_tokens=1000
+                max_tokens=3000,
+                thinking_budget=0,
             )
             content = res.get("content", "").strip()
             data = res.get("json_data")

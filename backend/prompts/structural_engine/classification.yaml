@@ -1,37 +1,19 @@
 # Structural Engine Taxonomy Classification Prompts
 # Path: backend/prompts/structural_engine/classification.yaml
 
-system_prompt: "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
+system_prompt: "You are a cybernetic taxonomy classifier. Output ONLY raw JSON, no markdown, no explanation outside the JSON."
 
 user_prompt_template: |
-  Analyze the structural/systemic profile of the following text chunk across 16 cybernetic dimensions.
-  Text to analyze:
-  ---
-  {text}
-  ---
-  You must output a JSON object containing:
-  1. "scores": An array of exactly 16 float values, each strictly between 0.0 and 1.0, representing the intensity of the following dimensions in order:
-     01: Homeostatic (negative feedback, stability, dampening)
-     02: Amplifying (positive feedback, runaway growth, cascade)
-     03: Cyclic (autopoietic loops, self-reference, circular)
-     04: Bifurcated (tipping points, thresholds, phase shifts)
-     05: Decentralized (distributed control, peer-to-peer, mesh)
-     06: Rhizomatic/Networked (redundant links, flat lateral paths)
-     07: Boundary Permeability (selectivity of system borders)
-     08: Recursion Depth (nested systems, fractals, scaling)
-     09: Variety Filtering (variety attenuation or control)
-     10: Negentropic Complexity (dense information, ordered structure)
-     11: Temporal Latency (time lags, feedback delay)
-     12: Attractor Depth (resilience, rigidity vs. plasticity)
-     13: Symbiotic (co-evolution, coupling, environmental match)
-     14: Nomadic (boundary crossing, lines of flight, drift)
-     15: Conversational Co-Orientation (dialogue, agreement dynamics)
-     16: Substrate Materiality (physical embodiment vs. symbolic virtuality)
+  Score this text across 16 cybernetic dimensions (each 0.0-1.0). Output ONLY this JSON, no markdown fences:
+  {{"scores":[16 floats],"justification":"brief reason"}}
 
-  2. "justification": A concise string explaining your reasoning for the structural properties of the text.
+  Dimensions: 01:Homeostatic(stability,dampening) 02:Amplifying(positive feedback,cascade) 03:Cyclic(loops,self-ref) 04:Bifurcated(thresholds,phase shifts) 05:Decentralized(distributed,mesh) 06:Rhizomatic(lateral network links) 07:BoundaryPerm(border selectivity) 08:Recursion(nested systems,fractals) 09:VarietyFilter(attenuation,control) 10:Negentropic(ordered complexity) 11:TemporalLag(feedback delay) 12:AttractorDepth(resilience vs plasticity) 13:Symbiotic(co-evolution,coupling) 14:Nomadic(boundary crossing,drift) 15:Conversational(dialogue dynamics) 16:SubstrateMaterial(physical vs virtual)
 
   Response must be valid JSON matching this schema:
   {
     "scores": [0.1, 0.2, ...],
     "justification": "reasoning..."
   }
+  
+  TEXT:
+  {text}

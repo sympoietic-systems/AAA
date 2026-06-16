@@ -363,11 +363,11 @@ CompositeStructuralScorer
   └─ LLMScorer       (w=0.3)  — LLM JSON schema analysis (optional, toggleable)
 ```
 
-**LLMScorer** calls the `structural_llm` model pool with a structured prompt requesting a JSON response:
+**LLMScorer** calls the `structural_llm` model pool with a compact prompt requesting a JSON response (scores-first ordering, thinking suppressed at API level):
 ```json
 {
-  "justification": "concise reasoning string",
-  "scores": [0.0, ..., 1.0]   // exactly 16 floats
+  "scores": [0.0, ..., 1.0],   // exactly 16 floats
+  "justification": "brief reason"
 }
 ```
 The `justification` string is cached in memory (SHA256-keyed, max 1000 entries) and returned to the frontend for display. The `scores` array drives the actual vector math.
