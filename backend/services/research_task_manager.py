@@ -196,7 +196,7 @@ class ResearchTaskManager:
         logger.info("Research task %s activated (%d/%d slots)", task_id, len(self._active_tasks), self.max_concurrent)
 
     async def _execute_task(self, task_id: str) -> None:
-        """Execute a research task — placeholder until SomaticResearchEngine is ready."""
+        """Execute a research task via SomaticResearchEngine."""
         semaphore = self._get_semaphore()
         async with semaphore:
             try:
@@ -205,12 +205,21 @@ class ResearchTaskManager:
                     "EXECUTING research task %s: %s",
                     task_id, task.get("title", "")[:80],
                 )
-                # TODO: Call SomaticResearchEngine here when Phase 2 is implemented
-                # For now, mark as completed with a placeholder
-                self.complete(
-                    task_id,
-                    result_summary="Research task execution placeholder — SomaticResearchEngine not yet wired.",
-                )
+
+                from backend.services.somatic_research import SomaticResearchEngine
+                engine = SomaticResearchEngine(self._app_state)
+
+                result = await engine.execute(task_id)
+
+                summary = result.get("result_summary", "")
+                if not summary:
+                    summary = (
+                        f"Research complete. "
+                        f"{result.get('branches_created', 0)} branches explored, "
+                        f"{result.get('assets_harvested', 0)} assets harvested."
+                    )
+                self.complete(task_id, result_summary=summary)
+
             except asyncio.CancelledError:
                 logger.info("Research task %s cancelled during execution", task_id)
                 raise
@@ -219,7 +228,6 @@ class ResearchTaskManager:
                 self.fail(task_id, "Unhandled exception during research execution")
             finally:
                 self._active_tasks.pop(task_id, None)
-                # Try to process next in queue
                 asyncio.create_task(self._try_process_queue())
 
     # ── Budget ────────────────────────────────────────────────────

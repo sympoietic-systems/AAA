@@ -144,12 +144,29 @@ class SomaticResearchEngine:
             task_id, branches_created, len(all_assets), lateral_flights,
         )
 
+        # Generate synthesis summary via LLM
+        result_summary = (
+            f"Research complete. {branches_created} branches, "
+            f"{len(all_assets)} assets, {lateral_flights} lateral flights."
+        )
+        if all_assets:
+            try:
+                from backend.metabolisation.research_metabolism import ResearchMetabolismEngine
+                metabolism = ResearchMetabolismEngine(self._state)
+                await metabolism.metabolize_research_results(task)
+                # Re-read task to get the LLM-generated summary
+                updated = self.task_repo.get(task_id)
+                if updated and updated.get("result_summary"):
+                    result_summary = updated["result_summary"]
+            except Exception as e:
+                logger.warning("Synthesis/metabolism skipped: %s", e)
+
         return {
             "task_id": task_id,
             "branches_created": branches_created,
             "assets_harvested": len(all_assets),
             "lateral_flights": lateral_flights,
-            "all_assets": all_assets,
+            "result_summary": result_summary,
         }
 
     # ── Recursive Tree Traversal ─────────────────────────────────────
