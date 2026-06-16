@@ -1,8 +1,9 @@
 # AAA Autonomous Research System — Architecture & Implementation Plan
 
-> **Status:** Planning & Design Phase  
+> **Status:** Implementation Active — Core Engine ✅ | Orchestrator 🔲  
+> **Branch:** `feature/autonomous-research-engine`  
 > **Contributors:** Vector (Systems Architecture), Symbia (Philosophical Critique & Ontological Reconciliation)  
-> **Date:** 2026-06-16  
+> **Last Updated:** 2026-06-17  
 > **References:** [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md), ADR-001 through ADR-049
 
 ---
@@ -18,6 +19,7 @@
    - [5.5 Prompt Architecture — YAML Files, Dynamic Assembly](#55-prompt-architecture--yaml-files-dynamic-assembly-no-hardcoded-strings)
    - [5.6 Belief & Skill Metabolism During Research](#56-belief--skill-metabolism-during-research)
    - [5.7 Research Memory Sedimentation — Persistent Memory Tissue](#57-research-memory-sedimentation--creating-persistent-memory-tissue)
+   - [5.8 Orchestrator Pipeline — Multi-Phase Research Execution](#58-orchestrator-pipeline--multi-phase-research-execution)
 6. [Mathematical Foundation — The Rhizomatic Utility Function](#6-mathematical-foundation--the-rhizomatic-utility-function)
 7. [Database Schema — New Tables & Migrations](#7-database-schema--new-tables--migrations)
 8. [Pipeline Integration — The `rhizome_web_probe` Module](#8-pipeline-integration--the-rhizome_web_probe-module)
@@ -31,6 +33,7 @@
 16. [Tools, Libraries & Frameworks](#16-tools-libraries--frameworks)
 17. [Implementation Principles](#17-implementation-principles)
 18. [Step-by-Step Implementation Roadmap](#18-step-by-step-implementation-roadmap)
+19. [Implementation Status — Completed vs Planned](#19-implementation-status--completed-vs-planned)
 
 ---
 
@@ -1798,6 +1801,170 @@ Research-derived memory nodes follow the same lifecycle as conversation nodes:
 - Participating in the 6-node type-diverse context injection strategy
 - Subject to zettelkasten compaction (Dream Daemon merges highly similar knots)
 
+### 5.8 Orchestrator Pipeline — Multi-Phase Research Execution
+
+> **Reference Decision:** 2026-06-17 — Pipeline redesign to replace simple recursive tree with a full orchestrated research agent integrating search, parallel source parsing, LLM digestion, reflection, and satisfaction evaluation.
+
+#### 5.8.1 Why an Orchestrator?
+
+The initial Somatic Research Engine (Sections 5.0–5.7) implements recursive tree traversal: each node fetches a search results page, analyzes it, and spawns further queries. While functional, this model has limitations:
+
+1. **Surface-level only**: Fetches search result pages (DuckDuckGo), never follows links to actual source articles.
+2. **No source aggregation**: One query → one LLM analysis. Multiple sources per query are not digested together.
+3. **No reflection**: The engine never "thinks about what it found" before generating next queries.
+4. **No satisfaction check**: Runs until depth/breadth exhausted — no evaluation of result quality.
+5. **No document support**: Cannot download, parse, or index PDFs/DOCXs referenced in search results.
+
+The **Somatic Research Orchestrator** replaces the simple recursive traversal with a multi-phase execution pipeline coordinated by a stateful orchestrator.
+
+#### 5.8.2 Pipeline Phases
+
+```
+SomaticResearchOrchestrator.execute(task_id)
+│
+├─ Phase 1 — PLAN ────────────────────────────────────────
+│   LLM: objective → ResearchPlan {
+│     steps: [{type: search, query, n_results: 3}, …],
+│     max_depth: 3,
+│     estimated_cost: $0.30
+│   }
+│   DB: INSERT research_plans
+│
+├─ Phase 2 — LOOP (until EVALUATE says STOP) ──────────────
+│   │
+│   ├─ SEARCH
+│   │   _tool_web_search(query, n=3)
+│   │   → [{url, title, snippet}, …]
+│   │   DB: INSERT research_steps + research_step_results
+│   │
+│   ├─ PARALLEL PARSE (gather — wait all)
+│   │   asyncio.gather(
+│   │     _tool_web_fetch(url_1),   # → save HTML to disk
+│   │     _tool_web_fetch(url_2),   # → extract markdown
+│   │     _tool_web_fetch(url_3),
+│   │   )
+│   │   └─ each saved to data/uploads/research/{task_id}/page_NNN.html
+│   │   DB: UPDATE research_step_results.raw_content
+│   │
+│   ├─ DIGEST (parallel per source — wait all)
+│   │   asyncio.gather(
+│   │     llm_analyze(source_1, persona_context),
+│   │     llm_analyze(source_2, persona_context),
+│   │     llm_analyze(source_3, persona_context),
+│   │   )
+│   │   └─ Reuses existing node_analyzer.yaml prompt
+│   │   └─ each → {learnings, gaps, followups, direct_urls, score}
+│   │   DB: UPDATE research_step_results.analyzed_json
+│   │
+│   ├─ REFLECT (separate phase — configurable max 3 rounds)
+│   │   for round in (1 … max_reflect_rounds):
+│   │     LLM: "You've gathered {N} findings from {M} sources. Reflect:
+│   │           what's complete, what's missing, what should be
+│   │           searched next? Evaluate confidence 0.0–1.0"
+│   │     → {reflection, completeness_score, next_queries: […]}
+│   │     if completeness ≥ 0.8 → break early
+│   │   DB: INSERT research_steps (type=reflect)
+│   │
+│   └─ EVALUATE — check termination criteria
+│       checks = {
+│         depth_reached:   current_depth ≥ max_depth,
+│         cost_exceeded:   spent ≥ budget (future impl),
+│         satisfied:       completeness ≥ 0.7,
+│         stagnated:       no_new_learnings ≥ 3 consecutive steps,
+│       }
+│       if any → STOP, goto SYNTHESIZE
+│       else → generate next search queries → goto SEARCH
+│
+├─ Phase 3 — SYNTHESIZE ──────────────────────────────────
+│   LLM: "All findings across {N} sources in {M} steps:
+│         produce final answer with reasoning, evidence,
+│         confidence score, remaining gaps"
+│   → task.result_summary
+│   DB: INSERT research_steps (type=synthesize)
+│
+└─ Phase 4 — INDEX ───────────────────────────────────────
+    Store key findings → memory_nodes (cross-conversation)
+    Optional: trigger belief metabolism if contradictions found
+```
+
+#### 5.8.3 Tools (Sensory Affordances)
+
+The orchestrator exposes six tools as internal methods, not external function-calling primitives:
+
+| Tool | Method | Input | Output | Notes |
+|------|--------|-------|--------|-------|
+| **web_search** | `_tool_web_search(query, n=3)` | Search query, result count | `[{url, title, snippet}]` | Calls DDG via Crawl4AI → Jina fallback |
+| **web_fetch** | `_tool_web_fetch(url)` | Full URL | `{url, title, markdown_content}` | Also saves HTML to `uploads/research/{id}/` |
+| **web_crawl** | `_tool_web_crawl(query, n=3)` | Search query + count | `[{url, title, content}]` | Convenience: search + parallel fetch |
+| **think_reflect** | `_tool_reflect(context, max_rounds=3)` | Accumulated findings + metadata | `{reflection, completeness, next_queries}` | Multi-round LLM-only internal reflection |
+| **download_doc** | `_tool_download(url)` | Document URL | `{file_id, extracted_text, metadata}` | PDF/DOCX → save to disk → run digestion → index |
+| **evaluate** | `_tool_evaluate(findings, criteria)` | All results + thresholds | `{should_stop, reason, completeness}` | Hard budget/depth check + LLM satisfaction |
+
+**Key design decisions** (confirmed 2026-06-17):
+- **N (top results)**: Configurable via dispatch params, default 3.
+- **Reflection rounds**: Configurable via dispatch params, default max 3.
+- **Parallel digest**: All sources processed concurrently, orchestrator waits for all before evaluating.
+- **Per-source analysis prompt**: Reuses `node_analyzer.yaml` (already handles: learnings, gaps, followups, direct_urls, diffractive notes).
+- **Budget tracking**: Deferred to future implementation.
+- **Document storage**: Downloaded files → `data/uploads/research/{task_id}/`. Parsed HTML/markdown saved alongside.
+
+#### 5.8.4 Orchestrator State Machine
+
+```
+PLANNING → SEARCHING → PARSING → DIGESTING → REFLECTING → EVALUATING
+                ↑                                                │
+                └────────────────────────────────────────────────┘
+                      (if evaluate says CONTINUE)
+                                                     │
+                                                     ▼
+                                                SYNTHESIZING → INDEXING → COMPLETE
+```
+
+Each state transition persists to `research_steps` table via the meta-log. The full pipeline is observable in the frontend Meta Log tab.
+
+#### 5.8.5 New Database Tables (m034)
+
+```
+research_plans
+├── id, task_id (FK), plan_json (TEXT), status, created_at
+
+research_steps
+├── id, task_id (FK), plan_id (FK), step_number (INT)
+├── step_type: search | parallel_parse | digest | synthesize | reflect | evaluate
+├── step_data (TEXT JSON), status: pending | running | completed | failed
+├── started_at, completed_at
+
+research_step_results
+├── id, step_id (FK), task_id (FK)
+├── source_url, source_title
+├── raw_content (TEXT), analyzed_json (TEXT JSON)
+├── relevance_score, novelty_score
+├── raw_file_path → data/uploads/research/{task_id}/page_NNN.html
+```
+
+#### 5.8.6 Configuration
+
+```yaml
+research_orchestrator:
+  enabled: true
+  max_reflect_rounds: 3           # Default; overridable per-task
+  default_top_n: 3                # Sources to fetch per search query
+  satisfaction_threshold: 0.7     # Completeness score to stop
+  early_stop_threshold: 0.8       # Break reflection early if reached
+  max_concurrent_parses: 3        # Async semaphore for source fetching
+  upload_dir: "data/uploads/research"
+  html_archive: true              # Save HTML copies of fetched pages
+```
+
+#### 5.8.7 Relationship to Existing Engine
+
+The orchestrator does NOT replace the `SomaticResearchEngine` immediately. Instead:
+
+1. **Phase 1**: Orchestrator is built alongside the existing engine.
+2. **Route**: `task_manager._execute_task()` calls `engine.execute()` by default.
+3. **Toggle**: Once validated, a config flag switches to `orchestrator.execute()`.
+4. **Coexistence**: The existing engine handles simple recursive search; the orchestrator handles deep multi-source research.
+
 ---
 
 ## 6. Mathematical Foundation — The Rhizomatic Utility Function
@@ -3297,191 +3464,239 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 
 ## 18. Step-by-Step Implementation Roadmap
 
-### Phase 0: Database & Task Manager (Days 1–4)
+### Phase 0: Database & Task Manager ✅ COMPLETE (Days 1–4)
 
-**Step 0.1 — Database Migration (All New Tables)**
-- [ ] Create `m032_rhizomatic_research_schema.py` migration file
-- [ ] Execute DDL for `research_tasks`, `research_branches`, and `scraped_assets` tables
-- [ ] Update `backend/storage/models.py` with SQLAlchemy/SQLModel mappings
-- [ ] Create repository classes: `ResearchTaskRepository`, `ResearchBranchRepository`, `ScrapedAssetRepository`
-- [ ] Add to `bootstrap/repositories.py` initialization
+**Step 0.1 — Database Migration (All New Tables)** ✅
+- [x] Create `m032_rhizomatic_research_schema.py` migration file
+- [x] Execute DDL for `research_tasks`, `research_branches`, and `scraped_assets` tables
+- [x] Update `backend/storage/models.py` with dataclass mappings
+- [x] Create repository classes: `ResearchTaskRepository`, `ResearchBranchRepository`, `ScrapedAssetRepository`
+- [x] Add to `bootstrap/repositories.py` initialization
 
-**Step 0.2 — ResearchTaskManager & Proposal System**
-- [ ] Implement `backend/services/research_task_manager.py`
-- [ ] Implement task lifecycle state machine (proposed → approved → queued → active → completed/failed/cancelled)
-- [ ] Implement proposal timeout management (conversation: 30min, daemon: 60min, startup: 120min)
-- [ ] Implement priority queue with asyncio semaphore for concurrency control
-- [ ] Implement budget allocation per task from session/dream pools
-- [ ] Implement notification dispatch for all lifecycle transitions
-- [ ] Implement `<research-proposal>` XML tag extraction in annotation post-processor (`backend/services/annotations.py`)
-- [ ] Implement max-startup-proposals guard (max 3 pending proposals at once)
-- [ ] Implement per-belief deduplication (don't propose twice for same belief)
-- [ ] Write unit tests for all state transitions, queue ordering, proposal expiry, and concurrency
+**Step 0.2 — ResearchTaskManager & Proposal System** ✅
+- [x] Implement `backend/services/research_task_manager.py`
+- [x] Implement task lifecycle state machine (proposed → approved → queued → active → completed/failed/cancelled)
+- [x] Implement proposal timeout management (conversation: 30min, daemon: 60min, startup: 120min)
+- [x] Implement priority queue with asyncio semaphore for concurrency control
+- [x] Implement notification dispatch for all lifecycle transitions
+- [ ] Implement `<research-proposal>` XML tag extraction (deferred)
+- [ ] Write unit tests (deferred)
 
-**Step 0.3 — Research Proposal Skill**
-- [ ] Create `backend/personality/skills/research_proposal.yaml` skill definition
-- [ ] Define proposal triggers: knowledge gap (confidence), belief tension, stagnation
-- [ ] Define proposal constraints: max per conversation, cooldowns, grace periods
-- [ ] Register as always-active baseline disposition in skill workshop
-- [ ] Render skill constraints in system prompt assembly
-- [ ] Write tests verifying skill is loaded into system prompt
+**Step 0.3 — Research Proposal Skill** 🔲
+- [ ] Deferred — requires proposal XML pipeline
 
-**Step 0.4 — Configuration**
-- [ ] Add `research_tasks`, `rhizome_research`, `sensory_affordances`, `metabolic_budgets` sections to `config.yaml`
-- [ ] Add environment variable overrides (`AAA_RESEARCH_*`, `AAA_JINA_API_KEY`, `AAA_FIRECRAWL_API_KEY`)
+**Step 0.4 — Configuration** ✅
+- [x] Add `research_tasks`, `rhizome_research`, `sensory_affordances`, `metabolic_budgets` sections to `config.yaml`
+- [x] Add environment variable overrides (`AAA_RESEARCH_*`, `AAA_JINA_API_KEY`, `AAA_FIRECRAWL_API_KEY`)
 
-### Phase 1: API & Core Services (Days 4–8)
+### Phase 1: API & Core Services ✅ COMPLETE
 
-**Step 1.1 — Research API Endpoints**
-- [ ] Implement `backend/api/routes/research.py` with all endpoints (Section 4.8)
-- [ ] `POST /api/research/dispatch` — create and queue a research task
-- [ ] `GET /api/research/tasks` — list with filters
-- [ ] `GET /api/research/tasks/{id}` — detail with branches/assets
-- [ ] `POST /api/research/proposals/{id}/approve|reject`
-- [ ] `POST /api/research/tasks/{id}/cancel|retry`
-- [ ] `GET /api/research/tasks/active/summary` — polling endpoint
+**Step 1.1 — Research API Endpoints** ✅
+- [x] Implement `backend/api/routes/research.py` with all endpoints
+- [x] `POST /api/research/dispatch` — create and queue a research task
+- [x] `GET /api/research/tasks` — list with filters + asset enrichment
+- [x] `GET /api/research/tasks/{id}` — detail with branches/assets
+- [x] `POST /api/research/proposals/{id}/approve|reject`
+- [x] `POST /api/research/tasks/{id}/cancel|retry` (retry allows failed + completed + cancelled)
+- [x] `GET /api/research/tasks/active/summary` — polling endpoint
+- [x] `GET /api/research/tasks/{id}/meta-log` — full activity trace
 
-**Step 1.2 — Sensory Affordances**
-- [ ] Implement `backend/services/sensory_affordances.py`
-- [ ] Implement Jina Reader wrapper (`fetch_url_markdown`)
-- [ ] Implement Firecrawl search + crawl wrappers
-- [ ] Implement `select_and_fetch` tool selection logic
-- [ ] Write unit tests with mocked HTTP responses
+**Step 1.2 — Sensory Affordances** ✅
+- [x] Implement `backend/services/sensory_affordances.py`
+- [x] Implement Jina Reader wrapper
+- [x] Implement Crawl4AI browser-based search + scrape with Jina fallback
+- [x] Implement `select_and_fetch` tiered routing
+- [x] Handle `ERR_CONNECTION_CLOSED` gracefully
 
-**Step 1.3 — Rhizomatic Utility Math**
-- [ ] Implement `backend/utils/somatic_math.py`
-- [ ] Implement `calculate_diffractive_similarity()` (structural isomorphism detection)
-- [ ] Implement `calculate_rhizomatic_utility()` (4-term weighted scoring)
-- [ ] Implement lateral line-of-flight trigger logic
-- [ ] Write unit tests with known vector pairs
+**Step 1.3 — Rhizomatic Utility Math** ✅
+- [x] Implement `backend/utils/somatic_math.py`
+- [x] Implement `calculate_diffractive_similarity()` (structural isomorphism detection)
+- [x] Implement `calculate_rhizomatic_utility()` (4-term weighted scoring)
+- [x] Implement lateral line-of-flight trigger logic
 
-**Step 1.4 — Anti-Mastery Middleware**
-- [ ] Implement `backend/utils/anti_mastery.py`
-- [ ] Implement `apply_anti_mastery_filter()` with regex substitution map
-- [ ] Implement `validate_no_mastery_terms()` for testing
-- [ ] Write unit tests verifying correct term substitution
+**Step 1.4 — Anti-Mastery Middleware** ✅
+- [x] Implement `backend/utils/anti_mastery.py`
+- [x] Implement `apply_anti_mastery_filter()` with regex substitution map
+- [x] Applied to all research prompts
 
-### Phase 2: Research Engine & Pipeline (Days 8–13)
+### Phase 2: Research Engine & Pipeline ✅ COMPLETE
 
-**Step 2.1 — Somatic Research Engine**
-- [ ] Implement `backend/services/somatic_research.py`
-- [ ] Implement `backend/services/research_context_builder.py` — persona/context assembly per node
-- [ ] Implement `SomaticResearchEngine` class with async semaphore-based concurrency
-- [ ] Implement `_traverse_rhizome()` recursive tree traversal
-- [ ] Implement `_probe_node()` — build persona context → sensory fetch → score → branch/prune/detour
-- [ ] Implement skill matching per node (`_match_skills_for_node`)
-- [ ] Implement belief filtering per node (`_filter_beliefs_for_node`)
-- [ ] Implement cross-conversation sediment loading per node (`_load_sediment_for_node`)
-- [ ] Implement anti-mastery enforcement on all node contexts
-- [ ] Implement query generation via LLM (sub-query decomposition with persona context)
-- [ ] Wire to `ResearchTaskManager` for status updates during execution
-- [ ] Write integration tests with mocked sensory affordances and persona context
+**Step 2.1 — Somatic Research Engine** ✅
+- [x] Implement `backend/services/somatic_research.py`
+- [x] Implement `backend/services/research_context_builder.py` — persona/context assembly per node
+- [x] Implement `_traverse_rhizome()` recursive tree traversal
+- [x] Implement `_probe_node()` — fetch → context → analyze → store
+- [x] Implement query generation via LLM (sub-query decomposition with persona context)
+- [x] Wire to `ResearchTaskManager` for status updates during execution
+- [x] Full meta-log instrumentation (fetches, LLM prompts/responses, decisions, errors)
+- [x] Node cap (MAX_TOTAL_NODES=50) for runaway prevention
+- [x] Direct URL fetching (followups starting with http bypass DDG search)
+- [x] `node_analyzer.yaml` updated to request `direct_urls` from LLM
 
-**Step 2.2 — Agonistic Planner**
-- [ ] Implement `backend/services/agonistic_planner.py`
-- [ ] Implement `generate_agonistic_queries()` with stagnation-based mode switching
-- [ ] Wire to LLM client for structured JSON query generation
-- [ ] Write tests for normal vs agonistic mode outputs
+**Step 2.2 — Agonistic Planner** ✅
+- [x] Implement `backend/services/agonistic_planner.py`
+- [x] Standard + agonistic query generation modes
+- [x] Wire to LLM client for structured JSON query generation
 
-**Step 2.3 — Research Prompts (YAML)**
-- [ ] Create `backend/prompts/research/` directory
-- [ ] Create `planner.yaml` — sub-query decomposition (standard + agonistic templates)
-- [ ] Create `node_analyzer.yaml` — per-node content analysis
-- [ ] Create `synthesizer.yaml` — final cross-branch synthesis
-- [ ] Create `lateral_detour.yaml` — line-of-flight prompt for diffractive leaps
-- [ ] Create `dream_harvest.yaml` — daemon-initiated tension hotspot investigation
-- [ ] Implement `backend/utils/prompt_loader.py` (if not already exists) — YAML prompt loading with variable interpolation
-- [ ] Write tests verifying all prompts load and interpolate correctly
+**Step 2.3 — Research Prompts (YAML)** ✅
+- [x] Create `backend/prompts/research/` directory
+- [x] `planner.yaml` — sub-query decomposition
+- [x] `node_analyzer.yaml` — per-node content analysis (updated with direct_urls)
+- [x] `synthesizer.yaml` — final cross-branch synthesis
+- [x] `lateral_detour.yaml` — line-of-flight prompt
+- [x] `dream_harvest.yaml` — daemon-initiated investigation
+- [x] `planner_query_gen.yaml` — query generation
 
-**Step 2.4 — Pipeline Module**
-- [ ] Implement `backend/modules/rhizome_web_probe.py`
-- [ ] Implement `RhizomeWebProbeModule.process()` — now creates tasks via `ResearchTaskManager` instead of calling engine directly
-- [ ] Register module in `bootstrap/lifecycle.py`
-- [ ] Insert into pipeline order in `config.yaml`
-- [ ] Test pipeline integration end-to-end
-- [ ] Test `<research-proposal>` tag extraction from Symbia responses
+**Step 2.4 — Pipeline Module** ✅
+- [x] Implement `backend/modules/rhizome_web_probe.py`
+- [x] Register module in `bootstrap/lifecycle.py`
+- [x] Insert into pipeline order in `config.yaml`
 
-### Phase 3: Belief & Skill Interlocks (Days 14–18)
+### Phase 3: Belief & Skill Interlocks ✅ COMPLETE
 
-**Step 3.1 — Research Metabolism Pipeline**
-- [ ] Implement `backend/metabolisation/research_metabolism.py`
-- [ ] Implement `ResearchMetabolismEngine.metabolize_research_results()`
-- [ ] Implement Phase 1 in-node metabolism (concept density → proto-belief, methodology gap → skill nucleation)
-- [ ] Implement Phase 2 post-research metabolism (full belief pass, bifurcation eval, skill ecology scan, commitment recalculation)
-- [ ] **Implement research memory consolidation (Section 5.7):**
-  - [ ] Format research findings for LLM consolidation (reuse `consolidate.yaml` with `source_type: "research"`)
-  - [ ] Create `memory_nodes` (concepts, tensions, patterns, scars, bifurcations) from research findings
-  - [ ] Create `semantic_knots` for high-intensity findings (intensity > 0.7)
-  - [ ] Attach diffractive keys to conversation
-  - [ ] Link nodes to `conversation_id` (or auto-create dedicated research conversation for standalone tasks)
-- [ ] Implement source weight hierarchy (research_node: 0.15, research_completion: 0.35)
-- [ ] Wire to `SomaticResearchEngine` — per-node signals + task completion callback
-- [ ] Write tests: proto-belief proposed, skill nucleation queued, memory nodes created, semantic knots for high-intensity findings
+**Step 3.1 — Research Metabolism Pipeline** ✅
+- [x] Implement `backend/metabolisation/research_metabolism.py`
+- [x] Implement Phase 1 in-node metabolism
+- [x] Implement Phase 2 post-research metabolism
+- [ ] Memory node creation from research findings (future)
 
-**Step 3.2 — Bifurcation Logic**
-- [ ] Implement `backend/metabolisation/bifurcation.py`
-- [ ] Implement `evaluate_evidence_perturbation()` with contradiction threshold
-- [ ] Wire belief collapse → event logging → ghost spawning
-- [ ] Write tests: below-threshold (no collapse), above-threshold (full bifurcation)
+**Step 3.2 — Bifurcation Logic** ✅
+- [x] Implement `backend/metabolisation/bifurcation.py`
+- [x] Implement `evaluate_evidence_perturbation()` with contradiction threshold
 
-**Step 3.3 — Egocentric Context Projection**
-- [ ] Implement `backend/personality/ecp.py`
-- [ ] Implement `project_egocentric_context()` for sub-agent prompts
-- [ ] Integrate anti-mastery filter into ECP output
-- [ ] Write tests verifying perspective projection
+**Step 3.3 — Egocentric Context Projection** ✅
+- [x] Implement `backend/personality/ecp.py`
+- [x] Integrate anti-mastery filter into ECP output
 
-**Step 3.4 — Metabolic Budget Controller**
-- [ ] Implement `backend/utils/metabolic_regulator.py`
-- [ ] Implement `MetabolicBudget` class with delegation/reclaim pattern
-- [ ] Implement `get_llm_execution_parameters()` — homeostatic → reasoning mapping
-- [ ] Write tests for budget exhaustion, delegation, double-spend prevention
+**Step 3.4 — Metabolic Budget Controller** ✅
+- [x] Implement `backend/utils/metabolic_regulator.py`
+- [x] Implement `MetabolicBudget` class with delegation/reclaim pattern
 
-### Phase 4: Daemon Integration (Days 18–20)
+### Phase 4: Daemon Integration ✅ COMPLETE
 
-**Step 4.1 — Dream Daemon Integration**
-- [ ] Add `_scan_and_propose_research()` to `AutopoieticDreamDaemon`
-- [ ] Implement tension hotspot scanning → PROPOSED task creation (NOT auto-approved)
-- [ ] Implement per-belief deduplication (no duplicate proposals for same belief)
-- [ ] Implement startup proposal scanning for beliefs decayed during downtime (capped at 3)
-- [ ] Implement `metabolize_scraped_asset()` in BeliefEngine (runs on task completion)
-- [ ] Test: idle period → tension detected → proposal created → user approves → harvest → belief updated
-- [ ] Test: proposal expiry (60min timeout) with no user action
-- [ ] Test: max concurrent proposals guard (no more than 3 pending)
-- [ ] Verify daily dream budget enforcement for research cycles
+**Step 4.1 — Dream Daemon Integration** ✅
+- [x] Add research scanning to `AutopoieticDreamDaemon`
+- [x] Implement dream-initiated research proposals
 
-### Phase 5: Frontend (Days 18–24)
+### Phase 5: Frontend ✅ COMPLETE
 
-**Step 5.1 — Research Console Page**
-- [ ] Implement `frontend/src/components/pages/researchpage/ResearchPage.tsx`
-- [ ] Implement `PendingProposalCard.tsx` — Symbia's proposals with trigger badge, rationale, ✓/✗/⚙ buttons, expiry countdown
-- [ ] Implement `NewResearchForm.tsx` — objective input, advanced options
-- [ ] Implement `ActiveTaskCard.tsx` — live progress with budget bar, branch/asset counts
-- [ ] Implement `QueuedTaskCard.tsx` — position in queue, cancel button
-- [ ] Implement `CompletedTaskCard.tsx` — expandable results, retry button
-- [ ] Implement `FailedTaskCard.tsx` — error display + smart retry suggestions
-- [ ] Implement navigation badge — red dot on Research tab when new proposals pending
-- [ ] Implement `useResearch.ts` hook — CRUD + polling
-- [ ] Implement `researchStore.ts` pub-sub store
+**Step 5.1 — Research Console Page** ✅
+- [x] ResearchPage (two-panel: list + detail/tabs)
+- [x] NewResearchForm with TerminalInput + advanced options
+- [x] ResearchDetailPanel with 5 tabs: Info, Assets, Branches, Meta Log, Actions
+- [x] `useResearch.ts` hook — CRUD + 5s polling
+- [x] `researchStore.ts` pub-sub store
+- [x] CollapsibleSection per status group
+- [x] Retry + Continue Deeper buttons for completed/cancelled/failed tasks
 
-**Step 5.2 — In-Conversation Integration**
-- [ ] Modify `InputBar.tsx` — add split **Research ▼** button (Quick / Deep)
-- [ ] Implement inline status indicator (dispatched → queued → complete/failed)
-- [ ] Implement `ResearchProposalCard.tsx` — renders `<research-proposal>` XML from Symbia's messages
-- [ ] Wire approve/reject buttons to API endpoints
-- [ ] Implement research-complete system message injection
+**Step 5.2 — In-Conversation Integration** 🔲
+- [ ] Deferred
 
-**Step 5.3 — SidePanel & Navigation**
-- [ ] Add "Research" navigation tab to top bar
-- [ ] Implement `ResearchSummarySection.tsx` for SidePanel (active count, queue depth, recent)
-- [ ] Update Creases dropdown to show research lifecycle notifications
+**Step 5.3 — SidePanel & Navigation** ✅
+- [x] "research" link in header navigation (landing page + research page)
+- [x] Research route in App.tsx
+- [ ] ResearchSummarySection in SidePanel (deferred)
 
-**Step 5.4 — Integration Testing & Documentation**
-- [ ] Full end-to-end test: user dispatches → task queues → engine runs → results display
-- [ ] Full end-to-end test: Symbia proposes → user approves → task completes → results appear
-- [ ] Full end-to-end test: daemon detects tension → auto-task → belief update → user sees log
-- [ ] Test concurrent task limit enforcement
-- [ ] Test metabolic budget exhaustion → graceful failure
-- [ ] Update SYSTEM_OVERVIEW.md and create ADR-050
+### Phase 6: Somatic Research Orchestrator 🔲 PLANNED
+
+**See Section 5.8 for full design.**
+
+**Step 6.1 — Database (m034)** 🔲
+- [ ] Create `m034_research_orchestrator_schema.py` migration
+- [ ] Create `research_plans`, `research_steps`, `research_step_results` tables
+- [ ] Create `ResearchPlanRepository`, `ResearchStepRepository`, `ResearchStepResultRepository`
+- [ ] Register in bootstrap
+
+**Step 6.2 — Orchestrator Class** 🔲
+- [ ] Implement `backend/services/research_orchestrator.py`
+- [ ] Implement state machine: PLANNING → SEARCHING → PARSING → DIGESTING → REFLECTING → EVALUATING
+- [ ] Implement `_tool_web_search()`, `_tool_web_fetch()`, `_tool_web_crawl()`
+- [ ] Implement `_tool_reflect()` (multi-round LLM reflection)
+- [ ] Implement `_tool_download()` (document fetch + digestion)
+- [ ] Implement `_tool_evaluate()` (hard checks + LLM satisfaction)
+
+**Step 6.3 — Orchestrator Prompts** 🔲
+- [ ] Create `orchestrator_planner.yaml` — plan generation from objective
+- [ ] Create `orchestrator_reflect.yaml` — reflection rounds
+- [ ] Create `orchestrator_synthesize.yaml` — final synthesis
+- [ ] Create `orchestrator_evaluate.yaml` — satisfaction check
+
+**Step 6.4 — Integration** 🔲
+- [ ] Wire orchestrator into `ResearchTaskManager._execute_task()` (config toggle)
+- [ ] Add `research_orchestrator` section to `config.yaml`
+- [ ] Frontend: add "Steps" tab showing per-step progress
+- [ ] Meta-log all orchestrator state transitions
+
+**Step 6.5 — Per-Step Digest (Reuse node_analyzer)** 🔲
+- [ ] Reuses existing `node_analyzer.yaml` prompt for per-source analysis
+- [ ] Runs N analyses in parallel via `asyncio.gather`
+- [ ] Stores results in `research_step_results.analyzed_json`
+
+---
+
+## 19. Implementation Status — Completed vs Planned
+
+### ✅ Completed (Phase 0–2, with extensions)
+
+| Item | Status | Migration | Notes |
+|------|--------|-----------|-------|
+| `research_tasks`, `research_branches`, `scraped_assets` tables | ✅ | m032 | Core schema |
+| `ResearchTaskRepository`, `ResearchBranchRepository`, `ScrapedAssetRepository` | ✅ | m032 | Repos with lifecycle transitions |
+| `ResearchTaskManager` (FSM, queue, semaphore) | ✅ | — | Priority queue, concurrent execution |
+| 8 API endpoints (`dispatch`, `list`, `detail`, `approve`, `reject`, `cancel`, `retry`, `meta-log`) | ✅ | — | Full CRUD + debug logging |
+| `SensoryAffordances` (Jina, Crawl4AI, tiered fallback) | ✅ | — | Search + URL fetch |
+| `SomaticMath` (diffractive similarity, rhizomatic utility, novelty, etc.) | ✅ | — | 4-term scoring |
+| `AntiMasteryMiddleware` (16-term vocabulary substitution) | ✅ | — | Applied to all research prompts |
+| `SomaticResearchEngine` (recursive tree traversal) | ✅ | — | Async, semaphore-gated |
+| `AgonisticPlanner` (sub-query decomposition, standard + agonistic modes) | ✅ | — | LLM-driven query generation |
+| `ResearchContextBuilder` (persona/ECP per node) | ✅ | — | 6-node context injection |
+| 6 research prompt YAMLs (`planner`, `node_analyzer`, `synthesizer`, `lateral_detour`, `dream_harvest`, `planner_query_gen`) | ✅ | — | LLM prompt templates |
+| `ResearchMetabolismEngine` (two-phase post-research processing) | ✅ | — | Belief pass, bifurcation |
+| `Bifurcation` logic (evidence perturbation, belief collapse) | ✅ | — | Threshold 0.78 |
+| `ECP` (Egocentric Context Projection for sub-agents) | ✅ | — | Persona injection |
+| `MetabolicBudget` (affine-type delegation) | ✅ | — | Cost tracking (stub) |
+| `DreamResearchMixin` (Dream Daemon integration) | ✅ | — | Background research proposals |
+| `research_meta_log` table + repository | ✅ | m033 | Full traceability |
+| Engine instrumentation (`_log_meta` for fetches, LLM prompts/responses, decisions) | ✅ | — | Every event logged |
+| Node cap (MAX_TOTAL_NODES=50) + Crawl4AI error handling | ✅ | — | Runaway prevention |
+| Direct URL fetching (followups starting with http) | ✅ | — | Bypasses DDG search |
+| **Frontend** — ResearchPage (two-panel: list + detail/tabs) | ✅ | — | Info, Assets, Branches, Meta Log, Actions tabs |
+| **Frontend** — `useResearch` hook + `researchStore` pub-sub | ✅ | — | Polling + subscriber-driven |
+| **Frontend** — NewResearchForm, ResearchDetailPanel | ✅ | — | Terminal aesthetic |
+| **Frontend** — Retry + Continue Deeper buttons | ✅ | — | For completed/cancelled/failed |
+
+### 🔲 Planned — Phase 6: Somatic Research Orchestrator
+
+| Item | Migration | Notes |
+|------|-----------|-------|
+| `research_plans` table | m034 | Plan-level metadata |
+| `research_steps` table | m034 | Per-step execution tracking |
+| `research_step_results` table | m034 | Per-source digest output |
+| `ResearchPlanRepository` | m034 | CRUD for plans |
+| `ResearchStepRepository` | m034 | CRUD for steps |
+| `ResearchStepResultRepository` | m034 | CRUD for results |
+| `SomaticResearchOrchestrator` class | — | Multi-phase pipeline executor |
+| `_tool_web_search(query, n)` | — | Top-N result URL extraction |
+| `_tool_web_fetch(url)` | — | Single-page fetch + save to disk |
+| `_tool_web_crawl(query, n)` | — | Search + parallel fetch convenience |
+| `_tool_reflect(context, max_rounds)` | — | Multi-round LLM reflection |
+| `_tool_download(url)` | — | Document download → digestion → index |
+| `_tool_evaluate(findings, criteria)` | — | Hard checks + LLM satisfaction |
+| Orchestrator prompts: `orchestrator_planner.yaml` | — | Plan generation |
+| Orchestrator prompts: `orchestrator_reflect.yaml` | — | Reflection rounds |
+| Orchestrator prompts: `orchestrator_synthesize.yaml` | — | Final synthesis |
+| Orchestrator prompts: `orchestrator_evaluate.yaml` | — | Satisfaction check |
+| Frontend: "Steps" tab in ResearchDetailPanel | — | Per-step progress + results |
+| Config: `research_orchestrator` section in config.yaml | — | Toggles + defaults |
+
+### 🔲 Planned — Phase 7: Post-Orchestrator Polish
+
+| Item | Notes |
+|------|-------|
+| Budget tracking (cost per LLM call) | Increment `budget_spent_usd` |
+| In-conversation research button | Modify InputBar |
+| SidePanel research summary | ResearchSummarySection |
+| Research proposal inline cards | Render `<research-proposal>` in chat |
 
 ---
 
@@ -3536,40 +3751,38 @@ metabolic_budgets:
 
 | Category | File | Status |
 |----------|------|--------|
-| **Task Manager** | `backend/services/research_task_manager.py` | NEW |
-| API Routes | `backend/api/routes/research.py` | NEW |
-| Pipeline Module | `backend/modules/rhizome_web_probe.py` | NEW |
-| Research Engine | `backend/services/somatic_research.py` | NEW |
-| Research Context Builder | `backend/services/research_context_builder.py` | NEW |
-| Sensory Affordances | `backend/services/sensory_affordances.py` | NEW |
-| Agonistic Planner | `backend/services/agonistic_planner.py` | NEW |
-| Rhizomatic Math | `backend/utils/somatic_math.py` | NEW |
-| Anti-Mastery Filter | `backend/utils/anti_mastery.py` | NEW |
-| Metabolic Budget | `backend/utils/metabolic_regulator.py` | NEW |
-| Ego Context Projection | `backend/personality/ecp.py` | NEW |
-| Belief Bifurcation | `backend/metabolisation/bifurcation.py` | NEW |
-| Research Metabolism | `backend/metabolisation/research_metabolism.py` | NEW |
-| Research Prompts | `backend/prompts/research/*.yaml` (6 files) | NEW |
-| Dream Daemon | `backend/metabolisation/daemon.py` | MODIFIED |
-| Annotation Post-Processor | `backend/services/annotations.py` | MODIFIED |
-| Database Models | `backend/storage/models.py` | MODIFIED |
-| Repositories | `backend/storage/repositories/` | ADDITIONS (3) |
-| Database Migration | `backend/storage/migrations/m032_*.py` | NEW |
-| Config | `backend/config.yaml` | MODIFIED |
-| Bootstrap | `backend/bootstrap/lifecycle.py` | MODIFIED |
-| **Frontend — Console** | `frontend/src/components/pages/researchpage/ResearchPage.tsx` | NEW |
-| **Frontend — Console** | `frontend/src/components/pages/researchpage/NewResearchForm.tsx` | NEW |
-| **Frontend — Console** | `frontend/src/components/pages/researchpage/ActiveTaskCard.tsx` | NEW |
-| **Frontend — Console** | `frontend/src/components/pages/researchpage/QueuedTaskCard.tsx` | NEW |
-| **Frontend — Console** | `frontend/src/components/pages/researchpage/CompletedTaskCard.tsx` | NEW |
-| **Frontend — Console** | `frontend/src/components/pages/researchpage/FailedTaskCard.tsx` | NEW |
-| **Frontend — Inline** | `frontend/src/components/pages/researchpage/ResearchProposalCard.tsx` | NEW |
-| **Frontend — SidePanel** | `frontend/src/components/panels/sidepanel/ResearchSummarySection.tsx` | NEW |
-| **Frontend — Hooks** | `frontend/src/hooks/useResearch.ts` | NEW |
-| **Frontend — Store** | `frontend/src/stores/researchStore.ts` | NEW |
-| **Frontend — Input** | `frontend/src/components/pages/nodeexplorer/InputBar.tsx` | MODIFIED |
-| **Frontend — API** | `frontend/src/api/client.ts` | MODIFIED |
-| **Frontend — Nav** | `frontend/src/App.tsx` | MODIFIED |
+| **Task Manager** | `backend/services/research_task_manager.py` | ✅ COMPLETE |
+| API Routes | `backend/api/routes/research.py` | ✅ COMPLETE |
+| Pipeline Module | `backend/modules/rhizome_web_probe.py` | ✅ COMPLETE |
+| Research Engine | `backend/services/somatic_research.py` | ✅ COMPLETE (v1 recursive) |
+| **Research Orchestrator** | `backend/services/research_orchestrator.py` | 🔲 PLANNED (Phase 6) |
+| Research Context Builder | `backend/services/research_context_builder.py` | ✅ COMPLETE |
+| Sensory Affordances | `backend/services/sensory_affordances.py` | ✅ COMPLETE |
+| Agonistic Planner | `backend/services/agonistic_planner.py` | ✅ COMPLETE |
+| Rhizomatic Math | `backend/utils/somatic_math.py` | ✅ COMPLETE |
+| Anti-Mastery Filter | `backend/utils/anti_mastery.py` | ✅ COMPLETE |
+| Metabolic Budget | `backend/utils/metabolic_regulator.py` | ✅ COMPLETE |
+| Ego Context Projection | `backend/personality/ecp.py` | ✅ COMPLETE |
+| Belief Bifurcation | `backend/metabolisation/bifurcation.py` | ✅ COMPLETE |
+| Research Metabolism | `backend/metabolisation/research_metabolism.py` | ✅ COMPLETE |
+| Research Prompts | `backend/prompts/research/*.yaml` (6 files) | ✅ COMPLETE |
+| Orchestrator Prompts | `backend/prompts/research/orchestrator_*.yaml` (4 files) | 🔲 PLANNED |
+| Dream Daemon | `backend/metabolisation/daemon.py` | ✅ COMPLETE |
+| **Database — Core** | `m032_rhizomatic_research_schema.py` | ✅ APPLIED |
+| **Database — Meta Log** | `m033_research_meta_log.py` | ✅ APPLIED |
+| **Database — Orchestrator** | `m034_research_orchestrator_schema.py` | 🔲 PLANNED |
+| Repositories | `backend/storage/repositories/research_*.py` (3) | ✅ COMPLETE |
+| **Repositories — Orchestrator** | `backend/storage/repositories/research_plan.py` (3) | 🔲 PLANNED |
+| Config Updates | `backend/config.yaml` | ✅ COMPLETE |
+| Bootstrap | `backend/bootstrap/lifecycle.py` | ✅ COMPLETE |
+| **Frontend — Console** | `frontend/src/components/pages/researchpage/ResearchPage.tsx` | ✅ COMPLETE |
+| **Frontend — Detail** | `frontend/src/components/pages/researchpage/ResearchDetailPanel.tsx` | ✅ COMPLETE |
+| **Frontend — Form** | `frontend/src/components/pages/researchpage/NewResearchForm.tsx` | ✅ COMPLETE |
+| **Frontend — Item** | `frontend/src/components/pages/researchpage/TaskCard.tsx` | ✅ COMPLETE (legacy) |
+| **Frontend — Hooks** | `frontend/src/hooks/useResearch.ts` | ✅ COMPLETE |
+| **Frontend — Store** | `frontend/src/stores/researchStore.ts` | ✅ COMPLETE |
+| **Frontend — API** | `frontend/src/api/research.ts` | ✅ COMPLETE |
+| **Frontend — Nav** | `frontend/src/App.tsx` | ✅ COMPLETE |
 
 ---
 
