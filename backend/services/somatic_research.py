@@ -286,12 +286,33 @@ class SomaticResearchEngine:
             # 1. Fetch web content via sensory affordances
             scraped_text = ""
             try:
-                from backend.services.sensory_affordances import select_and_fetch
-                scraped_text = await select_and_fetch(
-                    url_or_query=query,
-                    task_type="single_url",
-                    config=self._state.config,
-                )
+                from backend.services.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
+                # Convert search phrases to URLs if needed
+                if query.startswith("http://") or query.startswith("https://"):
+                    scraped_text = await select_and_fetch(
+                        url_or_query=query, task_type="single_url", config=self._state.config,
+                    )
+                elif is_crawl4ai_available():
+                    # Use Crawl4AI browser to scrape search results
+                    import urllib.parse
+                    search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+                    try:
+                        scraped_text = await fetch_via_crawl4ai(search_url, config=self._state.config)
+                        if not scraped_text:
+                            # Fallback to Jina
+                            scraped_text = await select_and_fetch(
+                                url_or_query=search_url, task_type="single_url", config=self._state.config,
+                            )
+                    except Exception:
+                        scraped_text = await select_and_fetch(
+                            url_or_query=search_url, task_type="single_url", config=self._state.config,
+                        )
+                else:
+                    import urllib.parse
+                    search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+                    scraped_text = await select_and_fetch(
+                        url_or_query=search_url, task_type="single_url", config=self._state.config,
+                    )
             except Exception as e:
                 logger.warning("Sensory fetch failed for '%s': %s", query[:60], e)
                 self.branch_repo.update(branch_id, status="collapsed")

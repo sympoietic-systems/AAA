@@ -332,7 +332,7 @@ sensory_affordances:
     api_base: "https://api.firecrawl.dev/v1"
     timeout_seconds: 20
   crawl4ai:
-    enabled: false
+    enabled: false                   # enable via AAA_CRAWL4AI_ENABLED=true
     timeout_seconds: 30
   strategy: "tiered"
   task_type_routing:

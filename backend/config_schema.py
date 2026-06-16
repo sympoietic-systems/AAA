@@ -29,15 +29,20 @@ class EnvOverride:
     env_var: str
     section: str
     key: str
+    sub_key: str = ""  # Optional nested key: config[section][key][sub_key]
     parser: Callable[[str], Any] = str
 
     def apply(self, config: dict) -> None:
-        """Read env_var and, if set, write parsed value into config[section][key]."""
+        """Read env_var and, if set, write parsed value into config[section][key][sub_key]."""
         raw = os.environ.get(self.env_var)
         if raw is None:
             return
         try:
-            config.setdefault(self.section, {})[self.key] = self.parser(raw)
+            if self.sub_key:
+                cfg = config.setdefault(self.section, {}).setdefault(self.key, {})
+                cfg[self.sub_key] = self.parser(raw)
+            else:
+                config.setdefault(self.section, {})[self.key] = self.parser(raw)
         except (ValueError, TypeError):
             pass  # Malformed env value → skip (keep config-file default)
 
@@ -115,6 +120,10 @@ ENV_OVERRIDES: list[EnvOverride] = [
     # ── Web retrieval ──
     EnvOverride("AAA_WEB_RETRIEVAL_ENABLED", "web_retrieval", "enabled", _parse_bool),
     EnvOverride("AAA_WEB_RETRIEVAL_AUTONOMOUS_ROUTING", "web_retrieval", "autonomous_routing", _parse_bool),
+
+    # ── Sensory affordances ──
+    EnvOverride("AAA_CRAWL4AI_ENABLED", "sensory_affordances", "crawl4ai", sub_key="enabled", parser=_parse_bool),
+    EnvOverride("AAA_JINA_ENABLED", "sensory_affordances", "jina_reader", sub_key="enabled", parser=_parse_bool),
 
     # ── Structural signature ──
     EnvOverride("AAA_LLM_SCORER_ENABLED", "structural_signature", "llm_scorer_enabled", _parse_bool),
