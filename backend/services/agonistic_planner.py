@@ -105,6 +105,7 @@ class AgonisticPlanner:
                 system_prompt=system_text,
                 user_prompt=user_text,
                 expect_json=True,
+                fallback_value=[{"query": objective, "goal": "Investigate the core objective"}],
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
@@ -163,6 +164,7 @@ class AgonisticPlanner:
                 system_prompt=system_text,
                 user_prompt=user_text,
                 expect_json=True,
+                fallback_value=[],
                 temperature=prompt_data.get("temperature", 0.4),
                 max_tokens=prompt_data.get("max_tokens", 1024),
             )

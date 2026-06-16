@@ -132,12 +132,16 @@ class ResearchMetabolismEngine:
                 system_prompt=system_text,
                 user_prompt=user_text,
                 expect_json=True,
+                fallback_value={"summary": "Research task completed but synthesis unavailable."},
                 temperature=prompt_data.get("temperature", 0.4),
                 max_tokens=prompt_data.get("max_tokens", 3072),
             )
             result = response.get("json_data") or response.get("content") or {}
             if isinstance(result, str):
-                result = json.loads(result)
+                try:
+                    result = json.loads(result)
+                except json.JSONDecodeError:
+                    result = {"summary": str(result)[:2000]}
             return result.get("summary", "") if isinstance(result, dict) else str(result)[:2000]
         except Exception as e:
             logger.error("Synthesis failed: %s", e)

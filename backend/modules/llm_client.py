@@ -232,6 +232,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         elif is_anthropic:
             merged_params.pop("presence_penalty", None)
             merged_params.pop("frequency_penalty", None)
+            merged_params.pop("response_format", None)  # Anthropic API does not support this
 
         body: dict = {
             "model": self._model,

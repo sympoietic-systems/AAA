@@ -405,12 +405,16 @@ class SomaticResearchEngine:
                 system_prompt=system_text,
                 user_prompt=user_text,
                 expect_json=True,
+                fallback_value={"learnings": [], "gaps": [], "followups": [], "diffractive_notes": []},
                 temperature=prompt_data.get("temperature", 0.3),
                 max_tokens=prompt_data.get("max_tokens", 2048),
             )
-            result = response.get("json_data") or {}
+            result = response.get("json_data") or response.get("content") or {}
             if isinstance(result, str):
-                result = json.loads(result)
+                try:
+                    result = json.loads(result)
+                except json.JSONDecodeError:
+                    result = {}
             return result if isinstance(result, dict) else {}
         except Exception as e:
             logger.error("LLM analysis failed for node: %s", e)
