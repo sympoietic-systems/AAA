@@ -30,6 +30,7 @@ frontend/dist/
 .codebuddy/*
 docs/protocols/*
 docs/extra/*
+docs/temp/*
 backend/.agents/*
 backend/scratch/*
 .agents/
