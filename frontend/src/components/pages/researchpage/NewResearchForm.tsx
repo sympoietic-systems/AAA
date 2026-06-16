@@ -1,8 +1,9 @@
 // NewResearchForm — create and dispatch a research task.
-// Terminal aesthetic: no bg/border/rounded containers.
+// Terminal aesthetic, uses shared UI components.
 
 import React, { memo, useState } from "react"
 import type { DispatchPayload } from "../../../api/research"
+import { TerminalInput, TerminalButton, TerminalHeader } from "../../UI"
 
 interface Props {
   onDispatch: (payload: DispatchPayload) => Promise<string | null>
@@ -36,26 +37,21 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
 
   return (
     <form onSubmit={handleSubmit} className="mb-4">
-      <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-2">
-        [new research]
-      </div>
+      <TerminalHeader className="mb-2">[ new research ]</TerminalHeader>
 
       {/* Objective */}
-      <input
-        type="text"
+      <TerminalInput
         value={objective}
-        onChange={e => setObjective(e.target.value)}
-        placeholder="Objective: What should we investigate?"
-        className="w-full bg-transparent border-b border-[#222]/40 focus:border-[#444] outline-none text-[#ccc] text-xs font-mono py-1 mb-2"
-        autoFocus
-        disabled={sending}
+        onChange={setObjective}
+        placeholder="What should we investigate?"
+        className="w-full mb-2"
       />
 
       {/* Advanced toggle */}
       <button
         type="button"
         onClick={() => setAdvanced(!advanced)}
-        className="text-[#555] hover:text-[#777] text-[10px] font-mono mb-2"
+        className="text-[#555] hover:text-[#777] text-[10px] font-mono mb-2 cursor-pointer select-none"
       >
         [{advanced ? "▼ advanced" : "▶ advanced"}]
       </button>
@@ -111,18 +107,13 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
         <button
           type="submit"
           disabled={!objective.trim() || sending}
-          className="text-[#4ade80] hover:text-[#6ee7b0] disabled:text-[#333] text-xs font-mono transition-colors"
+          className="text-[10px] text-[#4ade80] font-mono cursor-pointer select-none transition-colors disabled:text-[#333] disabled:cursor-not-allowed hover:text-[#6ee7b0]"
         >
           [{sending ? "dispatching..." : "▶ dispatch research"}]
         </button>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={sending}
-          className="text-[#666] hover:text-[#888] text-xs font-mono transition-colors"
-        >
-          [cancel]
-        </button>
+        <TerminalButton onClick={onClose} disabled={sending}>
+          cancel
+        </TerminalButton>
       </div>
     </form>
   )
