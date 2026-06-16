@@ -423,10 +423,17 @@ class SomaticResearchOrchestrator:
             from backend.modules.llm_client import generate_unified
             llm = getattr(self._state, "llm_provider", None)
             if llm:
+                self._log_meta(task_id, "orchestrator_plan_prompt", {
+                    "system_prompt": system_text[:8000],
+                    "user_prompt": user_text[:8000],
+                })
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True, fallback_value=plan_json,
                     temperature=prompt_data.get("temperature", 0.4),
                     max_tokens=prompt_data.get("max_tokens", 1024))
+                self._log_meta(task_id, "orchestrator_plan_response", {
+                    "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:8000],
+                })
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
@@ -463,10 +470,17 @@ class SomaticResearchOrchestrator:
             from backend.modules.llm_client import generate_unified
             llm = getattr(self._state, "llm_provider", None)
             if llm:
+                self._log_meta(task_id, "orchestrator_synthesize_prompt", {
+                    "system_prompt": system_text[:8000],
+                    "user_prompt": user_text[:8000],
+                })
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True, fallback_value={"answer": fallback},
                     temperature=prompt_data.get("temperature", 0.4),
                     max_tokens=prompt_data.get("max_tokens", 3072))
+                self._log_meta(task_id, "orchestrator_synthesize_response", {
+                    "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:8000],
+                })
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
