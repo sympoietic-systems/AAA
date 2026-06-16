@@ -17,6 +17,7 @@ dependencies = [
     "mcp",
     "EbookLib>=0.20",
     "mobi>=0.4.1",
+    "crawl4ai>=0.8.9",
 ]
 
 [project.optional-dependencies]
