@@ -17,6 +17,7 @@ from backend.storage.repositories.dream_log import DreamLogRepository
 from backend.storage.repositories.research_task import ResearchTaskRepository
 from backend.storage.repositories.research_branch import ResearchBranchRepository
 from backend.storage.repositories.scraped_asset import ScrapedAssetRepository
+from backend.storage.repositories.research_meta_log import ResearchMetaLogRepository
 
 __all__ = [
     "BeliefRepository",
@@ -38,4 +39,5 @@ __all__ = [
     "ResearchTaskRepository",
     "ResearchBranchRepository",
     "ScrapedAssetRepository",
+    "ResearchMetaLogRepository",
 ]

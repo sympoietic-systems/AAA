@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import numpy as np
@@ -77,6 +78,27 @@ class SomaticResearchEngine:
             self._semaphore = asyncio.Semaphore(self.max_concurrent_probes)
         return self._semaphore
 
+    @property
+    def _meta_log_repo(self):
+        return getattr(self._state, "research_meta_log_repo", None)
+
+    def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: str = None) -> None:
+        """Log a research event to the meta-log for debugging/traceability."""
+        try:
+            repo = self._meta_log_repo
+            if repo is None:
+                return
+            repo.create({
+                "id": str(uuid.uuid4()),
+                "task_id": task_id,
+                "branch_id": branch_id,
+                "event_type": event_type,
+                "event_data": json.dumps(data, default=str, ensure_ascii=False),
+                "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            })
+        except Exception:
+            pass  # Never let meta-logging break research execution
+
     def _anti_mastery(self, text: str) -> str:
         try:
             from backend.utils.anti_mastery import apply_anti_mastery_filter
@@ -107,6 +129,15 @@ class SomaticResearchEngine:
         is_agonistic = bool(task["is_agonistic"])
         conversation_id = task.get("conversation_id") or f"research_{task_id}"
 
+        self._log_meta(task_id, "task_started", {
+            "title": task.get("title", ""),
+            "objective": objective,
+            "max_depth": max_depth,
+            "max_breadth": max_breadth,
+            "is_agonistic": is_agonistic,
+            "budget_limit": task["budget_limit_usd"],
+        })
+
         # Auto-create conversation if it doesn't exist (console-initiated research)
         if not task.get("conversation_id"):
             try:
@@ -125,6 +156,11 @@ class SomaticResearchEngine:
         sub_queries = await self._generate_sub_queries(
             objective, is_agonistic, 0, max_depth, max_breadth
         )
+        self._log_meta(task_id, "query_generation", {
+            "objective": objective,
+            "sub_queries": sub_queries,
+            "is_agonistic": is_agonistic,
+        })
 
         # Recursive exploration
         all_assets = []
@@ -165,6 +201,7 @@ class SomaticResearchEngine:
         )
         if all_assets:
             try:
+                self._log_meta(task_id, "synthesis_start", {"assets_count": len(all_assets)})
                 from backend.metabolisation.research_metabolism import ResearchMetabolismEngine
                 metabolism = ResearchMetabolismEngine(self._state)
                 await metabolism.metabolize_research_results(task)
@@ -172,8 +209,17 @@ class SomaticResearchEngine:
                 updated = self.task_repo.get(task_id)
                 if updated and updated.get("result_summary"):
                     result_summary = updated["result_summary"]
+                self._log_meta(task_id, "synthesis_complete", {"summary": result_summary[:500]})
             except Exception as e:
                 logger.warning("Synthesis/metabolism skipped: %s", e)
+                self._log_meta(task_id, "synthesis_error", {"error": str(e)})
+
+        self._log_meta(task_id, "task_complete", {
+            "branches_created": branches_created,
+            "assets_harvested": len(all_assets),
+            "lateral_flights": lateral_flights,
+            "result_summary": result_summary[:500],
+        })
 
         return {
             "task_id": task_id,
@@ -216,6 +262,14 @@ class SomaticResearchEngine:
             "breadth": breadth,
             "status": "probing",
         })
+        self._log_meta(task_id, "branch_create", {
+            "branch_id": branch_id,
+            "parent_branch_id": parent_branch_id,
+            "query": query,
+            "goal": goal,
+            "depth": depth,
+            "breadth": breadth,
+        }, branch_id=branch_id)
 
         # Probe the node
         result = await self._probe_node(branch_id, task_id, query, goal, depth, max_depth)
@@ -286,11 +340,13 @@ class SomaticResearchEngine:
             # 1. Fetch web content via sensory affordances
             scraped_text = ""
             fetched_url = query  # Track what was actually fetched
+            fetch_method = "none"
             try:
                 from backend.services.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
                 # Convert search phrases to URLs if needed
                 if query.startswith("http://") or query.startswith("https://"):
                     fetched_url = query
+                    fetch_method = "jina_direct"
                     scraped_text = await select_and_fetch(
                         url_or_query=query, task_type="single_url", config=self._state.config,
                     )
@@ -299,14 +355,17 @@ class SomaticResearchEngine:
                     import urllib.parse
                     search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
                     fetched_url = search_url
+                    fetch_method = "crawl4ai"
                     try:
                         scraped_text = await fetch_via_crawl4ai(search_url, config=self._state.config)
                         if not scraped_text:
                             # Fallback to Jina
+                            fetch_method = "jina_fallback"
                             scraped_text = await select_and_fetch(
                                 url_or_query=search_url, task_type="single_url", config=self._state.config,
                             )
                     except Exception:
+                        fetch_method = "jina_fallback_after_error"
                         scraped_text = await select_and_fetch(
                             url_or_query=search_url, task_type="single_url", config=self._state.config,
                         )
@@ -314,11 +373,27 @@ class SomaticResearchEngine:
                     import urllib.parse
                     search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
                     fetched_url = search_url
+                    fetch_method = "jina_search"
                     scraped_text = await select_and_fetch(
                         url_or_query=search_url, task_type="single_url", config=self._state.config,
                     )
+
+                self._log_meta(task_id, "fetch_complete", {
+                    "query": query[:200],
+                    "fetched_url": fetched_url,
+                    "method": fetch_method,
+                    "content_length": len(scraped_text) if scraped_text else 0,
+                    "content_preview": (scraped_text or "")[:500],
+                }, branch_id=branch_id)
+
             except Exception as e:
                 logger.warning("Sensory fetch failed for '%s': %s", query[:60], e)
+                self._log_meta(task_id, "fetch_error", {
+                    "query": query[:200],
+                    "fetched_url": fetched_url,
+                    "method": fetch_method,
+                    "error": str(e),
+                }, branch_id=branch_id)
                 self.branch_repo.update(branch_id, status="collapsed")
                 return {"assets": [], "learnings": [], "followups": [], "diffractive_score": 0.0}
 
@@ -342,6 +417,15 @@ class SomaticResearchEngine:
                 query=query, goal=goal, depth=depth, max_depth=max_depth,
                 scraped_content=scraped_text[:8000], persona_context=context,
             )
+            self._log_meta(task_id, "llm_analysis", {
+                "query": query[:200],
+                "goal": goal[:200],
+                "depth": depth,
+                "learnings_count": len(analysis.get("learnings", [])),
+                "followups_count": len(analysis.get("followups", [])),
+                "diffractive_score": analysis.get("diffractive_score", 0),
+                "learnings": analysis.get("learnings", [])[:5],
+            }, branch_id=branch_id)
 
             # 4. Store asset
             asset_id = str(uuid.uuid4())

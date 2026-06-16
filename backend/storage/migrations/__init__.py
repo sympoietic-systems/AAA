@@ -75,6 +75,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m030_compressed_messages,
         m031_belief_events_relax_constraints,
         m032_rhizomatic_research_schema,
+        m033_research_meta_log,
     )
 
     runner = MigrationRunner(conn)
@@ -112,3 +113,4 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("030_compressed_messages", m030_compressed_messages.up)
     runner.run("031_belief_events_relax_constraints", m031_belief_events_relax_constraints.up)
     runner.run("032_rhizomatic_research_schema", m032_rhizomatic_research_schema.up)
+    runner.run("033_research_meta_log", m033_research_meta_log.up)

@@ -169,15 +169,15 @@ async def cancel_task(task_id: str, request: Request):
 
 @router.post("/research/tasks/{task_id}/retry")
 async def retry_task(task_id: str, request: Request):
-    """Retry a failed task with same parameters."""
+    """Retry a failed or completed task with same parameters."""
     state = request.app.state
     manager = state.research_task_manager
 
     task = manager.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task["status"] != "failed":
-        raise HTTPException(status_code=400, detail="Only failed tasks can be retried")
+    if task["status"] not in ("failed", "completed"):
+        raise HTTPException(status_code=400, detail="Only failed or completed tasks can be retried")
 
     # Create a new task with same parameters
     new_id = manager.create_task(
@@ -195,3 +195,35 @@ async def retry_task(task_id: str, request: Request):
 
     manager.queue(new_id)
     return {"task_id": new_id, "status": "queued", "retried_from": task_id}
+
+
+# ── Meta Log ──────────────────────────────────────────────────────────
+
+@router.get("/research/tasks/{task_id}/meta-log")
+async def get_task_meta_log(task_id: str, limit: int = 200, request: Request = None):
+    """Full activity log for a research task — fetches, prompts, decisions, errors."""
+    state = request.app.state
+    meta_repo = getattr(state, "research_meta_log_repo", None)
+    if meta_repo is None:
+        raise HTTPException(status_code=501, detail="Meta logging not available")
+
+    task = state.research_task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Research task not found")
+
+    entries = meta_repo.get_by_task(task_id, limit=limit)
+    # Parse JSON event_data for each entry
+    import json
+    for entry in entries:
+        try:
+            entry["event_data"] = json.loads(entry["event_data"])
+        except (json.JSONDecodeError, TypeError):
+            entry["event_data"] = {"raw": entry.get("event_data", "")}
+
+    return {
+        "task_id": task_id,
+        "title": task.get("title", ""),
+        "status": task.get("status", ""),
+        "entries": entries,
+        "count": len(entries),
+    }

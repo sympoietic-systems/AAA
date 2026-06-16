@@ -115,6 +115,31 @@ export async function retryTask(taskId: string): Promise<{ task_id: string; stat
   return res.json()
 }
 
+// ── Meta Log ────────────────────────────────────────────────────────
+
+export interface MetaLogEntry {
+  id: string
+  task_id: string
+  branch_id: string | null
+  event_type: string
+  event_data: Record<string, any>
+  created_at: string | null
+}
+
+export interface MetaLogResponse {
+  task_id: string
+  title: string
+  status: string
+  entries: MetaLogEntry[]
+  count: number
+}
+
+export async function getTaskMetaLog(taskId: string): Promise<MetaLogResponse> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/meta-log`)
+  if (!res.ok) throw new Error(`Meta log fetch failed: ${res.status}`)
+  return res.json()
+}
+
 // ── Assets ──────────────────────────────────────────────────────────
 
 export interface ScrapedAsset {
