@@ -2,7 +2,7 @@ import React, { memo, useMemo } from "react"
 
 export type JsonBlockVariant = "json" | "dim" | "prompt" | "raw"
 
-interface JsonBlockProps {
+export interface JsonBlockProps {
   data: any
   variant?: JsonBlockVariant
   maxHeight?: string

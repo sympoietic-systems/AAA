@@ -1,6 +1,6 @@
 import React, { memo } from "react"
 import type { ResearchStep, ResearchStepResult } from "../../../../api/research"
-import { JsonBlock } from "../shared/JsonBlock"
+import { JsonBlock } from "../../../UI"
 
 interface StepResultTabProps {
   selected: ResearchStep

@@ -1,3 +1,5 @@
+export { JsonBlock } from "./JsonBlock"
+export type { JsonBlockVariant, JsonBlockProps } from "./JsonBlock"
 export { Tooltip } from "./Tooltip"
 export { VectorVisualizer } from "./VectorVisualizer"
 export { AutopoieticCoordinates } from "./AutopoieticCoordinates"
