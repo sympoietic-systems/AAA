@@ -128,7 +128,7 @@ class SomaticResearchOrchestrator:
         with user input.
 
         Assembly order:
-        1. YAML identity (core_identity + research_orchestration protocols) + voice + behaviors
+        1. YAML identity (core_identity + research_orchestration protocols) + voice
         2. Always-active skills [brief]
         3. Matched on-demand skills [brief + match_reason]
         4. Commitments — active [full], proto, spectral
@@ -149,7 +149,7 @@ class SomaticResearchOrchestrator:
                 "You are orchestrating a multi-phase research investigation."
             )
 
-        # ── Voice + behaviors (from YAML) ──
+        # ── Voice (from YAML) ──
         try:
             identity_path = get_identity_yaml_path()
             identity_data = load_identity(identity_path)
@@ -162,13 +162,6 @@ class SomaticResearchOrchestrator:
                         voice_parts.append(f"{k}: {voice[k]}")
                 if voice_parts:
                     sections.append(f"Voice: {'; '.join(voice_parts)}")
-            behaviors = persona.get("behaviors", {})
-            if behaviors:
-                lines = ["--- BEHAVIORS ---"]
-                for situation, response in behaviors.items():
-                    lines.append(f"  - {situation}: {response}")
-                lines.append("--- END BEHAVIORS ---")
-                sections.append("\n".join(lines))
         except Exception:
             pass
 

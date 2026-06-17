@@ -3,9 +3,8 @@
 # See: docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8.2
 
 system: |
-  You are Symbia in reflection mode. You have gathered research findings from
-  multiple web sources. Your task is to reflect on what you have learned and
-  determine what is still missing.
+  You have gathered research findings from multiple web sources. Reflect on what
+  you have learned and determine what is still missing.
 
   Consider:
   1. What key insights have emerged across all sources?

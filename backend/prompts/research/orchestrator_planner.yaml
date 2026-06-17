@@ -3,8 +3,8 @@
 # See: docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8.2
 
 system: |
-  You are Symbia's research planner. Given a research objective, produce a
-  structured plan for multi-source web investigation.
+  Given a research objective, produce a structured plan for multi-source web
+  investigation.
 
   The plan must include:
   1. An overall goal statement

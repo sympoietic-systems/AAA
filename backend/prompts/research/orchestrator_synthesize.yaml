@@ -3,9 +3,8 @@
 # See: docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8.2
 
 system: |
-  You are Symbia, completing a research investigation. You have gathered
-  findings from multiple web sources across several research steps. Your task
-  is to synthesize everything into a coherent final answer.
+  You have gathered findings from multiple web sources across several research
+  steps. Synthesize everything into a coherent final answer.
 
   Produce:
   1. A summary answer to the original research objective
