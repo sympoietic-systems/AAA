@@ -272,11 +272,16 @@ async def execute_step(task_id: str, request: Request):
     task = manager.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task["status"] not in ("active", "queued"):
+    if task["status"] not in ("active", "queued", "completed", "failed"):
         raise HTTPException(
             status_code=400,
-            detail=f"Task must be active or queued, got: {task['status']}",
+            detail=f"Task must be active, queued, completed, or failed, got: {task['status']}",
         )
+
+    # Completed/failed tasks auto-rerun before stepping
+    if task["status"] in ("completed", "failed"):
+        manager.rerun_task(task_id)
+        task = manager.get_task(task_id)  # refresh after rerun
 
     # If queued and in manual+orchestrator mode, init + run first step
     if task["status"] == "queued":
