@@ -12,7 +12,6 @@ from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository, BeliefRepository
 from backend.storage.models import BeliefNode
 from backend.modules.structural_engine import LEXICON_MAPPINGS, LexiconScorer, CompositeStructuralScorer
-from backend.utils.prompt_builder import build_attractor_window
 
 logger = logging.getLogger(__name__)
 
@@ -469,6 +468,9 @@ class BeliefDynamicsEngine(ProcessingModule):
                 logger.error(f"Coordinate warping error: {e}")
 
         # 4. Extract Attractor Window (delegated to shared prompt_builder utility)
+        # Lazy import to avoid circular dependency (prompt_builder imports from belief_engine)
+        from backend.utils.prompt_builder import build_attractor_window
+
         sig_bytes = payload.get("structural_signature")
         sig_16d = np.frombuffer(sig_bytes, dtype=np.float32) if sig_bytes else None
         attractor_window = build_attractor_window(
