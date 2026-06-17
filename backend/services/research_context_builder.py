@@ -13,6 +13,7 @@ from backend.utils.prompt_builder import (
     compute_structural_signature,
     build_attractor_window,
     match_on_demand_skills,
+    split_skills,
     format_beliefs_block,
     format_skills_always_active,
     format_skills_matched,
@@ -58,13 +59,7 @@ class ResearchContextBuilder:
         skill_repo = getattr(self._state, "skill_repo", None)
         if skill_repo:
             try:
-                all_skills = (
-                    skill_repo.list_crystallized()
-                    if hasattr(skill_repo, "list_crystallized")
-                    else skill_repo.list_skills()
-                )
-                aa = [s for s in all_skills if getattr(s, "always_active", False)]
-                od = [s for s in all_skills if not getattr(s, "always_active", False)]
+                aa, od = split_skills(skill_repo)
 
                 aa_block = format_skills_always_active(aa, max_desc_len=150)
                 if aa_block:

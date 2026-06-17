@@ -5,6 +5,12 @@ import yaml
 from backend.modules.base import ProcessingModule
 from backend.pipeline.registry import PipelineRegistry
 from backend.utils.persona_loader import get_persona_text
+from backend.utils.prompt_builder import (
+    format_beliefs_block,
+    format_skills_always_active,
+    format_skills_matched,
+    format_skills_on_demand_slugs,
+)
 from backend.utils.token_counter import estimate_message_tokens
 
 
@@ -406,12 +412,18 @@ def _build_system_content(
 
     # ── BLOCK: Skills — Always-Active ──
     if always_active_skills:
-        block = "\n--- BEGIN SKILLS (Always-Active) ---\n"
-        block += "Baseline dispositions that are always active:\n"
-        for skill in always_active_skills:
-            block += f"  - {skill['name']}: {skill['short_content']}\n"
-        block += "--- END SKILLS (Always-Active) ---"
-        parts.append(block)
+        block = format_skills_always_active(
+            always_active_skills,
+            header_label="--- BEGIN SKILLS (Always-Active) ---",
+            footer_label="--- END SKILLS (Always-Active) ---",
+        )
+        if block:
+            # Prepend intro text that the shared formatter skips for brevity
+            block = block.replace(
+                "--- BEGIN SKILLS (Always-Active) ---",
+                "--- BEGIN SKILLS (Always-Active) ---\nBaseline dispositions that are always active:"
+            )
+            parts.append("\n" + block)
 
     # ── BLOCK: Directive — Tension Resolution ──
     if tension_directive_text:
@@ -422,16 +434,9 @@ def _build_system_content(
 
     # ── BLOCK: Beliefs — Attractor Window (Active) ──
     if attractor_window is not None:
-        block = "\n--- BEGIN BELIEFS (Attractor Window) ---\n"
-        block += "Core active beliefs currently shaping reasoning:\n"
-        for item in attractor_window:
-            origin_tag = ""
-            label = item.get("label", "")
-            if label and label.startswith("skill:"):
-                origin_tag = " [procedural]"
-            block += f"  - Slot {item['slot']}: [{item['confidence']:.2f}] {item['statement']} (Ontological Mass: {item['mass']:.1f}){origin_tag}\n"
-        block += "--- END BELIEFS (Attractor Window) ---"
-        parts.append(block)
+        block = format_beliefs_block(attractor_window)
+        if block:
+            parts.append("\n" + block)
     else:
         beliefs = persona.get("beliefs", [])
         if beliefs:
@@ -499,24 +504,22 @@ def _build_system_content(
 
     # ── BLOCK: Skills — Loaded ──
     if loaded_skills:
-        block = "\n--- BEGIN SKILLS (Loaded) ---\n"
-        block += "Skills loaded for this turn (full instructions in procedural sediment):\n"
-        for skill in loaded_skills:
-            desc = skill.get("description", "")
-            reason = skill.get("match_reason", "explicit")
-            if desc:
-                block += f"  - {skill['name']}: {desc} (reason: {reason})\n"
-            else:
-                block += f"  - {skill['name']} (reason: {reason})\n"
-        block += "--- END SKILLS (Loaded) ---"
-        parts.append(block)
+        block = format_skills_matched(
+            loaded_skills,
+            header_label="--- BEGIN SKILLS (Loaded) ---",
+            footer_label="--- END SKILLS (Loaded) ---",
+        )
+        if block:
+            # Prepend intro
+            block = block.replace(
+                "--- BEGIN SKILLS (Loaded) ---",
+                "--- BEGIN SKILLS (Loaded) ---\nSkills loaded for this turn (full instructions in procedural sediment):"
+            )
+            parts.append("\n" + block)
 
     # ── BLOCK: Skills — On-Demand ──
-    if on_demand_skills:
-        block = "\n--- BEGIN SKILLS (On-Demand) ---\n"
-        block += "Available on-demand skill slugs (automatically loaded when triggered):\n"
-        block += "  " + ", ".join(skill["name"] for skill in on_demand_skills) + "\n"
-        block += "--- END SKILLS (On-Demand) ---"
+    block = format_skills_on_demand_slugs(on_demand_skills or [])
+    if block:
         parts.append(block)
 
     # ── BLOCK: Skills — Ecology Notes ──

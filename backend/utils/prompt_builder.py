@@ -1,7 +1,7 @@
 """Shared prompt-assembly utilities — computation + formatting of beliefs, skills, commitments.
 
 Three computation functions produce structured data from repos + a 16D structural signature.
-Six formatting functions turn structured data into boundary-blocked prompt sections.
+Seven formatting functions turn structured data into boundary-blocked prompt sections.
 
 The same functions are used by:
 - Pipeline modules (BeliefDynamicsEngine, SkillActivatorModule) — for conversation
@@ -17,7 +17,27 @@ from typing import Any
 
 import numpy as np
 
+from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+
 logger = logging.getLogger(__name__)
+
+# ── Repo helpers ─────────────────────────────────────────────────────
+
+
+def split_skills(skill_repo: Any) -> tuple[list[Any], list[Any]]:
+    """Return (always_active, on_demand) skill lists from a repo.
+
+    Handles both list_crystallized() and list_skills() APIs.
+    """
+    all_skills = (
+        skill_repo.list_crystallized()
+        if hasattr(skill_repo, "list_crystallized")
+        else skill_repo.list_skills()
+    )
+    aa = [s for s in all_skills if getattr(s, "always_active", False)]
+    od = [s for s in all_skills if not getattr(s, "always_active", False)]
+    return aa, od
+
 
 # ── Computation ──────────────────────────────────────────────────────
 
@@ -68,7 +88,6 @@ def build_attractor_window(
     try:
         if belief_repo is None:
             return []
-        from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
 
         all_beliefs = belief_repo.list_beliefs(agent_id)
         active = [
@@ -174,8 +193,6 @@ def match_on_demand_skills(
     Returns list of {skill, reason, priority, score} dicts, capped at max_matched.
     """
     try:
-        from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
-
         candidates: dict[str, dict] = {}
 
         # Strategy B: semantic vector
@@ -286,6 +303,13 @@ def format_beliefs_block(
     return "\n".join(lines)
 
 
+def _val(obj: Any, key: str, default: Any = "") -> Any:
+    """Get a value from either a dict or an object attribute."""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
 def format_skills_always_active(
     always_active: list[Any],
     *,
@@ -303,15 +327,15 @@ def format_skills_always_active(
 
     filtered = [
         s for s in always_active
-        if getattr(s, "name", "") not in ("research-proposal", "skill-nucleation")
+        if _val(s, "name") not in ("research-proposal", "skill-nucleation")
     ][:max_count]
     if not filtered:
         return ""
 
     lines = [header_label]
     for s in filtered:
-        desc = (getattr(s, "short_content", None) or getattr(s, "description", None) or "")[:max_desc_len]
-        lines.append(f"[{s.name}]: {desc}")
+        desc = (_val(s, "short_content") or _val(s, "description") or "")[:max_desc_len]
+        lines.append(f"[{_val(s, 'name')}]: {desc}")
     lines.append(footer_label)
     return "\n".join(lines)
 
@@ -323,15 +347,29 @@ def format_skills_matched(
     footer_label: str = DEFAULT_SKILLS_MATCHED_FOOTER,
     max_desc_len: int = 150,
 ) -> str:
-    """Format matched on-demand skills with match reasons."""
+    """Format matched on-demand skills with match reasons.
+
+    Supports two entry shapes:
+      A) Pipeline style (flat dict): {name, description, match_reason}
+      B) orchestrator style (nested): {skill: <obj>, reason}
+    """
     if not matched:
         return ""
 
     lines = [header_label]
     for m in matched:
-        skill = m["skill"]
-        desc = (getattr(skill, "short_content", None) or getattr(skill, "description", None) or "")[:max_desc_len]
-        lines.append(f"[{skill.name}]: {desc} (reason: {m['reason']})")
+        if isinstance(m, dict) and "skill" in m:
+            # Nestled: {skill: <obj/dict>, reason: ...}
+            skill = m["skill"]
+            name = _val(skill, "name")
+            desc = (_val(skill, "short_content") or _val(skill, "description") or "")[:max_desc_len]
+            reason = _val(m, "reason") or m.get("reason", "")
+        else:
+            # Flat dict: {name, description, match_reason}
+            name = _val(m, "name")
+            desc = (_val(m, "description") or "")[:max_desc_len]
+            reason = _val(m, "match_reason") or m.get("match_reason", "") if isinstance(m, dict) else ""
+        lines.append(f"[{name}]: {desc} (reason: {reason})")
     lines.append(footer_label)
     return "\n".join(lines)
 
@@ -404,6 +442,23 @@ def format_identity_block(protocol_key: str) -> str:
         return load_persona_for_context(protocol_key)
     except Exception:
         return ""
+
+
+def format_skills_on_demand_slugs(
+    on_demand_skills: list[dict],
+    *,
+    header_label: str = "--- SKILLS (On-Demand) ---",
+    footer_label: str = "--- END SKILLS (On-Demand) ---",
+) -> str:
+    """Format available on-demand skill slugs (name list, no descriptions)."""
+    if not on_demand_skills:
+        return ""
+    return (
+        f"\n{header_label}\n"
+        f"Available on-demand skill slugs (automatically loaded when triggered):\n"
+        f"  {', '.join(s['name'] for s in on_demand_skills)}\n"
+        f"{footer_label}"
+    )
 
 
 def format_voice_block(identity_data: dict) -> str:
