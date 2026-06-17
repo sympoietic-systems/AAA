@@ -3,9 +3,54 @@
 Extracted from backend/main.py.
 """
 
+import asyncio
 import logging
+import os
+import shutil
+from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+async def _db_backup_loop():
+    """Run a DB backup on startup, then every 24 hours. Keeps last 3."""
+    DB_PATH = Path(__file__).resolve().parent.parent / "data" / "aaa.db"
+    BACKUP_DIR = DB_PATH.parent / "backups"
+    MAX_BACKUPS = 3
+
+    async def do_backup():
+        if not DB_PATH.exists():
+            return
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        today = datetime.now().strftime("%Y%m%d")
+        backup_path = BACKUP_DIR / f"aaa_backup_{today}.db"
+        if backup_path.exists():
+            return  # already done today
+        try:
+            shutil.copy2(str(DB_PATH), str(backup_path))
+            logger.info("DB backup created: %s", backup_path)
+            # Prune old backups
+            existing = sorted(BACKUP_DIR.glob("aaa_backup_*.db"), key=os.path.getmtime, reverse=True)
+            for old in existing[MAX_BACKUPS:]:
+                old.unlink()
+                logger.info("Pruned old backup: %s", old)
+        except Exception as e:
+            logger.warning("DB backup failed: %s", e)
+
+    # Run immediately on startup
+    await do_backup()
+
+    # Then every 24 hours
+    while True:
+        await asyncio.sleep(86400)
+        await do_backup()
+
+
+def _start_db_backup_loop():
+    """Launch the DB backup loop as a background task."""
+    asyncio.create_task(_db_backup_loop())
+    logger.info("DB backup loop started")
 
 
 def _init_background_engine(config: dict, llm_provider, vision_provider):
@@ -79,7 +124,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
 
 
 def _start_background_services(app_state):
-    """Start the background scheduler and dream daemon."""
+    """Start the background scheduler, dream daemon, and DB backup."""
     from backend.metabolisation.scheduler import BackgroundStartupScheduler
     from backend.services.file import FileService
 
@@ -92,3 +137,6 @@ def _start_background_services(app_state):
     dream_daemon = AutopoieticDreamDaemon(app_state)
     app_state.dream_daemon = dream_daemon
     dream_daemon.start()
+
+    # Daily DB backup — runs once on startup, then every 24h
+    _start_db_backup_loop()
