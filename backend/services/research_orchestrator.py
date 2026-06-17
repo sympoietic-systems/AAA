@@ -974,6 +974,14 @@ class SomaticResearchOrchestrator:
                 self._log_meta(task_id, "orchestrator_plan_response", {
                     "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 }, branch_id=branch_id or None)
+                # Save LLM response to step_data so frontend always sees it
+                if branch_id:
+                    try:
+                        self.step_repo.update(branch_id, step_data=json.dumps(
+                            {"llm_response": resp}, default=str, ensure_ascii=False
+                        )[:self._TRUNC_STEP_RESULT])
+                    except Exception:
+                        pass
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
@@ -1043,6 +1051,14 @@ class SomaticResearchOrchestrator:
                 self._log_meta(task_id, "orchestrator_synthesize_response", {
                     "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 }, branch_id=branch_id or None)
+                # Save LLM response to step_data
+                if branch_id:
+                    try:
+                        self.step_repo.update(branch_id, step_data=json.dumps(
+                            {"llm_response": resp}, default=str, ensure_ascii=False
+                        )[:self._TRUNC_STEP_RESULT])
+                    except Exception:
+                        pass
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
@@ -1287,6 +1303,14 @@ class SomaticResearchOrchestrator:
                         "completeness": result.get("completeness_score", 0),
                         "raw": json.dumps(resp, default=str, ensure_ascii=False)[:3000],
                     }, branch_id=branch_id or None)
+                    # Save LLM response to step_data for frontend display
+                    if branch_id:
+                        try:
+                            self.step_repo.update(branch_id, step_data=json.dumps(
+                                {"llm_response": resp}, default=str, ensure_ascii=False
+                            )[:self._TRUNC_STEP_RESULT])
+                        except Exception:
+                            pass
                     if result.get("completeness_score", 0) >= self.early_stop_threshold:
                         break
             except Exception as e:

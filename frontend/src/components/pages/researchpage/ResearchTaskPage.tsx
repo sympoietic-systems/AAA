@@ -604,7 +604,24 @@ const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: {
             </div>
           )}
 
-          {/* ── Raw LLM response(s) — collapsible ── */}
+          {/* ── LLM Response (from step_data, always available) ── */}
+          {(() => {
+            try {
+              const sd = selected.step_data ? JSON.parse(selected.step_data) : null
+              const llm = sd?.llm_response
+              if (!llm) return null
+              const llmStr = typeof llm === "string" ? llm : JSON.stringify(llm, null, 2)
+              if (!llmStr || llmStr === "{}") return null
+              return (
+                <div className="border-t border-[#1a1a1a] pt-2">
+                  <div className="text-[#555] text-[8px] mb-1">llm response:</div>
+                  <pre className="text-[#4ade80] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-64 overflow-y-auto whitespace-pre-wrap break-all">{llmStr.slice(0, 6000)}</pre>
+                </div>
+              )
+            } catch { return null }
+          })()}
+
+          {/* ── Raw LLM response(s) — collapsible (meta-log) ── */}
           {responseEntries.length > 0 && (
             <div className="border-t border-[#1a1a1a] pt-2">
               <div className="text-[#555] text-[9px] mb-1">raw responses ({responseEntries.length}):</div>
