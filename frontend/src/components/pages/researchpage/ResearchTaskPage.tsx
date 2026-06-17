@@ -178,12 +178,10 @@ function phaseStatus(idx: number, currentIdx: number): "done" | "current" | "pen
   return "pending"
 }
 
-const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus }: { taskId: string; orchPhase: string; taskStatus: string }) {
+const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, onRefreshTask }: { taskId: string; orchPhase: string; taskStatus: string; onRefreshTask?: () => void }) {
   const [data, setData] = useState<TaskStepsResponse | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stepping, setStepping] = useState(false)
-
-  const reload = () => window.location.reload()
 
   const load = useCallback(() => {
     getTaskSteps(taskId).then(setData).catch(() => {})
@@ -206,13 +204,15 @@ const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus }: { tas
     setStepping(true)
     try { await executeStep(taskId) } catch {}
     setStepping(false)
-    reload()
+    load()
+    onRefreshTask?.()
   }
   const doRerun = async () => {
     setStepping(true)
     try { await rerunTask(taskId) } catch {}
     setStepping(false)
-    reload()
+    load()
+    onRefreshTask?.()
   }
 
   // Map pipeline phases to DB step IDs
@@ -875,7 +875,10 @@ function TaskPageInner({ task }: { task: ResearchTask }) {
       {/* Content area — tabs with two-panel layout use their own height calc */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {tab === "info"     && <InfoTab task={current} orchPhase={orchPhase} />}
-        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} />}
+        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={() => {
+          getResearchTask(task.id).then(t => { if (t) setLiveTask(t) }).catch(() => {})
+          getTaskPhase(task.id).then(p => { if (p.phase && p.phase !== "not_started") setOrchPhase(p.phase) }).catch(() => {})
+        }} />}
         {tab === "assets"   && <AssetsTab task={current} />}
         {tab === "branches" && <BranchesTab task={current} />}
       </div>
