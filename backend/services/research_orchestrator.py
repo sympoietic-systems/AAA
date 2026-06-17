@@ -974,10 +974,16 @@ class SomaticResearchOrchestrator:
                     "system_prompt": system_text[:self._TRUNC_META_LOG],
                     "user_prompt": user_text[:self._TRUNC_META_LOG],
                 }, step_id=step_id or None)
+                gen_kwargs: dict = {
+                    "temperature": prompt_data.get("temperature", 0.4),
+                    "max_tokens": prompt_data.get("max_tokens", 1024),
+                }
+                thinking_cfg = prompt_data.get("thinking", {})
+                if isinstance(thinking_cfg, dict) and thinking_cfg.get("enabled"):
+                    gen_kwargs["thinking_override"] = True
+                    gen_kwargs["reasoning_effort"] = thinking_cfg.get("effort", "high")
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
-                    expect_json=True, fallback_value=plan_json,
-                    temperature=prompt_data.get("temperature", 0.4),
-                    max_tokens=prompt_data.get("max_tokens", 1024))
+                    expect_json=True, fallback_value=plan_json, **gen_kwargs)
                 self._log_meta(task_id, "orchestrator_plan_response", {
                     "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 }, step_id=step_id or None)

@@ -266,7 +266,11 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             if "max_tokens" in merged_params:
                 body["max_tokens"] = merged_params["max_tokens"]
 
-        if self._thinking:
+        # Per-request thinking override: takes precedence over provider-level setting
+        thinking_override = merged_params.pop("thinking_override", None)
+        use_thinking = self._thinking if thinking_override is None else bool(thinking_override)
+
+        if use_thinking:
             if is_anthropic:
                 body["thinking"] = {
                     "type": "enabled",
@@ -274,7 +278,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 }
             else:
                 body["thinking"] = {"type": "enabled"}
-                body["reasoning_effort"] = self._reasoning_effort
+                body["reasoning_effort"] = merged_params.pop("reasoning_effort", self._reasoning_effort)
         else:
             # Explicitly exclude reasoning/thinking for providers if supported
             is_openrouter = "openrouter" in self.provider_name.lower() or "openrouter.ai" in self._api_base
