@@ -42,7 +42,7 @@ async function doActionAndReload(action: () => Promise<any>) {
 }
 
 /* ── Info Tab (with inline actions) ── */
-function InfoTab({ task, orchPhase }: { task: ResearchTask; orchPhase?: string }) {
+const InfoTab = memo(function InfoTab({ task, orchPhase }: { task: ResearchTask; orchPhase?: string }) {
   const color = STATUS_COLORS[task.status] ?? "#666"
   const progress = task.budget_limit_usd > 0 ? Math.round((task.budget_spent_usd / task.budget_limit_usd) * 100) : 0
   const metrics = [
@@ -152,7 +152,7 @@ function InfoTab({ task, orchPhase }: { task: ResearchTask; orchPhase?: string }
       )}
     </div>
   )
-}
+});
 
 /* ── Steps Tab (§3: left list + right detail, with orchestrator pipeline) ── */
 const STEP_LABELS: Record<string, string> = {
@@ -178,7 +178,7 @@ function phaseStatus(idx: number, currentIdx: number): "done" | "current" | "pen
   return "pending"
 }
 
-function StepsTab({ taskId, orchPhase, taskStatus }: { taskId: string; orchPhase: string; taskStatus: string }) {
+const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus }: { taskId: string; orchPhase: string; taskStatus: string }) {
   const [data, setData] = useState<TaskStepsResponse | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stepping, setStepping] = useState(false)
@@ -289,10 +289,10 @@ function StepsTab({ taskId, orchPhase, taskStatus }: { taskId: string; orchPhase
       </div>
     </div>
   )
-}
+});
 
 /* ── Right: Detail Panel (summary + source results + meta log) ── */
-function StepDetailRight({ taskId, data, selectedId, orchPhase, taskStatus }: {
+const StepDetailRight = memo(function StepDetailRight({ taskId, data, selectedId, orchPhase, taskStatus }: {
   taskId: string
   data: TaskStepsResponse | null
   selectedId: string | null
@@ -347,10 +347,10 @@ function StepDetailRight({ taskId, data, selectedId, orchPhase, taskStatus }: {
       [ select a step ]
     </div>
   )
-}
+});
 
 /* ── Preview: shows inputs before step execution ── */
-function PreviewDetail({ preview, phaseLabel, onReinitialize, reinitLoading }: {
+const PreviewDetail = memo(function PreviewDetail({ preview, phaseLabel, onReinitialize, reinitLoading }: {
   preview: import("../../../api/research").StepPreview
   phaseLabel: string
   onReinitialize: () => void
@@ -410,7 +410,7 @@ function PreviewDetail({ preview, phaseLabel, onReinitialize, reinitLoading }: {
       )}
     </div>
   )
-}
+});
 
 const STEP_TO_PHASE: Record<string, string> = {
   plan: "planning", search: "searching", parallel_parse: "parsing",
@@ -421,7 +421,7 @@ const STEP_TO_PHASE: Record<string, string> = {
 type DetailTab = "input" | "result" | "log"
 
 /* ── DB Step Detail (when a step is selected from the results list) ── */
-function DbStepDetail({ taskId, data, selectedId }: {
+const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: {
   taskId: string
   data: TaskStepsResponse | null
   selectedId: string
@@ -668,7 +668,7 @@ function DbStepDetail({ taskId, data, selectedId }: {
       )}
     </div>
   )
-}
+});
 
 /* ── Shared log entry renderer ── */
 function LogEntries({ entries, loading, emptyMsg }: { entries: any[]; loading: boolean; emptyMsg: string }) {
@@ -783,16 +783,25 @@ function TaskPageInner({ task }: { task: ResearchTask }) {
   const [liveTask, setLiveTask] = useState(task)
   const [orchPhase, setOrchPhase] = useState(task.status === "queued" ? "planning" : "")
 
+  // Visibility-aware polling — pauses when tab is hidden, resumes on focus (FRONTEND_BEST_PRACTICES.md §2)
   useEffect(() => {
     if (task.status !== "active" && task.status !== "queued") return
-    const timer = setInterval(() => {
+    const poll = () => {
+      if (document.hidden) return
       getResearchTask(task.id).then(t => { if (t) setLiveTask(t) }).catch(() => {})
-      // Poll phase for both active and queued tasks
       getTaskPhase(task.id).then(p => {
         if (p.phase && p.phase !== "not_started") setOrchPhase(p.phase)
       }).catch(() => {})
-    }, 3000)
-    return () => clearInterval(timer)
+    }
+    // Always poll once on mount
+    poll()
+    const timer = setInterval(poll, 5000)
+    const onVisible = () => { poll() }  // re-poll immediately when tab becomes visible
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
   }, [task.id, task.status])
 
   const current = liveTask || task
