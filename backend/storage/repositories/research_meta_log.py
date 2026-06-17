@@ -8,23 +8,55 @@ from backend.storage.repositories.base import BaseRepository
 
 
 class ResearchMetaLogRepository(BaseRepository):
+    _step_id_ensured: bool = False
+
+    def _ensure_columns(self) -> None:
+        """Idempotently add step_id column if missing."""
+        if self.__class__._step_id_ensured:
+            return
+        try:
+            conn = self._conn()
+            conn.execute("ALTER TABLE research_meta_log ADD COLUMN step_id TEXT")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+        self.__class__._step_id_ensured = True
+
     @with_connection
     def create(self, entry: dict) -> str:
+        self._ensure_columns()
         conn = self._conn()
-        conn.execute(
-            """INSERT INTO research_meta_log (
-                id, task_id, branch_id, step_id, event_type, event_data, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (
-                entry["id"],
-                entry["task_id"],
-                entry.get("branch_id"),
-                entry.get("step_id"),
-                entry["event_type"],
-                entry["event_data"],
-                entry.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-            ),
-        )
+        # Fall back to old schema if step_id column doesn't exist yet
+        try:
+            conn.execute(
+                """INSERT INTO research_meta_log (
+                    id, task_id, branch_id, step_id, event_type, event_data, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    entry["id"],
+                    entry["task_id"],
+                    entry.get("branch_id"),
+                    entry.get("step_id"),
+                    entry["event_type"],
+                    entry["event_data"],
+                    entry.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                ),
+            )
+        except Exception:
+            # Fallback: old schema without step_id
+            conn.execute(
+                """INSERT INTO research_meta_log (
+                    id, task_id, branch_id, event_type, event_data, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    entry["id"],
+                    entry["task_id"],
+                    entry.get("branch_id"),
+                    entry["event_type"],
+                    entry["event_data"],
+                    entry.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                ),
+            )
         conn.commit()
         return entry["id"]
 
@@ -55,7 +87,9 @@ class ResearchMetaLogRepository(BaseRepository):
 
     @with_connection
     def get_by_step(self, step_id: str) -> list[dict]:
+        self._ensure_columns()
         conn = self._conn()
+        # If column exists after ensure, query with it
         rows = conn.execute(
             """SELECT id, task_id, branch_id, step_id, event_type, event_data, created_at
                FROM research_meta_log
