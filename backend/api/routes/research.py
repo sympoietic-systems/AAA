@@ -259,12 +259,16 @@ async def rerun_task(task_id: str, request: Request):
 # ── Orchestrator Step-by-Step ──────────────────────────────────────────
 
 @router.post("/research/tasks/{task_id}/step")
-async def execute_step(task_id: str, request: Request):
+async def execute_step(
+    task_id: str,
+    request: Request,
+    rerun_step_type: Optional[str] = None,
+):
     """Execute the next orchestrator phase (planning → searching → parsing →
     digesting → reflecting → evaluating → synthesizing → complete).
 
-    Used in manual mode for step-by-step debugging.  Each call advances
-    the pipeline by exactly one phase.
+    If rerun_step_type is provided (e.g., 'digest'), the task is reset and
+    executed up to and including that phase in one call.
     """
     state = request.app.state
     manager = state.research_task_manager
@@ -293,8 +297,30 @@ async def execute_step(task_id: str, request: Request):
             manager.transition(task_id, "active")
             manager.orchestrator.init_task(task_id)
 
+    # Map step_type to orchestrator phase for rerun-to-target
+    STEP_TYPE_TO_PHASE = {
+        "plan": "planning", "search": "searching", "parallel_parse": "parsing",
+        "digest": "digesting", "reflect": "reflecting", "evaluate": "evaluating",
+        "synthesize": "synthesizing",
+    }
+    target_phase = STEP_TYPE_TO_PHASE.get(rerun_step_type or "")
+
     try:
-        result = await manager.orchestrator_step(task_id)
+        if target_phase:
+            # Re-run steps until target phase is complete
+            result = {}
+            for _ in range(10):  # safety limit
+                result = await manager.orchestrator_step(task_id)
+                current_phase = manager.orchestrator.get_task_phase(task_id)
+                if current_phase not in STEP_TYPE_TO_PHASE.values():
+                    break  # past the pipeline
+                if result.get("executed_phase") == target_phase:
+                    break
+                if current_phase == "complete":
+                    break
+            return result
+        else:
+            result = await manager.orchestrator_step(task_id)
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

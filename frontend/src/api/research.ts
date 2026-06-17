@@ -133,7 +133,7 @@ export async function rerunTask(taskId: string): Promise<{ task_id: string; stat
   return res.json()
 }
 
-export async function executeStep(taskId: string): Promise<{
+export async function executeStep(taskId: string, rerunStepType?: string): Promise<{
   task_id: string
   executed_phase: string
   next_phase: string
@@ -151,7 +151,10 @@ export async function executeStep(taskId: string): Promise<{
   reason?: string
   result_summary?: string
 }> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/step`, { method: "POST" })
+  const url = rerunStepType
+    ? `${BASE}/research/tasks/${taskId}/step?rerun_step_type=${rerunStepType}`
+    : `${BASE}/research/tasks/${taskId}/step`
+  const res = await fetch(url, { method: "POST" })
   if (!res.ok) throw new Error(`Step failed: ${res.status}`)
   return res.json()
 }

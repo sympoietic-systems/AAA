@@ -507,7 +507,7 @@ const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: {
   }, [responseEntries])
 
   const handleRerunStep = async () => {
-    await doActionAndReload(() => executeStep(taskId))
+    await doActionAndReload(() => executeStep(taskId, selected.step_type))
   }
 
   return (
