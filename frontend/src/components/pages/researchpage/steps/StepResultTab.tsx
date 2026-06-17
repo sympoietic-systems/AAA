@@ -81,38 +81,7 @@ export const StepResultTab = memo(function StepResultTab({
         </div>
       )}
 
-      {/* LLM Response (from step_data) */}
-      {(() => {
-        try {
-          const sd = selected.step_data ? JSON.parse(selected.step_data) : null
-          const llm = sd?.llm_response || sd?.plan || sd?.answer
-          if (!llm || (typeof llm === "object" && !Object.keys(llm).length)) return null
-          const jsonOut = llm.json_data || (typeof llm === "object" && !llm.json_data ? llm : null)
-          const llmThinking = llm.thinking || ""
-          const isWrapper = !!(llm.json_data || llm.thinking)
-
-          return (
-            <div className="border-t border-[#1a1a1a] pt-2">
-              <div className="text-[#555] text-[8px] mb-1">llm response:</div>
-              {isWrapper ? (
-                <>
-                  {jsonOut && <pre className="text-[#4ade80] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all mb-1">{typeof jsonOut === "string" ? jsonOut : JSON.stringify(jsonOut, null, 2)}</pre>}
-                  {llmThinking && (
-                    <details>
-                      <summary className="text-[#555] text-[7px] cursor-pointer hover:text-[#888] uppercase">thinking trace ({llmThinking.length} chars)</summary>
-                      <pre className="text-[#555] text-[7px] bg-[#080808] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{llmThinking}</pre>
-                    </details>
-                  )}
-                </>
-              ) : (
-                <pre className="text-[#4ade80] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-64 overflow-y-auto whitespace-pre-wrap break-all">{typeof llm === "string" ? llm : JSON.stringify(llm, null, 2)}</pre>
-              )}
-            </div>
-          )
-        } catch { return null }
-      })()}
-
-      {/* Raw LLM response(s) from meta-log */}
+      {/* LLM response(s) from meta-log — full detail with thinking trace, wrapper */}
       {responseEntries.length > 0 && (
         <div className="border-t border-[#1a1a1a] pt-2">
           <div className="text-[#555] text-[9px] mb-1">llm responses ({responseEntries.length}):</div>
