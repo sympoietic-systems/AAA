@@ -42,7 +42,7 @@ async function doActionAndReload(action: () => Promise<any>) {
 }
 
 /* ── Info Tab (with inline actions) ── */
-const InfoTab = memo(function InfoTab({ task, orchPhase }: { task: ResearchTask; orchPhase?: string }) {
+const InfoTab = memo(function InfoTab({ task, orchPhase, onRefreshTask }: { task: ResearchTask; orchPhase?: string; onRefreshTask?: () => void }) {
   const color = STATUS_COLORS[task.status] ?? "#666"
   const progress = task.budget_limit_usd > 0 ? Math.round((task.budget_spent_usd / task.budget_limit_usd) * 100) : 0
   const metrics = [
@@ -100,7 +100,7 @@ const InfoTab = memo(function InfoTab({ task, orchPhase }: { task: ResearchTask;
           )}
           {task.status === "queued" && (
             <>
-              <TerminalButton onClick={() => doActionAndReload(() => executeStep(task.id))} intent="save">▶ run</TerminalButton>
+              <TerminalButton onClick={async () => { await executeStep(task.id); onRefreshTask?.() }} intent="save">▶ run</TerminalButton>
               <TerminalButton onClick={() => doActionAndReload(() => cancelTask(task.id))} intent="delete">✕ cancel</TerminalButton>
               <TerminalButton onClick={() => doActionAndReload(() => deleteTask(task.id))} intent="delete">✕ delete</TerminalButton>
             </>
@@ -608,10 +608,10 @@ const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: {
           {(() => {
             try {
               const sd = selected.step_data ? JSON.parse(selected.step_data) : null
-              const llm = sd?.llm_response
-              if (!llm) return null
+              const llm = sd?.llm_response || sd?.plan || sd?.answer || sd
+              if (!llm || (typeof llm === "object" && !Object.keys(llm).length)) return null
               const llmStr = typeof llm === "string" ? llm : JSON.stringify(llm, null, 2)
-              if (!llmStr || llmStr === "{}") return null
+              if (!llmStr || llmStr === "{}" || llmStr === "[]") return null
               return (
                 <div className="border-t border-[#1a1a1a] pt-2">
                   <div className="text-[#555] text-[8px] mb-1">llm response:</div>
@@ -833,6 +833,13 @@ function TaskPageInner({ task }: { task: ResearchTask }) {
   const current = liveTask || task
   const color = STATUS_COLORS[current.status] ?? "#666"
 
+  const refreshAll = useCallback(() => {
+    getResearchTask(task.id).then(t => { if (t) setLiveTask(t) }).catch(() => {})
+    getTaskPhase(task.id).then(p => {
+      if (p.phase && p.phase !== "not_started") setOrchPhase(p.phase)
+    }).catch(() => {})
+  }, [task.id])
+
   return (
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       {/* Header §1: terminal breadcrumb */}
@@ -874,11 +881,8 @@ function TaskPageInner({ task }: { task: ResearchTask }) {
 
       {/* Content area — tabs with two-panel layout use their own height calc */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {tab === "info"     && <InfoTab task={current} orchPhase={orchPhase} />}
-        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={() => {
-          getResearchTask(task.id).then(t => { if (t) setLiveTask(t) }).catch(() => {})
-          getTaskPhase(task.id).then(p => { if (p.phase && p.phase !== "not_started") setOrchPhase(p.phase) }).catch(() => {})
-        }} />}
+        {tab === "info"     && <InfoTab task={current} orchPhase={orchPhase} onRefreshTask={refreshAll} />}
+        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} />}
         {tab === "assets"   && <AssetsTab task={current} />}
         {tab === "branches" && <BranchesTab task={current} />}
       </div>
