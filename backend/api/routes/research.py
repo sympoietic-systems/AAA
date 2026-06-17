@@ -381,6 +381,21 @@ async def preview_step_inputs(task_id: str, phase: str, request: Request = None)
     return result
 
 
+# ── Reinitialize ───────────────────────────────────────────────────────
+
+@router.post("/research/tasks/{task_id}/reinitialize")
+async def reinitialize_task(task_id: str, request: Request = None):
+    """Clear cached phase inputs so next preview/step recomputes from scratch."""
+    state = request.app.state
+    manager = state.research_task_manager
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    manager.orchestrator.reinitialize(task_id)
+    return {"task_id": task_id, "status": "reinitialized"}
+
+
 # ── Orchestrator Steps ────────────────────────────────────────────────
 
 @router.get("/research/tasks/{task_id}/steps")

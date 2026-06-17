@@ -72,8 +72,11 @@ After each phase completes:
 Click a completed phase in the pipeline. The right panel shows **3 tabs:**
 
 **Input tab:**
-- **Live input preview** — regenerated on-demand via `⟳ reinitialize` button.
-  Fetches fresh prompts from the backend, reflecting any code changes you've made.
+- **Live input preview** — cached after first build.  Opening the tab or switching
+  between steps reads from the cache instantly (no LLM call).
+- **⟳ reinitialize** button — clears the cache and regenerates prompts from scratch.
+  Use this after editing backend code (prompt templates, persona builder, etc.) to
+  see updated inputs.
 - **Logged inputs** — the historical meta-log entries from when the step originally ran.
 
 **Result tab:**
@@ -84,19 +87,34 @@ Click a completed phase in the pipeline. The right panel shows **3 tabs:**
 **Log tab:**
 - All other meta-log entries (completions, status updates, errors)
 
-### 5. Reinitialize — Edit Code, See Changes
+### 5. Input Caching
+
+Phase inputs (persona context, prompts, search queries, parsed URLs) are cached
+in the `cached_inputs` column on `research_tasks` after first computation.
+Tab switches and step re-execution reuse the cache — no redundant LLM calls.
+
+The cache is keyed by phase name (`planning`, `searching`, `parsing`, `digesting`,
+`reflecting`, `synthesizing`) and stores everything needed to skip the expensive
+persona build (16D structural signature, skills, beliefs, commitments).
+
+### 6. Reinitialize — Edit Code, See Changes
 
 The debugging loop:
 1. Edit backend code (prompt templates, persona builder, tool logic)
-2. Click `⟳ reinitialize` on the Input tab to regenerate system/user prompts
+2. Click `⟳ reinitialize` on the Input tab to clear the cache and regenerate
+   system/user prompts from scratch
 3. Review the updated prompts
 4. Click `⟳ rerun step` to re-execute that phase with the new code
 5. Repeat
 
-### 6. Rerun
+When you reinitialize, the cache is cleared (`cached_inputs = NULL` on the task row)
+and the next preview or step execution recomputes everything fresh.
+
+### 7. Rerun
 
 - **Per-step:** Click `⟳ rerun step` on any completed step to re-execute that phase
-  (resets the task and re-runs up to that phase, preserving the task ID)
+  (resets the task and re-runs up to that phase, preserving the task ID).
+  Step re-execution uses cached inputs when available.
 - **Full task:** When complete, click `⟳ rerun all` to start the entire pipeline over
 - **Clone (retry):** Creates a new task with the same parameters (original task preserved)
 
@@ -108,8 +126,9 @@ The debugging loop:
 | `/research/tasks/{id}/run` | POST | Queue → Active (auto mode) |
 | `/research/tasks/{id}/step` | POST | Execute next phase (manual mode) |
 | `/research/tasks/{id}/rerun` | POST | Reset + re-queue (terminal states) |
+| `/research/tasks/{id}/reinitialize` | POST | Clear cached phase inputs |
 | `/research/tasks/{id}/phase` | GET | Current orchestrator phase |
-| `/research/tasks/{id}/preview/{phase}` | GET | Prompts/inputs without executing |
+| `/research/tasks/{id}/preview/{phase}` | GET | Prompts/inputs from cache (no LLM) |
 | `/research/tasks/{id}/meta-log?branch_id=X` | GET | Per-step meta log |
 
 ## Backend Architecture

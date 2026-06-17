@@ -160,6 +160,15 @@ class ResearchTaskRepository(BaseRepository):
         return cursor.rowcount
 
     @with_connection
+    def ensure_column(self, column_ddl: str) -> None:
+        """Idempotently add a column (ALTER TABLE ... ADD COLUMN). Silently ignores if exists."""
+        try:
+            self._conn().execute(column_ddl)
+            self._conn().commit()
+        except Exception:
+            pass  # column already exists
+
+    @with_connection
     def delete(self, task_id: str) -> None:
         """Delete a task. CASCADE handles branches, assets, plans, steps, meta log."""
         conn = self._conn()

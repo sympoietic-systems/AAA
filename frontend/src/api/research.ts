@@ -184,6 +184,12 @@ export async function getStepPreview(taskId: string, phase: string): Promise<Ste
   return res.json()
 }
 
+export async function reinitializeTask(taskId: string): Promise<{ task_id: string; status: string }> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/reinitialize`, { method: "POST" })
+  if (!res.ok) throw new Error(`Reinitialize failed: ${res.status}`)
+  return res.json()
+}
+
 // ── Meta Log ────────────────────────────────────────────────────────
 
 export interface MetaLogEntry {

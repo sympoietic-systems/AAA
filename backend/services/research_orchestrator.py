@@ -145,6 +145,54 @@ class SomaticResearchOrchestrator:
         except ImportError:
             return text
 
+    # ── Input cache ──────────────────────────────────────────────────
+
+    def _load_cache(self, task_id: str) -> dict:
+        """Load the cached_inputs JSON dict for a task. Returns {} on any failure."""
+        try:
+            task = self.task_repo.get(task_id)
+            raw = (task or {}).get("cached_inputs")
+            if not raw:
+                return {}
+            return json.loads(raw)
+        except Exception:
+            return {}
+
+    _cached_inputs_ensured: bool = False
+
+    def _ensure_cached_inputs_column(self) -> None:
+        """Add cached_inputs column if missing (idempotent)."""
+        if self.__class__._cached_inputs_ensured:
+            return
+        try:
+            self.task_repo.ensure_column(
+                "ALTER TABLE research_tasks ADD COLUMN cached_inputs TEXT"
+            )
+        except Exception:
+            pass  # fallback if repo doesn't have the method
+        self.__class__._cached_inputs_ensured = True
+
+    def _save_cache(self, task_id: str, cache: dict) -> None:
+        """Persist the full cache dict to the task row."""
+        try:
+            self._ensure_cached_inputs_column()
+            self.task_repo.update(task_id, cached_inputs=json.dumps(cache, ensure_ascii=False))
+        except Exception:
+            logger.warning("Failed to save cached_inputs for %s", task_id[:8], exc_info=True)
+
+    def _get_cached_phase(self, task_id: str, phase: str) -> Optional[dict]:
+        """Return cached inputs for a phase, or None if missing."""
+        cache = self._load_cache(task_id)
+        return cache.get(phase)
+
+    def reinitialize(self, task_id: str) -> None:
+        """Clear the input cache for a task. Next preview/step will recompute."""
+        try:
+            self._ensure_cached_inputs_column()
+            self.task_repo.update(task_id, cached_inputs=None)
+        except Exception:
+            logger.warning("Failed to reinitialize cached_inputs for %s", task_id[:8], exc_info=True)
+
     async def _build_orchestrator_persona(self, objective: str = "") -> str:
         """Build Symbia's persona context for orchestrator-level tasks (plan, reflect, synthesize).
 
@@ -298,19 +346,65 @@ class SomaticResearchOrchestrator:
         """Return the prompts/inputs that would be sent for a given phase,
         WITHOUT executing the phase.  Useful for inspecting before running.
 
-        Currently supports: 'planning' — shows system + user prompts.
-        Other phases return placeholder info.
+        Cached after first build — subsequent calls return the cache.
         """
+        # Check cache first
+        cached = self._get_cached_phase(task_id, phase)
+        if cached:
+            return cached
+
+        # Build fresh, save to cache
+        task = self.task_repo.get(task_id)
+        if not task:
+            raise ValueError(f"Task not found: {task_id}")
+
         if phase == "planning":
-            task = self.task_repo.get(task_id)
-            if not task:
-                raise ValueError(f"Task not found: {task_id}")
-            return await self._preview_plan_inputs(task)
-        if phase == "searching":
+            result = await self._preview_plan_inputs(task)
+        elif phase == "searching":
             s = self._task_states.get(task_id)
-            queries = s["plan"].get("search_queries", [s["objective"]]) if s else []
-            return {"phase": "searching", "pending_queries": queries}
-        return {"phase": phase, "note": "inputs available after previous step completes"}
+            if s and s.get("plan"):
+                queries = s["plan"].get("search_queries", [s["objective"]])
+                query_index = s.get("query_index", 0)
+                result: dict = {
+                    "phase": "searching",
+                    "pending_queries": queries,
+                    "query_index": query_index,
+                    "top_n": self.default_top_n,
+                    "cached_at": self._now_utc_str(),
+                }
+            else:
+                result = {"phase": "searching", "pending_queries": [task["objective"]], "query_index": 0,
+                          "top_n": self.default_top_n, "cached_at": self._now_utc_str()}
+        elif phase == "reflecting":
+            s = self._task_states.get(task_id)
+            result = {
+                "phase": "reflecting",
+                "objective": task["objective"],
+                "current_depth": s["current_depth"] if s else 0,
+                "max_depth": task["max_depth"],
+                "max_rounds": self.max_reflect_rounds,
+                "findings_count": len(s["all_findings"]) if s else 0,
+                "cached_at": self._now_utc_str(),
+            }
+        elif phase == "synthesizing":
+            s = self._task_states.get(task_id)
+            result = {
+                "phase": "synthesizing",
+                "objective": task["objective"],
+                "findings_count": len(s["all_findings"]) if s else 0,
+                "sources_count": s["sources_analyzed"] if s else 0,
+                "cached_at": self._now_utc_str(),
+            }
+        else:
+            result = {"phase": phase, "note": "inputs available after previous step completes"}
+
+        # Cache and return (except placeholder notes)
+        if "note" not in result:
+            cache = self._load_cache(task_id)
+            cache[phase] = result
+            self._save_cache(task_id, cache)
+
+        return result
 
     async def _preview_plan_inputs(self, task: dict) -> dict:
         """Build system + user prompts for planning."""
@@ -329,6 +423,7 @@ class SomaticResearchOrchestrator:
 
         return {
             "phase": "planning",
+            "persona": persona,
             "objective": objective,
             "max_depth": max_depth,
             "budget_limit_usd": budget,
@@ -337,6 +432,7 @@ class SomaticResearchOrchestrator:
             "model": getattr(self._state, "llm_provider", None) and getattr(self._state.llm_provider, "model_id", "(auto)") or "(auto)",
             "temperature": prompt_data.get("temperature", 0.4),
             "max_tokens": prompt_data.get("max_tokens", 1024),
+            "cached_at": self._now_utc_str(),
         }
 
     async def execute_step(self, task_id: str) -> dict:
@@ -437,6 +533,17 @@ class SomaticResearchOrchestrator:
 
         query = queries[s["query_index"]] if s["query_index"] < len(queries) else s["objective"]
 
+        # Cache search inputs for re-use on rerun
+        cache = self._load_cache(task_id)
+        cache["searching"] = {
+            "phase": "searching",
+            "pending_queries": queries,
+            "query_index": s["query_index"],
+            "top_n": self.default_top_n,
+            "cached_at": self._now_utc_str(),
+        }
+        self._save_cache(task_id, cache)
+
         logger.info("Step: SEARCHING '%s' — %s", query[:60], self._log_context(task_id, "searching"))
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
@@ -487,6 +594,13 @@ class SomaticResearchOrchestrator:
             result_summary=f"parsed {len(parsed)} sources")
         s["parsed_sources_cache"] = parsed
         s["phase"] = "digesting" if parsed else "reflecting"
+
+        # Cache URL list for re-use on rerun
+        urls = [{"url": p["url"], "title": p.get("title", p["url"])} for p in parsed]
+        cache = self._load_cache(task_id)
+        cache["parsing"] = {"phase": "parsing", "urls": urls, "cached_at": self._now_utc_str()}
+        self._save_cache(task_id, cache)
+
         return {"parsed_count": len(parsed), "step_id": step_id}
 
     async def _step_digest(self, task_id: str, s: dict) -> dict:
@@ -540,6 +654,20 @@ class SomaticResearchOrchestrator:
             s["phase"] = "searching"  # more queries this depth
         else:
             s["phase"] = "reflecting"
+
+        # Cache digest inputs for re-use on rerun
+        source_urls = [s.get("url", "") for s in s["parsed_sources_cache"]]
+        cache = self._load_cache(task_id)
+        cache["digesting"] = {
+            "phase": "digesting",
+            "query": query,
+            "objective": s["objective"],
+            "depth": s["current_depth"],
+            "max_depth": s["max_depth"],
+            "source_urls": source_urls,
+            "cached_at": self._now_utc_str(),
+        }
+        self._save_cache(task_id, cache)
 
         return {
             "digested_count": len(digest_results),
@@ -697,18 +825,42 @@ class SomaticResearchOrchestrator:
 
     async def _phase_plan(self, task_id, objective, max_depth, budget, previous_context: str = "") -> dict:
         prompt_data = get_prompts_dict("research/orchestrator_planner.yaml")
-        persona = await self._build_orchestrator_persona(objective)
-        system_text = persona + "\n\n" + prompt_data.get("system", "")
-        fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
-        if previous_context:
-            user_template = prompt_data.get("user_with_context", prompt_data.get("user", ""))
-            fmt["previous_context"] = previous_context
+
+        # Try cache first — skip expensive persona build if we already built it
+        cached = self._get_cached_phase(task_id, "planning")
+        if cached and cached.get("persona") and cached.get("system_prompt") and cached.get("user_prompt"):
+            persona = cached["persona"]
+            system_text = cached["system_prompt"]
+            user_text = cached["user_prompt"]
         else:
-            user_template = prompt_data.get("user", "")
-        user_text = user_template.format(**fmt)
-        if prompt_data.get("anti_mastery"):
-            system_text = self._anti_mastery(system_text)
-            user_text = self._anti_mastery(user_text)
+            persona = await self._build_orchestrator_persona(objective)
+            system_text = persona + "\n\n" + prompt_data.get("system", "")
+            fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
+            if previous_context:
+                user_template = prompt_data.get("user_with_context", prompt_data.get("user", ""))
+                fmt["previous_context"] = previous_context
+            else:
+                user_template = prompt_data.get("user", "")
+            user_text = user_template.format(**fmt)
+            if prompt_data.get("anti_mastery"):
+                system_text = self._anti_mastery(system_text)
+                user_text = self._anti_mastery(user_text)
+            # Cache for next use
+            cache = self._load_cache(task_id)
+            cache["planning"] = {
+                "phase": "planning",
+                "persona": persona,
+                "objective": objective,
+                "max_depth": max_depth,
+                "budget_limit_usd": budget,
+                "system_prompt": system_text,
+                "user_prompt": user_text,
+                "model": getattr(self._state, "llm_provider", None) and getattr(self._state.llm_provider, "model_id", "(auto)") or "(auto)",
+                "temperature": prompt_data.get("temperature", 0.4),
+                "max_tokens": prompt_data.get("max_tokens", 1024),
+                "cached_at": self._now_utc_str(),
+            }
+            self._save_cache(task_id, cache)
 
         plan_json = {"goal": objective, "search_queries": [objective], "n_results_per_query": 3, "estimated_depth": 1}
         try:
@@ -747,14 +899,36 @@ class SomaticResearchOrchestrator:
 
     async def _phase_synthesize(self, task_id, objective, goal, all_findings, sources_count) -> str:
         prompt_data = get_prompts_dict("research/orchestrator_synthesize.yaml")
-        persona = await self._build_orchestrator_persona(objective)
-        system_text = persona + "\n\n" + prompt_data.get("system", "")
+
+        # Try cache first for persona + system prompt
+        cached = self._get_cached_phase(task_id, "synthesizing")
+        if cached and cached.get("persona") and cached.get("system_prompt"):
+            persona = cached["persona"]
+            system_text = cached["system_prompt"]
+        else:
+            persona = await self._build_orchestrator_persona(objective)
+            system_text = persona + "\n\n" + prompt_data.get("system", "")
+            if prompt_data.get("anti_mastery"):
+                system_text = self._anti_mastery(system_text)
+            # Cache for next use
+            cache = self._load_cache(task_id)
+            cache["synthesizing"] = {
+                "phase": "synthesizing",
+                "persona": persona,
+                "objective": objective,
+                "goal": goal,
+                "system_prompt": system_text,
+                "sources_count": sources_count,
+                "findings_count": len(all_findings),
+                "cached_at": self._now_utc_str(),
+            }
+            self._save_cache(task_id, cache)
+
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
             all_findings="\n\n".join(all_findings[-30:]),  # Last 30 findings
         )
         if prompt_data.get("anti_mastery"):
-            system_text = self._anti_mastery(system_text)
             user_text = self._anti_mastery(user_text)
 
         fallback = f"Research complete. {sources_count} sources analyzed, {len(all_findings)} findings."
@@ -955,10 +1129,28 @@ class SomaticResearchOrchestrator:
                              all_findings, previous_reflection) -> dict:
         """Multi-round LLM reflection on accumulated findings."""
         prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
-        persona = await self._build_orchestrator_persona(objective)
-        system_text = persona + "\n\n" + prompt_data.get("system", "")
-        if prompt_data.get("anti_mastery"):
-            system_text = self._anti_mastery(system_text)
+
+        # Try cache first for persona + system prompt (static per task)
+        cached = self._get_cached_phase(task_id, "reflecting")
+        if cached and cached.get("persona") and cached.get("system_prompt"):
+            persona = cached["persona"]
+            system_text = cached["system_prompt"]
+        else:
+            persona = await self._build_orchestrator_persona(objective)
+            system_text = persona + "\n\n" + prompt_data.get("system", "")
+            if prompt_data.get("anti_mastery"):
+                system_text = self._anti_mastery(system_text)
+            # Cache for next use
+            cache = self._load_cache(task_id)
+            cache["reflecting"] = {
+                "phase": "reflecting",
+                "persona": persona,
+                "objective": objective,
+                "goal": goal,
+                "system_prompt": system_text,
+                "cached_at": self._now_utc_str(),
+            }
+            self._save_cache(task_id, cache)
 
         latest_result = {}
         for round_num in range(1, self.max_reflect_rounds + 1):

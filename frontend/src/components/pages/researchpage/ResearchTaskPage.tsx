@@ -11,7 +11,7 @@ import type {
 import {
   getResearchTask, getTaskSteps, getTaskMetaLog, getTaskPhase, getStepPreview,
   approveProposal, rejectProposal, cancelTask, retryTask, deleteTask,
-  rerunTask, executeStep,
+  rerunTask, executeStep, reinitializeTask,
 } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
 
@@ -312,6 +312,18 @@ function StepDetailRight({ taskId, data, selectedId, orchPhase, taskStatus }: {
       .finally(() => setPrevLoading(false))
   }, [taskId, orchPhase, taskStatus])
 
+  const reinitAndFetch = useCallback(async () => {
+    if (!orchPhase || orchPhase === "complete" || orchPhase === "not_started") return
+    if (taskStatus !== "active" && taskStatus !== "queued") return
+    setPrevLoading(true)
+    try {
+      await reinitializeTask(taskId)
+      const p = await getStepPreview(taskId, orchPhase)
+      setPreview(p)
+    } catch { setPreview(null) }
+    finally { setPrevLoading(false) }
+  }, [taskId, orchPhase, taskStatus])
+
   // Fetch preview for current phase when no DB step is selected
   useEffect(() => {
     if (selectedId) { setPreview(null); return }
@@ -328,7 +340,7 @@ function StepDetailRight({ taskId, data, selectedId, orchPhase, taskStatus }: {
   )
   if (preview) return (
     <PreviewDetail preview={preview} phaseLabel={phaseLabel}
-      onReinitialize={() => { setPrevLoading(true); fetchPreview() }} reinitLoading={prevLoading} />
+      onReinitialize={reinitAndFetch} reinitLoading={prevLoading} />
   )
   return (
     <div className="flex items-center justify-center h-full text-[#444] italic text-xs select-none">
@@ -431,10 +443,15 @@ function DbStepDetail({ taskId, data, selectedId }: {
     getTaskMetaLog(taskId, selectedId).then(m => { setMetaLog(m); setTab("result") }).catch(() => setMetaLog(null)).finally(() => setLogLoading(false))
   }, [selectedId, taskId])
 
-  const fetchLiveInput = () => {
+  const fetchLiveInput = async () => {
     if (!stepPhase) return
     setReinitLoading(true)
-    getStepPreview(taskId, stepPhase).then(setLiveInput).catch(() => {}).finally(() => setReinitLoading(false))
+    try {
+      await reinitializeTask(taskId)
+      const preview = await getStepPreview(taskId, stepPhase)
+      setLiveInput(preview)
+    } catch { setLiveInput(null) }
+    finally { setReinitLoading(false) }
   }
   // Auto-fetch when switching to input tab
   useEffect(() => { if (tab === "input" && !liveInput) fetchLiveInput() }, [tab])
