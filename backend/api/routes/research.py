@@ -292,40 +292,39 @@ async def execute_step(
     target_phase = STEP_TYPE_TO_PHASE.get(rerun_step_type or "")
 
     if target_phase:
-        # Per-step rerun — resume state from DB (preserves caches), then
-        # find the existing step to update in-place and cascade staleness.
-        # Do NOT reset the task — just transition if needed and reuse DB state.
+        # Per-step rerun — resume state, set phase, mark step for in-place update.
+        # Downstream steps are deleted by execute_step before re-execution.
         if task["status"] in ("completed", "failed"):
             manager.transition(task_id, "active")
         orch = manager.orchestrator
         orch.ensure_state(task_id)
         orch.set_phase(task_id, target_phase)
 
-        # Find existing step to update in-place
+        # Find the exact step to update in-place
         step_repo = getattr(state, "research_step_repo", None)
         if step_repo and rerun_step_type:
             if rerun_step_id:
-                # Use the exact step ID from the frontend (clicked step)
                 existing = step_repo.get(rerun_step_id)
             else:
-                # Fallback: find most recent step of this type
                 all_steps = step_repo.get_by_task(task_id)
                 matching = [s for s in all_steps
-                            if s["step_type"] == rerun_step_type and s["status"] in ("completed", "stale")]
+                            if s["step_type"] == rerun_step_type and s["status"] == "completed"]
                 existing = matching[-1] if matching else None
             if existing:
                 s2 = orch._task_states.get(task_id)
                 if s2 is not None:
                     s2["_rerun_step_id"] = existing["id"]
-                    s2["_rerun_version"] = (existing.get("rerun_version") or 1) + 1
-                    # Set query_index to match this step's query position
-                    if rerun_step_type in ("search", "parallel_parse", "digest"):
+                    # Set query_index from the step's query_group
+                    qg = existing.get("query_group")
+                    if qg and rerun_step_type in ("search", "parallel_parse", "digest"):
+                        s2["query_index"] = qg - 1  # query_group is 1-based, query_index is 0-based
+                    elif rerun_step_type in ("search", "parallel_parse", "digest"):
+                        # Fallback: count searches before this step
                         all_steps = step_repo.get_by_task(task_id)
-                        searches_before = sum(
+                        s2["query_index"] = sum(
                             1 for s in all_steps
                             if s["step_type"] == "search" and s["step_number"] < existing["step_number"]
                         )
-                        s2["query_index"] = searches_before
     else:
         # Normal sequential step execution
         if task["status"] in ("completed", "failed"):

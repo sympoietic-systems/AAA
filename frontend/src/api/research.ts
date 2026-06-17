@@ -247,6 +247,8 @@ export interface ResearchStep {
   result_summary: string | null
   started_at: string | null
   completed_at: string | null
+  query_group?: number
+  query_text?: string
 }
 
 export interface ResearchPlanInfo {

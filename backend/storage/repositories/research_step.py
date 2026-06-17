@@ -83,3 +83,16 @@ class ResearchStepRepository(BaseRepository):
         )
         conn.commit()
         return cur.rowcount
+
+    @with_connection
+    def delete_downstream(self, task_id: str, after_step_number: int) -> int:
+        """Delete all steps with step_number > after_step_number.
+        Used when rerunning a step — downstream must be re-created.
+        Returns count of deleted rows."""
+        conn = self._conn()
+        cur = conn.execute(
+            "DELETE FROM research_steps WHERE task_id = ? AND step_number > ?",
+            (task_id, after_step_number),
+        )
+        conn.commit()
+        return cur.rowcount

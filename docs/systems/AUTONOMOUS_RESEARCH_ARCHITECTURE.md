@@ -1912,6 +1912,65 @@ ALTER TABLE research_steps ADD COLUMN rerun_version INTEGER NOT NULL DEFAULT 1
 - `StepPipeline.tsx` — `PipelineRow` shows stale icon/label; grouping uses plan query count
 - `StepDbDetail.tsx` — rerun button on stale steps; orange status text
 
+#### 5.8.9 Simplified Pipeline — Orchestrator State Persistence (m039)
+
+> **Reference Decision:** 2026-06-17 — Eliminated stale/cascade complexity. The orchestrator state is the single source of truth. The DB is a log.
+
+**Motivation:** The stale cascade architecture (m038) introduced too many edge cases — stale steps appearing at the bottom, wrong active step detection, query_index mismatches, and fragile frontend grouping. A simpler approach was needed.
+
+**New design:**
+
+1. **Orchestrator state persistence** (`research_tasks.orchestrator_state` as JSON blob):
+   - After every step, the full orchestrator state is serialised and persisted.
+   - On resume/restart, deserialise — no reconstruction from scattered DB tables.
+   - Contains: `phase`, `query_index`, `current_depth`, `all_findings`, `plan`, `step_number`, all caches.
+
+2. **query_group column** (`research_steps.query_group`):
+   - Each cycle step (search/parse/digest) explicitly records which query (1, 2, 3…) it belongs to.
+   - The frontend groups by `query_group` directly — no positional guessing.
+   - `query_text` also stored for display in pipeline labels.
+
+3. **Rerun simplified: delete-and-recreate**:
+   - When a step is rerun, ALL downstream steps are **deleted** from DB.
+   - The step is re-executed, and subsequent steps are re-created naturally.
+   - No "stale" status. No cascade logic. No invalidation.
+   - The orchestrator state (from JSON blob) ensures correct `query_index` and caches.
+
+4. **Unified response format**:
+   Every `execute_step` response includes:
+   ```json
+   {
+     "phase": "searching",
+     "query_index": 0,
+     "current_depth": 0,
+     "inputs": { "query": "...", "urls": [...] },
+     "outputs": { "results_count": 5 },
+     "next_phase": "parsing",
+     "accumulated_findings": 12
+   }
+   ```
+
+5. **Frontend grouping**:
+   - Read plan's `search_queries` for query labels.
+   - Group steps by `query_group` column — one group per planned query.
+   - Active detection: walk groups in order, find first non-completed step matching `orchPhase`.
+
+**Removed complexity:**
+- ❌ `stale` status — replaced by delete-and-recreate
+- ❌ `rerun_version` column (m038) — no longer needed
+- ❌ `mark_downstream_stale()` — replaced by `delete_downstream()`
+- ❌ `_cascade_stale_after_rerun()` — deleted
+- ❌ `CYCLE_ORCH_PHASES` and complex `effectiveActiveIdx` — simplified
+- ❌ Positional step grouping (search boundary detection) — replaced by `query_group`
+- ❌ `cached_inputs` reconstruction in `resume_task` — replaced by `orchestrator_state`
+
+**Files changed (m039):**
+- `m039_orchestrator_state.py` — migration: `orchestrator_state` (tasks), `query_group` + `query_text` (steps)
+- `research_orchestrator.py` — `_persist_state()`, `_load_state()`, `_delete_downstream()`, simplified `resume_task()` and `execute_step()`, all `_step_*` return unified debug info
+- `research_step.py` — `delete_downstream()` method
+- `research.py` API — rerun uses `query_group` for `query_index`; simplified step finding
+- `StepPipeline.tsx` — grouping by `query_group`; query text labels; simplified active detection
+
 ---
 
 ## 6. Mathematical Foundation — The Rhizomatic Utility Function

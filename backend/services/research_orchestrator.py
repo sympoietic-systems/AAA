@@ -330,21 +330,32 @@ class SomaticResearchOrchestrator:
         return state
 
     def resume_task(self, task_id: str) -> Optional[dict]:
-        """Re-hydrate in-memory state from persisted steps after server restart.
+        """Re-hydrate in-memory state from persisted orchestrator_state.
 
-        Returns the state dict or None if the task has no persisted steps.
+        Returns the state dict or None if the task has no persisted state.
+        Falls back to reconstructing from DB steps if orchestrator_state is absent.
         """
         task = self.task_repo.get(task_id)
         if not task:
             return None
 
-        # Load persisted steps for this task, ordered by step_number
+        # Prefer orchestrator_state — the single source of truth
+        loaded = self._load_state(task_id)
+        if loaded:
+            loaded["objective"] = task["objective"]
+            loaded["max_depth"] = task["max_depth"]
+            loaded["budget"] = task["budget_limit_usd"]
+            self._task_states[task_id] = loaded
+            logger.info("Resumed task %s from orchestrator_state at phase '%s' (step %d)",
+                         task_id[:8], loaded.get("phase"), loaded.get("step_number", 0))
+            return loaded
+
+        # Fallback: reconstruct from DB (legacy, for tasks created before m039)
         steps = self.step_repo.get_by_task(task_id) if self.step_repo else []
         completed = [s for s in steps if s["status"] == "completed"]
         last_type = completed[-1]["step_type"] if completed else None
         step_number = len(completed)
 
-        # Load plan from DB
         plan = None
         plan_id = None
         if self.plan_repo:
@@ -356,7 +367,6 @@ class SomaticResearchOrchestrator:
                 except Exception:
                     plan = {}
 
-        # Determine phase from last completed step type
         phase_after: dict[str, str] = {
             "plan": "searching", "search": "parsing",
             "parallel_parse": "digesting", "digest": "reflecting",
@@ -366,51 +376,17 @@ class SomaticResearchOrchestrator:
         phase = phase_after.get(last_type, "planning") if last_type else "planning"
 
         state = {
-            "phase": phase,
-            "objective": task["objective"],
-            "max_depth": task["max_depth"],
-            "budget": task["budget_limit_usd"],
-            "plan_id": plan_id,
-            "plan": plan,
-            "all_findings": [],
-            "sources_analyzed": task.get("assets_harvested", 0),
-            "stagnation_counter": 0,
-            "step_number": step_number,
-            "last_reflection": {},
-            "current_depth": 0,
-            "query_index": 0,
-            "search_results_cache": [],
-            "parsed_sources_cache": [],
-            "digest_results_cache": [],
-            "should_stop": False,
-            "stop_reason": "",
+            "phase": phase, "objective": task["objective"],
+            "max_depth": task["max_depth"], "budget": task["budget_limit_usd"],
+            "plan_id": plan_id, "plan": plan,
+            "all_findings": [], "sources_analyzed": task.get("assets_harvested", 0),
+            "stagnation_counter": 0, "step_number": step_number,
+            "last_reflection": {}, "current_depth": 0, "query_index": 0,
+            "search_results_cache": [], "parsed_sources_cache": [],
+            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
         }
-        # Populate caches from cached_inputs so step re-execution works
-        cached = self._load_cache(task_id)
-        if cached.get("searching"):
-            state["query_index"] = cached["searching"].get("query_index", 0)
-        if cached.get("parsing") and cached["parsing"].get("urls"):
-            cached_urls = cached["parsing"]["urls"]
-            state["search_results_cache"] = cached_urls
-            # Build parsed_sources_cache for digest — load content from DB step_results
-            content_map: dict[str, str] = {}
-            parse_steps = [s for s in steps if s["step_type"] == "parallel_parse" and s["status"] == "completed"]
-            if parse_steps and self.step_result_repo:
-                latest_parse_id = parse_steps[-1]["id"]
-                results = self.step_result_repo.get_by_step(latest_parse_id)
-                content_map = {
-                    r["source_url"]: r.get("raw_content") or ""
-                    for r in results if r.get("source_url")
-                }
-            state["parsed_sources_cache"] = [
-                {"url": u["url"], "title": u.get("title", u["url"]), "content": content_map.get(u["url"], "")}
-                for u in cached_urls
-            ]
-        if cached.get("digesting"):
-            state["current_depth"] = cached["digesting"].get("depth", 0)
-
         self._task_states[task_id] = state
-        logger.info("Resumed task %s at phase '%s' (step %d)",
+        logger.info("Resumed task %s from DB reconstruction at phase '%s' (step %d)",
                      task_id[:8], phase, step_number)
         return state
 
@@ -546,16 +522,54 @@ class SomaticResearchOrchestrator:
             "cached_at": self._now_utc_str(),
         }
 
-    # ── In-place rerun helpers ─────────────────────────────────────
+    # ── State persistence ───────────────────────────────────────────
 
-    def _create_or_update_step(self, s: dict, task_id: str, step_type: str) -> str:
-        """Create a new step, or update an existing one in-place for reruns.
-        Pops _rerun_step_id / _rerun_version from state if present."""
+    _ORCH_STATE_KEYS = {
+        "phase", "objective", "max_depth", "budget", "plan_id", "plan",
+        "all_findings", "sources_analyzed", "stagnation_counter",
+        "step_number", "last_reflection", "current_depth", "query_index",
+        "search_results_cache", "parsed_sources_cache", "digest_results_cache",
+        "should_stop", "stop_reason",
+    }
+
+    def _persist_state(self, task_id: str) -> None:
+        """Serialise orchestrator state to research_tasks.orchestrator_state."""
+        s = self._task_states.get(task_id)
+        if not s:
+            return
+        clean = {k: v for k, v in s.items() if k in self._ORCH_STATE_KEYS}
+        try:
+            self.task_repo.update(task_id, orchestrator_state=json.dumps(clean, default=str, ensure_ascii=False))
+        except Exception:
+            logger.warning("Failed to persist orchestrator state for %s", task_id[:8], exc_info=True)
+
+    def _load_state(self, task_id: str) -> Optional[dict]:
+        """Load orchestrator state from DB. Returns None if not found."""
+        task = self.task_repo.get(task_id)
+        if not task or not task.get("orchestrator_state"):
+            return None
+        try:
+            state = json.loads(task["orchestrator_state"])
+            # Ensure mutable containers
+            for key in ("all_findings", "search_results_cache", "parsed_sources_cache", "digest_results_cache"):
+                if key not in state:
+                    state[key] = []
+            if "last_reflection" not in state:
+                state["last_reflection"] = {}
+            return state
+        except Exception:
+            logger.warning("Failed to load orchestrator state for %s", task_id[:8], exc_info=True)
+            return None
+
+    # ── Step record helpers ─────────────────────────────────────────
+
+    def _create_or_update_step(self, s: dict, task_id: str, step_type: str,
+                                query_group: int = 0, query_text: str = "") -> str:
+        """Create a new step, or update an existing one in-place for reruns."""
         rerun_id = s.pop("_rerun_step_id", None)
-        rerun_ver = s.pop("_rerun_version", None)
         if rerun_id:
             self.step_repo.update(rerun_id, status="running",
-                started_at=self._now_utc_str(), rerun_version=rerun_ver)
+                started_at=self._now_utc_str(), query_text=query_text)
             return rerun_id
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
@@ -563,34 +577,24 @@ class SomaticResearchOrchestrator:
             "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
             "step_number": s["step_number"], "step_type": step_type,
             "status": "running", "started_at": self._now_utc_str(),
+            "query_group": query_group, "query_text": query_text,
         })
         return step_id
 
-    def _cascade_stale_after_rerun(self, s: dict, task_id: str) -> None:
-        """After a step is rerun in-place, mark all downstream steps as stale."""
-        rerun_id = s.pop("_cascade_from_id", None)
-        if not rerun_id or not self.step_repo:
-            return
-        rerun_step = self.step_repo.get(rerun_id)
-        if rerun_step:
-            count = self.step_repo.mark_downstream_stale(task_id, rerun_step["step_number"])
-            if count:
-                logger.info("Cascaded stale → %d steps after step #%d — %s",
-                             count, rerun_step["step_number"], self._log_context(task_id, "rerun"))
+    def _delete_downstream(self, task_id: str, after_step_number: int) -> int:
+        """Delete all steps with step_number > after_step_number (for rerun)."""
+        if not self.step_repo:
+            return 0
+        return self.step_repo.delete_downstream(task_id, after_step_number)
 
     # ── Main step execution ───────────────────────────────────────
 
     async def execute_step(self, task_id: str) -> dict:
         """Execute exactly ONE phase of the research pipeline.
 
-        Returns info about what was executed and what the next phase will be.
-        Call repeatedly until phase == 'complete'.
-
-        If state contains _rerun_step_id, the next phase updates that
-        step in-place instead of creating a new record, and downstream
-        steps are marked 'stale' afterwards.
+        Returns unified debug info: inputs, outputs, prompts, next_phase.
+        Persists orchestrator_state after every step.
         """
-        # Guard against concurrent step execution for the same task
         if task_id not in self._step_locks:
             self._step_locks[task_id] = asyncio.Lock()
 
@@ -598,9 +602,22 @@ class SomaticResearchOrchestrator:
             s = self._get_state(task_id)
             phase = s["phase"]
 
-            # Capture rerun info before step clears it
+            # On rerun, delete all downstream steps
             rerun_id = s.get("_rerun_step_id")
-            result: dict = {"task_id": task_id, "executed_phase": phase}
+            if rerun_id:
+                rerun_step = self.step_repo.get(rerun_id) if self.step_repo else None
+                if rerun_step:
+                    deleted = self._delete_downstream(task_id, rerun_step["step_number"])
+                    if deleted:
+                        logger.info("Rerun: deleted %d downstream steps — %s",
+                                     deleted, self._log_context(task_id, "rerun"))
+
+            result: dict = {
+                "task_id": task_id,
+                "phase": phase,
+                "query_index": s.get("query_index", 0),
+                "current_depth": s.get("current_depth", 0),
+            }
 
             try:
                 if phase == "planning":
@@ -631,25 +648,22 @@ class SomaticResearchOrchestrator:
                 else:
                     raise ValueError(f"Unknown phase: {phase}")
 
-                # After successful rerun, cascade stale to downstream
-                if rerun_id:
-                    s["_cascade_from_id"] = rerun_id
-                    self._cascade_stale_after_rerun(s, task_id)
-
             except Exception as e:
                 logger.exception("Step %s failed for task %s", phase, task_id)
                 s["phase"] = "complete"
                 result.update({
                     "status": "error",
-                    "kind": "step_execution_failure",
-                    "message": f"Step '{phase}' failed",
-                    "entity": f"research_step.{phase}",
-                    "details": {"task_id": task_id, "phase": phase, "error": str(e)},
+                    "message": f"Step '{phase}' failed: {e}",
                 })
                 self.task_repo.update(task_id, status="failed",
                     result_summary=f"Step '{phase}' failed: {e}")
 
             result["next_phase"] = s["phase"]
+            result["accumulated_findings"] = len(s.get("all_findings", []))
+
+            # Persist state to DB after every step
+            self._persist_state(task_id)
+
             return result
 
     # ── Phase step implementations ─────────────────────────────────
@@ -707,10 +721,10 @@ class SomaticResearchOrchestrator:
         }
         self._save_cache(task_id, cache)
 
-        logger.info("Step: SEARCHING '%s' — %s", query[:60], self._log_context(task_id, "searching"))
-        step_id = self._create_or_update_step(s, task_id, "search")
-        self.step_repo.update(step_id,
-            result_summary=json.dumps({"query": query[:300]}))
+        query_group = s["query_index"] + 1
+        logger.info("Step: SEARCHING '%s' — %s (Q%d)", query[:60], self._log_context(task_id, "searching"), query_group)
+        step_id = self._create_or_update_step(s, task_id, "search",
+            query_group=query_group, query_text=query[:300])
 
         search_results = await web_search(query, self.default_top_n, self._state.config)
         self._log_meta(task_id, "orchestrator_search", {
@@ -726,18 +740,25 @@ class SomaticResearchOrchestrator:
             queries = s["plan"].get("search_queries", [s["objective"]])
             if s["query_index"] >= min(len(queries), 3):
                 s["phase"] = "reflecting"  # skip parse/digest for empty results
-            return {"query": query, "results": [], "step_id": step_id}
+            return {"query": query, "results": [], "urls": [], "step_id": step_id}
 
         self.step_repo.update(step_id, status="completed",
             result_summary=f"{len(search_results)} results")
         s["search_results_cache"] = search_results
         s["phase"] = "parsing"
-        return {"query": query, "results_count": len(search_results), "step_id": step_id}
+        return {
+            "query": query,
+            "results_count": len(search_results),
+            "urls": [{"url": r.get("url", ""), "title": r.get("title", r.get("url", ""))} for r in search_results],
+            "step_id": step_id,
+        }
 
     async def _step_parse(self, task_id: str, s: dict) -> dict:
         """Fetch search result URLs in parallel. Advance to digesting."""
         logger.info("Step: PARSING — %s", self._log_context(task_id, "parsing"))
-        step_id = self._create_or_update_step(s, task_id, "parallel_parse")
+        query_group = s["query_index"] + 1
+        step_id = self._create_or_update_step(s, task_id, "parallel_parse",
+            query_group=query_group, query_text="")
 
         parsed = await self._tool_parallel_parse(
             task_id, step_id, s["search_results_cache"], s["plan_id"],
@@ -753,15 +774,20 @@ class SomaticResearchOrchestrator:
         cache["parsing"] = {"phase": "parsing", "urls": urls, "cached_at": self._now_utc_str()}
         self._save_cache(task_id, cache)
 
-        return {"parsed_count": len(parsed), "step_id": step_id}
+        return {
+            "parsed_count": len(parsed),
+            "parsed_urls": urls,
+            "step_id": step_id,
+        }
 
     async def _step_digest(self, task_id: str, s: dict) -> dict:
         """Analyze sources via LLM. Advance to reflecting."""
         logger.info("Step: DIGESTING — %s", self._log_context(task_id, "digesting"))
-        step_id = self._create_or_update_step(s, task_id, "digest")
-
         queries = s["plan"].get("search_queries", [s["objective"]])
         query = queries[s["query_index"]] if s["query_index"] < len(queries) else s["objective"]
+        query_group = s["query_index"] + 1
+        step_id = self._create_or_update_step(s, task_id, "digest",
+            query_group=query_group, query_text=query[:300])
 
         digest_results = await self._tool_parallel_digest(
             task_id, step_id, s["parsed_sources_cache"],
@@ -820,6 +846,7 @@ class SomaticResearchOrchestrator:
             "new_learnings": new_learnings,
             "total_learnings": len(s["all_findings"]),
             "sources_analyzed": s["sources_analyzed"],
+            "findings_summary": s["all_findings"][-20:],  # last 20 for debug
             "step_id": step_id,
         }
 

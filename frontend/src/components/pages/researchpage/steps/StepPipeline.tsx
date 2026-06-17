@@ -94,14 +94,15 @@ export const StepPipeline = memo(function StepPipeline({
   const allComplete = taskStatus === "completed" && orchPhase === "complete"
   const hasPipeline = orchPhase && orchPhase !== "complete" && orchPhase !== "not_started"
 
-  // ── Simple plan-driven grouping ──
-  const { planStep, queryGroups, finalSteps, totalQueries, activeGroupIdx } = useMemo(() => {
+  // ── Plan-driven grouping using query_group from DB ──
+  const { planStep, queryGroups, finalSteps, totalQueries, activeGroupIdx, planQueries } = useMemo(() => {
     const empty = {
       planStep: null as ResearchStep | null,
       queryGroups: [] as QueryGroup[],
       finalSteps: [] as ResearchStep[],
       totalQueries: 0,
       activeGroupIdx: -1,
+      planQueries: [] as string[],
     }
     if (!data) return empty
 
@@ -110,33 +111,35 @@ export const StepPipeline = memo(function StepPipeline({
     const planQueryCount = getPlanQueryCount(data)
     const totalQ = planQueryCount || 1
 
-    // Collect cycle-phase steps in chronological order
-    const cycleSteps = steps.filter(s =>
-      (CYCLE_PHASES as readonly string[]).includes(s.step_type)
-    )
+    // Get plan query texts for labels
+    const planQueries: string[] = []
+    try {
+      if (data?.plan?.plan_json) {
+        const pj = JSON.parse(data.plan.plan_json)
+        planQueries.push(...(pj.search_queries || []))
+      }
+    } catch {}
 
-    // Build groups: for each query, pick the Nth step of each type
+    // Build groups: for each planned query, find DB steps with matching query_group
     const groups: QueryGroup[] = []
-    for (let q = 0; q < totalQ; q++) {
+    for (let q = 1; q <= totalQ; q++) {
       const groupSteps: ResearchStep[] = []
       for (const ct of CYCLE_PHASES) {
-        const sameType = cycleSteps.filter(s => s.step_type === ct)
-        const step = sameType[q] ?? null
-        if (step) {
-          groupSteps.push(step)
+        // Find the step with this step_type AND query_group = q
+        const match = steps.find(s => s.step_type === ct && (s as any).query_group === q)
+        if (match) {
+          groupSteps.push(match)
         } else {
-          groupSteps.push({ id: "", step_type: ct, step_number: 0, status: "pending" } as ResearchStep)
+          groupSteps.push({ id: "", step_type: ct, step_number: 0, status: "pending", query_group: q } as any)
         }
       }
-      groups.push({ queryIndex: q + 1, steps: groupSteps })
+      groups.push({ queryIndex: q, steps: groupSteps })
     }
 
-    // Final phases: filter out steps already in groups
-    const groupedIds = new Set(groups.flatMap(g => g.steps.map(s => s.id)))
+    // Final phases: filter steps by type directly
     const finals: ResearchStep[] = steps.filter(s =>
-      (FINAL_PHASES as readonly string[]).includes(s.step_type) && !groupedIds.has(s.id)
+      (FINAL_PHASES as readonly string[]).includes(s.step_type)
     )
-    // Add pending final phases
     const existingFinalTypes = new Set(finals.map(s => s.step_type))
     for (const ft of FINAL_PHASES) {
       if (!existingFinalTypes.has(ft)) {
@@ -144,7 +147,7 @@ export const StepPipeline = memo(function StepPipeline({
       }
     }
 
-    // ── Active step detection: first non-completed step matching orchPhase ──
+    // Active step: first non-completed step matching orchPhase
     let activeGIdx = -1
     for (let g = 0; g < groups.length; g++) {
       for (const s of groups[g].steps) {
@@ -156,7 +159,7 @@ export const StepPipeline = memo(function StepPipeline({
       if (activeGIdx >= 0) break
     }
 
-    return { planStep: plan, queryGroups: groups, finalSteps: finals, totalQueries: totalQ, activeGroupIdx: activeGIdx }
+    return { planStep: plan, queryGroups: groups, finalSteps: finals, totalQueries: totalQ, activeGroupIdx: activeGIdx, planQueries }
   }, [data, orchPhase])
 
   // Results by step for count labels
@@ -186,7 +189,9 @@ export const StepPipeline = memo(function StepPipeline({
 
         {/* Query groups */}
         {queryGroups.map((group) => {
-          const queryLabel = `Q${group.queryIndex}/${totalQueries}`
+          const qText = planQueries[group.queryIndex - 1] || ""
+          const qDisplay = qText ? `"${qText.slice(0, 60)}${qText.length > 60 ? "…" : ""}"` : ""
+          const queryLabel = `Q${group.queryIndex}/${totalQueries}${qDisplay ? `: ${qDisplay}` : ""}`
           return (
             <div key={group.queryIndex} className="mb-1 pl-2">
               <div className="text-[#555] text-[8px] tracking-wider mb-0.5">{queryLabel}</div>
