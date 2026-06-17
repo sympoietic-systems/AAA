@@ -103,11 +103,3 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   orchestrator_complete: "#22d3ee",
   orchestrator_step_complete: "#4ade80",
 }
-
-/** Determine phase status relative to current orchestrator phase index */
-export function phaseStatus(idx: number, currentIdx: number): "done" | "current" | "pending" {
-  if (currentIdx < 0) return "pending"
-  if (idx < currentIdx) return "done"
-  if (idx === currentIdx) return "current"
-  return "pending"
-}

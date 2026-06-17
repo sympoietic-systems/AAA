@@ -2,7 +2,7 @@ import React, { memo } from "react"
 import type { TaskStepsResponse } from "../../../../api/research"
 import { TerminalButton } from "../../../UI"
 import {
-  PHASE_ORDER_DISPLAY, PHASE_LABELS, STEP_TO_PHASE, phaseStatus,
+  PHASE_ORDER_DISPLAY, PHASE_LABELS, STEP_TO_PHASE,
 } from "../constants/taskConstants"
 
 interface StepPipelineProps {
@@ -20,10 +20,7 @@ export const StepPipeline = memo(function StepPipeline({
   data, orchPhase, taskStatus, selectedId, stepping,
   onSelect, onDoStep, onDoRerun,
 }: StepPipelineProps) {
-  const currentPhaseIdx = PHASE_ORDER_DISPLAY.indexOf(orchPhase)
-  const hasPipeline = orchPhase && orchPhase !== "complete" && orchPhase !== "not_started"
-
-  // Map pipeline phases to DB step IDs
+  // Map pipeline phases to DB step IDs — a phase is "done" if it has a DB entry
   const phaseToStepId: Record<string, string | null> = {}
   if (data) {
     const steps = [...data.steps].reverse()
@@ -33,6 +30,9 @@ export const StepPipeline = memo(function StepPipeline({
       if (phase && !seen[phase]) { phaseToStepId[phase] = s.id; seen[phase] = true }
     }
   }
+
+  const allComplete = taskStatus === "completed" && orchPhase === "complete"
+  const hasPipeline = orchPhase && orchPhase !== "complete" && orchPhase !== "not_started"
 
   const handlePipelineClick = (phase: string) => {
     const sid = phaseToStepId[phase]
@@ -44,14 +44,17 @@ export const StepPipeline = memo(function StepPipeline({
       <div>
         <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1.5">[ Pipeline ]</div>
         <div className="space-y-0.5">
-          {PHASE_ORDER_DISPLAY.map((phase, idx) => {
+          {PHASE_ORDER_DISPLAY.map((phase) => {
             const label = PHASE_LABELS[phase] || phase
             const sid = phaseToStepId[phase]
             const isSel = sid && sid === selectedId
-            const allComplete = taskStatus === "completed" && orchPhase === "complete"
-            const status = allComplete ? "done" : hasPipeline ? phaseStatus(idx, currentPhaseIdx) : "pending"
-            const isDone = status === "done"
-            const isCurrent = status === "current"
+
+            // Phase status: done if has DB entry, current if exactly matches orchPhase
+            const hasDbEntry = !!sid
+            const isCurrent = hasPipeline && phase === orchPhase
+            const isDone = allComplete || (!isCurrent && hasDbEntry)
+            const isPending = !isCurrent && !isDone
+
             const sc = isDone ? "#4ade80" : isCurrent ? "#f59e0b" : "#444"
             const canClick = isDone && sid
 
