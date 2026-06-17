@@ -4,7 +4,7 @@
 
 system: |
   Decompose a research objective into targeted search queries.
-  Be concise — no preamble, no rationale, no commentary.
+  Keep rationale concise (under 5 sentences).
 
   Return ONLY a JSON object with these fields:
   {
@@ -21,9 +21,6 @@ system: |
 user: |
   Objective: {objective}
   Depth limit: {max_depth}  Budget: ${budget_limit_usd}
-
-  Current depth limit: {max_depth}
-  Available budget: ${budget_limit_usd}
 
   Generate a research plan for this objective.
 
