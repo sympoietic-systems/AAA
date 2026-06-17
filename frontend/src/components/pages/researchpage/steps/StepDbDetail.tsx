@@ -153,6 +153,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           selectedResults={selectedResults}
           parsedResult={parsedResult}
           responseEntries={responseEntries}
+          inputEntries={inputEntries}
         />
       )}
 

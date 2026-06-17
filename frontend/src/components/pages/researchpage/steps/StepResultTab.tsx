@@ -14,14 +14,52 @@ interface StepResultTabProps {
     learnings: string[]
   }
   responseEntries: any[]
+  inputEntries?: any[]
 }
 
 export const StepResultTab = memo(function StepResultTab({
-  selected, selectedResults, parsedResult, responseEntries,
+  selected, selectedResults, parsedResult, responseEntries, inputEntries,
 }: StepResultTabProps) {
+  // Extract search queries from orchestrator_search events
+  const searchQueries = inputEntries
+    ?.filter(e => e.event_type === "orchestrator_search")
+    .map(e => ({
+      query: (e.event_data as any)?.query || "",
+      resultsCount: (e.event_data as any)?.results_count ?? 0,
+    })) ?? []
+
   return (
     <div className="space-y-2">
       {selected.result_summary && <div className="text-[#94a3b8] text-[10px]">{selected.result_summary}</div>}
+
+      {/* ── Search: queries + fetched URLs ── */}
+      {selected.step_type === "search" && searchQueries.length > 0 && (
+        <div className="border-t border-[#1a1a1a] pt-2 space-y-2">
+          <div className="text-[#555] text-[8px] uppercase">search queries ({searchQueries.length})</div>
+          {searchQueries.map((sq, qi) => (
+            <div key={qi} className="pl-2 border-l border-[#222]">
+              <div className="text-[#94a3b8] text-[9px] leading-relaxed">"{sq.query}"</div>
+              <div className="text-[#555] text-[8px]">{sq.resultsCount} results</div>
+            </div>
+          ))}
+          {selectedResults.length > 0 && (
+            <div className="pt-1">
+              <div className="text-[#555] text-[8px] mb-1 uppercase">fetched urls ({selectedResults.length})</div>
+              {selectedResults.map(r => (
+                <div key={r.id} className="pl-2 py-0.5">
+                  <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
+                    className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all text-[9px]">
+                    {r.source_title || r.source_url?.slice(0, 100) || "—"}
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+          {selectedResults.length === 0 && (
+            <div className="text-[#444] italic text-[9px] pl-2">no urls harvested yet</div>
+          )}
+        </div>
+      )}
 
       {/* Plan: generated queries */}
       {selected.step_type === "plan" && (parsedResult.queries.length > 0 || parsedResult.goal) && (
@@ -35,7 +73,7 @@ export const StepResultTab = memo(function StepResultTab({
       )}
 
       {/* Digest/Parse: per-source learnings */}
-      {selectedResults.length > 0 && selectedResults.map(r => {
+      {selected.step_type !== "search" && selectedResults.length > 0 && selectedResults.map(r => {
         let analysis: any = null
         try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
         return (
@@ -142,7 +180,8 @@ export const StepResultTab = memo(function StepResultTab({
         </div>
       )}
 
-      {selectedResults.length === 0 && !selected.result_summary && responseEntries.length === 0 && (
+      {selectedResults.length === 0 && !selected.result_summary && responseEntries.length === 0
+        && !(selected.step_type === "search" && searchQueries.length > 0) && (
         <div className="text-[#444] italic text-[9px]">no result data</div>
       )}
     </div>
