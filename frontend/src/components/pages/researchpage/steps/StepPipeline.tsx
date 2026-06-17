@@ -66,7 +66,8 @@ export const StepPipeline = memo(function StepPipeline({
   const { planStep, queryGroups, finalSteps } = useMemo(() => {
     if (!data) return { planStep: null as ResearchStep | null, queryGroups: [] as QueryGroup[], finalSteps: [] as ResearchStep[] }
 
-    const steps = [...data.steps] // chronological order (oldest first)
+    // API returns newest-first; reverse to chronological order
+    const steps = [...data.steps].reverse()
     const plan = steps.find(s => s.step_type === "plan") ?? null
     const others = steps.filter(s => s.step_type !== "plan")
 
