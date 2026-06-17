@@ -22,7 +22,6 @@ interface QueryGroup {
 }
 
 const CYCLE_PHASES = ["search", "parallel_parse", "digest"] as const
-const CYCLE_ORCH_PHASES = ["searching", "parsing", "digesting"]
 const FINAL_PHASES = ["reflect", "evaluate", "synthesize"] as const
 
 /** Parse result_summary or results_by_step into a compact count label. */
@@ -95,65 +94,49 @@ export const StepPipeline = memo(function StepPipeline({
   const allComplete = taskStatus === "completed" && orchPhase === "complete"
   const hasPipeline = orchPhase && orchPhase !== "complete" && orchPhase !== "not_started"
 
-  // Build query groups from DB steps, validated against plan's search_queries
-  const { planStep, queryGroups, finalSteps, plannedQueryCount } = useMemo(() => {
-    const empty = { planStep: null as ResearchStep | null, queryGroups: [] as QueryGroup[], finalSteps: [] as ResearchStep[], plannedQueryCount: 0 }
+  // ── Simple plan-driven grouping ──
+  const { planStep, queryGroups, finalSteps, totalQueries, activeGroupIdx } = useMemo(() => {
+    const empty = {
+      planStep: null as ResearchStep | null,
+      queryGroups: [] as QueryGroup[],
+      finalSteps: [] as ResearchStep[],
+      totalQueries: 0,
+      activeGroupIdx: -1,
+    }
     if (!data) return empty
 
-    // Steps are already in chronological order (from top to bottom)
     const steps = [...data.steps]
     const plan = steps.find(s => s.step_type === "plan") ?? null
-    const others = steps.filter(s => s.step_type !== "plan")
     const planQueryCount = getPlanQueryCount(data)
+    const totalQ = planQueryCount || 1
 
-    // Group search/parse/digest by query boundary (each "search" step starts a new query group)
+    // Collect cycle-phase steps in chronological order
+    const cycleSteps = steps.filter(s =>
+      (CYCLE_PHASES as readonly string[]).includes(s.step_type)
+    )
+
+    // Build groups: for each query, pick the Nth step of each type
     const groups: QueryGroup[] = []
-    let currentGroup: ResearchStep[] = []
-    let groupIdx = 0
-    for (const s of others) {
-      if ((CYCLE_PHASES as readonly string[]).includes(s.step_type)) {
-        // Start a new group when we encounter a "search" step (except for the very first)
-        if (s.step_type === "search" && currentGroup.length > 0) {
-          groupIdx++
-          groups.push({ steps: [...currentGroup], queryIndex: groupIdx })
-          currentGroup = []
-        }
-        currentGroup.push(s)
-      } else {
-        break // final phases start
-      }
-    }
-    // Push the last query group
-    if (currentGroup.length > 0) {
-      groupIdx++
-      groups.push({ steps: [...currentGroup], queryIndex: groupIdx })
-    }
-
-    // Cap groups to planned query count (ignore extra groups from retries)
-    const capped = planQueryCount > 0 ? groups.slice(0, planQueryCount) : groups
-
-    // Fill in missing query groups + missing steps with pending placeholders
-    const totalQueries = planQueryCount || capped.length
-    const filledGroups: QueryGroup[] = []
-    for (let q = 0; q < totalQueries; q++) {
-      const existingGroup = capped[q]  // undefined if no steps for this query yet
-      const steps: ResearchStep[] = []
-      const existingTypes = new Set((existingGroup?.steps || []).map((s: ResearchStep) => s.step_type))
+    for (let q = 0; q < totalQ; q++) {
+      const groupSteps: ResearchStep[] = []
       for (const ct of CYCLE_PHASES) {
-        if (existingTypes.has(ct)) {
-          steps.push(existingGroup!.steps.find((s: ResearchStep) => s.step_type === ct)!)
+        const sameType = cycleSteps.filter(s => s.step_type === ct)
+        const step = sameType[q] ?? null
+        if (step) {
+          groupSteps.push(step)
         } else {
-          steps.push({ id: "", step_type: ct, step_number: 0, status: "pending" } as ResearchStep)
+          groupSteps.push({ id: "", step_type: ct, step_number: 0, status: "pending" } as ResearchStep)
         }
       }
-      filledGroups.push({ queryIndex: q + 1, steps })
+      groups.push({ queryIndex: q + 1, steps: groupSteps })
     }
 
-    // Remaining steps after all cycle steps = final phases (reflect/evaluate/synthesize)
-    const cycleStepIds = new Set(filledGroups.flatMap(g => g.steps.map(s => s.id)))
-    const finals: ResearchStep[] = others.filter(s => !cycleStepIds.has(s.id))
-
-    // Also add pending final phases that haven't run yet
+    // Final phases: filter out steps already in groups
+    const groupedIds = new Set(groups.flatMap(g => g.steps.map(s => s.id)))
+    const finals: ResearchStep[] = steps.filter(s =>
+      (FINAL_PHASES as readonly string[]).includes(s.step_type) && !groupedIds.has(s.id)
+    )
+    // Add pending final phases
     const existingFinalTypes = new Set(finals.map(s => s.step_type))
     for (const ft of FINAL_PHASES) {
       if (!existingFinalTypes.has(ft)) {
@@ -161,33 +144,23 @@ export const StepPipeline = memo(function StepPipeline({
       }
     }
 
-    return { planStep: plan, queryGroups: filledGroups, finalSteps: finals, plannedQueryCount: planQueryCount || filledGroups.length }
-  }, [data])
+    // ── Active step detection: first non-completed step matching orchPhase ──
+    let activeGIdx = -1
+    for (let g = 0; g < groups.length; g++) {
+      for (const s of groups[g].steps) {
+        if (s.status !== "completed" && STEP_TO_PHASE[s.step_type] === orchPhase) {
+          activeGIdx = g
+          break
+        }
+      }
+      if (activeGIdx >= 0) break
+    }
+
+    return { planStep: plan, queryGroups: groups, finalSteps: finals, totalQueries: totalQ, activeGroupIdx: activeGIdx }
+  }, [data, orchPhase])
 
   // Results by step for count labels
   const resultsByStep = (data?.results_by_step || {}) as Record<string, unknown[]>
-
-  // Determine current cycle index from orchPhase
-  const cycleActiveIdx = CYCLE_ORCH_PHASES.indexOf(orchPhase)
-
-  // Phase-to-ID lookup for latest of each type
-  const phaseToStepId: Record<string, string | null> = {}
-  if (data) {
-    // Chronological order — latest iteration wins for each phase
-    const steps = [...data.steps]
-    const seen: Record<string, boolean> = {}
-    for (const s of steps) {
-      const phase = STEP_TO_PHASE[s.step_type]
-      if (phase && !seen[phase]) { phaseToStepId[phase] = s.id; seen[phase] = true }
-    }
-  }
-
-  // Total planned queries = from plan (or at least 1)
-  const totalQueries = plannedQueryCount || queryGroups.length || 1
-  // Which query group is currently active
-  const activeGroupIdx = cycleActiveIdx >= 0
-    ? queryGroups.findIndex(g => g.steps.some(s => s.status !== "completed")) : -1
-  const effectiveActiveIdx = activeGroupIdx >= 0 ? activeGroupIdx : queryGroups.length - 1
 
   return (
     <div className="flex-1 overflow-y-auto pr-1 space-y-3">
@@ -223,8 +196,11 @@ export const StepPipeline = memo(function StepPipeline({
                 const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
                 const pending = step.id ? "" : " —"
                 const done = allComplete || step.status === "completed" || stale
-                // Active if this step is in the currently-active query group and matches orchPhase
-                const isActive = !allComplete && hasPipeline && group.queryIndex - 1 === effectiveActiveIdx && STEP_TO_PHASE[step.step_type] === orchPhase
+                // Active: first non-completed step matching orchPhase in the active group
+                const isActive = !allComplete && hasPipeline
+                  && group.queryIndex - 1 === activeGroupIdx
+                  && STEP_TO_PHASE[step.step_type] === orchPhase
+                  && step.status !== "completed"
                 return (
                   <PipelineRow
                     key={step.id || `${group.queryIndex}-${step.step_type}`}
@@ -254,7 +230,7 @@ export const StepPipeline = memo(function StepPipeline({
               const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
               const pending = step.id ? "" : " —"
               const done = allComplete || step.status === "completed" || stale
-              const isActive = !allComplete && hasPipeline && phase === orchPhase
+              const isActive = !allComplete && hasPipeline && phase === orchPhase && step.status !== "completed"
               return (
                 <PipelineRow
                   key={step.id || step.step_type}
