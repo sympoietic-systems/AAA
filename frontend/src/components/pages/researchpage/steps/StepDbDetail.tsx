@@ -63,6 +63,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   const responseEntries = entries.filter(e =>
     e.event_type.endsWith("_response") && !e.event_type.endsWith("_prompt")
   )
+  const searchEntries = entries.filter(e => e.event_type === "orchestrator_search")
   const otherEntries = entries.filter(e => !inputEntries.includes(e) && !responseEntries.includes(e))
 
   const parsedResult = useMemo(() => {
@@ -123,7 +124,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   const tabBadges = entries.length > 0 ? {
     input: inputEntries.length,
     result: entries.length,
-    log: otherEntries.length,
+    log: otherEntries.length + searchEntries.length,
   } : undefined
 
   return (
@@ -168,7 +169,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
       )}
 
       {tab === "log" && (
-        <StepLogTab entries={otherEntries} loading={logLoading} />
+        <StepLogTab entries={[...otherEntries, ...searchEntries]} loading={logLoading} />
       )}
     </div>
   )
