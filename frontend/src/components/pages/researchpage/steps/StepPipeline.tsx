@@ -132,8 +132,25 @@ export const StepPipeline = memo(function StepPipeline({
     // Cap groups to planned query count (ignore extra groups from retries)
     const capped = planQueryCount > 0 ? groups.slice(0, planQueryCount) : groups
 
+    // Fill in missing query groups + missing steps with pending placeholders
+    const totalQueries = planQueryCount || capped.length
+    const filledGroups: QueryGroup[] = []
+    for (let q = 0; q < totalQueries; q++) {
+      const existingGroup = capped[q]  // undefined if no steps for this query yet
+      const steps: ResearchStep[] = []
+      const existingTypes = new Set((existingGroup?.steps || []).map((s: ResearchStep) => s.step_type))
+      for (const ct of CYCLE_PHASES) {
+        if (existingTypes.has(ct)) {
+          steps.push(existingGroup!.steps.find((s: ResearchStep) => s.step_type === ct)!)
+        } else {
+          steps.push({ id: "", step_type: ct, step_number: 0, status: "pending" } as ResearchStep)
+        }
+      }
+      filledGroups.push({ queryIndex: q + 1, steps })
+    }
+
     // Remaining steps after all cycle steps = final phases (reflect/evaluate/synthesize)
-    const cycleStepIds = new Set(capped.flatMap(g => g.steps.map(s => s.id)))
+    const cycleStepIds = new Set(filledGroups.flatMap(g => g.steps.map(s => s.id)))
     const finals: ResearchStep[] = others.filter(s => !cycleStepIds.has(s.id))
 
     // Also add pending final phases that haven't run yet
@@ -144,7 +161,7 @@ export const StepPipeline = memo(function StepPipeline({
       }
     }
 
-    return { planStep: plan, queryGroups: capped, finalSteps: finals, plannedQueryCount: planQueryCount || capped.length }
+    return { planStep: plan, queryGroups: filledGroups, finalSteps: finals, plannedQueryCount: planQueryCount || filledGroups.length }
   }, [data])
 
   // Results by step for count labels
