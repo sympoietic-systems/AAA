@@ -4,6 +4,7 @@ import yaml
 
 from backend.modules.base import ProcessingModule
 from backend.pipeline.registry import PipelineRegistry
+from backend.utils.persona_loader import get_persona_text
 from backend.utils.token_counter import estimate_message_tokens
 
 
@@ -284,8 +285,8 @@ def _build_system_content(
     persona = identity.get("personality", {})
     parts: list[str] = []
 
-    # 1. Core identity
-    prompt = persona.get("system_prompt", "")
+    # 1. Core identity + conversation protocols
+    prompt = get_persona_text(identity, "conversation")
     if prompt:
         parts.append(prompt.strip())
 

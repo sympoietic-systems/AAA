@@ -152,3 +152,4 @@
 
 ## RESEARCH
     [ ] think of memeory
+    [ ] if we start research from the conversation, we need to inject some memories there [maybe memory nodes + summary]

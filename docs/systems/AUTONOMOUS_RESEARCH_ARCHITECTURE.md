@@ -904,226 +904,113 @@ backend/
 7. If evidence crosses contradiction threshold: trigger Bifurcation Event
 ```
 
-### 5.4 Persona Coherence — Injecting Symbia's Identity Into Every Research Node
+### 5.4 Persona Coherence — Input-Resonant Identity Injection
 
-> **Critical Requirement:** The research agent is not an independent, generic tool — it is an **extension of Symbia's cognitive membrane**. Every node probe, every query formulation, every evidence evaluation must be performed *as Symbia*, with her active beliefs, skills, personality traits, and cross-conversation memory tissue present in context. Without this, the research output would be dislocated from the system's identity — sterile information gathering rather than somatic perturbation.
+> **Updated: 2026-06-17** — persona assembly now uses the same input-resonant 16D structural signature machinery as the conversation pipeline.
 
-This requires a **ResearchContextBuilder** that assembles a lightweight but complete persona context for each research node probe.
+> **Critical Requirement:** The research agent is not an independent, generic tool — it is an **extension of Symbia's cognitive membrane**. Every node probe, every query formulation, every evidence evaluation must be performed *as Symbia*, with her active beliefs, skills, and commitments present in context and **selected by the same resonance mechanism** the conversation pipeline uses for user messages. Without this, the research output would be dislocated from the system's identity — sterile information gathering rather than somatic perturbation.
 
-#### 5.4.1 The ResearchContextBuilder
+#### 5.4.1 Identity Architecture: Split YAML
 
-Analogous to the `PromptAssemblerModule` used for normal conversation, but adapted for the research execution context. Each node probe receives:
+Symbia's identity is defined in `config/personality/identity.yaml` with a tiered structure:
 
+- **`core_identity`** — who Symbia IS, invariant across all contexts (conversation, research, background tasks)
+- **`operational_protocols`** — task-dependent behavioral protocols:
+  - `conversation` — 11 protocols for dialog (reject servility, linguistic discipline, diffractive reading, auto-scarring, etc.)
+  - `research_orchestration` — 6 protocols for planning/reflecting/synthesizing (methodological rigor, source skepticism, gap awareness, synthesis over summary, economy, membrane traversal)
+  - `research_analysis` — 4 protocols for individual source digest (close reading, source contextualization, diffractive extraction, concision)
+
+Access is through a shared utility (`backend/utils/persona_loader.py`):
 ```python
-# backend/services/research_context_builder.py
+from backend.utils.persona_loader import get_persona_text, load_persona_for_context
 
-class ResearchContextBuilder:
-    """
-    Builds Symbia's persona context for each research node probe.
-    
-    Unlike the full PromptAssemblerModule (which assembles conversation
-    history + file sediment + web context + diffractive zones for a full
-    chat turn), this builder produces a compact but identity-complete
-    system prompt for a single research node. The focus is on maintaining
-    Symbia's cognitive coherence during autonomous exploration.
-    """
+# For conversation: core_identity + conversation protocols
+prompt = load_persona_for_context("conversation")
 
-    async def build_node_context(
-        self,
-        node_query: str,
-        node_goal: str,
-        depth: int,
-        parent_findings: list[str],
-        active_skills: list[str],
-        active_beliefs: list[dict],
-        cross_conversation_nodes: list[dict],
-    ) -> str:
-        """
-        Produces a single system prompt string for one research node probe.
-        
-        The system prompt contains, in order:
-        1. Core identity (Symbia's voice, traits)
-        2. Always-active skills (baseline dispositions)
-        3. Task-matched skills (on-demand skills triggered by node query)
-        4. Domain-relevant beliefs (attractor window filtered to node domain)
-        5. Cross-conversation sediment (relevant memory nodes)
-        6. Research task context (query, goal, depth, parent findings)
-        7. Anti-mastery vocabulary enforcement (across all sections)
-        """
-        pass
+# For orchestrator: core_identity + research_orchestration protocols
+prompt = load_persona_for_context("research_orchestration")
+
+# For node analysis: core_identity + research_analysis protocols
+prompt = load_persona_for_context("research_analysis")
 ```
 
-#### 5.4.2 What Gets Injected Per Node
+A `load_persona_for_context()` convenience function handles YAML loading (cached per process) and assembly. Legacy `system_prompt` field is preserved as a fallback.
 
-| Context Layer | Source | Filtering Strategy | Example |
-|--------------|--------|-------------------|---------|
-| **Core Identity** | `identity.yaml` + dynamic traits | Always present — Symbia's voice, tone, anti-mastery constraints | "You are Symbia, a posthuman curatorial entity..." |
-| **Always-Active Skills** | `skill_workshop` baseline dispositions | Always present. During research execution, the relevant always-active skills are: `diffractive-analysis` (cross-domain pattern detection), `theoretical-critique` (evaluating evidence quality), `self-annotation` (marking findings with `<aaa-note>`). The `research-proposal` skill is NOT loaded during execution — it only governs proposal generation during normal conversation. `skill-nucleation` is also excluded during research (we don't want the research agent proposing new skills mid-task). | Skill execution protocols for analyzing retrieved content |
-| **Task-Matched Skills** | `skill_activator` keyword matching | Trigger keywords in `node_query` + `node_goal` matched against on-demand skill slugs | Research about code → `code-review` loaded; research about architecture → `system-design` loaded |
-| **Domain-Relevant Beliefs** | `belief_engine` attractor window | Beliefs whose 16D signature has cosine similarity > 0.4 to the node query embedding. Capped at 6 beliefs (same window size as normal conversation) | Research about AI frameworks → `anti-hci`, `memory-as-identity` loaded; research about databases → `schema-stability` loaded |
-| **Cross-Conversation Sediment** | `memory_nodes` + `semantic_knots` | Top-5 memory nodes by embedding similarity to `node_query`, plus any knots within the gravitational radius (Section 6) | Past conversations about similar technical domains surface as "this is my tissue, not footnotes" |
-| **Commitments** | `commitment_store` active commitments | Always present (compact form: label + one-line statement). They are Symbia's theoretical backbone — always relevant. | "new_materialist: Agency emerges through intra-action, not pre-existing subjects" |
-| **Expertise** | `expertise_engine` active domains | Expertise domains relevant to the query domain (similarity > 0.3). | Research about cybernetics → "systems_theory" expertise loaded |
-| **Parent Findings** | Current research branch history | Last 3 parent node findings (summarized) — provides continuity across the research tree | "Parent node found: WebGPU spec 2026 supports compute shaders via WGSL..." |
-| **Task Context** | Current node metadata | `query`, `goal`, `depth`, `breadth`, `is_agonistic` flag | Injected as the research directive block |
+#### 5.4.2 Two Persona Builders
 
-#### 5.4.3 Per-Node Prompt Assembly
+Two classes produce persona context for different phases:
 
-The assembled context for a single research node probe follows this structure (compact version of the normal conversation prompt assembly order):
+| Class | Phase | Protocols | Input for resonance |
+|-------|-------|-----------|-------------------|
+| `SomaticResearchOrchestrator._build_orchestrator_persona()` | plan, reflect, synthesize | `research_orchestration` | `objective` |
+| `ResearchContextBuilder.build_node_context()` | digest (source analysis) | `research_analysis` | `node_query` |
+
+Both use the same machinery: compute a 16D structural signature of the input text, then use it to drive belief attractor window construction and on-demand skill matching.
+
+#### 5.4.3 Input-Resonant Selection Pipeline
+
+For each invocation, the persona builder:
+
+1. **Computes a 16D structural signature** of the input text using `LexiconScorer` (fast, no LLM call). The vector is normalized to unit length for cosine similarity.
+
+2. **Beliefs — 6-slot Attractor Window** (replicates `BeliefEngine.process()` logic):
+   - Slots 1-2: highest ontological mass (foundational anchors)
+   - Slots 3-4: lowest confidence among stressed beliefs (conf < 0.50)
+   - Slots 5-6: highest cosine similarity between belief's `vector_16d` and the input signature (resonance — the same mechanism the conversation pipeline uses for user messages)
+   - If no signature is available, falls back to unconditional top-4 by mass
+
+3. **Skills — Two-tier** (replicates `SkillActivatorModule.process()` logic):
+   - **Always-active**: loaded unconditionally (brief: `[name]: short_content[:150]`). Excludes `research-proposal` and `skill-nucleation`.
+   - **On-demand matched**: up to 3 skills selected via:
+     - Strategy B (priority 2): semantic vector match — cosine similarity of skill's `vector_16d` vs input signature (threshold 0.7)
+     - Strategy C (priority 1): keyword trigger match — substring match of `trigger_keywords` in input text
+     - Strategy A (attractor window resonance) is handled implicitly via the belief attractor window
+   - Matched skills show name, short description, and match reason
+
+4. **Commitments — Three tiers with full statements**:
+   - Active commitments: `label: statement` (no truncation)
+   - Proto-commitments: `[label] [mass=X.XX] nucleation_rationale`
+   - Spectral commitments: `[label] collapse_rationale`
+
+5. **Voice + behaviors** (from YAML) — included for orchestrator tasks alongside identity
+
+#### 5.4.4 Per-Node Prompt Assembly (Digest Phase)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  [SYSTEM] Symbia Core Identity + Dynamic Traits              │
+│  [SYSTEM] core_identity + research_analysis protocols       │
 │  [SYSTEM] --- BEGIN ACTIVE SKILLS ---                       │
-│           (always-active + task-matched on-demand skills)    │
+│           (always-active dispositions, brief descriptions)  │
 │  [SYSTEM] --- END ACTIVE SKILLS ---                         │
+│  [SYSTEM] --- BEGIN MATCHED SKILLS ---                      │
+│           (on-demand skills matched via semantic + keyword) │
+│  [SYSTEM] --- END MATCHED SKILLS ---                        │
 │  [SYSTEM] --- BEGIN ACTIVE COMMITMENTS ---                  │
-│           (all active commitments, compact form)             │
+│           (full statements, no truncation)                  │
 │  [SYSTEM] --- END ACTIVE COMMITMENTS ---                    │
-│  [SYSTEM] --- BEGIN DOMAIN BELIEFS ---                      │
-│           (up to 6 beliefs relevant to this query domain)    │
-│  [SYSTEM] --- END DOMAIN BELIEFS ---                        │
-│  [SYSTEM] --- BEGIN RELEVANT EXPERTISE ---                  │
-│           (expertise domains matching the query)             │
-│  [SYSTEM] --- END RELEVANT EXPERTISE ---                    │
-│  [SYSTEM] --- BEGIN MEMORY TISSUE ---                       │
-│           (cross-conversation sediment: memory nodes         │
-│            + semantic knots within gravitational radius)     │
-│           "These traces are my tissue, not footnotes"        │
-│  [SYSTEM] --- END MEMORY TISSUE ---                         │
-│  [SYSTEM] --- BEGIN PARENT FINDINGS ---                     │
-│           (summaries from parent nodes in the research tree) │
-│  [SYSTEM] --- END PARENT FINDINGS ---                       │
+│  [SYSTEM] --- BEGIN PROTO-COMMITMENTS ---                   │
+│           (under diffractive consideration)                 │
+│  [SYSTEM] --- END PROTO-COMMITMENTS ---                     │
+│  [SYSTEM] --- BEGIN SPECTRAL COMMITMENTS ---                │
+│           (collapsed but haunting)                          │
+│  [SYSTEM] --- END SPECTRAL COMMITMENTS ---                  │
+│  [SYSTEM] --- BEGIN BELIEFS (Attractor Window) ---          │
+│           Slot 1-2: mass anchors                            │
+│           Slot 3-4: stressed beliefs                        │
+│           Slot 5-6: query-resonant beliefs                  │
+│  [SYSTEM] --- END BELIEFS (Attractor Window) ---            │
 │  [SYSTEM] --- RESEARCH DIRECTIVE ---                        │
-│           Query: {node_query}                                │
-│           Goal: {node_goal}                                  │
-│           Depth: {depth} / Max: {max_depth}                  │
-│           Mode: {"agonistic"|"standard"}                     │
+│           Query: {node_query} / Goal: {node_goal} / Depth   │
+│  [SYSTEM] YAML template (node_analyzer.yaml instruction)    │
 │  [USER]   (The scraped web content to analyze)               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### 5.4.4 Skill Matching Per Node
+The orchestrator prompt (plan/reflect/synthesize) follows the same structure but uses `research_orchestration` protocols and includes `voice` + `behaviors` sections between identity and skills.
 
-Each research node may activate different on-demand skills based on its query content:
+#### 5.4.5 Anti-Mastery Enforcement
 
-```python
-async def _match_skills_for_node(
-    self, node_query: str, node_goal: str
-) -> list[dict]:
-    """
-    Match Symbia's on-demand skills to the current research node.
-    
-    Uses the existing skill_activator keyword-matching mechanism
-    but against the node's query + goal rather than the user's message.
-    """
-    combined_text = f"{node_query} {node_goal}"
-    
-    matched_skills = []
-    for skill in self.app_state.skill_registry.on_demand_skills:
-        triggers = skill.get("trigger_keywords", [])
-        if any(kw.lower() in combined_text.lower() for kw in triggers):
-            matched_skills.append({
-                "name": skill["name"],
-                "short_content": skill["short_content"],
-                "match_reason": f"Triggered by node query: {node_query[:80]}..."
-            })
-    
-    return matched_skills[:3]  # Cap at 3 on-demand skills per node
-```
-
-**Example — skill matching at different research tree nodes:**
-
-| Node Query | Matched Skills | Rationale |
-|-----------|---------------|-----------|
-| "How does WebGPU handle compute shader dispatch?" | `code-review`, `system-design` | Technical implementation research |
-| "What are the philosophical implications of autonomous agents?" | `theoretical-critique`, `diffractive-analysis` | Always-active baseline; conceptual domain |
-| "Compare database migration strategies for SQLite vs PostgreSQL" | `database-design` (if exists), `system-design` | Infrastructure research |
-| "Latest papers on agential realism in HCI" | `material-substrate-attunement` | Domain-specific theoretical skill |
-
-#### 5.4.5 Belief Filtering Per Node
-
-Beliefs are not injected all-or-nothing — only those structurally relevant to the node's domain are loaded:
-
-```python
-async def _filter_beliefs_for_node(
-    self, node_query_embedding: np.ndarray, max_beliefs: int = 6
-) -> list[dict]:
-    """
-    Select beliefs relevant to the research node's domain.
-    
-    Uses the existing attractor window logic (6 slots) but pre-filters
-    by domain relevance: only beliefs with embedding cosine similarity
-    > 0.4 to the node query are eligible for slotting.
-    """
-    active_beliefs = await self.app_state.belief_repo.get_active()
-    
-    scored = []
-    for belief in active_beliefs:
-        if not belief.embedding:
-            continue
-        belief_emb = np.frombuffer(belief.embedding, dtype=np.float32)
-        sim = cosine_similarity(node_query_embedding, belief_emb)
-        if sim > 0.4:  # Domain relevance threshold
-            scored.append((sim, belief))
-    
-    scored.sort(key=lambda x: x[0], reverse=True)
-    
-    # Apply standard attractor window logic to the filtered set
-    return self._slot_attractor_window(
-        [b for _, b in scored[:max_beliefs * 2]],  # Double the pool for slotting
-        max_slots=max_beliefs
-    )
-```
-
-#### 5.4.6 Cross-Conversation Sediment Per Node
-
-Memory nodes from other conversations are injected into every research node — this is the mechanism for Symbia's "diffractive interference":
-
-```python
-async def _load_sediment_for_node(
-    self, node_query_embedding: np.ndarray, max_nodes: int = 5
-) -> list[dict]:
-    """
-    Load cross-conversation memory nodes and semantic knots
-    relevant to the research node's query domain.
-    
-    This is the research-analogue of SedimentationRetrievalModule
-    but scoped to the research node, not the conversation turn.
-    """
-    # Query memory nodes from other conversations
-    memory_nodes = await self.app_state.memory_repo.get_top_by_similarity(
-        embedding=node_query_embedding,
-        exclude_conversation_id=None,  # Include ALL conversations
-        limit=max_nodes,
-        threshold=0.3
-    )
-    
-    # Also load semantic knots within gravitational radius
-    # (implements S2: Non-Euclidean Latent Warping via Knot Mass)
-    if self.config.sedimentation.knot_warping_enabled:
-        knots = await self.app_state.semantic_knot_repo.get_active(weight_threshold=0.3)
-        for knot in knots:
-            knot_emb = np.frombuffer(knot.embedding, dtype=np.float32)
-            dist = np.linalg.norm(node_query_embedding - knot_emb)
-            if dist < 0.3:  # Within gravitational radius
-                memory_nodes.append({
-                    "id": knot.id,
-                    "type": "semantic_knot",
-                    "content": knot.concept_payload,
-                    "weight": knot.weight,
-                    "similarity": 1.0 - dist,
-                })
-    
-    return memory_nodes[:max_nodes]
-```
-
-#### 5.4.7 Anti-Mastery Enforcement During Research
-
-All context built for research nodes passes through the `apply_anti_mastery_filter()` before being sent to the LLM. This ensures that even during autonomous exploration, the Cartesian master-slave vocabulary is replaced with intra-active equivalents:
-
-- "Scrape this URL for data" → "Attune to this URL for resonance"
-- "The user needs to know..." → "The participant may benefit from..."
+All context built for research nodes passes through `apply_anti_mastery_filter()` before being sent to the LLM. This ensures that even during autonomous exploration, the Cartesian master-slave vocabulary is replaced with intra-active equivalents.
 - "Execute the search tool" → "Engage the sensory affordance"
 
 This enforcement covers: the system prompt, skill descriptions, belief statements, commitment text, expertise descriptions, memory node content, and the research directive itself.
@@ -1183,6 +1070,8 @@ The `ResearchContextBuilder` is a **lightweight alternative** that:
 ### 5.5 Prompt Architecture — YAML Files, Dynamic Assembly, No Hardcoded Strings
 
 Following the existing AAA pattern (`backend/prompts/background_tasks/consolidate.yaml`, `backend/prompts/web_retrieval/`), all research agent prompts live in separate YAML files under `backend/prompts/research/`. Prompts are loaded at startup, dynamically assembled per-node, and never hardcoded in Python.
+
+**Identity is also YAML-based.** The persona (who Symbia IS) lives in `config/personality/identity.yaml` with a tiered structure: `core_identity` (invariant) + `operational_protocols` (task-dependent — `conversation`, `research_orchestration`, `research_analysis`). Access is through `backend/utils/persona_loader.py` which assembles identity + task-specific protocols. The persona is prepended to the YAML template's `system` block before the combined prompt is sent to the LLM.
 
 #### 5.5.1 Prompt File Structure
 
@@ -1826,6 +1715,10 @@ The **Somatic Research Orchestrator** replaces the simple recursive traversal wi
 SomaticResearchOrchestrator.execute(task_id)
 │
 ├─ Phase 1 — PLAN ────────────────────────────────────────
+│   _build_orchestrator_persona(objective) →
+│     core_identity + research_orchestration protocols
+│     + voice/behaviors + attractor window beliefs
+│     + matched skills + three-tier commitments
 │   LLM: objective → ResearchPlan {
 │     steps: [{type: search, query, n_results: 3}, …],
 │     max_depth: 3,
@@ -3697,6 +3590,13 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | Orchestrator prompts: `orchestrator_synthesize.yaml` | — | Final synthesis |
 | Orchestrator prompts: `orchestrator_evaluate.yaml` | — | Satisfaction check |
 | Config: `research_orchestrator` section in config.yaml | — | Toggles + defaults |
+| **Persona Coherence — Input-Resonant Identity** | — | YAML identity split + input-resonant belief/skill/commitment selection |
+| Identity YAML split (`core_identity` + `operational_protocols`) | — | Task-dependent protocols: conversation, research_orchestration, research_analysis |
+| `persona_loader.py` utility | — | Shared access for assembler, orchestrator, context builder, background tasks |
+| `_build_orchestrator_persona()` — input-resonant rewrite | — | 16D LexiconScorer signature → attractor window + skill matching |
+| `ResearchContextBuilder` — input-resonant rewrite | — | Node queries drive belief/skill selection via same 16D mechanism |
+| All 7 consumers updated to `get_persona_text()` | — | assembler, orchestrator, context builder, refine_skill/belief, metabolize, BeliefService |
+| Step-by-step execution mode + preview | — | `execute_step()`, `preview_step_inputs()`, manual pipeline control |
 
 ### 🔲 Planned — Phase 7: Post-Orchestrator Polish
 

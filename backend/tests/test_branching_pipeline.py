@@ -71,7 +71,7 @@ async def test_context_collector_branching():
 async def test_prompt_assembler_branching(tmp_path):
     # Create a dummy identity yaml
     identity_file = tmp_path / "identity.yaml"
-    identity_file.write_text("personality:\n  system_prompt: 'You are Symbia.'")
+    identity_file.write_text("personality:\n  core_identity: 'You are Symbia.'")
     
     mock_skill_registry = MagicMock()
     

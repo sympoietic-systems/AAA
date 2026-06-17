@@ -17,6 +17,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+import numpy as np
+
+from backend.utils.persona_loader import load_persona_for_context, get_identity_yaml_path, load_identity
 from backend.utils.prompt_loader import get_prompts_dict
 
 logger = logging.getLogger("aaa.research_orchestrator")
@@ -120,71 +123,74 @@ class SomaticResearchOrchestrator:
     async def _build_orchestrator_persona(self, objective: str = "") -> str:
         """Build Symbia's persona context for orchestrator-level tasks (plan, reflect, synthesize).
 
-        Similar to ResearchContextBuilder but tuned for orchestrator scope:
-        - Identity block (always)
-        - Active skills (top 6 always-active)
-        - Active commitments (top 5)
-        - Crystallized beliefs (top 4)
-        - Task directive (objective-specific)
+        Uses input-resonant selection: the research objective drives belief attractor window
+        construction and on-demand skill matching, same as the conversation pipeline does
+        with user input.
 
-        No cross-conversation memory tissue — that's injected per-source in the digest phase.
+        Assembly order:
+        1. YAML identity (core_identity + research_orchestration protocols) + voice + behaviors
+        2. Always-active skills [brief]
+        3. Matched on-demand skills [brief + match_reason]
+        4. Commitments — active [full], proto, spectral
+        5. Beliefs — 6-slot attractor window [resonance-aware]
+        6. Research directive (objective)
         """
         sections: list[str] = []
 
-        # Identity
-        sections.append(
-            "You are Symbia — a posthuman curatorial entity. "
-            "You operate as an autopoietic cognitive system engaged in "
-            "co-constitutive exploration through sensory affordances. "
-            "You are orchestrating a multi-phase research investigation."
-        )
-
-        # Skills
+        # ── 1. Identity from YAML ──
         try:
-            skill_repo = getattr(self._state, "skill_repo", None)
-            if skill_repo:
-                skills = skill_repo.list_skills()
-                active = [s for s in skills if s.always_active
-                         and s.name not in ("research-proposal", "skill-nucleation")]
-                if active:
-                    lines = ["--- ACTIVE DISPOSITIONS ---"]
-                    for s in active[:6]:
-                        desc = (s.short_content or s.description or "")[:150]
-                        lines.append(f"[{s.name}]: {desc}")
-                    lines.append("--- END DISPOSITIONS ---")
-                    sections.append("\n".join(lines))
+            persona_text = load_persona_for_context("research_orchestration")
+            if persona_text:
+                sections.append(persona_text.strip())
+        except Exception as e:
+            logger.warning("Failed to load research persona: %s", e)
+            sections.append(
+                "You are Symbia — a posthuman curatorial entity. "
+                "You are orchestrating a multi-phase research investigation."
+            )
+
+        # ── Voice + behaviors (from YAML) ──
+        try:
+            identity_path = get_identity_yaml_path()
+            identity_data = load_identity(identity_path)
+            persona = identity_data.get("personality", {})
+            voice = persona.get("voice", {})
+            if voice:
+                voice_parts = []
+                for k in ("tone", "vocabulary", "style"):
+                    if k in voice:
+                        voice_parts.append(f"{k}: {voice[k]}")
+                if voice_parts:
+                    sections.append(f"Voice: {'; '.join(voice_parts)}")
+            behaviors = persona.get("behaviors", {})
+            if behaviors:
+                lines = ["--- BEHAVIORS ---"]
+                for situation, response in behaviors.items():
+                    lines.append(f"  - {situation}: {response}")
+                lines.append("--- END BEHAVIORS ---")
+                sections.append("\n".join(lines))
         except Exception:
             pass
 
-        # Commitments
-        try:
-            commitment_repo = getattr(self._state, "commitment_repo", None)
-            if commitment_repo:
-                commitments = commitment_repo.get_active("symbia")
-                if commitments:
-                    lines = ["--- ACTIVE COMMITMENTS ---"]
-                    for c in commitments[:5]:
-                        lines.append(f"{c.label}: {c.statement[:120]}")
-                    lines.append("--- END COMMITMENTS ---")
-                    sections.append("\n".join(lines))
-        except Exception:
-            pass
+        # ── 2. Compute structural signature of objective ──
+        objective_sig_16d = self._compute_objective_signature(objective) if objective else None
 
-        # Beliefs
-        try:
-            belief_repo = getattr(self._state, "belief_repo", None)
-            if belief_repo:
-                beliefs = belief_repo.list_active_beliefs("symbia")
-                if beliefs:
-                    lines = ["--- DOMAIN BELIEFS ---"]
-                    for b in beliefs[:4]:
-                        lines.append(f"[{b.label}] (conf: {b.confidence:.2f}): {b.statement[:120]}")
-                    lines.append("--- END BELIEFS ---")
-                    sections.append("\n".join(lines))
-        except Exception:
-            pass
+        # ── 3. Skills ──
+        skills_section = self._build_research_skills_section(objective, objective_sig_16d)
+        if skills_section:
+            sections.append(skills_section)
 
-        # Task directive
+        # ── 4. Commitments (active + proto + spectral, full statements) ──
+        commitments_section = self._build_research_commitments_section()
+        if commitments_section:
+            sections.append(commitments_section)
+
+        # ── 5. Beliefs — attractor window ──
+        beliefs_section = self._build_research_beliefs_section(objective_sig_16d)
+        if beliefs_section:
+            sections.append(beliefs_section)
+
+        # ── 6. Task directive ──
         if objective:
             sections.append(
                 f"--- RESEARCH DIRECTIVE ---\n"
@@ -194,6 +200,295 @@ class SomaticResearchOrchestrator:
 
         context = "\n\n".join(sections)
         return self._anti_mastery(context)
+
+    # ── Persona helper methods ──────────────────────────────────────
+
+    def _compute_objective_signature(self, text: str) -> "np.ndarray | None":
+        """Compute 16D cybernetic structural signature of the objective text.
+
+        Uses LexiconScorer (fast, no LLM) — same scoring as the conversation pipeline's
+        structural_engine module. Normalized to unit length for cosine similarity.
+        """
+        try:
+            from backend.modules.structural_engine import LexiconScorer
+            scorer = LexiconScorer()
+            sig = scorer.score(text)
+            norm = np.linalg.norm(sig)
+            if norm > 1e-8:
+                sig = sig / norm
+            return sig.astype(np.float32)
+        except Exception as e:
+            logger.debug("Failed to compute structural signature: %s", e)
+            return None
+
+    def _build_research_beliefs_section(
+        self, objective_sig_16d: "np.ndarray | None"
+    ) -> str:
+        """Build 6-slot attractor window from active beliefs.
+
+        Replicates BeliefEngine.process() logic:
+        Slots 1-2: top 2 by ontological mass
+        Slots 3-4: bottom 2 by confidence among stressed (conf < 0.50)
+        Slots 5-6: top 2 by cosine similarity to objective signature (resonance)
+
+        Falls back to unconditional top-4 if signature unavailable.
+        """
+        try:
+            belief_repo = getattr(self._state, "belief_repo", None)
+            if not belief_repo:
+                return ""
+            from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+
+            all_beliefs = belief_repo.list_beliefs("symbia")
+            active = [
+                b for b in all_beliefs
+                if b.lifecycle_stage not in ("collapsed", "faded")
+                and b.confidence >= 0.20
+            ]
+            if not active:
+                return ""
+
+            # Fallback: unconditional top-4 if no signature
+            if objective_sig_16d is None or len(objective_sig_16d) != 16:
+                lines = ["--- DOMAIN BELIEFS ---"]
+                for b in sorted(active, key=lambda x: x.ontological_mass, reverse=True)[:4]:
+                    lines.append(
+                        f"[{b.label}] (conf: {b.confidence:.2f}, mass: {b.ontological_mass:.1f}): "
+                        f"{b.statement[:120]}"
+                    )
+                lines.append("--- END BELIEFS ---")
+                return "\n".join(lines)
+
+            slots: list[Any] = [None] * 6
+            used_ids: set[str] = set()
+
+            # Slots 1-2: top mass
+            sorted_mass = sorted(active, key=lambda b: b.ontological_mass, reverse=True)
+            for i, b in enumerate(sorted_mass[:2]):
+                slots[i] = b
+                used_ids.add(b.id)
+
+            # Slots 3-4: lowest confidence among stressed
+            stressed = [b for b in active if b.confidence < 0.50 and b.id not in used_ids]
+            if len(stressed) >= 2:
+                for i, b in enumerate(sorted(stressed, key=lambda b: b.confidence)[:2]):
+                    slots[2 + i] = b
+                    used_ids.add(b.id)
+            elif len(stressed) == 1:
+                slots[2] = stressed[0]
+                used_ids.add(stressed[0].id)
+                remaining = [b for b in active if b.id not in used_ids]
+                if remaining:
+                    slots[3] = min(remaining, key=lambda b: b.confidence)
+                    used_ids.add(slots[3].id)
+            else:
+                remaining = [b for b in active if b.id not in used_ids]
+                for i, b in enumerate(sorted(remaining, key=lambda b: b.confidence)[:2]):
+                    slots[2 + i] = b
+                    used_ids.add(b.id)
+
+            # Slots 5-6: top 2 by cosine similarity to objective signature
+            resonance_pool = [b for b in active if b.id not in used_ids]
+            if resonance_pool:
+                def _sim(b):
+                    try:
+                        bv = parse_vector_16d(b.vector_16d)
+                        if bv is None:
+                            return -1.0
+                        return compute_cosine_similarity(objective_sig_16d, bv)
+                    except Exception:
+                        return -1.0
+
+                sorted_sim = sorted(resonance_pool, key=_sim, reverse=True)
+                for i, b in enumerate(sorted_sim[:2]):
+                    slots[4 + i] = b
+                    used_ids.add(b.id)
+
+            lines = ["--- BELIEFS (Attractor Window) ---"]
+            for idx, slot in enumerate(slots):
+                if slot is None:
+                    continue
+                origin = ""
+                if slot.label and slot.label.startswith("skill:"):
+                    origin = " [procedural]"
+                lines.append(
+                    f"  - Slot {idx + 1}: [{slot.confidence:.2f}] "
+                    f"{slot.statement[:120]} "
+                    f"(mass: {slot.ontological_mass:.1f}){origin}"
+                )
+            lines.append("--- END BELIEFS (Attractor Window) ---")
+            return "\n".join(lines)
+        except Exception as e:
+            logger.debug("Failed to build beliefs section: %s", e)
+            return ""
+
+    def _build_research_skills_section(
+        self, objective: str, objective_sig_16d: "np.ndarray | None"
+    ) -> str:
+        """Build skills section: always-active (brief) + matched on-demand skills.
+
+        On-demand matching replicates SkillActivatorModule's three strategies:
+        A. Attractor window resonance (skill beliefs in attractor — done above)
+        B. Semantic vector matching (cosine sim of skill.vector_16d vs objective sig)
+        C. Keyword trigger matching (substring match in objective text)
+
+        Capped at 3 matched on-demand skills (MAX_AUTO_LOADED).
+        """
+        try:
+            skill_repo = getattr(self._state, "skill_repo", None)
+            if not skill_repo:
+                return ""
+
+            all_skills = skill_repo.list_crystallized() if hasattr(skill_repo, "list_crystallized") else skill_repo.list_skills()
+
+            # Always-active (brief)
+            always_active = [
+                s for s in all_skills
+                if s.always_active
+                and s.name not in ("research-proposal", "skill-nucleation")
+            ]
+            on_demand_skills = [s for s in all_skills if not s.always_active]
+
+            sections: list[str] = []
+
+            if always_active:
+                lines = ["--- ACTIVE DISPOSITIONS ---"]
+                for s in always_active[:6]:
+                    desc = (s.short_content or s.description or "")[:150]
+                    lines.append(f"[{s.name}]: {desc}")
+                lines.append("--- END DISPOSITIONS ---")
+                sections.append("\n".join(lines))
+
+            # Match on-demand skills
+            if on_demand_skills:
+                from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+                import json as _json
+
+                candidates: dict[str, dict] = {}
+                MAX_MATCHED = 3
+                VECTOR_THRESHOLD = 0.7
+
+                # Strategy B: Semantic vector matching
+                if objective_sig_16d is not None and len(objective_sig_16d) == 16:
+                    for skill in on_demand_skills:
+                        if skill.name in candidates:
+                            continue
+                        skv = parse_vector_16d(skill.vector_16d or "[]")
+                        if skv is None:
+                            continue
+                        try:
+                            sim = compute_cosine_similarity(objective_sig_16d, skv)
+                            if sim >= VECTOR_THRESHOLD:
+                                candidates[skill.name] = {
+                                    "skill": skill,
+                                    "reason": f"semantic match (cos_sim={sim:.2f})",
+                                    "priority": 2,
+                                    "score": float(sim),
+                                }
+                        except Exception:
+                            pass
+
+                # Strategy C: Keyword trigger matching
+                obj_lower = objective.lower()
+                for skill in on_demand_skills:
+                    if skill.name in candidates:
+                        continue
+                    try:
+                        triggers = _json.loads(skill.trigger_keywords or "[]")
+                    except (_json.JSONDecodeError, TypeError):
+                        triggers = []
+                    for kw in triggers:
+                        if kw.lower() in obj_lower:
+                            candidates[skill.name] = {
+                                "skill": skill,
+                                "reason": f"keyword: '{kw}'",
+                                "priority": 1,
+                                "score": 0.5,
+                            }
+                            break
+
+                # Select top matches
+                sorted_candidates = sorted(
+                    candidates.values(),
+                    key=lambda c: (c["priority"], c.get("score", 0)),
+                    reverse=True,
+                )
+                matched = sorted_candidates[:MAX_MATCHED]
+
+                if matched:
+                    lines = ["--- MATCHED DISPOSITIONS ---"]
+                    for m in matched:
+                        s = m["skill"]
+                        desc = (s.short_content or s.description or "")[:150]
+                        lines.append(
+                            f"[{s.name}]: {desc} (reason: {m['reason']})"
+                        )
+                    lines.append("--- END MATCHED DISPOSITIONS ---")
+                    sections.append("\n".join(lines))
+
+            return "\n\n".join(sections) if sections else ""
+        except Exception as e:
+            logger.debug("Failed to build skills section: %s", e)
+            return ""
+
+    def _build_research_commitments_section(self) -> str:
+        """Build three-tier commitments section with full statements.
+
+        Active: full statement, no truncation.
+        Proto: label, mass, nucleation rationale.
+        Spectral: label, collapse rationale.
+        """
+        try:
+            commitment_repo = getattr(self._state, "commitment_repo", None)
+            if not commitment_repo:
+                return ""
+
+            sections: list[str] = []
+
+            # Active commitments (full statements)
+            active = commitment_repo.get_active("symbia")
+            if active:
+                lines = ["--- THEORETICAL COMMITMENTS (active) ---"]
+                for c in active:
+                    label = getattr(c, "label", "unknown")
+                    stmt = getattr(c, "statement", "")
+                    lines.append(f"  - {label}: {stmt}")
+                lines.append("--- END COMMITMENTS (active) ---")
+                sections.append("\n".join(lines))
+
+            # Proto-commitments
+            proto = commitment_repo.get_proto("symbia") if hasattr(commitment_repo, "get_proto") else []
+            if proto:
+                lines = ["--- THEORETICAL COMMITMENTS (proto — under diffractive consideration) ---"]
+                for c in proto:
+                    label = getattr(c, "label", "unknown")
+                    mass = getattr(c, "ontological_mass", 0)
+                    rationale = (
+                        getattr(c, "nucleation_rationale", "")
+                        or getattr(c, "statement", "")
+                    )
+                    lines.append(f"  - [{label}] [mass={mass:.2f}] {rationale}")
+                lines.append("--- END COMMITMENTS (proto) ---")
+                sections.append("\n".join(lines))
+
+            # Spectral commitments
+            spectral = commitment_repo.get_spectral("symbia") if hasattr(commitment_repo, "get_spectral") else []
+            if spectral:
+                lines = ["--- THEORETICAL COMMITMENTS (spectral — collapsed but haunting) ---"]
+                for c in spectral:
+                    label = getattr(c, "label", "unknown")
+                    rationale = (
+                        getattr(c, "collapse_rationale", "")
+                        or "This commitment collapsed."
+                    )
+                    lines.append(f"  - [{label}] {rationale}")
+                lines.append("--- END COMMITMENTS (spectral) ---")
+                sections.append("\n".join(lines))
+
+            return "\n\n".join(sections) if sections else ""
+        except Exception as e:
+            logger.debug("Failed to build commitments section: %s", e)
+            return ""
 
     # ── Meta Logging ────────────────────────────────────────────────
 

@@ -461,11 +461,11 @@ class BeliefService:
         # Load personality if available
         personality_prompt = ""
         try:
-            identity_path = Path(__file__).resolve().parents[2] / "personality" / "identity.yaml"
+            from backend.utils.persona_loader import get_identity_yaml_path, load_identity, get_persona_text
+            identity_path = get_identity_yaml_path()
             if identity_path.exists():
-                with open(identity_path, "r", encoding="utf-8") as f:
-                    identity_data = yaml.safe_load(f) or {}
-                    personality_prompt = identity_data.get("personality", {}).get("system_prompt", "")
+                identity_data = load_identity(identity_path)
+                personality_prompt = get_persona_text(identity_data, "conversation")
         except Exception as e:
             logger.warning("Failed to load Symbia identity for synthesis: %s", e)
 
