@@ -56,7 +56,11 @@ export const StepResultTab = memo(function StepResultTab({
             </div>
           )}
           {selectedResults.length === 0 && (
-            <div className="text-[#444] italic text-[9px] pl-2">no urls harvested yet</div>
+            <div className="text-[#444] italic text-[9px] pl-2">
+              {searchQueries.some(sq => sq.resultsCount > 0)
+                ? `${searchQueries.reduce((sum, sq) => sum + sq.resultsCount, 0)} links found — fetch + analysis in parse/digest steps`
+                : "no urls found"}
+            </div>
           )}
         </div>
       )}
