@@ -29,7 +29,7 @@ llm:
   # thinking mode (DeepSeek-v4-pro / v4-flash)
   # when enabled, temperature/top_p/presence_penalty are ignored by the model
   thinking:
-    enabled: false
+    enabled: true
     effort: "high"  # high | max
   default_params:
     temperature: 0.7
