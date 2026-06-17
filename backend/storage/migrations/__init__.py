@@ -79,6 +79,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m034_research_orchestrator_schema,
         m035_rerun_count,
         m036_cached_inputs,
+        m037_meta_log_step_id,
     )
 
     runner = MigrationRunner(conn)

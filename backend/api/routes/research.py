@@ -334,9 +334,10 @@ async def get_task_meta_log(
     task_id: str,
     limit: int = 200,
     branch_id: Optional[str] = None,
+    step_id: Optional[str] = None,
     request: Request = None,
 ):
-    """Full activity log for a research task.  Pass ?branch_id=<step_id> to
+    """Full activity log for a research task.  Pass ?step_id=<step_id> to
     filter to a specific orchestrator step.
     """
     state = request.app.state
@@ -348,9 +349,10 @@ async def get_task_meta_log(
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
-    if branch_id:
+    if step_id:
+        entries = meta_repo.get_by_step(step_id)
+    elif branch_id:
         entries = meta_repo.get_by_branch(branch_id)
-        # Filter further to this task (branch_id may not be globally unique)
         entries = [e for e in entries if e.get("task_id") == task_id]
     else:
         entries = meta_repo.get_by_task(task_id, limit=limit)
@@ -362,6 +364,7 @@ async def get_task_meta_log(
         "title": task.get("title", ""),
         "status": task.get("status", ""),
         "branch_id": branch_id,
+        "step_id": step_id,
         "entries": entries,
         "count": len(entries),
     }

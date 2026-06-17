@@ -273,7 +273,7 @@ class SomaticResearchOrchestrator:
 
     # ── Meta Logging ────────────────────────────────────────────────
 
-    def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: Optional[str] = None) -> None:
+    def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: Optional[str] = None, step_id: Optional[str] = None) -> None:
         try:
             repo = self._meta_log_repo
             if repo is None:
@@ -281,7 +281,8 @@ class SomaticResearchOrchestrator:
             repo.create({
                 "id": str(uuid.uuid4()),
                 "task_id": task_id,
-                "branch_id": branch_id,
+                "branch_id": branch_id if branch_id else None,
+                "step_id": step_id if step_id else None,
                 "event_type": event_type,
                 "event_data": json.dumps(data, default=str, ensure_ascii=False),
                 "created_at": self._now_utc_str(),
@@ -600,7 +601,7 @@ class SomaticResearchOrchestrator:
         step_id = str(uuid.uuid4())
 
         # Generate the plan first so we have a valid plan_id
-        plan = await self._phase_plan(task_id, s["objective"], s["max_depth"], s["budget"], branch_id=step_id)
+        plan = await self._phase_plan(task_id, s["objective"], s["max_depth"], s["budget"], step_id=step_id)
         s["plan"] = plan
         s["plan_id"] = plan["id"]
 
@@ -617,7 +618,7 @@ class SomaticResearchOrchestrator:
             self.step_repo.update(step_id, step_data=json.dumps(llm_resp, default=str, ensure_ascii=False)[:self._TRUNC_STEP_RESULT])
         except Exception:
             pass
-        self._log_meta(task_id, "orchestrator_plan", {"plan": plan}, branch_id=step_id)
+        self._log_meta(task_id, "orchestrator_plan", {"plan": plan}, step_id=step_id)
 
         s["phase"] = "searching"
         return {"plan": plan, "plan_id": plan["id"], "step_id": step_id}
@@ -660,7 +661,7 @@ class SomaticResearchOrchestrator:
         self._log_meta(task_id, "orchestrator_search", {
             "query": query[:200],
             "results_count": len(search_results),
-        }, branch_id=step_id)
+        }, step_id=step_id)
 
         if not search_results:
             self.step_repo.update(step_id, status="completed",
@@ -748,7 +749,7 @@ class SomaticResearchOrchestrator:
             "step_number": s["step_number"],
             "new_learnings": new_learnings,
             "total_learnings": len(s["all_findings"]),
-        }, branch_id=step_id)
+        }, step_id=step_id)
 
         s["query_index"] += 1
         queries = s["plan"].get("search_queries", [s["objective"]])
@@ -793,7 +794,7 @@ class SomaticResearchOrchestrator:
         reflection = await self._tool_reflect(
             task_id, s["objective"], s["plan"].get("goal", s["objective"]),
             s["current_depth"], s["max_depth"],
-            s["all_findings"], s["last_reflection"], branch_id=step_id,
+            s["all_findings"], s["last_reflection"], step_id=step_id,
         )
         s["last_reflection"] = reflection
         completeness = reflection.get("completeness_score", 0)
@@ -804,7 +805,7 @@ class SomaticResearchOrchestrator:
             "depth": s["current_depth"],
             "completeness": completeness,
             "total_findings": len(s["all_findings"]),
-        }, branch_id=step_id)
+        }, step_id=step_id)
 
         s["phase"] = "evaluating"
         return {"completeness": completeness, "step_id": step_id}
@@ -828,7 +829,7 @@ class SomaticResearchOrchestrator:
             "decision": "stop" if should_stop else "continue",
             "reason": stop_reason,
             "depth": s["current_depth"],
-        }, branch_id=step_id)
+        }, step_id=step_id)
 
         self.step_repo.update(step_id, status="completed",
             result_summary=stop_reason)
@@ -858,12 +859,12 @@ class SomaticResearchOrchestrator:
             "total_findings": len(s["all_findings"]),
             "sources": s["sources_analyzed"],
             "depth": s["current_depth"],
-        }, branch_id=step_id)
+        }, step_id=step_id)
 
         result_summary = await self._phase_synthesize(
             task_id, s["objective"],
             s["plan"].get("goal", s["objective"]) if s["plan"] else s["objective"],
-            s["all_findings"], s["sources_analyzed"], branch_id=step_id,
+            s["all_findings"], s["sources_analyzed"], step_id=step_id,
         )
 
         self.task_repo.update(task_id,
@@ -880,7 +881,7 @@ class SomaticResearchOrchestrator:
             "sources": s["sources_analyzed"],
             "findings": len(s["all_findings"]),
             "depth": s["current_depth"],
-        }, branch_id=step_id)
+        }, step_id=step_id)
 
         s["result_summary"] = result_summary
         s["branches_created"] = s["step_number"]
@@ -925,7 +926,7 @@ class SomaticResearchOrchestrator:
 
     # ── Phase 1: PLAN ───────────────────────────────────────────────
 
-    async def _phase_plan(self, task_id, objective, max_depth, budget, previous_context: str = "", branch_id: str = "") -> dict:
+    async def _phase_plan(self, task_id, objective, max_depth, budget, previous_context: str = "", step_id: str = "") -> dict:
         prompt_data = get_prompts_dict("research/orchestrator_planner.yaml")
 
         # Try cache first — skip expensive persona build if we already built it
@@ -972,14 +973,14 @@ class SomaticResearchOrchestrator:
                 self._log_meta(task_id, "orchestrator_plan_prompt", {
                     "system_prompt": system_text[:self._TRUNC_META_LOG],
                     "user_prompt": user_text[:self._TRUNC_META_LOG],
-                }, branch_id=branch_id or None)
+                }, step_id=step_id or None)
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True, fallback_value=plan_json,
                     temperature=prompt_data.get("temperature", 0.4),
                     max_tokens=prompt_data.get("max_tokens", 1024))
                 self._log_meta(task_id, "orchestrator_plan_response", {
                     "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
-                }, branch_id=branch_id or None)
+                }, step_id=step_id or None)
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
@@ -999,7 +1000,7 @@ class SomaticResearchOrchestrator:
 
     # ── Phase 3: SYNTHESIZE ─────────────────────────────────────────
 
-    async def _phase_synthesize(self, task_id, objective, goal, all_findings, sources_count, branch_id: str = "") -> str:
+    async def _phase_synthesize(self, task_id, objective, goal, all_findings, sources_count, step_id: str = "") -> str:
         prompt_data = get_prompts_dict("research/orchestrator_synthesize.yaml")
 
         # Try cache first for persona + system prompt
@@ -1041,14 +1042,14 @@ class SomaticResearchOrchestrator:
                 self._log_meta(task_id, "orchestrator_synthesize_prompt", {
                     "system_prompt": system_text[:self._TRUNC_META_LOG],
                     "user_prompt": user_text[:self._TRUNC_META_LOG],
-                }, branch_id=branch_id or None)
+                }, step_id=step_id or None)
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True, fallback_value={"answer": fallback},
                     temperature=prompt_data.get("temperature", 0.4),
                     max_tokens=prompt_data.get("max_tokens", 3072))
                 self._log_meta(task_id, "orchestrator_synthesize_response", {
                     "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
-                }, branch_id=branch_id or None)
+                }, step_id=step_id or None)
                 # Save LLM response to step_data
                 if branch_id:
                     try:
@@ -1159,7 +1160,7 @@ class SomaticResearchOrchestrator:
                     result = await self._analyze_source(
                         task_id, source["url"], source.get("title", ""),
                         source.get("content", ""), query, objective, depth, max_depth,
-                        branch_id=step_id,
+                        step_id=step_id,
                     )
                     # Update the step result with analysis
                     try:
@@ -1181,7 +1182,7 @@ class SomaticResearchOrchestrator:
         gathered = await asyncio.gather(*tasks)
         return [g for g in gathered if g is not None]
 
-    async def _analyze_source(self, task_id, url, title, content, query, goal, depth, max_depth, branch_id: str = "") -> dict:
+    async def _analyze_source(self, task_id, url, title, content, query, goal, depth, max_depth, step_id: str = "") -> dict:
         """Analyze a single source via LLM (reuses node_analyzer prompt)."""
         prompt_data = get_prompts_dict("research/node_analyzer.yaml")
         system_text = prompt_data.get("system", "")
@@ -1209,7 +1210,7 @@ class SomaticResearchOrchestrator:
         self._log_meta(task_id, "orchestrator_digest_prompt", {
             "source_url": url, "source_title": title,
             "system_prompt": system_text[:3000], "user_prompt": user_text[:3000],
-        }, branch_id=branch_id or None)
+        }, step_id=step_id or None)
 
         fallback = {"learnings": [], "gaps": [], "followups": [], "direct_urls": [], "diffractive_notes": []}
         try:
@@ -1229,15 +1230,15 @@ class SomaticResearchOrchestrator:
                 "source_url": url,
                 "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:5000],
                 "learnings_count": len(result.get("learnings", [])) if isinstance(result, dict) else 0,
-            }, branch_id=branch_id or None)
+            }, step_id=step_id or None)
             return result if isinstance(result, dict) else fallback
         except Exception as e:
             logger.error("Source analysis failed: %s", e)
-            self._log_meta(task_id, "orchestrator_digest_error", {"source_url": url, "error": str(e)}, branch_id=branch_id or None)
+            self._log_meta(task_id, "orchestrator_digest_error", {"source_url": url, "error": str(e)}, step_id=step_id or None)
             return fallback
 
     async def _tool_reflect(self, task_id, objective, goal, depth, max_depth,
-                             all_findings, previous_reflection, branch_id: str = "") -> dict:
+                             all_findings, previous_reflection, step_id: str = "") -> dict:
         """Multi-round LLM reflection on accumulated findings."""
         prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
 
@@ -1279,7 +1280,7 @@ class SomaticResearchOrchestrator:
             self._log_meta(task_id, "orchestrator_reflect_prompt", {
                 "round": round_num, "system_prompt": system_text[:2000],
                 "user_prompt": user_text[:2000],
-            }, branch_id=branch_id or None)
+            }, step_id=step_id or None)
 
             try:
                 from backend.modules.llm_client import generate_unified
@@ -1300,7 +1301,7 @@ class SomaticResearchOrchestrator:
                         "round": round_num,
                         "completeness": result.get("completeness_score", 0),
                         "raw": json.dumps(resp, default=str, ensure_ascii=False)[:3000],
-                    }, branch_id=branch_id or None)
+                    }, step_id=step_id or None)
                     # Save LLM response to step_data for frontend display
                     if branch_id:
                         try:

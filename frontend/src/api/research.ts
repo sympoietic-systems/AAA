@@ -215,7 +215,7 @@ export interface MetaLogResponse {
 
 export async function getTaskMetaLog(taskId: string, branchId?: string): Promise<MetaLogResponse> {
   const url = branchId
-    ? `${BASE}/research/tasks/${taskId}/meta-log?branch_id=${branchId}`
+    ? `${BASE}/research/tasks/${taskId}/meta-log?step_id=${branchId}`
     : `${BASE}/research/tasks/${taskId}/meta-log`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Meta log fetch failed: ${res.status}`)
