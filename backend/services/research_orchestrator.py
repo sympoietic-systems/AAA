@@ -120,7 +120,6 @@ class SomaticResearchOrchestrator:
 
     _TRUNC_HTML_ARCHIVE = 50000
     _TRUNC_STEP_RESULT = 20000
-    _TRUNC_SCRAPED_ASSET = 10000
     _TRUNC_LLM_CONTENT = 6000
     _TRUNC_META_LOG = 8000
 
@@ -1157,21 +1156,9 @@ class SomaticResearchOrchestrator:
                         "raw_content": content[:self._TRUNC_STEP_RESULT],
                         "raw_file_path": file_path,
                     })
-                    # Also create a scraped_asset so Assets tab shows it
-                    try:
-                        asset_repo = getattr(self._state, "scraped_asset_repo", None)
-                        if asset_repo:
-                            asset_repo.create({
-                                "id": str(uuid.uuid4()),
-                                "branch_id": step_id,  # use step_id as branch_id for linkage
-                                "task_id": task_id,
-                                "url": url,
-                                "raw_markdown": content[:self._TRUNC_SCRAPED_ASSET],
-                                "relevance_score": 0.5,
-                                "novelty_score": 0.3,
-                            })
-                    except Exception:
-                        logger.warning("Failed to create scraped asset for %s", url[:80])
+                    # Orchestrator data is stored in research_step_results —
+                    # scraped_assets table has a FK on research_branches(id)
+                    # which doesn't apply here (orchestrator uses steps, not branches).
                     return {"id": result_id, "url": url, "title": title, "content": content}
                 except Exception as e:
                     logger.warning("Fetch failed for %s: %s", url[:80], e)
@@ -1214,8 +1201,26 @@ class SomaticResearchOrchestrator:
         gathered = await asyncio.gather(*tasks)
         return [g for g in gathered if g is not None]
 
+    # Anti-bot / paywall / garbage patterns — skip these without LLM call
+    _CONTENT_JUNK_PATTERNS: list[str] = [
+        "Security check required",
+        "Cloudflare",
+        "Please complete the security check",
+        "Enable JavaScript and cookies to continue",
+    ]
+
     async def _analyze_source(self, task_id, url, title, content, query, goal, depth, max_depth, step_id: str = "") -> dict:
         """Analyze a single source via LLM (reuses node_analyzer prompt)."""
+        # Skip obviously garbage content (anti-bot, paywalls, empty nav wrappers)
+        content_stripped = (content or "").strip()
+        if len(content_stripped) < 200:
+            logger.info("Skipping short content (%d chars) for %s", len(content_stripped), url[:80])
+            return {"learnings": [], "gaps": [f"Content too short ({len(content_stripped)} chars) — likely paywall or block"], "followups": [], "direct_urls": [], "diffractive_notes": []}
+        for junk in self._CONTENT_JUNK_PATTERNS:
+            if junk.lower() in content_stripped[:1000].lower():
+                logger.info("Skipping junk content ('%s') for %s", junk, url[:80])
+                return {"learnings": [], "gaps": [f"Blocked by anti-bot protection ('{junk}')"], "followups": [], "direct_urls": [url], "diffractive_notes": []}
+
         prompt_data = get_prompts_dict("research/node_analyzer.yaml")
         system_text = prompt_data.get("system", "")
         user_text = prompt_data.get("user", "").format(
