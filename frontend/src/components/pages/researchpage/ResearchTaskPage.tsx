@@ -2,7 +2,7 @@
 // Pattern: /agent page — tab bar, then two-panel (left list, right detail).
 // Actions merged into Info tab (FRONTEND_DESIGN_PRINCIPLES.md §1, §3, §4, §6).
 
-import React, { memo, useState, useEffect, useCallback } from "react"
+import React, { memo, useState, useEffect, useCallback, useMemo } from "react"
 import ReactMarkdown from "react-markdown"
 import type {
   ResearchTask, TaskStepsResponse,
@@ -473,6 +473,39 @@ function DbStepDetail({ taskId, data, selectedId }: {
   )
   const otherEntries = entries.filter(e => !inputEntries.includes(e) && !responseEntries.includes(e))
 
+  // Parse meta-log responses into structured result per step type
+  const parsedResult = useMemo(() => {
+    const r: { queries: string[], goal: string, completeness: number, answer: string, confidence: number, learnings: string[], query: string, urls: {url:string,title:string}[] } =
+      { queries: [], goal: "", completeness: 0, answer: "", confidence: 0, learnings: [], query: "", urls: [] }
+    for (const e of responseEntries) {
+      try {
+        const d = e.event_data as any
+        const raw = d?.raw_response || ""
+        let parsed: any = null
+        try { parsed = JSON.parse(raw) } catch {
+          try { parsed = JSON.parse(d?.response || "") } catch { /* skip */ }
+        }
+        if (!parsed) continue
+        const jd = parsed.json_data || parsed.content || parsed
+        if (typeof jd === "string") try { parsed = JSON.parse(jd) } catch { /* skip */ }
+        else parsed = jd
+        if (typeof parsed !== "object" || !parsed) continue
+        if (e.event_type === "orchestrator_plan_response") {
+          r.goal = parsed.goal || ""
+          r.queries = parsed.search_queries || []
+        } else if (e.event_type === "orchestrator_digest_response") {
+          if (parsed.learnings) r.learnings.push(...parsed.learnings)
+        } else if (e.event_type.includes("reflect_response")) {
+          r.completeness = parsed.completeness_score || parsed.completeness || 0
+        } else if (e.event_type === "orchestrator_synthesize_response") {
+          r.answer = parsed.answer || ""
+          r.confidence = parsed.confidence || 0
+        }
+      } catch { /* skip unparseable */ }
+    }
+    return r
+  }, [responseEntries])
+
   const handleRerunStep = async () => {
     await doActionAndReload(() => executeStep(taskId))
   }
@@ -501,7 +534,20 @@ function DbStepDetail({ taskId, data, selectedId }: {
 
       {tab === "result" && (
         <div className="space-y-2">
-          {selected.result_summary && <div className="text-[#94a3b8]">{selected.result_summary}</div>}
+          {selected.result_summary && <div className="text-[#94a3b8] text-[10px]">{selected.result_summary}</div>}
+
+          {/* ── Plan: generated queries ── */}
+          {selected.step_type === "plan" && (parsedResult.queries.length > 0 || parsedResult.goal) && (
+            <div className="border-t border-[#1a1a1a] pt-2 space-y-1">
+              {parsedResult.goal && <div><div className="text-[#555] text-[8px]">goal:</div><div className="text-[#94a3b8] text-[9px] pl-2">{parsedResult.goal}</div></div>}
+              {parsedResult.queries.length > 0 && <div>
+                <div className="text-[#555] text-[8px] mb-0.5">search queries ({parsedResult.queries.length}):</div>
+                {parsedResult.queries.map((q, i) => <div key={i} className="text-[#4ade80] text-[9px] pl-2 leading-relaxed">{i+1}. {q}</div>)}
+              </div>}
+            </div>
+          )}
+
+          {/* ── Digest/Parse: per-source learnings ── */}
           {selectedResults.length > 0 && selectedResults.map(r => {
             let analysis: any = null
             try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
@@ -526,10 +572,33 @@ function DbStepDetail({ taskId, data, selectedId }: {
             )
           })}
 
-          {/* Raw LLM response(s) */}
+          {/* ── Reflect: completeness ── */}
+          {selected.step_type === "reflect" && parsedResult.completeness > 0 && (
+            <div className="border-t border-[#1a1a1a] pt-2">
+              <div className="text-[#555] text-[8px]">completeness score:</div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex-1 h-2 bg-[#1a1a1a] rounded-sm overflow-hidden">
+                  <div className="h-full bg-[#4ade80] rounded-sm" style={{width: `${Math.round(parsedResult.completeness*100)}%`}} />
+                </div>
+                <span className="text-[#4ade80] text-[9px] font-mono">{Math.round(parsedResult.completeness*100)}%</span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Synthesize: answer ── */}
+          {selected.step_type === "synthesize" && parsedResult.answer && (
+            <div className="border-t border-[#1a1a1a] pt-2">
+              <div className="text-[#555] text-[8px] mb-1">
+                answer{parsedResult.confidence > 0 ? ` (confidence: ${Math.round(parsedResult.confidence*100)}%)` : ""}:
+              </div>
+              <div className="text-[#94a3b8] text-[9px] leading-relaxed whitespace-pre-wrap">{parsedResult.answer}</div>
+            </div>
+          )}
+
+          {/* ── Raw LLM response(s) — collapsible ── */}
           {responseEntries.length > 0 && (
             <div className="border-t border-[#1a1a1a] pt-2">
-              <div className="text-[#555] text-[9px] mb-1">raw response:</div>
+              <div className="text-[#555] text-[9px] mb-1">raw responses ({responseEntries.length}):</div>
               {responseEntries.map((entry, ei) => {
                 const d = entry.event_data as any
                 const resp = d?.raw_response || d?.response || JSON.stringify(d)
