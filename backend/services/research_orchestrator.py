@@ -611,6 +611,12 @@ class SomaticResearchOrchestrator:
             "status": "completed", "started_at": self._now_utc_str(),
             "result_summary": f"{len(plan.get('search_queries',[]))} queries planned × ~{plan.get('estimated_depth', 1)} depth",
         })
+        # Save the plan as LLM response in step_data so frontend shows it
+        try:
+            llm_resp = {"plan": plan}
+            self.step_repo.update(step_id, step_data=json.dumps(llm_resp, default=str, ensure_ascii=False)[:self._TRUNC_STEP_RESULT])
+        except Exception:
+            pass
         self._log_meta(task_id, "orchestrator_plan", {"plan": plan}, branch_id=step_id)
 
         s["phase"] = "searching"
@@ -974,14 +980,6 @@ class SomaticResearchOrchestrator:
                 self._log_meta(task_id, "orchestrator_plan_response", {
                     "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 }, branch_id=branch_id or None)
-                # Save LLM response to step_data so frontend always sees it
-                if branch_id:
-                    try:
-                        self.step_repo.update(branch_id, step_data=json.dumps(
-                            {"llm_response": resp}, default=str, ensure_ascii=False
-                        )[:self._TRUNC_STEP_RESULT])
-                    except Exception:
-                        pass
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
