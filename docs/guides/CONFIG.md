@@ -150,7 +150,7 @@ All env vars are optional overrides. Copy `.env.example` to `.env`.
 | Variable | Values | Default |
 |----------|--------|---------|
 | `AAA_LLM_PROVIDER` | `openrouter`, `deepseek`, `openai_compatible` | `openrouter` |
-| `AAA_LLM_MODEL` | Any model ID | Provider default |
+| `AAA_LLM_MODELS` | Comma-separated model IDs, tried in order (use a single entry for one model) | Provider default |
 | `AAA_LLM_API_BASE` | Full URL | Provider default |
 
 ### API Keys
@@ -207,8 +207,7 @@ and is stored as `agent_id` in every database row for multi-agent support.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AAA_BACKGROUND_MODELS` | (from config.yaml) | Comma-separated model list, tried in order |
-| `AAA_BACKGROUND_MODEL` | — | Single model (backward compat; `models` wins if both set) |
+| `AAA_BACKGROUND_MODELS` | (from config.yaml) | Comma-separated model list, tried in order (use a single entry for one model) |
 | `AAA_BACKGROUND_FALLBACK_MODEL` | `openrouter/free` | Model used when all pool models are rate-limited |
 | `AAA_BACKGROUND_API_BASE` | `https://openrouter.ai/api/v1` | API base for background models |
 | `AAA_BACKGROUND_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
@@ -217,8 +216,7 @@ and is stored as `agent_id` in every database row for multi-agent support.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AAA_VISION_MODELS` | — | Comma-separated list of vision-capable models, tried in order |
-| `AAA_VISION_MODEL` | — | Single vision-capable model (backward compatibility) |
+| `AAA_VISION_MODELS` | — | Comma-separated list of vision-capable models, tried in order (use a single entry for one model) |
 | `AAA_VISION_FALLBACK_MODEL` | — | Model used when all vision pool models are rate-limited or fail |
 | `AAA_VISION_API_BASE` | `https://openrouter.ai/api/v1` | API base for vision models |
 | `AAA_VISION_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
@@ -228,8 +226,9 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AAA_LLM_SCORER_ENABLED` | `true` | Enable/disable LLM-based structural scoring |
-| `AAA_STRUCTURAL_MODELS` | — | Comma-separated list of models for structural analysis, tried in order |
+| `AAA_STRUCTURAL_MODELS` | — | Comma-separated list of models for structural analysis, tried in order (use a single entry for one model) |
 | `AAA_STRUCTURAL_FALLBACK_MODEL` | — | Model used when all pool models are rate-limited |
+| `AAA_STRUCTURAL_API_BASE` | (auto-routed from prefix) | API base for structural models |
 | `AAA_STRUCTURAL_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key for structural tasks |
 
 ### Database
@@ -249,8 +248,58 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_SEDIMENT_TOKEN_BUDGET` | Any integer | `2000` (from `config.yaml`) |
 | `AAA_SEDIMENT_COUNT` | Any integer | `10` (from `config.yaml`) |
 | `AAA_DIFFRACTIVE_ENABLED` | `true`, `false` | `true` (from `config.yaml`) |
-| `AAA_DIFFRACTIVE_BUDGET` | Any integer | `1500` (from `config.yaml`) |
+| `AAA_DIFFRACTIVE_TOKEN_BUDGET` | Any integer | `1500` (from `config.yaml`) |
 | `AAA_DIFFRACTIVE_MAX_COUNT` | Any integer | `3` (from `config.yaml`) |
+
+### Additional API Keys
+
+| Variable | Description |
+|----------|-------------|
+| `AAA_GOOGLE_API_KEY` | Google Gemini API key(s); comma-separated for key rotation fallback |
+| `AAA_GOOGLE_API_BASE` | Google Gemini API base URL (default: `https://generativelanguage.googleapis.com`) |
+| `AAA_DEEPSEEK_API_BASE` | DeepSeek API base URL override (default: `https://api.deepseek.com`) |
+
+### Web Retrieval & Probing
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `AAA_WEB_RETRIEVAL_ENABLED` | `true`, `false` | `false` | Enable web search / retrieval for autonomous research |
+| `AAA_WEB_RETRIEVAL_AUTONOMOUS_ROUTING` | `true`, `false` | `false` | Allow the LLM to autonomously decide when to probe the web |
+
+### Sensory Affordances (Web Fetch Backends)
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `AAA_JINA_ENABLED` | `true`, `false` | `false` | Enable Jina Reader for single-URL markdown extraction (free tier available) |
+| `AAA_CRAWL4AI_ENABLED` | `true`, `false` | `false` | Enable self-hosted Crawl4AI Playwright-based crawler (free, open source) |
+| `AAA_JINA_API_KEY` | String | — | Optional Jina API key for higher rate limits |
+| `AAA_FIRECRAWL_API_KEY` | String | — | Optional Firecrawl API key (1,000 free credits/month) |
+
+### Autopoietic Dream Daemon
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `AAA_DAEMON_ENABLED` | `true`, `false` | `false` | Master toggle for the dream daemon (machine sleep engine) |
+| `AAA_DAEMON_CHECK_INTERVAL` | Seconds (int) | `60` | Seconds between trigger evaluations |
+| `AAA_DAEMON_IDLE_THRESHOLD` | Seconds (int) | `1800` | Seconds of human inactivity before dreaming begins |
+| `AAA_DAEMON_MIN_DREAM_INTERVAL` | Seconds (int) | `3600` | Minimum seconds between successful dreams |
+| `AAA_DAEMON_MAX_DAILY_DREAMS` | Count (int) | `10` | Maximum dreams permitted per 24-hour window |
+| `AAA_DAEMON_DRIFT_COEFFICIENT` | Float | `0.00001` | Decay speed of beliefs during sleep |
+
+### Research Architecture (Rhizome + Metabolic)
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `AAA_RESEARCH_*` | — | — | Research-specific environment overrides (wildcard prefix) |
+| `AAA_RHIZOME_MAX_DEPTH` | Integer | `3` | Default recursion depth for rhizomatic research |
+| `AAA_RHIZOME_MAX_BREADTH` | Integer | `4` | Default parallel paths for rhizomatic research |
+| `AAA_METABOLIC_SESSION_USD` | Float (USD) | `1.00` | Hard spending cap per research session |
+
+### Authentication
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `AAA_PASSWORD` | String | — | If set, prompts for this password on application load |
 
 ### Agent Flux
 
@@ -260,7 +309,7 @@ and is stored as `agent_id` in every database row for multi-agent support.
 
 ## Provider Defaults
 
-Without `AAA_LLM_MODEL` or `AAA_LLM_API_BASE` set, these auto-apply:
+Without `AAA_LLM_MODELS` or `AAA_LLM_API_BASE` set, these auto-apply:
 
 | `AAA_LLM_PROVIDER` | Default model | Default base URL |
 |---|---|---|
@@ -298,7 +347,7 @@ Uses DeepSeek's `deepseek-v4-pro` with chain-of-thought.
 # .env
 AAA_LLM_PROVIDER=openai_compatible
 AAA_LLM_API_KEY=sk-local-abc
-AAA_LLM_MODEL=llama-3-8b
+AAA_LLM_MODELS=llama-3-8b
 AAA_LLM_API_BASE=http://localhost:11434/v1
 ```
 
@@ -316,10 +365,9 @@ AAA_BACKGROUND_API_BASE=https://openrouter.ai/api/v1
 Models are tried in order. If one is rate-limited, the next is used.
 When all are exhausted, falls back to `fallback_model`.
 
-For a single model (backward compat):
+For a single model, just include one entry in `AAA_BACKGROUND_MODELS`:
 ```bash
-# .env — single model
-AAA_BACKGROUND_MODEL=google/gemma-4-26b-a4b-it:free
+AAA_BACKGROUND_MODELS=google/gemma-4-26b-a4b-it:free
 ```
 
 ### Vision Model Pool

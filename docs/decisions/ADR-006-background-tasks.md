@@ -129,10 +129,10 @@ vision_llm:
 ```
 
 Environment variable overrides:
-- `AAA_BACKGROUND_MODELS` (comma-separated list), `AAA_BACKGROUND_MODEL` (single, backward compat)
+- `AAA_BACKGROUND_MODELS` (comma-separated list; use a single entry for one model)
 - `AAA_BACKGROUND_FALLBACK_MODEL`
 - `AAA_BACKGROUND_API_BASE`, `AAA_BACKGROUND_API_KEY`
-- `AAA_VISION_MODEL`, `AAA_VISION_API_BASE`, `AAA_VISION_API_KEY`
+- `AAA_VISION_MODELS`, `AAA_VISION_API_BASE`, `AAA_VISION_API_KEY`
 
 ### Model Pool Provider
 

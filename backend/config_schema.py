@@ -69,7 +69,6 @@ def _parse_list(v: str) -> list[str]:
 
 ENV_OVERRIDES: list[EnvOverride] = [
     # ── Core ──
-    EnvOverride("AAA_LLM_MODEL", "llm", "model"),
     EnvOverride("AAA_LLM_MODELS", "llm", "models", _parse_list),
     EnvOverride("AAA_LLM_PROVIDER", "llm", "provider"),
     EnvOverride("AAA_LLM_API_BASE", "llm", "api_base"),
@@ -85,19 +84,16 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_EMBEDDING_OFFLINE", "embedding", "offline", _parse_bool),
 
     # ── Background LLM ──
-    EnvOverride("AAA_BACKGROUND_MODEL", "background_llm", "model"),
     EnvOverride("AAA_BACKGROUND_MODELS", "background_llm", "models", _parse_list),
     EnvOverride("AAA_BACKGROUND_API_BASE", "background_llm", "api_base"),
     EnvOverride("AAA_BACKGROUND_FALLBACK_MODEL", "background_llm", "fallback_model"),
 
     # ── Structural LLM ──
-    EnvOverride("AAA_STRUCTURAL_MODEL", "structural_llm", "model"),
     EnvOverride("AAA_STRUCTURAL_MODELS", "structural_llm", "models", _parse_list),
     EnvOverride("AAA_STRUCTURAL_API_BASE", "structural_llm", "api_base"),
     EnvOverride("AAA_STRUCTURAL_FALLBACK_MODEL", "structural_llm", "fallback_model"),
 
     # ── Vision LLM ──
-    EnvOverride("AAA_VISION_MODEL", "vision_llm", "model"),
     EnvOverride("AAA_VISION_MODELS", "vision_llm", "models", _parse_list),
     EnvOverride("AAA_VISION_API_BASE", "vision_llm", "api_base"),
     EnvOverride("AAA_VISION_FALLBACK_MODEL", "vision_llm", "fallback_model"),
