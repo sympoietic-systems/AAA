@@ -12,6 +12,7 @@ from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository, BeliefRepository
 from backend.storage.models import BeliefNode
 from backend.modules.structural_engine import LEXICON_MAPPINGS, LexiconScorer, CompositeStructuralScorer
+from backend.utils.prompt_builder import build_attractor_window
 
 logger = logging.getLogger(__name__)
 
@@ -467,82 +468,16 @@ class BeliefDynamicsEngine(ProcessingModule):
             except Exception as e:
                 logger.error(f"Coordinate warping error: {e}")
 
-        # 4. Extract Attractor Window and Spectral Margin
+        # 4. Extract Attractor Window (delegated to shared prompt_builder utility)
+        sig_bytes = payload.get("structural_signature")
+        sig_16d = np.frombuffer(sig_bytes, dtype=np.float32) if sig_bytes else None
+        attractor_window = build_attractor_window(
+            self._belief_repo, agent_id, sig_16d,
+        )
+
+        # Spectral Margin (up to 2 collapsed beliefs)
         all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        active_beliefs = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
         collapsed_beliefs = [b for b in all_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20]
-
-        # Attractor Window (6 slots: 2×mass, 2×stress, 2×resonance)
-        slots: list[Optional[BeliefNode]] = [None] * 6
-        used_ids: set[str] = set()
-
-        if active_beliefs:
-            # Slots 1-2: Top 2 by ontological mass (foundational anchors)
-            sorted_by_mass = sorted(active_beliefs, key=lambda b: b.ontological_mass, reverse=True)
-            for i, b in enumerate(sorted_by_mass[:2]):
-                slots[i] = b
-                used_ids.add(b.id)
-
-            # Slots 3-4: Bottom 2 by confidence among stressed beliefs
-            stressed_beliefs = [b for b in active_beliefs if b.confidence < 0.50 and b.id not in used_ids]
-            if len(stressed_beliefs) >= 2:
-                sorted_stressed = sorted(stressed_beliefs, key=lambda b: b.confidence)
-                for i, b in enumerate(sorted_stressed[:2]):
-                    slots[2 + i] = b
-                    used_ids.add(b.id)
-            elif len(stressed_beliefs) == 1:
-                slots[2] = stressed_beliefs[0]
-                used_ids.add(stressed_beliefs[0].id)
-                # Fill slot 4 from remaining lowest-confidence
-                remaining = [b for b in active_beliefs if b.id not in used_ids]
-                if remaining:
-                    chosen = min(remaining, key=lambda b: b.confidence)
-                    slots[3] = chosen
-                    used_ids.add(chosen.id)
-            else:
-                # No stressed beliefs: pick 2 lowest-confidence from remaining
-                remaining = [b for b in active_beliefs if b.id not in used_ids]
-                sorted_remaining = sorted(remaining, key=lambda b: b.confidence)
-                for i, b in enumerate(sorted_remaining[:2]):
-                    slots[2 + i] = b
-                    used_ids.add(b.id)
-
-            # Slots 5-6: Top 2 by cosine similarity to user input (resonance)
-            sig_bytes = payload.get("structural_signature")
-            if sig_bytes:
-                try:
-                    user_vec = np.frombuffer(sig_bytes, dtype=np.float32)
-                    if len(user_vec) == 16:
-                        def sim_score(b: BeliefNode) -> float:
-                            try:
-                                b_vec = parse_vector_16d(b.vector_16d)
-                                if b_vec is None:
-                                    return -1.0
-                                return compute_cosine_similarity(user_vec, b_vec)
-                            except Exception:
-                                return -1.0
-
-                        resonance_pool = [b for b in active_beliefs if b.id not in used_ids]
-                        if resonance_pool:
-                            sorted_by_sim = sorted(resonance_pool, key=sim_score, reverse=True)
-                            for i, b in enumerate(sorted_by_sim[:2]):
-                                slots[4 + i] = b
-                                used_ids.add(b.id)
-                except Exception as e:
-                    logger.error(f"Error calculating resonance slots: {e}")
-
-        # Construct Attractor Window dicts
-        attractor_window = []
-        for idx, slot in enumerate(slots):
-            if slot:
-                attractor_window.append({
-                    "slot": idx + 1,
-                    "id": slot.id,
-                    "label": slot.label,
-                    "statement": slot.statement,
-                    "confidence": slot.confidence,
-                    "mass": slot.ontological_mass,
-                })
 
         # Spectral Margin (up to 2 collapsed beliefs)
         spectral_margin = []

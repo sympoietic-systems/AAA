@@ -158,8 +158,14 @@ class SomaticResearchOrchestrator:
         except Exception:
             pass
 
-        # ── 2. Compute structural signature of objective ──
-        sig_16d = compute_structural_signature(objective) if objective else None
+        # ── 2. Compute structural signature (CompositeScorer when provider available) ──
+        sig_16d = (
+            await compute_structural_signature(
+                objective,
+                llm_provider=getattr(self._state, "llm_provider", None),
+            )
+            if objective else None
+        )
 
         # ── 3. Skills (always-active + matched on-demand) ──
         try:

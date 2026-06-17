@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import Optional
 
 import numpy as np
 
@@ -9,7 +8,6 @@ from backend.modules.base import ProcessingModule
 logger = logging.getLogger(__name__)
 
 MAX_AUTO_LOADED = 3
-VECTOR_SIMILARITY_THRESHOLD = 0.7
 MAX_SKILL_CONTENT_CHARS = 2000
 
 
@@ -70,19 +68,25 @@ class SkillActivatorModule(ProcessingModule):
 
         candidates: dict[str, dict] = {}
 
-        # Strategy A: Attractor Window Resonance
+        # Strategy A: Attractor Window Resonance (pipeline-specific)
         attractor_window = payload.get("attractor_window", [])
         self._match_attractor_window(attractor_window, on_demand_skills, candidates)
 
-        # Strategy B: Semantic Vector Matching
+        # Strategies B + C: Delegated to shared match_on_demand_skills()
         current_vector = self._get_current_vector(payload)
-        if current_vector is not None:
-            self._match_semantic(current_vector, on_demand_skills, candidates)
-
-        # Strategy C: Keyword Trigger Matching
         user_message = self._get_user_message(payload)
-        if user_message:
-            self._match_keywords(user_message, on_demand_skills, candidates)
+        if on_demand_skills and (current_vector is not None or user_message):
+            from backend.utils.prompt_builder import match_on_demand_skills
+            matched = match_on_demand_skills(
+                on_demand_skills,
+                user_message or "",
+                current_vector,
+                max_matched=MAX_AUTO_LOADED,
+            )
+            # Merge without overwriting A-candidates (higher priority 3)
+            for m in matched:
+                if m["skill"].name not in candidates:
+                    candidates[m["skill"].name] = m
 
         sorted_candidates = sorted(
             candidates.values(),
@@ -143,49 +147,6 @@ class SkillActivatorModule(ProcessingModule):
                             "priority": 3,
                             "score": item.get("mass", 0.5),
                         }
-                    break
-
-    def _match_semantic(self, current_vector, on_demand_skills, candidates):
-        if current_vector is None:
-            return
-        current_dim = len(current_vector)
-        for skill in on_demand_skills:
-            if skill.name in candidates:
-                continue
-            skill_vec = self._parse_vector(skill.vector_16d or "[]", target_dim=current_dim)
-            if skill_vec is None:
-                continue
-            try:
-                dot = np.dot(current_vector, skill_vec)
-                norm_current = np.linalg.norm(current_vector)
-                norm_skill = np.linalg.norm(skill_vec)
-                if norm_current == 0 or norm_skill == 0:
-                    continue
-                similarity = dot / (norm_current * norm_skill)
-            except Exception:
-                continue
-            if similarity >= VECTOR_SIMILARITY_THRESHOLD:
-                candidates[skill.name] = {
-                    "skill": skill,
-                    "reason": f"Semantic match ({current_dim}D cos_sim={similarity:.2f})",
-                    "priority": 2,
-                    "score": float(similarity),
-                }
-
-    def _match_keywords(self, user_message: str, on_demand_skills, candidates):
-        msg_lower = user_message.lower()
-        for skill in on_demand_skills:
-            if skill.name in candidates:
-                continue
-            trigger_keywords = self._parse_trigger_keywords(skill.trigger_keywords or "[]")
-            for keyword in trigger_keywords:
-                if keyword.lower() in msg_lower:
-                    candidates[skill.name] = {
-                        "skill": skill,
-                        "reason": f"Keyword match: '{keyword}'",
-                        "priority": 1,
-                        "score": 0.5,
-                    }
                     break
 
     def _get_current_vector(self, payload: dict) -> Optional[np.ndarray]:
@@ -253,10 +214,4 @@ class SkillActivatorModule(ProcessingModule):
 
         return None
 
-    def _parse_trigger_keywords(self, trigger_json: str) -> list[str]:
-        if not trigger_json or trigger_json == "[]":
-            return []
-        try:
-            return json.loads(trigger_json)
-        except (json.JSONDecodeError, TypeError):
-            return []
+

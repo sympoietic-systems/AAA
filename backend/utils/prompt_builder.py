@@ -3,8 +3,11 @@
 Three computation functions produce structured data from repos + a 16D structural signature.
 Six formatting functions turn structured data into boundary-blocked prompt sections.
 
-Used by: assembler.py (conversation), research_orchestrator.py (orchestrator phases),
-research_context_builder.py (node digest).  """
+The same functions are used by:
+- Pipeline modules (BeliefDynamicsEngine, SkillActivatorModule) — for conversation
+- Research orchestrator — for plan/reflect/synthesize
+- Research context builder — for node digest (source analysis)
+"""
 
 from __future__ import annotations
 
@@ -19,12 +22,26 @@ logger = logging.getLogger(__name__)
 # ── Computation ──────────────────────────────────────────────────────
 
 
-def compute_structural_signature(text: str) -> np.ndarray | None:
-    """16D LexiconScorer vector, normalized to unit length for cosine similarity."""
-    try:
-        from backend.modules.structural_engine import LexiconScorer
+async def compute_structural_signature(
+    text: str,
+    llm_provider: Any = None,
+) -> np.ndarray | None:
+    """16D structural signature — same CompositeStructuralScorer as the pipeline.
 
-        sig = LexiconScorer().score(text)
+    When llm_provider is available: CompositeStructuralScorer
+      (lexicon 25% + topology 25% + LLM 50%) — async, identical to StructuralScorerModule.
+
+    When llm_provider is None: LexiconScorer only — sync, fast fallback.
+    """
+    try:
+        if llm_provider is not None:
+            from backend.modules.structural_engine import CompositeStructuralScorer
+            scorer = CompositeStructuralScorer(llm_provider=llm_provider)
+            sig = await scorer.score_async(text)
+        else:
+            from backend.modules.structural_engine import LexiconScorer
+            sig = LexiconScorer().score(text)
+
         norm = np.linalg.norm(sig)
         if norm > 1e-8:
             sig = sig / norm
