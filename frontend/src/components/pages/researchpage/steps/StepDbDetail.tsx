@@ -107,7 +107,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
 
   const handleRerunStep = async () => {
     setLogLoading(true)
-    try { await executeStep(taskId, selected.step_type) } catch {}
+    try { await executeStep(taskId, selected.step_type, selectedId) } catch {}
     // Step was updated in-place — reload meta log for same step ID
     getTaskMetaLog(taskId, selectedId).then(setMetaLog).catch(() => {}).finally(() => setLogLoading(false))
   }

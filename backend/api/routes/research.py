@@ -263,6 +263,7 @@ async def execute_step(
     task_id: str,
     request: Request,
     rerun_step_type: Optional[str] = None,
+    rerun_step_id: Optional[str] = None,
 ):
     """Execute the next orchestrator phase (planning → searching → parsing →
     digesting → reflecting → evaluating → synthesizing → complete).
@@ -300,20 +301,26 @@ async def execute_step(
         orch.ensure_state(task_id)
         orch.set_phase(task_id, target_phase)
 
-        # Find existing completed step of this type to update in-place
+        # Find existing step to update in-place
         step_repo = getattr(state, "research_step_repo", None)
         if step_repo and rerun_step_type:
-            all_steps = step_repo.get_by_task(task_id)
-            matching = [s for s in all_steps
-                        if s["step_type"] == rerun_step_type and s["status"] in ("completed", "stale")]
-            if matching:
-                existing = matching[-1]  # most recent
+            if rerun_step_id:
+                # Use the exact step ID from the frontend (clicked step)
+                existing = step_repo.get(rerun_step_id)
+            else:
+                # Fallback: find most recent step of this type
+                all_steps = step_repo.get_by_task(task_id)
+                matching = [s for s in all_steps
+                            if s["step_type"] == rerun_step_type and s["status"] in ("completed", "stale")]
+                existing = matching[-1] if matching else None
+            if existing:
                 s2 = orch._task_states.get(task_id)
                 if s2 is not None:
                     s2["_rerun_step_id"] = existing["id"]
                     s2["_rerun_version"] = (existing.get("rerun_version") or 1) + 1
                     # Set query_index to match this step's query position
                     if rerun_step_type in ("search", "parallel_parse", "digest"):
+                        all_steps = step_repo.get_by_task(task_id)
                         searches_before = sum(
                             1 for s in all_steps
                             if s["step_type"] == "search" and s["step_number"] < existing["step_number"]
