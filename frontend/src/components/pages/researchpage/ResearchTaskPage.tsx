@@ -443,7 +443,13 @@ function DbStepDetail({ taskId, data, selectedId }: {
     getTaskMetaLog(taskId, selectedId).then(m => { setMetaLog(m); setTab("result") }).catch(() => setMetaLog(null)).finally(() => setLogLoading(false))
   }, [selectedId, taskId])
 
-  const fetchLiveInput = async () => {
+  const fetchLiveInput = () => {
+    if (!stepPhase) return
+    setReinitLoading(true)
+    getStepPreview(taskId, stepPhase).then(setLiveInput).catch(() => setLiveInput(null)).finally(() => setReinitLoading(false))
+  }
+
+  const reinitLiveInput = async () => {
     if (!stepPhase) return
     setReinitLoading(true)
     try {
@@ -453,7 +459,7 @@ function DbStepDetail({ taskId, data, selectedId }: {
     } catch { setLiveInput(null) }
     finally { setReinitLoading(false) }
   }
-  // Auto-fetch when switching to input tab
+  // Auto-fetch when switching to input tab — read from cache, no reinitialize
   useEffect(() => { if (tab === "input" && !liveInput) fetchLiveInput() }, [tab])
 
   const entries = metaLog?.entries ?? []
@@ -553,7 +559,7 @@ function DbStepDetail({ taskId, data, selectedId }: {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <div className="text-[#555] text-[9px]">live input preview ({stepPhase})</div>
-                <button onClick={fetchLiveInput} disabled={reinitLoading}
+                <button onClick={reinitLiveInput} disabled={reinitLoading}
                   className="text-[#4ade80] hover:text-[#6ee7b0] text-[9px] font-mono disabled:text-[#333] cursor-pointer">
                   [{reinitLoading ? "…" : "⟳ reinitialize"}]
                 </button>
