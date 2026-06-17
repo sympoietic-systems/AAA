@@ -28,13 +28,24 @@ async def _db_backup_loop():
         if backup_path.exists():
             return  # already done today
         try:
+            new_size = DB_PATH.stat().st_size
             shutil.copy2(str(DB_PATH), str(backup_path))
-            logger.info("DB backup created: %s", backup_path)
-            # Prune old backups
+            logger.info("DB backup created: %s (%dB)", backup_path, new_size)
+
+            # Prune old backups — but only if new one is not suspiciously smaller
             existing = sorted(BACKUP_DIR.glob("aaa_backup_*.db"), key=os.path.getmtime, reverse=True)
-            for old in existing[MAX_BACKUPS:]:
-                old.unlink()
-                logger.info("Pruned old backup: %s", old)
+            if len(existing) > MAX_BACKUPS:
+                # Check previous backup size ratio
+                prev_size = existing[1].stat().st_size if len(existing) > 1 else new_size
+                if new_size < prev_size * 0.3:
+                    logger.warning(
+                        "New backup (%dB) is <30%% of previous (%dB) — "
+                        "keeping old backups as safety", new_size, prev_size,
+                    )
+                    return
+                for old in existing[MAX_BACKUPS:]:
+                    old.unlink()
+                    logger.info("Pruned old backup: %s", old)
         except Exception as e:
             logger.warning("DB backup failed: %s", e)
 
