@@ -329,8 +329,83 @@ class SomaticResearchOrchestrator:
         })
         return state
 
+    def resume_task(self, task_id: str) -> Optional[dict]:
+        """Re-hydrate in-memory state from persisted steps after server restart.
+
+        Returns the state dict or None if the task has no persisted steps.
+        """
+        task = self.task_repo.get(task_id)
+        if not task:
+            return None
+
+        # Load persisted steps for this task, ordered by step_number
+        steps = self.step_repo.get_by_task(task_id) if self.step_repo else []
+        completed = [s for s in steps if s["status"] == "completed"]
+        last_type = completed[-1]["step_type"] if completed else None
+        step_number = len(completed)
+
+        # Load plan from DB
+        plan = None
+        plan_id = None
+        if self.plan_repo:
+            plan_row = self.plan_repo.get_by_task(task_id)
+            if plan_row:
+                plan_id = plan_row["id"]
+                try:
+                    plan = json.loads(plan_row["plan_json"])
+                except Exception:
+                    plan = {}
+
+        # Determine phase from last completed step type
+        phase_after: dict[str, str] = {
+            "plan": "searching", "search": "parsing",
+            "parallel_parse": "digesting", "digest": "reflecting",
+            "reflect": "evaluating", "evaluate": "synthesizing",
+            "synthesize": "complete",
+        }
+        phase = phase_after.get(last_type, "planning") if last_type else "planning"
+
+        state = {
+            "phase": phase,
+            "objective": task["objective"],
+            "max_depth": task["max_depth"],
+            "budget": task["budget_limit_usd"],
+            "plan_id": plan_id,
+            "plan": plan,
+            "all_findings": [],
+            "sources_analyzed": task.get("assets_harvested", 0),
+            "stagnation_counter": 0,
+            "step_number": step_number,
+            "last_reflection": {},
+            "current_depth": 0,
+            "query_index": 0,
+            "search_results_cache": [],
+            "parsed_sources_cache": [],
+            "digest_results_cache": [],
+            "should_stop": False,
+            "stop_reason": "",
+        }
+        self._task_states[task_id] = state
+        logger.info("Resumed task %s at phase '%s' (step %d)",
+                     task_id[:8], phase, step_number)
+        return state
+
+    def ensure_state(self, task_id: str) -> dict:
+        """Get or resume task state.  Called before any orchestrator action."""
+        s = self._task_states.get(task_id)
+        if s is not None:
+            return s
+        s = self.resume_task(task_id)
+        if s is not None:
+            return s
+        raise RuntimeError(
+            f"No orchestrator state for {task_id}. Call init_task() first."
+        )
+
     def _get_state(self, task_id: str) -> dict:
         s = self._task_states.get(task_id)
+        if s is None:
+            s = self.resume_task(task_id)
         if s is None:
             raise RuntimeError(
                 f"No orchestrator state for {task_id}. Call init_task() first."
@@ -340,6 +415,8 @@ class SomaticResearchOrchestrator:
     def get_task_phase(self, task_id: str) -> str:
         """Return current phase for a task, or empty string if not initialised."""
         state = self._task_states.get(task_id)
+        if state is None:
+            state = self.resume_task(task_id)
         return state["phase"] if state else ""
 
     async def preview_step_inputs(self, task_id: str, phase: str) -> dict:
