@@ -298,7 +298,7 @@ async def execute_step(
             manager.orchestrator.init_task(task_id)
 
     # Map step_type to orchestrator phase for rerun-to-target
-    STEP_TYPE_TO_PHASE = {
+    STEP_TYPE_TO_PHASE: dict[str, str] = {
         "plan": "planning", "search": "searching", "parallel_parse": "parsing",
         "digest": "digesting", "reflect": "reflecting", "evaluate": "evaluating",
         "synthesize": "synthesizing",
@@ -307,20 +307,11 @@ async def execute_step(
 
     try:
         if target_phase:
-            # Re-run steps until target phase is complete
-            result = {}
-            for _ in range(10):  # safety limit
-                result = await manager.orchestrator_step(task_id)
-                current_phase = manager.orchestrator.get_task_phase(task_id)
-                if current_phase not in STEP_TYPE_TO_PHASE.values():
-                    break  # past the pipeline
-                if result.get("executed_phase") == target_phase:
-                    break
-                if current_phase == "complete":
-                    break
-            return result
-        else:
-            result = await manager.orchestrator_step(task_id)
+            # Ensure state is loaded, then force-set to the target phase so
+            # only that one phase re-executes using cached inputs from the DB.
+            manager.orchestrator.ensure_state(task_id)
+            manager.orchestrator.set_phase(task_id, target_phase)
+        result = await manager.orchestrator_step(task_id)
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

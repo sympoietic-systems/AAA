@@ -385,10 +385,29 @@ class SomaticResearchOrchestrator:
             "should_stop": False,
             "stop_reason": "",
         }
+        # Populate caches from cached_inputs so step re-execution works
+        cached = self._load_cache(task_id)
+        if cached.get("searching"):
+            state["query_index"] = cached["searching"].get("query_index", 0)
+        if cached.get("parsing") and cached["parsing"].get("urls"):
+            state["search_results_cache"] = cached["parsing"]["urls"]
+        if cached.get("digesting"):
+            state["current_depth"] = cached["digesting"].get("depth", 0)
+
         self._task_states[task_id] = state
         logger.info("Resumed task %s at phase '%s' (step %d)",
                      task_id[:8], phase, step_number)
         return state
+
+    def set_phase(self, task_id: str, phase: str) -> None:
+        """Force-set the orchestrator phase for a task so the next execute_step
+        runs exactly that phase (used for single-step rerun)."""
+        s = self._task_states.get(task_id)
+        if s is None:
+            s = self.resume_task(task_id)
+        if s is None:
+            raise RuntimeError(f"Cannot set phase — task not found: {task_id}")
+        s["phase"] = phase
 
     def ensure_state(self, task_id: str) -> dict:
         """Get or resume task state.  Called before any orchestrator action."""
