@@ -61,7 +61,7 @@ class ResearchStepRepository(BaseRepository):
 
     @with_connection
     def update(self, step_id: str, **kwargs) -> None:
-        allowed = {"status", "result_summary", "started_at", "completed_at", "step_data"}
+        allowed = {"status", "result_summary", "started_at", "completed_at", "step_data", "rerun_version"}
         updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
         if not updates:
             return
@@ -70,3 +70,16 @@ class ResearchStepRepository(BaseRepository):
         values = list(updates.values()) + [step_id]
         conn.execute(f"UPDATE research_steps SET {set_clause} WHERE id = ?", values)
         conn.commit()
+
+    @with_connection
+    def mark_downstream_stale(self, task_id: str, after_step_number: int) -> int:
+        """Set all steps with step_number > after_step_number to 'stale'.
+        Returns count of affected rows."""
+        conn = self._conn()
+        cur = conn.execute(
+            """UPDATE research_steps SET status = 'stale'
+               WHERE task_id = ? AND step_number > ? AND status = 'completed'""",
+            (task_id, after_step_number),
+        )
+        conn.commit()
+        return cur.rowcount

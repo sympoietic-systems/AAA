@@ -4,7 +4,7 @@ export const DETAIL_TABS: DetailTab[] = ["input", "result", "log"]
 
 import React, { memo, useState, useEffect, useMemo } from "react"
 import type { MetaLogResponse, TaskStepsResponse, StepPreview } from "../../../../api/research"
-import { getTaskMetaLog, getStepPreview, executeStep, getTaskSteps, reinitializeTask } from "../../../../api/research"
+import { getTaskMetaLog, getStepPreview, executeStep, reinitializeTask } from "../../../../api/research"
 import { TerminalButton } from "../../../UI"
 import { STEP_TO_PHASE, STEP_LABELS } from "../constants/taskConstants"
 import { StepResultTab } from "./StepResultTab"
@@ -108,16 +108,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   const handleRerunStep = async () => {
     setLogLoading(true)
     try { await executeStep(taskId, selected.step_type) } catch {}
-    try {
-      const fresh = await getTaskSteps(taskId)
-      if (fresh?.steps) {
-        const latest = [...fresh.steps].reverse().find(s => s.step_type === selected.step_type)
-        if (latest) {
-          getTaskMetaLog(taskId, latest.id).then(setMetaLog).catch(() => {}).finally(() => setLogLoading(false))
-          return
-        }
-      }
-    } catch {}
+    // Step was updated in-place — reload meta log for same step ID
     getTaskMetaLog(taskId, selectedId).then(setMetaLog).catch(() => {}).finally(() => setLogLoading(false))
   }
 
@@ -131,9 +122,12 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
     <div className="space-y-2 text-[10px]">
       <div className="flex items-center justify-between">
         <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
-          [ Step #{selected.step_number}: {STEP_LABELS[selected.step_type] || selected.step_type} <span className="text-[#555]">({selected.status})</span> ]
+          [ Step #{selected.step_number}: {STEP_LABELS[selected.step_type] || selected.step_type}
+          <span className={selected.status === "stale" ? "text-[#f97316]" : "text-[#555]"}>
+            ({selected.status})
+          </span> ]
         </div>
-        {selected.status === "completed" && (
+        {(selected.status === "completed" || selected.status === "stale") && (
           <TerminalButton onClick={handleRerunStep} intent="edit">⟳ rerun step</TerminalButton>
         )}
       </div>

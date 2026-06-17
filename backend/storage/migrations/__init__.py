@@ -80,6 +80,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m035_rerun_count,
         m036_cached_inputs,
         m037_meta_log_step_id,
+        m038_rerun_version,
     )
 
     runner = MigrationRunner(conn)
@@ -120,3 +121,4 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("033_research_meta_log", m033_research_meta_log.up)
     runner.run("034_research_orchestrator_schema", m034_research_orchestrator_schema.up)
     runner.run("035_rerun_count", m035_rerun_count.up)
+    runner.run("038_rerun_version", m038_rerun_version.up)

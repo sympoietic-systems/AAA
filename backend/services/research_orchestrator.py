@@ -391,7 +391,22 @@ class SomaticResearchOrchestrator:
         if cached.get("searching"):
             state["query_index"] = cached["searching"].get("query_index", 0)
         if cached.get("parsing") and cached["parsing"].get("urls"):
-            state["search_results_cache"] = cached["parsing"]["urls"]
+            cached_urls = cached["parsing"]["urls"]
+            state["search_results_cache"] = cached_urls
+            # Build parsed_sources_cache for digest — load content from DB step_results
+            content_map: dict[str, str] = {}
+            parse_steps = [s for s in steps if s["step_type"] == "parallel_parse" and s["status"] == "completed"]
+            if parse_steps and self.step_result_repo:
+                latest_parse_id = parse_steps[-1]["id"]
+                results = self.step_result_repo.get_by_step(latest_parse_id)
+                content_map = {
+                    r["source_url"]: r.get("raw_content") or ""
+                    for r in results if r.get("source_url")
+                }
+            state["parsed_sources_cache"] = [
+                {"url": u["url"], "title": u.get("title", u["url"]), "content": content_map.get(u["url"], "")}
+                for u in cached_urls
+            ]
         if cached.get("digesting"):
             state["current_depth"] = cached["digesting"].get("depth", 0)
 
@@ -532,11 +547,49 @@ class SomaticResearchOrchestrator:
             "cached_at": self._now_utc_str(),
         }
 
+    # ── In-place rerun helpers ─────────────────────────────────────
+
+    def _create_or_update_step(self, s: dict, task_id: str, step_type: str) -> str:
+        """Create a new step, or update an existing one in-place for reruns.
+        Pops _rerun_step_id / _rerun_version from state if present."""
+        rerun_id = s.pop("_rerun_step_id", None)
+        rerun_ver = s.pop("_rerun_version", None)
+        if rerun_id:
+            self.step_repo.update(rerun_id, status="running",
+                started_at=self._now_utc_str(), rerun_version=rerun_ver)
+            return rerun_id
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
+        self.step_repo.create({
+            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
+            "step_number": s["step_number"], "step_type": step_type,
+            "status": "running", "started_at": self._now_utc_str(),
+        })
+        return step_id
+
+    def _cascade_stale_after_rerun(self, s: dict, task_id: str) -> None:
+        """After a step is rerun in-place, mark all downstream steps as stale."""
+        rerun_id = s.pop("_cascade_from_id", None)
+        if not rerun_id or not self.step_repo:
+            return
+        rerun_step = self.step_repo.get(rerun_id)
+        if rerun_step:
+            count = self.step_repo.mark_downstream_stale(task_id, rerun_step["step_number"])
+            if count:
+                logger.info("Cascaded stale → %d steps after step #%d — %s",
+                             count, rerun_step["step_number"], self._log_context(task_id, "rerun"))
+
+    # ── Main step execution ───────────────────────────────────────
+
     async def execute_step(self, task_id: str) -> dict:
         """Execute exactly ONE phase of the research pipeline.
 
         Returns info about what was executed and what the next phase will be.
         Call repeatedly until phase == 'complete'.
+
+        If state contains _rerun_step_id, the next phase updates that
+        step in-place instead of creating a new record, and downstream
+        steps are marked 'stale' afterwards.
         """
         # Guard against concurrent step execution for the same task
         if task_id not in self._step_locks:
@@ -545,6 +598,9 @@ class SomaticResearchOrchestrator:
         async with self._step_locks[task_id]:
             s = self._get_state(task_id)
             phase = s["phase"]
+
+            # Capture rerun info before step clears it
+            rerun_id = s.get("_rerun_step_id")
             result: dict = {"task_id": task_id, "executed_phase": phase}
 
             try:
@@ -575,6 +631,11 @@ class SomaticResearchOrchestrator:
 
                 else:
                     raise ValueError(f"Unknown phase: {phase}")
+
+                # After successful rerun, cascade stale to downstream
+                if rerun_id:
+                    s["_cascade_from_id"] = rerun_id
+                    self._cascade_stale_after_rerun(s, task_id)
 
             except Exception as e:
                 logger.exception("Step %s failed for task %s", phase, task_id)
@@ -648,14 +709,9 @@ class SomaticResearchOrchestrator:
         self._save_cache(task_id, cache)
 
         logger.info("Step: SEARCHING '%s' — %s", query[:60], self._log_context(task_id, "searching"))
-        s["step_number"] += 1
-        step_id = str(uuid.uuid4())
-        self.step_repo.create({
-            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
-            "step_number": s["step_number"], "step_type": "search",
-            "status": "running", "started_at": self._now_utc_str(),
-            "result_summary": json.dumps({"query": query[:300]}),
-        })
+        step_id = self._create_or_update_step(s, task_id, "search")
+        self.step_repo.update(step_id,
+            result_summary=json.dumps({"query": query[:300]}))
 
         search_results = await web_search(query, self.default_top_n, self._state.config)
         self._log_meta(task_id, "orchestrator_search", {
@@ -682,13 +738,7 @@ class SomaticResearchOrchestrator:
     async def _step_parse(self, task_id: str, s: dict) -> dict:
         """Fetch search result URLs in parallel. Advance to digesting."""
         logger.info("Step: PARSING — %s", self._log_context(task_id, "parsing"))
-        s["step_number"] += 1
-        step_id = str(uuid.uuid4())
-        self.step_repo.create({
-            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
-            "step_number": s["step_number"], "step_type": "parallel_parse",
-            "status": "running", "started_at": self._now_utc_str(),
-        })
+        step_id = self._create_or_update_step(s, task_id, "parallel_parse")
 
         parsed = await self._tool_parallel_parse(
             task_id, step_id, s["search_results_cache"], s["plan_id"],
@@ -709,13 +759,7 @@ class SomaticResearchOrchestrator:
     async def _step_digest(self, task_id: str, s: dict) -> dict:
         """Analyze sources via LLM. Advance to reflecting."""
         logger.info("Step: DIGESTING — %s", self._log_context(task_id, "digesting"))
-        s["step_number"] += 1
-        step_id = str(uuid.uuid4())
-        self.step_repo.create({
-            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
-            "step_number": s["step_number"], "step_type": "digest",
-            "status": "running", "started_at": self._now_utc_str(),
-        })
+        step_id = self._create_or_update_step(s, task_id, "digest")
 
         queries = s["plan"].get("search_queries", [s["objective"]])
         query = queries[s["query_index"]] if s["query_index"] < len(queries) else s["objective"]
@@ -783,13 +827,7 @@ class SomaticResearchOrchestrator:
     async def _step_reflect(self, task_id: str, s: dict) -> dict:
         """Multi-round LLM reflection. Advance to evaluating."""
         logger.info("Step: REFLECTING — %s", self._log_context(task_id, "reflecting"))
-        s["step_number"] += 1
-        step_id = str(uuid.uuid4())
-        self.step_repo.create({
-            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
-            "step_number": s["step_number"], "step_type": "reflect",
-            "status": "running", "started_at": self._now_utc_str(),
-        })
+        step_id = self._create_or_update_step(s, task_id, "reflect")
 
         reflection = await self._tool_reflect(
             task_id, s["objective"], s["plan"].get("goal", s["objective"]),
@@ -813,13 +851,7 @@ class SomaticResearchOrchestrator:
     def _step_evaluate(self, task_id: str, s: dict) -> dict:
         """Hard checks + decision. Advance to synthesizing, searching (next depth), or complete."""
         logger.info("Step: EVALUATING — %s", self._log_context(task_id, "evaluating"))
-        s["step_number"] += 1
-        step_id = str(uuid.uuid4())
-        self.step_repo.create({
-            "id": step_id, "task_id": task_id, "plan_id": s.get("plan_id") or step_id,
-            "step_number": s["step_number"], "step_type": "evaluate",
-            "status": "running", "started_at": self._now_utc_str(),
-        })
+        step_id = self._create_or_update_step(s, task_id, "evaluate")
 
         should_stop, stop_reason = self._tool_evaluate(
             s["current_depth"], s["max_depth"], s["sources_analyzed"],
@@ -847,13 +879,7 @@ class SomaticResearchOrchestrator:
     async def _step_synthesize(self, task_id: str, s: dict) -> dict:
         """Final synthesis. Advance to complete."""
         logger.info("Step: SYNTHESIZING — %s", self._log_context(task_id, "synthesizing"))
-        s["step_number"] += 1
-        step_id = str(uuid.uuid4())
-        self.step_repo.create({
-            "id": step_id, "task_id": task_id, "plan_id": s.get("plan_id") or step_id,
-            "step_number": s["step_number"], "step_type": "synthesize",
-            "status": "running", "started_at": self._now_utc_str(),
-        })
+        step_id = self._create_or_update_step(s, task_id, "synthesize")
 
         self._log_meta(task_id, "orchestrator_synthesize_start", {
             "total_findings": len(s["all_findings"]),

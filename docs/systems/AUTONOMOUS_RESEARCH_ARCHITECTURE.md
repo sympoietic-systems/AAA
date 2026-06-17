@@ -1853,6 +1853,65 @@ The orchestrator does NOT replace the `SomaticResearchEngine` immediately. Inste
 3. **Toggle**: Once validated, a config flag switches to `orchestrator.execute()`.
 4. **Coexistence**: The existing engine handles simple recursive search; the orchestrator handles deep multi-source research.
 
+#### 5.8.8 Step Rerun & Cascade Staleness (m038)
+
+> **Reference Decision:** 2026-06-17 — In-place step rerun with automatic downstream invalidation, ensuring the pipeline always uses fresh upstream results.
+
+**Motivation:** When a step is re-executed (e.g., a search was redone with a better query), all downstream steps that consumed the old result are stale. The user must be able to rerun any individual step and have the pipeline reflect which steps need re-execution.
+
+**Design Principles:**
+
+1. **In-place update** — Rerunning a step updates the existing `research_steps` row (same UUID) instead of creating a duplicate. Controlled by `rerun_version` counter.
+2. **Cascade invalidation** — When a step is rerun, ALL steps with a higher `step_number` are marked `status: "stale"` in the database.
+3. **Dependency chain** — Each step implicitly depends on its predecessors:
+   ```
+   Search(Qn) → Parse(Qn) → Digest(Qn) → Search(Qn+1) → … → Reflect → Evaluate → Synthesize
+   ```
+4. **Fresh data on re-execution** — Running a stale step uses the updated parent data (e.g., rerunning Parse after Search uses the new search results, not the cached ones).
+5. **Correct query targeting** — When rerunning a step, `query_index` is recalculated to match the step's query position, ensuring the correct query/URLs are used.
+
+**Database changes (m038):**
+
+```sql
+ALTER TABLE research_steps ADD COLUMN rerun_version INTEGER NOT NULL DEFAULT 1
+```
+
+- `rerun_version` increments on each in-place rerun.
+- `mark_downstream_stale(task_id, after_step_number)` — sets all completed steps after a given step to `status = 'stale'`.
+
+**API behavior:**
+
+| Mode | Trigger | Behavior |
+|------|---------|----------|
+| **Run** | `POST /step` (no param) | Executes the current phase. On completed tasks: `rerun_task` (full reset). |
+| **Rerun step** | `POST /step?rerun_step_type=digest` | Finds existing step → in-place update → cascade stale downstream. Does NOT reset the task. |
+
+**Frontend display:**
+
+| Status | Icon | Color | Clickable | Label |
+|--------|------|-------|-----------|-------|
+| `completed` | ✔ | green | Yes → detail | `Search (5 hits)` |
+| `stale` | ⟳ | orange | Yes → detail + rerun | `Parse (3 urls) (stale)` |
+| `pending` | ○ | gray | No | `Digest —` |
+| `running` | ▶ | yellow | No | Current active step |
+
+**Example flow:**
+```
+1. Pipeline complete: Q1→Search✔ Parse✔ Digest✔ | Q2→Search✔ Parse✔ Digest✔
+2. Rerun Q1's Search → all downstream marked stale:
+   Q1→Search✔ Parse⟳(stale) Digest⟳(stale) | Q2→Search⟳ Parse⟳ Digest⟳
+3. Click "Run" → executes Q1's Parse with fresh search data
+4. Continue step by step until pipeline is clean
+```
+
+**Files changed:**
+- `m038_rerun_version.py` — migration
+- `research_step.py` — `update()` accepts `rerun_version`; new `mark_downstream_stale()`
+- `research_orchestrator.py` — `_create_or_update_step()`, `_cascade_stale_after_rerun()`, all `_step_*` methods use helper
+- `research.py` API — per-step rerun sets `_rerun_step_id`, `_rerun_version`, correct `query_index`
+- `StepPipeline.tsx` — `PipelineRow` shows stale icon/label; grouping uses plan query count
+- `StepDbDetail.tsx` — rerun button on stale steps; orange status text
+
 ---
 
 ## 6. Mathematical Foundation — The Rhizomatic Utility Function
@@ -3582,6 +3641,15 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | Orchestrator prompts: `orchestrator_synthesize.yaml` | — | Final synthesis |
 | Orchestrator prompts: `orchestrator_evaluate.yaml` | — | Satisfaction check |
 | Config: `research_orchestrator` section in config.yaml | — | Toggles + defaults |
+| **In-place step rerun + cascade stale** | m038 | `rerun_version` column, no duplicate steps |
+| `mark_downstream_stale()` repository method | m038 | Sets status='stale' for all steps after rerun |
+| `_create_or_update_step()` orchestrator helper | — | In-place update on rerun, create on first run |
+| `_cascade_stale_after_rerun()` orchestrator helper | — | Automatic cascade after successful rerun |
+| Per-step rerun preserves DB state (no reset) | — | `ensure_state` + `set_phase`, not `rerun_task` |
+| Correct `query_index` on rerun | — | Calculated from searches before the step |
+| Frontend: stale status display (⟳ icon, orange) | — | `PipelineRow` supports `isStale` prop |
+| Frontend: stale steps clickable + rerunnable | — | `StepDbDetail` rerun button on stale steps |
+| Frontend: plan-based query count for grouping | — | `getPlanQueryCount()` from `plan_json` |
 | **Persona Coherence — Input-Resonant Identity** | — | YAML identity split + input-resonant belief/skill/commitment selection |
 | Identity YAML split (`core_identity` + `operational_protocols`) | — | Task-dependent protocols: conversation, research_orchestration, research_analysis |
 | `persona_loader.py` utility | — | Shared access for assembler, orchestrator, context builder, background tasks |
@@ -3591,6 +3659,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | `_build_system_content()` — unified formatting | — | Assembler now uses shared format_beliefs_block/format_skills_* functions |
 | All 7 consumers updated to `get_persona_text()` | — | assembler, orchestrator, context builder, refine_skill/belief, metabolize, BeliefService |
 | Step-by-step execution mode + preview | — | `execute_step()`, `preview_step_inputs()`, manual pipeline control |
+| **Rerun/stale cascade architecture** | m038 | In-place update, cascade invalidation, stale UI (see §5.8.8) |
 
 ### 🔲 Planned — Phase 7: Post-Orchestrator Polish
 
@@ -3600,7 +3669,6 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | In-conversation research button | Modify InputBar |
 | SidePanel research summary | ResearchSummarySection |
 | Research proposal inline cards | Render `<research-proposal>` in chat |
-| Frontend: "Steps" tab in ResearchDetailPanel | Per-step progress + results |
 
 ---
 

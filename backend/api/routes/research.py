@@ -267,8 +267,8 @@ async def execute_step(
     """Execute the next orchestrator phase (planning → searching → parsing →
     digesting → reflecting → evaluating → synthesizing → complete).
 
-    If rerun_step_type is provided (e.g., 'digest'), the task is reset and
-    executed up to and including that phase in one call.
+    If rerun_step_type is provided (e.g., 'digest'), the existing DB state
+    is preserved and only that single phase is re-executed (per-step rerun).
     """
     state = request.app.state
     manager = state.research_task_manager
@@ -282,21 +282,6 @@ async def execute_step(
             detail=f"Task must be active, queued, completed, or failed, got: {task['status']}",
         )
 
-    # Completed/failed tasks auto-rerun before stepping
-    if task["status"] in ("completed", "failed"):
-        manager.rerun_task(task_id)
-        task = manager.get_task(task_id)  # refresh after rerun
-        # Always init orchestrator for a rerun task
-        manager.transition(task_id, "active")
-        manager.orchestrator.init_task(task_id)
-
-    # If queued and in manual+orchestrator mode, init + run first step
-    elif task["status"] == "queued":
-        orch_config = state.config.get("research_orchestrator", {})
-        if orch_config.get("enabled") and manager.config.get("manual_mode", False):
-            manager.transition(task_id, "active")
-            manager.orchestrator.init_task(task_id)
-
     # Map step_type to orchestrator phase for rerun-to-target
     STEP_TYPE_TO_PHASE: dict[str, str] = {
         "plan": "planning", "search": "searching", "parallel_parse": "parsing",
@@ -305,12 +290,49 @@ async def execute_step(
     }
     target_phase = STEP_TYPE_TO_PHASE.get(rerun_step_type or "")
 
+    if target_phase:
+        # Per-step rerun — resume state from DB (preserves caches), then
+        # find the existing step to update in-place and cascade staleness.
+        # Do NOT reset the task — just transition if needed and reuse DB state.
+        if task["status"] in ("completed", "failed"):
+            manager.transition(task_id, "active")
+        orch = manager.orchestrator
+        orch.ensure_state(task_id)
+        orch.set_phase(task_id, target_phase)
+
+        # Find existing completed step of this type to update in-place
+        step_repo = getattr(state, "research_step_repo", None)
+        if step_repo and rerun_step_type:
+            all_steps = step_repo.get_by_task(task_id)
+            matching = [s for s in all_steps
+                        if s["step_type"] == rerun_step_type and s["status"] in ("completed", "stale")]
+            if matching:
+                existing = matching[-1]  # most recent
+                s2 = orch._task_states.get(task_id)
+                if s2 is not None:
+                    s2["_rerun_step_id"] = existing["id"]
+                    s2["_rerun_version"] = (existing.get("rerun_version") or 1) + 1
+                    # Set query_index to match this step's query position
+                    if rerun_step_type in ("search", "parallel_parse", "digest"):
+                        searches_before = sum(
+                            1 for s in all_steps
+                            if s["step_type"] == "search" and s["step_number"] < existing["step_number"]
+                        )
+                        s2["query_index"] = searches_before
+    else:
+        # Normal sequential step execution
+        if task["status"] in ("completed", "failed"):
+            manager.rerun_task(task_id)
+            task = manager.get_task(task_id)  # refresh after rerun
+            manager.transition(task_id, "active")
+            manager.orchestrator.init_task(task_id)
+        elif task["status"] == "queued":
+            orch_config = state.config.get("research_orchestrator", {})
+            if orch_config.get("enabled") and manager.config.get("manual_mode", False):
+                manager.transition(task_id, "active")
+                manager.orchestrator.init_task(task_id)
+
     try:
-        if target_phase:
-            # Ensure state is loaded, then force-set to the target phase so
-            # only that one phase re-executes using cached inputs from the DB.
-            manager.orchestrator.ensure_state(task_id)
-            manager.orchestrator.set_phase(task_id, target_phase)
         result = await manager.orchestrator_step(task_id)
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
