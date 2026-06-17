@@ -936,84 +936,76 @@ prompt = load_persona_for_context("research_analysis")
 
 A `load_persona_for_context()` convenience function handles YAML loading (cached per process) and assembly. Legacy `system_prompt` field is preserved as a fallback.
 
-#### 5.4.2 Two Persona Builders
+#### 5.4.2 Shared Architecture: `prompt_builder.py`
 
-Two classes produce persona context for different phases:
+All three consumers share a single utility module (`backend/utils/prompt_builder.py`) that provides:
 
-| Class | Phase | Protocols | Input for resonance |
-|-------|-------|-----------|-------------------|
-| `SomaticResearchOrchestrator._build_orchestrator_persona()` | plan, reflect, synthesize | `research_orchestration` | `objective` |
-| `ResearchContextBuilder.build_node_context()` | digest (source analysis) | `research_analysis` | `node_query` |
+**Computation functions** (take repos + 16D signature, return structured data):
+- `compute_structural_signature(text, llm_provider=None)` — `CompositeStructuralScorer` when `structural_provider` is available (lexicon 25% + topology 25% + LLM 50%, 5s timeout with lexicon fallback), `LexiconScorer` otherwise
+- `build_attractor_window(belief_repo, agent_id, sig_16d)` — 6-slot mass+stress+resonance. Called by `BeliefDynamicsEngine.process()` (pipeline) and both research consumers.
+- `match_on_demand_skills(skills, text, sig, max)` — semantic vector + keyword matching. Called by `SkillActivatorModule.process()` (pipeline) and both research consumers.
+- `split_skills(skill_repo)` — partitions skills into (always_active, on_demand).
 
-Both use the same machinery: compute a 16D structural signature of the input text, then use it to drive belief attractor window construction and on-demand skill matching.
+**Formatting functions** (take structured data, return boundary-blocked strings, all parameterized with custom labels):
+- `format_beliefs_block()` / `format_skills_always_active()` / `format_skills_matched()` / `format_skills_on_demand_slugs()` / `format_commitments_block()` / `format_identity_block()` / `format_voice_block()`
 
-#### 5.4.3 Input-Resonant Selection Pipeline
+#### 5.4.3 Three Consumers
 
-For each invocation, the persona builder:
+| Consumer | Scope | Protocols | Input for resonance | Signature |
+|----------|-------|-----------|-------------------|-----------|
+| `PromptAssemblerModule._build_system_content()` | Every conversation turn | `conversation` | Pre-computed by pipeline (`structural_provider`) | `StructuralScorerModule` in pipeline |
+| `SomaticResearchOrchestrator._build_orchestrator_persona()` | plan, reflect, synthesize | `research_orchestration` | `objective` | `compute_structural_signature(..., structural_provider)` |
+| `ResearchContextBuilder.build_node_context()` | digest (source analysis) | `research_analysis` | `node_query` | `compute_structural_signature(..., structural_provider)` |
 
-1. **Computes a 16D structural signature** of the input text using `LexiconScorer` (fast, no LLM call). The vector is normalized to unit length for cosine similarity.
+All three use the same `prompt_builder` functions for formatting — only boundary labels differ per context.
 
-2. **Beliefs — 6-slot Attractor Window** (replicates `BeliefEngine.process()` logic):
-   - Slots 1-2: highest ontological mass (foundational anchors)
-   - Slots 3-4: lowest confidence among stressed beliefs (conf < 0.50)
-   - Slots 5-6: highest cosine similarity between belief's `vector_16d` and the input signature (resonance — the same mechanism the conversation pipeline uses for user messages)
-   - If no signature is available, falls back to unconditional top-4 by mass
+#### 5.4.4 Input-Resonant Selection Pipeline
 
-3. **Skills — Two-tier** (replicates `SkillActivatorModule.process()` logic):
-   - **Always-active**: loaded unconditionally (brief: `[name]: short_content[:150]`). Excludes `research-proposal` and `skill-nucleation`.
-   - **On-demand matched**: up to 3 skills selected via:
-     - Strategy B (priority 2): semantic vector match — cosine similarity of skill's `vector_16d` vs input signature (threshold 0.7)
-     - Strategy C (priority 1): keyword trigger match — substring match of `trigger_keywords` in input text
-     - Strategy A (attractor window resonance) is handled implicitly via the belief attractor window
-   - Matched skills show name, short description, and match reason
+For each invocation:
 
-4. **Commitments — Three tiers with full statements**:
-   - Active commitments: `label: statement` (no truncation)
-   - Proto-commitments: `[label] [mass=X.XX] nucleation_rationale`
-   - Spectral commitments: `[label] collapse_rationale`
+1. **16D structural signature** via `compute_structural_signature()` — `CompositeStructuralScorer` with `structural_provider` (5s timeout, falls back to lexicon-only on failure). Normalized to unit length.
 
-5. **Voice + behaviors** (from YAML) — included for orchestrator tasks alongside identity
+2. **Beliefs — 6-slot Attractor Window** via shared `build_attractor_window()` — identical logic to `BeliefDynamicsEngine.process()`. Slots 1-2: mass anchors, 3-4: stressed beliefs, 5-6: cosine similarity resonance. Falls back to unconditional top-4 by mass if no signature.
 
-#### 5.4.4 Per-Node Prompt Assembly (Digest Phase)
+3. **Skills — Two-tier** via shared `split_skills()` + `match_on_demand_skills()` — identical logic to `SkillActivatorModule.process()`. Always-active (brief, excludes `research-proposal`/`skill-nucleation`). On-demand: semantic vector (threshold 0.7) + keyword triggers, capped at 3 (orchestrator) / 2 (context builder).
+
+4. **Commitments — Three tiers** via shared `format_commitments_block()` — active (full statements, no truncation), proto (mass + nucleation rationale), spectral (collapse rationale).
+
+5. **Voice** (from YAML) — included for orchestrator tasks via `format_voice_block()`.
+
+#### 5.4.5 Prompt Assembly Layout
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  [SYSTEM] core_identity + research_analysis protocols       │
-│  [SYSTEM] --- BEGIN ACTIVE SKILLS ---                       │
-│           (always-active dispositions, brief descriptions)  │
-│  [SYSTEM] --- END ACTIVE SKILLS ---                         │
-│  [SYSTEM] --- BEGIN MATCHED SKILLS ---                      │
-│           (on-demand skills matched via semantic + keyword) │
-│  [SYSTEM] --- END MATCHED SKILLS ---                        │
-│  [SYSTEM] --- BEGIN ACTIVE COMMITMENTS ---                  │
-│           (full statements, no truncation)                  │
-│  [SYSTEM] --- END ACTIVE COMMITMENTS ---                    │
-│  [SYSTEM] --- BEGIN PROTO-COMMITMENTS ---                   │
-│           (under diffractive consideration)                 │
-│  [SYSTEM] --- END PROTO-COMMITMENTS ---                     │
-│  [SYSTEM] --- BEGIN SPECTRAL COMMITMENTS ---                │
-│           (collapsed but haunting)                          │
-│  [SYSTEM] --- END SPECTRAL COMMITMENTS ---                  │
-│  [SYSTEM] --- BEGIN BELIEFS (Attractor Window) ---          │
-│           Slot 1-2: mass anchors                            │
-│           Slot 3-4: stressed beliefs                        │
-│           Slot 5-6: query-resonant beliefs                  │
-│  [SYSTEM] --- END BELIEFS (Attractor Window) ---            │
-│  [SYSTEM] --- RESEARCH DIRECTIVE ---                        │
-│           Query: {node_query} / Goal: {node_goal} / Depth   │
-│  [SYSTEM] YAML template (node_analyzer.yaml instruction)    │
-│  [USER]   (The scraped web content to analyze)               │
-└─────────────────────────────────────────────────────────────┘
+┌─ Orchestrator (plan/reflect/synthesize) ─────────────────────┐
+│  [SYSTEM] core_identity + research_orchestration protocols    │
+│  [SYSTEM] Voice: tone / vocabulary / style                    │
+│  [SYSTEM] --- ACTIVE DISPOSITIONS ---                         │
+│  [SYSTEM] --- MATCHED DISPOSITIONS ---                        │
+│  [SYSTEM] --- THEORETICAL COMMITMENTS (active) ---            │
+│  [SYSTEM] --- THEORETICAL COMMITMENTS (proto) ---             │
+│  [SYSTEM] --- THEORETICAL COMMITMENTS (spectral) ---          │
+│  [SYSTEM] --- BELIEFS (Attractor Window) ---                  │
+│  [SYSTEM] --- RESEARCH DIRECTIVE --- Objective: ...           │
+│  [SYSTEM] YAML template (orchestrator_planner.yaml)           │
+└──────────────────────────────────────────────────────────────┘
+
+┌─ Context Builder (digest) ───────────────────────────────────┐
+│  [SYSTEM] core_identity + research_analysis protocols        │
+│  [SYSTEM] --- BEGIN ACTIVE SKILLS ---                         │
+│  [SYSTEM] --- BEGIN MATCHED SKILLS ---                        │
+│  [SYSTEM] --- BEGIN ACTIVE COMMITMENTS ---                    │
+│  [SYSTEM] --- BEGIN PROTO-COMMITMENTS ---                     │
+│  [SYSTEM] --- BEGIN SPECTRAL COMMITMENTS ---                  │
+│  [SYSTEM] --- BEGIN BELIEFS (Attractor Window) ---            │
+│  [SYSTEM] --- RESEARCH DIRECTIVE ---                          │
+│  [SYSTEM] YAML template (node_analyzer.yaml)                  │
+│  [USER]   (scraped web content)                               │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-The orchestrator prompt (plan/reflect/synthesize) follows the same structure but uses `research_orchestration` protocols and includes `voice` + `behaviors` sections between identity and skills.
+#### 5.4.6 Anti-Mastery Enforcement
 
-#### 5.4.5 Anti-Mastery Enforcement
-
-All context built for research nodes passes through `apply_anti_mastery_filter()` before being sent to the LLM. This ensures that even during autonomous exploration, the Cartesian master-slave vocabulary is replaced with intra-active equivalents.
-- "Execute the search tool" → "Engage the sensory affordance"
-
-This enforcement covers: the system prompt, skill descriptions, belief statements, commitment text, expertise descriptions, memory node content, and the research directive itself.
+All context built for research nodes passes through `apply_anti_mastery_filter()` before being sent to the LLM.
 
 #### 5.4.8 Integration with SomaticResearchEngine
 
@@ -1717,7 +1709,7 @@ SomaticResearchOrchestrator.execute(task_id)
 ├─ Phase 1 — PLAN ────────────────────────────────────────
 │   _build_orchestrator_persona(objective) →
 │     core_identity + research_orchestration protocols
-│     + voice/behaviors + attractor window beliefs
+│     + voice + attractor window beliefs
 │     + matched skills + three-tier commitments
 │   LLM: objective → ResearchPlan {
 │     steps: [{type: search, query, n_results: 3}, …],
@@ -3593,8 +3585,10 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | **Persona Coherence — Input-Resonant Identity** | — | YAML identity split + input-resonant belief/skill/commitment selection |
 | Identity YAML split (`core_identity` + `operational_protocols`) | — | Task-dependent protocols: conversation, research_orchestration, research_analysis |
 | `persona_loader.py` utility | — | Shared access for assembler, orchestrator, context builder, background tasks |
-| `_build_orchestrator_persona()` — input-resonant rewrite | — | 16D LexiconScorer signature → attractor window + skill matching |
-| `ResearchContextBuilder` — input-resonant rewrite | — | Node queries drive belief/skill selection via same 16D mechanism |
+| `prompt_builder.py` — shared computation + formatting | — | 3 computation + 7 formatting functions, used by all 3 consumers + pipeline modules |
+| `_build_orchestrator_persona()` — input-resonant rewrite | — | Calls prompt_builder: 16D CompositeStructuralScorer → attractor window + skill matching |
+| `ResearchContextBuilder` — input-resonant rewrite | — | Same prompt_builder machinery driven by node_query |
+| `_build_system_content()` — unified formatting | — | Assembler now uses shared format_beliefs_block/format_skills_* functions |
 | All 7 consumers updated to `get_persona_text()` | — | assembler, orchestrator, context builder, refine_skill/belief, metabolize, BeliefService |
 | Step-by-step execution mode + preview | — | `execute_step()`, `preview_step_inputs()`, manual pipeline control |
 
