@@ -59,6 +59,17 @@ Despite API-level thinking suppression, truncated scorer responses (`'\n  "score
 3. **`fallback_value` added** — `generate_unified` now gets `{"scores": [0.25]*16}` default, preventing exception propagation through `CompositeStructuralScorer`.
 4. **Per-call `thinking_budget` opt-in** — generic OpenAI-compatible endpoints now support `thinking_budget=0` as a per-call parameter. For known providers (OpenRouter/Google/Anthropic), suppression already works via global `thinking: enabled: false` config. No change to normal chat calls.
 
+### 2026-06-17 Update — Per-Request `thinking_override`
+
+The two-speed brain was previously all-or-nothing at the provider level: global `thinking.enabled` applied to ALL calls. This forced a trade-off — either fast responses everywhere (no thinking) or expensive reasoning everywhere (thinking on). The research orchestrator needs thinking for planning (high-quality query decomposition) but fast responses for synthesis and reflection.
+
+Changes:
+1. **`OpenAIComposableProvider.generate()`** now pops `thinking_override` from `**params`. If present and truthy, it enables thinking mode for that specific request, overriding the provider-level `self._thinking` flag. If falsy, it disables thinking for that request. If absent (`None`), the provider-level default applies.
+2. **Prompt YAML support** — `orchestrator_planner.yaml` declares `thinking: {enabled: true, effort: "high"}`. The orchestrator reads this and passes `thinking_override=True` + `reasoning_effort` to `generate_unified()`.
+3. **Global default unchanged** — `config.yaml` keeps `thinking.enabled: false`. Only prompts that opt in via their YAML get thinking mode.
+
+Usage: add `thinking: {enabled: true, effort: "high"}` to any prompt YAML to enable deep reasoning for that specific phase. Omit the block to keep the default (fast/no thinking).
+
 ---
 
 ## Consequences

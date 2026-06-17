@@ -172,6 +172,11 @@ The correct key is automatically selected based on `AAA_LLM_PROVIDER`.
 Only meaningful for DeepSeek-v4-pro/v4-flash. When enabled, `temperature`
 and `top_p` are silently ignored by the model.
 
+**Per-request override**: Prompt YAML files (e.g. `orchestrator_planner.yaml`)
+can declare `thinking: {enabled: true, effort: "high"}` to enable thinking
+for that specific LLM call, independent of the global setting. See
+ADR-021 for details.
+
 ### Embedding
 
 | Variable | Values | Default |
