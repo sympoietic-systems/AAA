@@ -621,33 +621,87 @@ const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: {
           {(() => {
             try {
               const sd = selected.step_data ? JSON.parse(selected.step_data) : null
-              const llm = sd?.llm_response || sd?.plan || sd?.answer || sd
+              const llm = sd?.llm_response || sd?.plan || sd?.answer
               if (!llm || (typeof llm === "object" && !Object.keys(llm).length)) return null
-              const llmStr = typeof llm === "string" ? llm : JSON.stringify(llm, null, 2)
-              if (!llmStr || llmStr === "{}" || llmStr === "[]") return null
+              // If llm is a full response wrapper with json_data/thinking, extract parts
+              const jsonOut = llm.json_data || (typeof llm === "object" && !llm.json_data ? llm : null)
+              const llmThinking = llm.thinking || ""
+              const isWrapper = !!(llm.json_data || llm.thinking)
+
               return (
                 <div className="border-t border-[#1a1a1a] pt-2">
                   <div className="text-[#555] text-[8px] mb-1">llm response:</div>
-                  <pre className="text-[#4ade80] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-64 overflow-y-auto whitespace-pre-wrap break-all">{llmStr.slice(0, 6000)}</pre>
+                  {isWrapper ? (
+                    <>
+                      {jsonOut && <pre className="text-[#4ade80] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all mb-1">{typeof jsonOut === "string" ? jsonOut : JSON.stringify(jsonOut, null, 2)}</pre>}
+                      {llmThinking && (
+                        <details>
+                          <summary className="text-[#555] text-[7px] cursor-pointer hover:text-[#888] uppercase">thinking trace ({llmThinking.length} chars)</summary>
+                          <pre className="text-[#555] text-[7px] bg-[#080808] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{llmThinking}</pre>
+                        </details>
+                      )}
+                    </>
+                  ) : (
+                    <pre className="text-[#4ade80] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-64 overflow-y-auto whitespace-pre-wrap break-all">{typeof llm === "string" ? llm : JSON.stringify(llm, null, 2)}</pre>
+                  )}
                 </div>
               )
             } catch { return null }
           })()}
 
-          {/* ── Raw LLM response(s) — collapsible (meta-log) ── */}
+          {/* ── Raw LLM response(s) — structured (meta-log) ── */}
           {responseEntries.length > 0 && (
             <div className="border-t border-[#1a1a1a] pt-2">
-              <div className="text-[#555] text-[9px] mb-1">raw responses ({responseEntries.length}):</div>
+              <div className="text-[#555] text-[9px] mb-1">llm responses ({responseEntries.length}):</div>
               {responseEntries.map((entry, ei) => {
                 const d = entry.event_data as any
-                const resp = d?.raw_response || d?.response || JSON.stringify(d)
-                if (!resp || resp === "{}") return null
+                const rawStr = d?.raw_response || d?.response || ""
+                if (!rawStr || rawStr === "{}") return null
+                let resp: any = null
+                try { resp = JSON.parse(rawStr) } catch { /* raw text, fallback */ }
+
+                if (!resp || typeof resp !== "object") {
+                  return (
+                    <details key={ei} className="mb-1">
+                      <summary className="text-[#777] text-[9px] cursor-pointer hover:text-[#aaa]">
+                        {entry.event_type.replace("orchestrator_","").replace("_response","")} ({entry.created_at?.slice(11,19)})
+                      </summary>
+                      <pre className="text-[#666] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{rawStr.slice(0, 4000)}</pre>
+                    </details>
+                  )
+                }
+
+                const jsonData = resp.json_data || resp.content
+                const thinking = resp.thinking || ""
+                const wrapperStr = JSON.stringify({ model: resp.model, provider_used: resp.provider_used, truncated: resp.truncated, finish_reason: resp.finish_reason }, null, 2)
+
                 return (
-                  <details key={ei} className="mb-1">
+                  <details key={ei} className="mb-2" open>
                     <summary className="text-[#777] text-[9px] cursor-pointer hover:text-[#aaa]">
-                      {entry.event_type.replace("orchestrator_","").replace("_response","")} ({entry.created_at?.slice(11,19)})
+                      {entry.event_type.replace("orchestrator_","").replace("_response","")} ({entry.created_at?.slice(11,19)}) {resp.model && <span className="text-[#555]">— {resp.model}</span>} {resp.truncated && <span className="text-[#f59e0b] text-[8px]">[truncated]</span>}
                     </summary>
-                    <pre className="text-[#666] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{String(resp).slice(0, 4000)}</pre>
+
+                    {/* Structured output (json_data) */}
+                    {jsonData && (
+                      <div className="mt-2">
+                        <div className="text-[#555] text-[7px] mb-0.5 uppercase">output:</div>
+                        <pre className="text-[#4ade80] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{typeof jsonData === "string" ? jsonData : JSON.stringify(jsonData, null, 2)}</pre>
+                      </div>
+                    )}
+
+                    {/* Thinking trace (collapsible) */}
+                    {thinking && (
+                      <details className="mt-1">
+                        <summary className="text-[#555] text-[7px] cursor-pointer hover:text-[#888] uppercase">thinking trace ({thinking.length} chars)</summary>
+                        <pre className="text-[#555] text-[7px] bg-[#080808] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{thinking}</pre>
+                      </details>
+                    )}
+
+                    {/* Raw wrapper (collapsible) */}
+                    <details className="mt-1">
+                      <summary className="text-[#444] text-[7px] cursor-pointer hover:text-[#666]">raw wrapper</summary>
+                      <pre className="text-[#444] text-[7px] bg-[#080808] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-24 overflow-y-auto whitespace-pre-wrap break-all">{wrapperStr}</pre>
+                    </details>
                   </details>
                 )
               })}
