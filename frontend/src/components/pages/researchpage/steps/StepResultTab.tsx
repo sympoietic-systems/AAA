@@ -1,5 +1,6 @@
 import React, { memo } from "react"
 import type { ResearchStep, ResearchStepResult } from "../../../../api/research"
+import { JsonBlock } from "../shared/JsonBlock"
 
 interface StepResultTabProps {
   selected: ResearchStep
@@ -98,14 +99,16 @@ export const StepResultTab = memo(function StepResultTab({
                   <summary className="text-[#777] text-[9px] cursor-pointer hover:text-[#aaa]">
                     {entry.event_type.replace("orchestrator_","").replace("_response","")} ({entry.created_at?.slice(11,19)})
                   </summary>
-                  <pre className="text-[#666] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{rawStr.slice(0, 4000)}</pre>
+                  <div className="mt-1">
+                    <JsonBlock data={rawStr.slice(0, 4000)} variant="raw" />
+                  </div>
                 </details>
               )
             }
 
             const jsonData = resp.json_data || resp.content
             const thinking = resp.thinking || ""
-            const wrapperStr = JSON.stringify({ model: resp.model, provider_used: resp.provider_used, truncated: resp.truncated, finish_reason: resp.finish_reason }, null, 2)
+            const wrapper = { model: resp.model, provider_used: resp.provider_used, truncated: resp.truncated, finish_reason: resp.finish_reason }
 
             return (
               <details key={ei} className="mb-2" open>
@@ -116,20 +119,22 @@ export const StepResultTab = memo(function StepResultTab({
                 {jsonData && (
                   <div className="mt-2">
                     <div className="text-[#555] text-[7px] mb-0.5 uppercase">output:</div>
-                    <pre className="text-[#4ade80] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{typeof jsonData === "string" ? jsonData : JSON.stringify(jsonData, null, 2)}</pre>
+                    <JsonBlock data={jsonData} />
                   </div>
                 )}
 
                 {thinking && (
                   <details className="mt-1">
                     <summary className="text-[#555] text-[7px] cursor-pointer hover:text-[#888] uppercase">thinking trace ({thinking.length} chars)</summary>
-                    <pre className="text-[#555] text-[7px] bg-[#080808] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{thinking}</pre>
+                    <JsonBlock data={thinking} variant="dim" maxHeight="max-h-48" className="mt-1" />
                   </details>
                 )}
 
                 <details className="mt-1">
                   <summary className="text-[#444] text-[7px] cursor-pointer hover:text-[#666]">raw wrapper</summary>
-                  <pre className="text-[#444] text-[7px] bg-[#080808] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-24 overflow-y-auto whitespace-pre-wrap break-all">{wrapperStr}</pre>
+                  <div className="mt-1">
+                    <JsonBlock data={wrapper} variant="dim" maxHeight="max-h-24" />
+                  </div>
                 </details>
               </details>
             )

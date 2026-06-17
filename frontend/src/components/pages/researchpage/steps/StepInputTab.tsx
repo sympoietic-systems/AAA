@@ -1,6 +1,7 @@
 import React, { memo } from "react"
 import type { StepPreview } from "../../../../api/research"
 import { SectionDivider } from "../shared/SectionDivider"
+import { JsonBlock } from "../shared/JsonBlock"
 import { LogEntries } from "./LogEntries"
 
 interface StepInputTabProps {
@@ -31,8 +32,8 @@ export const StepInputTab = memo(function StepInputTab({
             <div className="space-y-2">
               {liveInput.objective && <div><div className="text-[#555] text-[8px]">objective:</div><div className="text-[#94a3b8] text-[9px] pl-2">{liveInput.objective}</div></div>}
               {liveInput.max_depth != null && <div className="flex gap-3 text-[#777] text-[9px] flex-wrap"><span>depth:{liveInput.max_depth}</span><span>budget:${liveInput.budget_limit_usd?.toFixed(2)}</span>{liveInput.model && <span>model:{liveInput.model}</span>}{liveInput.temperature != null && <span>temp:{liveInput.temperature}</span>}</div>}
-              {liveInput.system_prompt && <div><div className="text-[#555] text-[8px] mb-0.5">system prompt:</div><pre className="text-[#888] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-32 overflow-y-auto whitespace-pre-wrap break-all">{liveInput.system_prompt}</pre></div>}
-              {liveInput.user_prompt && <div><div className="text-[#555] text-[8px] mb-0.5">user prompt:</div><pre className="text-[#888] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-24 overflow-y-auto whitespace-pre-wrap break-all">{liveInput.user_prompt}</pre></div>}
+              {liveInput.system_prompt && <div><div className="text-[#555] text-[8px] mb-0.5">system prompt:</div><JsonBlock data={liveInput.system_prompt} variant="prompt" maxHeight="max-h-32" /></div>}
+              {liveInput.user_prompt && <div><div className="text-[#555] text-[8px] mb-0.5">user prompt:</div><JsonBlock data={liveInput.user_prompt} variant="prompt" maxHeight="max-h-24" /></div>}
               {liveInput.pending_queries && liveInput.pending_queries.length > 0 && <div><div className="text-[#555] text-[8px] mb-0.5">queries:</div>{liveInput.pending_queries.map((q,i)=><div key={i} className="text-[#94a3b8] text-[9px] pl-2">· {q}</div>)}</div>}
               {liveInput.note && <div className="text-[#444] italic text-[8px]">{liveInput.note}</div>}
             </div>

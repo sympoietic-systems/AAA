@@ -1,5 +1,6 @@
 import React, { memo } from "react"
 import type { StepPreview } from "../../../../api/research"
+import { JsonBlock } from "../shared/JsonBlock"
 
 interface StepPreviewPanelProps {
   preview: StepPreview
@@ -43,13 +44,13 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
       {preview.system_prompt && (
         <div>
           <div className="text-[#555] text-[9px] mb-0.5">system prompt:</div>
-          <pre className="text-[#888] text-[9px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{preview.system_prompt}</pre>
+          <JsonBlock data={preview.system_prompt} variant="prompt" maxHeight="max-h-48" />
         </div>
       )}
       {preview.user_prompt && (
         <div>
           <div className="text-[#555] text-[9px] mb-0.5">user prompt:</div>
-          <pre className="text-[#888] text-[9px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-32 overflow-y-auto whitespace-pre-wrap break-all">{preview.user_prompt}</pre>
+          <JsonBlock data={preview.user_prompt} variant="prompt" maxHeight="max-h-32" />
         </div>
       )}
       {preview.pending_queries && preview.pending_queries.length > 0 && (
