@@ -9,19 +9,19 @@ import type {
   MetaLogResponse,
 } from "../../../api/research"
 import {
-  getResearchTask, getTaskSteps, getTaskMetaLog,
+  getResearchTask, getTaskSteps, getTaskMetaLog, getTaskPhase, getStepPreview,
   approveProposal, rejectProposal, cancelTask, retryTask, deleteTask,
+  rerunTask, executeStep,
 } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
 
-type SubTabId = "info" | "steps" | "assets" | "branches" | "meta_log"
+type SubTabId = "info" | "steps" | "assets" | "branches"
 
 const SUB_TABS: { key: SubTabId; label: string }[] = [
   { key: "info",     label: "Info" },
   { key: "steps",    label: "Steps" },
   { key: "assets",   label: "Assets" },
   { key: "branches", label: "Branches" },
-  { key: "meta_log", label: "Meta Log" },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
@@ -42,7 +42,7 @@ async function doActionAndReload(action: () => Promise<any>) {
 }
 
 /* ── Info Tab (with inline actions) ── */
-function InfoTab({ task }: { task: ResearchTask }) {
+function InfoTab({ task, orchPhase }: { task: ResearchTask; orchPhase?: string }) {
   const color = STATUS_COLORS[task.status] ?? "#666"
   const progress = task.budget_limit_usd > 0 ? Math.round((task.budget_spent_usd / task.budget_limit_usd) * 100) : 0
   const metrics = [
@@ -55,6 +55,7 @@ function InfoTab({ task }: { task: ResearchTask }) {
     { key: "branches", value: task.branches_created },
     { key: "assets", value: task.assets_harvested || (task.assets?.length ?? 0) },
     { key: "budget", value: `$${task.budget_spent_usd.toFixed(4)} / $${task.budget_limit_usd.toFixed(2)} (${progress}%)` },
+    ...(orchPhase && orchPhase !== "complete" ? [{ key: "phase", value: orchPhase.toUpperCase(), valueColor: "#f59e0b" }] : []),
     ...(task.proposed_at ? [{ key: "proposed", value: task.proposed_at }] : []),
     ...(task.started_at ? [{ key: "started", value: task.started_at }] : []),
     ...(task.completed_at ? [{ key: "completed", value: task.completed_at }] : []),
@@ -97,7 +98,14 @@ function InfoTab({ task }: { task: ResearchTask }) {
               <TerminalButton onClick={() => doActionAndReload(() => deleteTask(task.id))} intent="delete">✕ delete</TerminalButton>
             </>
           )}
-          {(task.status === "queued" || task.status === "active") && (
+          {task.status === "queued" && (
+            <>
+              <TerminalButton onClick={() => doActionAndReload(() => executeStep(task.id))} intent="save">▶ run</TerminalButton>
+              <TerminalButton onClick={() => doActionAndReload(() => cancelTask(task.id))} intent="delete">✕ cancel</TerminalButton>
+              <TerminalButton onClick={() => doActionAndReload(() => deleteTask(task.id))} intent="delete">✕ delete</TerminalButton>
+            </>
+          )}
+          {task.status === "active" && (
             <>
               <TerminalButton onClick={() => doActionAndReload(() => cancelTask(task.id))} intent="delete">✕ cancel</TerminalButton>
               <TerminalButton onClick={() => doActionAndReload(() => deleteTask(task.id))} intent="delete">✕ delete</TerminalButton>
@@ -105,21 +113,24 @@ function InfoTab({ task }: { task: ResearchTask }) {
           )}
           {task.status === "failed" && (
             <>
-              <TerminalButton onClick={() => doActionAndReload(() => retryTask(task.id))} intent="edit">↻ retry</TerminalButton>
+              <TerminalButton onClick={() => doActionAndReload(() => rerunTask(task.id))} intent="edit">⟳ rerun</TerminalButton>
+              <TerminalButton onClick={() => doActionAndReload(() => retryTask(task.id))} intent="neutral">↻ retry (clone)</TerminalButton>
               <TerminalButton onClick={doContinue} intent="cyan">▶ continue deeper</TerminalButton>
               <TerminalButton onClick={() => doActionAndReload(() => deleteTask(task.id))} intent="delete">✕ delete</TerminalButton>
             </>
           )}
           {task.status === "completed" && (
             <>
-              <TerminalButton onClick={() => doActionAndReload(() => retryTask(task.id))} intent="save">↻ retry</TerminalButton>
+              <TerminalButton onClick={() => doActionAndReload(() => rerunTask(task.id))} intent="edit">⟳ rerun</TerminalButton>
+              <TerminalButton onClick={() => doActionAndReload(() => retryTask(task.id))} intent="save">↻ retry (clone)</TerminalButton>
               <TerminalButton onClick={doContinue} intent="cyan">▶ continue deeper</TerminalButton>
               <TerminalButton onClick={() => doActionAndReload(() => deleteTask(task.id))} intent="delete">✕ delete</TerminalButton>
             </>
           )}
           {task.status === "cancelled" && (
             <>
-              <TerminalButton onClick={() => doActionAndReload(() => retryTask(task.id))} intent="edit">↻ retry</TerminalButton>
+              <TerminalButton onClick={() => doActionAndReload(() => rerunTask(task.id))} intent="edit">⟳ rerun</TerminalButton>
+              <TerminalButton onClick={() => doActionAndReload(() => retryTask(task.id))} intent="neutral">↻ retry (clone)</TerminalButton>
               <TerminalButton onClick={doContinue} intent="cyan">▶ continue deeper</TerminalButton>
               <TerminalButton onClick={() => doActionAndReload(() => deleteTask(task.id))} intent="delete">✕ delete</TerminalButton>
             </>
@@ -143,182 +154,456 @@ function InfoTab({ task }: { task: ResearchTask }) {
   )
 }
 
-/* ── Steps Tab (§3: left list + right detail) ── */
+/* ── Steps Tab (§3: left list + right detail, with orchestrator pipeline) ── */
 const STEP_LABELS: Record<string, string> = {
-  search: "Search", parallel_parse: "Parse Sources", digest: "Digest",
-  reflect: "Reflect", synthesize: "Synthesize", evaluate: "Evaluate",
-}
-const STEP_COLORS: Record<string, string> = {
-  search: "#3b82f6", parallel_parse: "#f59e0b", digest: "#a892ee",
-  reflect: "#c084fc", synthesize: "#4ade80", evaluate: "#22d3ee",
+  plan: "Plan", search: "Search", parallel_parse: "Parse Sources",
+  digest: "Digest", reflect: "Reflect", synthesize: "Synthesize",
+  evaluate: "Evaluate",
 }
 
-function StepsTab({ taskId }: { taskId: string }) {
+const PHASE_ORDER_DISPLAY = [
+  "planning", "searching", "parsing", "digesting", "reflecting", "evaluating", "synthesizing",
+]
+const PHASE_LABELS: Record<string, string> = {
+  planning: "Plan", searching: "Search", parsing: "Parse Sources",
+  digesting: "Digest", reflecting: "Reflect", evaluating: "Evaluate",
+  synthesizing: "Synthesize", complete: "Complete",
+}
+
+/** Determine phase status relative to current orch phase */
+function phaseStatus(idx: number, currentIdx: number): "done" | "current" | "pending" {
+  if (currentIdx < 0) return "pending"
+  if (idx < currentIdx) return "done"
+  if (idx === currentIdx) return "current"
+  return "pending"
+}
+
+function StepsTab({ taskId, orchPhase, taskStatus }: { taskId: string; orchPhase: string; taskStatus: string }) {
   const [data, setData] = useState<TaskStepsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [stepping, setStepping] = useState(false)
 
-  useEffect(() => { getTaskSteps(taskId).then(setData).finally(() => setLoading(false)) }, [taskId])
+  const reload = () => window.location.reload()
 
-  if (loading) return <div className="text-[#555] animate-pulse text-xs font-mono">[ loading… ]</div>
-  if (!data || data.steps.length === 0) return <div className="text-[#444] italic text-xs text-center mt-8 select-none">[ no steps — legacy engine ]</div>
+  const load = useCallback(() => {
+    getTaskSteps(taskId).then(setData).catch(() => {})
+  }, [taskId])
 
-  const steps = [...data.steps].reverse()
-  const selected = selectedId ? steps.find(s => s.id === selectedId) : null
-  const selectedResults = selectedId ? (data.results_by_step[selectedId] || []) : []
+  useEffect(() => { load() }, [load])
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el = (e.target as HTMLElement).closest("[data-sid]") as HTMLElement | null
-    if (!el) return
-    setSelectedId(prev => prev === el.getAttribute("data-sid") ? null : el.getAttribute("data-sid"))
+  // Poll while task is active
+  useEffect(() => {
+    if (taskStatus !== "active") return
+    const t = setInterval(load, 3000)
+    return () => clearInterval(t)
+  }, [load, taskStatus])
+
+  const currentPhaseIdx = PHASE_ORDER_DISPLAY.indexOf(orchPhase)
+  // If phase isn't in the display list (e.g. "not_started" or "complete"), use -2
+  const hasPipeline = orchPhase && orchPhase !== "complete" && orchPhase !== "not_started"
+
+  const doStep = async () => {
+    setStepping(true)
+    try { await executeStep(taskId) } catch {}
+    setStepping(false)
+    reload()
+  }
+  const doRerun = async () => {
+    setStepping(true)
+    try { await rerunTask(taskId) } catch {}
+    setStepping(false)
+    reload()
+  }
+
+  // Map pipeline phases to DB step IDs
+  const phaseToStepId: Record<string, string | null> = {}
+  if (data) {
+    const steps = [...data.steps].reverse()
+    const seen: Record<string, boolean> = {}
+    for (const s of steps) {
+      const phase = STEP_TO_PHASE[s.step_type]
+      if (phase && !seen[phase]) { phaseToStepId[phase] = s.id; seen[phase] = true }
+    }
+  }
+
+  const handlePipelineClick = (phase: string) => {
+    const sid = phaseToStepId[phase]
+    setSelectedId(prev => prev === sid ? null : sid)
   }
 
   return (
     <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-200px)]">
-      {/* Left list §4 */}
-      <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0 md:max-h-full max-h-[40vh]" onClick={handleClick}>
-        <div className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none">
-          {steps.map(s => {
-            const sc = STEP_COLORS[s.step_type] || "#666"
-            const resultCount = (data?.results_by_step[s.id] || []).length
-            let learnCount = 0
-            for (const r of (data?.results_by_step[s.id] || [])) {
-              try { const a = r.analyzed_json ? JSON.parse(r.analyzed_json) : null; learnCount += (a?.learnings?.length || 0) } catch {}
-            }
-            return (
-              <div key={s.id} data-sid={s.id}
-                className={`cursor-pointer border-l-2 transition-colors px-1.5 py-1
-                  ${selectedId === s.id ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}`}
-              >
-                <div className="flex items-center gap-1.5 text-[10px]">
-                  <span style={{ color: sc }} className="text-[8px] shrink-0">●</span>
-                  <span className="text-[#bbb] font-mono">#{s.step_number} {STEP_LABELS[s.step_type] || s.step_type}</span>
-                  <span style={{ color: sc }} className="text-[8px] ml-auto uppercase">{s.status}</span>
-                </div>
-                <div className="text-[#555] text-[8px] ml-3.5 mt-0.5">
-                  {s.result_summary ? s.result_summary.split(" — ")[0] : ""}
-                  {resultCount > 0 && <span className="ml-1">· {resultCount} source{resultCount !== 1 ? "s" : ""}</span>}
-                  {learnCount > 0 && <span className="ml-1">· {learnCount} finding{learnCount !== 1 ? "s" : ""}</span>}
-                </div>
+      {/* ── LEFT: Pipeline (clickable) ── */}
+      <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0 md:max-h-full max-h-[40vh]">
+        <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+          <div>
+            <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1.5">[ Pipeline ]</div>
+            <div className="space-y-0.5">
+              {PHASE_ORDER_DISPLAY.map((phase, idx) => {
+                const label = PHASE_LABELS[phase] || phase
+                const sid = phaseToStepId[phase]
+                const isSel = sid && sid === selectedId
+                // Determine status
+                const allComplete = taskStatus === "completed" && orchPhase === "complete"
+                const status = allComplete ? "done" : hasPipeline ? phaseStatus(idx, currentPhaseIdx) : "pending"
+                const isDone = status === "done"
+                const isCurrent = status === "current"
+                const sc = isDone ? "#4ade80" : isCurrent ? "#f59e0b" : "#444"
+                const canClick = isDone && sid
+
+                return (
+                  <div key={phase}
+                    onClick={canClick ? (() => handlePipelineClick(phase)) : undefined}
+                    className={`flex items-center gap-2 text-[10px] px-2 py-1 rounded-sm
+                      ${canClick ? "cursor-pointer hover:bg-[#111]" : ""}
+                      ${isCurrent ? "bg-[#1a1a2e]/30 border border-[#f59e0b]/20" : ""}
+                      ${isSel ? "border border-[#a78bfa]/30 bg-[#1a1a2e]/30" : ""}`}>
+                    <span style={{ color: sc }} className="text-[8px] shrink-0 w-3">
+                      {isDone ? "✔" : isCurrent ? "▶" : "○"}
+                    </span>
+                    <span className={`font-mono flex-1 ${isSel ? "text-[#c4b5fd]" : isDone ? "text-[#94a3b8]" : isCurrent ? "text-[#fbbf24]" : "text-[#555]"}`}>
+                      {label}
+                    </span>
+                    {isCurrent && (
+                      <button onClick={e => { e.stopPropagation(); doStep() }} disabled={stepping}
+                        className="text-[#4ade80] hover:text-[#6ee7b0] text-[9px] font-mono disabled:text-[#333] cursor-pointer">
+                        [{stepping ? "…" : "▶ run"}]
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {taskStatus === "completed" && orchPhase === "complete" && (
+              <div className="mt-2">
+                <TerminalButton onClick={doRerun} intent="edit">⟳ rerun all</TerminalButton>
               </div>
-            )
-          })}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Right detail §3 */}
+      {/* ── RIGHT: Detail Panel ── */}
       <div className="flex-1 min-w-0 w-full md:flex md:flex-col md:min-h-0 overflow-y-auto">
-        {selected ? (
-          <div className="space-y-2 text-[10px]">
-            <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
-              [ Step #{selected.step_number}: {STEP_LABELS[selected.step_type] || selected.step_type} ]
-            </div>
+        <StepDetailRight taskId={taskId} data={data} selectedId={selectedId} orchPhase={orchPhase} taskStatus={taskStatus} />
+      </div>
+    </div>
+  )
+}
 
-            {/* Step summary */}
-            {selected.result_summary && (
-              <div className="text-[#94a3b8]">{selected.result_summary}</div>
-            )}
+/* ── Right: Detail Panel (summary + source results + meta log) ── */
+function StepDetailRight({ taskId, data, selectedId, orchPhase, taskStatus }: {
+  taskId: string
+  data: TaskStepsResponse | null
+  selectedId: string | null
+  orchPhase: string
+  taskStatus: string
+}) {
+  const [preview, setPreview] = useState<import("../../../api/research").StepPreview | null>(null)
+  const [prevLoading, setPrevLoading] = useState(false)
 
-            {/* Step data (JSON) */}
-            {selected.step_data && (() => {
-              try {
-                const sd = JSON.parse(selected.step_data)
-                if (sd && Object.keys(sd).length > 0) {
-                  return (
-                    <div>
-                      <div className="text-[#555] text-[9px] mb-0.5">step config:</div>
-                      <KeyValueGrid items={Object.entries(sd).map(([k, v]) => ({ key: k, value: String(v).slice(0, 120) }))} />
-                    </div>
-                  )
-                }
-              } catch {}
-              return null
-            })()}
+  const fetchPreview = useCallback(() => {
+    if (!orchPhase || orchPhase === "complete" || orchPhase === "not_started") return
+    if (taskStatus !== "active" && taskStatus !== "queued") return
+    setPrevLoading(true)
+    getStepPreview(taskId, orchPhase)
+      .then(setPreview)
+      .catch(() => setPreview(null))
+      .finally(() => setPrevLoading(false))
+  }, [taskId, orchPhase, taskStatus])
 
-            {/* Source results */}
-            {selectedResults.map(r => {
-              let analysis: any = null
-              try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
-              return (
-                <div key={r.id} className="border-t border-[#1a1a1a] pt-2">
-                  {/* Source link */}
-                  <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
-                    className="text-[#4ade80] hover:text-[#6ee7b0] underline text-[10px] break-all font-bold"
-                  >{r.source_title || r.source_url?.slice(0, 100) || "—"}</a>
-                  <KeyValueGrid className="text-[9px] mt-0.5" items={[
-                    { key: "relevance", value: (r.relevance_score ?? 0).toFixed(2), valueColor: "#4ade80" },
-                    { key: "novelty", value: (r.novelty_score ?? 0).toFixed(2) },
-                  ]} />
+  // Fetch preview for current phase when no DB step is selected
+  useEffect(() => {
+    if (selectedId) { setPreview(null); return }
+    fetchPreview()
+  }, [selectedId, fetchPreview])
 
-                  {/* Analysis: learnings */}
-                  {analysis?.learnings && analysis.learnings.length > 0 && (
-                    <div className="mt-1">
-                      <div className="text-[#555] text-[9px] mb-0.5">learnings:</div>
-                      {analysis.learnings.map((l: string, li: number) => (
-                        <div key={li} className="text-[#888] text-[9px] pl-2 leading-relaxed">· {l}</div>
-                      ))}
-                    </div>
-                  )}
+  // If a DB step is selected, show its details
+  if (selectedId) return <DbStepDetail {...{ taskId, data, selectedId }} />
 
-                  {/* Analysis: gaps */}
-                  {analysis?.gaps && analysis.gaps.length > 0 && (
-                    <div className="mt-1">
-                      <div className="text-[#555] text-[9px] mb-0.5">gaps:</div>
-                      {analysis.gaps.map((g: string, gi: number) => (
-                        <div key={gi} className="text-[#f59e0b] text-[9px] pl-2 leading-relaxed">◇ {g}</div>
-                      ))}
-                    </div>
-                  )}
+  // If no DB step selected, show placeholder or preview
+  const phaseLabel = PHASE_LABELS[orchPhase] || orchPhase
+  if (prevLoading) return (
+    <div className="flex items-center justify-center h-full text-[#555] animate-pulse text-xs select-none">[ loading preview… ]</div>
+  )
+  if (preview) return (
+    <PreviewDetail preview={preview} phaseLabel={phaseLabel}
+      onReinitialize={() => { setPrevLoading(true); fetchPreview() }} reinitLoading={prevLoading} />
+  )
+  return (
+    <div className="flex items-center justify-center h-full text-[#444] italic text-xs select-none">
+      [ select a step ]
+    </div>
+  )
+}
 
-                  {/* Analysis: followups */}
-                  {analysis?.followups && analysis.followups.length > 0 && (
-                    <div className="mt-1">
-                      <div className="text-[#555] text-[9px] mb-0.5">followups:</div>
-                      {analysis.followups.map((f: string, fi: number) => (
-                        <div key={fi} className="text-[#a78bfa] text-[9px] pl-2 leading-relaxed">→ {f}</div>
-                      ))}
-                    </div>
-                  )}
+/* ── Preview: shows inputs before step execution ── */
+function PreviewDetail({ preview, phaseLabel, onReinitialize, reinitLoading }: {
+  preview: import("../../../api/research").StepPreview
+  phaseLabel: string
+  onReinitialize: () => void
+  reinitLoading: boolean
+}) {
+  return (
+    <div className="space-y-2 text-[10px]">
+      <div className="flex items-center justify-between">
+        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
+          [ {phaseLabel} — preview ]
+        </div>
+        <button onClick={onReinitialize} disabled={reinitLoading}
+          className="text-[#4ade80] hover:text-[#6ee7b0] text-[9px] font-mono disabled:text-[#333] cursor-pointer">
+          [{reinitLoading ? "…" : "⟳ reinitialize"}]
+        </button>
+      </div>
+      <div className="flex gap-3 border-b border-[#1a1a1a] pb-1">
+        <span className="text-[#94a3b8] text-[9px] uppercase">input</span>
+      </div>
+      {preview.objective && (
+        <div>
+          <div className="text-[#555] text-[9px] mb-0.5">objective:</div>
+          <div className="text-[#94a3b8] pl-2">{preview.objective}</div>
+        </div>
+      )}
+      {preview.max_depth != null && (
+        <div className="flex gap-4 text-[#777] flex-wrap">
+          <span>depth: {preview.max_depth}</span>
+          <span>budget: ${preview.budget_limit_usd?.toFixed(2)}</span>
+          {preview.model && <span>model: {preview.model}</span>}
+          {preview.temperature != null && <span>temp: {preview.temperature}</span>}
+          {preview.max_tokens && <span>tokens: {preview.max_tokens}</span>}
+        </div>
+      )}
+      {preview.system_prompt && (
+        <div>
+          <div className="text-[#555] text-[9px] mb-0.5">system prompt:</div>
+          <pre className="text-[#888] text-[9px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{preview.system_prompt}</pre>
+        </div>
+      )}
+      {preview.user_prompt && (
+        <div>
+          <div className="text-[#555] text-[9px] mb-0.5">user prompt:</div>
+          <pre className="text-[#888] text-[9px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-32 overflow-y-auto whitespace-pre-wrap break-all">{preview.user_prompt}</pre>
+        </div>
+      )}
+      {preview.pending_queries && preview.pending_queries.length > 0 && (
+        <div>
+          <div className="text-[#555] text-[9px] mb-0.5">pending queries:</div>
+          {preview.pending_queries.map((q, i) => (
+            <div key={i} className="text-[#94a3b8] pl-2">· {q}</div>
+          ))}
+        </div>
+      )}
+      {preview.note && (
+        <div className="text-[#444] italic text-[9px]">{preview.note}</div>
+      )}
+    </div>
+  )
+}
 
-                  {/* Analysis: direct_urls */}
-                  {analysis?.direct_urls && analysis.direct_urls.length > 0 && (
-                    <div className="mt-1">
-                      <div className="text-[#555] text-[9px] mb-0.5">referenced URLs:</div>
-                      {analysis.direct_urls.map((u: string, ui: number) => (
-                        <div key={ui} className="text-[#4ade80] text-[9px] pl-2 break-all">
-                          <a href={u} target="_blank" rel="noopener noreferrer" className="hover:underline">{u}</a>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+const STEP_TO_PHASE: Record<string, string> = {
+  plan: "planning", search: "searching", parallel_parse: "parsing",
+  digest: "digesting", reflect: "reflecting", evaluate: "evaluating",
+  synthesize: "synthesizing",
+}
 
-                  {/* Diffractive notes */}
-                  {analysis?.diffractive_notes && analysis.diffractive_notes.length > 0 && (
-                    <div className="mt-1">
-                      <div className="text-[#555] text-[9px] mb-0.5">diffractive connections:</div>
-                      {analysis.diffractive_notes.map((d: string, di: number) => (
-                        <div key={di} className="text-[#a892ee] text-[9px] pl-2 leading-relaxed">~ {d}</div>
-                      ))}
-                    </div>
-                  )}
+type DetailTab = "input" | "result" | "log"
 
-                  {/* File path */}
-                  {r.raw_file_path && (
-                    <div className="text-[#555] text-[8px] mt-1">saved: {r.raw_file_path}</div>
-                  )}
-                </div>
-              )
-            })}
+/* ── DB Step Detail (when a step is selected from the results list) ── */
+function DbStepDetail({ taskId, data, selectedId }: {
+  taskId: string
+  data: TaskStepsResponse | null
+  selectedId: string
+}) {
+  const steps = data ? [...data.steps].reverse() : []
+  const selected = steps.find(s => s.id === selectedId)
+  if (!selected) return null
+  const selectedResults = data ? (data.results_by_step[selectedId] || []) : []
+  const [tab, setTab] = useState<DetailTab>("result")
+  const [metaLog, setMetaLog] = useState<MetaLogResponse | null>(null)
+  const [logLoading, setLogLoading] = useState(false)
+  const [liveInput, setLiveInput] = useState<import("../../../api/research").StepPreview | null>(null)
+  const [reinitLoading, setReinitLoading] = useState(false)
 
-            {/* Empty results */}
-            {selectedResults.length === 0 && (
-              <div className="text-[#555] italic text-[10px]">no source results for this step</div>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-[#444] italic text-xs select-none">[ select a step ]</div>
+  const stepPhase = STEP_TO_PHASE[selected.step_type] || ""
+
+  useEffect(() => {
+    setLogLoading(true)
+    getTaskMetaLog(taskId, selectedId).then(m => { setMetaLog(m); setTab("result") }).catch(() => setMetaLog(null)).finally(() => setLogLoading(false))
+  }, [selectedId, taskId])
+
+  const fetchLiveInput = () => {
+    if (!stepPhase) return
+    setReinitLoading(true)
+    getStepPreview(taskId, stepPhase).then(setLiveInput).catch(() => {}).finally(() => setReinitLoading(false))
+  }
+  // Auto-fetch when switching to input tab
+  useEffect(() => { if (tab === "input" && !liveInput) fetchLiveInput() }, [tab])
+
+  const entries = metaLog?.entries ?? []
+  const inputEntries = entries.filter(e => {
+    const d = e.event_data as any
+    return e.event_type.endsWith("_prompt") || e.event_type === "orchestrator_search" ||
+      (d && (d.system_prompt || d.user_prompt))
+  })
+  const responseEntries = entries.filter(e =>
+    e.event_type.endsWith("_response") && !e.event_type.endsWith("_prompt")
+  )
+  const otherEntries = entries.filter(e => !inputEntries.includes(e) && !responseEntries.includes(e))
+
+  const handleRerunStep = async () => {
+    await doActionAndReload(() => executeStep(taskId))
+  }
+
+  return (
+    <div className="space-y-2 text-[10px]">
+      <div className="flex items-center justify-between">
+        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
+          [ Step #{selected.step_number}: {STEP_LABELS[selected.step_type] || selected.step_type} <span className="text-[#555]">({selected.status})</span> ]
+        </div>
+        {selected.status === "completed" && (
+          <TerminalButton onClick={handleRerunStep} intent="edit">⟳ rerun step</TerminalButton>
         )}
       </div>
+
+      {/* Mini-tabs */}
+      <div className="flex gap-3 border-b border-[#1a1a1a] pb-1">
+        {(["input","result","log"] as DetailTab[]).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`text-[9px] uppercase cursor-pointer transition-colors
+              ${tab === t ? "text-[#94a3b8]" : "text-[#444] hover:text-[#777]"}`}>
+            {t}{entries.length > 0 ? ` (${t==="input"?inputEntries.length:t==="log"?otherEntries.length:entries.length})` : ""}
+          </button>
+        ))}
+      </div>
+
+      {tab === "result" && (
+        <div className="space-y-2">
+          {selected.result_summary && <div className="text-[#94a3b8]">{selected.result_summary}</div>}
+          {selectedResults.length > 0 && selectedResults.map(r => {
+            let analysis: any = null
+            try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
+            return (
+              <div key={r.id} className="border-t border-[#1a1a1a] pt-2">
+                <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
+                  className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all font-bold">{r.source_title || r.source_url?.slice(0, 100) || "—"}</a>
+                {analysis?.learnings?.length > 0 && <div className="mt-1">
+                  <div className="text-[#555] text-[9px] mb-0.5">learnings:</div>
+                  {analysis.learnings.map((l: string, li: number) => (
+                    <div key={li} className="text-[#888] text-[9px] pl-2 leading-relaxed">· {l}</div>
+                  ))}
+                </div>}
+                {analysis?.gaps?.length > 0 && <div className="mt-1">
+                  <div className="text-[#555] text-[9px] mb-0.5">gaps:</div>
+                  {analysis.gaps.map((g: string, gi: number) => (
+                    <div key={gi} className="text-[#f59e0b] text-[9px] pl-2 leading-relaxed">◇ {g}</div>
+                  ))}
+                </div>}
+                {r.raw_file_path && <div className="text-[#555] text-[8px] mt-1">saved: {r.raw_file_path}</div>}
+              </div>
+            )
+          })}
+
+          {/* Raw LLM response(s) */}
+          {responseEntries.length > 0 && (
+            <div className="border-t border-[#1a1a1a] pt-2">
+              <div className="text-[#555] text-[9px] mb-1">raw response:</div>
+              {responseEntries.map((entry, ei) => {
+                const d = entry.event_data as any
+                const resp = d?.raw_response || d?.response || JSON.stringify(d)
+                if (!resp || resp === "{}") return null
+                return (
+                  <details key={ei} className="mb-1">
+                    <summary className="text-[#777] text-[9px] cursor-pointer hover:text-[#aaa]">
+                      {entry.event_type.replace("orchestrator_","").replace("_response","")} ({entry.created_at?.slice(11,19)})
+                    </summary>
+                    <pre className="text-[#666] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 mt-1 rounded-sm max-h-48 overflow-y-auto whitespace-pre-wrap break-all">{String(resp).slice(0, 4000)}</pre>
+                  </details>
+                )
+              })}
+            </div>
+          )}
+
+          {selectedResults.length === 0 && !selected.result_summary && responseEntries.length === 0 && (
+            <div className="text-[#444] italic text-[9px]">no result data</div>
+          )}
+        </div>
+      )}
+
+      {tab === "input" && (
+        <div className="space-y-3">
+          {/* Live preview (re-fetchable) */}
+          {stepPhase && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-[#555] text-[9px]">live input preview ({stepPhase})</div>
+                <button onClick={fetchLiveInput} disabled={reinitLoading}
+                  className="text-[#4ade80] hover:text-[#6ee7b0] text-[9px] font-mono disabled:text-[#333] cursor-pointer">
+                  [{reinitLoading ? "…" : "⟳ reinitialize"}]
+                </button>
+              </div>
+              {reinitLoading ? (
+                <div className="text-[#555] text-[9px] animate-pulse">regenerating…</div>
+              ) : liveInput ? (
+                <div className="space-y-2">
+                  {liveInput.objective && <div><div className="text-[#555] text-[8px]">objective:</div><div className="text-[#94a3b8] text-[9px] pl-2">{liveInput.objective}</div></div>}
+                  {liveInput.max_depth != null && <div className="flex gap-3 text-[#777] text-[9px] flex-wrap"><span>depth:{liveInput.max_depth}</span><span>budget:${liveInput.budget_limit_usd?.toFixed(2)}</span>{liveInput.model && <span>model:{liveInput.model}</span>}{liveInput.temperature != null && <span>temp:{liveInput.temperature}</span>}</div>}
+                  {liveInput.system_prompt && <div><div className="text-[#555] text-[8px] mb-0.5">system prompt:</div><pre className="text-[#888] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-32 overflow-y-auto whitespace-pre-wrap break-all">{liveInput.system_prompt}</pre></div>}
+                  {liveInput.user_prompt && <div><div className="text-[#555] text-[8px] mb-0.5">user prompt:</div><pre className="text-[#888] text-[8px] bg-[#0c0c0c] border border-[#1a1a1a] p-2 rounded-sm max-h-24 overflow-y-auto whitespace-pre-wrap break-all">{liveInput.user_prompt}</pre></div>}
+                  {liveInput.pending_queries && liveInput.pending_queries.length > 0 && <div><div className="text-[#555] text-[8px] mb-0.5">queries:</div>{liveInput.pending_queries.map((q,i)=><div key={i} className="text-[#94a3b8] text-[9px] pl-2">· {q}</div>)}</div>}
+                  {liveInput.note && <div className="text-[#444] italic text-[8px]">{liveInput.note}</div>}
+                </div>
+              ) : (
+                <div className="text-[#444] italic text-[9px]">click reinitialize to load</div>
+              )}
+            </div>
+          )}
+
+          {/* Recorded log inputs */}
+          {inputEntries.length > 0 && (
+            <div className="border-t border-[#1a1a1a] pt-2">
+              <div className="text-[#555] text-[9px] mb-1">logged inputs ({inputEntries.length}):</div>
+              <LogEntries entries={inputEntries} loading={false} emptyMsg="" />
+            </div>
+          )}
+          {inputEntries.length === 0 && !stepPhase && (
+            <div className="text-[#444] italic text-[9px]">no input data for this step</div>
+          )}
+        </div>
+      )}
+
+      {tab === "log" && (
+        <LogEntries entries={otherEntries} loading={logLoading} emptyMsg="no additional log entries" />
+      )}
+    </div>
+  )
+}
+
+/* ── Shared log entry renderer ── */
+function LogEntries({ entries, loading, emptyMsg }: { entries: any[]; loading: boolean; emptyMsg: string }) {
+  if (loading) return <div className="text-[#555] text-[9px] animate-pulse">loading…</div>
+  if (entries.length === 0) return <div className="text-[#444] italic text-[9px]">{emptyMsg}</div>
+  return (
+    <div className="space-y-1 max-h-80 overflow-y-auto">
+      {entries.map((entry, ei) => (
+        <div key={ei} className="text-[9px] border-l border-[#222] pl-2">
+          <div className="flex gap-1">
+            <span className="text-[#f59e0b] shrink-0">{entry.event_type}</span>
+            <span className="text-[#555]">{entry.created_at?.slice(11, 19)}</span>
+          </div>
+          {entry.event_data && typeof entry.event_data === "object" && (
+            <div className="text-[#666] mt-0.5 break-all space-y-0.5">
+              {/* Show relevant fields, skip huge raw_response blobs */}
+              {Object.entries(entry.event_data as Record<string, any>)
+                .filter(([k]) => k !== "raw_response")
+                .map(([k, v]) => {
+                  const val = typeof v === "string" ? v : JSON.stringify(v)
+                  if (val.length > 8000) return <div key={k} className="text-[#444] italic">{k}: [too large to display]</div>
+                  return <div key={k} className="text-[#777]"><span className="text-[#555]">{k}:</span> <span className="whitespace-pre-wrap break-all">{val.slice(0, 2000)}</span></div>
+                })}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
@@ -400,102 +685,21 @@ function BranchesTab({ task }: { task: ResearchTask }) {
 }
 
 /* ── Meta Log Tab (§3, §4) ── */
-const EVENT_LABELS: Record<string, string> = {
-  orchestrator_plan: "Plan", orchestrator_plan_prompt: "Plan Prompt",
-  orchestrator_plan_response: "Plan Response", orchestrator_replan: "Re-Plan",
-  orchestrator_search: "Search", orchestrator_digest_prompt: "Digest Prompt",
-  orchestrator_digest_response: "Digest Response", orchestrator_digest_error: "Digest Error",
-  orchestrator_reflect: "Reflect", orchestrator_reflect_prompt: "Reflect Prompt",
-  orchestrator_reflect_response: "Reflect Response", orchestrator_evaluate: "Evaluate",
-  orchestrator_synthesize_prompt: "Synth Prompt", orchestrator_synthesize_response: "Synth Response",
-  orchestrator_complete: "Complete", orchestrator_start: "Start",
-  task_started: "Start", task_complete: "Complete",
-  fetch_complete: "Fetch", fetch_error: "Fetch Error",
-  llm_prompt: "LLM Prompt", llm_response: "LLM Response", llm_error: "LLM Error",
-}
-const EVENT_COLORS: Record<string, string> = { ...STATUS_COLORS,
-  orchestrator_search: "#3b82f6", orchestrator_digest_prompt: "#c084fc",
-  orchestrator_digest_response: "#a892ee", orchestrator_reflect: "#a78bfa",
-  orchestrator_synthesize_prompt: "#c084fc", orchestrator_synthesize_response: "#a892ee",
-  orchestrator_evaluate: "#22d3ee", llm_prompt: "#c084fc", llm_response: "#a892ee",
-  fetch_complete: "#3b82f6", fetch_error: "#ef4444",
-}
-
-function MetaLogTab({ taskId }: { taskId: string }) {
-  const [data, setData] = useState<MetaLogResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-
-  useEffect(() => { getTaskMetaLog(taskId).then(setData).finally(() => setLoading(false)) }, [taskId])
-
-  if (loading) return <div className="text-[#555] animate-pulse text-xs font-mono">[ loading… ]</div>
-  if (!data || data.entries.length === 0) return <div className="text-[#444] italic text-xs text-center mt-8 select-none">[ no meta events ]</div>
-
-  const entries = [...data.entries].reverse()
-  const selected = selectedId ? entries.find(e => e.id === selectedId) : null
-
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el = (e.target as HTMLElement).closest("[data-mid]") as HTMLElement | null
-    if (!el) return
-    const id = el.getAttribute("data-mid")
-    if (id) setSelectedId(prev => prev === id ? null : id)
-  }
-
-  return (
-    <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-200px)]">
-      <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0 md:max-h-full max-h-[40vh]" onClick={handleClick}>
-        <div className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none">
-          {entries.map(entry => {
-            const label = EVENT_LABELS[entry.event_type] || entry.event_type
-            const ec = EVENT_COLORS[entry.event_type] || "#666"
-            return (
-              <div key={entry.id} data-mid={entry.id}
-                className={`flex items-center gap-1.5 px-1.5 py-1 cursor-pointer border-l-2 transition-colors text-[10px]
-                  ${selectedId === entry.id ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}`}
-              >
-                <span style={{ color: ec }} className="text-[8px] shrink-0">●</span>
-                <span className="text-[#bbb] font-mono">{label}</span>
-                <span className="text-[#555] text-[8px] ml-auto">{entry.created_at?.slice(11, 19)}</span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      <div className="flex-1 min-w-0 w-full md:flex md:flex-col md:min-h-0 overflow-y-auto">
-        {selected ? (
-          <div className="space-y-1 text-[10px]">
-            <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1">[ {EVENT_LABELS[selected.event_type] || selected.event_type} ]</div>
-            {selected.branch_id && <div className="text-[#555] text-[9px]">branch: {selected.branch_id.slice(0, 8)}…</div>}
-            <div className="text-[#777] font-mono whitespace-pre-wrap break-all leading-relaxed max-h-96 overflow-y-auto">
-              {Object.entries(selected.event_data || {}).map(([k, v]) => {
-                const val = typeof v === "string" ? v : JSON.stringify(v, null, 1)
-                return (
-                  <div key={k} className="mb-0.5">
-                    <span className="text-[#555]">{k}: </span>
-                    <span className="text-[#888]">{val}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-[#444] italic text-xs select-none">[ select an event ]</div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 /* ── Shell (§1: terminal header, §6: tab bar) ── */
 function TaskPageInner({ task }: { task: ResearchTask }) {
   const [tab, setTab] = useState<SubTabId>("info")
   const [liveTask, setLiveTask] = useState(task)
+  const [orchPhase, setOrchPhase] = useState(task.status === "queued" ? "planning" : "")
 
   useEffect(() => {
     if (task.status !== "active" && task.status !== "queued") return
     const timer = setInterval(() => {
       getResearchTask(task.id).then(t => { if (t) setLiveTask(t) }).catch(() => {})
-    }, 5000)
+      // Poll phase for both active and queued tasks
+      getTaskPhase(task.id).then(p => {
+        if (p.phase && p.phase !== "not_started") setOrchPhase(p.phase)
+      }).catch(() => {})
+    }, 3000)
     return () => clearInterval(timer)
   }, [task.id, task.status])
 
@@ -516,6 +720,9 @@ function TaskPageInner({ task }: { task: ResearchTask }) {
           <span className="text-[#333]">//</span>
           <span className="text-[#bbb] text-xs truncate">{current.title}</span>
           <span style={{ color }} className="text-[10px] ml-1 uppercase shrink-0">{current.status}</span>
+          {orchPhase && orchPhase !== "complete" && (
+            <span className="text-[#f59e0b] text-[9px] ml-1 uppercase shrink-0">[{orchPhase}]</span>
+          )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <TerminalButton onClick={() => window.location.href = '/'}>home</TerminalButton>
@@ -540,11 +747,10 @@ function TaskPageInner({ task }: { task: ResearchTask }) {
 
       {/* Content area — tabs with two-panel layout use their own height calc */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {tab === "info"     && <InfoTab task={current} />}
-        {tab === "steps"    && <StepsTab taskId={current.id} />}
+        {tab === "info"     && <InfoTab task={current} orchPhase={orchPhase} />}
+        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} />}
         {tab === "assets"   && <AssetsTab task={current} />}
         {tab === "branches" && <BranchesTab task={current} />}
-        {tab === "meta_log" && <MetaLogTab taskId={current.id} />}
       </div>
     </div>
   )
@@ -622,7 +828,7 @@ function NewResearchFormInline() {
           </select>
         </label>
         <label className="flex items-center gap-1">budget: $
-          <input type="number" value={budget} step={0.25} min={0.10} max={5.00} onChange={e => setBudget(Number(e.target.value))} className="w-16 bg-transparent border-b border-[#222]/40 text-[#94a3b8] outline-none" />
+          <input type="number" value={budget} step={0.01} min={0.10} max={5.00} onChange={e => setBudget(Number(e.target.value))} className="w-16 bg-transparent border-b border-[#222]/40 text-[#94a3b8] outline-none" />
         </label>
       </div>
       <button type="submit" disabled={!objective.trim() || sending} className="text-[10px] text-[#4ade80] font-mono disabled:text-[#333] transition-colors hover:text-[#6ee7b0] cursor-pointer">[{sending ? "dispatching..." : "▶ dispatch research"}]</button>

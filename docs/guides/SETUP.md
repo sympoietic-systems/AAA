@@ -2,7 +2,8 @@
 
 ## Prerequisites
 
-- **Python 3.11+** — [python.org](https://python.org) or `winget install Python.Python.3.11`
+- **Python 3.12–3.13** — [python.org](https://python.org) or `winget install Python.Python.3.13`
+  - Python 3.14 is currently unsupported due to `crawl4ai` / `lxml` wheel incompatibility. The `.python-version` file pins 3.13 for `uv`.
 - **Node.js 18+** — [nodejs.org](https://nodejs.org) or `winget install OpenJS.NodeJS.LTS`
 - **uv** (Python package manager) — `pip install uv` or `winget install uv`
 

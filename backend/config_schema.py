@@ -135,4 +135,7 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_DAEMON_MIN_DREAM_INTERVAL", "daemon", "min_dream_interval", _parse_int),
     EnvOverride("AAA_DAEMON_MAX_DAILY_DREAMS", "daemon", "max_daily_dreams", _parse_int),
     EnvOverride("AAA_DAEMON_DRIFT_COEFFICIENT", "daemon", "drift_coefficient", _parse_float),
+
+    # ── Research tasks ──
+    EnvOverride("AAA_RESEARCH_MANUAL_MODE", "research_tasks", "manual_mode", _parse_bool),
 ]

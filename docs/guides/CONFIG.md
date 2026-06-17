@@ -294,6 +294,7 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_RHIZOME_MAX_DEPTH` | Integer | `3` | Default recursion depth for rhizomatic research |
 | `AAA_RHIZOME_MAX_BREADTH` | Integer | `4` | Default parallel paths for rhizomatic research |
 | `AAA_METABOLIC_SESSION_USD` | Float (USD) | `1.00` | Hard spending cap per research session |
+| `AAA_RESEARCH_MANUAL_MODE` | `true`, `false` | `false` | Queue tasks without auto-execution; user clicks "▶ Run" to start each task. Useful for debugging and iteration. |
 
 ### Authentication
 

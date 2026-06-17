@@ -22,12 +22,31 @@ from backend.utils.prompt_loader import get_prompts_dict
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
+# ── Phase ordering for step-by-step execution ─────────────────────
+
+PHASE_ORDER = [
+    "planning",
+    "searching",
+    "parsing",
+    "digesting",
+    "reflecting",
+    "evaluating",
+    "synthesizing",
+    "complete",
+]
+
+
 class SomaticResearchOrchestrator:
-    """Multi-phase research execution engine with tool-based orchestration."""
+    """Multi-phase research execution engine with tool-based orchestration.
+
+    Supports both auto (execute) and manual step-by-step (execute_step) modes.
+    """
 
     def __init__(self, app_state: Any):
         self._state = app_state
         self._semaphore: Optional[asyncio.Semaphore] = None
+        self._task_states: dict[str, dict] = {}  # task_id → execution state
+        self._step_locks: dict[str, asyncio.Lock] = {}  # per-task step locks
 
     # ── Properties ──────────────────────────────────────────────────
 
@@ -194,215 +213,450 @@ class SomaticResearchOrchestrator:
         except Exception:
             pass
 
-    # ── Main Entry Point ─────────────────────────────────────────────
+    # ── In-memory task state (for step-by-step execution) ──────────
 
-    async def execute(self, task_id: str) -> dict:
-        """Execute a complete research task via the orchestrator pipeline."""
+    def init_task(self, task_id: str) -> dict:
+        """Initialise per-task execution state for step-by-step mode.
+
+        Reads objective/max_depth/budget from the database, sets phase='planning'.
+        """
         task = self.task_repo.get(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")
 
+        state = {
+            "phase": "planning",
+            "objective": task["objective"],
+            "max_depth": task["max_depth"],
+            "budget": task["budget_limit_usd"],
+            "plan_id": None,
+            "plan": None,
+            "all_findings": [],
+            "sources_analyzed": 0,
+            "stagnation_counter": 0,
+            "step_number": 0,
+            "last_reflection": {},
+            "current_depth": 0,
+            "query_index": 0,
+            "search_results_cache": [],
+            "parsed_sources_cache": [],
+            "digest_results_cache": [],
+            "should_stop": False,
+            "stop_reason": "",
+        }
+        self._task_states[task_id] = state
+        self._log_meta(task_id, "orchestrator_step_init", {
+            "objective": state["objective"],
+            "max_depth": state["max_depth"],
+            "budget": state["budget"],
+            "mode": "step_by_step",
+        })
+        return state
+
+    def _get_state(self, task_id: str) -> dict:
+        s = self._task_states.get(task_id)
+        if s is None:
+            raise RuntimeError(
+                f"No orchestrator state for {task_id}. Call init_task() first."
+            )
+        return s
+
+    def get_task_phase(self, task_id: str) -> str:
+        """Return current phase for a task, or empty string if not initialised."""
+        state = self._task_states.get(task_id)
+        return state["phase"] if state else ""
+
+    async def preview_step_inputs(self, task_id: str, phase: str) -> dict:
+        """Return the prompts/inputs that would be sent for a given phase,
+        WITHOUT executing the phase.  Useful for inspecting before running.
+
+        Currently supports: 'planning' — shows system + user prompts.
+        Other phases return placeholder info.
+        """
+        if phase == "planning":
+            task = self.task_repo.get(task_id)
+            if not task:
+                raise ValueError(f"Task not found: {task_id}")
+            return await self._preview_plan_inputs(task)
+        if phase == "searching":
+            s = self._task_states.get(task_id)
+            queries = s["plan"].get("search_queries", [s["objective"]]) if s else []
+            return {"phase": "searching", "pending_queries": queries}
+        return {"phase": phase, "note": "inputs available after previous step completes"}
+
+    async def _preview_plan_inputs(self, task: dict) -> dict:
+        """Build system + user prompts for planning without calling LLM."""
         objective = task["objective"]
         max_depth = task["max_depth"]
         budget = task["budget_limit_usd"]
-        task_title = task.get("title", "")[:80]
 
-        logger.info("Orchestrator starting: %s", task_title)
-        self._log_meta(task_id, "orchestrator_start", {
+        prompt_data = get_prompts_dict("research/orchestrator_planner.yaml")
+        persona = await self._build_orchestrator_persona(objective)
+        system_text = persona + "\n\n" + prompt_data.get("system", "")
+        fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
+        user_text = prompt_data.get("user", "").format(**fmt)
+        if prompt_data.get("anti_mastery"):
+            system_text = self._anti_mastery(system_text)
+            user_text = self._anti_mastery(user_text)
+
+        return {
+            "phase": "planning",
             "objective": objective,
             "max_depth": max_depth,
-            "budget": budget,
-        })
+            "budget_limit_usd": budget,
+            "system_prompt": system_text,
+            "user_prompt": user_text,
+            "model": getattr(self._state, "llm_provider", None) and getattr(self._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "temperature": prompt_data.get("temperature", 0.4),
+            "max_tokens": prompt_data.get("max_tokens", 1024),
+        }
 
-        # ── Phase 1: PLAN ───────────────────────────────────────────
-        plan = await self._phase_plan(task_id, objective, max_depth, budget)
-        plan_id = plan["id"]
+    async def execute_step(self, task_id: str) -> dict:
+        """Execute exactly ONE phase of the research pipeline.
 
-        # ── Phase 2: EXECUTE LOOP ────────────────────────────────────
-        all_findings: list[str] = []
-        current_depth = 0
-        stagnation_counter = 0
-        sources_analyzed = 0
-        step_number = 0
-        last_reflection: dict = {}
+        Returns info about what was executed and what the next phase will be.
+        Call repeatedly until phase == 'complete'.
+        """
+        # Guard against concurrent step execution for the same task
+        if task_id not in self._step_locks:
+            self._step_locks[task_id] = asyncio.Lock()
 
-        while current_depth < max_depth:
-            # A. RE-PLAN with accumulated context (after first iteration)
-            if current_depth > 0 and last_reflection:
-                # Re-plan: call planner again with findings as context
-                findings_snippet = "\n".join(all_findings[-15:]) if all_findings else "(none)"
-                ref_snippet = json.dumps(last_reflection, ensure_ascii=False)[:500]
-                new_plan = await self._phase_plan(
-                    task_id, objective, max_depth - current_depth, budget,
-                    previous_context=f"Previous findings:\n{findings_snippet}\n\nReflection: {ref_snippet}",
-                )
-                plan = new_plan
-                self._log_meta(task_id, "orchestrator_replan", {
-                    "depth": current_depth,
-                    "new_queries": plan.get("search_queries", []),
-                })
+        async with self._step_locks[task_id]:
+            s = self._get_state(task_id)
+            phase = s["phase"]
+            result: dict = {"task_id": task_id, "executed_phase": phase}
 
-            # B. SEARCH
-            queries = plan.get("search_queries", [objective])
-            if current_depth == 0 and last_reflection.get("next_queries"):
-                queries = last_reflection.get("next_queries", queries)
+            try:
+                if phase == "planning":
+                    result.update(await self._step_plan(task_id, s))
 
-            for query in queries[:3]:  # Max 3 queries per iteration
-                step_number += 1
-                step_id = str(uuid.uuid4())
-                self.step_repo.create({
-                    "id": step_id, "task_id": task_id, "plan_id": plan_id,
-                    "step_number": step_number, "step_type": "search",
-                    "status": "running", "started_at": self._now_utc_str(),
-                })
+                elif phase == "searching":
+                    result.update(await self._step_search(task_id, s))
 
-                search_results = await self._tool_web_search(query, self.default_top_n)
-                self._log_meta(task_id, "orchestrator_search", {
-                    "query": query[:200],
-                    "results_count": len(search_results),
-                    "results": [{r["url"]: r.get("title", "")} for r in search_results[:5]],
-                })
+                elif phase == "parsing":
+                    result.update(await self._step_parse(task_id, s))
 
-                if not search_results:
-                    logger.warning("Orchestrator search returned 0 results for: %s", query[:80])
-                    self._log_meta(task_id, "orchestrator_search_empty", {
-                        "query": query[:200],
-                        "note": "All URL extraction strategies returned empty. DDG may be blocking or returning unexpected format.",
-                    })
-                    self.step_repo.update(step_id, status="completed",
-                        result_summary="no results — URL extraction failed")
-                    continue
+                elif phase == "digesting":
+                    result.update(await self._step_digest(task_id, s))
 
-                # B. PARALLEL PARSE — fetch all result URLs concurrently
-                parse_step_id = str(uuid.uuid4())
-                self.step_repo.create({
-                    "id": parse_step_id, "task_id": task_id, "plan_id": plan_id,
-                    "step_number": step_number + 1, "step_type": "parallel_parse",
-                    "status": "running", "started_at": self._now_utc_str(),
-                })
+                elif phase == "reflecting":
+                    result.update(await self._step_reflect(task_id, s))
 
-                parsed_sources = await self._tool_parallel_parse(
-                    task_id, parse_step_id, search_results, plan_id
-                )
-                self.step_repo.update(parse_step_id, status="completed",
-                    result_summary=f"parsed {len(parsed_sources)} sources")
-                step_number += 1
+                elif phase == "evaluating":
+                    result.update(self._step_evaluate(task_id, s))
 
-                if not parsed_sources:
-                    self.step_repo.update(step_id, status="completed", result_summary="parse failed")
-                    continue
+                elif phase == "synthesizing":
+                    result.update(await self._step_synthesize(task_id, s))
 
-                # C. PARALLEL DIGEST — analyze each source concurrently
-                digest_step_id = str(uuid.uuid4())
-                self.step_repo.create({
-                    "id": digest_step_id, "task_id": task_id, "plan_id": plan_id,
-                    "step_number": step_number + 1, "step_type": "digest",
-                    "status": "running", "started_at": self._now_utc_str(),
-                })
+                elif phase == "complete":
+                    result["message"] = "already complete"
+                    return result
 
-                digest_results = await self._tool_parallel_digest(
-                    task_id, digest_step_id, parsed_sources,
-                    query, objective, current_depth, max_depth,
-                )
-                self.step_repo.update(digest_step_id, status="completed",
-                    result_summary=f"digested {len(digest_results)} sources")
-                step_number += 1
-
-                # Accumulate findings
-                new_learnings = 0
-                for dr in digest_results:
-                    results = dr.get("result", {})
-                    learnings = results.get("learnings", []) if isinstance(results, dict) else []
-                    if learnings:
-                        new_learnings += len(learnings)
-                        all_findings.extend(f"[{dr['source_title'] or dr['source_url'][:80]}]: " + l for l in learnings)
-                    sources_analyzed += 1
-
-                if new_learnings == 0:
-                    stagnation_counter += 1
                 else:
-                    stagnation_counter = 0
+                    raise ValueError(f"Unknown phase: {phase}")
 
-                self.step_repo.update(step_id, status="completed",
-                    result_summary=f"{len(search_results)} results, {len(parsed_sources)} parsed, {new_learnings} learnings")
-                self._log_meta(task_id, "orchestrator_step_complete", {
-                    "step_number": step_number,
-                    "search_query": query[:200],
-                    "parsed": len(parsed_sources),
-                    "new_learnings": new_learnings,
-                    "total_learnings": len(all_findings),
-                })
+            except Exception as e:
+                logger.exception("Step %s failed for task %s", phase, task_id)
+                s["phase"] = "complete"
+                result["error"] = str(e)
+                self.task_repo.update(task_id, status="failed",
+                    result_summary=f"Step '{phase}' failed: {e}")
 
-            current_depth += 1
+            result["next_phase"] = s["phase"]
+            return result
 
-            # D. REFLECT
-            reflect_step_id = str(uuid.uuid4())
-            self.step_repo.create({
-                "id": reflect_step_id, "task_id": task_id, "plan_id": plan_id,
-                "step_number": step_number + 1, "step_type": "reflect",
-                "status": "running", "started_at": self._now_utc_str(),
-            })
-            last_reflection = await self._tool_reflect(
-                task_id, objective, plan.get("goal", objective),
-                current_depth, max_depth, all_findings, last_reflection,
-            )
-            self.step_repo.update(reflect_step_id, status="completed",
-                result_summary=f"completeness: {last_reflection.get('completeness_score', 0):.2f}")
-            step_number += 1
+    # ── Phase step implementations ─────────────────────────────────
 
-            self._log_meta(task_id, "orchestrator_reflect", {
-                "depth": current_depth,
-                "completeness": last_reflection.get("completeness_score", 0),
-                "total_findings": len(all_findings),
-                "stagnation": stagnation_counter,
-            })
+    async def _step_plan(self, task_id: str, s: dict) -> dict:
+        """Generate research plan via LLM. Advance to searching."""
+        logger.info("Step: PLANNING for %s", task_id[:8])
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
 
-            # E. EVALUATE
-            should_stop, stop_reason = self._tool_evaluate(
-                current_depth, max_depth, sources_analyzed,
-                last_reflection, stagnation_counter,
-            )
-            self._log_meta(task_id, "orchestrator_evaluate", {
-                "decision": "stop" if should_stop else "continue",
-                "reason": stop_reason,
-                "depth": current_depth,
-            })
+        # Generate the plan first so we have a valid plan_id
+        plan = await self._phase_plan(task_id, s["objective"], s["max_depth"], s["budget"])
+        s["plan"] = plan
+        s["plan_id"] = plan["id"]
 
-            if should_stop:
-                logger.info("Orchestrator stopping: %s", stop_reason)
-                break
-
-        # ── Phase 3: SYNTHESIZE ──────────────────────────────────────
-        self._log_meta(task_id, "orchestrator_synthesize_start", {
-            "total_findings": len(all_findings),
-            "sources": sources_analyzed,
-            "depth": current_depth,
+        # Now create the step record with the real plan_id
+        self.step_repo.create({
+            "id": step_id, "task_id": task_id, "plan_id": plan["id"],
+            "step_number": s["step_number"], "step_type": "plan",
+            "status": "completed", "started_at": self._now_utc_str(),
+            "result_summary": f"{len(plan.get('search_queries',[]))} queries planned × ~{plan.get('estimated_depth', 1)} depth",
         })
+        self._log_meta(task_id, "orchestrator_plan", {"plan": plan}, branch_id=step_id)
+
+        s["phase"] = "searching"
+        return {"plan": plan, "plan_id": plan["id"], "step_id": step_id}
+
+    async def _step_search(self, task_id: str, s: dict) -> dict:
+        """Web search for the next query. Advance to parsing."""
+        queries = s["plan"].get("search_queries", [s["objective"]])
+        # Use reflection-suggested queries if available
+        if s["current_depth"] > 0 and s["last_reflection"].get("next_queries"):
+            queries = s["last_reflection"]["next_queries"]
+
+        if s["query_index"] >= len(queries):
+            s["query_index"] = 0  # reset for this depth
+            queries = s["plan"].get("search_queries", [s["objective"]])
+
+        query = queries[s["query_index"]] if s["query_index"] < len(queries) else s["objective"]
+
+        logger.info("Step: SEARCHING '%s' for %s", query[:60], task_id[:8])
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
+        self.step_repo.create({
+            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
+            "step_number": s["step_number"], "step_type": "search",
+            "status": "running", "started_at": self._now_utc_str(),
+            "result_summary": json.dumps({"query": query[:300]}),
+        })
+
+        search_results = await self._tool_web_search(query, self.default_top_n)
+        self._log_meta(task_id, "orchestrator_search", {
+            "query": query[:200],
+            "results_count": len(search_results),
+        }, branch_id=step_id)
+
+        if not search_results:
+            self.step_repo.update(step_id, status="completed",
+                result_summary="no results — URL extraction failed")
+            s["query_index"] += 1
+            # Stay in searching for next query (or advance)
+            queries = s["plan"].get("search_queries", [s["objective"]])
+            if s["query_index"] >= min(len(queries), 3):
+                s["phase"] = "reflecting"  # skip parse/digest for empty results
+            return {"query": query, "results": [], "step_id": step_id}
+
+        self.step_repo.update(step_id, status="completed",
+            result_summary=f"{len(search_results)} results")
+        s["search_results_cache"] = search_results
+        s["phase"] = "parsing"
+        return {"query": query, "results_count": len(search_results), "step_id": step_id}
+
+    async def _step_parse(self, task_id: str, s: dict) -> dict:
+        """Fetch search result URLs in parallel. Advance to digesting."""
+        logger.info("Step: PARSING for %s", task_id[:8])
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
+        self.step_repo.create({
+            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
+            "step_number": s["step_number"], "step_type": "parallel_parse",
+            "status": "running", "started_at": self._now_utc_str(),
+        })
+
+        parsed = await self._tool_parallel_parse(
+            task_id, step_id, s["search_results_cache"], s["plan_id"],
+        )
+        self.step_repo.update(step_id, status="completed",
+            result_summary=f"parsed {len(parsed)} sources")
+        s["parsed_sources_cache"] = parsed
+        s["phase"] = "digesting" if parsed else "reflecting"
+        return {"parsed_count": len(parsed), "step_id": step_id}
+
+    async def _step_digest(self, task_id: str, s: dict) -> dict:
+        """Analyze sources via LLM. Advance to reflecting."""
+        logger.info("Step: DIGESTING for %s", task_id[:8])
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
+        self.step_repo.create({
+            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
+            "step_number": s["step_number"], "step_type": "digest",
+            "status": "running", "started_at": self._now_utc_str(),
+        })
+
+        queries = s["plan"].get("search_queries", [s["objective"]])
+        query = queries[s["query_index"]] if s["query_index"] < len(queries) else s["objective"]
+
+        digest_results = await self._tool_parallel_digest(
+            task_id, step_id, s["parsed_sources_cache"],
+            query, s["objective"], s["current_depth"], s["max_depth"],
+        )
+        self.step_repo.update(step_id, status="completed",
+            result_summary=f"digested {len(digest_results)} sources")
+
+        # Accumulate findings
+        new_learnings = 0
+        for dr in digest_results:
+            r = dr.get("result", {})
+            learnings = r.get("learnings", []) if isinstance(r, dict) else []
+            if learnings:
+                new_learnings += len(learnings)
+                s["all_findings"].extend(
+                    f"[{dr['source_title'] or dr['source_url'][:80]}]: " + l
+                    for l in learnings
+                )
+            s["sources_analyzed"] += 1
+
+        if new_learnings == 0:
+            s["stagnation_counter"] += 1
+        else:
+            s["stagnation_counter"] = 0
+
+        self._log_meta(task_id, "orchestrator_step_complete", {
+            "step_number": s["step_number"],
+            "new_learnings": new_learnings,
+            "total_learnings": len(s["all_findings"]),
+        }, branch_id=step_id)
+
+        s["query_index"] += 1
+        queries = s["plan"].get("search_queries", [s["objective"]])
+        if s["query_index"] < min(len(queries), 3):
+            s["phase"] = "searching"  # more queries this depth
+        else:
+            s["phase"] = "reflecting"
+
+        return {
+            "digested_count": len(digest_results),
+            "new_learnings": new_learnings,
+            "total_learnings": len(s["all_findings"]),
+            "sources_analyzed": s["sources_analyzed"],
+            "step_id": step_id,
+        }
+
+    async def _step_reflect(self, task_id: str, s: dict) -> dict:
+        """Multi-round LLM reflection. Advance to evaluating."""
+        logger.info("Step: REFLECTING for %s", task_id[:8])
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
+        self.step_repo.create({
+            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
+            "step_number": s["step_number"], "step_type": "reflect",
+            "status": "running", "started_at": self._now_utc_str(),
+        })
+
+        reflection = await self._tool_reflect(
+            task_id, s["objective"], s["plan"].get("goal", s["objective"]),
+            s["current_depth"], s["max_depth"],
+            s["all_findings"], s["last_reflection"],
+        )
+        s["last_reflection"] = reflection
+        completeness = reflection.get("completeness_score", 0)
+        self.step_repo.update(step_id, status="completed",
+            result_summary=f"completeness: {completeness:.2f}")
+
+        self._log_meta(task_id, "orchestrator_reflect", {
+            "depth": s["current_depth"],
+            "completeness": completeness,
+            "total_findings": len(s["all_findings"]),
+        }, branch_id=step_id)
+
+        s["phase"] = "evaluating"
+        return {"completeness": completeness, "step_id": step_id}
+
+    def _step_evaluate(self, task_id: str, s: dict) -> dict:
+        """Hard checks + decision. Advance to synthesizing, searching (next depth), or complete."""
+        logger.info("Step: EVALUATING for %s", task_id[:8])
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
+        self.step_repo.create({
+            "id": step_id, "task_id": task_id, "plan_id": s.get("plan_id") or step_id,
+            "step_number": s["step_number"], "step_type": "evaluate",
+            "status": "running", "started_at": self._now_utc_str(),
+        })
+
+        should_stop, stop_reason = self._tool_evaluate(
+            s["current_depth"], s["max_depth"], s["sources_analyzed"],
+            s["last_reflection"], s["stagnation_counter"],
+        )
+        self._log_meta(task_id, "orchestrator_evaluate", {
+            "decision": "stop" if should_stop else "continue",
+            "reason": stop_reason,
+            "depth": s["current_depth"],
+        }, branch_id=step_id)
+
+        self.step_repo.update(step_id, status="completed",
+            result_summary=stop_reason)
+
+        if should_stop:
+            s["phase"] = "synthesizing"
+        else:
+            s["current_depth"] += 1
+            s["query_index"] = 0
+            s["phase"] = "searching"
+
+        return {"should_stop": should_stop, "reason": stop_reason,
+                "current_depth": s["current_depth"], "step_id": step_id}
+
+    async def _step_synthesize(self, task_id: str, s: dict) -> dict:
+        """Final synthesis. Advance to complete."""
+        logger.info("Step: SYNTHESIZING for %s", task_id[:8])
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
+        self.step_repo.create({
+            "id": step_id, "task_id": task_id, "plan_id": s.get("plan_id") or step_id,
+            "step_number": s["step_number"], "step_type": "synthesize",
+            "status": "running", "started_at": self._now_utc_str(),
+        })
+
+        self._log_meta(task_id, "orchestrator_synthesize_start", {
+            "total_findings": len(s["all_findings"]),
+            "sources": s["sources_analyzed"],
+            "depth": s["current_depth"],
+        }, branch_id=step_id)
 
         result_summary = await self._phase_synthesize(
-            task_id, objective, plan.get("goal", objective), all_findings, sources_analyzed,
+            task_id, s["objective"],
+            s["plan"].get("goal", s["objective"]) if s["plan"] else s["objective"],
+            s["all_findings"], s["sources_analyzed"],
         )
 
         self.task_repo.update(task_id,
-            branches_created=step_number,
-            assets_harvested=sources_analyzed,
+            branches_created=s["step_number"],
+            assets_harvested=s["sources_analyzed"],
             result_summary=result_summary,
         )
 
+        self.step_repo.update(step_id, status="completed",
+            result_summary=f"{s['sources_analyzed']} sources, {len(s['all_findings'])} findings")
+
         self._log_meta(task_id, "orchestrator_complete", {
-            "steps": step_number,
-            "sources": sources_analyzed,
-            "findings": len(all_findings),
-            "depth": current_depth,
-            "result_preview": result_summary[:500],
+            "steps": s["step_number"],
+            "sources": s["sources_analyzed"],
+            "findings": len(s["all_findings"]),
+            "depth": s["current_depth"],
+        }, branch_id=step_id)
+
+        s["result_summary"] = result_summary
+        s["branches_created"] = s["step_number"]
+        s["assets_harvested"] = s["sources_analyzed"]
+        s["phase"] = "complete"
+        return {
+            "result_summary": result_summary,
+            "branches_created": s["step_number"],
+            "assets_harvested": s["sources_analyzed"],
+        }
+
+    # ── Auto mode (full pipeline) ───────────────────────────────────
+
+    async def execute(self, task_id: str) -> dict:
+        """Execute a complete research task via the orchestrator pipeline (auto mode)."""
+        task = self.task_repo.get(task_id)
+        if not task:
+            raise ValueError(f"Task not found: {task_id}")
+
+        self.init_task(task_id)
+        s = self._task_states[task_id]
+
+        logger.info("Orchestrator (auto) starting: %s", task.get("title", "")[:80])
+        self._log_meta(task_id, "orchestrator_start", {
+            "objective": s["objective"],
+            "max_depth": s["max_depth"],
+            "budget": s["budget"],
+            "mode": "auto",
         })
 
+        while s["phase"] != "complete":
+            await self.execute_step(task_id)
+
+        s = self._task_states.pop(task_id, {})
         return {
             "task_id": task_id,
-            "branches_created": step_number,
-            "assets_harvested": sources_analyzed,
+            "branches_created": s.get("step_number", 0),
+            "assets_harvested": s.get("sources_analyzed", 0),
             "lateral_flights": 0,
-            "result_summary": result_summary,
+            "result_summary": s.get("result_summary", ""),
         }
 
     # ── Phase 1: PLAN ───────────────────────────────────────────────
@@ -452,7 +706,7 @@ class SomaticResearchOrchestrator:
             "plan_json": json.dumps(plan_json, ensure_ascii=False),
             "status": "active",
         })
-        self._log_meta(task_id, "orchestrator_plan", {"plan": plan_json})
+        # (plan meta log emitted by _step_plan with branch_id)
         return {"id": plan_id, **plan_json}
 
     # ── Phase 3: SYNTHESIZE ─────────────────────────────────────────

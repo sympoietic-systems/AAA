@@ -38,6 +38,15 @@ class ResearchTaskManager:
         self._app_state = app_state
         self._semaphore: Optional[asyncio.Semaphore] = None
         self._active_tasks: dict[str, asyncio.Task] = {}
+        self._orchestrator = None  # lazy init
+
+    @property
+    def orchestrator(self):
+        """Lazy-init the orchestrator singleton (shared across all tasks)."""
+        if self._orchestrator is None:
+            from backend.services.research_orchestrator import SomaticResearchOrchestrator
+            self._orchestrator = SomaticResearchOrchestrator(self._app_state)
+        return self._orchestrator
 
     @property
     def config(self) -> dict:
@@ -148,8 +157,9 @@ class ResearchTaskManager:
     def queue(self, task_id: str) -> None:
         """Move an approved task into the execution queue."""
         self.transition(task_id, "queued")
-        # Try to start if slots are available
-        asyncio.create_task(self._try_process_queue())
+        # In manual mode, don't auto-drain — user clicks "Run"
+        if not self.config.get("manual_mode", False):
+            asyncio.create_task(self._try_process_queue())
 
     def cancel(self, task_id: str) -> None:
         """Cancel a queued or active task."""
@@ -226,9 +236,7 @@ class ResearchTaskManager:
                 use_orchestrator = orch_config.get("enabled", False)
 
                 if use_orchestrator:
-                    from backend.services.research_orchestrator import SomaticResearchOrchestrator
-                    orchestrator = SomaticResearchOrchestrator(self._app_state)
-                    result = await orchestrator.execute(task_id)
+                    result = await self.orchestrator.execute(task_id)
                 else:
                     from backend.services.somatic_research import SomaticResearchEngine
                     engine = SomaticResearchEngine(self._app_state)
@@ -251,7 +259,127 @@ class ResearchTaskManager:
                 self.fail(task_id, "Unhandled exception during research execution")
             finally:
                 self._active_tasks.pop(task_id, None)
-                asyncio.create_task(self._try_process_queue())
+                if not self.config.get("manual_mode", False):
+                    asyncio.create_task(self._try_process_queue())
+
+    def run_task(self, task_id: str) -> None:
+        """Manually trigger execution of a queued task. (manual mode)"""
+        task = self.task_repo.get(task_id)
+        if task is None:
+            raise ValueError(f"Task not found: {task_id}")
+        if task["status"] != "queued":
+            raise ValueError(f"Task must be queued to run, got: {task['status']}")
+
+        orch_config = self._app_state.config.get("research_orchestrator", {})
+        use_orchestrator = orch_config.get("enabled", False)
+        is_manual = self.config.get("manual_mode", False)
+
+        if use_orchestrator and is_manual:
+            # Step-by-step mode: init state + run just planning phase
+            self.transition(task_id, "active")
+            coro = self._orchestrator_step_async(task_id, first_step=True)
+            asyncio_task = asyncio.create_task(coro)
+            self._active_tasks[task_id] = asyncio_task
+            logger.info("Research task %s — orchestrator step-by-step activated", task_id)
+        else:
+            self.transition(task_id, "active")
+            coro = self._execute_task(task_id)
+            asyncio_task = asyncio.create_task(coro)
+            self._active_tasks[task_id] = asyncio_task
+            logger.info("Research task %s manually activated", task_id)
+
+    async def _orchestrator_step_async(self, task_id: str, first_step: bool = False) -> None:
+        """Run one orchestrator step as a background task, handling completion."""
+        try:
+            if first_step:
+                self.orchestrator.init_task(task_id)
+
+            result = await self.orchestrator.execute_step(task_id)
+            phase = self.orchestrator.get_task_phase(task_id)
+
+            if phase == "complete":
+                summary = result.get("result_summary", "Research complete.")
+                self.complete(task_id, result_summary=summary)
+            elif result.get("error"):
+                self.fail(task_id, result["error"])
+            # Otherwise stays active — user clicks "Step" for next phase
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Orchestrator step failed for %s", task_id)
+            self.fail(task_id, "Step execution failed")
+        finally:
+            self._active_tasks.pop(task_id, None)
+
+    async def orchestrator_step(self, task_id: str) -> dict:
+        """Execute the next orchestrator phase. Returns phase info."""
+        state = self.orchestrator.get_task_phase(task_id)
+        if not state:
+            raise RuntimeError(f"No orchestrator state for {task_id}")
+        if state == "complete":
+            return {"task_id": task_id, "executed_phase": "complete", "next_phase": "complete",
+                    "message": "already complete"}
+
+        result = await self.orchestrator.execute_step(task_id)
+        phase = self.orchestrator.get_task_phase(task_id)
+
+        if phase == "complete":
+            summary = result.get("result_summary", "Research complete.")
+            self.complete(task_id, result_summary=summary)
+
+        return result
+
+    def rerun_task(self, task_id: str) -> None:
+        """Rerun a terminal task in-place — resets counters, clears old data.
+
+        Use for debugging: edit code, rerun same task to see new results.
+        Does NOT clone — preserves task ID, objective, parameters.
+        """
+        task = self.task_repo.get(task_id)
+        if task is None:
+            raise ValueError(f"Task not found: {task_id}")
+        if task["status"] not in ("completed", "failed", "cancelled"):
+            raise ValueError(
+                f"Can only rerun terminal tasks, got: {task['status']}"
+            )
+
+        # Delete old branches and assets for this task
+        try:
+            self.asset_repo.delete_by_task(task_id)
+        except Exception:
+            pass
+        try:
+            self.branch_repo.delete_by_task(task_id)
+        except Exception:
+            pass
+
+        # Reset counters
+        rerun_count = (task.get("rerun_count") or 0) + 1
+        update_fields = {
+            "status": "queued",
+            "budget_spent_usd": 0.0,
+            "branches_created": 0,
+            "assets_harvested": 0,
+            "lateral_flights": 0,
+            "bifurcation_triggered": 0,
+            "result_summary": None,
+            "started_at": None,
+            "completed_at": None,
+        }
+        try:
+            update_fields["rerun_count"] = rerun_count
+            self.task_repo.update(task_id, **update_fields)
+        except Exception:
+            # rerun_count column may not exist (m035 not applied yet)
+            update_fields.pop("rerun_count", None)
+            self.task_repo.update(task_id, **update_fields)
+        logger.info(
+            "Research task %s rerun #%d (in-place reset)", task_id, rerun_count,
+        )
+
+        # In manual mode, stay queued. Otherwise auto-execute.
+        if not self.config.get("manual_mode", False):
+            asyncio.create_task(self._try_process_queue())
 
     # ── Budget ────────────────────────────────────────────────────
 

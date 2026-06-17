@@ -16,7 +16,7 @@ This guide walks you through installing, running, and registering the MCP server
 ## Prerequisites
 
 - AAA backend must be running (listen on `http://127.0.0.1:8000`).
-- Python 3.11+ and `uv` installed.
+- Python 3.12–3.13 and `uv` installed.
 - The `mcp` package added to `pyproject.toml` (already done).
 
 ---

@@ -122,7 +122,7 @@ A Paskian feedback loop maintains cognitive vitality. If conversation becomes re
 
 | Layer | Technology |
 |-------|-----------|
-| Backend Framework | FastAPI (Python 3.11+) |
+| Backend Framework | FastAPI (Python 3.12–3.13) |
 | ASGI Server | uvicorn |
 | Database | SQLite (WAL mode, single-file) |
 | Embedding Model | `sentence-transformers/all-MiniLM-L6-v2` (384-dim) |

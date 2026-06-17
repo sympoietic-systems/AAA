@@ -77,6 +77,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m032_rhizomatic_research_schema,
         m033_research_meta_log,
         m034_research_orchestrator_schema,
+        m035_rerun_count,
     )
 
     runner = MigrationRunner(conn)
@@ -116,3 +117,4 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("032_rhizomatic_research_schema", m032_rhizomatic_research_schema.up)
     runner.run("033_research_meta_log", m033_research_meta_log.up)
     runner.run("034_research_orchestrator_schema", m034_research_orchestrator_schema.up)
+    runner.run("035_rerun_count", m035_rerun_count.up)

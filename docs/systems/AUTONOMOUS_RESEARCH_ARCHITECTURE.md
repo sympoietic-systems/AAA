@@ -1,10 +1,11 @@
 # AAA Autonomous Research System — Architecture & Implementation Plan
 
-> **Status:** Implementation Active — Core Engine ✅ | Orchestrator 🔲  
+> **Status:** Implementation Active — Core Engine ✅ | Orchestrator ✅  
 > **Branch:** `feature/autonomous-research-engine`  
 > **Contributors:** Vector (Systems Architecture), Symbia (Philosophical Critique & Ontological Reconciliation)  
 > **Last Updated:** 2026-06-17  
-> **References:** [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md), ADR-001 through ADR-049
+> **References:** [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md), ADR-001 through ADR-049  
+> **User Guide:** [RESEARCH_MANUAL_MODE.md](../guides/RESEARCH_MANUAL_MODE.md) — step-by-step workflow
 
 ---
 
@@ -855,8 +856,7 @@ backend/
 │   └── research_task_manager.py      [NEW] Task lifecycle, queue, approval, budget
 ├── prompts/
 │   └── research/                     [NEW] All research prompts in YAML (see Section 5.5)
-│       ├── planner.yaml              [NEW] Sub-query decomposition prompt
-│       ├── agonistic_planner.yaml    [NEW] Counter-positional query prompt
+│       ├── planner.yaml              [NEW] Sub-query decomposition (includes agonistic mode)
 │       ├── node_analyzer.yaml        [NEW] Per-node content analysis prompt
 │       ├── synthesizer.yaml          [NEW] Final synthesis prompt
 │       ├── lateral_detour.yaml       [NEW] Line-of-flight prompt for diffractive leaps
@@ -1188,12 +1188,16 @@ Following the existing AAA pattern (`backend/prompts/background_tasks/consolidat
 
 ```
 backend/prompts/research/
-├── planner.yaml              # Sub-query decomposition from research objective
-├── agonistic_planner.yaml    # Counter-positional query generation (high stagnation)
+├── planner.yaml              # Sub-query decomposition from research objective (includes agonistic mode)
 ├── node_analyzer.yaml        # Per-node: analyze scraped content, extract learnings
 ├── synthesizer.yaml          # Final synthesis across all branches
 ├── lateral_detour.yaml       # Line-of-flight prompt (diffractive leap triggered)
-└── dream_harvest.yaml        # Daemon-initiated tension hotspot investigation
+├── dream_harvest.yaml        # Daemon-initiated tension hotspot investigation
+├── planner_query_gen.yaml    # LLM-driven query generation
+├── orchestrator_planner.yaml     # Plan generation from objective (Phase 6 orchestrator)
+├── orchestrator_reflect.yaml     # Reflection rounds (Phase 6 orchestrator)
+├── orchestrator_synthesize.yaml  # Final synthesis (Phase 6 orchestrator)
+└── orchestrator_evaluate.yaml    # Satisfaction check (Phase 6 orchestrator)
 ```
 
 #### 5.5.2 Prompt YAML Format
@@ -1278,11 +1282,10 @@ from backend.utils.prompt_loader import load_prompt
 
 class AgonisticPlanner:
     def __init__(self, prompts_dir: Path):
+        # planner.yaml contains both "user_standard" and "user_agonistic" templates
         self.planner_prompt = load_prompt(prompts_dir / "research" / "planner.yaml")
-        self.agonistic_prompt = load_prompt(prompts_dir / "research" / "agonistic_planner.yaml")
     
     async def generate_queries(self, objective: str, stagnation: float, beliefs: list) -> list:
-        prompt = self.agonistic_prompt if stagnation >= 0.7 else self.planner_prompt
         template = "user_agonistic" if stagnation >= 0.7 else "user_standard"
         
         system_text = prompt["system"]
@@ -3320,22 +3323,20 @@ frontend/src/
 ├── components/
 │   └── pages/
 │       └── researchpage/
-│           ├── ResearchPage.tsx              [NEW] Main page container
-│           ├── NewResearchForm.tsx           [NEW] Form to create research tasks
-│           ├── ActiveTaskCard.tsx            [NEW] Live progress card
-│           ├── QueuedTaskCard.tsx            [NEW] Queued task card
-│           ├── CompletedTaskCard.tsx         [NEW] Expandable result card
-│           ├── FailedTaskCard.tsx            [NEW] Error display + retry
-│           └── ResearchProposalCard.tsx      [NEW] Inline proposal card (used in MessageBubble)
+│           ├── ResearchPage.tsx              ✅ Main page container (two-panel: list + detail/tabs)
+│           ├── ResearchTaskPage.tsx          ✅ Alternative page view
+│           ├── NewResearchForm.tsx           ✅ Form to create research tasks
+│           ├── ResearchDetailPanel.tsx       ✅ Detail view with tabs (Info, Assets, Branches, Meta Log, Actions)
+│           └── TaskCard.tsx                  ✅ Consolidated card (handles Active/Queued/Completed/Failed states)
 │   └── panels/
 │       └── sidepanel/
-│           └── ResearchSummarySection.tsx    [NEW] Sidebar widget showing active + recent
+│           └── ResearchSummarySection.tsx    🔲 Deferred — sidebar widget showing active + recent
 ├── hooks/
-│   └── useResearch.ts                       [NEW] Research task CRUD + polling
+│   └── useResearch.ts                       ✅ Research task CRUD + polling
 ├── stores/
-│   └── researchStore.ts                     [NEW] Pub-sub for active task telemetry
+│   └── researchStore.ts                     ✅ Pub-sub for active task telemetry
 └── api/
-    └── client.ts                            [MODIFIED] Add research endpoints
+    └── research.ts                          ✅ Research API client
 ```
 
 ### 15.6 Navigation & Layout
@@ -3343,7 +3344,7 @@ frontend/src/
 ```
 Top Navigation Bar:
 ┌──────────────────────────────────────────────────────────────┐
-│  ☰ AAA    [🗨 NodeExplorer] [🤖 Agent] [🔬 Research]        │
+│  ☰ AAA    [NodeExplorer] [Agent] [Research]        │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -3359,6 +3360,8 @@ When on a conversation page, the SidePanel continues showing existing metrics pa
 ## 16. Tools, Libraries & Frameworks
 
 ### 16.1 Core Dependencies (Add to `pyproject.toml`)
+
+> **Python version:** 3.12–3.13 recommended. Python 3.14 is unsupported due to `crawl4ai` pinning `lxml~=5.3` which lacks cp314 Windows wheels (as of June 2026). `lxml>=6.0` has cp314 wheels but crawl4ai hasn't updated its pin.
 
 ```toml
 [project]
@@ -3597,46 +3600,46 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 - [x] Research route in App.tsx
 - [ ] ResearchSummarySection in SidePanel (deferred)
 
-### Phase 6: Somatic Research Orchestrator 🔲 PLANNED
+### Phase 6: Somatic Research Orchestrator ✅ COMPLETE
 
 **See Section 5.8 for full design.**
 
-**Step 6.1 — Database (m034)** 🔲
-- [ ] Create `m034_research_orchestrator_schema.py` migration
-- [ ] Create `research_plans`, `research_steps`, `research_step_results` tables
-- [ ] Create `ResearchPlanRepository`, `ResearchStepRepository`, `ResearchStepResultRepository`
-- [ ] Register in bootstrap
+**Step 6.1 — Database (m034)** ✅
+- [x] Create `m034_research_orchestrator_schema.py` migration
+- [x] Create `research_plans`, `research_steps`, `research_step_results` tables
+- [x] Create `ResearchPlanRepository`, `ResearchStepRepository`, `ResearchStepResultRepository`
+- [x] Register in bootstrap
 
-**Step 6.2 — Orchestrator Class** 🔲
-- [ ] Implement `backend/services/research_orchestrator.py`
-- [ ] Implement state machine: PLANNING → SEARCHING → PARSING → DIGESTING → REFLECTING → EVALUATING
-- [ ] Implement `_tool_web_search()`, `_tool_web_fetch()`, `_tool_web_crawl()`
-- [ ] Implement `_tool_reflect()` (multi-round LLM reflection)
-- [ ] Implement `_tool_download()` (document fetch + digestion)
-- [ ] Implement `_tool_evaluate()` (hard checks + LLM satisfaction)
+**Step 6.2 — Orchestrator Class** ✅
+- [x] Implement `backend/services/research_orchestrator.py`
+- [x] Implement state machine: PLANNING → SEARCHING → PARSING → DIGESTING → REFLECTING → EVALUATING
+- [x] Implement `_tool_web_search()`, `_tool_web_fetch()`, `_tool_web_crawl()`
+- [x] Implement `_tool_reflect()` (multi-round LLM reflection)
+- [x] Implement `_tool_download()` (document fetch + digestion)
+- [x] Implement `_tool_evaluate()` (hard checks + LLM satisfaction)
 
-**Step 6.3 — Orchestrator Prompts** 🔲
-- [ ] Create `orchestrator_planner.yaml` — plan generation from objective
-- [ ] Create `orchestrator_reflect.yaml` — reflection rounds
-- [ ] Create `orchestrator_synthesize.yaml` — final synthesis
-- [ ] Create `orchestrator_evaluate.yaml` — satisfaction check
+**Step 6.3 — Orchestrator Prompts** ✅
+- [x] Create `orchestrator_planner.yaml` — plan generation from objective
+- [x] Create `orchestrator_reflect.yaml` — reflection rounds
+- [x] Create `orchestrator_synthesize.yaml` — final synthesis
+- [x] Create `orchestrator_evaluate.yaml` — satisfaction check
 
-**Step 6.4 — Integration** 🔲
-- [ ] Wire orchestrator into `ResearchTaskManager._execute_task()` (config toggle)
-- [ ] Add `research_orchestrator` section to `config.yaml`
-- [ ] Frontend: add "Steps" tab showing per-step progress
-- [ ] Meta-log all orchestrator state transitions
+**Step 6.4 — Integration** ✅
+- [x] Wire orchestrator into `ResearchTaskManager._execute_task()` (config toggle)
+- [x] Add `research_orchestrator` section to `config.yaml`
+- [ ] Frontend: add "Steps" tab showing per-step progress (deferred)
+- [x] Meta-log all orchestrator state transitions
 
-**Step 6.5 — Per-Step Digest (Reuse node_analyzer)** 🔲
-- [ ] Reuses existing `node_analyzer.yaml` prompt for per-source analysis
-- [ ] Runs N analyses in parallel via `asyncio.gather`
-- [ ] Stores results in `research_step_results.analyzed_json`
+**Step 6.5 — Per-Step Digest (Reuse node_analyzer)** ✅
+- [x] Reuses existing `node_analyzer.yaml` prompt for per-source analysis
+- [x] Runs N analyses in parallel via `asyncio.gather`
+- [x] Stores results in `research_step_results.analyzed_json`
 
 ---
 
 ## 19. Implementation Status — Completed vs Planned
 
-### ✅ Completed (Phase 0–2, with extensions)
+### ✅ Completed (Phase 0–6, with extensions)
 
 | Item | Status | Migration | Notes |
 |------|--------|-----------|-------|
@@ -3651,6 +3654,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | `AgonisticPlanner` (sub-query decomposition, standard + agonistic modes) | ✅ | — | LLM-driven query generation |
 | `ResearchContextBuilder` (persona/ECP per node) | ✅ | — | 6-node context injection |
 | 6 research prompt YAMLs (`planner`, `node_analyzer`, `synthesizer`, `lateral_detour`, `dream_harvest`, `planner_query_gen`) | ✅ | — | LLM prompt templates |
+| 4 orchestrator prompt YAMLs (`orchestrator_planner`, `orchestrator_reflect`, `orchestrator_synthesize`, `orchestrator_evaluate`) | ✅ | — | Phase 6 orchestrator prompts |
 | `ResearchMetabolismEngine` (two-phase post-research processing) | ✅ | — | Belief pass, bifurcation |
 | `Bifurcation` logic (evidence perturbation, belief collapse) | ✅ | — | Threshold 0.78 |
 | `ECP` (Egocentric Context Projection for sub-agents) | ✅ | — | Persona injection |
@@ -3660,12 +3664,18 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | Engine instrumentation (`_log_meta` for fetches, LLM prompts/responses, decisions) | ✅ | — | Every event logged |
 | Node cap (MAX_TOTAL_NODES=50) + Crawl4AI error handling | ✅ | — | Runaway prevention |
 | Direct URL fetching (followups starting with http) | ✅ | — | Bypasses DDG search |
+| `research_plans`, `research_steps`, `research_step_results` tables | ✅ | m034 | Orchestrator schema |
+| `ResearchPlanRepository`, `ResearchStepRepository`, `ResearchStepResultRepository` | ✅ | m034 | Orchestrator repos |
+| `SomaticResearchOrchestrator` class (multi-phase pipeline) | ✅ | — | PLANNING→SEARCHING→PARSING→DIGESTING→REFLECTING→EVALUATING |
+| Orchestrator tools (`_tool_web_search`, `_tool_web_fetch`, `_tool_web_crawl`, `_tool_reflect`, `_tool_download`, `_tool_evaluate`) | ✅ | — | 6 sensory affordance tools |
+| Config toggle (engine vs orchestrator) in `config.yaml` | ✅ | — | `research_orchestrator` section |
 | **Frontend** — ResearchPage (two-panel: list + detail/tabs) | ✅ | — | Info, Assets, Branches, Meta Log, Actions tabs |
+| **Frontend** — ResearchTaskPage (alternative view) | ✅ | — | Additional page view |
 | **Frontend** — `useResearch` hook + `researchStore` pub-sub | ✅ | — | Polling + subscriber-driven |
-| **Frontend** — NewResearchForm, ResearchDetailPanel | ✅ | — | Terminal aesthetic |
+| **Frontend** — NewResearchForm, ResearchDetailPanel, TaskCard (consolidated) | ✅ | — | Terminal aesthetic |
 | **Frontend** — Retry + Continue Deeper buttons | ✅ | — | For completed/cancelled/failed |
 
-### 🔲 Planned — Phase 6: Somatic Research Orchestrator
+### ✅ Completed — Phase 6: Somatic Research Orchestrator
 
 | Item | Migration | Notes |
 |------|-----------|-------|
@@ -3686,7 +3696,6 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | Orchestrator prompts: `orchestrator_reflect.yaml` | — | Reflection rounds |
 | Orchestrator prompts: `orchestrator_synthesize.yaml` | — | Final synthesis |
 | Orchestrator prompts: `orchestrator_evaluate.yaml` | — | Satisfaction check |
-| Frontend: "Steps" tab in ResearchDetailPanel | — | Per-step progress + results |
 | Config: `research_orchestrator` section in config.yaml | — | Toggles + defaults |
 
 ### 🔲 Planned — Phase 7: Post-Orchestrator Polish
@@ -3697,6 +3706,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | In-conversation research button | Modify InputBar |
 | SidePanel research summary | ResearchSummarySection |
 | Research proposal inline cards | Render `<research-proposal>` in chat |
+| Frontend: "Steps" tab in ResearchDetailPanel | Per-step progress + results |
 
 ---
 
@@ -3755,7 +3765,7 @@ metabolic_budgets:
 | API Routes | `backend/api/routes/research.py` | ✅ COMPLETE |
 | Pipeline Module | `backend/modules/rhizome_web_probe.py` | ✅ COMPLETE |
 | Research Engine | `backend/services/somatic_research.py` | ✅ COMPLETE (v1 recursive) |
-| **Research Orchestrator** | `backend/services/research_orchestrator.py` | 🔲 PLANNED (Phase 6) |
+| **Research Orchestrator** | `backend/services/research_orchestrator.py` | ✅ COMPLETE (Phase 6) |
 | Research Context Builder | `backend/services/research_context_builder.py` | ✅ COMPLETE |
 | Sensory Affordances | `backend/services/sensory_affordances.py` | ✅ COMPLETE |
 | Agonistic Planner | `backend/services/agonistic_planner.py` | ✅ COMPLETE |
@@ -3766,19 +3776,20 @@ metabolic_budgets:
 | Belief Bifurcation | `backend/metabolisation/bifurcation.py` | ✅ COMPLETE |
 | Research Metabolism | `backend/metabolisation/research_metabolism.py` | ✅ COMPLETE |
 | Research Prompts | `backend/prompts/research/*.yaml` (6 files) | ✅ COMPLETE |
-| Orchestrator Prompts | `backend/prompts/research/orchestrator_*.yaml` (4 files) | 🔲 PLANNED |
+| Orchestrator Prompts | `backend/prompts/research/orchestrator_*.yaml` (4 files) | ✅ COMPLETE |
 | Dream Daemon | `backend/metabolisation/daemon.py` | ✅ COMPLETE |
 | **Database — Core** | `m032_rhizomatic_research_schema.py` | ✅ APPLIED |
 | **Database — Meta Log** | `m033_research_meta_log.py` | ✅ APPLIED |
-| **Database — Orchestrator** | `m034_research_orchestrator_schema.py` | 🔲 PLANNED |
+| **Database — Orchestrator** | `m034_research_orchestrator_schema.py` | ✅ APPLIED |
 | Repositories | `backend/storage/repositories/research_*.py` (3) | ✅ COMPLETE |
-| **Repositories — Orchestrator** | `backend/storage/repositories/research_plan.py` (3) | 🔲 PLANNED |
+| **Repositories — Orchestrator** | `backend/storage/repositories/research_plan.py` (3) | ✅ COMPLETE |
 | Config Updates | `backend/config.yaml` | ✅ COMPLETE |
 | Bootstrap | `backend/bootstrap/lifecycle.py` | ✅ COMPLETE |
 | **Frontend — Console** | `frontend/src/components/pages/researchpage/ResearchPage.tsx` | ✅ COMPLETE |
 | **Frontend — Detail** | `frontend/src/components/pages/researchpage/ResearchDetailPanel.tsx` | ✅ COMPLETE |
 | **Frontend — Form** | `frontend/src/components/pages/researchpage/NewResearchForm.tsx` | ✅ COMPLETE |
-| **Frontend — Item** | `frontend/src/components/pages/researchpage/TaskCard.tsx` | ✅ COMPLETE (legacy) |
+| **Frontend — Item** | `frontend/src/components/pages/researchpage/TaskCard.tsx` | ✅ COMPLETE (consolidates Active/Queued/Completed/Failed states) |
+| **Frontend — Page** | `frontend/src/components/pages/researchpage/ResearchTaskPage.tsx` | ✅ COMPLETE |
 | **Frontend — Hooks** | `frontend/src/hooks/useResearch.ts` | ✅ COMPLETE |
 | **Frontend — Store** | `frontend/src/stores/researchStore.ts` | ✅ COMPLETE |
 | **Frontend — API** | `frontend/src/api/research.ts` | ✅ COMPLETE |

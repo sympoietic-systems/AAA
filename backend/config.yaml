@@ -307,6 +307,8 @@ research_tasks:
   auto_approve:
     symbia_dream: false
     symbia_belief_conflict: false
+    symbia_stagnation: false
+  manual_mode: false                            # true = tasks queue but don't auto-execute (debug)
 
 # ── Somatic Research Orchestrator ────────────────
 # See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8

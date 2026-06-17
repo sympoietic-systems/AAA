@@ -87,6 +87,15 @@ class ScrapedAssetRepository(BaseRepository):
         return row[0] if row else 0
 
     @with_connection
+    def delete_by_task(self, task_id: str) -> int:
+        conn = self._conn()
+        cursor = conn.execute(
+            "DELETE FROM scraped_assets WHERE task_id = ?", (task_id,)
+        )
+        conn.commit()
+        return cursor.rowcount
+
+    @with_connection
     def get_lightweight_by_task_ids(self, task_ids: list[str]) -> dict[str, list[dict]]:
         """Batch-fetch lightweight assets (no raw_markdown) for multiple tasks.
         Returns {task_id: [asset_dict, ...]}.

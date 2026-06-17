@@ -121,6 +121,69 @@ export async function retryTask(taskId: string): Promise<{ task_id: string; stat
   return res.json()
 }
 
+export async function runTask(taskId: string): Promise<{ task_id: string; status: string }> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/run`, { method: "POST" })
+  if (!res.ok) throw new Error(`Task run failed: ${res.status}`)
+  return res.json()
+}
+
+export async function rerunTask(taskId: string): Promise<{ task_id: string; status: string; rerun_count: number; auto_run: boolean }> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/rerun`, { method: "POST" })
+  if (!res.ok) throw new Error(`Task rerun failed: ${res.status}`)
+  return res.json()
+}
+
+export async function executeStep(taskId: string): Promise<{
+  task_id: string
+  executed_phase: string
+  next_phase: string
+  error?: string
+  message?: string
+  plan?: any
+  query?: string
+  results_count?: number
+  parsed_count?: number
+  digested_count?: number
+  new_learnings?: number
+  total_learnings?: number
+  completeness?: number
+  should_stop?: boolean
+  reason?: string
+  result_summary?: string
+}> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/step`, { method: "POST" })
+  if (!res.ok) throw new Error(`Step failed: ${res.status}`)
+  return res.json()
+}
+
+// ── Orchestrator Phase / Preview ────────────────────────────────────
+
+export async function getTaskPhase(taskId: string): Promise<{ task_id: string; phase: string }> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/phase`)
+  if (!res.ok) throw new Error(`Phase fetch failed: ${res.status}`)
+  return res.json()
+}
+
+export interface StepPreview {
+  phase: string
+  objective?: string
+  max_depth?: number
+  budget_limit_usd?: number
+  system_prompt?: string
+  user_prompt?: string
+  model?: string
+  temperature?: number
+  max_tokens?: number
+  pending_queries?: string[]
+  note?: string
+}
+
+export async function getStepPreview(taskId: string, phase: string): Promise<StepPreview> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/preview/${phase}`)
+  if (!res.ok) throw new Error(`Preview fetch failed: ${res.status}`)
+  return res.json()
+}
+
 // ── Meta Log ────────────────────────────────────────────────────────
 
 export interface MetaLogEntry {
@@ -136,12 +199,16 @@ export interface MetaLogResponse {
   task_id: string
   title: string
   status: string
+  branch_id?: string
   entries: MetaLogEntry[]
   count: number
 }
 
-export async function getTaskMetaLog(taskId: string): Promise<MetaLogResponse> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/meta-log`)
+export async function getTaskMetaLog(taskId: string, branchId?: string): Promise<MetaLogResponse> {
+  const url = branchId
+    ? `${BASE}/research/tasks/${taskId}/meta-log?branch_id=${branchId}`
+    : `${BASE}/research/tasks/${taskId}/meta-log`
+  const res = await fetch(url)
   if (!res.ok) throw new Error(`Meta log fetch failed: ${res.status}`)
   return res.json()
 }

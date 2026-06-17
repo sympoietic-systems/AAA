@@ -212,11 +212,108 @@ async def retry_task(task_id: str, request: Request):
     return {"task_id": new_id, "status": "queued", "retried_from": task_id}
 
 
+# ── Manual Execution (debug / manual mode) ────────────────────────────
+
+@router.post("/research/tasks/{task_id}/run")
+async def run_task(task_id: str, request: Request):
+    """Manually trigger execution of a queued task. Used in manual mode."""
+    state = request.app.state
+    manager = state.research_task_manager
+
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task["status"] != "queued":
+        raise HTTPException(status_code=400, detail=f"Task must be queued to run, got: {task['status']}")
+
+    manager.run_task(task_id)
+    return {"task_id": task_id, "status": "active"}
+
+
+@router.post("/research/tasks/{task_id}/rerun")
+async def rerun_task(task_id: str, request: Request):
+    """Rerun a terminal task in-place — resets counters, clears old data.
+
+    Same task ID, same parameters. Use for debugging: edit code, rerun to see new results.
+    Does NOT clone — old branches/assets are deleted, counters reset to zero.
+    """
+    state = request.app.state
+    manager = state.research_task_manager
+
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task["status"] not in ("completed", "failed", "cancelled"):
+        raise HTTPException(status_code=400, detail=f"Can only rerun terminal tasks, got: {task['status']}")
+
+    manager.rerun_task(task_id)
+    is_manual = manager.config.get("manual_mode", False)
+    return {
+        "task_id": task_id,
+        "status": "queued",
+        "rerun_count": (task.get("rerun_count") or 0) + 1,
+        "auto_run": not is_manual,
+    }
+
+
+# ── Orchestrator Step-by-Step ──────────────────────────────────────────
+
+@router.post("/research/tasks/{task_id}/step")
+async def execute_step(task_id: str, request: Request):
+    """Execute the next orchestrator phase (planning → searching → parsing →
+    digesting → reflecting → evaluating → synthesizing → complete).
+
+    Used in manual mode for step-by-step debugging.  Each call advances
+    the pipeline by exactly one phase.
+    """
+    state = request.app.state
+    manager = state.research_task_manager
+
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task["status"] not in ("active", "queued"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task must be active or queued, got: {task['status']}",
+        )
+
+    # If queued and in manual+orchestrator mode, init + run first step
+    if task["status"] == "queued":
+        orch_config = state.config.get("research_orchestrator", {})
+        if orch_config.get("enabled") and manager.config.get("manual_mode", False):
+            manager.transition(task_id, "active")
+            manager.orchestrator.init_task(task_id)
+
+    try:
+        result = await manager.orchestrator_step(task_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
+
+
 # ── Meta Log ──────────────────────────────────────────────────────────
 
+def _parse_event_data(entry: dict) -> dict:
+    import json
+    try:
+        entry["event_data"] = json.loads(entry["event_data"])
+    except (json.JSONDecodeError, TypeError):
+        entry["event_data"] = {"raw": entry.get("event_data", "")}
+    return entry
+
+
 @router.get("/research/tasks/{task_id}/meta-log")
-async def get_task_meta_log(task_id: str, limit: int = 200, request: Request = None):
-    """Full activity log for a research task — fetches, prompts, decisions, errors."""
+async def get_task_meta_log(
+    task_id: str,
+    limit: int = 200,
+    branch_id: Optional[str] = None,
+    request: Request = None,
+):
+    """Full activity log for a research task.  Pass ?branch_id=<step_id> to
+    filter to a specific orchestrator step.
+    """
     state = request.app.state
     meta_repo = getattr(state, "research_meta_log_repo", None)
     if meta_repo is None:
@@ -226,22 +323,62 @@ async def get_task_meta_log(task_id: str, limit: int = 200, request: Request = N
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
-    entries = meta_repo.get_by_task(task_id, limit=limit)
-    # Parse JSON event_data for each entry
-    import json
-    for entry in entries:
-        try:
-            entry["event_data"] = json.loads(entry["event_data"])
-        except (json.JSONDecodeError, TypeError):
-            entry["event_data"] = {"raw": entry.get("event_data", "")}
+    if branch_id:
+        entries = meta_repo.get_by_branch(branch_id)
+        # Filter further to this task (branch_id may not be globally unique)
+        entries = [e for e in entries if e.get("task_id") == task_id]
+    else:
+        entries = meta_repo.get_by_task(task_id, limit=limit)
+
+    entries = [_parse_event_data(e) for e in entries]
 
     return {
         "task_id": task_id,
         "title": task.get("title", ""),
         "status": task.get("status", ""),
+        "branch_id": branch_id,
         "entries": entries,
         "count": len(entries),
     }
+
+
+# ── Orchestrator Phase ────────────────────────────────────────────────
+
+@router.get("/research/tasks/{task_id}/phase")
+async def get_task_phase(task_id: str, request: Request = None):
+    """Return the current orchestrator phase for a task (manual step-by-step mode)."""
+    state = request.app.state
+    manager = state.research_task_manager
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    phase = manager.orchestrator.get_task_phase(task_id)
+    return {"task_id": task_id, "phase": phase or "not_started"}
+
+
+# ── Step Input Preview (inspect before running) ────────────────────────
+
+@router.get("/research/tasks/{task_id}/preview/{phase}")
+async def preview_step_inputs(task_id: str, phase: str, request: Request = None):
+    """Return the prompts/inputs that WOULD be used for a given phase,
+    without executing it.  Useful for inspecting before clicking 'Run'.
+
+    Supported phases: planning (full system + user prompts), searching.
+    """
+    state = request.app.state
+    manager = state.research_task_manager
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    try:
+        result = await manager.orchestrator.preview_step_inputs(task_id, phase)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return result
 
 
 # ── Orchestrator Steps ────────────────────────────────────────────────

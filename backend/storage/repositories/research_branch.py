@@ -83,6 +83,15 @@ class ResearchBranchRepository(BaseRepository):
         return row[0] if row else 0
 
     @with_connection
+    def delete_by_task(self, task_id: str) -> int:
+        conn = self._conn()
+        cursor = conn.execute(
+            "DELETE FROM research_branches WHERE task_id = ?", (task_id,)
+        )
+        conn.commit()
+        return cursor.rowcount
+
+    @with_connection
     def get_active_by_task(self, task_id: str) -> list[dict]:
         conn = self._conn()
         rows = conn.execute(

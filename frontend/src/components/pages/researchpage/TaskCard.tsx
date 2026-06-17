@@ -3,12 +3,14 @@
 
 import React, { memo, useState } from "react"
 import type { ResearchTask } from "../../../api/research"
+import { runTask, rerunTask } from "../../../api/research"
 
 interface Props {
   task: ResearchTask & { assets?: { id: string; url: string; relevance_score: number }[] }
   onApprove?: (id: string) => Promise<void>
   onReject?: (id: string) => Promise<void>
   onCancel?: (id: string) => Promise<void>
+  onRefresh?: () => void
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -32,13 +34,25 @@ const TRIGGER_BADGES: Record<string, string> = {
   symbia_stagnation: "symbia · stagnation",
 }
 
-export const TaskCard = memo(function TaskCard({ task, onApprove, onReject, onCancel }: Props) {
+export const TaskCard = memo(function TaskCard({ task, onApprove, onReject, onCancel, onRefresh }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const [acting, setActing] = useState(false)
   const color = STATUS_COLORS[task.status] || "#666"
   const badge = TRIGGER_BADGES[task.trigger_source] || task.trigger_source
   const progress = task.budget_limit_usd > 0
     ? Math.round((task.budget_spent_usd / task.budget_limit_usd) * 100)
     : 0
+
+  const doRun = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActing(true)
+    try { await runTask(task.id) } catch {} finally { setActing(false); onRefresh?.() }
+  }
+  const doRerun = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActing(true)
+    try { await rerunTask(task.id) } catch {} finally { setActing(false); onRefresh?.() }
+  }
 
   return (
     <div className="text-xs font-mono">
@@ -54,6 +68,13 @@ export const TaskCard = memo(function TaskCard({ task, onApprove, onReject, onCa
             className="text-[#666] hover:text-[#ef4444] text-[9px]"
           >
             [cancel]
+          </button>
+        )}
+        {task.status === "queued" && (
+          <button onClick={doRun} disabled={acting}
+            className="text-[#4ade80] hover:text-[#6ee7b0] text-[9px] disabled:text-[#333]"
+          >
+            [{acting ? "..." : "▶ run"}]
           </button>
         )}
       </div>
@@ -103,11 +124,27 @@ export const TaskCard = memo(function TaskCard({ task, onApprove, onReject, onCa
             </div>
           )}
 
-          {/* Queued cancel */}
-          {task.status === "queued" && onCancel && (
-            <button onClick={() => onCancel(task.id)} className="text-[#ef4444] hover:text-[#f87171] text-[10px]">
-              [✕ cancel]
-            </button>
+          {/* Queued actions */}
+          {task.status === "queued" && (
+            <div className="flex gap-2 mt-1">
+              <button onClick={doRun} disabled={acting}
+                className="text-[#4ade80] hover:text-[#6ee7b0] text-[10px] disabled:text-[#333]"
+              >[{acting ? "..." : "▶ run"}]</button>
+              {onCancel && (
+                <button onClick={() => onCancel(task.id)} className="text-[#ef4444] hover:text-[#f87171] text-[10px]">
+                  [✕ cancel]
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Terminal actions: rerun */}
+          {(task.status === "completed" || task.status === "failed" || task.status === "cancelled") && (
+            <div className="flex gap-2 mt-1">
+              <button onClick={doRerun} disabled={acting}
+                className="text-[#f59e0b] hover:text-[#fbbf24] text-[10px] disabled:text-[#333]"
+              >[{acting ? "..." : "⟳ rerun"}]</button>
+            </div>
           )}
         </div>
       )}
