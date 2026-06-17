@@ -10,8 +10,6 @@ See: docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8
 import asyncio
 import json
 import logging
-import os
-import urllib.parse
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +17,7 @@ from typing import Any, Optional
 
 import numpy as np
 
+from backend.services.research.search_tool import web_search
 from backend.utils.persona_loader import get_identity_yaml_path, load_identity
 from backend.utils.prompt_builder import (
     compute_structural_signature,
@@ -117,6 +116,20 @@ class SomaticResearchOrchestrator:
     def html_archive(self) -> bool:
         return self.config.get("html_archive", True)
 
+    # ── Truncation constants ───────────────────────────────────────
+
+    _TRUNC_HTML_ARCHIVE = 50000
+    _TRUNC_STEP_RESULT = 20000
+    _TRUNC_SCRAPED_ASSET = 10000
+    _TRUNC_LLM_CONTENT = 6000
+    _TRUNC_META_LOG = 8000
+
+    # ── Helpers ────────────────────────────────────────────────────
+
+    def _log_context(self, task_id: str, phase: str) -> str:
+        """Return a structured log prefix: 'task=<id> phase=<phase>'."""
+        return f"task={task_id[:8]} phase={phase}"
+
     def _get_semaphore(self) -> asyncio.Semaphore:
         if self._semaphore is None:
             self._semaphore = asyncio.Semaphore(self.max_concurrent)
@@ -157,7 +170,7 @@ class SomaticResearchOrchestrator:
             if voice_block:
                 sections.append(voice_block)
         except Exception:
-            pass
+            logger.warning("Failed to build voice persona section, continuing without voice context")
 
         # ── 2. Compute structural signature (CompositeScorer via structural_provider) ──
         sig_16d = (
@@ -184,7 +197,7 @@ class SomaticResearchOrchestrator:
                     if matched_block:
                         sections.append(matched_block)
         except Exception:
-            pass
+            logger.warning("Failed to build skills persona section, continuing without skills context")
 
         # ── 4. Commitments ──
         commitment_repo = getattr(self._state, "commitment_repo", None)
@@ -212,7 +225,7 @@ class SomaticResearchOrchestrator:
 
     # ── Meta Logging ────────────────────────────────────────────────
 
-    def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: str = None) -> None:
+    def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: Optional[str] = None) -> None:
         try:
             repo = self._meta_log_repo
             if repo is None:
@@ -226,7 +239,7 @@ class SomaticResearchOrchestrator:
                 "created_at": self._now_utc_str(),
             })
         except Exception:
-            pass
+            logger.warning("Failed to persist meta log for task %s event %s", task_id, event_type)
 
     # ── In-memory task state (for step-by-step execution) ──────────
 
@@ -373,7 +386,13 @@ class SomaticResearchOrchestrator:
             except Exception as e:
                 logger.exception("Step %s failed for task %s", phase, task_id)
                 s["phase"] = "complete"
-                result["error"] = str(e)
+                result.update({
+                    "status": "error",
+                    "kind": "step_execution_failure",
+                    "message": f"Step '{phase}' failed",
+                    "entity": f"research_step.{phase}",
+                    "details": {"task_id": task_id, "phase": phase, "error": str(e)},
+                })
                 self.task_repo.update(task_id, status="failed",
                     result_summary=f"Step '{phase}' failed: {e}")
 
@@ -384,7 +403,7 @@ class SomaticResearchOrchestrator:
 
     async def _step_plan(self, task_id: str, s: dict) -> dict:
         """Generate research plan via LLM. Advance to searching."""
-        logger.info("Step: PLANNING for %s", task_id[:8])
+        logger.info("Step: PLANNING — %s", self._log_context(task_id, "planning"))
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
 
@@ -418,7 +437,7 @@ class SomaticResearchOrchestrator:
 
         query = queries[s["query_index"]] if s["query_index"] < len(queries) else s["objective"]
 
-        logger.info("Step: SEARCHING '%s' for %s", query[:60], task_id[:8])
+        logger.info("Step: SEARCHING '%s' — %s", query[:60], self._log_context(task_id, "searching"))
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
         self.step_repo.create({
@@ -428,7 +447,7 @@ class SomaticResearchOrchestrator:
             "result_summary": json.dumps({"query": query[:300]}),
         })
 
-        search_results = await self._tool_web_search(query, self.default_top_n)
+        search_results = await web_search(query, self.default_top_n, self._state.config)
         self._log_meta(task_id, "orchestrator_search", {
             "query": query[:200],
             "results_count": len(search_results),
@@ -452,7 +471,7 @@ class SomaticResearchOrchestrator:
 
     async def _step_parse(self, task_id: str, s: dict) -> dict:
         """Fetch search result URLs in parallel. Advance to digesting."""
-        logger.info("Step: PARSING for %s", task_id[:8])
+        logger.info("Step: PARSING — %s", self._log_context(task_id, "parsing"))
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
         self.step_repo.create({
@@ -472,7 +491,7 @@ class SomaticResearchOrchestrator:
 
     async def _step_digest(self, task_id: str, s: dict) -> dict:
         """Analyze sources via LLM. Advance to reflecting."""
-        logger.info("Step: DIGESTING for %s", task_id[:8])
+        logger.info("Step: DIGESTING — %s", self._log_context(task_id, "digesting"))
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
         self.step_repo.create({
@@ -532,7 +551,7 @@ class SomaticResearchOrchestrator:
 
     async def _step_reflect(self, task_id: str, s: dict) -> dict:
         """Multi-round LLM reflection. Advance to evaluating."""
-        logger.info("Step: REFLECTING for %s", task_id[:8])
+        logger.info("Step: REFLECTING — %s", self._log_context(task_id, "reflecting"))
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
         self.step_repo.create({
@@ -562,7 +581,7 @@ class SomaticResearchOrchestrator:
 
     def _step_evaluate(self, task_id: str, s: dict) -> dict:
         """Hard checks + decision. Advance to synthesizing, searching (next depth), or complete."""
-        logger.info("Step: EVALUATING for %s", task_id[:8])
+        logger.info("Step: EVALUATING — %s", self._log_context(task_id, "evaluating"))
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
         self.step_repo.create({
@@ -596,7 +615,7 @@ class SomaticResearchOrchestrator:
 
     async def _step_synthesize(self, task_id: str, s: dict) -> dict:
         """Final synthesis. Advance to complete."""
-        logger.info("Step: SYNTHESIZING for %s", task_id[:8])
+        logger.info("Step: SYNTHESIZING — %s", self._log_context(task_id, "synthesizing"))
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
         self.step_repo.create({
@@ -654,7 +673,7 @@ class SomaticResearchOrchestrator:
         self.init_task(task_id)
         s = self._task_states[task_id]
 
-        logger.info("Orchestrator (auto) starting: %s", task.get("title", "")[:80])
+        logger.info("Orchestrator (auto) starting — %s: %s", self._log_context(task_id, "auto"), task.get("title", "")[:80])
         self._log_meta(task_id, "orchestrator_start", {
             "objective": s["objective"],
             "max_depth": s["max_depth"],
@@ -697,15 +716,15 @@ class SomaticResearchOrchestrator:
             llm = getattr(self._state, "llm_provider", None)
             if llm:
                 self._log_meta(task_id, "orchestrator_plan_prompt", {
-                    "system_prompt": system_text[:8000],
-                    "user_prompt": user_text[:8000],
+                    "system_prompt": system_text[:self._TRUNC_META_LOG],
+                    "user_prompt": user_text[:self._TRUNC_META_LOG],
                 })
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True, fallback_value=plan_json,
                     temperature=prompt_data.get("temperature", 0.4),
                     max_tokens=prompt_data.get("max_tokens", 1024))
                 self._log_meta(task_id, "orchestrator_plan_response", {
-                    "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:8000],
+                    "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 })
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
@@ -744,15 +763,15 @@ class SomaticResearchOrchestrator:
             llm = getattr(self._state, "llm_provider", None)
             if llm:
                 self._log_meta(task_id, "orchestrator_synthesize_prompt", {
-                    "system_prompt": system_text[:8000],
-                    "user_prompt": user_text[:8000],
+                    "system_prompt": system_text[:self._TRUNC_META_LOG],
+                    "user_prompt": user_text[:self._TRUNC_META_LOG],
                 })
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True, fallback_value={"answer": fallback},
                     temperature=prompt_data.get("temperature", 0.4),
                     max_tokens=prompt_data.get("max_tokens", 3072))
                 self._log_meta(task_id, "orchestrator_synthesize_response", {
-                    "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:8000],
+                    "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 })
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
@@ -766,207 +785,6 @@ class SomaticResearchOrchestrator:
         return fallback
 
     # ── Tools ───────────────────────────────────────────────────────
-
-    async def _tool_web_search(self, query: str, n: int = 3) -> list[dict]:
-        """Search DuckDuckGo and return top N result URLs + snippets.
-
-        Strategy: Crawl4AI → extract structured links from result object.
-        Falls back to Jina + markdown URL pattern extraction.
-        """
-        try:
-            from backend.services.sensory_affordances import is_crawl4ai_available
-
-            search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-
-            if is_crawl4ai_available():
-                try:
-                    results = await self._search_via_crawl4ai_structured(search_url, n)
-                    if results:
-                        return results
-                except (RuntimeError, Exception) as e:
-                    logger.warning("Crawl4AI search failed, falling back: %s", str(e)[:80])
-
-            # Jina fallback — get raw content and extract URLs
-            raw = await self._fetch_via_jina(search_url)
-            if raw:
-                return self._extract_urls_from_content(raw, n, query)
-
-            return []
-        except Exception as e:
-            logger.warning("Web search failed for '%s': %s", query[:60], e)
-            return []
-
-    async def _search_via_crawl4ai_structured(self, search_url: str, n: int) -> list[dict]:
-        """Use Crawl4AI's structured link extraction instead of regex."""
-        try:
-            from crawl4ai import AsyncWebCrawler
-            import re
-            from urllib.parse import parse_qs, urlparse
-
-            def clean_ddg_url(url: str) -> str:
-                """Extract real URL from DuckDuckGo redirect links (uddg= parameter)."""
-                if "uddg=" in url:
-                    try:
-                        qs = parse_qs(urlparse(url).query)
-                        real = qs.get("uddg", [""])[0]
-                        if real and real.startswith("http"):
-                            return real
-                    except Exception:
-                        pass
-                return url
-
-            async with AsyncWebCrawler() as crawler:
-                result = await crawler.arun(url=search_url)
-
-                if not result:
-                    return []
-
-                results = []
-                seen_urls = set()
-
-                # Strategy 1: Crawl4AI's structured links (both external and internal)
-                if result.links:
-                    external = result.links.get("external", [])
-                    internal = result.links.get("internal", [])
-                    for link in external + internal:
-                        href = link.get("href", "")
-                        if not href.startswith("http"):
-                            continue
-                        # Clean DDG redirect URLs
-                        real_url = clean_ddg_url(href)
-                        if any(skip in real_url for skip in ["duckduckgo.com", "spread.", "y.js", ".js?", ".css"]):
-                            continue
-                        if real_url in seen_urls:
-                            continue
-                        seen_urls.add(real_url)
-                        title = link.get("text", "") or link.get("title", "") or real_url[:80]
-                        results.append({
-                            "url": real_url,
-                            "title": title[:120],
-                            "snippet": link.get("description", link.get("snippet", ""))[:200],
-                        })
-                        if len(results) >= n:
-                            break
-
-                # Strategy 2: Extract markdown links + clean DDG redirects
-                if not results and result.markdown:
-                    md_links = re.findall(r'\[([^\]]{3,120})\]\((https?://[^\)]+)\)', result.markdown)
-                    for title, url in md_links:
-                        real_url = clean_ddg_url(url)
-                        if any(skip in real_url for skip in ["duckduckgo.com", "spread.", ".js", ".css"]):
-                            continue
-                        if real_url in seen_urls:
-                            continue
-                        seen_urls.add(real_url)
-                        title_clean = re.sub(r'<[^>]+>', '', title).strip()
-                        results.append({"url": real_url, "title": title_clean[:120], "snippet": ""})
-                        if len(results) >= n:
-                            break
-
-                # Strategy 3: Extract all http URLs from raw text
-                if not results and result.markdown:
-                    bare_urls = re.findall(r'https?://[^\s<>"\'\)\]\#]{10,300}', result.markdown)
-                    for url in bare_urls:
-                        real_url = clean_ddg_url(url)
-                        if any(skip in real_url for skip in ["duckduckgo", "spread.", ".js", ".css", "schema.org"]):
-                            continue
-                        if real_url in seen_urls:
-                            continue
-                        seen_urls.add(real_url)
-                        results.append({"url": real_url, "title": real_url[:80], "snippet": ""})
-                        if len(results) >= n:
-                            break
-
-                # Strategy 4: Fallback to _extract_urls_from_content
-                if not results and result.markdown:
-                    results = self._extract_urls_from_content(result.markdown, n)
-
-                return results[:n]
-        except ImportError:
-            return []
-        except Exception as e:
-            logger.warning("Crawl4AI structured search exception: %s", str(e)[:120])
-            return []
-
-    async def _fetch_via_jina(self, url: str) -> str:
-        from backend.services.sensory_affordances import select_and_fetch
-        return (await select_and_fetch(url_or_query=url, task_type="single_url",
-                                       config=self._state.config)) or ""
-
-    def _extract_urls_from_content(self, content: str, n: int, query: str = "") -> list[dict]:
-        """Extract URLs from markdown or HTML content.
-
-        Handles both formats:
-        - Markdown: [title](url), bare https:// URLs
-        - HTML: <a href="url">title</a>
-        - DuckDuckGo redirect URLs: extract uddg= parameter
-        - Also parses DuckDuckGo result snippets
-        """
-        import re
-        from urllib.parse import parse_qs, urlparse
-
-        def clean_ddg_url(url: str) -> str:
-            """Extract real URL from DuckDuckGo redirect links."""
-            if "duckduckgo.com/l/" in url or "uddg=" in url:
-                try:
-                    parsed = urlparse(url)
-                    qs = parse_qs(parsed.query)
-                    real = qs.get("uddg", qs.get("u", qs.get("url", [""])))[0]
-                    if real and real.startswith("http"):
-                        return real
-                except Exception:
-                    pass
-            return url
-
-        results = []
-
-        # Strategy 1: Markdown link pattern [text](url)
-        md_links = re.findall(r'\[([^\]]+)\]\((https?://[^\)]+)\)', content)
-        for title, url in md_links[:n * 3]:
-            if "duckduckgo.com" not in url and "localhost" not in url:
-                # Clean title — remove HTML/MD artifacts
-                title_clean = re.sub(r'<[^>]+>', '', title).strip()
-                results.append({"url": url, "title": title_clean[:120], "snippet": ""})
-
-        # Strategy 2: HTML <a href="url"> pattern
-        if not results:
-            html_links = re.findall(r'<a[^>]+href="(https?://[^"]+)"[^>]*>(.*?)</a>', content, re.IGNORECASE | re.DOTALL)
-            for url, title in html_links[:n * 3]:
-                if "duckduckgo.com" not in url and "localhost" not in url:
-                    results.append({
-                        "url": url,
-                        "title": re.sub(r'<[^>]+>', '', title).strip()[:120],
-                        "snippet": "",
-                    })
-
-        # Strategy 3: Bare URLs in text (last resort)
-        if not results:
-            bare_urls = re.findall(r'(?:^|\s)(https?://[^\s<>"]+?)(?:$|\s|[,.?!;:])', content)
-            for url in bare_urls[:n]:
-                if "duckduckgo.com" not in url and "localhost" not in url:
-                    results.append({"url": url, "title": url[:80], "snippet": ""})
-
-        # Strategy 4: DuckDuckGo result snippet lines — "Title" followed by description then URL
-        if not results:
-            # DDG in markdown often produces lines like:
-            # ### [Title](redirect-url) or **Title** followed by link
-            lines = content.split("\n")
-            for i, line in enumerate(lines):
-                if line.strip() and not line.startswith("#") and "http" not in line:
-                    # Look ahead for URL in next 3 lines
-                    for j in range(i + 1, min(i + 4, len(lines))):
-                        url_match = re.search(r'(https?://[^\s<>"]+)', lines[j])
-                        if url_match and "duckduckgo" not in url_match.group(1):
-                            title = re.sub(r'^[\d.\s*#>-]+', '', line).strip()[:120]
-                            if title and title != query:
-                                results.append({
-                                    "url": url_match.group(1),
-                                    "title": title,
-                                    "snippet": "",
-                                })
-                            break
-
-        return results[:n]
 
     async def _tool_parallel_parse(self, task_id, step_id, search_results, plan_id) -> list[dict]:
         """Fetch all search result URLs in parallel, saving HTML to disk. Skips already-fetched URLs."""
@@ -983,7 +801,7 @@ class SomaticResearchOrchestrator:
                 continue
             new_urls.append(r)
         if skipped:
-            logger.info("Skipping %d already-fetched URLs for task %s", skipped, task_id[:8])
+            logger.info("Skipping %d already-fetched URLs — %s", skipped, self._log_context(task_id, "parsing"))
 
         async def fetch_one(url: str, title: str) -> Optional[dict]:
             async with sem:
@@ -1011,15 +829,15 @@ class SomaticResearchOrchestrator:
                             safe_name = f"page_{uuid.uuid4().hex[:8]}.html"
                             file_path = str(task_dir / safe_name)
                             with open(file_path, "w", encoding="utf-8") as f:
-                                f.write(content[:50000])
+                                f.write(content[:self._TRUNC_HTML_ARCHIVE])
                         except Exception:
-                            pass
+                            logger.warning("Failed to archive HTML for %s", url[:80])
 
                     result_id = str(uuid.uuid4())
                     self.step_result_repo.create({
                         "id": result_id, "step_id": step_id, "task_id": task_id,
                         "source_url": url, "source_title": title,
-                        "raw_content": content[:20000],
+                        "raw_content": content[:self._TRUNC_STEP_RESULT],
                         "raw_file_path": file_path,
                     })
                     # Also create a scraped_asset so Assets tab shows it
@@ -1031,12 +849,12 @@ class SomaticResearchOrchestrator:
                                 "branch_id": step_id,  # use step_id as branch_id for linkage
                                 "task_id": task_id,
                                 "url": url,
-                                "raw_markdown": content[:10000],
+                                "raw_markdown": content[:self._TRUNC_SCRAPED_ASSET],
                                 "relevance_score": 0.5,
                                 "novelty_score": 0.3,
                             })
                     except Exception:
-                        pass
+                        logger.warning("Failed to create scraped asset for %s", url[:80])
                     return {"id": result_id, "url": url, "title": title, "content": content}
                 except Exception as e:
                     logger.warning("Fetch failed for %s: %s", url[:80], e)
@@ -1067,7 +885,7 @@ class SomaticResearchOrchestrator:
                                     s["id"], json.dumps(result, ensure_ascii=False),
                                 )
                     except Exception:
-                        pass
+                        logger.warning("Failed to update step result analysis for %s", step_id[:8])
                     return {"source_url": source["url"], "source_title": source.get("title"),
                             "result": result}
                 except Exception as e:
@@ -1085,7 +903,7 @@ class SomaticResearchOrchestrator:
         user_text = prompt_data.get("user", "").format(
             query=query, goal=goal, depth=depth, max_depth=max_depth,
             parent_findings="(orchestrator — multi-source analysis)",
-            scraped_content=content[:6000],
+            scraped_content=content[:self._TRUNC_LLM_CONTENT],
         )
         if prompt_data.get("anti_mastery"):
             system_text = self._anti_mastery(system_text)
@@ -1099,6 +917,7 @@ class SomaticResearchOrchestrator:
             if persona:
                 system_text = persona + "\n\n" + system_text
         except Exception:
+            logger.warning("Failed to build research context persona for node digest")
             pass
 
         # Log prompt
