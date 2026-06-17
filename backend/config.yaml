@@ -339,7 +339,7 @@ sensory_affordances:
   jina_reader:
     enabled: true
     api_base: "https://r.jina.ai"
-    timeout_seconds: 15
+    timeout_seconds: 25
   firecrawl:
     enabled: false
     api_base: "https://api.firecrawl.dev/v1"

@@ -1123,15 +1123,19 @@ class SomaticResearchOrchestrator:
             async with sem:
                 try:
                     from backend.services.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
-                    if is_crawl4ai_available():
+                    # Try Jina Reader first (cloud service, handles anti-bot better),
+                    # then Crawl4AI as local fallback
+                    content = await select_and_fetch(url_or_query=url, task_type="single_url",
+                                                     config=self._state.config)
+                    # If tiered gave empty content but Crawl4AI is available, try it directly
+                    if not content and is_crawl4ai_available():
                         try:
                             content = await fetch_via_crawl4ai(url, config=self._state.config)
                         except RuntimeError:
-                            content = await select_and_fetch(url_or_query=url, task_type="single_url",
-                                                             config=self._state.config)
-                    else:
-                        content = await select_and_fetch(url_or_query=url, task_type="single_url",
-                                                         config=self._state.config)
+                            pass
+                    if not content:
+                        logger.warning("All backends returned empty content for %s", url[:80])
+                        return None
                     if not content:
                         return None
 

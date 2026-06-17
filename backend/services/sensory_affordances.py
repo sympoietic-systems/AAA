@@ -113,12 +113,15 @@ async def fetch_via_crawl4ai(
 ) -> str:
     """Crawl4AI — self-hosted, Playwright-based web scraper.
 
+    Uses robust browser config: random user agents, network-idle wait,
+    user simulation, overlay removal, magic extraction mode.
+    Falls back to simpler config if the first attempt returns no content.
+
     Setup: pip install crawl4ai && python -m playwright install
     Cost: Your own compute — no external API bills.
-    Best for: Privacy-sensitive deployments, offline mode.
     """
     cfg = _get_crawl4ai_config(config or {})
-    timeout = cfg.get("timeout_seconds", 30)
+    timeout_sec = cfg.get("timeout_seconds", 30)
 
     if not is_crawl4ai_available():
         raise BackendUnavailableError(
@@ -127,11 +130,42 @@ async def fetch_via_crawl4ai(
         )
 
     try:
-        from crawl4ai import AsyncWebCrawler
+        from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
 
-        async with AsyncWebCrawler() as crawler:
-            result = await crawler.arun(url=url)
-            return result.markdown if result else ""
+        browser_cfg = BrowserConfig(
+            headless=True,
+            java_script_enabled=True,
+            ignore_https_errors=True,
+            user_agent_mode="random",
+        )
+
+        run_cfg = CrawlerRunConfig(
+            cache_mode=CacheMode.BYPASS,
+            wait_until="networkidle",
+            delay_before_return_html=2.0,
+            page_timeout=int(timeout_sec * 1000),
+            simulate_user=True,
+            magic=True,
+            remove_overlay_elements=True,
+            scan_full_page=True,
+            word_count_threshold=10,
+        )
+
+        async with AsyncWebCrawler(config=browser_cfg) as crawler:
+            result = await crawler.arun(url=url, config=run_cfg)
+            if result and result.markdown and len(result.markdown.strip()) > 50:
+                return result.markdown
+
+            # Fallback: simpler config if magic/wait didn't work
+            logger.info("Crawl4AI primary attempt returned sparse content for %s, retrying with basic config", url[:80])
+            fallback_cfg = CrawlerRunConfig(
+                cache_mode=CacheMode.BYPASS,
+                wait_until="load",
+                page_timeout=int(timeout_sec * 1000),
+            )
+            result = await crawler.arun(url=url, config=fallback_cfg)
+            return result.markdown if result and result.markdown else ""
+
     except ImportError:
         raise BackendUnavailableError("Crawl4AI import failed despite availability check")
     except Exception as e:
