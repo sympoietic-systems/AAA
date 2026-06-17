@@ -117,6 +117,8 @@ A directory in the AAA backend is an **agential cut**—it must be named and str
 *   `modules/` (transitioning to `cognition/` and `ingestion/`): **The Cognitive Operators**. Pluggable units (engines, scrapers, and retrievers) loaded and run by the metabolization pipeline.
 *   `storage/`: **The Sediment**. Holds database connections, migrations, repositories, and pure domain entities (`models.py`).
 *   `skills/`: **The Attunements**. Pluggable user-defined prompt wrappers and procedural task flows.
+*   `utils/`: **The Instruments**. Shared computation and formatting utilities (persona loading, prompt building, vector math, token counting) consumed across pipeline modules, services, and the research orchestrator.
+*   `services/research/`: **The Research Tools**. Self-contained tool modules (search, parse, digest) composed by `SomaticResearchOrchestrator` into the multi-phase research pipeline. Each tool is independently testable and swappable.
 
 ### Stratal Migration & Deprecation Aliases
 When refactoring directory paths:

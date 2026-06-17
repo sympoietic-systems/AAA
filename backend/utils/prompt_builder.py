@@ -67,7 +67,7 @@ async def compute_structural_signature(
                 from backend.modules.structural_engine import LexiconScorer
                 sig = LexiconScorer().score(text)
             except Exception:
-                logger.debug("LLM structural scorer failed, falling back to lexicon", exc_info=True)
+                logger.exception("LLM structural scorer failed, falling back to lexicon")
                 from backend.modules.structural_engine import LexiconScorer
                 sig = LexiconScorer().score(text)
         else:
@@ -79,7 +79,7 @@ async def compute_structural_signature(
             sig = sig / norm
         return sig.astype(np.float32)
     except Exception as e:
-        logger.debug("Failed to compute structural signature: %s", e)
+        logger.exception("Failed to compute structural signature: %s", e)
         return None
 
 
@@ -165,6 +165,7 @@ def build_attractor_window(
                         return -1.0
                     return compute_cosine_similarity(signature_16d, bv)
                 except Exception:
+                    logger.warning("Cosine similarity failed for belief resonance scoring")
                     return -1.0
 
             for i, b in enumerate(sorted(resonance_pool, key=_sim, reverse=True)[:2]):
@@ -186,7 +187,7 @@ def build_attractor_window(
         ]
 
     except Exception as e:
-        logger.debug("Failed to build attractor window: %s", e)
+        logger.exception("Failed to build attractor window: %s", e)
         return []
 
 
@@ -225,7 +226,7 @@ def match_on_demand_skills(
                             "score": float(sim),
                         }
                 except Exception:
-                    pass
+                    logger.warning("Cosine similarity failed for skill '%s' during on-demand matching", skill.name)
 
         # Strategy C: keyword triggers
         text_lower = (input_text or "").lower()
@@ -254,7 +255,7 @@ def match_on_demand_skills(
         return sorted_candidates[:max_matched]
 
     except Exception as e:
-        logger.debug("Failed to match on-demand skills: %s", e)
+        logger.exception("Failed to match on-demand skills: %s", e)
         return []
 
 
@@ -443,7 +444,7 @@ def format_commitments_block(
         return "\n\n".join(sections) if sections else ""
 
     except Exception as e:
-        logger.debug("Failed to build commitments block: %s", e)
+        logger.exception("Failed to build commitments block: %s", e)
         return ""
 
 
@@ -453,6 +454,7 @@ def format_identity_block(protocol_key: str) -> str:
         from backend.utils.persona_loader import load_persona_for_context
         return load_persona_for_context(protocol_key)
     except Exception:
+        logger.warning("Failed to load identity block for protocol_key '%s'", protocol_key)
         return ""
 
 
