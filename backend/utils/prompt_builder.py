@@ -11,6 +11,7 @@ The same functions are used by:
 
 from __future__ import annotations
 
+import asyncio
 import json as _json
 import logging
 from typing import Any
@@ -45,19 +46,30 @@ def split_skills(skill_repo: Any) -> tuple[list[Any], list[Any]]:
 async def compute_structural_signature(
     text: str,
     llm_provider: Any = None,
+    llm_timeout: float = 5.0,
 ) -> np.ndarray | None:
     """16D structural signature — same CompositeStructuralScorer as the pipeline.
 
     When llm_provider is available: CompositeStructuralScorer
       (lexicon 25% + topology 25% + LLM 50%) — async, identical to StructuralScorerModule.
+      If the LLM call exceeds llm_timeout (default 5s), falls back to lexicon-only.
 
-    When llm_provider is None: LexiconScorer only — sync, fast fallback.
+    When llm_provider is None: LexiconScorer only — sync, fast.
     """
     try:
         if llm_provider is not None:
             from backend.modules.structural_engine import CompositeStructuralScorer
             scorer = CompositeStructuralScorer(llm_provider=llm_provider)
-            sig = await scorer.score_async(text)
+            try:
+                sig = await asyncio.wait_for(scorer.score_async(text), timeout=llm_timeout)
+            except asyncio.TimeoutError:
+                logger.debug("LLM structural scorer timed out after %.1fs, falling back to lexicon", llm_timeout)
+                from backend.modules.structural_engine import LexiconScorer
+                sig = LexiconScorer().score(text)
+            except Exception:
+                logger.debug("LLM structural scorer failed, falling back to lexicon", exc_info=True)
+                from backend.modules.structural_engine import LexiconScorer
+                sig = LexiconScorer().score(text)
         else:
             from backend.modules.structural_engine import LexiconScorer
             sig = LexiconScorer().score(text)

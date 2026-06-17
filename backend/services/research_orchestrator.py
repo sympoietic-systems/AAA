@@ -159,9 +159,12 @@ class SomaticResearchOrchestrator:
         except Exception:
             pass
 
-        # ── 2. Compute structural signature (lexicon-only for preview/speed) ──
+        # ── 2. Compute structural signature (CompositeScorer when provider available) ──
         sig_16d = (
-            await compute_structural_signature(objective)
+            await compute_structural_signature(
+                objective,
+                llm_provider=getattr(self._state, "llm_provider", None),
+            )
             if objective else None
         )
 
@@ -297,7 +300,7 @@ class SomaticResearchOrchestrator:
         return {"phase": phase, "note": "inputs available after previous step completes"}
 
     async def _preview_plan_inputs(self, task: dict) -> dict:
-        """Build system + user prompts for planning without calling LLM."""
+        """Build system + user prompts for planning."""
         objective = task["objective"]
         max_depth = task["max_depth"]
         budget = task["budget_limit_usd"]
