@@ -518,7 +518,17 @@ const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: {
   const handleRerunStep = async () => {
     setLogLoading(true)
     try { await executeStep(taskId, selected.step_type) } catch {}
-    // Refresh meta-log and steps after rerun
+    // Refetch steps to get the new step ID from the rerun
+    try {
+      const fresh = await getTaskSteps(taskId)
+      if (fresh?.steps) {
+        const latest = [...fresh.steps].reverse().find(s => s.step_type === selected.step_type)
+        if (latest) {
+          getTaskMetaLog(taskId, latest.id).then(setMetaLog).catch(() => {}).finally(() => setLogLoading(false))
+          return
+        }
+      }
+    } catch {}
     getTaskMetaLog(taskId, selectedId).then(setMetaLog).catch(() => {}).finally(() => setLogLoading(false))
   }
 
