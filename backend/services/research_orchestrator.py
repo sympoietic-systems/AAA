@@ -159,12 +159,9 @@ class SomaticResearchOrchestrator:
         except Exception:
             pass
 
-        # ── 2. Compute structural signature (CompositeScorer when provider available) ──
+        # ── 2. Compute structural signature (lexicon-only for preview/speed) ──
         sig_16d = (
-            await compute_structural_signature(
-                objective,
-                llm_provider=getattr(self._state, "llm_provider", None),
-            )
+            await compute_structural_signature(objective)
             if objective else None
         )
 
