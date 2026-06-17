@@ -473,7 +473,8 @@ const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: {
   )
   const otherEntries = entries.filter(e => !inputEntries.includes(e) && !responseEntries.includes(e))
 
-  // Parse meta-log responses into structured result per step type
+  // Parse meta-log responses into structured result per step type.
+  // Falls back to data.plan (research_plans table) when meta-log is unavailable.
   const parsedResult = useMemo(() => {
     const r: { queries: string[], goal: string, completeness: number, answer: string, confidence: number, learnings: string[], query: string, urls: {url:string,title:string}[] } =
       { queries: [], goal: "", completeness: 0, answer: "", confidence: 0, learnings: [], query: "", urls: [] }
@@ -503,8 +504,16 @@ const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: {
         }
       } catch { /* skip unparseable */ }
     }
+    // Fallback: read plan from research_plans table when meta-log is empty
+    if (!r.goal && !r.queries.length && data?.plan?.plan_json) {
+      try {
+        const plan = JSON.parse(data.plan.plan_json)
+        r.goal = plan.goal || ""
+        r.queries = plan.search_queries || []
+      } catch { /* skip */ }
+    }
     return r
-  }, [responseEntries])
+  }, [responseEntries, data])
 
   const handleRerunStep = async () => {
     await doActionAndReload(() => executeStep(taskId, selected.step_type))
