@@ -46,11 +46,11 @@ class ResearchContextBuilder:
         identity = format_identity_block("research_analysis")
         sections.append(identity if identity else self._fallback_identity())
 
-        # 2. Signature (CompositeScorer when provider available)
+        # 2. Signature (CompositeScorer via structural_provider)
         sig = (
             await compute_structural_signature(
                 node_query,
-                llm_provider=getattr(self._state, "llm_provider", None),
+                llm_provider=getattr(self._state, "structural_provider", None),
             )
             if node_query else None
         )
