@@ -282,9 +282,12 @@ async def execute_step(task_id: str, request: Request):
     if task["status"] in ("completed", "failed"):
         manager.rerun_task(task_id)
         task = manager.get_task(task_id)  # refresh after rerun
+        # Always init orchestrator for a rerun task
+        manager.transition(task_id, "active")
+        manager.orchestrator.init_task(task_id)
 
     # If queued and in manual+orchestrator mode, init + run first step
-    if task["status"] == "queued":
+    elif task["status"] == "queued":
         orch_config = state.config.get("research_orchestrator", {})
         if orch_config.get("enabled") and manager.config.get("manual_mode", False):
             manager.transition(task_id, "active")
