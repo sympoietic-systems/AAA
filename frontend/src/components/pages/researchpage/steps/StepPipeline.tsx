@@ -21,10 +21,9 @@ interface QueryGroup {
   queryIndex: number
 }
 
-const CYCLE_PHASES = ["search", "parse", "digest"] as const
+const CYCLE_PHASES = ["search", "parallel_parse", "digest"] as const
 const CYCLE_ORCH_PHASES = ["searching", "parsing", "digesting"]
 const FINAL_PHASES = ["reflect", "evaluate", "synthesize"] as const
-const FINAL_ORCH_PHASES = ["reflecting", "evaluating", "synthesizing"]
 
 function PipelineRow({ label, stepId, isDone, isCurrent, isSelected, onSelect, onDoStep, stepping }: {
   label: string; stepId?: string | null; isDone: boolean; isCurrent: boolean; isSelected: boolean
