@@ -1,6 +1,5 @@
 import React, { memo } from "react"
 import type { StepPreview } from "../../../../api/research"
-import { SectionDivider } from "../shared/SectionDivider"
 import { JsonBlock } from "../../../UI"
 import { LogEntries } from "./LogEntries"
 
@@ -10,13 +9,68 @@ interface StepInputTabProps {
   reinitLoading: boolean
   reinitLiveInput: () => void
   inputEntries: any[]
+  /** URLs from the previous step (search → parse, parse → digest) */
+  parentInputUrls?: { url: string; title: string }[]
+  /** The current step's type */
+  stepType?: string
 }
 
 export const StepInputTab = memo(function StepInputTab({
   stepPhase, liveInput, reinitLoading, reinitLiveInput, inputEntries,
+  parentInputUrls, stepType,
 }: StepInputTabProps) {
+  const isParse = stepType === "parallel_parse"
+  const isDigest = stepType === "digest"
+
   return (
     <div className="space-y-3">
+      {/* ── Parse input: URLs to fetch ── */}
+      {isParse && parentInputUrls && parentInputUrls.length > 0 && (
+        <div>
+          <div className="text-[#555] text-[9px] mb-1 uppercase">
+            urls to parse ({parentInputUrls.length})
+          </div>
+          <div className="space-y-0.5 max-h-48 overflow-y-auto">
+            {parentInputUrls.map((u, i) => (
+              <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                <span className="text-[#555]">{i+1}.</span>{" "}
+                <a href={u.url} target="_blank" rel="noopener noreferrer"
+                  className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
+                  {u.title || u.url?.slice(0, 100) || "—"}
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {isParse && (!parentInputUrls || parentInputUrls.length === 0) && (
+        <div className="text-[#444] italic text-[9px]">no urls from previous search step</div>
+      )}
+
+      {/* ── Digest input: pages to analyze ── */}
+      {isDigest && parentInputUrls && parentInputUrls.length > 0 && (
+        <div>
+          <div className="text-[#555] text-[9px] mb-1 uppercase">
+            pages to digest ({parentInputUrls.length})
+          </div>
+          <div className="space-y-0.5 max-h-48 overflow-y-auto">
+            {parentInputUrls.map((u, i) => (
+              <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                <span className="text-[#555]">{i+1}.</span>{" "}
+                <a href={u.url} target="_blank" rel="noopener noreferrer"
+                  className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
+                  {u.title || u.url?.slice(0, 100) || "—"}
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {isDigest && (!parentInputUrls || parentInputUrls.length === 0) && (
+        <div className="text-[#444] italic text-[9px]">no parsed pages from previous parse step</div>
+      )}
+
+      {/* ── Live input preview (for LLM steps: plan/search/reflect/digest/synthesize) ── */}
       {stepPhase && (
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -43,14 +97,14 @@ export const StepInputTab = memo(function StepInputTab({
         </div>
       )}
 
+      {/* ── Logged inputs (prompts from meta-log) ── */}
       {inputEntries.length > 0 && (
         <div>
-          <SectionDivider />
-          <div className="text-[#555] text-[9px] mb-1">logged inputs ({inputEntries.length}):</div>
+          <div className="text-[#444] uppercase text-[8px] mb-1 tracking-wider">logged inputs ({inputEntries.length}):</div>
           <LogEntries entries={inputEntries} loading={false} emptyMsg="" />
         </div>
       )}
-      {inputEntries.length === 0 && !stepPhase && (
+      {inputEntries.length === 0 && !stepPhase && !(isParse || isDigest) && (
         <div className="text-[#444] italic text-[9px]">no input data for this step</div>
       )}
     </div>

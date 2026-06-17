@@ -22,6 +22,25 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   const selected = steps.find(s => s.id === selectedId)
   if (!selected) return null
   const selectedResults = data ? (data.results_by_step[selectedId] || []) : []
+
+  // Previous step context — for parse (show search URLs) and digest (show parsed pages)
+  const prevStepId = useMemo(() => {
+    if (!data || !selected) return null
+    const chrono = [...data.steps] // chronological order
+    const idx = chrono.findIndex(s => s.id === selectedId)
+    if (idx <= 0) return null
+    // Find the actual predecessor (skip plan step for cycle phases)
+    let prevIdx = idx - 1
+    while (prevIdx >= 0 && chrono[prevIdx].step_type === "plan") prevIdx--
+    return prevIdx >= 0 ? chrono[prevIdx].id : null
+  }, [data, selectedId, selected])
+  const prevStepResults = prevStepId ? (data?.results_by_step[prevStepId] || []) : []
+  // For parse: the search step's results are the URLs to parse
+  // For digest: the parse step's results are the pages to digest
+  const parentInputUrls = selected.step_type === "parallel_parse" || selected.step_type === "digest"
+    ? prevStepResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
+    : []
+
   const [tab, setTab] = useState<DetailTab>("result")
   const [metaLog, setMetaLog] = useState<MetaLogResponse | null>(null)
   const [logLoading, setLogLoading] = useState(false)
@@ -149,6 +168,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           parsedResult={parsedResult}
           responseEntries={responseEntries}
           inputEntries={inputEntries}
+          parentInputUrls={parentInputUrls}
         />
       )}
 
@@ -159,6 +179,8 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           reinitLoading={reinitLoading}
           reinitLiveInput={reinitLiveInput}
           inputEntries={inputEntries}
+          parentInputUrls={parentInputUrls}
+          stepType={selected.step_type}
         />
       )}
 

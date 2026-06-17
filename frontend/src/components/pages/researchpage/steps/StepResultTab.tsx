@@ -1,4 +1,4 @@
-import React, { memo } from "react"
+import React, { memo, useMemo } from "react"
 import type { ResearchStep, ResearchStepResult } from "../../../../api/research"
 import { JsonBlock } from "../../../UI"
 
@@ -15,18 +15,45 @@ interface StepResultTabProps {
   }
   responseEntries: any[]
   inputEntries?: any[]
+  parentInputUrls?: { url: string; title: string }[]
+}
+
+/** Classify a parse result by its raw_content. */
+function parseStatus(content: string | null | undefined): { icon: string; label: string; color: string } {
+  if (!content || content.trim().length === 0) return { icon: "✗", label: "empty", color: "#ef4444" }
+  const c = content.trim()
+  if (c.length < 200) return { icon: "○", label: "too short", color: "#f59e0b" }
+  const junkPatterns = ["security check required", "cloudflare", "enable javascript", "please complete the security check"]
+  if (junkPatterns.some(p => c.slice(0, 1000).toLowerCase().includes(p))) return { icon: "⚠", label: "blocked", color: "#f97316" }
+  if (/^(skip|close|open navigation|sign in|sign up)/i.test(c.slice(0, 100).trim())) return { icon: "⛔", label: "paywall", color: "#f97316" }
+  return { icon: "✓", label: "ok", color: "#4ade80" }
 }
 
 export const StepResultTab = memo(function StepResultTab({
   selected, selectedResults, parsedResult, responseEntries, inputEntries,
 }: StepResultTabProps) {
-  // Extract search queries from orchestrator_search events
   const searchQueries = inputEntries
     ?.filter(e => e.event_type === "orchestrator_search")
     .map(e => ({
       query: (e.event_data as any)?.query || "",
       resultsCount: (e.event_data as any)?.results_count ?? 0,
     })) ?? []
+
+  // ── Digest: aggregate learnings/gaps/followups across all sources ──
+  const digestSummary = useMemo(() => {
+    if (selected.step_type !== "digest") return null
+    const allLearnings: string[] = []
+    const allGaps: string[] = []
+    const allFollowups: string[] = []
+    for (const r of selectedResults) {
+      let a: any = null
+      try { a = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
+      if (a?.learnings) allLearnings.push(...a.learnings)
+      if (a?.gaps) allGaps.push(...a.gaps)
+      if (a?.followups) allFollowups.push(...a.followups)
+    }
+    return { learnings: allLearnings, gaps: allGaps, followups: allFollowups }
+  }, [selectedResults, selected.step_type])
 
   return (
     <div className="space-y-2">
@@ -65,7 +92,32 @@ export const StepResultTab = memo(function StepResultTab({
         </div>
       )}
 
-      {/* Plan: generated queries */}
+      {/* ── Parse: per-URL status ── */}
+      {selected.step_type === "parallel_parse" && selectedResults.length > 0 && (
+        <div className="border-t border-[#1a1a1a] pt-2 space-y-1">
+          <div className="text-[#555] text-[8px] uppercase mb-1">parsed pages ({selectedResults.length})</div>
+          {selectedResults.map(r => {
+            const st = parseStatus(r.raw_file_path ? "ok" : null)
+            return (
+              <div key={r.id} className="pl-2 flex items-start gap-1.5 py-0.5">
+                <span style={{color: st.color}} className="text-[9px] shrink-0">{st.icon}</span>
+                <div className="min-w-0">
+                  <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
+                    className="text-[#94a3b8] hover:text-[#c4b5fd] underline break-all text-[9px]">
+                    {r.source_title || r.source_url?.slice(0, 100) || "—"}
+                  </a>
+                  {r.raw_file_path && <div className="text-[#555] text-[7px] truncate">saved: {r.raw_file_path}</div>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {selected.step_type === "parallel_parse" && selectedResults.length === 0 && (
+        <div className="text-[#444] italic text-[9px] border-t border-[#1a1a1a] pt-2">no parsed results</div>
+      )}
+
+      {/* ── Plan: generated queries ── */}
       {selected.step_type === "plan" && (parsedResult.queries.length > 0 || parsedResult.goal) && (
         <div className="border-t border-[#1a1a1a] pt-2 space-y-1">
           {parsedResult.goal && <div><div className="text-[#555] text-[8px]">goal:</div><div className="text-[#94a3b8] text-[9px] pl-2">{parsedResult.goal}</div></div>}
@@ -76,32 +128,99 @@ export const StepResultTab = memo(function StepResultTab({
         </div>
       )}
 
-      {/* Digest/Parse: per-source learnings */}
-      {selected.step_type !== "search" && selectedResults.length > 0 && selectedResults.map(r => {
-        let analysis: any = null
-        try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
-        return (
-          <div key={r.id} className="border-t border-[#1a1a1a] pt-2">
-            <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
-              className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all font-bold">{r.source_title || r.source_url?.slice(0, 100) || "—"}</a>
-            {analysis?.learnings?.length > 0 && <div className="mt-1">
-              <div className="text-[#555] text-[9px] mb-0.5">learnings:</div>
-              {analysis.learnings.map((l: string, li: number) => (
-                <div key={li} className="text-[#888] text-[9px] pl-2 leading-relaxed">· {l}</div>
-              ))}
-            </div>}
-            {analysis?.gaps?.length > 0 && <div className="mt-1">
-              <div className="text-[#555] text-[9px] mb-0.5">gaps:</div>
-              {analysis.gaps.map((g: string, gi: number) => (
-                <div key={gi} className="text-[#f59e0b] text-[9px] pl-2 leading-relaxed">◇ {g}</div>
-              ))}
-            </div>}
-            {r.raw_file_path && <div className="text-[#555] text-[8px] mt-1">saved: {r.raw_file_path}</div>}
+      {/* ── Digest: per-source analysis + combined summary ── */}
+      {selected.step_type === "digest" && selectedResults.length > 0 && (
+        <>
+          <div className="border-t border-[#1a1a1a] pt-2 space-y-2">
+            <div className="text-[#555] text-[8px] uppercase">per-source analysis ({selectedResults.length})</div>
+            {selectedResults.map(r => {
+              let analysis: any = null
+              try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
+              const hasContent = analysis?.learnings?.length > 0 || analysis?.gaps?.length > 0
+              const label = hasContent ? `${analysis.learnings?.length || 0} learnings` : "no content"
+              return (
+                <details key={r.id} className="pl-2 border-l border-[#222]">
+                  <summary className="text-[#94a3b8] text-[9px] cursor-pointer hover:text-[#c4b5fd] break-all flex items-center gap-1">
+                    <span className="truncate">{r.source_title || r.source_url?.slice(0, 80) || "—"}</span>
+                    <span className="text-[#555] text-[8px] shrink-0">({label})</span>
+                  </summary>
+                  {analysis?.learnings?.length > 0 && <div className="mt-1">
+                    <div className="text-[#555] text-[8px] mb-0.5">learnings:</div>
+                    {analysis.learnings.map((l: string, li: number) => (
+                      <div key={li} className="text-[#888] text-[9px] pl-2 leading-relaxed">· {l}</div>
+                    ))}
+                  </div>}
+                  {analysis?.gaps?.length > 0 && <div className="mt-1">
+                    <div className="text-[#555] text-[8px] mb-0.5">gaps:</div>
+                    {analysis.gaps.map((g: string, gi: number) => (
+                      <div key={gi} className="text-[#f59e0b] text-[9px] pl-2 leading-relaxed">◇ {g}</div>
+                    ))}
+                  </div>}
+                  {analysis?.followups?.length > 0 && <div className="mt-1">
+                    <div className="text-[#555] text-[8px] mb-0.5">followups:</div>
+                    {analysis.followups.map((f: string, fi: number) => (
+                      <div key={fi} className="text-[#a78bfa] text-[9px] pl-2 leading-relaxed">→ {f}</div>
+                    ))}
+                  </div>}
+                  {!hasContent && <div className="text-[#f59e0b] text-[8px] mt-1 italic">no data extracted</div>}
+                </details>
+              )
+            })}
           </div>
-        )
-      })}
 
-      {/* Reflect: completeness */}
+          {/* Combined digest summary */}
+          {digestSummary && (digestSummary.learnings.length > 0 || digestSummary.gaps.length > 0) && (
+            <div className="border-t border-[#1a1a1a] pt-2 space-y-1">
+              <div className="text-[#6c6c8a] text-[9px] uppercase tracking-wider mb-1">
+                → combined summary ({digestSummary.learnings.length} learnings, {digestSummary.gaps.length} gaps)
+              </div>
+              {digestSummary.learnings.length > 0 && (
+                <details open>
+                  <summary className="text-[#4ade80] text-[9px] cursor-pointer hover:text-[#6ee7b0]">
+                    all learnings ({digestSummary.learnings.length})
+                  </summary>
+                  <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
+                    {digestSummary.learnings.map((l, i) => (
+                      <div key={i} className="text-[#94a3b8] text-[9px] pl-2 leading-relaxed border-l border-[#1a3a1a]">
+                        {i+1}. {l}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+              {digestSummary.gaps.length > 0 && (
+                <details>
+                  <summary className="text-[#f59e0b] text-[9px] cursor-pointer hover:text-[#fbbf24]">
+                    all gaps ({digestSummary.gaps.length})
+                  </summary>
+                  <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto">
+                    {digestSummary.gaps.map((g, i) => (
+                      <div key={i} className="text-[#888] text-[9px] pl-2 leading-relaxed">◇ {g}</div>
+                    ))}
+                  </div>
+                </details>
+              )}
+              {digestSummary.followups.length > 0 && (
+                <details>
+                  <summary className="text-[#a78bfa] text-[9px] cursor-pointer hover:text-[#c4b5fd]">
+                    all followups ({digestSummary.followups.length})
+                  </summary>
+                  <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto">
+                    {digestSummary.followups.map((f, i) => (
+                      <div key={i} className="text-[#a78bfa] text-[9px] pl-2 leading-relaxed">→ {f}</div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
+        </>
+      )}
+      {selected.step_type === "digest" && selectedResults.length === 0 && (
+        <div className="text-[#444] italic text-[9px] border-t border-[#1a1a1a] pt-2">no digested results</div>
+      )}
+
+      {/* ── Reflect: completeness ── */}
       {selected.step_type === "reflect" && parsedResult.completeness > 0 && (
         <div className="border-t border-[#1a1a1a] pt-2">
           <div className="text-[#555] text-[8px]">completeness score:</div>
@@ -114,7 +233,7 @@ export const StepResultTab = memo(function StepResultTab({
         </div>
       )}
 
-      {/* Synthesize: answer */}
+      {/* ── Synthesize: answer ── */}
       {selected.step_type === "synthesize" && parsedResult.answer && (
         <div className="border-t border-[#1a1a1a] pt-2">
           <div className="text-[#555] text-[8px] mb-1">
@@ -124,7 +243,15 @@ export const StepResultTab = memo(function StepResultTab({
         </div>
       )}
 
-      {/* LLM response(s) from meta-log — full detail with thinking trace, wrapper */}
+      {/* ── Evaluate: reason ── */}
+      {selected.step_type === "evaluate" && selected.result_summary && (
+        <div className="border-t border-[#1a1a1a] pt-2">
+          <div className="text-[#555] text-[8px] uppercase mb-1">decision</div>
+          <div className="text-[#22d3ee] text-[9px]">{selected.result_summary}</div>
+        </div>
+      )}
+
+      {/* ── LLM response(s) from meta-log ── */}
       {responseEntries.length > 0 && (
         <div className="border-t border-[#1a1a1a] pt-2">
           <div className="text-[#555] text-[9px] mb-1">llm responses ({responseEntries.length}):</div>
@@ -133,7 +260,7 @@ export const StepResultTab = memo(function StepResultTab({
             const rawStr = d?.raw_response || d?.response || ""
             if (!rawStr || rawStr === "{}") return null
             let resp: any = null
-            try { resp = JSON.parse(rawStr) } catch { /* raw text, fallback */ }
+            try { resp = JSON.parse(rawStr) } catch {}
 
             if (!resp || typeof resp !== "object") {
               return (
@@ -157,21 +284,18 @@ export const StepResultTab = memo(function StepResultTab({
                 <summary className="text-[#777] text-[9px] cursor-pointer hover:text-[#aaa]">
                   {entry.event_type.replace("orchestrator_","").replace("_response","")} ({entry.created_at?.slice(11,19)}) {resp.model && <span className="text-[#555]">— {resp.model}</span>} {resp.truncated && <span className="text-[#f59e0b] text-[8px]">[truncated]</span>}
                 </summary>
-
                 {jsonData && (
                   <div className="mt-2">
                     <div className="text-[#555] text-[7px] mb-0.5 uppercase">output:</div>
                     <JsonBlock data={jsonData} />
                   </div>
                 )}
-
                 {thinking && (
                   <details className="mt-1">
                     <summary className="text-[#555] text-[7px] cursor-pointer hover:text-[#888] uppercase">thinking trace ({thinking.length} chars)</summary>
                     <JsonBlock data={thinking} variant="dim" maxHeight="max-h-48" className="mt-1" />
                   </details>
                 )}
-
                 <details className="mt-1">
                   <summary className="text-[#444] text-[7px] cursor-pointer hover:text-[#666]">raw wrapper</summary>
                   <div className="mt-1">
@@ -185,7 +309,7 @@ export const StepResultTab = memo(function StepResultTab({
       )}
 
       {selectedResults.length === 0 && !selected.result_summary && responseEntries.length === 0
-        && !(selected.step_type === "search" && searchQueries.length > 0) && (
+        && selected.step_type !== "evaluate" && !(selected.step_type === "search" && searchQueries.length > 0) && (
         <div className="text-[#444] italic text-[9px]">no result data</div>
       )}
     </div>
