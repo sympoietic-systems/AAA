@@ -13,7 +13,13 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     server: {
+      host: '0.0.0.0',
       allowedHosts: ['aaa.sokaris.link', '.sokaris.link'],
+      hmr: {
+        host: 'aaa.sokaris.link',
+        port: 80,
+        protocol: 'ws',
+      },
       proxy: {
         '/api': {
           target: `http://${host}:${port}`,
