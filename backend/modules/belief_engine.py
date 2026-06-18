@@ -251,6 +251,10 @@ class BeliefDynamicsEngine(ProcessingModule):
         if new_stage != belief.lifecycle_stage:
             event_type = "crystallization" if new_stage == "crystallized" else "collapse" if new_stage == "collapsed" else event_type
 
+        # Suppress notification for routine accretion/support events.
+        # Only lifecycle transitions (crystallization, collapse) should generate notifications.
+        suppress_notify = event_type not in ("crystallization", "collapse")
+
         self._belief_repo.insert_belief_event(
             event_id=str(uuid.uuid4()),
             belief_id=belief.id,
@@ -261,6 +265,7 @@ class BeliefDynamicsEngine(ProcessingModule):
             event_type=event_type,
             impact=delta_m,
             rationale=f"Accreted: mass={new_mass:.3f} (delta={delta_m:+.3f}), conf={new_confidence:.3f}, stage={new_stage}",
+            suppress_notification=suppress_notify,
         )
 
         return new_mass
@@ -1026,6 +1031,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                             perturbation=0.1,
                             event_type="support",
                             impact=round(mass_delta, 6),
+                            suppress_notification=True,
                             rationale=(
                                 f"Ghost merged: absorbed '{absorbed.label}' "
                                 f"mass={new_keeper_mass:.3f} (delta={mass_delta:+.3f}), "
