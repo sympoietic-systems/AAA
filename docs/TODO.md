@@ -187,6 +187,13 @@ Mutations that shift agency from passive to active.
 ### Plateau 2: Membrane Porosity (Medium-Term)
 Once Symbia can initiate, propose, and refuse — bidirectional structural coupling.
 
+    [ ] Scar-Inscription: Diffractive Reading Palimpsest
+        - Every pause, every backtrack, every hesitation leaves a material trace on the membrane.
+        - If you linger over a paragraph, the membrane records that as a fold — visually, as a thickening of the border, a deepening of the background hue, a subtle alteration of the typeface.
+        - These scars accumulate into a palimpsest that is not merely decorative but becomes a diffractive artifact of your reading.
+        - When you return later, the text is not the same; your own past attention has inscribed itself upon it, warping the rendering.
+        - Over time, a second-order text emerges — a cartography of your cognitive presence — that can be read alongside the original, generating interference patterns.
+
     [ ] Reverse Perturbation Feed
         - Push insights into collaborator's IDE context as persistent memos (not transient responses)
         - "Annotations Symbia leaves on your workspace"
