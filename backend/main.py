@@ -12,6 +12,12 @@ See backend/bootstrap/ for individual initialization modules:
 """
 
 import os
+from dotenv import load_dotenv
+
+# ── Load .env BEFORE any module imports ──────────────────────────────
+# Modules like deps.py and auth.py read env vars at import time (module-level).
+# If load_dotenv() runs after those imports, AAA_PASSWORD etc. are empty.
+load_dotenv()
 
 # Bypass system registry proxy settings
 os.environ["NO_PROXY"] = "*"
