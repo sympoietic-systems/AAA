@@ -10,7 +10,8 @@ from typing import Optional
 from datetime import datetime, timezone
 
 from backend.storage.models import RefusalNode
-from backend.storage.repositories.base import with_connection
+from backend.storage.connection import with_connection
+from backend.storage.repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +29,7 @@ def _row_to_refusal(row) -> RefusalNode:
     )
 
 
-class RefusalRepository:
-    def __init__(self, db_path: str):
-        self._db_path = db_path
-
-    def _conn(self):
-        import sqlite3
-        conn = sqlite3.connect(self._db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
-
+class RefusalRepository(BaseRepository):
     @with_connection
     def create(
         self,
