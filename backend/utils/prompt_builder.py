@@ -333,14 +333,14 @@ def format_skills_always_active(
 ) -> str:
     """Format brief always-active skills into a boundary-blocked section.
 
-    Excludes research-proposal and skill-nucleation from the list.
+    Excludes research-proposal, skill-nucleation, and belief-nucleation from the list.
     """
     if not always_active:
         return ""
 
     filtered = [
         s for s in always_active
-        if _val(s, "name") not in ("research-proposal", "skill-nucleation")
+        if _val(s, "name") not in ("research-proposal", "skill-nucleation", "belief-nucleation")
     ][:max_count]
     if not filtered:
         return ""

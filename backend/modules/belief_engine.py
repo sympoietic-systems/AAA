@@ -700,8 +700,8 @@ class BeliefDynamicsEngine(ProcessingModule):
                 self._accrete_belief(b, structural_signature, source_weight, alignment, perturbation,
                                      source_type=source_type, source_id=source_id)
 
-            # 2. Draft proposal if this is a completely new concept (similarity < 0.3)
-            if best_sim < 0.3:
+            # 2. Draft proposal if this is a completely new concept (similarity < 0.25)
+            if best_sim < 0.25:
                 statement = f"Emergent concept from ingested perception '{source_id}'."
                 self._nucleate_proto_belief(
                     agent_id=agent_id,

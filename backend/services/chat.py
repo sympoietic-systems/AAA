@@ -11,6 +11,7 @@ from backend.services.annotations import process_self_annotations
 from backend.services.background_tasks import (
     run_background_resonance_scan,
     run_background_skill_refinement,
+    run_background_belief_nucleation,
 )
 from backend.services.consolidation import ConsolidationService
 from backend.services.metrics import MetricsService
@@ -23,14 +24,16 @@ logger = logging.getLogger(__name__)
 
 # ── Response artifact parsing ───────────────────────────────────────────
 
-def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list[dict], list[tuple[int, str]]]:
-    """Extract skill nucleations, branch proposals, and resonance links from response text.
+def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list[dict], list[tuple[int, str]], list[dict]]:
+    """Extract skill nucleations, belief nucleations, branch proposals, and resonance links from response text.
 
-    Returns: (cleaned_text, proposed_skills, proposed_branches, proposed_resonances)
+    Returns: (cleaned_text, proposed_skills, proposed_branches, proposed_resonances, proposed_beliefs)
     """
     from backend.utils.skill_parser import parse_skill_nucleation_tags
+    from backend.utils.belief_parser import parse_belief_nucleate_tags
 
     response_text, proposed_skills = parse_skill_nucleation_tags(response_text)
+    response_text, proposed_beliefs = parse_belief_nucleate_tags(response_text)
 
     proposed_branches = []
     lof_pattern = r'<line_of_flight\s+title="([^"]+)">([\s\S]*?)</line_of_flight>'
@@ -50,7 +53,7 @@ def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list
             logger.warning("Invalid resonance target ID: %s", target_id_str)
     response_text = re.sub(res_pattern, "", response_text).strip()
 
-    return response_text, proposed_skills, proposed_branches, proposed_resonances
+    return response_text, proposed_skills, proposed_branches, proposed_resonances, proposed_beliefs
 
 
 class ChatService:
@@ -241,7 +244,7 @@ class ChatService:
             response_text = result.payload.get("response", "")
 
             # Parse embedded artifact tags from response text
-            response_text, proposed_skills, proposed_branches, proposed_resonances = (
+            response_text, proposed_skills, proposed_branches, proposed_resonances, proposed_beliefs = (
                 _parse_response_artifacts(response_text)
             )
 
@@ -393,6 +396,15 @@ class ChatService:
                         background_engine,
                         conversation_id,
                         skill_data,
+                    )
+
+            if proposed_beliefs and background_engine and background_tasks:
+                for belief_data in proposed_beliefs:
+                    background_tasks.add_task(
+                        run_background_belief_nucleation,
+                        background_engine,
+                        conversation_id,
+                        belief_data,
                     )
 
             # Auto-generate title logic

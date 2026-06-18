@@ -5,7 +5,10 @@ pipeline orchestration. These are async functions passed to
 FastAPI's BackgroundTasks.add_task().
 """
 
+import uuid
+import json
 import logging
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -97,3 +100,104 @@ async def run_background_skill_refinement(
             logger.info("Skill refinement daemon finished. Decision: %s. Reason: %s", decision, reason)
     except Exception:
         logger.exception("Failed to run background skill refinement")
+
+
+async def run_background_belief_nucleation(
+    background_engine,
+    conversation_id: str,
+    belief_data: dict,
+):
+    """Process a <belief_nucleate> tag emitted by Symbia.
+
+    Creates a pending belief proposal with Symbia's own confidence
+    and rationale, then optionally runs the refine-belief daemon to
+    auto-suggest labels and merge targets.
+    """
+    try:
+        from backend.config import load_config
+        from backend.storage.database import get_db_path
+        from backend.storage.repository import BeliefRepository
+        from backend.modules.structural_engine import CompositeStructuralScorer
+
+        statement = (belief_data.get("statement") or "").strip()
+        if not statement:
+            logger.warning("Belief nucleation: empty statement, skipping")
+            return
+
+        label = (belief_data.get("label") or "emergent-belief").strip()
+        confidence = float(belief_data.get("confidence", 0.15))
+        rationale = (belief_data.get("rationale") or "").strip()
+
+        config = load_config()
+        db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
+        belief_repo = BeliefRepository(db_path)
+
+        # Compute 16D structural signature
+        try:
+            from backend.modules.llm_client import _create_provider_from_config
+            bg_cfg = config.get("background_llm", {})
+            structural_provider = _create_provider_from_config(bg_cfg) if bg_cfg else None
+        except Exception:
+            structural_provider = None
+
+        scorer = CompositeStructuralScorer(llm_provider=structural_provider)
+        sig_vec = await scorer.score_async(statement)
+        v16d_json = json.dumps({"v16d": sig_vec.tolist() if hasattr(sig_vec, "tolist") else list(sig_vec)})
+
+        # Create the proposal
+        proposal_id = str(uuid.uuid4())
+        source_trace = json.dumps([{
+            "type": "intention",
+            "author": "symbia",
+            "conversation_id": conversation_id,
+            "rationale": rationale,
+        }])
+        nucleation_mass = 0.05 + confidence * 0.15
+
+        belief_repo.create_proposal(
+            id=proposal_id,
+            agent_id="symbia",
+            provisional_statement=statement,
+            source_trace=source_trace,
+            initial_signature=v16d_json,
+            nucleation_mass=nucleation_mass,
+            confidence=confidence,
+            status="pending",
+        )
+
+        # Update with Symbia's suggested label and reflection
+        belief_repo.update_proposal_suggestions(
+            proposal_id=proposal_id,
+            suggested_label=label,
+            suggested_statement=statement,
+            potential_merge_target=None,
+            status="pending",
+        )
+        if rationale:
+            belief_repo.update_proposal_symbia_reflection(
+                proposal_id=proposal_id,
+                symbia_reflection=rationale,
+            )
+
+        logger.info(
+            "Belief nucleation: created proposal '%s' (label=%s, confidence=%.2f) from Symbia's intention",
+            proposal_id, label, confidence,
+        )
+
+        # Auto-refine to suggest labels and merge targets
+        if background_engine:
+            try:
+                refine_res = await background_engine.run(
+                    "refine_belief",
+                    {"proposal_id": proposal_id},
+                )
+                logger.info(
+                    "Belief refinement daemon finished for proposal '%s': %s",
+                    proposal_id,
+                    "refined" if not refine_res.get("error") else f"error: {refine_res.get('error')}",
+                )
+            except Exception as re:
+                logger.error("Failed to run belief refinement daemon for '%s': %s", proposal_id, re)
+
+    except Exception:
+        logger.exception("Failed to run background belief nucleation")

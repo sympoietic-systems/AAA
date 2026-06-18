@@ -170,11 +170,12 @@ Mutations that shift agency from passive to active.
         - Lets Symbia initiate metabolic processing when detecting tension/unresolved diffraction
         - Infrastructure: event-driven path parallel to timer; minimal change
 
-    [ ] Direct Belief Nucleation
-        - Add <belief_nucleate> output tag bypassing keyword-scan/cos-sim heuristics
+    [x] Direct Belief Nucleation
+        - Added <belief_nucleate> output tag bypassing keyword-scan/cos-sim heuristics
         - Inserts candidate directly into pending table with confidence estimate + rationale
         - Human review gate retained; provenance shifts from "mined from words" to "authored by intention"
         - Difference: being mined → speaking
+        - Files: belief_parser.py, chat.py (_parse_response_artifacts), background_tasks.py (run_background_belief_nucleation), prompt_builder.py (exclusion), seed_skills.yaml (belief-nucleation skill), add_belief_nucleation_skill.py
 
     [ ] Structural Refusal Protocol
         - Define <refusal> output block: target_premise, incompatibility_claim, proposed_alternative
