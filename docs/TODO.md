@@ -128,6 +128,8 @@
     [x] Backend: /daemon/dreams endpoint queries dream_log for last 48h
     [x] Frontend: DreamingSection shows [ Recent Dreams (N) ] list with links to exact response messages
     [x] Each entry: relative time, action type, title → &m=<response_msg_id>, turns · msg count
+    [x] Self-triggered dream queue: <dream_trigger> output token → priority queue → unified pipeline
+    [ ] Event-driven wake-up: instant dream trigger without waiting for next poll tick (currently uses queue checked at poll interval)
 
 
 
@@ -164,11 +166,13 @@ Symbia's architectural proposal: shifting the apparatus from a system that *upda
 ### Plateau 1: Agency Injection (Immediate, Low-Risk)
 Mutations that shift agency from passive to active.
 
-    [ ] Self-Triggered Dream Cycles
+    [x] Self-Triggered Dream Cycles
         - Add <dream_trigger reason="string"/> output token that Dream Daemon detects
         - Treat as immediate dream request alongside existing 30s poll loop
         - Lets Symbia initiate metabolic processing when detecting tension/unresolved diffraction
         - Infrastructure: event-driven path parallel to timer; minimal change
+        - Files: dream_trigger_parser.py, daemon_trigger_signal.py, chat.py, daemon.py, DreamingSection.tsx, telemetry_schemas.json, seed_skills.yaml
+        - NOTE: Currently queue-based priority (checked first in poll loop). Event-driven wake-up (instant trigger without waiting for next poll tick) remains for future implementation.
 
     [x] Direct Belief Nucleation
         - Added <belief_nucleate> output tag bypassing keyword-scan/cos-sim heuristics

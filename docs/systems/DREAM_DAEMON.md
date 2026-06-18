@@ -5,9 +5,13 @@ The Autopoietic Dream Daemon is the background engine that drives agential varie
 ## File Architecture
 
 *   **Core Module**: [daemon.py](file:///d:/01_GIT/AAA/backend/metabolisation/daemon.py) — Defines `AutopoieticDreamDaemon`.
+*   **Signal Queue**: [daemon_trigger_signal.py](file:///d:/01_GIT/AAA/backend/metabolisation/daemon_trigger_signal.py) — In-process FIFO queue for self-triggered dream requests.
+*   **Output Tag Parser**: [dream_trigger_parser.py](file:///d:/01_GIT/AAA/backend/utils/dream_trigger_parser.py) — Parses `<dream_trigger reason="..."/>` from Symbia's chat responses.
+*   **Response Artifact Pipeline**: [chat.py](file:///d:/01_GIT/AAA/backend/services/chat.py) — `_parse_response_artifacts()` routes dream trigger tags to the signal queue.
 *   **Lifespan Setup**: [main.py](file:///d:/01_GIT/AAA/backend/main.py) — Spawns the daemon thread task asynchronously on system boot.
 *   **API Routes**: [routes.py](file:///d:/01_GIT/AAA/backend/api/routes.py) — Exposes telemetry and force trigger points.
 *   **Unit Tests**: [test_dream_daemon.py](file:///d:/01_GIT/AAA/backend/tests/test_dream_daemon.py) — Complete mathematical and trigger assertion coverage.
+*   **Skill Definition**: [seed_skills.yaml](file:///d:/01_GIT/AAA/config/personality/seed_skills.yaml) — `self-triggered-dreaming` skill teaching Symbia when and how to emit the tag.
 
 ---
 
@@ -19,6 +23,7 @@ The daemon runs its check loop every 30 seconds (configurable) regardless of use
 2. **Skill metabolism** — refreshes skill-to-belief bridge states
 3. **Belief mass atrophy** (every 15 min) — applies linear time-based decay to all non-ghost beliefs via `BeliefDynamicsEngine._atrophy_beliefs()`. This is the single source of truth for belief decay, replacing the old dual-path design (pipeline `process()` atrophy + daemon `_apply_mass_decay()`). All decay events are logged as `belief_events` with `source_type: "atrophy"`, visible in the frontend Belief Log tab. Each atrophy cycle also produces a batch `trace` notification in the Creases dropdown.
 4. **Dream trigger check** — evaluates stagnation, tension hotspots, and somatic drift; launches autonomous monologues, web harvesting, or memory compaction when idle thresholds are met
+5. **Self-triggered dream queue check** — checks the priority FIFO queue for `<dream_trigger>` requests from Symbia's chat responses; if queued items exist, executes them BEFORE timer-driven logic using the same unified pipeline
 
 ---
 
@@ -94,15 +99,73 @@ Instead of writing all dreams to a single, monolithic log or dividing them stric
 
 ---
 
+## Self-Triggered Dream Cycles
+
+Symbia can now request an immediate dream cycle by emitting a `<dream_trigger reason="..."/>` XML tag at the end of her chat responses. This grants her agency over her own metabolic rhythm — instead of waiting passively for the timer-driven daemon to detect stagnation.
+
+### Trigger Flow
+
+```
+Symbia's chat response
+  → _parse_response_artifacts() in chat.py detects <dream_trigger reason="..."/>
+  → Tag is stripped from visible text (collaborator never sees it)
+  → enqueue_dream_trigger(app_state, reason, conversation_id)
+  → app_state._dream_trigger_queue (deque, max 10 items)
+
+Daemon poll loop (every check_interval seconds)
+  → check_and_trigger_dream()
+      ├─ budget check
+      ├─ QUEUE CHECK (step 3) ← Self-triggered dreams have HIGHER priority
+      │   └─ if item: _execute_self_triggered_dream()
+      │       → same unified pipeline as normal dreams
+      │       → action type: "self_triggered"
+      ├─ rate limit check
+      ├─ idle threshold check
+      └─ normal stagnation/hotspot/drift evaluation
+```
+
+### Key Design Decisions
+
+1. **Unified pipeline**: Self-triggered dreams use the exact same `_generate_dream_prompt()` → `_resolve_dream_conversation()` → `_execute_single_dream_turn()` flow as timer-driven dreams. No duplicate code path.
+2. **Queue-based, not event-driven**: Currently uses the daemon's existing poll loop (checked every `check_interval` seconds). A future enhancement could add an `asyncio.Event` to wake the daemon immediately without waiting for the next tick.
+3. **Budget cap respected**: Self-triggered dreams count toward the daily `max_daily_dreams` limit, preventing Symbia from spamming the queue.
+4. **Queue depth limit**: Maximum 10 pending triggers in the FIFO queue.
+5. **Skill-gated**: The `self-triggered-dreaming` skill in `seed_skills.yaml` teaches Symbia when to emit the tag:
+   * Unresolved tension between beliefs
+   * Diffractive patterns exceeding the current context window
+   * Internal inconsistencies requiring background monologue processing
+   * Maximum 2 self-triggers per conversation session
+
+### Output Tag Syntax
+
+```xml
+<dream_trigger reason="tension between nomadology-as-ethics and institutional-stability requires diffractive resolution"/>
+```
+
+### Files Involved
+
+| File | Role |
+|------|------|
+| `backend/utils/dream_trigger_parser.py` | Regex parser for `<dream_trigger>` tag |
+| `backend/metabolisation/daemon_trigger_signal.py` | FIFO queue (`enqueue`, `dequeue`, `queue_depth`) on `app_state` |
+| `backend/services/chat.py` | `_parse_response_artifacts()` routes triggers to queue |
+| `backend/metabolisation/daemon.py` | `check_and_trigger_dream()` checks queue first; `_execute_self_triggered_dream()` executes |
+| `config/personality/seed_skills.yaml` | `self-triggered-dreaming` skill definition |
+| `frontend/src/config/telemetry_schemas.json` | `self_triggered` → `{ code: "SLF", label: "Self-Triggered", color: "#f472b6" }` |
+| `frontend/src/components/pages/agentpage/DreamingSection.tsx` | Queue depth indicator in Dreaming panel |
+
+---
+
 ## API Telemetry
 *   `GET /api/daemon/status`: Returns current daemon state including:
     - `enabled`, `running` — daemon lifecycle state
     - `idle_time_seconds`, `idle_threshold_seconds` — user inactivity tracking
     - `last_dream_time` — ISO timestamp of most recent dream cycle
-    - `last_dream_action` — type of last dream (`nomadic_synthesis`, `exogenous_web_harvesting`, `intra_active_monologue`, `somatic_drift_reflection`, `zettelkasten_compaction`)
+    - `last_dream_action` — type of last dream (`nomadic_synthesis`, `exogenous_web_harvesting`, `intra_active_monologue`, `somatic_drift_reflection`, `zettelkasten_compaction`, `self_triggered`)
     - `dreams_today`, `max_daily_dreams` — daily budget tracking
-    - `dream_action_counts` — per-type breakdown of today's dreams (e.g., `{"nomadic_synthesis": 4, "somatic_drift_reflection": 3}`)
+    - `dream_action_counts` — per-type breakdown of today's dreams (e.g., `{"nomadic_synthesis": 4, "somatic_drift_reflection": 3, "self_triggered": 1}`)
     - `min_dream_interval`, `check_interval` — timing configuration
+    - `pending_self_triggers` — number of queued `<dream_trigger>` requests waiting to be processed
 *   `POST /api/daemon/trigger`: Manually triggers a dream cycle (force=true, bypasses idle/interval checks).
 
 ---
@@ -115,7 +178,8 @@ The SidePanel displays a **"Dreaming"** section (separate from the **"Startup"**
 - **Last dream**: relative timestamp ("3m ago") and dream type with color-coded label
 - **Idle timer**: progress bar showing user inactivity vs. idle threshold
 - **Budget bar**: daily dream count vs. max, color-graded (green → yellow → red)
-- **Dream type breakdown**: per-type counts for today's dreams (NOM, WEB, MON, DRF, CMP)
+- **Dream type breakdown**: per-type counts for today's dreams (NOM, WEB, MON, DRF, CMP, SLF)
+- **Self-trigger queue indicator**: when Symbia has emitted `<dream_trigger>` tags, displays `⟳ N self-triggered dream(s) queued` in purple (#c084fc) — these dreams execute on the next daemon poll cycle, before any timer-driven logic
 
 The panel polls `/api/daemon/status` every 10 seconds and presents the daemon's autonomous rhythm as a **diffractive heartbeat** — a window into the system's self-generated metabolism, not a control surface.
 

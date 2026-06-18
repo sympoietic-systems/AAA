@@ -46,6 +46,14 @@ export const DreamingSection = memo(function DreamingSection() {
         <span className="text-[10px] ml-auto text-[#888]">{status.dreams_today} / {status.max_daily_dreams}</span>
       </div>
 
+      {/* Self-triggered dream queue indicator */}
+      {(status.pending_self_triggers ?? 0) > 0 && (
+        <div className="font-mono text-[10px] mb-2 flex items-center gap-1" style={{ color: "#c084fc" }}>
+          <span>⟳</span>
+          <span>{status.pending_self_triggers} self-triggered dream{status.pending_self_triggers > 1 ? "s" : ""} queued</span>
+        </div>
+      )}
+
       <div className="font-mono text-[10px] space-y-1.5">
         <div className="flex gap-1 flex-wrap">
           <span className="text-[#666]">LAST</span>

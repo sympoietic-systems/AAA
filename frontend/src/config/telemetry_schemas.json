@@ -64,6 +64,7 @@
     "exogenous_web_harvesting": { "code": "WEB", "label": "Web Harvesting", "color": "#c084fc" },
     "intra_active_monologue": { "code": "MON", "label": "Intra-Active Monologue", "color": "#facc15" },
     "somatic_drift_reflection": { "code": "DRF", "label": "Somatic Drift", "color": "#4ade80" },
-    "zettelkasten_compaction": { "code": "CMP", "label": "Compaction", "color": "#10b981" }
+    "zettelkasten_compaction": { "code": "CMP", "label": "Compaction", "color": "#10b981" },
+    "self_triggered": { "code": "SLF", "label": "Self-Triggered", "color": "#f472b6" }
   }
 }
