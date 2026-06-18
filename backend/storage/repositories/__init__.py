@@ -11,6 +11,7 @@ from backend.storage.repositories.note import NoteRepository
 from backend.storage.repositories.notification import NotificationRepository
 from backend.storage.repositories.perception_sediment import PerceptionSedimentRepository
 from backend.storage.repositories.personality_state import PersonalityStateRepository
+from backend.storage.repositories.refusal import RefusalRepository
 from backend.storage.repositories.semantic_knot import SemanticKnotRepository
 from backend.storage.repositories.skill import SkillRepository
 from backend.storage.repositories.dream_log import DreamLogRepository
@@ -36,6 +37,7 @@ __all__ = [
     "NotificationRepository",
     "PerceptionSedimentRepository",
     "PersonalityStateRepository",
+    "RefusalRepository",
     "SemanticKnotRepository",
     "SkillRepository",
     "DreamLogRepository",

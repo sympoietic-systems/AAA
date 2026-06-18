@@ -640,11 +640,45 @@ class BeliefDynamicsEngine(ProcessingModule):
                     logger.error(f"Failed to query somatic state in metabolism: {e}")
 
                 # If vitality is collapsed (< 0.15)
+                # Suppress immune response if Symbia has recently emitted a structural
+                # refusal — challenging premises is a signal of health, not stagnation.
                 if vitality < 0.15:
-                    somatic_reservoir = min(3.0, somatic_reservoir + 0.85)
-                    matrix_warping = 0.40
-                    immunological_directive_active = 1
-                    logger.warning(f"Vitality collapse! Aesthetic Immune System triggered: matrix warping=0.40, directive active.")
+                    try:
+                        from backend.storage.repositories.refusal import RefusalRepository
+                        refusal_repo = RefusalRepository(self._belief_repo._db_path)
+                        recent_refusals = refusal_repo.list_by_conversation(conversation_id, limit=3)
+                        # Check if any refusal was created in the last 15 minutes
+                        now_ts = datetime.now(timezone.utc)
+                        has_recent_refusal = any(
+                            r.created_at and now_ts - r.created_at.replace(tzinfo=timezone.utc) < timedelta(minutes=15)
+                            for r in recent_refusals
+                            if r.created_at
+                        )
+                        if has_recent_refusal:
+                            logger.info(
+                                "Immune response suppressed: recent structural refusal detected in conversation %s",
+                                conversation_id[:8],
+                            )
+                            somatic_reservoir = max(0.0, somatic_reservoir - 0.5)
+                            matrix_warping = 0.0
+                            immunological_directive_active = 0
+                        else:
+                            somatic_reservoir = min(3.0, somatic_reservoir + 0.85)
+                            matrix_warping = 0.40
+                            immunological_directive_active = 1
+                            logger.warning(
+                                f"Vitality collapse! Aesthetic Immune System triggered: "
+                                f"matrix warping=0.40, directive active."
+                            )
+                    except Exception as ref_e:
+                        logger.warning("Failed to check refusals for immune suppression: %s", ref_e)
+                        somatic_reservoir = min(3.0, somatic_reservoir + 0.85)
+                        matrix_warping = 0.40
+                        immunological_directive_active = 1
+                        logger.warning(
+                            f"Vitality collapse! Aesthetic Immune System triggered: "
+                            f"matrix warping=0.40, directive active."
+                        )
                 else:
                     # Decay warping and immune state slowly if vitality recovered
                     matrix_warping = max(0.0, matrix_warping - 0.10)

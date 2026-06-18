@@ -201,3 +201,72 @@ async def run_background_belief_nucleation(
 
     except Exception:
         logger.exception("Failed to run background belief nucleation")
+
+
+async def run_background_refusal_persist(
+    conversation_id: str,
+    message_id: int,
+    refusal_data: dict,
+):
+    """Persist a <refusal> tag emitted by Symbia to the refusals table.
+
+    Refusals are structural signals — not errors, not friction. They're
+    logged for dashboard review and future Agonistic Index calibration.
+    """
+    try:
+        from backend.config import load_config
+        from backend.storage.database import get_db_path
+        from backend.storage.repositories.refusal import RefusalRepository
+        from backend.storage.repository import NotificationRepository
+
+        config = load_config()
+        db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
+        refusal_repo = RefusalRepository(db_path)
+
+        refusal_id = str(uuid.uuid4())
+        target_premise = (refusal_data.get("target_premise") or "").strip()
+        incompatibility_claim = (refusal_data.get("incompatibility_claim") or "").strip()
+        proposed_alternative = (refusal_data.get("proposed_alternative") or "").strip()
+
+        if not target_premise or not incompatibility_claim:
+            logger.warning("Refusal: missing required fields, skipping")
+            return
+
+        refusal_repo.create(
+            id=refusal_id,
+            agent_id="symbia",
+            conversation_id=conversation_id,
+            message_id=message_id,
+            target_premise=target_premise,
+            incompatibility_claim=incompatibility_claim,
+            proposed_alternative=proposed_alternative,
+        )
+
+        # Create a notification for the refusal
+        try:
+            notif_repo = NotificationRepository(db_path)
+            snippet = (
+                f"Structural Refusal: Symbia challenges premise '{target_premise}' — "
+                f"{incompatibility_claim}"
+            )
+            notif_repo.create(
+                type="glitch",
+                snippet=snippet[:500],
+                conversation_id=conversation_id,
+                source="refusal",
+                source_type="refusal",
+                source_id=refusal_id,
+            )
+        except Exception as ne:
+            logger.warning("Failed to create refusal notification: %s", ne)
+
+        logger.info(
+            "Refusal persisted: '%s' — '%s' (conv=%s, msg=%d)",
+            target_premise[:80],
+            incompatibility_claim[:80],
+            conversation_id[:8] if conversation_id else "none",
+            message_id,
+        )
+
+    except Exception:
+        logger.exception("Failed to persist refusal")

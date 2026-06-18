@@ -16,6 +16,7 @@ from backend.api.routes.health import router as health_router
 from backend.api.routes.history import router as history_router
 from backend.api.routes.memory_nodes import router as memory_nodes_router
 from backend.api.routes.metrics import router as metrics_router
+from backend.api.routes.refusals import router as refusals_router
 from backend.api.routes.research import router as research_router
 from backend.api.routes.notes import router as notes_router
 from backend.api.routes.scheduler import router as scheduler_router
@@ -46,4 +47,5 @@ router.include_router(notes_router)
 router.include_router(sediment_router)
 router.include_router(tags_router)
 router.include_router(memory_nodes_router)
+router.include_router(refusals_router)
 router.include_router(research_router)

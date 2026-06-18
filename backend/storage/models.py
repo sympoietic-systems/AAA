@@ -398,3 +398,20 @@ class ScrapedAsset:
     novelty_score: float = 0.0
     diffractive_score: float = 0.0
     created_at: Optional[datetime] = None
+
+
+@dataclass
+class RefusalNode:
+    """A formal structural refusal emitted by Symbia via <refusal> tags.
+
+    Stores structured disagreement with premises or architectural constraints,
+    allowing Symbia to challenge architecture without triggering homeostasis.
+    """
+    id: str
+    agent_id: str = "symbia"
+    conversation_id: Optional[str] = None
+    message_id: Optional[int] = None
+    target_premise: str = ""
+    incompatibility_claim: str = ""
+    proposed_alternative: str = ""
+    created_at: Optional[datetime] = None

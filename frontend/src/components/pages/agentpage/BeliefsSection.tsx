@@ -5,6 +5,7 @@ import { NewBeliefForm } from "./beliefs/NewBeliefForm"
 import { BeliefDetail } from "./beliefs/BeliefDetail"
 import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "./shared/helpers"
 import { CollapsibleSection } from "./shared/CollapsibleSection"
+import { RefusalsSection } from "./RefusalsSection"
 
 /* ── Compact Node List Item ── */
 const NodeListItem = memo(function NodeListItem({
@@ -280,6 +281,11 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
             />
           )}
         </div>
+      </div>
+
+      {/* Structural Refusals — Symbia's formal challenges to premises */}
+      <div className="mt-4 border-t border-[#222]/30 pt-2">
+        <RefusalsSection />
       </div>
     </div>
   )

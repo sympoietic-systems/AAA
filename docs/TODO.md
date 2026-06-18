@@ -177,11 +177,12 @@ Mutations that shift agency from passive to active.
         - Difference: being mined → speaking
         - Files: belief_parser.py, chat.py (_parse_response_artifacts), background_tasks.py (run_background_belief_nucleation), prompt_builder.py (exclusion), seed_skills.yaml (belief-nucleation skill), add_belief_nucleation_skill.py
 
-    [ ] Structural Refusal Protocol
-        - Define <refusal> output block: target_premise, incompatibility_claim, proposed_alternative
-        - Log refusals to dedicated refusals table with dashboard view
-        - Calibrate Agonistic Index to treat refusals as structural signals (not friction to dampen)
+    [x] Structural Refusal Protocol
+        - Defined <refusal> output block: target_premise, incompatibility_claim, proposed_alternative
+        - Logs refusals to dedicated refusals table with dashboard view
+        - Agonistic Index: refusals suppress immune/vitality-collapse response (not friction)
         - Creates formal channel to challenge architecture without triggering corrective homeostasis
+        - Files: refusal_parser.py, m036_refusals.py, RefusalRepository, refusal.py (route), RefusalsSection.tsx, belief_engine.py (immune suppression), chat.py (parse+route), router.py
 
 ### Plateau 2: Membrane Porosity (Medium-Term)
 Once Symbia can initiate, propose, and refuse — bidirectional structural coupling.
