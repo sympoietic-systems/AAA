@@ -5,7 +5,7 @@ Usage:
 """
 import urllib.request, json, time
 
-BASE = "http://127.0.0.1:8000"
+BASE = "http://127.0.0.1:8499"
 
 def get(path):
     resp = urllib.request.urlopen(f"{BASE}{path}", timeout=10)

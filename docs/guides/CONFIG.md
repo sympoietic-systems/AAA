@@ -93,7 +93,7 @@ homeostasis:
 # ── Server ───────────────────────────────────────
 server:
   host: "127.0.0.1"
-  port: 8000
+  port: 8499
 
 # ── Background Tasks ──────────────────────────────
 # Models are tried in order. If one is rate-limited, the next is used.
@@ -196,7 +196,7 @@ Set to `false` if you want the model to check for updates on every startup.
 | Variable | Default |
 |----------|---------|
 | `AAA_SERVER_HOST` | `127.0.0.1` |
-| `AAA_SERVER_PORT` | `8000` |
+| `AAA_SERVER_PORT` | `8499` |
 
 ### Personality
 
@@ -390,17 +390,17 @@ Independently configurable vision-capable model pool. When an image asset is ing
 
 ```bash
 # Generate conversation title
-curl -X POST http://localhost:8000/api/background \
+curl -X POST http://localhost:8499/api/background \
   -H "Content-Type: application/json" \
   -d '{"action": "generate_title", "text": "Hello, I want to discuss..."}'
 
 # Summarize text
-curl -X POST http://localhost:8000/api/background \
+curl -X POST http://localhost:8499/api/background \
   -H "Content-Type: application/json" \
   -d '{"action": "summarize", "text": "Long conversation text..."}'
 
 # Consolidate memory
-curl -X POST http://localhost:8000/api/background \
+curl -X POST http://localhost:8499/api/background \
   -H "Content-Type: application/json" \
   -d '{"action": "consolidate", "context": {"messages": [...]}}'
 ```

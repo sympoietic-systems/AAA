@@ -30,7 +30,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  AAA Backend starting..."
 echo "  Database: backend/data/aaa.db"
 echo "  Migrations: $([ "${AAA_RUN_MIGRATIONS}" = "true" ] && echo "ENABLED" || echo "DISABLED")"
-echo "  API: http://127.0.0.1:8000"
+echo "  API: http://127.0.0.1:8499"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 uv run python -m backend.main

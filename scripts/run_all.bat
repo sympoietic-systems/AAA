@@ -20,7 +20,7 @@ echo.
 echo =========================================================
 echo   All components launched in separate windows!
 echo   - Frontend: http://localhost:5173
-echo   - Backend API: http://127.0.0.1:8000
+echo   - Backend API: http://127.0.0.1:8499
 echo.
 echo   Keep this launcher open to easily monitor services, or
 echo   press any key to exit this launcher window (services

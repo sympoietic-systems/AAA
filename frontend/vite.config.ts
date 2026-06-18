@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, '../'), 'AAA_')
   
   const host = env.AAA_SERVER_HOST || '127.0.0.1'
-  const port = env.AAA_SERVER_PORT || '8000'
+  const port = env.AAA_SERVER_PORT || '8499'
 
   return {
     plugins: [react(), tailwindcss()],

@@ -126,7 +126,7 @@ After seeding, beliefs live in the database and evolve through the belief lifecy
 bash scripts/run_all.sh
 
 # Or start individually:
-bash scripts/run_backend.sh    # → http://127.0.0.1:8000 (API docs at /docs)
+bash scripts/run_backend.sh    # → http://127.0.0.1:8499 (API docs at /docs)
 bash scripts/run_frontend.sh   # → http://localhost:5173
 ```
 
@@ -185,21 +185,21 @@ Type a message and press Enter. The agent should respond within a few seconds.
 
 ```bash
 # Health check
-curl http://127.0.0.1:8000/api/health
+curl http://127.0.0.1:8499/api/health
 
 # Agent identity (name from identity.yaml)
-curl http://127.0.0.1:8000/api/agent
+curl http://127.0.0.1:8499/api/agent
 
 # Chat
-curl -X POST http://127.0.0.1:8000/api/chat \
+curl -X POST http://127.0.0.1:8499/api/chat \
   -H "Content-Type: application/json" \
   -d '{"content": "Hello"}'
 
 # History
-curl http://127.0.0.1:8000/api/history?limit=10
+curl http://127.0.0.1:8499/api/history?limit=10
 
 # Skills / Pipeline
-curl http://127.0.0.1:8000/api/skills
+curl http://127.0.0.1:8499/api/skills
 ```
 
 ## Troubleshooting

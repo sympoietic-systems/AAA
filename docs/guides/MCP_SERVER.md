@@ -15,7 +15,7 @@ This guide walks you through installing, running, and registering the MCP server
 
 ## Prerequisites
 
-- AAA backend must be running (listen on `http://127.0.0.1:8000`).
+- AAA backend must be running (listen on `http://127.0.0.1:8499`).
 - Python 3.12–3.13 and `uv` installed.
 - The `mcp` package added to `pyproject.toml` (already done).
 
@@ -33,7 +33,7 @@ uv run python backend/mcp_server.py
 
 The server prints logs similar to:
 ```
-INFO:     Uvicorn running on http://127.0.0.1:8000
+INFO:     Uvicorn running on http://127.0.0.1:8499
 INFO:     MCP server started – waiting for stdio commands
 ```
 
@@ -106,7 +106,7 @@ Both tools return a structured JSON string containing conversation metadata and 
 ### 3. Accessing Resources
 ```bash
 # Retrieve the philosophy document
-curl -X POST -d '{"resource": "aaa://philosophy"}' http://127.0.0.1:8000/api/mcp
+curl -X POST -d '{"resource": "aaa://philosophy"}' http://127.0.0.1:8499/api/mcp
 ```
 Replace the URL with the appropriate endpoint as configured by your IDE's MCP client.
 
