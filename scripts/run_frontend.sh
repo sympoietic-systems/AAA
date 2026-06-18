@@ -55,7 +55,8 @@ fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  AAA Frontend starting..."
-echo "  URL: http://localhost:5173"
+echo "  Local:   http://localhost:5173"
+echo "  Network: http://0.0.0.0:5173"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-npm run dev
+npm run dev -- --host
