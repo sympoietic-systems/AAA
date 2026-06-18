@@ -27,14 +27,21 @@ logger = logging.getLogger(__name__)
 AAA_PASSWORD: str = os.environ.get("AAA_PASSWORD", "").strip()
 
 
-async def verify_password(authorization: Optional[str] = Header(None)):
+async def verify_password(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+):
     """FastAPI dependency: verify Bearer token against AAA_PASSWORD env var.
 
     If AAA_PASSWORD is not set, authentication is bypassed.
-
-    Attached to the API router via dependencies=[Depends(verify_password)].
+    The /api/auth/verify endpoint is always allowed (used by frontend to
+    detect whether auth is enabled before prompting for a password).
     """
     if not AAA_PASSWORD:
+        return
+
+    # Allow the auth verify endpoint through so the frontend can discover auth status
+    if request.url.path == "/api/auth/verify":
         return
 
     if not authorization:
