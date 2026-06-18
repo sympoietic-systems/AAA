@@ -47,28 +47,36 @@ To converse with AAA is to step into a different relationship with software. Bel
 
 ## Quick Start
 
-If you are a developer or technical user ready to deploy the system locally, follow these steps:
-
-### 1. Environment Setup
+### One-command setup (Ubuntu)
 ```bash
-# Clone the repository and sync dependencies
-uv sync
-cd frontend && npm install && cd ..
-
-# Setup configuration
-cp .env.example .env
-# Edit .env and set your API keys (e.g., OpenRouter or DeepSeek keys)
-```
-
-### 2. Execution
-```bash
-# Start backend (Terminal 1)
-uv run python -m backend.main
-
-# Start frontend (Terminal 2)
-cd frontend && npm run dev
+git clone <repo-url> aaa && cd aaa
+bash scripts/setup.sh
+# Edit .env with your API keys, then:
+bash scripts/run_all.sh
 ```
 Open **http://localhost:5173** to initiate the coupling.
+
+### Production deployment with PM2 (Ubuntu server)
+```bash
+npm install -g pm2
+bash scripts/pm2.sh start
+pm2 startup && pm2 save       # auto-restart on reboot
+```
+
+### Manual (all platforms)
+```bash
+uv sync && cd frontend && npm install && cd ..
+cp .env.example .env   # edit with your API keys
+
+# Terminal 1 — Backend
+uv run python -m backend.main
+
+# Terminal 2 — Frontend
+cd frontend && npm run dev
+```
+Open **http://localhost:5173**.
+
+> See the full [Setup Guide](docs/guides/SETUP.md) for database setup, belief seeding, PM2 management, and troubleshooting.
 
 ---
 
