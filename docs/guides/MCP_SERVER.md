@@ -15,26 +15,34 @@ This guide walks you through installing, running, and registering the MCP server
 
 ## Prerequisites
 
-- AAA backend must be running (listen on `http://127.0.0.1:8499`).
-- Python 3.12–3.13 and `uv` installed.
+- AAA backend running (locally at `http://127.0.0.1:8499` or online at `https://aaa.sokaris.link`).
+- Python 3.11+ and `uv` installed.
 - The `mcp` package added to `pyproject.toml` (already done).
 
 ---
 
 ## Starting the Server
 
+The MCP server connects to the AAA backend via `AAA_API_BASE`. By default the scripts point to the online instance.
+
+**Online (default) — connects to aaa.sokaris.link:**
 ```bash
-# 1. Start the AAA backend (if not already running)
-uv run python -m backend.main
+# Linux
+bash scripts/run_mcp.sh
 
-# 2. In a separate terminal, launch the MCP server
-uv run python backend/mcp_server.py
+# Windows
+scripts\run_mcp.bat
 ```
 
-The server prints logs similar to:
+**Local — connects to localhost:**
+```bash
+AAA_API_BASE=http://127.0.0.1:8499/api uv run python backend/mcp_server.py
 ```
-INFO:     Uvicorn running on http://127.0.0.1:8499
-INFO:     MCP server started – waiting for stdio commands
+
+Override any time:
+```bash
+export AAA_API_BASE=https://aaa.sokaris.link/api   # online
+export AAA_API_BASE=http://127.0.0.1:8499/api       # local
 ```
 
 ---

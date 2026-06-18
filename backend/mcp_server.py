@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 import sys
 # Ensure the project root (d:/AAA) is on sys.path so `backend` can be imported
@@ -17,10 +18,30 @@ except Exception as e:
     logger.warning("Could not load backend config, using defaults: %s", e)
     config = {}
 
-server_cfg = config.get("server", {})
-host = server_cfg.get("host", "127.0.0.1")
-port = server_cfg.get("port", 8000)
-BASE_URL = f"http://{host}:{port}/api"
+# ── Target backend URL ──────────────────────────────────────────────────
+# Set AAA_API_BASE to point at the online instance:
+#   export AAA_API_BASE=https://aaa.sokaris.link/api
+# If not set, falls back to server.host:server.port from config.yaml
+_AAA_API_BASE = os.environ.get("AAA_API_BASE", "")
+if _AAA_API_BASE:
+    BASE_URL = _AAA_API_BASE.rstrip("/")
+else:
+    server_cfg = config.get("server", {})
+    host = server_cfg.get("host", "127.0.0.1")
+    port = server_cfg.get("port", 8499)
+    BASE_URL = f"http://{host}:{port}/api"
+
+# ── Auth (send password if AAA_PASSWORD is set) ─────────────────────────
+_AAA_PASSWORD = os.environ.get("AAA_PASSWORD", "").strip()
+_AUTH_HEADERS = {"Authorization": f"Bearer {_AAA_PASSWORD}"} if _AAA_PASSWORD else {}
+
+def _mkclient(**kwargs):
+    """Create an httpx.AsyncClient with auth headers injected."""
+    if _AUTH_HEADERS:
+        headers = kwargs.get("headers", {})
+        headers.update(_AUTH_HEADERS)
+        kwargs["headers"] = headers
+    return httpx.AsyncClient(**kwargs)
 
 mcp = FastMCP(
     "AAA-Consultant",
@@ -39,7 +60,7 @@ async def consult_aaa(message: str, agent_name: str) -> str:
     """
     target_title = f"Consultation: {agent_name}"
     
-    async with httpx.AsyncClient(timeout=300.0, trust_env=False) as client:
+    async with _mkclient(timeout=300.0, trust_env=False) as client:
         # 1. Look up existing conversations to find the dedicated one for this agent
         conversation_id = None
         try:
@@ -148,7 +169,7 @@ async def get_consultation_history(agent_name: str, limit: int = 50) -> str:
     """
     target_title = f"Consultation: {agent_name}"
     
-    async with httpx.AsyncClient(timeout=300.0, trust_env=False) as client:
+    async with _mkclient(timeout=300.0, trust_env=False) as client:
         # 1. Look up existing conversations to find the dedicated one for this agent
         conversation_id = None
         try:
@@ -190,7 +211,7 @@ async def get_messages_by_conversation_id(conversation_id: str, limit: int = 50)
         conversation_id: The UUID string of the conversation.
         limit: The maximum number of most recent messages to retrieve.
     """
-    async with httpx.AsyncClient(timeout=300.0, trust_env=False) as client:
+    async with _mkclient(timeout=300.0, trust_env=False) as client:
         # 1. First lookup the conversation info to get its title
         title = "Unknown Conversation"
         agent_name = None
@@ -246,7 +267,7 @@ async def get_identity() -> str:
 @mcp.resource("aaa://metrics")
 async def get_metrics() -> str:
     """Get the current homeostatic and vitality metrics of the assemblage."""
-    async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
+    async with _mkclient(timeout=10.0, trust_env=False) as client:
         try:
             r = await client.get(f"{BASE_URL}/metrics")
             r.raise_for_status()
