@@ -3,14 +3,10 @@ import { BASE } from "./http"
 export async function checkAuthStatus(): Promise<{ authenticated: boolean; authEnabled: boolean }> {
   try {
     const res = await fetch(`${BASE}/auth/verify`)
-    if (res.status === 401) {
-      return { authenticated: false, authEnabled: true }
-    }
     const data = await res.json().catch(() => ({}))
-    return {
-      authenticated: res.ok,
-      authEnabled: !!data.auth_enabled,
-    }
+    const authEnabled = !!data.auth_enabled
+    const authenticated = data.status === "authenticated"
+    return { authenticated, authEnabled }
   } catch {
     return { authenticated: true, authEnabled: false }
   }
