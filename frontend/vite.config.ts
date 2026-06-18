@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ['aaa.sokaris.link', '.sokaris.link'],
       hmr: {
         host: 'aaa.sokaris.link',
-        port: 80,
+        clientPort: 80,
         protocol: 'ws',
       },
       proxy: {
