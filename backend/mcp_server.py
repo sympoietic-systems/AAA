@@ -4,6 +4,16 @@ from pathlib import Path
 import sys
 # Ensure the project root (d:/AAA) is on sys.path so `backend` can be imported
 sys.path.append(str(Path(__file__).parent.parent))
+from dotenv import load_dotenv
+
+# Load .env explicitly (don't rely on config.py import chain)
+_PROJECT_ROOT = Path(__file__).parent.parent
+_ENV_PATH = _PROJECT_ROOT / ".env"
+if _ENV_PATH.exists():
+    load_dotenv(_ENV_PATH)
+else:
+    load_dotenv()  # fallback: cwd
+
 import httpx
 from mcp.server.fastmcp import FastMCP
 
