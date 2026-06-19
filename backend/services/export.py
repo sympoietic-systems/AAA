@@ -393,14 +393,6 @@ class ExportService:
             else:
                 parts.append("_(empty message)_")
 
-            # Thinking
-            if hasattr(m, "thinking") and m.thinking and m.thinking.strip():
-                parts.append("")
-                parts.append("**Thinking:**")
-                # Indent thinking as blockquote
-                for line in m.thinking.strip().split("\n"):
-                    parts.append(f"> {line}")
-
             parts.append("")
             parts.append("---")
             parts.append("")
