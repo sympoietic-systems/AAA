@@ -196,23 +196,13 @@ export async function reprocessFile(conversationId: string, fileName: string): P
 }
 
 export async function downloadExport(conversationId: string): Promise<void> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}/export`)
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Unknown error" }))
-    throw new Error(err.detail || `HTTP ${res.status}`)
-  }
-  // Extract filename from Content-Disposition header
-  const disposition = res.headers.get("Content-Disposition") || ""
-  const match = disposition.match(/filename="?([^"]+)"?/)
-  const filename = match ? match[1] : `conversation_${conversationId.slice(0, 8)}.md`
-
-  // Use data URL instead of blob URL to avoid browser insecure-connection
-  // warnings when the page is served over HTTP
-  const text = await res.text()
-  const dataUrl = "data:text/markdown;charset=utf-8," + encodeURIComponent(text)
+  // Native browser download via direct URL navigation — avoids blob/data URL
+  // insecure-connection warnings on HTTP origins.
+  const token = localStorage.getItem("aaa_password") || ""
+  const qs = token ? `?token=${encodeURIComponent(token)}` : ""
   const a = document.createElement("a")
-  a.href = dataUrl
-  a.download = filename
+  a.href = `${BASE}/conversations/${conversationId}/export${qs}`
+  a.download = ""  // Let Content-Disposition header determine filename
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

@@ -36,6 +36,9 @@ async def verify_password(
     If AAA_PASSWORD is not set, authentication is bypassed.
     The /api/auth/verify endpoint is always allowed (used by frontend to
     detect whether auth is enabled before prompting for a password).
+
+    Also accepts token via query parameter (?token=...) for download links
+    that can't use Authorization headers (e.g., window.open navigation).
     """
     if not AAA_PASSWORD:
         return
@@ -44,16 +47,23 @@ async def verify_password(
     if request.url.path == "/api/auth/verify":
         return
 
-    if not authorization:
+    token: Optional[str] = None
+
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+
+    # Fallback: accept token via query parameter for download links
+    if not token:
+        qp_token = request.query_params.get("token")
+        if qp_token:
+            token = qp_token
+
+    if not token:
         raise HTTPException(
             status_code=401,
             detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    token: Optional[str] = None
-    if authorization.startswith("Bearer "):
-        token = authorization[7:]
 
     if token != AAA_PASSWORD:
         raise HTTPException(
