@@ -28,11 +28,9 @@ export const DreamingSection = memo(function DreamingSection() {
     return () => clearInterval(id)
   }, [])
 
-  if (error && !status) return <div className="text-[#ef4444] font-mono">{error}</div>
-  if (!status) return <div className="text-[#444] font-mono">waiting for data...</div>
-
-  // §3: useMemo — compute all derived values once per status change
-  const { stateLabel, stateColor, lastAction, typeCounts, idlePct, budgetPct, hasShortWindow, shortWindowPct } = useMemo(() => {
+  // §3: useMemo — always called (before early returns) to keep stable hook count
+  const derived = useMemo(() => {
+    if (!status) return null
     let label = "dormant"; let color = "#555"
     if (status.enabled && status.running) {
       const tsd = status.last_dream_time ? (Date.now() - new Date(status.last_dream_time).getTime()) / 1000 : Infinity
@@ -62,13 +60,13 @@ export const DreamingSection = memo(function DreamingSection() {
       ? Math.min(100, ((status.short_window_count ?? 0) / status.short_window_max!) * 100)
       : 0
 
-    return {
-      stateLabel: label, stateColor: color,
-      lastAction: action, typeCounts: counts,
-      idlePct: idle, budgetPct: budget,
-      hasShortWindow: hasSW, shortWindowPct: swPct,
-    }
+    return { stateLabel: label, stateColor: color, lastAction: action, typeCounts: counts, idlePct: idle, budgetPct: budget, hasShortWindow: hasSW, shortWindowPct: swPct }
   }, [status])
+
+  if (error && !status) return <div className="text-[#ef4444] font-mono">{error}</div>
+  if (!status || !derived) return <div className="text-[#444] font-mono">waiting for data...</div>
+
+  const { stateLabel, stateColor, lastAction, typeCounts, idlePct, budgetPct, hasShortWindow, shortWindowPct } = derived
 
   return (
     <div className="px-4 py-2">
