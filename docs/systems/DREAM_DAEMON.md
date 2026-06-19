@@ -23,7 +23,11 @@ The daemon runs its check loop every `check_interval` seconds (default 300s / 5 
 2. **Skill metabolism** — refreshes skill-to-belief bridge states
 3. **Belief mass atrophy** (every 15 min) — applies linear time-based decay to all non-ghost beliefs via `BeliefDynamicsEngine._atrophy_beliefs()`. This is the single source of truth for belief decay, replacing the old dual-path design (pipeline `process()` atrophy + daemon `_apply_mass_decay()`). All decay events are logged as `belief_events` with `source_type: "atrophy"`, visible in the frontend Belief Log tab. Each atrophy cycle also produces a batch `trace` notification in the Creases dropdown.
 4. **Dream trigger check** — if self-triggered queue is non-empty, drains ONE item per tick (highest priority, bypasses rate/idle gates). If queue is empty, falls through to normal evaluation: stagnation, tension hotspots, and somatic drift; launches autonomous monologues, web harvesting, or memory compaction when idle thresholds are met
-5. **Daily budget enforcement** — before any dream executes (including self-triggered and manual triggers), the daemon checks `dream_log` for today's dream count. If at or above `max_daily_dreams`, ALL dream execution stops — no override path. Queued self-triggers wait for midnight UTC rollover.
+5. **Two-tier budget enforcement** — before any dream executes (including self-triggered and manual triggers), the daemon checks `dream_log` against TWO rolling windows:
+   - **Short window** (`short_window_hours` × `short_window_max`): e.g. ≤ 2 dreams in last 8 hours — prevents burst exhaustion
+   - **Long window** (`max_daily_dreams`): e.g. ≤ 6 dreams in last 24 hours — caps daily total
+   
+   Both windows must pass. Neither has an override path — not even for manual triggers.
 
 ---
 
@@ -67,20 +71,24 @@ Configure daemon thresholds in `backend/config.yaml` or override them in `.env`:
 ```yaml
 daemon:
   enabled: true
-  check_interval: 300       # seconds between tick evaluations (5 min)
-  idle_threshold: 1800      # seconds of user silence before dreaming (30 min)
-  min_dream_interval: 3600  # minimum seconds between successive dreams (1 hour)
-  max_daily_dreams: 20      # daily dream cycle count budget (counted from dream_log)
+  check_interval: 300        # seconds between tick evaluations (5 min)
+  idle_threshold: 1800       # seconds of user silence before dreaming (30 min)
+  min_dream_interval: 3600   # minimum seconds between successive dreams (1 hour)
+  max_daily_dreams: 6        # max dreams in rolling 24h window
+  short_window_hours: 8      # short burst-prevention window (hours)
+  short_window_max: 2        # max dreams allowed in short window
   drift_coefficient: 0.00001
 ```
 
 ### Environment Variable Overrides (`.env`)
 ```bash
 AAA_DAEMON_ENABLED=true
-AAA_DAEMON_CHECK_INTERVAL=300      # seconds between tick evaluations (5 min)
-AAA_DAEMON_IDLE_THRESHOLD=1800     # seconds of user silence (30 min)
-AAA_DAEMON_MIN_DREAM_INTERVAL=3600 # minimum seconds between dreams (1 hour)
-AAA_DAEMON_MAX_DAILY_DREAMS=20     # max dream cycles per day (counted from dream_log)
+AAA_DAEMON_CHECK_INTERVAL=300       # seconds between tick evaluations (5 min)
+AAA_DAEMON_IDLE_THRESHOLD=1800      # seconds of user silence (30 min)
+AAA_DAEMON_MIN_DREAM_INTERVAL=3600  # minimum seconds between dreams (1 hour)
+AAA_DAEMON_MAX_DAILY_DREAMS=6       # max dreams in rolling 24h window
+AAA_DAEMON_SHORT_WINDOW_HOURS=8     # burst-prevention window (hours)
+AAA_DAEMON_SHORT_WINDOW_MAX=2       # max dreams in short window
 AAA_DAEMON_DRIFT_COEFFICIENT=0.00001
 ```
 

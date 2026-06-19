@@ -77,8 +77,10 @@ class AutopoieticDreamDaemon(
         self.consolidate_min_new_messages = daemon_cfg.get("consolidate_min_new_messages", 4)
         self.consolidate_first_time_threshold = daemon_cfg.get("consolidate_first_time_threshold", 12)
 
-        # Execution constraints
+        # Execution constraints (two-tier budget)
         self.max_daily_dreams = daemon_cfg.get("max_daily_dreams", 120)
+        self.short_window_hours = daemon_cfg.get("short_window_hours", 8)
+        self.short_window_max = daemon_cfg.get("short_window_max", 2)
         self.dream_counter = 0
         self.last_reset_day = datetime.now(timezone.utc).day
 
@@ -121,6 +123,9 @@ class AutopoieticDreamDaemon(
             "last_dream_time": datetime.fromtimestamp(self.last_dream_time, tz=timezone.utc).isoformat() if self.last_dream_time else None,
             "dreams_today": self.dream_counter,
             "max_daily_dreams": self.max_daily_dreams,
+            "short_window_hours": self.short_window_hours,
+            "short_window_max": self.short_window_max,
+            "short_window_count": getattr(self, "short_counter", 0),
             "last_dream_action": self.last_dream_action,
             "dream_action_counts": dict(self.dream_action_counts),
             "min_dream_interval": self.min_dream_interval,
@@ -183,9 +188,9 @@ class AutopoieticDreamDaemon(
     async def check_and_trigger_dream(self, force: bool = False) -> Optional[dict]:
         """Single dream cycle entry point — called once per daemon tick.
 
-        Flow (one dream MAX per tick, strict budget enforcement):
-          1. Load rolling-24h dream count from dream_log table (persistent across restarts)
-          2. HARD STOP if budget exhausted (NO bypass, not even for force/manual trigger)
+        Flow (one dream MAX per tick, strict two-tier budget enforcement):
+          1. Load dream counts from dream_log: short-window (e.g. 8h) + long-window (24h)
+          2. HARD STOP if EITHER window exhausted (NO bypass, not even for force/manual)
           3. Priority: drain self-triggered queue (one item per tick, skips rate/idle gates)
           4. Rate-limit gate (min_dream_interval) — normal dreams only
           5. Idle gate (idle_threshold) — normal dreams only
@@ -193,11 +198,23 @@ class AutopoieticDreamDaemon(
         """
         now = time.time()
 
-        # ── STEP 1: Load daily dream count from dream_log (rolling 24h, persistent, restart-safe) ──
+        # ── STEP 1: Two-tier budget check (short window + long window) ──
+        # Short window prevents burst exhaustion, long window caps daily total.
+        # Both must pass. Counts are persistent (dream_log table).
+        from backend.metabolisation.daemon_trigger_signal import dequeue_dream_trigger, queue_depth
+
         try:
-            rolling_24h_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
-            self.dream_counter = self.message_repo.count_dreams_since(rolling_24h_ago)
-            logger.debug("Daemon loaded daily dream count (rolling 24h) from database: %d", self.dream_counter)
+            now_utc = datetime.now(timezone.utc)
+            short_ago = (now_utc - timedelta(hours=self.short_window_hours)).strftime("%Y-%m-%d %H:%M:%S")
+            long_ago = (now_utc - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+
+            self.short_counter = self.message_repo.count_dreams_since(short_ago)
+            self.dream_counter = self.message_repo.count_dreams_since(long_ago)
+            logger.debug(
+                "Daemon budget: %d/%d dreams in %dh, %d/%d dreams in 24h",
+                self.short_counter, self.short_window_max, self.short_window_hours,
+                self.dream_counter, self.max_daily_dreams,
+            )
         except Exception as e:
             logger.warning("Failed to count dreams from database: %s. Falling back to in-memory tracking.", e)
             current_day = datetime.now(timezone.utc).day
@@ -206,13 +223,19 @@ class AutopoieticDreamDaemon(
                 self.dream_action_counts = {}
                 self.last_reset_day = current_day
 
-        # ── STEP 2: HARD budget cap — NO override path ──
-        from backend.metabolisation.daemon_trigger_signal import dequeue_dream_trigger, queue_depth
+        # ── STEP 2: HARD budget caps (both windows) — NO override path ──
+        if self.short_counter >= self.short_window_max:
+            pending = queue_depth(self.app_state)
+            logger.warning(
+                "Short-window dream budget EXHAUSTED (%d/%d in %dh). %d self-triggered dream(s) queued — next slot frees in rolling %dh window.",
+                self.short_counter, self.short_window_max, self.short_window_hours, pending, self.short_window_hours,
+            )
+            return None
 
         if self.dream_counter >= self.max_daily_dreams:
             pending = queue_depth(self.app_state)
             logger.warning(
-                "Daily dream budget EXHAUSTED (%d/%d). %d self-triggered dream(s) queued — budget frees oldest slot in rolling 24h window.",
+                "Daily dream budget EXHAUSTED (%d/%d in 24h). %d self-triggered dream(s) queued — budget frees oldest slot in rolling 24h window.",
                 self.dream_counter, self.max_daily_dreams, pending,
             )
             return None

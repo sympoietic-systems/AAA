@@ -35,6 +35,8 @@ export const DreamingSection = memo(function DreamingSection() {
   const typeCounts = Object.entries(status.dream_action_counts || {}).map(([key, count]) => ({ key, count, ...(DREAM_TYPE_LABELS[key] || { code: "???", label: key, color: "#888" }) })).sort((a, b) => b.count - a.count)
   const idlePct = status.idle_threshold_seconds > 0 ? Math.min(100, (status.idle_time_seconds / status.idle_threshold_seconds) * 100) : 0
   const budgetPct = status.max_daily_dreams > 0 ? Math.min(100, (status.dreams_today / status.max_daily_dreams) * 100) : 0
+  const hasShortWindow = (status.short_window_hours ?? 0) > 0 && (status.short_window_max ?? 0) > 0
+  const shortWindowPct = hasShortWindow ? Math.min(100, ((status.short_window_count ?? 0) / status.short_window_max!) * 100) : 0
 
   return (
     <div className="px-4 py-2">
@@ -80,10 +82,24 @@ export const DreamingSection = memo(function DreamingSection() {
           <span className="text-[#888]">{status.dreams_today}</span>
           <span className="text-[#444]">/</span>
           <span className="text-[#555]">{status.max_daily_dreams}</span>
+          <span className="text-[#444]">· 24h</span>
           <div className="ml-auto w-10 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
             <div className="h-full rounded-sm transition-all duration-500" style={{ width: `${budgetPct}%`, backgroundColor: budgetPct > 80 ? "#ef4444" : budgetPct > 50 ? "#facc15" : "#4ade80", opacity: 0.7 }} />
           </div>
         </div>
+        {/* Short window burst-prevention bar (only when configured) */}
+        {hasShortWindow && (
+          <div className="flex gap-1 items-center">
+            <span className="text-[#666]">BURST</span>
+            <span className="text-[#888]">{status.short_window_count ?? 0}</span>
+            <span className="text-[#444]">/</span>
+            <span className="text-[#555]">{status.short_window_max}</span>
+            <span className="text-[#444]">· {status.short_window_hours}h</span>
+            <div className="ml-auto w-10 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
+              <div className="h-full rounded-sm transition-all duration-500" style={{ width: `${shortWindowPct}%`, backgroundColor: shortWindowPct >= 100 ? "#ef4444" : shortWindowPct > 50 ? "#facc15" : "#f472b6", opacity: 0.7 }} />
+            </div>
+          </div>
+        )}
         {typeCounts.length > 0 && (
           <>
             <div className="text-[#555] mt-2 font-bold">=== DREAM TYPES ===</div>
