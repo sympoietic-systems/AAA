@@ -206,13 +206,14 @@ export async function downloadExport(conversationId: string): Promise<void> {
   const match = disposition.match(/filename="?([^"]+)"?/)
   const filename = match ? match[1] : `conversation_${conversationId.slice(0, 8)}.md`
 
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
+  // Use data URL instead of blob URL to avoid browser insecure-connection
+  // warnings when the page is served over HTTP
+  const text = await res.text()
+  const dataUrl = "data:text/markdown;charset=utf-8," + encodeURIComponent(text)
   const a = document.createElement("a")
-  a.href = url
+  a.href = dataUrl
   a.download = filename
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  URL.revokeObjectURL(url)
 }
