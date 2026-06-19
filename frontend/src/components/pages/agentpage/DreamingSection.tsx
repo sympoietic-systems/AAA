@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react"
+import { useState, useEffect, memo, useMemo } from "react"
 import { getDaemonStatus, getRecentDreams } from "../../../api/client"
 import type { DaemonStatusResponse, DreamEntry } from "../../../api/client"
 import { formatRelativeTime } from "../../../utils/dateFormat"
@@ -6,16 +6,23 @@ import telemetrySchemas from "../../../config/telemetry_schemas.json"
 
 const { DREAM_TYPE_LABELS } = telemetrySchemas as { DREAM_TYPE_LABELS: Record<string, { code: string; label: string; color: string }> }
 
+// §3: Stable references — avoid inline object creation each render
+const EMPTY_COUNTS: Record<string, number> = {}
+const UNKNOWN_TYPE = { code: "???", label: "", color: "#888" } as const
+const EMPTY_ARRAY: DreamEntry[] = []
+
 export const DreamingSection = memo(function DreamingSection() {
   const [status, setStatus] = useState<DaemonStatusResponse | null>(null)
-  const [dreams, setDreams] = useState<DreamEntry[]>([])
+  const [dreams, setDreams] = useState<DreamEntry[]>(EMPTY_ARRAY)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     getDaemonStatus().then(setStatus).catch(e => setError(e.message || "Failed"))
     getRecentDreams(24).then(d => setDreams(d.dreams)).catch(() => {})
     const id = setInterval(() => {
-      getDaemonStatus().then(setStatus).catch(() => {})
+      getDaemonStatus().then(setStatus).catch(() => {
+        // If daemon goes down, keep last known state (no spam)
+      })
       getRecentDreams(24).then(d => setDreams(d.dreams)).catch(() => {})
     }, 10000)
     return () => clearInterval(id)
@@ -24,19 +31,44 @@ export const DreamingSection = memo(function DreamingSection() {
   if (error && !status) return <div className="text-[#ef4444] font-mono">{error}</div>
   if (!status) return <div className="text-[#444] font-mono">waiting for data...</div>
 
-  let stateLabel = "dormant"; let stateColor = "#555"
-  if (status.enabled && status.running) {
-    const tsd = status.last_dream_time ? (Date.now() - new Date(status.last_dream_time).getTime()) / 1000 : Infinity
-    stateLabel = tsd < status.check_interval * 2 ? "dreaming" : "resting"
-    stateColor = stateLabel === "dreaming" ? "#a78bfa" : "#6c6c8a"
-  } else if (status.enabled && !status.running) { stateLabel = "resting"; stateColor = "#6c6c8a" }
+  // §3: useMemo — compute all derived values once per status change
+  const { stateLabel, stateColor, lastAction, typeCounts, idlePct, budgetPct, hasShortWindow, shortWindowPct } = useMemo(() => {
+    let label = "dormant"; let color = "#555"
+    if (status.enabled && status.running) {
+      const tsd = status.last_dream_time ? (Date.now() - new Date(status.last_dream_time).getTime()) / 1000 : Infinity
+      label = tsd < status.check_interval * 2 ? "dreaming" : "resting"
+      color = label === "dreaming" ? "#a78bfa" : "#6c6c8a"
+    } else if (status.enabled && !status.running) { label = "resting"; color = "#6c6c8a" }
 
-  const lastAction = status.last_dream_action ? DREAM_TYPE_LABELS[status.last_dream_action] || { code: "???", label: status.last_dream_action, color: "#888" } : null
-  const typeCounts = Object.entries(status.dream_action_counts || {}).map(([key, count]) => ({ key, count, ...(DREAM_TYPE_LABELS[key] || { code: "???", label: key, color: "#888" }) })).sort((a, b) => b.count - a.count)
-  const idlePct = status.idle_threshold_seconds > 0 ? Math.min(100, (status.idle_time_seconds / status.idle_threshold_seconds) * 100) : 0
-  const budgetPct = status.max_daily_dreams > 0 ? Math.min(100, (status.dreams_today / status.max_daily_dreams) * 100) : 0
-  const hasShortWindow = (status.short_window_hours ?? 0) > 0 && (status.short_window_max ?? 0) > 0
-  const shortWindowPct = hasShortWindow ? Math.min(100, ((status.short_window_count ?? 0) / status.short_window_max!) * 100) : 0
+    const action = status.last_dream_action
+      ? DREAM_TYPE_LABELS[status.last_dream_action] || { ...UNKNOWN_TYPE, label: status.last_dream_action }
+      : null
+
+    const counts = Object.entries(status.dream_action_counts || EMPTY_COUNTS)
+      .map(([key, count]) => ({
+        key, count,
+        ...(DREAM_TYPE_LABELS[key] || { ...UNKNOWN_TYPE, label: key }),
+      }))
+      .sort((a, b) => b.count - a.count)
+
+    const idle = status.idle_threshold_seconds > 0
+      ? Math.min(100, (status.idle_time_seconds / status.idle_threshold_seconds) * 100)
+      : 0
+    const budget = status.max_daily_dreams > 0
+      ? Math.min(100, (status.dreams_today / status.max_daily_dreams) * 100)
+      : 0
+    const hasSW = (status.short_window_hours ?? 0) > 0 && (status.short_window_max ?? 0) > 0
+    const swPct = hasSW
+      ? Math.min(100, ((status.short_window_count ?? 0) / status.short_window_max!) * 100)
+      : 0
+
+    return {
+      stateLabel: label, stateColor: color,
+      lastAction: action, typeCounts: counts,
+      idlePct: idle, budgetPct: budget,
+      hasShortWindow: hasSW, shortWindowPct: swPct,
+    }
+  }, [status])
 
   return (
     <div className="px-4 py-2">

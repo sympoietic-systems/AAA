@@ -6,6 +6,7 @@ using a multi-turn resonance loop.
 """
 
 import asyncio
+import json
 import logging
 import time
 from collections import deque
@@ -165,7 +166,7 @@ class AutopoieticDreamDaemon(
             except Exception as e:
                 logger.exception("Error in Autopoietic Dream Daemon skill metabolism: %s", e)
             # Periodic belief atrophy (logged, covers all non-ghost stages)
-            now_ts = __import__("time").time()
+            now_ts = time.time()
             if now_ts - _last_atrophy_time >= _atrophy_interval:
                 _last_atrophy_time = now_ts
                 try:
@@ -509,7 +510,7 @@ class AutopoieticDreamDaemon(
             engine = getattr(self.app_state, "belief_metabolism", None)
             if engine:
                 health = await engine.compute_ecosystem_health("symbia")
-                dream_context["ecosystem_health"] = __import__("json").dumps(health, default=str)
+                dream_context["ecosystem_health"] = json.dumps(health, default=str)
                 dream_context["active_belief_count"] = health.get("active_count", 0)
                 dream_context["eco_vitality"] = health.get("eco_vitality", 0)
                 dream_context["tension"] = health.get("tension", 0)

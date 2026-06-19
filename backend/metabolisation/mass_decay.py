@@ -1,6 +1,7 @@
 """Mass decay and skill ecology mixin for the Dream Daemon."""
 
 import logging
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -16,7 +17,7 @@ class MassDecayMixin:
         if idle_duration < 10:
             return
 
-        now = __import__("time").time()
+        now = time.time()
         if not getattr(self, "last_decay_time", 0.0):
             self.last_decay_time = now - idle_duration
 
