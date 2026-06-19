@@ -339,6 +339,7 @@ export const NodeExplorer = memo(function NodeExplorer({
   conversations = [],
   onNavigateToNotification,
   onDeleteMessage,
+  onExportConversation,
 }: Props) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleVal, setTitleVal] = useState(conversationTitle)
