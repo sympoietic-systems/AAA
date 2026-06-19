@@ -200,13 +200,8 @@ class MessageRepository(BaseRepository):
     def count_dreams_since(self, since_date_str: str) -> int:
         conn = self._conn()
         row = conn.execute(
-            """SELECT COUNT(*) as cnt FROM conversation_log
-               WHERE conversation_id IN (
-                   SELECT conversation_id FROM conversation_tags
-                   WHERE tag_type = 'structural' AND tag = 'dreams'
-               )
-               AND speaker = 'apparatus'
-               AND timestamp >= ?""",
+            """SELECT COUNT(*) as cnt FROM dream_log
+               WHERE timestamp >= ?""",
             (since_date_str,),
         ).fetchone()
         return row["cnt"] if row else 0

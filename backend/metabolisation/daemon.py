@@ -181,9 +181,19 @@ class AutopoieticDreamDaemon(
             await asyncio.sleep(self.check_interval)
 
     async def check_and_trigger_dream(self, force: bool = False) -> Optional[dict]:
+        """Single dream cycle entry point — called once per daemon tick.
+
+        Flow (one dream MAX per tick, strict budget enforcement):
+          1. Load daily dream count from dream_log table (persistent across restarts)
+          2. HARD STOP if budget exhausted (NO bypass, not even for force/manual trigger)
+          3. Priority: drain self-triggered queue (one item per tick, skips rate/idle gates)
+          4. Rate-limit gate (min_dream_interval) — normal dreams only
+          5. Idle gate (idle_threshold) — normal dreams only
+          6. Normal dream evaluation (stagnation → hotspot → drift/compaction)
+        """
         now = time.time()
 
-        # 1. Query daily dream count from database to prevent restart & multi-process bypass
+        # ── STEP 1: Load daily dream count from dream_log (persistent, restart-safe) ──
         try:
             today_utc_str = datetime.now(timezone.utc).strftime("%Y-%m-%d 00:00:00")
             self.dream_counter = self.message_repo.count_dreams_since(today_utc_str)
@@ -196,28 +206,36 @@ class AutopoieticDreamDaemon(
                 self.dream_action_counts = {}
                 self.last_reset_day = current_day
 
-        # 2. Check daily budget cap
-        if self.dream_counter >= self.max_daily_dreams and not force:
-            logger.warning("Daily dream budget exhausted (%d/%d)", self.dream_counter, self.max_daily_dreams)
+        # ── STEP 2: HARD budget cap — NO override path ──
+        from backend.metabolisation.daemon_trigger_signal import dequeue_dream_trigger, queue_depth
+
+        if self.dream_counter >= self.max_daily_dreams:
+            pending = queue_depth(self.app_state)
+            logger.warning(
+                "Daily dream budget EXHAUSTED (%d/%d). %d self-triggered dream(s) queued will execute after midnight UTC.",
+                self.dream_counter, self.max_daily_dreams, pending,
+            )
             return None
 
-        # 3. CHECK SELF-TRIGGERED DREAM QUEUE (higher priority, bypasses idle/rate checks)
-        from backend.metabolisation.daemon_trigger_signal import dequeue_dream_trigger
+        # ── STEP 3: Drain self-triggered queue — highest priority ──
+        # Each tick pops ONE item. Queue drains item-by-item across ticks.
+        # Self-triggered dreams skip rate-limit and idle gates (Symbia requested them).
         pending_trigger = dequeue_dream_trigger(self.app_state)
         if pending_trigger:
+            remaining = queue_depth(self.app_state)
             logger.info(
-                "Autopoietic Dream Daemon: self-triggered dream request (reason=%s, convo=%s)",
-                pending_trigger["reason"][:120], pending_trigger["conversation_id"][:8],
+                "Dream Daemon: consuming self-triggered dream (reason=%s, convo=%s, queue_remaining=%d)",
+                pending_trigger["reason"][:120], pending_trigger["conversation_id"][:8], remaining,
             )
             return await self._execute_self_triggered_dream(pending_trigger, now)
 
-        # 4. Check rate limit interval between dream cycles
+        # ── STEP 4: Rate-limit gate (normal dreams only) ──
         if not force and (now - self.last_dream_time < self.min_dream_interval):
             logger.debug("Dream Daemon cooling down. Elapsed: %.1fs, Required: %ds",
                          now - self.last_dream_time, self.min_dream_interval)
             return None
 
-        # 5. Check user inactivity duration
+        # ── STEP 5: Idle gate (normal dreams only) ──
         last_msg_ts = self.message_repo.get_last_message_timestamp()
         if not last_msg_ts:
             logger.info("No message history found. Skipping dream trigger.")

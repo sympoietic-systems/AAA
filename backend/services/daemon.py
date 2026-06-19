@@ -11,6 +11,12 @@ class DaemonService:
         daemon = getattr(state, "dream_daemon", None)
         if not daemon:
             return None
+        # Check budget before attempting trigger (force no longer bypasses budget)
+        if daemon.dream_counter >= daemon.max_daily_dreams:
+            return {
+                "status": "skipped",
+                "reason": f"Daily dream budget exhausted ({daemon.dream_counter}/{daemon.max_daily_dreams})",
+            }
         result = await daemon.check_and_trigger_dream(force=True)
         if result is None:
             return {"status": "skipped", "reason": "No active conversation or compilation error"}

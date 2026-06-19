@@ -17,13 +17,13 @@ The Autopoietic Dream Daemon is the background engine that drives agential varie
 
 ## Daemon Loop Responsibilities
 
-The daemon runs its check loop every 30 seconds (configurable) regardless of user activity. Each cycle executes:
+The daemon runs its check loop every `check_interval` seconds (default 300s / 5 min) regardless of user activity. Each cycle executes:
 
 1. **Conversation consolidation** — compacts stale conversations
 2. **Skill metabolism** — refreshes skill-to-belief bridge states
 3. **Belief mass atrophy** (every 15 min) — applies linear time-based decay to all non-ghost beliefs via `BeliefDynamicsEngine._atrophy_beliefs()`. This is the single source of truth for belief decay, replacing the old dual-path design (pipeline `process()` atrophy + daemon `_apply_mass_decay()`). All decay events are logged as `belief_events` with `source_type: "atrophy"`, visible in the frontend Belief Log tab. Each atrophy cycle also produces a batch `trace` notification in the Creases dropdown.
-4. **Dream trigger check** — evaluates stagnation, tension hotspots, and somatic drift; launches autonomous monologues, web harvesting, or memory compaction when idle thresholds are met
-5. **Self-triggered dream queue check** — checks the priority FIFO queue for `<dream_trigger>` requests from Symbia's chat responses; if queued items exist, executes them BEFORE timer-driven logic using the same unified pipeline
+4. **Dream trigger check** — if self-triggered queue is non-empty, drains ONE item per tick (highest priority, bypasses rate/idle gates). If queue is empty, falls through to normal evaluation: stagnation, tension hotspots, and somatic drift; launches autonomous monologues, web harvesting, or memory compaction when idle thresholds are met
+5. **Daily budget enforcement** — before any dream executes (including self-triggered and manual triggers), the daemon checks `dream_log` for today's dream count. If at or above `max_daily_dreams`, ALL dream execution stops — no override path. Queued self-triggers wait for midnight UTC rollover.
 
 ---
 
@@ -67,20 +67,20 @@ Configure daemon thresholds in `backend/config.yaml` or override them in `.env`:
 ```yaml
 daemon:
   enabled: true
-  check_interval: 60       # seconds between checking state
-  idle_threshold: 1800     # seconds of user silence before dreaming (e.g. 30 mins)
-  min_dream_interval: 3600 # minimum seconds between successive dreams (e.g. 1 hour)
-  max_daily_dreams: 10     # daily dream count budget limit
+  check_interval: 300       # seconds between tick evaluations (5 min)
+  idle_threshold: 1800      # seconds of user silence before dreaming (30 min)
+  min_dream_interval: 3600  # minimum seconds between successive dreams (1 hour)
+  max_daily_dreams: 20      # daily dream cycle count budget (counted from dream_log)
   drift_coefficient: 0.00001
 ```
 
 ### Environment Variable Overrides (`.env`)
 ```bash
 AAA_DAEMON_ENABLED=true
-AAA_DAEMON_CHECK_INTERVAL=60
-AAA_DAEMON_IDLE_THRESHOLD=1800
-AAA_DAEMON_MIN_DREAM_INTERVAL=3600
-AAA_DAEMON_MAX_DAILY_DREAMS=10
+AAA_DAEMON_CHECK_INTERVAL=300      # seconds between tick evaluations (5 min)
+AAA_DAEMON_IDLE_THRESHOLD=1800     # seconds of user silence (30 min)
+AAA_DAEMON_MIN_DREAM_INTERVAL=3600 # minimum seconds between dreams (1 hour)
+AAA_DAEMON_MAX_DAILY_DREAMS=20     # max dream cycles per day (counted from dream_log)
 AAA_DAEMON_DRIFT_COEFFICIENT=0.00001
 ```
 
@@ -89,7 +89,7 @@ AAA_DAEMON_DRIFT_COEFFICIENT=0.00001
 ## Database Budget Caps & Agentic Meta-Cognitive Routing
 
 ### 1. Database-Backed Budget Caps
-To prevent daemon budget bypasses caused by server restarts (uvicorn auto-reload) or multiple parallel backend instances, the daily dream count is tracked dynamically in the database via `count_dreams_since` with wildcards (`LIKE 'Dream Log%' OR LIKE 'Internal Diary%'`). This counts all successful dream monologues executed since midnight UTC of the current calendar day.
+To prevent daemon budget bypasses caused by server restarts (uvicorn auto-reload) or multiple parallel backend instances, the daily dream count is tracked dynamically in the database via `count_dreams_since` which queries the `dream_log` table (one row per dream cycle). This counts all successful dream cycles executed since midnight UTC of the current calendar day — **not individual apparatus messages**.
 
 ### 2. Agentic Meta-Cognitive Routing
 Instead of writing all dreams to a single, monolithic log or dividing them strictly by their technical dream action types (which produces extremely long, mixed-topic logs), the background model itself decides where to route each dream cycle based on the **specific conceptual topic or theme**.
@@ -101,7 +101,7 @@ Instead of writing all dreams to a single, monolithic log or dividing them stric
 
 ## Self-Triggered Dream Cycles
 
-Symbia can now request an immediate dream cycle by emitting a `<dream_trigger reason="..."/>` XML tag at the end of her chat responses. This grants her agency over her own metabolic rhythm — instead of waiting passively for the timer-driven daemon to detect stagnation.
+Symbia can request a dream cycle by emitting a `<dream_trigger reason="..."/>` XML tag at the end of her chat responses. Triggers are queued (not executed instantly) and drained one-per-tick by the daemon — granting agency while respecting budget and pacing constraints.
 
 ### Trigger Flow
 
@@ -114,21 +114,21 @@ Symbia's chat response
 
 Daemon poll loop (every check_interval seconds)
   → check_and_trigger_dream()
-      ├─ budget check
-      ├─ QUEUE CHECK (step 3) ← Self-triggered dreams have HIGHER priority
-      │   └─ if item: _execute_self_triggered_dream()
-      │       → same unified pipeline as normal dreams
-      │       → action type: "self_triggered"
-      ├─ rate limit check
-      ├─ idle threshold check
-      └─ normal stagnation/hotspot/drift evaluation
+      ├─ STEP 1: Load dream_log count (dream cycles, not messages)
+      ├─ STEP 2: HARD STOP if budget exhausted (NO override — manual and self-triggered both blocked)
+      ├─ STEP 3: Dequeue ONE self-triggered dream → execute → return
+      │         Queued dreams skip rate-limit & idle gates (Symbia explicitly requested them).
+      │         Queue drains one item per tick until empty.
+      ├─ STEP 4: Rate-limit gate (normal dreams only)
+      ├─ STEP 5: Idle gate (normal dreams only)
+      └─ STEP 6: Normal stagnation/hotspot/drift evaluation
 ```
 
 ### Key Design Decisions
 
 1. **Unified pipeline**: Self-triggered dreams use the exact same `_generate_dream_prompt()` → `_resolve_dream_conversation()` → `_execute_single_dream_turn()` flow as timer-driven dreams. No duplicate code path.
-2. **Queue-based, not event-driven**: Currently uses the daemon's existing poll loop (checked every `check_interval` seconds). A future enhancement could add an `asyncio.Event` to wake the daemon immediately without waiting for the next tick.
-3. **Budget cap respected**: Self-triggered dreams count toward the daily `max_daily_dreams` limit, preventing Symbia from spamming the queue.
+2. **Queue drains one per tick**: Each daemon tick pops a single item. If 5 items are queued, they execute over 5 ticks (5 × check_interval). No burst execution.
+3. **Absolute budget cap**: Self-triggered + normal + manual dreams all count toward `max_daily_dreams` (tracked via `dream_log` table, one row per cycle). When budget is exhausted, NO dream type executes. Queued triggers wait for midnight UTC rollover.
 4. **Queue depth limit**: Maximum 10 pending triggers in the FIFO queue.
 5. **Skill-gated**: The `self-triggered-dreaming` skill in `seed_skills.yaml` teaches Symbia when to emit the tag:
    * Unresolved tension between beliefs
@@ -166,7 +166,7 @@ Daemon poll loop (every check_interval seconds)
     - `dream_action_counts` — per-type breakdown of today's dreams (e.g., `{"nomadic_synthesis": 4, "somatic_drift_reflection": 3, "self_triggered": 1}`)
     - `min_dream_interval`, `check_interval` — timing configuration
     - `pending_self_triggers` — number of queued `<dream_trigger>` requests waiting to be processed
-*   `POST /api/daemon/trigger`: Manually triggers a dream cycle (force=true, bypasses idle/interval checks).
+*   `POST /api/daemon/trigger`: Manually triggers a dream cycle. Bypasses idle and rate-limit checks, but still respects the daily budget cap. If budget is exhausted, returns `{"status": "skipped", "reason": "Daily dream budget exhausted (N/M)"}`.
 
 ---
 
