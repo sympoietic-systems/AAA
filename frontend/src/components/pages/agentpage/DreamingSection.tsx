@@ -105,22 +105,51 @@ export const DreamingSection = memo(function DreamingSection() {
             [ Recent Dreams ({dreams.length}) ]
           </div>
           <div className="flex flex-col gap-0.5 max-h-80 overflow-y-auto">
-            {dreams.map((d) => (
-              <div key={d.id} className="flex items-center gap-2 py-1">
-                <span className="text-[#555] text-[9px] shrink-0">{formatRelativeTime(d.timestamp)}</span>
-                <span className="text-[#555] text-[9px] shrink-0">{d.action}</span>
-                <a
-                  href={`/?c=${d.conversation_id}${d.response_msg_id ? `&m=${d.response_msg_id}` : ""}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#94a3b8] hover:text-[#a78bfa] truncate flex-1 min-w-0 transition-colors"
-                  title={d.last_snippet || d.title}
-                >
-                  {d.title}
-                </a>
-                <span className="text-[#555] text-[9px] shrink-0">{d.turns}t · {d.msg_count}m</span>
-              </div>
-            ))}
+            {dreams.map((d) => {
+              const isSelfTriggered = d.action === "self_triggered"
+              const typeDef = DREAM_TYPE_LABELS[d.action]
+              return (
+                <div key={d.id} className="py-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#555] text-[9px] shrink-0">{formatRelativeTime(d.timestamp)}</span>
+                    <span className="text-[9px] shrink-0" style={{ color: typeDef?.color || "#555" }}>
+                      {typeDef?.code || d.action}
+                    </span>
+                    <a
+                      href={`/?c=${d.conversation_id}${d.response_msg_id ? `&m=${d.response_msg_id}` : ""}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#94a3b8] hover:text-[#a78bfa] truncate flex-1 min-w-0 transition-colors"
+                      title={d.last_snippet || d.title}
+                    >
+                      {d.title}
+                    </a>
+                    <span className="text-[#555] text-[9px] shrink-0">{d.turns}t · {d.msg_count}m</span>
+                  </div>
+                  {/* Self-triggered metadata: reason + source conversation link */}
+                  {isSelfTriggered && (d.trigger_reason || d.source_conversation_id) && (
+                    <div className="flex items-center gap-2 ml-0 mt-0.5">
+                      {d.trigger_reason && (
+                        <span className="text-[#6b4b8a] text-[8px] truncate flex-1 min-w-0 italic" title={d.trigger_reason}>
+                          ← {d.trigger_reason}
+                        </span>
+                      )}
+                      {d.source_conversation_id && (
+                        <a
+                          href={`/?c=${d.source_conversation_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#8b6cba] hover:text-[#c084fc] text-[8px] shrink-0 transition-colors"
+                          title="Jump to source conversation"
+                        >
+                          [→ src]
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

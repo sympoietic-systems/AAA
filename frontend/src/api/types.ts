@@ -84,7 +84,7 @@ export interface ConversationFilesResponse { conversation_id: string; files: Con
 
 export interface SchedulerStatusResponse { status: "pending" | "running" | "completed" | "error" | "not_initialized"; indexing_tasks_found: number; indexing_tasks_completed: number; indexing_tasks_failed: number; active_indexing_jobs: string[]; belief_turns_found: number; belief_turns_completed: number; belief_turns_failed: number; error_details?: string | null }
 export interface DaemonStatusResponse { enabled: boolean; running: boolean; idle_time_seconds: number; idle_threshold_seconds: number; last_dream_time: string | null; dreams_today: number; max_daily_dreams: number; last_dream_action: string | null; dream_action_counts: Record<string, number>; min_dream_interval: number; check_interval: number; pending_self_triggers: number }
-export interface DreamEntry { id: number; conversation_id: string; action: string; response_msg_id: number | null; turns: number; timestamp: string; title: string; msg_count: number; last_snippet: string | null }
+export interface DreamEntry { id: number; conversation_id: string; action: string; response_msg_id: number | null; turns: number; timestamp: string; title: string; msg_count: number; last_snippet: string | null; trigger_reason?: string | null; source_conversation_id?: string | null }
 export interface DreamHistoryResponse { dreams: DreamEntry[]; count: number }
 
 export interface NoteInfo { id: string; conversation_id: string; message_id: number; selected_text: string; comment: string; visibility: "personal" | "shared" | "agent"; created_at: string; updated_at: string }

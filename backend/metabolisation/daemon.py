@@ -596,6 +596,8 @@ class AutopoieticDreamDaemon(
                         prompt_msg_id=first_turn["user_msg"].id,
                         response_msg_id=last_turn["assistant_msg"].id,
                         turns=actual_turns,
+                        trigger_reason=reason,
+                        source_conversation_id=source_convo_id,
                     )
                 except Exception as e:
                     logger.warning("Failed to log self-triggered dream: %s", e)

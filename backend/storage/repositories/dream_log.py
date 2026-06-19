@@ -11,12 +11,17 @@ class DreamLogRepository(BaseRepository):
         prompt_msg_id: int,
         response_msg_id: int,
         turns: int = 1,
+        trigger_reason: str = "",
+        source_conversation_id: str = "",
     ) -> int:
         conn = self._conn()
         cursor = conn.execute(
-            """INSERT INTO dream_log (conversation_id, action, prompt_msg_id, response_msg_id, turns)
-               VALUES (?, ?, ?, ?, ?)""",
-            (conversation_id, action, prompt_msg_id, response_msg_id, turns),
+            """INSERT INTO dream_log
+               (conversation_id, action, prompt_msg_id, response_msg_id, turns,
+                trigger_reason, source_conversation_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (conversation_id, action, prompt_msg_id, response_msg_id, turns,
+             trigger_reason, source_conversation_id),
         )
         conn.commit()
         return cursor.lastrowid
@@ -26,6 +31,7 @@ class DreamLogRepository(BaseRepository):
         conn = self._conn()
         rows = conn.execute(
             """SELECT dl.id, dl.conversation_id, dl.action, dl.response_msg_id, dl.turns, dl.timestamp,
+                      dl.trigger_reason, dl.source_conversation_id,
                       c.title,
                       (SELECT COUNT(*) FROM conversation_log WHERE conversation_id = dl.conversation_id) as msg_count,
                       (SELECT content FROM conversation_log WHERE id = dl.response_msg_id) as last_snippet
