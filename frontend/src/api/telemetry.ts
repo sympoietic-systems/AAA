@@ -31,8 +31,8 @@ export async function getSchedulerStatus(): Promise<SchedulerStatusResponse> {
   return res.json()
 }
 
-export async function getRecentDreams(hours: number = 48): Promise<DreamHistoryResponse> {
-  const res = await fetch(`${BASE}/daemon/dreams?hours=${hours}`)
+export async function getRecentDreams(limit: number = 24): Promise<DreamHistoryResponse> {
+  const res = await fetch(`${BASE}/daemon/dreams?limit=${limit}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

@@ -23,8 +23,8 @@ async def trigger_daemon_dream(state=Depends(get_app_state)):
 
 
 @router.get("/daemon/dreams")
-async def get_recent_dreams(request: Request, hours: int = 48, repo=Depends(get_dream_log_repo)):
+async def get_recent_dreams(request: Request, limit: int = 24, repo=Depends(get_dream_log_repo)):
     if not repo:
         raise HTTPException(status_code=503, detail="Dream Log not available")
-    dreams = repo.get_recent(hours)
+    dreams = repo.get_recent(limit)
     return {"dreams": dreams, "count": len(dreams)}

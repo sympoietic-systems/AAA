@@ -13,10 +13,10 @@ export const DreamingSection = memo(function DreamingSection() {
 
   useEffect(() => {
     getDaemonStatus().then(setStatus).catch(e => setError(e.message || "Failed"))
-    getRecentDreams(48).then(d => setDreams(d.dreams)).catch(() => {})
+    getRecentDreams(24).then(d => setDreams(d.dreams)).catch(() => {})
     const id = setInterval(() => {
       getDaemonStatus().then(setStatus).catch(() => {})
-      getRecentDreams(48).then(d => setDreams(d.dreams)).catch(() => {})
+      getRecentDreams(24).then(d => setDreams(d.dreams)).catch(() => {})
     }, 10000)
     return () => clearInterval(id)
   }, [])
@@ -98,7 +98,7 @@ export const DreamingSection = memo(function DreamingSection() {
         )}
       </div>
 
-      {/* Dream History — last 48h */}
+      {/* Dream History — last 24 entries */}
       {dreams.length > 0 && (
         <div className="mt-4 font-mono text-[10px]">
           <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1.5">

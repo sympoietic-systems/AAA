@@ -27,7 +27,7 @@ class DreamLogRepository(BaseRepository):
         return cursor.lastrowid
 
     @with_connection
-    def get_recent(self, hours: int = 48) -> list[dict]:
+    def get_recent(self, limit: int = 24) -> list[dict]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT dl.id, dl.conversation_id, dl.action, dl.response_msg_id, dl.turns, dl.timestamp,
@@ -37,9 +37,8 @@ class DreamLogRepository(BaseRepository):
                       (SELECT content FROM conversation_log WHERE id = dl.response_msg_id) as last_snippet
                FROM dream_log dl
                JOIN conversations c ON dl.conversation_id = c.id
-               WHERE dl.timestamp > datetime('now', '-' || ? || ' hours')
                ORDER BY dl.timestamp DESC
-               LIMIT 50""",
-            (hours,),
+               LIMIT ?""",
+            (limit,),
         ).fetchall()
         return [dict(r) for r in rows]
