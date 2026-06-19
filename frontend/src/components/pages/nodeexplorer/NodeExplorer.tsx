@@ -42,6 +42,7 @@ interface Props {
   conversations?: ConversationInfo[]
   onNavigateToNotification?: (convId: string, msgId: number) => void
   onDeleteMessage?: (messageId: number) => void
+  onExportConversation?: () => void
 }
 
 const EMPTY_ARRAY: NoteInfo[] = []
@@ -460,10 +461,21 @@ export const NodeExplorer = memo(function NodeExplorer({
           )}
         </div>
 
-        <CreasesDropdown
-          conversations={conversations}
-          onNavigateToNotification={onNavigateToNotification}
-        />
+        <div className="flex items-center gap-2">
+          {onExportConversation && (
+            <TerminalButton
+              onClick={onExportConversation}
+              title="Export conversation as Markdown"
+              intent="save"
+            >
+              #export
+            </TerminalButton>
+          )}
+          <CreasesDropdown
+            conversations={conversations}
+            onNavigateToNotification={onNavigateToNotification}
+          />
+        </div>
       </div>
 
       {/* Tags Bar */}

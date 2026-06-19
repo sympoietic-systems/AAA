@@ -11,7 +11,7 @@ import { ResearchPage } from "./components/pages/researchpage/ResearchPage"
 import { ResearchTaskPage } from "./components/pages/researchpage/ResearchTaskPage"
 import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
-import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag, getAgent, deleteMessage } from "./api/client"
+import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag, getAgent, deleteMessage, downloadExport } from "./api/client"
 
 const EMPTY_STRING_ARRAY: string[] = []
 
@@ -261,6 +261,16 @@ export default function App() {
 
   const handleGenerateTitle = async () => {
     if (activeId) await generateTitle(activeId)
+  }
+
+  const handleExportConversation = async () => {
+    if (activeId) {
+      try {
+        await downloadExport(activeId)
+      } catch (err) {
+        console.error("Failed to export conversation:", err)
+      }
+    }
   }
 
   const handleAddTag = async (tag: string) => {
@@ -540,6 +550,7 @@ export default function App() {
         conversations={conversations}
         onNavigateToNotification={handleNavigateToNotification}
         onDeleteMessage={agentFlux ? handleDeleteMessage : undefined}
+        onExportConversation={conversationId ? handleExportConversation : undefined}
       />
 
       {!rightPanelCollapsed && (

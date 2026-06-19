@@ -194,3 +194,25 @@ export async function reprocessFile(conversationId: string, fileName: string): P
   if (!res.ok) { const err = await res.json().catch(() => ({ detail: "Unknown error" })); throw new Error(err.detail || `HTTP ${res.status}`) }
   return res.json()
 }
+
+export async function downloadExport(conversationId: string): Promise<void> {
+  const res = await fetch(`${BASE}/conversations/${conversationId}/export`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Unknown error" }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  // Extract filename from Content-Disposition header
+  const disposition = res.headers.get("Content-Disposition") || ""
+  const match = disposition.match(/filename="?([^"]+)"?/)
+  const filename = match ? match[1] : `conversation_${conversationId.slice(0, 8)}.md`
+
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}

@@ -308,6 +308,75 @@ async def delete_resonance_link(conversation_id: str, link_id: str, request: Req
     return {"status": "success"}
 
 
+@router.get("/conversations/{conversation_id}/export")
+async def export_conversation(conversation_id: str, request: Request):
+    """Export the full conversation as a Markdown document for LLM consumption.
+
+    Includes tree structure, branches, cross-links, notes, memory nodes,
+    and metadata — all with machine-parseable ID references.
+    """
+    from fastapi.responses import PlainTextResponse
+
+    state = request.app.state
+    conv_repo = getattr(state, "conversation_repo", None)
+    msg_repo = state.message_repo
+    checkpoint_repo = getattr(state, "checkpoint_repo", None)
+    note_repo = getattr(state, "note_repo", None)
+    memory_node_repo = getattr(state, "memory_node_repo", None)
+
+    conv = require_conversation(conv_repo, conversation_id)
+
+    # Gather all data
+    tags = conv_repo.get_tags(conversation_id)
+
+    checkpoint = None
+    if checkpoint_repo:
+        checkpoint = checkpoint_repo.get_latest(conversation_id)
+
+    messages = msg_repo.get_messages_by_conversation(conversation_id)
+    links = msg_repo.get_message_links(conversation_id)
+
+    notes = []
+    if note_repo:
+        notes = note_repo.get_notes_by_conversation(conversation_id)
+
+    memory_nodes = []
+    if memory_node_repo:
+        memory_nodes = memory_node_repo.get_nodes(conversation_id)
+
+    # Build export
+    from backend.services.export import ExportService
+
+    conv_dict = {
+        "id": conv.id,
+        "title": conv.title,
+        "created_at": conv.created_at.isoformat() if conv.created_at else "",
+        "updated_at": conv.updated_at.isoformat() if conv.updated_at else "",
+        "message_count": conv.message_count,
+        "agent_id": conv.agent_id,
+    }
+
+    markdown = ExportService.build_export(
+        conv=conv_dict,
+        tags=tags,
+        checkpoint=checkpoint,
+        messages=messages,
+        links=links,
+        notes=notes,
+        memory_nodes=memory_nodes,
+    )
+
+    # Generate filename from title
+    safe_title = conv.title.strip().replace(" ", "_").replace("/", "_")[:80] if conv.title else "conversation"
+    filename = f"{safe_title}_{conversation_id[:8]}.md"
+
+    return PlainTextResponse(
+        content=markdown,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/conversations/{conversation_id}/messages/{message_id}/spectral-suggestions", response_model=list[SpectralSuggestion])
 async def get_spectral_suggestions(conversation_id: str, message_id: int, request: Request, threshold: float = 0.70):
     state = request.app.state

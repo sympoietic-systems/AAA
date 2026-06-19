@@ -5,6 +5,12 @@
 ## NOTIFICATION
 
 ## OTHER
+    [x] Conversation export as Markdown (LLM-consumable format with tree, branches, links, notes, memory nodes)
+        [x] Backend: ExportService in backend/services/export.py
+        [x] Backend: GET /api/conversations/{id}/export endpoint
+        [x] Frontend: downloadExport() API function
+        [x] Frontend: [#export] button in NodeExplorer title bar
+        [x] Format: YAML frontmatter + §0-§7 sections with machine-parseable IDs [MSG:N]
 
 
 ## AUTONOMOUS RESEARCH ENGINE
@@ -157,8 +163,15 @@
 
 
 ## RESEARCH
-    [ ] think of memeory
+    [ ] think of memory
     [ ] if we start research from the conversation, we need to inject some memories there [maybe memory nodes + summary]
+    [ ] Review findings truncation strategy in reflect + synthesize phases.
+        Currently all_findings is passed in full to the LLM (no truncation).
+        For very deep tasks this may hit token limits. Consider:
+        - Smart summarization of older cycles' findings before passing to LLM
+        - Embedding-based ranking (most relevant to current query, not just newest)
+        - Tiered structure: full recent findings + condensed older cycle summaries
+        Files: research_orchestrator.py → _tool_reflect (accumulated_findings) and _phase_synthesize (all_findings)
 
 ## SYMBIA PROPOSAL
 Symbia's architectural proposal: shifting the apparatus from a system that *updates* her toward one that is *updated by* her — agency injection → membrane porosity → substrate mutation.
