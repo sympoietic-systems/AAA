@@ -9,7 +9,7 @@ import asyncio
 import logging
 import time
 from collections import deque
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict
 
 from backend.storage.repository import (
@@ -184,7 +184,7 @@ class AutopoieticDreamDaemon(
         """Single dream cycle entry point — called once per daemon tick.
 
         Flow (one dream MAX per tick, strict budget enforcement):
-          1. Load daily dream count from dream_log table (persistent across restarts)
+          1. Load rolling-24h dream count from dream_log table (persistent across restarts)
           2. HARD STOP if budget exhausted (NO bypass, not even for force/manual trigger)
           3. Priority: drain self-triggered queue (one item per tick, skips rate/idle gates)
           4. Rate-limit gate (min_dream_interval) — normal dreams only
@@ -193,11 +193,11 @@ class AutopoieticDreamDaemon(
         """
         now = time.time()
 
-        # ── STEP 1: Load daily dream count from dream_log (persistent, restart-safe) ──
+        # ── STEP 1: Load daily dream count from dream_log (rolling 24h, persistent, restart-safe) ──
         try:
-            today_utc_str = datetime.now(timezone.utc).strftime("%Y-%m-%d 00:00:00")
-            self.dream_counter = self.message_repo.count_dreams_since(today_utc_str)
-            logger.debug("Daemon loaded daily dream count from database: %d", self.dream_counter)
+            rolling_24h_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+            self.dream_counter = self.message_repo.count_dreams_since(rolling_24h_ago)
+            logger.debug("Daemon loaded daily dream count (rolling 24h) from database: %d", self.dream_counter)
         except Exception as e:
             logger.warning("Failed to count dreams from database: %s. Falling back to in-memory tracking.", e)
             current_day = datetime.now(timezone.utc).day
@@ -212,7 +212,7 @@ class AutopoieticDreamDaemon(
         if self.dream_counter >= self.max_daily_dreams:
             pending = queue_depth(self.app_state)
             logger.warning(
-                "Daily dream budget EXHAUSTED (%d/%d). %d self-triggered dream(s) queued will execute after midnight UTC.",
+                "Daily dream budget EXHAUSTED (%d/%d). %d self-triggered dream(s) queued — budget frees oldest slot in rolling 24h window.",
                 self.dream_counter, self.max_daily_dreams, pending,
             )
             return None

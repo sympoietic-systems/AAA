@@ -89,7 +89,7 @@ AAA_DAEMON_DRIFT_COEFFICIENT=0.00001
 ## Database Budget Caps & Agentic Meta-Cognitive Routing
 
 ### 1. Database-Backed Budget Caps
-To prevent daemon budget bypasses caused by server restarts (uvicorn auto-reload) or multiple parallel backend instances, the daily dream count is tracked dynamically in the database via `count_dreams_since` which queries the `dream_log` table (one row per dream cycle). This counts all successful dream cycles executed since midnight UTC of the current calendar day — **not individual apparatus messages**.
+To prevent daemon budget bypasses caused by server restarts (uvicorn auto-reload) or multiple parallel backend instances, the daily dream count is tracked dynamically in the database via `count_dreams_since` which queries the `dream_log` table (one row per dream cycle). This counts all successful dream cycles executed in the last 24 hours (rolling window from `now() - 24h`) — **not individual apparatus messages** and **not a calendar-day midnight reset**.
 
 ### 2. Agentic Meta-Cognitive Routing
 Instead of writing all dreams to a single, monolithic log or dividing them strictly by their technical dream action types (which produces extremely long, mixed-topic logs), the background model itself decides where to route each dream cycle based on the **specific conceptual topic or theme**.
@@ -114,7 +114,7 @@ Symbia's chat response
 
 Daemon poll loop (every check_interval seconds)
   → check_and_trigger_dream()
-      ├─ STEP 1: Load dream_log count (dream cycles, not messages)
+      ├─ STEP 1: Load dream_log count (rolling 24h, dream cycles, not messages)
       ├─ STEP 2: HARD STOP if budget exhausted (NO override — manual and self-triggered both blocked)
       ├─ STEP 3: Dequeue ONE self-triggered dream → execute → return
       │         Queued dreams skip rate-limit & idle gates (Symbia explicitly requested them).
@@ -128,7 +128,7 @@ Daemon poll loop (every check_interval seconds)
 
 1. **Unified pipeline**: Self-triggered dreams use the exact same `_generate_dream_prompt()` → `_resolve_dream_conversation()` → `_execute_single_dream_turn()` flow as timer-driven dreams. No duplicate code path.
 2. **Queue drains one per tick**: Each daemon tick pops a single item. If 5 items are queued, they execute over 5 ticks (5 × check_interval). No burst execution.
-3. **Absolute budget cap**: Self-triggered + normal + manual dreams all count toward `max_daily_dreams` (tracked via `dream_log` table, one row per cycle). When budget is exhausted, NO dream type executes. Queued triggers wait for midnight UTC rollover.
+3. **Absolute budget cap**: Self-triggered + normal + manual dreams all count toward `max_daily_dreams` (tracked via `dream_log` table, one row per cycle, rolling 24-hour window). When budget is exhausted, NO dream type executes. The oldest slot frees up continuously as 24h passes — no midnight burst.
 4. **Queue depth limit**: Maximum 10 pending triggers in the FIFO queue.
 5. **Skill-gated**: The `self-triggered-dreaming` skill in `seed_skills.yaml` teaches Symbia when to emit the tag:
    * Unresolved tension between beliefs
