@@ -53,6 +53,15 @@ echo -e "${YELLOW}[3/5] Installing Python dependencies (uv sync) ...${NC}"
 uv sync
 echo -e "${GREEN}  [OK]${NC}"
 
+# Install Playwright browser binaries
+echo -e "${YELLOW}Installing Playwright browser binaries ...${NC}"
+if uv run playwright install; then
+    echo -e "${GREEN}  [OK] Playwright browser binaries installed${NC}"
+else
+    echo -e "${YELLOW}  [WARNING] Playwright installation failed. Crawling functionality may be limited.${NC}"
+fi
+echo ""
+
 # ── 4. Install Node.js & frontend deps ───────────────────────
 echo -e "${YELLOW}[4/5] Setting up frontend ...${NC}"
 if ! command -v node &> /dev/null; then

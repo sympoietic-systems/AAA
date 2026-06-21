@@ -48,6 +48,16 @@ if %ERRORLEVEL% neq 0 (
 echo [OK] Python dependencies installed.
 echo.
 
+:: Install Playwright browser binaries
+echo Installing Playwright browser binaries ...
+uv run playwright install
+if %ERRORLEVEL% neq 0 (
+    echo [WARNING] Playwright installation failed. Crawling functionality may be limited.
+) else (
+    echo [OK] Playwright browser binaries installed.
+)
+echo.
+
 :: 4. Check/Install Node.js & frontend dependencies
 echo [4/5] Checking frontend dependencies ...
 where node >nul 2>&1
