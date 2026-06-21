@@ -76,7 +76,7 @@ cd frontend && npm run dev
 ```
 Open **http://localhost:5173**.
 
-> See the full [Setup Guide](docs/guides/SETUP.md) for database setup, belief seeding, PM2 management, and troubleshooting.
+> See the [Easy Quickstart Guide](docs/guides/QUICKSTART_NON_TECHNICAL.md) for a simplified, non-technical local setup walkthrough, or the full [Setup Guide](docs/guides/SETUP.md) for advanced configuration, database seeding scripts, and troubleshooting.
 
 ---
 

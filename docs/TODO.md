@@ -5,12 +5,6 @@
 ## NOTIFICATION
 
 ## OTHER
-    [x] Conversation export as Markdown (LLM-consumable format with tree, branches, links, notes, memory nodes)
-        [x] Backend: ExportService in backend/services/export.py
-        [x] Backend: GET /api/conversations/{id}/export endpoint
-        [x] Frontend: downloadExport() API function
-        [x] Frontend: [#export] button in NodeExplorer title bar
-        [x] Format: YAML frontmatter + §0-§7 sections with machine-parseable IDs [MSG:N]
 
 
 ## AUTONOMOUS RESEARCH ENGINE
@@ -172,6 +166,9 @@
         - Embedding-based ranking (most relevant to current query, not just newest)
         - Tiered structure: full recent findings + condensed older cycle summaries
         Files: research_orchestrator.py → _tool_reflect (accumulated_findings) and _phase_synthesize (all_findings)
+        - MAYBE actualy reflect step, or we add one more step [consolidation] that would analize all current findings for the cycle and consolidate them in some way
+        - we need to remove useles findings from the calls [like page doesn't have any information]
+
 
 ## SYMBIA PROPOSAL
 Symbia's architectural proposal: shifting the apparatus from a system that *updates* her toward one that is *updated by* her — agency injection → membrane porosity → substrate mutation.

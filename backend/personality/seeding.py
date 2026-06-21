@@ -165,8 +165,7 @@ def seed_dynamic_personality(
     Only seeds if the commitment_nodes table is empty.
     Idempotent — safe to call on every startup.
 
-    Data is hardcoded from the original identity.yaml baseline.
-    The YAML file itself is now the trimmed runtime version.
+    Data is loaded from identity_path if provided, falling back to canonical defaults.
     """
     # Check if already seeded
     existing_count = commitment_repo.count(agent_id)
@@ -177,12 +176,50 @@ def seed_dynamic_personality(
         )
         return
 
-    logger.info("Seeding dynamic personality from canonical baseline...")
+    commitments = SEED_COMMITMENTS
+    expertise = SEED_EXPERTISE
+    aspirational_traits = DEFAULT_ASPIRATIONAL_TRAITS
+
+    if identity_path and Path(identity_path).exists():
+        try:
+            import yaml
+            with open(identity_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            
+            # Read from root or nested personality section
+            if "commitments" in data:
+                commitments = data["commitments"]
+                logger.info("Loaded custom commitments from seeding configuration.")
+            elif "personality" in data and isinstance(data["personality"], dict) and "commitments" in data["personality"]:
+                commitments = data["personality"]["commitments"]
+                logger.info("Loaded custom commitments from nested personality configuration.")
+                
+            if "expertise" in data:
+                expertise = data["expertise"]
+                logger.info("Loaded custom expertise domains from seeding configuration.")
+            elif "personality" in data and isinstance(data["personality"], dict) and "expertise" in data["personality"]:
+                expertise = data["personality"]["expertise"]
+                logger.info("Loaded custom expertise domains from nested personality configuration.")
+                
+            if "aspirational_traits" in data:
+                aspirational_traits = data["aspirational_traits"]
+                logger.info("Loaded custom aspirational traits from seeding configuration.")
+            elif "personality" in data and isinstance(data["personality"], dict) and "aspirational_traits" in data["personality"]:
+                aspirational_traits = data["personality"]["aspirational_traits"]
+                logger.info("Loaded custom aspirational traits from nested personality configuration.")
+        except Exception as e:
+            logger.warning(
+                "Failed to load dynamic personality from %s: %s. Falling back to default baseline.",
+                identity_path,
+                e,
+            )
+
+    logger.info("Seeding dynamic personality...")
 
     # ── 1. Seed commitments ──
     seeded_commitment_ids = []
 
-    for item in SEED_COMMITMENTS:
+    for item in commitments:
         label = item["label"]
         statement = item["statement"]
         vector = _score_text(statement)
@@ -220,10 +257,10 @@ def seed_dynamic_personality(
     # ── 2. Seed expertise domains ──
     seeded_expertise_count = 0
 
-    for exp in SEED_EXPERTISE:
+    for exp in expertise:
         domain = exp["domain"]
         description = exp["description"]
-        mass = exp["mass"]
+        mass = exp.get("mass", 1.0)
         level_label = "advanced" if mass >= 1.0 else "developing"
 
         text_to_score = f"{domain}: {description}"
@@ -243,7 +280,7 @@ def seed_dynamic_personality(
             vector_16d=vector_json,
             signal_count=5,
             last_signal_at=datetime.now(timezone.utc).isoformat(),
-            crystallization_rationale=f"Canonical baseline expertise seeded from identity.yaml (level: {exp['level']})",
+            crystallization_rationale=f"Canonical baseline expertise seeded from identity.yaml (level: {level_label})",
         )
 
         seeded_expertise_count += 1
@@ -257,13 +294,13 @@ def seed_dynamic_personality(
     state = PersonalityState(
         id=1,
         agent_id=agent_id,
-        aspirational_traits_json=json.dumps(DEFAULT_ASPIRATIONAL_TRAITS),
+        aspirational_traits_json=json.dumps(aspirational_traits),
         active_commitment_ids_json=json.dumps(seeded_commitment_ids),
         trait_computation_version=1,
         last_recomputed_at=datetime.now(timezone.utc).isoformat(),
         updated_at=datetime.now(timezone.utc),
     )
     personality_state_repo.upsert(state)
-    logger.info("Seeded personality_state with %d aspirational traits", len(DEFAULT_ASPIRATIONAL_TRAITS))
+    logger.info("Seeded personality_state with %d aspirational traits", len(aspirational_traits))
 
     logger.info("Dynamic personality seeding complete.")

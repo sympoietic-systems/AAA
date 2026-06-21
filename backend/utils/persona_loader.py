@@ -61,6 +61,20 @@ def get_persona_text(
         persona.get("operational_protocols", {}).get(protocol_key, "").strip()
     )
 
+    def strip_comments(text: str) -> str:
+        if not text:
+            return ""
+        lines = []
+        for line in text.splitlines():
+            # Strip lines that start with '#' (ignoring leading whitespace)
+            if line.strip().startswith("#"):
+                continue
+            lines.append(line)
+        return "\n".join(lines).strip()
+
+    core = strip_comments(core)
+    protocols = strip_comments(protocols)
+
     if protocols:
         return core + "\n\n" + protocols
     return core

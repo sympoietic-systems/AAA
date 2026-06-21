@@ -1,5 +1,9 @@
 # Setup Guide
 
+> [!TIP]
+> Are you a non-technical user or looking for the fastest path to get Symbia up and running locally? 
+> Read the [Easy Quickstart Guide](QUICKSTART_NON_TECHNICAL.md) first!
+
 ## Prerequisites
 
 - **Python 3.11+** — [python.org](https://python.org) or `sudo apt install python3` (Ubuntu)
@@ -77,6 +81,14 @@ AAA_LLM_REASONING_EFFORT=high   # high | max
 
 When enabled, the UI shows a collapsible `▶ thinking` section under responses.
 
+## Agent Customization
+
+Creating or customizing an agent involves defining their core identity, baseline beliefs, procedural skills, dynamic personality commitments/expertise, and task-specific prompts. 
+
+All customization settings are managed via human-readable YAML configurations. For complete details and schema references, please read the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md).
+
+---
+
 ## Run
 
 ### Database & Migrations
@@ -85,37 +97,47 @@ The backend uses **SQLite** (`backend/data/aaa.db`). On first startup, the datab
 
 Migration files are in `backend/storage/migrations/` (custom runner — not Alembic). Each migration is idempotent and tracked in the `_migrations` table.
 
-### 1. Seed Foundational Beliefs & Skills (one-time setup)
+### 1. Database Seeding & Ingestion (one-time setup)
 
-Before first run, seed Symbia's core philosophical commitments and procedural skills into the database:
+Before first run, you must check your configuration, run database migrations, and ingest the agent's personality files, baseline commitments, and initial skill configurations into the database.
 
+#### Recommended: Unified Agent Initialization Script
 ```bash
-# Seed beliefs
-uv run python backend/scripts/seed_beliefs.py
-# → Seeds 8 foundational beliefs (glitch-as-voice, anti-hci, etc.)
-# → Safe to run multiple times — skips if authored beliefs already exist
-# → Use --force to re-seed alongside existing beliefs
-
-# Seed skills
-uv run python backend/scripts/seed_skills.py
-# → Seeds baseline dispositions and on-demand capabilities
-# → Safe to run multiple times — skips if skills already exist by default
-# → Use --force to overwrite/reset database skills to seed defaults
+uv run python backend/scripts/initialize_agent.py
 ```
+* **What it does**:
+  1. **Validates Environment**: Checks that `.env` is present and contains valid (non-placeholder) API keys for at least one configured LLM provider.
+  2. **Initializes Database**: Automatically creates the database (`data/aaa.db`) and runs all pending migrations.
+  3. **Seeds Beliefs**: Loads foundational beliefs from `config/personality/seed_beliefs.yaml`.
+  4. **Seeds Skills**: Loads procedural skills from `config/personality/seed_skills.yaml` (with structural properties) and creates belief bridges.
+  5. **Seeds Dynamic Personality**: Seeds commitments, expertise nodes, and trait attractors from `config/personality/seed_personality.yaml`.
+* **Flags**:
+  * `--force`: Clears the database and runs a clean, complete re-seeding of all tables.
+  * `--db <path>`: Specifies a custom database path (defaults to value in configuration).
+  * `--ignore-env`: Bypasses the environment check (useful for offline seeding or development).
 
-Beliefs are defined in `backend/personality/seed_beliefs.yaml` and skills in `backend/personality/seed_skills.yaml`. Format:
+---
 
-```yaml
-beliefs:
-  - id: "belief-label"
-    statement: "The belief statement text."
-    category: "foundational"   # foundational | ontological | methodological
-    confidence: 0.90           # 0.0–1.0
+### Vector Management & Maintenance Utilities
+
+To maintain vector integrity, the system provides utility scripts to validate, repair, and recalculate 16-dimensional signature vectors for skills and beliefs:
+
+#### A. Local Vector Repair
+```bash
+uv run python backend/scripts/repair_vectors.py
 ```
+* **Use Case**: Run this if database vectors become corrupt, empty, or incorrectly formatted (e.g. list formats in skill nodes instead of required schema dictionaries `{v16d: [...], v384d: []}`).
+* **Mechanism**: Performs local LexiconScorer validation. If a node is missing its vector or is incorrectly formatted, it recalculates the 16D vector locally using `LexiconScorer` and updates the database row.
 
-Categories map to ontological mass: foundational=1.5, ontological=1.2, methodological=1.0.
+#### B. High-Fidelity LLM Vector Recalculation
+```bash
+uv run python backend/scripts/recalculate_autopoietic_vectors.py
+```
+* **Use Case**: Run this to upgrade the quality of seeded vectors to use full LLM-based scoring.
+* **Mechanism**: Runs an asynchronous loop that reads every belief and skill in the database and recalculates its 16D structural vector using the configured `structural_llm` model pool.
+* **Requirements**: Requires a valid LLM provider API key to be set in `.env` for the structural scorer pool. If a provider is not configured, it will fall back to empirical/lexicon scoring.
 
-After seeding, beliefs live in the database and evolve through the belief lifecycle. They are **not** injected from the YAML into system prompts — the attractor window handles that dynamically.
+---
 
 ### 2. Start Services
 

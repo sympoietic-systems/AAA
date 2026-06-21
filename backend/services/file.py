@@ -30,7 +30,7 @@ class FileService:
     @staticmethod
     async def run_digest_worker(conversation_id: str, file_name: str, file_type: str, reprocess: bool = False):
         cmd = [
-            sys.executable, "-m", "backend.scripts.digest_worker",
+            sys.executable, "-m", "backend.workers.digest_worker",
             "--conversation_id", conversation_id,
             "--file_name", file_name,
             "--file_type", file_type,

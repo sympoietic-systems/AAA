@@ -21,19 +21,24 @@ with patch(
     from fastapi.testclient import TestClient
 
     with TestClient(app) as client:
-        agent = client.get("/api/agent")
-        print(f"Agent: {agent.status_code} -> {agent.json()['name']}")
+        headers = {}
+        password = os.environ.get("AAA_PASSWORD")
+        if password:
+            headers["Authorization"] = f"Bearer {password}"
+
+        agent = client.get("/api/agent", headers=headers)
+        print(f"Agent: {agent.status_code} -> {agent.json().get('name') if agent.status_code == 200 else agent.text}")
         assert agent.status_code == 200
         assert agent.json()["name"] == "Symbia"
 
-        chat = client.post("/api/chat", json={"content": "What is intra-action?", "speaker": "human"})
+        chat = client.post("/api/chat", json={"content": "What is intra-action?", "speaker": "human"}, headers=headers)
         assert chat.status_code == 200, f"Chat failed: {chat.json()}"
         chat_data = chat.json()
         print(f"Chat: {chat_data['content'][:60]}...")
         assert chat_data["model_used"] == "mock-gemini-model"
         assert chat_data["provider_used"] == "mock-provider"
 
-        history = client.get("/api/history")
+        history = client.get("/api/history", headers=headers)
         msgs = history.json()["messages"]
         print(f"History: {len(msgs)} messages")
         # Find the apparatus message in history and verify fields
