@@ -22,29 +22,10 @@ echo -e "${CYAN}  AAA – First-Time macOS / Linux Setup${NC}"
 echo -e "${CYAN}=============================================================${NC}"
 echo ""
 
-# ── 1. Check Python ─────────────────────────────────────────
-echo -e "${YELLOW}[1/5] Checking Python 3.11+ ...${NC}"
-if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}[FAIL] python3 not found.${NC}"
-    echo -e "  - Ubuntu/Linux: run 'sudo apt install python3 python3-pip'"
-    echo -e "  - macOS: run 'brew install python' or download from https://python.org"
-    exit 1
-fi
-
-PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-echo -e "  Found Python ${PY_VERSION}"
-
-PY_MAJOR=$(echo "$PY_VERSION" | cut -d. -f1)
-PY_MINOR=$(echo "$PY_VERSION" | cut -d. -f2)
-if [ "$PY_MAJOR" -lt 3 ] || { [ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 11 ]; }; then
-    echo -e "${RED}[FAIL] Python 3.11+ required, found ${PY_VERSION}${NC}"
-    exit 1
-fi
-echo -e "${GREEN}  [OK]${NC}"
-
-# ── 2. Install uv ────────────────────────────────────────────
-echo -e "${YELLOW}[2/5] Installing uv package manager ...${NC}"
+# ── 1. Install uv ────────────────────────────────────────────
+echo -e "${YELLOW}[1/5] Checking uv package manager ...${NC}"
 if ! command -v uv &> /dev/null; then
+    echo -e "  uv not found. Installing uv..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
     # Add uv to PATH for this session
     export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
@@ -56,6 +37,16 @@ if ! command -v uv &> /dev/null; then
 else
     echo -e "${GREEN}  [OK] uv already installed: $(uv --version)${NC}"
 fi
+
+# ── 2. Check/Install Python via uv ───────────────────────────
+echo -e "${YELLOW}[2/5] Checking Python runtime (managed by uv) ...${NC}"
+if ! uv run python3 --version &> /dev/null; then
+    echo -e "  Downloading required Python runtime..."
+    uv python install
+fi
+PY_VERSION=$(uv run python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")')
+echo -e "  Using Python ${PY_VERSION} (managed by uv)"
+echo -e "${GREEN}  [OK] Python runtime is ready${NC}"
 
 # ── 3. Install Python dependencies ───────────────────────────
 echo -e "${YELLOW}[3/5] Installing Python dependencies (uv sync) ...${NC}"

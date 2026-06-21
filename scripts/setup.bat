@@ -6,38 +6,8 @@ echo   AAA - First-Time Local Setup (Windows)
 echo =============================================================
 echo.
 
-:: 1. Check Python
-echo [1/5] Checking Python 3.11+ ...
-python --version >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [FAIL] Python is not installed or not in PATH.
-    echo Please download and install Python 3.11 or 3.12 from python.org.
-    echo Make sure to check "Add Python to PATH" during installation.
-    exit /b 1
-)
-
-:: Check version number
-for /f "tokens=2" %%v in ('python --version 2^>^&1') do set PY_VER=%%v
-for /f "tokens=1,2 delims=." %%a in ("%PY_VER%") do (
-    set PY_MAJOR=%%a
-    set PY_MINOR=%%b
-)
-echo Found Python %PY_MAJOR%.%PY_MINOR%
-if %PY_MAJOR% lss 3 (
-    echo [FAIL] Python 3.11+ required.
-    exit /b 1
-)
-if %PY_MAJOR% equ 3 (
-    if %PY_MINOR% lss 11 (
-        echo [FAIL] Python 3.11+ required.
-        exit /b 1
-    )
-)
-echo [OK] Python is valid.
-echo.
-
-:: 2. Check/Install uv
-echo [2/5] Checking uv package manager ...
+:: 1. Check/Install uv
+echo [1/5] Checking uv package manager ...
 where uv >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo uv not found. Installing uv ...
@@ -55,6 +25,19 @@ if %ERRORLEVEL% neq 0 (
 )
 echo.
 
+:: 2. Check/Install Python via uv
+echo [2/5] Checking Python runtime (managed by uv) ...
+:: uv will automatically fetch the correct python version based on .python-version or pyproject.toml
+uv run python --version >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    echo uv is downloading/installing the required Python runtime...
+    uv python install
+)
+for /f "tokens=2" %%v in ('uv run python --version 2^>^&1') do set PY_VER=%%v
+echo Found Python !PY_VER! (managed by uv)
+echo [OK] Python runtime is ready.
+echo.
+
 :: 3. Install Python dependencies
 echo [3/5] Installing Python dependencies (uv sync) ...
 uv sync
@@ -69,12 +52,12 @@ echo.
 echo [4/5] Checking frontend dependencies ...
 where node >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo [FAIL] Node.js not found. Please install Node.js (LTS) from nodejs.org
+    echo [FAIL] Node.js not found. Please install Node.js LTS from nodejs.org
     exit /b 1
 )
 where npm >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo [FAIL] npm not found. Please install Node.js (LTS) from nodejs.org
+    echo [FAIL] npm not found. Please install Node.js LTS from nodejs.org
     exit /b 1
 )
 
