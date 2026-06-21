@@ -45,14 +45,51 @@ We have provided automated setup scripts to prepare all dependencies, virtual en
 ## 3. Configuration & API Key Setup
 
 1. Open the newly created `.env` file in a text editor (such as Notepad, TextEdit, or VS Code).
-2. Locate the line that looks like this:
-   ```env
-   AAA_LLM_API_KEY=your_openrouter_api_key_here
-   ```
-3. Replace `your_openrouter_api_key_here` with your actual OpenRouter key (which usually starts with `sk-or-`). Save and close the file.
+2. Configure your API key and update the models to match your provider. Choose **one** of the options below:
 
-> [!NOTE]
-> OpenRouter is recommended as it provides access to all models with a single key. If you prefer to connect directly to DeepSeek or Google Gemini using native API keys, please see the [Full Setup Guide](SETUP.md#api-key-setup) for the key configuration details.
+### Option A: OpenRouter (Recommended / Easiest)
+Use this option if you want to access multiple models (Gemini, DeepSeek, Llama, etc.) via a single OpenRouter key.
+1. Set your API key:
+   ```env
+   AAA_LLM_API_KEY=sk-or-v1-your-openrouter-key-here
+   ```
+2. Configure the models in `.env` to route through OpenRouter:
+   ```env
+   AAA_LLM_MODELS=openrouter_router/google/gemini-2.5-pro,openrouter_router/google/gemini-2.5-flash,openrouter_router/deepseek/deepseek-chat
+   AAA_BACKGROUND_MODELS=openrouter_router/google/gemini-2.5-flash,openrouter_router/google/gemma-2-27b-it:free
+   AAA_STRUCTURAL_MODELS=openrouter_router/google/gemini-2.5-flash,openrouter_router/google/gemma-2-27b-it:free
+   AAA_VISION_MODELS=openrouter_router/google/gemini-2.5-flash
+   ```
+
+### Option B: Google Gemini (Direct API Connection)
+Use this option if you have a Google AI Studio API key.
+1. Set your API key:
+   ```env
+   AAA_GOOGLE_API_KEY=AIzaSyYourGeminiKeyHere
+   ```
+2. Configure the models in `.env` to use native Google routing:
+   ```env
+   AAA_LLM_MODELS=google_router/gemini-2.5-pro,google_router/gemini-2.5-flash
+   AAA_BACKGROUND_MODELS=google_router/gemini-2.5-flash
+   AAA_STRUCTURAL_MODELS=google_router/gemini-2.5-flash
+   AAA_VISION_MODELS=google_router/gemini-2.5-flash
+   ```
+
+### Option C: DeepSeek (Direct API Connection)
+Use this option if you have a DeepSeek platform API key.
+1. Set your API key:
+   ```env
+   AAA_DEEPSEEK_API_KEY=sk-your-deepseek-key-here
+   ```
+2. Configure the models in `.env` to use native DeepSeek routing:
+   ```env
+   AAA_LLM_MODELS=deepseek_router/deepseek-chat,deepseek_router/deepseek-reasoner
+   AAA_BACKGROUND_MODELS=deepseek_router/deepseek-chat
+   AAA_STRUCTURAL_MODELS=deepseek_router/deepseek-chat
+   AAA_VISION_MODELS=deepseek_router/deepseek-chat
+   ```
+
+3. Save and close the `.env` file.
 
 ---
 
