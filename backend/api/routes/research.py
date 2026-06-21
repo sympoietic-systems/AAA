@@ -483,6 +483,8 @@ async def get_task_steps(task_id: str, request: Request = None):
         sid = r.get("step_id", "")
         if sid not in results_by_step:
             results_by_step[sid] = []
+        raw_content = r.get("raw_content") or ""
+        error_msg = raw_content if raw_content.startswith("Error:") else None
         results_by_step[sid].append({
             "id": r.get("id"),
             "source_url": r.get("source_url"),
@@ -491,6 +493,7 @@ async def get_task_steps(task_id: str, request: Request = None):
             "relevance_score": r.get("relevance_score"),
             "novelty_score": r.get("novelty_score"),
             "raw_file_path": r.get("raw_file_path"),
+            "error": error_msg,
         })
 
     return {

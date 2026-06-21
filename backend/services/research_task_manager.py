@@ -353,6 +353,22 @@ class ResearchTaskManager:
         except Exception:
             pass
 
+        # Delete old steps and plans (step results cascade delete)
+        try:
+            if hasattr(self.orchestrator, "step_repo") and self.orchestrator.step_repo:
+                conn = self.orchestrator.step_repo._conn()
+                conn.execute("DELETE FROM research_steps WHERE task_id = ?", (task_id,))
+                conn.commit()
+        except Exception:
+            logger.exception("Failed to delete old steps for task %s during rerun", task_id)
+        try:
+            if hasattr(self.orchestrator, "plan_repo") and self.orchestrator.plan_repo:
+                conn = self.orchestrator.plan_repo._conn()
+                conn.execute("DELETE FROM research_plans WHERE task_id = ?", (task_id,))
+                conn.commit()
+        except Exception:
+            logger.exception("Failed to delete old plans for task %s during rerun", task_id)
+
         # Reset counters
         rerun_count = (task.get("rerun_count") or 0) + 1
         update_fields = {
@@ -365,6 +381,7 @@ class ResearchTaskManager:
             "result_summary": None,
             "started_at": None,
             "completed_at": None,
+            "orchestrator_state": None,
         }
         try:
             update_fields["rerun_count"] = rerun_count

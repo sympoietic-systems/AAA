@@ -85,6 +85,14 @@ class SomaticResearchOrchestrator:
         return self._state.research_step_result_repo
 
     @property
+    def asset_repo(self):
+        return getattr(self._state, "scraped_asset_repo", None)
+
+    @property
+    def branch_repo(self):
+        return getattr(self._state, "research_branch_repo", None)
+
+    @property
     def _meta_log_repo(self):
         return getattr(self._state, "research_meta_log_repo", None)
 
@@ -289,6 +297,32 @@ class SomaticResearchOrchestrator:
         except Exception:
             logger.warning("Failed to persist meta log for task %s event %s", task_id, event_type)
 
+    def _get_or_create_default_branch(self, task_id: str) -> str:
+        """Get or create a default branch ID for the task to satisfy scraped_assets.branch_id NOT NULL / FK constraints."""
+        if not self.branch_repo:
+            raise RuntimeError("branch_repo is not available")
+
+        branches = self.branch_repo.get_by_task(task_id)
+        if branches:
+            return branches[0]["id"]
+
+        # Create a default/dummy branch
+        task = self.task_repo.get(task_id)
+        conv_id = (task or {}).get("conversation_id") or "default_conv"
+        branch_id = str(uuid.uuid4())
+        self.branch_repo.create({
+            "id": branch_id,
+            "task_id": task_id,
+            "conversation_id": conv_id,
+            "parent_branch_id": None,
+            "query": (task or {}).get("objective", "default"),
+            "goal": "Autonomous research execution",
+            "depth": 0,
+            "breadth": 0,
+            "status": "crystallized",
+        })
+        return branch_id
+
     # ── In-memory task state (for step-by-step execution) ──────────
 
     def init_task(self, task_id: str) -> dict:
@@ -445,25 +479,76 @@ class SomaticResearchOrchestrator:
         if not task:
             raise ValueError(f"Task not found: {task_id}")
 
+        s = self._task_states.get(task_id)
+        if s is None:
+            s = self.resume_task(task_id)
+
         if phase == "planning":
             result = await self._preview_plan_inputs(task)
         elif phase == "searching":
-            s = self._task_states.get(task_id)
             if s and s.get("plan"):
                 queries = s["plan"].get("search_queries", [s["objective"]])
-                query_index = s.get("query_index", 0)
+                if s["current_depth"] > 0 and s.get("last_reflection", {}).get("next_queries"):
+                    queries = s["last_reflection"]["next_queries"]
                 result: dict = {
                     "phase": "searching",
                     "pending_queries": queries,
-                    "query_index": query_index,
+                    "query_index": s.get("query_index", 0),
                     "top_n": self.default_top_n,
                     "cached_at": self._now_utc_str(),
                 }
             else:
                 result = {"phase": "searching", "pending_queries": [task["objective"]], "query_index": 0,
                           "top_n": self.default_top_n, "cached_at": self._now_utc_str()}
+        elif phase == "parsing":
+            urls = []
+            if s and s.get("search_results_cache"):
+                urls = [{"url": r.get("url", ""), "title": r.get("title", r.get("url", "")), "query_group": r.get("query_group")} for r in s["search_results_cache"]]
+            result = {
+                "phase": "parsing",
+                "urls_to_fetch": urls,
+                "cached_at": self._now_utc_str(),
+            }
+        elif phase == "digesting":
+            sources = []
+            if s:
+                # Re-hydrate parsed_sources_cache if empty — scope to current_depth only
+                if not s.get("parsed_sources_cache") and self.step_repo and self.step_result_repo:
+                    steps = self.step_repo.get_by_task(task_id)
+                    current_depth = s.get("current_depth", 0)
+                    parse_steps = [
+                        st for st in steps
+                        if st["step_type"] == "parallel_parse" and st["status"] == "completed"
+                        and self._get_step_depth(st) == current_depth
+                    ]
+                    if parse_steps:
+                        s["parsed_sources_cache"] = []
+                        for ps in parse_steps:
+                            db_results = self.step_result_repo.get_by_step(ps["id"])
+                            for r in db_results:
+                                s["parsed_sources_cache"].append({
+                                    "id": r["id"],
+                                    "url": r["source_url"],
+                                    "title": r["source_title"],
+                                    "content": r["raw_content"],
+                                    "query_group": ps.get("query_group", 1),
+                                })
+                if s.get("parsed_sources_cache"):
+                    sources = [
+                        {
+                            "url": src["url"],
+                            "title": src.get("title", ""),
+                            "snippet": src.get("content", "")[:300] + "...",
+                            "query_group": src.get("query_group"),
+                        }
+                        for src in s["parsed_sources_cache"]
+                    ]
+            result = {
+                "phase": "digesting",
+                "sources_to_digest": sources,
+                "cached_at": self._now_utc_str(),
+            }
         elif phase == "reflecting":
-            s = self._task_states.get(task_id)
             result = {
                 "phase": "reflecting",
                 "objective": task["objective"],
@@ -473,8 +558,17 @@ class SomaticResearchOrchestrator:
                 "findings_count": len(s["all_findings"]) if s else 0,
                 "cached_at": self._now_utc_str(),
             }
+        elif phase == "evaluating":
+            result = {
+                "phase": "evaluating",
+                "current_depth": s["current_depth"] if s else 0,
+                "max_depth": task["max_depth"],
+                "sources_analyzed": s["sources_analyzed"] if s else 0,
+                "stagnation_counter": s["stagnation_counter"] if s else 0,
+                "completeness_score": s["last_reflection"].get("completeness_score", 0) if s and s.get("last_reflection") else 0,
+                "cached_at": self._now_utc_str(),
+            }
         elif phase == "synthesizing":
-            s = self._task_states.get(task_id)
             result = {
                 "phase": "synthesizing",
                 "objective": task["objective"],
@@ -528,7 +622,8 @@ class SomaticResearchOrchestrator:
         "phase", "objective", "max_depth", "budget", "plan_id", "plan",
         "all_findings", "sources_analyzed", "stagnation_counter",
         "step_number", "last_reflection", "current_depth", "query_index",
-        "search_results_cache", "parsed_sources_cache", "digest_results_cache",
+        "search_results_cache", "digest_results_cache",
+        "digest_signals",
         "should_stop", "stop_reason",
     }
 
@@ -568,18 +663,50 @@ class SomaticResearchOrchestrator:
         """Create a new step, or update an existing one in-place for reruns."""
         rerun_id = s.pop("_rerun_step_id", None)
         if rerun_id:
+            # Update depth in step_data for the rerun step
+            step_data = json.dumps({"depth": s.get("current_depth", 0)})
             self.step_repo.update(rerun_id, status="running",
-                started_at=self._now_utc_str(), query_text=query_text)
+                started_at=self._now_utc_str(), query_text=query_text, step_data=step_data)
             return rerun_id
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
+        step_data = json.dumps({"depth": s.get("current_depth", 0)})
         self.step_repo.create({
             "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
             "step_number": s["step_number"], "step_type": step_type,
+            "step_data": step_data,
             "status": "running", "started_at": self._now_utc_str(),
             "query_group": query_group, "query_text": query_text,
         })
         return step_id
+
+    def _save_llm_response_to_step_data(self, step_id: str, resp: dict) -> None:
+        """Helper to save LLM response to step_data without losing existing keys like depth."""
+        if not step_id or not self.step_repo:
+            return
+        try:
+            existing = self.step_repo.get(step_id)
+            existing_data = {}
+            if existing and existing.get("step_data"):
+                try:
+                    existing_data = json.loads(existing["step_data"])
+                except Exception:
+                    pass
+            existing_data["llm_response"] = resp
+            self.step_repo.update(step_id, step_data=json.dumps(
+                existing_data, default=str, ensure_ascii=False
+            )[:self._TRUNC_STEP_RESULT])
+        except Exception:
+            logger.warning("Failed to save LLM response to step %s step_data", step_id, exc_info=True)
+
+    @staticmethod
+    def _get_step_depth(step: dict) -> int:
+        """Extract the cycle depth from a step's step_data JSON. Returns 0 on failure."""
+        try:
+            data = json.loads(step.get("step_data") or "{}")
+            return int(data.get("depth", 0))
+        except Exception:
+            return 0
 
     def _delete_downstream(self, task_id: str, after_step_number: int) -> int:
         """Delete all steps with step_number > after_step_number (for rerun)."""
@@ -602,15 +729,25 @@ class SomaticResearchOrchestrator:
             s = self._get_state(task_id)
             phase = s["phase"]
 
-            # On rerun, delete all downstream steps
+            # On rerun, delete all downstream steps starting from the beginning of the rerun phase
             rerun_id = s.get("_rerun_step_id")
             if rerun_id:
                 rerun_step = self.step_repo.get(rerun_id) if self.step_repo else None
                 if rerun_step:
-                    deleted = self._delete_downstream(task_id, rerun_step["step_number"])
+                    # Find all steps of the same type at this phase depth to reset the phase cleanly
+                    all_steps = self.step_repo.get_by_task(task_id) if self.step_repo else []
+                    same_phase_steps = [
+                        st for st in all_steps
+                        if st["step_type"] == rerun_step["step_type"]
+                        and abs(st["step_number"] - rerun_step["step_number"]) < 10
+                    ]
+                    min_step_num = min(st["step_number"] for st in same_phase_steps) if same_phase_steps else rerun_step["step_number"]
+                    deleted = self._delete_downstream(task_id, min_step_num - 1)
                     if deleted:
-                        logger.info("Rerun: deleted %d downstream steps — %s",
-                                     deleted, self._log_context(task_id, "rerun"))
+                        logger.info("Rerun: deleted %d downstream steps starting from step %d — %s",
+                                     deleted, min_step_num, self._log_context(task_id, "rerun"))
+                    s["step_number"] = min_step_num - 1
+                    s.pop("_rerun_step_id", None)
 
             result: dict = {
                 "task_id": task_id,
@@ -688,7 +825,7 @@ class SomaticResearchOrchestrator:
         })
         # Save the plan as LLM response in step_data so frontend shows it
         try:
-            llm_resp = {"plan": plan}
+            llm_resp = {"plan": plan, "depth": 0}
             self.step_repo.update(step_id, step_data=json.dumps(llm_resp, default=str, ensure_ascii=False)[:self._TRUNC_STEP_RESULT])
         except Exception:
             pass
@@ -698,78 +835,130 @@ class SomaticResearchOrchestrator:
         return {"plan": plan, "plan_id": plan["id"], "step_id": step_id}
 
     async def _step_search(self, task_id: str, s: dict) -> dict:
-        """Web search for the next query. Advance to parsing."""
+        """Web search for all queries of the current depth in parallel. Advance to parsing."""
         queries = s["plan"].get("search_queries", [s["objective"]])
         # Use reflection-suggested queries if available
         if s["current_depth"] > 0 and s["last_reflection"].get("next_queries"):
             queries = s["last_reflection"]["next_queries"]
-
-        if s["query_index"] >= len(queries):
-            s["query_index"] = 0  # reset for this depth
-            queries = s["plan"].get("search_queries", [s["objective"]])
-
-        query = queries[s["query_index"]] if s["query_index"] < len(queries) else s["objective"]
 
         # Cache search inputs for re-use on rerun
         cache = self._load_cache(task_id)
         cache["searching"] = {
             "phase": "searching",
             "pending_queries": queries,
-            "query_index": s["query_index"],
+            "query_index": 0,
             "top_n": self.default_top_n,
             "cached_at": self._now_utc_str(),
         }
         self._save_cache(task_id, cache)
 
-        query_group = s["query_index"] + 1
-        logger.info("Step: SEARCHING '%s' — %s (Q%d)", query[:60], self._log_context(task_id, "searching"), query_group)
-        step_id = self._create_or_update_step(s, task_id, "search",
-            query_group=query_group, query_text=query[:300])
+        logger.info("Step: SEARCHING %d queries in parallel — %s", len(queries), self._log_context(task_id, "searching"))
 
-        search_results = await web_search(query, self.default_top_n, self._state.config)
-        self._log_meta(task_id, "orchestrator_search", {
-            "query": query[:200],
-            "results_count": len(search_results),
-        }, step_id=step_id)
+        # Create search steps for all query groups in the DB
+        group_steps = {}
+        for i, q in enumerate(queries):
+            q_group = i + 1
+            step_id = self._create_or_update_step(s, task_id, "search",
+                query_group=q_group, query_text=q[:300])
+            group_steps[q_group] = step_id
 
-        if not search_results:
-            self.step_repo.update(step_id, status="completed",
-                result_summary="no results — URL extraction failed")
-            s["query_index"] += 1
-            # Stay in searching for next query (or advance)
-            queries = s["plan"].get("search_queries", [s["objective"]])
-            if s["query_index"] >= min(len(queries), 3):
-                s["phase"] = "reflecting"  # skip parse/digest for empty results
-            return {"query": query, "results": [], "urls": [], "step_id": step_id}
+        # Run DDG searches in parallel
+        tasks = [web_search(q, self.default_top_n, self._state.config) for q in queries]
+        search_results_list = await asyncio.gather(*tasks)
 
-        self.step_repo.update(step_id, status="completed",
-            result_summary=f"{len(search_results)} results")
+        # Merge results, deduping by URL but keeping track of query_group
+        seen_urls = set()
+        search_results = []
+        
+        for i, results in enumerate(search_results_list):
+            q_group = i + 1
+            step_id = group_steps[q_group]
+            
+            # Log meta and update individual query step
+            self._log_meta(task_id, "orchestrator_search", {
+                "query": queries[i],
+                "results_count": len(results),
+            }, step_id=step_id)
+            
+            if not results:
+                self.step_repo.update(step_id, status="completed",
+                    result_summary="no results")
+            else:
+                self.step_repo.update(step_id, status="completed",
+                    result_summary=f"{len(results)} results")
+                
+            for r in results:
+                url = r.get("url")
+                if url:
+                    # Save search results to DB research_step_results table
+                    if self.step_result_repo:
+                        try:
+                            self.step_result_repo.create({
+                                "id": str(uuid.uuid4()),
+                                "step_id": step_id,
+                                "task_id": task_id,
+                                "source_url": url,
+                                "source_title": r.get("title", url[:100]),
+                                "relevance_score": r.get("relevance", 0.0),
+                                "novelty_score": r.get("novelty", 0.0),
+                            })
+                        except Exception as e:
+                            logger.warning("Failed to save search step result to DB: %s", e)
+                    
+                    # Preserve query group info on the search result cache
+                    r_copy = dict(r)
+                    r_copy["query_group"] = q_group
+                    search_results.append(r_copy)
+
         s["search_results_cache"] = search_results
+        # Clear the previous cycle's parsed/digest caches so Cycle N+1
+        # never re-digests Cycle N's sources.
+        s["parsed_sources_cache"] = []
         s["phase"] = "parsing"
+        
+        # If no search results at all
+        if not search_results:
+            s["phase"] = "reflecting"
+
         return {
-            "query": query,
+            "queries": queries,
             "results_count": len(search_results),
-            "urls": [{"url": r.get("url", ""), "title": r.get("title", r.get("url", ""))} for r in search_results],
-            "step_id": step_id,
+            "urls": [{"url": r.get("url", ""), "title": r.get("title", r.get("url", "")), "query_group": r.get("query_group")} for r in search_results],
         }
 
     async def _step_parse(self, task_id: str, s: dict) -> dict:
         """Fetch search result URLs in parallel. Advance to digesting."""
         logger.info("Step: PARSING — %s", self._log_context(task_id, "parsing"))
-        query_group = s["query_index"] + 1
-        step_id = self._create_or_update_step(s, task_id, "parallel_parse",
-            query_group=query_group, query_text="")
+        
+        # Determine unique query groups present in the search results cache
+        search_cache = s.get("search_results_cache", [])
+        query_groups = sorted(list(set(r.get("query_group", 1) for r in search_cache)))
+        if not query_groups:
+            query_groups = [1]
 
-        parsed = await self._tool_parallel_parse(
-            task_id, step_id, s["search_results_cache"], s["plan_id"],
+        # Create a parallel_parse step for each query group
+        group_steps = {}
+        for q_group in query_groups:
+            step_id = self._create_or_update_step(s, task_id, "parallel_parse",
+                query_group=q_group, query_text="")
+            group_steps[q_group] = step_id
+
+        # Fetch in parallel
+        parsed = await self._tool_parallel_parse_grouped(
+            task_id, group_steps, search_cache, s["plan_id"],
         )
-        self.step_repo.update(step_id, status="completed",
-            result_summary=f"parsed {len(parsed)} sources")
+        
+        # Update each parallel_parse step status
+        for q_group, step_id in group_steps.items():
+            parsed_for_group = [p for p in parsed if p.get("query_group") == q_group]
+            self.step_repo.update(step_id, status="completed",
+                result_summary=f"parsed {len(parsed_for_group)} sources")
+
         s["parsed_sources_cache"] = parsed
         s["phase"] = "digesting" if parsed else "reflecting"
 
         # Cache URL list for re-use on rerun
-        urls = [{"url": p["url"], "title": p.get("title", p["url"])} for p in parsed]
+        urls = [{"url": p["url"], "title": p.get("title", p["url"]), "query_group": p.get("query_group")} for p in parsed]
         cache = self._load_cache(task_id)
         cache["parsing"] = {"phase": "parsing", "urls": urls, "cached_at": self._now_utc_str()}
         self._save_cache(task_id, cache)
@@ -777,26 +966,66 @@ class SomaticResearchOrchestrator:
         return {
             "parsed_count": len(parsed),
             "parsed_urls": urls,
-            "step_id": step_id,
         }
 
     async def _step_digest(self, task_id: str, s: dict) -> dict:
         """Analyze sources via LLM. Advance to reflecting."""
         logger.info("Step: DIGESTING — %s", self._log_context(task_id, "digesting"))
+        
+        # Re-hydrate parsed_sources_cache if it is empty (e.g. after a resume/restart).
+        # IMPORTANT: scope to current_depth only — never pull pages from previous cycles.
+        if not s.get("parsed_sources_cache") and self.step_repo and self.step_result_repo:
+            steps = self.step_repo.get_by_task(task_id)
+            current_depth = s.get("current_depth", 0)
+            # Filter parse steps to only those at the current depth level
+            parse_steps = [
+                st for st in steps
+                if st["step_type"] == "parallel_parse" and st["status"] == "completed"
+                and self._get_step_depth(st) == current_depth
+            ]
+            if parse_steps:
+                s["parsed_sources_cache"] = []
+                for ps in parse_steps:
+                    db_results = self.step_result_repo.get_by_step(ps["id"])
+                    for r in db_results:
+                        s["parsed_sources_cache"].append({
+                            "id": r["id"],
+                            "url": r["source_url"],
+                            "title": r["source_title"],
+                            "content": r["raw_content"],
+                            "query_group": ps.get("query_group", 1),
+                        })
+
+        parsed_sources = s.get("parsed_sources_cache", [])
+        query_groups = sorted(list(set(src.get("query_group", 1) for src in parsed_sources)))
+        if not query_groups:
+            query_groups = [1]
+
+        # Create a digest step for each query group
+        group_steps = {}
         queries = s["plan"].get("search_queries", [s["objective"]])
-        query = queries[s["query_index"]] if s["query_index"] < len(queries) else s["objective"]
-        query_group = s["query_index"] + 1
-        step_id = self._create_or_update_step(s, task_id, "digest",
-            query_group=query_group, query_text=query[:300])
+        if s["current_depth"] > 0 and s["last_reflection"].get("next_queries"):
+            queries = s["last_reflection"]["next_queries"]
+            
+        for q_group in query_groups:
+            q_text = queries[q_group - 1] if (q_group - 1) < len(queries) else s["objective"]
+            step_id = self._create_or_update_step(s, task_id, "digest",
+                query_group=q_group, query_text=q_text[:300])
+            group_steps[q_group] = step_id
 
-        digest_results = await self._tool_parallel_digest(
-            task_id, step_id, s["parsed_sources_cache"],
-            query, s["objective"], s["current_depth"], s["max_depth"],
+        # Digest all sources in parallel
+        digest_results = await self._tool_parallel_digest_grouped(
+            task_id, group_steps, parsed_sources,
+            queries, s["objective"], s["current_depth"], s["max_depth"],
         )
-        self.step_repo.update(step_id, status="completed",
-            result_summary=f"digested {len(digest_results)} sources")
 
-        # Accumulate findings
+        # Update each digest step status
+        for q_group, step_id in group_steps.items():
+            digested_for_group = [dr for dr in digest_results if dr.get("query_group") == q_group]
+            self.step_repo.update(step_id, status="completed",
+                result_summary=f"digested {len(digested_for_group)} sources")
+
+        # Accumulate findings and create scraped assets for metabolism and visibility
         new_learnings = 0
         for dr in digest_results:
             r = dr.get("result", {})
@@ -809,30 +1038,77 @@ class SomaticResearchOrchestrator:
                 )
             s["sources_analyzed"] += 1
 
+            # Create a scraped asset record for metabolism and frontend visibility
+            if self.asset_repo:
+                try:
+                    if not self.asset_repo.url_exists_for_task(task_id, dr["source_url"]):
+                        raw_markdown = ""
+                        for src in parsed_sources:
+                            if src["url"] == dr["source_url"]:
+                                raw_markdown = src.get("content", "")
+                                break
+                        
+                        self.asset_repo.create({
+                            "id": str(uuid.uuid4()),
+                            "branch_id": self._get_or_create_default_branch(task_id),
+                            "task_id": task_id,
+                            "url": dr["source_url"],
+                            "raw_markdown": raw_markdown[:10000],
+                            "relevance_score": r.get("relevance_score", 0.7) if isinstance(r, dict) else 0.7,
+                            "novelty_score": r.get("novelty_score", 0.5) if isinstance(r, dict) else 0.5,
+                            "diffractive_score": r.get("diffractive_score", 0.0) if isinstance(r, dict) else 0.0,
+                        })
+                except Exception as e:
+                    logger.warning("Failed to create scraped asset for %s: %s", dr["source_url"][:80], e)
+
         if new_learnings == 0:
             s["stagnation_counter"] += 1
         else:
             s["stagnation_counter"] = 0
 
+        # Collect digest signals (followups, direct_urls, gaps) for the reflect step.
+        # Deduplicate and store in state — _tool_reflect will inject them into the prompt.
+        cycle_followups: list[str] = []
+        cycle_direct_urls: list[str] = []
+        cycle_gaps: list[str] = []
+        seen_signals: set[str] = set()
+        for dr in digest_results:
+            r = dr.get("result", {})
+            if not isinstance(r, dict):
+                continue
+            for item in r.get("followups", []):
+                if item and item not in seen_signals:
+                    seen_signals.add(item)
+                    cycle_followups.append(item)
+            for item in r.get("direct_urls", []):
+                if item and item not in seen_signals:
+                    seen_signals.add(item)
+                    cycle_direct_urls.append(item)
+            for item in r.get("gaps", []):
+                if item and item not in seen_signals:
+                    seen_signals.add(item)
+                    cycle_gaps.append(item)
+        s["digest_signals"] = {
+            "followups": cycle_followups,
+            "direct_urls": cycle_direct_urls,
+            "gaps": cycle_gaps,
+        }
+
+        # We log meta here for the complete digest step block
         self._log_meta(task_id, "orchestrator_step_complete", {
             "step_number": s["step_number"],
             "new_learnings": new_learnings,
             "total_learnings": len(s["all_findings"]),
-        }, step_id=step_id)
+        })
 
-        s["query_index"] += 1
-        queries = s["plan"].get("search_queries", [s["objective"]])
-        if s["query_index"] < min(len(queries), 3):
-            s["phase"] = "searching"  # more queries this depth
-        else:
-            s["phase"] = "reflecting"
+        s["phase"] = "reflecting"
 
         # Cache digest inputs for re-use on rerun
-        source_urls = [s.get("url", "") for s in s["parsed_sources_cache"]]
+        source_urls = [src.get("url", "") for src in parsed_sources]
         cache = self._load_cache(task_id)
         cache["digesting"] = {
             "phase": "digesting",
-            "query": query,
+            "query": ", ".join(queries),
             "objective": s["objective"],
             "depth": s["current_depth"],
             "max_depth": s["max_depth"],
@@ -846,8 +1122,7 @@ class SomaticResearchOrchestrator:
             "new_learnings": new_learnings,
             "total_learnings": len(s["all_findings"]),
             "sources_analyzed": s["sources_analyzed"],
-            "findings_summary": s["all_findings"][-20:],  # last 20 for debug
-            "step_id": step_id,
+            "findings_summary": s["all_findings"][-20:],
         }
 
     async def _step_reflect(self, task_id: str, s: dict) -> dict:
@@ -858,7 +1133,9 @@ class SomaticResearchOrchestrator:
         reflection = await self._tool_reflect(
             task_id, s["objective"], s["plan"].get("goal", s["objective"]),
             s["current_depth"], s["max_depth"],
-            s["all_findings"], s["last_reflection"], step_id=step_id,
+            s["all_findings"], s["last_reflection"],
+            digest_signals=s.get("digest_signals", {}),
+            step_id=step_id,
         )
         s["last_reflection"] = reflection
         completeness = reflection.get("completeness_score", 0)
@@ -1087,7 +1364,7 @@ class SomaticResearchOrchestrator:
 
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
-            all_findings="\n\n".join(all_findings[-30:]),  # Last 30 findings
+            all_findings="\n\n".join(all_findings),
         )
         if prompt_data.get("anti_mastery"):
             user_text = self._anti_mastery(user_text)
@@ -1109,13 +1386,8 @@ class SomaticResearchOrchestrator:
                     "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 }, step_id=step_id or None)
                 # Save LLM response to step_data
-                if branch_id:
-                    try:
-                        self.step_repo.update(branch_id, step_data=json.dumps(
-                            {"llm_response": resp}, default=str, ensure_ascii=False
-                        )[:self._TRUNC_STEP_RESULT])
-                    except Exception:
-                        pass
+                if step_id:
+                    self._save_llm_response_to_step_data(step_id, resp)
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
@@ -1129,24 +1401,66 @@ class SomaticResearchOrchestrator:
 
     # ── Tools ───────────────────────────────────────────────────────
 
-    async def _tool_parallel_parse(self, task_id, step_id, search_results, plan_id) -> list[dict]:
-        """Fetch all search result URLs in parallel, saving HTML to disk. Skips already-fetched URLs."""
+    async def _tool_parallel_parse_grouped(self, task_id, group_steps, search_results, plan_id) -> list[dict]:
+        """Fetch all search result URLs in parallel, saving HTML to disk. Skips already-fetched URLs.
+        Uses local DB cache lookup to avoid redundant network requests.
+        """
         sem = self._get_semaphore()
 
-        # Dedup: skip URLs already fetched for this task
-        asset_repo = getattr(self._state, "scraped_asset_repo", None)
+        # Dedup: for each URL, check if we already have its content in the DB
+        # (either from a scraped_asset record or a step_result).
+        # If we do, reuse it so we avoid a redundant network fetch but still
+        # pass the content into this cycle's digest step.
         new_urls = []
-        skipped = 0
+        reused = []
         for r in search_results:
             url = r.get("url", "")
-            if asset_repo and asset_repo.url_exists_for_task(task_id, url):
-                skipped += 1
-                continue
-            new_urls.append(r)
-        if skipped:
-            logger.info("Skipping %d already-fetched URLs — %s", skipped, self._log_context(task_id, "parsing"))
+            q_group = r.get("query_group", 1)
+            step_id = group_steps.get(q_group) or (list(group_steps.values())[0] if group_steps else None)
+            cached_content = None
 
-        async def fetch_one(url: str, title: str) -> Optional[dict]:
+            # Check the step_result table for existing raw_content for this URL in this task
+            if self.step_result_repo:
+                try:
+                    task_results = self.step_result_repo.get_by_task(task_id)
+                    for er in task_results:
+                        if er.get("source_url") == url and er.get("raw_content") and not er["raw_content"].startswith("Error:"):
+                            cached_content = er["raw_content"]
+                            break
+                except Exception:
+                    pass
+
+            if cached_content:
+                # Content already in DB — create a new step_result row linked to THIS cycle's step_id
+                logger.info("DB cache hit, reusing content for URL: %s", url[:80])
+                if self.step_result_repo and step_id:
+                    try:
+                        result_id = str(uuid.uuid4())
+                        self.step_result_repo.create({
+                            "id": result_id, "step_id": step_id, "task_id": task_id,
+                            "source_url": url, "source_title": r.get("title", url),
+                            "raw_content": cached_content,
+                            "raw_file_path": "",
+                        })
+                        reused.append({
+                            "id": result_id, "url": url, "title": r.get("title", url),
+                            "content": cached_content, "query_group": q_group,
+                        })
+                    except Exception as e:
+                        logger.warning("Failed to create reused step_result for %s: %s", url[:80], e)
+            else:
+                new_urls.append(r)
+
+        if reused:
+            logger.info("Reused %d cached pages, fetching %d new URLs — %s",
+                        len(reused), len(new_urls), self._log_context(task_id, "parsing"))
+
+        # Fetch truly-new URLs in parallel
+        async def fetch_one(url: str, title: str, q_group: int) -> Optional[dict]:
+            step_id = group_steps.get(q_group)
+            if not step_id:
+                step_id = list(group_steps.values())[0]
+
             async with sem:
                 try:
                     from backend.services.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
@@ -1162,8 +1476,16 @@ class SomaticResearchOrchestrator:
                             pass
                     if not content:
                         logger.warning("All backends returned empty content for %s", url[:80])
-                        return None
-                    if not content:
+                        if self.step_result_repo:
+                            try:
+                                self.step_result_repo.create({
+                                    "id": str(uuid.uuid4()), "step_id": step_id, "task_id": task_id,
+                                    "source_url": url, "source_title": title,
+                                    "raw_content": "Error: Empty content returned from all backends",
+                                    "raw_file_path": None,
+                                })
+                            except Exception as db_err:
+                                logger.warning("Failed to save parse empty result to DB: %s", db_err)
                         return None
 
                     # Save HTML to disk (relative to backend/ directory)
@@ -1187,43 +1509,70 @@ class SomaticResearchOrchestrator:
                         "raw_content": content[:self._TRUNC_STEP_RESULT],
                         "raw_file_path": file_path,
                     })
-                    # Orchestrator data is stored in research_step_results —
-                    # scraped_assets table has a FK on research_branches(id)
-                    # which doesn't apply here (orchestrator uses steps, not branches).
-                    return {"id": result_id, "url": url, "title": title, "content": content}
+                    return {"id": result_id, "url": url, "title": title, "content": content, "query_group": q_group}
                 except Exception as e:
                     logger.warning("Fetch failed for %s: %s", url[:80], e)
+                    if self.step_result_repo:
+                        try:
+                            self.step_result_repo.create({
+                                "id": str(uuid.uuid4()), "step_id": step_id, "task_id": task_id,
+                                "source_url": url, "source_title": title,
+                                "raw_content": f"Error: Fetch failed: {str(e)[:300]}",
+                                "raw_file_path": None,
+                            })
+                        except Exception as db_err:
+                            logger.warning("Failed to save parse error result to DB: %s", db_err)
                     return None
 
-        tasks = [fetch_one(r["url"], r.get("title", r["url"])) for r in new_urls]
-        gathered = await asyncio.gather(*tasks)
-        return [g for g in gathered if g is not None]
+        tasks = []
+        seen_urls_in_batch = set()
+        for r in new_urls:
+            url = r["url"]
+            if url not in seen_urls_in_batch:
+                seen_urls_in_batch.add(url)
+                tasks.append(fetch_one(url, r.get("title", url), r.get("query_group", 1)))
 
-    async def _tool_parallel_digest(self, task_id, step_id, parsed_sources,
-                                     query, objective, depth, max_depth) -> list[dict]:
-        """Analyze each parsed source concurrently via LLM."""
+        gathered = await asyncio.gather(*tasks)
+        fetched = [g for g in gathered if g is not None]
+        return reused + fetched
+
+    async def _tool_parallel_digest_grouped(self, task_id, group_steps, parsed_sources,
+                                            queries, objective, depth, max_depth) -> list[dict]:
+        """Analyze each parsed source concurrently via LLM, saving results under the correct step_id."""
         sem = self._get_semaphore()
 
         async def digest_one(source: dict) -> Optional[dict]:
             async with sem:
                 try:
+                    q_group = source.get("query_group", 1)
+                    step_id = group_steps.get(q_group)
+                    if not step_id:
+                        step_id = list(group_steps.values())[0]
+
+                    query_text = queries[q_group - 1] if (q_group - 1) < len(queries) else objective
+                    
                     result = await self._analyze_source(
                         task_id, source["url"], source.get("title", ""),
-                        source.get("content", ""), query, objective, depth, max_depth,
+                        source.get("content", ""), query_text, objective, depth, max_depth,
                         step_id=step_id,
                     )
-                    # Update the step result with analysis
+                    # Update the step result with analysis — scope to the CURRENT step_id
+                    # to avoid overwriting results from the same URL in previous cycles.
                     try:
-                        srcs = self.step_result_repo.get_by_step(step_id)
-                        for s in srcs:
-                            if s["source_url"] == source["url"]:
+                        if step_id:
+                            step_srcs = self.step_result_repo.get_by_step(step_id)
+                        else:
+                            step_srcs = self.step_result_repo.get_by_task(task_id)
+                        for sr in step_srcs:
+                            if sr["source_url"] == source["url"]:
                                 self.step_result_repo.update_analysis(
-                                    s["id"], json.dumps(result, ensure_ascii=False),
+                                    sr["id"], json.dumps(result, ensure_ascii=False),
                                 )
-                    except Exception:
-                        logger.warning("Failed to update step result analysis for %s", step_id[:8])
+                                break  # stop at first match within this step
+                    except Exception as db_err:
+                        logger.warning("Failed to update step result analysis for %s: %s", source["url"][:40], db_err)
                     return {"source_url": source["url"], "source_title": source.get("title"),
-                            "result": result}
+                            "result": result, "query_group": q_group}
                 except Exception as e:
                     logger.warning("Digest failed for %s: %s", source.get("url", "")[:80], e)
                     return None
@@ -1306,8 +1655,15 @@ class SomaticResearchOrchestrator:
             return fallback
 
     async def _tool_reflect(self, task_id, objective, goal, depth, max_depth,
-                             all_findings, previous_reflection, step_id: str = "") -> dict:
-        """Multi-round LLM reflection on accumulated findings."""
+                             all_findings, previous_reflection,
+                             digest_signals: dict = None,
+                             step_id: str = "") -> dict:
+        """Multi-round LLM reflection on accumulated findings.
+        
+        digest_signals: dict with keys followups, direct_urls, gaps — collected
+        from all digest results in this cycle. Injected into prompt so the LLM
+        can use concrete pointers when generating next_queries.
+        """
         prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
 
         # Try cache first for persona + system prompt (static per task)
@@ -1332,29 +1688,35 @@ class SomaticResearchOrchestrator:
             }
             self._save_cache(task_id, cache)
 
+        # Build digest signals block for prompt injection
+        signals = digest_signals or {}
+        followups_text = "\n".join(f"- {f}" for f in signals.get("followups", [])) or "(none)"
+        direct_urls_text = "\n".join(f"- {u}" for u in signals.get("direct_urls", [])) or "(none)"
+        gaps_text = "\n".join(f"- {g}" for g in signals.get("gaps", [])) or "(none)"
+
+        user_text = prompt_data.get("user", "").format(
+            objective=objective, goal=goal,
+            current_depth=depth, max_depth=max_depth,
+            accumulated_findings="\n\n".join(all_findings),
+            previous_reflection=json.dumps(previous_reflection, ensure_ascii=False)
+                if previous_reflection else "(none)",
+            digest_followups=followups_text,
+            digest_direct_urls=direct_urls_text,
+            digest_gaps=gaps_text,
+        )
+        if prompt_data.get("anti_mastery"):
+            user_text = self._anti_mastery(user_text)
+
+        self._log_meta(task_id, "orchestrator_reflect_prompt", {
+            "system_prompt": system_text[:2000],
+            "user_prompt": user_text[:2000],
+        }, step_id=step_id or None)
+
         latest_result = {}
-        for round_num in range(1, self.max_reflect_rounds + 1):
-            user_text = prompt_data.get("user", "").format(
-                objective=objective, goal=goal,
-                current_depth=depth, max_depth=max_depth,
-                round_number=round_num, max_rounds=self.max_reflect_rounds,
-                accumulated_findings="\n\n".join(all_findings[-20:]),
-                previous_reflection=json.dumps(previous_reflection, ensure_ascii=False)
-                    if round_num > 1 and previous_reflection else "(none)",
-            )
-            if prompt_data.get("anti_mastery"):
-                user_text = self._anti_mastery(user_text)
-
-            self._log_meta(task_id, "orchestrator_reflect_prompt", {
-                "round": round_num, "system_prompt": system_text[:2000],
-                "user_prompt": user_text[:2000],
-            }, step_id=step_id or None)
-
-            try:
-                from backend.modules.llm_client import generate_unified
-                llm = getattr(self._state, "llm_provider", None)
-                if not llm:
-                    break
+        try:
+            from backend.modules.llm_client import generate_unified
+            llm = getattr(self._state, "llm_provider", None)
+            if llm:
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True,
                     fallback_value={"completeness_score": 0.5, "next_queries": []},
@@ -1366,23 +1728,13 @@ class SomaticResearchOrchestrator:
                 if isinstance(result, dict):
                     latest_result = result
                     self._log_meta(task_id, "orchestrator_reflect_response", {
-                        "round": round_num,
                         "completeness": result.get("completeness_score", 0),
                         "raw": json.dumps(resp, default=str, ensure_ascii=False)[:3000],
                     }, step_id=step_id or None)
-                    # Save LLM response to step_data for frontend display
-                    if branch_id:
-                        try:
-                            self.step_repo.update(branch_id, step_data=json.dumps(
-                                {"llm_response": resp}, default=str, ensure_ascii=False
-                            )[:self._TRUNC_STEP_RESULT])
-                        except Exception:
-                            pass
-                    if result.get("completeness_score", 0) >= self.early_stop_threshold:
-                        break
-            except Exception as e:
-                logger.warning("Reflection round %d failed: %s", round_num, e)
-                break
+                    if step_id:
+                        self._save_llm_response_to_step_data(step_id, resp)
+        except Exception as e:
+            logger.warning("Reflection failed: %s", e)
 
         return latest_result or {"completeness_score": 0.3, "next_queries": [], "reflection": "No reflection"}
 

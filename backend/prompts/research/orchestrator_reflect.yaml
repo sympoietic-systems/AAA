@@ -26,15 +26,29 @@ user: |
   Research Objective: {objective}
   Research Goal: {goal}
   Current Depth: {current_depth} / {max_depth}
-  Reflection Round: {round_number} / {max_rounds}
 
-  Accumulated Findings:
+  Accumulated Findings (all cycles):
   {accumulated_findings}
+
+  Signals from Source Digestion (this cycle):
+
+  Follow-up questions identified while reading sources:
+  {digest_followups}
+
+  Direct URLs found in sources worth reading next:
+  {digest_direct_urls}
+
+  Gaps identified in individual sources:
+  {digest_gaps}
 
   Previous Reflection (if any):
   {previous_reflection}
 
-  Reflect on the current state of this research and identify next steps.
+  Using all of the above — findings, follow-up pointers, identified gaps, and direct URLs — reflect on
+  the current state of this research and generate precise next search queries that address what is
+  still missing. If direct URLs were found in sources, you may include them verbatim in next_queries
+  (they will be fetched directly rather than searched).
+
 
 response_format: "json"
 temperature: 0.5

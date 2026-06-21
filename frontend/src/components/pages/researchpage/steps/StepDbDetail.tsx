@@ -2,7 +2,7 @@ type DetailTab = "input" | "result" | "log"
 
 export const DETAIL_TABS: DetailTab[] = ["input", "result", "log"]
 
-import React, { memo, useState, useEffect, useMemo } from "react"
+import { memo, useState, useEffect, useMemo } from "react"
 import type { MetaLogResponse, TaskStepsResponse, StepPreview } from "../../../../api/research"
 import { getTaskMetaLog, getStepPreview, executeStep, reinitializeTask } from "../../../../api/research"
 import { TerminalButton } from "../../../UI"
@@ -23,23 +23,58 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   if (!selected) return null
   const selectedResults = data ? (data.results_by_step[selectedId] || []) : []
 
-  // Previous step context — for parse (show search URLs) and digest (show parsed pages)
-  const prevStepId = useMemo(() => {
-    if (!data || !selected) return null
-    const chrono = [...data.steps] // chronological order
-    const idx = chrono.findIndex(s => s.id === selectedId)
-    if (idx <= 0) return null
-    // Find the actual predecessor (skip plan step for cycle phases)
-    let prevIdx = idx - 1
-    while (prevIdx >= 0 && chrono[prevIdx].step_type === "plan") prevIdx--
-    return prevIdx >= 0 ? chrono[prevIdx].id : null
-  }, [data, selectedId, selected])
-  const prevStepResults = prevStepId ? (data?.results_by_step[prevStepId] || []) : []
+  // Fallback to find search/digest results for a query_group if the step itself has no saved results (older runs or digest updates stored under parse step)
+  const resolvedSearchResults = useMemo(() => {
+    if (!data || !selected) return []
+    if (selected.step_type === "search") {
+      if (selectedResults.length > 0) return selectedResults
+      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group)
+      if (parseStep && data.results_by_step[parseStep.id]?.length > 0) {
+        return data.results_by_step[parseStep.id]
+      }
+      const digestStep = data.steps.find(s => s.step_type === "digest" && s.query_group === selected.query_group)
+      if (digestStep && data.results_by_step[digestStep.id]?.length > 0) {
+        return data.results_by_step[digestStep.id]
+      }
+    }
+    if (selected.step_type === "digest") {
+      if (selectedResults.length > 0) return selectedResults
+      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group)
+      if (parseStep && data.results_by_step[parseStep.id]?.length > 0) {
+        return data.results_by_step[parseStep.id]
+      }
+    }
+    return selectedResults
+  }, [data, selected, selectedId, selectedResults])
+
   // For parse: the search step's results are the URLs to parse
   // For digest: the parse step's results are the pages to digest
-  const parentInputUrls = selected.step_type === "parallel_parse" || selected.step_type === "digest"
-    ? prevStepResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
-    : []
+  const parentInputUrls = useMemo(() => {
+    if (!data || !selected) return []
+    if (selected.step_type === "parallel_parse") {
+      const searchStep = data.steps.find(s => s.step_type === "search" && s.query_group === selected.query_group)
+      if (searchStep) {
+        const searchResults = data.results_by_step[searchStep.id] || []
+        if (searchResults.length > 0) {
+          return searchResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
+        }
+      }
+      const parseResults = data.results_by_step[selectedId] || []
+      return parseResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
+    }
+    if (selected.step_type === "digest") {
+      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group)
+      if (parseStep) {
+        const parseResults = data.results_by_step[parseStep.id] || []
+        if (parseResults.length > 0) {
+          return parseResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
+        }
+      }
+      const digestResults = data.results_by_step[selectedId] || []
+      return digestResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
+    }
+    return []
+  }, [data, selected, selectedId])
 
   const [tab, setTab] = useState<DetailTab>("result")
   const [metaLog, setMetaLog] = useState<MetaLogResponse | null>(null)
@@ -164,7 +199,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
       {tab === "result" && (
         <StepResultTab
           selected={selected}
-          selectedResults={selectedResults}
+          selectedResults={resolvedSearchResults}
           parsedResult={parsedResult}
           responseEntries={responseEntries}
           inputEntries={inputEntries}

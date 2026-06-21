@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from "react"
+import { memo, useMemo } from "react"
 import type { ResearchStep, ResearchStepResult } from "../../../../api/research"
 import { JsonBlock } from "../../../UI"
 
@@ -60,18 +60,28 @@ export const StepResultTab = memo(function StepResultTab({
       {selected.result_summary && <div className="text-[#94a3b8] text-[10px]">{selected.result_summary}</div>}
 
       {/* ── Search: queries + fetched URLs ── */}
-      {selected.step_type === "search" && searchQueries.length > 0 && (
+      {selected.step_type === "search" && (
         <div className="border-t border-[#1a1a1a] pt-2 space-y-2">
-          <div className="text-[#555] text-[8px] uppercase">search queries ({searchQueries.length})</div>
-          {searchQueries.map((sq, qi) => (
-            <div key={qi} className="pl-2 border-l border-[#222]">
-              <div className="text-[#94a3b8] text-[9px] leading-relaxed">"{sq.query}"</div>
-              <div className="text-[#555] text-[8px]">{sq.resultsCount} results</div>
+          {searchQueries.length > 0 ? (
+            <>
+              <div className="text-[#555] text-[8px] uppercase">search queries ({searchQueries.length})</div>
+              {searchQueries.map((sq, qi) => (
+                <div key={qi} className="pl-2 border-l border-[#222]">
+                  <div className="text-[#94a3b8] text-[9px] leading-relaxed">"{sq.query}"</div>
+                  <div className="text-[#555] text-[8px]">{sq.resultsCount} results</div>
+                </div>
+              ))}
+            </>
+          ) : selected.query_text ? (
+            <div className="pl-2 border-l border-[#222]">
+              <div className="text-[#555] text-[8px] uppercase">search query</div>
+              <div className="text-[#94a3b8] text-[9px] leading-relaxed">"{selected.query_text}"</div>
             </div>
-          ))}
-          {selectedResults.length > 0 && (
+          ) : null}
+
+          {selectedResults.length > 0 ? (
             <div className="pt-1">
-              <div className="text-[#555] text-[8px] mb-1 uppercase">fetched urls ({selectedResults.length})</div>
+              <div className="text-[#555] text-[8px] mb-1 uppercase">urls to parse at next step ({selectedResults.length})</div>
               {selectedResults.map(r => (
                 <div key={r.id} className="pl-2 py-0.5">
                   <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
@@ -81,8 +91,7 @@ export const StepResultTab = memo(function StepResultTab({
                 </div>
               ))}
             </div>
-          )}
-          {selectedResults.length === 0 && (
+          ) : (
             <div className="text-[#444] italic text-[9px] pl-2">
               {searchQueries.some(sq => sq.resultsCount > 0)
                 ? `${searchQueries.reduce((sum, sq) => sum + sq.resultsCount, 0)} links found — fetch + analysis in parse/digest steps`
@@ -97,7 +106,10 @@ export const StepResultTab = memo(function StepResultTab({
         <div className="border-t border-[#1a1a1a] pt-2 space-y-1">
           <div className="text-[#555] text-[8px] uppercase mb-1">parsed pages ({selectedResults.length})</div>
           {selectedResults.map(r => {
-            const st = parseStatus(r.raw_file_path ? "ok" : null)
+            const errorMsg = (r as any).error
+            const st = errorMsg
+              ? { icon: "✗", label: "error", color: "#ef4444" }
+              : parseStatus(r.raw_file_path ? "ok" : null)
             return (
               <div key={r.id} className="pl-2 flex items-start gap-1.5 py-0.5">
                 <span style={{color: st.color}} className="text-[9px] shrink-0">{st.icon}</span>
@@ -106,7 +118,11 @@ export const StepResultTab = memo(function StepResultTab({
                     className="text-[#94a3b8] hover:text-[#c4b5fd] underline break-all text-[9px]">
                     {r.source_title || r.source_url?.slice(0, 100) || "—"}
                   </a>
-                  {r.raw_file_path && <div className="text-[#555] text-[7px] truncate">saved: {r.raw_file_path}</div>}
+                  {errorMsg ? (
+                    <div className="text-[#ef4444] text-[7.5px] font-mono leading-tight pl-1">{errorMsg}</div>
+                  ) : (
+                    r.raw_file_path && <div className="text-[#555] text-[7px] truncate">saved: {r.raw_file_path}</div>
+                  )}
                 </div>
               </div>
             )
@@ -162,6 +178,14 @@ export const StepResultTab = memo(function StepResultTab({
                       <div key={fi} className="text-[#a78bfa] text-[9px] pl-2 leading-relaxed">→ {f}</div>
                     ))}
                   </div>}
+                  {analysis && (
+                    <details className="mt-1.5 pl-2 border-l border-[#1a1a1a]">
+                      <summary className="text-[#555] text-[7.5px] cursor-pointer hover:text-[#777] uppercase">raw analysis payload (json)</summary>
+                      <div className="mt-1">
+                        <JsonBlock data={analysis} variant="json" maxHeight="max-h-36" />
+                      </div>
+                    </details>
+                  )}
                   {!hasContent && <div className="text-[#f59e0b] text-[8px] mt-1 italic">no data extracted</div>}
                 </details>
               )
@@ -214,6 +238,24 @@ export const StepResultTab = memo(function StepResultTab({
               )}
             </div>
           )}
+
+          {/* Collapsible raw database results block */}
+          <details className="border-t border-[#1a1a1a] pt-2">
+            <summary className="text-[#6c6c8a] text-[9px] uppercase tracking-wider cursor-pointer hover:text-[#94a3b8] mb-1">
+              [+] view raw digested results ({selectedResults.length} sources)
+            </summary>
+            <div className="mt-2">
+              <JsonBlock data={selectedResults.map(r => {
+                let analysis: any = null
+                try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : r.analyzed_json } catch {}
+                return {
+                  title: r.source_title,
+                  url: r.source_url,
+                  analysis
+                }
+              })} variant="json" maxHeight="max-h-64" />
+            </div>
+          </details>
         </>
       )}
       {selected.step_type === "digest" && selectedResults.length === 0 && (
@@ -260,22 +302,30 @@ export const StepResultTab = memo(function StepResultTab({
             const rawStr = d?.raw_response || d?.response || ""
             if (!rawStr || rawStr === "{}") return null
             let resp: any = null
-            try { resp = JSON.parse(rawStr) } catch {}
+            if (typeof rawStr === "object" && rawStr !== null) {
+              resp = rawStr
+            } else {
+              try { resp = JSON.parse(rawStr) } catch {}
+            }
 
             if (!resp || typeof resp !== "object") {
+              const displayData = typeof rawStr === "string" ? rawStr : JSON.stringify(rawStr, null, 2)
               return (
                 <details key={ei} className="mb-1">
                   <summary className="text-[#777] text-[9px] cursor-pointer hover:text-[#aaa]">
                     {entry.event_type.replace("orchestrator_","").replace("_response","")} ({entry.created_at?.slice(11,19)})
                   </summary>
                   <div className="mt-1">
-                    <JsonBlock data={rawStr.slice(0, 4000)} variant="raw" />
+                    <JsonBlock data={displayData.slice(0, 4000)} variant="raw" />
                   </div>
                 </details>
               )
             }
 
-            const jsonData = resp.json_data || resp.content
+            let jsonData = resp.json_data || resp.content
+            if (typeof jsonData === "string") {
+              try { jsonData = JSON.parse(jsonData) } catch {}
+            }
             const thinking = resp.thinking || ""
             const wrapper = { model: resp.model, provider_used: resp.provider_used, truncated: resp.truncated, finish_reason: resp.finish_reason }
 
