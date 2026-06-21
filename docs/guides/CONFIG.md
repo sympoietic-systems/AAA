@@ -202,7 +202,7 @@ Set to `false` if you want the model to check for updates on every startup.
 
 | Variable | Default |
 |----------|---------|
-| `AAA_IDENTITY_PATH` | `backend/personality/identity.yaml` |
+| `AAA_IDENTITY_PATH` | `config/personality/identity.yaml` |
 
 The identity file defines the agent's name, system prompt, traits, voice,
 expertise, beliefs, and behaviors. The agent name drives the UI header
