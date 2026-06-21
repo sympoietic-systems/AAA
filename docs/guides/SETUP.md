@@ -61,25 +61,47 @@ cp .env.example .env
 
 ```bash
 # .env
-AAA_LLM_PROVIDER=openrouter
 AAA_LLM_API_KEY=sk-or-v1-your-key-here
 ```
-
-Get a key at [openrouter.ai/keys](https://openrouter.ai/keys).
+*   **Models**: Supports routing to all models on OpenRouter using the `openrouter_router/<model_id>` prefix in `AAA_LLM_MODELS`.
+*   **Get Key**: [openrouter.ai/keys](https://openrouter.ai/keys).
 
 ### Option B — DeepSeek Direct
 
 ```bash
 # .env
-AAA_LLM_PROVIDER=deepseek
 AAA_DEEPSEEK_API_KEY=sk-your-deepseek-key
 ```
+*   **Models**: Supports routing directly to DeepSeek models (e.g. `deepseek-chat`, `deepseek-reasoner`) using the `deepseek_router/<model_id>` prefix.
+*   **Get Key**: [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys).
 
-Get a key at [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys).
+### Option C — Google Gemini Direct
+
+```bash
+# .env
+AAA_GOOGLE_API_KEY=AIzaSyYourGoogleStudioKeyHere
+```
+*   **Models**: Supports routing directly to Google Gemini models (e.g. `gemini-2.5-pro`, `gemini-2.5-flash`) using the `google_router/<model_id>` prefix.
+*   **Get Key**: [aistudio.google.com](https://aistudio.google.com/).
+
+### Multi-Provider Fallback & Router Prefixes
+
+The system has an intelligent multi-provider pool with automatic fallback. If a model is rate-limited or fails, it falls back to the next model in your list. 
+
+Define your prioritized models in the `AAA_LLM_MODELS` list (comma-separated), using the appropriate prefix for each model:
+
+*   `google_router/` — Routes natively to Google's API (requires `AAA_GOOGLE_API_KEY`)
+*   `deepseek_router/` — Routes natively to DeepSeek's API (requires `AAA_DEEPSEEK_API_KEY`)
+*   `openrouter_router/` — Routes to OpenRouter (requires `AAA_LLM_API_KEY`)
+
+**Example list configuration:**
+```env
+AAA_LLM_MODELS=google_router/gemini-2.5-pro,google_router/gemini-2.5-flash,deepseek_router/deepseek-v4-pro,openrouter_router/google/gemma-2-27b-it:free
+```
 
 ### Optional: Thinking Mode
 
-DeepSeek-v4-pro/v4-flash supports chain-of-thought reasoning:
+DeepSeek-v4-pro/v4-flash (and other reasoning models) support chain-of-thought:
 
 ```bash
 AAA_LLM_THINKING=true

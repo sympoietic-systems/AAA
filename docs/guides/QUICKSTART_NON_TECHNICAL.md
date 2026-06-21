@@ -51,6 +51,9 @@ We have provided automated setup scripts to prepare all dependencies, virtual en
    ```
 3. Replace `your_openrouter_api_key_here` with your actual OpenRouter key (which usually starts with `sk-or-`). Save and close the file.
 
+> [!NOTE]
+> OpenRouter is recommended as it provides access to all models with a single key. If you prefer to connect directly to DeepSeek or Google Gemini using native API keys, please see the [Full Setup Guide](SETUP.md#api-key-setup) for the key configuration details.
+
 ---
 
 ## 4. Initializing the Agent (One-Command Database Seeding)
