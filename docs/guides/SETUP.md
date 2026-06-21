@@ -72,7 +72,7 @@ AAA_LLM_API_KEY=sk-or-v1-your-key-here
 # .env
 AAA_DEEPSEEK_API_KEY=sk-your-deepseek-key
 ```
-*   **Models**: Supports routing directly to DeepSeek models (e.g. `deepseek-chat`, `deepseek-reasoner`) using the `deepseek_router/<model_id>` prefix.
+*   **Models**: Supports routing directly to DeepSeek models (e.g. `deepseek-v4-pro`, `deepseek-v4-flash`) using the `deepseek_router/<model_id>` prefix.
 *   **Get Key**: [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys).
 
 ### Option C — Google Gemini Direct
@@ -81,7 +81,7 @@ AAA_DEEPSEEK_API_KEY=sk-your-deepseek-key
 # .env
 AAA_GOOGLE_API_KEY=AIzaSyYourGoogleStudioKeyHere
 ```
-*   **Models**: Supports routing directly to Google Gemini models (e.g. `gemini-2.5-pro`, `gemini-2.5-flash`) using the `google_router/<model_id>` prefix.
+*   **Models**: Supports routing directly to Google Gemini models (e.g. `gemini-2.5-pro`, `gemini-1.5-pro`, `gemini-2.5-flash`, `gemini-1.5-flash`) using the `google_router/<model_id>` prefix.
 *   **Get Key**: [aistudio.google.com](https://aistudio.google.com/).
 
 ### Multi-Provider Fallback & Router Prefixes
