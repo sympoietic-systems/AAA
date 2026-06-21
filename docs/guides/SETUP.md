@@ -9,20 +9,27 @@
 - **Python 3.11+** — [python.org](https://python.org) or `sudo apt install python3` (Ubuntu)
   - Python 3.14 is currently unsupported due to `crawl4ai` / `lxml` wheel incompatibility. The `.python-version` file pins 3.13 for `uv`.
 - **Node.js 18+** — [nodejs.org](https://nodejs.org) or `nvm install --lts`
-- **uv** (Python package manager) — installed automatically by `setup.sh`; see [uv install guide](https://docs.astral.sh/uv/getting-started/installation/)
+- **uv** (Python package manager) — installed automatically by setup scripts (`setup.sh` / `setup.bat`); see [uv install guide](https://docs.astral.sh/uv/getting-started/installation/)
 
 ## Installation
 
-### Automated (Ubuntu — recommended)
+### Automated
 
-```bash
-# Clone and run the one-shot setup script
-git clone <repo-url> aaa
-cd aaa
-bash scripts/setup.sh
-```
+This installs all dependencies (`uv`, Python packages, Node.js + npm packages), configures the virtual environment, copies the configuration template (`.env`), and creates required data directories. Safe to re-run.
 
-This installs all dependencies (`uv`, Python packages, Node.js + npm packages) and creates required data directories. Safe to re-run.
+*   **macOS / Linux**:
+    ```bash
+    git clone <repo-url> aaa
+    cd aaa
+    bash scripts/setup.sh
+    ```
+*   **Windows**:
+    ```powershell
+    git clone <repo-url> aaa
+    cd aaa
+    .\scripts\setup.bat
+    ```
+    *(Or double-click `setup.bat` inside the `scripts` folder in Windows File Explorer)*
 
 ### Manual
 
@@ -143,14 +150,25 @@ uv run python backend/scripts/recalculate_autopoietic_vectors.py
 
 **Option A — Scripts (development)**
 
-```bash
-# Start both backend + frontend (Ctrl+C to stop)
-bash scripts/run_all.sh
+*   **macOS / Linux**:
+    ```bash
+    # Start both backend + frontend (Ctrl+C to stop)
+    bash scripts/run_all.sh
 
-# Or start individually:
-bash scripts/run_backend.sh    # → http://127.0.0.1:8499 (API docs at /docs)
-bash scripts/run_frontend.sh   # → http://localhost:5173
-```
+    # Or start individually:
+    bash scripts/run_backend.sh    # → http://127.0.0.1:8499 (API docs at /docs)
+    bash scripts/run_frontend.sh   # → http://localhost:5173
+    ```
+
+*   **Windows**:
+    ```powershell
+    # Start both backend + frontend (Ctrl+C to stop)
+    .\scripts\run_all.bat
+
+    # Or start individually:
+    .\scripts\run_backend.bat
+    .\scripts\run_frontend.bat
+    ```
 
 **Option B — PM2 (production / server deployment, recommended for Ubuntu)**
 

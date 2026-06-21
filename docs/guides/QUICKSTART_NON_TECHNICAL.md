@@ -17,83 +17,75 @@ Before you begin, install the following software. They are free and safe:
 
 ---
 
-## 2. Configuration & API Key Setup
+## 2. Automated Setup Script
 
-1. Open your terminal application:
-   * **Windows**: Open **PowerShell** (search for it in the Start menu).
-   * **macOS/Linux**: Open **Terminal**.
-2. Navigate to the folder where you downloaded or cloned this repository:
-   ```bash
-   cd path/to/your/aaa-folder
-   ```
-3. Copy the configuration template file:
-   * **Windows (PowerShell)**:
+We have provided automated setup scripts to prepare all dependencies, virtual environments, and configuration templates:
+
+1. Open your terminal application and navigate to the project directory:
+   * **Windows**: Open **PowerShell** (search in Start menu) and run:
      ```powershell
-     copy .env.example .env
+     cd path/to/your/aaa-folder
+     .\scripts\setup.bat
      ```
-   * **macOS / Linux (Terminal)**:
+     *(Alternatively, you can just double-click `setup.bat` inside the `scripts` folder in Windows File Explorer)*
+   * **macOS / Linux**: Open **Terminal** and run:
      ```bash
-     cp .env.example .env
+     cd path/to/your/aaa-folder
+     bash scripts/setup.sh
      ```
-4. Open the newly created `.env` file in a text editor (such as Notepad, TextEdit, or VS Code).
-5. Locate the line that looks like this:
+2. The setup script will:
+   * Check your Python & Node.js versions.
+   * Install the modern `uv` Python package manager.
+   * Initialize a Python virtual environment and download backend dependencies (`uv sync`).
+   * Download and install all frontend user interface packages (`npm install`).
+   * Create database folders and copy the template configuration file (`.env`).
+
+---
+
+## 3. Configuration & API Key Setup
+
+1. Open the newly created `.env` file in a text editor (such as Notepad, TextEdit, or VS Code).
+2. Locate the line that looks like this:
    ```env
    AAA_LLM_API_KEY=your_openrouter_api_key_here
    ```
-6. Replace `your_openrouter_api_key_here` with your actual OpenRouter key (it usually starts with `sk-or-`). Save and close the file.
+3. Replace `your_openrouter_api_key_here` with your actual OpenRouter key (which usually starts with `sk-or-`). Save and close the file.
 
 ---
 
-## 3. Initializing the Agent (One-Command Setup)
+## 4. Initializing the Agent (One-Command Database Seeding)
 
-We have created a single command that checks your configuration, sets up the database, and loads Symbia's personality, beliefs, and skills:
+With the environment ready and API key configured, run the following command to set up the local database and load Symbia's core beliefs and skills:
 
-1. In your terminal or PowerShell window, run this command:
+1. Run this command in your terminal/PowerShell window:
    ```bash
    uv run python backend/scripts/initialize_agent.py
    ```
-2. The script will:
-   * Verify your `.env` file API key is valid.
-   * Create the local SQLite database (`backend/data/aaa.db`).
-   * Seed Symbia's core beliefs and procedural skills.
-   * Output a success message once complete!
+2. Once complete, you will see a success message showing that the local SQLite database (`backend/data/aaa.db`) is successfully seeded!
 
 ---
 
-## 4. Starting the Application
+## 5. Starting the Application
 
-To run the application, you need to start the backend server first, and then the frontend user interface.
+You can start both the backend server and the frontend user interface together using a single run script:
 
-### Step A: Start the Backend Server
-1. In your current terminal/PowerShell window, start the backend:
-   ```bash
-   uv run python backend/main.py
-   ```
-2. You will see logs indicating that the server has started (e.g. `Uvicorn running on http://127.0.0.1:8499`). Keep this window open!
+* **Windows**:
+  Run this command in PowerShell:
+  ```powershell
+  .\scripts\run_all.bat
+  ```
+  *(Or simply double-click `run_all.bat` inside the `scripts` folder)*
+* **macOS / Linux**:
+  Run this command in Terminal:
+  ```bash
+  bash scripts/run_all.sh
+  ```
 
-### Step B: Start the Frontend Interface
-1. Open a **new, separate terminal or PowerShell window**.
-2. Navigate back to the project folder:
-   ```bash
-   cd path/to/your/aaa-folder
-   ```
-3. Enter the `frontend` folder:
-   ```bash
-   cd frontend
-   ```
-4. Install the frontend dependencies (only required on the first setup):
-   ```bash
-   npm install
-   ```
-5. Start the frontend interface:
-   ```bash
-   npm run dev
-   ```
-6. You will see a message like `Local: http://localhost:5173/`. Open this link in your web browser!
+Open **`http://localhost:5173`** in your web browser to start the coupling interface!
 
 ---
 
-## 5. Interacting with Symbia
+## 6. Interacting with Symbia
 
 Once you open `http://localhost:5173` in your browser:
 * You will see the AAA workspace with a sidebar showing Symbia's cognitive vital signs (Boredom, Entropy, active processes).

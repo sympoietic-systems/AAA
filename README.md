@@ -47,36 +47,27 @@ To converse with AAA is to step into a different relationship with software. Bel
 
 ## Quick Start
 
-### One-command setup (Ubuntu)
-```bash
-git clone <repo-url> aaa && cd aaa
-bash scripts/setup.sh
-# Edit .env with your API keys, then:
-bash scripts/run_all.sh
-```
-Open **http://localhost:5173** to initiate the coupling.
+### Automated Setup & Launch
 
-### Production deployment with PM2 (Ubuntu server)
-```bash
-npm install -g pm2
-bash scripts/pm2.sh start
-pm2 startup && pm2 save       # auto-restart on reboot
-```
+1. Clone the repository and navigate into it:
+   ```bash
+   git clone <repo-url> aaa && cd aaa
+   ```
+2. Run the setup script for your platform to install all dependencies and configure the environment template:
+   * **Windows**: Run `.\scripts\setup.bat` (or double-click it in File Explorer)
+   * **macOS / Linux**: Run `bash scripts/setup.sh`
+3. Edit the newly created `.env` file in a text editor to add your API keys (e.g. `AAA_LLM_API_KEY=your_openrouter_key`).
+4. Initialize the agent database:
+   ```bash
+   uv run python backend/scripts/initialize_agent.py
+   ```
+5. Launch the application (starts both backend and frontend):
+   * **Windows**: Run `.\scripts\run_all.bat` (or double-click it)
+   * **macOS / Linux**: Run `bash scripts/run_all.sh`
 
-### Manual (all platforms)
-```bash
-uv sync && cd frontend && npm install && cd ..
-cp .env.example .env   # edit with your API keys
+Open **`http://localhost:5173`** to begin chatting with Symbia!
 
-# Terminal 1 — Backend
-uv run python -m backend.main
-
-# Terminal 2 — Frontend
-cd frontend && npm run dev
-```
-Open **http://localhost:5173**.
-
-> See the [Easy Quickstart Guide](docs/guides/QUICKSTART_NON_TECHNICAL.md) for a simplified, non-technical local setup walkthrough, or the full [Setup Guide](docs/guides/SETUP.md) for advanced configuration, database seeding scripts, and troubleshooting.
+> See the [Easy Quickstart Guide](docs/guides/QUICKSTART_NON_TECHNICAL.md) for a simplified local setup walkthrough, or the full [Setup Guide](docs/guides/SETUP.md) for advanced configuration details and troubleshooting.
 
 ---
 
