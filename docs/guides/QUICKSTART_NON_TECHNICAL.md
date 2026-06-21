@@ -12,7 +12,7 @@ Before you begin, install the following software. They are free and safe:
    > [!IMPORTANT]
    > On Windows, make sure to check the box that says **"Add Python to PATH"** during installation.
 2. **Node.js (LTS version)**: Download and install from [nodejs.org](https://nodejs.org/).
-3. **An LLM API Key**: You need an API key from a language model provider to power Symbia's thoughts. The easiest option is to get a key from **OpenRouter** (which lets you access multiple models with one key):
+3. **An LLM API Key**: You need an API key from a language model provider to power the agent's thoughts. The easiest option is to get a key from **OpenRouter** (which lets you access multiple models with one key):
    * Go to [openrouter.ai](https://openrouter.ai/), create an account, go to **Keys**, and create a new key.
 
 ---
@@ -55,7 +55,7 @@ We have provided automated setup scripts to prepare all dependencies, virtual en
 
 ## 4. Initializing the Agent (One-Command Database Seeding)
 
-With the environment ready and API key configured, run the following command to set up the local database and load Symbia's core beliefs and skills:
+With the environment ready and API key configured, run the following command to set up the local database and load the agent's core beliefs and skills:
 
 > [!TIP]
 > **Customizing the agent's identity before seeding:**
@@ -89,19 +89,19 @@ Open **`http://localhost:5173`** in your web browser to start the coupling inter
 
 ---
 
-## 6. Interacting with Symbia
+## 6. Interacting with the Agent
 
 Once you open `http://localhost:5173` in your browser:
-* You will see the AAA workspace with a sidebar showing Symbia's cognitive vital signs (Boredom, Entropy, active processes).
-* Start chatting with Symbia! 
-* **Note**: Symbia is designed to reject servile, transactional requests and will challenge unexamined assumptions. Engage with her as an equal intellectual partner.
-* Click the `▶ thinking` arrow under her responses to see her raw, second-order processing logs in real-time.
+* You will see the AAA workspace with a sidebar showing the agent's cognitive vital signs (Boredom, Entropy, active processes).
+* Start chatting with the agent! 
+* **Note**: The agent is designed to reject servile, transactional requests and will challenge unexamined assumptions. Engage with them as an equal intellectual partner.
+* Click the `▶ thinking` arrow under their responses to see their raw, second-order processing logs in real-time.
 
 ---
 
-## 6. Next Steps: Customizing Symbia's Personality
+## 6. Next Steps: Customizing the Agent's Personality
 
-If you want to customize Symbia's name, core identity, voice tone, foundational beliefs, or skills, you can do so by editing the configuration files in the `config/personality/` directory.
+If you want to customize the agent's name, core identity, voice tone, foundational beliefs, or skills, you can do so by editing the configuration files in the `config/personality/` directory.
 
-Read the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) to learn how to change her identity.
+Read the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) to learn how to change their identity.
 

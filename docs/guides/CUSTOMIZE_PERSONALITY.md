@@ -1,6 +1,6 @@
 # Agent Personality Customization Guide
 
-This guide details how to customize Symbia's (or any new agent's) core identity, voice, behaviors, initial beliefs, procedural skills, and task-specific prompt templates. 
+This guide details how to customize the agent's core identity, voice, behaviors, initial beliefs, procedural skills, and task-specific prompt templates. 
 
 For the initial setup or running the application locally, please see the [Easy Quickstart Guide](QUICKSTART_NON_TECHNICAL.md).
 

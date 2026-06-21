@@ -1,7 +1,7 @@
 # Setup Guide
 
 > [!TIP]
-> Are you a non-technical user or looking for the fastest path to get Symbia up and running locally? 
+> Are you a non-technical user or looking for the fastest path to get the agent up and running locally? 
 > Read the [Easy Quickstart Guide](QUICKSTART_NON_TECHNICAL.md) first!
 
 ## Prerequisites
@@ -217,9 +217,9 @@ The frontend proxies `/api` requests to the backend automatically.
 Open `http://localhost:5173`. You should see:
 
 ```
-> symbia
+> agent-name
 ────────────────────────────────
-Symbia v0.1.0 — type a message below.
+AgentName v0.1.0 — type a message below.
 > _                              ← your prompt
 ```
 

@@ -2,12 +2,12 @@
 
 ## Overview
 
-The **Model Context Protocol (MCP) Server** exposes Symbia (the AAA posthuman entity) and its core resources as MCP tools. Development assistants such as `antigravity` and `opencode` can invoke these tools to:
+The **Model Context Protocol (MCP) Server** exposes the autopoietic agent (the AAA posthuman entity) and its core resources as MCP tools. Development assistants such as `antigravity` and `opencode` can invoke these tools to:
 
 - Retrieve philosophical foundations (`aaa://philosophy`).
 - Query the system identity (`aaa://identity`).
 - Pull live metrics (`aaa://metrics`).
-- Consult Symbia via the `consult_aaa` tool, with persistent per‑agent conversations titled `Consultation: <agent_name>`.
+- Consult the agent via the `consult_aaa` tool, with persistent per‑agent conversations titled `Consultation: <agent_name>`.
 
 This guide walks you through installing, running, and registering the MCP server for seamless integration with your development environment.
 
@@ -73,7 +73,7 @@ After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will au
 
 ## Using the Tools
 
-### 1. Consulting Symbia
+### 1. Consulting the Agent
 ```json
 {
   "tool": "consult_aaa",
