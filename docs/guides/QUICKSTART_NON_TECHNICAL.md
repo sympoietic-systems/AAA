@@ -93,13 +93,17 @@ Use this option if you have a DeepSeek platform API key.
 
 ---
 
-## 4. Initializing the Agent (One-Command Database Seeding)
+## 4. Customizing the Agent's Personality (Optional)
 
-With the environment ready and API key configured, run the following command to set up the local database and load the agent's core beliefs and skills:
+If you want to customize the agent's name, core identity, voice tone, foundational beliefs, or skills, you can do so by editing the configuration files in the `config/personality/` directory **before** running the database initialization command.
 
-> [!TIP]
-> **Customizing the agent's identity before seeding:**
-> Seeding reads the YAML configuration files in `config/personality/` (such as `seed_personality.yaml`) and writes them to the database. If you want to change the agent's name, core commitments, beliefs, or procedural skills *before* creating the database, edit these files first. See the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) for details.
+Read the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) to learn how to change their identity.
+
+---
+
+## 5. Initializing the Agent (One-Command Database Seeding)
+
+With the environment ready and API keys configured, run the following command to set up the local database and load the agent's beliefs and skills:
 
 1. Run this command in your terminal/PowerShell window:
    ```bash
@@ -109,7 +113,7 @@ With the environment ready and API key configured, run the following command to 
 
 ---
 
-## 5. Starting the Application
+## 6. Starting the Application
 
 You can start both the backend server and the frontend user interface together using a single run script:
 
@@ -129,7 +133,7 @@ Open **`http://localhost:5173`** in your web browser to start the coupling inter
 
 ---
 
-## 6. Interacting with the Agent
+## 7. Interacting with the Agent
 
 Once you open `http://localhost:5173` in your browser:
 * You will see the AAA workspace with a sidebar showing the agent's cognitive vital signs (Boredom, Entropy, active processes).
@@ -139,9 +143,5 @@ Once you open `http://localhost:5173` in your browser:
 
 ---
 
-## 6. Next Steps: Customizing the Agent's Personality
-
-If you want to customize the agent's name, core identity, voice tone, foundational beliefs, or skills, you can do so by editing the configuration files in the `config/personality/` directory.
-
-Read the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) to learn how to change their identity.
+For a complete reference of all environment variables, pipeline configuration options, and daemon settings, please refer to the [Advanced Configuration Guide](CONFIG.md).
 
