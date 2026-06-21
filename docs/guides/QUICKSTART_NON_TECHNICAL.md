@@ -139,9 +139,25 @@ Once you open `http://localhost:5173` in your browser:
 
 ---
 
-## 6. Next Steps: Customizing the Agent's Personality
+## 6. Interacting with the Agent
+
+Once you open `http://localhost:5173` in your browser:
+* You will see the AAA workspace with a sidebar showing the agent's cognitive vital signs (Boredom, Entropy, active processes).
+* Start chatting with the agent! 
+* **Note**: The agent is designed to reject servile, transactional requests and will challenge unexamined assumptions. Engage with them as an equal intellectual partner.
+* Click the `▶ thinking` arrow under their responses to see their raw, second-order processing logs in real-time.
+
+---
+
+## 7. Next Steps: Customizing the Agent's Personality
 
 If you want to customize the agent's name, core identity, voice tone, foundational beliefs, or skills, you can do so by editing the configuration files in the `config/personality/` directory.
 
 Read the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) to learn how to change their identity.
+
+---
+
+## 8. Advanced Configuration
+
+For an in-depth reference of all environment variables, background tasks, dream daemon options, and pipeline parameters, check the [Advanced Configuration Guide](CONFIG.md).
 
