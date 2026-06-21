@@ -55,10 +55,10 @@ Use this option if you want to access multiple models (Gemini, DeepSeek, Llama, 
    ```
 2. Configure the models in `.env` to route through OpenRouter:
    ```env
-   AAA_LLM_MODELS=openrouter_router/google/gemini-2.5-pro,openrouter_router/google/gemini-1.5-pro,openrouter_router/deepseek/deepseek-chat
-   AAA_BACKGROUND_MODELS=openrouter_router/google/gemini-2.5-flash,openrouter_router/google/gemini-1.5-flash,openrouter_router/deepseek/deepseek-v4-flash-20260423:free
-   AAA_STRUCTURAL_MODELS=openrouter_router/google/gemini-2.5-flash,openrouter_router/google/gemini-1.5-flash,openrouter_router/deepseek/deepseek-v4-flash-20260423:free
-   AAA_VISION_MODELS=openrouter_router/google/gemini-2.5-flash,openrouter_router/google/gemini-1.5-flash
+   AAA_LLM_MODELS=openrouter_router/google/gemini-3.5-pro,openrouter_router/google/gemini-3.1-pro,openrouter_router/deepseek/deepseek-chat
+   AAA_BACKGROUND_MODELS=openrouter_router/google/gemini-3.5-flash,openrouter_router/google/gemini-3.1-flash,openrouter_router/deepseek/deepseek-v4-flash-20260423:free
+   AAA_STRUCTURAL_MODELS=openrouter_router/google/gemini-3.5-flash,openrouter_router/google/gemini-3.1-flash,openrouter_router/deepseek/deepseek-v4-flash-20260423:free
+   AAA_VISION_MODELS=openrouter_router/google/gemini-3.5-flash,openrouter_router/google/gemini-3.1-flash
    ```
 
 ### Option B: Google Gemini (Direct API Connection)
@@ -67,12 +67,12 @@ Use this option if you have a Google AI Studio API key.
    ```env
    AAA_GOOGLE_API_KEY=AIzaSyYourGeminiKeyHere
    ```
-2. Configure the models in `.env` to use native Google routing (Gemini 2.5 and 1.5 Pro/Flash):
+2. Configure the models in `.env` to use native Google routing (Gemini 3.5 and 3.1 Pro/Flash):
    ```env
-   AAA_LLM_MODELS=google_router/gemini-2.5-pro,google_router/gemini-1.5-pro
-   AAA_BACKGROUND_MODELS=google_router/gemini-2.5-flash,google_router/gemini-1.5-flash
-   AAA_STRUCTURAL_MODELS=google_router/gemini-2.5-flash,google_router/gemini-1.5-flash
-   AAA_VISION_MODELS=google_router/gemini-2.5-flash,google_router/gemini-1.5-flash
+   AAA_LLM_MODELS=google_router/gemini-3.5-pro,google_router/gemini-3.1-pro
+   AAA_BACKGROUND_MODELS=google_router/gemini-3.5-flash,google_router/gemini-3.1-flash
+   AAA_STRUCTURAL_MODELS=google_router/gemini-3.5-flash,google_router/gemini-3.1-flash
+   AAA_VISION_MODELS=google_router/gemini-3.5-flash,google_router/gemini-3.1-flash
    ```
 
 ### Option C: DeepSeek (Direct API Connection)

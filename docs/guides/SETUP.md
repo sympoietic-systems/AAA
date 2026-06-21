@@ -81,7 +81,7 @@ AAA_DEEPSEEK_API_KEY=sk-your-deepseek-key
 # .env
 AAA_GOOGLE_API_KEY=AIzaSyYourGoogleStudioKeyHere
 ```
-*   **Models**: Supports routing directly to Google Gemini models (e.g. `gemini-2.5-pro`, `gemini-1.5-pro`, `gemini-2.5-flash`, `gemini-1.5-flash`) using the `google_router/<model_id>` prefix.
+*   **Models**: Supports routing directly to Google Gemini models (e.g. `gemini-3.5-pro`, `gemini-3.1-pro`, `gemini-3.5-flash`, `gemini-3.1-flash`) using the `google_router/<model_id>` prefix.
 *   **Get Key**: [aistudio.google.com](https://aistudio.google.com/).
 
 ### Multi-Provider Fallback & Router Prefixes
@@ -96,7 +96,7 @@ Define your prioritized models in the `AAA_LLM_MODELS` list (comma-separated), u
 
 **Example list configuration:**
 ```env
-AAA_LLM_MODELS=google_router/gemini-2.5-pro,google_router/gemini-2.5-flash,deepseek_router/deepseek-v4-pro,openrouter_router/google/gemma-2-27b-it:free
+AAA_LLM_MODELS=google_router/gemini-3.5-pro,google_router/gemini-3.5-flash,deepseek_router/deepseek-v4-pro,openrouter_router/google/gemma-2-27b-it:free
 ```
 
 ### Optional: Thinking Mode
