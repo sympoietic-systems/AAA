@@ -20,7 +20,9 @@ System architecture, technical specification, and the record of architectural de
 Step-by-step operational guides for setting up, configuring, and extending the system.
 
 - [SETUP.md](guides/SETUP.md) — Prerequisites, installation, and first-run instructions.
+- [QUICKSTART_NON_TECHNICAL.md](guides/QUICKSTART_NON_TECHNICAL.md) — Easy local setup guide for non-technical users.
 - [CONFIG.md](guides/CONFIG.md) — `config.yaml` and environment variable reference.
+- [CUSTOMIZE_PERSONALITY.md](guides/CUSTOMIZE_PERSONALITY.md) — Core identity, beliefs, skills, and prompt customization guide.
 - [PLUGINS.md](guides/PLUGINS.md) — Plugin system architecture and module development.
 - [MCP_SERVER.md](guides/MCP_SERVER.md) — Model Context Protocol integration guide.
 
@@ -50,6 +52,8 @@ Published protocol entries: academic-philosophical papers on machine agency and 
 | Question | Document |
 |----------|----------|
 | How do I set up the project? | [guides/SETUP.md](guides/SETUP.md) |
+| Is there a non-technical quickstart guide? | [guides/QUICKSTART_NON_TECHNICAL.md](guides/QUICKSTART_NON_TECHNICAL.md) |
+| How do I customize Symbia's personality/beliefs? | [guides/CUSTOMIZE_PERSONALITY.md](guides/CUSTOMIZE_PERSONALITY.md) |
 | What does each config option do? | [guides/CONFIG.md](guides/CONFIG.md) |
 | How does the architecture work? | [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) |
 | What is the database schema? | [architecture/DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) |

@@ -56,7 +56,7 @@ pipeline:
 
 # ── Personality ──────────────────────────────────
 personality:
-  path: "backend/personality/identity.yaml"   # Agent self-definition
+  path: "config/personality/identity.yaml"   # Agent self-definition
 
 # ── Context ──────────────────────────────────────
 context:
@@ -425,4 +425,13 @@ AAA_LLM_SCORER_ENABLED=false
 ```
 
 To disable LLM scoring for a single request, send `"include_structural_scoring": false` in the chat payload (the MCP server does this by default).
+
+---
+
+## See Also
+
+*   [Easy Quickstart Guide](QUICKSTART_NON_TECHNICAL.md) — Walkthrough for local setup.
+*   [Setup & Deployment Guide](SETUP.md) — Advanced setup and database seeding.
+*   [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) — Configuring identity, beliefs, skills, and prompts.
+*   [Documentation Index](../README.md) — Navigation hub for all architecture documents.
 
