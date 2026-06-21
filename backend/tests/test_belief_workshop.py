@@ -380,6 +380,44 @@ async def test_belief_direct_crud_flux():
             os.remove(db_path)
 
 
+def migrate_legacy_beliefs(conn: sqlite3.Connection) -> None:
+    rows = conn.execute(
+        """SELECT id, agent_id, label, statement, origin, confidence, ontological_mass, vector_16d, lifecycle_stage, genesis_materials 
+           FROM belief_nodes 
+           WHERE lifecycle_stage IN ('nucleation', 'accretion', 'collapsed')"""
+    ).fetchall()
+
+    for row in rows:
+        bid = row["id"]
+        agent_id = row["agent_id"]
+        label = row["label"]
+        statement = row["statement"]
+        confidence = row["confidence"]
+        mass = row["ontological_mass"]
+        vector = row["vector_16d"]
+        stage = row["lifecycle_stage"]
+        materials = row["genesis_materials"] or "[]"
+
+        status = "pending"
+        rejection_rationale = None
+        if stage == "collapsed":
+            status = "rejected"
+            rejection_rationale = "Belief collapsed due to decay/counter-evidence in metabolism."
+
+        # Insert into belief_proposals if not already exists
+        conn.execute(
+            """INSERT OR IGNORE INTO belief_proposals
+               (id, agent_id, provisional_statement, source_trace, initial_signature, nucleation_mass, confidence, status, suggested_label, suggested_statement, rejection_rationale, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+            (bid, agent_id, statement, materials, vector, mass, confidence, status, label, statement, rejection_rationale)
+        )
+
+        # Delete from belief_nodes
+        conn.execute("DELETE FROM belief_statement_versions WHERE belief_id = ?", (bid,))
+        conn.execute("DELETE FROM belief_events WHERE belief_id = ?", (bid,))
+        conn.execute("DELETE FROM belief_nodes WHERE id = ?", (bid,))
+
+
 def test_belief_legacy_migration():
     db_path = str(get_db_path("data/aaa_migration_test.db"))
     if os.path.exists(db_path):
@@ -387,7 +425,6 @@ def test_belief_legacy_migration():
 
     # Establish db and insert legacy nodes directly to database
     from backend.storage.database import init_db
-    from backend.scripts.migrate_legacy_beliefs import migrate_legacy_beliefs
     
     conn = init_db(db_path)
     try:
