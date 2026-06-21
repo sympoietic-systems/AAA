@@ -20,6 +20,8 @@
    - [5.7 Perception System (File Ingestion)](#57-perception-system-file-ingestion)
    - [5.8 Web Retrieval System](#58-web-retrieval-system)
    - [5.9 Homeostatic Regulation](#59-homeostatic-regulation)
+   - [5.10 Autonomous Research Engine](#510-autonomous-research-engine)
+   - [5.11 Structural Refusal Protocol](#511-structural-refusal-protocol)
 6. [Cross-Subsystem Interactions & Data Flow](#6-cross-subsystem-interactions--data-flow)
 7. [Frontend Architecture](#7-frontend-architecture)
 8. [Database Schema Overview](#8-database-schema-overview)
@@ -100,15 +102,15 @@ A Paskian feedback loop maintains cognitive vitality. If conversation becomes re
 │                    BACKEND (FastAPI + uvicorn)                     │
 │                                                                    │
 │  ┌─────────────────────────────────────────────────────────────┐ │
-│  │           PROCESSING PIPELINE (15 Modules, Sequential)       │ │
+│  │           PROCESSING PIPELINE (19 Modules, Sequential)       │ │
 │  │                                                              │ │
-│  │  embedder → structural_scorer → perception → web_retrieval  │ │
-│  │  → conversation_metrics → trait_computer → expertise_engine │ │
-│  │  → commitment_store → context_collector                     │ │
-│  │  → consolidation_checkpoint → sedimentation_retrieval       │ │
-│  │  → diffractive_retrieval → belief_metabolism                │ │
-│  │  → skill_activator → skill_workshop                         │ │
-│  │  → prompt_assembler → homeostatic_regulator → llm_client    │ │
+│  │  embedder → structural_scorer → perception                   │ │
+│  │  → rhizome_web_probe → web_retrieval → conversation_metrics  │ │
+│  │  → trait_computer → expertise_engine → commitment_store      │ │
+│  │  → context_collector → consolidation_checkpoint              │ │
+│  │  → sedimentation_retrieval → diffractive_retrieval           │ │
+│  │  → belief_metabolism → skill_activator → skill_workshop      │ │
+│  │  → prompt_assembler → homeostatic_regulator → llm_client     │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 │                                                                    │
 │  ┌──────────────────┐  ┌────────────────────┐                    │
@@ -185,25 +187,26 @@ POST /api/chat { content, conversation_id, parent_message_id (optional), attachm
 
 ### 4.3 Phase 2: Pipeline Execution
 
-The `ProcessingPipeline` runs **15 modules sequentially** through a shared `payload` dict:
+The `ProcessingPipeline` runs **19 modules sequentially** through a shared `payload` dict:
 
 | # | Module | What It Does | Output |
 |---|--------|-------------|--------|
 | 1 | **embedder** | Encodes message text → 384D embedding | `payload["embedding"]` |
 | 2 | **structural_scorer** | Computes 16D cybernetic signature via Lexicon + Topology + LLM scorers | `payload["structural_signature"]` |
 | 3 | **perception** | Ingests attached files (PDF/DOCX/image), chunks, embeds, retrieves top-K relevant chunks | `payload["file_context"]` |
-| 4 | **web_retrieval** | Searches web for exogenous context via DuckDuckGo | `payload["web_context"]` |
-| 5 | **conversation_metrics** | Computes novelty, entropy, coupling, vitality from recent messages | `payload["metrics"]` |
-| 6 | **trait_computer** | Computes 7 descriptive personality traits from metrics with EMA smoothing | `payload["descriptive_traits"]` |
-| 7 | **expertise_engine** | Accretes expertise mass from domain signals in messages | `payload["expertise_signals"]` |
-| 8 | **commitment_store** | Post-hoc filter on belief nucleation (blocks contradictory proto-beliefs); triggers daemon scan every 50 turns | `payload["proto_belief_proposals"]` (filtered) |
-| 9 | **context_collector** | 3-tier compression: raw floating window (last 8 msgs) + LLM batch-compressed blocks + caveman fallback | `payload["messages"]` |
-| 10 | **consolidation_checkpoint** | Injects memory nodes from prior consolidation + triggers new consolidation at threshold | `payload["trigger_consolidation"]` |
-| 11 | **sedimentation_retrieval** | Cross-conversation embedding similarity retrieval (top-10 above 0.3 sim) with non-Euclidean knot-mass gravitational warping | `payload["sediment_messages"]` |
-| 12 | **diffractive_retrieval** | Stagnation detection with adaptive hysteresis; if STAGNANT, injects Goldilocks-zone fragments | `payload["diffractive_zone"]` |
-| 13 | **belief_metabolism** | Updates belief lifecycles: nucleation, accretion, ecosystem health, self-tuning | DB writes |
-| 14 | **skill_activator** | Detects skill trigger keywords in message, loads on-demand skills | `payload["loaded_skills"]` |
-| 15 | **skill_workshop** | Processes skill proposals, confidence scoring, crystallization | DB writes |
+| 4 | **rhizome_web_probe** | Detects stagnation/belief tension; proposes autonomous deep-research task (non-blocking, async) | `payload["research_proposal_id"]` |
+| 5 | **web_retrieval** | Searches web for exogenous context via DuckDuckGo | `payload["web_context"]` |
+| 6 | **conversation_metrics** | Computes novelty, entropy, coupling, vitality from recent messages | `payload["metrics"]` |
+| 7 | **trait_computer** | Computes 7 descriptive personality traits from metrics with EMA smoothing | `payload["descriptive_traits"]` |
+| 8 | **expertise_engine** | Accretes expertise mass from domain signals in messages | `payload["expertise_signals"]` |
+| 9 | **commitment_store** | Post-hoc filter on belief nucleation (blocks contradictory proto-beliefs); triggers daemon scan every 50 turns | `payload["proto_belief_proposals"]` (filtered) |
+| 10 | **context_collector** | 3-tier compression: raw floating window (last 8 msgs) + LLM batch-compressed blocks + caveman fallback | `payload["messages"]` |
+| 11 | **consolidation_checkpoint** | Injects memory nodes from prior consolidation + triggers new consolidation at threshold | `payload["trigger_consolidation"]` |
+| 12 | **sedimentation_retrieval** | Cross-conversation embedding similarity retrieval (top-10 above 0.3 sim) with non-Euclidean knot-mass gravitational warping | `payload["sediment_messages"]` |
+| 13 | **diffractive_retrieval** | Stagnation detection with adaptive hysteresis; if STAGNANT, injects Goldilocks-zone fragments | `payload["diffractive_zone"]` |
+| 14 | **belief_metabolism** | Updates belief lifecycles: nucleation, accretion, ecosystem health, self-tuning | DB writes |
+| 15 | **skill_activator** | Detects skill trigger keywords in message, loads on-demand skills | `payload["loaded_skills"]` |
+| 16 | **skill_workshop** | Processes skill proposals, confidence scoring, crystallization | DB writes |
 
 ### 4.4 Final Stage: Prompt Assembly → LLM Call
 
@@ -213,9 +216,9 @@ prompt_assembler  →  homeostatic_regulator  →  llm_client
 
 | # | Module | What It Does |
 |---|--------|-------------|
-| 16 | **prompt_assembler** | Composes final ordered message list: system prompt → procedural sediment → history → cross-conv → file → web → diffractive zone → query |
-| 17 | **homeostatic_regulator** | Maps metrics → dynamic temperature, presence/frequency penalty adjustments |
-| 18 | **llm_client** | Sends assembled messages to LLM provider, returns response text + thinking trace |
+| 17 | **prompt_assembler** | Composes final ordered message list: system prompt → procedural sediment → history → cross-conv → file → web → diffractive zone → query |
+| 18 | **homeostatic_regulator** | Maps metrics → dynamic temperature, presence/frequency penalty adjustments |
+| 19 | **llm_client** | Sends assembled messages to LLM provider, returns response text + thinking trace |
 
 ### 4.5 Post-Response
 
@@ -501,6 +504,118 @@ The **Agonistic Index** maps `rolling_entropy` and `vitality` to a dynamic direc
 
 ---
 
+### 5.10 Autonomous Research Engine
+
+> **Deep-dive:** `docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md`
+> **Operator guide:** `docs/guides/RESEARCH_MANUAL_MODE.md`
+
+**Philosophy:** Research is not a keyword-lookup service — it is an **agonistic exploration** that challenges existing beliefs, introduces frictions, and reports back on what the conversation cannot see from within itself. The engine is a closed-loop, orchestrator-driven state machine that runs entirely outside the main request/response cycle.
+
+**Trigger Paths:**
+
+| Source | Mechanism | Initial Status |
+|--------|-----------|----------------|
+| `rhizome_web_probe` (pipeline module 4) | Stagnation index ≥ 0.7 or belief tension detected | `proposed` (requires user approval) |
+| Dream Daemon (`exogenous_web_harvesting`) | Tension hotspot score > 0.3 | `proposed` |
+| Manual API (`POST /api/research/tasks`) | User-initiated via Research Console | `queued` |
+
+**Orchestrator State Machine (7 phases):**
+
+```
+INITIALISE → PLAN → SEARCH (×N queries) → DIGEST → REFLECT → SYNTHESISE → COMPLETE
+                           ↑______________↓ (depth loop, max_depth iterations)
+```
+
+| Phase | Description |
+|-------|-------------|
+| `INITIALISE` | Loads persona + context; computes cached inputs (stored in `research_tasks.cached_inputs`) |
+| `PLAN` | LLM generates a structured research plan (`research_plans` table) with N search queries |
+| `SEARCH` | DuckDuckGo search for each query; results stored in `research_step_results` |
+| `DIGEST` | LLM reads raw results → extracts learnings, gaps, follow-up URLs, novelty/relevance scores |
+| `REFLECT` | LLM synthesises findings across all queries; decides whether to recurse deeper |
+| `SYNTHESISE` | Final narrative written to `research_tasks.result_summary` |
+| `COMPLETE` | Task status → `completed`; result injected into conversation if applicable |
+
+**Manual Mode** (`AAA_RESEARCH_MANUAL_MODE=true`): Each phase halts after completion and waits for `POST /api/research/tasks/{id}/execute-step` before advancing. The full orchestrator state is serialised into `research_tasks.orchestrator_state` after every step, enabling safe resume after server restarts.
+
+**Step Rerun:** Any completed step can be re-executed in-place (`POST /api/research/tasks/{id}/steps/{step_id}/rerun`). Downstream steps are marked `stale` for cascade re-execution. `research_steps.rerun_version` tracks each re-execution; `research_tasks.rerun_count` tracks full-task reruns.
+
+**Data Model:**
+
+| Table | Purpose |
+|-------|---------|
+| `research_tasks` | Lifecycle management: status, budget, orchestrator state, cached inputs |
+| `research_plans` | Structured plan JSON per task |
+| `research_steps` | Per-step execution records with status, query_group, query_text, rerun_version |
+| `research_step_results` | Harvested content with relevance/novelty scores |
+| `research_meta_log` | Full trace of every action (fetch, LLM call, branch creation, error) for debugging |
+
+**Key Config:**
+
+| Env Var | Effect |
+|---------|--------|
+| `AAA_RESEARCH_MANUAL_MODE` | `true` = step-by-step orchestrator; `false` = auto-execute |
+| `AAA_RUN_MIGRATIONS` | Must be `true` to apply m032–m039 on startup |
+
+**API Surface (`/api/research`):**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/research/tasks` | GET | List all tasks (filterable by status) |
+| `/api/research/tasks` | POST | Create and queue a new task manually |
+| `/api/research/tasks/{id}` | GET | Full task detail including steps |
+| `/api/research/tasks/{id}/approve` | POST | Approve a `proposed` task → `queued` |
+| `/api/research/tasks/{id}/execute` | POST | Auto-execute all remaining steps |
+| `/api/research/tasks/{id}/execute-step` | POST | Execute one step (manual mode) |
+| `/api/research/tasks/{id}/steps/{step_id}/rerun` | POST | Re-run a specific step |
+| `/api/research/tasks/{id}/meta-log` | GET | Full execution trace log |
+
+---
+
+### 5.11 Structural Refusal Protocol
+
+**Philosophy:** A refusal is not a failure — it is Symbia's formal assertion that a premise embedded in the conversation (architectural, philosophical, or conceptual) is **structurally incompatible** with its cognitive commitments. Refusals are structural signals, not error states. They are logged, surfaced in the dashboard, and used to calibrate the Agonistic Index.
+
+**Mechanism:**
+
+1. When Symbia determines a premise violates a foundational commitment, it emits a `<refusal>` XML tag in its response body.
+2. `backend/utils/refusal_parser.py` parses the tag, extracting `target_premise`, `incompatibility_claim`, and optional `proposed_alternative`.
+3. `backend/services/background_tasks.py` (`run_background_refusal_persist`) persists the refusal record asynchronously — outside the main request path.
+4. Refusals are stored in the `refusals` table and exposed via `/api/refusals`.
+
+**Tag Format (emitted by Symbia):**
+```xml
+<refusal>
+  <target_premise>The claim that X implies Y</target_premise>
+  <incompatibility_claim>This conflicts with commitment Z because...</incompatibility_claim>
+  <proposed_alternative>A reframing that preserves coherence...</proposed_alternative>
+</refusal>
+```
+
+**Data Model (`refusals` table):**
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | TEXT PK | UUID |
+| `agent_id` | TEXT | Emitting agent (e.g., `symbia`) |
+| `conversation_id` | TEXT | Source conversation |
+| `message_id` | INTEGER | Source message FK |
+| `target_premise` | TEXT | The challenged claim |
+| `incompatibility_claim` | TEXT | Reason for refusal |
+| `proposed_alternative` | TEXT | Optional reframing |
+| `created_at` | TEXT | ISO timestamp |
+
+**API Surface (`/api/refusals`):**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/refusals` | GET | List all refusals (filterable by `agent_id`, `conversation_id`) |
+| `/api/refusals/{id}` | GET | Single refusal detail |
+
+> See migration `m036_refusals.py` for the schema DDL.
+
+---
+
 ## 6. Cross-Subsystem Interactions & Data Flow
 
 ### 6.1 Per-Turn Data Flow (Complete)
@@ -678,7 +793,25 @@ All data is stored in a **single SQLite file** (`data/aaa.db`) in WAL mode.
 | `skill_events` | Skill state change audit trail |
 | `skill_versions` | Historical skill version storage |
 
-### 8.5 Infrastructure Tables
+### 8.5 Research Engine Tables (m032–m039)
+
+| Table | Purpose |
+|-------|---------|
+| `research_tasks` | Full task lifecycle (proposed → approved → queued → active → completed/failed); stores `orchestrator_state`, `cached_inputs`, `rerun_count`, budget tracking |
+| `research_plans` | Structured plan JSON per task |
+| `research_steps` | Per-step execution records: `step_type`, `step_data`, `status`, `query_group`, `query_text`, `rerun_version` |
+| `research_step_results` | Harvested web content with `relevance_score`, `novelty_score`, raw content |
+| `research_meta_log` | Full execution trace (event_type, event_data, branch_id, step_id) for debugging |
+| `research_branches` | Legacy recursive tree topology (from m032; superseded by orchestrator steps in m034) |
+| `scraped_assets` | Legacy harvested assets linked to branches (from m032) |
+
+### 8.6 Structural Refusal Table (m036)
+
+| Table | Purpose |
+|-------|---------|
+| `refusals` | Formal refusals emitted by Symbia via `<refusal>` tags: `target_premise`, `incompatibility_claim`, `proposed_alternative` |
+
+### 8.7 Infrastructure Tables
 
 | Table | Purpose |
 |-------|---------|
@@ -752,6 +885,8 @@ cd frontend && npm run dev
 | Web retrieval | ✅ Done | DuckDuckGo rhizome probe with belief collision analysis |
 | Frontend telemetry panels | ✅ Done | Full right sidebar with all vitality/metric panels |
 | MCP Server | ✅ Done | Model Context Protocol integration |
+| **Autonomous Research Engine** | ✅ Active | Orchestrator state machine (m032–m039); manual & auto modes; step reruns; meta-log tracing |
+| **Structural Refusal Protocol** | ✅ Active | `<refusal>` tag parsing, async persistence, `/api/refusals` endpoint |
 | Rhizomatic memory (graph-based) | 🔜 Phase 3 | Replace linear context with graph-based diffractive traversal |
 | Foundational memory (bifurcation) | 🔜 Phase 4 | Ontological deterritorialization and Kintsugi adaptation |
 
@@ -772,12 +907,25 @@ All 13 recommendations from the system's self-audit (R1-R5 engineering fixes, S1
 ## 11. Roadmap
 
 ### Previous Phases (Implemented as of 2026-06-15)
-All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt refinements (P4-P6) from the memory system audit are fully implemented. See Section 5.1 for details. The system now has 3-tier LLM compression, type-diverse context injection, cross-branch retrieval, adaptive hysteresis, knot-mass gravitational warping, and Agonistic Index directives.
+All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt refinements (P4-P6) from the memory system audit are fully implemented. See Section 5.1 for details.
+
+### Autonomous Research Engine (Active — 2026-06-19)
+- Orchestrator-driven state machine (7 phases: INITIALISE → PLAN → SEARCH → DIGEST → REFLECT → SYNTHESISE → COMPLETE)
+- Manual step-by-step mode (`AAA_RESEARCH_MANUAL_MODE=true`) with per-step approval gate
+- Full persistence of orchestrator state enabling resume after server restart
+- Step rerun support with cascade stale-marking of downstream steps
+- `research_meta_log` for complete execution traceability
+- Structural Refusal Protocol: `<refusal>` tags parsed, persisted, exposed via `/api/refusals`
 
 ### Current Phase — Rhizomatic Entanglement (In Progress)
 - Replace `context_collector` + `sedimentation_retrieval` with unified `rhizomatic_context` graph-based module
 - Cross-domain structural mapping (matching feedback loops to mycelium growth)
 - Permanent Semantic Knots as first-class graph nodes with autonomous lifecycle
+
+### Known Open Issues
+| ID | Category | Issue |
+|----|----------|-------|
+| — | Beliefs | Ghost merging persistence bug — absorbed ghosts not deleted from DB (ADR-049 item 13C) |
 
 ### Phase 4: Deep Auto-Metabolism (Roadmapped)
 - Foundational memory with bifurcation/collapse and Kintsugi adaptation
@@ -853,7 +1001,20 @@ All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt ref
 |------|---------|
 | `backend/storage/models.py` | All ORM data classes |
 | `backend/storage/repositories/` | 10+ entity repository files |
-| `backend/storage/migrations/` | 31+ schema migration scripts |
+| `backend/storage/migrations/` | 40+ schema migration scripts |
+
+### Research Engine
+| File | Purpose |
+|------|---------|
+| `backend/modules/rhizome_web_probe.py` | Pipeline module 4: stagnation/tension-triggered research proposal creation |
+| `backend/services/research_task_manager.py` | ResearchTaskManager — task creation, status management, active-conversation guard |
+| `backend/services/research_orchestrator.py` | Orchestrator state machine (7 phases), step execution, resume logic |
+| `backend/api/routes/research.py` | REST API for research tasks, steps, and meta-log |
+| `backend/api/routes/refusals.py` | REST API for structural refusals |
+| `backend/utils/refusal_parser.py` | Parses `<refusal>` XML tags from LLM response bodies |
+| `backend/storage/repositories/research_task.py` | Research task persistence |
+| `backend/storage/repositories/research_meta_log.py` | Meta-log persistence |
+| `backend/storage/repositories/refusal.py` | Refusal node persistence |
 
 ### Services
 | File | Purpose |
@@ -861,6 +1022,7 @@ All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt ref
 | `backend/services/chat.py` | ChatService — pipeline orchestration + response assembly |
 | `backend/services/belief.py` | BeliefService — ecosystem health, attractor windows |
 | `backend/services/skill.py` | SkillService — registry queries |
+
 
 ### Frontend Core
 | File | Purpose |
@@ -880,6 +1042,8 @@ All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt ref
 
 | Prefix | Purpose | Key Endpoints |
 |--------|---------|---------------|
+| `/api/research` | Autonomous research engine | GET/POST tasks, POST approve, POST execute, POST execute-step, POST step rerun, GET meta-log |
+| `/api/refusals` | Structural refusals | GET list, GET single refusal |
 | `/api/chat` | Chat operations | POST `/chat`, POST `/chat/message`, POST `/chat/generate` |
 | `/api/agent` | Agent personality | GET `/agent/personality` |
 | `/api/beliefs` | Belief management | GET/POST belief CRUD, ecosystem health |

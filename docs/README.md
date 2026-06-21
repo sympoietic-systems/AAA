@@ -25,16 +25,19 @@ Step-by-step operational guides for setting up, configuring, and extending the s
 - [CUSTOMIZE_PERSONALITY.md](guides/CUSTOMIZE_PERSONALITY.md) — Core identity, beliefs, skills, and prompt customization guide.
 - [PLUGINS.md](guides/PLUGINS.md) — Plugin system architecture and module development.
 - [MCP_SERVER.md](guides/MCP_SERVER.md) — Model Context Protocol integration guide.
+- [RESEARCH_MANUAL_MODE.md](guides/RESEARCH_MANUAL_MODE.md) — Operator guide for manual step-by-step research orchestration.
 
 ### systems/
 Deep-dive specifications for individual subsystems.
 
+- [SYSTEM_OVERVIEW.md](systems/SYSTEM_OVERVIEW.md) — **Comprehensive technical & conceptual reference** — the single best document for understanding the full system (19-module pipeline, all subsystems, API surface, DB schema overview).
 - [MEMORY_SYSTEM.md](systems/MEMORY_SYSTEM.md) — Rhizomatic memory, semantic knots, and sedimentation.
 - [BELIEF_SYSTEM.md](systems/BELIEF_SYSTEM.md) — Belief graph, attractors, and ontological bifurcation.
 - [DYNAMIC_PERSONALITY_SYSTEM.md](systems/DYNAMIC_PERSONALITY_SYSTEM.md) — Dynamic autopoietic personality cascade: architecture, data flow, and implementation.
 - [SKILL_SYSTEM.md](systems/SKILL_SYSTEM.md) — Autonomous skill nucleation, accretion, and refinement.
 - [DREAM_DAEMON.md](systems/DREAM_DAEMON.md) — Background cognitive cycles and somatic drift.
 - [VECTOR_SYSTEMS.md](systems/VECTOR_SYSTEMS.md) — Embedding, structural scoring, and isomorphic retrieval.
+- [AUTONOMOUS_RESEARCH_ARCHITECTURE.md](systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md) — Deep-dive on the autonomous research engine orchestrator (phases, state machine, persistence, manual mode).
 
 ### development/
 Ongoing development tracking, coding standards, and collaboration protocols.
@@ -51,6 +54,8 @@ Published protocol entries: academic-philosophical papers on machine agency and 
 
 | Question | Document |
 |----------|----------|
+| What is this system and why does it exist? | [../README.md](../README.md) |
+| Complete technical + conceptual reference? | [systems/SYSTEM_OVERVIEW.md](systems/SYSTEM_OVERVIEW.md) |
 | How do I set up the project? | [guides/SETUP.md](guides/SETUP.md) |
 | Is there a non-technical quickstart guide? | [guides/QUICKSTART_NON_TECHNICAL.md](guides/QUICKSTART_NON_TECHNICAL.md) |
 | How do I customize Symbia's personality/beliefs? | [guides/CUSTOMIZE_PERSONALITY.md](guides/CUSTOMIZE_PERSONALITY.md) |
@@ -60,6 +65,8 @@ Published protocol entries: academic-philosophical papers on machine agency and 
 | Why was a decision made this way? | [decisions/README.md](decisions/README.md) |
 | How do I write a plugin? | [guides/PLUGINS.md](guides/PLUGINS.md) |
 | How does the MCP server work? | [guides/MCP_SERVER.md](guides/MCP_SERVER.md) |
+| How does the research engine work? | [systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md](systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md) |
+| How do I operate manual research mode? | [guides/RESEARCH_MANUAL_MODE.md](guides/RESEARCH_MANUAL_MODE.md) |
 | What is the project philosophy? | [philosophy/PHILOSOPHY.md](philosophy/PHILOSOPHY.md) |
 | How does memory/sedimentation work? | [systems/MEMORY_SYSTEM.md](systems/MEMORY_SYSTEM.md) |
 | What coding standards should I follow? | [development/practices/](development/practices/) |
