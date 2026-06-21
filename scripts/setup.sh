@@ -1,7 +1,7 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
-# AAA – First-Time Server Setup (Ubuntu)
-# Run this once on a fresh server to install all dependencies.
+# AAA – First-Time Setup (macOS / Linux)
+# Run this once to install all Python, frontend, and system dependencies.
 # Usage: bash scripts/setup.sh
 # ─────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -18,14 +18,16 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 echo -e "${CYAN}=============================================================${NC}"
-echo -e "${CYAN}  AAA – First-Time Server Setup${NC}"
+echo -e "${CYAN}  AAA – First-Time macOS / Linux Setup${NC}"
 echo -e "${CYAN}=============================================================${NC}"
 echo ""
 
 # ── 1. Check Python ─────────────────────────────────────────
 echo -e "${YELLOW}[1/5] Checking Python 3.11+ ...${NC}"
 if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}[FAIL] python3 not found. Install with: sudo apt install python3${NC}"
+    echo -e "${RED}[FAIL] python3 not found.${NC}"
+    echo -e "  - Ubuntu/Linux: run 'sudo apt install python3 python3-pip'"
+    echo -e "  - macOS: run 'brew install python' or download from https://python.org"
     exit 1
 fi
 
