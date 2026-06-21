@@ -57,6 +57,10 @@ We have provided automated setup scripts to prepare all dependencies, virtual en
 
 With the environment ready and API key configured, run the following command to set up the local database and load Symbia's core beliefs and skills:
 
+> [!TIP]
+> **Customizing the agent's identity before seeding:**
+> Seeding reads the YAML configuration files in `config/personality/` (such as `seed_personality.yaml`) and writes them to the database. If you want to change the agent's name, core commitments, beliefs, or procedural skills *before* creating the database, edit these files first. See the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) for details.
+
 1. Run this command in your terminal/PowerShell window:
    ```bash
    uv run python backend/scripts/initialize_agent.py

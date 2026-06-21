@@ -108,6 +108,10 @@ Migration files are in `backend/storage/migrations/` (custom runner — not Alem
 
 Before first run, you must check your configuration, run database migrations, and ingest the agent's personality files, baseline commitments, and initial skill configurations into the database.
 
+> [!IMPORTANT]
+> **Customizing the agent before seeding:**
+> Seeding parses the YAML files in `config/personality/` (such as `seed_personality.yaml`, `seed_beliefs.yaml`, and `seed_skills.yaml`) and writes them directly to the database. If you wish to change the agent's default name, core commitments, baseline beliefs, or skills, modify those files **before** running the initialization script below. Refer to the [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) for full instructions.
+
 #### Recommended: Unified Agent Initialization Script
 ```bash
 uv run python backend/scripts/initialize_agent.py
