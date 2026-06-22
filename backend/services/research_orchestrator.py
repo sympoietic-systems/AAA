@@ -906,6 +906,9 @@ class SomaticResearchOrchestrator:
                 "sources_count": sources_count,
                 "system_prompt": system_prompt,
                 "user_prompt": user_text,
+                "sources": parsed_urls_list,
+                "findings": all_findings,
+                "reflection": reflection,
                 "cached_at": self._now_utc_str(),
             }
         else:
