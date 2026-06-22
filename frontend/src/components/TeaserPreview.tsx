@@ -39,11 +39,9 @@ const SILENCE_MAX = 15000
 const LINGER_MIN = 6000
 const LINGER_MAX = 10000
 
-// Pre-load the OBFUSCATE_CHARS outside render
 function obfuscateText(text: string): string {
   if (!text || text.length < 10) return text
   const chars = text.split("")
-  // Obfuscate ~first third of chars
   for (let i = 0; i < Math.floor(chars.length / 3); i++) {
     if (chars[i] !== " ") chars[i] = "\u2587"
   }
@@ -53,21 +51,20 @@ function obfuscateText(text: string): string {
 export const TeaserPreview = memo(function TeaserPreview({
   onPasswordSubmit, authError, onClearError,
 }: Props) {
-  const [lines, setLines] = useState<Line[]>([])
+  // ── Pool (mutated via refs so cycle() never gets stale) ──
   const [pool, setPool] = useState<Line[]>([])
-  const [poolIndex, setPoolIndex] = useState(0)
-  const [state, setState] = useState<BreathState>("silent")
+  const poolRef = useRef<Line[]>([])
+  const indexRef = useRef(0)
 
-  // Current display
+  // Display state (for React rendering)
   const [primary, setPrimary] = useState<Line | null>(null)
+  const primaryRef = useRef<Line | null>(null)
   const [primaryVisible, setPrimaryVisible] = useState(false)
-  const [primaryFading, setPrimaryFading] = useState(false)
   const [response, setResponse] = useState<Line | null>(null)
-  const [responseVisible, setResponseVisible] = useState(false)
-  const [glitchTarget, setGlitchTarget] = useState<Line | null>(null)
+
+  // Glitch
+  const [glitchText, setGlitchText] = useState("")
   const [glitchVisible, setGlitchVisible] = useState(false)
-  const [glitchVariant, setGlitchVariant] = useState("")
-  const [isStruckThrough, setIsStruckThrough] = useState(false)
 
   // Password
   const [password, setPassword] = useState("")
@@ -82,118 +79,93 @@ export const TeaserPreview = memo(function TeaserPreview({
       .then(r => r.json())
       .then(data => {
         if (!cancelled && data.lines?.length) {
-          setLines(data.lines)
           setPool(data.lines)
+          poolRef.current = data.lines
         }
       })
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
 
-  // Next line from pool (round-robin)
+  // Pull next line from pool (round-robin via refs — no stale closure)
   const nextLine = useCallback((): Line | null => {
-    if (pool.length === 0) return null
-    const idx = poolIndex % pool.length
-    setPoolIndex(prev => prev + 1)
-    return pool[idx]
-  }, [pool, poolIndex])
+    const p = poolRef.current
+    if (p.length === 0) return null
+    const idx = indexRef.current % p.length
+    indexRef.current = idx + 1
+    return p[idx]
+  }, [])
 
-  // ── Breathing cycle ──
+  // ── Breathing cycle ── fires once on mount, self-chains via setTimeout ──
   useEffect(() => {
-    if (pool.length === 0) return
-
     let timeout: ReturnType<typeof setTimeout>
+    // Use a ref to track whether we should continue
+    const alive = { current: true }
 
     const cycle = () => {
-      const shouldGlitch = Math.random() < 0.20 && primaryVisible && !glitchVisible
-
-      if (shouldGlitch) {
-        // ── Glitch ──
-        setState("glitching")
-        setGlitchTarget(primary)
-        setGlitchVisible(true)
-        setIsStruckThrough(true)
-        setGlitchVariant(primary?.text ? primary.text.slice(0, Math.floor(primary.text.length * 0.6)) + "…" : "")
-        // After brief flash, dissolve
-        timeout = setTimeout(() => {
-          setGlitchVisible(false)
-          setPrimaryFading(true)
-          setResponseVisible(false)
-          timeout = setTimeout(() => {
-            // Long recovery silence
-            setPrimary(null)
-            setPrimaryVisible(false)
-            setPrimaryFading(false)
-            setResponse(null)
-            setGlitchTarget(null)
-            setGlitchVariant("")
-            setIsStruckThrough(false)
-            setState("silent")
-            timeout = setTimeout(cycle, SILENCE_MIN + Math.random() * (SILENCE_MAX - SILENCE_MIN))
-          }, 500)
-        }, 400)
+      if (!alive.current) return
+      const p = poolRef.current
+      if (p.length === 0) {
+        timeout = setTimeout(cycle, 2000)
         return
       }
 
-      if (state === "glitching") return  // already glitching, wait
-
-      // ── Silent → Breathing ──
+      // Pick a line from the pool
       const line = nextLine()
       if (!line) {
-        timeout = setTimeout(cycle, 3000)
+        timeout = setTimeout(cycle, 2000)
         return
       }
-      setState("breathing")
+
+      // ── Appear already-formed ──
       setPrimary(line)
-      setResponse(null)
-      // Appear already-formed
+      primaryRef.current = line
+
       timeout = setTimeout(() => {
+        if (!alive.current) return
         setPrimaryVisible(true)
-        // Maybe spawn response
+
+        // Maybe spawn a response line 40% of the time
         const hasResponse = Math.random() < 0.4
         if (hasResponse) {
+          const respDelay = 2000 + Math.random() * 2000
           timeout = setTimeout(() => {
+            if (!alive.current) return
             const respLine = nextLine()
-            if (respLine && respLine !== line) {
-              setResponse(respLine)
-              timeout = setTimeout(() => setResponseVisible(true), 100)
-            }
-          }, 2000 + Math.random() * 2000)
+            if (respLine) setResponse(respLine)
+          }, respDelay)
         }
-        // Linger, then fade out
+
+        // Linger, then fade
         const linger = LINGER_MIN + Math.random() * (LINGER_MAX - LINGER_MIN)
         timeout = setTimeout(() => {
-          setPrimaryFading(true)
-          setResponseVisible(false)
+          if (!alive.current) return
+          setPrimaryVisible(false)
+          setResponse(null)
+
           timeout = setTimeout(() => {
+            if (!alive.current) return
             setPrimary(null)
-            setPrimaryVisible(false)
-            setPrimaryFading(false)
-            setResponse(null)
-            setState("silent")
+            primaryRef.current = null
+
             // Silence, then next breath
             const silence = SILENCE_MIN + Math.random() * (SILENCE_MAX - SILENCE_MIN)
             timeout = setTimeout(cycle, silence)
-          }, 1500)
+          }, 1200) // fade-out duration
         }, linger)
-      }, 600)
+      }, 400) // appear delay
     }
 
-    // Start after initial fetch
+    // Start after a short initial pause
     timeout = setTimeout(cycle, 1500)
-    return () => clearTimeout(timeout)
-  }, [pool.length])
+    return () => { alive.current = false; clearTimeout(timeout) }
+  }, [nextLine])
 
   // ── Password handling ──
   const handlePasswordKey = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setPassword(val)
-    // Render last 3 chars as visible keystrokes
-    if (val.length > 0) {
-      setKeystrokes("·".repeat(Math.min(val.length, 3)))
-    } else {
-      setKeystrokes("")
-    }
+    setKeystrokes(val.length > 0 ? "·".repeat(Math.min(val.length, 3)) : "")
     if (authError) onClearError()
   }
 
@@ -209,29 +181,29 @@ export const TeaserPreview = memo(function TeaserPreview({
     passwordRef.current?.focus()
   }
 
-  // ── Determine color ──
+  // ── Derived display values ──
   const primaryColor = primary?.stage
     ? STAGE_COLORS[primary.stage] ?? "#555555"
     : "#555555"
-
-  // Apply blur if the line has blur flag
   const blurStyle = primary?.blur ? { filter: "blur(3px)", opacity: 0.6 } : {}
   const primaryText = primary?.obfuscated ? obfuscateText(primary.text) : primary?.text
+  const responseText = response
+    ? (response.obfuscated ? obfuscateText(response.text) : response.text)
+    : ""
 
   return (
     <div className="flex items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none relative overflow-hidden">
       {/* ── The Slip ── */}
       <div className="relative w-full max-w-[360px] px-4 text-center">
-        {/* Breathing lines */}
-        <div className="min-h-[120px] flex flex-col items-center justify-center relative">
+        {/* Breathing column */}
+        <div className="min-h-[160px] flex flex-col items-center justify-center relative">
           {/* Primary line */}
           {primary && (
             <div
-              className={`transition-opacity text-left leading-relaxed
-                ${primaryVisible && !primaryFading ? "opacity-100" : "opacity-0"}
-                ${primaryFading ? "fade-bottom-up" : ""}`}
+              className={`text-left leading-relaxed max-w-full
+                ${primaryVisible ? "opacity-100" : "opacity-0"}`}
               style={{
-                transitionDuration: primaryVisible ? "1s" : "1.5s",
+                transition: `opacity ${primaryVisible ? "0.8s" : "1.2s"} ease-in-out`,
                 color: primaryColor,
                 fontSize: primary.type === "scar_fold" ? "9px" : "12px",
                 fontStyle: primary.type === "dream" ? "italic" : "normal",
@@ -247,36 +219,32 @@ export const TeaserPreview = memo(function TeaserPreview({
           {/* Response line */}
           {response && (
             <div
-              className={`transition-opacity text-left mt-3 ml-6 ${responseVisible ? "opacity-80" : "opacity-0"}`}
+              className="text-left mt-3 ml-6 transition-opacity"
               style={{
-                transitionDuration: "1s",
+                transitionDuration: "0.8s",
                 color: "#666666",
                 fontSize: "11px",
                 fontStyle: response.type === "dream" ? "italic" : "normal",
+                opacity: primaryVisible && response ? 0.8 : 0,
               }}
             >
-              — {response.obfuscated ? obfuscateText(response.text) : response.text}
+              — {responseText}
             </div>
           )}
 
-          {/* Glitch overlay */}
-          {glitchVisible && glitchTarget && (
+          {/* Glitch flash */}
+          {glitchVisible && (
             <div
-              className="absolute inset-x-0 top-0 text-left transition-opacity"
+              className="absolute inset-x-0 top-0 text-left transition-all"
               style={{
                 color: "#ef4444",
                 fontSize: "12px",
-                textDecoration: isStruckThrough ? "line-through" : "none",
-                opacity: 0.9,
+                textDecoration: "line-through",
+                opacity: 0.85,
                 transitionDuration: "0.3s",
               }}
             >
-              {glitchTarget.text}
-              {glitchVariant && (
-                <div className="mt-1" style={{ color: "#555555", fontSize: "10px", textDecoration: "none", opacity: 0.4 }}>
-                  {glitchVariant}
-                </div>
-              )}
+              {glitchText}
             </div>
           )}
         </div>
@@ -323,15 +291,6 @@ export const TeaserPreview = memo(function TeaserPreview({
           </form>
         </div>
       </div>
-
-      {/* ── CSS for bottom-up fade ── */}
-      <style>{`
-        .fade-bottom-up {
-          mask-image: linear-gradient(to top, transparent 0%, black 50%);
-          -webkit-mask-image: linear-gradient(to top, transparent 0%, black 50%);
-          opacity: 0.3 !important;
-        }
-      `}</style>
     </div>
   )
 })
