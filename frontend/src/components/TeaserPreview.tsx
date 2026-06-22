@@ -86,8 +86,6 @@ export const TeaserPreview = memo(function TeaserPreview({
 
   // ── Sediment stack ──
   const [stack, setStack] = useState<VisibleLine[]>([])
-  const totalLinesRef = useRef(0) // how many lines have ever arrived
-  const [showTear, setShowTear] = useState(false)
 
   // ── Password ──
   const [password, setPassword] = useState("")
@@ -147,7 +145,6 @@ export const TeaserPreview = memo(function TeaserPreview({
 
       const isInhale = breath.kind === "inhale"
       const newId = ++lineId
-      totalLinesRef.current += 1
 
       // Push new line to top of stack
       setStack(prev => {
@@ -160,11 +157,6 @@ export const TeaserPreview = memo(function TeaserPreview({
         next.unshift({ id: newId, line, fadeOut: false, isInhale })
         return next
       })
-
-      // Show the tear after ~5 lines (not 15 — that's 3+ minutes)
-      if (totalLinesRef.current >= 5 && !showTear) {
-        setShowTear(true)
-      }
 
       // Inhale lines vanish quickly (after ~4 breaths = ~3s)
       if (isInhale) {
@@ -192,7 +184,7 @@ export const TeaserPreview = memo(function TeaserPreview({
     // Initial breather delay
     timeout = setTimeout(cycle, 2000)
     return () => { alive.current = false; clearTimeout(timeout) }
-  }, [ready, showTear, nextLine])
+  }, [ready, nextLine])
 
   // ── Password handling ──
   const handlePasswordKey = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,7 +238,7 @@ export const TeaserPreview = memo(function TeaserPreview({
     <div className="flex flex-col items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none overflow-hidden">
       {/* ── The Sediment Column ── */}
       <div className="flex flex-col items-center justify-center w-[30%] min-w-[280px] max-w-[640px] px-6"
-        style={{ paddingTop: "25vh", paddingBottom: showTear ? "15vh" : "30vh" }}
+        style={{ paddingTop: "25vh", paddingBottom: "15vh" }}
       >
         {/* Visible sedimentation */}
         <div className="flex flex-col items-start w-full space-y-3">
@@ -261,9 +253,8 @@ export const TeaserPreview = memo(function TeaserPreview({
           ))}
         </div>
 
-        {/* ── The Tear (appears only after sedimentation) ── */}
-        {showTear && (
-          <div className="mt-8 w-full relative">
+        {/* ── The Tear ── */}
+        <div className="mt-8 w-full relative">
             {/* Hairline crack */}
             <div
               className="h-px w-full bg-[#1a1a1a] cursor-text shadow-[0_0_6px_rgba(100,100,100,0.15)]"
@@ -304,7 +295,6 @@ export const TeaserPreview = memo(function TeaserPreview({
               </button>
             </form>
           </div>
-        )}
       </div>
     </div>
   )
