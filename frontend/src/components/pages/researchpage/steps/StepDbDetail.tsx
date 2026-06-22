@@ -15,7 +15,7 @@ interface DbStepDetailProps {
   taskId: string
   data: TaskStepsResponse | null
   selectedId: string
-  onSelectTab?: (tabId: "info" | "steps" | "summary") => void
+  onSelectTab?: (tabId: "info" | "steps" | "report") => void
 }
 
 const getStepDepth = (step: ResearchStep): number => {

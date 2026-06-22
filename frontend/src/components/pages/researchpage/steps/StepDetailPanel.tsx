@@ -12,7 +12,7 @@ interface StepDetailPanelProps {
   preview: StepPreview | null
   prevLoading: boolean
   onReinitialize: () => void
-  onSelectTab?: (tabId: "info" | "steps" | "summary") => void
+  onSelectTab?: (tabId: "info" | "steps" | "report") => void
 }
 
 export const StepDetailPanel = memo(function StepDetailPanel({

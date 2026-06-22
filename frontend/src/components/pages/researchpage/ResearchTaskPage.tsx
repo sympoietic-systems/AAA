@@ -13,19 +13,19 @@ import { StepsTab } from "./tabs/StepsTab"
 import { MarkdownSection } from "./shared/MarkdownSection"
 import { NewResearchForm } from "./NewResearchForm"
 
-type SubTabId = "info" | "steps" | "summary"
+type SubTabId = "info" | "steps" | "report"
 
 const SUB_TABS: { key: SubTabId; label: string }[] = [
   { key: "info",     label: "Info" },
   { key: "steps",    label: "Steps" },
-  { key: "summary",  label: "Summary" },
+  { key: "report",   label: "Report" },
 ]
 
 /* ── Shell — header, tab bar, content routing ── */
 const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask }) {
   const { current, orchPhase, refreshAll } = useTaskPolling(task.id, task.status, task)
   const [tab, setTab] = useState<SubTabId>(() => {
-    if (task.status === "completed" && task.result_summary) return "summary"
+    if (task.status === "completed" && task.result_summary) return "report"
     return "info"
   })
 
@@ -74,10 +74,10 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
       <div className="flex-1 min-h-0 flex flex-col px-4 pb-4 pt-1">
         {tab === "info"     && <div className="flex-1 overflow-y-auto pr-1"><InfoTab task={current} orchPhase={orchPhase} onRefreshTask={refreshAll} /></div>}
         {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} onSelectTab={setTab} />}
-        {tab === "summary"  && (
-          <div className="flex-1 overflow-y-auto pr-1">
+        {tab === "report"   && (
+          <div className="flex-1 min-h-0 pr-1">
             {current.result_summary ? (
-              <MarkdownSection title=" Research Synthesis Report " content={current.result_summary} />
+              <MarkdownSection title=" Research Synthesis Report " content={current.result_summary} fullHeight actions />
             ) : (
               <div className="text-[10px] text-[#444] py-2 font-mono italic">
                 Synthesis in progress — the final report will be available here when completed.

@@ -10,7 +10,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
   orchPhase: string
   taskStatus: string
   onRefreshTask?: () => void
-  onSelectTab?: (tabId: "info" | "steps" | "summary") => void
+  onSelectTab?: (tabId: "info" | "steps" | "report") => void
 }) {
   const [data, setData] = useState<TaskStepsResponse | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
