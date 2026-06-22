@@ -124,15 +124,29 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
             <div>
               <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">visited/parsed urls ({preview.parsed_urls.length})</div>
               <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
-                {preview.parsed_urls.map((u, i) => (
-                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
-                    <span className="text-[#555]">{i+1}.</span>{" "}
-                    <a href={u.url} target="_blank" rel="noopener noreferrer"
-                      className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
-                      {u.title || u.url}
-                    </a>
-                  </div>
-                ))}
+                {preview.parsed_urls.map((u, i) => {
+                  const statusColor = u.status === "ok"
+                    ? "#4ade80"
+                    : u.status?.startsWith("failed")
+                      ? "#ef4444"
+                      : "#f59e0b"
+                  return (
+                    <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed flex items-center justify-between gap-2 max-w-full">
+                      <div className="truncate flex-1 min-w-0">
+                        <span className="text-[#555]">{i+1}.</span>{" "}
+                        <a href={u.url} target="_blank" rel="noopener noreferrer"
+                          className="text-[#4ade80] hover:text-[#6ee7b0] underline">
+                          {u.title || u.url}
+                        </a>
+                      </div>
+                      {u.status && (
+                        <span style={{ color: statusColor }} className="text-[8px] font-mono shrink-0 select-none">
+                          [{u.status}]
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}

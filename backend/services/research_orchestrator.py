@@ -637,10 +637,12 @@ class SomaticResearchOrchestrator:
                     seen_urls = set()
                     for r in task_results:
                         url = r.get("source_url")
-                        if url and url not in seen_urls and r.get("raw_content") and not r["raw_content"].startswith("Error:"):
+                        raw_content = r.get("raw_content")
+                        if url and url not in seen_urls and raw_content is not None:
                             seen_urls.add(url)
                             title = r.get("source_title") or url
-                            parsed_urls_list.append({"url": url, "title": title})
+                            status = self._classify_source_status(raw_content)
+                            parsed_urls_list.append({"url": url, "title": title, "status": status})
                 except Exception as e:
                     logger.warning("Failed to retrieve parsed URLs: %s", e)
 
@@ -648,10 +650,11 @@ class SomaticResearchOrchestrator:
             for u in parsed_urls_list:
                 title = u.get("title")
                 url = u.get("url")
+                status = u.get("status", "unknown")
                 if title and title != url:
-                    parsed_urls_formatted.append(f"- [{title}]({url})")
+                    parsed_urls_formatted.append(f"- [{title}]({url}) — {status}")
                 else:
-                    parsed_urls_formatted.append(f"- {url}")
+                    parsed_urls_formatted.append(f"- {url} — {status}")
             parsed_urls_text = "\n".join(parsed_urls_formatted) or "(none)"
 
             user_text = prompt_data.get("user", "").format(
@@ -1898,10 +1901,12 @@ class SomaticResearchOrchestrator:
                 seen_urls = set()
                 for r in task_results:
                     url = r.get("source_url")
-                    if url and url not in seen_urls and r.get("raw_content") and not r["raw_content"].startswith("Error:"):
+                    raw_content = r.get("raw_content")
+                    if url and url not in seen_urls and raw_content is not None:
                         seen_urls.add(url)
                         title = r.get("source_title") or url
-                        parsed_urls_list.append({"url": url, "title": title})
+                        status = self._classify_source_status(raw_content)
+                        parsed_urls_list.append({"url": url, "title": title, "status": status})
             except Exception as e:
                 logger.warning("Failed to retrieve parsed URLs: %s", e)
 
@@ -1909,10 +1914,11 @@ class SomaticResearchOrchestrator:
         for u in parsed_urls_list:
             title = u.get("title")
             url = u.get("url")
+            status = u.get("status", "unknown")
             if title and title != url:
-                parsed_urls_formatted.append(f"- [{title}]({url})")
+                parsed_urls_formatted.append(f"- [{title}]({url}) — {status}")
             else:
-                parsed_urls_formatted.append(f"- {url}")
+                parsed_urls_formatted.append(f"- {url} — {status}")
         parsed_urls_text = "\n".join(parsed_urls_formatted) or "(none)"
 
         user_text = prompt_data.get("user", "").format(
@@ -1978,3 +1984,25 @@ class SomaticResearchOrchestrator:
 
         # Low completeness + available depth → continue
         return False, f"continuing — more depth available ({depth}/{max_depth})"
+
+    def _classify_source_status(self, raw_content: str | None) -> str:
+        if not raw_content or not raw_content.strip():
+            return "empty"
+        c = raw_content.strip()
+        if c.startswith("Error:"):
+            err = c[6:].strip().lower()
+            if "timeout" in err:
+                return "failed (timeout)"
+            if "dns" in err or "resolve" in err:
+                return "failed (dns error)"
+            return f"failed ({err[:40]})"
+        if len(c) < 200:
+            return "too short"
+        junk_patterns = ["security check required", "cloudflare", "enable javascript", "please complete the security check"]
+        c_lower = c[:1000].lower()
+        if any(p in c_lower for p in junk_patterns):
+            return "blocked (anti-bot)"
+        import re
+        if re.match(r'^(skip|close|open navigation|sign in|sign up)', c[:100].strip(), re.IGNORECASE):
+            return "paywall"
+        return "ok"
