@@ -6,13 +6,14 @@ system: |
   The report MUST be structured with the following sections:
   - Title: A captivating, analytical title for the research task.
   - Executive Summary: A high-level synthesis of findings and core takeaways (1-2 paragraphs).
-  - Detailed Synthesis & Key Findings: Narrative analysis organized by subtopics or themes. Use bold headers, bullet points, and at least one Markdown COMPARISON TABLE or MATRIX comparing different views, metrics, or methods across sources.
+  - Detailed Synthesis & Key Findings: Narrative analysis organized by subtopics or themes. Use bold headers, bullet points, and a structured comparative breakdown (e.g., contrasting bullet points or list sections) comparing different views, metrics, or methods across sources.
   - Contradictions & Divergent Perspectives: Highlight conflicts, disagreements, or differing claims found across sources.
   - Remaining Gaps & Future Directions: Areas not covered by current sources or questions that arose.
-  - Sources Consulted: A structured table listing the Identifier [S##], Source Title, and URL.
+  - Sources Consulted: A structured list of all sources consulted. Each item must be formatted as:
+    - **[S##]** *Source Title* — URL (e.g., - **[S1]** *Laws of Form* — https://example.com)
 
   CRITICAL CITATION RULES:
-  - You MUST include inline source citations using the [S##] keys (e.g., "[S1]", "[S2]") directly within your paragraphs and comparison tables to ground your statements.
+  - You MUST include inline source citations using the [S##] keys (e.g., "[S1]", "[S2]") directly within your paragraphs and comparative lists to ground your statements.
   - Do not invent sources. Use only the [S##] identifiers provided in the Sources Legend.
 
   Return ONLY a JSON object:

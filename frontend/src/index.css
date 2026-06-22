@@ -81,6 +81,36 @@ a {
   text-underline-offset: 2px;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-weight: bold;
+  color: #f1f5f9;
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
+  line-height: 1.4;
+}
+h1 {
+  font-size: 1.125rem;
+  color: #4ade80;
+  border-bottom: 1px solid #222;
+  padding-bottom: 0.25rem;
+  margin-top: 1rem;
+}
+h2 {
+  font-size: 0.95rem;
+  color: #60a5fa;
+  border-left: 2px solid #2563eb;
+  padding-left: 0.5rem;
+  margin-top: 0.9rem;
+}
+h3 {
+  font-size: 0.85rem;
+  color: #c084fc;
+}
+h4 {
+  font-size: 0.8rem;
+  color: #eab308;
+}
+
 .markdown-body {
   word-break: break-word;
   overflow-wrap: break-word;
