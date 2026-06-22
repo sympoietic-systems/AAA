@@ -18,6 +18,8 @@ interface Line {
   scar?: boolean
   blur?: boolean
   obfuscated?: boolean
+  obfuscation_ratio?: number   // 0.15-0.55 — how much to redact
+  obfuscation_offset?: string  // "start" | "middle" | "end" | "scatter"
 }
 
 interface VisibleLine {
@@ -66,11 +68,47 @@ function drawBreath(): { kind: "exhale" | "inhale" | "silence"; delay: number } 
   return { kind: "silence", delay: 25000 + Math.random() * 15000 }
 }
 
-function obfuscateText(text: string): string {
+function obfuscateText(text: string, ratio = 0.33, offset = "start"): string {
   if (!text || text.length < 10) return text
   const chars = text.split("")
-  for (let i = 0; i < Math.floor(chars.length / 3); i++) {
-    if (chars[i] !== " ") chars[i] = "\u2587"
+  const count = Math.floor(chars.length * ratio)
+  if (count < 2) return text
+
+  // Determine which indices to obfuscate based on offset mode
+  let indices: number[]
+  switch (offset) {
+    case "middle": {
+      const start = Math.floor(chars.length * 0.25)
+      indices = Array.from({ length: count }, (_, i) => start + i)
+      break
+    }
+    case "end": {
+      const start = chars.length - count
+      indices = Array.from({ length: count }, (_, i) => start + i)
+      break
+    }
+    case "scatter": {
+      // Randomly distributed blocks of 2-4 chars
+      indices = []
+      let remaining = count
+      while (remaining > 0) {
+        const block = Math.min(remaining, 2 + Math.floor(Math.random() * 3))
+        const pos = Math.floor(Math.random() * (chars.length - block))
+        for (let j = 0; j < block; j++) {
+          if (!indices.includes(pos + j)) indices.push(pos + j)
+        }
+        remaining -= block
+      }
+      break
+    }
+    default: // "start"
+      indices = Array.from({ length: count }, (_, i) => i)
+  }
+
+  for (const i of indices) {
+    if (i >= 0 && i < chars.length && chars[i] !== " " && chars[i] !== "\n") {
+      chars[i] = "\u2587"
+    }
   }
   return chars.join("")
 }
@@ -202,7 +240,9 @@ export const TeaserPreview = memo(function TeaserPreview({
   }
 
   const formatText = (vl: VisibleLine): string =>
-    vl.line.obfuscated ? obfuscateText(vl.line.text) : vl.line.text
+    vl.line.obfuscated
+      ? obfuscateText(vl.line.text, vl.line.obfuscation_ratio ?? 0.33, vl.line.obfuscation_offset ?? "start")
+      : vl.line.text
 
   return (
     <div className="flex flex-col items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none overflow-hidden">

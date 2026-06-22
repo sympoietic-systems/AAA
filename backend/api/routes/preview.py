@@ -60,16 +60,16 @@ async def get_preview_nodes(request: Request):
     conv_repo = getattr(state, "conversation_repo", None)
     if memory_node_repo and conv_repo:
         try:
-            convos = conv_repo.list_all(limit=10) or []
+            convos = conv_repo.list_all(limit=20) or []
             sample_convos = [c for c in convos if "dream" not in (c.title or "").lower()]
             if not sample_convos:
                 sample_convos = convos
             random.shuffle(sample_convos)
 
-            for conv in sample_convos[:5]:
+            for conv in sample_convos[:10]:
                 try:
                     nodes = memory_node_repo.get_nodes(conv.id) or []
-                    for n in nodes[:2]:
+                    for n in nodes[:3]:
                         payload = n.get("surface_fragment") or n.get("intra_active_text") or ""
                         if payload.strip():
                             lines.append({
@@ -87,7 +87,7 @@ async def get_preview_nodes(request: Request):
     dream_log_repo = getattr(state, "dream_log_repo", None)
     if dream_log_repo:
         try:
-            dreams = dream_log_repo.get_recent(limit=3)
+            dreams = dream_log_repo.get_recent(limit=6)
             for d in dreams:
                 action = d.get("action", "dream")
                 title = d.get("title", "")
@@ -96,11 +96,16 @@ async def get_preview_nodes(request: Request):
                 if snippet:
                     text += f" — {_truncate(snippet, 150)}"
                 if text.strip():
+                    obfuscate = random.random() < 0.35
+                    obfuscation_ratio = random.uniform(0.15, 0.55) if obfuscate else 0
+                    obfuscation_offset = random.choice(["start", "middle", "end", "scatter"])
                     lines.append({
                         "text": _truncate(text, 200),
                         "type": "dream",
                         "intensity": 0.0,
-                        "obfuscated": random.random() < 0.3,
+                        "obfuscated": obfuscate,
+                        "obfuscation_ratio": round(obfuscation_ratio, 2),
+                        "obfuscation_offset": obfuscation_offset if obfuscate else "",
                     })
         except Exception:
             pass
