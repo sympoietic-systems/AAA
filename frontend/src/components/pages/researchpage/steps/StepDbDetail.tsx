@@ -124,6 +124,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   const inputEntries = entries.filter(e => {
     const d = e.event_data as any
     return e.event_type.endsWith("_prompt") || e.event_type === "orchestrator_search" ||
+      e.event_type === "orchestrator_evaluate" ||
       (d && (d.system_prompt || d.user_prompt))
   })
   const responseEntries = entries.filter(e =>

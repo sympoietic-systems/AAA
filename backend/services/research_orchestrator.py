@@ -708,13 +708,44 @@ class SomaticResearchOrchestrator:
                 "cached_at": self._now_utc_str(),
             }
         elif phase == "evaluating":
+            reflection = s["last_reflection"] if s and s.get("last_reflection") else {}
+            completeness = reflection.get("completeness_score", 0)
+            # Determine which path will be taken
+            depth = s["current_depth"] if s else 0
+            max_depth = task["max_depth"]
+            stagnation = s["stagnation_counter"] if s else 0
+            sat_threshold = self.satisfaction_threshold
+            if depth >= max_depth:
+                eval_path = "hard_stop"
+                eval_path_reason = f"depth limit reached ({depth}/{max_depth})"
+            elif stagnation >= 3:
+                eval_path = "hard_stop"
+                eval_path_reason = f"stagnation ({stagnation} steps)"
+            elif completeness >= sat_threshold:
+                eval_path = "hard_stop"
+                eval_path_reason = f"completeness {completeness:.2f} >= threshold {sat_threshold}"
+            elif completeness < 0.4:
+                eval_path = "hard_continue"
+                eval_path_reason = f"completeness too low ({completeness:.2f}), no LLM needed"
+            else:
+                eval_path = "llm_borderline"
+                eval_path_reason = f"borderline ({completeness:.2f}) — LLM will decide"
             result = {
                 "phase": "evaluating",
-                "current_depth": s["current_depth"] if s else 0,
-                "max_depth": task["max_depth"],
+                "current_depth": depth,
+                "max_depth": max_depth,
                 "sources_analyzed": s["sources_analyzed"] if s else 0,
-                "stagnation_counter": s["stagnation_counter"] if s else 0,
-                "completeness_score": s["last_reflection"].get("completeness_score", 0) if s and s.get("last_reflection") else 0,
+                "stagnation_counter": stagnation,
+                "completeness_score": completeness,
+                "satisfaction_threshold": sat_threshold,
+                "eval_path": eval_path,
+                "eval_path_reason": eval_path_reason,
+                # consolidation context for display
+                "key_insights": reflection.get("key_insights", []),
+                "remaining_gaps": reflection.get("remaining_gaps", []),
+                "next_queries": reflection.get("next_queries", []),
+                "next_direct_urls": reflection.get("next_direct_urls", []),
+                "objective": task["objective"],
                 "cached_at": self._now_utc_str(),
             }
         elif phase == "synthesizing":

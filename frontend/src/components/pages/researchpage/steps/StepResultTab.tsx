@@ -439,13 +439,94 @@ export const StepResultTab = memo(function StepResultTab({
         </div>
       )}
 
-      {/* ── Evaluate: reason ── */}
-      {selected.step_type === "evaluate" && selected.result_summary && (
-        <div className="border-t border-[#1a1a1a] pt-2">
-          <div className="text-[#555] text-[8px] uppercase mb-1">decision</div>
-          <div className="text-[#22d3ee] text-[9px]">{selected.result_summary}</div>
-        </div>
-      )}
+      {/* ── Evaluate: decision + reasoning ── */}
+      {selected.step_type === "evaluate" && (() => {
+        // Parse evaluate meta-log entry for structured fields
+        const evalEntry = inputEntries?.find(e =>
+          e.event_type === "orchestrator_evaluate"
+        ) ?? responseEntries.find(e =>
+          e.event_type === "orchestrator_evaluate"
+        )
+        const evalData = evalEntry?.event_data as any
+        const decision: string = evalData?.decision ?? (
+          selected.result_summary?.startsWith("STOP") ? "stop" : "continue"
+        )
+        const isStop = decision === "stop"
+        const reason: string = evalData?.reason ?? selected.result_summary ?? ""
+        const completeness: number = evalData?.completeness ?? evalData?.completeness_score ?? 0
+        const hadLlm = responseEntries.some(e =>
+          e.event_type === "orchestrator_evaluate_response"
+        )
+
+        return (
+          <div className="border-t border-[#1a1a1a] pt-2 space-y-3">
+            {/* Decision badge */}
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-sm border ${
+                isStop
+                  ? "text-[#ef4444] border-[#ef4444]/40 bg-[#ef4444]/8"
+                  : "text-[#4ade80] border-[#4ade80]/40 bg-[#4ade80]/8"
+              }`}>
+                {isStop ? "■ STOP" : "▶ CONTINUE"}
+              </span>
+              <span className={`text-[8px] font-mono px-1 py-0.5 rounded-sm ${
+                hadLlm
+                  ? "text-[#f59e0b] bg-[#f59e0b]/10"
+                  : "text-[#555] bg-[#1a1a1a]"
+              }`}>
+                {hadLlm ? "via LLM" : "hard rule"}
+              </span>
+            </div>
+
+            {/* Reason */}
+            {reason && (
+              <div>
+                <div className="text-[#555] text-[8px] uppercase mb-0.5">reason</div>
+                <div className="text-[#94a3b8] text-[9px] leading-relaxed border border-[#1a1a1a] p-2 bg-[#080808]/30 rounded-sm">
+                  {reason.replace(/^(STOP|CONTINUE):\s*/i, "")}
+                </div>
+              </div>
+            )}
+
+            {/* Completeness bar */}
+            {completeness > 0 && (
+              <div>
+                <div className="text-[#555] text-[8px] uppercase mb-1">completeness at decision</div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-[#1a1a1a] rounded-sm overflow-hidden">
+                    <div
+                      className={`h-full rounded-sm ${isStop ? "bg-[#4ade80]" : "bg-[#f59e0b]"}`}
+                      style={{ width: `${Math.round(completeness * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-[#94a3b8] text-[9px] font-mono">{Math.round(completeness * 100)}%</span>
+                </div>
+              </div>
+            )}
+
+            {/* LLM parsed output (only when LLM was called) */}
+            {hadLlm && (() => {
+              const llmEntry = responseEntries.find(e => e.event_type === "orchestrator_evaluate_response")
+              if (!llmEntry) return null
+              const d = llmEntry.event_data as any
+              const rawStr = d?.raw_response || d?.raw || ""
+              let llmJson: any = null
+              try {
+                const parsed = typeof rawStr === "string" ? JSON.parse(rawStr) : rawStr
+                const inner = parsed?.json_data || parsed?.content
+                llmJson = typeof inner === "string" ? JSON.parse(inner) : inner
+              } catch {}
+              if (!llmJson) return null
+              return (
+                <div className="space-y-1">
+                  <div className="text-[#555] text-[8px] uppercase">llm evaluator output</div>
+                  <JsonBlock data={llmJson} variant="json" maxHeight="max-h-32" />
+                </div>
+              )
+            })()}
+          </div>
+        )
+      })()}
 
       {/* ── LLM response(s) from meta-log ── */}
       {responseEntries.length > 0 && (
