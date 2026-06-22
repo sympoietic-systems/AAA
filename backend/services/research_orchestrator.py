@@ -306,7 +306,7 @@ class SomaticResearchOrchestrator:
             if "thinking" in log_resp and isinstance(log_resp["thinking"], str):
                 log_resp["thinking"] = log_resp["thinking"][:3000]
             if "content" in log_resp and isinstance(log_resp["content"], str):
-                log_resp["content"] = log_resp["content"][:6000]
+                log_resp["content"] = log_resp["content"][:12000]
             
             event_data = extra.copy() if extra else {}
             serialized = json.dumps(log_resp, default=str, ensure_ascii=False)
@@ -845,7 +845,7 @@ class SomaticResearchOrchestrator:
             if "thinking" in safe_resp and isinstance(safe_resp["thinking"], str):
                 safe_resp["thinking"] = safe_resp["thinking"][:4000]
             if "content" in safe_resp and isinstance(safe_resp["content"], str):
-                safe_resp["content"] = safe_resp["content"][:10000]
+                safe_resp["content"] = safe_resp["content"][:14000]
             existing_data["llm_response"] = safe_resp
             self.step_repo.update(step_id, step_data=json.dumps(
                 existing_data, default=str, ensure_ascii=False

@@ -58,5 +58,5 @@ user: |
 
 response_format: "json"
 temperature: 0.5
-max_tokens: 2048
+max_tokens: 8192
 anti_mastery: true
