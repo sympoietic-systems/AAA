@@ -109,14 +109,58 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
         </div>
       )}
       {preview.phase === "reflecting" && (
-        <div className="space-y-1">
-          <div className="text-[#555] text-[9px] uppercase font-mono">reflection details</div>
-          <KeyValueGrid items={[
-            { key: "findings to reflect on", value: preview.findings_count ?? 0 },
-            { key: "current depth", value: preview.current_depth ?? 0 },
-            { key: "max depth", value: preview.max_depth ?? 0 },
-            { key: "max reflection rounds", value: preview.max_rounds ?? 0 },
-          ]} />
+        <div className="space-y-3">
+          <div>
+            <div className="text-[#555] text-[9px] uppercase font-mono mb-1">consolidation details</div>
+            <KeyValueGrid items={[
+              { key: "findings to consolidate", value: preview.findings_count ?? 0 },
+              { key: "current depth", value: preview.current_depth ?? 0 },
+              { key: "max depth", value: preview.max_depth ?? 0 },
+              { key: "max consolidation rounds", value: preview.max_rounds ?? 0 },
+            ]} />
+          </div>
+
+          {preview.accumulated_findings && preview.accumulated_findings.length > 0 && (
+            <div>
+              <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">accumulated findings ({preview.accumulated_findings.length})</div>
+              <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                {preview.accumulated_findings.map((f, i) => (
+                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                    <span className="text-[#555]">{i+1}.</span> {f}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {preview.digest_signals && (
+            <div className="space-y-2">
+              {preview.digest_signals.gaps && preview.digest_signals.gaps.length > 0 && (
+                <div>
+                  <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">gaps to consolidate ({preview.digest_signals.gaps.length})</div>
+                  <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                    {preview.digest_signals.gaps.map((g, i) => (
+                      <div key={i} className="text-[#f59e0b] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                        ◇ {g}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {preview.digest_signals.followups && preview.digest_signals.followups.length > 0 && (
+                <div>
+                  <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">followups ({preview.digest_signals.followups.length})</div>
+                  <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                    {preview.digest_signals.followups.map((f, i) => (
+                      <div key={i} className="text-[#a78bfa] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                        → {f}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
       {preview.phase === "evaluating" && (

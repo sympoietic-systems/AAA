@@ -190,6 +190,12 @@ export interface StepPreview {
   completeness_score?: number
   current_depth?: number
   max_rounds?: number
+  accumulated_findings?: string[]
+  digest_signals?: {
+    followups?: string[]
+    direct_urls?: string[]
+    gaps?: string[]
+  }
 }
 
 export async function getStepPreview(taskId: string, phase: string): Promise<StepPreview> {

@@ -67,6 +67,8 @@
     [x] Bugfix: Robust client-side JSON repair to parse and format truncated LLM response payloads
     [x] Bugfix: Scoped digest analysis database updates to the preceding `parallel_parse` step_id, fixing `analysis: null` bug
     [x] Layout: TwoPanelLayout updated to take 100% viewport height, avoiding inner scroll limitations and double scrollbars
+    [x] UX: Rename "Reflect" step, phase, and log events to "Consolidate" in UI constants for better conceptual mapping (keeping backend keys intact)
+    [x] UX: Display accumulated findings, gaps, and follow-ups in the live input preview panel/tab during the consolidating phase
 
 ### Pending
     [ ] Search: extract actual article URLs from DDG results (not just search page snippets)

@@ -590,13 +590,52 @@ class SomaticResearchOrchestrator:
                 "cached_at": self._now_utc_str(),
             }
         elif phase == "reflecting":
+            prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
+            system_text = prompt_data.get("system", "")
+            
+            # Use cached persona or build it
+            cached = self._get_cached_phase(task_id, "reflecting")
+            if cached and cached.get("persona"):
+                persona = cached["persona"]
+            else:
+                persona = await self._build_orchestrator_persona(task["objective"])
+                
+            system_prompt = persona + "\n\n" + system_text
+            if prompt_data.get("anti_mastery"):
+                system_prompt = self._anti_mastery(system_prompt)
+
+            signals = s.get("digest_signals", {}) if s else {}
+            followups_text = "\n".join(f"- {f}" for f in signals.get("followups", [])) or "(none)"
+            direct_urls_text = "\n".join(f"- {u}" for u in signals.get("direct_urls", [])) or "(none)"
+            gaps_text = "\n".join(f"- {g}" for g in signals.get("gaps", [])) or "(none)"
+            all_findings = s.get("all_findings", []) if s else []
+
+            user_text = prompt_data.get("user", "").format(
+                objective=task["objective"],
+                goal=s["plan"].get("goal", task["objective"]) if (s and s.get("plan")) else task["objective"],
+                current_depth=s.get("current_depth", 0) if s else 0,
+                max_depth=task["max_depth"],
+                accumulated_findings="\n\n".join(all_findings),
+                previous_reflection=json.dumps(s.get("last_reflection", {}), ensure_ascii=False)
+                    if (s and s.get("last_reflection")) else "(none)",
+                digest_followups=followups_text,
+                digest_direct_urls=direct_urls_text,
+                digest_gaps=gaps_text,
+            )
+            if prompt_data.get("anti_mastery"):
+                user_text = self._anti_mastery(user_text)
+
             result = {
                 "phase": "reflecting",
                 "objective": task["objective"],
-                "current_depth": s["current_depth"] if s else 0,
+                "current_depth": s.get("current_depth", 0) if s else 0,
                 "max_depth": task["max_depth"],
                 "max_rounds": self.max_reflect_rounds,
-                "findings_count": len(s["all_findings"]) if s else 0,
+                "findings_count": len(all_findings),
+                "system_prompt": system_prompt,
+                "user_prompt": user_text,
+                "accumulated_findings": all_findings,
+                "digest_signals": signals,
                 "cached_at": self._now_utc_str(),
             }
         elif phase == "evaluating":

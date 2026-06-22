@@ -9,7 +9,7 @@ export const STATUS_COLORS: Record<string, string> = {
 
 export const STEP_LABELS: Record<string, string> = {
   plan: "Plan", search: "Search", parallel_parse: "Parse Sources",
-  digest: "Digest", reflect: "Reflect", synthesize: "Synthesize",
+  digest: "Digest", reflect: "Consolidate", synthesize: "Synthesize",
   evaluate: "Evaluate",
 }
 
@@ -25,7 +25,7 @@ export const PHASE_ORDER_DISPLAY = [
 
 export const PHASE_LABELS: Record<string, string> = {
   planning: "Plan", searching: "Search", parsing: "Parse Sources",
-  digesting: "Digest", reflecting: "Reflect", evaluating: "Evaluate",
+  digesting: "Digest", reflecting: "Consolidate", evaluating: "Evaluate",
   synthesizing: "Synthesize", complete: "Complete",
 }
 
@@ -60,9 +60,9 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   orchestrator_digest_prompt: "Digest Prompt",
   orchestrator_digest_response: "Digest Response",
   orchestrator_digest_error: "Digest Error",
-  orchestrator_reflect: "Reflect Result",
-  orchestrator_reflect_prompt: "Reflect Prompt",
-  orchestrator_reflect_response: "Reflect Response",
+  orchestrator_reflect: "Consolidate Result",
+  orchestrator_reflect_prompt: "Consolidate Prompt",
+  orchestrator_reflect_response: "Consolidate Response",
   orchestrator_evaluate: "Evaluate",
   orchestrator_synthesize_start: "Synthesize Start",
   orchestrator_synthesize_prompt: "Synthesize Prompt",
