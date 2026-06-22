@@ -26,6 +26,9 @@ user: |
   Research Objective: {objective}
   Research Goal: {goal}
 
+  Consolidation & Reflection Context:
+  {reflection}
+
   All Findings & Sources Legend:
   {all_findings}
 

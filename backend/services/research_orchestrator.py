@@ -874,9 +874,26 @@ class SomaticResearchOrchestrator:
                 "Sources Legend:\n" + sources_legend_text + "\n\n" + "\n".join(compressed_findings)
             )
 
+            # Format reflection / consolidation details
+            reflection = s.get("last_reflection", {}) if s else {}
+            prev_refl_formatted = "(none)"
+            if reflection and isinstance(reflection, dict):
+                parts = []
+                if reflection.get("reflection"):
+                    parts.append(f"Methodological Reflection:\n{reflection.get('reflection')}")
+                if reflection.get("key_insights"):
+                    insights = [f"- {ins}" for ins in reflection.get("key_insights", [])]
+                    parts.append("Stabilized Key Insights:\n" + "\n".join(insights))
+                if reflection.get("remaining_gaps"):
+                    gaps = [f"- {gap}" for gap in reflection.get("remaining_gaps", [])]
+                    parts.append("Remaining Gaps:\n" + "\n".join(gaps))
+                if parts:
+                    prev_refl_formatted = "\n\n".join(parts)
+
             user_text = prompt_data.get("user", "").format(
                 objective=task["objective"],
                 goal=s["plan"].get("goal", task["objective"]) if (s and s.get("plan")) else task["objective"],
+                reflection=prev_refl_formatted,
                 all_findings=accumulated_findings_text,
             )
             if prompt_data.get("anti_mastery"):
@@ -1773,8 +1790,30 @@ class SomaticResearchOrchestrator:
             "Sources Legend:\n" + sources_legend_text + "\n\n" + "\n".join(compressed_findings)
         )
 
+        # Format reflection / consolidation details
+        try:
+            s = self._get_state(task_id)
+            reflection = s.get("last_reflection", {})
+        except Exception:
+            reflection = {}
+
+        prev_refl_formatted = "(none)"
+        if reflection and isinstance(reflection, dict):
+            parts = []
+            if reflection.get("reflection"):
+                parts.append(f"Methodological Reflection:\n{reflection.get('reflection')}")
+            if reflection.get("key_insights"):
+                insights = [f"- {ins}" for ins in reflection.get("key_insights", [])]
+                parts.append("Stabilized Key Insights:\n" + "\n".join(insights))
+            if reflection.get("remaining_gaps"):
+                gaps = [f"- {gap}" for gap in reflection.get("remaining_gaps", [])]
+                parts.append("Remaining Gaps:\n" + "\n".join(gaps))
+            if parts:
+                prev_refl_formatted = "\n\n".join(parts)
+
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
+            reflection=prev_refl_formatted,
             all_findings=accumulated_findings_text,
         )
         if prompt_data.get("anti_mastery"):

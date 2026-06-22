@@ -59,6 +59,11 @@ async def test_synthesize_phase_uses_synthesis_persona():
         "sources_analyzed": 2,
         "step_number": 5,
         "current_depth": 1,
+        "last_reflection": {
+            "reflection": "Reflection about intra-action",
+            "key_insights": ["Insight A", "Insight B"],
+            "remaining_gaps": ["Gap C"]
+        }
     }
 
     # Mock DB returns for step results
@@ -134,3 +139,8 @@ async def test_synthesize_phase_uses_synthesis_persona():
             user_prompt = kwargs.get("user_prompt", "")
             assert "[S1]:" in user_prompt or "[S2]:" in user_prompt
             assert "Sources Legend:" in user_prompt
+            
+            # Verify reflection context was passed
+            assert "Reflection about intra-action" in user_prompt
+            assert "Insight A" in user_prompt
+            assert "Gap C" in user_prompt
