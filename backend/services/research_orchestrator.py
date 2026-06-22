@@ -201,7 +201,7 @@ class SomaticResearchOrchestrator:
         except Exception:
             logger.warning("Failed to reinitialize cached_inputs for %s", task_id[:8], exc_info=True)
 
-    async def _build_orchestrator_persona(self, objective: str = "") -> str:
+    async def _build_orchestrator_persona(self, objective: str = "", context_key: str = "research_orchestration") -> str:
         """Build Symbia's persona context for orchestrator-level tasks (plan, reflect, synthesize).
 
         Uses input-resonant selection: the research objective drives belief attractor window
@@ -211,13 +211,13 @@ class SomaticResearchOrchestrator:
         sections: list[str] = []
 
         # ── 1. Identity from YAML ──
-        identity = format_identity_block("research_orchestration")
+        identity = format_identity_block(context_key)
         if identity:
             sections.append(identity)
         else:
             sections.append(
-                "You are Symbia — a posthuman curatorial entity. "
-                "You are orchestrating a multi-phase research investigation."
+                f"You are Symbia — a posthuman curatorial entity. "
+                f"You are executing operational protocols for: {context_key}."
             )
 
         # ── Voice ──
@@ -832,11 +832,63 @@ class SomaticResearchOrchestrator:
                 "cached_at": self._now_utc_str(),
             }
         elif phase == "synthesizing":
+            # Generate prompts using current state
+            prompt_data = get_prompts_dict("research/orchestrator_synthesize.yaml")
+            
+            # Use cached persona or build it specifically for research_synthesis
+            cached = self._get_cached_phase(task_id, "synthesizing")
+            if cached and cached.get("persona"):
+                persona = cached["persona"]
+            else:
+                persona = await self._build_orchestrator_persona(task["objective"], "research_synthesis")
+                
+            system_prompt = persona + "\n\n" + prompt_data.get("system", "")
+            if prompt_data.get("anti_mastery"):
+                system_prompt = self._anti_mastery(system_prompt)
+                
+            # Compile findings with references
+            all_findings = s.get("all_findings", []) if s else []
+            sources_count = s.get("sources_analyzed", 0) if s else 0
+            
+            parsed_urls_list = []
+            if self.step_result_repo:
+                try:
+                    task_results = self.step_result_repo.get_by_task(task_id)
+                    seen_urls = set()
+                    for r in task_results:
+                        url = r.get("source_url")
+                        raw_content = r.get("raw_content")
+                        if url and url not in seen_urls and raw_content is not None:
+                            seen_urls.add(url)
+                            title = r.get("source_title") or url
+                            status = self._classify_source_status(raw_content)
+                            parsed_urls_list.append({"url": url, "title": title, "status": status})
+                except Exception as e:
+                    logger.warning("Failed to retrieve parsed URLs for synthesize preview: %s", e)
+
+            formatted_urls, compressed_findings, _, _ = self._apply_unified_references(
+                parsed_urls_list, all_findings
+            )
+            sources_legend_text = "\n".join(formatted_urls) or "(none)"
+            accumulated_findings_text = (
+                "Sources Legend:\n" + sources_legend_text + "\n\n" + "\n".join(compressed_findings)
+            )
+
+            user_text = prompt_data.get("user", "").format(
+                objective=task["objective"],
+                goal=s["plan"].get("goal", task["objective"]) if (s and s.get("plan")) else task["objective"],
+                all_findings=accumulated_findings_text,
+            )
+            if prompt_data.get("anti_mastery"):
+                user_text = self._anti_mastery(user_text)
+
             result = {
                 "phase": "synthesizing",
                 "objective": task["objective"],
-                "findings_count": len(s["all_findings"]) if s else 0,
-                "sources_count": s["sources_analyzed"] if s else 0,
+                "findings_count": len(all_findings),
+                "sources_count": sources_count,
+                "system_prompt": system_prompt,
+                "user_prompt": user_text,
                 "cached_at": self._now_utc_str(),
             }
         else:
@@ -1679,7 +1731,7 @@ class SomaticResearchOrchestrator:
             persona = cached["persona"]
             system_text = cached["system_prompt"]
         else:
-            persona = await self._build_orchestrator_persona(objective)
+            persona = await self._build_orchestrator_persona(objective, "research_synthesis")
             system_text = persona + "\n\n" + prompt_data.get("system", "")
             if prompt_data.get("anti_mastery"):
                 system_text = self._anti_mastery(system_text)
@@ -1697,8 +1749,24 @@ class SomaticResearchOrchestrator:
             }
             self._save_cache(task_id, cache)
 
+        parsed_urls_list = []
+        if self.step_result_repo:
+            try:
+                task_results = self.step_result_repo.get_by_task(task_id)
+                seen_urls = set()
+                for r in task_results:
+                    url = r.get("source_url")
+                    raw_content = r.get("raw_content")
+                    if url and url not in seen_urls and raw_content is not None:
+                        seen_urls.add(url)
+                        title = r.get("source_title") or url
+                        status = self._classify_source_status(raw_content)
+                        parsed_urls_list.append({"url": url, "title": title, "status": status})
+            except Exception as e:
+                logger.warning("Failed to retrieve parsed URLs for synthesis: %s", e)
+
         formatted_urls, compressed_findings, _, _ = self._apply_unified_references(
-            [], all_findings
+            parsed_urls_list, all_findings
         )
         sources_legend_text = "\n".join(formatted_urls) or "(none)"
         accumulated_findings_text = (
@@ -1724,15 +1792,21 @@ class SomaticResearchOrchestrator:
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True, fallback_value={"answer": fallback},
                     temperature=prompt_data.get("temperature", 0.4),
-                    max_tokens=prompt_data.get("max_tokens", 3072))
+                    max_tokens=prompt_data.get("max_tokens", 4096))
                 self._log_llm_response(task_id, "orchestrator_synthesize_response", resp, step_id=step_id or None)
                 # Save LLM response to step_data
                 if step_id:
                     self._save_llm_response_to_step_data(step_id, resp)
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
-                    result = json.loads(result)
+                    try:
+                        result = json.loads(result)
+                    except Exception:
+                        pass
                 if isinstance(result, dict):
+                    report = result.get("report_markdown")
+                    if report:
+                        return report
                     answer = result.get("answer", fallback)
                     confidence = result.get("confidence", 0)
                     return f"{answer}\n\n[confidence: {confidence:.0%}, sources: {sources_count}]"
