@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react"
+import ReactMarkdown from "react-markdown"
 import type { ResearchStep, ResearchStepResult } from "../../../../api/research"
 import { JsonBlock } from "../../../UI"
 
@@ -468,11 +469,13 @@ export const StepResultTab = memo(function StepResultTab({
 
       {/* ── Synthesize: answer ── */}
       {selected.step_type === "synthesize" && parsedResult.answer && (
-        <div className="border-t border-[#1a1a1a] pt-2">
-          <div className="text-[#555] text-[8px] mb-1">
-            answer{parsedResult.confidence > 0 ? ` (confidence: ${Math.round(parsedResult.confidence*100)}%)` : ""}:
+        <div className="border-t border-[#1a1a1a] pt-2 space-y-1.5">
+          <div className="text-[#555] text-[8px]">
+            synthesis report{parsedResult.confidence > 0 ? ` (confidence: ${Math.round(parsedResult.confidence*100)}%)` : ""}:
           </div>
-          <div className="text-[#94a3b8] text-[9px] leading-relaxed whitespace-pre-wrap">{parsedResult.answer}</div>
+          <div className="text-[#94a3b8] text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none max-h-[500px] overflow-y-auto border border-[#1a1a1a] p-2 bg-[#080808]/30">
+            <ReactMarkdown>{parsedResult.answer}</ReactMarkdown>
+          </div>
         </div>
       )}
 
