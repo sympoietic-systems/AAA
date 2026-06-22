@@ -58,6 +58,11 @@
     [x] Frontend: Markdown-rendered result summary
     [x] Frontend: Meta log + Steps sorted newest-first
     [x] Frontend: Unified design matching /agent page patterns + FRONTEND_DESIGN_PRINCIPLES.md
+    [x] Frontend/Backend: Cycle-depth aware digestion lookup and UI step detail filtering
+    [x] Backend: Unified global source reference mapping ([S##]) across findings, gaps, and follow-ups
+    [x] Backend: Preview prompt caching and reuse during step execution
+    [x] Backend: Automated cycle-scoped context compilation (structured hybrid reflection template)
+
 
 ### Pending
     [ ] Search: extract actual article URLs from DDG results (not just search page snippets)

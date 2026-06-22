@@ -1974,6 +1974,26 @@ ALTER TABLE research_steps ADD COLUMN rerun_version INTEGER NOT NULL DEFAULT 1
 - `research.py` API — rerun uses `query_group` for `query_index`; simplified step finding
 - `StepPipeline.tsx` — grouping by `query_group`; query text labels; simplified active detection
 
+#### 5.8.10 Cycle-Scoped Context, Unified [S##] Referencing, and Preview Caching (m040)
+
+To achieve token-efficient, cycle-aware research execution and guarantee synchronization between UI previews and LLM executions:
+
+1. **Cycle-Scoped Context Compilation**:
+   - Split database findings by cycle depth: New findings are separated from historical findings (Cycles 1 to N-1).
+   - Formatted legacy reflection state into a structured Markdown block covering methodological reflection, stabilized insights, and remaining gaps.
+   - Restricts search and digest lookups in both the backend and frontend to the current cycle's depth, preventing cross-cycle data pollution.
+
+2. **Unified Source Referencing (`_apply_unified_references`)**:
+   - Replaced fragmented URL/title compression blocks with a centralized mapper.
+   - Maps verbose source titles/URLs to standardized keys (`[S1]`, `[S2]`, ...).
+   - Generates a single, token-efficient **Sources Legend** injected at the start of LLM prompts.
+   - Compresses source mentions within findings, gaps, and follow-ups consistently.
+   - Preserves full human-readable titles in the DB and UI state, isolating token compression to prompt assembly.
+
+3. **Synchronized Preview-Execution Caching**:
+   - Stores prompt previews in the task's cache.
+   - The execution phase (`_tool_reflect`) retrieves and executes the cached prompt directly if it exists, ensuring the executed prompt matches the UI-previewed prompt exactly.
+
 ---
 
 ## 6. Mathematical Foundation — The Rhizomatic Utility Function
