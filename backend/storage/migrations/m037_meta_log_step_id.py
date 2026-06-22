@@ -9,8 +9,13 @@ import sqlite3
 
 
 def up(conn: sqlite3.Connection) -> None:
-    conn.execute("ALTER TABLE research_meta_log ADD COLUMN step_id TEXT")
-    conn.commit()
+    try:
+        conn.execute("ALTER TABLE research_meta_log ADD COLUMN step_id TEXT")
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e).lower():
+            raise
+
 
 
 def down(conn: sqlite3.Connection) -> None:

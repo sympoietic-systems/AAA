@@ -179,6 +179,22 @@ class ConversationRepository(BaseRepository):
         conn.commit()
 
     @with_connection
+    def sync_diffractive_tags(self, conversation_id: str, tags: list[str]) -> None:
+        conn = self._conn()
+        conn.execute(
+            "DELETE FROM conversation_tags WHERE conversation_id = ? AND tag_type IN ('keyword', 'diffractive')",
+            (conversation_id,),
+        )
+        for t in tags:
+            conn.execute(
+                """INSERT OR IGNORE INTO conversation_tags (conversation_id, tag, tag_type)
+                   VALUES (?, ?, 'diffractive')""",
+                (conversation_id, t.strip()),
+            )
+        conn.commit()
+
+
+    @with_connection
     def get_all_unique_tags(self) -> list[dict]:
         conn = self._conn()
         rows = conn.execute(

@@ -264,28 +264,19 @@ class ConsolidationMixin:
 
     def _sync_diffractive_tags(self, conversation_id: str, nodes: list[dict]) -> None:
         """Remove old keyword/diffractive tags and re-add from merged nodes."""
-        # Remove old keyword and diffractive tags
-        existing_tags = self.conversation_repo.get_tags(conversation_id)
-        for t in existing_tags:
-            if t["tag_type"] in ("keyword", "diffractive"):
-                try:
-                    self.conversation_repo.remove_tag(conversation_id, t["tag"])
-                except Exception:
-                    pass
-
-        # Add diffractive keys as tags
         seen_keys = set()
         for node in nodes:
             dk = node.get("diffractive_key", "").strip()
-            if dk and dk not in seen_keys:
+            if dk:
                 seen_keys.add(dk)
-                try:
-                    self.conversation_repo.add_tag(conversation_id, dk, "diffractive")
-                except Exception:
-                    pass
 
-        if seen_keys:
-            logger.info(
-                "Synced %d diffractive keys for conversation %s",
-                len(seen_keys), conversation_id,
-            )
+        try:
+            self.conversation_repo.sync_diffractive_tags(conversation_id, list(seen_keys))
+            if seen_keys:
+                logger.info(
+                    "Synced %d diffractive keys for conversation %s",
+                    len(seen_keys), conversation_id,
+                )
+        except Exception as e:
+            logger.warning("Failed to sync diffractive tags for %s: %s", conversation_id, e)
+

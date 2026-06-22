@@ -79,6 +79,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m034_research_orchestrator_schema,
         m035_rerun_count,
         m036_cached_inputs,
+        m036_refusals,
         m037_meta_log_step_id,
         m038_rerun_version,
         m039_orchestrator_state,
@@ -123,6 +124,9 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("033_research_meta_log", m033_research_meta_log.up)
     runner.run("034_research_orchestrator_schema", m034_research_orchestrator_schema.up)
     runner.run("035_rerun_count", m035_rerun_count.up)
+    runner.run("036_cached_inputs", m036_cached_inputs.up)
+    runner.run("036_refusals", m036_refusals.up)
+    runner.run("037_meta_log_step_id", m037_meta_log_step_id.up)
     runner.run("038_rerun_version", m038_rerun_version.up)
     runner.run("039_orchestrator_state", m039_orchestrator_state.up)
     runner.run("040_dream_log_trigger_metadata", m040_dream_log_trigger_metadata.up)
