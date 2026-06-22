@@ -2,6 +2,7 @@ import React, { memo } from "react"
 import type { StepPreview } from "../../../../api/research"
 import { JsonBlock } from "../../../UI"
 import { LogEntries } from "./LogEntries"
+import { parseStatus } from "./StepResultTab"
 
 interface StepInputTabProps {
   stepPhase: string
@@ -10,7 +11,7 @@ interface StepInputTabProps {
   reinitLiveInput: () => void
   inputEntries: any[]
   /** URLs from the previous step (search → parse, parse → digest) */
-  parentInputUrls?: { url: string; title: string }[]
+  parentInputUrls?: { url: string; title: string; error?: string; raw_file_path?: string | null; content_preview?: string }[]
   /** The current step's type */
   stepType?: string
 }
@@ -54,15 +55,26 @@ export const StepInputTab = memo(function StepInputTab({
             pages to digest ({parentInputUrls.length})
           </div>
           <div className="space-y-0.5 max-h-48 overflow-y-auto">
-            {parentInputUrls.map((u, i) => (
-              <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
-                <span className="text-[#555]">{i+1}.</span>{" "}
-                <a href={u.url} target="_blank" rel="noopener noreferrer"
-                  className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
-                  {u.title || u.url?.slice(0, 100) || "—"}
-                </a>
-              </div>
-            ))}
+            {parentInputUrls.map((u, i) => {
+              const errorMsg = u.error
+              const st = errorMsg
+                ? { icon: "✗", label: errorMsg.toLowerCase().replace("error: ", ""), color: "#ef4444" }
+                : parseStatus(u.content_preview)
+              return (
+                <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed flex items-center justify-between gap-2 max-w-full">
+                  <div className="truncate flex-1 min-w-0">
+                    <span className="text-[#555]">{i+1}.</span>{" "}
+                    <a href={u.url} target="_blank" rel="noopener noreferrer"
+                      className="text-[#4ade80] hover:text-[#6ee7b0] underline">
+                      {u.title || u.url?.slice(0, 100) || "—"}
+                    </a>
+                  </div>
+                  <span style={{ color: st.color }} className="text-[8px] font-mono shrink-0 select-none">
+                    [{st.label}]
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -86,8 +98,26 @@ export const StepInputTab = memo(function StepInputTab({
             <div className="space-y-2">
               {liveInput.objective && <div><div className="text-[#555] text-[8px]">objective:</div><div className="text-[#94a3b8] text-[9px] pl-2">{liveInput.objective}</div></div>}
               {liveInput.max_depth != null && <div className="flex gap-3 text-[#777] text-[9px] flex-wrap"><span>depth:{liveInput.max_depth}</span><span>budget:${liveInput.budget_limit_usd?.toFixed(2)}</span>{liveInput.model && <span>model:{liveInput.model}</span>}{liveInput.temperature != null && <span>temp:{liveInput.temperature}</span>}</div>}
-              {liveInput.system_prompt && <div><div className="text-[#555] text-[8px] mb-0.5">system prompt:</div><JsonBlock data={liveInput.system_prompt} variant="prompt" maxHeight="max-h-32" /></div>}
-              {liveInput.user_prompt && <div><div className="text-[#555] text-[8px] mb-0.5">user prompt:</div><JsonBlock data={liveInput.user_prompt} variant="prompt" maxHeight="max-h-24" /></div>}
+              {liveInput.system_prompt && (
+                <JsonBlock
+                  data={liveInput.system_prompt}
+                  variant="prompt"
+                  maxHeight="max-h-[300px]"
+                  collapsible={true}
+                  defaultCollapsed={true}
+                  label="system prompt"
+                />
+              )}
+              {liveInput.user_prompt && (
+                <JsonBlock
+                  data={liveInput.user_prompt}
+                  variant="prompt"
+                  maxHeight="max-h-[300px]"
+                  collapsible={true}
+                  defaultCollapsed={false}
+                  label="user prompt"
+                />
+              )}
               {liveInput.pending_queries && liveInput.pending_queries.length > 0 && <div><div className="text-[#555] text-[8px] mb-0.5">queries:</div>{liveInput.pending_queries.map((q,i)=><div key={i} className="text-[#94a3b8] text-[9px] pl-2">· {q}</div>)}</div>}
               {liveInput.note && <div className="text-[#444] italic text-[8px]">{liveInput.note}</div>}
             </div>

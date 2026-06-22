@@ -1,6 +1,6 @@
 import React, { memo } from "react"
 import type { StepPreview } from "../../../../api/research"
-import { JsonBlock } from "../../../UI"
+import { JsonBlock, KeyValueGrid } from "../../../UI"
 
 interface StepPreviewPanelProps {
   preview: StepPreview
@@ -13,9 +13,9 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
   preview, phaseLabel, onReinitialize, reinitLoading,
 }: StepPreviewPanelProps) {
   return (
-    <div className="space-y-2 text-[10px]">
+    <div className="space-y-3 text-[10px]">
       <div className="flex items-center justify-between">
-        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
+        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider font-mono">
           [ {phaseLabel} — preview ]
         </div>
         <button onClick={onReinitialize} disabled={reinitLoading}
@@ -24,16 +24,16 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
         </button>
       </div>
       <div className="flex gap-3 border-b border-[#1a1a1a] pb-1">
-        <span className="text-[#94a3b8] text-[9px] uppercase">input</span>
+        <span className="text-[#94a3b8] text-[9px] uppercase font-mono">input / upcoming state</span>
       </div>
       {preview.objective && (
         <div>
-          <div className="text-[#555] text-[9px] mb-0.5">objective:</div>
+          <div className="text-[#555] text-[9px] mb-0.5 uppercase font-mono">objective:</div>
           <div className="text-[#94a3b8] pl-2">{preview.objective}</div>
         </div>
       )}
       {preview.max_depth != null && (
-        <div className="flex gap-4 text-[#777] flex-wrap">
+        <div className="flex gap-4 text-[#777] flex-wrap font-mono">
           <span>depth: {preview.max_depth}</span>
           <span>budget: ${preview.budget_limit_usd?.toFixed(2)}</span>
           {preview.model && <span>model: {preview.model}</span>}
@@ -42,23 +42,102 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
         </div>
       )}
       {preview.system_prompt && (
-        <div>
-          <div className="text-[#555] text-[9px] mb-0.5">system prompt:</div>
-          <JsonBlock data={preview.system_prompt} variant="prompt" maxHeight="max-h-48" />
-        </div>
+        <JsonBlock
+          data={preview.system_prompt}
+          variant="prompt"
+          maxHeight="max-h-[350px]"
+          collapsible={true}
+          defaultCollapsed={true}
+          label="system prompt"
+        />
       )}
       {preview.user_prompt && (
-        <div>
-          <div className="text-[#555] text-[9px] mb-0.5">user prompt:</div>
-          <JsonBlock data={preview.user_prompt} variant="prompt" maxHeight="max-h-32" />
-        </div>
+        <JsonBlock
+          data={preview.user_prompt}
+          variant="prompt"
+          maxHeight="max-h-[350px]"
+          collapsible={true}
+          defaultCollapsed={false}
+          label="user prompt"
+        />
       )}
       {preview.pending_queries && preview.pending_queries.length > 0 && (
         <div>
-          <div className="text-[#555] text-[9px] mb-0.5">pending queries:</div>
+          <div className="text-[#555] text-[9px] mb-0.5 uppercase font-mono">pending queries:</div>
           {preview.pending_queries.map((q, i) => (
             <div key={i} className="text-[#94a3b8] pl-2">· {q}</div>
           ))}
+        </div>
+      )}
+      {preview.urls_to_fetch && preview.urls_to_fetch.length > 0 && (
+        <div>
+          <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">urls to parse ({preview.urls_to_fetch.length})</div>
+          <div className="space-y-0.5 max-h-48 overflow-y-auto">
+            {preview.urls_to_fetch.map((u, i) => (
+              <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                <span className="text-[#555]">{i+1}.</span>{" "}
+                <a href={u.url} target="_blank" rel="noopener noreferrer"
+                  className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
+                  {u.title || u.url || "—"}
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {preview.sources_to_digest && preview.sources_to_digest.length > 0 && (
+        <div>
+          <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">sources to digest ({preview.sources_to_digest.length})</div>
+          <div className="space-y-1.5 max-h-60 overflow-y-auto">
+            {preview.sources_to_digest.map((s, i) => (
+              <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                <div className="flex gap-1.5 items-center">
+                  <span className="text-[#555]">{i+1}.</span>
+                  <a href={s.url} target="_blank" rel="noopener noreferrer"
+                    className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all font-semibold">
+                    {s.title || s.url || "—"}
+                  </a>
+                </div>
+                {s.snippet && (
+                  <div className="text-[#777] text-[8px] pl-4 mt-0.5 leading-normal italic">
+                    {s.snippet}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {preview.phase === "reflecting" && (
+        <div className="space-y-1">
+          <div className="text-[#555] text-[9px] uppercase font-mono">reflection details</div>
+          <KeyValueGrid items={[
+            { key: "findings to reflect on", value: preview.findings_count ?? 0 },
+            { key: "current depth", value: preview.current_depth ?? 0 },
+            { key: "max depth", value: preview.max_depth ?? 0 },
+            { key: "max reflection rounds", value: preview.max_rounds ?? 0 },
+          ]} />
+        </div>
+      )}
+      {preview.phase === "evaluating" && (
+        <div className="space-y-1">
+          <div className="text-[#555] text-[9px] uppercase font-mono">evaluation metrics</div>
+          <KeyValueGrid items={[
+            { key: "current depth", value: preview.current_depth ?? 0 },
+            { key: "max depth", value: preview.max_depth ?? 0 },
+            { key: "sources analyzed", value: preview.sources_analyzed ?? 0 },
+            { key: "stagnation counter", value: preview.stagnation_counter ?? 0 },
+            { key: "completeness score", value: `${Math.round((preview.completeness_score ?? 0) * 100)}%` },
+          ]} />
+        </div>
+      )}
+      {preview.phase === "synthesizing" && (
+        <div className="space-y-1">
+          <div className="text-[#555] text-[9px] uppercase font-mono">synthesis context</div>
+          <KeyValueGrid items={[
+            { key: "accumulated findings", value: preview.findings_count ?? 0 },
+            { key: "sources count", value: preview.sources_count ?? 0 },
+          ]} />
         </div>
       )}
       {preview.note && (

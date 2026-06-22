@@ -18,8 +18,65 @@ interface StepResultTabProps {
   parentInputUrls?: { url: string; title: string }[]
 }
 
+/** Repair a JSON string that has been truncated by balancing braces, brackets, and quotes. */
+export function repairTruncatedJson(str: string): string {
+  let cleaned = str.trim()
+  if (!cleaned) return ""
+  
+  let inString = false
+  let escaped = false
+  const stack: ("{" | "[")[] = []
+  
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i]
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (char === "\\") {
+      escaped = true
+      continue
+    }
+    if (char === '"') {
+      inString = !inString
+      continue
+    }
+    if (inString) {
+      continue
+    }
+    if (char === "{") {
+      stack.push("{")
+    } else if (char === "[") {
+      stack.push("[")
+    } else if (char === "}") {
+      if (stack[stack.length - 1] === "{") {
+        stack.pop()
+      }
+    } else if (char === "]") {
+      if (stack[stack.length - 1] === "[") {
+        stack.pop()
+      }
+    }
+  }
+  
+  let repaired = cleaned
+  if (inString) {
+    repaired += '"'
+  }
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const openChar = stack[i]
+    if (openChar === "{") {
+      repaired += "}"
+    } else if (openChar === "[") {
+      repaired += "]"
+    }
+  }
+  
+  return repaired
+}
+
 /** Classify a parse result by its raw_content. */
-function parseStatus(content: string | null | undefined): { icon: string; label: string; color: string } {
+export function parseStatus(content: string | null | undefined): { icon: string; label: string; color: string } {
   if (!content || content.trim().length === 0) return { icon: "✗", label: "empty", color: "#ef4444" }
   const c = content.trim()
   if (c.length < 200) return { icon: "○", label: "too short", color: "#f59e0b" }
@@ -27,6 +84,31 @@ function parseStatus(content: string | null | undefined): { icon: string; label:
   if (junkPatterns.some(p => c.slice(0, 1000).toLowerCase().includes(p))) return { icon: "⚠", label: "blocked", color: "#f97316" }
   if (/^(skip|close|open navigation|sign in|sign up)/i.test(c.slice(0, 100).trim())) return { icon: "⛔", label: "paywall", color: "#f97316" }
   return { icon: "✓", label: "ok", color: "#4ade80" }
+}
+
+function sourceStatusLabel(analysis: any): { label: string; color: string } {
+  if (!analysis) return { label: "no analysis", color: "#666" }
+  if (analysis.learnings?.length > 0) return { label: `${analysis.learnings.length} learnings`, color: "#4ade80" }
+  
+  // Check gaps for known error messages
+  const gaps = analysis.gaps || []
+  for (const gap of gaps) {
+    if (typeof gap === "string") {
+      const g = gap.toLowerCase()
+      if (g.includes("blocked by anti-bot") || g.includes("cloudflare") || g.includes("captcha")) {
+        return { label: "blocked (anti-bot)", color: "#ef4444" }
+      }
+      if (g.includes("content too short") || g.includes("too short")) {
+        return { label: "too short", color: "#f59e0b" }
+      }
+      if (g.includes("fetch failed")) {
+        return { label: "fetch failed", color: "#ef4444" }
+      }
+    }
+  }
+  
+  if (gaps.length > 0) return { label: `${gaps.length} gaps`, color: "#f59e0b" }
+  return { label: "no learnings", color: "#f97316" }
 }
 
 export const StepResultTab = memo(function StepResultTab({
@@ -109,7 +191,7 @@ export const StepResultTab = memo(function StepResultTab({
             const errorMsg = (r as any).error
             const st = errorMsg
               ? { icon: "✗", label: "error", color: "#ef4444" }
-              : parseStatus(r.raw_file_path ? "ok" : null)
+              : parseStatus(r.content_preview)
             return (
               <div key={r.id} className="pl-2 flex items-start gap-1.5 py-0.5">
                 <span style={{color: st.color}} className="text-[9px] shrink-0">{st.icon}</span>
@@ -152,13 +234,13 @@ export const StepResultTab = memo(function StepResultTab({
             {selectedResults.map(r => {
               let analysis: any = null
               try { analysis = r.analyzed_json ? JSON.parse(r.analyzed_json) : null } catch {}
+              const status = sourceStatusLabel(analysis)
               const hasContent = analysis?.learnings?.length > 0 || analysis?.gaps?.length > 0
-              const label = hasContent ? `${analysis.learnings?.length || 0} learnings` : "no content"
               return (
                 <details key={r.id} className="pl-2 border-l border-[#222]">
                   <summary className="text-[#94a3b8] text-[9px] cursor-pointer hover:text-[#c4b5fd] break-all flex items-center gap-1">
                     <span className="truncate">{r.source_title || r.source_url?.slice(0, 80) || "—"}</span>
-                    <span className="text-[#555] text-[8px] shrink-0">({label})</span>
+                    <span style={{ color: status.color }} className="text-[8px] shrink-0 font-mono">({status.label})</span>
                   </summary>
                   {analysis?.learnings?.length > 0 && <div className="mt-1">
                     <div className="text-[#555] text-[8px] mb-0.5">learnings:</div>
@@ -305,18 +387,40 @@ export const StepResultTab = memo(function StepResultTab({
             if (typeof rawStr === "object" && rawStr !== null) {
               resp = rawStr
             } else {
-              try { resp = JSON.parse(rawStr) } catch {}
+              try {
+                resp = JSON.parse(rawStr)
+              } catch {
+                try {
+                  resp = JSON.parse(repairTruncatedJson(rawStr))
+                } catch {}
+              }
             }
 
             if (!resp || typeof resp !== "object") {
               const displayData = typeof rawStr === "string" ? rawStr : JSON.stringify(rawStr, null, 2)
+              let parsedJson = null
+              try {
+                let cleaned = displayData.trim()
+                if (cleaned.includes("```json")) {
+                  const match = cleaned.match(/```json\s*([\s\S]*?)\s*```/)
+                  if (match) cleaned = match[1].trim()
+                } else if (cleaned.includes("```")) {
+                  const match = cleaned.match(/```\s*([\s\S]*?)\s*```/)
+                  if (match) cleaned = match[1].trim()
+                }
+                try {
+                  parsedJson = JSON.parse(cleaned)
+                } catch {
+                  parsedJson = JSON.parse(repairTruncatedJson(cleaned))
+                }
+              } catch {}
               return (
                 <details key={ei} className="mb-1">
                   <summary className="text-[#777] text-[9px] cursor-pointer hover:text-[#aaa]">
                     {entry.event_type.replace("orchestrator_","").replace("_response","")} ({entry.created_at?.slice(11,19)})
                   </summary>
                   <div className="mt-1">
-                    <JsonBlock data={displayData.slice(0, 4000)} variant="raw" />
+                    <JsonBlock data={parsedJson || displayData.slice(0, 4000)} variant={parsedJson ? "json" : "raw"} />
                   </div>
                 </details>
               )
@@ -324,7 +428,21 @@ export const StepResultTab = memo(function StepResultTab({
 
             let jsonData = resp.json_data || resp.content
             if (typeof jsonData === "string") {
-              try { jsonData = JSON.parse(jsonData) } catch {}
+              let cleaned = jsonData.trim()
+              if (cleaned.includes("```json")) {
+                const match = cleaned.match(/```json\s*([\s\S]*?)\s*```/)
+                if (match) cleaned = match[1].trim()
+              } else if (cleaned.includes("```")) {
+                const match = cleaned.match(/```\s*([\s\S]*?)\s*```/)
+                if (match) cleaned = match[1].trim()
+              }
+              try {
+                jsonData = JSON.parse(cleaned)
+              } catch {
+                try {
+                  jsonData = JSON.parse(repairTruncatedJson(cleaned))
+                } catch {}
+              }
             }
             const thinking = resp.thinking || ""
             const wrapper = { model: resp.model, provider_used: resp.provider_used, truncated: resp.truncated, finish_reason: resp.finish_reason }

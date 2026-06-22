@@ -511,6 +511,8 @@ class SomaticResearchOrchestrator:
             }
         elif phase == "digesting":
             sources = []
+            system_prompt = ""
+            user_prompt = ""
             if s:
                 # Re-hydrate parsed_sources_cache if empty — scope to current_depth only
                 if not s.get("parsed_sources_cache") and self.step_repo and self.step_result_repo:
@@ -533,7 +535,8 @@ class SomaticResearchOrchestrator:
                                     "content": r["raw_content"],
                                     "query_group": ps.get("query_group", 1),
                                 })
-                if s.get("parsed_sources_cache"):
+                parsed_sources = s.get("parsed_sources_cache", [])
+                if parsed_sources:
                     sources = [
                         {
                             "url": src["url"],
@@ -541,11 +544,49 @@ class SomaticResearchOrchestrator:
                             "snippet": src.get("content", "")[:300] + "...",
                             "query_group": src.get("query_group"),
                         }
-                        for src in s["parsed_sources_cache"]
+                        for src in parsed_sources
                     ]
+                    # Generate a preview of the prompt using the first parsed source
+                    try:
+                        first_src = parsed_sources[0]
+                        q_group = first_src.get("query_group", 1)
+                        queries = s["plan"].get("search_queries", [s["objective"]])
+                        if s["current_depth"] > 0 and s["last_reflection"].get("next_queries"):
+                            queries = s["last_reflection"]["next_queries"]
+                        q_text = queries[q_group - 1] if (q_group - 1) < len(queries) else s["objective"]
+                        
+                        prompt_data = get_prompts_dict("research/node_analyzer.yaml")
+                        system_text = prompt_data.get("system", "")
+                        user_text = prompt_data.get("user", "").format(
+                            query=q_text,
+                            goal=s["objective"],
+                            depth=s["current_depth"],
+                            max_depth=task["max_depth"],
+                            parent_findings="(orchestrator — multi-source analysis)",
+                            scraped_content=first_src.get("content", "")[:1000] + "\n[... truncated for preview ...]",
+                        )
+                        if prompt_data.get("anti_mastery"):
+                            system_text = self._anti_mastery(system_text)
+                            user_text = self._anti_mastery(user_text)
+                            
+                        try:
+                            from backend.services.research_context_builder import ResearchContextBuilder
+                            builder = ResearchContextBuilder(self._state)
+                            persona = await builder.build_node_context(node_query=q_text, node_goal=s["objective"], depth=s["current_depth"])
+                            if persona:
+                                system_text = persona + "\n\n" + system_text
+                        except Exception:
+                            pass
+                            
+                        system_prompt = system_text
+                        user_prompt = user_text
+                    except Exception as pe:
+                        logger.warning("Failed to generate digest preview prompts: %s", pe)
             result = {
                 "phase": "digesting",
                 "sources_to_digest": sources,
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
                 "cached_at": self._now_utc_str(),
             }
         elif phase == "reflecting":
@@ -1559,10 +1600,19 @@ class SomaticResearchOrchestrator:
                     # Update the step result with analysis — scope to the CURRENT step_id
                     # to avoid overwriting results from the same URL in previous cycles.
                     try:
-                        if step_id:
-                            step_srcs = self.step_result_repo.get_by_step(step_id)
+                        parse_step_id = None
+                        if self.step_repo:
+                            steps = self.step_repo.get_by_task(task_id)
+                            parse_step = next((s for s in steps if s.get("step_type") == "parallel_parse" and s.get("query_group") == q_group), None)
+                            if parse_step:
+                                parse_step_id = parse_step.get("id")
+
+                        target_step_id = parse_step_id or step_id
+                        if target_step_id:
+                            step_srcs = self.step_result_repo.get_by_step(target_step_id)
                         else:
                             step_srcs = self.step_result_repo.get_by_task(task_id)
+
                         for sr in step_srcs:
                             if sr["source_url"] == source["url"]:
                                 self.step_result_repo.update_analysis(
@@ -1626,7 +1676,8 @@ class SomaticResearchOrchestrator:
         # Log prompt
         self._log_meta(task_id, "orchestrator_digest_prompt", {
             "source_url": url, "source_title": title,
-            "system_prompt": system_text[:3000], "user_prompt": user_text[:3000],
+            "system_prompt": system_text[:self._TRUNC_META_LOG],
+            "user_prompt": user_text[:self._TRUNC_META_LOG],
         }, step_id=step_id or None)
 
         fallback = {"learnings": [], "gaps": [], "followups": [], "direct_urls": [], "diffractive_notes": []}
@@ -1645,7 +1696,7 @@ class SomaticResearchOrchestrator:
             # Log response
             self._log_meta(task_id, "orchestrator_digest_response", {
                 "source_url": url,
-                "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:5000],
+                "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 "learnings_count": len(result.get("learnings", [])) if isinstance(result, dict) else 0,
             }, step_id=step_id or None)
             return result if isinstance(result, dict) else fallback

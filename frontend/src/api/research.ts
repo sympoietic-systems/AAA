@@ -181,6 +181,15 @@ export interface StepPreview {
   max_tokens?: number
   pending_queries?: string[]
   note?: string
+  urls_to_fetch?: { url: string; title: string; query_group?: number }[]
+  sources_to_digest?: { url: string; title: string; snippet?: string; query_group?: number }[]
+  findings_count?: number
+  sources_count?: number
+  sources_analyzed?: number
+  stagnation_counter?: number
+  completeness_score?: number
+  current_depth?: number
+  max_rounds?: number
 }
 
 export async function getStepPreview(taskId: string, phase: string): Promise<StepPreview> {
@@ -234,6 +243,8 @@ export interface ResearchStepResult {
   relevance_score: number
   novelty_score: number
   raw_file_path: string | null
+  error?: string
+  content_preview?: string
 }
 
 export interface ResearchStep {

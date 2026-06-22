@@ -67,11 +67,23 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
       if (parseStep) {
         const parseResults = data.results_by_step[parseStep.id] || []
         if (parseResults.length > 0) {
-          return parseResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
+          return parseResults.map(r => ({
+            url: r.source_url || "",
+            title: r.source_title || r.source_url?.slice(0, 80) || "",
+            error: r.error,
+            raw_file_path: r.raw_file_path,
+            content_preview: r.content_preview
+          }))
         }
       }
       const digestResults = data.results_by_step[selectedId] || []
-      return digestResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
+      return digestResults.map(r => ({
+        url: r.source_url || "",
+        title: r.source_title || r.source_url?.slice(0, 80) || "",
+        error: r.error,
+        raw_file_path: r.raw_file_path,
+        content_preview: r.content_preview
+      }))
     }
     return []
   }, [data, selected, selectedId])

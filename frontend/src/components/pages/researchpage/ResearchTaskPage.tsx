@@ -70,8 +70,8 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
       </div>
 
       {/* Content area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {tab === "info"     && <InfoTab task={current} orchPhase={orchPhase} onRefreshTask={refreshAll} />}
+      <div className="flex-1 min-h-0 flex flex-col px-4 pb-4 pt-1">
+        {tab === "info"     && <div className="flex-1 overflow-y-auto pr-1"><InfoTab task={current} orchPhase={orchPhase} onRefreshTask={refreshAll} /></div>}
         {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} />}
         {tab === "assets"   && <AssetsTab task={current} />}
         {tab === "branches" && <BranchesTab task={current} />}

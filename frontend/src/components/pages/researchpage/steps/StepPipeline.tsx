@@ -60,11 +60,22 @@ function PipelineRow({ label, stepId, isDone, isCurrent, isStale, isSelected, on
   onSelect: (id: string | null) => void; onDoStep: () => void; stepping: boolean
 }) {
   const sc = isStale ? "#f97316" : isDone ? "#4ade80" : isCurrent ? "#f59e0b" : "#444"
-  const canClick = (isDone || isStale) && stepId
+  const canClick = (isDone || isStale) ? !!stepId : isCurrent
+
+  const handleClick = () => {
+    if (!canClick) return
+    if (isSelected) {
+      onSelect(null)
+    } else if (stepId) {
+      onSelect(stepId)
+    } else {
+      onSelect(null)
+    }
+  }
 
   return (
     <div
-      onClick={canClick ? (() => onSelect(stepId!)) : undefined}
+      onClick={handleClick}
       className={`flex items-center gap-2 text-[10px] px-2 py-1 rounded-sm
         ${canClick ? "cursor-pointer hover:bg-[#111]" : ""}
         ${isCurrent ? "bg-[#1a1a2e]/30 border border-[#f59e0b]/20" : ""}
@@ -112,7 +123,8 @@ export const StepPipeline = memo(function StepPipeline({
     if (!data) return empty
 
     const steps = [...data.steps]
-    const plan = steps.find(s => s.step_type === "plan") ?? null
+    const plan = steps.find(s => s.step_type === "plan") ?? 
+      (orchPhase === "planning" ? { id: "", step_type: "plan", status: "pending" } as ResearchStep : null)
     const planQueryCount = getPlanQueryCount(data)
     const totalQ = planQueryCount || 1
 
@@ -247,11 +259,11 @@ export const StepPipeline = memo(function StepPipeline({
           <div className="mb-2">
             <PipelineRow
               label={`Plan${planStep.status === "completed" ? stepCountSuffix(planStep, resultsByStep) : allComplete ? "" : " (" + planStep.status + ")"}`}
-              stepId={planStep.id}
+              stepId={planStep.id || null}
               isDone={allComplete || planStep.status === "completed"}
               isCurrent={orchPhase === "planning"}
               isStale={planStep.status === "stale"}
-              isSelected={selectedId === planStep.id}
+              isSelected={planStep.id ? selectedId === planStep.id : (selectedId === null && orchPhase === "planning")}
               onSelect={onSelect}
               onDoStep={onDoStep}
               stepping={stepping}
@@ -298,8 +310,8 @@ export const StepPipeline = memo(function StepPipeline({
                           isDone={done}
                           isCurrent={isActive}
                           isStale={stale}
-                          isSelected={step.id ? selectedId === step.id : false}
-                          onSelect={step.id ? onSelect : () => {}}
+                          isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                          onSelect={onSelect}
                           onDoStep={onDoStep}
                           stepping={stepping}
                         />
@@ -329,8 +341,8 @@ export const StepPipeline = memo(function StepPipeline({
                       isDone={done}
                       isCurrent={isActive}
                       isStale={stale}
-                      isSelected={step.id ? selectedId === step.id : false}
-                      onSelect={step.id ? onSelect : () => {}}
+                      isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                      onSelect={onSelect}
                       onDoStep={onDoStep}
                       stepping={stepping}
                     />
@@ -355,8 +367,8 @@ export const StepPipeline = memo(function StepPipeline({
                       isDone={done}
                       isCurrent={isActive}
                       isStale={stale}
-                      isSelected={step.id ? selectedId === step.id : false}
-                      onSelect={step.id ? onSelect : () => {}}
+                      isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                      onSelect={onSelect}
                       onDoStep={onDoStep}
                       stepping={stepping}
                     />
@@ -387,8 +399,8 @@ export const StepPipeline = memo(function StepPipeline({
                   isDone={done}
                   isCurrent={isActive}
                   isStale={stale}
-                  isSelected={step.id ? selectedId === step.id : false}
-                  onSelect={step.id ? onSelect : () => {}}
+                  isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                  onSelect={onSelect}
                   onDoStep={onDoStep}
                   stepping={stepping}
                 />
