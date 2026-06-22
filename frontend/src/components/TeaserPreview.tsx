@@ -245,7 +245,7 @@ export const TeaserPreview = memo(function TeaserPreview({
   return (
     <div className="flex flex-col items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none overflow-hidden">
       {/* ── The Sediment Column ── */}
-      <div className="flex flex-col items-center justify-center w-full max-w-[360px] px-6"
+      <div className="flex flex-col items-center justify-center w-[30%] min-w-[280px] max-w-[640px] px-6"
         style={{ paddingTop: "25vh", paddingBottom: showTear ? "15vh" : "30vh" }}
       >
         {/* Visible sedimentation */}
