@@ -1,6 +1,6 @@
 import React, { memo, useState, useEffect, useCallback } from "react"
-import type { TaskStepsResponse } from "../../../../api/research"
-import { getTaskSteps, executeStep, rerunTask } from "../../../../api/research"
+import type { TaskStepsResponse, StepPreview } from "../../../../api/research"
+import { getTaskSteps, executeStep, rerunTask, getStepPreview, reinitializeTask } from "../../../../api/research"
 import { TwoPanelLayout } from "../shared/TwoPanelLayout"
 import { StepPipeline } from "../steps/StepPipeline"
 import { StepDetailPanel } from "../steps/StepDetailPanel"
@@ -14,24 +14,68 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
   const [data, setData] = useState<TaskStepsResponse | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stepping, setStepping] = useState(false)
+  const [preview, setPreview] = useState<StepPreview | null>(null)
+  const [prevLoading, setPrevLoading] = useState(false)
 
   const load = useCallback(() => {
     getTaskSteps(taskId).then(setData).catch(() => {})
   }, [taskId])
 
+  const fetchPreview = useCallback(() => {
+    if (!orchPhase || orchPhase === "complete" || orchPhase === "not_started") {
+      setPreview(null)
+      return
+    }
+    if (taskStatus !== "active" && taskStatus !== "queued") {
+      setPreview(null)
+      return
+    }
+    setPrevLoading(true)
+    getStepPreview(taskId, orchPhase)
+      .then(setPreview)
+      .catch(() => setPreview(null))
+      .finally(() => setPrevLoading(false))
+  }, [taskId, orchPhase, taskStatus])
+
+  const reinitAndFetch = useCallback(async () => {
+    if (!orchPhase || orchPhase === "complete" || orchPhase === "not_started") return
+    if (taskStatus !== "active" && taskStatus !== "queued") return
+    setPrevLoading(true)
+    try {
+      await reinitializeTask(taskId)
+      const p = await getStepPreview(taskId, orchPhase)
+      setPreview(p)
+    } catch { setPreview(null) }
+    finally { setPrevLoading(false) }
+  }, [taskId, orchPhase, taskStatus])
+
   useEffect(() => { load() }, [load])
 
   useEffect(() => {
+    if (selectedId) {
+      setPreview(null)
+      return
+    }
+    fetchPreview()
+  }, [selectedId, fetchPreview])
+
+  useEffect(() => {
     if (taskStatus !== "active") return
-    const t = setInterval(load, 3000)
+    const t = setInterval(() => {
+      load()
+      if (!selectedId) {
+        getStepPreview(taskId, orchPhase).then(setPreview).catch(() => {})
+      }
+    }, 3000)
     return () => clearInterval(t)
-  }, [load, taskStatus])
+  }, [load, taskStatus, selectedId, taskId, orchPhase])
 
   const doStep = async () => {
     setStepping(true)
     try { await executeStep(taskId) } catch {}
     setStepping(false)
     load()
+    fetchPreview()
     onRefreshTask?.()
   }
 
@@ -40,6 +84,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
     try { await rerunTask(taskId) } catch {}
     setStepping(false)
     load()
+    fetchPreview()
     onRefreshTask?.()
   }
 
@@ -48,6 +93,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
       left={
         <StepPipeline
           data={data}
+          preview={preview}
           orchPhase={orchPhase}
           taskStatus={taskStatus}
           selectedId={selectedId}
@@ -63,7 +109,9 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
           data={data}
           selectedId={selectedId}
           orchPhase={orchPhase}
-          taskStatus={taskStatus}
+          preview={preview}
+          prevLoading={prevLoading}
+          onReinitialize={reinitAndFetch}
         />
       }
     />

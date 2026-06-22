@@ -1,5 +1,5 @@
-import { memo, useMemo } from "react"
-import type { TaskStepsResponse, ResearchStep } from "../../../../api/research"
+import { memo, useMemo, useState } from "react"
+import type { TaskStepsResponse, ResearchStep, StepPreview } from "../../../../api/research"
 import { TerminalButton } from "../../../UI"
 import {
   STEP_TO_PHASE, STEP_LABELS, PHASE_LABELS,
@@ -7,6 +7,7 @@ import {
 
 interface StepPipelineProps {
   data: TaskStepsResponse | null
+  preview: StepPreview | null
   orchPhase: string
   taskStatus: string
   selectedId: string | null
@@ -98,7 +99,7 @@ function PipelineRow({ label, stepId, isDone, isCurrent, isStale, isSelected, on
 }
 
 export const StepPipeline = memo(function StepPipeline({
-  data, orchPhase, taskStatus, selectedId, stepping,
+  data, preview, orchPhase, taskStatus, selectedId, stepping,
   onSelect, onDoStep, onDoRerun,
 }: StepPipelineProps) {
   const allComplete = taskStatus === "completed" && orchPhase === "complete"
@@ -170,6 +171,24 @@ export const StepPipeline = memo(function StepPipeline({
       }
     }
 
+    // Calculate active query count from preview if available
+    let previewQueryCount = 0
+    if (preview) {
+      if (preview.pending_queries && preview.pending_queries.length > 0) {
+        previewQueryCount = preview.pending_queries.length
+      } else if (preview.urls_to_fetch && preview.urls_to_fetch.length > 0) {
+        const groups = preview.urls_to_fetch.map(u => u.query_group).filter(Boolean) as number[]
+        if (groups.length > 0) {
+          previewQueryCount = Math.max(...groups)
+        }
+      } else if (preview.sources_to_digest && preview.sources_to_digest.length > 0) {
+        const groups = preview.sources_to_digest.map(s => s.query_group).filter(Boolean) as number[]
+        if (groups.length > 0) {
+          previewQueryCount = Math.max(...groups)
+        }
+      }
+    }
+
     // Build cycles list
     const cyclesList = []
     for (let d = 0; d <= actDepth; d++) {
@@ -177,7 +196,7 @@ export const StepPipeline = memo(function StepPipeline({
       
       // Determine how many query groups to display for this depth
       const queryGroupsInDepth = Array.from(new Set(depthSteps.map(s => s.query_group).filter(Boolean))) as number[]
-      const depthQCount = queryGroupsInDepth.length || (d === actDepth ? totalQ : 1)
+      const depthQCount = queryGroupsInDepth.length || (d === actDepth ? (previewQueryCount || totalQ) : 1)
       
       // Get query text maps if any
       const queryTexts: Record<number, string> = {}
@@ -244,17 +263,33 @@ export const StepPipeline = memo(function StepPipeline({
       planQueries, 
       activeDepth: actDepth 
     }
-  }, [data, orchPhase])
+  }, [data, orchPhase, preview])
 
   // Results by step for count labels
   const resultsByStep = (data?.results_by_step || {}) as Record<string, unknown[]>
+
+  const [collapsedCycles, setCollapsedCycles] = useState<Record<number, boolean>>({})
+
+  const isCollapsed = (depth: number) => {
+    if (collapsedCycles[depth] !== undefined) {
+      return collapsedCycles[depth]
+    }
+    return depth !== activeDepth
+  }
+
+  const toggleCycle = (depth: number) => {
+    setCollapsedCycles((prev) => ({
+      ...prev,
+      [depth]: !isCollapsed(depth),
+    }))
+  }
 
   return (
     <div className="flex-1 overflow-y-auto pr-1 space-y-3">
       <div>
         <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1.5">[ Pipeline ]</div>
 
-        {/* Plan */}
+        {/* Planning step */}
         {planStep && (
           <div className="mb-2">
             <PipelineRow
@@ -274,37 +309,88 @@ export const StepPipeline = memo(function StepPipeline({
         {/* Cycles list */}
         {cycles.map((cycle) => {
           const isCycleCurrent = cycle.depth === activeDepth
+          const collapsed = isCollapsed(cycle.depth)
           return (
             <div key={cycle.depth} className="border border-[#1a1a1a] rounded-sm p-1.5 mb-2 bg-[#0d0d0d]/30">
-              <div className="text-[#888] font-mono text-[9px] uppercase tracking-wider mb-1.5 border-b border-[#1a1a1a] pb-0.5">
-                Cycle {cycle.depth + 1} (Depth {cycle.depth})
+              <div
+                onClick={() => toggleCycle(cycle.depth)}
+                className="text-[#888] font-mono text-[9px] uppercase tracking-wider mb-1.5 border-b border-[#1a1a1a] pb-0.5 flex justify-between items-center cursor-pointer select-none hover:text-[#bbb]"
+              >
+                <span>Cycle {cycle.depth + 1} (Depth {cycle.depth})</span>
+                <span className="text-[#555] text-[8px] font-mono shrink-0 select-none">
+                  {collapsed ? "[+ expand]" : "[- collapse]"}
+                </span>
               </div>
 
-              {/* Query groups inside this cycle */}
-              {cycle.groups.map((group) => {
-                const qText = group.queryIndex <= planQueries.length && cycle.depth === 0
-                  ? planQueries[group.queryIndex - 1]
-                  : cycle.queryTexts[group.queryIndex] || ""
-                const qDisplay = qText ? `"${qText.slice(0, 60)}${qText.length > 60 ? "…" : ""}"` : ""
-                const queryLabel = `Q${group.queryIndex}/${cycle.groups.length}${qDisplay ? `: ${qDisplay}` : ""}`
-                return (
-                  <div key={group.queryIndex} className="mb-2 pl-1.5 border-l border-[#1a1a1a]">
-                    <div className="text-[#555] text-[8px] tracking-wider mb-0.5">{queryLabel}</div>
-                    {group.steps.map((step) => {
-                      const baseLabel = STEP_LABELS[step.step_type] || step.step_type
+              {!collapsed && (
+                <>
+                  {/* Query groups inside this cycle */}
+                  {cycle.groups.map((group) => {
+                    let qText = ""
+                    if (group.queryIndex <= planQueries.length && cycle.depth === 0) {
+                      qText = planQueries[group.queryIndex - 1]
+                    } else {
+                      qText = cycle.queryTexts[group.queryIndex] || ""
+                    }
+
+                    if (!qText && cycle.depth === activeDepth && preview && preview.pending_queries) {
+                      const pq = preview.pending_queries[group.queryIndex - 1]
+                      if (pq) {
+                        qText = pq
+                      }
+                    }
+
+                    const qDisplay = qText ? `"${qText.slice(0, 60)}${qText.length > 60 ? "…" : ""}"` : ""
+                    const queryLabel = `Q${group.queryIndex}/${cycle.groups.length}${qDisplay ? `: ${qDisplay}` : ""}`
+                    return (
+                      <div key={group.queryIndex} className="mb-2 pl-1.5 border-l border-[#1a1a1a]">
+                        <div className="text-[#555] text-[8px] tracking-wider mb-0.5">{queryLabel}</div>
+                        {group.steps.map((step) => {
+                          const baseLabel = STEP_LABELS[step.step_type] || step.step_type
+                          const stale = step.status === "stale"
+                          const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
+                          const pending = step.id ? "" : " —"
+                          const done = allComplete || step.status === "completed" || stale
+                          // Active: first non-completed step matching orchPhase in the active group
+                          const isActive = !allComplete && hasPipeline
+                            && isCycleCurrent
+                            && group.queryIndex - 1 === activeGroupIdx
+                            && STEP_TO_PHASE[step.step_type] === orchPhase
+                            && step.status !== "completed"
+                          return (
+                            <PipelineRow
+                              key={step.id || `${cycle.depth}-${group.queryIndex}-${step.step_type}`}
+                              label={baseLabel + suffix + pending}
+                              stepId={step.id || null}
+                              isDone={done}
+                              isCurrent={isActive}
+                              isStale={stale}
+                              isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                              onSelect={onSelect}
+                              onDoStep={onDoStep}
+                              stepping={stepping}
+                            />
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+
+                  {/* Cycle final steps: Reflect & Evaluate */}
+                  <div className="pl-1.5 pt-1.5 border-t border-[#1a1a1a]/50 mt-1 space-y-1">
+                    {/* Reflect */}
+                    {(() => {
+                      const step = cycle.reflectStep
+                      const phase = "reflecting"
+                      const baseLabel = PHASE_LABELS[phase] || step.step_type
                       const stale = step.status === "stale"
                       const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
                       const pending = step.id ? "" : " —"
                       const done = allComplete || step.status === "completed" || stale
-                      // Active: first non-completed step matching orchPhase in the active group
-                      const isActive = !allComplete && hasPipeline
-                        && isCycleCurrent
-                        && group.queryIndex - 1 === activeGroupIdx
-                        && STEP_TO_PHASE[step.step_type] === orchPhase
-                        && step.status !== "completed"
+                      const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed"
                       return (
                         <PipelineRow
-                          key={step.id || `${cycle.depth}-${group.queryIndex}-${step.step_type}`}
+                          key={step.id || `${cycle.depth}-reflect`}
                           label={baseLabel + suffix + pending}
                           stepId={step.id || null}
                           isDone={done}
@@ -316,65 +402,36 @@ export const StepPipeline = memo(function StepPipeline({
                           stepping={stepping}
                         />
                       )
-                    })}
+                    })()}
+
+                    {/* Evaluate */}
+                    {(() => {
+                      const step = cycle.evaluateStep
+                      const phase = "evaluating"
+                      const baseLabel = PHASE_LABELS[phase] || step.step_type
+                      const stale = step.status === "stale"
+                      const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
+                      const pending = step.id ? "" : " —"
+                      const done = allComplete || step.status === "completed" || stale
+                      const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed"
+                      return (
+                        <PipelineRow
+                          key={step.id || `${cycle.depth}-evaluate`}
+                          label={baseLabel + suffix + pending}
+                          stepId={step.id || null}
+                          isDone={done}
+                          isCurrent={isActive}
+                          isStale={stale}
+                          isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                          onSelect={onSelect}
+                          onDoStep={onDoStep}
+                          stepping={stepping}
+                        />
+                      )
+                    })()}
                   </div>
-                )
-              })}
-
-              {/* Cycle final steps: Reflect & Evaluate */}
-              <div className="pl-1.5 pt-1.5 border-t border-[#1a1a1a]/50 mt-1 space-y-1">
-                {/* Reflect */}
-                {(() => {
-                  const step = cycle.reflectStep
-                  const phase = "reflecting"
-                  const baseLabel = PHASE_LABELS[phase] || step.step_type
-                  const stale = step.status === "stale"
-                  const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
-                  const pending = step.id ? "" : " —"
-                  const done = allComplete || step.status === "completed" || stale
-                  const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed"
-                  return (
-                    <PipelineRow
-                      key={step.id || `${cycle.depth}-reflect`}
-                      label={baseLabel + suffix + pending}
-                      stepId={step.id || null}
-                      isDone={done}
-                      isCurrent={isActive}
-                      isStale={stale}
-                      isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
-                      onSelect={onSelect}
-                      onDoStep={onDoStep}
-                      stepping={stepping}
-                    />
-                  )
-                })()}
-
-                {/* Evaluate */}
-                {(() => {
-                  const step = cycle.evaluateStep
-                  const phase = "evaluating"
-                  const baseLabel = PHASE_LABELS[phase] || step.step_type
-                  const stale = step.status === "stale"
-                  const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
-                  const pending = step.id ? "" : " —"
-                  const done = allComplete || step.status === "completed" || stale
-                  const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed"
-                  return (
-                    <PipelineRow
-                      key={step.id || `${cycle.depth}-evaluate`}
-                      label={baseLabel + suffix + pending}
-                      stepId={step.id || null}
-                      isDone={done}
-                      isCurrent={isActive}
-                      isStale={stale}
-                      isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
-                      onSelect={onSelect}
-                      onDoStep={onDoStep}
-                      stepping={stepping}
-                    />
-                  )
-                })()}
-              </div>
+                </>
+              )}
             </div>
           )
         })}

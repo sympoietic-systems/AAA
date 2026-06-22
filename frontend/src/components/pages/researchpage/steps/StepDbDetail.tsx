@@ -3,7 +3,7 @@ type DetailTab = "input" | "result" | "log"
 export const DETAIL_TABS: DetailTab[] = ["input", "result", "log"]
 
 import { memo, useState, useEffect, useMemo } from "react"
-import type { MetaLogResponse, TaskStepsResponse, StepPreview } from "../../../../api/research"
+import type { MetaLogResponse, TaskStepsResponse, StepPreview, ResearchStep } from "../../../../api/research"
 import { getTaskMetaLog, getStepPreview, executeStep, reinitializeTask } from "../../../../api/research"
 import { TerminalButton } from "../../../UI"
 import { STEP_TO_PHASE, STEP_LABELS } from "../constants/taskConstants"
@@ -17,6 +17,17 @@ interface DbStepDetailProps {
   selectedId: string
 }
 
+const getStepDepth = (step: ResearchStep): number => {
+  if (step.step_type === "plan") return 0
+  if (!step.step_data) return 0
+  try {
+    const parsed = JSON.parse(step.step_data)
+    return typeof parsed.depth === "number" ? parsed.depth : 0
+  } catch {
+    return 0
+  }
+}
+
 export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: DbStepDetailProps) {
   const steps = data ? [...data.steps].reverse() : []
   const selected = steps.find(s => s.id === selectedId)
@@ -26,20 +37,21 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   // Fallback to find search/digest results for a query_group if the step itself has no saved results (older runs or digest updates stored under parse step)
   const resolvedSearchResults = useMemo(() => {
     if (!data || !selected) return []
+    const selectedDepth = getStepDepth(selected)
     if (selected.step_type === "search") {
       if (selectedResults.length > 0) return selectedResults
-      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group)
+      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group && getStepDepth(s) === selectedDepth)
       if (parseStep && data.results_by_step[parseStep.id]?.length > 0) {
         return data.results_by_step[parseStep.id]
       }
-      const digestStep = data.steps.find(s => s.step_type === "digest" && s.query_group === selected.query_group)
+      const digestStep = data.steps.find(s => s.step_type === "digest" && s.query_group === selected.query_group && getStepDepth(s) === selectedDepth)
       if (digestStep && data.results_by_step[digestStep.id]?.length > 0) {
         return data.results_by_step[digestStep.id]
       }
     }
     if (selected.step_type === "digest") {
       if (selectedResults.length > 0) return selectedResults
-      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group)
+      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group && getStepDepth(s) === selectedDepth)
       if (parseStep && data.results_by_step[parseStep.id]?.length > 0) {
         return data.results_by_step[parseStep.id]
       }
@@ -51,8 +63,9 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   // For digest: the parse step's results are the pages to digest
   const parentInputUrls = useMemo(() => {
     if (!data || !selected) return []
+    const selectedDepth = getStepDepth(selected)
     if (selected.step_type === "parallel_parse") {
-      const searchStep = data.steps.find(s => s.step_type === "search" && s.query_group === selected.query_group)
+      const searchStep = data.steps.find(s => s.step_type === "search" && s.query_group === selected.query_group && getStepDepth(s) === selectedDepth)
       if (searchStep) {
         const searchResults = data.results_by_step[searchStep.id] || []
         if (searchResults.length > 0) {
@@ -63,7 +76,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
       return parseResults.map(r => ({ url: r.source_url || "", title: r.source_title || r.source_url?.slice(0, 80) || "" }))
     }
     if (selected.step_type === "digest") {
-      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group)
+      const parseStep = data.steps.find(s => s.step_type === "parallel_parse" && s.query_group === selected.query_group && getStepDepth(s) === selectedDepth)
       if (parseStep) {
         const parseResults = data.results_by_step[parseStep.id] || []
         if (parseResults.length > 0) {
