@@ -12,6 +12,10 @@ interface StepResultTabProps {
     answer: string
     confidence: number
     learnings: string[]
+    key_insights?: string[]
+    remaining_gaps?: string[]
+    next_queries?: string[]
+    next_direct_urls?: string[]
   }
   responseEntries: any[]
   inputEntries?: any[]
@@ -344,16 +348,74 @@ export const StepResultTab = memo(function StepResultTab({
         <div className="text-[#444] italic text-[9px] border-t border-[#1a1a1a] pt-2">no digested results</div>
       )}
 
-      {/* ── Reflect: completeness ── */}
-      {selected.step_type === "reflect" && parsedResult.completeness > 0 && (
-        <div className="border-t border-[#1a1a1a] pt-2">
-          <div className="text-[#555] text-[8px]">completeness score:</div>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="flex-1 h-2 bg-[#1a1a1a] rounded-sm overflow-hidden">
-              <div className="h-full bg-[#4ade80] rounded-sm" style={{width: `${Math.round(parsedResult.completeness*100)}%`}} />
+      {/* ── Reflect: completeness, insights, gaps, next actions ── */}
+      {selected.step_type === "reflect" && (
+        <div className="border-t border-[#1a1a1a] pt-2 space-y-3">
+          {parsedResult.completeness > 0 && (
+            <div>
+              <div className="text-[#555] text-[8px]">completeness score:</div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex-1 h-2 bg-[#1a1a1a] rounded-sm overflow-hidden">
+                  <div className="h-full bg-[#4ade80] rounded-sm" style={{width: `${Math.round(parsedResult.completeness*100)}%`}} />
+                </div>
+                <span className="text-[#4ade80] text-[9px] font-mono">{Math.round(parsedResult.completeness*100)}%</span>
+              </div>
             </div>
-            <span className="text-[#4ade80] text-[9px] font-mono">{Math.round(parsedResult.completeness*100)}%</span>
-          </div>
+          )}
+
+          {parsedResult.key_insights && parsedResult.key_insights.length > 0 && (
+            <div>
+              <div className="text-[#555] text-[8px] mb-1 uppercase font-mono">key insights ({parsedResult.key_insights.length})</div>
+              <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                {parsedResult.key_insights.map((insight, i) => (
+                  <div key={i} className="text-[#4ade80] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                    ✓ {insight}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {parsedResult.remaining_gaps && parsedResult.remaining_gaps.length > 0 && (
+            <div>
+              <div className="text-[#555] text-[8px] mb-1 uppercase font-mono">remaining gaps ({parsedResult.remaining_gaps.length})</div>
+              <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                {parsedResult.remaining_gaps.map((gap, i) => (
+                  <div key={i} className="text-[#f59e0b] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                    ◇ {gap}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {parsedResult.next_queries && parsedResult.next_queries.length > 0 && (
+            <div>
+              <div className="text-[#555] text-[8px] mb-1 uppercase font-mono">planned next search queries ({parsedResult.next_queries.length})</div>
+              <div className="space-y-0.5 pl-2">
+                {parsedResult.next_queries.map((q, i) => (
+                  <div key={i} className="text-[#94a3b8] text-[9px]">· {q}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {parsedResult.next_direct_urls && parsedResult.next_direct_urls.length > 0 && (
+            <div>
+              <div className="text-[#555] text-[8px] mb-1 uppercase font-mono">planned direct URLs to parse ({parsedResult.next_direct_urls.length})</div>
+              <div className="space-y-0.5 pl-2">
+                {parsedResult.next_direct_urls.map((u, i) => (
+                  <div key={i} className="text-[#94a3b8] text-[9px] leading-relaxed">
+                    <span className="text-[#555]">{i+1}.</span>{" "}
+                    <a href={u} target="_blank" rel="noopener noreferrer"
+                      className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
+                      {u}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

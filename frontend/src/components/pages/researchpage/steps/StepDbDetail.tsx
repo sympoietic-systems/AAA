@@ -155,6 +155,10 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           if (parsed.learnings) r.learnings.push(...parsed.learnings)
         } else if (e.event_type.includes("reflect_response")) {
           r.completeness = parsed.completeness_score || parsed.completeness || 0
+          r.key_insights = parsed.key_insights || []
+          r.remaining_gaps = parsed.remaining_gaps || []
+          r.next_queries = parsed.next_queries || []
+          r.next_direct_urls = parsed.next_direct_urls || []
         } else if (e.event_type === "orchestrator_synthesize_response") {
           r.answer = parsed.answer || ""
           r.confidence = parsed.confidence || 0

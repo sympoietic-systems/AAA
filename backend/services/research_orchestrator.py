@@ -487,12 +487,32 @@ class SomaticResearchOrchestrator:
             result = await self._preview_plan_inputs(task)
         elif phase == "searching":
             if s and s.get("plan"):
-                queries = s["plan"].get("search_queries", [s["objective"]])
+                raw_queries = s["plan"].get("search_queries", [s["objective"]])
                 if s["current_depth"] > 0 and s.get("last_reflection", {}).get("next_queries"):
-                    queries = s["last_reflection"]["next_queries"]
+                    raw_queries = s["last_reflection"]["next_queries"]
+                
+                search_queries = []
+                direct_urls = []
+
+                if s.get("last_reflection") and isinstance(s["last_reflection"], dict):
+                    for u in s["last_reflection"].get("next_direct_urls", []):
+                        if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://")):
+                            if u not in direct_urls:
+                                direct_urls.append(u)
+
+                for q in raw_queries:
+                    if isinstance(q, str) and (q.startswith("http://") or q.startswith("https://")):
+                        if q not in direct_urls:
+                            direct_urls.append(q)
+                    else:
+                        search_queries.append(q)
+
+                direct_urls = direct_urls[:5]
+                pending_queries = search_queries + (["Direct URL Parse Pointers"] if direct_urls else [])
+
                 result: dict = {
                     "phase": "searching",
-                    "pending_queries": queries,
+                    "pending_queries": pending_queries,
                     "query_index": s.get("query_index", 0),
                     "top_n": self.default_top_n,
                     "cached_at": self._now_utc_str(),
@@ -942,38 +962,65 @@ class SomaticResearchOrchestrator:
 
     async def _step_search(self, task_id: str, s: dict) -> dict:
         """Web search for all queries of the current depth in parallel. Advance to parsing."""
-        queries = s["plan"].get("search_queries", [s["objective"]])
+        raw_queries = s["plan"].get("search_queries", [s["objective"]])
         # Use reflection-suggested queries if available
         if s["current_depth"] > 0 and s["last_reflection"].get("next_queries"):
-            queries = s["last_reflection"]["next_queries"]
+            raw_queries = s["last_reflection"]["next_queries"]
+
+        search_queries = []
+        direct_urls = []
+
+        # Pull from next_direct_urls if present
+        if s.get("last_reflection") and isinstance(s["last_reflection"], dict):
+            for u in s["last_reflection"].get("next_direct_urls", []):
+                if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://")):
+                    if u not in direct_urls:
+                        direct_urls.append(u)
+
+        for q in raw_queries:
+            if isinstance(q, str) and (q.startswith("http://") or q.startswith("https://")):
+                if q not in direct_urls:
+                    direct_urls.append(q)
+            else:
+                search_queries.append(q)
+
+        # Limit direct URLs to 5 max
+        direct_urls = direct_urls[:5]
+        pending_queries = search_queries + (["Direct URL Parse Pointers"] if direct_urls else [])
 
         # Cache search inputs for re-use on rerun
         cache = self._load_cache(task_id)
         cache["searching"] = {
             "phase": "searching",
-            "pending_queries": queries,
+            "pending_queries": pending_queries,
             "query_index": 0,
             "top_n": self.default_top_n,
             "cached_at": self._now_utc_str(),
         }
         self._save_cache(task_id, cache)
 
-        logger.info("Step: SEARCHING %d queries in parallel — %s", len(queries), self._log_context(task_id, "searching"))
+        logger.info("Step: SEARCHING %d queries in parallel — %s", len(pending_queries), self._log_context(task_id, "searching"))
 
-        # Create search steps for all query groups in the DB
+        # Create search steps for search queries in the DB
         group_steps = {}
-        for i, q in enumerate(queries):
+        for i, q in enumerate(search_queries):
             q_group = i + 1
             step_id = self._create_or_update_step(s, task_id, "search",
                 query_group=q_group, query_text=q[:300])
             group_steps[q_group] = step_id
 
+        # Setup query group for direct URLs if present
+        direct_group = len(search_queries) + 1 if direct_urls else None
+        if direct_group:
+            step_id = self._create_or_update_step(s, task_id, "search",
+                query_group=direct_group, query_text="Direct URL Parse Pointers")
+            group_steps[direct_group] = step_id
+
         # Run DDG searches in parallel
-        tasks = [web_search(q, self.default_top_n, self._state.config) for q in queries]
+        tasks = [web_search(q, self.default_top_n, self._state.config) for q in search_queries]
         search_results_list = await asyncio.gather(*tasks)
 
         # Merge results, deduping by URL but keeping track of query_group
-        seen_urls = set()
         search_results = []
         
         for i, results in enumerate(search_results_list):
@@ -982,7 +1029,7 @@ class SomaticResearchOrchestrator:
             
             # Log meta and update individual query step
             self._log_meta(task_id, "orchestrator_search", {
-                "query": queries[i],
+                "query": search_queries[i],
                 "results_count": len(results),
             }, step_id=step_id)
             
@@ -1016,6 +1063,39 @@ class SomaticResearchOrchestrator:
                     r_copy["query_group"] = q_group
                     search_results.append(r_copy)
 
+        # Append direct URLs to search results so they bypass search and get parsed directly
+        if direct_group and direct_urls:
+            step_id = group_steps[direct_group]
+            self._log_meta(task_id, "orchestrator_search", {
+                "query": "Direct URL Parse Pointers",
+                "results_count": len(direct_urls),
+                "urls": direct_urls,
+            }, step_id=step_id)
+            
+            self.step_repo.update(step_id, status="completed",
+                result_summary=f"{len(direct_urls)} direct URLs queued")
+            
+            for url in direct_urls:
+                if self.step_result_repo:
+                    try:
+                        self.step_result_repo.create({
+                            "id": str(uuid.uuid4()),
+                            "step_id": step_id,
+                            "task_id": task_id,
+                            "source_url": url,
+                            "source_title": url[:100],
+                            "relevance_score": 1.0,
+                            "novelty_score": 1.0,
+                        })
+                    except Exception as e:
+                        logger.warning("Failed to save direct URL result: %s", e)
+                
+                search_results.append({
+                    "url": url,
+                    "title": url[:100],
+                    "query_group": direct_group,
+                })
+
         s["search_results_cache"] = search_results
         # Clear the previous cycle's parsed/digest caches so Cycle N+1
         # never re-digests Cycle N's sources.
@@ -1027,7 +1107,7 @@ class SomaticResearchOrchestrator:
             s["phase"] = "reflecting"
 
         return {
-            "queries": queries,
+            "queries": pending_queries,
             "results_count": len(search_results),
             "urls": [{"url": r.get("url", ""), "title": r.get("title", r.get("url", "")), "query_group": r.get("query_group")} for r in search_results],
         }
@@ -1861,7 +1941,7 @@ class SomaticResearchOrchestrator:
             if llm:
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True,
-                    fallback_value={"completeness_score": 0.5, "next_queries": []},
+                    fallback_value={"completeness_score": 0.5, "next_queries": [], "next_direct_urls": []},
                     temperature=prompt_data.get("temperature", 0.5),
                     max_tokens=prompt_data.get("max_tokens", 2048))
                 result = resp.get("json_data") or resp.get("content") or {}
@@ -1878,7 +1958,7 @@ class SomaticResearchOrchestrator:
         except Exception as e:
             logger.warning("Reflection failed: %s", e)
 
-        return latest_result or {"completeness_score": 0.3, "next_queries": [], "reflection": "No reflection"}
+        return latest_result or {"completeness_score": 0.3, "next_queries": [], "next_direct_urls": [], "reflection": "No reflection"}
 
     def _tool_evaluate(self, depth, max_depth, sources, reflection, stagnation) -> tuple[bool, str]:
         """Check hard constraints + LLM satisfaction. Returns (should_stop, reason)."""

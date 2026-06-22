@@ -19,7 +19,8 @@ system: |
     "completeness_score": 0.0-1.0,
     "key_insights": ["insight 1", "insight 2"],
     "remaining_gaps": ["gap 1", "gap 2"],
-    "next_queries": ["specific search query 1", "specific search query 2"]
+    "next_queries": ["specific search query 1", "specific search query 2"],
+    "next_direct_urls": ["url 1", "url 2"]
   }
 
 user: |
@@ -48,9 +49,11 @@ user: |
   {previous_reflection}
 
   Using all of the above — findings, follow-up pointers, identified gaps, and direct URLs — reflect on
-  the current state of this research and generate precise next search queries that address what is
-  still missing. If direct URLs were found in sources, you may include them verbatim in next_queries
-  (they will be fetched directly rather than searched).
+  the current state of this research and generate precise next search queries and direct URLs to parse.
+  
+  If there are specific URLs in the "Direct URLs found in sources" list or within the findings/gaps that 
+  are highly relevant and worth reading next, place them (up to 5 max) in the "next_direct_urls" list so
+  they can be fetched directly. Place search-engine terms in "next_queries".
 
 
 response_format: "json"
