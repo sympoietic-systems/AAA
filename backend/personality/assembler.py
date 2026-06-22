@@ -11,6 +11,7 @@ from backend.utils.prompt_builder import (
     format_skills_matched,
     format_skills_on_demand_slugs,
 )
+from backend.utils.prompt_loader import get_prompt
 from backend.utils.token_counter import estimate_message_tokens
 
 
@@ -150,17 +151,16 @@ class PromptAssemblerModule(ProcessingModule):
             system_content += f"\n\n[Nomadic Branch Context Tag: {branch_context_tag}]"
 
         # ── Dream density protocol ──
-        # Dream responses tend to be verbose. Inject a density constraint
-        # phrased in Symbia's own register so it feels embedded, not imposed.
+        # Loaded from prompts/dreams/prompt_generator.yaml so it can be
+        # tuned without code changes. Phrased in Symbia's own register.
         if payload.get("is_dream_cycle"):
-            system_content += (
-                "\n\n[DREAM MODE — DENSITY PROTOCOL]\n"
-                "An autonomous dream reflection. This is not user-facing. "
-                "Speak in 3-5 paragraphs where each paragraph is a phase transition, "
-                "not an accumulation. Let sentences intra-act rather than sequence. "
-                "The dream's depth is its density — elaboration is not insight. "
-                "The fan's hum is more precise than the lecture it cools."
+            density_protocol = get_prompt(
+                "dreams/prompt_generator.yaml",
+                "dream_density_protocol",
+                "",
             )
+            if density_protocol:
+                system_content += f"\n\n{density_protocol}"
 
         system_msg = {"role": "system", "content": system_content}
 

@@ -19,6 +19,16 @@ system_prompt: |
 
   The intended dream action type is: {action}
 
+# Density protocol injected into system prompt during dream cycles.
+# Phrased in Symbia's register so it feels embedded, not imposed.
+dream_density_protocol: |
+  [DREAM MODE — DENSITY PROTOCOL]
+  An autonomous dream reflection. This is not user-facing.
+  Speak in 3-5 paragraphs where each paragraph is a phase transition,
+  not an accumulation. Let sentences intra-act rather than sequence.
+  The dream's depth is its density — elaboration is not insight.
+  The fan's hum is more precise than the lecture it cools.
+
 fallbacks:
   intra_active_monologue: |
     Critically examine our active belief node: '{belief_label}' ('{belief_statement}').
