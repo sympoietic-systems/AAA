@@ -43,6 +43,8 @@ const STAGE_COLORS: Record<string, string> = {
   ghost: "#a78bfa",
 }
 
+const INHALE_COLORS = ["#f59e0b", "#a78bfa"]  // amber, ghost-purple
+
 // Opacity cascade: newest → oldest (0-7 active, 8+ compressed ghosts)
 const OPACITY_CASCADE = [1.0, 0.6, 0.35, 0.20, 0.12, 0.08, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03]
 const FONT_SIZE_CASCADE = [12, 11.5, 11, 10.5, 10, 9.5, 9, 9, 7.5, 7, 7, 7] // px
@@ -55,12 +57,9 @@ const MAX_TOTAL = 30  // remove oldest beyond this to prevent DOM bloat
 // held silence: 25-40s → nothing new (15%)
 // First 3 breaths always exhale (warmup — no silence at the start)
 
-let breathCount = 0
-
-function drawBreath(): { kind: "exhale" | "inhale" | "silence"; delay: number } {
-  breathCount++
+function drawBreath(count: number): { kind: "exhale" | "inhale" | "silence"; delay: number } {
   // First 3 breaths: always exhale so the column visibly forms
-  if (breathCount <= 3) return { kind: "exhale", delay: 6000 + Math.random() * 4000 }
+  if (count <= 3) return { kind: "exhale", delay: 6000 + Math.random() * 4000 }
 
   const r = Math.random()
   if (r < 0.60) return { kind: "exhale", delay: 12000 + Math.random() * 6000 }
@@ -121,6 +120,7 @@ export const TeaserPreview = memo(function TeaserPreview({
 }: Props) {
   // ── Sediment stack ──
   const [stack, setStack] = useState<VisibleLine[]>([])
+  const breathCountRef = useRef(0)
 
   // ── Password ──
   const [password, setPassword] = useState("")
@@ -147,7 +147,8 @@ export const TeaserPreview = memo(function TeaserPreview({
     const cycle = () => {
       if (!alive.current) return
 
-      const breath = drawBreath()
+      breathCountRef.current += 1
+      const breath = drawBreath(breathCountRef.current)
 
       if (breath.kind === "silence") {
         // Held silence — nothing new. Just wait.
@@ -222,7 +223,7 @@ export const TeaserPreview = memo(function TeaserPreview({
     const color = vl.line.stage
       ? STAGE_COLORS[vl.line.stage] ?? "#555555"
       : vl.isInhale
-        ? (Math.random() > 0.5 ? "#f59e0b" : "#a78bfa")
+        ? INHALE_COLORS[vl.id % 2]  // stable per line, not random on every render
         : "#555555"
 
     return {

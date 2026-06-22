@@ -1,10 +1,12 @@
 """Public preview endpoint — returns one random text line for the locked-page
-artwork "The Slip". No auth required. No pool — each request picks one random
+artwork. No auth required. No pool — each request picks one random
 category and fetches one live item from the database."""
 
+import logging
 import random
 from fastapi import APIRouter, Request
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 SNIPPET_LENGTH = 300
@@ -60,8 +62,8 @@ def _pick_one(state) -> dict:
                     if b.lifecycle_stage == "ghost":
                         line["scar"] = True
                     return {"line": line}
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("preview: failed to fetch belief: %s", e)
 
     # ── 2. Memory node (30% chance) ──
     if random.random() < 0.45:  # 0.45 * (1-0.40) ≈ 27% effective
@@ -87,8 +89,8 @@ def _pick_one(state) -> dict:
                             "intensity": float(n.get("intensity", 0.5)),
                             "blur": random.random() < 0.5,
                         }}
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("preview: failed to fetch memory node: %s", e)
 
     # ── 3. Dream trace (20% chance) ──
     if random.random() < 0.55:  # 0.55 * (1-0.40)*(1-0.45) ≈ 18% effective
@@ -115,8 +117,8 @@ def _pick_one(state) -> dict:
                         line["obfuscation_ratio"] = round(random.uniform(0.15, 0.55), 2)
                         line["obfuscation_offset"] = random.choice(["start", "middle", "end", "scatter"])
                     return {"line": line}
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("preview: failed to fetch dream trace: %s", e)
 
     # ── 4. Scar-fold (fallback — always available) ──
     scar_text = random.choice(SCAR_FOLD_POOL)
@@ -136,8 +138,8 @@ def _pick_one(state) -> dict:
                             scars.append(st.strip()[:200])
                 if scars:
                     scar_text = random.choice(scars)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("preview: failed to fetch scar-fold from memory: %s", e)
     return {"line": {
         "text": scar_text,
         "type": "scar_fold",
