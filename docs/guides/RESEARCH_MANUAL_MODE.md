@@ -27,18 +27,42 @@ research_orchestrator:
 
 The pipeline progresses through 7 phases in order:
 
-| # | Phase        | What it does                                    | DB Step Type     |
-|---|-------------|-------------------------------------------------|------------------|
-| 1 | Planning     | Generate research plan from objective via LLM   | `plan`           |
-| 2 | Searching    | Web search (DuckDuckGo) for query               | `search`         |
-| 3 | Parsing      | Fetch all result URLs in parallel               | `parallel_parse` |
-| 4 | Digesting    | Analyze each source via LLM (node_analyzer)     | `digest`         |
-| 5 | Reflecting   | Multi-round LLM reflection on findings          | `reflect`        |
-| 6 | Evaluating   | Hard checks + decision (stop or continue)       | `evaluate`       |
-| 7 | Synthesizing | Final synthesis + write result                  | `synthesize`     |
+| # | Phase           | What it does                                                      | DB Step Type     |
+|---|----------------|-------------------------------------------------------------------|------------------|
+| 1 | Planning        | Generate research plan from objective via LLM                     | `plan`           |
+| 2 | Searching       | Web search (DuckDuckGo) for query                                 | `search`         |
+| 3 | Parsing         | Fetch all result URLs in parallel                                 | `parallel_parse` |
+| 4 | Digesting       | Analyze each source via LLM (node_analyzer)                       | `digest`         |
+| 5 | Consolidating   | Reflect on all findings; generate next queries and direct URLs    | `reflect`        |
+| 6 | Evaluating      | Hard checks + decision (stop or continue)                         | `evaluate`       |
+| 7 | Synthesizing    | Final synthesis + write result                                    | `synthesize`     |
 
 After Evaluating, if completeness is insufficient and depth remains,
 the pipeline loops back to Searching for the next depth iteration.
+
+> **Phase 5 — Consolidating** (previously called "Reflecting"):
+> The DB step type remains `reflect` for backwards compatibility, but the UI
+> labels it as **Consolidate**. The phase now receives a richer prompt including:
+> - All accumulated findings (all cycles)
+> - Previously visited + blocked/failed URLs (deduplicated)
+> - Per-source gaps, follow-up questions, and direct URLs from the Digest phase
+> - Previous reflection output (if any)
+>
+> The LLM returns a JSON object with:
+> ```json
+> {
+>   "reflection": "free-text analysis",
+>   "completeness_score": 0.0–1.0,
+>   "key_insights": ["..."],
+>   "remaining_gaps": ["..."],
+>   "next_queries": ["search engine query 1", "..."],
+>   "next_direct_urls": ["https://example.com/article", "..."]
+> }
+> ```
+> `next_queries` feeds the next Searching cycle.
+> `next_direct_urls` (up to 5) are fetched **directly** in the next Parsing phase,
+> bypassing the search engine entirely. `max_tokens` is **8192** to accommodate
+> complex research goals with many findings.
 
 ## Workflow
 
@@ -81,7 +105,13 @@ Click a completed phase in the pipeline. The right panel shows **3 tabs:**
 
 **Result tab:**
 - Step result summary (e.g., "3 queries planned × ~2 depth")
-- Source results with learnings and gaps (for digest steps)
+- Source results with learnings, gaps, and source attribution (for digest steps)
+- Consolidation analysis for the `reflect` step — rendered as structured sections:
+  - **Reflection** narrative
+  - **Key Insights** (sourced findings)
+  - **Remaining Gaps** (with source attribution)
+  - **Next Queries** (for next search cycle)
+  - **Next Direct URLs** (to be parsed directly, bypassing search)
 - Raw LLM responses in collapsible `<details>` blocks
 
 **Log tab:**
@@ -152,12 +182,13 @@ Key files:
 
 | File | Role |
 |------|------|
-| `backend/services/research_orchestrator.py` | Phase-based state machine, step execution, preview, resume |
+| `backend/services/research_orchestrator.py` | Phase-based state machine, step execution, preview, resume. Includes `_log_llm_response()` safe logging helper (prevents truncated JSON in meta-log). |
 | `backend/services/research_task_manager.py` | Task lifecycle, manual vs auto routing |
 | `backend/api/routes/research.py` | REST endpoints for step/run/rerun/preview/log |
 | `backend/storage/repositories/research_step.py` | DB step records (includes step_data for LLM responses) |
 | `backend/storage/repositories/research_meta_log.py` | Per-step traceability log (step_id column) |
 | `backend/prompts/research/orchestrator_planner.yaml` | Planning prompt with thinking mode override |
+| `backend/prompts/research/orchestrator_reflect.yaml` | Consolidation prompt — 8192 max_tokens, receives digest signals (gaps, followups, direct URLs), returns next_queries + next_direct_urls |
 | `backend/modules/llm_client.py` | LLM client with per-request thinking_override |
 
 ## Configuration
