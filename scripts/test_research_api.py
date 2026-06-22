@@ -3,9 +3,10 @@
 Usage:
   uv run python scripts/test_research_api.py
 """
-import urllib.request, json, time
+import urllib.request, json, time, os
 
-BASE = "http://127.0.0.1:8499"
+PORT = os.environ.get("AAA_SERVER_PORT", "8499")
+BASE = f"http://127.0.0.1:{PORT}"
 
 def get(path):
     resp = urllib.request.urlopen(f"{BASE}{path}", timeout=10)

@@ -10,6 +10,7 @@ See: docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8
 import asyncio
 import json
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -329,6 +330,20 @@ class SomaticResearchOrchestrator:
         # Create a default/dummy branch
         task = self.task_repo.get(task_id)
         conv_id = (task or {}).get("conversation_id") or "default_conv"
+        
+        # Ensure the conversation exists to satisfy the branch FK constraint
+        try:
+            conn = self.branch_repo._conn()
+            exists = conn.execute("SELECT 1 FROM conversations WHERE id = ?", (conv_id,)).fetchone()
+            if not exists:
+                conn.execute(
+                    "INSERT OR IGNORE INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
+                    (conv_id, "System Generated Conversation", "system")
+                )
+                conn.commit()
+        except Exception as e:
+            logger.warning("Failed to verify/create dummy conversation %s: %s", conv_id, e)
+
         branch_id = str(uuid.uuid4())
         self.branch_repo.create({
             "id": branch_id,
@@ -666,26 +681,94 @@ class SomaticResearchOrchestrator:
                 except Exception as e:
                     logger.warning("Failed to retrieve parsed URLs: %s", e)
 
-            parsed_urls_formatted = []
-            for u in parsed_urls_list:
-                title = u.get("title")
-                url = u.get("url")
-                status = u.get("status", "unknown")
-                if title and title != url:
-                    parsed_urls_formatted.append(f"- [{title}]({url}) — {status}")
-                else:
-                    parsed_urls_formatted.append(f"- {url} — {status}")
-            parsed_urls_text = "\n".join(parsed_urls_formatted) or "(none)"
+            depth = s.get("current_depth", 0) if s else 0
+            previous_reflection = s.get("last_reflection", {}) if (s and s.get("last_reflection")) else {}
+
+            # Extract findings of the current cycle from the DB
+            current_cycle_findings = []
+            if self.step_repo and self.step_result_repo:
+                try:
+                    steps = self.step_repo.get_by_task(task_id)
+                    current_parse_steps = [
+                        st for st in steps
+                        if st.get("step_type") == "parallel_parse" and self._get_step_depth(st) == depth
+                    ]
+                    for ps in current_parse_steps:
+                        db_results = self.step_result_repo.get_by_step(ps["id"])
+                        for r in db_results:
+                            if r.get("analyzed_json"):
+                                try:
+                                    analysis = json.loads(r["analyzed_json"])
+                                    learnings = analysis.get("learnings", [])
+                                    title = r.get("source_title") or r.get("source_url", "")[:80]
+                                    for l in learnings:
+                                        current_cycle_findings.append(f"[{title}]: {l}")
+                                except Exception:
+                                    pass
+                except Exception as e:
+                    logger.warning("Failed to retrieve current cycle findings for preview: %s", e)
+
+            # Fallback if DB fetch returned nothing
+            if not current_cycle_findings:
+                current_cycle_findings = all_findings
+
+            # Compute historical findings
+            historical_set = set(all_findings) - set(current_cycle_findings)
+            historical_findings = [f for f in all_findings if f in historical_set]
+
+            # Compress findings and extract sources map globally
+            all_to_compress = current_cycle_findings + historical_findings
+            formatted_urls, compressed_all, compressed_followups, compressed_gaps = self._apply_unified_references(
+                parsed_urls_list,
+                all_to_compress,
+                signals.get("followups", []),
+                signals.get("gaps", []),
+            )
+            
+            parsed_urls_text = "\n".join(formatted_urls) or "(none)"
+            compressed_current = compressed_all[:len(current_cycle_findings)]
+            compressed_historical = compressed_all[len(current_cycle_findings):]
+
+            if depth > 0:
+                accumulated_findings_text = (
+                    f"### New Findings (Cycle {depth + 1}):\n" +
+                    ("\n".join(compressed_current) if compressed_current else "(none)")
+                )
+                if historical_findings:
+                    accumulated_findings_text += (
+                        f"\n\n### Historical Findings (Cycle 1 to {depth}):\n" +
+                        "\n".join(compressed_historical)
+                    )
+            else:
+                accumulated_findings_text = "\n".join(compressed_current)
+
+            followups_text = "\n".join(f"- {f}" for f in compressed_followups) or "(none)"
+            gaps_text = "\n".join(f"- {g}" for g in compressed_gaps) or "(none)"
+            direct_urls_text = "\n".join(f"- {u}" for u in signals.get("direct_urls", [])) or "(none)"
+
+            # Format previous_reflection as structured markdown
+            prev_refl_formatted = "(none)"
+            if previous_reflection and isinstance(previous_reflection, dict):
+                parts = []
+                if previous_reflection.get("reflection"):
+                    parts.append(f"Methodological Reflection (Cycle {depth}):\n{previous_reflection.get('reflection')}")
+                if previous_reflection.get("key_insights"):
+                    insights = [f"- {ins}" for ins in previous_reflection.get("key_insights", [])]
+                    parts.append(f"Stabilized Key Insights (Cycle {depth} Anchor):\n" + "\n".join(insights))
+                if previous_reflection.get("remaining_gaps"):
+                    gaps = [f"- {gap}" for gap in previous_reflection.get("remaining_gaps", [])]
+                    parts.append("Remaining Gaps from Previous Cycle:\n" + "\n".join(gaps))
+                if parts:
+                    prev_refl_formatted = "\n\n".join(parts)
 
             user_text = prompt_data.get("user", "").format(
                 objective=task["objective"],
                 goal=s["plan"].get("goal", task["objective"]) if (s and s.get("plan")) else task["objective"],
-                current_depth=s.get("current_depth", 0) if s else 0,
+                current_depth=depth,
                 max_depth=task["max_depth"],
                 parsed_urls=parsed_urls_text,
-                accumulated_findings="\n\n".join(all_findings),
-                previous_reflection=json.dumps(s.get("last_reflection", {}), ensure_ascii=False)
-                    if (s and s.get("last_reflection")) else "(none)",
+                accumulated_findings=accumulated_findings_text,
+                previous_reflection=prev_refl_formatted,
                 digest_followups=followups_text,
                 digest_direct_urls=direct_urls_text,
                 digest_gaps=gaps_text,
@@ -1614,9 +1697,17 @@ class SomaticResearchOrchestrator:
             }
             self._save_cache(task_id, cache)
 
+        formatted_urls, compressed_findings, _, _ = self._apply_unified_references(
+            [], all_findings
+        )
+        sources_legend_text = "\n".join(formatted_urls) or "(none)"
+        accumulated_findings_text = (
+            "Sources Legend:\n" + sources_legend_text + "\n\n" + "\n".join(compressed_findings)
+        )
+
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
-            all_findings="\n\n".join(all_findings),
+            all_findings=accumulated_findings_text,
         )
         if prompt_data.get("anti_mastery"):
             user_text = self._anti_mastery(user_text)
@@ -1812,7 +1903,7 @@ class SomaticResearchOrchestrator:
                         parse_step_id = None
                         if self.step_repo:
                             steps = self.step_repo.get_by_task(task_id)
-                            parse_step = next((s for s in steps if s.get("step_type") == "parallel_parse" and s.get("query_group") == q_group), None)
+                            parse_step = next((s for s in steps if s.get("step_type") == "parallel_parse" and s.get("query_group") == q_group and self._get_step_depth(s) == depth), None)
                             if parse_step:
                                 parse_step_id = parse_step.get("id")
 
@@ -1925,8 +2016,48 @@ class SomaticResearchOrchestrator:
         """
         prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
 
-        # Try cache first for persona + system prompt (static per task)
+        # Try cache first for persona, system prompt, and user prompt (matching depth)
         cached = self._get_cached_phase(task_id, "reflecting")
+        if (
+            cached
+            and cached.get("current_depth") == depth
+            and cached.get("system_prompt")
+            and cached.get("user_prompt")
+        ):
+            logger.info("Using cached preview prompts for reflecting phase (depth %d)", depth)
+            system_text = cached["system_prompt"]
+            user_text = cached["user_prompt"]
+            
+            self._log_meta(task_id, "orchestrator_reflect_prompt", {
+                "system_prompt": system_text[:2000],
+                "user_prompt": user_text[:2000],
+            }, step_id=step_id or None)
+
+            latest_result = {}
+            try:
+                from backend.modules.llm_client import generate_unified
+                llm = getattr(self._state, "llm_provider", None)
+                if llm:
+                    resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
+                        expect_json=True,
+                        fallback_value={"completeness_score": 0.5, "next_queries": [], "next_direct_urls": []},
+                        temperature=prompt_data.get("temperature", 0.5),
+                        max_tokens=prompt_data.get("max_tokens", 2048))
+                    result = resp.get("json_data") or resp.get("content") or {}
+                    if isinstance(result, str):
+                        result = json.loads(result)
+                    if isinstance(result, dict):
+                        latest_result = result
+                        self._log_llm_response(task_id, "orchestrator_reflect_response", resp, extra={
+                            "completeness": result.get("completeness_score", 0),
+                        }, step_id=step_id or None)
+                        if step_id:
+                            self._save_llm_response_to_step_data(step_id, resp)
+            except Exception as e:
+                logger.warning("Reflection failed with cached preview: %s", e)
+
+            return latest_result or {"completeness_score": 0.3, "next_queries": [], "next_direct_urls": [], "reflection": "No reflection"}
+
         if cached and cached.get("persona") and cached.get("system_prompt"):
             persona = cached["persona"]
             system_text = cached["system_prompt"]
@@ -1949,9 +2080,6 @@ class SomaticResearchOrchestrator:
 
         # Build digest signals block for prompt injection
         signals = digest_signals or {}
-        followups_text = "\n".join(f"- {f}" for f in signals.get("followups", [])) or "(none)"
-        direct_urls_text = "\n".join(f"- {u}" for u in signals.get("direct_urls", [])) or "(none)"
-        gaps_text = "\n".join(f"- {g}" for g in signals.get("gaps", [])) or "(none)"
 
         parsed_urls_list = []
         if self.step_result_repo:
@@ -1969,24 +2097,89 @@ class SomaticResearchOrchestrator:
             except Exception as e:
                 logger.warning("Failed to retrieve parsed URLs: %s", e)
 
-        parsed_urls_formatted = []
-        for u in parsed_urls_list:
-            title = u.get("title")
-            url = u.get("url")
-            status = u.get("status", "unknown")
-            if title and title != url:
-                parsed_urls_formatted.append(f"- [{title}]({url}) — {status}")
-            else:
-                parsed_urls_formatted.append(f"- {url} — {status}")
-        parsed_urls_text = "\n".join(parsed_urls_formatted) or "(none)"
+        # Extract findings of the current cycle from the DB
+        current_cycle_findings = []
+        if self.step_repo and self.step_result_repo:
+            try:
+                steps = self.step_repo.get_by_task(task_id)
+                current_parse_steps = [
+                    st for st in steps
+                    if st.get("step_type") == "parallel_parse" and self._get_step_depth(st) == depth
+                ]
+                for ps in current_parse_steps:
+                    db_results = self.step_result_repo.get_by_step(ps["id"])
+                    for r in db_results:
+                        if r.get("analyzed_json"):
+                            try:
+                                analysis = json.loads(r["analyzed_json"])
+                                learnings = analysis.get("learnings", [])
+                                title = r.get("source_title") or r.get("source_url", "")[:80]
+                                for l in learnings:
+                                    current_cycle_findings.append(f"[{title}]: {l}")
+                            except Exception:
+                                pass
+            except Exception as e:
+                logger.warning("Failed to retrieve current cycle findings: %s", e)
+
+        # Fallback if DB fetch returned nothing
+        if not current_cycle_findings:
+            current_cycle_findings = all_findings
+
+        # Compute historical findings
+        historical_set = set(all_findings) - set(current_cycle_findings)
+        historical_findings = [f for f in all_findings if f in historical_set]
+
+        # Compress findings and extract sources map globally
+        all_to_compress = current_cycle_findings + historical_findings
+        formatted_urls, compressed_all, compressed_followups, compressed_gaps = self._apply_unified_references(
+            parsed_urls_list,
+            all_to_compress,
+            signals.get("followups", []),
+            signals.get("gaps", []),
+        )
+        
+        parsed_urls_text = "\n".join(formatted_urls) or "(none)"
+        compressed_current = compressed_all[:len(current_cycle_findings)]
+        compressed_historical = compressed_all[len(current_cycle_findings):]
+
+        if depth > 0:
+            accumulated_findings_text = (
+                f"### New Findings (Cycle {depth + 1}):\n" +
+                ("\n".join(compressed_current) if compressed_current else "(none)")
+            )
+            if historical_findings:
+                accumulated_findings_text += (
+                    f"\n\n### Historical Findings (Cycle 1 to {depth}):\n" +
+                    "\n".join(compressed_historical)
+                )
+        else:
+            accumulated_findings_text = "\n".join(compressed_current)
+
+        followups_text = "\n".join(f"- {f}" for f in compressed_followups) or "(none)"
+        gaps_text = "\n".join(f"- {g}" for g in compressed_gaps) or "(none)"
+        direct_urls_text = "\n".join(f"- {u}" for u in signals.get("direct_urls", [])) or "(none)"
+
+        # Format previous_reflection as structured markdown
+        prev_refl_formatted = "(none)"
+        if previous_reflection and isinstance(previous_reflection, dict):
+            parts = []
+            if previous_reflection.get("reflection"):
+                parts.append(f"Methodological Reflection (Cycle {depth}):\n{previous_reflection.get('reflection')}")
+            if previous_reflection.get("key_insights"):
+                insights = [f"- {ins}" for ins in previous_reflection.get("key_insights", [])]
+                parts.append(f"Stabilized Key Insights (Cycle {depth} Anchor):\n" + "\n".join(insights))
+            if previous_reflection.get("remaining_gaps"):
+                gaps = [f"- {gap}" for gap in previous_reflection.get("remaining_gaps", [])]
+                parts.append("Remaining Gaps from Previous Cycle:\n" + "\n".join(gaps))
+            if parts:
+                prev_refl_formatted = "\n\n".join(parts)
 
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
             current_depth=depth, max_depth=max_depth,
             parsed_urls=parsed_urls_text,
-            accumulated_findings="\n\n".join(all_findings),
-            previous_reflection=json.dumps(previous_reflection, ensure_ascii=False)
-                if previous_reflection else "(none)",
+            accumulated_findings=accumulated_findings_text,
+            previous_reflection=prev_refl_formatted,
             digest_followups=followups_text,
             digest_direct_urls=direct_urls_text,
             digest_gaps=gaps_text,
@@ -2132,3 +2325,76 @@ class SomaticResearchOrchestrator:
         if re.match(r'^(skip|close|open navigation|sign in|sign up)', c[:100].strip(), re.IGNORECASE):
             return "paywall"
         return "ok"
+
+    def _apply_unified_references(
+        self, parsed_urls_list: list[dict], findings: list[str], followups: list[str] = None, gaps: list[str] = None
+    ) -> tuple[list[str], list[str], list[str], list[str]]:
+        """
+        Builds a unified source ID map (S1, S2, ...) from parsed_urls_list,
+        then replaces the source titles in findings, followups, and gaps with [S1], [S2] etc.
+        Returns:
+            parsed_urls_formatted: list of formatted string lines with [S##] prefix.
+            compressed_findings: list of findings with source titles replaced by [S##].
+            compressed_followups: list of followups with source titles replaced by [S##].
+            compressed_gaps: list of gaps with source titles replaced by [S##].
+        """
+        import re
+        
+        # If parsed_urls_list is empty (e.g. in final synthesize phase),
+        # dynamically extract all source keys from the findings to build a basic list.
+        if not parsed_urls_list:
+            seen_srcs = []
+            for f in findings:
+                match = re.match(r"^\[(.*?)\]:\s*(.*)$", f)
+                if match:
+                    src_key = match.group(1)
+                    if src_key not in seen_srcs:
+                        seen_srcs.append(src_key)
+            parsed_urls_list = [{"url": s, "title": s, "status": ""} for s in seen_srcs]
+
+        # Build source mapping: title -> S##, url -> S##
+        source_map = {}
+        parsed_urls_formatted = []
+        
+        for idx, u in enumerate(parsed_urls_list, 1):
+            sid = f"S{idx}"
+            title = u.get("title") or u["url"]
+            url = u["url"]
+            status = u.get("status", "")
+            
+            # Map both title and url to sid for robust matching
+            source_map[title] = sid
+            source_map[url] = sid
+            if len(title) > 80:
+                source_map[title[:80]] = sid
+            
+            # Format: - [S1] [Title](URL) — Status
+            status_suffix = f" — {status}" if status else ""
+            if title and title != url:
+                parsed_urls_formatted.append(f"- [{sid}] [{title}]({url}){status_suffix}")
+            else:
+                parsed_urls_formatted.append(f"- [{sid}] {url}{status_suffix}")
+
+        def compress_item(item_str: str) -> str:
+            # Matches pattern: ^\[(.*?)\]:\s*(.*)$
+            match = re.match(r"^\[(.*?)\]:\s*(.*)$", item_str)
+            if match:
+                src_key = match.group(1)
+                content = match.group(2)
+                
+                # Check for direct key match
+                if src_key in source_map:
+                    return f"[{source_map[src_key]}]: {content}"
+                
+                # Try prefix/substring match in case of minor mismatches/truncations
+                for key, sid in source_map.items():
+                    if src_key.startswith(key) or key.startswith(src_key):
+                        return f"[{sid}]: {content}"
+                        
+            return item_str
+
+        compressed_findings = [compress_item(f) for f in findings]
+        compressed_followups = [compress_item(f) for f in (followups or [])]
+        compressed_gaps = [compress_item(g) for g in (gaps or [])]
+        
+        return parsed_urls_formatted, compressed_findings, compressed_followups, compressed_gaps
