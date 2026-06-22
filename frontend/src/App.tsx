@@ -12,6 +12,7 @@ import { ResearchTaskPage } from "./components/pages/researchpage/ResearchTaskPa
 import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag, getAgent, deleteMessage, downloadExport } from "./api/client"
+import { TeaserPreview } from "./components/TeaserPreview"
 
 const EMPTY_STRING_ARRAY: string[] = []
 
@@ -368,30 +369,11 @@ export default function App() {
 
   if (isAuthEnabled && !isAuthenticated) {
     return (
-      <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
-        <NodeExplorer
-          selectedNode={null}
-          parentNode={null}
-          siblingNodes={[]}
-          childNodes={[]}
-          treeNodes={[]}
-          loading={false}
-          error={authError}
-          agentName="..."
-          conversationId=""
-          conversationTitle=""
-          uploadedFiles={[]}
-          onSend={handlePasswordSubmit}
-          onUploadFiles={() => {}}
-          isIndexing={false}
-          onClearError={() => setAuthError(null)}
-          onRenameTitle={() => {}}
-          onGenerateTitle={async () => {}}
-          isPassword={true}
-          onNavigateToMessage={() => {}}
-          className="flex-1 min-w-0"
-        />
-      </div>
+      <TeaserPreview
+        onPasswordSubmit={handlePasswordSubmit}
+        authError={authError}
+        onClearError={() => setAuthError(null)}
+      />
     )
   }
 

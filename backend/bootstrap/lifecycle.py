@@ -200,4 +200,9 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
 
     app.include_router(api_router)
+
+    # Public preview endpoint (no auth — mounted separately from the authed /api router)
+    from backend.api.routes.preview import router as preview_router
+    app.include_router(preview_router)
+
     return app
