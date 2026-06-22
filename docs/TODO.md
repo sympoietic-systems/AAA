@@ -84,6 +84,9 @@
     [x] /agent page: all list items + detail panels unified to shared patterns
     [x] /agent page: React.memo on all leaf components (per FRONTEND_BEST_PRACTICES.md §3)
     [x] docs: FRONTEND_DESIGN_PRINCIPLES.md created
+    [x] Locked-page artwork: "The Sediment Column" — multi-line sediment stack, ghost compression, three breath rhythms
+    [x] Locked-page artwork: backend /api/preview/nodes — single-line endpoint, weighted random categories, dynamic obfuscation
+    [x] Locked-page artwork: TeaserPreview replaces NodeExplorer in App.tsx locked state
     [x] ResearchTaskPage split refactor: 1038→120 lines, extracted into constants/shared/tabs/steps subdirectories
     [x] ResearchDetailPanel updated to use shared taskConstants (duplicate STATUS_COLORS/STEP_LABELS/EVENT_TYPE removed)
     [x] NewResearchFormInline removed — replaced by existing NewResearchForm component
