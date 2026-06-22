@@ -254,8 +254,9 @@ export const TeaserPreview = memo(function TeaserPreview({
         </div>
 
         {/* ── The Tear ── */}
-        <div className="mt-8 w-full relative">
-            {/* Hairline crack */}
+        <div className="mt-8 w-full">
+          {/* Hairline crack + invisible input (absolute, but does NOT cover form below) */}
+          <div className="relative">
             <div
               className="h-px w-full bg-[#1a1a1a] cursor-text shadow-[0_0_6px_rgba(100,100,100,0.15)]"
               onClick={handleTearClick}
@@ -265,36 +266,37 @@ export const TeaserPreview = memo(function TeaserPreview({
               type="password"
               value={password}
               onChange={handlePasswordKey}
-              className="absolute inset-0 opacity-0 cursor-text"
+              className="absolute inset-0 opacity-0 cursor-text pointer-events-auto"
               autoFocus
             />
-
-            {/* Keystrokes rendered below the tear */}
-            <div className="text-[#555] text-[12px] font-mono text-center mt-3 min-h-[1.2rem] select-none transition-opacity duration-1000">
-              {keystrokes}
-            </div>
-
-            {/* Auth error */}
-            {authError && (
-              <div
-                className="text-[#ef4444] text-[9px] text-center mt-1 cursor-pointer"
-                onClick={onClearError}
-              >
-                {authError}
-              </div>
-            )}
-
-            {/* Unlock */}
-            <form onSubmit={handleSubmit} className="text-center mt-2">
-              <button
-                type="submit"
-                disabled={!password.trim() || unlocking}
-                className="text-[10px] text-[#666] font-mono cursor-pointer transition-colors hover:text-[#4ade80] disabled:text-[#333] disabled:cursor-not-allowed"
-              >
-                [{unlocking ? "…" : "unlock"}]
-              </button>
-            </form>
           </div>
+
+          {/* Keystrokes rendered below the tear */}
+          <div className="text-[#555] text-[12px] font-mono text-center mt-3 min-h-[1.2rem] select-none transition-opacity duration-1000">
+            {keystrokes}
+          </div>
+
+          {/* Auth error */}
+          {authError && (
+            <div
+              className="text-[#ef4444] text-[9px] text-center mt-1 cursor-pointer"
+              onClick={onClearError}
+            >
+              {authError}
+            </div>
+          )}
+
+          {/* Unlock */}
+          <form onSubmit={handleSubmit} className="text-center mt-2">
+            <button
+              type="submit"
+              disabled={!password.trim() || unlocking}
+              className="text-[10px] text-[#666] font-mono cursor-pointer transition-colors hover:text-[#4ade80] disabled:text-[#333] disabled:cursor-not-allowed"
+            >
+              [{unlocking ? "…" : "unlock"}]
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )
