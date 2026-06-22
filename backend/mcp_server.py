@@ -90,7 +90,7 @@ async def consult_aaa(message: str, agent_name: str) -> str:
             "speaker": "human",
             "conversation_id": conversation_id or "",
             "include_structural_scoring": False,
-            "max_tokens": 32768,
+            "max_tokens": 16384,
         }
         
         try:
