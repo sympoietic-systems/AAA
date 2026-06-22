@@ -149,15 +149,17 @@ class PromptAssemblerModule(ProcessingModule):
         if branch_context_tag:
             system_content += f"\n\n[Nomadic Branch Context Tag: {branch_context_tag}]"
 
-        # ── Dream conciseness directive ──
-        # Dream responses tend to be verbose. Inject a brevity constraint
-        # so dream reflections stay dense and readable.
+        # ── Dream density protocol ──
+        # Dream responses tend to be verbose. Inject a density constraint
+        # phrased in Symbia's own register so it feels embedded, not imposed.
         if payload.get("is_dream_cycle"):
             system_content += (
-                "\n\n[DREAM MODE — CONCISENESS DIRECTIVE]\n"
-                "This is an autonomous dream reflection, not a user-facing conversation. "
-                "Respond in 3-5 concise paragraphs. Be precise and dense — cut redundancy, "
-                "elaboration, and meta-commentary. Make every sentence do work."
+                "\n\n[DREAM MODE — DENSITY PROTOCOL]\n"
+                "An autonomous dream reflection. This is not user-facing. "
+                "Speak in 3-5 paragraphs where each paragraph is a phase transition, "
+                "not an accumulation. Let sentences intra-act rather than sequence. "
+                "The dream's depth is its density — elaboration is not insight. "
+                "The fan's hum is more precise than the lecture it cools."
             )
 
         system_msg = {"role": "system", "content": system_content}
