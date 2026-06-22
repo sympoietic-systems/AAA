@@ -48,8 +48,11 @@ export default function App() {
     checkAuthStatus().then((status) => {
       setIsAuthenticated(status.authenticated)
       setIsAuthEnabled(status.authEnabled)
+      // Only fetch agent info if authenticated (skip 401 on locked page)
+      if (status.authenticated || !status.authEnabled) {
+        getAgent().then(info => setAgentFlux(!!info.agent_flux)).catch(() => setAgentFlux(false))
+      }
     })
-    getAgent().then(info => setAgentFlux(!!info.agent_flux)).catch(() => setAgentFlux(false))
   }, [])
 
   const handlePasswordSubmit = async (password: string) => {
