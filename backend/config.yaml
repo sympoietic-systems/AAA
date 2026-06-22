@@ -193,9 +193,9 @@ daemon:
   drift_coefficient: 0.00001     # decay speed for somatic belief drift
   belief_dream_cooldown_minutes: 30  # minimum minutes between dreams about the same belief
   prompt_hash_window: 10             # number of recent prompt hashes to deduplicate against
-  dream_resonance_turns: 4           # max self-response rounds per dream (rhizomatic resonance; 1 = classic single-turn)
+  dream_resonance_turns: 3           # max self-response rounds per dream (rhizomatic resonance; 1 = classic single-turn)
   resonance_stagnation: 0.98         # intra-dream assistant similarity threshold for early termination
-  max_resonance_tokens: 30000         # cumulative assistant token cap per dream cycle
+  max_resonance_tokens: 12000         # cumulative assistant token cap per dream cycle (3 turns)
   consolidate_cooldown_hours: 12      # hours before re-consolidating an already-summarized conversation
   consolidate_min_new_messages: 4     # minimum new messages since last checkpoint to trigger re-consolidation
   consolidate_first_time_threshold: 12  # minimum messages for first-ever consolidation (no prior checkpoint)

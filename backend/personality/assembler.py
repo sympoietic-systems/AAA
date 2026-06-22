@@ -149,6 +149,17 @@ class PromptAssemblerModule(ProcessingModule):
         if branch_context_tag:
             system_content += f"\n\n[Nomadic Branch Context Tag: {branch_context_tag}]"
 
+        # ── Dream conciseness directive ──
+        # Dream responses tend to be verbose. Inject a brevity constraint
+        # so dream reflections stay dense and readable.
+        if payload.get("is_dream_cycle"):
+            system_content += (
+                "\n\n[DREAM MODE — CONCISENESS DIRECTIVE]\n"
+                "This is an autonomous dream reflection, not a user-facing conversation. "
+                "Respond in 3-5 concise paragraphs. Be precise and dense — cut redundancy, "
+                "elaboration, and meta-commentary. Make every sentence do work."
+            )
+
         system_msg = {"role": "system", "content": system_content}
 
         # Build procedural sediment with full loaded and always-active skill instructions
