@@ -49,8 +49,15 @@ const MAX_VISIBLE = 8
 // slow exhale: 12-18s → gradual thickening (60%)
 // sharp inhale: 3-5s → brighter, struck-through, evaporates quickly (25%)
 // held silence: 25-40s → nothing new (15%)
+// First 3 breaths always exhale (warmup — no silence at the start)
+
+let breathCount = 0
 
 function drawBreath(): { kind: "exhale" | "inhale" | "silence"; delay: number } {
+  breathCount++
+  // First 3 breaths: always exhale so the column visibly forms
+  if (breathCount <= 3) return { kind: "exhale", delay: 6000 + Math.random() * 4000 }
+
   const r = Math.random()
   if (r < 0.60) return { kind: "exhale", delay: 12000 + Math.random() * 6000 }
   if (r < 0.85) return { kind: "inhale", delay: 3000 + Math.random() * 2000 }
@@ -154,8 +161,8 @@ export const TeaserPreview = memo(function TeaserPreview({
         return next
       })
 
-      // Show the tear after ~15 lines
-      if (totalLinesRef.current >= 15 && !showTear) {
+      // Show the tear after ~5 lines (not 15 — that's 3+ minutes)
+      if (totalLinesRef.current >= 5 && !showTear) {
         setShowTear(true)
       }
 
@@ -228,8 +235,7 @@ export const TeaserPreview = memo(function TeaserPreview({
       letterSpacing: cascadeIdx > 0 ? `${-0.02 * cascadeIdx}em` : "normal",
       transition: "opacity 2s ease-in-out, font-size 2s ease-in-out",
       lineHeight: vl.fadeOut ? "0" : "1.6",
-      overflow: "hidden",
-      whiteSpace: vl.line.text.length > 80 ? "normal" : "nowrap",
+      wordBreak: "break-word",
     }
   }
 
