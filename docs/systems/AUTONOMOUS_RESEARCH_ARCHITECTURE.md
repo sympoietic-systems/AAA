@@ -1805,6 +1805,10 @@ PLANNING → SEARCHING → PARSING → DIGESTING → REFLECTING → EVALUATING
                       (if evaluate says CONTINUE)
                                                      │
                                                      ▼
+                                                  SYNTHESIZE → task.result_summary
+
+> **UI Note:** The REFLECTING phase is displayed as "Consolidate" in the frontend step pipeline.
+> It accumulates findings, identifies gaps, and suggests follow-up URLs before synthesis.
                                                 SYNTHESIZING → INDEXING → COMPLETE
 ```
 
@@ -3350,10 +3354,31 @@ frontend/src/
 │   └── pages/
 │       └── researchpage/
 │           ├── ResearchPage.tsx              ✅ Main page container (two-panel: list + detail/tabs)
-│           ├── ResearchTaskPage.tsx          ✅ Alternative page view
+│           ├── ResearchTaskPage.tsx          ✅ Task detail page (Info · Steps · Report tabs) — routed via App.tsx
 │           ├── NewResearchForm.tsx           ✅ Form to create research tasks
-│           ├── ResearchDetailPanel.tsx       ✅ Detail view with tabs (Info, Assets, Branches, Meta Log, Actions)
-│           └── TaskCard.tsx                  ✅ Consolidated card (handles Active/Queued/Completed/Failed states)
+│           ├── ResearchDetailPanel.tsx       ✅ Legacy detail view (Info, Steps, Assets, Branches, Meta Log, Actions)
+│           ├── TaskCard.tsx                  ✅ Consolidated card (handles Active/Queued/Completed/Failed states)
+│           ├── constants/
+│           │   └── taskConstants.ts          ✅ STATUS_COLORS, STEP_LABELS, STEP_TYPE_COLORS, EVENT_TYPE_*
+│           ├── shared/
+│           │   ├── BracketHeader.tsx         ✅ [ Header ] terminal-style section labels
+│           │   ├── MarkdownSection.tsx       ✅ Markdown renderer + Report export (copy/export md, export PDF)
+│           │   ├── TaskActions.tsx           ✅ Retry, continue deeper, delete buttons
+│           │   ├── TwoPanelLayout.tsx        ✅ Split left/right panel layout for Steps tab
+│           │   ├── useTaskPolling.ts         ✅ Active-task polling hook
+│           │   └── taskHelpers.ts            ✅ Shared utility functions
+│           ├── tabs/
+│           │   ├── InfoTab.tsx               ✅ Objective, Metrics, Actions
+│           │   └── StepsTab.tsx              ✅ Step pipeline + detail (delegates to steps/)
+│           └── steps/
+│               ├── StepPipeline.tsx          ✅ Left panel — step list with status/type indicators
+│               ├── StepDetailPanel.tsx       ✅ Right panel — router for step detail views
+│               ├── StepDbDetail.tsx          ✅ Full step detail (tabs: result, input, log)
+│               ├── StepResultTab.tsx         ✅ Per-source analysis results + learnings
+│               ├── StepInputTab.tsx          ✅ Live step input preview
+│               ├── StepPreviewPanel.tsx      ✅ Synthesis preview (sources, findings, reflection)
+│               ├── StepLogTab.tsx            ✅ Meta-log entries for a step
+│               └── LogEntries.tsx            ✅ Log entry rendering helper
 │   └── panels/
 │       └── sidepanel/
 │           └── ResearchSummarySection.tsx    🔲 Deferred — sidebar widget showing active + recent
@@ -3695,11 +3720,14 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | `SomaticResearchOrchestrator` class (multi-phase pipeline) | ✅ | — | PLANNING→SEARCHING→PARSING→DIGESTING→REFLECTING→EVALUATING |
 | Orchestrator tools (`_tool_web_search`, `_tool_web_fetch`, `_tool_web_crawl`, `_tool_reflect`, `_tool_download`, `_tool_evaluate`) | ✅ | — | 6 sensory affordance tools |
 | Config toggle (engine vs orchestrator) in `config.yaml` | ✅ | — | `research_orchestrator` section |
-| **Frontend** — ResearchPage (two-panel: list + detail/tabs) | ✅ | — | Info, Assets, Branches, Meta Log, Actions tabs |
-| **Frontend** — ResearchTaskPage (alternative view) | ✅ | — | Additional page view |
+| **Frontend** — ResearchPage (two-panel: list + detail/tabs) | ✅ | — | List + TaskCard preview |
+| **Frontend** — ResearchTaskPage (task detail, routed) | ✅ | — | Info · Steps · Report tabs, terminal aesthetic |
 | **Frontend** — `useResearch` hook + `researchStore` pub-sub | ✅ | — | Polling + subscriber-driven |
-| **Frontend** — NewResearchForm, ResearchDetailPanel, TaskCard (consolidated) | ✅ | — | Terminal aesthetic |
+| **Frontend** — NewResearchForm, TaskCard (consolidated) | ✅ | — | Terminal aesthetic |
 | **Frontend** — Retry + Continue Deeper buttons | ✅ | — | For completed/cancelled/failed |
+| **Frontend** — Report tab (full-height markdown + export) | ✅ | — | Copy markdown, export .md, export PDF (print); filename from report heading |
+| **Frontend** — Step pipeline + per-step detail | ✅ | — | StepPipeline, StepDbDetail, StepPreviewPanel, StepResultTab |
+| **Frontend** — Consolidation preview (sources/findings/reflection) | ✅ | — | Structured synthesis preview in StepPreviewPanel |
 
 ### ✅ Completed — Phase 6: Somatic Research Orchestrator
 
@@ -3715,12 +3743,12 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | `_tool_web_search(query, n)` | — | Top-N result URL extraction |
 | `_tool_web_fetch(url)` | — | Single-page fetch + save to disk |
 | `_tool_web_crawl(query, n)` | — | Search + parallel fetch convenience |
-| `_tool_reflect(context, max_rounds)` | — | Multi-round LLM reflection |
+| `_tool_reflect(context, max_rounds)` | — | Multi-round LLM reflection (displayed as "Consolidate" in UI) |
 | `_tool_download(url)` | — | Document download → digestion → index |
 | `_tool_evaluate(findings, criteria)` | — | Hard checks + LLM satisfaction |
 | Orchestrator prompts: `orchestrator_planner.yaml` | — | Plan generation |
-| Orchestrator prompts: `orchestrator_reflect.yaml` | — | Reflection rounds |
-| Orchestrator prompts: `orchestrator_synthesize.yaml` | — | Final synthesis |
+| Orchestrator prompts: `orchestrator_reflect.yaml` | — | Consolidation rounds (findings, gaps, follow-ups) |
+| Orchestrator prompts: `orchestrator_synthesize.yaml` | — | Final synthesis — publication-ready diffractive report |
 | Orchestrator prompts: `orchestrator_evaluate.yaml` | — | Satisfaction check |
 | Config: `research_orchestrator` section in config.yaml | — | Toggles + defaults |
 | **In-place step rerun + cascade stale** | m038 | `rerun_version` column, no duplicate steps |
@@ -3741,6 +3769,10 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | `_build_system_content()` — unified formatting | — | Assembler now uses shared format_beliefs_block/format_skills_* functions |
 | All 7 consumers updated to `get_persona_text()` | — | assembler, orchestrator, context builder, refine_skill/belief, metabolize, BeliefService |
 | Step-by-step execution mode + preview | — | `execute_step()`, `preview_step_inputs()`, manual pipeline control |
+| Consolidation reflections + gaps injected into synthesis | — | `last_reflection` passed to `_phase_synthesize` for context-aware reports |
+| Unified [S##] source reference mapping | — | Global source legend across findings, gaps, and follow-ups |
+| Cycle-scoped context + step filtering | — | Cycle-depth aware digestion lookup + UI step detail filtering (m040) |
+| Preview prompt caching + reuse | — | Cached persona/system prompt reused during step execution |
 | **Rerun/stale cascade architecture** | m038 | In-place update, cascade invalidation, stale UI (see §5.8.8) |
 
 ### 🔲 Planned — Phase 7: Post-Orchestrator Polish

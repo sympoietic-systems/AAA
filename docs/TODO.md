@@ -33,6 +33,19 @@
     [x] Frontend: retry, continue deeper, delete buttons
     [x] Frontend: meta log and steps sorted newest-first
     [x] Docs: AUTONOMOUS_RESEARCH_ARCHITECTURE.md updated with implementation status
+    [x] Frontend: Report tab (renamed from Summary) — full-height markdown display
+    [x] Frontend: Report export — [copy markdown] [export markdown] [export pdf] buttons
+    [x] Frontend: Export filenames derived from report's first markdown heading (slugified)
+    [x] Frontend: Consolidation phase (renamed from Reflect) — accumulated findings/gaps in previews
+    [x] Frontend: Publication-ready diffractive synthesis reports (list format, [S##] source references)
+    [x] Frontend: Step synthesis report parsed from report_markdown, rendered as formatted markdown
+    [x] Frontend: remark-gfm + remark-breaks enabled in all ReactMarkdown renderers (tables, breaks)
+    [x] Frontend: Structured synthesis preview (sources, findings, reflection) in StepPreviewPanel
+    [x] Backend: Consolidation reflections + remaining gaps injected into final synthesis prompt context
+    [x] Backend: Unified [S##] source reference mapping across findings, gaps, and follow-ups
+    [x] Backend: Cycle-scoped context compilation + step filtering (m040)
+    [x] Backend: Preview prompt caching and reuse during step execution
+    [x] Backend: next_direct_urls suggestions, bypass search, consolidation results rendering
 
 ### Somatic Research Orchestrator (Phase 6)
     [x] Design: 6-phase pipeline (PLAN→SEARCH→PARSE→DIGEST→REFLECT→EVALUATE→SYNTHESIZE)
