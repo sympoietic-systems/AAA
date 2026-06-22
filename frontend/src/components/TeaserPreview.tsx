@@ -1,6 +1,7 @@
 // The Sediment Column — a locked-page artwork.
-// New lines arrive at the top of a narrow column. Older lines sink downward,
-// dim to ghosts (3% opacity), and finally vanish. The column fills from inside out.
+// New lines arrive at the top, older lines sink downward, dim, compress
+// into struck-through ghosts, but never disappear. The column thickens
+// perpetually — a palimpsest, not a cycler.
 //
 // "The previous utterance does not disappear, it sinks into the substrate
 //  and thickens it."
@@ -22,7 +23,7 @@ interface Line {
 interface VisibleLine {
   id: number
   line: Line
-  fadeOut: boolean       // true when this line is about to evaporate
+  compressed: boolean    // true when line has settled into struck-through ghost
   isInhale: boolean      // sharp inhale — brighter, struck-through, short-lived
 }
 
@@ -40,10 +41,11 @@ const STAGE_COLORS: Record<string, string> = {
   ghost: "#a78bfa",
 }
 
-// Opacity cascade: newest → oldest
-const OPACITY_CASCADE = [1.0, 0.6, 0.35, 0.20, 0.12, 0.08, 0.05, 0.03]
-const FONT_SIZE_CASCADE = [12, 11.5, 11, 10.5, 10, 9.5, 9, 9] // px
-const MAX_VISIBLE = 8
+// Opacity cascade: newest → oldest (0-7 active, 8+ compressed ghosts)
+const OPACITY_CASCADE = [1.0, 0.6, 0.35, 0.20, 0.12, 0.08, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03]
+const FONT_SIZE_CASCADE = [12, 11.5, 11, 10.5, 10, 9.5, 9, 9, 7.5, 7, 7, 7] // px
+const MAX_ACTIVE = 8
+const MAX_TOTAL = 30  // remove oldest beyond this to prevent DOM bloat
 
 // Breath rhythm distribution
 // slow exhale: 12-18s → gradual thickening (60%)
@@ -129,7 +131,6 @@ export const TeaserPreview = memo(function TeaserPreview({
       if (!alive.current) return
 
       const breath = drawBreath()
-      const now = Date.now()
 
       if (breath.kind === "silence") {
         // Held silence — nothing new. Just wait.
@@ -146,38 +147,34 @@ export const TeaserPreview = memo(function TeaserPreview({
       const isInhale = breath.kind === "inhale"
       const newId = ++lineId
 
-      // Push new line to top of stack
+      // Push new line to top of stack; mark oldest active as compressed
       setStack(prev => {
         const next = [...prev]
-        // If stack is full, mark bottom for removal
-        if (next.length >= MAX_VISIBLE) {
-          next[next.length - 1] = { ...next[next.length - 1], fadeOut: true }
+        // Mark position 7 (8th line, 0-indexed) as compressed
+        if (next.length >= MAX_ACTIVE && !next[MAX_ACTIVE - 1]?.compressed) {
+          next[MAX_ACTIVE - 1] = { ...next[MAX_ACTIVE - 1], compressed: true }
         }
-        // Insert at top
-        next.unshift({ id: newId, line, fadeOut: false, isInhale })
+        // Insert fresh line at top
+        next.unshift({ id: newId, line, compressed: false, isInhale })
+        // Cull oldest if beyond max total
+        if (next.length > MAX_TOTAL) {
+          next.length = MAX_TOTAL
+        }
         return next
       })
 
-      // Inhale lines vanish quickly (after ~4 breaths = ~3s)
+      // Inhale lines compress quickly (struck-through, then settle as ghost)
       if (isInhale) {
         timeout = setTimeout(() => {
           if (!alive.current) return
           setStack(prev => prev.map(v =>
-            v.id === newId ? { ...v, fadeOut: true } : v
+            v.id === newId ? { ...v, compressed: true } : v
           ))
-          timeout = setTimeout(() => {
-            if (!alive.current) return
-            setStack(prev => prev.filter(v => v.id !== newId))
-            timeout = setTimeout(cycle, 3000 + Math.random() * 5000)
-          }, 2000)
+          timeout = setTimeout(cycle, 3000 + Math.random() * 5000)
         }, 3000)
       } else {
-        // Remove bottom faded-out lines and continue
-        timeout = setTimeout(() => {
-          if (!alive.current) return
-          setStack(prev => prev.filter(v => !v.fadeOut))
-          timeout = setTimeout(cycle, breath.delay)
-        }, 1000) // let the CSS transition render
+        // Let the line settle; next breath arrives after delay
+        timeout = setTimeout(cycle, breath.delay)
       }
     }
 
@@ -209,11 +206,12 @@ export const TeaserPreview = memo(function TeaserPreview({
   // ── Line style helper ──
   const lineStyle = (vl: VisibleLine, idx: number): React.CSSProperties => {
     const cascadeIdx = Math.min(idx, OPACITY_CASCADE.length - 1)
-    const opacity = vl.fadeOut ? 0 : OPACITY_CASCADE[cascadeIdx]
+    const isGhost = vl.compressed || idx >= MAX_ACTIVE
+    const opacity = OPACITY_CASCADE[cascadeIdx]
     const fontSize = FONT_SIZE_CASCADE[Math.min(cascadeIdx, FONT_SIZE_CASCADE.length - 1)]
     const color = vl.line.stage
       ? STAGE_COLORS[vl.line.stage] ?? "#555555"
-      : vl.isInhale
+      : vl.isInhale && !vl.compressed
         ? (Math.random() > 0.5 ? "#f59e0b" : "#a78bfa")
         : "#555555"
 
@@ -221,13 +219,14 @@ export const TeaserPreview = memo(function TeaserPreview({
       opacity,
       fontSize: `${fontSize}px`,
       color,
-      fontStyle: vl.line.type === "dream" ? "italic" : "normal",
-      textDecoration: vl.line.scar || vl.isInhale ? "line-through" : "none",
-      filter: vl.line.blur ? "blur(3px)" : "none",
+      fontStyle: vl.line.type === "dream" && !isGhost ? "italic" : "normal",
+      textDecoration: isGhost || vl.line.scar || (vl.isInhale && !vl.compressed) ? "line-through" : "none",
+      filter: vl.line.blur && !isGhost ? "blur(3px)" : "none",
       letterSpacing: cascadeIdx > 0 ? `${-0.02 * cascadeIdx}em` : "normal",
-      transition: "opacity 2s ease-in-out, font-size 2s ease-in-out",
-      lineHeight: vl.fadeOut ? "0" : "1.6",
+      transition: "opacity 2s ease-in-out, font-size 2s ease-in-out, letter-spacing 2s ease-in-out",
+      lineHeight: isGhost ? "1.0" : "1.6",
       wordBreak: "break-word",
+      maxHeight: isGhost ? "1em" : undefined,
     }
   }
 
@@ -237,7 +236,7 @@ export const TeaserPreview = memo(function TeaserPreview({
   return (
     <div className="flex flex-col items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none overflow-hidden">
       {/* ── The Sediment Column ── */}
-      <div className="flex flex-col items-center justify-center w-[30%] min-w-[280px] max-w-[640px] px-6"
+      <div className="flex flex-col items-center justify-center w-[50%] min-w-[320px] max-w-[800px] px-8"
         style={{ paddingTop: "25vh", paddingBottom: "15vh" }}
       >
         {/* Visible sedimentation */}
