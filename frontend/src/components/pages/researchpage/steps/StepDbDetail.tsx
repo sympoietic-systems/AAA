@@ -7,7 +7,7 @@ import type { MetaLogResponse, TaskStepsResponse, StepPreview } from "../../../.
 import { getTaskMetaLog, getStepPreview, executeStep, reinitializeTask } from "../../../../api/research"
 import { TerminalButton } from "../../../UI"
 import { STEP_TO_PHASE, STEP_LABELS } from "../constants/taskConstants"
-import { StepResultTab } from "./StepResultTab"
+import { StepResultTab, repairTruncatedJson } from "./StepResultTab"
 import { StepInputTab } from "./StepInputTab"
 import { StepLogTab } from "./StepLogTab"
 
@@ -133,20 +133,52 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   const otherEntries = entries.filter(e => !inputEntries.includes(e) && !responseEntries.includes(e))
 
   const parsedResult = useMemo(() => {
-    const r: { queries: string[], goal: string, completeness: number, answer: string, confidence: number, learnings: string[], query: string, urls: {url:string,title:string}[] } =
-      { queries: [], goal: "", completeness: 0, answer: "", confidence: 0, learnings: [], query: "", urls: [] }
+    const r: {
+      queries: string[]
+      goal: string
+      completeness: number
+      answer: string
+      confidence: number
+      learnings: string[]
+      query: string
+      urls: {url:string,title:string}[]
+      reflection?: string
+      key_insights?: string[]
+      remaining_gaps?: string[]
+      next_queries?: string[]
+      next_direct_urls?: string[]
+    } = {
+      queries: [],
+      goal: "",
+      completeness: 0,
+      answer: "",
+      confidence: 0,
+      learnings: [],
+      query: "",
+      urls: [],
+      reflection: "",
+    }
     for (const e of responseEntries) {
       try {
         const d = e.event_data as any
-        const raw = d?.raw_response || ""
+        const raw = d?.raw_response || d?.raw || d?.response || ""
         let parsed: any = null
         try { parsed = JSON.parse(raw) } catch {
-          try { parsed = JSON.parse(d?.response || "") } catch { /* skip */ }
+          try { parsed = JSON.parse(repairTruncatedJson(raw)) } catch {
+            try { parsed = JSON.parse(d?.raw_response || "") } catch {
+              try { parsed = JSON.parse(d?.response || "") } catch { /* skip */ }
+            }
+          }
         }
         if (!parsed) continue
         const jd = parsed.json_data || parsed.content || parsed
-        if (typeof jd === "string") try { parsed = JSON.parse(jd) } catch { /* skip */ }
-        else parsed = jd
+        if (typeof jd === "string") {
+          try { parsed = JSON.parse(jd) } catch {
+            try { parsed = JSON.parse(repairTruncatedJson(jd)) } catch { /* skip */ }
+          }
+        } else {
+          parsed = jd
+        }
         if (typeof parsed !== "object" || !parsed) continue
         if (e.event_type === "orchestrator_plan_response") {
           r.goal = parsed.goal || ""
@@ -155,6 +187,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           if (parsed.learnings) r.learnings.push(...parsed.learnings)
         } else if (e.event_type.includes("reflect_response")) {
           r.completeness = parsed.completeness_score || parsed.completeness || 0
+          r.reflection = parsed.reflection || ""
           r.key_insights = parsed.key_insights || []
           r.remaining_gaps = parsed.remaining_gaps || []
           r.next_queries = parsed.next_queries || []

@@ -297,6 +297,26 @@ class SomaticResearchOrchestrator:
         except Exception:
             logger.warning("Failed to persist meta log for task %s event %s", task_id, event_type)
 
+    def _log_llm_response(self, task_id: str, event_type: str, resp: dict, extra: Optional[dict] = None, step_id: Optional[str] = None) -> None:
+        """Log an LLM response safely by truncating large fields within the dictionary,
+        ensuring the serialized JSON is always valid. Writes to both raw_response and raw.
+        """
+        try:
+            log_resp = resp.copy()
+            if "thinking" in log_resp and isinstance(log_resp["thinking"], str):
+                log_resp["thinking"] = log_resp["thinking"][:3000]
+            if "content" in log_resp and isinstance(log_resp["content"], str):
+                log_resp["content"] = log_resp["content"][:6000]
+            
+            event_data = extra.copy() if extra else {}
+            serialized = json.dumps(log_resp, default=str, ensure_ascii=False)
+            event_data["raw_response"] = serialized
+            event_data["raw"] = serialized
+            
+            self._log_meta(task_id, event_type, event_data, step_id=step_id)
+        except Exception:
+            logger.warning("Failed to log LLM response for task %s event %s", task_id, event_type, exc_info=True)
+
     def _get_or_create_default_branch(self, task_id: str) -> str:
         """Get or create a default branch ID for the task to satisfy scraped_assets.branch_id NOT NULL / FK constraints."""
         if not self.branch_repo:
@@ -821,10 +841,15 @@ class SomaticResearchOrchestrator:
                     existing_data = json.loads(existing["step_data"])
                 except Exception:
                     pass
-            existing_data["llm_response"] = resp
+            safe_resp = resp.copy()
+            if "thinking" in safe_resp and isinstance(safe_resp["thinking"], str):
+                safe_resp["thinking"] = safe_resp["thinking"][:4000]
+            if "content" in safe_resp and isinstance(safe_resp["content"], str):
+                safe_resp["content"] = safe_resp["content"][:10000]
+            existing_data["llm_response"] = safe_resp
             self.step_repo.update(step_id, step_data=json.dumps(
                 existing_data, default=str, ensure_ascii=False
-            )[:self._TRUNC_STEP_RESULT])
+            ))
         except Exception:
             logger.warning("Failed to save LLM response to step %s step_data", step_id, exc_info=True)
 
@@ -955,7 +980,7 @@ class SomaticResearchOrchestrator:
         # Save the plan as LLM response in step_data so frontend shows it
         try:
             llm_resp = {"plan": plan, "depth": 0}
-            self.step_repo.update(step_id, step_data=json.dumps(llm_resp, default=str, ensure_ascii=False)[:self._TRUNC_STEP_RESULT])
+            self.step_repo.update(step_id, step_data=json.dumps(llm_resp, default=str, ensure_ascii=False))
         except Exception:
             pass
         self._log_meta(task_id, "orchestrator_plan", {"plan": plan}, step_id=step_id)
@@ -1503,9 +1528,7 @@ class SomaticResearchOrchestrator:
                     gen_kwargs["reasoning_effort"] = thinking_cfg.get("effort", "high")
                 resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
                     expect_json=True, fallback_value=plan_json, **gen_kwargs)
-                self._log_meta(task_id, "orchestrator_plan_response", {
-                    "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
-                }, step_id=step_id or None)
+                self._log_llm_response(task_id, "orchestrator_plan_response", resp, step_id=step_id or None)
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
@@ -1572,9 +1595,7 @@ class SomaticResearchOrchestrator:
                     expect_json=True, fallback_value={"answer": fallback},
                     temperature=prompt_data.get("temperature", 0.4),
                     max_tokens=prompt_data.get("max_tokens", 3072))
-                self._log_meta(task_id, "orchestrator_synthesize_response", {
-                    "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
-                }, step_id=step_id or None)
+                self._log_llm_response(task_id, "orchestrator_synthesize_response", resp, step_id=step_id or None)
                 # Save LLM response to step_data
                 if step_id:
                     self._save_llm_response_to_step_data(step_id, resp)
@@ -1843,9 +1864,8 @@ class SomaticResearchOrchestrator:
             if isinstance(result, str):
                 result = json.loads(result)
             # Log response
-            self._log_meta(task_id, "orchestrator_digest_response", {
+            self._log_llm_response(task_id, "orchestrator_digest_response", resp, extra={
                 "source_url": url,
-                "raw_response": json.dumps(resp, default=str, ensure_ascii=False)[:self._TRUNC_META_LOG],
                 "learnings_count": len(result.get("learnings", [])) if isinstance(result, dict) else 0,
             }, step_id=step_id or None)
             return result if isinstance(result, dict) else fallback
@@ -1955,9 +1975,8 @@ class SomaticResearchOrchestrator:
                     result = json.loads(result)
                 if isinstance(result, dict):
                     latest_result = result
-                    self._log_meta(task_id, "orchestrator_reflect_response", {
+                    self._log_llm_response(task_id, "orchestrator_reflect_response", resp, extra={
                         "completeness": result.get("completeness_score", 0),
-                        "raw": json.dumps(resp, default=str, ensure_ascii=False)[:3000],
                     }, step_id=step_id or None)
                     if step_id:
                         self._save_llm_response_to_step_data(step_id, resp)

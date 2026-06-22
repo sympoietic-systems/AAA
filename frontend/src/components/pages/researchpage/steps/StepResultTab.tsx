@@ -12,6 +12,7 @@ interface StepResultTabProps {
     answer: string
     confidence: number
     learnings: string[]
+    reflection?: string
     key_insights?: string[]
     remaining_gaps?: string[]
     next_queries?: string[]
@@ -363,6 +364,15 @@ export const StepResultTab = memo(function StepResultTab({
             </div>
           )}
 
+          {parsedResult.reflection && (
+            <div>
+              <div className="text-[#555] text-[8px] mb-1 uppercase font-mono">consolidated analysis</div>
+              <div className="text-[#94a3b8] text-[9.5px] leading-relaxed whitespace-pre-wrap border border-[#1a1a1a] p-2 bg-[#080808]/30 rounded-sm">
+                {parsedResult.reflection}
+              </div>
+            </div>
+          )}
+
           {parsedResult.key_insights && parsedResult.key_insights.length > 0 && (
             <div>
               <div className="text-[#555] text-[8px] mb-1 uppercase font-mono">key insights ({parsedResult.key_insights.length})</div>
@@ -443,7 +453,7 @@ export const StepResultTab = memo(function StepResultTab({
           <div className="text-[#555] text-[9px] mb-1">llm responses ({responseEntries.length}):</div>
           {responseEntries.map((entry, ei) => {
             const d = entry.event_data as any
-            const rawStr = d?.raw_response || d?.response || ""
+            const rawStr = d?.raw_response || d?.raw || d?.response || ""
             if (!rawStr || rawStr === "{}") return null
             let resp: any = null
             if (typeof rawStr === "object" && rawStr !== null) {
