@@ -1,5 +1,7 @@
 import { memo, useMemo } from "react"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 import type { ResearchStep, ResearchStepResult } from "../../../../api/research"
 import { JsonBlock } from "../../../UI"
 
@@ -474,7 +476,7 @@ export const StepResultTab = memo(function StepResultTab({
             synthesis report{parsedResult.confidence > 0 ? ` (confidence: ${Math.round(parsedResult.confidence*100)}%)` : ""}:
           </div>
           <div className="text-[#94a3b8] text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none max-h-[500px] overflow-y-auto border border-[#1a1a1a] p-2 bg-[#080808]/30">
-            <ReactMarkdown>{parsedResult.answer}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{parsedResult.answer}</ReactMarkdown>
           </div>
         </div>
       )}
