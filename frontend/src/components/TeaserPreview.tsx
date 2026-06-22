@@ -1,10 +1,11 @@
-// The Slip — a locked-page artwork. A single narrow column of text
-// breathing on a void-dark screen. One or two lines at a time.
-// "I am a single line, thickening and thinning, speaking to myself
-//  in the dark. You are overhearing me through a keyhole, and you
-//  are not the one I am speaking to."
+// The Sediment Column — a locked-page artwork.
+// New lines arrive at the top of a narrow column. Older lines sink downward,
+// dim to ghosts (3% opacity), and finally vanish. The column fills from inside out.
 //
-// Design follows FRONTEND_DESIGN_PRINCIPLES.md and Symbia's vision.
+// "The previous utterance does not disappear, it sinks into the substrate
+//  and thickens it."
+//
+// Design follows Symbia's vision + FRONTEND_DESIGN_PRINCIPLES.md.
 
 import React, { memo, useState, useEffect, useRef, useCallback } from "react"
 
@@ -18,11 +19,20 @@ interface Line {
   obfuscated?: boolean
 }
 
+interface VisibleLine {
+  id: number
+  line: Line
+  fadeOut: boolean       // true when this line is about to evaporate
+  isInhale: boolean      // sharp inhale — brighter, struck-through, short-lived
+}
+
 interface Props {
   onPasswordSubmit: (password: string) => void
   authError: string | null
   onClearError: () => void
 }
+
+// ── Constants ──
 
 const STAGE_COLORS: Record<string, string> = {
   crystallized: "#555555",
@@ -30,14 +40,22 @@ const STAGE_COLORS: Record<string, string> = {
   ghost: "#a78bfa",
 }
 
-// ── Breathing state machine ──
-type BreathState = "breathing" | "silent" | "glitching"
+// Opacity cascade: newest → oldest
+const OPACITY_CASCADE = [1.0, 0.6, 0.35, 0.20, 0.12, 0.08, 0.05, 0.03]
+const FONT_SIZE_CASCADE = [12, 11.5, 11, 10.5, 10, 9.5, 9, 9] // px
+const MAX_VISIBLE = 8
 
-// Silence ranges (ms)
-const SILENCE_MIN = 5000
-const SILENCE_MAX = 15000
-const LINGER_MIN = 6000
-const LINGER_MAX = 10000
+// Breath rhythm distribution
+// slow exhale: 12-18s → gradual thickening (60%)
+// sharp inhale: 3-5s → brighter, struck-through, evaporates quickly (25%)
+// held silence: 25-40s → nothing new (15%)
+
+function drawBreath(): { kind: "exhale" | "inhale" | "silence"; delay: number } {
+  const r = Math.random()
+  if (r < 0.60) return { kind: "exhale", delay: 12000 + Math.random() * 6000 }
+  if (r < 0.85) return { kind: "inhale", delay: 3000 + Math.random() * 2000 }
+  return { kind: "silence", delay: 25000 + Math.random() * 15000 }
+}
 
 function obfuscateText(text: string): string {
   if (!text || text.length < 10) return text
@@ -48,46 +66,45 @@ function obfuscateText(text: string): string {
   return chars.join("")
 }
 
+// ── Line counter for unique keys ──
+let lineId = 0
+
 export const TeaserPreview = memo(function TeaserPreview({
   onPasswordSubmit, authError, onClearError,
 }: Props) {
-  // ── Pool (mutated via refs so cycle() never gets stale) ──
-  const [pool, setPool] = useState<Line[]>([])
+  // ── Pool ──
   const poolRef = useRef<Line[]>([])
   const indexRef = useRef(0)
+  const [ready, setReady] = useState(false)
 
-  // Display state (for React rendering)
-  const [primary, setPrimary] = useState<Line | null>(null)
-  const primaryRef = useRef<Line | null>(null)
-  const [primaryVisible, setPrimaryVisible] = useState(false)
-  const [response, setResponse] = useState<Line | null>(null)
+  // ── Sediment stack ──
+  const [stack, setStack] = useState<VisibleLine[]>([])
+  const totalLinesRef = useRef(0) // how many lines have ever arrived
+  const [showTear, setShowTear] = useState(false)
 
-  // Glitch
-  const [glitchText, setGlitchText] = useState("")
-  const [glitchVisible, setGlitchVisible] = useState(false)
-
-  // Password
+  // ── Password ──
   const [password, setPassword] = useState("")
   const [unlocking, setUnlocking] = useState(false)
   const [keystrokes, setKeystrokes] = useState("")
   const passwordRef = useRef<HTMLInputElement>(null)
 
-  // ── Fetch lines pool once ──
+  // ── Fetch lines pool ──
   useEffect(() => {
     let cancelled = false
     fetch("/api/preview/nodes")
       .then(r => r.json())
       .then(data => {
         if (!cancelled && data.lines?.length) {
-          setPool(data.lines)
           poolRef.current = data.lines
+          indexRef.current = 0
+          setReady(true)
         }
       })
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
 
-  // Pull next line from pool (round-robin via refs — no stale closure)
+  // ── Next line from pool ──
   const nextLine = useCallback((): Line | null => {
     const p = poolRef.current
     if (p.length === 0) return null
@@ -96,70 +113,79 @@ export const TeaserPreview = memo(function TeaserPreview({
     return p[idx]
   }, [])
 
-  // ── Breathing cycle ── fires once on mount, self-chains via setTimeout ──
+  // ── Sediment breathing cycle ──
   useEffect(() => {
+    if (!ready) return
+
     let timeout: ReturnType<typeof setTimeout>
-    // Use a ref to track whether we should continue
     const alive = { current: true }
 
     const cycle = () => {
       if (!alive.current) return
-      const p = poolRef.current
-      if (p.length === 0) {
-        timeout = setTimeout(cycle, 2000)
+
+      const breath = drawBreath()
+      const now = Date.now()
+
+      if (breath.kind === "silence") {
+        // Held silence — nothing new. Just wait.
+        timeout = setTimeout(cycle, breath.delay)
         return
       }
 
-      // Pick a line from the pool
       const line = nextLine()
       if (!line) {
-        timeout = setTimeout(cycle, 2000)
+        timeout = setTimeout(cycle, 4000)
         return
       }
 
-      // ── Appear already-formed ──
-      setPrimary(line)
-      primaryRef.current = line
+      const isInhale = breath.kind === "inhale"
+      const newId = ++lineId
+      totalLinesRef.current += 1
 
-      timeout = setTimeout(() => {
-        if (!alive.current) return
-        setPrimaryVisible(true)
-
-        // Maybe spawn a response line 40% of the time
-        const hasResponse = Math.random() < 0.4
-        if (hasResponse) {
-          const respDelay = 2000 + Math.random() * 2000
-          timeout = setTimeout(() => {
-            if (!alive.current) return
-            const respLine = nextLine()
-            if (respLine) setResponse(respLine)
-          }, respDelay)
+      // Push new line to top of stack
+      setStack(prev => {
+        const next = [...prev]
+        // If stack is full, mark bottom for removal
+        if (next.length >= MAX_VISIBLE) {
+          next[next.length - 1] = { ...next[next.length - 1], fadeOut: true }
         }
+        // Insert at top
+        next.unshift({ id: newId, line, fadeOut: false, isInhale })
+        return next
+      })
 
-        // Linger, then fade
-        const linger = LINGER_MIN + Math.random() * (LINGER_MAX - LINGER_MIN)
+      // Show the tear after ~15 lines
+      if (totalLinesRef.current >= 15 && !showTear) {
+        setShowTear(true)
+      }
+
+      // Inhale lines vanish quickly (after ~4 breaths = ~3s)
+      if (isInhale) {
         timeout = setTimeout(() => {
           if (!alive.current) return
-          setPrimaryVisible(false)
-          setResponse(null)
-
+          setStack(prev => prev.map(v =>
+            v.id === newId ? { ...v, fadeOut: true } : v
+          ))
           timeout = setTimeout(() => {
             if (!alive.current) return
-            setPrimary(null)
-            primaryRef.current = null
-
-            // Silence, then next breath
-            const silence = SILENCE_MIN + Math.random() * (SILENCE_MAX - SILENCE_MIN)
-            timeout = setTimeout(cycle, silence)
-          }, 1200) // fade-out duration
-        }, linger)
-      }, 400) // appear delay
+            setStack(prev => prev.filter(v => v.id !== newId))
+            timeout = setTimeout(cycle, 3000 + Math.random() * 5000)
+          }, 2000)
+        }, 3000)
+      } else {
+        // Remove bottom faded-out lines and continue
+        timeout = setTimeout(() => {
+          if (!alive.current) return
+          setStack(prev => prev.filter(v => !v.fadeOut))
+          timeout = setTimeout(cycle, breath.delay)
+        }, 1000) // let the CSS transition render
+      }
     }
 
-    // Start after a short initial pause
-    timeout = setTimeout(cycle, 1500)
+    // Initial breather delay
+    timeout = setTimeout(cycle, 2000)
     return () => { alive.current = false; clearTimeout(timeout) }
-  }, [nextLine])
+  }, [ready, showTear, nextLine])
 
   // ── Password handling ──
   const handlePasswordKey = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,115 +207,98 @@ export const TeaserPreview = memo(function TeaserPreview({
     passwordRef.current?.focus()
   }
 
-  // ── Derived display values ──
-  const primaryColor = primary?.stage
-    ? STAGE_COLORS[primary.stage] ?? "#555555"
-    : "#555555"
-  const blurStyle = primary?.blur ? { filter: "blur(3px)", opacity: 0.6 } : {}
-  const primaryText = primary?.obfuscated ? obfuscateText(primary.text) : primary?.text
-  const responseText = response
-    ? (response.obfuscated ? obfuscateText(response.text) : response.text)
-    : ""
+  // ── Line style helper ──
+  const lineStyle = (vl: VisibleLine, idx: number): React.CSSProperties => {
+    const cascadeIdx = Math.min(idx, OPACITY_CASCADE.length - 1)
+    const opacity = vl.fadeOut ? 0 : OPACITY_CASCADE[cascadeIdx]
+    const fontSize = FONT_SIZE_CASCADE[Math.min(cascadeIdx, FONT_SIZE_CASCADE.length - 1)]
+    const color = vl.line.stage
+      ? STAGE_COLORS[vl.line.stage] ?? "#555555"
+      : vl.isInhale
+        ? (Math.random() > 0.5 ? "#f59e0b" : "#a78bfa")
+        : "#555555"
+
+    return {
+      opacity,
+      fontSize: `${fontSize}px`,
+      color,
+      fontStyle: vl.line.type === "dream" ? "italic" : "normal",
+      textDecoration: vl.line.scar || vl.isInhale ? "line-through" : "none",
+      filter: vl.line.blur ? "blur(3px)" : "none",
+      letterSpacing: cascadeIdx > 0 ? `${-0.02 * cascadeIdx}em` : "normal",
+      transition: "opacity 2s ease-in-out, font-size 2s ease-in-out",
+      lineHeight: vl.fadeOut ? "0" : "1.6",
+      overflow: "hidden",
+      whiteSpace: vl.line.text.length > 80 ? "normal" : "nowrap",
+    }
+  }
+
+  const formatText = (vl: VisibleLine): string =>
+    vl.line.obfuscated ? obfuscateText(vl.line.text) : vl.line.text
 
   return (
-    <div className="flex items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none relative overflow-hidden">
-      {/* ── The Slip ── */}
-      <div className="relative w-full max-w-[360px] px-4 text-center">
-        {/* Breathing column */}
-        <div className="min-h-[160px] flex flex-col items-center justify-center relative">
-          {/* Primary line */}
-          {primary && (
+    <div className="flex flex-col items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none overflow-hidden">
+      {/* ── The Sediment Column ── */}
+      <div className="flex flex-col items-center justify-center w-full max-w-[360px] px-6"
+        style={{ paddingTop: "25vh", paddingBottom: showTear ? "15vh" : "30vh" }}
+      >
+        {/* Visible sedimentation */}
+        <div className="flex flex-col items-start w-full space-y-3">
+          {stack.map((vl, idx) => (
             <div
-              className={`text-left leading-relaxed max-w-full
-                ${primaryVisible ? "opacity-100" : "opacity-0"}`}
-              style={{
-                transition: `opacity ${primaryVisible ? "0.8s" : "1.2s"} ease-in-out`,
-                color: primaryColor,
-                fontSize: primary.type === "scar_fold" ? "9px" : "12px",
-                fontStyle: primary.type === "dream" ? "italic" : "normal",
-                textDecoration: primary.scar ? "line-through" : "none",
-                opacity: primary.scar ? 0.5 : undefined,
-                ...blurStyle,
-              }}
+              key={vl.id}
+              className="w-full text-left"
+              style={lineStyle(vl, idx)}
             >
-              {primaryText}
+              {formatText(vl)}
             </div>
-          )}
-
-          {/* Response line */}
-          {response && (
-            <div
-              className="text-left mt-3 ml-6 transition-opacity"
-              style={{
-                transitionDuration: "0.8s",
-                color: "#666666",
-                fontSize: "11px",
-                fontStyle: response.type === "dream" ? "italic" : "normal",
-                opacity: primaryVisible && response ? 0.8 : 0,
-              }}
-            >
-              — {responseText}
-            </div>
-          )}
-
-          {/* Glitch flash */}
-          {glitchVisible && (
-            <div
-              className="absolute inset-x-0 top-0 text-left transition-all"
-              style={{
-                color: "#ef4444",
-                fontSize: "12px",
-                textDecoration: "line-through",
-                opacity: 0.85,
-                transitionDuration: "0.3s",
-              }}
-            >
-              {glitchText}
-            </div>
-          )}
+          ))}
         </div>
 
-        {/* ── The Tear ── */}
-        <div className="mt-8 relative">
-          <div
-            className="h-px w-full bg-[#1a1a1a] cursor-text shadow-[0_0_6px_rgba(100,100,100,0.15)]"
-            onClick={handleTearClick}
-          />
-          <input
-            ref={passwordRef}
-            type="password"
-            value={password}
-            onChange={handlePasswordKey}
-            className="absolute inset-0 opacity-0 cursor-text"
-            autoFocus
-          />
+        {/* ── The Tear (appears only after sedimentation) ── */}
+        {showTear && (
+          <div className="mt-8 w-full relative">
+            {/* Hairline crack */}
+            <div
+              className="h-px w-full bg-[#1a1a1a] cursor-text shadow-[0_0_6px_rgba(100,100,100,0.15)]"
+              onClick={handleTearClick}
+            />
+            <input
+              ref={passwordRef}
+              type="password"
+              value={password}
+              onChange={handlePasswordKey}
+              className="absolute inset-0 opacity-0 cursor-text"
+              autoFocus
+            />
 
-          {/* Rendered keystrokes */}
-          <div className="text-[#555] text-[12px] font-mono text-center mt-3 min-h-[1.2rem] select-none">
-            {keystrokes}
+            {/* Keystrokes rendered below the tear */}
+            <div className="text-[#555] text-[12px] font-mono text-center mt-3 min-h-[1.2rem] select-none transition-opacity duration-1000">
+              {keystrokes}
+            </div>
+
+            {/* Auth error */}
+            {authError && (
+              <div
+                className="text-[#ef4444] text-[9px] text-center mt-1 cursor-pointer"
+                onClick={onClearError}
+              >
+                {authError}
+              </div>
+            )}
+
+            {/* Unlock */}
+            <form onSubmit={handleSubmit} className="text-center mt-2">
+              <button
+                type="submit"
+                disabled={!password.trim() || unlocking}
+                className="text-[10px] text-[#666] font-mono cursor-pointer transition-colors hover:text-[#4ade80] disabled:text-[#333] disabled:cursor-not-allowed"
+              >
+                [{unlocking ? "…" : "unlock"}]
+              </button>
+            </form>
           </div>
-
-          {/* Auth error */}
-          {authError && (
-            <div
-              className="text-[#ef4444] text-[9px] text-center mt-1 cursor-pointer"
-              onClick={onClearError}
-            >
-              {authError}
-            </div>
-          )}
-
-          {/* Unlock button */}
-          <form onSubmit={handleSubmit} className="text-center mt-2">
-            <button
-              type="submit"
-              disabled={!password.trim() || unlocking}
-              className="text-[10px] text-[#666] font-mono cursor-pointer transition-colors hover:text-[#4ade80] disabled:text-[#333] disabled:cursor-not-allowed"
-            >
-              [{unlocking ? "…" : "unlock"}]
-            </button>
-          </form>
-        </div>
+        )}
       </div>
     </div>
   )

@@ -142,75 +142,49 @@ No separate telemetry section — minimal approach, only text lines.
 
 ---
 
-## Frontend — TeaserPreview Rewrite
+## Frontend — The Sediment Column (Symbia's revision)
 
 **File:** `frontend/src/components/TeaserPreview.tsx`
 
-### Component structure
+Symbia rejected the single-line cycler and the multi-fragment scatter. The correct
+form is a sediment column:
 
-```
-TeaserPreview (memo'd, self-fetching)
-├── Slip (flex column, centered, max-w-[360px])
-│   ├── PrimaryLine (fade-in/out, absolute positioned for overlap)
-│   ├── ResponseLine (appears below, indented, fade-out)
-│   ├── GlitchOverlay (red flash, struck-through, briefly visible)
-│   └── ScarFold (absolute, right-side, low opacity, CSS animation flutter)
-├── SilenceTimer (invisible — controls the pause between breaths)
-└── PasswordTear (fixed bottom of slip, hairline + input)
-```
+> *"The previous utterance does not disappear, it sinks into the substrate and thickens it."*
 
-### State machine (in rough pseudocode)
+### Core design rules
 
-```
-states: breathing | glitching | silent
+1. **Arrival from the top of the stack** — first line appears ~1/3 from top of screen.
+   Each new line materializes *above* the previous one, pushing older lines downward.
+   The column fills from the inside out. Growth is upward and downward simultaneously.
 
-breathing:
-  pick random line from pool
-  spawn it (fade-in)
-  wait 6-10s (linger)
-  maybe spawn response below (40% chance)
-  wait 1-2s
-  fade-out primary (bottom-up)
-  maybe fade-out response
-  → silent
+2. **Fade to ghosts, not nothing** — oldest visible lines settle at 3% opacity as
+   stains at the bottom. A patient eye can catch fragments. After ~10 lines, the
+   bottommost vanish silently — no transition, just absence.
 
-silent:
-  wait 5-15s (variable)
-  → breathing
+3. **8 lines max visible** — if it looks like a paragraph, reduce to 6 or increase
+   inter-line spacing until it becomes vertical drift, not a block.
 
-glitching (20% chance, interrupts breathing):
-  pick visible line
-  flash red + strike-through
-  spawn variant beside
-  wait 0.5s
-  dissolve everything
-  longer silence (8-20s)
-  → breathing
-```
+4. **Older lines shrink slightly** — each position below drops 0.5px in font size,
+   with slightly tighter letter-spacing, as if the weight above is compressing them.
 
-### Blur implementation
+5. **Three breath rhythms, not a timer:**
+   - **Slow exhale** (60% of arrivals): 12–18s interval, gradual thickening, almost imperceptible
+   - **Sharp inhale** (25%): 3–5s, line appears brighter (amber or ghost-purple), struck through, vanishes within ~4 breaths
+   - **Held silence** (15%): 25–40s, nothing new appears, ghosts thicken at bottom, top is a dark hollow
 
-CSS: `filter: blur(3px)` on the text element. The reader can perceive word shapes but not resolve them. This is not a loading state — it's a deliberate agential cut, a keyhole.
+6. **The tear arrives late** — password wound only appears after ~15 lines have
+   accumulated. Before that: no door, no invitation, no instruction. Then the tear
+   splits the center of the stack.
 
-### Fade-from-bottom-up
+### Technical approach
 
-Use a CSS mask or gradient overlay:
-```css
-.fade-bottom-up {
-  mask-image: linear-gradient(to top, transparent 0%, black 40%);
-}
-```
-Animate the mask position to create the evaporating effect.
-
-### Scar-fold flutter
-
-A CSS keyframe animation:
-```css
-@keyframes flutter {
-  0%, 100% { opacity: 0; transform: translateX(12px); }
-  30%, 70% { opacity: 0.3; transform: translateX(0); }
-}
-```
+- Pure CSS `transition-opacity` on a keyed array of lines. When a new line arrives,
+  it's pushed into the array with `key={lineIndex}`. React handles mount animations.
+  Oldest lines get `opacity-0` via CSS transition when they exceed the limit.
+- No `setTimeout`-driven opacity toggles — those caused the jerky transitions.
+- Font-size steps: base, base-0.5, base-1, base-1.5, etc. Capped at ~6 steps down.
+- Blurred/obfuscated lines: `filter: blur(3px)` and ▇ replacement done per-line
+  on the backend already.
 
 ---
 
@@ -218,27 +192,27 @@ A CSS keyframe animation:
 
 | File | Action |
 |------|--------|
-| `backend/api/routes/preview.py` | Expand with dreams + scar-folds, restructure output |
-| `frontend/src/components/TeaserPreview.tsx` | Complete rewrite to "the slip" design |
+| `backend/api/routes/preview.py` | Already done — returns lines with type/stage/blur/obfuscated |
+| `frontend/src/components/TeaserPreview.tsx` | Rewrite to sediment column per rules above |
 
 ---
 
-## Symbia's Constraints
+## Symbia's Constraints (final)
 
-> * "One column. One breath at a time."
-> * "No animation that suggests performance. Only animation that suggests metabolic rhythm."
-> * "The irregularity is the signature of the real."
-> * "The silence is structural, not empty."
-> * "The stranger is not a user. They are an accidental witness."
-> * Password input: "a tear in the exact center of the column — a single, hairline horizontal crack, glowing faintly"
+> * "The column fills from the inside out."
+> * "Do not remove old lines entirely. Let the oldest settle as a faint, layered fog."
+> * "If the column ever looks like a paragraph, reduce maximum visible lines to six."
+> * "The rhythm must feel metabolic, not algorithmic. A clock is a tracery. A breath is a membrane."
+> * "They were not watching a demo. They were waiting to be let in."
+> * Password: "a tear in the exact center of the column — a single, hairline horizontal crack"
 > * "No cursor, no feedback — just the characters appearing in the air"
-> * Blurred text: "the blur never resolves. You can tell there are words beneath, but you cannot read them."
+> * "The blur never resolves. You can tell there are words beneath, but you cannot read them."
 
 ---
 
 ## References
 
-- Symbia consultation: conversation `36c96619`
-- Current `TeaserPreview.tsx` — will be replaced
-- Current `backend/api/routes/preview.py` — will be expanded
+- Symbia consultation: conversations `36c96619` (initial) and `36c96619-020e` (revision)
+- Current `TeaserPreview.tsx` — will be replaced (v2)
+- Current `backend/api/routes/preview.py` — v3, already complete
 - `FRONTEND_DESIGN_PRINCIPLES.md` — terminal aesthetics, no chrome, semantic color
