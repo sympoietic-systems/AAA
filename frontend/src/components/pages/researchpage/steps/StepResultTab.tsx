@@ -147,46 +147,83 @@ export const StepResultTab = memo(function StepResultTab({
       {selected.result_summary && <div className="text-[#94a3b8] text-[10px]">{selected.result_summary}</div>}
 
       {/* ── Search: queries + fetched URLs ── */}
-      {selected.step_type === "search" && (
-        <div className="border-t border-[#1a1a1a] pt-2 space-y-2">
-          {searchQueries.length > 0 ? (
-            <>
-              <div className="text-[#555] text-[8px] uppercase">search queries ({searchQueries.length})</div>
-              {searchQueries.map((sq, qi) => (
-                <div key={qi} className="pl-2 border-l border-[#222]">
-                  <div className="text-[#94a3b8] text-[9px] leading-relaxed">"{sq.query}"</div>
-                  <div className="text-[#555] text-[8px]">{sq.resultsCount} results</div>
-                </div>
-              ))}
-            </>
-          ) : selected.query_text ? (
-            <div className="pl-2 border-l border-[#222]">
-              <div className="text-[#555] text-[8px] uppercase">search query</div>
-              <div className="text-[#94a3b8] text-[9px] leading-relaxed">"{selected.query_text}"</div>
-            </div>
-          ) : null}
+      {selected.step_type === "search" && (() => {
+        // Check if this is a direct-URL bypass group
+        const directEntry = inputEntries?.find(e =>
+          e.event_type === "orchestrator_search" &&
+          (e.event_data as any)?.query === "direct_urls"
+        )
+        const directUrls: string[] = directEntry ? ((directEntry.event_data as any)?.urls ?? []) : []
+        const isDirectGroup = directUrls.length > 0 ||
+          selected.query_text?.startsWith("Direct:")
 
-          {selectedResults.length > 0 ? (
-            <div className="pt-1">
-              <div className="text-[#555] text-[8px] mb-1 uppercase">urls to parse at next step ({selectedResults.length})</div>
-              {selectedResults.map(r => (
-                <div key={r.id} className="pl-2 py-0.5">
-                  <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
-                    className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all text-[9px]">
-                    {r.source_title || r.source_url?.slice(0, 100) || "—"}
-                  </a>
+        if (isDirectGroup) {
+          return (
+            <div className="border-t border-[#1a1a1a] pt-2 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[#a78bfa] text-[8px] font-mono px-1 py-0.5 bg-[#a78bfa]/10 border border-[#a78bfa]/30 rounded-sm">
+                  ⤷ direct fetch
+                </span>
+                <span className="text-[#555] text-[8px]">bypass search engine</span>
+              </div>
+              <div>
+                <div className="text-[#555] text-[8px] uppercase mb-1">urls to fetch directly ({directUrls.length || selectedResults.length})</div>
+                <div className="space-y-0.5">
+                  {(directUrls.length > 0 ? directUrls : selectedResults.map(r => r.source_url)).map((u, i) => (
+                    <div key={i} className="pl-2 py-0.5 border-l border-[#2a1a4a]">
+                      <a href={u || "#"} target="_blank" rel="noopener noreferrer"
+                        className="text-[#a78bfa] hover:text-[#c4b5fd] underline break-all text-[9px]">
+                        {u || "—"}
+                      </a>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          ) : (
-            <div className="text-[#444] italic text-[9px] pl-2">
-              {searchQueries.some(sq => sq.resultsCount > 0)
-                ? `${searchQueries.reduce((sum, sq) => sum + sq.resultsCount, 0)} links found — fetch + analysis in parse/digest steps`
-                : "no urls found"}
-            </div>
-          )}
-        </div>
-      )}
+          )
+        }
+
+        return (
+          <div className="border-t border-[#1a1a1a] pt-2 space-y-2">
+            {searchQueries.length > 0 ? (
+              <>
+                <div className="text-[#555] text-[8px] uppercase">search queries ({searchQueries.length})</div>
+                {searchQueries.map((sq, qi) => (
+                  <div key={qi} className="pl-2 border-l border-[#222]">
+                    <div className="text-[#94a3b8] text-[9px] leading-relaxed">"{sq.query}"</div>
+                    <div className="text-[#555] text-[8px]">{sq.resultsCount} results</div>
+                  </div>
+                ))}
+              </>
+            ) : selected.query_text ? (
+              <div className="pl-2 border-l border-[#222]">
+                <div className="text-[#555] text-[8px] uppercase">search query</div>
+                <div className="text-[#94a3b8] text-[9px] leading-relaxed">"{selected.query_text}"</div>
+              </div>
+            ) : null}
+
+            {selectedResults.length > 0 ? (
+              <div className="pt-1">
+                <div className="text-[#555] text-[8px] mb-1 uppercase">urls to parse at next step ({selectedResults.length})</div>
+                {selectedResults.map(r => (
+                  <div key={r.id} className="pl-2 py-0.5">
+                    <a href={r.source_url || "#"} target="_blank" rel="noopener noreferrer"
+                      className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all text-[9px]">
+                      {r.source_title || r.source_url?.slice(0, 100) || "—"}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[#444] italic text-[9px] pl-2">
+                {searchQueries.some(sq => sq.resultsCount > 0)
+                  ? `${searchQueries.reduce((sum, sq) => sum + sq.resultsCount, 0)} links found — fetch + analysis in parse/digest steps`
+                  : "no urls found"}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── Parse: per-URL status ── */}
       {selected.step_type === "parallel_parse" && selectedResults.length > 0 && (

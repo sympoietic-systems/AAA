@@ -1071,8 +1071,9 @@ class SomaticResearchOrchestrator:
         # Setup query group for direct URLs if present
         direct_group = len(search_queries) + 1 if direct_urls else None
         if direct_group:
+            direct_label = f"Direct: {direct_urls[0][:60]}{'…' if len(direct_urls) > 1 else ''}"
             step_id = self._create_or_update_step(s, task_id, "search",
-                query_group=direct_group, query_text="Direct URL Parse Pointers")
+                query_group=direct_group, query_text=direct_label)
             group_steps[direct_group] = step_id
 
         # Run DDG searches in parallel
@@ -1126,13 +1127,13 @@ class SomaticResearchOrchestrator:
         if direct_group and direct_urls:
             step_id = group_steps[direct_group]
             self._log_meta(task_id, "orchestrator_search", {
-                "query": "Direct URL Parse Pointers",
+                "query": "direct_urls",
                 "results_count": len(direct_urls),
                 "urls": direct_urls,
             }, step_id=step_id)
             
             self.step_repo.update(step_id, status="completed",
-                result_summary=f"{len(direct_urls)} direct URLs queued")
+                result_summary=f"{len(direct_urls)} direct URL(s) queued — bypass search")
             
             for url in direct_urls:
                 if self.step_result_repo:
