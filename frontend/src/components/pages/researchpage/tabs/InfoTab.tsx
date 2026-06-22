@@ -55,8 +55,6 @@ export const InfoTab = memo(function InfoTab({ task, orchPhase, onRefreshTask }:
           onRefreshTask={onRefreshTask}
         />
       </div>
-
-      {task.result_summary && <MarkdownSection title=" Result Summary " content={task.result_summary} />}
     </div>
   )
 })

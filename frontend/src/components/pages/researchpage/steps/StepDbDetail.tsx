@@ -15,6 +15,7 @@ interface DbStepDetailProps {
   taskId: string
   data: TaskStepsResponse | null
   selectedId: string
+  onSelectTab?: (tabId: "info" | "steps" | "summary") => void
 }
 
 const getStepDepth = (step: ResearchStep): number => {
@@ -28,7 +29,7 @@ const getStepDepth = (step: ResearchStep): number => {
   }
 }
 
-export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: DbStepDetailProps) {
+export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId, onSelectTab }: DbStepDetailProps) {
   const steps = data ? [...data.steps].reverse() : []
   const selected = steps.find(s => s.id === selectedId)
   if (!selected) return null
@@ -267,6 +268,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           responseEntries={responseEntries}
           inputEntries={inputEntries}
           parentInputUrls={parentInputUrls}
+          onSelectTab={onSelectTab}
         />
       )}
 

@@ -5,11 +5,12 @@ import { TwoPanelLayout } from "../shared/TwoPanelLayout"
 import { StepPipeline } from "../steps/StepPipeline"
 import { StepDetailPanel } from "../steps/StepDetailPanel"
 
-export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, onRefreshTask }: {
+export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, onRefreshTask, onSelectTab }: {
   taskId: string
   orchPhase: string
   taskStatus: string
   onRefreshTask?: () => void
+  onSelectTab?: (tabId: "info" | "steps" | "summary") => void
 }) {
   const [data, setData] = useState<TaskStepsResponse | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -112,6 +113,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
           preview={preview}
           prevLoading={prevLoading}
           onReinitialize={reinitAndFetch}
+          onSelectTab={onSelectTab}
         />
       }
     />

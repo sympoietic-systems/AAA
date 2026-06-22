@@ -12,13 +12,14 @@ interface StepDetailPanelProps {
   preview: StepPreview | null
   prevLoading: boolean
   onReinitialize: () => void
+  onSelectTab?: (tabId: "info" | "steps" | "summary") => void
 }
 
 export const StepDetailPanel = memo(function StepDetailPanel({
   taskId, data, selectedId, orchPhase,
-  preview, prevLoading, onReinitialize,
+  preview, prevLoading, onReinitialize, onSelectTab,
 }: StepDetailPanelProps) {
-  if (selectedId) return <DbStepDetail taskId={taskId} data={data} selectedId={selectedId} />
+  if (selectedId) return <DbStepDetail taskId={taskId} data={data} selectedId={selectedId} onSelectTab={onSelectTab} />
 
   const phaseLabel = PHASE_LABELS[orchPhase] || orchPhase
   if (prevLoading) return (

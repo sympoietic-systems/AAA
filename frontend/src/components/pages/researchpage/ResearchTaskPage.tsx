@@ -10,23 +10,24 @@ import { STATUS_COLORS } from "./constants/taskConstants"
 import { useTaskPolling } from "./shared/useTaskPolling"
 import { InfoTab } from "./tabs/InfoTab"
 import { StepsTab } from "./tabs/StepsTab"
-import { AssetsTab } from "./tabs/AssetsTab"
-import { BranchesTab } from "./tabs/BranchesTab"
+import { MarkdownSection } from "./shared/MarkdownSection"
 import { NewResearchForm } from "./NewResearchForm"
 
-type SubTabId = "info" | "steps" | "assets" | "branches"
+type SubTabId = "info" | "steps" | "summary"
 
 const SUB_TABS: { key: SubTabId; label: string }[] = [
   { key: "info",     label: "Info" },
   { key: "steps",    label: "Steps" },
-  { key: "assets",   label: "Assets" },
-  { key: "branches", label: "Branches" },
+  { key: "summary",  label: "Summary" },
 ]
 
 /* ── Shell — header, tab bar, content routing ── */
 const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask }) {
-  const [tab, setTab] = useState<SubTabId>("info")
   const { current, orchPhase, refreshAll } = useTaskPolling(task.id, task.status, task)
+  const [tab, setTab] = useState<SubTabId>(() => {
+    if (task.status === "completed" && task.result_summary) return "summary"
+    return "info"
+  })
 
   const color = STATUS_COLORS[current.status] ?? "#666"
 
@@ -72,9 +73,18 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
       {/* Content area */}
       <div className="flex-1 min-h-0 flex flex-col px-4 pb-4 pt-1">
         {tab === "info"     && <div className="flex-1 overflow-y-auto pr-1"><InfoTab task={current} orchPhase={orchPhase} onRefreshTask={refreshAll} /></div>}
-        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} />}
-        {tab === "assets"   && <AssetsTab task={current} />}
-        {tab === "branches" && <BranchesTab task={current} />}
+        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} onSelectTab={setTab} />}
+        {tab === "summary"  && (
+          <div className="flex-1 overflow-y-auto pr-1">
+            {current.result_summary ? (
+              <MarkdownSection title=" Research Synthesis Report " content={current.result_summary} />
+            ) : (
+              <div className="text-[10px] text-[#444] py-2 font-mono italic">
+                Synthesis in progress — the final report will be available here when completed.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
