@@ -336,12 +336,80 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
         </div>
       )}
       {preview.phase === "synthesizing" && (
-        <div className="space-y-1">
-          <div className="text-[#555] text-[9px] uppercase font-mono">synthesis context</div>
-          <KeyValueGrid items={[
-            { key: "accumulated findings", value: preview.findings_count ?? 0 },
-            { key: "sources count", value: preview.sources_count ?? 0 },
-          ]} />
+        <div className="space-y-3">
+          <div>
+            <div className="text-[#555] text-[9px] uppercase font-mono mb-1">synthesis context</div>
+            <KeyValueGrid items={[
+              { key: "accumulated findings", value: preview.findings_count ?? 0 },
+              { key: "sources analyzed", value: preview.sources_count ?? 0 },
+            ]} />
+          </div>
+
+          {preview.sources && preview.sources.length > 0 && (
+            <details>
+              <summary className="text-[#4ade80] text-[9px] cursor-pointer hover:text-[#6ee7b0] font-mono">
+                sources consulted ({preview.sources.length})
+              </summary>
+              <div className="mt-1 space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                {preview.sources.map((u, i) => (
+                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed flex items-center justify-between gap-2 max-w-full">
+                    <div className="truncate flex-1 min-w-0">
+                      <span className="text-[#555]">{i+1}.</span>{" "}
+                      <a href={u.url} target="_blank" rel="noopener noreferrer"
+                        className="text-[#4ade80] hover:text-[#6ee7b0] underline">
+                        {u.title || u.url}
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+
+          {preview.findings && preview.findings.length > 0 && (
+            <details open>
+              <summary className="text-[#94a3b8] text-[9px] cursor-pointer hover:text-[#cbd5e1] font-mono">
+                accumulated findings ({preview.findings.length})
+              </summary>
+              <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                {preview.findings.map((f, i) => (
+                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                    <span className="text-[#555]">{i+1}.</span> {f}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+
+          {preview.reflection && (
+            <>
+              {preview.reflection.key_insights && preview.reflection.key_insights.length > 0 && (
+                <details>
+                  <summary className="text-[#4ade80] text-[9px] cursor-pointer hover:text-[#6ee7b0] font-mono">
+                    stabilized key insights ({preview.reflection.key_insights.length})
+                  </summary>
+                  <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-[#1a1a1a] p-1.5 bg-[#080808]/30">
+                    {preview.reflection.key_insights.map((ins: string, i: number) => (
+                      <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#1a3a1a] leading-relaxed">✓ {ins}</div>
+                    ))}
+                  </div>
+                </details>
+              )}
+
+              {preview.reflection.remaining_gaps && preview.reflection.remaining_gaps.length > 0 && (
+                <details>
+                  <summary className="text-[#f59e0b] text-[9px] cursor-pointer hover:text-[#fbbf24] font-mono">
+                    remaining gaps ({preview.reflection.remaining_gaps.length})
+                  </summary>
+                  <div className="mt-1 space-y-0.5 max-h-28 overflow-y-auto pr-1 border border-[#1a1a1a] p-1.5 bg-[#080808]/30">
+                    {preview.reflection.remaining_gaps.map((g: string, i: number) => (
+                      <div key={i} className="text-[#888] text-[9px] pl-2 border-l border-[#222] leading-relaxed">◇ {g}</div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
+          )}
         </div>
       )}
       {preview.note && (

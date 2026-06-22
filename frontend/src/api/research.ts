@@ -192,6 +192,20 @@ export interface StepPreview {
   max_rounds?: number
   accumulated_findings?: string[]
   parsed_urls?: { url: string; title?: string; status?: string }[]
+  sources?: { url: string; title?: string; status?: string }[]
+  findings?: string[]
+  reflection?: {
+    reflection?: string
+    key_insights?: string[]
+    remaining_gaps?: string[]
+  }
+  eval_path?: string
+  eval_path_reason?: string
+  satisfaction_threshold?: number
+  key_insights?: string[]
+  remaining_gaps?: string[]
+  next_queries?: string[]
+  next_direct_urls?: string[]
   digest_signals?: {
     followups?: string[]
     direct_urls?: string[]
