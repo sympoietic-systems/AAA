@@ -120,6 +120,23 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
             ]} />
           </div>
 
+          {preview.parsed_urls && preview.parsed_urls.length > 0 && (
+            <div>
+              <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">visited/parsed urls ({preview.parsed_urls.length})</div>
+              <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                {preview.parsed_urls.map((u, i) => (
+                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                    <span className="text-[#555]">{i+1}.</span>{" "}
+                    <a href={u.url} target="_blank" rel="noopener noreferrer"
+                      className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
+                      {u.title || u.url}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {preview.accumulated_findings && preview.accumulated_findings.length > 0 && (
             <div>
               <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">accumulated findings ({preview.accumulated_findings.length})</div>

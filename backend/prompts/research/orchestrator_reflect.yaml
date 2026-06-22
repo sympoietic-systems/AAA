@@ -27,6 +27,9 @@ user: |
   Research Goal: {goal}
   Current Depth: {current_depth} / {max_depth}
 
+  Already Visited/Parsed URLs:
+  {parsed_urls}
+
   Accumulated Findings (all cycles):
   {accumulated_findings}
 

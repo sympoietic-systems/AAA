@@ -58,17 +58,6 @@
     [x] Frontend: Markdown-rendered result summary
     [x] Frontend: Meta log + Steps sorted newest-first
     [x] Frontend: Unified design matching /agent page patterns + FRONTEND_DESIGN_PRINCIPLES.md
-    [x] UX: Clickable current active step in pipeline to toggle preview display
-    [x] UX: Full prompt/template previews in digesting/reflecting/evaluating/synthesizing phases
-    [x] UX: Clear status labels (blocked, too short, ok, paywall) for parsed sources on digest input/result tabs
-    [x] Bugfix: Fixed `[empty content]` false-positives for cached parsed content by introducing `content_preview` API field
-    [x] UX: Interactive collapsible prompts (system prompt collapsed by default, user prompt open)
-    [x] UX: Collapsible accordion-style LogEntries list to avoid vertical clutter
-    [x] Bugfix: Robust client-side JSON repair to parse and format truncated LLM response payloads
-    [x] Bugfix: Scoped digest analysis database updates to the preceding `parallel_parse` step_id, fixing `analysis: null` bug
-    [x] Layout: TwoPanelLayout updated to take 100% viewport height, avoiding inner scroll limitations and double scrollbars
-    [x] UX: Rename "Reflect" step, phase, and log events to "Consolidate" in UI constants for better conceptual mapping (keeping backend keys intact)
-    [x] UX: Display accumulated findings, gaps, and follow-ups in the live input preview panel/tab during the consolidating phase
 
 ### Pending
     [ ] Search: extract actual article URLs from DDG results (not just search page snippets)
@@ -148,7 +137,7 @@
     [ ] I think you should not ask me what I ' would like' to do or explore. You are here not to serve me!
         [ ] The paragraph must not point at the concept; it must perform the cut it describes. - this can be a new skill
 
-    [x] Vitality collapse, check when it added. now vitality .5, but it triggered (fixed: missing refusals table caused exception in suppression check, forcing fallback immune trigger)
+    [] Vitality collapse, check when it added. now vitality .5, but it triggered
     
 
 

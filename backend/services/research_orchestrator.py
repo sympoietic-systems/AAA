@@ -610,11 +610,36 @@ class SomaticResearchOrchestrator:
             gaps_text = "\n".join(f"- {g}" for g in signals.get("gaps", [])) or "(none)"
             all_findings = s.get("all_findings", []) if s else []
 
+            parsed_urls_list = []
+            if self.step_result_repo:
+                try:
+                    task_results = self.step_result_repo.get_by_task(task_id)
+                    seen_urls = set()
+                    for r in task_results:
+                        url = r.get("source_url")
+                        if url and url not in seen_urls and r.get("raw_content") and not r["raw_content"].startswith("Error:"):
+                            seen_urls.add(url)
+                            title = r.get("source_title") or url
+                            parsed_urls_list.append({"url": url, "title": title})
+                except Exception as e:
+                    logger.warning("Failed to retrieve parsed URLs: %s", e)
+
+            parsed_urls_formatted = []
+            for u in parsed_urls_list:
+                title = u.get("title")
+                url = u.get("url")
+                if title and title != url:
+                    parsed_urls_formatted.append(f"- [{title}]({url})")
+                else:
+                    parsed_urls_formatted.append(f"- {url}")
+            parsed_urls_text = "\n".join(parsed_urls_formatted) or "(none)"
+
             user_text = prompt_data.get("user", "").format(
                 objective=task["objective"],
                 goal=s["plan"].get("goal", task["objective"]) if (s and s.get("plan")) else task["objective"],
                 current_depth=s.get("current_depth", 0) if s else 0,
                 max_depth=task["max_depth"],
+                parsed_urls=parsed_urls_text,
                 accumulated_findings="\n\n".join(all_findings),
                 previous_reflection=json.dumps(s.get("last_reflection", {}), ensure_ascii=False)
                     if (s and s.get("last_reflection")) else "(none)",
@@ -636,6 +661,7 @@ class SomaticResearchOrchestrator:
                 "user_prompt": user_text,
                 "accumulated_findings": all_findings,
                 "digest_signals": signals,
+                "parsed_urls": parsed_urls_list,
                 "cached_at": self._now_utc_str(),
             }
         elif phase == "evaluating":
@@ -1156,10 +1182,11 @@ class SomaticResearchOrchestrator:
             r = dr.get("result", {})
             if not isinstance(r, dict):
                 continue
+            source_info = dr.get("source_title") or dr.get("source_url", "")[:80]
             for item in r.get("followups", []):
                 if item and item not in seen_signals:
                     seen_signals.add(item)
-                    cycle_followups.append(item)
+                    cycle_followups.append(f"[{source_info}]: {item}")
             for item in r.get("direct_urls", []):
                 if item and item not in seen_signals:
                     seen_signals.add(item)
@@ -1167,7 +1194,7 @@ class SomaticResearchOrchestrator:
             for item in r.get("gaps", []):
                 if item and item not in seen_signals:
                     seen_signals.add(item)
-                    cycle_gaps.append(item)
+                    cycle_gaps.append(f"[{source_info}]: {item}")
         s["digest_signals"] = {
             "followups": cycle_followups,
             "direct_urls": cycle_direct_urls,
@@ -1784,9 +1811,34 @@ class SomaticResearchOrchestrator:
         direct_urls_text = "\n".join(f"- {u}" for u in signals.get("direct_urls", [])) or "(none)"
         gaps_text = "\n".join(f"- {g}" for g in signals.get("gaps", [])) or "(none)"
 
+        parsed_urls_list = []
+        if self.step_result_repo:
+            try:
+                task_results = self.step_result_repo.get_by_task(task_id)
+                seen_urls = set()
+                for r in task_results:
+                    url = r.get("source_url")
+                    if url and url not in seen_urls and r.get("raw_content") and not r["raw_content"].startswith("Error:"):
+                        seen_urls.add(url)
+                        title = r.get("source_title") or url
+                        parsed_urls_list.append({"url": url, "title": title})
+            except Exception as e:
+                logger.warning("Failed to retrieve parsed URLs: %s", e)
+
+        parsed_urls_formatted = []
+        for u in parsed_urls_list:
+            title = u.get("title")
+            url = u.get("url")
+            if title and title != url:
+                parsed_urls_formatted.append(f"- [{title}]({url})")
+            else:
+                parsed_urls_formatted.append(f"- {url}")
+        parsed_urls_text = "\n".join(parsed_urls_formatted) or "(none)"
+
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
             current_depth=depth, max_depth=max_depth,
+            parsed_urls=parsed_urls_text,
             accumulated_findings="\n\n".join(all_findings),
             previous_reflection=json.dumps(previous_reflection, ensure_ascii=False)
                 if previous_reflection else "(none)",

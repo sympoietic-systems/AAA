@@ -191,6 +191,7 @@ export interface StepPreview {
   current_depth?: number
   max_rounds?: number
   accumulated_findings?: string[]
+  parsed_urls?: { url: string; title?: string }[]
   digest_signals?: {
     followups?: string[]
     direct_urls?: string[]

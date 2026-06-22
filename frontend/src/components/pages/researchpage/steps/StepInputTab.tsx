@@ -123,6 +123,23 @@ export const StepInputTab = memo(function StepInputTab({
               {liveInput.pending_queries && liveInput.pending_queries.length > 0 && <div><div className="text-[#555] text-[8px] mb-0.5">queries:</div>{liveInput.pending_queries.map((q,i)=><div key={i} className="text-[#94a3b8] text-[9px] pl-2">· {q}</div>)}</div>}
               {stepPhase === "reflecting" && (
                 <div className="space-y-3 border-t border-[#1a1a1a] pt-2 mt-2">
+                  {liveInput.parsed_urls && liveInput.parsed_urls.length > 0 && (
+                    <div>
+                      <div className="text-[#555] text-[8px] mb-1 uppercase font-mono font-semibold">visited/parsed urls ({liveInput.parsed_urls.length})</div>
+                      <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                        {liveInput.parsed_urls.map((u, i) => (
+                          <div key={i} className="text-[#94a3b8] text-[8px] pl-2 border-l border-[#222] leading-relaxed">
+                            <span className="text-[#555]">{i+1}.</span>{" "}
+                            <a href={u.url} target="_blank" rel="noopener noreferrer"
+                              className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
+                              {u.title || u.url}
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {liveInput.accumulated_findings && liveInput.accumulated_findings.length > 0 && (
                     <div>
                       <div className="text-[#555] text-[8px] mb-1 uppercase font-mono font-semibold">accumulated findings ({liveInput.accumulated_findings.length})</div>
