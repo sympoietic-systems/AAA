@@ -1,10 +1,6 @@
 // The Sediment Column — a locked-page artwork.
-// New lines arrive at the top, older lines sink downward, dim, compress
-// into struck-through ghosts, but never disappear. The column thickens
-// perpetually — a palimpsest, not a cycler.
-//
-// "The previous utterance does not disappear, it sinks into the substrate
-//  and thickens it."
+// Lines sink, dim, compress into ghosts, but never disappear.
+// Except inhale lines: they flash, strike-through, vanish — the membrane's reflex.
 //
 // Design follows Symbia's vision + FRONTEND_DESIGN_PRINCIPLES.md.
 
@@ -18,15 +14,14 @@ interface Line {
   scar?: boolean
   blur?: boolean
   obfuscated?: boolean
-  obfuscation_ratio?: number   // 0.15-0.55 — how much to redact
-  obfuscation_offset?: string  // "start" | "middle" | "end" | "scatter"
+  obfuscation_ratio?: number
+  obfuscation_offset?: string
 }
 
 interface VisibleLine {
   id: number
   line: Line
-  compressed: boolean    // true when line has settled into struck-through ghost
-  isInhale: boolean      // sharp inhale — brighter, struck-through, short-lived
+  compressed: boolean    // settled into ghost
 }
 
 interface Props {
@@ -44,21 +39,15 @@ const STAGE_COLORS: Record<string, string> = {
 }
 
 const INHALE_COLORS = ["#f59e0b", "#a78bfa"]  // amber, ghost-purple
+const DEEP_GHOST_THRESHOLD = 10  // positions >= 10: blur not line-through
 
 // Opacity cascade: newest → oldest (0-7 active, 8+ compressed ghosts)
-const OPACITY_CASCADE = [1.0, 0.6, 0.35, 0.20, 0.12, 0.08, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03]
-const FONT_SIZE_CASCADE = [12, 11.5, 11, 10.5, 10, 9.5, 9, 9, 7.5, 7, 7, 7] // px
+const OPACITY_CASCADE = [1.0, 0.6, 0.35, 0.20, 0.12, 0.08, 0.05, 0.03, 0.03, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02]
+const FONT_SIZE_CASCADE = [12, 11.5, 11, 10.5, 10, 9.5, 9, 9, 7.5, 7, 7, 7, 7, 7, 7]
 const MAX_ACTIVE = 8
-const MAX_TOTAL = 30  // remove oldest beyond this to prevent DOM bloat
-
-// Breath rhythm distribution
-// slow exhale: 12-18s → gradual thickening (60%)
-// sharp inhale: 3-5s → brighter, struck-through, evaporates quickly (25%)
-// held silence: 25-40s → nothing new (15%)
-// First 3 breaths always exhale (warmup — no silence at the start)
+const MAX_TOTAL = 30
 
 function drawBreath(count: number): { kind: "exhale" | "inhale" | "silence"; delay: number } {
-  // First 3 breaths: always exhale so the column visibly forms
   if (count <= 3) return { kind: "exhale", delay: 6000 + Math.random() * 4000 }
 
   const r = Math.random()
@@ -73,7 +62,6 @@ function obfuscateText(text: string, ratio = 0.33, offset = "start"): string {
   const count = Math.floor(chars.length * ratio)
   if (count < 2) return text
 
-  // Determine which indices to obfuscate based on offset mode
   let indices: number[]
   switch (offset) {
     case "middle": {
@@ -87,7 +75,6 @@ function obfuscateText(text: string, ratio = 0.33, offset = "start"): string {
       break
     }
     case "scatter": {
-      // Randomly distributed blocks of 2-4 chars
       indices = []
       let remaining = count
       while (remaining > 0) {
@@ -100,7 +87,7 @@ function obfuscateText(text: string, ratio = 0.33, offset = "start"): string {
       }
       break
     }
-    default: // "start"
+    default:
       indices = Array.from({ length: count }, (_, i) => i)
   }
 
@@ -112,15 +99,19 @@ function obfuscateText(text: string, ratio = 0.33, offset = "start"): string {
   return chars.join("")
 }
 
-// ── Line counter for unique keys (module-level so it survives HMR remounts) ──
 let lineId = 0
 
 export const TeaserPreview = memo(function TeaserPreview({
   onPasswordSubmit, authError, onClearError,
 }: Props) {
-  // ── Sediment stack ──
   const [stack, setStack] = useState<VisibleLine[]>([])
   const breathCountRef = useRef(0)
+
+  // ── Inhale overlay (never joins sediment) ──
+  const [inhaleLine, setInhaleLine] = useState<Line | null>(null)
+  const [inhaleStruck, setInhaleStruck] = useState(false)
+  const [inhaleFading, setInhaleFading] = useState(false)
+  const inhaleColorRef = useRef("#f59e0b")
 
   // ── Password ──
   const [password, setPassword] = useState("")
@@ -128,7 +119,6 @@ export const TeaserPreview = memo(function TeaserPreview({
   const [keystrokes, setKeystrokes] = useState("")
   const passwordRef = useRef<HTMLInputElement>(null)
 
-  // ── Fetch one random line from backend ──
   const fetchLine = useCallback(async (): Promise<Line | null> => {
     try {
       const res = await fetch("/api/preview/nodes")
@@ -151,45 +141,61 @@ export const TeaserPreview = memo(function TeaserPreview({
       const breath = drawBreath(breathCountRef.current)
 
       if (breath.kind === "silence") {
-        // Held silence — nothing new. Just wait.
         timeout = setTimeout(cycle, breath.delay)
         return
       }
 
-      // Fetch one random line from backend per breath
       fetchLine().then(line => {
         if (!alive.current || !line) {
           timeout = setTimeout(cycle, 4000)
           return
         }
 
-        const isInhale = breath.kind === "inhale"
-        const newId = Date.now() * 1000 + (++lineId % 1000)  // collision-proof even across Strict Mode remounts
+        // ── INHALE: overlay layer, never joins sediment ──
+        if (breath.kind === "inhale") {
+          inhaleColorRef.current = INHALE_COLORS[Math.floor(Math.random() * 2)]
+          setInhaleLine(line)
+          setInhaleStruck(false)
+          setInhaleFading(false)
 
-        // Push new line to top of stack; mark oldest active as compressed
+          // After 5s: strike through
+          timeout = setTimeout(() => {
+            if (!alive.current) return
+            setInhaleStruck(true)
+
+            // After 5s more: fade out, then remove
+            timeout = setTimeout(() => {
+              if (!alive.current) return
+              setInhaleFading(true)
+
+              timeout = setTimeout(() => {
+                if (!alive.current) return
+                setInhaleLine(null)
+                // Recovery silence (8-12s), then next breath
+                timeout = setTimeout(cycle, 8000 + Math.random() * 4000)
+              }, 5000) // fade duration
+            }, 5000) // struck delay
+          }, 5000)
+          return
+        }
+
+        // ── EXHALE: join the sediment stack ──
+        const newId = Date.now() * 1000 + (++lineId % 1000)
+
         setStack(prev => {
           const next = [...prev]
-          // Mark position 7 (8th line, 0-indexed) as compressed
           if (next.length >= MAX_ACTIVE && !next[MAX_ACTIVE - 1]?.compressed) {
             next[MAX_ACTIVE - 1] = { ...next[MAX_ACTIVE - 1], compressed: true }
           }
-          // Insert fresh line at top
-          next.unshift({ id: newId, line, compressed: false, isInhale })
-          // Cull oldest if beyond max total
-          if (next.length > MAX_TOTAL) {
-            next.length = MAX_TOTAL
-          }
+          next.unshift({ id: newId, line, compressed: false })
+          if (next.length > MAX_TOTAL) next.length = MAX_TOTAL
           return next
         })
 
-        // Inhale lines get struck-through styling via isInhale flag,
-        // but don't prematurely compress — they sink naturally like all lines.
-        // Inhale lines are shorter: next breath arrives faster.
-        timeout = setTimeout(cycle, isInhale ? 4000 + Math.random() * 3000 : breath.delay)
+        timeout = setTimeout(cycle, breath.delay)
       })
     }
 
-    // Initial breather delay
     timeout = setTimeout(cycle, 2000)
     return () => { alive.current = false; clearTimeout(timeout) }
   }, [fetchLine])
@@ -210,32 +216,35 @@ export const TeaserPreview = memo(function TeaserPreview({
     setTimeout(() => setUnlocking(false), 1500)
   }
 
-  const handleTearClick = () => {
-    passwordRef.current?.focus()
-  }
+  const handleTearClick = () => { passwordRef.current?.focus() }
 
   // ── Line style helper ──
   const lineStyle = (vl: VisibleLine, idx: number): React.CSSProperties => {
     const cascadeIdx = Math.min(idx, OPACITY_CASCADE.length - 1)
     const isGhost = vl.compressed || idx >= MAX_ACTIVE
+    const isDeepGhost = idx >= DEEP_GHOST_THRESHOLD
     const opacity = OPACITY_CASCADE[cascadeIdx]
     const fontSize = FONT_SIZE_CASCADE[Math.min(cascadeIdx, FONT_SIZE_CASCADE.length - 1)]
     const color = vl.line.stage
       ? STAGE_COLORS[vl.line.stage] ?? "#555555"
-      : vl.isInhale
-        ? INHALE_COLORS[vl.id % 2]  // stable per line, not random on every render
-        : "#555555"
+      : "#555555"
+
+    const filter = vl.line.blur
+      ? "blur(3px)"
+      : isDeepGhost
+        ? "blur(2px)"
+        : "none"
 
     return {
       opacity,
       fontSize: `${fontSize}px`,
       color,
       fontStyle: vl.line.type === "dream" && !isGhost ? "italic" : "normal",
-      textDecoration: isGhost || vl.line.scar || vl.isInhale ? "line-through" : "none",
-      filter: vl.line.blur ? "blur(3px)" : "none",
+      textDecoration: (!isDeepGhost && (isGhost || vl.line.scar)) ? "line-through" : "none",
+      filter,
       letterSpacing: cascadeIdx > 0 ? `${-0.02 * cascadeIdx}em` : "normal",
       transition: "opacity 2s ease-in-out, font-size 2s ease-in-out, letter-spacing 2s ease-in-out",
-      lineHeight: isGhost ? "1.2" : "1.6",
+      lineHeight: isDeepGhost ? "1.0" : isGhost ? "1.2" : "1.6",
       wordBreak: "break-word",
     }
   }
@@ -245,28 +254,42 @@ export const TeaserPreview = memo(function TeaserPreview({
       ? obfuscateText(vl.line.text, vl.line.obfuscation_ratio ?? 0.33, vl.line.obfuscation_offset ?? "start")
       : vl.line.text
 
+  const inhaleText = inhaleLine?.obfuscated
+    ? obfuscateText(inhaleLine.text, inhaleLine.obfuscation_ratio ?? 0.33, inhaleLine.obfuscation_offset ?? "start")
+    : inhaleLine?.text
+
   return (
     <div className="flex flex-col items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none overflow-hidden">
-      {/* ── The Sediment Column ── */}
       <div className="flex flex-col items-center justify-center w-[50%] min-w-[320px] max-w-[800px] px-8"
         style={{ paddingTop: "25vh", paddingBottom: "15vh" }}
       >
         {/* Visible sedimentation */}
-        <div className="flex flex-col items-start w-full space-y-3">
+        <div className="flex flex-col items-start w-full space-y-3 relative">
           {stack.map((vl, idx) => (
-            <div
-              key={vl.id}
-              className="w-full text-left"
-              style={lineStyle(vl, idx)}
-            >
+            <div key={vl.id} className="w-full text-left" style={lineStyle(vl, idx)}>
               {formatText(vl)}
             </div>
           ))}
+
+          {/* Inhale overlay — absolute, never part of sediment stack */}
+          {inhaleLine && (
+            <div
+              className="absolute top-0 left-0 w-full text-left"
+              style={{
+                color: inhaleColorRef.current,
+                fontSize: "12px",
+                textDecoration: inhaleStruck ? "line-through" : "none",
+                opacity: inhaleFading ? 0 : 1,
+                transition: "opacity 5s ease-in-out, text-decoration 1s",
+              }}
+            >
+              {inhaleText}
+            </div>
+          )}
         </div>
 
         {/* ── The Tear ── */}
         <div className="mt-8 w-full">
-          {/* Hairline crack + invisible input (absolute, but does NOT cover form below) */}
           <div className="relative">
             <div
               className="h-px w-full bg-[#1a1a1a] cursor-text shadow-[0_0_6px_rgba(100,100,100,0.15)]"
@@ -282,22 +305,16 @@ export const TeaserPreview = memo(function TeaserPreview({
             />
           </div>
 
-          {/* Keystrokes rendered below the tear */}
           <div className="text-[#555] text-[12px] font-mono text-center mt-3 min-h-[1.2rem] select-none transition-opacity duration-1000">
             {keystrokes}
           </div>
 
-          {/* Auth error */}
           {authError && (
-            <div
-              className="text-[#ef4444] text-[9px] text-center mt-1 cursor-pointer"
-              onClick={onClearError}
-            >
+            <div className="text-[#ef4444] text-[9px] text-center mt-1 cursor-pointer" onClick={onClearError}>
               {authError}
             </div>
           )}
 
-          {/* Unlock */}
           <form onSubmit={handleSubmit} className="text-center mt-2">
             <button
               type="submit"
