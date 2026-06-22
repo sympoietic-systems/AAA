@@ -927,7 +927,7 @@ class SomaticResearchOrchestrator:
                     result.update(await self._step_reflect(task_id, s))
 
                 elif phase == "evaluating":
-                    result.update(self._step_evaluate(task_id, s))
+                    result.update(await self._step_evaluate(task_id, s))
 
                 elif phase == "synthesizing":
                     result.update(await self._step_synthesize(task_id, s))
@@ -1366,23 +1366,30 @@ class SomaticResearchOrchestrator:
         s["phase"] = "evaluating"
         return {"completeness": completeness, "step_id": step_id}
 
-    def _step_evaluate(self, task_id: str, s: dict) -> dict:
-        """Hard checks + decision. Advance to synthesizing, searching (next depth), or complete."""
+    async def _step_evaluate(self, task_id: str, s: dict) -> dict:
+        """Hard checks + optional LLM decision. Advance to synthesizing or back to searching."""
         logger.info("Step: EVALUATING — %s", self._log_context(task_id, "evaluating"))
         step_id = self._create_or_update_step(s, task_id, "evaluate")
 
-        should_stop, stop_reason = self._tool_evaluate(
-            s["current_depth"], s["max_depth"], s["sources_analyzed"],
-            s["last_reflection"], s["stagnation_counter"],
+        should_stop, stop_reason = await self._tool_evaluate(
+            task_id=task_id,
+            step_id=step_id,
+            objective=s["objective"],
+            depth=s["current_depth"],
+            max_depth=s["max_depth"],
+            sources=s["sources_analyzed"],
+            reflection=s["last_reflection"],
+            stagnation=s["stagnation_counter"],
         )
         self._log_meta(task_id, "orchestrator_evaluate", {
             "decision": "stop" if should_stop else "continue",
             "reason": stop_reason,
             "depth": s["current_depth"],
+            "completeness": s["last_reflection"].get("completeness_score", 0),
         }, step_id=step_id)
 
         self.step_repo.update(step_id, status="completed",
-            result_summary=stop_reason)
+            result_summary=f"{'STOP' if should_stop else 'CONTINUE'}: {stop_reason}")
 
         if should_stop:
             s["phase"] = "synthesizing"
@@ -1985,24 +1992,92 @@ class SomaticResearchOrchestrator:
 
         return latest_result or {"completeness_score": 0.3, "next_queries": [], "next_direct_urls": [], "reflection": "No reflection"}
 
-    def _tool_evaluate(self, depth, max_depth, sources, reflection, stagnation) -> tuple[bool, str]:
-        """Check hard constraints + LLM satisfaction. Returns (should_stop, reason)."""
+    async def _tool_evaluate(
+        self, task_id: str, step_id: str, objective: str,
+        depth: int, max_depth: int, sources: int,
+        reflection: dict, stagnation: int,
+    ) -> tuple[bool, str]:
+        """Check hard constraints first (no LLM); call LLM only in the borderline zone."""
         completeness = reflection.get("completeness_score", 0)
 
-        # Hard constraints
+        # ── Hard constraints — fast, no LLM ──────────────────────────
         if depth >= max_depth:
             return True, f"depth limit reached ({depth}/{max_depth})"
         if stagnation >= 3:
-            return True, f"stagnation ({stagnation} steps without new findings)"
+            return True, f"stagnation ({stagnation} consecutive steps without new findings)"
         if completeness >= self.satisfaction_threshold:
             return True, f"satisfaction reached ({completeness:.2f} >= {self.satisfaction_threshold})"
 
-        # Run LLM evaluate if borderline
-        if completeness >= 0.4:
-            return False, f"continuing (completeness {completeness:.2f} < {self.satisfaction_threshold})"
+        # ── Below borderline — continue without LLM call ──────────────
+        if completeness < 0.4:
+            return False, f"continuing — completeness too low ({completeness:.2f}), more depth needed"
 
-        # Low completeness + available depth → continue
-        return False, f"continuing — more depth available ({depth}/{max_depth})"
+        # ── Borderline zone (0.4 <= completeness < threshold) — LLM decides ──
+        logger.info("Evaluate: borderline completeness %.2f — calling LLM evaluator", completeness)
+        try:
+            prompt_data = get_prompts_dict("research/orchestrator_evaluate.yaml")
+
+            key_insights   = reflection.get("key_insights", [])
+            remaining_gaps = reflection.get("remaining_gaps", [])
+            next_queries   = reflection.get("next_queries", [])
+            next_direct    = reflection.get("next_direct_urls", [])
+
+            system_text = prompt_data.get("system", "")
+            user_text = prompt_data.get("user", "").format(
+                objective=objective,
+                current_depth=depth,
+                max_depth=max_depth,
+                sources_analyzed=sources,
+                completeness_score=f"{completeness:.2f}",
+                key_insights   =  "\n".join(f"- {i}" for i in key_insights)    or "(none)",
+                remaining_gaps =  "\n".join(f"- {g}" for g in remaining_gaps)  or "(none)",
+                next_queries   =  "\n".join(f"- {q}" for q in next_queries)    or "(none)",
+                next_direct_urls= "\n".join(f"- {u}" for u in next_direct)     or "(none)",
+                depth_reached  = str(depth >= max_depth),
+                stagnation_steps= stagnation,
+                stagnated      = str(stagnation >= 3),
+            )
+            if prompt_data.get("anti_mastery"):
+                system_text = self._anti_mastery(system_text)
+                user_text   = self._anti_mastery(user_text)
+
+            self._log_meta(task_id, "orchestrator_evaluate_prompt", {
+                "system_prompt": system_text[:self._TRUNC_META_LOG],
+                "user_prompt":   user_text[:self._TRUNC_META_LOG],
+            }, step_id=step_id or None)
+
+            from backend.modules.llm_client import generate_unified
+            llm = getattr(self._state, "llm_provider", None)
+            if not llm:
+                raise RuntimeError("No LLM provider")
+
+            resp = await generate_unified(
+                llm,
+                system_prompt=system_text,
+                user_prompt=user_text,
+                expect_json=True,
+                fallback_value={"decision": "continue", "reason": "evaluation unavailable",
+                                "completeness_assessment": completeness},
+                temperature=prompt_data.get("temperature", 0.2),
+                max_tokens=prompt_data.get("max_tokens", 1024),
+            )
+            self._log_llm_response(task_id, "orchestrator_evaluate_response", resp,
+                                   step_id=step_id or None)
+            if step_id:
+                self._save_llm_response_to_step_data(step_id, resp)
+
+            result = resp.get("json_data") or resp.get("content") or {}
+            if isinstance(result, str):
+                result = json.loads(result)
+            if isinstance(result, dict):
+                decision = result.get("decision", "continue").lower()
+                reason   = result.get("reason", f"LLM completeness at {completeness:.2f}")
+                return decision == "stop", reason
+
+        except Exception as exc:
+            logger.warning("LLM evaluate failed, defaulting to continue: %s", exc)
+
+        return False, f"continuing (completeness {completeness:.2f} < {self.satisfaction_threshold}, LLM fallback)"
 
     def _classify_source_status(self, raw_content: str | None) -> str:
         if not raw_content or not raw_content.strip():

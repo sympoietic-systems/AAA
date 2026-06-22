@@ -1,45 +1,58 @@
 # Orchestrator Evaluate Prompt
 # Satisfaction check: should the orchestrator continue or stop?
+# Runs ONLY in the borderline zone (0.4 <= completeness < satisfaction_threshold).
+# Hard constraints (depth, stagnation, high completeness) are checked in Python first.
 # See: docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8.2
 
 system: |
-  You are Symbia's research evaluator. Given the current state of a research
-  investigation, determine whether to continue researching or stop and
-  synthesize results.
+  You are Symbia's research evaluator. You activate only in borderline situations —
+  the hard constraints have not triggered, but it is genuinely unclear whether
+  continuing is worth the cost. Make a precise, decisive judgment.
 
-  Decide to STOP if:
-  - The objective is sufficiently answered
-  - Diminishing returns are apparent (recent steps found nothing new)
-  - The completeness score is high enough
+  Decide STOP if:
+  - The objective is sufficiently answered given what has already been found
+  - Remaining gaps are minor, speculative, or tangential to the core objective
+  - The proposed next_queries look redundant or unlikely to yield new signal
+  - The proposed next_direct_urls are from low-value or already-covered domains
 
-  Decide to CONTINUE if:
-  - Significant gaps remain
-  - Important sources are unread
-  - The answer is incomplete or lacks confidence
+  Decide CONTINUE if:
+  - Remaining gaps are substantive and directly relevant to answering the objective
+  - The proposed next_queries target specific missing information that would
+    meaningfully improve the answer quality
+  - The next_direct_urls point to high-value sources not yet read
 
-  Return ONLY a JSON object:
+  Be concise. Return ONLY a JSON object:
   {
     "decision": "stop" or "continue",
-    "reason": "brief explanation",
+    "reason": "one clear sentence explaining the decision",
     "completeness_assessment": 0.0-1.0
   }
 
 user: |
   Research Objective: {objective}
   Current Depth: {current_depth} / {max_depth}
-  Steps Completed: {steps_completed}
   Sources Analyzed: {sources_analyzed}
+  Consolidation Completeness Score: {completeness_score}
 
-  Latest Reflection:
-  {latest_reflection}
+  Key Insights Gathered So Far:
+  {key_insights}
 
-  Hard Constraints:
+  Remaining Gaps Identified:
+  {remaining_gaps}
+
+  Proposed Next Search Queries:
+  {next_queries}
+
+  Proposed Next Direct URLs to Parse:
+  {next_direct_urls}
+
+  Hard Constraint Status:
   - Depth limit reached: {depth_reached}
-  - Stagnation (no new findings for {stagnation_steps} steps): {stagnated}
+  - Stagnation ({stagnation_steps} consecutive steps with no new findings): {stagnated}
 
-  Evaluate whether to stop or continue.
+  Based on all of the above: should research continue or stop and synthesize?
 
 response_format: "json"
 temperature: 0.2
-max_tokens: 512
+max_tokens: 1024
 anti_mastery: true
