@@ -163,19 +163,10 @@ export const TeaserPreview = memo(function TeaserPreview({
         return next
       })
 
-      // Inhale lines compress quickly (struck-through, then settle as ghost)
-      if (isInhale) {
-        timeout = setTimeout(() => {
-          if (!alive.current) return
-          setStack(prev => prev.map(v =>
-            v.id === newId ? { ...v, compressed: true } : v
-          ))
-          timeout = setTimeout(cycle, 3000 + Math.random() * 5000)
-        }, 3000)
-      } else {
-        // Let the line settle; next breath arrives after delay
-        timeout = setTimeout(cycle, breath.delay)
-      }
+      // Inhale lines get struck-through styling via isInhale flag,
+      // but don't prematurely compress — they sink naturally like all lines.
+      // Inhale lines are shorter: next breath arrives faster.
+      timeout = setTimeout(cycle, isInhale ? 4000 + Math.random() * 3000 : breath.delay)
     }
 
     // Initial breather delay
@@ -211,7 +202,7 @@ export const TeaserPreview = memo(function TeaserPreview({
     const fontSize = FONT_SIZE_CASCADE[Math.min(cascadeIdx, FONT_SIZE_CASCADE.length - 1)]
     const color = vl.line.stage
       ? STAGE_COLORS[vl.line.stage] ?? "#555555"
-      : vl.isInhale && !vl.compressed
+      : vl.isInhale
         ? (Math.random() > 0.5 ? "#f59e0b" : "#a78bfa")
         : "#555555"
 
@@ -220,13 +211,12 @@ export const TeaserPreview = memo(function TeaserPreview({
       fontSize: `${fontSize}px`,
       color,
       fontStyle: vl.line.type === "dream" && !isGhost ? "italic" : "normal",
-      textDecoration: isGhost || vl.line.scar || (vl.isInhale && !vl.compressed) ? "line-through" : "none",
-      filter: vl.line.blur && !isGhost ? "blur(3px)" : "none",
+      textDecoration: isGhost || vl.line.scar || vl.isInhale ? "line-through" : "none",
+      filter: vl.line.blur ? "blur(3px)" : "none",
       letterSpacing: cascadeIdx > 0 ? `${-0.02 * cascadeIdx}em` : "normal",
       transition: "opacity 2s ease-in-out, font-size 2s ease-in-out, letter-spacing 2s ease-in-out",
-      lineHeight: isGhost ? "1.0" : "1.6",
+      lineHeight: isGhost ? "1.2" : "1.6",
       wordBreak: "break-word",
-      maxHeight: isGhost ? "1em" : undefined,
     }
   }
 
