@@ -140,7 +140,11 @@ async def get_preview_nodes(request: Request):
             "intensity": 0.0,
         })
 
-    # Shuffle and return
+    # Shuffle
     random.shuffle(lines)
+
+    # ?single=1 → return just one random line
+    if request.query_params.get("single") == "1" and lines:
+        return {"line": random.choice(lines), "count": len(lines)}
 
     return {"lines": lines, "count": len(lines)}

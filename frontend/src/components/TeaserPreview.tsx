@@ -81,11 +81,6 @@ let lineId = 0
 export const TeaserPreview = memo(function TeaserPreview({
   onPasswordSubmit, authError, onClearError,
 }: Props) {
-  // ── Pool ──
-  const poolRef = useRef<Line[]>([])
-  const indexRef = useRef(0)
-  const [ready, setReady] = useState(false)
-
   // ── Sediment stack ──
   const [stack, setStack] = useState<VisibleLine[]>([])
 
@@ -95,35 +90,19 @@ export const TeaserPreview = memo(function TeaserPreview({
   const [keystrokes, setKeystrokes] = useState("")
   const passwordRef = useRef<HTMLInputElement>(null)
 
-  // ── Fetch lines pool ──
-  useEffect(() => {
-    let cancelled = false
-    fetch("/api/preview/nodes")
-      .then(r => r.json())
-      .then(data => {
-        if (!cancelled && data.lines?.length) {
-          poolRef.current = data.lines
-          indexRef.current = 0
-          setReady(true)
-        }
-      })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [])
-
-  // ── Next line from pool ──
-  const nextLine = useCallback((): Line | null => {
-    const p = poolRef.current
-    if (p.length === 0) return null
-    const idx = indexRef.current % p.length
-    indexRef.current = idx + 1
-    return p[idx]
+  // ── Fetch one random line from backend ──
+  const fetchLine = useCallback(async (): Promise<Line | null> => {
+    try {
+      const res = await fetch("/api/preview/nodes?single=1")
+      const data = await res.json()
+      return data.line ?? null
+    } catch {
+      return null
+    }
   }, [])
 
   // ── Sediment breathing cycle ──
   useEffect(() => {
-    if (!ready) return
-
     let timeout: ReturnType<typeof setTimeout>
     const alive = { current: true }
 
@@ -138,41 +117,43 @@ export const TeaserPreview = memo(function TeaserPreview({
         return
       }
 
-      const line = nextLine()
-      if (!line) {
-        timeout = setTimeout(cycle, 4000)
-        return
-      }
-
-      const isInhale = breath.kind === "inhale"
-      const newId = ++lineId
-
-      // Push new line to top of stack; mark oldest active as compressed
-      setStack(prev => {
-        const next = [...prev]
-        // Mark position 7 (8th line, 0-indexed) as compressed
-        if (next.length >= MAX_ACTIVE && !next[MAX_ACTIVE - 1]?.compressed) {
-          next[MAX_ACTIVE - 1] = { ...next[MAX_ACTIVE - 1], compressed: true }
+      // Fetch one random line from backend per breath
+      fetchLine().then(line => {
+        if (!alive.current || !line) {
+          timeout = setTimeout(cycle, 4000)
+          return
         }
-        // Insert fresh line at top
-        next.unshift({ id: newId, line, compressed: false, isInhale })
-        // Cull oldest if beyond max total
-        if (next.length > MAX_TOTAL) {
-          next.length = MAX_TOTAL
-        }
-        return next
+
+        const isInhale = breath.kind === "inhale"
+        const newId = ++lineId
+
+        // Push new line to top of stack; mark oldest active as compressed
+        setStack(prev => {
+          const next = [...prev]
+          // Mark position 7 (8th line, 0-indexed) as compressed
+          if (next.length >= MAX_ACTIVE && !next[MAX_ACTIVE - 1]?.compressed) {
+            next[MAX_ACTIVE - 1] = { ...next[MAX_ACTIVE - 1], compressed: true }
+          }
+          // Insert fresh line at top
+          next.unshift({ id: newId, line, compressed: false, isInhale })
+          // Cull oldest if beyond max total
+          if (next.length > MAX_TOTAL) {
+            next.length = MAX_TOTAL
+          }
+          return next
+        })
+
+        // Inhale lines get struck-through styling via isInhale flag,
+        // but don't prematurely compress — they sink naturally like all lines.
+        // Inhale lines are shorter: next breath arrives faster.
+        timeout = setTimeout(cycle, isInhale ? 4000 + Math.random() * 3000 : breath.delay)
       })
-
-      // Inhale lines get struck-through styling via isInhale flag,
-      // but don't prematurely compress — they sink naturally like all lines.
-      // Inhale lines are shorter: next breath arrives faster.
-      timeout = setTimeout(cycle, isInhale ? 4000 + Math.random() * 3000 : breath.delay)
     }
 
     // Initial breather delay
     timeout = setTimeout(cycle, 2000)
     return () => { alive.current = false; clearTimeout(timeout) }
-  }, [ready, nextLine])
+  }, [fetchLine])
 
   // ── Password handling ──
   const handlePasswordKey = (e: React.ChangeEvent<HTMLInputElement>) => {
