@@ -125,9 +125,9 @@ export const TeaserPreview = memo(function TeaserPreview({
 
             {/* Snippet */}
             <div className={`text-[#94a3b8] text-[10px] leading-relaxed max-w-md mx-auto ${node.scar ? "line-through opacity-40" : ""}`}>
-              <ReactMarkdown className="prose prose-invert prose-xs max-w-none">
-                {node.snippet}
-              </ReactMarkdown>
+              <div className="prose prose-invert prose-xs max-w-none">
+                <ReactMarkdown>{node.snippet}</ReactMarkdown>
+              </div>
             </div>
 
             {/* Intensity bar */}
