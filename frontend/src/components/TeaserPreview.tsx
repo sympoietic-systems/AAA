@@ -112,7 +112,7 @@ function obfuscateText(text: string, ratio = 0.33, offset = "start"): string {
   return chars.join("")
 }
 
-// ── Line counter for unique keys ──
+// ── Line counter for unique keys (module-level so it survives HMR remounts) ──
 let lineId = 0
 
 export const TeaserPreview = memo(function TeaserPreview({
@@ -164,7 +164,7 @@ export const TeaserPreview = memo(function TeaserPreview({
         }
 
         const isInhale = breath.kind === "inhale"
-        const newId = ++lineId
+        const newId = Date.now() * 1000 + (++lineId % 1000)  // collision-proof even across Strict Mode remounts
 
         // Push new line to top of stack; mark oldest active as compressed
         setStack(prev => {

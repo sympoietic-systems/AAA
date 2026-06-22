@@ -36,6 +36,8 @@ function getSnapshot(): SedimentNotification[] {
  * Synchronize local state with the backend's active (un-dismissed) notifications.
  */
 export async function syncNotifications() {
+  // Don't sync when not authenticated (locked page)
+  if (!localStorage.getItem("aaa_password")) return
   try {
     const backendNotifs = await getNotifications(false)
     // Check if anything changed in the list of IDs or read states
