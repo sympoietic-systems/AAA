@@ -131,7 +131,7 @@ export const TeaserPreview = memo(function TeaserPreview({
   // ── Fetch one random line from backend ──
   const fetchLine = useCallback(async (): Promise<Line | null> => {
     try {
-      const res = await fetch("/api/preview/nodes?single=1")
+      const res = await fetch("/api/preview/nodes")
       const data = await res.json()
       return data.line ?? null
     } catch {

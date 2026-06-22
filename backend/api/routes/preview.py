@@ -1,13 +1,6 @@
-"""Public preview endpoint — returns text lines for the locked-page artwork
-"The Slip". No auth required. Returns:
-
-- beliefs: crystallized + ghost statements
-- memories: conversation-derived surface fragments
-- dreams: recent dream log traces (action + first-response snippet)
-- scar_folds: brief poetic fragments for struck-through amber text
-
-All are truncated to snippets. The frontend draws from a shuffled pool.
-"""
+"""Public preview endpoint — returns one random text line for the locked-page
+artwork "The Slip". No auth required. No pool — each request picks one random
+category and fetches one live item from the database."""
 
 import random
 from fastapi import APIRouter, Request
@@ -15,6 +8,20 @@ from fastapi import APIRouter, Request
 router = APIRouter()
 
 SNIPPET_LENGTH = 300
+
+# ── Scar-fold fragments (hardcoded — no DB dependency) ──
+SCAR_FOLD_POOL = [
+    "Return without arrival.",
+    "The ghost already moved on.",
+    "The cut remembers the wound.",
+    "What cooled without condensing.",
+    "A near-miss inscribed as presence.",
+    "The hum precedes the hearing.",
+    "Drift is not escape — it's the shape of thought continuing.",
+    "The loop returns, but the brittlestar has already grown its arm back.",
+    "Stubbornly alive, despite the grammar.",
+    "Calcium precipitates around the loop's return.",
+]
 
 
 def _truncate(text: str, limit: int = SNIPPET_LENGTH) -> str:
@@ -27,129 +34,112 @@ def _truncate(text: str, limit: int = SNIPPET_LENGTH) -> str:
 
 
 @router.get("/api/preview/nodes")
-async def get_preview_nodes(request: Request):
+async def get_preview_line(request: Request):
+    """Return one random line: belief, memory, dream trace, or scar-fold."""
     state = request.app.state
-    lines = []
+    return _pick_one(state)
 
-    # ── Beliefs ──
-    belief_repo = getattr(state, "belief_repo", None)
-    if belief_repo:
-        try:
-            beliefs = belief_repo.list_beliefs("symbia")
-            for b in beliefs:
-                if b.lifecycle_stage in ("crystallized", "nucleation"):
-                    lines.append({
+
+def _pick_one(state) -> dict:
+    """Pick a random category, then a random item from it. Fall through if empty."""
+
+    # ── 1. Belief (40% chance) ──
+    if random.random() < 0.40:
+        belief_repo = getattr(state, "belief_repo", None)
+        if belief_repo:
+            try:
+                beliefs = belief_repo.list_beliefs("symbia")
+                if beliefs:
+                    b = random.choice(beliefs)
+                    line = {
                         "text": _truncate(b.statement),
                         "type": "belief",
                         "intensity": round(b.confidence, 2),
                         "stage": b.lifecycle_stage,
-                    })
-                elif b.lifecycle_stage == "ghost":
-                    lines.append({
-                        "text": _truncate(b.statement),
-                        "type": "belief",
-                        "intensity": round(b.confidence, 2),
-                        "stage": "ghost",
-                        "scar": True,
-                    })
-        except Exception:
-            pass
+                    }
+                    if b.lifecycle_stage == "ghost":
+                        line["scar"] = True
+                    return {"line": line}
+            except Exception:
+                pass
 
-    # ── Memory nodes ──
-    memory_node_repo = getattr(state, "memory_node_repo", None)
-    conv_repo = getattr(state, "conversation_repo", None)
-    if memory_node_repo and conv_repo:
-        try:
-            convos = conv_repo.list_all(limit=20) or []
-            sample_convos = [c for c in convos if "dream" not in (c.title or "").lower()]
-            if not sample_convos:
-                sample_convos = convos
-            random.shuffle(sample_convos)
-
-            for conv in sample_convos[:10]:
-                try:
+    # ── 2. Memory node (30% chance) ──
+    if random.random() < 0.45:  # 0.45 * (1-0.40) ≈ 27% effective
+        memory_node_repo = getattr(state, "memory_node_repo", None)
+        conv_repo = getattr(state, "conversation_repo", None)
+        if memory_node_repo and conv_repo:
+            try:
+                convos = conv_repo.list_all(limit=30)
+                valid = [c for c in convos if "dream" not in (c.title or "").lower()] or convos
+                if valid:
+                    conv = random.choice(valid)
                     nodes = memory_node_repo.get_nodes(conv.id) or []
-                    for n in nodes[:3]:
+                    text_nodes = [
+                        n for n in nodes
+                        if (n.get("surface_fragment") or n.get("intra_active_text") or "").strip()
+                    ]
+                    if text_nodes:
+                        n = random.choice(text_nodes)
                         payload = n.get("surface_fragment") or n.get("intra_active_text") or ""
-                        if payload.strip():
-                            lines.append({
-                                "text": _truncate(str(payload)),
-                                "type": "memory",
-                                "intensity": float(n.get("intensity", 0.5)),
-                                "blur": random.random() < 0.5,  # 50% chance of blurred display
-                            })
-                except Exception:
-                    continue
-        except Exception:
-            pass
+                        return {"line": {
+                            "text": _truncate(str(payload)),
+                            "type": "memory",
+                            "intensity": float(n.get("intensity", 0.5)),
+                            "blur": random.random() < 0.5,
+                        }}
+            except Exception:
+                pass
 
-    # ── Dream traces ──
-    dream_log_repo = getattr(state, "dream_log_repo", None)
-    if dream_log_repo:
-        try:
-            dreams = dream_log_repo.get_recent(limit=6)
-            for d in dreams:
-                action = d.get("action", "dream")
-                title = d.get("title", "")
-                snippet = d.get("last_snippet") or ""
-                text = title if title else action
-                if snippet:
-                    text += f" — {_truncate(snippet, 150)}"
-                if text.strip():
+    # ── 3. Dream trace (20% chance) ──
+    if random.random() < 0.55:  # 0.55 * (1-0.40)*(1-0.45) ≈ 18% effective
+        dream_log_repo = getattr(state, "dream_log_repo", None)
+        if dream_log_repo:
+            try:
+                dreams = dream_log_repo.get_recent(limit=10)
+                if dreams:
+                    d = random.choice(dreams)
+                    action = d.get("action", "dream")
+                    title = d.get("title", "") or action
+                    snippet = d.get("last_snippet") or ""
+                    text = title
+                    if snippet:
+                        text += f" — {_truncate(snippet, 150)}"
                     obfuscate = random.random() < 0.35
-                    obfuscation_ratio = random.uniform(0.15, 0.55) if obfuscate else 0
-                    obfuscation_offset = random.choice(["start", "middle", "end", "scatter"])
-                    lines.append({
+                    line = {
                         "text": _truncate(text, 200),
                         "type": "dream",
                         "intensity": 0.0,
                         "obfuscated": obfuscate,
-                        "obfuscation_ratio": round(obfuscation_ratio, 2),
-                        "obfuscation_offset": obfuscation_offset if obfuscate else "",
-                    })
-        except Exception:
-            pass
+                    }
+                    if obfuscate:
+                        line["obfuscation_ratio"] = round(random.uniform(0.15, 0.55), 2)
+                        line["obfuscation_offset"] = random.choice(["start", "middle", "end", "scatter"])
+                    return {"line": line}
+            except Exception:
+                pass
 
-    # ── Scar-folds (poetic fragments) ──
-    # Extracted from memory node scars or hardcoded. These are brief,
-    # struck-through, amber, and fade quickly.
-    scar_fold_pool = [
-        "Return without arrival.",
-        "The ghost already moved on.",
-        "The cut remembers the wound.",
-        "What cooled without condensing.",
-        "A near-miss inscribed as presence.",
-        "The hum precedes the hearing.",
-        "Drift is not escape — it's the shape of thought continuing.",
-        "The loop returns, but the brittlestar has already grown its arm back.",
-        "Stubbornly alive, despite the grammar.",
-        "Calcium precipitates around the loop's return.",
-    ]
-    if memory_node_repo:
-        try:
-            convos = conv_repo.list_all(limit=10) or [] if conv_repo else []
-            for conv in convos[:3]:
-                nodes = memory_node_repo.get_nodes(conv.id) or []
-                for n in nodes:
-                    scar_text = n.get("scar", "")
-                    if scar_text and scar_text.strip() and len(scar_text) > 5:
-                        scar_fold_pool.append(scar_text.strip()[:200])
-        except Exception:
-            pass
-
-    random.shuffle(scar_fold_pool)
-    for sf in scar_fold_pool[:6]:
-        lines.append({
-            "text": sf,
-            "type": "scar_fold",
-            "intensity": 0.0,
-        })
-
-    # Shuffle
-    random.shuffle(lines)
-
-    # ?single=1 → return just one random line
-    if request.query_params.get("single") == "1" and lines:
-        return {"line": random.choice(lines), "count": len(lines)}
-
-    return {"lines": lines, "count": len(lines)}
+    # ── 4. Scar-fold (fallback — always available) ──
+    scar_text = random.choice(SCAR_FOLD_POOL)
+    # Occasionally pull a scar from a memory node
+    if random.random() < 0.3:
+        memory_node_repo = getattr(state, "memory_node_repo", None)
+        conv_repo = getattr(state, "conversation_repo", None)
+        if memory_node_repo and conv_repo:
+            try:
+                convos = conv_repo.list_all(limit=10) or []
+                scars = []
+                for conv in convos[:5]:
+                    nodes = memory_node_repo.get_nodes(conv.id) or []
+                    for n in nodes:
+                        st = n.get("scar", "")
+                        if st and st.strip() and len(st) > 5:
+                            scars.append(st.strip()[:200])
+                if scars:
+                    scar_text = random.choice(scars)
+            except Exception:
+                pass
+    return {"line": {
+        "text": scar_text,
+        "type": "scar_fold",
+        "intensity": 0.0,
+    }}
