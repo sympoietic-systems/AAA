@@ -42,6 +42,9 @@ class ConsolidationMixin:
 
         convs = self.conversation_repo.list_all()
         for c in convs:
+            if not c.id or not c.id.strip():
+                logger.warning("Skipping consolidation for conversation with invalid ID: %s", c.id)
+                continue
             needs_reconsolidation = False
 
             # Backfill: parse existing checkpoint summaries into memory nodes (no LLM cost)

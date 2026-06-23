@@ -240,11 +240,14 @@ def import_task(json_path, db_path, proj_root):
         print(f"\n[{idx+1}/{len(tasks_to_import)}] Importing task '{task_id}' (conversation: {conversation_id})...")
 
         # 1. Lazily provision the shell conversation to satisfy foreign key constraints
-        cursor.execute(
-            "INSERT OR IGNORE INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
-            (conversation_id, "Imported Research Space", "system")
-        )
-        print(f"  - Ensured conversation '{conversation_id}' exists in target database.")
+        if conversation_id:
+            cursor.execute(
+                "INSERT OR IGNORE INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
+                (conversation_id, "Imported Research Space", "system")
+            )
+            print(f"  - Ensured conversation '{conversation_id}' exists in target database.")
+        else:
+            print("  - No associated conversation for this task; skipping conversation provisioning.")
 
         # 2. Insert rows into research tables
         for table, rows in t_bundle["data"].items():

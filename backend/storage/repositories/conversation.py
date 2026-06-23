@@ -40,7 +40,7 @@ class ConversationRepository(BaseRepository):
         offset: Optional[int] = None,
     ) -> list[Conversation]:
         conn = self._conn()
-        where_clauses = []
+        where_clauses = ["c.id IS NOT NULL", "c.id != ''"]
         params = []
 
         if tag:
@@ -75,7 +75,7 @@ class ConversationRepository(BaseRepository):
     @with_connection
     def count_all(self, tag: Optional[str] = None, search: Optional[str] = None) -> int:
         conn = self._conn()
-        where_clauses = []
+        where_clauses = ["c.id IS NOT NULL", "c.id != ''"]
         params = []
 
         if tag:

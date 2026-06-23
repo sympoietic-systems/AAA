@@ -24,14 +24,22 @@ def init_db(db_path: str) -> sqlite3.Connection:
     """Initialize database. Migrations run only when AAA_RUN_MIGRATIONS=true."""
     conn = get_connection(db_path)
 
+    _cleanup_invalid_conversations(conn)
+
     if os.environ.get("AAA_RUN_MIGRATIONS", "").lower() not in ("true", "1", "yes"):
         return conn
 
     from backend.storage.migrations import run_all_migrations
     run_all_migrations(conn)
     _migrate_legacy_conversation(conn)
+    _cleanup_invalid_conversations(conn)
     conn.commit()
     return conn
+
+
+def _cleanup_invalid_conversations(conn: sqlite3.Connection) -> None:
+    conn.execute("DELETE FROM conversations WHERE id IS NULL OR id = ''")
+    conn.commit()
 
 
 _LEGACY_CONVERSATION_ID = "00000000-0000-0000-0000-000000000000"
