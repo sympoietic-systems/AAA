@@ -76,3 +76,29 @@ Refreshing the page or sharing a link should never reset the workspace layout.
 ### Guidelines
 *   **URL Query Synchronization**: Sync key layout states (the active conversation ID `?c=`, message active node `?m=`) with query parameters.
 *   **History API Integration**: Use `window.history.pushState` on selection changes to preserve history trail, and listen to `popstate` events to handle standard browser Back/Forward navigation smoothly.
+
+---
+
+## 6. Secure & Non-Secure Context Safety (Clipboard API, etc.)
+Web APIs (such as the Clipboard API via `navigator.clipboard`) are restricted by modern browsers to secure contexts (HTTPS/localhost). In temporary, staging, or tunnel deployments running over plain HTTP, these APIs will be `undefined`, causing runtime `TypeErrors` if invoked.
+
+### Guidelines
+*   **Resilient API Invocation**: Never assume modern Web APIs are present. Always perform capability checks (`typeof navigator.clipboard === "object"`).
+*   **Fallback Implementations**: Provide fallbacks for essential interactions. For example, text copying should fall back to creating a hidden `<textarea>`, selecting its contents, and calling `document.execCommand('copy')`.
+*   **Use Shared Helpers**: Route clipboard copying actions through the central helper `frontend/src/utils/clipboard.ts` rather than calling `navigator.clipboard` directly.
+
+---
+
+## 7. Scoped Styling for Dynamic Content (CSS Namespacing)
+Global HTML tag selectors (`h1`, `h2`, `pre`, `p`, etc.) inside custom CSS stylesheets will override typography for normal UI controls (e.g. headers, inputs, navigation links) and violate the terminal aesthetic.
+
+### Guidelines
+*   **Namespace Dynamic Layouts**: Wrap user-generated markdown rendering in namespace selectors like `.markdown-body` or `.prose`.
+*   **Scope Rules in CSS**: All tag-based overrides inside `index.css` must be nested under the namespace classes:
+    ```css
+    /* DO NOT DO THIS: */
+    h1 { font-size: 1.5rem; }
+
+    /* DO THIS: */
+    .markdown-body h1, .prose h1 { font-size: 1.5rem; }
+    ```

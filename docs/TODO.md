@@ -108,6 +108,8 @@
     [x] ResearchDetailPanel updated to use shared taskConstants (duplicate STATUS_COLORS/STEP_LABELS/EVENT_TYPE removed)
     [x] NewResearchFormInline removed — replaced by existing NewResearchForm component
     [x] docs: refactor_research_task_page.md proposal + report
+    [x] Scope all markdown heading and tag styling in index.css under .markdown-body and .prose to prevent UI breaks
+    [x] Implement resilient clipboard copy helper (clipboard.ts) with execCommand fallback for non-secure HTTP environments
 
 ## RIGHT PANEL (SidePanel) REFACTOR
     [x] Move file summary fetching into SedimentSection (was in SidePanel — data-broker antipattern)

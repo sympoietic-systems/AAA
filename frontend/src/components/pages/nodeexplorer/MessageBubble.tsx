@@ -10,6 +10,7 @@ import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
 import { VitalityBar } from "./VitalityBar"
 import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEqual, getSelectionCharacterOffsetWithin } from "./messageBubbleUtils"
+import { copyToClipboard } from "../../../utils/clipboard"
 
 export const MessageBubble = memo(function MessageBubble({
   msg,
@@ -472,13 +473,15 @@ export const MessageBubble = memo(function MessageBubble({
             className="fixed z-50 flex items-center gap-0 bg-[#1a1a1a] border border-[#333] shadow-xl rounded-md px-1 py-1 select-none"
           >
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(selectedText)
-                setCopied(true)
-                setTimeout(() => {
-                  setShowSelectionToolbar(false)
-                  setCopied(false)
-                }, 800)
+              onClick={async () => {
+                const success = await copyToClipboard(selectedText)
+                if (success) {
+                  setCopied(true)
+                  setTimeout(() => {
+                    setShowSelectionToolbar(false)
+                    setCopied(false)
+                  }, 800)
+                }
               }}
               className="text-[#888] hover:text-[#4ade80] px-2 py-0.5 text-[10px] font-mono transition-colors whitespace-nowrap"
             >

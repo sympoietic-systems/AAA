@@ -1,9 +1,10 @@
-import React, { memo, useState, useCallback, useRef } from "react"
+import { memo, useState, useCallback, useRef } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import { BracketHeader } from "./BracketHeader"
 import { TerminalButton } from "../../../UI"
+import { copyToClipboard } from "../../../../utils/clipboard"
 
 interface MarkdownSectionProps {
   title: string
@@ -38,11 +39,11 @@ export const MarkdownSection = memo(function MarkdownSection({ title, content, f
   const baseName = slugify(extractReportTitle(content) ?? fileName ?? title)
 
   const copyMarkdown = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(content)
+    const success = await copyToClipboard(content)
+    if (success) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-    } catch {}
+    }
   }, [content])
 
   const exportMarkdown = useCallback(() => {

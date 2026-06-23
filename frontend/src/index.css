@@ -31,7 +31,7 @@ body {
   background: #444;
 }
 
-pre {
+.markdown-body pre, .prose pre {
   margin: 0.5rem 0;
   padding: 0.75rem 1rem;
   background: #141414;
@@ -42,12 +42,12 @@ pre {
   line-height: 1.5;
 }
 
-code {
+.markdown-body code, .prose code {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
 }
 
-:not(pre) > code {
+.markdown-body :not(pre) > code, .prose :not(pre) > code {
   background: #1a1a1a;
   color: #4ade80;
   padding: 0.125rem 0.375rem;
@@ -55,58 +55,59 @@ code {
   border: 1px solid #222;
 }
 
-p {
+.markdown-body p, .prose p {
   margin: 0 0 0.35rem;
 }
 
-ul, ol {
+.markdown-body ul, .markdown-body ol, .prose ul, .prose ol {
   margin: 0.25rem 0;
   padding-left: 1.25rem;
 }
 
-li {
+.markdown-body li, .prose li {
   margin-bottom: 0.15rem;
 }
 
-blockquote {
+.markdown-body blockquote, .prose blockquote {
   border-left: 2px solid #4ade80;
   margin: 0.5rem 0;
   padding-left: 0.75rem;
   color: #888;
 }
 
-a {
+.markdown-body a, .prose a {
   color: #4ade80;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-h1, h2, h3, h4, h5, h6 {
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6,
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
   font-weight: bold;
   color: #f8fafc;
   margin-top: 0.75rem;
   margin-bottom: 0.35rem;
   line-height: 1.4;
 }
-h1 {
+.markdown-body h1, .prose h1 {
   font-size: 1.125rem;
   color: #f8fafc;
   border-bottom: 1px solid #334155;
   padding-bottom: 0.25rem;
   margin-top: 1rem;
 }
-h2 {
+.markdown-body h2, .prose h2 {
   font-size: 0.95rem;
   color: #e2e8f0;
   border-left: 2px solid #475569;
   padding-left: 0.5rem;
   margin-top: 0.9rem;
 }
-h3 {
+.markdown-body h3, .prose h3 {
   font-size: 0.85rem;
   color: #cbd5e1;
 }
-h4 {
+.markdown-body h4, .prose h4 {
   font-size: 0.8rem;
   color: #94a3b8;
 }
@@ -116,7 +117,7 @@ h4 {
   overflow-wrap: break-word;
 }
 
-table {
+.markdown-body table, .prose table {
   border-collapse: collapse;
   margin: 0.5rem 0;
   font-size: 0.8125rem;
@@ -124,12 +125,12 @@ table {
   overflow-x: auto;
   max-width: 100%;
 }
-th, td {
+.markdown-body th, .markdown-body td, .prose th, .prose td {
   border: 1px solid #222;
   padding: 0.25rem 0.5rem;
   text-align: left;
 }
-th {
+.markdown-body th, .prose th {
   background: #141414;
 }
 
