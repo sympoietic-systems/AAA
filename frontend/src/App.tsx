@@ -13,6 +13,7 @@ import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, getAgent, deleteMessage, downloadExport } from "./api/client"
 import { TeaserPreview } from "./components/TeaserPreview"
+import { LoginPage } from "./components/pages/login/LoginPage"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "./components/UI"
 
 const EMPTY_STRING_ARRAY: string[] = []
@@ -91,17 +92,23 @@ export default function App() {
 
   // --- Router switch ---
 
-  // / (landing page artwork) or /login (authentication)
-  if (path === "/" || path === "/login") {
+  // / (landing page artwork)
+  if (path === "/") {
     return (
       <div className="h-screen w-screen overflow-hidden">
-        <TeaserPreview
-          showLogin={path === "/login"}
-          onPasswordSubmit={handlePasswordSubmit}
-          authError={authError}
-          onClearError={() => setAuthError(null)}
-        />
+        <TeaserPreview />
       </div>
+    )
+  }
+
+  // /login (authentication page)
+  if (path === "/login") {
+    return (
+      <LoginPage
+        onPasswordSubmit={handlePasswordSubmit}
+        authError={authError}
+        onClearError={() => setAuthError(null)}
+      />
     )
   }
 
