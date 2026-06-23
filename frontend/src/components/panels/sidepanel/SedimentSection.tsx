@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react"
+import { useState, useEffect, useMemo, memo } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
@@ -42,6 +42,7 @@ function SedimentInjectionModal({
 }) {
   const [files, setFiles] = useState<SedimentFileInfo[]>([])
   const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState<'all' | 'files' | 'research'>('all')
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [injecting, setInjecting] = useState(false)
@@ -87,8 +88,22 @@ function SedimentInjectionModal({
     if (type === "md") return "📝"
     if (type === "epub" || type === "mobi") return "📖"
     if (type === "web_probe") return "🌐"
+    if (type === "research-synthesis" || type === "synthesis-sediment") return "⊙"
     return "📄"
   }
+
+  const filteredFiles = useMemo(() => {
+    return files.filter((f) => {
+      const isResearch = f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment"
+      if (filter === "files" && isResearch) return false
+      if (filter === "research" && !isResearch) return false
+      return true
+    })
+  }, [files, filter])
+
+  const researchCount = useMemo(() => {
+    return files.filter((f) => f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment").length
+  }, [files])
 
   return (
     <div
@@ -96,18 +111,17 @@ function SedimentInjectionModal({
       onClick={onClose}
     >
       <div
-        className="w-[480px] max-h-[80vh] bg-[#0c0c0c] border border-[#2a2a2a] rounded-lg shadow-2xl flex flex-col overflow-hidden"
+        className="w-[480px] max-h-[80vh] bg-[#0c0c0e]/95 border border-[#222]/40 rounded-sm shadow-2xl flex flex-col overflow-hidden backdrop-blur-md"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a1a1a] shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-[#a78bfa]">◈</span>
-            <span className="text-[11px] text-[#ccc] font-mono tracking-wide">Inject Sediment</span>
-          </div>
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[#1a1a1a] select-none shrink-0">
+          <span className="text-[9px] font-mono uppercase tracking-widest text-[#6c6c8a]">
+            [ Inject Sediment ]
+          </span>
           <button
             onClick={onClose}
-            className="text-[10px] text-[#555] hover:text-[#aaa] font-mono transition-colors"
+            className="text-[9px] text-[#555] hover:text-[#888] font-mono cursor-pointer transition-colors"
           >
             [close]
           </button>
@@ -120,47 +134,71 @@ function SedimentInjectionModal({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search files across all conversations..."
-            className="w-full bg-[#111] border border-[#222] rounded px-3 py-1.5 text-[10px] text-[#ccc] font-mono placeholder-[#444] focus:outline-none focus:border-[#a78bfa]/50 transition-colors"
+            className="w-full bg-transparent border-b border-[#222]/40 px-1 py-1.5 text-[10px] text-[#ccc] font-mono placeholder-[#444] focus:outline-none focus:border-[#a78bfa]/50 transition-colors"
             autoFocus
           />
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex gap-x-3 px-4 py-1.5 text-[9px] font-mono shrink-0 select-none border-b border-[#1a1a1a]">
+          <button
+            onClick={() => setFilter('all')}
+            className={`cursor-pointer transition-colors ${filter === 'all' ? 'text-[#a78bfa]' : 'text-[#555] hover:text-[#888]'}`}
+          >
+            all
+          </button>
+          <span className="text-[#333]">•</span>
+          <button
+            onClick={() => setFilter('files')}
+            className={`cursor-pointer transition-colors ${filter === 'files' ? 'text-[#a78bfa]' : 'text-[#555] hover:text-[#888]'}`}
+          >
+            files
+          </button>
+          <span className="text-[#333]">•</span>
+          <button
+            onClick={() => setFilter('research')}
+            className={`cursor-pointer transition-colors ${filter === 'research' ? 'text-[#a78bfa]' : 'text-[#555] hover:text-[#888]'}`}
+          >
+            research ({researchCount})
+          </button>
         </div>
 
         {/* File list */}
         <div className="flex-1 overflow-y-auto px-2 py-2 min-h-0">
           {loading ? (
             <div className="text-[9px] text-[#555] font-mono animate-pulse text-center py-8">
-              scanning sediment layers...
+              [ scanning sediment layers... ]
             </div>
-          ) : files.length === 0 ? (
+          ) : filteredFiles.length === 0 ? (
             <div className="text-[9px] text-[#444] font-mono text-center py-8 italic">
-              {search ? "No files match your search." : "No files available for injection."}
+              {search ? "[ no matching files found ]" : "[ no files available for injection ]"}
             </div>
           ) : (
             <div className="space-y-0.5">
-              {files.map((f) => {
+              {filteredFiles.map((f) => {
                 const key = `${f.conversation_id}:${f.file_name}`
                 const isSelected = selected.has(key)
                 return (
                   <div
                     key={key}
                     onClick={() => toggleFile(key)}
-                    className={`flex items-start gap-2 px-2.5 py-2 rounded cursor-pointer transition-all duration-150 ${isSelected
-                        ? "bg-[#a78bfa]/10 border border-[#a78bfa]/30"
-                        : "hover:bg-[#151515] border border-transparent"
+                    className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-all duration-150 border-l-2 ${isSelected
+                        ? "border-[#a78bfa] bg-[#1a1a2e]/50"
+                        : "border-transparent hover:bg-[#111]"
                       }`}
                   >
-                    <div className={`w-3.5 h-3.5 mt-0.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${isSelected
+                    <div className={`w-3 h-3 mt-0.5 border flex items-center justify-center shrink-0 transition-colors ${isSelected
                         ? "border-[#a78bfa] bg-[#a78bfa]/20"
-                        : "border-[#333] bg-[#0a0a0a]"
+                        : "border-[#333] bg-transparent"
                       }`}>
                       {isSelected && <span className="text-[8px] text-[#a78bfa] leading-none">✓</span>}
                     </div>
 
                     <div className="flex-1 min-w-0 font-mono">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm">{fileIcon(f.file_type)}</span>
-                        <span className="text-[10px] text-[#ccc] truncate">
-                          {f.file_name}
+                        <span className="text-sm leading-none">{fileIcon(f.file_type)}</span>
+                        <span className="text-[10px] text-[#ccc] truncate" title={f.display_name || f.file_name}>
+                          {f.display_name || f.file_name}
                         </span>
                         <span className="text-[8px] text-[#555] shrink-0">
                           {f.token_count >= 1000 ? `${(f.token_count / 1000).toFixed(1)}k` : f.token_count}tok
@@ -183,19 +221,19 @@ function SedimentInjectionModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#1a1a1a] bg-[#080808] shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#1a1a1a] bg-[#0c0c0e]/95 shrink-0">
           <span className="text-[8px] text-[#555] font-mono">
             {selected.size} file{selected.size !== 1 ? "s" : ""} selected
           </span>
           <button
             onClick={handleInject}
             disabled={selected.size === 0 || injecting}
-            className={`text-[9px] font-mono px-3 py-1 rounded transition-all duration-200 ${selected.size === 0 || injecting
-                ? "text-[#444] bg-[#111] border border-[#222] cursor-not-allowed"
-                : "text-[#a78bfa] bg-[#a78bfa]/10 border border-[#a78bfa]/30 hover:bg-[#a78bfa]/20 hover:border-[#a78bfa]/50"
+            className={`text-[9px] font-mono px-3 py-1 transition-all duration-200 ${selected.size === 0 || injecting
+                ? "text-[#444] cursor-not-allowed"
+                : "text-[#a78bfa] hover:text-[#c0b0ff] cursor-pointer"
               }`}
           >
-            {injecting ? "injecting..." : `inject ${selected.size > 0 ? `(${selected.size})` : ""}`}
+            {injecting ? "[injecting...]" : `[inject ${selected.size > 0 ? `(${selected.size})` : ""}]`}
           </button>
         </div>
       </div>
@@ -299,7 +337,13 @@ function SedimentSectionComponent({
     if (type === "md") return "📝"
     if (type === "epub" || type === "mobi") return "📖"
     if (type === "web_probe") return "🌐"
+    if (type === "research-synthesis" || type === "synthesis-sediment") return "⊙"
     return "📄"
+  }
+
+  const extractTaskIdFromFileName = (fileName: string) => {
+    const match = fileName.match(/research-synthesis-([a-f0-9-]+)\.md/i)
+    return match ? match[1] : ""
   }
 
   const renderSummaryContent = (fileName: string) => {
@@ -364,8 +408,14 @@ function SedimentSectionComponent({
               <div className="flex items-center gap-1.5 group">
                 <span className="text-sm">{fileIcon(inj.file_type)}</span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-[10px] text-[#aaa] font-mono truncate block">
-                    {inj.source_file_name}
+                  <span className={`text-[10px] font-mono truncate block ${
+                    inj.file_type === "research-synthesis" || inj.file_type === "synthesis-sediment"
+                      ? "text-[#a78bfa] font-medium"
+                      : "text-[#aaa]"
+                  }`}>
+                    {inj.file_type === "research-synthesis" || inj.file_type === "synthesis-sediment"
+                      ? `synthesis: ${inj.source_file_name.replace("research-synthesis-", "").replace(".md", "")}`
+                      : inj.source_file_name}
                   </span>
                   <span className="text-[7px] text-[#555] font-mono truncate block">
                     from "{inj.source_conversation_title || "untitled"}"
@@ -376,12 +426,24 @@ function SedimentSectionComponent({
                   {inj.token_count >= 1000 ? `${(inj.token_count / 1000).toFixed(1)}k` : inj.token_count} tok
                 </span>
 
-                <button
-                  onClick={() => handleToggleSummary(inj.source_file_name)}
-                  className="text-[8px] text-[#4ade80] hover:underline"
-                >
-                  {expandedFile === inj.source_file_name ? "hide" : "sum"}
-                </button>
+                {(!inj.status || inj.status === "ready") ? (
+                  <button
+                    onClick={() => handleToggleSummary(inj.source_file_name)}
+                    className="text-[8px] text-[#4ade80] hover:underline"
+                  >
+                    {expandedFile === inj.source_file_name ? "hide" : "sum"}
+                  </button>
+                ) : (
+                  <span className={`text-[8px] px-1 border rounded animate-pulse font-mono ${
+                    inj.status === "uploading"
+                      ? "text-[#eab308] border-[#eab308]/30"
+                      : inj.status === "error"
+                      ? "text-[#ef4444] border-[#ef4444]/30 animate-none"
+                      : "text-[#3b82f6] border-[#3b82f6]/30"
+                  }`}>
+                    {inj.status === "uploading" ? "uploading" : inj.status === "error" ? "error" : "indexing"}
+                  </span>
+                )}
 
                 <button
                   onClick={() => handleRemoveInjection(inj.id)}
@@ -393,8 +455,20 @@ function SedimentSectionComponent({
               </div>
 
               {expandedFile === inj.source_file_name && (
-                <div className="mt-1 ml-4">
+                <div className="mt-1 ml-4 border-l border-[#2a2a2a] pl-2">
                   {renderSummaryContent(inj.source_file_name)}
+                  {(inj.file_type === "research-synthesis" || inj.file_type === "synthesis-sediment") && (
+                    <div className="mt-2 pt-1.5 border-t border-[#1a1a1a] flex justify-end">
+                      <a
+                        href={`/research?id=${extractTaskIdFromFileName(inj.source_file_name)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] font-mono flex items-center gap-1 transition-colors"
+                      >
+                        <span>View Full Synthesis ↗</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -411,8 +485,14 @@ function SedimentSectionComponent({
                 <span className="text-sm">
                   {fileIcon(f.file_type)}
                 </span>
-                <span className="text-[10px] text-[#aaa] truncate flex-1 font-mono">
-                  {f.file_name}
+                <span className={`text-[10px] truncate flex-1 font-mono ${
+                  f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment"
+                    ? "text-[#a78bfa] font-medium"
+                    : "text-[#aaa]"
+                }`}>
+                  {f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment"
+                    ? `synthesis: ${f.file_name.replace("research-synthesis-", "").replace(".md", "")}`
+                    : f.file_name}
                 </span>
 
                 {f.status === "uploading" && (
@@ -469,8 +549,20 @@ function SedimentSectionComponent({
               </div>
 
               {expandedFile === f.file_name && (
-                <div className="mt-1 ml-4">
+                <div className="mt-1 ml-4 border-l border-[#2a2a2a] pl-2">
                   {renderSummaryContent(f.file_name)}
+                  {(f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment") && (
+                    <div className="mt-2 pt-1.5 border-t border-[#1a1a1a] flex justify-end">
+                      <a
+                        href={`/research?id=${extractTaskIdFromFileName(f.file_name)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] font-mono flex items-center gap-1 transition-colors"
+                      >
+                        <span>View Full Synthesis ↗</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

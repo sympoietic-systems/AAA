@@ -82,8 +82,7 @@
     [ ] Document download tool (PDF/DOCX → digestion → index/vectorize)
     [ ] Memory node creation from research findings (cross-conversation recall)
     [ ] Budget tracking (increment budget_spent_usd per LLM call)
-    [ ] In-conversation research button (InputBar split Research ▼)
-    [ ] SidePanel ResearchSummarySection
+    [x] In-conversation research button (InputBar split Research ▼) and task result lazy indexing/sedimentation
     [ ] Research proposal inline cards (<research-proposal> XML in chat)
     [ ] if the url PDF, we need to doswnload it, dygest through our digesting system and also anlayze for the current research
     [ ] add reflection step [if LLM need to think a bit before do next queries, or before do next queries. Do we need it? sometimes is good to think for a bit about what is digested/readed before move forward.]

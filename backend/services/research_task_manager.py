@@ -192,6 +192,38 @@ class ResearchTaskManager:
         self.task_repo.update(task_id, result_summary=result_summary)
         self.transition(task_id, "completed")
 
+        # Ingestion Hook: write synthesis report and start digestion
+        task = self.task_repo.get(task_id)
+        if task and task.get("conversation_id"):
+            conversation_id = task["conversation_id"]
+            try:
+                filename = f"research-synthesis-{task_id}.md"
+                from backend.services.file import FileService
+                
+                content_bytes = result_summary.encode("utf-8") if result_summary else b"No synthesis result generated."
+                
+                # Cache on disk
+                FileService.cache_file(conversation_id, filename, content_bytes)
+                
+                # Register in perception_files
+                perception_repo = getattr(self._app_state, "perception_repo", None)
+                if perception_repo:
+                    perception_repo.create_file(
+                        conversation_id=conversation_id,
+                        file_name=filename,
+                        file_type="research-synthesis",
+                        status="uploading",
+                    )
+                    
+                    # Spawn async digest worker
+                    coro = FileService.process_and_summarize(
+                        self._app_state, conversation_id, filename, "research-synthesis"
+                    )
+                    asyncio.create_task(coro)
+                    logger.info("Automatically registered and queued digestion for research-synthesis: %s", filename)
+            except Exception as e:
+                logger.error("Failed to automatically digest research synthesis for task %s: %s", task_id, e)
+
     def fail(self, task_id: str, error_reason: str = "") -> None:
         self.task_repo.update(
             task_id,

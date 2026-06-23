@@ -11,12 +11,51 @@ interface Props {
 }
 
 export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClose }: Props) {
-  const [objective, setObjective] = useState("")
-  const [advanced, setAdvanced] = useState(false)
-  const [depth, setDepth] = useState(2)
-  const [breadth, setBreadth] = useState(2)
-  const [agonistic, setAgonistic] = useState(false)
-  const [budget, setBudget] = useState(0.50)
+  const [objective, setObjective] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      return params.get("objective") || ""
+    }
+    return ""
+  })
+  const [advanced, setAdvanced] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      return params.has("depth") || params.has("breadth") || params.has("budget")
+    }
+    return false
+  })
+  const [depth, setDepth] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const d = parseInt(params.get("depth") || "")
+      return isNaN(d) ? 2 : d
+    }
+    return 2
+  })
+  const [breadth, setBreadth] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const b = parseInt(params.get("breadth") || "")
+      return isNaN(b) ? 2 : b
+    }
+    return 2
+  })
+  const [agonistic, setAgonistic] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      return params.get("agonistic") === "true"
+    }
+    return false
+  })
+  const [budget, setBudget] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const bg = parseFloat(params.get("budget") || "")
+      return isNaN(bg) ? 0.50 : bg
+    }
+    return 0.50
+  })
   const [sending, setSending] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {

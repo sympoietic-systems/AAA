@@ -318,6 +318,7 @@ export const NodeExplorer = memo(function NodeExplorer({
   loading,
   error,
   conversationTitle,
+  conversationId,
   onSend,
   onUploadFiles,
   isIndexing,
@@ -604,6 +605,7 @@ export const NodeExplorer = memo(function NodeExplorer({
         disabled={loading}
         isIndexing={isIndexing}
         isPassword={isPassword}
+        conversationId={conversationId}
       />
     </div>
   )

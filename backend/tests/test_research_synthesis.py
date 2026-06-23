@@ -144,3 +144,137 @@ async def test_synthesize_phase_uses_synthesis_persona():
             assert "Reflection about intra-action" in user_prompt
             assert "Insight A" in user_prompt
             assert "Gap C" in user_prompt
+
+
+@pytest.mark.asyncio
+async def test_research_task_completion_triggers_sedimentation():
+    state = MockAppState()
+    state.perception_repo = MagicMock()
+    
+    from backend.services.research_task_manager import ResearchTaskManager
+    manager = ResearchTaskManager(state)
+    
+    # Mock transition
+    manager.transition = MagicMock()
+    
+    # Mock task repository
+    task_id = "test-task-123"
+    state.research_task_repo.get.return_value = {
+        "id": task_id,
+        "conversation_id": "test-conv-abc",
+        "objective": "Test task completion",
+    }
+    
+    # Mock FileService functions
+    from backend.services.file import FileService
+    with patch.object(FileService, "cache_file") as mock_cache, \
+         patch.object(FileService, "process_and_summarize", new_callable=AsyncMock) as mock_process:
+        
+        manager.complete(task_id, "This is the final result markdown")
+        
+        # Verify transition was called
+        manager.transition.assert_called_once_with(task_id, "completed")
+        
+        # Verify task update was called
+        state.research_task_repo.update.assert_called_once_with(task_id, result_summary="This is the final result markdown")
+        
+        # Verify file caching occurred
+        mock_cache.assert_called_once_with("test-conv-abc", f"research-synthesis-{task_id}.md", b"This is the final result markdown")
+        
+        # Verify file creation in perception repo
+        state.perception_repo.create_file.assert_called_once_with(
+            conversation_id="test-conv-abc",
+            file_name=f"research-synthesis-{task_id}.md",
+            file_type="research-synthesis",
+            status="uploading",
+        )
+
+
+@pytest.mark.asyncio
+async def test_inject_global_research_task_lazy_provisions():
+    from fastapi.testclient import TestClient
+    from fastapi import FastAPI
+    from backend.api.routes.sediment import router as sediment_router
+    
+    app = FastAPI()
+    app.include_router(sediment_router)
+    
+    class MockApp:
+        def __init__(self):
+            self.state = MagicMock()
+            self.state.perception_repo = MagicMock()
+            self.state.research_task_repo = MagicMock()
+            
+    mock_app = MockApp()
+    app.state = mock_app.state
+    
+    # Mock data
+    task_id = "global-task-456"
+    mock_app.state.research_task_repo.list_all.return_value = [
+        {
+            "id": task_id,
+            "objective": "Global test task",
+            "result_summary": "Report synthesis text content",
+            "completed_at": "2026-06-23 10:00:00",
+        }
+    ]
+    mock_app.state.perception_repo.get_all_files_across_conversations.return_value = []
+    
+    # Mock SQLite repository methods
+    mock_app.state.perception_repo.check_file_exists.return_value = False
+    
+    mock_app.state.research_task_repo.get.return_value = {
+        "id": task_id,
+        "objective": "Global test task",
+        "result_summary": "Report synthesis text content",
+    }
+    
+    # Client request testing
+    client = TestClient(app)
+    
+    # 1. Test listing
+    resp = client.get("/sediment/files")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["files"]) == 1
+    assert data["files"][0]["file_name"] == f"research-synthesis-{task_id}.md"
+    assert data["files"][0]["conversation_id"] == "global-research"
+    assert data["files"][0]["display_name"] == "Global test task"
+    
+    # 2. Test injecting
+    from backend.services.file import FileService
+    with patch.object(FileService, "cache_file") as mock_cache, \
+         patch.object(FileService, "process_and_summarize", new_callable=AsyncMock) as mock_process:
+        
+        inject_payload = {
+            "files": [
+                {
+                    "source_conversation_id": "global-research",
+                    "source_file_name": f"research-synthesis-{task_id}.md"
+                }
+            ]
+        }
+        
+        # Mock service inject call
+        from backend.services.sediment import SedimentService
+        with patch.object(SedimentService, "inject", return_value=[{"id": "inj-999", "source_conversation_id": "global-research", "source_file_name": f"research-synthesis-{task_id}.md"}]) as mock_inj_service:
+            
+            resp_inject = client.post(
+                "/conversations/conv-xyz/sediment/inject",
+                json=inject_payload
+            )
+            assert resp_inject.status_code == 200
+            
+            # Verify conversations was checked/inserted
+            mock_app.state.perception_repo.ensure_conversation_exists.assert_called_once_with(
+                "global-research", "Global Research Reports", "system"
+            )
+            
+            # Verify file was cached and created in repo
+            mock_cache.assert_called_once_with("global-research", f"research-synthesis-{task_id}.md", b"Report synthesis text content")
+            mock_app.state.perception_repo.create_file.assert_called_once_with(
+                conversation_id="global-research",
+                file_name=f"research-synthesis-{task_id}.md",
+                file_type="research-synthesis",
+                status="uploading",
+            )

@@ -374,6 +374,7 @@ class SedimentFileInfo(BaseModel):
     chunk_count: int = 0
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+    display_name: Optional[str] = None
 
 
 class SedimentFilesResponse(BaseModel):
@@ -394,6 +395,7 @@ class SedimentInjectionInfo(BaseModel):
     chunk_count: int = 0
     summary: Optional[str] = None
     injected_at: Optional[str] = None
+    status: str = "ready"
 
 
 class SedimentInjectionsResponse(BaseModel):

@@ -189,6 +189,24 @@ class PerceptionSedimentRepository(BaseRepository):
         conn.commit()
 
     @with_connection
+    def ensure_conversation_exists(self, conversation_id: str, title: str, agent_id: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            "INSERT OR IGNORE INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
+            (conversation_id, title, agent_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def check_file_exists(self, conversation_id: str, file_name: str) -> bool:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT 1 FROM perception_files WHERE conversation_id = ? AND file_name = ?",
+            (conversation_id, file_name),
+        ).fetchone()
+        return row is not None
+
+    @with_connection
     def update_file(
         self,
         conversation_id: str,

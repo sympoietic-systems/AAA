@@ -89,8 +89,8 @@ export interface DreamHistoryResponse { dreams: DreamEntry[]; count: number }
 
 export interface NoteInfo { id: string; conversation_id: string; message_id: number; selected_text: string; comment: string; visibility: "personal" | "shared" | "agent"; created_at: string; updated_at: string }
 
-export interface SedimentFileInfo { conversation_id: string; conversation_title: string; file_name: string; file_type: string; summary: string | null; token_count: number; chunk_count: number; created_at: string | null; updated_at: string | null }
-export interface SedimentInjectionInfo { id: string; source_conversation_id: string; source_file_name: string; source_conversation_title: string; file_type: string; token_count: number; chunk_count: number; summary: string | null; injected_at: string | null }
+export interface SedimentFileInfo { conversation_id: string; conversation_title: string; file_name: string; file_type: string; summary: string | null; token_count: number; chunk_count: number; created_at: string | null; updated_at: string | null; display_name?: string | null }
+export interface SedimentInjectionInfo { id: string; source_conversation_id: string; source_file_name: string; source_conversation_title: string; file_type: string; token_count: number; chunk_count: number; summary: string | null; injected_at: string | null; status?: string | null }
 export interface SpectralSuggestion { message_id: number; speaker: string; content: string; similarity: number; timestamp: string }
 
 export interface SkillEventInfo { id: string; skill_id: string; event_type: 'emergence' | 'crystallization' | 'revision' | 'collapse'; source_type: string; rationale: string; annotation: string; created_at: string; skill_name: string }
