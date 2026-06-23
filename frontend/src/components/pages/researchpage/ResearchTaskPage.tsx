@@ -40,7 +40,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
           <span className="text-[#333]">|</span>
           <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
             <HeaderIndicator intent="gold" />
-            <HeaderLogo onClick={() => window.location.href = '/'} />
+            <HeaderLogo onClick={() => window.location.href = '/nodes'} />
           </span>
           <HeaderSeparator />
           <span className="text-[#bbb] text-xs truncate font-bold">{current.title}</span>
@@ -51,9 +51,6 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
         </div>
         <div className="flex items-center gap-4 shrink-0">
           <CreasesDropdown />
-          <HeaderActionButton onClick={() => window.location.href = '/'}>
-            home
-          </HeaderActionButton>
           <HeaderActionButton onClick={() => window.location.href = '/agent'}>
             agent
           </HeaderActionButton>
@@ -115,7 +112,7 @@ const NewTaskInline = memo(function NewTaskInline() {
           <span className="text-[#333]">|</span>
           <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
             <HeaderIndicator intent="gold" />
-            <HeaderLogo onClick={() => window.location.href = '/'} />
+            <HeaderLogo onClick={() => window.location.href = '/nodes'} />
           </span>
           <HeaderSeparator />
           <HeaderLabel intent="gold">new research</HeaderLabel>

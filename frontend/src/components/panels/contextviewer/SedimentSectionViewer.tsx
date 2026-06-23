@@ -118,7 +118,7 @@ export const SedimentSectionViewer: React.FC<{ content: string }> = memo(({ cont
               <div className="flex flex-wrap items-center justify-between gap-1.5 text-[8px] border-b border-[#2563eb]/10 pb-1">
                 {item.conversationId ? (
                   <a
-                    href={`/?c=${encodeURIComponent(item.conversationId)}${item.messageId ? `&m=${item.messageId}` : ""}`}
+                    href={`/nodes?c=${encodeURIComponent(item.conversationId)}${item.messageId ? `&m=${item.messageId}` : ""}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-bold text-[#60a5fa] hover:text-[#a78bfa] transition-colors truncate max-w-[190px] hover:underline"

@@ -18,10 +18,9 @@ const TABS: { key: TabId; label: string }[] = [
 
 interface Props {
   onGoHome: () => void
-  onGoConversation?: () => void
 }
 
-export function AgentPage({ onGoHome, onGoConversation }: Props) {
+export function AgentPage({ onGoHome }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const params = new URLSearchParams(window.location.search)
     let tab = params.get("tab")
@@ -81,17 +80,9 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
         </span>
         <div className="flex items-center gap-4">
           <CreasesDropdown />
-          <HeaderActionButton onClick={onGoHome}>
-            home
-          </HeaderActionButton>
           <HeaderActionButton onClick={() => window.location.href = '/research'}>
             research
           </HeaderActionButton>
-          {onGoConversation && (
-            <HeaderActionButton onClick={onGoConversation}>
-              back to chat
-            </HeaderActionButton>
-          )}
         </div>
       </HeaderContainer>
 

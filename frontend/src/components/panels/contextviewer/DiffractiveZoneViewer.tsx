@@ -150,7 +150,7 @@ export const DiffractiveZoneViewer: React.FC<{ content: string }> = memo(({ cont
                     </span>
                     {frag.conversationId ? (
                       <a
-                        href={`/?c=${encodeURIComponent(frag.conversationId)}${frag.messageId ? `&m=${frag.messageId}` : ""}`}
+                        href={`/nodes?c=${encodeURIComponent(frag.conversationId)}${frag.messageId ? `&m=${frag.messageId}` : ""}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-bold text-[#fb7185] hover:text-[#fb923c] transition-colors truncate max-w-[180px] hover:underline"

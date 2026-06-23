@@ -162,7 +162,7 @@ export const DreamingSection = memo(function DreamingSection() {
                       {typeDef?.code || d.action}
                     </span>
                     <a
-                      href={`/?c=${d.conversation_id}${d.response_msg_id ? `&m=${d.response_msg_id}` : ""}`}
+                      href={`/nodes?c=${d.conversation_id}${d.response_msg_id ? `&m=${d.response_msg_id}` : ""}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#94a3b8] hover:text-[#a78bfa] truncate flex-1 min-w-0 transition-colors"
@@ -182,7 +182,7 @@ export const DreamingSection = memo(function DreamingSection() {
                       )}
                       {d.source_conversation_id && (
                         <a
-                          href={`/?c=${d.source_conversation_id}`}
+                          href={`/nodes?c=${d.source_conversation_id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[#8b6cba] hover:text-[#c084fc] text-[8px] shrink-0 transition-colors"

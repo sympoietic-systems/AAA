@@ -18,32 +18,10 @@ import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLa
 const EMPTY_STRING_ARRAY: string[] = []
 
 export default function App() {
-  // Render agent page standalone if navigated to /agent
-  if (window.location.pathname === "/agent") {
-    return <AgentPage onGoHome={() => window.location.href = "/"} />
-  }
-
-  // Render research console or task detail
-  if (window.location.pathname === "/research") {
-    const params = new URLSearchParams(window.location.search)
-    const taskId = params.get("id")
-    const isNew = params.get("id") === "new"
-    if (taskId && !isNew) {
-      return <ResearchTaskPage taskId={taskId} />
-    }
-    if (isNew) {
-      return <ResearchTaskPage taskId="" isNew />
-    }
-    return <ResearchPage />
-  }
-
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isAuthEnabled, setIsAuthEnabled] = useState<boolean>(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [agentFlux, setAgentFlux] = useState<boolean>(false)
-
-  // Track if we are in clean/new chat creation workspace mode
-  const [isNewChatMode, setIsNewChatMode] = useState(false)
 
   useEffect(() => {
     checkAuthStatus().then((status) => {
@@ -62,7 +40,7 @@ export default function App() {
     if (success) {
       localStorage.setItem("aaa_password", password)
       setIsAuthenticated(true)
-      window.location.reload()
+      window.location.href = "/nodes"
     } else {
       setAuthError("Incorrect password")
     }
@@ -71,8 +49,108 @@ export default function App() {
   const handleLogout = () => {
     logout()
     setIsAuthenticated(false)
-    window.location.reload()
+    window.location.href = "/"
   }
+
+  const path = window.location.pathname
+  const params = new URLSearchParams(window.location.search)
+
+  // 1. Initializing state
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#0c0c0c] text-sm font-mono text-[#555] select-none">
+        <span className="animate-pulse">initializing system...</span>
+      </div>
+    )
+  }
+
+  // 2. Intercept query parameters on root page / and redirect to /nodes
+  if (path === "/" && params.has("c")) {
+    window.location.replace(`/nodes${window.location.search}`)
+    return null
+  }
+
+  // 3. Routing and Authentication guards
+  if (path === "/login") {
+    // If auth is not enabled, or user is already authenticated, redirect to /nodes
+    if (!isAuthEnabled || isAuthenticated) {
+      window.location.replace("/nodes")
+      return null
+    }
+  } else if (path === "/nodes" || path === "/agent" || path === "/research") {
+    // If auth is enabled and user is not authenticated, redirect to /login
+    if (isAuthEnabled && !isAuthenticated) {
+      window.location.replace("/login")
+      return null
+    }
+  } else if (path !== "/") {
+    // Fallback/wildcard: if they visit a page we don't know, redirect to /
+    window.location.replace("/")
+    return null
+  }
+
+  // --- Router switch ---
+
+  // / (landing page artwork) or /login (authentication)
+  if (path === "/" || path === "/login") {
+    return (
+      <div className="h-screen w-screen overflow-hidden">
+        <TeaserPreview
+          showLogin={path === "/login"}
+          onPasswordSubmit={handlePasswordSubmit}
+          authError={authError}
+          onClearError={() => setAuthError(null)}
+        />
+      </div>
+    )
+  }
+
+  // /agent (agent page console)
+  if (path === "/agent") {
+    return (
+      <AgentPage
+        onGoHome={() => window.location.href = "/nodes"}
+      />
+    )
+  }
+
+  // /research (research pages)
+  if (path === "/research") {
+    const taskId = params.get("id")
+    const isNew = params.get("id") === "new"
+    if (taskId && !isNew) {
+      return <ResearchTaskPage taskId={taskId} />
+    }
+    if (isNew) {
+      return <ResearchTaskPage taskId="" isNew />
+    }
+    return <ResearchPage />
+  }
+
+  // /nodes (conversations workspace page)
+  if (path === "/nodes") {
+    return (
+      <NodesPage
+        isAuthEnabled={isAuthEnabled}
+        handleLogout={handleLogout}
+        agentFlux={agentFlux}
+      />
+    )
+  }
+
+  return null
+}
+
+/* --- Subcomponent for /nodes workspace to respect React rules of Hooks --- */
+
+interface NodesPageProps {
+  isAuthEnabled: boolean
+  handleLogout: () => void
+  agentFlux: boolean
+}
+
+function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
+  const [isNewChatMode, setIsNewChatMode] = useState(false)
 
   const {
     conversations,
@@ -124,10 +202,8 @@ export default function App() {
   const handleNavigateToNotification = useCallback((convId: string, msgId: number) => {
     dismissByMatch(convId, msgId)
     if (convId === activeId) {
-      // Same conversation — just navigate to the node
       navigateToMessage(msgId)
     } else {
-      // Different conversation — preserve target message ID so useChat loads the right path
       setIsNewChatMode(false)
       setActiveId(convId, msgId)
     }
@@ -236,7 +312,6 @@ export default function App() {
     const onMove = (ev: MouseEvent) => {
       const maxRight = Math.floor(window.innerWidth * 0.3)
       const minChat = Math.floor(window.innerWidth * 0.3)
-      // Right panel can't push chat below its minimum
       const maxAllowed = Math.min(maxRight, window.innerWidth - leftPanelWidth - minChat)
       const w = Math.max(200, Math.min(maxAllowed, startWidth - (ev.clientX - startX)))
       rightWidthRef.current = w
@@ -304,7 +379,6 @@ export default function App() {
     }
   }
 
-
   const handleSend = async (content: string) => {
     const currentActiveId = activeIdRef.current
     const response = await send(content)
@@ -368,25 +442,7 @@ export default function App() {
     setActiveId("")
   }
 
-  if (isAuthenticated === null) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-[#0c0c0c] text-sm font-mono text-[#555] select-none">
-        <span className="animate-pulse">initializing system...</span>
-      </div>
-    )
-  }
-
-  if (isAuthEnabled && !isAuthenticated) {
-    return (
-      <TeaserPreview
-        onPasswordSubmit={handlePasswordSubmit}
-        authError={authError}
-        onClearError={() => setAuthError(null)}
-      />
-    )
-  }
-
-  // Landing page
+  // Inside /nodes: If no active conversation and not in new chat mode, show the Landing Page (conversation list)
   if (!activeId && !isNewChatMode) {
     return (
       <ConversationLandingPage
@@ -407,10 +463,9 @@ export default function App() {
     )
   }
 
-  // Active chat workspace layout
+  // Active chat workspace layout (inside /nodes)
   return (
     <div className="flex flex-col h-screen bg-[#0c0c0c]">
-      {/* Unified Full-Width Header */}
       <HeaderContainer>
         <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5 min-w-0">
           <HeaderIndicator intent="green" />
@@ -462,7 +517,6 @@ export default function App() {
             </HeaderActionButton>
           )}
 
-          {/* Quick toggle buttons for side panels on mobile */}
           <HeaderActionButton
             onClick={() => setLeftPanelCollapsed(prev => !prev)}
             title="Toggle Connection Cloud (DAG)"
@@ -483,10 +537,6 @@ export default function App() {
             conversations={conversations}
             onNavigateToNotification={handleNavigateToNotification}
           />
-          
-          <HeaderActionButton onClick={handleGoHome}>
-            home
-          </HeaderActionButton>
           
           <HeaderActionButton onClick={() => window.location.href = '/agent'}>
             agent

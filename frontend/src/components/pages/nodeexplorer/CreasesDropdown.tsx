@@ -56,7 +56,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
           onNavigateToNotification(convId, n.messageId)
         } else {
           // If on other pages, navigate in-tab instead of opening a new tab
-          window.location.href = `/?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`
+          window.location.href = `/nodes?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`
         }
       }
     }

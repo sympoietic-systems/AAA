@@ -555,7 +555,7 @@ AAA/
 │       │   ├── telemetryStore.ts     Centralized reference-counted polling timers registry
 │       │   └── notificationStore.ts  Stream manager for sediment, glitch, and trace notifications
 │       └── components/
-│           ├── App.tsx           Main root interface layout and state wireframing
+│           ├── App.tsx           Main root routing orchestrator, auth guards & NodesPage workspace
 │           ├── ConversationList.tsx Collapsible left history sidebar
 │           ├── pages/            Standing page layout components
 │           │   ├── landing/      ConversationLandingPage default entry layout

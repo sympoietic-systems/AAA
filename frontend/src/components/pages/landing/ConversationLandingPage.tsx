@@ -198,7 +198,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
       <HeaderContainer>
         <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5">
           <HeaderIndicator intent="green" />
-          <HeaderLogo onClick={() => window.location.href = '/'} />
+          <HeaderLogo onClick={() => window.location.href = '/nodes'} />
           <HeaderSeparator />
           <HeaderLogo
             onClick={() => window.location.href = '/research'}
@@ -461,7 +461,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                     ) : (
                       <NotesSection
                         notes={notes || []}
-                        onNavigate={(_messageId) => window.open(`/?c=${displayConv.id}&m=${_messageId}`, '_blank')}
+                        onNavigate={(_messageId) => window.open(`/nodes?c=${displayConv.id}&m=${_messageId}`, '_blank')}
                         onDeleteNote={(noteId) => {
                           deleteNote(displayConv.id, noteId).then(() => {
                             setNotes(prev => (prev || []).filter(n => n.id !== noteId))

@@ -114,7 +114,7 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
       window.open(`/agent?tab=${n.sourceType}s&id=${n.sourceId || ""}`, "_blank")
     } else if (n.sourceType === "conversation" || n.conversationId) {
       const convId = n.sourceId || n.conversationId
-      if (convId) window.open(`/?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`, "_blank")
+      if (convId) window.open(`/nodes?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`, "_blank")
     }
   }
 
