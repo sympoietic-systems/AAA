@@ -47,20 +47,43 @@ def decode_bytes(value):
     return value
 
 def get_db_connection(db_path):
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     if not os.path.exists(db_path):
         print(f"Warning: Database path '{db_path}' does not exist. A new database will be created.", file=sys.stderr)
     conn = sqlite3.connect(db_path)
     conn.row_factory = dict_factory
     return conn
 
-def export_all_tasks(db_path, out_path):
+def get_proj_root():
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def get_synthesis_file_path(proj_root, conversation_id, task_id):
+    # Matches backend UPLOAD_DIR = os.path.join("backend", "data", "uploads")
+    return os.path.abspath(
+        os.path.join(
+            proj_root,
+            "backend",
+            "data",
+            "uploads",
+            conversation_id,
+            f"research-synthesis-{task_id}.md"
+        )
+    )
+
+def export_all_tasks(db_path, out_path, proj_root):
     print(f"Connecting to database: {db_path}")
     conn = get_db_connection(db_path)
     cursor = conn.cursor()
 
-    # Fetch all task IDs
-    cursor.execute("SELECT id FROM research_tasks")
-    task_ids = [row["id"] for row in cursor.fetchall()]
+    try:
+        cursor.execute("SELECT id FROM research_tasks")
+        task_ids = [row["id"] for row in cursor.fetchall()]
+    except sqlite3.OperationalError as e:
+        print(f"Error: Could not query research_tasks table. Schema might not be initialized. Details: {e}", file=sys.stderr)
+        conn.close()
+        sys.exit(1)
 
     if not task_ids:
         print("No research tasks found in the database.", file=sys.stderr)
@@ -96,7 +119,7 @@ def export_all_tasks(db_path, out_path):
 
         # Read synthesis file from disk if it exists
         synthesis_filename = f"research-synthesis-{task_id}.md"
-        synthesis_path = os.path.join("data", "conversations", conversation_id, synthesis_filename)
+        synthesis_path = get_synthesis_file_path(proj_root, conversation_id, task_id)
         if os.path.exists(synthesis_path):
             with open(synthesis_path, "r", encoding="utf-8") as f:
                 task_bundle["synthesis_file"] = {
@@ -117,9 +140,9 @@ def export_all_tasks(db_path, out_path):
     print(f"\nSuccessfully exported {len(task_ids)} task(s) to: {out_path}")
     conn.close()
 
-def export_task(task_id, db_path, out_path):
+def export_task(task_id, db_path, out_path, proj_root):
     if task_id.lower() == "all":
-        export_all_tasks(db_path, out_path)
+        export_all_tasks(db_path, out_path, proj_root)
         return
 
     print(f"Connecting to database: {db_path}")
@@ -127,8 +150,14 @@ def export_task(task_id, db_path, out_path):
     cursor = conn.cursor()
 
     # 1. Fetch the main research task
-    cursor.execute("SELECT * FROM research_tasks WHERE id = ?", (task_id,))
-    task_row = cursor.fetchone()
+    try:
+        cursor.execute("SELECT * FROM research_tasks WHERE id = ?", (task_id,))
+        task_row = cursor.fetchone()
+    except sqlite3.OperationalError as e:
+        print(f"Error: Could not query research_tasks table. Schema might not be initialized. Details: {e}", file=sys.stderr)
+        conn.close()
+        sys.exit(1)
+
     if not task_row:
         print(f"Error: Research task '{task_id}' not found in the database.", file=sys.stderr)
         conn.close()
@@ -154,7 +183,7 @@ def export_task(task_id, db_path, out_path):
 
     # 3. Read synthesis file from disk if it exists
     synthesis_filename = f"research-synthesis-{task_id}.md"
-    synthesis_path = os.path.join("data", "conversations", conversation_id, synthesis_filename)
+    synthesis_path = get_synthesis_file_path(proj_root, conversation_id, task_id)
     if os.path.exists(synthesis_path):
         print(f"  - Found synthesis file on disk: {synthesis_path}")
         with open(synthesis_path, "r", encoding="utf-8") as f:
@@ -174,7 +203,7 @@ def export_task(task_id, db_path, out_path):
     print(f"\nSuccessfully exported task to: {out_path}")
     conn.close()
 
-def import_task(json_path, db_path):
+def import_task(json_path, db_path, proj_root):
     print(f"Loading bundle from: {json_path}")
     if not os.path.exists(json_path):
         print(f"Error: JSON file '{json_path}' not found.", file=sys.stderr)
@@ -184,7 +213,7 @@ def import_task(json_path, db_path):
         bundle = json.load(f)
 
     print(f"Connecting to database: {db_path}")
-    conn = sqlite3.connect(db_path)
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
 
     # Determine if it's a single task or bulk export
@@ -232,9 +261,8 @@ def import_task(json_path, db_path):
         # 3. Write synthesis file back to disk if present in bundle
         synth_file = t_bundle.get("synthesis_file")
         if synth_file:
-            dest_dir = os.path.join("data", "conversations", conversation_id)
-            os.makedirs(dest_dir, exist_ok=True)
-            dest_path = os.path.join(dest_dir, synth_file["filename"])
+            dest_path = get_synthesis_file_path(proj_root, conversation_id, task_id)
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
             with open(dest_path, "w", encoding="utf-8") as f:
                 f.write(synth_file["content"])
             print(f"  - Synthesis report written to disk: {dest_path}")
@@ -254,12 +282,19 @@ def main():
 
     args = parser.parse_args()
 
+    proj_root = get_proj_root()
+    
+    # Replicate native get_db_path path resolution
+    resolved_db_path = args.db
+    if not os.path.isabs(args.db):
+        resolved_db_path = os.path.abspath(os.path.join(proj_root, "backend", args.db))
+
     if args.export:
         if not args.out:
             parser.error("--out is required when using --export")
-        export_task(args.export, args.db, args.out)
+        export_task(args.export, resolved_db_path, args.out, proj_root)
     elif args.import_file:
-        import_task(args.import_file, args.db)
+        import_task(args.import_file, resolved_db_path, proj_root)
 
 if __name__ == "__main__":
     main()
