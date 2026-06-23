@@ -116,7 +116,7 @@ function SedimentInjectionModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-[#1a1a1a] select-none shrink-0">
-          <span className="text-[9px] font-mono uppercase tracking-widest text-[#6c6c8a]">
+          <span className="text-[9px] font-mono uppercase tracking-widest text-semantic-header">
             [ Inject Sediment ]
           </span>
           <button
@@ -134,7 +134,7 @@ function SedimentInjectionModal({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search files across all conversations..."
-            className="w-full bg-transparent border-b border-[#222]/40 px-1 py-1.5 text-[10px] text-[#ccc] font-mono placeholder-[#444] focus:outline-none focus:border-[#a78bfa]/50 transition-colors"
+            className="w-full bg-transparent border-b border-[#222]/40 px-1 py-1.5 text-[10px] text-[#ccc] font-mono placeholder-[#444] focus:outline-none focus:border-action-hover/50 transition-colors"
             autoFocus
           />
         </div>
@@ -143,21 +143,21 @@ function SedimentInjectionModal({
         <div className="flex gap-x-3 px-4 py-1.5 text-[9px] font-mono shrink-0 select-none border-b border-[#1a1a1a]">
           <button
             onClick={() => setFilter('all')}
-            className={`cursor-pointer transition-colors ${filter === 'all' ? 'text-[#a78bfa]' : 'text-[#555] hover:text-[#888]'}`}
+            className={`cursor-pointer transition-colors ${filter === 'all' ? 'text-semantic-purple' : 'text-[#555] hover:text-[#888]'}`}
           >
             all
           </button>
           <span className="text-[#333]">•</span>
           <button
             onClick={() => setFilter('files')}
-            className={`cursor-pointer transition-colors ${filter === 'files' ? 'text-[#a78bfa]' : 'text-[#555] hover:text-[#888]'}`}
+            className={`cursor-pointer transition-colors ${filter === 'files' ? 'text-semantic-purple' : 'text-[#555] hover:text-[#888]'}`}
           >
             files
           </button>
           <span className="text-[#333]">•</span>
           <button
             onClick={() => setFilter('research')}
-            className={`cursor-pointer transition-colors ${filter === 'research' ? 'text-[#a78bfa]' : 'text-[#555] hover:text-[#888]'}`}
+            className={`cursor-pointer transition-colors ${filter === 'research' ? 'text-semantic-purple' : 'text-[#555] hover:text-[#888]'}`}
           >
             research ({researchCount})
           </button>
@@ -183,32 +183,32 @@ function SedimentInjectionModal({
                     key={key}
                     onClick={() => toggleFile(key)}
                     className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-all duration-150 border-l-2 ${isSelected
-                        ? "border-[#a78bfa] bg-[#1a1a2e]/50"
-                        : "border-transparent hover:bg-[#111]"
+                        ? "border-action-hover bg-action-hover/5"
+                        : "border-transparent hover:bg-ui-border/20"
                       }`}
                   >
                     <div className={`w-3 h-3 mt-0.5 border flex items-center justify-center shrink-0 transition-colors ${isSelected
-                        ? "border-[#a78bfa] bg-[#a78bfa]/20"
-                        : "border-[#333] bg-transparent"
+                        ? "border-action-hover bg-action-hover/10"
+                        : "border-ui-border bg-transparent"
                       }`}>
-                      {isSelected && <span className="text-[8px] text-[#a78bfa] leading-none">✓</span>}
+                      {isSelected && <span className="text-[8px] text-action-hover leading-none">✓</span>}
                     </div>
 
                     <div className="flex-1 min-w-0 font-mono">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm leading-none">{fileIcon(f.file_type)}</span>
-                        <span className="text-[10px] text-[#ccc] truncate" title={f.display_name || f.file_name}>
+                        <span className="text-[10px] text-ui-primary truncate" title={f.display_name || f.file_name}>
                           {f.display_name || f.file_name}
                         </span>
-                        <span className="text-[8px] text-[#555] shrink-0">
+                        <span className="text-[8px] text-ui-dim shrink-0">
                           {f.token_count >= 1000 ? `${(f.token_count / 1000).toFixed(1)}k` : f.token_count}tok
                         </span>
                       </div>
-                      <div className="text-[8px] text-[#555] truncate mt-0.5">
+                      <div className="text-[8px] text-ui-dim truncate mt-0.5">
                         from "{f.conversation_title || "untitled"}"
                       </div>
                       {f.summary && (
-                        <div className="text-[8px] text-[#666] mt-0.5 line-clamp-2 leading-relaxed">
+                        <div className="text-[8px] text-ui-dim mt-0.5 line-clamp-2 leading-relaxed">
                           {f.summary.slice(0, 120)}{f.summary.length > 120 ? "..." : ""}
                         </div>
                       )}
@@ -221,16 +221,16 @@ function SedimentInjectionModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#1a1a1a] bg-[#0c0c0e]/95 shrink-0">
-          <span className="text-[8px] text-[#555] font-mono">
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-ui-border bg-[#0c0c0c]/95 shrink-0">
+          <span className="text-[8px] text-ui-dim font-mono">
             {selected.size} file{selected.size !== 1 ? "s" : ""} selected
           </span>
           <button
             onClick={handleInject}
             disabled={selected.size === 0 || injecting}
             className={`text-[9px] font-mono px-3 py-1 transition-all duration-200 ${selected.size === 0 || injecting
-                ? "text-[#444] cursor-not-allowed"
-                : "text-[#a78bfa] hover:text-[#c0b0ff] cursor-pointer"
+                ? "text-ui-dim cursor-not-allowed"
+                : "text-action-dim hover:text-action-hover cursor-pointer"
               }`}
           >
             {injecting ? "[injecting...]" : `[inject ${selected.size > 0 ? `(${selected.size})` : ""}]`}
@@ -348,12 +348,12 @@ function SedimentSectionComponent({
 
   const renderSummaryContent = (fileName: string) => {
     if (loadingSummary === fileName) {
-      return <div className="p-2 text-[9px] text-[#888] font-mono animate-pulse">Loading summary...</div>
+      return <div className="p-2 text-[9px] text-ui-secondary font-mono animate-pulse">Loading summary...</div>
     }
 
     const data = loadedSummaries[fileName]
     if (!data) {
-      return <div className="p-2 text-[9px] text-[#888] font-mono">No summary available.</div>
+      return <div className="p-2 text-[9px] text-ui-secondary font-mono">No summary available.</div>
     }
 
     if (data.image_metadata) {
@@ -366,7 +366,7 @@ function SedimentSectionComponent({
       return <DocumentMetadataCard metadata={data.document_metadata} summary={data.summary} />
     }
     return (
-      <div className="p-2 text-[9px] text-[#888] font-mono leading-relaxed markdown-body">
+      <div className="p-2 text-[9px] text-ui-secondary font-mono leading-relaxed markdown-body">
         {data.summary ? (
           <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>
             {data.summary}
@@ -385,12 +385,12 @@ function SedimentSectionComponent({
         <div className="mt-2 mb-1 flex items-center gap-2">
           <button
             onClick={() => setShowInjectModal(true)}
-            className="text-[9px] font-mono text-[#666] hover:text-[#a78bfa] cursor-pointer select-none transition-colors"
+            className="text-[9px] font-mono text-action-dim hover:text-action-hover cursor-pointer select-none transition-colors"
           >
             [+ inject]
           </button>
           {injections.length > 0 && (
-            <span className="text-[7px] text-[#666] font-mono">
+            <span className="text-[7px] text-ui-dim font-mono">
               {injections.length} linked
             </span>
           )}
@@ -399,47 +399,47 @@ function SedimentSectionComponent({
 
       {/* Injected files */}
       {injections.length > 0 && (
-        <div className="border-t border-[#1a1a1a] pt-1.5 mb-1.5">
-          <div className="text-[7px] text-[#6c6c8a] font-mono uppercase tracking-wider mb-1">
+        <div className="border-t border-ui-border pt-1.5 mb-1.5">
+          <div className="text-[7px] text-semantic-header font-mono uppercase tracking-wider mb-1">
             [ Injected Sediment ]
           </div>
           {injections.map((inj) => (
-            <div key={inj.id} className="py-1.5 border-b border-[#1a1a1a] last:border-b-0">
+            <div key={inj.id} className="py-1.5 border-b border-ui-border last:border-b-0">
               <div className="flex items-center gap-1.5 group">
                 <span className="text-sm">{fileIcon(inj.file_type)}</span>
                 <div className="flex-1 min-w-0">
                   <span className={`text-[10px] font-mono truncate block ${
                     inj.file_type === "research-synthesis" || inj.file_type === "synthesis-sediment"
-                      ? "text-[#a78bfa] font-medium"
-                      : "text-[#aaa]"
+                      ? "text-semantic-purple font-medium"
+                      : "text-ui-secondary"
                   }`}>
                     {inj.file_type === "research-synthesis" || inj.file_type === "synthesis-sediment"
                       ? `synthesis: ${inj.source_file_name.replace("research-synthesis-", "").replace(".md", "")}`
                       : inj.source_file_name}
                   </span>
-                  <span className="text-[7px] text-[#555] font-mono truncate block">
+                  <span className="text-[7px] text-ui-dim font-mono truncate block">
                     from "{inj.source_conversation_title || "untitled"}"
                   </span>
                 </div>
 
-                <span className="text-[8px] text-[#666] font-mono shrink-0">
+                <span className="text-[8px] text-ui-dim font-mono shrink-0">
                   {inj.token_count >= 1000 ? `${(inj.token_count / 1000).toFixed(1)}k` : inj.token_count} tok
                 </span>
 
                 {(!inj.status || inj.status === "ready") ? (
                   <button
                     onClick={() => handleToggleSummary(inj.source_file_name)}
-                    className="text-[8px] text-[#4ade80] hover:underline"
+                    className="text-[8px] text-action-dim hover:text-action-hover hover:underline"
                   >
                     {expandedFile === inj.source_file_name ? "hide" : "sum"}
                   </button>
                 ) : (
                   <span className={`text-[8px] px-1 border rounded animate-pulse font-mono ${
                     inj.status === "uploading"
-                      ? "text-[#eab308] border-[#eab308]/30"
+                      ? "text-semantic-gold border-semantic-gold/30"
                       : inj.status === "error"
-                      ? "text-[#ef4444] border-[#ef4444]/30 animate-none"
-                      : "text-[#3b82f6] border-[#3b82f6]/30"
+                      ? "text-semantic-red border-semantic-red/30 animate-none"
+                      : "text-semantic-blue border-semantic-blue/30"
                   }`}>
                     {inj.status === "uploading" ? "uploading" : inj.status === "error" ? "error" : "indexing"}
                   </span>
@@ -447,7 +447,7 @@ function SedimentSectionComponent({
 
                 <button
                   onClick={() => handleRemoveInjection(inj.id)}
-                  className="text-[9px] text-[#555] hover:text-[#ef4444] px-0.5 font-mono opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-[9px] text-ui-dim hover:text-semantic-red px-0.5 font-mono opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Remove injection"
                 >
                   ×
@@ -455,15 +455,15 @@ function SedimentSectionComponent({
               </div>
 
               {expandedFile === inj.source_file_name && (
-                <div className="mt-1 ml-4 border-l border-[#2a2a2a] pl-2">
+                <div className="mt-1 ml-4 border-l border-ui-border pl-2">
                   {renderSummaryContent(inj.source_file_name)}
                   {(inj.file_type === "research-synthesis" || inj.file_type === "synthesis-sediment") && (
-                    <div className="mt-2 pt-1.5 border-t border-[#1a1a1a] flex justify-end">
+                    <div className="mt-2 pt-1.5 border-t border-ui-border flex justify-end">
                       <a
                         href={`/research?id=${extractTaskIdFromFileName(inj.source_file_name)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] font-mono flex items-center gap-1 transition-colors"
+                        className="text-[9px] text-semantic-purple hover:text-action-hover font-mono flex items-center gap-1 transition-colors"
                       >
                         <span>View Full Synthesis ↗</span>
                       </a>
@@ -478,17 +478,17 @@ function SedimentSectionComponent({
 
       {/* Native files */}
       {uploadedFiles.length > 0 && (
-        <div className="border-t border-[#1a1a1a] pt-2">
+        <div className="border-t border-ui-border pt-2">
           {uploadedFiles.map((f) => (
-            <div key={f.file_name} className="py-1.5 border-b border-[#1a1a1a] last:border-b-0">
+            <div key={f.file_name} className="py-1.5 border-b border-ui-border last:border-b-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm">
                   {fileIcon(f.file_type)}
                 </span>
                 <span className={`text-[10px] truncate flex-1 font-mono ${
                   f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment"
-                    ? "text-[#a78bfa] font-medium"
-                    : "text-[#aaa]"
+                    ? "text-semantic-purple font-medium"
+                    : "text-ui-secondary"
                 }`}>
                   {f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment"
                     ? `synthesis: ${f.file_name.replace("research-synthesis-", "").replace(".md", "")}`
@@ -496,24 +496,24 @@ function SedimentSectionComponent({
                 </span>
 
                 {f.status === "uploading" && (
-                  <span className="text-[8px] text-[#eab308] animate-pulse px-1 border border-[#eab308]/30 rounded">
+                  <span className="text-[8px] text-semantic-gold animate-pulse px-1 border border-semantic-gold/30 rounded">
                     uploading
                   </span>
                 )}
                 {f.status === "processing" && (
-                  <span className="text-[8px] text-[#3b82f6] animate-pulse px-1 border border-[#3b82f6]/30 rounded">
+                  <span className="text-[8px] text-semantic-blue animate-pulse px-1 border border-semantic-blue/30 rounded">
                     indexing
                   </span>
                 )}
                 {f.status === "error" && (
                   <div className="flex items-center gap-1.5 font-mono">
-                    <span className="text-[8px] text-[#ef4444] px-1 border border-[#ef4444]/30 rounded" title={f.summary || "Unknown error"}>
+                    <span className="text-[8px] text-semantic-red px-1 border border-semantic-red/30 rounded" title={f.summary || "Unknown error"}>
                       error
                     </span>
                     {onReprocessFile && (
                       <button
                         onClick={() => onReprocessFile(f.file_name)}
-                        className="text-[8px] text-[#60a5fa] hover:text-[#93c5fd] hover:underline"
+                        className="text-[8px] text-semantic-blue hover:text-action-hover hover:underline"
                         title="Retry indexing/summarization"
                       >
                         retry
@@ -523,7 +523,7 @@ function SedimentSectionComponent({
                 )}
 
                 {f.token_count > 0 && f.status === "ready" && (
-                  <span className="text-[8px] text-[#666] font-mono">
+                  <span className="text-[8px] text-ui-dim font-mono">
                     {f.token_count >= 1000 ? `${(f.token_count / 1000).toFixed(1)}k` : f.token_count} tok
                   </span>
                 )}
@@ -531,7 +531,7 @@ function SedimentSectionComponent({
                 {f.status === "ready" && (
                   <button
                     onClick={() => handleToggleSummary(f.file_name)}
-                    className="text-[8px] text-[#4ade80] hover:underline"
+                    className="text-[8px] text-action-dim hover:text-action-hover hover:underline"
                   >
                     {expandedFile === f.file_name ? "hide" : "sum"}
                   </button>
@@ -540,7 +540,7 @@ function SedimentSectionComponent({
                 {onDeleteFile && (
                   <button
                     onClick={() => onDeleteFile(f.file_name)}
-                    className="text-[9px] text-[#555] hover:text-[#ef4444] px-1 font-mono"
+                    className="text-[9px] text-ui-dim hover:text-semantic-red px-1 font-mono"
                     title="Delete file trace"
                   >
                     ×
@@ -549,15 +549,15 @@ function SedimentSectionComponent({
               </div>
 
               {expandedFile === f.file_name && (
-                <div className="mt-1 ml-4 border-l border-[#2a2a2a] pl-2">
+                <div className="mt-1 ml-4 border-l border-ui-border pl-2">
                   {renderSummaryContent(f.file_name)}
                   {(f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment") && (
-                    <div className="mt-2 pt-1.5 border-t border-[#1a1a1a] flex justify-end">
+                    <div className="mt-2 pt-1.5 border-t border-ui-border flex justify-end">
                       <a
                         href={`/research?id=${extractTaskIdFromFileName(f.file_name)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] font-mono flex items-center gap-1 transition-colors"
+                        className="text-[9px] text-semantic-purple hover:text-action-hover font-mono flex items-center gap-1 transition-colors"
                       >
                         <span>View Full Synthesis ↗</span>
                       </a>
@@ -571,7 +571,7 @@ function SedimentSectionComponent({
       )}
 
       {uploadedFiles.length === 0 && injections.length === 0 && (
-        <div className="text-[9px] text-[#444] font-mono italic py-2 mt-1">
+        <div className="text-[9px] text-ui-dim font-mono italic py-2 mt-1">
           No files or injections in this conversation.
         </div>
       )}

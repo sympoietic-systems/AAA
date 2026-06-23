@@ -49,8 +49,8 @@ export const ImageMetadataCard = memo(function ImageMetadataCard({ metadata }: {
       <TerminalHeader>[ Somatic Ingestion ]</TerminalHeader>
 
       <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-        <span><span className="text-[#666]">G_f:</span> <span className="text-[#e63946] font-bold">{metadata.g_f_score.toFixed(3)}</span></span>
-        <span><span className="text-[#666]">A_d:</span> <span className="text-[#f77f00] font-bold">{metadata.a_d_score.toFixed(3)}</span></span>
+        <span><span className="text-[#666]">G_f:</span> <span className="text-semantic-red font-bold">{metadata.g_f_score.toFixed(3)}</span></span>
+        <span><span className="text-[#666]">A_d:</span> <span className="text-action-hover font-bold">{metadata.a_d_score.toFixed(3)}</span></span>
       </div>
 
       {metadata.somatic_notes && (
@@ -69,16 +69,16 @@ export const ImageMetadataCard = memo(function ImageMetadataCard({ metadata }: {
 
       {implicatedNodes.length > 0 && (
         <div>
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">. . . Collides With . . .</div>
+          <div className="text-semantic-header uppercase text-[9px] tracking-wider">. . . Collides With . . .</div>
           <div className="flex flex-wrap gap-1 mt-0.5">
-            {implicatedNodes.map((node) => <span key={node} className="text-[8px] text-[#a78bfa]">{node}</span>)}
+            {implicatedNodes.map((node) => <span key={node} className="text-[8px] text-semantic-purple">{node}</span>)}
           </div>
         </div>
       )}
 
       {metadata.raw_transcription && (
         <div>
-          <button onClick={() => setOcrOpen(!ocrOpen)} className="text-[9px] text-[#6c6c8a] hover:text-[#999] font-mono cursor-pointer select-none">
+          <button onClick={() => setOcrOpen(!ocrOpen)} className="text-[9px] text-action-dim hover:text-action-hover font-mono cursor-pointer select-none">
             [{ocrOpen ? "−" : "+"} OCR Transcription]
           </button>
           {ocrOpen && (
@@ -92,7 +92,7 @@ export const ImageMetadataCard = memo(function ImageMetadataCard({ metadata }: {
       {vec.length > 0 && (
         <div>
           <div className="text-[#555] font-mono text-[10px] uppercase">[ 16D Autopoietic Signature ]</div>
-          <VectorVisualizer vector={vec} variant="signature" titleColorClass="text-[#4ade80]" barColorClass="bg-[#4ade80]" />
+          <VectorVisualizer vector={vec} variant="signature" titleColorClass="text-semantic-green" barColorClass="bg-semantic-green" />
         </div>
       )}
     </div>
@@ -115,7 +115,7 @@ export const WebMetadataCard = memo(function WebMetadataCard({ metadata, summary
       <TerminalHeader>[ Exogenous Telemetry — Web ]</TerminalHeader>
 
       <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-        <span><span className="text-[#666]">Interference:</span> <span className="text-[#facc15] font-bold">{metadata.interference_score.toFixed(4)}</span></span>
+        <span><span className="text-[#666]">Interference:</span> <span className="text-semantic-gold font-bold">{metadata.interference_score.toFixed(4)}</span></span>
       </div>
 
       <div>
@@ -132,7 +132,7 @@ export const WebMetadataCard = memo(function WebMetadataCard({ metadata, summary
 
       {cleanSummary && (
         <div>
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Insight / Summary ]</div>
+          <div className="text-semantic-header uppercase text-[9px] tracking-wider">[ Insight / Summary ]</div>
           <div className="text-[#e0e0f0] text-[11px] leading-relaxed font-sans markdown-body">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>{cleanSummary}</ReactMarkdown>
           </div>
@@ -141,8 +141,8 @@ export const WebMetadataCard = memo(function WebMetadataCard({ metadata, summary
 
       {unresolvedTensions && (
         <div>
-          <div className="text-[#f87171] font-mono text-[9px] uppercase tracking-wider">⚡ Unresolved Tensions</div>
-          <div className="text-[#e0d0d0] text-[11px] leading-relaxed font-sans markdown-body pl-1.5 border-l border-[#f87171]/40">
+          <div className="text-semantic-red font-mono text-[9px] uppercase tracking-wider">⚡ Unresolved Tensions</div>
+          <div className="text-[#e0d0d0] text-[11px] leading-relaxed font-sans markdown-body pl-1.5 border-l border-semantic-red/40">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>{unresolvedTensions}</ReactMarkdown>
           </div>
         </div>
@@ -150,9 +150,9 @@ export const WebMetadataCard = memo(function WebMetadataCard({ metadata, summary
 
       {implicatedNodes.length > 0 && (
         <div>
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">. . . Collides With . . .</div>
+          <div className="text-semantic-header uppercase text-[9px] tracking-wider">. . . Collides With . . .</div>
           <div className="flex flex-wrap gap-1 mt-0.5">
-            {implicatedNodes.map((node) => <span key={node} className="text-[8px] text-[#c084fc]">{node}</span>)}
+            {implicatedNodes.map((node) => <span key={node} className="text-[8px] text-semantic-purple">{node}</span>)}
           </div>
         </div>
       )}
@@ -171,12 +171,12 @@ export const DocumentMetadataCard = memo(function DocumentMetadataCard({ metadat
       <TerminalHeader>[ Sediment Telemetry — Document ]</TerminalHeader>
 
       <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-        <span><span className="text-[#666]">Interference:</span> <span className="text-[#facc15] font-bold">{metadata.interference_score.toFixed(4)}</span></span>
+        <span><span className="text-[#666]">Interference:</span> <span className="text-semantic-gold font-bold">{metadata.interference_score.toFixed(4)}</span></span>
       </div>
 
       {cleanSummary && (
         <div>
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Insight / Summary ]</div>
+          <div className="text-semantic-header uppercase text-[9px] tracking-wider">[ Insight / Summary ]</div>
           <div className="text-[#e0e0f0] text-[11px] leading-relaxed font-sans markdown-body">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>{cleanSummary}</ReactMarkdown>
           </div>
@@ -185,8 +185,8 @@ export const DocumentMetadataCard = memo(function DocumentMetadataCard({ metadat
 
       {unresolvedTensions && (
         <div>
-          <div className="text-[#f87171] font-mono text-[9px] uppercase tracking-wider">⚡ Unresolved Tensions</div>
-          <div className="text-[#e0d0d0] text-[11px] leading-relaxed font-sans markdown-body pl-1.5 border-l border-[#f87171]/40">
+          <div className="text-semantic-red font-mono text-[9px] uppercase tracking-wider">⚡ Unresolved Tensions</div>
+          <div className="text-[#e0d0d0] text-[11px] leading-relaxed font-sans markdown-body pl-1.5 border-l border-semantic-red/40">
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>{unresolvedTensions}</ReactMarkdown>
           </div>
         </div>
@@ -194,9 +194,9 @@ export const DocumentMetadataCard = memo(function DocumentMetadataCard({ metadat
 
       {implicatedNodes.length > 0 && (
         <div>
-          <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">. . . Collides With . . .</div>
+          <div className="text-semantic-header uppercase text-[9px] tracking-wider">. . . Collides With . . .</div>
           <div className="flex flex-wrap gap-1 mt-0.5">
-            {implicatedNodes.map((node) => <span key={node} className="text-[8px] text-[#10b981]">{node}</span>)}
+            {implicatedNodes.map((node) => <span key={node} className="text-[8px] text-semantic-green">{node}</span>)}
           </div>
         </div>
       )}

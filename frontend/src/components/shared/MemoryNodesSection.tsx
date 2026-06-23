@@ -67,7 +67,7 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false, classNam
 
   if (loadingNodes && !hasFetched) {
     return (
-      <div className="text-[10px] text-[#555] animate-pulse py-2 font-mono">
+      <div className="text-[10px] text-ui-dim animate-pulse py-2 font-mono">
         intra-acting through memory strata...
       </div>
     )
@@ -75,7 +75,7 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false, classNam
 
   if (memoryNodes.length === 0) {
     return (
-      <div className="text-[10px] text-[#444] py-2 font-mono italic">
+      <div className="text-[10px] text-ui-dim py-2 font-mono italic">
         No memory nodes yet — sedimentation runs when conversations reach the consolidation threshold.
       </div>
     )
@@ -86,8 +86,8 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false, classNam
   )
 
   return (
-    <div className="mt-1.5 pt-1.5">
-      <div className="text-[8px] text-[#555] mb-1.5 uppercase tracking-wider select-none font-bold">
+    <div className="mt-1.5 pt-1.5 font-mono">
+      <div className="text-[8px] text-ui-dim mb-1.5 uppercase tracking-wider select-none font-bold">
         Intra-Active Memory Nodes ({uniqueNodes.length})
       </div>
       <div className={className || "flex flex-col gap-1.5"} style={style}>

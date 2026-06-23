@@ -1,6 +1,25 @@
 import { useEffect, useRef, useState, memo, useCallback } from "react"
 
 const EMPTY_NOTES: any[] = []
+
+import { COLOR_PALETTE } from "../../../config/colors"
+
+const CANVAS_COLORS = {
+  bg: COLOR_PALETTE.uiBg,
+  guideRings: COLOR_PALETTE.uiGuideRings,
+  linkDefault: COLOR_PALETTE.uiGuideRings,
+  linkResonance: COLOR_PALETTE.uiLinkResonance,
+  human: COLOR_PALETTE.semanticGreen,
+  apparatus: COLOR_PALETTE.semanticPurple,
+  active: COLOR_PALETTE.semanticGreen,
+  proposed: COLOR_PALETTE.semanticGold,
+  ghost: COLOR_PALETTE.semanticSlate,
+  humanBg: COLOR_PALETTE.humanBg,
+  apparatusBg: COLOR_PALETTE.apparatusBg,
+  noteAgent: COLOR_PALETTE.semanticBlue,
+  noteShared: COLOR_PALETTE.semanticPurple,
+  noteProposed: COLOR_PALETTE.semanticGold,
+}
 import type { ChatMessage, NoteInfo, ConversationTreeNode, ConversationTreeLink } from "../../../api/client"
 import { getConversationTree } from "../../../api/client"
 import type { SimNode, SimLink } from "./ConnectionCloudSimulation"
@@ -568,7 +587,7 @@ function ConnectionCloud({
     }
 
     // 2. Draw Concentric Rings (Autopoietic Coordinate Guides)
-    ctx.strokeStyle = "#4a576d"
+    ctx.strokeStyle = CANVAS_COLORS.guideRings
     ctx.lineWidth = 0.5
     ctx.globalAlpha = 0.2
     ctx.setLineDash([2, 3])
@@ -631,15 +650,15 @@ function ConnectionCloud({
       const srcId = parseInt(link.source)
       const tgtId = parseInt(link.target)
       const isFuture = !isNaN(srcId) && !isNaN(tgtId) && activePathIds.has(srcId) && !activePathIds.has(tgtId) && link.type === "parent"
-      const futureColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
+      const futureColor = tgtNode.speaker === "apparatus" ? CANVAS_COLORS.apparatus : CANVAS_COLORS.human
 
-      let strokeColor = tgtNode.speaker === "apparatus" ? "#a892ee" : "#6bc28c"
+      let strokeColor: string = tgtNode.speaker === "apparatus" ? CANVAS_COLORS.apparatus : CANVAS_COLORS.human
       let strokeWidth = 0.4
       let strokeDash: number[] = []
       let opacity = 0.25
 
       if (isActive) {
-        strokeColor = "#6bc28c"
+        strokeColor = CANVAS_COLORS.active
         strokeWidth = 0.8
         opacity = 0.85
       } else if (isFuture) {
@@ -648,18 +667,18 @@ function ConnectionCloud({
         strokeWidth = 0.8
         opacity = 0.8
       } else if (isProposed) {
-        strokeColor = "#e09b67"
+        strokeColor = CANVAS_COLORS.proposed
         strokeDash = [2, 2]
         strokeWidth = 0.5
         opacity = 0.35
       } else if (isResonance) {
         if (isProposedResonance) {
-          strokeColor = "#e09b67"
+          strokeColor = CANVAS_COLORS.proposed
           strokeDash = [1, 3]
           strokeWidth = 0.7
           opacity = 0.7
         } else {
-          strokeColor = "#94a3b8"
+          strokeColor = CANVAS_COLORS.ghost
           strokeDash = [3, 3]
           strokeWidth = 0.5
           opacity = 0.45
@@ -708,57 +727,57 @@ function ConnectionCloud({
       const isHovered = hoveredNode?.id === node.id
       const nodeNotes = notesMap.get(node.dbId ?? -1) ?? EMPTY_NOTES
 
-      let fill = "#0a0a0c"
-      let stroke = "#3f3f4e"
+      let fill: string = CANVAS_COLORS.bg
+      let stroke: string = CANVAS_COLORS.linkResonance
       let strokeWidth = 0.6
       let radius = 2.0
       let strokeDash: number[] = []
 
       if (node.isProposed) {
-        fill = "#0a0a0c"
-        stroke = "#e09b67"
+        fill = CANVAS_COLORS.bg
+        stroke = CANVAS_COLORS.proposed
         strokeWidth = 0.8
         radius = 3.2
         strokeDash = [2, 2]
       } else if (node.speaker === "human") {
         if (isActive) {
-          fill = isLeaf ? "#152a1d" : "#0a0a0c"
-          stroke = "#6bc28c"
+          fill = isLeaf ? CANVAS_COLORS.humanBg : CANVAS_COLORS.bg
+          stroke = CANVAS_COLORS.human
           strokeWidth = isLeaf ? 1.5 : 1.0
           radius = isLeaf ? 4.5 : 3.2
         } else if (isFuture) {
-          fill = "#0a0a0c"
-          stroke = "#6bc28c"
+          fill = CANVAS_COLORS.bg
+          stroke = CANVAS_COLORS.human
           strokeWidth = 1.0
           radius = 3.2
           strokeDash = [2, 1.5]
         } else {
-          fill = "#0a0a0c"
-          stroke = "#6bc28c"
+          fill = CANVAS_COLORS.bg
+          stroke = CANVAS_COLORS.human
           strokeWidth = 0.7
           radius = 2.2
         }
       } else if (node.speaker === "apparatus") {
         if (isActive) {
-          fill = isLeaf ? "#211a36" : "#0a0a0c"
-          stroke = "#a892ee"
+          fill = isLeaf ? CANVAS_COLORS.apparatusBg : CANVAS_COLORS.bg
+          stroke = CANVAS_COLORS.apparatus
           strokeWidth = isLeaf ? 1.5 : 1.0
           radius = isLeaf ? 4.5 : 3.2
         } else if (isFuture) {
-          fill = "#0a0a0c"
-          stroke = "#a892ee"
+          fill = CANVAS_COLORS.bg
+          stroke = CANVAS_COLORS.apparatus
           strokeWidth = 1.0
           radius = 3.2
           strokeDash = [2, 1.5]
         } else {
-          fill = "#0a0a0c"
-          stroke = "#a892ee"
+          fill = CANVAS_COLORS.bg
+          stroke = CANVAS_COLORS.apparatus
           strokeWidth = 0.7
           radius = 2.2
         }
       } else {
-        fill = "#0a0a0c"
-        stroke = "#94a3b8"
+        fill = CANVAS_COLORS.bg
+        stroke = CANVAS_COLORS.ghost
         radius = 1.8
       }
 
@@ -771,14 +790,14 @@ function ConnectionCloud({
       if (isLeaf) {
         ctx.beginPath()
         ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
-        ctx.strokeStyle = node.speaker === "human" ? "#6bc28c" : "#a892ee"
+        ctx.strokeStyle = node.speaker === "human" ? CANVAS_COLORS.human : CANVAS_COLORS.apparatus
         ctx.lineWidth = 0.8
         ctx.globalAlpha = 0.3
         ctx.stroke()
 
         ctx.beginPath()
         ctx.arc(node.x, node.y, radius + 2.0, 0, 2 * Math.PI)
-        ctx.strokeStyle = node.speaker === "human" ? "#6bc28c" : "#a892ee"
+        ctx.strokeStyle = node.speaker === "human" ? CANVAS_COLORS.human : CANVAS_COLORS.apparatus
         ctx.lineWidth = 0.5
         ctx.globalAlpha = 0.5
         ctx.stroke()
@@ -791,7 +810,7 @@ function ConnectionCloud({
       ctx.arc(node.x, node.y, drawRadius, 0, 2 * Math.PI)
       ctx.fillStyle = fill
       ctx.fill()
-      
+
       ctx.strokeStyle = stroke
       ctx.lineWidth = strokeWidth
       if (strokeDash.length > 0) {
@@ -806,7 +825,7 @@ function ConnectionCloud({
       nodeNotes.forEach((note, idx) => {
         const isAgent = note.visibility === "agent"
         const isShared = note.visibility === "shared"
-        const dotColor = isAgent ? "#22d3ee" : isShared ? "#a892ee" : "#facc15"
+        const dotColor = isAgent ? CANVAS_COLORS.noteAgent : isShared ? CANVAS_COLORS.noteShared : CANVAS_COLORS.noteProposed
 
         const angle = -Math.PI / 4 - (idx * Math.PI) / 2
         const dist = drawRadius + 2.2
@@ -817,8 +836,8 @@ function ConnectionCloud({
         ctx.arc(dx, dy, 1.1, 0, 2 * Math.PI)
         ctx.fillStyle = dotColor
         ctx.fill()
-        
-        ctx.strokeStyle = "#0a0a0c"
+
+        ctx.strokeStyle = CANVAS_COLORS.bg
         ctx.lineWidth = 0.3
         ctx.stroke()
       })
@@ -826,7 +845,7 @@ function ConnectionCloud({
       // Proposed Title Label
       if (node.isProposed) {
         ctx.font = "bold 9px monospace"
-        ctx.fillStyle = "#e09b67"
+        ctx.fillStyle = CANVAS_COLORS.proposed
         ctx.textAlign = "center"
         ctx.textBaseline = "bottom"
         ctx.globalAlpha = 0.8
@@ -1044,7 +1063,7 @@ function ConnectionCloud({
     >
       {/* Header — terminal style */}
       <div className="px-3 py-2 flex justify-between items-center select-none">
-        <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#6c6c8a]">
+        <span className="text-xs font-mono font-bold uppercase tracking-wider text-semantic-header">
           Connection Cloud
         </span>
         <div className="flex items-center gap-3">
@@ -1052,8 +1071,8 @@ function ConnectionCloud({
             onClick={toggleSimulateSettling}
             className={`text-[9px] font-mono cursor-pointer select-none transition-colors ${
               simulateSettling
-                ? "text-[#ec4899]"
-                : "text-[#666] hover:text-[#888]"
+                ? "text-action-hover font-bold"
+                : "text-action-dim hover:text-action-hover"
             }`}
             title={simulateSettling ? "Simulating settling in real-time" : "Instant static layout"}
           >

@@ -7,7 +7,7 @@ interface TerminalHeaderProps {
 
 function TerminalHeaderComponent({ children, className = "" }: TerminalHeaderProps) {
   return (
-    <div className={`text-[#6c6c8a] uppercase text-[9px] tracking-wider ${className}`}>
+    <div className={`text-semantic-header uppercase text-[9px] tracking-wider ${className}`}>
       {children}
     </div>
   )

@@ -61,21 +61,21 @@ export function NewSkillForm({ onCancel, onCreate }: NewSkillFormProps) {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[10px] shrink-0 text-[#a78bfa]">◆</span>
+          <span className="text-[10px] shrink-0 text-semantic-purple">◆</span>
           <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">CREATE NEW SKILL</span>
         </div>
         <div className="flex gap-2">
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="text-[10px] text-[#4ade80] hover:text-[#4ade80]/80 disabled:text-[#555] transition-colors cursor-pointer select-none"
+            className="text-[10px] text-action-dim hover:text-action-hover disabled:text-[#555] transition-colors cursor-pointer select-none"
           >
             {isSaving ? "[saving...]" : "[save]"}
           </button>
           <button
             onClick={onCancel}
             disabled={isSaving}
-            className="text-[10px] text-[#ef4444] hover:text-[#ef4444]/80 disabled:text-[#555] transition-colors cursor-pointer select-none"
+            className="text-[10px] text-action-dim hover:text-semantic-red disabled:text-[#555] transition-colors cursor-pointer select-none"
           >
             [cancel]
           </button>
@@ -83,7 +83,7 @@ export function NewSkillForm({ onCancel, onCreate }: NewSkillFormProps) {
       </div>
 
       {saveError && (
-        <div className="text-[10px] text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 p-1.5 rounded shrink-0">
+        <div className="text-[10px] text-semantic-red bg-semantic-red/10 border border-semantic-red/20 p-1.5 rounded shrink-0">
           {saveError}
         </div>
       )}
@@ -99,7 +99,7 @@ export function NewSkillForm({ onCancel, onCreate }: NewSkillFormProps) {
             onChange={(e) => setName(e.target.value)}
             disabled={isSaving}
             placeholder="e.g. system-attunement"
-            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50"
+            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-action-hover/50"
           />
         </div>
 
@@ -113,7 +113,7 @@ export function NewSkillForm({ onCancel, onCreate }: NewSkillFormProps) {
                 checked={!alwaysActive}
                 onChange={() => setAlwaysActive(false)}
                 disabled={isSaving}
-                className="accent-[#a78bfa] cursor-pointer"
+                className="accent-semantic-purple cursor-pointer"
               />
               On-Demand Capability
             </label>
@@ -123,7 +123,7 @@ export function NewSkillForm({ onCancel, onCreate }: NewSkillFormProps) {
                 checked={alwaysActive}
                 onChange={() => setAlwaysActive(true)}
                 disabled={isSaving}
-                className="accent-[#a78bfa] cursor-pointer"
+                className="accent-semantic-purple cursor-pointer"
               />
               Baseline Disposition (Always Active)
             </label>
@@ -138,7 +138,7 @@ export function NewSkillForm({ onCancel, onCreate }: NewSkillFormProps) {
             onChange={(e) => setDescription(e.target.value)}
             disabled={isSaving}
             placeholder="Brief explanation of when the skill is relevant."
-            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[50px] resize-y"
+            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-action-hover/50 min-h-[50px] resize-y"
           />
         </div>
 
@@ -152,7 +152,7 @@ export function NewSkillForm({ onCancel, onCreate }: NewSkillFormProps) {
               onChange={(e) => setTriggers(e.target.value)}
               disabled={isSaving}
               placeholder="e.g. system state, diagnostics, attunement"
-              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50"
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-action-hover/50"
             />
           </div>
         )}
@@ -165,7 +165,7 @@ export function NewSkillForm({ onCancel, onCreate }: NewSkillFormProps) {
             onChange={(e) => setContent(e.target.value)}
             disabled={isSaving}
             placeholder="Detailed markdown content. If left empty, a default template will be generated."
-            className="flex-1 bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-mono leading-relaxed w-full focus:outline-none focus:border-[#a78bfa]/50 resize-none overflow-y-auto"
+            className="flex-1 bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-mono leading-relaxed w-full focus:outline-none focus:border-action-hover/50 resize-none overflow-y-auto"
           />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { memo } from "react"
+import { memo } from "react"
 import type { StepPreview } from "../../../../api/research"
 import { JsonBlock, KeyValueGrid } from "../../../UI"
 
@@ -15,25 +15,25 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
   return (
     <div className="space-y-3 text-[10px]">
       <div className="flex items-center justify-between">
-        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider font-mono">
+        <div className="text-semantic-header uppercase text-[9px] tracking-wider font-mono">
           [ {phaseLabel} — preview ]
         </div>
         <button onClick={onReinitialize} disabled={reinitLoading}
-          className="text-[#4ade80] hover:text-[#6ee7b0] text-[9px] font-mono disabled:text-[#333] cursor-pointer">
+          className="text-action-dim hover:text-action-hover text-[9px] font-mono disabled:text-[#333] cursor-pointer transition-colors">
           [{reinitLoading ? "…" : "⟳ reinitialize"}]
         </button>
       </div>
-      <div className="flex gap-3 border-b border-[#1a1a1a] pb-1">
-        <span className="text-[#94a3b8] text-[9px] uppercase font-mono">input / upcoming state</span>
+      <div className="flex gap-3 border-b border-ui-border pb-1">
+        <span className="text-ui-secondary text-[9px] uppercase font-mono">input / upcoming state</span>
       </div>
       {preview.objective && (
         <div>
-          <div className="text-[#555] text-[9px] mb-0.5 uppercase font-mono">objective:</div>
-          <div className="text-[#94a3b8] pl-2">{preview.objective}</div>
+          <div className="text-ui-dim text-[9px] mb-0.5 uppercase font-mono">objective:</div>
+          <div className="text-ui-secondary pl-2 font-mono">{preview.objective}</div>
         </div>
       )}
       {preview.max_depth != null && (
-        <div className="flex gap-4 text-[#777] flex-wrap font-mono">
+        <div className="flex gap-4 text-ui-dim flex-wrap font-mono">
           <span>depth: {preview.max_depth}</span>
           <span>budget: ${preview.budget_limit_usd?.toFixed(2)}</span>
           {preview.model && <span>model: {preview.model}</span>}
@@ -63,21 +63,21 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
       )}
       {preview.pending_queries && preview.pending_queries.length > 0 && (
         <div>
-          <div className="text-[#555] text-[9px] mb-0.5 uppercase font-mono">pending queries:</div>
+          <div className="text-ui-dim text-[9px] mb-0.5 uppercase font-mono">pending queries:</div>
           {preview.pending_queries.map((q, i) => (
-            <div key={i} className="text-[#94a3b8] pl-2">· {q}</div>
+            <div key={i} className="text-ui-secondary pl-2 font-mono">· {q}</div>
           ))}
         </div>
       )}
       {preview.urls_to_fetch && preview.urls_to_fetch.length > 0 && (
         <div>
-          <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">urls to parse ({preview.urls_to_fetch.length})</div>
+          <div className="text-ui-dim text-[9px] mb-1 uppercase font-mono">urls to parse ({preview.urls_to_fetch.length})</div>
           <div className="space-y-0.5 max-h-48 overflow-y-auto">
             {preview.urls_to_fetch.map((u, i) => (
-              <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
-                <span className="text-[#555]">{i+1}.</span>{" "}
+              <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">
+                <span className="text-ui-dim">{i+1}.</span>{" "}
                 <a href={u.url} target="_blank" rel="noopener noreferrer"
-                  className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">
+                  className="text-action-dim hover:text-action-hover underline break-all font-mono transition-colors">
                   {u.title || u.url || "—"}
                 </a>
               </div>
@@ -87,19 +87,19 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
       )}
       {preview.sources_to_digest && preview.sources_to_digest.length > 0 && (
         <div>
-          <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">sources to digest ({preview.sources_to_digest.length})</div>
+          <div className="text-ui-dim text-[9px] mb-1 uppercase font-mono">sources to digest ({preview.sources_to_digest.length})</div>
           <div className="space-y-1.5 max-h-60 overflow-y-auto">
             {preview.sources_to_digest.map((s, i) => (
-              <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+              <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">
                 <div className="flex gap-1.5 items-center">
-                  <span className="text-[#555]">{i+1}.</span>
+                  <span className="text-ui-dim">{i+1}.</span>
                   <a href={s.url} target="_blank" rel="noopener noreferrer"
-                    className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all font-semibold">
+                    className="text-action-dim hover:text-action-hover underline break-all font-mono font-semibold transition-colors">
                     {s.title || s.url || "—"}
                   </a>
                 </div>
                 {s.snippet && (
-                  <div className="text-[#777] text-[8px] pl-4 mt-0.5 leading-normal italic">
+                  <div className="text-ui-dim text-[8px] pl-4 mt-0.5 leading-normal italic font-mono">
                     {s.snippet}
                   </div>
                 )}
@@ -111,7 +111,7 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
       {preview.phase === "reflecting" && (
         <div className="space-y-3">
           <div>
-            <div className="text-[#555] text-[9px] uppercase font-mono mb-1">consolidation details</div>
+            <div className="text-ui-dim text-[9px] uppercase font-mono mb-1">consolidation details</div>
             <KeyValueGrid items={[
               { key: "findings to consolidate", value: preview.findings_count ?? 0 },
               { key: "current depth", value: preview.current_depth ?? 0 },
@@ -122,20 +122,20 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
 
           {preview.parsed_urls && preview.parsed_urls.length > 0 && (
             <div>
-              <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">visited/parsed urls ({preview.parsed_urls.length})</div>
-              <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+              <div className="text-ui-dim text-[9px] mb-1 uppercase font-mono">visited/parsed urls ({preview.parsed_urls.length})</div>
+              <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30 font-mono">
                 {preview.parsed_urls.map((u, i) => {
                   const statusColor = u.status === "ok"
-                    ? "#4ade80"
+                    ? "var(--color-semantic-green)"
                     : u.status?.startsWith("failed")
-                      ? "#ef4444"
-                      : "#f59e0b"
+                      ? "var(--color-semantic-red)"
+                      : "var(--color-semantic-gold)"
                   return (
-                    <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed flex items-center justify-between gap-2 max-w-full">
+                    <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed flex items-center justify-between gap-2 max-w-full">
                       <div className="truncate flex-1 min-w-0">
-                        <span className="text-[#555]">{i+1}.</span>{" "}
+                        <span className="text-ui-dim">{i+1}.</span>{" "}
                         <a href={u.url} target="_blank" rel="noopener noreferrer"
-                          className="text-[#4ade80] hover:text-[#6ee7b0] underline">
+                          className="text-action-dim hover:text-action-hover underline transition-colors">
                           {u.title || u.url}
                         </a>
                       </div>
@@ -153,11 +153,11 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
 
           {preview.accumulated_findings && preview.accumulated_findings.length > 0 && (
             <div>
-              <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">accumulated findings ({preview.accumulated_findings.length})</div>
-              <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+              <div className="text-ui-dim text-[9px] mb-1 uppercase font-mono">accumulated findings ({preview.accumulated_findings.length})</div>
+              <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30 font-mono">
                 {preview.accumulated_findings.map((f, i) => (
-                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
-                    <span className="text-[#555]">{i+1}.</span> {f}
+                  <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">
+                    <span className="text-ui-dim">{i+1}.</span> {f}
                   </div>
                 ))}
               </div>
@@ -168,10 +168,10 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
             <div className="space-y-2">
               {preview.digest_signals.gaps && preview.digest_signals.gaps.length > 0 && (
                 <div>
-                  <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">gaps to consolidate ({preview.digest_signals.gaps.length})</div>
-                  <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                  <div className="text-ui-dim text-[9px] mb-1 uppercase font-mono">gaps to consolidate ({preview.digest_signals.gaps.length})</div>
+                  <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30 font-mono">
                     {preview.digest_signals.gaps.map((g, i) => (
-                      <div key={i} className="text-[#f59e0b] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                      <div key={i} className="text-semantic-gold text-[9px] pl-2 border-l border-ui-border leading-relaxed">
                         ◇ {g}
                       </div>
                     ))}
@@ -180,10 +180,10 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
               )}
               {preview.digest_signals.followups && preview.digest_signals.followups.length > 0 && (
                 <div>
-                  <div className="text-[#555] text-[9px] mb-1 uppercase font-mono">followups ({preview.digest_signals.followups.length})</div>
-                  <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+                  <div className="text-ui-dim text-[9px] mb-1 uppercase font-mono">followups ({preview.digest_signals.followups.length})</div>
+                  <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30 font-mono">
                     {preview.digest_signals.followups.map((f, i) => (
-                      <div key={i} className="text-[#a78bfa] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
+                      <div key={i} className="text-semantic-purple text-[9px] pl-2 border-l border-ui-border leading-relaxed">
                         → {f}
                       </div>
                     ))}
@@ -195,28 +195,28 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
         </div>
       )}
       {preview.phase === "evaluating" && (
-        <div className="space-y-3">
+        <div className="space-y-3 font-mono">
           {/* Path indicator — hard rule or LLM */}
           {preview.eval_path && (
             <div className="flex items-center gap-2">
               <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-sm border ${
                 preview.eval_path === "hard_stop"
-                  ? "text-[#ef4444] border-[#ef4444]/30 bg-[#ef4444]/5"
+                  ? "text-semantic-red border-semantic-red/30 bg-semantic-red/5"
                   : preview.eval_path === "hard_continue"
-                  ? "text-[#4ade80] border-[#4ade80]/30 bg-[#4ade80]/5"
-                  : "text-[#f59e0b] border-[#f59e0b]/30 bg-[#f59e0b]/5"
+                  ? "text-semantic-green border-semantic-green/30 bg-semantic-green/5"
+                  : "text-semantic-gold border-semantic-gold/30 bg-semantic-gold/5"
               }`}>
                 {preview.eval_path === "hard_stop" ? "■ HARD STOP" :
                  preview.eval_path === "hard_continue" ? "▶ HARD CONTINUE" :
                  "⚖ LLM BORDERLINE"}
               </span>
-              <span className="text-[#555] text-[9px]">{preview.eval_path_reason}</span>
+              <span className="text-ui-dim text-[9px]">{preview.eval_path_reason}</span>
             </div>
           )}
 
           {/* Metrics */}
           <div>
-            <div className="text-[#555] text-[9px] uppercase font-mono mb-1">evaluation metrics</div>
+            <div className="text-ui-dim text-[9px] uppercase font-mono mb-1">evaluation metrics</div>
             <KeyValueGrid items={[
               { key: "current depth", value: `${preview.current_depth ?? 0} / ${preview.max_depth ?? 0}` },
               { key: "sources analyzed", value: preview.sources_analyzed ?? 0 },
@@ -226,31 +226,31 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
 
           {/* Completeness vs threshold */}
           <div>
-            <div className="text-[#555] text-[9px] uppercase font-mono mb-1">completeness score</div>
+            <div className="text-ui-dim text-[9px] uppercase font-mono mb-1">completeness score</div>
             <div className="flex items-center gap-2">
-              <div className="flex-1 h-2 bg-[#1a1a1a] rounded-sm overflow-hidden relative">
+              <div className="flex-1 h-2 bg-ui-border rounded-sm overflow-hidden relative">
                 <div
-                  className="h-full bg-[#4ade80] rounded-sm transition-all"
+                  className="h-full bg-semantic-green rounded-sm transition-all"
                   style={{ width: `${Math.round((preview.completeness_score ?? 0) * 100)}%` }}
                 />
                 {/* threshold marker */}
                 {preview.satisfaction_threshold != null && (
                   <div
-                    className="absolute top-0 bottom-0 w-px bg-[#f59e0b]"
+                    className="absolute top-0 bottom-0 w-px bg-semantic-gold"
                     style={{ left: `${Math.round(preview.satisfaction_threshold * 100)}%` }}
                     title={`threshold: ${Math.round(preview.satisfaction_threshold * 100)}%`}
                   />
                 )}
               </div>
-              <span className="text-[#4ade80] text-[9px] font-mono shrink-0">
+              <span className="text-semantic-green text-[9px] font-mono shrink-0">
                 {Math.round((preview.completeness_score ?? 0) * 100)}%
                 {preview.satisfaction_threshold != null && (
-                  <span className="text-[#555]"> / {Math.round(preview.satisfaction_threshold * 100)}%</span>
+                  <span className="text-ui-dim"> / {Math.round(preview.satisfaction_threshold * 100)}%</span>
                 )}
               </span>
             </div>
             {preview.eval_path === "llm_borderline" && (
-              <div className="text-[#f59e0b] text-[8px] mt-0.5 font-mono">
+              <div className="text-semantic-gold text-[8px] mt-0.5 font-mono">
                 ↑ in borderline zone — LLM evaluator will decide stop vs continue
               </div>
             )}
@@ -259,53 +259,56 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
           {/* Consolidation context passed to evaluator */}
           {preview.key_insights && preview.key_insights.length > 0 && (
             <details open>
-              <summary className="text-[#4ade80] text-[9px] cursor-pointer hover:text-[#6ee7b0] font-mono">
+              <summary className="text-semantic-green text-[9px] cursor-pointer hover:text-semantic-green/80 font-mono transition-colors">
                 key insights ({preview.key_insights.length})
               </summary>
-              <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-[#1a1a1a] p-1.5 bg-[#080808]/30">
+              <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-ui-border p-1.5 bg-[#080808]/30">
                 {preview.key_insights.map((ins: string, i: number) => (
-                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#1a3a1a] leading-relaxed">✓ {ins}</div>
+                  <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">✓ {ins}</div>
                 ))}
               </div>
             </details>
           )}
 
+          {/* Remaining gaps */}
           {preview.remaining_gaps && preview.remaining_gaps.length > 0 && (
             <details open>
-              <summary className="text-[#f59e0b] text-[9px] cursor-pointer hover:text-[#fbbf24] font-mono">
+              <summary className="text-semantic-gold text-[9px] cursor-pointer hover:text-semantic-gold/80 font-mono transition-colors">
                 remaining gaps ({preview.remaining_gaps.length})
               </summary>
-              <div className="mt-1 space-y-0.5 max-h-28 overflow-y-auto pr-1 border border-[#1a1a1a] p-1.5 bg-[#080808]/30">
+              <div className="mt-1 space-y-0.5 max-h-28 overflow-y-auto pr-1 border border-ui-border p-1.5 bg-[#080808]/30">
                 {preview.remaining_gaps.map((g: string, i: number) => (
-                  <div key={i} className="text-[#888] text-[9px] pl-2 border-l border-[#222] leading-relaxed">◇ {g}</div>
+                  <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed font-mono">◇ {g}</div>
                 ))}
               </div>
             </details>
           )}
 
+          {/* Proposed next queries */}
           {preview.next_queries && preview.next_queries.length > 0 && (
             <details>
-              <summary className="text-[#94a3b8] text-[9px] cursor-pointer hover:text-[#c4b5fd] font-mono">
+              <summary className="text-ui-secondary text-[9px] cursor-pointer hover:text-ui-primary font-mono transition-colors">
                 proposed next queries ({preview.next_queries.length})
               </summary>
               <div className="mt-1 space-y-0.5 pl-2">
                 {preview.next_queries.map((q: string, i: number) => (
-                  <div key={i} className="text-[#94a3b8] text-[9px] leading-relaxed">· {q}</div>
+                  <div key={i} className="text-ui-secondary text-[9px] leading-relaxed">· {q}</div>
                 ))}
               </div>
             </details>
           )}
 
+          {/* Proposed direct URLs */}
           {preview.next_direct_urls && preview.next_direct_urls.length > 0 && (
             <details>
-              <summary className="text-[#94a3b8] text-[9px] cursor-pointer hover:text-[#c4b5fd] font-mono">
+              <summary className="text-ui-secondary text-[9px] cursor-pointer hover:text-ui-primary font-mono transition-colors">
                 proposed direct URLs ({preview.next_direct_urls.length})
               </summary>
               <div className="mt-1 space-y-0.5 pl-2">
                 {preview.next_direct_urls.map((u: string, i: number) => (
                   <div key={i} className="text-[9px]">
                     <a href={u} target="_blank" rel="noopener noreferrer"
-                       className="text-[#4ade80] hover:text-[#6ee7b0] underline break-all">{u}</a>
+                       className="text-action-dim hover:text-action-hover underline break-all transition-colors">{u}</a>
                   </div>
                 ))}
               </div>
@@ -336,9 +339,9 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
         </div>
       )}
       {preview.phase === "synthesizing" && (
-        <div className="space-y-3">
+        <div className="space-y-3 font-mono">
           <div>
-            <div className="text-[#555] text-[9px] uppercase font-mono mb-1">synthesis context</div>
+            <div className="text-ui-dim text-[9px] uppercase font-mono mb-1">synthesis context</div>
             <KeyValueGrid items={[
               { key: "accumulated findings", value: preview.findings_count ?? 0 },
               { key: "sources analyzed", value: preview.sources_count ?? 0 },
@@ -347,16 +350,16 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
 
           {preview.sources && preview.sources.length > 0 && (
             <details>
-              <summary className="text-[#4ade80] text-[9px] cursor-pointer hover:text-[#6ee7b0] font-mono">
+              <summary className="text-semantic-green text-[9px] cursor-pointer hover:text-semantic-green/80 font-mono transition-colors">
                 sources consulted ({preview.sources.length})
               </summary>
-              <div className="mt-1 space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+              <div className="mt-1 space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30">
                 {preview.sources.map((u, i) => (
-                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed flex items-center justify-between gap-2 max-w-full">
+                  <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed flex items-center justify-between gap-2 max-w-full">
                     <div className="truncate flex-1 min-w-0">
-                      <span className="text-[#555]">{i+1}.</span>{" "}
+                      <span className="text-ui-dim">{i+1}.</span>{" "}
                       <a href={u.url} target="_blank" rel="noopener noreferrer"
-                        className="text-[#4ade80] hover:text-[#6ee7b0] underline">
+                        className="text-action-dim hover:text-action-hover underline transition-colors">
                         {u.title || u.url}
                       </a>
                     </div>
@@ -368,13 +371,13 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
 
           {preview.findings && preview.findings.length > 0 && (
             <details open>
-              <summary className="text-[#94a3b8] text-[9px] cursor-pointer hover:text-[#cbd5e1] font-mono">
+              <summary className="text-ui-secondary text-[9px] cursor-pointer hover:text-ui-primary font-mono transition-colors">
                 accumulated findings ({preview.findings.length})
               </summary>
-              <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto pr-1 border border-[#1a1a1a] p-2 bg-[#080808]/30">
+              <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30">
                 {preview.findings.map((f, i) => (
-                  <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#222] leading-relaxed">
-                    <span className="text-[#555]">{i+1}.</span> {f}
+                  <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">
+                    <span className="text-ui-dim">{i+1}.</span> {f}
                   </div>
                 ))}
               </div>
@@ -385,12 +388,12 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
             <>
               {preview.reflection.key_insights && preview.reflection.key_insights.length > 0 && (
                 <details>
-                  <summary className="text-[#4ade80] text-[9px] cursor-pointer hover:text-[#6ee7b0] font-mono">
+                  <summary className="text-semantic-green text-[9px] cursor-pointer hover:text-semantic-green/80 font-mono transition-colors">
                     stabilized key insights ({preview.reflection.key_insights.length})
                   </summary>
-                  <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-[#1a1a1a] p-1.5 bg-[#080808]/30">
+                  <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-ui-border p-1.5 bg-[#080808]/30 font-mono">
                     {preview.reflection.key_insights.map((ins: string, i: number) => (
-                      <div key={i} className="text-[#94a3b8] text-[9px] pl-2 border-l border-[#1a3a1a] leading-relaxed">✓ {ins}</div>
+                      <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">✓ {ins}</div>
                     ))}
                   </div>
                 </details>
@@ -398,12 +401,12 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
 
               {preview.reflection.remaining_gaps && preview.reflection.remaining_gaps.length > 0 && (
                 <details>
-                  <summary className="text-[#f59e0b] text-[9px] cursor-pointer hover:text-[#fbbf24] font-mono">
+                  <summary className="text-semantic-gold text-[9px] cursor-pointer hover:text-semantic-gold/80 font-mono transition-colors">
                     remaining gaps ({preview.reflection.remaining_gaps.length})
                   </summary>
-                  <div className="mt-1 space-y-0.5 max-h-28 overflow-y-auto pr-1 border border-[#1a1a1a] p-1.5 bg-[#080808]/30">
+                  <div className="mt-1 space-y-0.5 max-h-28 overflow-y-auto pr-1 border border-ui-border p-1.5 bg-[#080808]/30 font-mono">
                     {preview.reflection.remaining_gaps.map((g: string, i: number) => (
-                      <div key={i} className="text-[#888] text-[9px] pl-2 border-l border-[#222] leading-relaxed">◇ {g}</div>
+                      <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">◇ {g}</div>
                     ))}
                   </div>
                 </details>
@@ -413,7 +416,7 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
         </div>
       )}
       {preview.note && (
-        <div className="text-[#444] italic text-[9px]">{preview.note}</div>
+        <div className="text-ui-dim italic text-[9px] font-mono">{preview.note}</div>
       )}
     </div>
   )

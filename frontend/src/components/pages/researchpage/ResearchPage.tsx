@@ -5,7 +5,7 @@ import React, { memo, useState, useCallback } from "react"
 import { useResearch } from "../../../hooks/useResearch"
 import type { ResearchTask } from "../../../api/research"
 import { CollapsibleSection } from "../agentpage/shared/CollapsibleSection"
-import { TerminalButton, KeyValueGrid } from "../../UI"
+import { TerminalButton, KeyValueGrid, HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "../../UI"
 
 const STATUS_GROUPS: { key: string; label: string; icon: string; color: string; defaultOpen: boolean }[] = [
   { key: "proposed",  label: "Pending Proposals",   icon: "●", color: "#f59e0b", defaultOpen: true },
@@ -49,7 +49,14 @@ const TaskRow = memo(function TaskRow({ task, isSelected }: { task: ResearchTask
 })
 
 /* ── Right-side basic detail panel ── */
-function TaskPreview({ task, onEnter }: { task: ResearchTask; onEnter: () => void }) {
+interface TaskPreviewProps {
+  task: ResearchTask
+  onEnter: () => void
+  onApprove?: (id: string) => void
+  onCancel?: (id: string) => void
+}
+
+function TaskPreview({ task, onEnter, onApprove, onCancel }: TaskPreviewProps) {
   const color = STATUS_COLORS[task.status] ?? "#666"
   const progress = task.budget_limit_usd > 0 ? Math.round((task.budget_spent_usd / task.budget_limit_usd) * 100) : 0
 
@@ -89,11 +96,11 @@ function TaskPreview({ task, onEnter }: { task: ResearchTask; onEnter: () => voi
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-2 pt-1 border-t border-[#1a1a1a]">
-        {task.status === "proposed" && (
-          <TerminalButton onClick={() => {}} intent="save">✓ approve</TerminalButton>
+        {task.status === "proposed" && onApprove && (
+          <TerminalButton onClick={() => onApprove(task.id)} intent="save">✓ approve</TerminalButton>
         )}
-        {(task.status === "queued" || task.status === "active") && (
-          <TerminalButton onClick={() => {}} intent="delete">✕ cancel</TerminalButton>
+        {(task.status === "queued" || task.status === "active") && onCancel && (
+          <TerminalButton onClick={() => onCancel(task.id)} intent="delete">✕ cancel</TerminalButton>
         )}
       </div>
     </div>
@@ -125,24 +132,31 @@ export const ResearchPage = memo(function ResearchPage() {
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#1a1a1a] shrink-0">
-        <span className="text-[11px] text-[#444] tracking-widest uppercase select-none">
-          <span className="text-[#eab308]">■</span>
-          <span className="ml-2">symbia</span>
-          <span className="text-[#333] mx-2">//</span>
-          <span>research</span>
-          <span className="text-[#555] text-[10px] ml-3 normal-case">
+      {/* Header — single line */}
+      <HeaderContainer>
+        <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5">
+          <HeaderIndicator intent="gold" />
+          <HeaderLogo onClick={() => window.location.href = '/'} />
+          <HeaderSeparator />
+          <HeaderLabel intent="gold">research</HeaderLabel>
+          <span className="text-[#555] text-[10px] ml-2 normal-case hidden sm:inline">
             {summary.active_count} active · {summary.queued_count} queued · {summary.pending_proposals} proposals
           </span>
         </span>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {loading && <span className="text-[#555] text-[10px] animate-pulse">polling…</span>}
-          <TerminalButton onClick={() => window.location.href = '/'}>home</TerminalButton>
-          <TerminalButton onClick={() => window.open('/agent', '_blank')} intent="purple">agent</TerminalButton>
-          <TerminalButton onClick={() => window.location.href = '/research?id=new'} intent="save">+ new research</TerminalButton>
+          <CreasesDropdown />
+          <HeaderActionButton onClick={() => window.location.href = '/'}>
+            home
+          </HeaderActionButton>
+          <HeaderActionButton onClick={() => window.location.href = '/agent'}>
+            agent
+          </HeaderActionButton>
+          <HeaderActionButton onClick={() => window.location.href = '/research?id=new'}>
+            + new research
+          </HeaderActionButton>
         </div>
-      </div>
+      </HeaderContainer>
 
       {error && (
         <div className="text-[#ef4444] text-[10px] font-mono px-6 py-1 border-b border-[#1a1a1a]">[{error}]</div>
@@ -176,7 +190,12 @@ export const ResearchPage = memo(function ResearchPage() {
         {/* Right: detail preview */}
         <div className="flex-1 min-w-0 w-full md:flex md:flex-col md:min-h-0 overflow-y-auto">
           {selected ? (
-            <TaskPreview task={selected} onEnter={() => window.location.href = `/research?id=${selected.id}`} />
+            <TaskPreview
+              task={selected}
+              onEnter={() => window.location.href = `/research?id=${selected.id}`}
+              onApprove={approve}
+              onCancel={cancel}
+            />
           ) : (
             <div className="flex items-center justify-center h-full text-[#444] italic text-xs select-none">
               [ select a task to preview, double-click or [enter] for full detail ]
@@ -184,6 +203,7 @@ export const ResearchPage = memo(function ResearchPage() {
           )}
         </div>
       </div>
+      <UnifiedFooter />
     </div>
   )
 })

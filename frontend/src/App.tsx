@@ -11,15 +11,16 @@ import { ResearchPage } from "./components/pages/researchpage/ResearchPage"
 import { ResearchTaskPage } from "./components/pages/researchpage/ResearchTaskPage"
 import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
-import { checkAuthStatus, verifyPassword, logout, addConversationTag, removeConversationTag, getAgent, deleteMessage, downloadExport } from "./api/client"
+import { checkAuthStatus, verifyPassword, logout, addConversationTag, getAgent, deleteMessage, downloadExport } from "./api/client"
 import { TeaserPreview } from "./components/TeaserPreview"
+import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "./components/UI"
 
 const EMPTY_STRING_ARRAY: string[] = []
 
 export default function App() {
   // Render agent page standalone if navigated to /agent
   if (window.location.pathname === "/agent") {
-    return <AgentPage onGoHome={() => window.close()} />
+    return <AgentPage onGoHome={() => window.location.href = "/"} />
   }
 
   // Render research console or task detail
@@ -259,8 +260,23 @@ export default function App() {
   const conversationTitle = activeConv?.title || ""
   const conversationId = activeId
 
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleVal, setTitleVal] = useState("")
+
+  useEffect(() => {
+    setTitleVal(conversationTitle)
+  }, [conversationTitle])
+
   const handleRenameTitle = (title: string) => {
     if (activeId) renameConversation(activeId, title)
+  }
+
+  const handleTitleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setEditingTitle(false)
+    if (titleVal.trim() && titleVal !== conversationTitle) {
+      handleRenameTitle(titleVal)
+    }
   }
 
   const handleGenerateTitle = async () => {
@@ -288,16 +304,6 @@ export default function App() {
     }
   }
 
-  const handleRemoveTag = async (tag: string) => {
-    if (activeId) {
-      try {
-        await removeConversationTag(activeId, tag)
-        refreshConvs()
-      } catch (err) {
-        console.error("Failed to remove tag:", err)
-      }
-    }
-  }
 
   const handleSend = async (content: string) => {
     const currentActiveId = activeIdRef.current
@@ -403,164 +409,323 @@ export default function App() {
 
   // Active chat workspace layout
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-[#0c0c0c]">
-      {/* Sleek, collapsible Left Panel for Connection Cloud DAG */}
-      <div
-        className={`
-          border-[#222] bg-[#0c0c0c]
-          md:border-r md:border-b-0 md:h-full
-          border-b
-          flex flex-col shrink-0
-          overflow-hidden
-          transition-all duration-200
-          ${leftPanelCollapsed ? "md:w-9 w-full" : "w-full"}
-        `}
-        style={!leftPanelCollapsed ? { width: `${leftPanelWidth}px` } : undefined}
-      >
-        {leftPanelCollapsed ? (
-          <button
-            onClick={() => setLeftPanelCollapsed(false)}
-            className="
-              flex items-center gap-1.5 shrink-0
-              text-xs text-[#555] hover:text-[#888]
-              transition-colors
-              md:flex-col md:justify-start md:gap-2 md:py-3 md:px-0
-              md:h-full
-              flex-row justify-start py-2 px-3
-              select-none cursor-pointer
-            "
-          >
-            <span className="text-[10px]">▶</span>
-            <span className="md:[writing-mode:vertical-rl] md:text-[10px] md:tracking-wider text-[11px] font-mono">
-              CONNECTION CLOUD
-            </span>
-          </button>
-        ) : (
-          <>
-            <div className="flex items-center justify-between shrink-0 px-3 py-2 border-b border-[#222]">
-              <span className="text-[10px] font-mono uppercase text-[#666]">Connection Cloud</span>
-              <button
-                onClick={() => setLeftPanelCollapsed(true)}
-                className="flex items-center gap-1 text-[10px] text-[#555] hover:text-[#888] transition-colors cursor-pointer"
-              >
-                <span>◀</span>
-                <span>collapse</span>
-              </button>
-            </div>
-
-            {/* DAG — 2/3 height */}
-            <div className="overflow-hidden relative" style={{ flex: 2 }}>
-              {activeId ? (
-                <ConnectionCloud
-                  activeLoadedMessages={fullTreeMessages}
-                  notes={notes}
-                  activeMessageId={activeMessageId}
-                  activePathIds={activePathIds}
-                  setActiveMessageId={setActiveMessageId}
-                  commitProposedBranch={commitProposedBranch}
-                  refreshTree={refreshTree}
-                  conversationId={activeId}
-                  onNavigateToMessage={navigateToMessage}
-                  agentFlux={agentFlux}
-                  onDeleteMessage={handleDeleteMessage}
+    <div className="flex flex-col h-screen bg-[#0c0c0c]">
+      {/* Unified Full-Width Header */}
+      <HeaderContainer>
+        <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5 min-w-0">
+          <HeaderIndicator intent="green" />
+          <HeaderLogo onClick={handleGoHome} />
+          <HeaderSeparator />
+          <HeaderLabel intent="green">entanglement</HeaderLabel>
+          <HeaderSeparator className="hidden sm:inline" />
+          
+          <div className="min-w-0 flex-1 sm:flex-initial hidden sm:block">
+            {editingTitle ? (
+              <form onSubmit={handleTitleSubmit} className="inline-block">
+                <input
+                  type="text"
+                  value={titleVal}
+                  onChange={(e) => setTitleVal(e.target.value)}
+                  onBlur={() => handleTitleSubmit()}
+                  className="bg-transparent border-b border-[#222]/40 px-1 py-0.5 text-xs text-[#ddd] font-mono outline-none focus:border-action-hover/50 w-32 sm:w-48 md:w-64"
+                  autoFocus
                 />
-              ) : (
-                <div className="flex items-center justify-center h-full text-[#444] text-[10px] font-mono px-4 text-center select-none">
-                  DAG will initialize upon first message inscription
-                </div>
-              )}
-            </div>
+              </form>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h1
+                  onClick={() => setEditingTitle(true)}
+                  className="text-xs font-mono font-bold tracking-wider text-semantic-header hover:text-[#aaa] cursor-pointer truncate max-w-[120px] md:max-w-xs uppercase"
+                  title={conversationTitle || "Untitled Entanglement"}
+                >
+                  {conversationTitle || "Untitled Entanglement"}
+                </h1>
+                <HeaderActionButton
+                  onClick={handleGenerateTitle}
+                  title="Auto-generate title"
+                >
+                  #generate_title
+                </HeaderActionButton>
+              </div>
+            )}
+          </div>
+        </span>
 
-            {/* Spectral Echoes — 1/3 height, always open */}
-            <div className="flex flex-col shrink-0 border-t border-[#222] overflow-y-auto" style={{ flex: 1 }}>
-              <div className="px-3 py-1.5 shrink-0">
-                <span className="text-[9px] font-mono uppercase tracking-wider text-[#555]">Spectral Echoes</span>
-              </div>
-              <div className="flex-1 overflow-y-auto px-2 pb-2">
-                {activeId ? (
-                  <SpectralEchoes
-                    conversationId={activeId}
-                    activeMessageId={activeMessageId}
-                    refreshTree={refreshTree}
-                  />
-                ) : (
-                  <div className="text-[10px] font-mono text-[#333] px-2 select-none">
-                    no active node
-                  </div>
-                )}
-              </div>
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+          {conversationId && (
+            <HeaderActionButton
+              onClick={handleExportConversation}
+              title="Export conversation as Markdown"
+              className="hidden md:inline"
+            >
+              #export
+            </HeaderActionButton>
+          )}
+
+          {/* Quick toggle buttons for side panels on mobile */}
+          <HeaderActionButton
+            onClick={() => setLeftPanelCollapsed(prev => !prev)}
+            title="Toggle Connection Cloud (DAG)"
+            className="md:hidden"
+          >
+            {leftPanelCollapsed ? "show cloud" : "hide cloud"}
+          </HeaderActionButton>
+
+          <HeaderActionButton
+            onClick={() => setRightPanelCollapsed(prev => !prev)}
+            title="Toggle Metadata Pipeline"
+            className="md:hidden"
+          >
+            {rightPanelCollapsed ? "show pipeline" : "hide pipeline"}
+          </HeaderActionButton>
+
+          <CreasesDropdown
+            conversations={conversations}
+            onNavigateToNotification={handleNavigateToNotification}
+          />
+          
+          <HeaderActionButton onClick={handleGoHome}>
+            home
+          </HeaderActionButton>
+          
+          <HeaderActionButton onClick={() => window.location.href = '/agent'}>
+            agent
+          </HeaderActionButton>
+
+          <HeaderActionButton onClick={() => window.location.href = '/research'}>
+            research
+          </HeaderActionButton>
+
+          <HeaderActionButton onClick={handleNewConversation}>
+            + new
+          </HeaderActionButton>
+
+          {isAuthEnabled && (
+            <HeaderActionButton
+              onClick={handleLogout}
+              className="hover:text-red-500! hidden sm:inline"
+            >
+              logout
+            </HeaderActionButton>
+          )}
+        </div>
+      </HeaderContainer>
+
+      {/* For mobile screens: show title bar beneath header if screen is small */}
+      <div className="sm:hidden flex items-center justify-between px-4 py-2 border-b border-[#1a1a1a] shrink-0 font-mono text-[11px] bg-[#0d0d0d]">
+        <div className="min-w-0 flex-1">
+          {editingTitle ? (
+            <form onSubmit={handleTitleSubmit} className="w-full">
+              <input
+                type="text"
+                value={titleVal}
+                onChange={(e) => setTitleVal(e.target.value)}
+                onBlur={() => handleTitleSubmit()}
+                className="bg-transparent border-b border-[#222]/40 px-1 py-0.5 text-xs text-[#ddd] font-mono outline-none focus:border-action-hover/50 w-full"
+                autoFocus
+              />
+            </form>
+          ) : (
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[#444]">title:</span>
+              <h1
+                onClick={() => setEditingTitle(true)}
+                className="text-xs font-mono font-bold tracking-wider text-semantic-header hover:text-[#aaa] cursor-pointer truncate flex-1 uppercase"
+                title={conversationTitle || "Untitled Entanglement"}
+              >
+                {conversationTitle || "Untitled Entanglement"}
+              </h1>
+              <HeaderActionButton
+                onClick={handleGenerateTitle}
+                title="Auto-generate title"
+                className="shrink-0"
+              >
+                #gen
+              </HeaderActionButton>
             </div>
-          </>
+          )}
+        </div>
+        {conversationId && (
+          <HeaderActionButton
+            onClick={handleExportConversation}
+            title="Export conversation as Markdown"
+            className="shrink-0 ml-2"
+          >
+            #export
+          </HeaderActionButton>
         )}
       </div>
 
-      {!leftPanelCollapsed && (
+      {/* Workspace Area: Left Panel, NodeExplorer, SidePanel */}
+      <div className="flex-1 flex flex-row min-h-0 overflow-hidden relative">
+        {/* Backdrop for Left Panel overlay on mobile */}
+        {!leftPanelCollapsed && (
+          <div
+            onClick={() => setLeftPanelCollapsed(true)}
+            className="md:hidden fixed inset-0 z-20 bg-black/60 backdrop-blur-xs"
+          />
+        )}
+
+        {/* Sleek, collapsible Left Panel for Connection Cloud DAG */}
         <div
-          onMouseDown={handleResizeStart}
-          className="w-1 cursor-col-resize hover:bg-[#4ade80]/30 active:bg-[#4ade80]/50 transition-colors shrink-0 hidden md:block"
+          className={`
+            border-[#222] bg-[#0c0c0c]
+            md:border-r md:border-b-0 md:h-full
+            flex flex-col shrink-0
+            overflow-hidden
+            transition-all duration-200
+            ${leftPanelCollapsed 
+              ? "hidden md:flex md:w-9 md:h-full" 
+              : "absolute md:relative z-30 left-0 top-0 bottom-0 w-[85vw] max-w-[340px] md:w-auto md:h-full md:flex md:z-auto border-r md:border-r-0 bg-[#0c0c0e]/95"
+            }
+          `}
+          style={!leftPanelCollapsed ? { width: `${leftPanelWidth}px` } : undefined}
+        >
+          {leftPanelCollapsed ? (
+            <button
+              onClick={() => setLeftPanelCollapsed(false)}
+              className="
+                flex items-center gap-1.5 shrink-0
+                text-xs text-[#555] hover:text-[#888]
+                transition-colors
+                md:flex-col md:justify-start md:gap-2 md:py-3 md:px-0
+                md:h-full
+                select-none cursor-pointer
+              "
+            >
+              <span className="text-[10px]">▶</span>
+              <span className="md:[writing-mode:vertical-rl] md:text-[10px] md:tracking-wider text-[11px] font-mono">
+                CONNECTION CLOUD
+              </span>
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center justify-between shrink-0 px-3 py-2 border-b border-[#222]">
+                <span className="text-[10px] font-mono uppercase text-[#666]">Connection Cloud</span>
+                <button
+                  onClick={() => setLeftPanelCollapsed(true)}
+                  className="flex items-center gap-1 text-[10px] text-[#555] hover:text-[#888] transition-colors cursor-pointer"
+                >
+                  <span>◀</span>
+                  <span>collapse</span>
+                </button>
+              </div>
+
+              {/* DAG — 2/3 height */}
+              <div className="overflow-hidden relative" style={{ flex: 2 }}>
+                {activeId ? (
+                  <ConnectionCloud
+                    activeLoadedMessages={fullTreeMessages}
+                    notes={notes}
+                    activeMessageId={activeMessageId}
+                    activePathIds={activePathIds}
+                    setActiveMessageId={setActiveMessageId}
+                    commitProposedBranch={commitProposedBranch}
+                    refreshTree={refreshTree}
+                    conversationId={activeId}
+                    onNavigateToMessage={navigateToMessage}
+                    agentFlux={agentFlux}
+                    onDeleteMessage={handleDeleteMessage}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-[#444] text-[10px] font-mono px-4 text-center select-none">
+                    DAG will initialize upon first message inscription
+                  </div>
+                )}
+              </div>
+
+              {/* Spectral Echoes — 1/3 height, always open */}
+              <div className="flex flex-col shrink-0 border-t border-[#222] overflow-y-auto" style={{ flex: 1 }}>
+                <div className="px-3 py-1.5 shrink-0">
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-[#555]">Spectral Echoes</span>
+                </div>
+                <div className="flex-1 overflow-y-auto px-2 pb-2">
+                  {activeId ? (
+                    <SpectralEchoes
+                      conversationId={activeId}
+                      activeMessageId={activeMessageId}
+                      refreshTree={refreshTree}
+                    />
+                  ) : (
+                    <div className="text-[10px] font-mono text-[#333] px-2 select-none">
+                      no active node
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {!leftPanelCollapsed && (
+          <div
+            onMouseDown={handleResizeStart}
+            className="w-1 cursor-col-resize hover:bg-action-hover/20 active:bg-action-hover/40 transition-colors shrink-0 hidden md:block"
+          />
+        )}
+
+        {/* Main node explorer interface */}
+        <NodeExplorer
+          selectedNode={selectedNode}
+          parentNode={parentNode}
+          siblingNodes={siblingNodes}
+          childNodes={childNodes}
+          treeNodes={treeNodes}
+          loading={loading}
+          error={error}
+          agentName={agentName}
+          conversationId={conversationId}
+          uploadedFiles={uploadedFiles}
+          onSend={handleSend}
+          onUploadFiles={handleUploadFiles}
+          isIndexing={isIndexing}
+          onClearError={clearError}
+          onRegenerate={regenerate}
+          notes={notes}
+          onAddNote={handleAddNote}
+          onDeleteNote={handleDeleteNote}
+          onUpdateNote={handleUpdateNote}
+          tags={(activeConv?.tags ?? EMPTY_STRING_ARRAY) as any}
+          onAddTag={handleAddTag}
+          onNavigateToMessage={navigateToMessage}
+          className="flex-1 min-w-0"
+          history={history}
+          onDeleteMessage={agentFlux ? handleDeleteMessage : undefined}
         />
-      )}
 
-      {/* Main node explorer interface */}
-      <NodeExplorer
-        selectedNode={selectedNode}
-        parentNode={parentNode}
-        siblingNodes={siblingNodes}
-        childNodes={childNodes}
-        treeNodes={treeNodes}
-        loading={loading}
-        error={error}
-        agentName={agentName}
-        conversationId={conversationId}
-        conversationTitle={conversationTitle}
-        uploadedFiles={uploadedFiles}
-        onSend={handleSend}
-        onUploadFiles={handleUploadFiles}
-        isIndexing={isIndexing}
-        onClearError={clearError}
-        onRegenerate={regenerate}
-        onRenameTitle={handleRenameTitle}
-        onGenerateTitle={handleGenerateTitle}
-        notes={notes}
-        onAddNote={handleAddNote}
-        onDeleteNote={handleDeleteNote}
-        onUpdateNote={handleUpdateNote}
-        tags={(activeConv?.tags ?? EMPTY_STRING_ARRAY) as any}
-        onAddTag={handleAddTag}
-        onRemoveTag={handleRemoveTag}
-        onNavigateToMessage={navigateToMessage}
-        onGoHome={handleGoHome}
-        className="flex-1 min-w-0"
-        history={history}
-        conversations={conversations}
-        onNavigateToNotification={handleNavigateToNotification}
-        onDeleteMessage={agentFlux ? handleDeleteMessage : undefined}
-        onExportConversation={conversationId ? handleExportConversation : undefined}
-      />
+        {/* Backdrop for Right Panel overlay on mobile */}
+        {!rightPanelCollapsed && (
+          <div
+            onClick={() => setRightPanelCollapsed(true)}
+            className="md:hidden fixed inset-0 z-20 bg-black/60 backdrop-blur-xs"
+          />
+        )}
 
-      {!rightPanelCollapsed && (
-        <div
-          onMouseDown={handleRightResizeStart}
-          className="w-1 cursor-col-resize hover:bg-[#4ade80]/30 active:bg-[#4ade80]/50 transition-colors shrink-0 hidden md:block"
+        {!rightPanelCollapsed && (
+          <div
+            onMouseDown={handleRightResizeStart}
+            className="w-1 cursor-col-resize hover:bg-action-hover/20 active:bg-action-hover/40 transition-colors shrink-0 hidden md:block"
+          />
+        )}
+
+        <SidePanel
+          uploadedFiles={uploadedFiles}
+          conversationId={conversationId}
+          onDeleteFile={handleDeleteFile}
+          onReprocessFile={handleReprocessFile}
+          messageCount={messages.length}
+          notes={notes}
+          onDeleteNote={handleDeleteNote}
+          onUpdateNote={handleUpdateNote}
+          summary={activeConv?.summary}
+          humanSummary={activeConv?.human_summary}
+          width={rightPanelWidth}
+          panelCollapsed={rightPanelCollapsed}
+          onPanelToggle={() => setRightPanelCollapsed(p => !p)}
+          onNavigateNode={navigateToMessage}
         />
-      )}
-
-      <SidePanel
-        uploadedFiles={uploadedFiles}
-        conversationId={conversationId}
-        onDeleteFile={handleDeleteFile}
-        onReprocessFile={handleReprocessFile}
-        messageCount={messages.length}
-        notes={notes}
-        onDeleteNote={handleDeleteNote}
-        onUpdateNote={handleUpdateNote}
-        summary={activeConv?.summary}
-        humanSummary={activeConv?.human_summary}
-        width={rightPanelWidth}
-        panelCollapsed={rightPanelCollapsed}
-        onPanelToggle={() => setRightPanelCollapsed(p => !p)}
-        onNavigateNode={navigateToMessage}
-      />
+      </div>
+      <UnifiedFooter />
     </div>
   )
 }

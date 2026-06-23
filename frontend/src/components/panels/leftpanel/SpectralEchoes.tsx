@@ -97,7 +97,7 @@ function SpectralEchoesComponent({
   return (
     <div className="flex flex-col gap-2 p-2 font-mono">
       <div className="flex justify-between items-center">
-        <span className="text-[9px] font-bold text-[#6c6c8a] uppercase tracking-wider">
+        <span className="text-[9px] font-bold text-semantic-header uppercase tracking-wider">
           Spectral Echoes
         </span>
         {loading && <span className="text-[9px] text-[#555] animate-pulse">scanning...</span>}
@@ -119,10 +119,10 @@ function SpectralEchoesComponent({
           return (
             <div key={sug.message_id} className="flex flex-col gap-1 text-[9px]">
               <div className="flex justify-between items-center text-[8px]">
-                <span className={sug.speaker === "human" ? "text-[#6bc28c]" : "text-[#a892ee]"}>
+                <span className={sug.speaker === "human" ? "text-semantic-green" : "text-semantic-purple"}>
                   {sug.speaker === "human" ? "Human" : "Symbia"} (ID: {sug.message_id})
                 </span>
-                <span className="text-[#4ade80] font-bold">{simPercent}%</span>
+                <span className="text-semantic-green font-bold">{simPercent}%</span>
               </div>
 
               <div className="text-[#94a3b8] line-clamp-3 italic">
@@ -136,13 +136,13 @@ function SpectralEchoesComponent({
                     value={justification}
                     onChange={(e) => setJustification(e.target.value)}
                     placeholder="justification (optional)..."
-                    className="w-full bg-transparent border-b border-[#222]/40 text-[#ccc] text-[8px] focus:outline-none focus:border-[#a892ee] font-mono"
+                    className="w-full bg-transparent border-b border-[#222]/40 text-[#ccc] text-[8px] focus:outline-none focus:border-action-hover/50 font-mono"
                   />
                   <div className="flex gap-2">
                     <button onClick={() => setLinkingMsgId(null)}
                       className="text-[8px] text-[#666] hover:text-[#888] cursor-pointer select-none font-mono">[cancel]</button>
                     <button onClick={() => handleCreateLink(sug.message_id)} disabled={isLinking}
-                      className="text-[8px] text-[#a78bfa] hover:text-[#c084fc] disabled:text-[#555] cursor-pointer select-none font-mono">
+                      className="text-[8px] text-action-dim hover:text-action-hover disabled:text-[#555] cursor-pointer select-none font-mono">
                       {isLinking ? "[linking...]" : "[confirm link]"}
                     </button>
                   </div>
@@ -150,9 +150,9 @@ function SpectralEchoesComponent({
               ) : (
                 <div className="flex gap-2">
                   <button onClick={() => { setLinkingMsgId(sug.message_id); setJustification("") }}
-                    className="text-[8px] text-[#666] hover:text-[#a78bfa] cursor-pointer select-none font-mono">[link]</button>
+                    className="text-[8px] text-[#666] hover:text-action-hover cursor-pointer select-none font-mono">[link]</button>
                   <button onClick={() => handleIgnoreLink(sug.message_id)} disabled={isLinking}
-                    className="text-[8px] text-[#666] hover:text-[#ef4444] cursor-pointer select-none font-mono">[ignore]</button>
+                    className="text-[8px] text-[#666] hover:text-semantic-red cursor-pointer select-none font-mono">[ignore]</button>
                 </div>
               )}
             </div>

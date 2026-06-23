@@ -15,7 +15,6 @@ interface DbStepDetailProps {
   taskId: string
   data: TaskStepsResponse | null
   selectedId: string
-  onSelectTab?: (tabId: "info" | "steps" | "report") => void
 }
 
 const getStepDepth = (step: ResearchStep): number => {
@@ -29,7 +28,7 @@ const getStepDepth = (step: ResearchStep): number => {
   }
 }
 
-export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId, onSelectTab }: DbStepDetailProps) {
+export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedId }: DbStepDetailProps) {
   const steps = data ? [...data.steps].reverse() : []
   const selected = steps.find(s => s.id === selectedId)
   if (!selected) return null
@@ -237,11 +236,11 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   } : undefined
 
   return (
-    <div className="space-y-2 text-[10px]">
+    <div className="space-y-2 text-[10px] font-mono">
       <div className="flex items-center justify-between">
-        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">
+        <div className="text-semantic-header uppercase text-[9px] tracking-wider">
           [ Step #{selected.step_number}: {STEP_LABELS[selected.step_type] || selected.step_type}
-          <span className={selected.status === "stale" ? "text-[#f97316]" : "text-[#555]"}>
+          <span className={selected.status === "stale" ? "text-semantic-sand ml-1" : "text-ui-dim ml-1"}>
             ({selected.status})
           </span> ]
         </div>
@@ -250,11 +249,11 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
         )}
       </div>
 
-      <div className="flex gap-3 border-b border-[#1a1a1a] pb-1">
+      <div className="flex gap-3 border-b border-ui-border pb-1">
         {DETAIL_TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`text-[9px] uppercase cursor-pointer transition-colors
-              ${tab === t ? "text-[#94a3b8]" : "text-[#444] hover:text-[#777]"}`}>
+              ${tab === t ? "text-ui-primary" : "text-ui-dim hover:text-ui-secondary"}`}>
             {t}{tabBadges ? ` (${tabBadges[t]})` : ""}
           </button>
         ))}
@@ -268,7 +267,6 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           responseEntries={responseEntries}
           inputEntries={inputEntries}
           parentInputUrls={parentInputUrls}
-          onSelectTab={onSelectTab}
         />
       )}
 

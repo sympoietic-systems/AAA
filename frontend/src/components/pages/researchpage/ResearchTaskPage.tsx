@@ -2,10 +2,10 @@
 // Entry point: fetches task, delegates shell to TaskPageInner, handles new-task form.
 // Refactored: tabs, steps, constants, and shared components extracted to subdirectories.
 
-import React, { memo, useState, useEffect, useCallback } from "react"
+import { memo, useState, useEffect } from "react"
+import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "../../UI"
 import type { ResearchTask } from "../../../api/research"
-import { getResearchTask, getTaskPhase } from "../../../api/research"
-import { TerminalButton } from "../../UI"
+import { getResearchTask } from "../../../api/research"
 import { STATUS_COLORS } from "./constants/taskConstants"
 import { useTaskPolling } from "./shared/useTaskPolling"
 import { InfoTab } from "./tabs/InfoTab"
@@ -34,26 +34,31 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
   return (
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       {/* Terminal breadcrumb header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#1a1a1a] shrink-0">
+      <HeaderContainer>
         <div className="flex items-center gap-2 min-w-0">
-          <a href="/research" className="text-[#666] hover:text-[#bbb] text-[11px] transition-colors cursor-pointer">◀ back</a>
+          <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</a>
           <span className="text-[#333]">|</span>
-          <span className="text-[11px] text-[#444] tracking-widest uppercase select-none shrink-0">
-            <span className="text-[#eab308]">■</span>
-            <span className="ml-2">symbia</span>
+          <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
+            <HeaderIndicator intent="gold" />
+            <HeaderLogo onClick={() => window.location.href = '/'} />
           </span>
-          <span className="text-[#333]">//</span>
-          <span className="text-[#bbb] text-xs truncate">{current.title}</span>
-          <span style={{ color }} className="text-[10px] ml-1 uppercase shrink-0">{current.status}</span>
+          <HeaderSeparator />
+          <span className="text-[#bbb] text-xs truncate font-bold">{current.title}</span>
+          <span style={{ color }} className="text-[10px] ml-1 uppercase shrink-0 font-bold">{current.status}</span>
           {orchPhase && orchPhase !== "complete" && (
-            <span className="text-[#f59e0b] text-[9px] ml-1 uppercase shrink-0">[{orchPhase}]</span>
+            <HeaderLabel intent="gold" className="text-[9px] ml-1">[{orchPhase}]</HeaderLabel>
           )}
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <TerminalButton onClick={() => window.location.href = '/'}>home</TerminalButton>
-          <TerminalButton onClick={() => window.open('/agent', '_blank')} intent="purple">agent</TerminalButton>
+        <div className="flex items-center gap-4 shrink-0">
+          <CreasesDropdown />
+          <HeaderActionButton onClick={() => window.location.href = '/'}>
+            home
+          </HeaderActionButton>
+          <HeaderActionButton onClick={() => window.location.href = '/agent'}>
+            agent
+          </HeaderActionButton>
         </div>
-      </div>
+      </HeaderContainer>
 
       {/* Tab bar — dot-separated */}
       <div className="flex flex-wrap gap-x-1 gap-y-1 px-4 py-2 text-[10px] select-none shrink-0">
@@ -86,6 +91,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
           </div>
         )}
       </div>
+      <UnifiedFooter />
     </div>
   )
 })
@@ -103,14 +109,25 @@ const NewTaskInline = memo(function NewTaskInline() {
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
-      <div className="flex items-center px-6 py-3 border-b border-[#1a1a1a] shrink-0">
-        <a href="/research" className="text-[#666] hover:text-[#bbb] text-[11px] transition-colors cursor-pointer">◀ back</a>
-        <span className="text-[#333] mx-2">|</span>
-        <span className="text-[#eab308] text-[11px]">■ new research</span>
-      </div>
+      <HeaderContainer>
+        <div className="flex items-center gap-2">
+          <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</a>
+          <span className="text-[#333]">|</span>
+          <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
+            <HeaderIndicator intent="gold" />
+            <HeaderLogo onClick={() => window.location.href = '/'} />
+          </span>
+          <HeaderSeparator />
+          <HeaderLabel intent="gold">new research</HeaderLabel>
+        </div>
+        <div className="flex items-center gap-4 shrink-0">
+          <CreasesDropdown />
+        </div>
+      </HeaderContainer>
       <div className="flex-1 overflow-y-auto px-4 py-4 max-w-lg">
         <NewResearchForm onDispatch={handleDispatch} onClose={handleClose} />
       </div>
+      <UnifiedFooter />
     </div>
   )
 })
@@ -132,12 +149,20 @@ export const ResearchTaskPage = memo(function ResearchTaskPage({ taskId, isNew }
   }, [taskId])
 
   if (error) return (
-    <div className="flex flex-col h-screen bg-[#0c0c0c] items-center justify-center text-[#ef4444] text-xs font-mono">
-      {error}
-      <a href="/research" className="text-[#666] hover:text-[#bbb] mt-2">◀ back</a>
+    <div className="flex flex-col h-screen bg-[#0c0c0c] items-center justify-between text-[#ef4444] text-xs font-mono">
+      <div className="flex-1 flex flex-col items-center justify-center">
+        {error}
+        <a href="/research" className="text-[#666] hover:text-[#bbb] mt-2">◀ back</a>
+      </div>
+      <UnifiedFooter className="w-full" />
     </div>
   )
-  if (!task) return <div className="flex flex-col h-screen bg-[#0c0c0c] items-center justify-center text-[#555] text-xs animate-pulse font-mono">[ loading… ]</div>
+  if (!task) return (
+    <div className="flex flex-col h-screen bg-[#0c0c0c] items-center justify-between text-[#555] text-xs font-mono">
+      <div className="flex-1 flex items-center justify-center animate-pulse">[ loading… ]</div>
+      <UnifiedFooter className="w-full" />
+    </div>
+  )
 
   return <TaskPageInner task={task} />
 })

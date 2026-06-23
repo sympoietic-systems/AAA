@@ -243,11 +243,11 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
           <span className="text-[#ccc] font-bold">editing: {b.label}</span>
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={isSavingOrDeleting}
-              className="text-[10px] text-[#666] hover:text-[#4ade80] disabled:text-[#555] transition-colors cursor-pointer select-none font-bold">
+              className="text-[10px] text-action-dim hover:text-action-hover disabled:text-[#555] transition-colors cursor-pointer select-none font-bold">
               {isSavingOrDeleting ? "[saving...]" : "[save]"}
             </button>
             <button onClick={() => setIsEditing(false)} disabled={isSavingOrDeleting}
-              className="text-[10px] text-[#666] hover:text-[#ef4444] disabled:text-[#555] transition-colors cursor-pointer select-none font-bold">
+              className="text-[10px] text-action-dim hover:text-semantic-red disabled:text-[#555] transition-colors cursor-pointer select-none font-bold">
               [cancel]
             </button>
           </div>
@@ -257,29 +257,29 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
           <div className="flex flex-col gap-1">
             <span className="text-[#555] text-[10px] uppercase font-bold">[ Belief Label ]</span>
             <input type="text" value={editLabel} onChange={e => setEditLabel(e.target.value)} disabled={isSavingOrDeleting}
-              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50" />
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-action-hover/50" />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[#555] text-[10px] uppercase font-bold">[ Statement ]</span>
             <textarea value={editStatement} onChange={e => setEditStatement(e.target.value)} disabled={isSavingOrDeleting}
-              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[60px] resize-y" />
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-action-hover/50 min-h-[60px] resize-y" />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[#555] text-[10px] uppercase font-bold">[ Confidence: {(editConfidence * 100).toFixed(0)}% ]</span>
             <input type="range" min="0" max="1" step="0.05" value={editConfidence}
               onChange={e => setEditConfidence(parseFloat(e.target.value))} disabled={isSavingOrDeleting}
-              className="accent-[#a78bfa] w-full cursor-pointer bg-[#14141c] h-1 rounded" />
+              className="accent-semantic-purple w-full cursor-pointer bg-[#14141c] h-1 rounded" />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[#555] text-[10px] uppercase font-bold">[ Ontological Mass: {editOntologicalMass.toFixed(2)} ]</span>
             <input type="range" min="0" max="3" step="0.05" value={editOntologicalMass}
               onChange={e => setEditOntologicalMass(parseFloat(e.target.value))} disabled={isSavingOrDeleting}
-              className="accent-[#a78bfa] w-full cursor-pointer bg-[#14141c] h-1 rounded" />
+              className="accent-semantic-purple w-full cursor-pointer bg-[#14141c] h-1 rounded" />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[#555] text-[10px] uppercase font-bold">[ Lifecycle Stage ]</span>
             <select value={editLifecycleStage} onChange={e => setEditLifecycleStage(e.target.value)} disabled={isSavingOrDeleting}
-              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50">
+              className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-action-hover/50">
               <option value="nucleation">nucleation (proto-belief)</option>
               <option value="accretion">accretion (incubating)</option>
               <option value="crystallized">crystallized (active)</option>
@@ -299,11 +299,11 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       <div className={`flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 gap-3 text-[11px] ${isGhost ? "opacity-55" : ""}`}>
         <div className="flex items-center justify-between font-mono">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] shrink-0 text-[#f59e0b]">◇</span>
+            <span className="text-[11px] shrink-0 text-semantic-gold">◇</span>
             <span className="font-bold text-[#ccc] truncate">PROPOSAL: {b.label}</span>
           </div>
           <span className="text-[9px] font-mono font-bold"
-            style={{ color: status === "pending" ? "#f59e0b" : status === "refined" ? "#a78bfa" : status === "rejected" ? "#ef4444" : "#4ade80" }}>
+            style={{ color: status === "pending" ? "var(--color-semantic-gold)" : status === "refined" ? "var(--color-semantic-purple)" : status === "rejected" ? "var(--color-semantic-red)" : "var(--color-semantic-green)" }}>
             {status}
           </span>
         </div>
@@ -320,10 +320,10 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
         </div>
         {b.symbia_reflection && (
           <div>
-            <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider">[ Symbia's Reflection ]</div>
+            <div className="text-semantic-purple font-mono text-[9px] uppercase font-bold tracking-wider">[ Symbia's Reflection ]</div>
             <div className="text-[#ccc] leading-relaxed text-[10.5px] mt-0.5">{b.symbia_reflection}</div>
             {b.symbia_friction_rationale && (
-              <div className="mt-1 text-[#fb7185] italic text-[10px]">
+              <div className="mt-1 text-semantic-red italic text-[10px]">
                 <span className="font-mono uppercase font-bold">[ Friction Warning ]:</span> {b.symbia_friction_rationale}
               </div>
             )}
@@ -331,8 +331,8 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
         )}
         {status === "rejected" && b.rejection_rationale && (
           <div>
-            <div className="text-[#ef4444]/60 font-mono text-[9px] uppercase font-bold tracking-wider">[ Refusal Rationale ]</div>
-            <div className="text-[#ef4444]/90 leading-relaxed text-[10.5px] mt-0.5">{b.rejection_rationale}</div>
+            <div className="text-semantic-red/60 font-mono text-[9px] uppercase font-bold tracking-wider">[ Refusal Rationale ]</div>
+            <div className="text-semantic-red/90 leading-relaxed text-[10.5px] mt-0.5">{b.rejection_rationale}</div>
           </div>
         )}
         {vec.length > 0 && (
@@ -355,25 +355,25 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
         )}
         {agentFlux && (status === "pending" || status === "refined") && (
           <div ref={workshopRef} className="flex flex-col gap-2">
-            <div className="text-[#a78bfa] font-mono text-[10px] uppercase font-bold tracking-wider">[ Workshop Actions ]</div>
+            <div className="text-semantic-purple font-mono text-[10px] uppercase font-bold tracking-wider">[ Workshop Actions ]</div>
             {vetMode === "none" ? (
               <div className="flex gap-2 font-mono text-[10px]">
                 <button onClick={handleRefine} disabled={isRefining || isVetting}
-                  className="flex-1 py-1 text-[#a78bfa] hover:text-[#c084fc] cursor-pointer select-none font-bold">[ refine ]</button>
+                  className="flex-1 py-1 text-action-dim hover:text-action-hover cursor-pointer select-none font-bold">[ refine ]</button>
                 <button onClick={() => setVetMode("adopt")} disabled={isRefining || isVetting}
-                  className="flex-1 py-1 text-[#4ade80] hover:text-[#86efac] cursor-pointer select-none font-bold">[ adopt ]</button>
+                  className="flex-1 py-1 text-action-dim hover:text-semantic-green cursor-pointer select-none font-bold">[ adopt ]</button>
                 <button onClick={() => setVetMode("reject")} disabled={isRefining || isVetting}
-                  className="flex-1 py-1 text-[#ef4444] hover:text-[#f87171] cursor-pointer select-none font-bold">[ reject ]</button>
+                  className="flex-1 py-1 text-action-dim hover:text-semantic-red cursor-pointer select-none font-bold">[ reject ]</button>
                 {activeBeliefs.length > 0 && (
                   <button onClick={() => setVetMode("merge")} disabled={isRefining || isVetting}
-                    className="flex-1 py-1 text-[#facc15] hover:text-[#fde047] cursor-pointer select-none font-bold">[ merge ]</button>
+                    className="flex-1 py-1 text-action-dim hover:text-semantic-gold cursor-pointer select-none font-bold">[ merge ]</button>
                 )}
               </div>
             ) : (
               <div className="flex flex-col gap-2 font-mono">
                 <div className="flex justify-between items-center">
                   <span className="text-[#aaa] text-[9.5px] uppercase font-bold">Action: {vetMode}</span>
-                  <button onClick={() => setVetMode("none")} className="text-[#666] hover:text-[#ef4444] text-[9px] font-bold cursor-pointer">[cancel]</button>
+                  <button onClick={() => setVetMode("none")} className="text-action-dim hover:text-semantic-red text-[9px] font-bold cursor-pointer">[cancel]</button>
                 </div>
                 {vetMode === "adopt" && (
                   <>
@@ -412,24 +412,24 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                         <div className="flex justify-between items-center">
                           <span className="text-[#555] text-[9px] uppercase font-bold">[ Synthesized Statement ]</span>
                           <button onClick={handleSynthesize} disabled={isSynthesizing}
-                            className="text-[8.5px] text-[#a78bfa] hover:text-[#c084fc] font-bold cursor-pointer underline disabled:text-[#555]">[ ask symbia to synthesize ]</button>
+                            className="text-[8.5px] text-action-dim hover:text-action-hover font-bold cursor-pointer underline disabled:text-[#555]">[ ask symbia to synthesize ]</button>
                         </div>
                         <textarea value={mergedStatement} onChange={e => setMergedStatement(e.target.value)}
-                          className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[50px] resize-y font-serif" />
+                          className="bg-[#050508] border border-[#222] text-[#ccc] p-1.5 rounded text-[10px] w-full focus:outline-none focus:border-action-hover/50 min-h-[50px] resize-y font-serif" />
                         {targetBeliefId === belief.potential_merge_target && belief.statement && (
                           <div>
-                            <div className="text-[#a78bfa] font-mono text-[9px] uppercase font-bold tracking-wider">[ Symbia's Suggested Synthesis ]</div>
+                            <div className="text-semantic-purple font-mono text-[9px] uppercase font-bold tracking-wider">[ Symbia's Suggested Synthesis ]</div>
                             <p className="italic font-serif text-[#ccc]">"{belief.statement}"</p>
                             <button onClick={() => setMergedStatement(belief.statement)}
-                              className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] font-bold cursor-pointer underline">[ Apply suggestion ]</button>
+                              className="text-[9px] text-action-dim hover:text-action-hover font-bold cursor-pointer underline">[ Apply suggestion ]</button>
                           </div>
                         )}
                       </div>
                     )}
                   </>
                 )}
-                <button onClick={() => handleVet(vetMode)} disabled={isVetting}
-                  className={`w-full py-1 text-center font-bold uppercase tracking-wider rounded border text-[10px] cursor-pointer ${vetMode === "adopt" ? "border-[#4ade80]/30 text-[#4ade80]" : vetMode === "reject" ? "border-[#ef4444]/30 text-[#ef4444]" : "border-[#facc15]/30 text-[#facc15]"}`}>
+                <button onClick={() => handleVet(vetMode as any)} disabled={isVetting}
+                  className={`w-full py-1 text-center font-bold uppercase tracking-wider rounded border text-[10px] cursor-pointer ${vetMode === "adopt" ? "border-semantic-green/30 text-semantic-green" : vetMode === "reject" ? "border-semantic-red/30 text-semantic-red" : "border-semantic-gold/30 text-semantic-gold"}`}>
                   {isVetting ? "[ processing... ]" : `[ confirm ${vetMode} ]`}
                 </button>
               </div>
@@ -457,16 +457,16 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
             <>
               {isConfirmingDelete ? (
                 <span className="flex items-center gap-1.5 font-mono text-[10px]">
-                  <span className="text-[#ef4444] animate-pulse">confirm delete?</span>
-                  <button onClick={handleDelete} disabled={isSavingOrDeleting} className="text-[#666] hover:text-[#ef4444] hover:underline cursor-pointer select-none font-bold">[yes]</button>
-                  <button onClick={() => setIsConfirmingDelete(false)} disabled={isSavingOrDeleting} className="text-[#666] hover:text-[#888] hover:underline cursor-pointer select-none font-bold">[no]</button>
+                  <span className="text-semantic-red animate-pulse">confirm delete?</span>
+                  <button onClick={handleDelete} disabled={isSavingOrDeleting} className="text-action-dim hover:text-semantic-red hover:underline cursor-pointer select-none font-bold">[yes]</button>
+                  <button onClick={() => setIsConfirmingDelete(false)} disabled={isSavingOrDeleting} className="text-action-dim hover:text-action-hover hover:underline cursor-pointer select-none font-bold">[no]</button>
                 </span>
               ) : (
-                <button onClick={() => setIsConfirmingDelete(true)} disabled={isSavingOrDeleting} className="text-[10px] text-[#666] hover:text-[#f87171] font-mono transition-colors cursor-pointer select-none font-bold">
+                <button onClick={() => setIsConfirmingDelete(true)} disabled={isSavingOrDeleting} className="text-[10px] text-action-dim hover:text-semantic-red font-mono transition-colors cursor-pointer select-none font-bold">
                   [delete]
                 </button>
               )}
-              <button onClick={handleStartEdit} disabled={isSavingOrDeleting} className="text-[10px] text-[#666] hover:text-[#c084fc] font-mono transition-colors cursor-pointer select-none font-bold">
+              <button onClick={handleStartEdit} disabled={isSavingOrDeleting} className="text-[10px] text-action-dim hover:text-action-hover font-mono transition-colors cursor-pointer select-none font-bold">
                 [edit]
               </button>
             </>
@@ -529,13 +529,13 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
 
                 const evType = e.event_type || "event"
                 const evTypeColor =
-                  evType === "atrophy" ? "text-[#f59e0b]" :
-                  evType === "collapse" ? "text-[#ef4444]" :
-                  evType === "emergence" ? "text-[#22c55e]" :
-                  evType === "crystallization" ? "text-[#60a5fa]" :
-                  evType === "support" ? "text-[#a78bfa]" :
-                  evType === "revision" ? "text-[#f472b6]" :
-                  evType === "accretion" ? "text-[#2dd4bf]" :
+                  evType === "atrophy" ? "text-semantic-gold" :
+                  evType === "collapse" ? "text-semantic-red" :
+                  evType === "emergence" ? "text-semantic-green" :
+                  evType === "crystallization" ? "text-semantic-blue" :
+                  evType === "support" ? "text-semantic-purple" :
+                  evType === "revision" ? "text-semantic-purple" :
+                  evType === "accretion" ? "text-semantic-sand" :
                   "text-[#888]"
 
                 return (
@@ -543,17 +543,17 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                     <div className="flex items-center gap-x-2 font-mono text-[10px]">
                       <span className="text-[#555]">{formatTime(e.timestamp)}</span>
                       {massVal !== null && (
-                        <span className="text-[#93c5fd]">
+                        <span className="text-semantic-blue">
                           m:<span>{massVal.toFixed(3)}</span>
                           {massDelta !== null && massDelta !== 0 && (
-                            <span className={massDelta > 0 ? "text-[#4ade80]" : "text-[#f87171]"}>
+                            <span className={massDelta > 0 ? "text-semantic-green" : "text-semantic-red"}>
                               ({massDelta > 0 ? "+" : ""}{massDelta.toFixed(3)})
                             </span>
                           )}
                         </span>
                       )}
                       {confVal !== null && (
-                        <span className="text-[#4ade80]">c:{(confVal * 100).toFixed(0)}%</span>
+                        <span className="text-semantic-green">c:{(confVal * 100).toFixed(0)}%</span>
                       )}
                       <span className={`${evTypeColor} uppercase tracking-wider`}>[{evType}]</span>
                     </div>
@@ -599,7 +599,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                           <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Statement Diff ]</div>
                           <div>
                             {statementDiff.map((line: any, lIdx: number) => (
-                              <div key={lIdx} className={line.type === 'added' ? 'text-[#4ade80] px-1 font-mono' : line.type === 'removed' ? 'text-[#ef4444] line-through px-1 font-mono' : 'text-[#888] px-1 font-mono'}>
+                              <div key={lIdx} className={line.type === 'added' ? 'text-semantic-green px-1 font-mono' : line.type === 'removed' ? 'text-semantic-red line-through px-1 font-mono' : 'text-[#888] px-1 font-mono'}>
                                 {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}{line.value}
                               </div>
                             ))}

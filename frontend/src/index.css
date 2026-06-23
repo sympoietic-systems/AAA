@@ -2,6 +2,31 @@
 
 @theme {
   --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+
+  /* Custom Action colors: Desaturated Orange by default, Hot Orange on Hover */
+  --color-action-dim: #b37e5d;
+  --color-action-hover: #ff6b00;
+
+  /* Semantic colors in desaturated variations */
+  --color-semantic-red: #b86a6a;
+  --color-semantic-blue: #6b88a3;
+  --color-semantic-gold: #b89553;
+  --color-semantic-purple: #8f7ba8;
+  --color-semantic-green: #5c9e7a;
+  --color-semantic-sand: #c48956;
+  --color-semantic-slate: #78909c;
+
+  /* Tags */
+  --color-tag: #5f8776;
+
+  /* Headers and Labels */
+  --color-semantic-header: #8a7d74;
+
+  /* UI Surface/Text/Border tokens */
+  --color-ui-primary: #ccc;
+  --color-ui-secondary: #bbb;
+  --color-ui-dim: #555;
+  --color-ui-border: #222;
 }
 
 body {
@@ -9,11 +34,11 @@ body {
   font-family: var(--font-mono);
   background: #0c0c0c;
   color: #c8c8c8;
-  caret-color: #4ade80;
+  caret-color: var(--color-action-hover);
 }
 
 ::selection {
-  background: #4ade80;
+  background: var(--color-action-hover);
   color: #0c0c0c;
 }
 
@@ -49,7 +74,7 @@ body {
 
 .markdown-body :not(pre) > code, .prose :not(pre) > code {
   background: #1a1a1a;
-  color: #4ade80;
+  color: var(--color-semantic-green);
   padding: 0.125rem 0.375rem;
   border-radius: 3px;
   border: 1px solid #222;
@@ -69,16 +94,20 @@ body {
 }
 
 .markdown-body blockquote, .prose blockquote {
-  border-left: 2px solid #4ade80;
+  border-left: 2px solid var(--color-semantic-green);
   margin: 0.5rem 0;
   padding-left: 0.75rem;
   color: #888;
 }
 
 .markdown-body a, .prose a {
-  color: #4ade80;
+  color: var(--color-action-dim);
   text-decoration: underline;
   text-underline-offset: 2px;
+  transition: color 150ms ease;
+}
+.markdown-body a:hover, .prose a:hover {
+  color: var(--color-action-hover);
 }
 
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6,
@@ -136,8 +165,8 @@ body {
 
 @keyframes active-focus-glow {
   0% {
-    border-color: rgba(74, 222, 128, 0.8) !important;
-    box-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+    border-color: rgba(255, 107, 0, 0.8) !important;
+    box-shadow: 0 0 15px rgba(255, 107, 0, 0.4);
   }
   100% {
     border-color: rgba(42, 42, 53, 1) !important;

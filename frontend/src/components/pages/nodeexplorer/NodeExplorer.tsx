@@ -1,9 +1,8 @@
-import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, ConversationTreeNode, ConversationInfo } from "../../../api/client"
+import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, ConversationTreeNode } from "../../../api/client"
 import { getMessagePath } from "../../../api/client"
 import { formatTime } from "../../../utils/dateFormat"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
-import { CreasesDropdown } from "./CreasesDropdown"
 import { TerminalButton } from "../../UI"
 
 import { useState, useMemo, useCallback, memo, useEffect, useRef } from "react"
@@ -18,15 +17,12 @@ interface Props {
   error: string | null
   agentName: string
   conversationId: string
-  conversationTitle: string
   uploadedFiles: ConversationFile[]
   onSend: (text: string) => void
   onUploadFiles: (files: File[]) => void
   isIndexing: boolean
   onClearError: () => void
   onRegenerate?: (userMsgId?: number) => void
-  onRenameTitle: (title: string) => void
-  onGenerateTitle: () => void
   className?: string
   notes?: NoteInfo[]
   isPassword?: boolean
@@ -35,14 +31,9 @@ interface Props {
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   tags?: ConversationTagInfo[]
   onAddTag?: (tag: string) => void
-  onRemoveTag?: (tag: string) => void
   onNavigateToMessage: (messageId: number) => void
-  onGoHome?: () => void
   history?: { id: number; speaker: string; snippet: string }[]
-  conversations?: ConversationInfo[]
-  onNavigateToNotification?: (convId: string, msgId: number) => void
   onDeleteMessage?: (messageId: number) => void
-  onExportConversation?: () => void
 }
 
 const EMPTY_ARRAY: NoteInfo[] = []
@@ -78,7 +69,7 @@ const ParentNodeCard = memo(function ParentNodeCard({
   return (
     <div className="p-4 relative group/parentcard">
       <div className="flex items-center justify-between pb-2 mb-3 select-none">
-        <span className="text-[9px] text-[#6c6c8a] font-mono uppercase tracking-widest">
+        <span className="text-[9px] text-semantic-header font-mono uppercase tracking-widest">
           [ Predecessor : {parentMsg.speaker === "human" ? "Human" : "Apparatus"} ]
         </span>
         <TerminalButton
@@ -152,7 +143,7 @@ const SedimentFold = memo(function SedimentFold({
 
       {isOpen && (
         <div className="w-full mt-3 z-20 max-h-60 overflow-y-auto flex flex-col gap-1.5">
-          <div className="text-[9px] text-[#6c6c8a] uppercase font-mono tracking-wider pb-1 mb-1 select-none">
+          <div className="text-[9px] text-semantic-header uppercase font-mono tracking-wider pb-1 mb-1 select-none">
             [ Deep Memory Strata Chain ]
           </div>
           {loading ? (
@@ -290,7 +281,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   return (
     <div className={`p-4 relative transition-all duration-300 ${isHighlighted ? "highlight-glow" : ""}`}>
       <div className="flex items-center justify-between pb-2 mb-3 select-none">
-        <span className="text-[9px] text-[#6c6c8a] font-mono uppercase tracking-widest">
+        <span className="text-[9px] text-semantic-header font-mono uppercase tracking-widest">
           [ Active Focus Cut : {selectedMsg.speaker === "human" ? "Human" : "Apparatus"} ]
         </span>
       </div>
@@ -317,15 +308,12 @@ export const NodeExplorer = memo(function NodeExplorer({
   treeNodes,
   loading,
   error,
-  conversationTitle,
   conversationId,
   onSend,
   onUploadFiles,
   isIndexing,
   onClearError,
   onRegenerate,
-  onRenameTitle,
-  onGenerateTitle,
   className = "",
   notes = [],
   isPassword = false,
@@ -335,16 +323,9 @@ export const NodeExplorer = memo(function NodeExplorer({
   tags = [],
   onAddTag,
   onNavigateToMessage,
-  onGoHome,
   history = [],
-  conversations = [],
-  onNavigateToNotification,
   onDeleteMessage,
-  onExportConversation,
 }: Props) {
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [titleVal, setTitleVal] = useState(conversationTitle)
-  const [prevTitle, setPrevTitle] = useState(conversationTitle)
   const [newTagVal, setNewTagVal] = useState("")
 
   const selectedNodeId = selectedNode ? selectedNode.id : null
@@ -371,11 +352,6 @@ export const NodeExplorer = memo(function NodeExplorer({
     }
   }, [selectedNodeId])
 
-  if (conversationTitle !== prevTitle) {
-    setPrevTitle(conversationTitle)
-    setTitleVal(conversationTitle)
-  }
-
   const handleAddTagSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = newTagVal.trim().toLowerCase()
@@ -383,15 +359,6 @@ export const NodeExplorer = memo(function NodeExplorer({
       onAddTag(trimmed)
       setNewTagVal("")
     }
-  }
-
-  const handleTitleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const trimmed = titleVal.trim()
-    if (trimmed && trimmed !== conversationTitle) {
-      onRenameTitle(trimmed)
-    }
-    setEditingTitle(false)
   }
 
   const notesByMessageId = useMemo(() => {
@@ -422,63 +389,6 @@ export const NodeExplorer = memo(function NodeExplorer({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      {/* Title Bar — terminal style */}
-      <div className="flex items-center gap-3 px-4 py-3 select-none">
-        {onGoHome && (
-          <TerminalButton
-            onClick={onGoHome}
-            title="Go to Home"
-          >
-            home
-          </TerminalButton>
-        )}
-        <div className="flex-1 min-w-0">
-          {editingTitle ? (
-            <form onSubmit={handleTitleSubmit}>
-              <input
-                type="text"
-                value={titleVal}
-                onChange={(e) => setTitleVal(e.target.value)}
-                onBlur={handleTitleSubmit}
-                className="bg-transparent border-b border-[#222]/40 px-1 py-0.5 text-xs text-[#ddd] font-mono outline-none focus:border-[#4ade80] w-full"
-                autoFocus
-              />
-            </form>
-          ) : (
-            <div className="flex items-center gap-2">
-              <h1
-                onClick={() => setEditingTitle(true)}
-                className="text-xs font-mono font-bold tracking-wider text-[#6c6c8a] hover:text-[#aaa] cursor-pointer truncate max-w-xs uppercase"
-              >
-                {conversationTitle || "Untitled Entanglement"}
-              </h1>
-              <TerminalButton
-                onClick={onGenerateTitle}
-                title="Auto-generate title"
-                intent="save"
-              >
-                #generate_title
-              </TerminalButton>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {onExportConversation && (
-            <TerminalButton
-              onClick={onExportConversation}
-              title="Export conversation as Markdown"
-              intent="save"
-            >
-              #export
-            </TerminalButton>
-          )}
-          <CreasesDropdown
-            conversations={conversations}
-            onNavigateToNotification={onNavigateToNotification}
-          />
-        </div>
-      </div>
 
       {/* Tags Bar */}
       {tags.length > 0 || onAddTag ? (

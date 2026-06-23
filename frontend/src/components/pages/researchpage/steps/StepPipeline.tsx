@@ -60,7 +60,7 @@ function PipelineRow({ label, stepId, isDone, isCurrent, isStale, isSelected, on
   label: string; stepId?: string | null; isDone: boolean; isCurrent: boolean; isStale: boolean; isSelected: boolean
   onSelect: (id: string | null) => void; onDoStep: () => void; stepping: boolean
 }) {
-  const sc = isStale ? "#f97316" : isDone ? "#4ade80" : isCurrent ? "#f59e0b" : "#444"
+  const sc = isStale ? "var(--color-semantic-sand)" : isDone ? "var(--color-semantic-green)" : isCurrent ? "var(--color-semantic-gold)" : "var(--color-ui-dim)"
   const canClick = (isDone || isStale) ? !!stepId : isCurrent
 
   const handleClick = () => {
@@ -77,20 +77,21 @@ function PipelineRow({ label, stepId, isDone, isCurrent, isStale, isSelected, on
   return (
     <div
       onClick={handleClick}
-      className={`flex items-center gap-2 text-[10px] px-2 py-1 rounded-sm
+      className={`flex items-center gap-2 text-[10px] px-2 py-1 rounded-sm transition-all
         ${canClick ? "cursor-pointer hover:bg-[#111]" : ""}
-        ${isCurrent ? "bg-[#1a1a2e]/30 border border-[#f59e0b]/20" : ""}
-        ${isStale ? "bg-[#1a1a2e]/30 border border-[#f97316]/10" : ""}
-        ${isSelected ? "border border-[#a78bfa]/30 bg-[#1a1a2e]/30" : ""}`}>
-      <span style={{ color: sc }} className="text-[8px] shrink-0 w-3">
+        ${isCurrent ? "bg-action-hover/5 border border-semantic-gold/20" : ""}
+        ${isStale ? "bg-action-hover/5 border border-semantic-sand/10" : ""}
+        ${isSelected ? "border border-action-hover/20 bg-action-hover/5" : ""}`}
+    >
+      <span style={{ color: sc }} className="text-[8px] shrink-0 w-3 font-mono">
         {isStale ? "⟳" : isDone ? "✔" : isCurrent ? "▶" : "○"}
       </span>
-      <span className={`font-mono flex-1 ${isSelected ? "text-[#c4b5fd]" : isStale ? "text-[#f97316]/80" : isDone ? "text-[#94a3b8]" : isCurrent ? "text-[#fbbf24]" : "text-[#555]"}`}>
+      <span className={`font-mono flex-1 ${isSelected ? "text-action-hover" : isStale ? "text-semantic-sand/80" : isDone ? "text-ui-secondary" : isCurrent ? "text-semantic-gold" : "text-ui-dim"}`}>
         {label}{isStale ? " (stale)" : ""}
       </span>
       {isCurrent && (
         <button onClick={e => { e.stopPropagation(); onDoStep() }} disabled={stepping}
-          className="text-[#4ade80] hover:text-[#6ee7b0] text-[9px] font-mono disabled:text-[#333] cursor-pointer">
+          className="text-action-dim hover:text-action-hover text-[9px] font-mono disabled:text-[#333] cursor-pointer transition-colors">
           [{stepping ? "…" : "▶ run"}]
         </button>
       )}
@@ -287,7 +288,7 @@ export const StepPipeline = memo(function StepPipeline({
   return (
     <div className="flex-1 overflow-y-auto pr-1 space-y-3">
       <div>
-        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-1.5">[ Pipeline ]</div>
+        <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-1.5 font-mono">[ Pipeline ]</div>
 
         {/* Planning step */}
         {planStep && (
@@ -311,13 +312,13 @@ export const StepPipeline = memo(function StepPipeline({
           const isCycleCurrent = cycle.depth === activeDepth
           const collapsed = isCollapsed(cycle.depth)
           return (
-            <div key={cycle.depth} className="border border-[#1a1a1a] rounded-sm p-1.5 mb-2 bg-[#0d0d0d]/30">
+            <div key={cycle.depth} className="border border-ui-border rounded-sm p-1.5 mb-2 bg-ui-card">
               <div
                 onClick={() => toggleCycle(cycle.depth)}
-                className="text-[#888] font-mono text-[9px] uppercase tracking-wider mb-1.5 border-b border-[#1a1a1a] pb-0.5 flex justify-between items-center cursor-pointer select-none hover:text-[#bbb]"
+                className="text-ui-secondary font-mono text-[9px] uppercase tracking-wider mb-1.5 border-b border-ui-border pb-0.5 flex justify-between items-center cursor-pointer select-none hover:text-ui-primary transition-colors"
               >
                 <span>Cycle {cycle.depth + 1} (Depth {cycle.depth})</span>
-                <span className="text-[#555] text-[8px] font-mono shrink-0 select-none">
+                <span className="text-ui-dim text-[8px] font-mono shrink-0 select-none">
                   {collapsed ? "[+ expand]" : "[- collapse]"}
                 </span>
               </div>
@@ -343,8 +344,8 @@ export const StepPipeline = memo(function StepPipeline({
                     const qDisplay = qText ? `"${qText.slice(0, 60)}${qText.length > 60 ? "…" : ""}"` : ""
                     const queryLabel = `Q${group.queryIndex}/${cycle.groups.length}${qDisplay ? `: ${qDisplay}` : ""}`
                     return (
-                      <div key={group.queryIndex} className="mb-2 pl-1.5 border-l border-[#1a1a1a]">
-                        <div className="text-[#555] text-[8px] tracking-wider mb-0.5">{queryLabel}</div>
+                      <div key={group.queryIndex} className="mb-2 pl-1.5 border-l border-ui-border">
+                        <div className="text-ui-dim text-[8px] tracking-wider mb-0.5 font-mono">{queryLabel}</div>
                         {group.steps.map((step) => {
                           const baseLabel = STEP_LABELS[step.step_type] || step.step_type
                           const stale = step.status === "stale"
@@ -377,7 +378,7 @@ export const StepPipeline = memo(function StepPipeline({
                   })}
 
                   {/* Cycle final steps: Reflect & Evaluate */}
-                  <div className="pl-1.5 pt-1.5 border-t border-[#1a1a1a]/50 mt-1 space-y-1">
+                  <div className="pl-1.5 pt-1.5 border-t border-ui-border/50 mt-1 space-y-1">
                     {/* Reflect */}
                     {(() => {
                       const step = cycle.reflectStep
@@ -438,7 +439,7 @@ export const StepPipeline = memo(function StepPipeline({
 
         {/* Global Synthesize step */}
         {synthesizeStep && (
-          <div className="pl-1.5 pt-2 border-t border-[#1a1a1a] mt-2">
+          <div className="pl-1.5 pt-2 border-t border-ui-border mt-2">
             {(() => {
               const step = synthesizeStep
               const phase = "synthesizing"

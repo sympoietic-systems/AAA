@@ -6,6 +6,7 @@ import { generateHumanSummary } from "../../../api/conversations"
 import { formatDateTime } from "../../../utils/dateFormat"
 import { NotesSection } from "../../shared/NotesSection"
 import { MemoryNodesSection } from "../../shared/MemoryNodesSection"
+import { HeaderContainer, HeaderIndicator, HeaderActionButton, HeaderLogo, HeaderSeparator, CreasesDropdown, UnifiedFooter } from "../../UI"
 
 interface Props {
   conversations: ConversationInfo[]
@@ -32,11 +33,11 @@ function Tags({ tags }: { tags?: any[] }) {
       {tags.map((t, i) => {
         let color = "text-[#555]"
         if (t.tag_type === "structural") {
-          if (t.tag === "dreams") color = "text-[#a892ee]"
-          else if (t.tag === "other agents") color = "text-[#e09b67]"
-          else color = "text-[#6bc28c]"
-        } else if (t.tag_type === "keyword") color = "text-[#6fafe2]"
-        else if (t.tag_type === "diffractive") color = "text-[#4ec9b0]"
+          if (t.tag === "dreams") color = "text-semantic-purple"
+          else if (t.tag === "other agents") color = "text-semantic-sand"
+          else color = "text-semantic-green"
+        } else if (t.tag_type === "keyword") color = "text-semantic-blue"
+        else if (t.tag_type === "diffractive") color = "text-semantic-slate"
         return (
           <span key={t.tag} className={`font-mono text-[10px] ${color}`}>
             {i > 0 && <span className="text-[#333]"> // </span>}
@@ -186,52 +187,46 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
 
   const structural = displayConv?.tags?.find(t => t.tag_type === "structural")
   let letter = "U"
-  let letterColor = "text-[#6bc28c]"
-  if (structural?.tag === "dreams") { letter = "D"; letterColor = "text-[#a892ee]" }
-  else if (structural?.tag === "other agents") { letter = "A"; letterColor = "text-[#e09b67]" }
+  let letterColor = "text-semantic-green"
+  if (structural?.tag === "dreams") { letter = "D"; letterColor = "text-semantic-purple" }
+  else if (structural?.tag === "other agents") { letter = "A"; letterColor = "text-semantic-sand" }
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666] selection:bg-[#4ade80]/20">
+    <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666] selection:bg-action-hover/10">
 
       {/* Header — single line */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#1a1a1a] shrink-0">
-        <span className="text-[11px] text-[#444] tracking-widest uppercase select-none">
-          <span className="text-[#4ade80]">■</span>
-          <button
-            onClick={() => window.open('/agent', '_blank')}
-            className="ml-2 hover:text-[#a892ee] transition-colors cursor-pointer"
-            title="Agent configuration"
-          >
-            symbia
-          </button>
-          <span className="text-[#333] mx-1">//</span>
-          <button
-            onClick={() => window.open('/research', '_blank')}
-            className="hover:text-[#eab308] transition-colors cursor-pointer"
+      <HeaderContainer>
+        <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5">
+          <HeaderIndicator intent="green" />
+          <HeaderLogo onClick={() => window.location.href = '/'} />
+          <HeaderSeparator />
+          <HeaderLogo
+            onClick={() => window.location.href = '/research'}
             title="Research console"
           >
             research
-          </button>
-          <span className="text-[#333] mx-2">//</span>
-          <span>{totalCount} conversations</span>
+          </HeaderLogo>
+          <HeaderSeparator />
+          <span className="text-[#555] normal-case">{totalCount} conversations</span>
         </span>
         <div className="flex items-center gap-4">
-          <button
-            onClick={onNew}
-            className="text-[11px] text-[#4ade80] hover:text-white transition-colors cursor-pointer select-none"
-          >
-            [+ new]
-          </button>
+          <CreasesDropdown conversations={conversations} />
+          <HeaderActionButton onClick={() => window.location.href = '/agent'}>
+            agent
+          </HeaderActionButton>
+          <HeaderActionButton onClick={onNew}>
+            + new
+          </HeaderActionButton>
           {showLogout && onLogout && (
-            <button
+            <HeaderActionButton
               onClick={onLogout}
-              className="text-[11px] text-[#444] hover:text-red-500 transition-colors cursor-pointer select-none"
+              className="hover:text-red-500!"
             >
-              [logout]
-            </button>
+              logout
+            </HeaderActionButton>
           )}
         </div>
-      </div>
+      </HeaderContainer>
 
       {/* Two-panel body */}
       <div className="flex-1 flex flex-col md:flex-row min-h-0 md:overflow-hidden overflow-auto">
@@ -279,9 +274,9 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                   const s = conv.tags?.find(t => t.tag_type === "structural")
 
                   let l = "U"
-                  let lc = "text-[#6bc28c]"
-                  if (s?.tag === "dreams") { l = "D"; lc = "text-[#a892ee]" }
-                  else if (s?.tag === "other agents") { l = "A"; lc = "text-[#e09b67]" }
+                  let lc = "text-semantic-green"
+                  if (s?.tag === "dreams") { l = "D"; lc = "text-semantic-purple" }
+                  else if (s?.tag === "other agents") { l = "A"; lc = "text-semantic-sand" }
 
                   const title = (() => {
                     const t = conv.title || "untitled"
@@ -297,7 +292,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                       className={`
                         flex items-baseline gap-1.5 px-5 py-1.5 cursor-pointer
                         border-l-2 transition-colors
-                        ${selectedId === conv.id ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}
+                        ${selectedId === conv.id ? "border-action-hover bg-action-hover/5" : "border-transparent hover:bg-[#111]"}
                       `}
                     >
                       <span className="text-[10px] text-[#444] shrink-0 w-24">
@@ -363,7 +358,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                 <div className="flex items-center gap-3 shrink-0">
                   <button
                     onClick={() => onSelect(displayConv.id)}
-                    className="text-[11px] text-[#4ade80] hover:text-white transition-colors cursor-pointer"
+                    className="text-[11px] text-action-dim hover:text-action-hover transition-colors cursor-pointer"
                   >
                     [enter]
                   </button>
@@ -429,7 +424,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                 {/* Summary tab */}
                 {activeTab === "summary" && (
                   <div>
-                    <div className="text-[9px] text-[#6c6c8a] uppercase tracking-wider mb-2">
+                    <div className="text-[9px] text-semantic-header uppercase tracking-wider mb-2">
                       [ Summary ]
                     </div>
                     {displayConv.human_summary ? (
@@ -446,7 +441,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                         <button
                           onClick={handleGenerateHumanSummary}
                           disabled={generatingSummary}
-                          className="text-[10px] text-[#4ade80] hover:text-white transition-colors cursor-pointer disabled:text-[#2a2a2a] font-mono"
+                          className="text-[10px] text-action-dim hover:text-action-hover transition-colors cursor-pointer disabled:text-[#2a2a2a] font-mono"
                         >
                           {generatingSummary ? "[ generating summary... ]" : "[ generate summary ]"}
                         </button>
@@ -458,7 +453,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                 {/* Notes tab */}
                 {activeTab === "notes" && (
                   <div>
-                    <div className="text-[9px] text-[#6c6c8a] uppercase tracking-wider mb-2">
+                    <div className="text-[9px] text-semantic-header uppercase tracking-wider mb-2">
                       [ Notes ]
                     </div>
                     {notesLoading ? (
@@ -485,7 +480,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                 {/* Memory Nodes tab */}
                 {activeTab === "memory_nodes" && (
                   <div>
-                    <div className="text-[9px] text-[#6c6c8a] uppercase tracking-wider mb-2">
+                    <div className="text-[9px] text-semantic-header uppercase tracking-wider mb-2">
                       [ Memory Nodes ]
                     </div>
                     <MemoryNodesSection
@@ -501,6 +496,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
           )}
         </div>
       </div>
+      <UnifiedFooter />
     </div>
   )
 })

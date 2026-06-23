@@ -54,11 +54,11 @@ export const ConnectionCloudOverlays = memo(function ConnectionCloudOverlays({
 
       {/* Zoom Controls — terminal style */}
       <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10 select-none">
-        <button onClick={handleZoomIn} className="font-mono text-xs text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
+        <button onClick={handleZoomIn} className="font-mono text-xs text-[#666] hover:text-action-hover cursor-pointer transition-colors"
           title="Zoom In">[ + ]</button>
-        <button onClick={handleZoomOut} className="font-mono text-xs text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
+        <button onClick={handleZoomOut} className="font-mono text-xs text-[#666] hover:text-action-hover cursor-pointer transition-colors"
           title="Zoom Out">[ − ]</button>
-        <button onClick={handleResetZoom} className="font-mono text-[9px] text-[#666] hover:text-[#00e5ff] cursor-pointer transition-colors"
+        <button onClick={handleResetZoom} className="font-mono text-[9px] text-[#666] hover:text-action-hover cursor-pointer transition-colors"
           title="Reset View">[ ⟲ ]</button>
       </div>
 
@@ -92,11 +92,11 @@ export const ConnectionCloudOverlays = memo(function ConnectionCloudOverlays({
         <div className="absolute inset-0 bg-[#09090b]/80 flex flex-col justify-end p-3 z-20">
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-mono font-bold text-[#ec4899] uppercase tracking-wider">
+              <span className="text-[10px] font-mono font-bold text-semantic-purple uppercase tracking-wider">
                 [ Commit Line of Flight ]
               </span>
               <button onClick={() => setCommittingNode(null)}
-                className="text-[10px] font-mono text-[#666] hover:text-[#88] cursor-pointer select-none">[cancel]</button>
+                className="text-[10px] font-mono text-action-dim hover:text-semantic-red cursor-pointer select-none">[cancel]</button>
             </div>
             <div className="text-[10px] font-mono text-[#94a3b8]">
               Topic: <span className="text-[#ccc]">{committingNode.title}</span>
@@ -105,12 +105,12 @@ export const ConnectionCloudOverlays = memo(function ConnectionCloudOverlays({
               value={commitContent}
               onChange={(e) => setCommitContent(e.target.value)}
               rows={4}
-              className="w-full bg-[#08080c] border border-[#1b1b21] p-2 text-xs font-mono text-[#e4e4e7] focus:outline-none focus:border-[#ec4899] resize-none"
+              className="w-full bg-[#08080c] border border-[#1b1b21] p-2 text-xs font-mono text-[#e4e4e7] focus:outline-none focus:border-action-hover/50 resize-none"
             />
             <button
               onClick={handleCommitSubmit}
               disabled={isCommitLoading || !commitContent.trim()}
-              className="text-[10px] font-mono text-[#ec4899] hover:text-[#f472b6] disabled:text-[#555] disabled:cursor-not-allowed cursor-pointer select-none self-start"
+              className="text-[10px] font-mono text-action-dim hover:text-action-hover disabled:text-[#555] disabled:cursor-not-allowed cursor-pointer select-none self-start"
             >
               {isCommitLoading ? "[committing...]" : "[commit branch to DAG]"}
             </button>
@@ -154,7 +154,7 @@ export const ConnectionCloudOverlays = memo(function ConnectionCloudOverlays({
                     }
                     setSelectedLink(null); setSelectedLinkPos(null)
                   }}
-                  className="text-[9px] text-[#4ade80] hover:text-[#6ee7a0] font-mono cursor-pointer select-none"
+                  className="text-[9px] text-semantic-green hover:text-action-hover font-mono cursor-pointer select-none"
                 >[confirm]</button>
                 <button
                   onClick={async (e) => {
@@ -165,7 +165,7 @@ export const ConnectionCloudOverlays = memo(function ConnectionCloudOverlays({
                     }
                     setSelectedLink(null); setSelectedLinkPos(null)
                   }}
-                  className="text-[9px] text-[#ef4444] hover:text-[#f87171] font-mono cursor-pointer select-none"
+                  className="text-[9px] text-semantic-red hover:text-action-hover font-mono cursor-pointer select-none"
                 >[dismiss]</button>
               </>
             ) : (
@@ -178,7 +178,7 @@ export const ConnectionCloudOverlays = memo(function ConnectionCloudOverlays({
                   }
                   setSelectedLink(null); setSelectedLinkPos(null)
                 }}
-                className="text-[9px] text-[#ef4444] hover:text-[#f87171] font-mono cursor-pointer select-none"
+                className="text-[9px] text-semantic-red hover:text-action-hover font-mono cursor-pointer select-none"
               >[remove link]</button>
             )}
           </div>

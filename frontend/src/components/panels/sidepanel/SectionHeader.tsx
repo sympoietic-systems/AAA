@@ -16,7 +16,7 @@ function SectionHeaderComponent({
   return (
     <button
       onClick={onToggle}
-      className="w-full flex items-center gap-1.5 py-1 text-left hover:text-[#aaa] text-[#888] text-xs transition-colors font-mono"
+      className="w-full flex items-center gap-1.5 py-1 text-left hover:text-[#aaa] text-semantic-header text-xs transition-colors font-mono"
     >
       <span className="text-[10px]">{open ? "▼" : "▶"}</span>
       <span>{label}</span>

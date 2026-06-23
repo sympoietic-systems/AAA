@@ -128,7 +128,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
         }`}
       >
         <span className={`mr-2 select-none text-sm font-mono self-start mt-0.5 ${
-          isIndexing ? "text-[#eab308] animate-pulse" : "text-[#4ade80]"
+          isIndexing ? "text-semantic-gold animate-pulse" : "text-semantic-green"
         }`}>
           {isIndexing ? "•" : ">"}
         </span>
@@ -179,7 +179,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
                 }
               }}
               disabled={disabled}
-              className="text-[#555] hover:text-[#4ade80] text-xs leading-none disabled:opacity-30 transition-colors cursor-pointer"
+              className="text-action-dim hover:text-action-hover text-xs leading-none disabled:opacity-30 transition-colors cursor-pointer"
               title={inputExpanded ? "collapse input" : "expand input"}
             >
               {inputExpanded ? "—" : "↕"}
@@ -188,7 +188,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled || isIndexing}
-              className="text-[#555] hover:text-[#4ade80] text-sm leading-none disabled:opacity-30 transition-colors cursor-pointer"
+              className="text-action-dim hover:text-action-hover text-sm leading-none disabled:opacity-30 transition-colors cursor-pointer"
               title="Attach files"
             >
               +
@@ -198,7 +198,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
               disabled={!canSubmit}
               className={`text-[10px] uppercase tracking-wider transition-colors cursor-pointer select-none leading-none ${
                 canSubmit
-                  ? "text-[#4ade80] hover:text-[#6ee7a0]"
+                  ? "text-action-dim hover:text-action-hover"
                   : "text-[#333] cursor-not-allowed"
               }`}
               title="Send message"
@@ -215,7 +215,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
                 }}
                 className={`text-[10px] uppercase tracking-wider transition-colors cursor-pointer select-none leading-none ${
                   canSubmit
-                    ? "text-[#8b5cf6] hover:text-[#a78bfa]"
+                    ? "text-action-dim hover:text-action-hover"
                     : "text-[#333] cursor-not-allowed"
                 }`}
                 title="Research options"
@@ -233,7 +233,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
                     }}
                     className="w-full text-left px-3 py-1.5 hover:bg-[#16161a]/60 text-[#aaa] hover:text-white transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer"
                   >
-                    <span className="w-3 h-3 flex items-center justify-center leading-none shrink-0 text-[#6c6c8a]">⊙</span> Standard Research
+                    <span className="w-3 h-3 flex items-center justify-center leading-none shrink-0 text-semantic-header">⊙</span> Standard Research
                   </button>
                   <button
                     type="button"
@@ -243,7 +243,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
                     }}
                     className="w-full text-left px-3 py-1.5 hover:bg-[#16161a]/60 text-[#aaa] hover:text-white transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer"
                   >
-                    <span className="w-3 h-3 flex items-center justify-center leading-none shrink-0 text-[#6c6c8a]">⋈</span> Agonistic Research
+                    <span className="w-3 h-3 flex items-center justify-center leading-none shrink-0 text-semantic-header">⋈</span> Agonistic Research
                   </button>
                   <button
                     type="button"
@@ -254,7 +254,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
                     }}
                     className="w-full text-left px-3 py-1.5 hover:bg-[#16161a]/60 text-[#aaa] hover:text-white transition-colors flex items-center gap-2 whitespace-nowrap border-t border-[#222]/30 cursor-pointer"
                   >
-                    <span className="w-3 h-3 flex items-center justify-center leading-none shrink-0 text-[#6c6c8a]">⚙</span> Configure Research...
+                    <span className="w-3 h-3 flex items-center justify-center leading-none shrink-0 text-semantic-header">⚙</span> Configure Research...
                   </button>
                 </div>
               )}
@@ -266,7 +266,7 @@ export const InputBar = memo(function InputBar({ onSend, onUploadFiles, disabled
             disabled={!canSubmit}
             className={`ml-2 text-[10px] uppercase font-mono tracking-wider transition-colors self-end cursor-pointer select-none leading-none ${
               canSubmit
-                ? "text-[#4ade80] hover:text-[#6ee7a0]"
+                ? "text-action-dim hover:text-action-hover"
                 : "text-[#333] cursor-not-allowed"
             }`}
             title="Unlock application"

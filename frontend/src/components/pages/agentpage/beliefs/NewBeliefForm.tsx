@@ -74,21 +74,21 @@ export function NewBeliefForm({ onCancel, onCreate }: NewBeliefFormProps) {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#1f1f2e]/30 pb-1.5 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[10px] shrink-0 text-[#a78bfa]">◇</span>
+          <span className="text-[10px] shrink-0 text-semantic-purple">◇</span>
           <span className="font-mono text-[11px] font-bold text-[#ccc] truncate">CREATE NEW BELIEF</span>
         </div>
         <div className="flex gap-2">
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="text-[10px] text-[#4ade80] hover:text-[#4ade80]/80 disabled:text-[#555] transition-colors cursor-pointer select-none font-bold"
+            className="text-[10px] text-action-dim hover:text-action-hover disabled:text-[#555] transition-colors cursor-pointer select-none font-bold"
           >
             {isSaving ? "[saving...]" : "[save]"}
           </button>
           <button
             onClick={onCancel}
             disabled={isSaving}
-            className="text-[10px] text-[#ef4444] hover:text-[#ef4444]/80 disabled:text-[#555] transition-colors cursor-pointer select-none font-bold"
+            className="text-[10px] text-action-dim hover:text-semantic-red disabled:text-[#555] transition-colors cursor-pointer select-none font-bold"
           >
             [cancel]
           </button>
@@ -96,7 +96,7 @@ export function NewBeliefForm({ onCancel, onCreate }: NewBeliefFormProps) {
       </div>
 
       {saveError && (
-        <div className="text-[10px] text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 p-1.5 rounded shrink-0">
+        <div className="text-[10px] text-semantic-red bg-semantic-red/10 border border-semantic-red/20 p-1.5 rounded shrink-0">
           {saveError}
         </div>
       )}
@@ -112,7 +112,7 @@ export function NewBeliefForm({ onCancel, onCreate }: NewBeliefFormProps) {
             onChange={(e) => setLabel(e.target.value)}
             disabled={isSaving}
             placeholder="e.g. autopoietic-closure"
-            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50"
+            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-action-hover/50"
           />
         </div>
 
@@ -124,7 +124,7 @@ export function NewBeliefForm({ onCancel, onCreate }: NewBeliefFormProps) {
             onChange={(e) => setStatement(e.target.value)}
             disabled={isSaving}
             placeholder="Core thesis statement representing this belief node."
-            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-[#a78bfa]/50 min-h-[60px] resize-y"
+            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] p-2 rounded text-[11px] font-serif leading-relaxed w-full focus:outline-none focus:border-action-hover/50 min-h-[60px] resize-y"
           />
         </div>
 
@@ -141,7 +141,7 @@ export function NewBeliefForm({ onCancel, onCreate }: NewBeliefFormProps) {
             value={confidence}
             onChange={(e) => setConfidence(parseFloat(e.target.value))}
             disabled={isSaving}
-            className="accent-[#a78bfa] w-full cursor-pointer bg-[#14141c] h-1 rounded"
+            className="accent-semantic-purple w-full cursor-pointer bg-[#14141c] h-1 rounded"
           />
         </div>
 
@@ -158,7 +158,7 @@ export function NewBeliefForm({ onCancel, onCreate }: NewBeliefFormProps) {
             value={ontologicalMass}
             onChange={(e) => setOntologicalMass(parseFloat(e.target.value))}
             disabled={isSaving}
-            className="accent-[#a78bfa] w-full cursor-pointer bg-[#14141c] h-1 rounded"
+            className="accent-semantic-purple w-full cursor-pointer bg-[#14141c] h-1 rounded"
           />
         </div>
 
@@ -169,7 +169,7 @@ export function NewBeliefForm({ onCancel, onCreate }: NewBeliefFormProps) {
             value={lifecycleStage}
             onChange={(e) => setLifecycleStage(e.target.value)}
             disabled={isSaving}
-            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-[#a78bfa]/50"
+            className="bg-[#08080c] border border-[#1a1a24] text-[#ccc] px-2 py-1.5 rounded text-[11px] font-mono w-full focus:outline-none focus:border-action-hover/50"
           >
             <option value="nucleation">nucleation (proto-belief)</option>
             <option value="accretion">accretion (incubating)</option>

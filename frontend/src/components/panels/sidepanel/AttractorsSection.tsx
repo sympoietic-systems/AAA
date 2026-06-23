@@ -1,7 +1,8 @@
 import { memo } from "react"
+import { useTelemetryBeliefs } from "../../../hooks/useTelemetry"
+import { getCategoryColor } from "../../pages/agentpage/shared/helpers"
 
 const EMPTY_BELIEF_ARRAY: any[] = []
-import { useTelemetryBeliefs } from "../../../hooks/useTelemetry"
 
 interface AttractorsSectionProps {
   conversationId?: string
@@ -29,17 +30,13 @@ function AttractorsSectionComponent({
             <p className="text-[9px] text-[#444] italic">No active attractors</p>
           ) : (
             <div>
-              <span className="text-[#6c6c8a] text-[8px] uppercase tracking-wider block mb-1">
+              <span className="text-semantic-header text-[8px] uppercase tracking-wider block mb-1">
                 [ Attractor Window ]
               </span>
               <div className="flex flex-wrap gap-1">
                 {beliefs.attractor_window.map((label) => {
                   const b = [...(beliefs.beliefs ?? EMPTY_BELIEF_ARRAY), ...(beliefs.proto_beliefs ?? EMPTY_BELIEF_ARRAY), ...(beliefs.ghosts ?? EMPTY_BELIEF_ARRAY)].find(x => x.label === label)
-                  const catColor =
-                    b?.category === "foundational" ? "#4ade80"
-                    : b?.category === "ontological" ? "#a78bfa"
-                    : b?.category === "methodological" ? "#facc15"
-                    : "#555"
+                  const catColor = b ? getCategoryColor(b.category) : "var(--color-ui-dim)"
                   return (
                     <span
                       key={label}
@@ -56,7 +53,7 @@ function AttractorsSectionComponent({
           )}
           {beliefs.spectral_margin.length > 0 && (
             <div>
-              <span className="text-[#6c6c8a] text-[8px] uppercase tracking-wider block mb-1">
+              <span className="text-semantic-header text-[8px] uppercase tracking-wider block mb-1">
                 [ Spectral Margin ]
               </span>
               <div className="flex flex-wrap gap-1">

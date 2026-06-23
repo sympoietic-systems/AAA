@@ -27,7 +27,7 @@ function VersionItem({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[#a78bfa] font-bold">v{version}</span>
+            <span className="text-semantic-purple font-bold">v{version}</span>
             {source && <span className={`text-[8px] uppercase font-bold`}>{sourceLabel}</span>}
             <span className="text-[#555] text-[9px]">{timestamp}</span>
           </div>
@@ -38,13 +38,13 @@ function VersionItem({
         <div className="flex items-center gap-2 shrink-0">
           {agentFlux && !isCurrent && onRevert && (
             <button onClick={onRevert} disabled={isReverting}
-              className="text-[9px] text-[#a78bfa] hover:text-[#c084fc] hover:underline disabled:text-[#555] cursor-pointer select-none font-bold">
+              className="text-[9px] text-action-dim hover:text-action-hover hover:underline disabled:text-[#555] cursor-pointer select-none font-bold">
               {isReverting ? "[reverting...]" : "[revert]"}
             </button>
           )}
           {hasDiff && (
             <button onClick={onToggleDiff}
-              className="text-[9px] text-[#888] hover:text-[#ccc] hover:underline cursor-pointer select-none font-bold">
+              className="text-[9px] text-action-dim hover:text-action-hover hover:underline cursor-pointer select-none font-bold">
               {isExpanded ? "[collapse]" : "[diff]"}
             </button>
           )}
@@ -128,9 +128,9 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
           <span className="text-[#ccc] font-bold">editing: {skill.name}</span>
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={isSavingOrDeleting}
-              className="text-[10px] text-[#666] hover:text-[#4ade80] disabled:text-[#555] transition-colors cursor-pointer select-none">[save]</button>
+              className="text-[10px] text-action-dim hover:text-action-hover disabled:text-[#555] transition-colors cursor-pointer select-none">[save]</button>
             <button onClick={() => setIsEditing(false)} disabled={isSavingOrDeleting}
-              className="text-[10px] text-[#666] hover:text-[#ef4444] disabled:text-[#555] transition-colors cursor-pointer select-none">[cancel]</button>
+              className="text-[10px] text-action-dim hover:text-semantic-red disabled:text-[#555] transition-colors cursor-pointer select-none">[cancel]</button>
           </div>
         </div>
         {errorMsg && <div className="text-[#ef4444]">{errorMsg}</div>}
@@ -177,7 +177,7 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[10px] shrink-0 text-[#a78bfa]">◆</span>
+          <span className="text-[10px] shrink-0 text-semantic-purple">◆</span>
           <span className="font-mono font-bold text-[#ccc] truncate">
             {skill.name} <span className="text-[#888] font-normal text-[9px]">v{skill.version}</span>
           </span>
@@ -187,17 +187,17 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
             <>
               {isConfirmingDelete ? (
                 <span className="flex items-center gap-1.5 font-mono text-[10px]">
-                  <span className="text-[#ef4444] animate-pulse">confirm delete?</span>
-                  <button onClick={handleDelete} disabled={isSavingOrDeleting} className="text-[#666] hover:text-[#ef4444] hover:underline cursor-pointer select-none">[yes]</button>
-                  <button onClick={() => setIsConfirmingDelete(false)} disabled={isSavingOrDeleting} className="text-[#666] hover:text-[#888] hover:underline cursor-pointer select-none">[no]</button>
+                  <span className="text-semantic-red animate-pulse">confirm delete?</span>
+                  <button onClick={handleDelete} disabled={isSavingOrDeleting} className="text-action-dim hover:text-semantic-red hover:underline cursor-pointer select-none font-bold">[yes]</button>
+                  <button onClick={() => setIsConfirmingDelete(false)} disabled={isSavingOrDeleting} className="text-action-dim hover:text-action-hover hover:underline cursor-pointer select-none font-bold">[no]</button>
                 </span>
               ) : (
-                <button onClick={() => setIsConfirmingDelete(true)} disabled={isSavingOrDeleting} className="text-[10px] text-[#666] hover:text-[#f87171] font-mono transition-colors cursor-pointer select-none">[delete]</button>
+                <button onClick={() => setIsConfirmingDelete(true)} disabled={isSavingOrDeleting} className="text-[10px] text-action-dim hover:text-semantic-red font-mono transition-colors cursor-pointer select-none font-bold">[delete]</button>
               )}
-              <button onClick={handleStartEdit} disabled={isSavingOrDeleting} className="text-[10px] text-[#666] hover:text-[#c084fc] font-mono transition-colors cursor-pointer select-none">[edit]</button>
+              <button onClick={handleStartEdit} disabled={isSavingOrDeleting} className="text-[10px] text-action-dim hover:text-action-hover font-mono transition-colors cursor-pointer select-none font-bold">[edit]</button>
             </>
           )}
-          <span className="text-[9px] font-mono font-bold text-[#a78bfa]">{skill.always_active ? "baseline" : "on-demand"}</span>
+          <span className="text-[9px] font-mono font-bold text-semantic-purple">{skill.always_active ? "baseline" : "on-demand"}</span>
         </div>
       </div>
 
@@ -224,10 +224,10 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
           </div>
           {skill.lifecycle_stage === "collapsed" && skill.refusal_reason && (
             <div>
-              <div className={`font-mono text-[9px] uppercase font-bold tracking-wider ${skill.changelog?.startsWith("Merged") ? "text-[#a78bfa]/60" : "text-[#ef4444]/60"}`}>
+              <div className={`font-mono text-[9px] uppercase font-bold tracking-wider ${skill.changelog?.startsWith("Merged") ? "text-semantic-purple/60" : "text-semantic-red/60"}`}>
                 {skill.changelog?.startsWith("Merged") ? "[ Integration Rationale ]" : "[ Refusal Rationale ]"}
               </div>
-              <div className={`leading-relaxed text-[10.5px] mt-0.5 ${skill.changelog?.startsWith("Merged") ? "text-[#a78bfa]/90" : "text-[#ef4444]/90"}`}>
+              <div className={`leading-relaxed text-[10.5px] mt-0.5 ${skill.changelog?.startsWith("Merged") ? "text-semantic-purple/90" : "text-semantic-red/90"}`}>
                 {skill.refusal_reason}
               </div>
             </div>
@@ -303,7 +303,7 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
                           <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Description Diff ]</div>
                           <div className="leading-relaxed text-[10px] font-sans">
                             {descDiff.map((line: any, lIdx: number) => (
-                              <div key={lIdx} className={line.type === 'added' ? 'text-[#4ade80] px-1' : line.type === 'removed' ? 'text-[#ef4444] line-through px-1' : 'text-[#888] px-1'}>
+                              <div key={lIdx} className={line.type === 'added' ? 'text-semantic-green px-1' : line.type === 'removed' ? 'text-semantic-red line-through px-1' : 'text-[#888] px-1'}>
                                 {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}{line.value}
                               </div>
                             ))}
@@ -315,10 +315,10 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
                           <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Triggers Diff ]</div>
                           <div className="flex flex-wrap gap-1">
                             {removedTriggers.map((t: string) => (
-                              <span key={t} className="text-[9px] font-mono text-[#ef4444] line-through px-1.5 py-0.5">-{t}</span>
+                              <span key={t} className="text-[9px] font-mono text-semantic-red line-through px-1.5 py-0.5">-{t}</span>
                             ))}
                             {addedTriggers.map((t: string) => (
-                              <span key={t} className="text-[9px] font-mono text-[#4ade80] px-1.5 py-0.5">+{t}</span>
+                              <span key={t} className="text-[9px] font-mono text-semantic-green px-1.5 py-0.5">+{t}</span>
                             ))}
                           </div>
                         </div>
@@ -328,7 +328,7 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
                           <div className="text-[#555] uppercase font-bold tracking-wider mb-0.5">[ Content Diff ]</div>
                           <div className="font-mono text-[9px] overflow-x-auto whitespace-pre max-h-[120px] overflow-y-auto leading-normal">
                             {contentDiff.map((line: any, lIdx: number) => (
-                              <div key={lIdx} className={line.type === 'added' ? 'text-[#4ade80] px-1' : line.type === 'removed' ? 'text-[#ef4444] px-1' : 'text-[#666] px-1'}>
+                              <div key={lIdx} className={line.type === 'added' ? 'text-semantic-green px-1' : line.type === 'removed' ? 'text-semantic-red px-1' : 'text-[#666] px-1'}>
                                 {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}{line.value}
                               </div>
                             ))}

@@ -15,7 +15,7 @@ export function Tooltip({
   subtitle,
   description,
   children,
-  titleColorClass = "text-[#4ade80]",
+  titleColorClass = "text-semantic-green",
   position = "top-left",
   className = "inline-block"
 }: TooltipProps) {

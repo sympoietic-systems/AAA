@@ -1,10 +1,18 @@
 // Shared constants for research task views.
 // Single source of truth — used by ResearchTaskPage and ResearchDetailPanel.
 
+import { CSS_VARS } from "../../../../config/colors"
+
 export const STATUS_COLORS: Record<string, string> = {
-  proposed: "#f59e0b", approved: "#3b82f6", queued: "#8b5cf6",
-  active: "#4ade80", completed: "#22d3ee", failed: "#ef4444",
-  cancelled: "#666666", rejected: "#f97316", expired: "#444444",
+  proposed: CSS_VARS.semanticGold,
+  approved: CSS_VARS.semanticBlue,
+  queued: CSS_VARS.semanticPurple,
+  active: CSS_VARS.semanticGreen,
+  completed: CSS_VARS.semanticSlate,
+  failed: CSS_VARS.semanticRed,
+  cancelled: CSS_VARS.uiDim,
+  rejected: CSS_VARS.semanticSand,
+  expired: CSS_VARS.uiDim,
 }
 
 export const STEP_LABELS: Record<string, string> = {
@@ -30,12 +38,12 @@ export const PHASE_LABELS: Record<string, string> = {
 }
 
 export const STEP_TYPE_COLORS: Record<string, string> = {
-  search: "#3b82f6",
-  parallel_parse: "#f59e0b",
-  digest: "#a892ee",
-  reflect: "#c084fc",
-  synthesize: "#4ade80",
-  evaluate: "#22d3ee",
+  search: CSS_VARS.semanticBlue,
+  parallel_parse: CSS_VARS.semanticSand,
+  digest: CSS_VARS.semanticPurple,
+  reflect: CSS_VARS.semanticSlate,
+  synthesize: CSS_VARS.semanticGreen,
+  evaluate: CSS_VARS.semanticGold,
 }
 
 export const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -72,34 +80,34 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
 }
 
 export const EVENT_TYPE_COLORS: Record<string, string> = {
-  task_started: "#4ade80",
-  task_complete: "#22d3ee",
-  query_generation: "#a78bfa",
-  branch_create: "#f59e0b",
-  fetch_complete: "#3b82f6",
-  fetch_error: "#ef4444",
-  llm_prompt: "#c084fc",
-  llm_response: "#a892ee",
-  llm_error: "#ef4444",
-  synthesis_start: "#facc15",
-  synthesis_complete: "#4ade80",
-  synthesis_error: "#ef4444",
-  orchestrator_start: "#4ade80",
-  orchestrator_plan: "#a78bfa",
-  orchestrator_plan_prompt: "#c084fc",
-  orchestrator_plan_response: "#a892ee",
-  orchestrator_replan: "#f59e0b",
-  orchestrator_search: "#3b82f6",
-  orchestrator_digest_prompt: "#c084fc",
-  orchestrator_digest_response: "#a892ee",
-  orchestrator_digest_error: "#ef4444",
-  orchestrator_reflect: "#a78bfa",
-  orchestrator_reflect_prompt: "#c084fc",
-  orchestrator_reflect_response: "#a892ee",
-  orchestrator_evaluate: "#22d3ee",
-  orchestrator_synthesize_start: "#facc15",
-  orchestrator_synthesize_prompt: "#c084fc",
-  orchestrator_synthesize_response: "#a892ee",
-  orchestrator_complete: "#22d3ee",
-  orchestrator_step_complete: "#4ade80",
+  task_started: CSS_VARS.semanticGreen,
+  task_complete: CSS_VARS.semanticBlue,
+  query_generation: CSS_VARS.semanticPurple,
+  branch_create: CSS_VARS.semanticSand,
+  fetch_complete: CSS_VARS.semanticSlate,
+  fetch_error: CSS_VARS.semanticRed,
+  llm_prompt: CSS_VARS.semanticPurple,
+  llm_response: CSS_VARS.semanticPurple,
+  llm_error: CSS_VARS.semanticRed,
+  synthesis_start: CSS_VARS.semanticGold,
+  synthesis_complete: CSS_VARS.semanticGreen,
+  synthesis_error: CSS_VARS.semanticRed,
+  orchestrator_start: CSS_VARS.semanticGreen,
+  orchestrator_plan: CSS_VARS.semanticPurple,
+  orchestrator_plan_prompt: CSS_VARS.semanticPurple,
+  orchestrator_plan_response: CSS_VARS.semanticPurple,
+  orchestrator_replan: CSS_VARS.semanticSand,
+  orchestrator_search: CSS_VARS.semanticBlue,
+  orchestrator_digest_prompt: CSS_VARS.semanticPurple,
+  orchestrator_digest_response: CSS_VARS.semanticPurple,
+  orchestrator_digest_error: CSS_VARS.semanticRed,
+  orchestrator_reflect: CSS_VARS.semanticPurple,
+  orchestrator_reflect_prompt: CSS_VARS.semanticPurple,
+  orchestrator_reflect_response: CSS_VARS.semanticPurple,
+  orchestrator_evaluate: CSS_VARS.semanticGold,
+  orchestrator_synthesize_start: CSS_VARS.semanticGold,
+  orchestrator_synthesize_prompt: CSS_VARS.semanticPurple,
+  orchestrator_synthesize_response: CSS_VARS.semanticPurple,
+  orchestrator_complete: CSS_VARS.semanticBlue,
+  orchestrator_step_complete: CSS_VARS.semanticGreen,
 }

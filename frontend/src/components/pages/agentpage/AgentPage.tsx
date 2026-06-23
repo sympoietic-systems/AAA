@@ -4,7 +4,7 @@ import { PersonalitySection } from "./PersonalitySection"
 import { StartupSection } from "./StartupSection"
 import { PipelineSection } from "./PipelineSection"
 import { TracesSection } from "./TracesSection"
-import { TerminalTabs, TerminalButton } from "../../UI"
+import { TerminalTabs, HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "../../UI"
 
 type TabId = "personality" | "dreaming" | "daemons" | "pipeline" | "traces"
 
@@ -71,21 +71,29 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#1a1a1a] shrink-0">
-        <span className="text-[11px] text-[#444] tracking-widest uppercase select-none">
-          <span className="text-[#a892ee]">■</span>
-          <span className="ml-2">symbia</span>
-          <span className="text-[#333] mx-2">//</span>
-          <span>agent</span>
+      {/* Header — single line */}
+      <HeaderContainer>
+        <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5">
+          <HeaderIndicator intent="purple" />
+          <HeaderLogo onClick={onGoHome} />
+          <HeaderSeparator />
+          <HeaderLabel intent="purple">agent</HeaderLabel>
         </span>
         <div className="flex items-center gap-4">
-          <TerminalButton onClick={onGoHome} className="text-[11px]">home</TerminalButton>
+          <CreasesDropdown />
+          <HeaderActionButton onClick={onGoHome}>
+            home
+          </HeaderActionButton>
+          <HeaderActionButton onClick={() => window.location.href = '/research'}>
+            research
+          </HeaderActionButton>
           {onGoConversation && (
-            <TerminalButton onClick={onGoConversation} className="text-[11px]">back to chat</TerminalButton>
+            <HeaderActionButton onClick={onGoConversation}>
+              back to chat
+            </HeaderActionButton>
           )}
         </div>
-      </div>
+      </HeaderContainer>
 
       {/* Tab bar — terminal-like, minimal, wraps on mobile */}
       <TerminalTabs
@@ -126,6 +134,7 @@ export function AgentPage({ onGoHome, onGoConversation }: Props) {
           />
         )}
       </div>
+      <UnifiedFooter />
     </div>
   )
 }

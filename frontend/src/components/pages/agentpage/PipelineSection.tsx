@@ -7,14 +7,14 @@ import { CollapsibleSection } from "./shared/CollapsibleSection"
 
 /* ── Category config ── */
 const CATEGORIES = [
-  { key: "perception", label: "Perception", color: "#38bdf8" },
-  { key: "memory", label: "Memory", color: "#f59e0b" },
-  { key: "reasoning", label: "Reasoning", color: "#a78bfa" },
-  { key: "action", label: "Action", color: "#f43f5e" },
+  { key: "perception", label: "Perception", color: "var(--color-semantic-blue)" },
+  { key: "memory", label: "Memory", color: "var(--color-semantic-sand)" },
+  { key: "reasoning", label: "Reasoning", color: "var(--color-semantic-purple)" },
+  { key: "action", label: "Action", color: "var(--color-semantic-red)" },
 ]
 
 function getCatColor(cat: string) {
-  return CATEGORIES.find(c => c.key === cat?.toLowerCase())?.color ?? "#94a3b8"
+  return CATEGORIES.find(c => c.key === cat?.toLowerCase())?.color ?? "var(--color-ui-secondary)"
 }
 
 /* ── List item ── */
@@ -22,9 +22,9 @@ const ModuleListItem = memo(function ModuleListItem({ module, isSelected }: { mo
   const catColor = getCatColor(module.category)
   return (
     <div data-module-name={module.name} data-selected={isSelected ? "true" : undefined}
-      className={`flex items-center gap-1.5 px-1.5 py-1 cursor-pointer border-l-2 transition-colors select-none ${isSelected ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}`}>
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${module.status ? "bg-[#4ade80]" : "bg-[#ef4444]"}`} />
-      <span className="font-mono text-[11px] truncate flex-1 min-w-0 text-[#bbb]">{module.name}</span>
+      className={`flex items-center gap-1.5 px-1.5 py-1 cursor-pointer border-l-2 transition-colors select-none ${isSelected ? "border-action-hover bg-action-hover/5" : "border-transparent hover:bg-[#111]"}`}>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${module.status ? "bg-semantic-green" : "bg-semantic-red"}`} />
+      <span className="font-mono text-[11px] truncate flex-1 min-w-0 text-ui-secondary">{module.name}</span>
       <span className="text-[9px] font-mono font-bold shrink-0" style={{ color: catColor }}>{module.category}</span>
     </div>
   )
@@ -35,11 +35,11 @@ const SubmoduleItem = memo(function SubmoduleItem({ sub }: { sub: SkillInfo }) {
   return (
     <div className="text-[10px]">
       <div className="flex items-center gap-1.5">
-        <span className="text-[#a78bfa] font-bold">↳</span>
-        <span className="text-[#ccc] font-bold font-mono">{sub.name}</span>
-        <span className="text-[9px] text-[#555] font-mono">{sub.category}</span>
+        <span className="text-action-dim font-bold">↳</span>
+        <span className="text-ui-primary font-bold font-mono">{sub.name}</span>
+        <span className="text-[9px] text-ui-dim font-mono">{sub.category}</span>
       </div>
-      <p className="text-[#777] leading-relaxed font-serif mt-0.5 ml-4">{sub.description}</p>
+      <p className="text-ui-secondary leading-relaxed font-serif mt-0.5 ml-4">{sub.description}</p>
     </div>
   )
 })
@@ -78,8 +78,8 @@ export const PipelineSection = memo(function PipelineSection() {
     return map
   }, [pipeline])
 
-  if (loading) return <div className="text-[#555] font-mono animate-pulse">loading pipeline...</div>
-  if (error) return <div className="text-[#ef4444] font-mono">Error: {error}</div>
+  if (loading) return <div className="text-ui-dim font-mono animate-pulse">loading pipeline...</div>
+  if (error) return <div className="text-semantic-red font-mono">Error: {error}</div>
 
   const selectedModule = pipeline.find(m => m.name === selectedName) || null
 
@@ -109,30 +109,30 @@ export const PipelineSection = memo(function PipelineSection() {
         {selectedModule ? (
           <div className="flex-1 min-h-0 flex flex-col overflow-y-auto pr-1.5 gap-3 text-[11px]">
             <div className="flex items-center gap-1.5">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedModule.status ? "bg-[#4ade80]" : "bg-[#ef4444]"}`} />
-              <span className="font-mono font-bold text-[#ccc] truncate">{selectedModule.name}</span>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedModule.status ? "bg-semantic-green" : "bg-semantic-red"}`} />
+              <span className="font-mono font-bold text-ui-primary truncate">{selectedModule.name}</span>
             </div>
 
             <div>
-              <div className="text-[#555] font-mono text-[10px] uppercase">[ Description ]</div>
-              <div className="text-[#ccc] leading-relaxed font-serif mt-0.5">{selectedModule.description}</div>
+              <div className="text-ui-dim font-mono text-[10px] uppercase">[ Description ]</div>
+              <div className="text-ui-primary leading-relaxed font-serif mt-0.5">{selectedModule.description}</div>
             </div>
 
-            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] font-mono text-[#888]">
-              <span><span className="text-[#444]">Category:</span> <span style={{ color: getCatColor(selectedModule.category) }} className="uppercase">{selectedModule.category}</span></span>
-              <span><span className="text-[#444]">Cost Pool:</span> <span className="text-[#aaa] uppercase">{selectedModule.cost}</span></span>
-              <span><span className="text-[#444]">Status:</span> <span className={selectedModule.status ? "text-[#4ade80]" : "text-[#ef4444]"}>{selectedModule.status ? "online" : "offline"}</span></span>
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] font-mono text-ui-secondary">
+              <span><span className="text-ui-dim">Category:</span> <span style={{ color: getCatColor(selectedModule.category) }} className="uppercase">{selectedModule.category}</span></span>
+              <span><span className="text-ui-dim">Cost Pool:</span> <span className="text-ui-secondary uppercase">{selectedModule.cost}</span></span>
+              <span><span className="text-ui-dim">Status:</span> <span className={selectedModule.status ? "text-semantic-green" : "text-semantic-red"}>{selectedModule.status ? "online" : "offline"}</span></span>
             </div>
 
             {selectedModule.triggers?.length > 0 && (
               <div>
-                <div className="text-[#555] font-mono text-[10px] uppercase">[ Activation Triggers ]</div>
-                <div className="text-[10px] text-[#888] mt-0.5">{selectedModule.triggers.join(", ")}</div>
+                <div className="text-ui-dim font-mono text-[10px] uppercase">[ Activation Triggers ]</div>
+                <div className="text-[10px] text-ui-secondary mt-0.5">{selectedModule.triggers.join(", ")}</div>
               </div>
             )}
 
             <div className="flex-1 min-h-0 flex flex-col">
-              <div className="text-[#555] font-mono text-[10px] uppercase shrink-0">
+              <div className="text-ui-dim font-mono text-[10px] uppercase shrink-0">
                 [ Submodules ({selectedModule.children?.length ?? 0}) ]
               </div>
               {selectedModule.children?.length > 0 ? (
@@ -140,13 +140,13 @@ export const PipelineSection = memo(function PipelineSection() {
                   {selectedModule.children.map(sub => <SubmoduleItem key={sub.name} sub={sub} />)}
                 </div>
               ) : (
-                <span className="text-[#444] italic mt-0.5">No submodules registered</span>
+                <span className="text-ui-dim italic mt-0.5">No submodules registered</span>
               )}
             </div>
           </div>
         ) : (
           <div className="flex-1 min-h-0 flex items-center justify-center">
-            <span className="text-[#444] italic font-mono">select a module to inspect</span>
+            <span className="text-ui-dim italic font-mono">select a module to inspect</span>
           </div>
         )}
       </div>

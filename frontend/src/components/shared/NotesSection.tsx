@@ -53,7 +53,7 @@ function NotesSectionComponent({
 
   if (notes.length === 0) {
     return (
-      <div className="text-[10px] text-[#444] py-2 font-mono italic">
+      <div className="text-[10px] text-ui-dim py-2 font-mono italic">
         No notes or highlights in this conversation.
         Select text in the conversation bubbles to create a note.
       </div>
@@ -80,19 +80,19 @@ function NotesSectionComponent({
   return (
     <div className="mt-1.5 pt-1.5 font-mono text-xs flex flex-col gap-1.5">
       {/* Search and Filters controls */}
-      <div className="flex flex-col gap-1 pb-1.5 border-b border-[#1a1a1a]">
+      <div className="flex flex-col gap-1 pb-1.5 border-b border-ui-border">
         <div className="relative flex items-center">
           <input
             type="text"
             placeholder="search notes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-transparent border-b border-[#222]/40 text-[#eee] pl-0 pr-6 py-1 text-[10px] focus:outline-none focus:border-[#444] transition-colors font-mono"
+            className="w-full bg-transparent border-b border-ui-border/40 text-ui-primary pl-0 pr-6 py-1 text-[10px] focus:outline-none focus:border-ui-dim transition-colors font-mono"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm("")}
-              className="absolute right-1.5 text-gray-500 hover:text-gray-300 text-[10px] cursor-pointer"
+              className="absolute right-1.5 text-ui-dim hover:text-ui-primary text-[10px] cursor-pointer"
               title="Clear search"
             >
               ✕
@@ -101,19 +101,19 @@ function NotesSectionComponent({
         </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] select-none">
-          <span className="text-[#555]">visibility:</span>
+          <span className="text-ui-dim">visibility:</span>
           {(['all', 'personal', 'shared', 'agent'] as const).map((v, i) => {
             const isSelected = visibilityFilter === v
             const color =
-              v === 'personal' ? 'text-yellow-400' :
-              v === 'shared' ? 'text-purple-400' :
-              v === 'agent' ? 'text-cyan-400' : ''
+              v === 'personal' ? 'text-semantic-gold' :
+              v === 'shared' ? 'text-semantic-purple' :
+              v === 'agent' ? 'text-semantic-blue' : ''
             return (
               <span key={v} className="flex items-center gap-x-2">
-                {i > 0 && <span className="text-[#333]">•</span>}
+                {i > 0 && <span className="text-ui-border">/</span>}
                 <button
                   onClick={() => setVisibilityFilter(v)}
-                  className={`cursor-pointer transition-colors ${isSelected ? `text-[#94a3b8] ${color || ''}`.replace(/\s+$/, '') : "text-[#444] hover:text-[#777]"}`}
+                  className={`cursor-pointer transition-colors ${isSelected ? `text-ui-primary ${color || ''}`.replace(/\s+$/, '') : "text-ui-dim hover:text-ui-secondary"}`}
                 >
                   {v}
                 </button>
@@ -125,7 +125,7 @@ function NotesSectionComponent({
 
       {/* Notes timeline list */}
       {filteredNotes.length === 0 ? (
-        <div className="text-[10px] text-[#444] py-2 font-mono italic">
+        <div className="text-[10px] text-ui-dim py-2 font-mono italic">
           No notes matched this query filter.
         </div>
       ) : (
@@ -134,23 +134,23 @@ function NotesSectionComponent({
             const isAgent = note.visibility === "agent"
             const isShared = note.visibility === "shared"
             const label = isAgent ? "A" : isShared ? "SH" : "P"
-            const labelColor = isAgent ? "text-cyan-400" : isShared ? "text-purple-400" : "text-yellow-400"
+            const labelColor = isAgent ? "text-semantic-blue" : isShared ? "text-semantic-purple" : "text-semantic-gold"
             const isFailed = scrollFailed === note.id
 
             return (
               <div
                 key={note.id}
-                className="flex flex-col gap-0.5 py-1 px-1.5 hover:bg-[#121212]/50 transition-colors border border-transparent rounded-[2px] group/note"
+                className="flex flex-col gap-0.5 py-1 px-1.5 hover:bg-action-hover/5 transition-colors border border-transparent rounded-[2px] group/note"
               >
                 <div className="flex items-start gap-1 font-mono text-[10px] leading-tight">
                   <span className={`${labelColor} font-bold shrink-0 w-3.5`}>{label}</span>
-                  <span className="text-gray-500 font-bold shrink-0">&gt;&gt;</span>
-                  <span className="text-gray-300 break-words flex-1 min-w-0 font-mono select-text">
+                  <span className="text-ui-dim font-bold shrink-0">&gt;&gt;</span>
+                  <span className="text-ui-primary break-words flex-1 min-w-0 font-mono select-text">
                     "{note.selected_text}"
                   </span>
                   <button
                     onClick={(e) => handleGoToNote(e, note)}
-                    className="shrink-0 text-[#555] hover:text-[#4ade80] transition-colors opacity-0 group-hover/note:opacity-100 ml-0.5"
+                    className="shrink-0 text-ui-dim hover:text-action-hover transition-colors opacity-0 group-hover/note:opacity-100 ml-0.5"
                     title="Go to note in conversation"
                   >
                     ↗
@@ -164,7 +164,7 @@ function NotesSectionComponent({
                             onDeleteNote(note.id)
                             setConfirmDeleteId(null)
                           }}
-                          className="text-[#ef4444] hover:text-red-400 text-[9px]"
+                          className="text-semantic-red hover:text-action-hover text-[9px]"
                           title="Confirm delete"
                         >
                           ✓
@@ -174,7 +174,7 @@ function NotesSectionComponent({
                             e.stopPropagation()
                             setConfirmDeleteId(null)
                           }}
-                          className="text-[#555] hover:text-gray-300 text-[9px]"
+                          className="text-ui-dim hover:text-ui-primary text-[9px]"
                           title="Cancel"
                         >
                           ✕
@@ -186,7 +186,7 @@ function NotesSectionComponent({
                           e.stopPropagation()
                           setConfirmDeleteId(note.id)
                         }}
-                        className="shrink-0 text-[#555] hover:text-[#ef4444] transition-colors opacity-0 group-hover/note:opacity-100 ml-0.5"
+                        className="shrink-0 text-ui-dim hover:text-semantic-red transition-colors opacity-0 group-hover/note:opacity-100 ml-0.5"
                         title="Delete note"
                       >
                         ✕
@@ -195,7 +195,7 @@ function NotesSectionComponent({
                   )}
                 </div>
                 {note.comment && (
-                  <div className="flex items-start gap-1 pl-4 font-mono text-[9px] leading-tight text-gray-500">
+                  <div className="flex items-start gap-1 pl-4 font-mono text-[9px] leading-tight text-ui-dim">
                     <span className="shrink-0 font-bold">&gt;&gt;</span>
                     <span className="break-words flex-1 min-w-0 italic font-mono select-text">
                       {note.comment}
@@ -203,7 +203,7 @@ function NotesSectionComponent({
                   </div>
                 )}
                 {isFailed && (
-                  <div className="pl-4 text-[9px] text-yellow-600 italic">
+                  <div className="pl-4 text-[9px] text-semantic-gold italic">
                     Message not loaded — scroll up to load older messages first
                   </div>
                 )}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, memo } from "react"
+import { listConversations } from "../../../api/client"
 import type { ConversationInfo, SedimentNotification } from "../../../api/client"
 import { formatTime, formatTimeShort } from "../../../utils/dateFormat"
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../../stores/notificationStore"
 
 interface Props {
-  conversations: ConversationInfo[]
+  conversations?: ConversationInfo[]
   onNavigateToNotification?: (convId: string, msgId: number) => void
 }
 
@@ -17,8 +18,18 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
   const [creasesOpen, setCreasesOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'sediment' | 'glitch' | 'trace'>('sediment')
   const creasesRef = useRef<HTMLDivElement>(null)
+  
+  const [localConversations, setLocalConversations] = useState<ConversationInfo[]>([])
 
-  // Poll of notifications is handled centrally by the notificationStore
+  // Fetch conversations locally if not passed down as a prop
+  useEffect(() => {
+    if (conversations) return
+    listConversations(undefined, undefined, 100, 0)
+      .then((res) => setLocalConversations(res.conversations))
+      .catch(() => {})
+  }, [conversations])
+
+  const resolvedConversations = conversations ?? localConversations
 
   // Close creases dropdown on click outside
   useEffect(() => {
@@ -44,7 +55,8 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
         if (onNavigateToNotification && n.messageId) {
           onNavigateToNotification(convId, n.messageId)
         } else {
-          window.open(`/?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`, "_blank")
+          // If on other pages, navigate in-tab instead of opening a new tab
+          window.location.href = `/?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`
         }
       }
     }
@@ -54,13 +66,13 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
   const enrichedSediment = useMemo(() => {
     const sedimentNotifs = notifications.filter((n) => n.type === 'sediment' || !n.type)
     return sedimentNotifs.map((n) => {
-      const conv = conversations.find((c) => c.id === n.conversationId)
+      const conv = resolvedConversations.find((c) => c.id === n.conversationId)
       return {
         ...n,
         conversationTitle: conv?.title || "Untitled Entanglement",
       }
     })
-  }, [notifications, conversations])
+  }, [notifications, resolvedConversations])
 
   const glitches = useMemo(() => {
     return notifications.filter((n) => n.type === 'glitch')
@@ -84,8 +96,8 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
         onClick={() => setCreasesOpen((p) => !p)}
         className={`relative text-[10px] font-mono transition-colors cursor-pointer select-none ${
           enrichedSediment.length > 0
-            ? "text-[#e09b67] hover:text-[#f0b080]"
-            : "text-[#666] hover:text-[#888]"
+            ? "text-semantic-sand hover:text-action-hover"
+            : "text-[#666] hover:text-action-hover"
         }`}
         title={
           unreadGlitchesCount > 0
@@ -98,10 +110,10 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
         {enrichedSediment.length > 0 ? (
           <>
             <span className="animate-pulse mr-1">◆</span>
-            creases: {enrichedSediment.length}
+            [creases: {enrichedSediment.length}]
           </>
         ) : (
-          "creases"
+          "[creases]"
         )}
 
         {/* Unread glitches pulse marker */}
@@ -115,7 +127,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
         <div         className="absolute right-0 top-full mt-1 z-50 w-85 max-h-96 overflow-hidden flex flex-col bg-[#0c0c0e]/95 backdrop-blur-md">
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 select-none shrink-0">
-            <span className="text-[9px] font-mono uppercase tracking-widest text-[#6c6c8a]">
+            <span className="text-[9px] font-mono uppercase tracking-widest text-semantic-header">
               [ Crease Folds ]
             </span>
             {notifications.filter((n) => n.type === activeTab || (activeTab === 'sediment' && (!n.type || n.type === 'sediment'))).length > 0 && (
@@ -173,7 +185,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
                     </div>
                     <div className="flex items-start gap-2">
                       <span className={`text-[8px] font-mono uppercase tracking-wider mt-0.5 shrink-0 ${
-                        notif.speaker === "human" ? "text-[#6bc28c]" : "text-[#a892ee]"
+                        notif.speaker === "human" ? "text-semantic-green" : "text-semantic-purple"
                       }`}>
                         {notif.speaker === "human" ? "H" : "A"}
                       </span>
@@ -185,7 +197,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
                     <div className="flex items-center gap-2 mt-1.5">
                       {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
                         <button onClick={() => handleJump(notif)}
-                          className="text-[9px] text-[#666] hover:text-[#4ade80] font-mono cursor-pointer select-none">
+                          className="text-[9px] text-[#666] hover:text-action-hover font-mono cursor-pointer select-none">
                           [jump]
                         </button>
                       )}

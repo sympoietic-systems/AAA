@@ -16,7 +16,32 @@ The interface draws from terminal/CLI aesthetics: **text-first, borderless, back
 ### Core Rules
 *   **No decorative containers**: Components must NOT use `bg-[...]`, `border`, `rounded`, or shadow wrappers for content areas. Data lives on the bare surface.
 *   **Semantic color only**: The only color in the UI conveys meaning — category type, lifecycle stage, status, confidence level. Never use color for decoration alone.
-*   **Typography-driven hierarchy**: Size and weight carry all visual structure. Headers are `text-[#6c6c8a] uppercase text-[9px] tracking-wider`. Active content is `text-[#ccc]`/`text-[#bbb]`. Dim/inactive is `text-[#555]`/`text-[#444]`.
+*   **Typography-driven hierarchy**: Size and weight carry all visual structure. Headers are `text-semantic-header uppercase text-[9px] tracking-wider` (warm stone-gray, `#8a7d74`). Active content is `text-[#ccc]`/`text-[#bbb]`. Dim/inactive is `text-[#555]`/`text-[#444]`.
+
+### Unified Color Palette & Tailwind Semantic Tokens
+Vibrant high-saturation colors are strictly forbidden for static/resting states. All static and metabolic indicators use desaturated variables defined in `index.css`.
+
+For JS/TS constants, utility logic, and HTML5 Canvas context rendering where CSS utility classes cannot be used, all color definitions must be imported from the centralized colors configuration:
+* **Central File:** `frontend/src/config/colors.ts`
+* **Raw Hex Codes:** `COLOR_PALETTE` (for canvas/drawing)
+* **CSS Variables:** `CSS_VARS` (for React inline styles)
+
+| Token | Class | Hex Value | Purpose |
+| :--- | :--- | :--- | :--- |
+| `action-dim` | `text-action-dim` | `#b37e5d` | Default resting color for actionable bracketed buttons, boundaries, tags |
+| `action-hover` | `text-action-hover` | `#ff6b00` | Vibrant orange highlight on hover/focus |
+| `semantic-red` | `text-semantic-red` | `#b86a6a` | Warning alerts, deleted/rejected/collapsed states, tension/scar nodes, destructive cancels |
+| `semantic-green` | `text-semantic-green` | `#5c9e7a` | Crystallized/active beliefs, online module status, diff additions |
+| `semantic-blue` | `text-semantic-blue` | `#6b88a3` | Perception pipeline modules, concept nodes |
+| `semantic-gold` | `text-semantic-gold` | `#b89553` | Nucleation/pending stages, workshop merges, atrophy events |
+| `semantic-purple` | `text-semantic-purple` | `#8f7ba8` | Ontological elements, reasoning pipeline modules, badges |
+| `semantic-sand` | `text-semantic-sand` | `#c48956` | Accreting/proto/developing stages, memory modules, accretion events |
+| `semantic-slate` | `text-semantic-slate` | `#78909c` | Senescing/decaying stages |
+| `tag` | `text-tag` | `#5f8776` | Neutral tag labels |
+| `ui-primary` | `text-ui-primary` | `#ccc` | Primary active foreground text |
+| `ui-secondary` | `text-ui-secondary` | `#bbb` | Secondary/details foreground text |
+| `ui-dim` | `text-ui-dim` | `#555` | Dimmed/inactive metadata text, list counts |
+| `ui-border` | `border-ui-border` | `#222` | Solid boundary lines, separators, box edges |
 
 ### Tab Navigation
 ```
@@ -31,14 +56,14 @@ Personality • Pipeline • Dreaming • Daemons • Traces
 ```
 [edit] [delete] [recalc] [+ add] [save] [cancel]
 ```
-*   Default: `text-[#666]` — invisible until needed
-*   Hover: color-coded intent (`#4ade80` save, `#ef4444` delete, `#a78bfa` edit)
+*   Default: `text-action-dim` — resting desaturated state (`#b37e5d`)
+*   Hover: Color-coded intent (`text-action-hover` for normal edit/save/add, `text-semantic-red` for delete/cancel)
 *   No backgrounds, no borders, no padding — pure text with `[]` brackets
 
 ### Loading / Empty / Error States
 *   **Loading**: `text-[#555] animate-pulse` plain text, no spinner wrappers
 *   **Empty**: `text-[#444] italic font-mono` centered hint
-*   **Error**: `text-[#ef4444] font-mono` plain text
+*   **Error**: `text-semantic-red font-mono` plain text
 
 ---
 
@@ -100,7 +125,7 @@ All list items across all panels share identical structure:
 
 | Field | Placement | Example |
 |-------|-----------|---------|
-| Icon | Color-coded dot (●◇◆▲✖), 10px, shrink-0 | `●` `#4ade80` |
+| Icon | Color-coded dot (●◇◆▲✖), 10px, shrink-0 | `●` `#5c9e7a` (semantic-green) |
 | Name | `font-mono text-[11px] truncate flex-1`, `text-[#bbb]` | `autonomy` |
 | Version | `text-[#666] text-[9px]`, after name | `v14` |
 | Mass | `text-[8px] font-mono text-[#555]`, hidden on mobile | `m:1.23` |
@@ -109,7 +134,7 @@ All list items across all panels share identical structure:
 ### Selection State
 ```
 border-l-2 transition-colors
-Selected:   border-[#a78bfa] bg-[#1a1a2e]/50
+Selected:   border-action-hover bg-action-hover/5
 Unselected: border-transparent hover:bg-[#111]
 ```
 
@@ -124,7 +149,7 @@ Unselected: border-transparent hover:bg-[#111]
 All grouped lists use `shared/CollapsibleSection`:
 
 ```tsx
-<CollapsibleSection label="Active" count={5} icon="●" iconColor="#4ade80" defaultOpen={true}>
+<CollapsibleSection label="Active" count={5} icon="●" iconColor="#5c9e7a" defaultOpen={true}>
   {items.map(...)}
 </CollapsibleSection>
 ```
@@ -200,11 +225,11 @@ All color/label logic is centralized in `shared/helpers.ts`:
 
 | Function | Used by | Purpose |
 |----------|---------|---------|
-| `getCategoryColor(c)` | Beliefs, Pipeline | `foundational`→`#4ade80`, `ontological`→`#a78bfa`, etc. |
-| `getBeliefStageColor(s)` | Beliefs | `crystallized`→`#4ade80`, `nucleation`→`#f59e0b`, etc. |
+| `getCategoryColor(c)` | Beliefs, Pipeline | `foundational`→`#5c9e7a` (green), `ontological`→`#8f7ba8` (purple), etc. |
+| `getBeliefStageColor(s)` | Beliefs | `crystallized`→`#5c9e7a` (green), `nucleation`→`#b89553` (gold), etc. |
 | `getBeliefStageLabel(s)` | Beliefs | Human-readable stage participle |
-| `getStageColor(s)` | Commitments | `active`→`#4ade80`, `proto`→`#f59e0b`, `spectral`→`#ef4444` |
-| `getLevelColor(l)` | Expertise | `advanced`→`#4ade80`, `developing`→`#f59e0b`, etc. |
+| `getStageColor(s)` | Commitments | `active`→`#5c9e7a` (green), `proto`→`#c48956` (sand), `spectral`→`#b86a6a` (red) |
+| `getLevelColor(l)` | Expertise | `advanced`→`#5c9e7a` (green), `developing`→`#c48956` (sand), etc. |
 
 No component defines these locally — single source of truth.
 
@@ -352,7 +377,7 @@ NodeExplorer (memo'd)
 ### Design Rules
 *   **NodeExplorer memo'd**: Wraps entire center column — prevents re-renders on unrelated state changes
 *   **No container chrome**: Outer wrapper `flex flex-col h-full` — no `bg/border`; Explorerspace `flex-1 overflow-y-auto px-4 py-4` — bare
-*   **Title bar**: `text-[#6c6c8a]` label, `[home]` `[#generate_title]` as bracket text, title input `bg-transparent border-b`
+*   **Title bar**: Standardized using `<HeaderContainer>` and `<HeaderActionButton>` sub-components from `UnifiedHeader.tsx` (matches §15 pattern exactly).
 *   **Tags bar**: Plain text `text-[#6bc28c]` separated by `//`, `×` remove button — no `bg/border/rounded` badge wrappers
 *   **History trail**: `[H: snippet]` / `[A: snippet]` bracket text, `>` separator — no `bg/border` pill wrappers
 *   **Error bar**: Plain `text-[#ef4444]` text, `[retry]` `[dismiss]` terminal buttons — no `bg/border` box
@@ -404,3 +429,20 @@ ConversationLandingPage (memo'd, prop-driven from App.tsx)
 *   **No container chrome**: Sections use bracket-delimited labels in `text-[#6c6c8a] uppercase text-[9px]` — never `bg/border/rounded`
 *   **Terminal-style inputs**: Search input uses `bg-transparent border-b focus:border-[#444]`
 *   **Empty state**: `[ select a conversation to inspect ]` italic placeholder in the right panel
+
+---
+
+## 15. Unified Navigation Header
+
+All primary views (Chat/Home, Agent, Research, and Conversation NodeExplorer) must share a unified top navigation header. This layout structure, margins, spacing, and buttons are encapsulated in a set of reusable sub-components in `frontend/src/components/UI/UnifiedHeader.tsx`:
+
+*   `<HeaderContainer>`: Provides the consistent layout, height, horizontal padding (`px-6 py-3`), bottom border (`border-[#1a1a1a]`), and font/mono styling.
+*   `<HeaderIndicator>`: Renders the colored category indicator block (`■`). Intent parameter colors correspond to the section:
+    *   `green` (default): Conversation Landing (`text-semantic-green`)
+    *   `purple`: Agent Page (`text-semantic-purple`)
+    *   `gold`: Research Page / Research Task Details (`text-semantic-gold`)
+*   `<HeaderLogo>`: Renders the uppercase `SYMBIA` logo. If provided with an `onClick` callback, transitions seamlessly and is interactive.
+*   `<HeaderSeparator>`: Standardizes the double-slash breadcrumb separator (`//`).
+*   `<HeaderLabel>`: Highlights the current page/context title using uppercase, tracking, and desaturated colors matching the indicator.
+*   `<HeaderActionButton>`: Standardizes the bracketed action button links (`[name]`). Default resting state is desaturated (`text-action-dim`), highlighting to vibrant orange (`text-action-hover`) on hover/focus. Action buttons are strictly formatted as `[text]` with no background or borders.
+

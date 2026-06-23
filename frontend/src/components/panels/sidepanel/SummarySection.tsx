@@ -11,7 +11,7 @@ interface SummarySectionProps {
 function SummarySectionComponent({ summary, humanSummary }: SummarySectionProps) {
   if (!summary && !humanSummary) {
     return (
-      <div className="text-[10px] text-[#444] py-2 font-mono italic">
+      <div className="text-[10px] text-ui-dim py-2 font-mono italic">
         No summary checkpoint yet — sedimentation occurs after sufficient dialogue.
       </div>
     )
@@ -21,8 +21,8 @@ function SummarySectionComponent({ summary, humanSummary }: SummarySectionProps)
   const label = humanSummary ? "Sedimentation Summary" : "Autopoietic Summary Checkpoint"
 
   return (
-    <div className="mt-1.5 pt-1.5 text-[10px] text-[#aaa] font-mono leading-relaxed markdown-body max-h-64 overflow-y-auto">
-      <div className="text-[8px] text-[#555] mb-1 uppercase tracking-wider select-none font-bold">
+    <div className="mt-1.5 pt-1.5 text-[10px] text-ui-secondary font-mono leading-relaxed markdown-body max-h-64 overflow-y-auto">
+      <div className="text-[8px] text-ui-dim mb-1 uppercase tracking-wider select-none font-bold">
         {label}
       </div>
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>

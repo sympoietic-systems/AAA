@@ -67,11 +67,13 @@ export const SidePanel = memo(function SidePanel({
     <div
       className={`
         md:border-l md:border-t-0 md:h-full
-        border-t border-[#222]/40
         flex flex-col shrink-0
         overflow-hidden
         transition-all duration-200
-        ${isCollapsed ? "md:w-9 w-full" : "w-full"}
+        ${isCollapsed 
+          ? "hidden md:flex md:w-9 md:h-full" 
+          : "absolute md:relative z-30 right-0 top-0 bottom-0 w-[85vw] max-w-[340px] md:w-auto md:h-full md:flex md:z-auto border-l border-ui-border bg-[#0c0c0e]/95"
+        }
       `}
       style={!isCollapsed && width ? { width: `${width}px` } : undefined}
     >
@@ -80,7 +82,7 @@ export const SidePanel = memo(function SidePanel({
           onClick={togglePanel}
           className="
             flex items-center gap-1.5 shrink-0
-            text-xs text-[#555] hover:text-[#888]
+            text-xs text-ui-dim hover:text-ui-primary
             transition-colors
             md:flex-col md:justify-start md:gap-2 md:py-3 md:px-0
             md:h-full
@@ -97,10 +99,10 @@ export const SidePanel = memo(function SidePanel({
 
       {!isCollapsed && (
         <>
-          <div className="flex items-center shrink-0 px-3 py-2 border-b border-[#222]/40">
+          <div className="flex items-center shrink-0 px-3 py-2 border-b border-ui-border/40">
             <button
               onClick={togglePanel}
-              className="flex items-center gap-1.5 text-[10px] text-[#555] hover:text-[#888] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-[10px] text-ui-dim hover:text-ui-primary transition-colors cursor-pointer"
             >
               <span>▶</span>
               <span>close</span>

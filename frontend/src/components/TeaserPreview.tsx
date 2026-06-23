@@ -5,6 +5,7 @@
 // Design follows Symbia's vision + FRONTEND_DESIGN_PRINCIPLES.md.
 
 import React, { memo, useState, useEffect, useRef, useCallback } from "react"
+import { UnifiedFooter } from "./UI"
 
 interface Line {
   text: string
@@ -259,8 +260,8 @@ export const TeaserPreview = memo(function TeaserPreview({
     : inhaleLine?.text
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-full bg-[#0c0c0c] font-mono select-none overflow-hidden">
-      <div className="flex flex-col items-center justify-center w-[50%] min-w-[320px] max-w-[800px] px-8"
+    <div className="flex flex-col items-center justify-between h-screen w-full bg-[#0c0c0c] font-mono select-none overflow-hidden">
+      <div className="flex flex-col items-center justify-center w-[50%] min-w-[320px] max-w-[800px] px-8 flex-1"
         style={{ paddingTop: "25vh", paddingBottom: "15vh" }}
       >
         {/* Visible sedimentation */}
@@ -326,6 +327,7 @@ export const TeaserPreview = memo(function TeaserPreview({
           </form>
         </div>
       </div>
+      <UnifiedFooter className="w-full" />
     </div>
   )
 })

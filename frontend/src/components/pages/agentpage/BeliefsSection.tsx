@@ -25,7 +25,7 @@ const NodeListItem = memo(function NodeListItem({
       className={`
         flex items-center gap-1.5 px-1.5 py-1 cursor-pointer
         border-l-2 transition-colors
-        ${isSelected ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"}
+        ${isSelected ? "border-action-hover bg-action-hover/5" : "border-transparent hover:bg-[#111]"}
         ${isGhost ? "opacity-50" : isProto ? "opacity-75" : ""}
       `}
     >
@@ -189,27 +189,27 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
       {/* Somatic & Ecosystem health metrics moved to Traits & Health tab */}
 
       {/* Category legend & Sorting */}
-      <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[9px] font-mono text-[#555] border-b border-[#222]/30 pb-1.5">
+      <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[9px] font-mono text-ui-dim border-b border-ui-border/30 pb-1.5">
         <div className="flex items-center gap-3">
-          <span className="text-[#444] uppercase">sort:</span>
+          <span className="text-ui-dim uppercase">sort:</span>
           <button
             onClick={() => setSortBy("mass")}
-            className={`cursor-pointer transition-colors hover:text-[#ccc] ${sortBy === "mass" ? "text-[#a78bfa] font-bold" : "text-[#555]"}`}
+            className={`cursor-pointer transition-colors hover:text-ui-primary ${sortBy === "mass" ? "text-action-dim font-bold" : "text-ui-dim"}`}
           >
             [mass]
           </button>
           <button
             onClick={() => setSortBy("confidence")}
-            className={`cursor-pointer transition-colors hover:text-[#ccc] ${sortBy === "confidence" ? "text-[#a78bfa] font-bold" : "text-[#555]"}`}
+            className={`cursor-pointer transition-colors hover:text-ui-primary ${sortBy === "confidence" ? "text-action-dim font-bold" : "text-ui-dim"}`}
           >
             [confidence]
           </button>
         </div>
         <div className="flex gap-1.5 md:gap-2">
-          <span className="text-[#4ade80] flex items-center gap-0.5"><span className="text-[11px]">●</span><span className="hidden md:inline">found</span></span>
-          <span className="text-[#a78bfa] flex items-center gap-0.5"><span className="text-[11px]">●</span><span className="hidden md:inline">ont</span></span>
-          <span className="text-[#facc15] flex items-center gap-0.5"><span className="text-[11px]">●</span><span className="hidden md:inline">meth</span></span>
-          <span className="text-[#f59e0b] flex items-center gap-0.5"><span className="text-[11px]">◇</span><span className="hidden md:inline">proto</span></span>
+          <span className="text-semantic-green flex items-center gap-0.5"><span className="text-[11px]">●</span><span className="hidden md:inline">found</span></span>
+          <span className="text-semantic-purple flex items-center gap-0.5"><span className="text-[11px]">●</span><span className="hidden md:inline">ont</span></span>
+          <span className="text-semantic-gold flex items-center gap-0.5"><span className="text-[11px]">●</span><span className="hidden md:inline">meth</span></span>
+          <span className="text-semantic-sand flex items-center gap-0.5"><span className="text-[11px]">◇</span><span className="hidden md:inline">proto</span></span>
         </div>
       </div>
 

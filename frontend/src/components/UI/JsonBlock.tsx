@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from "react"
+import { memo, useMemo, useState } from "react"
 
 export type JsonBlockVariant = "json" | "dim" | "prompt" | "raw"
 
@@ -13,10 +13,10 @@ export interface JsonBlockProps {
 }
 
 const VARIANT_STYLES: Record<JsonBlockVariant, string> = {
-  json:   "text-[#4ade80] text-[8px] bg-[#0c0c0c]",
-  dim:    "text-[#555] text-[7px] bg-[#080808]",
-  prompt: "text-[#888] text-[8px] bg-[#0c0c0c]",
-  raw:    "text-[#666] text-[8px] bg-[#0c0c0c]",
+  json:   "text-ui-secondary text-[8px] bg-[#0c0c0c]",
+  dim:    "text-ui-dim text-[7px] bg-[#080808]",
+  prompt: "text-ui-secondary text-[8px] bg-[#0c0c0c]",
+  raw:    "text-ui-secondary text-[8px] bg-[#0c0c0c]",
 }
 
 export const JsonBlock = memo(function JsonBlock({
@@ -33,19 +33,19 @@ export const JsonBlock = memo(function JsonBlock({
 
   if (collapsible) {
     return (
-      <div className="border border-[#1a1a1a] rounded-sm bg-[#080808] overflow-hidden">
+      <div className="border border-ui-border rounded-sm bg-[#080808] overflow-hidden">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-between px-2 py-1.5 text-[8px] uppercase text-[#555] hover:text-[#bbb] hover:bg-[#111] select-none cursor-pointer font-mono border-none outline-none"
+          className="w-full flex items-center justify-between px-2 py-1.5 text-[8px] uppercase text-ui-dim hover:text-ui-primary hover:bg-action-hover/5 select-none cursor-pointer font-mono border-none outline-none"
         >
           <span className="flex items-center gap-1.5">
-            <span className="text-[#333] text-[7px]">{collapsed ? "▶" : "▼"}</span>
+            <span className="text-ui-dim text-[7px]">{collapsed ? "▶" : "▼"}</span>
             <span>{label || variant}</span>
           </span>
-          <span className="text-[7.5px] font-semibold text-[#4ade80]/70">{collapsed ? "show" : "hide"}</span>
+          <span className="text-[7.5px] font-semibold text-action-dim">{collapsed ? "show" : "hide"}</span>
         </button>
         {!collapsed && (
-          <pre className={`${VARIANT_STYLES[variant]} border-t border-[#1a1a1a] p-2 ${maxHeight} overflow-y-auto whitespace-pre-wrap break-all ${className}`}>
+          <pre className={`${VARIANT_STYLES[variant]} border-t border-ui-border p-2 ${maxHeight} overflow-y-auto whitespace-pre-wrap break-all ${className}`}>
             {content}
           </pre>
         )}
@@ -54,7 +54,7 @@ export const JsonBlock = memo(function JsonBlock({
   }
 
   return (
-    <pre className={`${VARIANT_STYLES[variant]} border border-[#1a1a1a] p-2 rounded-sm ${maxHeight} overflow-y-auto whitespace-pre-wrap break-all ${className}`}>
+    <pre className={`${VARIANT_STYLES[variant]} border border-ui-border p-2 rounded-sm ${maxHeight} overflow-y-auto whitespace-pre-wrap break-all ${className}`}>
       {content}
     </pre>
   )

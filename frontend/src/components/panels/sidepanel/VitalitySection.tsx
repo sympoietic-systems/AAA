@@ -15,9 +15,9 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
   const state = metrics?.recommendations?.state ?? "unknown"
 
   const stateColor =
-    (state === "flowing" || state === "healthy") ? "#4ade80" :
-      (state === "consolidating" || state === "compensating") ? "#facc15" :
-        (state === "disrupted" || state === "critical") ? "#ef4444" : "#555"
+    (state === "flowing" || state === "healthy") ? "var(--color-semantic-green)" :
+      (state === "consolidating" || state === "compensating") ? "var(--color-semantic-gold)" :
+        (state === "disrupted" || state === "critical") ? "var(--color-semantic-red)" : "var(--color-ui-dim)"
 
   const renderBar = (
     label: string,
@@ -35,14 +35,14 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
         title={fullName}
         subtitle={`${display} / ${max}`}
         description={hint}
-        titleColorClass="text-[#4ade80]"
+        titleColorClass="text-semantic-green"
         position="top-left"
       >
         <div className="flex items-center gap-1.5 cursor-help w-full">
-          <span className="w-7 text-[9px] text-[#555] text-right font-mono">{label}</span>
-          <div className="w-12 h-1 bg-[#1a1a1a] rounded-sm overflow-hidden">
+          <span className="w-7 text-[9px] text-ui-dim text-right font-mono">{label}</span>
+          <div className="w-12 h-1 bg-ui-border rounded-sm overflow-hidden">
             <div
-              className="h-full rounded-sm bg-[#444] transition-all transition-colors duration-200"
+              className="h-full rounded-sm bg-ui-dim transition-all transition-colors duration-200"
               style={{
                 width: `${pct}%`,
                 opacity: 0.6,
@@ -50,7 +50,7 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
               }}
             />
           </div>
-          <span className="text-[9px] text-[#666] transition-colors w-10 text-right font-mono">{display}</span>
+          <span className="text-[9px] text-ui-dim transition-colors w-10 text-right font-mono">{display}</span>
         </div>
       </Tooltip>
     )
@@ -65,13 +65,13 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
         >
           ●
         </span>
-        <span className="text-[10px] text-[#888]">vitality</span>
+        <span className="text-[10px] text-ui-secondary">vitality</span>
         <span className="text-[9px] ml-auto" style={{ color: stateColor }}>
           {state} {vitality != null ? `vit:${vitality.toFixed(2)}` : ""}{paskHealth != null ? ` ph:${paskHealth.toFixed(2)}` : ""}
         </span>
       </div>
 
-      {error && <p className="text-[9px] text-[#ef4444] font-mono">{error}</p>}
+      {error && <p className="text-[9px] text-semantic-red font-mono">{error}</p>}
 
       {metrics?.latest && (
         <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1.5">
@@ -101,19 +101,19 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
       )}
 
       {loading && !metrics && (
-        <p className="text-[9px] text-[#444] font-mono animate-pulse">loading...</p>
+        <p className="text-[9px] text-ui-dim font-mono animate-pulse">loading...</p>
       )}
 
       {!metrics && !error && !loading && (
-        <p className="text-[9px] text-[#444] font-mono">waiting for data...</p>
+        <p className="text-[9px] text-ui-dim font-mono">waiting for data...</p>
       )}
 
       {metrics?.latest?.phase_shifts && metrics.latest.phase_shifts.length > 0 && (
         <div className="mt-1.5 font-mono">
-          <span className="text-[9px] text-[#facc15]">phase shifts:</span>
+          <span className="text-[9px] text-semantic-gold">phase shifts:</span>
           <div className="flex flex-wrap gap-1 mt-0.5">
             {metrics.latest.phase_shifts.map((s, i) => (
-              <span key={i} className="text-[8px] text-[#facc15]">
+              <span key={i} className="text-[8px] text-semantic-gold">
                 {s.event} {s.direction === "rise" ? "↑" : "↓"}{s.delta.toFixed(2)}
               </span>
             ))}
@@ -124,7 +124,7 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
       {metrics?.recommendations?.triggered_flags && metrics.recommendations.triggered_flags.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1 font-mono">
           {metrics.recommendations.triggered_flags.map((f) => (
-            <span key={f} className="text-[8px] text-[#f87171]">
+            <span key={f} className="text-[8px] text-semantic-red">
               {f}
             </span>
           ))}
@@ -132,7 +132,7 @@ function VitalitySectionComponent({ enabled = false }: VitalitySectionProps) {
       )}
 
       {metrics?.recommendations?.temperature?.delta !== undefined && metrics.recommendations.temperature.delta !== 0 && (
-        <div className="mt-1 text-[9px] text-[#666] font-mono">
+        <div className="mt-1 text-[9px] text-ui-dim font-mono">
           param: T{metrics.recommendations.temperature.value.toFixed(2)}
           {metrics.recommendations.temperature.clamped ? " (clamped)" : ""}
         </div>
