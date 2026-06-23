@@ -112,20 +112,24 @@ def export_all_tasks(db_path, out_path, proj_root):
 
         # Fetch related rows from all research tables
         for table in TABLES:
-            query = f"SELECT * FROM {table} WHERE task_id = ?"
+            col_name = "id" if table == "research_tasks" else "task_id"
+            query = f"SELECT * FROM {table} WHERE {col_name} = ?"
             cursor.execute(query, (task_id,))
             rows = cursor.fetchall()
             task_bundle["data"][table] = rows
 
         # Read synthesis file from disk if it exists
-        synthesis_filename = f"research-synthesis-{task_id}.md"
-        synthesis_path = get_synthesis_file_path(proj_root, conversation_id, task_id)
-        if os.path.exists(synthesis_path):
-            with open(synthesis_path, "r", encoding="utf-8") as f:
-                task_bundle["synthesis_file"] = {
-                    "filename": synthesis_filename,
-                    "content": f.read()
-                }
+        if conversation_id:
+            synthesis_filename = f"research-synthesis-{task_id}.md"
+            synthesis_path = get_synthesis_file_path(proj_root, conversation_id, task_id)
+            if os.path.exists(synthesis_path):
+                with open(synthesis_path, "r", encoding="utf-8") as f:
+                    task_bundle["synthesis_file"] = {
+                        "filename": synthesis_filename,
+                        "content": f.read()
+                    }
+            else:
+                task_bundle["synthesis_file"] = None
         else:
             task_bundle["synthesis_file"] = None
 
@@ -175,24 +179,29 @@ def export_task(task_id, db_path, out_path, proj_root):
 
     # 2. Fetch related rows from all research tables
     for table in TABLES:
-        query = f"SELECT * FROM {table} WHERE task_id = ?"
+        col_name = "id" if table == "research_tasks" else "task_id"
+        query = f"SELECT * FROM {table} WHERE {col_name} = ?"
         cursor.execute(query, (task_id,))
         rows = cursor.fetchall()
         bundle["data"][table] = rows
         print(f"  - Table {table:25s}: {len(rows)} row(s)")
 
     # 3. Read synthesis file from disk if it exists
-    synthesis_filename = f"research-synthesis-{task_id}.md"
-    synthesis_path = get_synthesis_file_path(proj_root, conversation_id, task_id)
-    if os.path.exists(synthesis_path):
-        print(f"  - Found synthesis file on disk: {synthesis_path}")
-        with open(synthesis_path, "r", encoding="utf-8") as f:
-            bundle["synthesis_file"] = {
-                "filename": synthesis_filename,
-                "content": f.read()
-            }
+    if conversation_id:
+        synthesis_filename = f"research-synthesis-{task_id}.md"
+        synthesis_path = get_synthesis_file_path(proj_root, conversation_id, task_id)
+        if os.path.exists(synthesis_path):
+            print(f"  - Found synthesis file on disk: {synthesis_path}")
+            with open(synthesis_path, "r", encoding="utf-8") as f:
+                bundle["synthesis_file"] = {
+                    "filename": synthesis_filename,
+                    "content": f.read()
+                }
+        else:
+            print(f"  - No synthesis file found on disk at: {synthesis_path}")
+            bundle["synthesis_file"] = None
     else:
-        print(f"  - No synthesis file found on disk at: {synthesis_path}")
+        print(f"  - No conversation associated with this task; skipping synthesis file check.")
         bundle["synthesis_file"] = None
 
     # Write out the JSON bundle
@@ -260,7 +269,7 @@ def import_task(json_path, db_path, proj_root):
 
         # 3. Write synthesis file back to disk if present in bundle
         synth_file = t_bundle.get("synthesis_file")
-        if synth_file:
+        if synth_file and conversation_id:
             dest_path = get_synthesis_file_path(proj_root, conversation_id, task_id)
             os.makedirs(os.path.dirname(dest_path), exist_ok=True)
             with open(dest_path, "w", encoding="utf-8") as f:
