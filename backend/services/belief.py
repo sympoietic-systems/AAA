@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from typing import Optional
 
 from backend.modules.structural_engine import CompositeStructuralScorer
@@ -195,6 +196,10 @@ class BeliefService:
         belief_repo.update_proposal_status(proposal_id, "adopted")
 
         import uuid
+
+
+
+        
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
         v16d_json = await _score_statement_16d(state, statement, fallback=p.initial_signature)
@@ -290,6 +295,10 @@ class BeliefService:
         new_conf = min(1.0, target_belief.confidence + 0.1)
 
         import uuid
+
+
+
+        
         statement_updated = False
         new_v16d = target_belief.vector_16d
         new_version = target_belief.version
@@ -442,6 +451,10 @@ Proposed Belief Statement:
             return {"status": "error", "message": "Belief not found"}
 
         import uuid
+
+
+
+        
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
         new_v16d_json = await _score_statement_16d(state, statement)
@@ -540,6 +553,10 @@ Proposed Belief Statement:
             return {"status": "error", "message": "Belief repository not initialized"}
 
         import uuid
+
+
+
+        
         import json
         belief_id = str(uuid.uuid4())
         v16d_json = await _score_statement_16d(state, statement)
@@ -619,6 +636,10 @@ Proposed Belief Statement:
             return {"status": "error", "message": "Belief not found"}
 
         import uuid
+
+
+
+        
         import json
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
@@ -757,6 +778,10 @@ Proposed Belief Statement:
             return {"status": "error", "message": "Belief not found"}
 
         import uuid
+
+
+
+        
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
 
