@@ -142,7 +142,7 @@
     [x] CreasesDropdown: strip chrome (toggle button, dropdown container, tabs → • dot separator, items, jump/read buttons → terminal style)
     [x] InputBar: wrap in React.memo
     [x] InputBar: strip chrome (form bg, send button → plain text)
-    [x] MessageBubble: NOT modified (separate pass planned due to complex note/tooltip/selection logic)
+    [x] MessageBubble: ResearchProposalCard, SelectionToolbar, NoteEditorPopover extracted (871 → 578 lines, ADR-050). Remaining note/tooltip interactions for future pass.
     [x] docs: FRONTEND_DESIGN_PRINCIPLES.md updated with §13 Center Column
 
 ## DAEMON / DREAMING

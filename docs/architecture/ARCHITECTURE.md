@@ -555,13 +555,20 @@ AAA/
 │       │   ├── telemetryStore.ts     Centralized reference-counted polling timers registry
 │       │   └── notificationStore.ts  Stream manager for sediment, glitch, and trace notifications
 │       └── components/
-│           ├── App.tsx           Main root routing orchestrator, auth guards & NodesPage workspace
+│           ├── App.tsx           Root routing orchestrator (React Router), auth guards & NodesPage workspace
 │           ├── ConversationList.tsx Collapsible left history sidebar
 │           ├── pages/            Standing page layout components
 │           │   ├── landing/      ConversationLandingPage default entry layout
 │           │   ├── agentpage/    Decoupled agent telemetry dashboard
-│           │   └── nodeexplorer/ NodeExplorer traversal workspace (includes MessageBubble, InputBar, CreasesDropdown)
-│           └── panels/           Embedded floating overlays and panels
+│           │   │   └── researchpage/ Autonomous research orchestration UI
+│           │   └── nodeexplorer/ NodeExplorer workspace (MessageBubble, InputBar, ResearchProposalCard, SelectionToolbar, NoteEditorPopover)
+│           ├── panels/           Embedded floating overlays and panels
+│           │   ├── leftpanel/    ConnectionCloud (receives tree as props) + SpectralEchoes
+│           │   ├── sidepanel/    Right metadata side panel
+│           │   └── contextviewer/ Context inspection overlay
+│           └── shared/           Cross-page reusable components (ConversationTitleBar, NotesSection, MemoryNodesSection)
+│           └── utils/            noteHelpers (buildNotesMap), dateFormat, clipboard, diff
+│           └── hooks/            useChat, useConversations, usePanelResizer, useNotes, useTelemetry
 │               ├── contextviewer/ Collapsible post-processed context debugger overlay
 │               ├── leftpanel/    SVG/Canvas relational graphs and matching echo sidebars
 │               └── sidepanel/    Collapsible telemetry sidebar (SidePanel thin shell)

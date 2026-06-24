@@ -155,9 +155,9 @@ AAA/
 │   └── tests/               # pytest suite
 ├── frontend/
 │   └── src/
-│       ├── App.tsx          # Root layout (no React Router)
+│       ├── App.tsx          # Root layout (React Router + lazy loading)
 │       ├── api/client.ts    # HTTP client for all backend endpoints
-│       ├── hooks/           # useChat, useConversations, useTelemetry
+│       ├── hooks/           # useChat, useConversations, useTelemetry, usePanelResizer
 │       ├── stores/          # telemetryStore, notificationStore (pub-sub)
 │       └── components/      # Pages, panels, UI primitives
 ├── config/                  # Personality YAML configs
@@ -710,10 +710,13 @@ Messages are organized as a **directed tree** via `parent_message_id`. Key impli
 
 ## 7. Frontend Architecture
 
-### 7.1 Component Hierarchy
+### 7.1 Component Hierarchy (with React Router + Code Splitting)
+
+All page components are lazy-loaded via `React.lazy()` for automatic code splitting.
+ConnectionCloud now receives `treeNodes`/`treeLinks` as props from `App.tsx` (no longer self-fetches).
 
 ```
-App.tsx (root orchestrator — no React Router)
+App.tsx (root orchestrator — React Router + lazy loading)
 ├── AgentPage.tsx              (when pathname === "/agent")
 │   └── PersonalitySection.tsx (5 sub-tabs: Traits | Commitments | Expertise | Beliefs | Skills)
 ├── ConversationLandingPage    (when no active conversation)
@@ -736,9 +739,10 @@ App.tsx (root orchestrator — no React Router)
 
 ### 7.2 State Management
 
-- **`useChat(conversationId)`** — Core chat engine: message history (paginated, 50/page), tree structure, send/regenerate/branch, file management, active path navigation
+- **`useChat(conversationId)`** — Core chat engine: message history (paginated, 50/page), tree structure, send/regenerate/branch, file management, active path navigation (~730 lines)
 - **`useConversations()`** — Conversation list CRUD, URL-synced activeId via `?c=` param
-- **`telemetryStore`** — Vanilla JS pub-sub with reference-counted polling timers. Five subscriber hooks: `useTelemetryMetrics`, `useTelemetryBeliefs`, `useTelemetryTokens`, `useTelemetryDaemon`, `useTelemetryScheduler`
+- **`usePanelResizer()`** — Reusable panel resize hook with localStorage persistence
+- **`telemetryStore`** — Vanilla JS pub-sub with generic factory (`createPollingChannel`, `createKeyedPollingChannel`). Five subscriber hooks: `useTelemetryMetrics`, `useTelemetryBeliefs`, `useTelemetryTokens`, `useTelemetryDaemon`, `useTelemetryScheduler`
 - **`notificationStore`** — Stream manager for sediment, glitch, and trace notifications (drives CreasesDropdown)
 
 ### 7.3 Key UI Features
@@ -890,7 +894,7 @@ cd frontend && npm run dev
 | Rhizomatic memory (graph-based) | 🔜 Phase 3 | Replace linear context with graph-based diffractive traversal |
 | Foundational memory (bifurcation) | 🔜 Phase 4 | Ontological deterritorialization and Kintsugi adaptation |
 
-**Total ADRs:** 49 Architecture Decision Records (ADR-001 through ADR-049)
+**Total ADRs:** 50 Architecture Decision Records (ADR-001 through ADR-050)
 
 **Resolved Gaps (Memory System Audit — Implemented 2026-06-15 via ADR-049):**
 

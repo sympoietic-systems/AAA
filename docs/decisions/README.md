@@ -80,6 +80,8 @@ What becomes easier/harder?
 | [046](ADR-046-belief-workshop-and-versioning-system.md) | Belief Workshop and Versioning System | accepted | 2026-06-13 |
 | [047](ADR-047-belief-workshop-migration-and-quick-actions.md) | Belief Workshop Migration and Quick Actions | accepted | 2026-06-14 |
 | [048](ADR-048-dynamic-autopoietic-personality-cascade.md) | Dynamic Autopoietic Personality Cascade | accepted | 2026-06-14 |
+| [049](ADR-049-memory-system-sclerosis-remediation.md) | Memory System Sclerosis Remediation | accepted | 2026-06-15 |
+| [050](ADR-050-frontend-codebase-optimization-extraction-deduplication.md) | Frontend Codebase Optimization — Extraction, Deduplication & Code Splitting | accepted | 2026-06-24 |
 
 ## Creating a New ADR
 

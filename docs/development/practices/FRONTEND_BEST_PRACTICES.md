@@ -70,12 +70,13 @@ Not all user sessions require loading all parts of the application. Deferring qu
 
 ---
 
-## 5. URL State Synchronization (Resilient Routing)
+## 5. URL State Synchronization (Resilient Routing via React Router)
 Refreshing the page or sharing a link should never reset the workspace layout.
 
 ### Guidelines
-*   **URL Query Synchronization**: Sync key layout states (the active conversation ID `?c=`, message active node `?m=`) with query parameters.
-*   **History API Integration**: Use `window.history.pushState` on selection changes to preserve history trail, and listen to `popstate` events to handle standard browser Back/Forward navigation smoothly.
+*   **URL Query Synchronization**: Sync key layout states (the active conversation ID `?c=`, message active node `?m=`) with query parameters. These are managed via `useSearchParams()` from `react-router-dom` and synced to `URLSearchParams` in the chat hooks.
+*   **Browser Navigation**: Use `<BrowserRouter>`, `<Routes>`, and `<Route>` for top-level page routing. Use `useNavigate()` for programmatic navigation instead of direct `window.location` manipulation. Use `window.history.replaceState` only for in-page URL parameter sync (e.g., updating `?m=` without triggering a navigation).
+*   **Code Splitting**: Leverage `React.lazy()` with `<Suspense>` boundaries for page-level components to enable automatic code splitting (per ADR-050).
 
 ---
 

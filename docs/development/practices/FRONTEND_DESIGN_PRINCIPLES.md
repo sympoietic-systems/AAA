@@ -89,7 +89,7 @@ AgentPage (tab router only)
 *   **Each component owns its data**: Uses `useState` + `useEffect` to fetch its own data independently.
 *   **Each component owns its loading/error/empty states**: No prop-drilling of `isLoading` or `error` from parents.
 *   **Parent only routes**: `AgentPage` switches `activeTab`; `PersonalitySection` switches `subTab`. Both are pure routing shells under 50 lines.
-*   **URL state sync**: `activeTab` ↔ `?tab=`, `selectedId` ↔ `?id=` via `history.replaceState`.
+*   **URL state sync**: `activeTab` ↔ `?tab=`, `selectedId` ↔ `?id=` via React Router (`useNavigate()` with query params in `/agent` and `/research` sub-routes).
 
 ---
 
@@ -331,7 +331,7 @@ The left panel renders the conversation's DAG as an interactive canvas force gra
 
 ```
 App.tsx
-├── ConnectionCloud (memo'd, self-fetching via getConversationTree)
+├── ConnectionCloud (memo'd, receives treeNodes/treeLinks as props from App.tsx)
 │   └── Canvas: node/link drawing, force simulation, zoom/pan, click/tooltip
 │   └── Overlays: tooltip, context menu, commit modal, resonance details
 │   └── Controls: zoom [+]/[−]/[⟲], settling toggle
@@ -387,7 +387,7 @@ NodeExplorer (memo'd)
 *   **GlimmerLinks**: `[Alt N: "snippet"]` / `[Cut → "snippet"]` bracket text buttons — no `bg/border/rounded` pill buttons
 *   **CreasesDropdown**: `[creases: N ◆]` text toggle, tabs as `•` dot-separated text, items as plain rows, `[jump]` `[read]` terminal buttons — no `bg/border/rounded` anywhere
 *   **InputBar**: `border-t border-[#222]/40` divider only, send button `text-[#4ade80]` plain text — no `bg`
-*   **MessageBubble kept as-is**: Complex note/tooltip/selection interactions not yet simplified (separate pass planned)
+*   **MessageBubble simplified**: `ResearchProposalCard`, `SelectionToolbar`, and `NoteEditorPopover` extracted into standalone components (871 → 578 lines, per ADR-050). Core note/tooltip/selection interactions remain for future optimization.
 
 ---
 

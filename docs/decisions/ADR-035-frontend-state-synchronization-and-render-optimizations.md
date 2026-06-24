@@ -58,4 +58,6 @@ We implemented a unified optimization and navigation architecture across three k
 - **Independent Section Lifecycles**: Each sidebar section polls independently. Collapsed sections do zero work. The `SidePanel` itself is a thin shell with no data-fetching responsibilities.
 
 ### Risks
-- **Stable Array Fallbacks**: Passing empty array fallbacks to nested child components can cause reference leaks if declared inline. We mitigated this by declaring stable global array constants (`EMPTY_ARRAY`, `EMPTY_NUM_ARRAY`) outside the component rendering loops.
+- **Stable Array Fallbacks**: Passing empty array fallbacks to nested child components can cause reference leaks if declared inline. We mitigated this by declaring stable global array constants (`EMPTY_ARRAY`, `EMPTY_NUM_ARRAY`, and now `EMPTY_NOTE_ARRAY` from `utils/noteHelpers.ts`) outside the component rendering loops.
+
+> **Amendment (2026-06-24, ADR-050):** Section 1's URL state synchronization via manual `popstate`/`pushState` has been superseded by `react-router-dom` integration. Top-level routing (agent, research, nodes, login, landing) is now handled by `<BrowserRouter>`, `<Routes>`, and `<Route>`. Programmatic navigation uses `useNavigate()`. In-page URL parameter sync (`?c=`, `?m=`) continues to use `window.history.replaceState` within hooks. All page components are lazy-loaded via `React.lazy()` for code splitting.
