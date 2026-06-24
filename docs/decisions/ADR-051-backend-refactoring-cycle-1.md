@@ -51,18 +51,26 @@ Four new test files capturing behavior before any code changes:
 
 2. **Extracted `CacheManager`** (`services/research/cache_manager.py`): Encapsulates `load_cache`, `save_cache`, `get_cached_phase`, `ensure_cached_inputs_column`, `reinitialize`. orchestrator.py: -45 lines.
 
+### Phase 4 — Belief Math Extraction
+
+1. **Extracted `belief_math.py`** (`modules/belief_math.py`): Pure math functions — `calculate_concept_density`, `parse_vector_16d`, `compute_delta_mass`, `compute_delta_confidence`, `clamp_mass`, `clamp_confidence`, `compute_lifecycle_stage`. `belief_engine.py` delegates accretion math and lifecycle stage to this module. Re-exports keep backwards compatibility. Added 16 new math tests (32 total).
+
+### Phase 5 — LLM Client Modularization
+
+1. **Extracted Anthropic utils** (`modules/providers/anthropic_utils.py`): `parse_anthropic_response()` for converting content[] blocks to standard message dict, and `build_anthropic_body()` for constructing Anthropic API request bodies. llm_client.py: -14 lines.
+
 ## Consequences
 
-- **Line count:** `research_orchestrator.py` reduced from 2,516 → ~2,210 lines (~12% reduction)
-- **Test count:** 108 → 158 tests (+50, +46%)
+- **Line count:** `research_orchestrator.py` reduced from 2,516 → ~2,210 lines (-306)
+- **New modules:** `task_state.py`, `cache_manager.py`, `research_logger.py`, `belief_math.py`, `anthropic_utils.py`
+- **Test count:** 108 → 173 tests (+65, +60%)
 - **Duplication eliminated:** 4 cosine_similarity copies, 2 log_meta copies, 4 reflection formatting copies, 4 parsed URL builders
 - **Files removed:** 8 stub files from `core/`
-- **New infrastructure:** `TaskStateManager`, `CacheManager`, `research_logger.py` ready for reuse
-- **No behavioral changes:** All 157 passing tests continue to pass
+- **No behavioral changes:** All 173 passing tests continue to pass (1 pre-existing failure)
 
 ## Remaining Work
 
 Further decomposition planned for future cycles:
-- Extract phase implementations from orchestrator into 7 dedicated files (Phase 3.5)
-- Extract `BeliefMath`, `BeliefSomaticMonitor`, `BeliefMetabolizer` from `belief_engine.py`
-- Modularize `llm_client.py` provider adapters (Anthropic, Google, OpenRouter)
+- Extract phase implementations from orchestrator into 7 dedicated files
+- Extract `BeliefSomaticMonitor` and `BeliefMetabolizer` from `belief_engine.py`
+- Extract Anthropic body construction + ThinkingConfig from `llm_client.py`
