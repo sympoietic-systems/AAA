@@ -1,10 +1,11 @@
-import { useState, memo, useRef, useEffect } from "react"
+import { useState, memo, useRef, useEffect, Children } from "react"
+import React from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
 import type { ChatMessage, NoteInfo } from "../../../api/client"
-import { getMessageThinking, getMessageContext } from "../../../api/client"
+import { getMessageThinking, getMessageContext, getResearchTask, approveProposal, rejectProposal } from "../../../api/client"
 import { formatTime } from "../../../utils/dateFormat"
 import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
@@ -317,6 +318,157 @@ export const MessageBubble = memo(function MessageBubble({
     );
   };
 
+  const renderResearchProposalComponent = (props: any) => {
+    const proposalId = props.id || props["data-id"];
+    
+    // Parse fields from child nodes (using react-markdown/rehype-raw children structure)
+    const childrenArray = Children.toArray(props.children);
+    let objective = "";
+    let rationale = "";
+    let depth = 2;
+    let breadth = 3;
+    let isAgonistic = false;
+
+    childrenArray.forEach((child: any) => {
+      if (!child || typeof child !== 'object') return;
+      const tagName = child.type || child.props?.node?.tagName || "";
+      const text = child.props?.children 
+        ? (Array.isArray(child.props.children) ? child.props.children.join("") : String(child.props.children))
+        : (child.props?.node?.children?.[0]?.value || "");
+      
+      if (tagName === "objective") objective = text.trim();
+      else if (tagName === "rationale") rationale = text.trim();
+      else if (tagName === "suggested_depth" || tagName === "suggested-depth") depth = parseInt(text.trim()) || 2;
+      else if (tagName === "suggested_breadth" || tagName === "suggested-breadth") breadth = parseInt(text.trim()) || 3;
+      else if (tagName === "is_agonistic" || tagName === "is-agonistic") isAgonistic = text.trim().toLowerCase() === "true";
+    });
+
+    const [status, setStatus] = useState<string>("proposed");
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (!proposalId) return;
+      getResearchTask(proposalId)
+        .then((task) => {
+          if (task && task.status) {
+            setStatus(task.status);
+          }
+        })
+        .catch((err) => {
+          console.warn("Failed to fetch initial status for proposal:", proposalId, err);
+        });
+    }, [proposalId]);
+
+    const handleApprove = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!proposalId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        await approveProposal(proposalId);
+        setStatus("queued");
+      } catch (err: any) {
+        setError(err.message || "Failed to approve");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleReject = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!proposalId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        await rejectProposal(proposalId);
+        setStatus("rejected");
+      } catch (err: any) {
+        setError(err.message || "Failed to reject");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const estCost = (0.025 * depth * breadth).toFixed(2);
+
+    return (
+      <div className="border-l-2 border-semantic-gold pl-3 py-1.5 my-3 flex flex-col gap-1 select-none">
+        <div className="text-[10px] text-semantic-gold font-mono font-bold tracking-wider uppercase">
+          🔬 Symbia Proposes Research
+        </div>
+        {objective && (
+          <div className="text-ui-primary text-xs font-mono italic my-0.5">
+            "{objective}"
+          </div>
+        )}
+        {rationale && (
+          <div className="text-ui-secondary text-[11px] font-sans">
+            {rationale}
+          </div>
+        )}
+        <div className="text-ui-dim text-[10px] font-mono flex flex-wrap gap-x-2 gap-y-0.5">
+          <span>Depth: {depth}</span>
+          <span>·</span>
+          <span>Breadth: {breadth}</span>
+          <span>·</span>
+          <span>Est. ${estCost}</span>
+          {isAgonistic && (
+            <>
+              <span>·</span>
+              <span className="text-semantic-purple">Agonistic</span>
+            </>
+          )}
+        </div>
+        
+        {error && (
+          <div className="text-semantic-red text-[10px] font-mono mt-0.5">
+            Error: {error}
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 mt-1 font-mono text-[10px]">
+          {loading ? (
+            <span className="text-ui-dim animate-pulse">Processing...</span>
+          ) : status === "proposed" ? (
+            <>
+              <button 
+                onClick={handleApprove}
+                className="text-action-dim hover:text-action-hover cursor-pointer"
+              >
+                [✓ Approve & dispatch]
+              </button>
+              <button 
+                onClick={handleReject}
+                className="text-action-dim hover:text-semantic-red cursor-pointer"
+              >
+                [✗ Dismiss]
+              </button>
+            </>
+          ) : status === "queued" ? (
+            <span className="text-semantic-gold">[✓ Approved & queued]</span>
+          ) : status === "active" ? (
+            <span className="text-semantic-gold animate-pulse">[✓ Approved & active...]</span>
+          ) : status === "completed" ? (
+            <span className="text-semantic-green">
+              [✓ Completed · <a href={`/research?id=${proposalId}`} className="underline hover:text-action-hover font-mono">View Report</a>]
+            </span>
+          ) : status === "rejected" ? (
+            <span className="text-ui-dim">[✗ Dismissed]</span>
+          ) : status === "expired" ? (
+            <span className="text-ui-dim">[✗ Expired]</span>
+          ) : status === "failed" ? (
+            <span className="text-semantic-red">[✗ Failed]</span>
+          ) : (
+            <span className="text-ui-secondary">[{status}]</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div ref={bubbleRef} className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
       <div className={`text-sm leading-relaxed ${isHuman ? "text-[#777]" : "text-[#c8c8c8]"}`}>
@@ -334,6 +486,7 @@ export const MessageBubble = memo(function MessageBubble({
                   'note-entanglement': renderNoteComponent,
                   'scar-fold': () => null,
                   'scar_fold': () => null,
+                  'research-proposal': renderResearchProposalComponent,
                 } as any}
               >
                 {processedContent}
@@ -352,6 +505,7 @@ export const MessageBubble = memo(function MessageBubble({
                   'note-entanglement': renderNoteComponent,
                   'scar-fold': () => null,
                   'scar_fold': () => null,
+                  'research-proposal': renderResearchProposalComponent,
                 } as any}
               >
                 {processedContent}

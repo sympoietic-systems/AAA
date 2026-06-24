@@ -282,3 +282,5 @@ curl http://127.0.0.1:8499/api/skills
 | Database errors / missing tables | Ensure `AAA_RUN_MIGRATIONS=true` is set (enabled by default in all startup scripts). To reset: delete `backend/data/aaa.db` and restart. |
 | PM2: command not found | `npm install -g pm2` then ensure `~/.npm-global/bin` or npm's global bin is on `PATH` |
 | PM2: service crashes on startup | Check logs: `pm2 logs aaa-backend --lines 50`. Ensure `.env` has valid API keys and `uv sync` has been run. |
+| Terminal freezes / Website hangs on Windows (waiting for Enter key) | Windows Command Prompt QuickEdit Mode can suspend console execution when you click inside the terminal window. Press **Enter** or **Esc** inside the terminal to resume it. We programmatically disable QuickEdit at startup now, but you can also disable it permanently by right-clicking the terminal title bar -> **Defaults** -> uncheck **QuickEdit Mode**. |
+

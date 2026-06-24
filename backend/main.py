@@ -19,6 +19,10 @@ from dotenv import load_dotenv
 # If load_dotenv() runs after those imports, AAA_PASSWORD etc. are empty.
 load_dotenv()
 
+# Disable Windows Console QuickEdit mode to prevent suspension when clicking in terminal
+from backend.utils.console import disable_quick_edit
+disable_quick_edit()
+
 # Bypass system registry proxy settings
 os.environ["NO_PROXY"] = "*"
 os.environ["no_proxy"] = "*"

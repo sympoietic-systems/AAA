@@ -78,7 +78,6 @@
 
 
 ### Pending
-    [ ] Search: extract actual article URLs from DDG results (not just search page snippets)
     [ ] Document download tool (PDF/DOCX → digestion → index/vectorize)
     [ ] Memory node creation from research findings (cross-conversation recall)
     [ ] Budget tracking (increment budget_spent_usd per LLM call)

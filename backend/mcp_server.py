@@ -14,6 +14,11 @@ if _ENV_PATH.exists():
 else:
     load_dotenv()  # fallback: cwd
 
+# Disable Windows Console QuickEdit mode to prevent suspension when clicking in terminal
+from backend.utils.console import disable_quick_edit
+disable_quick_edit()
+
+
 import httpx
 from mcp.server.fastmcp import FastMCP
 

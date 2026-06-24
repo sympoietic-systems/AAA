@@ -38,8 +38,12 @@ def init_db(db_path: str) -> sqlite3.Connection:
 
 
 def _cleanup_invalid_conversations(conn: sqlite3.Connection) -> None:
-    conn.execute("DELETE FROM conversations WHERE id IS NULL OR id = ''")
-    conn.commit()
+    try:
+        conn.execute("DELETE FROM conversations WHERE id IS NULL OR id = ''")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
 
 
 _LEGACY_CONVERSATION_ID = "00000000-0000-0000-0000-000000000000"

@@ -7,7 +7,10 @@ from fastapi import BackgroundTasks
 
 from backend.api.schemas import ChatResponse
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
-from backend.services.annotations import process_self_annotations
+from backend.services.annotations import (
+    process_self_annotations,
+    process_research_proposals,
+)
 from backend.services.background_tasks import (
     run_background_resonance_scan,
     run_background_skill_refinement,
@@ -338,6 +341,19 @@ class ChatService:
                     )
                 except Exception:
                     logger.exception("Failed to process self-annotations")
+
+            research_task_manager = getattr(state, "research_task_manager", None)
+            if research_task_manager:
+                try:
+                    response_text = process_research_proposals(
+                        response_text=response_text,
+                        conversation_id=conversation_id,
+                        message_id=response_msg.id,
+                        task_manager=research_task_manager,
+                        message_repo=repo,
+                    )
+                except Exception:
+                    logger.exception("Failed to process research proposals")
 
             payload_metrics = result.payload.get("metrics")
             recommendations = result.payload.get("homeostatic_recommendations")

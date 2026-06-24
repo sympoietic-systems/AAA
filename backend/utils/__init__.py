@@ -8,4 +8,6 @@ from backend.utils.vector import (
 )
 from backend.utils.filesystem import UPLOAD_DIR, ensure_upload_dir, get_upload_path, to_utc
 from backend.utils.skill_parser import parse_skill_nucleation_tags
+from backend.utils.console import disable_quick_edit
+
 
