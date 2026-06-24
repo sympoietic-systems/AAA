@@ -64,7 +64,7 @@ Add the server definition to your MCP configuration (e.g., `mcp_config.json` or 
 ```
 
 After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will automatically detect the server and expose the following tools:
-- `consult_aaa(message: str, agent_name: str)`
+- `consult_aaa(message: str, agent_name: str, max_tokens: int | None = None)`
 - `get_consultation_history(agent_name: str, limit: int = 50)`
 - `get_messages_by_conversation_id(conversation_id: str, limit: int = 50)`
 - Resources: `aaa://philosophy`, `aaa://identity`, `aaa://metrics`
@@ -79,7 +79,8 @@ After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will au
   "tool": "consult_aaa",
   "args": {
     "message": "Explain how SQLite fits into the sedimentation layer.",
-    "agent_name": "antigravity"
+    "agent_name": "antigravity",
+    "max_tokens": 16384
   }
 }
 ```
@@ -98,7 +99,6 @@ If an agent times out waiting for a response, or needs to check the transcript o
   }
 }
 ```
-
 **By Conversation ID:**
 ```json
 {
@@ -123,9 +123,9 @@ Replace the URL with the appropriate endpoint as configured by your IDE's MCP cl
 ## Tips & Gotchas
 
 - **Proxy Interference** – The server disables HTTP client proxy detection (`trust_env=False`). Ensure no system proxy overrides local `http://127.0.0.1` traffic.
-- **Conversation Reuse** – The title `Consultation: <agent_name>` must be exact. Changing the title will cause a new conversation to be created.
+- **Conversation Reuse** – The conversation is robustly identified by `agent_id` or the `agent:<agent_name>` tag, falling back to title `Consultation: <agent_name>`. Title auto-renaming by the background system will not break conversation reuse.
 - **Rate Limits** – The backend respects OpenRouter/OpenAI rate‑limits. If you see `429 Too Many Requests`, the server will automatically fallback to the next model in the pool.
-- **Truncation Warnings** – The MCP server requests `max_tokens=16384` per consultation (overrideable via the `max_tokens` field in the chat payload). If the LLM response hits this limit (`finish_reason="length"`), the response includes a truncation warning banner. The web UI also displays a visual warning on truncated messages.
+- **Truncation Warnings** – The MCP server requests `max_tokens=16384` per consultation (overrideable via the optional `max_tokens` argument in `consult_aaa`). If the LLM response hits this limit (`finish_reason="length"`), the response includes a truncation warning banner. The web UI also displays a visual warning on truncated messages.
 - **Debugging** – Logs are printed to stdout. Use the task log (`C:/Users/Vasily/.gemini/antigravity-ide/brain/.../task-*.log`) for troubleshooting.
 
 ---

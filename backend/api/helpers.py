@@ -7,7 +7,7 @@ from backend.utils.token_counter import estimate_tokens
 from .schemas import AttachmentInfo
 
 
-async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool], Optional[int], Optional[int]]:
+async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool], Optional[int], Optional[int], Optional[str]]:
     content_type = request.headers.get("content-type", "")
 
     if "multipart/form-data" in content_type:
@@ -15,6 +15,8 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
         content = str(form.get("content", ""))
         conversation_id = str(form.get("conversation_id", ""))
         speaker = str(form.get("speaker", "human"))
+        agent_id_raw = form.get("agent_id")
+        agent_id = str(agent_id_raw) if agent_id_raw is not None else None
         uploaded_files = form.getlist("files")
         include_structural_scoring_raw = form.get("include_structural_scoring")
         if include_structural_scoring_raw is not None:
@@ -53,12 +55,13 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
                 "content": file_bytes,
             })
 
-        return content, speaker, conversation_id, (attachments if attachments else None), include_structural_scoring, max_tokens, parent_message_id
+        return content, speaker, conversation_id, (attachments if attachments else None), include_structural_scoring, max_tokens, parent_message_id, agent_id
 
     body = await request.json()
     content = body.get("content", "")
     speaker = body.get("speaker", "human")
     conversation_id = body.get("conversation_id", "")
+    agent_id = body.get("agent_id")
     json_attachments = body.get("attachments")
     include_structural_scoring = body.get("include_structural_scoring")
     max_tokens = body.get("max_tokens")
@@ -76,7 +79,7 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
             for a in json_attachments
         ] if isinstance(json_attachments, list) else None
 
-    return content, speaker, conversation_id, parsed_attachments, include_structural_scoring, max_tokens, parent_message_id
+    return content, speaker, conversation_id, parsed_attachments, include_structural_scoring, max_tokens, parent_message_id, agent_id
 
 
 def _build_response_attachments(
@@ -114,7 +117,10 @@ def _ensure_structural_tags(conv_repo, conversation) -> list[dict]:
         return existing_tags
 
     title = conversation.title or ""
-    if "Dream Log" in title or "Internal Diary" in title or "dream" in title.lower():
+    agent_id = getattr(conversation, "agent_id", "symbia") or "symbia"
+    if agent_id != "symbia":
+        structural_tag = "other agents"
+    elif "Dream Log" in title or "Internal Diary" in title or "dream" in title.lower():
         structural_tag = "dreams"
     elif "consultation:" in title.lower():
         structural_tag = "other agents"

@@ -12,7 +12,10 @@ class ConversationService:
             return existing_tags
 
         title = conversation.title or ""
-        if "Dream Log" in title or "Internal Diary" in title or "dream" in title.lower():
+        agent_id = getattr(conversation, "agent_id", "symbia") or "symbia"
+        if agent_id != "symbia":
+            structural_tag = "other agents"
+        elif "Dream Log" in title or "Internal Diary" in title or "dream" in title.lower():
             structural_tag = "dreams"
         elif "consultation:" in title.lower():
             structural_tag = "other agents"
@@ -36,6 +39,7 @@ class ConversationService:
         return {
             "id": conv.id,
             "title": conv.title,
+            "agent_id": getattr(conv, "agent_id", None),
             "created_at": conv.created_at,
             "updated_at": conv.updated_at,
             "message_count": conv.message_count,

@@ -13,12 +13,13 @@ class AttachmentInfo(BaseModel):
 
 class ChatRequest(BaseModel):
     content: str
-    speaker: str = Field(default="human", pattern="^(human|apparatus)$")
+    speaker: str = Field(default="human", pattern="^(human|apparatus|[\w-]+)$")
     conversation_id: str = Field(default="", description="Conversation ID; auto-created if empty")
     attachments: list[AttachmentInfo] | None = None
     include_structural_scoring: Optional[bool] = None
     max_tokens: Optional[int] = Field(default=None, description="Override max_tokens for this request")
     parent_message_id: Optional[int] = Field(default=None, description="Parent message ID for conversation branching")
+    agent_id: Optional[str] = Field(default=None, description="Optional calling agent name")
 
 
 class GenerateRequest(BaseModel):
@@ -275,6 +276,7 @@ class MemoryNodeListResponse(BaseModel):
 class ConversationInfo(BaseModel):
     id: str
     title: str
+    agent_id: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     message_count: int = 0

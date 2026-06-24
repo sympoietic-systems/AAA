@@ -78,6 +78,7 @@ class ChatService:
         max_tokens_override: Optional[int] = None,
         background_tasks: Optional[BackgroundTasks] = None,
         parent_message_id: Optional[int] = None,
+        agent_id: Optional[str] = None,
     ) -> ChatResponse:
         state = self._state
         error_repo = state.error_repo
@@ -91,6 +92,7 @@ class ChatService:
                 attachments=attachments,
                 include_structural_scoring=include_structural_scoring,
                 parent_message_id=parent_message_id,
+                agent_id=agent_id,
             )
 
             # Phase 2: Metabolize and generate assistant response
@@ -117,20 +119,24 @@ class ChatService:
         attachments: Optional[list[dict]] = None,
         include_structural_scoring: Optional[bool] = None,
         parent_message_id: Optional[int] = None,
+        agent_id: Optional[str] = None,
     ) -> ChatResponse:
         state = self._state
         repo = state.message_repo
         conv_repo = getattr(state, "conversation_repo", None)
-        agent_id = getattr(state, "agent_name", "symbia")
+        conv_agent_id = agent_id or getattr(state, "agent_name", "symbia")
 
         is_new = False
         if conv_repo:
-            if not conversation_id or not conv_repo.get(conversation_id):
+            existing_conv = conv_repo.get(conversation_id) if conversation_id else None
+            if not existing_conv:
                 conversation_id = str(uuid.uuid4())
-                conv_repo.create(conversation_id=conversation_id, agent_id=agent_id)
+                conv_repo.create(conversation_id=conversation_id, agent_id=conv_agent_id)
                 is_new = True
             else:
                 conv_repo.touch(conversation_id)
+                if not agent_id and getattr(existing_conv, "agent_id", None):
+                    conv_agent_id = existing_conv.agent_id
 
         if parent_message_id is None and conversation_id and not is_new:
             last_msgs = repo.get_recent(limit=1, conversation_id=conversation_id)
@@ -169,7 +175,7 @@ class ChatService:
             embedding=embedding,
             embedding_model=embedding_model,
             embedding_dim=embedding_dim,
-            agent_id=agent_id,
+            agent_id=conv_agent_id,
             conversation_id=conversation_id,
             content_tokens=content_tokens,
             structural_signature=user_sig_blob,
@@ -213,6 +219,10 @@ class ChatService:
         metrics_repo = getattr(state, "metrics_repo", None)
         conv_repo = getattr(state, "conversation_repo", None)
         agent_id = getattr(state, "agent_name", "symbia")
+        if conv_repo:
+            conv = conv_repo.get(conversation_id)
+            if conv and getattr(conv, "agent_id", None):
+                agent_id = conv.agent_id
         background_engine = getattr(state, "background_engine", None)
 
         # Retrieve the user message

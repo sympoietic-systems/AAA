@@ -63,8 +63,28 @@ mcp = FastMCP(
     dependencies=["httpx", "mcp"]
 )
 
+def _find_conversation_id(conversations, agent_name: str) -> str | None:
+    # 1. Try agent_id match
+    for c in conversations:
+        if c.get("agent_id") == agent_name:
+            return c.get("id")
+    # 2. Try tag match agent:<agent_name>
+    tag_to_find = f"agent:{agent_name}"
+    for c in conversations:
+        tags = c.get("tags") or []
+        for t in tags:
+            if t.get("tag") == tag_to_find:
+                return c.get("id")
+    # 3. Try legacy title match
+    target_title = f"Consultation: {agent_name}"
+    for c in conversations:
+        if c.get("title") == target_title:
+            return c.get("id")
+    return None
+
+
 @mcp.tool()
-async def consult_aaa(message: str, agent_name: str) -> str:
+async def consult_aaa(message: str, agent_name: str, max_tokens: int | None = None) -> str:
     """
     Send a message/code to Symbia (the AAA posthuman curatorial entity) to check implementation logic,
     discuss theoretical grounding, or confirm alignment with the system's philosophical commitments.
@@ -72,6 +92,7 @@ async def consult_aaa(message: str, agent_name: str) -> str:
     Arguments:
         message: The inquiry, code block, or philosophical question to present to Symbia.
         agent_name: The name of the calling dev agent (e.g., 'antigravity', 'opencode') to ensure a persistent, dedicated conversation.
+        max_tokens: Optional token limit override for the model response (default 16384).
     """
     target_title = f"Consultation: {agent_name}"
     
@@ -82,20 +103,18 @@ async def consult_aaa(message: str, agent_name: str) -> str:
             r = await client.get(f"{BASE_URL}/conversations")
             r.raise_for_status()
             conversations = r.json().get("conversations", [])
-            for c in conversations:
-                if c.get("title") == target_title:
-                    conversation_id = c.get("id")
-                    break
+            conversation_id = _find_conversation_id(conversations, agent_name)
         except Exception as e:
             return f"Error: Failed to connect to AAA backend at {BASE_URL}. Ensure the backend server is running. (Details: {e})"
 
         # 2. Send the message to the conversation
         chat_payload = {
             "content": message,
-            "speaker": "human",
+            "speaker": agent_name,
+            "agent_id": agent_name,
             "conversation_id": conversation_id or "",
             "include_structural_scoring": False,
-            "max_tokens": 16384,
+            "max_tokens": max_tokens or 16384,
         }
         
         try:
@@ -111,16 +130,28 @@ async def consult_aaa(message: str, agent_name: str) -> str:
         thinking = res_data.get("thinking", "")
         truncated = res_data.get("truncated", False)
 
-        # 3. If this was a new conversation, set its title so we can find it next time
-        if not conversation_id and new_conversation_id:
+        # 3. Ensure the conversation has the tag and legacy title
+        resolved_id = new_conversation_id or conversation_id
+        if resolved_id:
             try:
-                patch_r = await client.patch(
-                    f"{BASE_URL}/conversations/{new_conversation_id}",
-                    json={"title": target_title}
+                tag_payload = {"tag": f"agent:{agent_name}"}
+                tag_r = await client.post(
+                    f"{BASE_URL}/conversations/{resolved_id}/tags",
+                    json=tag_payload
                 )
-                patch_r.raise_for_status()
-            except Exception as patch_err:
-                logger.error(f"Failed to set conversation title: {patch_err}")
+                tag_r.raise_for_status()
+            except Exception as tag_err:
+                logger.error(f"Failed to tag conversation {resolved_id} with agent:{agent_name}: {tag_err}")
+
+            if not conversation_id and new_conversation_id:
+                try:
+                    patch_r = await client.patch(
+                        f"{BASE_URL}/conversations/{new_conversation_id}",
+                        json={"title": target_title}
+                    )
+                    patch_r.raise_for_status()
+                except Exception as patch_err:
+                    logger.error(f"Failed to set conversation title: {patch_err}")
 
         # 4. Format the final output
         output_parts = []
@@ -191,10 +222,7 @@ async def get_consultation_history(agent_name: str, limit: int = 50) -> str:
             r = await client.get(f"{BASE_URL}/conversations")
             r.raise_for_status()
             conversations = r.json().get("conversations", [])
-            for c in conversations:
-                if c.get("title") == target_title:
-                    conversation_id = c.get("id")
-                    break
+            conversation_id = _find_conversation_id(conversations, agent_name)
         except Exception as e:
             return f"Error: Failed to connect to AAA backend at {BASE_URL}. Ensure the backend server is running. (Details: {e})"
 

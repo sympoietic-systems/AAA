@@ -15,7 +15,7 @@ async def chat(
     service=Depends(get_chat_service),
 ):
     parsed = await _parse_chat_request(request)
-    content, speaker, conversation_id, attachments, include_structural_scoring, max_tokens_override, parent_message_id = parsed
+    content, speaker, conversation_id, attachments, include_structural_scoring, max_tokens_override, parent_message_id, agent_id = parsed
 
     try:
         return await service.process_chat(
@@ -27,6 +27,7 @@ async def chat(
             max_tokens_override=max_tokens_override,
             background_tasks=background_tasks,
             parent_message_id=parent_message_id,
+            agent_id=agent_id,
         )
     except ValueError as e:
         raise ServiceException(str(e), status_code=500)
@@ -47,6 +48,7 @@ async def chat_message(
             attachments=attachments_dict,
             include_structural_scoring=body.include_structural_scoring,
             parent_message_id=body.parent_message_id,
+            agent_id=body.agent_id,
         )
     except ValueError as e:
         raise ServiceException(str(e), status_code=500)
