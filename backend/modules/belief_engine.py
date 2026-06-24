@@ -12,6 +12,7 @@ from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository, BeliefRepository
 from backend.storage.models import BeliefNode
 from backend.modules.structural_engine import LEXICON_MAPPINGS, LexiconScorer, CompositeStructuralScorer
+from backend.storage.repositories.refusal import RefusalRepository
 
 logger = logging.getLogger(__name__)
 
@@ -635,7 +636,6 @@ class BeliefDynamicsEngine(ProcessingModule):
                 # refusal — challenging premises is a signal of health, not stagnation.
                 if vitality < 0.15:
                     try:
-                        from backend.storage.repositories.refusal import RefusalRepository
                         refusal_repo = RefusalRepository(self._belief_repo._db_path)
                         recent_refusals = refusal_repo.list_by_conversation(conversation_id, limit=3)
                         # Check if any refusal was created in the last 15 minutes

@@ -3,6 +3,7 @@ import re
 import uuid
 from typing import Optional
 
+import numpy as np
 from fastapi import BackgroundTasks
 
 from backend.api.schemas import ChatResponse
@@ -22,6 +23,11 @@ from backend.services.metrics import MetricsService
 from backend.services.semantic_knot import SemanticKnotService
 from backend.services.title import TitleService
 from backend.utils.token_counter import estimate_tokens
+from backend.utils.skill_parser import parse_skill_nucleation_tags
+from backend.utils.belief_parser import parse_belief_nucleate_tags
+from backend.utils.refusal_parser import parse_refusal_tags
+from backend.utils.dream_trigger_parser import parse_dream_trigger_tags
+from backend.metabolisation.daemon_trigger_signal import enqueue_dream_trigger
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +39,6 @@ def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list
 
     Returns: (cleaned_text, proposed_skills, proposed_branches, proposed_resonances, proposed_beliefs, proposed_refusals, proposed_dream_triggers)
     """
-    from backend.utils.skill_parser import parse_skill_nucleation_tags
-    from backend.utils.belief_parser import parse_belief_nucleate_tags
-    from backend.utils.refusal_parser import parse_refusal_tags
-    from backend.utils.dream_trigger_parser import parse_dream_trigger_tags
-
     response_text, proposed_skills = parse_skill_nucleation_tags(response_text)
     response_text, proposed_beliefs = parse_belief_nucleate_tags(response_text)
     response_text, proposed_refusals = parse_refusal_tags(response_text)
@@ -183,7 +184,6 @@ class ChatService:
             parent_message_id=parent_message_id,
         )
 
-        import numpy as np
         try:
             user_sig_list = user_sig.tolist() if 'user_sig' in locals() and user_sig is not None else None
         except Exception:
@@ -268,7 +268,6 @@ class ChatService:
 
             # Enqueue self-triggered dream requests into the daemon's priority queue
             if proposed_dream_triggers:
-                from backend.metabolisation.daemon_trigger_signal import enqueue_dream_trigger
                 for trigger in proposed_dream_triggers:
                     enqueue_dream_trigger(
                         app_state=state,
