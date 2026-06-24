@@ -10,6 +10,7 @@ import logging
 import re
 import uuid
 from pathlib import Path
+from typing import Optional
 
 from backend.modules.llm_client import generate_unified
 from backend.services.research.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
@@ -225,7 +226,7 @@ async def _analyze_source(orch, task_id, url, title, content, query, goal, depth
         if len(content_stripped) < 200:
             logger.info("Skipping short content (%d chars) for %s", len(content_stripped), url[:80])
             return {"learnings": [], "gaps": [f"Content too short ({len(content_stripped)} chars) — likely paywall or block"], "followups": [], "direct_urls": [], "diffractive_notes": []}
-        for junk in orch._CONTENT_JUNK_PATTERNS:
+        for junk in _CONTENT_JUNK_PATTERNS:
             if junk.lower() in content_stripped[:1000].lower():
                 logger.info("Skipping junk content ('%s') for %s", junk, url[:80])
                 return {"learnings": [], "gaps": [f"Blocked by anti-bot protection ('{junk}')"], "followups": [], "direct_urls": [url], "diffractive_notes": []}
@@ -471,7 +472,7 @@ async def _tool_reflect(orch, task_id, objective, goal, depth, max_depth,
         return latest_result or {"completeness_score": 0.3, "next_queries": [], "next_direct_urls": [], "reflection": "No reflection"}
 
 async def _tool_evaluate(
-        self, task_id: str, step_id: str, objective: str,
+        orch, task_id: str, step_id: str, objective: str,
         depth: int, max_depth: int, sources: int,
         reflection: dict, stagnation: int,
     ) -> tuple[bool, str]:

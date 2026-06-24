@@ -295,7 +295,7 @@ async def execute_step(
         # Per-step rerun — resume state, set phase, mark step for in-place update.
         # Downstream steps are deleted by execute_step before re-execution.
         if task["status"] in ("completed", "failed"):
-            manager.transition(task_id, "active")
+            manager.task_repo.update(task_id, status="active")
         orch = manager.orchestrator
         orch.ensure_state(task_id)
         orch.set_phase(task_id, target_phase)
@@ -311,7 +311,7 @@ async def execute_step(
                             if s["step_type"] == rerun_step_type and s["status"] == "completed"]
                 existing = matching[-1] if matching else None
             if existing:
-                s2 = orch._task_states.get(task_id)
+                s2 = orch._state_mgr._states.get(task_id)
                 if s2 is not None:
                     s2["_rerun_step_id"] = existing["id"]
                     # Set query_index from the step's query_group
