@@ -35,6 +35,7 @@ from backend.utils.prompt_builder import (
 from backend.utils.prompt_loader import get_prompts_dict
 
 from backend.utils.research_logger import log_research_meta, now_utc_str
+from backend.utils.concurrency import ensure_semaphore
 from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.services.research.task_state import TaskStateManager
 from backend.services.research.cache_manager import CacheManager
@@ -149,9 +150,7 @@ class SomaticResearchOrchestrator:
         return f"task={task_id[:8]} phase={phase}"
 
     def _get_semaphore(self) -> asyncio.Semaphore:
-        if self._semaphore is None:
-            self._semaphore = asyncio.Semaphore(self.max_concurrent)
-        return self._semaphore
+        return ensure_semaphore(self, '_semaphore', self.max_concurrent)
 
     @staticmethod
     def _format_reflection_markdown(reflection: dict, depth: int = 0, include_cycle: bool = False) -> str:

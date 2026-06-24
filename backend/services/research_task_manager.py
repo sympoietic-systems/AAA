@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from backend.utils.research_logger import now_utc_str
+from backend.utils.concurrency import ensure_semaphore
 
 logger = logging.getLogger("aaa.research_task_manager")
 
@@ -71,9 +72,7 @@ class ResearchTaskManager:
         return self._app_state.scraped_asset_repo
 
     def _get_semaphore(self) -> asyncio.Semaphore:
-        if self._semaphore is None:
-            self._semaphore = asyncio.Semaphore(self.max_concurrent)
-        return self._semaphore
+        return ensure_semaphore(self, '_semaphore', self.max_concurrent)
 
     # ── Task Creation ─────────────────────────────────────────────
 

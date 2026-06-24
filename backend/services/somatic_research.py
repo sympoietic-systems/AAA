@@ -19,6 +19,7 @@ import numpy as np
 from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import log_research_meta
 from backend.utils.anti_mastery import apply_anti_mastery_filter
+from backend.utils.concurrency import ensure_semaphore
 from backend.utils.somatic_math import (
     calculate_diffractive_similarity,
     calculate_rhizomatic_utility,
@@ -76,9 +77,7 @@ class SomaticResearchEngine:
         return self.config.get("detour_interpolation_alpha", 0.5)
 
     def _get_semaphore(self) -> asyncio.Semaphore:
-        if self._semaphore is None:
-            self._semaphore = asyncio.Semaphore(self.max_concurrent_probes)
-        return self._semaphore
+        return ensure_semaphore(self, '_semaphore', self.max_concurrent_probes)
 
     @property
     def _meta_log_repo(self):
