@@ -39,6 +39,7 @@ from backend.utils.concurrency import ensure_semaphore
 from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.services.research.task_state import TaskStateManager
 from backend.services.research.cache_manager import CacheManager
+from backend.services.research.phases import ResearchPhases
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
@@ -883,33 +884,28 @@ class SomaticResearchOrchestrator:
             }
 
             try:
-                if phase == "planning":
-                    result.update(await self._step_plan(task_id, s))
+                    if phase == "planning":
+                        result.update(await ResearchPhases.step_plan(self, task_id, s))
+                    elif phase == "searching":
+                        result.update(await ResearchPhases.step_search(self, task_id, s))
+                    elif phase == "parsing":
+                        result.update(await ResearchPhases.step_parse(self, task_id, s))
+                    elif phase == "digesting":
+                        result.update(await ResearchPhases.step_digest(self, task_id, s))
+                    elif phase == "reflecting":
+                        result.update(await ResearchPhases.step_reflect(self, task_id, s))
+                    elif phase == "evaluating":
+                        result.update(await ResearchPhases.step_evaluate(self, task_id, s))
+                    elif phase == "synthesizing":
+                        result.update(await ResearchPhases.step_synthesize(self, task_id, s))
 
-                elif phase == "searching":
-                    result.update(await self._step_search(task_id, s))
+                    elif phase == "complete":
+                        result["message"] = "already complete"
+                        return result
 
-                elif phase == "parsing":
-                    result.update(await self._step_parse(task_id, s))
+                    else:
+                        raise ValueError(f"Unknown phase: {phase}")
 
-                elif phase == "digesting":
-                    result.update(await self._step_digest(task_id, s))
-
-                elif phase == "reflecting":
-                    result.update(await self._step_reflect(task_id, s))
-
-                elif phase == "evaluating":
-                    result.update(await self._step_evaluate(task_id, s))
-
-                elif phase == "synthesizing":
-                    result.update(await self._step_synthesize(task_id, s))
-
-                elif phase == "complete":
-                    result["message"] = "already complete"
-                    return result
-
-                else:
-                    raise ValueError(f"Unknown phase: {phase}")
 
             except Exception as e:
                 logger.exception("Step %s failed for task %s", phase, task_id)
@@ -932,33 +928,7 @@ class SomaticResearchOrchestrator:
     # ── Phase step implementations ─────────────────────────────────
 
     async def _step_plan(self, task_id: str, s: dict) -> dict:
-        """Generate research plan via LLM. Advance to searching."""
-        logger.info("Step: PLANNING — %s", self._log_context(task_id, "planning"))
-        s["step_number"] += 1
-        step_id = str(uuid.uuid4())
-
-        # Generate the plan first so we have a valid plan_id
-        plan = await self._phase_plan(task_id, s["objective"], s["max_depth"], s["budget"], step_id=step_id)
-        s["plan"] = plan
-        s["plan_id"] = plan["id"]
-
-        # Now create the step record with the real plan_id
-        self.step_repo.create({
-            "id": step_id, "task_id": task_id, "plan_id": plan["id"],
-            "step_number": s["step_number"], "step_type": "plan",
-            "status": "completed", "started_at": now_utc_str(),
-            "result_summary": f"{len(plan.get('search_queries',[]))} queries planned × ~{plan.get('estimated_depth', 1)} depth",
-        })
-        # Save the plan as LLM response in step_data so frontend shows it
-        try:
-            llm_resp = {"plan": plan, "depth": 0}
-            self.step_repo.update(step_id, step_data=json.dumps(llm_resp, default=str, ensure_ascii=False))
-        except Exception:
-            pass
-        self._log_meta(task_id, "orchestrator_plan", {"plan": plan}, step_id=step_id)
-
-        s["phase"] = "searching"
-        return {"plan": plan, "plan_id": plan["id"], "step_id": step_id}
+        return await ResearchPhases.step_plan(self, task_id, s)
 
     async def _step_search(self, task_id: str, s: dict) -> dict:
         """Web search for all queries of the current depth in parallel. Advance to parsing."""
