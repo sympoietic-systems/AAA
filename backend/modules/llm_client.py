@@ -7,6 +7,7 @@ from typing import Optional
 import httpx
 
 from .base import ProcessingModule
+from backend.modules.providers.anthropic_utils import parse_anthropic_response
 
 logger = logging.getLogger(__name__)
 
@@ -195,20 +196,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 data = response.json()
                 
                 if is_anthropic:
-                    content_list = data.get("content", [])
-                    text_content = ""
-                    reasoning_content = ""
-                    for block in content_list:
-                        if block.get("type") == "text":
-                            text_content += block.get("text", "")
-                        elif block.get("type") == "thinking":
-                            reasoning_content += block.get("thinking", "")
-                    
-                    message = {
-                        "role": data.get("role", "assistant"),
-                        "content": text_content,
-                        "reasoning_content": reasoning_content,
-                    }
+                    message = parse_anthropic_response(data)
                 else:
                     message = data["choices"][0]["message"]
                 
