@@ -7,6 +7,11 @@ from typing import Optional
 logger = logging.getLogger("aaa.research_logger")
 
 
+def now_utc_str() -> str:
+    """Return current UTC timestamp as ISO-like string for DB insertions."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def log_research_meta(
     meta_log_repo,
     task_id: str,
@@ -29,7 +34,7 @@ def log_research_meta(
             "step_id": step_id if step_id else None,
             "event_type": event_type,
             "event_data": json.dumps(data, default=str, ensure_ascii=False),
-            "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            "created_at": now_utc_str(),
         })
     except Exception:
         logger.warning(

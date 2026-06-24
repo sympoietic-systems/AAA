@@ -14,6 +14,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from backend.utils.research_logger import now_utc_str
+
 logger = logging.getLogger("aaa.research_task_manager")
 
 VALID_STATUSES = {
@@ -72,9 +74,6 @@ class ResearchTaskManager:
         if self._semaphore is None:
             self._semaphore = asyncio.Semaphore(self.max_concurrent)
         return self._semaphore
-
-    def _now_utc_str(self) -> str:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     # ── Task Creation ─────────────────────────────────────────────
 
@@ -147,7 +146,7 @@ class ResearchTaskManager:
 
     def approve(self, task_id: str) -> None:
         """User approves a Symbia-proposed task."""
-        self.task_repo.update(task_id, approved_by="user", approved_at=self._now_utc_str())
+        self.task_repo.update(task_id, approved_by="user", approved_at=now_utc_str())
         self.transition(task_id, "approved")
 
     def reject(self, task_id: str) -> None:

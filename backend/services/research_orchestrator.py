@@ -34,7 +34,7 @@ from backend.utils.prompt_builder import (
 )
 from backend.utils.prompt_loader import get_prompts_dict
 
-from backend.utils.research_logger import log_research_meta
+from backend.utils.research_logger import log_research_meta, now_utc_str
 from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.services.research.task_state import TaskStateManager
 from backend.services.research.cache_manager import CacheManager
@@ -192,9 +192,6 @@ class SomaticResearchOrchestrator:
         except Exception as e:
             logger.warning("Failed to retrieve parsed URLs: %s", e)
         return result
-
-    def _now_utc_str(self) -> str:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     # ── Input cache ──────────────────────────────────────────────────
 
@@ -425,11 +422,11 @@ class SomaticResearchOrchestrator:
                     "pending_queries": pending_queries,
                     "query_index": s.get("query_index", 0),
                     "top_n": self.default_top_n,
-                    "cached_at": self._now_utc_str(),
+                    "cached_at": now_utc_str(),
                 }
             else:
                 result = {"phase": "searching", "pending_queries": [task["objective"]], "query_index": 0,
-                          "top_n": self.default_top_n, "cached_at": self._now_utc_str()}
+                          "top_n": self.default_top_n, "cached_at": now_utc_str()}
         elif phase == "parsing":
             urls = []
             if s and s.get("search_results_cache"):
@@ -437,7 +434,7 @@ class SomaticResearchOrchestrator:
             result = {
                 "phase": "parsing",
                 "urls_to_fetch": urls,
-                "cached_at": self._now_utc_str(),
+                "cached_at": now_utc_str(),
             }
         elif phase == "digesting":
             sources = []
@@ -517,7 +514,7 @@ class SomaticResearchOrchestrator:
                 "sources_to_digest": sources,
                 "system_prompt": system_prompt,
                 "user_prompt": user_prompt,
-                "cached_at": self._now_utc_str(),
+                "cached_at": now_utc_str(),
             }
         elif phase == "reflecting":
             prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
@@ -636,7 +633,7 @@ class SomaticResearchOrchestrator:
                 "accumulated_findings": all_findings,
                 "digest_signals": signals,
                 "parsed_urls": parsed_urls_list,
-                "cached_at": self._now_utc_str(),
+                "cached_at": now_utc_str(),
             }
         elif phase == "evaluating":
             reflection = s["last_reflection"] if s and s.get("last_reflection") else {}
@@ -677,7 +674,7 @@ class SomaticResearchOrchestrator:
                 "next_queries": reflection.get("next_queries", []),
                 "next_direct_urls": reflection.get("next_direct_urls", []),
                 "objective": task["objective"],
-                "cached_at": self._now_utc_str(),
+                "cached_at": now_utc_str(),
             }
         elif phase == "synthesizing":
             # Generate prompts using current state
@@ -731,7 +728,7 @@ class SomaticResearchOrchestrator:
                 "sources": parsed_urls_list,
                 "findings": all_findings,
                 "reflection": reflection,
-                "cached_at": self._now_utc_str(),
+                "cached_at": now_utc_str(),
             }
         else:
             result = {"phase": phase, "note": "inputs available after previous step completes"}
@@ -770,7 +767,7 @@ class SomaticResearchOrchestrator:
             "model": getattr(self._state, "llm_provider", None) and getattr(self._state.llm_provider, "model_id", "(auto)") or "(auto)",
             "temperature": prompt_data.get("temperature", 0.4),
             "max_tokens": prompt_data.get("max_tokens", 1024),
-            "cached_at": self._now_utc_str(),
+            "cached_at": now_utc_str(),
         }
 
     # ── State persistence ───────────────────────────────────────────
@@ -791,7 +788,7 @@ class SomaticResearchOrchestrator:
             # Update depth in step_data for the rerun step
             step_data = json.dumps({"depth": s.get("current_depth", 0)})
             self.step_repo.update(rerun_id, status="running",
-                started_at=self._now_utc_str(), query_text=query_text, step_data=step_data)
+                started_at=now_utc_str(), query_text=query_text, step_data=step_data)
             return rerun_id
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
@@ -800,7 +797,7 @@ class SomaticResearchOrchestrator:
             "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
             "step_number": s["step_number"], "step_type": step_type,
             "step_data": step_data,
-            "status": "running", "started_at": self._now_utc_str(),
+            "status": "running", "started_at": now_utc_str(),
             "query_group": query_group, "query_text": query_text,
         })
         return step_id
@@ -950,7 +947,7 @@ class SomaticResearchOrchestrator:
         self.step_repo.create({
             "id": step_id, "task_id": task_id, "plan_id": plan["id"],
             "step_number": s["step_number"], "step_type": "plan",
-            "status": "completed", "started_at": self._now_utc_str(),
+            "status": "completed", "started_at": now_utc_str(),
             "result_summary": f"{len(plan.get('search_queries',[]))} queries planned × ~{plan.get('estimated_depth', 1)} depth",
         })
         # Save the plan as LLM response in step_data so frontend shows it
@@ -999,7 +996,7 @@ class SomaticResearchOrchestrator:
             "pending_queries": pending_queries,
             "query_index": 0,
             "top_n": self.default_top_n,
-            "cached_at": self._now_utc_str(),
+            "cached_at": now_utc_str(),
         }
         self._save_cache(task_id, cache)
 
@@ -1151,7 +1148,7 @@ class SomaticResearchOrchestrator:
         # Cache URL list for re-use on rerun
         urls = [{"url": p["url"], "title": p.get("title", p["url"]), "query_group": p.get("query_group")} for p in parsed]
         cache = self._load_cache(task_id)
-        cache["parsing"] = {"phase": "parsing", "urls": urls, "cached_at": self._now_utc_str()}
+        cache["parsing"] = {"phase": "parsing", "urls": urls, "cached_at": now_utc_str()}
         self._save_cache(task_id, cache)
 
         return {
@@ -1305,7 +1302,7 @@ class SomaticResearchOrchestrator:
             "depth": s["current_depth"],
             "max_depth": s["max_depth"],
             "source_urls": source_urls,
-            "cached_at": self._now_utc_str(),
+            "cached_at": now_utc_str(),
         }
         self._save_cache(task_id, cache)
 
@@ -1489,7 +1486,7 @@ class SomaticResearchOrchestrator:
                 "model": getattr(self._state, "llm_provider", None) and getattr(self._state.llm_provider, "model_id", "(auto)") or "(auto)",
                 "temperature": prompt_data.get("temperature", 0.4),
                 "max_tokens": prompt_data.get("max_tokens", 1024),
-                "cached_at": self._now_utc_str(),
+                "cached_at": now_utc_str(),
             }
             self._save_cache(task_id, cache)
 
@@ -1555,7 +1552,7 @@ class SomaticResearchOrchestrator:
                 "system_prompt": system_text,
                 "sources_count": sources_count,
                 "findings_count": len(all_findings),
-                "cached_at": self._now_utc_str(),
+                "cached_at": now_utc_str(),
             }
             self._save_cache(task_id, cache)
 
@@ -1954,7 +1951,7 @@ class SomaticResearchOrchestrator:
                 "objective": objective,
                 "goal": goal,
                 "system_prompt": system_text,
-                "cached_at": self._now_utc_str(),
+                "cached_at": now_utc_str(),
             }
             self._save_cache(task_id, cache)
 
