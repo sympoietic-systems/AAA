@@ -108,8 +108,8 @@ class TestInitTask:
         orch = SomaticResearchOrchestrator(state_mock)
         orch.init_task(task_id)
 
-        assert task_id in orch._task_states
-        assert orch._task_states[task_id]["phase"] == "planning"
+        assert task_id in orch._state_mgr.states
+        assert orch._state_mgr.states[task_id]["phase"] == "planning"
 
         conn.close()
 
@@ -210,7 +210,7 @@ class TestEnsureState:
         state_mock.research_meta_log_repo = MagicMock()
 
         orch = SomaticResearchOrchestrator(state_mock)
-        orch._task_states["test-id"] = {"phase": "planning", "_custom": True}
+        orch._state_mgr.states["test-id"] = {"phase": "planning", "_custom": True}
 
         state = orch.ensure_state("test-id")
         assert state["_custom"] is True
@@ -235,7 +235,7 @@ class TestGetTaskPhase:
         state_mock.research_meta_log_repo = MagicMock()
 
         orch = SomaticResearchOrchestrator(state_mock)
-        orch._task_states["task-a"] = {"phase": "parsing"}
+        orch._state_mgr.states["task-a"] = {"phase": "parsing"}
         assert orch.get_task_phase("task-a") == "parsing"
 
     def test_returns_empty_string_for_uninitialized(self):
@@ -254,10 +254,10 @@ class TestSetPhase:
         state_mock.research_meta_log_repo = MagicMock()
 
         orch = SomaticResearchOrchestrator(state_mock)
-        orch._task_states["task-x"] = {"phase": "planning"}
+        orch._state_mgr.states["task-x"] = {"phase": "planning"}
 
         orch.set_phase("task-x", "searching")
-        assert orch._task_states["task-x"]["phase"] == "searching"
+        assert orch._state_mgr.states["task-x"]["phase"] == "searching"
 
     def test_raises_runtime_error_for_missing_task(self):
         state_mock = _make_mock_state()
@@ -284,7 +284,7 @@ class TestPersistAndLoadState:
         state_mock.research_meta_log_repo = MagicMock()
 
         orch = SomaticResearchOrchestrator(state_mock)
-        orch._task_states[task_id] = {
+        orch._state_mgr.states[task_id] = {
             "phase": "reflecting",
             "objective": "Test",
             "max_depth": 2,

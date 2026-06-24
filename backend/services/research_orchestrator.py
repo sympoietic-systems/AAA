@@ -35,6 +35,7 @@ from backend.utils.prompt_builder import (
 from backend.utils.prompt_loader import get_prompts_dict
 
 from backend.utils.research_logger import log_research_meta
+from backend.services.research.task_state import TaskStateManager
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
@@ -62,8 +63,12 @@ class SomaticResearchOrchestrator:
     def __init__(self, app_state: Any):
         self._state = app_state
         self._semaphore: Optional[asyncio.Semaphore] = None
-        self._task_states: dict[str, dict] = {}  # task_id → execution state
-        self._step_locks: dict[str, asyncio.Lock] = {}  # per-task step locks
+        self._state_mgr = TaskStateManager(
+            task_repo=app_state.research_task_repo,
+            plan_repo=getattr(app_state, "research_plan_repo", None),
+            step_repo=getattr(app_state, "research_step_repo", None),
+            meta_log_repo=getattr(app_state, "research_meta_log_repo", None),
+        )
 
     # ── Properties ──────────────────────────────────────────────────
 
@@ -389,142 +394,22 @@ class SomaticResearchOrchestrator:
     # ── In-memory task state (for step-by-step execution) ──────────
 
     def init_task(self, task_id: str) -> dict:
-        """Initialise per-task execution state for step-by-step mode.
-
-        Reads objective/max_depth/budget from the database, sets phase='planning'.
-        """
-        task = self.task_repo.get(task_id)
-        if not task:
-            raise ValueError(f"Task not found: {task_id}")
-
-        state = {
-            "phase": "planning",
-            "objective": task["objective"],
-            "max_depth": task["max_depth"],
-            "budget": task["budget_limit_usd"],
-            "plan_id": None,
-            "plan": None,
-            "all_findings": [],
-            "sources_analyzed": 0,
-            "stagnation_counter": 0,
-            "step_number": 0,
-            "last_reflection": {},
-            "current_depth": 0,
-            "query_index": 0,
-            "search_results_cache": [],
-            "parsed_sources_cache": [],
-            "digest_results_cache": [],
-            "should_stop": False,
-            "stop_reason": "",
-        }
-        self._task_states[task_id] = state
-        self._log_meta(task_id, "orchestrator_step_init", {
-            "objective": state["objective"],
-            "max_depth": state["max_depth"],
-            "budget": state["budget"],
-            "mode": "step_by_step",
-        })
-        return state
+        return self._state_mgr.init_task(task_id)
 
     def resume_task(self, task_id: str) -> Optional[dict]:
-        """Re-hydrate in-memory state from persisted orchestrator_state.
-
-        Returns the state dict or None if the task has no persisted state.
-        Falls back to reconstructing from DB steps if orchestrator_state is absent.
-        """
-        task = self.task_repo.get(task_id)
-        if not task:
-            return None
-
-        # Prefer orchestrator_state — the single source of truth
-        loaded = self._load_state(task_id)
-        if loaded:
-            loaded["objective"] = task["objective"]
-            loaded["max_depth"] = task["max_depth"]
-            loaded["budget"] = task["budget_limit_usd"]
-            self._task_states[task_id] = loaded
-            logger.info("Resumed task %s from orchestrator_state at phase '%s' (step %d)",
-                         task_id[:8], loaded.get("phase"), loaded.get("step_number", 0))
-            return loaded
-
-        # Fallback: reconstruct from DB (legacy, for tasks created before m039)
-        steps = self.step_repo.get_by_task(task_id) if self.step_repo else []
-        completed = [s for s in steps if s["status"] == "completed"]
-        last_type = completed[-1]["step_type"] if completed else None
-        step_number = len(completed)
-
-        plan = None
-        plan_id = None
-        if self.plan_repo:
-            plan_row = self.plan_repo.get_by_task(task_id)
-            if plan_row:
-                plan_id = plan_row["id"]
-                try:
-                    plan = json.loads(plan_row["plan_json"])
-                except Exception:
-                    plan = {}
-
-        phase_after: dict[str, str] = {
-            "plan": "searching", "search": "parsing",
-            "parallel_parse": "digesting", "digest": "reflecting",
-            "reflect": "evaluating", "evaluate": "synthesizing",
-            "synthesize": "complete",
-        }
-        phase = phase_after.get(last_type, "planning") if last_type else "planning"
-
-        state = {
-            "phase": phase, "objective": task["objective"],
-            "max_depth": task["max_depth"], "budget": task["budget_limit_usd"],
-            "plan_id": plan_id, "plan": plan,
-            "all_findings": [], "sources_analyzed": task.get("assets_harvested", 0),
-            "stagnation_counter": 0, "step_number": step_number,
-            "last_reflection": {}, "current_depth": 0, "query_index": 0,
-            "search_results_cache": [], "parsed_sources_cache": [],
-            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
-        }
-        self._task_states[task_id] = state
-        logger.info("Resumed task %s from DB reconstruction at phase '%s' (step %d)",
-                     task_id[:8], phase, step_number)
-        return state
+        return self._state_mgr.resume_task(task_id)
 
     def set_phase(self, task_id: str, phase: str) -> None:
-        """Force-set the orchestrator phase for a task so the next execute_step
-        runs exactly that phase (used for single-step rerun)."""
-        s = self._task_states.get(task_id)
-        if s is None:
-            s = self.resume_task(task_id)
-        if s is None:
-            raise RuntimeError(f"Cannot set phase — task not found: {task_id}")
-        s["phase"] = phase
+        self._state_mgr.set_phase(task_id, phase)
 
     def ensure_state(self, task_id: str) -> dict:
-        """Get or resume task state.  Called before any orchestrator action."""
-        s = self._task_states.get(task_id)
-        if s is not None:
-            return s
-        s = self.resume_task(task_id)
-        if s is not None:
-            return s
-        raise RuntimeError(
-            f"No orchestrator state for {task_id}. Call init_task() first."
-        )
+        return self._state_mgr.ensure_state(task_id)
 
     def _get_state(self, task_id: str) -> dict:
-        s = self._task_states.get(task_id)
-        if s is None:
-            s = self.resume_task(task_id)
-        if s is None:
-            raise RuntimeError(
-                f"No orchestrator state for {task_id}. Call init_task() first."
-            )
-        return s
+        return self._state_mgr.get_state(task_id)
 
     def get_task_phase(self, task_id: str) -> str:
-        """Return current phase for a task, or empty string if not initialised."""
-        state = self._task_states.get(task_id)
-        if state is None:
-            state = self.resume_task(task_id)
-        return state["phase"] if state else ""
+        return self._state_mgr.get_task_phase(task_id)
 
     async def preview_step_inputs(self, task_id: str, phase: str) -> dict:
         """Return the prompts/inputs that would be sent for a given phase,
@@ -542,7 +427,7 @@ class SomaticResearchOrchestrator:
         if not task:
             raise ValueError(f"Task not found: {task_id}")
 
-        s = self._task_states.get(task_id)
+        s = self._state_mgr.states.get(task_id)
         if s is None:
             s = self.resume_task(task_id)
 
@@ -928,43 +813,11 @@ class SomaticResearchOrchestrator:
 
     # ── State persistence ───────────────────────────────────────────
 
-    _ORCH_STATE_KEYS = {
-        "phase", "objective", "max_depth", "budget", "plan_id", "plan",
-        "all_findings", "sources_analyzed", "stagnation_counter",
-        "step_number", "last_reflection", "current_depth", "query_index",
-        "search_results_cache", "digest_results_cache",
-        "digest_signals",
-        "should_stop", "stop_reason",
-    }
-
     def _persist_state(self, task_id: str) -> None:
-        """Serialise orchestrator state to research_tasks.orchestrator_state."""
-        s = self._task_states.get(task_id)
-        if not s:
-            return
-        clean = {k: v for k, v in s.items() if k in self._ORCH_STATE_KEYS}
-        try:
-            self.task_repo.update(task_id, orchestrator_state=json.dumps(clean, default=str, ensure_ascii=False))
-        except Exception:
-            logger.warning("Failed to persist orchestrator state for %s", task_id[:8], exc_info=True)
+        self._state_mgr._persist_state(task_id)
 
     def _load_state(self, task_id: str) -> Optional[dict]:
-        """Load orchestrator state from DB. Returns None if not found."""
-        task = self.task_repo.get(task_id)
-        if not task or not task.get("orchestrator_state"):
-            return None
-        try:
-            state = json.loads(task["orchestrator_state"])
-            # Ensure mutable containers
-            for key in ("all_findings", "search_results_cache", "parsed_sources_cache", "digest_results_cache"):
-                if key not in state:
-                    state[key] = []
-            if "last_reflection" not in state:
-                state["last_reflection"] = {}
-            return state
-        except Exception:
-            logger.warning("Failed to load orchestrator state for %s", task_id[:8], exc_info=True)
-            return None
+        return self._state_mgr._load_state(task_id)
 
     # ── Step record helpers ─────────────────────────────────────────
 
@@ -1037,10 +890,10 @@ class SomaticResearchOrchestrator:
         Returns unified debug info: inputs, outputs, prompts, next_phase.
         Persists orchestrator_state after every step.
         """
-        if task_id not in self._step_locks:
-            self._step_locks[task_id] = asyncio.Lock()
+        if task_id not in self._state_mgr.locks:
+            self._state_mgr.locks[task_id] = asyncio.Lock()
 
-        async with self._step_locks[task_id]:
+        async with self._state_mgr.locks[task_id]:
             s = self._get_state(task_id)
             phase = s["phase"]
 
@@ -1615,7 +1468,7 @@ class SomaticResearchOrchestrator:
             raise ValueError(f"Task not found: {task_id}")
 
         self.init_task(task_id)
-        s = self._task_states[task_id]
+        s = self._state_mgr.states[task_id]
 
         logger.info("Orchestrator (auto) starting — %s: %s", self._log_context(task_id, "auto"), task.get("title", "")[:80])
         self._log_meta(task_id, "orchestrator_start", {
@@ -1628,7 +1481,7 @@ class SomaticResearchOrchestrator:
         while s["phase"] != "complete":
             await self.execute_step(task_id)
 
-        s = self._task_states.pop(task_id, {})
+        s = self._state_mgr.states.pop(task_id, {})
         return {
             "task_id": task_id,
             "branches_created": s.get("step_number", 0),

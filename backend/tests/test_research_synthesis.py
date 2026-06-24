@@ -50,7 +50,7 @@ async def test_synthesize_phase_uses_synthesis_persona():
     }
     
     # Empty cache initially
-    orchestrator._task_states[task_id] = {
+    orchestrator._state_mgr.states[task_id] = {
         "phase": "synthesizing",
         "objective": "Understand Barad's diffractive methodology",
         "max_depth": 2,

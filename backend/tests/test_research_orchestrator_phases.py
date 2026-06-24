@@ -79,7 +79,7 @@ class TestExecuteStepRouting:
         state_mock.belief_repo = None
 
         orch = SomaticResearchOrchestrator(state_mock)
-        orch._task_states[task_id] = {
+        orch._state_mgr.states[task_id] = {
             "phase": "planning",
             "objective": "Research objective",
             "max_depth": 3, "budget": 0.5,
@@ -90,9 +90,9 @@ class TestExecuteStepRouting:
             "digest_results_cache": [], "should_stop": False, "stop_reason": "",
         }
 
-        result = await orch._step_plan(task_id, orch._task_states[task_id])
+        result = await orch._step_plan(task_id, orch._state_mgr.states[task_id])
 
-        s = orch._task_states[task_id]
+        s = orch._state_mgr.states[task_id]
         assert s["phase"] == "searching"
         assert s["plan_id"] is not None
         assert "search_queries" in result["plan"]
@@ -126,7 +126,7 @@ class TestExecuteStepRouting:
         state_mock.belief_repo = None
 
         orch = SomaticResearchOrchestrator(state_mock)
-        orch._task_states[task_id] = {
+        orch._state_mgr.states[task_id] = {
             "phase": "planning",
             "objective": "Test", "max_depth": 3, "budget": 0.5,
             "plan_id": None, "plan": None, "all_findings": [],
@@ -136,10 +136,10 @@ class TestExecuteStepRouting:
             "digest_results_cache": [], "should_stop": False, "stop_reason": "",
         }
 
-        await orch._step_plan(task_id, orch._task_states[task_id])
+        await orch._step_plan(task_id, orch._state_mgr.states[task_id])
 
-        assert orch._task_states[task_id]["phase"] == "searching"
-        assert orch._task_states[task_id]["step_number"] == 6
+        assert orch._state_mgr.states[task_id]["phase"] == "searching"
+        assert orch._state_mgr.states[task_id]["step_number"] == 6
 
         conn.close()
 
