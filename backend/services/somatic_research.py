@@ -17,6 +17,7 @@ from typing import Any, Optional
 import numpy as np
 
 from backend.utils.prompt_loader import get_prompts_dict
+from backend.utils.research_logger import log_research_meta
 from backend.utils.somatic_math import (
     calculate_diffractive_similarity,
     calculate_rhizomatic_utility,
@@ -83,21 +84,7 @@ class SomaticResearchEngine:
         return getattr(self._state, "research_meta_log_repo", None)
 
     def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: str = None) -> None:
-        """Log a research event to the meta-log for debugging/traceability."""
-        try:
-            repo = self._meta_log_repo
-            if repo is None:
-                return
-            repo.create({
-                "id": str(uuid.uuid4()),
-                "task_id": task_id,
-                "branch_id": branch_id,
-                "event_type": event_type,
-                "event_data": json.dumps(data, default=str, ensure_ascii=False),
-                "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-            })
-        except Exception:
-            pass  # Never let meta-logging break research execution
+        log_research_meta(self._meta_log_repo, task_id, event_type, data, branch_id)
 
     def _anti_mastery(self, text: str) -> str:
         try:

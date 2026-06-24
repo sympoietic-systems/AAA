@@ -34,6 +34,8 @@ from backend.utils.prompt_builder import (
 )
 from backend.utils.prompt_loader import get_prompts_dict
 
+from backend.utils.research_logger import log_research_meta
+
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
@@ -282,21 +284,7 @@ class SomaticResearchOrchestrator:
     # ── Meta Logging ────────────────────────────────────────────────
 
     def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: Optional[str] = None, step_id: Optional[str] = None) -> None:
-        try:
-            repo = self._meta_log_repo
-            if repo is None:
-                return
-            repo.create({
-                "id": str(uuid.uuid4()),
-                "task_id": task_id,
-                "branch_id": branch_id if branch_id else None,
-                "step_id": step_id if step_id else None,
-                "event_type": event_type,
-                "event_data": json.dumps(data, default=str, ensure_ascii=False),
-                "created_at": self._now_utc_str(),
-            })
-        except Exception:
-            logger.warning("Failed to persist meta log for task %s event %s", task_id, event_type)
+        log_research_meta(self._meta_log_repo, task_id, event_type, data, branch_id, step_id)
 
     def _log_llm_response(self, task_id: str, event_type: str, resp: dict, extra: Optional[dict] = None, step_id: Optional[str] = None) -> None:
         """Log an LLM response safely by truncating large fields within the dictionary,
