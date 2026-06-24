@@ -36,6 +36,7 @@ from backend.utils.prompt_loader import get_prompts_dict
 
 from backend.utils.research_logger import log_research_meta
 from backend.services.research.task_state import TaskStateManager
+from backend.services.research.cache_manager import CacheManager
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
@@ -69,6 +70,7 @@ class SomaticResearchOrchestrator:
             step_repo=getattr(app_state, "research_step_repo", None),
             meta_log_repo=getattr(app_state, "research_meta_log_repo", None),
         )
+        self._cache = CacheManager(task_repo=app_state.research_task_repo)
 
     # ── Properties ──────────────────────────────────────────────────
 
@@ -203,50 +205,16 @@ class SomaticResearchOrchestrator:
     # ── Input cache ──────────────────────────────────────────────────
 
     def _load_cache(self, task_id: str) -> dict:
-        """Load the cached_inputs JSON dict for a task. Returns {} on any failure."""
-        try:
-            task = self.task_repo.get(task_id)
-            raw = (task or {}).get("cached_inputs")
-            if not raw:
-                return {}
-            return json.loads(raw)
-        except Exception:
-            return {}
-
-    _cached_inputs_ensured: bool = False
-
-    def _ensure_cached_inputs_column(self) -> None:
-        """Add cached_inputs column if missing (idempotent)."""
-        if self.__class__._cached_inputs_ensured:
-            return
-        try:
-            self.task_repo.ensure_column(
-                "ALTER TABLE research_tasks ADD COLUMN cached_inputs TEXT"
-            )
-        except Exception:
-            pass  # fallback if repo doesn't have the method
-        self.__class__._cached_inputs_ensured = True
+        return self._cache.load_cache(task_id)
 
     def _save_cache(self, task_id: str, cache: dict) -> None:
-        """Persist the full cache dict to the task row."""
-        try:
-            self._ensure_cached_inputs_column()
-            self.task_repo.update(task_id, cached_inputs=json.dumps(cache, ensure_ascii=False))
-        except Exception:
-            logger.warning("Failed to save cached_inputs for %s", task_id[:8], exc_info=True)
+        self._cache.save_cache(task_id, cache)
 
     def _get_cached_phase(self, task_id: str, phase: str) -> Optional[dict]:
-        """Return cached inputs for a phase, or None if missing."""
-        cache = self._load_cache(task_id)
-        return cache.get(phase)
+        return self._cache.get_cached_phase(task_id, phase)
 
     def reinitialize(self, task_id: str) -> None:
-        """Clear the input cache for a task. Next preview/step will recompute."""
-        try:
-            self._ensure_cached_inputs_column()
-            self.task_repo.update(task_id, cached_inputs=None)
-        except Exception:
-            logger.warning("Failed to reinitialize cached_inputs for %s", task_id[:8], exc_info=True)
+        self._cache.reinitialize(task_id)
 
     async def _build_orchestrator_persona(self, objective: str = "", context_key: str = "research_orchestration") -> str:
         """Build Symbia's persona context for orchestrator-level tasks (plan, reflect, synthesize).
