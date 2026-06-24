@@ -1,17 +1,19 @@
-import { useState, memo, useRef, useEffect, Children } from "react"
+import { useState, memo, useRef, useEffect } from "react"
 import React from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
 import type { ChatMessage, NoteInfo } from "../../../api/client"
-import { getMessageThinking, getMessageContext, getResearchTask, approveProposal, rejectProposal } from "../../../api/client"
+import { getMessageThinking, getMessageContext } from "../../../api/client"
 import { formatTime } from "../../../utils/dateFormat"
 import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
 import { VitalityBar } from "./VitalityBar"
 import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEqual, getSelectionCharacterOffsetWithin } from "./messageBubbleUtils"
-import { copyToClipboard } from "../../../utils/clipboard"
+import { ResearchProposalCard } from "./ResearchProposalCard"
+import { SelectionToolbar } from "./SelectionToolbar"
+import { NoteEditorPopover } from "./NoteEditorPopover"
 
 export const MessageBubble = memo(function MessageBubble({
   msg,
@@ -142,6 +144,15 @@ export const MessageBubble = memo(function MessageBubble({
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [showSelectionToolbar, showNoteCreator])
+
+  const dismissNoteEditor = () => {
+    setShowNoteCreator(false)
+    setEditingNote(null)
+    setSelectedText("")
+    setNoteComment("")
+    setPopupCoords(null)
+    window.getSelection()?.removeAllRanges()
+  }
 
   const [thinkingText, setThinkingText] = useState<string | null>(msg.thinking || null)
   const [loadingThinking, setLoadingThinking] = useState(false)
@@ -318,157 +329,6 @@ export const MessageBubble = memo(function MessageBubble({
     );
   };
 
-  const renderResearchProposalComponent = (props: any) => {
-    const proposalId = props.id || props["data-id"];
-    
-    // Parse fields from child nodes (using react-markdown/rehype-raw children structure)
-    const childrenArray = Children.toArray(props.children);
-    let objective = "";
-    let rationale = "";
-    let depth = 2;
-    let breadth = 3;
-    let isAgonistic = false;
-
-    childrenArray.forEach((child: any) => {
-      if (!child || typeof child !== 'object') return;
-      const tagName = child.type || child.props?.node?.tagName || "";
-      const text = child.props?.children 
-        ? (Array.isArray(child.props.children) ? child.props.children.join("") : String(child.props.children))
-        : (child.props?.node?.children?.[0]?.value || "");
-      
-      if (tagName === "objective") objective = text.trim();
-      else if (tagName === "rationale") rationale = text.trim();
-      else if (tagName === "suggested_depth" || tagName === "suggested-depth") depth = parseInt(text.trim()) || 2;
-      else if (tagName === "suggested_breadth" || tagName === "suggested-breadth") breadth = parseInt(text.trim()) || 3;
-      else if (tagName === "is_agonistic" || tagName === "is-agonistic") isAgonistic = text.trim().toLowerCase() === "true";
-    });
-
-    const [status, setStatus] = useState<string>("proposed");
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-      if (!proposalId) return;
-      getResearchTask(proposalId)
-        .then((task) => {
-          if (task && task.status) {
-            setStatus(task.status);
-          }
-        })
-        .catch((err) => {
-          console.warn("Failed to fetch initial status for proposal:", proposalId, err);
-        });
-    }, [proposalId]);
-
-    const handleApprove = async (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!proposalId) return;
-      setLoading(true);
-      setError(null);
-      try {
-        await approveProposal(proposalId);
-        setStatus("queued");
-      } catch (err: any) {
-        setError(err.message || "Failed to approve");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const handleReject = async (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!proposalId) return;
-      setLoading(true);
-      setError(null);
-      try {
-        await rejectProposal(proposalId);
-        setStatus("rejected");
-      } catch (err: any) {
-        setError(err.message || "Failed to reject");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const estCost = (0.025 * depth * breadth).toFixed(2);
-
-    return (
-      <div className="border-l-2 border-semantic-gold pl-3 py-1.5 my-3 flex flex-col gap-1 select-none">
-        <div className="text-[10px] text-semantic-gold font-mono font-bold tracking-wider uppercase">
-          🔬 Symbia Proposes Research
-        </div>
-        {objective && (
-          <div className="text-ui-primary text-xs font-mono italic my-0.5">
-            "{objective}"
-          </div>
-        )}
-        {rationale && (
-          <div className="text-ui-secondary text-[11px] font-sans">
-            {rationale}
-          </div>
-        )}
-        <div className="text-ui-dim text-[10px] font-mono flex flex-wrap gap-x-2 gap-y-0.5">
-          <span>Depth: {depth}</span>
-          <span>·</span>
-          <span>Breadth: {breadth}</span>
-          <span>·</span>
-          <span>Est. ${estCost}</span>
-          {isAgonistic && (
-            <>
-              <span>·</span>
-              <span className="text-semantic-purple">Agonistic</span>
-            </>
-          )}
-        </div>
-        
-        {error && (
-          <div className="text-semantic-red text-[10px] font-mono mt-0.5">
-            Error: {error}
-          </div>
-        )}
-
-        <div className="flex items-center gap-4 mt-1 font-mono text-[10px]">
-          {loading ? (
-            <span className="text-ui-dim animate-pulse">Processing...</span>
-          ) : status === "proposed" ? (
-            <>
-              <button 
-                onClick={handleApprove}
-                className="text-action-dim hover:text-action-hover cursor-pointer"
-              >
-                [✓ Approve & dispatch]
-              </button>
-              <button 
-                onClick={handleReject}
-                className="text-action-dim hover:text-semantic-red cursor-pointer"
-              >
-                [✗ Dismiss]
-              </button>
-            </>
-          ) : status === "queued" ? (
-            <span className="text-semantic-gold">[✓ Approved & queued]</span>
-          ) : status === "active" ? (
-            <span className="text-semantic-gold animate-pulse">[✓ Approved & active...]</span>
-          ) : status === "completed" ? (
-            <span className="text-semantic-green">
-              [✓ Completed · <a href={`/research?id=${proposalId}`} className="underline hover:text-action-hover font-mono">View Report</a>]
-            </span>
-          ) : status === "rejected" ? (
-            <span className="text-ui-dim">[✗ Dismissed]</span>
-          ) : status === "expired" ? (
-            <span className="text-ui-dim">[✗ Expired]</span>
-          ) : status === "failed" ? (
-            <span className="text-semantic-red">[✗ Failed]</span>
-          ) : (
-            <span className="text-ui-secondary">[{status}]</span>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div ref={bubbleRef} className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
       <div className={`text-sm leading-relaxed ${isHuman ? "text-[#777]" : "text-[#c8c8c8]"}`}>
@@ -486,7 +346,7 @@ export const MessageBubble = memo(function MessageBubble({
                   'note-entanglement': renderNoteComponent,
                   'scar-fold': () => null,
                   'scar_fold': () => null,
-                  'research-proposal': renderResearchProposalComponent,
+                  'research-proposal': ResearchProposalCard,
                 } as any}
               >
                 {processedContent}
@@ -505,7 +365,7 @@ export const MessageBubble = memo(function MessageBubble({
                   'note-entanglement': renderNoteComponent,
                   'scar-fold': () => null,
                   'scar_fold': () => null,
-                  'research-proposal': renderResearchProposalComponent,
+                  'research-proposal': ResearchProposalCard,
                 } as any}
               >
                 {processedContent}
@@ -611,150 +471,29 @@ export const MessageBubble = memo(function MessageBubble({
       </div>
 
       {showSelectionToolbar && popupCoords && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-transparent cursor-default"
-            onMouseDown={() => setShowSelectionToolbar(false)}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              top: `${popupCoords.y}px`,
-              left: `${Math.min(window.innerWidth - 180, Math.max(10, popupCoords.x))}px`,
-            }}
-            onMouseUp={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            className="fixed z-50 flex items-center gap-0 bg-[#1a1a1a] border border-[#333] shadow-xl rounded-md px-1 py-1 select-none"
-          >
-            <button
-              onClick={async () => {
-                const success = await copyToClipboard(selectedText)
-                if (success) {
-                  setCopied(true)
-                  setTimeout(() => {
-                    setShowSelectionToolbar(false)
-                    setCopied(false)
-                  }, 800)
-                }
-              }}
-              className="text-[#888] hover:text-[#4ade80] px-2 py-0.5 text-[10px] font-mono transition-colors whitespace-nowrap"
-            >
-              {copied ? "Copied!" : "Copy"}
-            </button>
-            <span className="text-[#333] text-[10px] px-0.5">|</span>
-            <button
-              onClick={() => {
-                setShowSelectionToolbar(false)
-                setShowNoteCreator(true)
-              }}
-              className="text-[#888] hover:text-[#e09b67] px-2 py-0.5 text-[10px] font-mono transition-colors whitespace-nowrap"
-            >
-              Note
-            </button>
-          </div>
-        </>
+        <SelectionToolbar
+          selectedText={selectedText}
+          popupCoords={popupCoords}
+          onDismiss={() => setShowSelectionToolbar(false)}
+          onOpenNoteEditor={() => setShowNoteCreator(true)}
+          copied={copied}
+          onCopied={setCopied}
+        />
       )}
 
       {showNoteCreator && popupCoords && (
-        <>
-          {/* Backdrop overlay to handle deselect and clicks outside */}
-          <div 
-            className="fixed inset-0 z-40 bg-transparent cursor-default"
-            onMouseDown={() => {
-              setShowNoteCreator(false)
-              setEditingNote(null)
-              setSelectedText("")
-              setNoteComment("")
-              setPopupCoords(null)
-              window.getSelection()?.removeAllRanges() // Clear selection
-            }}
-          />
-          
-          <div 
-            style={{
-              position: 'fixed',
-              top: `${popupCoords.y}px`,
-              left: `${Math.min(window.innerWidth - 400, Math.max(10, popupCoords.x - 100))}px`,
-            }}
-            onMouseUp={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            className="fixed z-50 w-[380px] p-3 bg-[#111] border border-[#333] shadow-2xl rounded-md text-xs select-none"
-          >
-            <div className="text-gray-400 font-mono mb-2">
-              {editingNote ? "EDIT NOTE FOR SELECTION:" : "ADD NOTE FOR SELECTION:"}
-            </div>
-            <div className={`italic text-gray-500 bg-[#090909] p-2 rounded mb-2 border-l-2 ${noteVisibility === 'shared' ? 'border-purple-500' : 'border-yellow-500'} overflow-x-auto whitespace-pre-wrap max-h-20 font-mono`}>
-              "{selectedText}"
-            </div>
-            <textarea
-              value={noteComment}
-              onChange={(e) => setNoteComment(e.target.value)}
-              placeholder="Add comment..."
-              className="w-full bg-[#1a1a1a] border border-[#333] p-2 rounded text-[#ccc] placeholder-[#555] focus:outline-none focus:border-[#4ade80] resize-none h-16 mb-2"
-              autoFocus
-            />
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setNoteVisibility("personal")}
-                  className={`px-2 py-1 rounded text-[10px] transition-colors ${
-                    noteVisibility === "personal"
-                      ? "bg-[#333] text-white border border-[#555]"
-                      : "bg-transparent text-[#555] border border-transparent hover:text-gray-300"
-                  }`}
-                >
-                  Personal
-                </button>
-                <button
-                  onClick={() => setNoteVisibility("shared")}
-                  className={`px-2 py-1 rounded text-[10px] transition-colors ${
-                    noteVisibility === "shared"
-                      ? "bg-purple-950 text-purple-200 border border-purple-800"
-                      : "bg-transparent text-[#555] border border-transparent hover:text-purple-400"
-                  }`}
-                >
-                  Shared
-                </button>
-              </div>
-              <div className="flex gap-2">
-                {editingNote && onDeleteNote && (
-                  <button
-                    onClick={() => {
-                      onDeleteNote(editingNote.id)
-                      setEditingNote(null)
-                      setShowNoteCreator(false)
-                      setSelectedText("")
-                      setNoteComment("")
-                      setPopupCoords(null)
-                    }}
-                    className="text-[#ef4444] hover:text-red-400 hover:underline px-2 py-1 mr-2 text-[10px]"
-                  >
-                    Delete
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setEditingNote(null);
-                    setShowNoteCreator(false);
-                    setSelectedText("");
-                    setNoteComment("");
-                    setPopupCoords(null);
-                    window.getSelection()?.removeAllRanges();
-                  }}
-                  className="text-gray-500 hover:text-gray-300 px-2 py-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveNote}
-                  className="bg-green-800 hover:bg-green-700 text-green-100 px-3 py-1 rounded font-mono text-[10px]"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
+        <NoteEditorPopover
+          selectedText={selectedText}
+          noteComment={noteComment}
+          noteVisibility={noteVisibility}
+          editingNote={editingNote}
+          popupCoords={popupCoords}
+          onCommentChange={setNoteComment}
+          onVisibilityChange={setNoteVisibility}
+          onSave={handleSaveNote}
+          onDismiss={dismissNoteEditor}
+          onDeleteNote={onDeleteNote}
+        />
       )}
 
       {isHuman && msg.metrics && <VitalityBar metrics={msg.metrics} />}

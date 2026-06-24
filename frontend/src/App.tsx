@@ -1,20 +1,32 @@
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react"
+import { Routes, Route, Navigate, useNavigate, useSearchParams } from "react-router-dom"
 import { useChat } from "./hooks/useChat"
 import { useConversations } from "./hooks/useConversations"
 import { useNotes } from "./hooks/useNotes"
 import { dismissByMatch } from "./stores/notificationStore"
 import { NodeExplorer } from "./components/pages/nodeexplorer/NodeExplorer"
 import { SidePanel } from "./components/panels/sidepanel/SidePanel"
-import { ConversationLandingPage } from "./components/pages/landing/ConversationLandingPage"
-import { AgentPage } from "./components/pages/agentpage/AgentPage"
-import { ResearchPage } from "./components/pages/researchpage/ResearchPage"
-import { ResearchTaskPage } from "./components/pages/researchpage/ResearchTaskPage"
 import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, getAgent, deleteMessage, downloadExport } from "./api/client"
-import { TeaserPreview } from "./components/TeaserPreview"
-import { LoginPage } from "./components/pages/login/LoginPage"
+import { usePanelResizer } from "./hooks/usePanelResizer"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "./components/UI"
+import { ConversationTitleBar } from "./components/shared/ConversationTitleBar"
+
+const TeaserPreview = lazy(() => import("./components/TeaserPreview").then(m => ({ default: m.TeaserPreview })))
+const LoginPage = lazy(() => import("./components/pages/login/LoginPage").then(m => ({ default: m.LoginPage })))
+const AgentPage = lazy(() => import("./components/pages/agentpage/AgentPage").then(m => ({ default: m.AgentPage })))
+const ResearchPage = lazy(() => import("./components/pages/researchpage/ResearchPage").then(m => ({ default: m.ResearchPage })))
+const ResearchTaskPage = lazy(() => import("./components/pages/researchpage/ResearchTaskPage").then(m => ({ default: m.ResearchTaskPage })))
+const ConversationLandingPage = lazy(() => import("./components/pages/landing/ConversationLandingPage").then(m => ({ default: m.ConversationLandingPage })))
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-screen bg-[#0c0c0c] text-sm font-mono text-[#555] select-none">
+      <span className="animate-pulse">loading...</span>
+    </div>
+  )
+}
 
 const EMPTY_STRING_ARRAY: string[] = []
 
@@ -35,13 +47,15 @@ export default function App() {
     })
   }, [])
 
+  const navigate = useNavigate()
+
   const handlePasswordSubmit = async (password: string) => {
     setAuthError(null)
     const success = await verifyPassword(password)
     if (success) {
       localStorage.setItem("aaa_password", password)
       setIsAuthenticated(true)
-      window.location.href = "/nodes"
+      navigate("/nodes")
     } else {
       setAuthError("Incorrect password")
     }
@@ -50,13 +64,9 @@ export default function App() {
   const handleLogout = () => {
     logout()
     setIsAuthenticated(false)
-    window.location.href = "/"
+    navigate("/")
   }
 
-  const path = window.location.pathname
-  const params = new URLSearchParams(window.location.search)
-
-  // 1. Initializing state
   if (isAuthenticated === null) {
     return (
       <div className="flex items-center justify-center h-screen bg-[#0c0c0c] text-sm font-mono text-[#555] select-none">
@@ -65,98 +75,57 @@ export default function App() {
     )
   }
 
-  // 2. Intercept query parameters on root page / and redirect to /nodes
-  if (path === "/" && params.has("c")) {
-    window.location.replace(`/nodes${window.location.search}`)
-    return null
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/" element={
+          isAuthEnabled && !isAuthenticated
+            ? <Navigate to="/login" replace />
+            : (<div className="h-screen w-screen overflow-hidden"><TeaserPreview /></div>)
+        } />
+        <Route path="/login" element={
+          !isAuthEnabled || isAuthenticated
+            ? <Navigate to="/nodes" replace />
+            : <LoginPage onPasswordSubmit={handlePasswordSubmit} authError={authError} onClearError={() => setAuthError(null)} />
+        } />
+        <Route path="/agent" element={
+          isAuthEnabled && !isAuthenticated
+            ? <Navigate to="/login" replace />
+            : <AgentPage onGoHome={() => navigate("/nodes")} />
+        } />
+        <Route path="/research" element={
+          isAuthEnabled && !isAuthenticated
+            ? <Navigate to="/login" replace />
+            : <ResearchRouter />
+        } />
+        <Route path="/nodes" element={
+          isAuthEnabled && !isAuthenticated
+            ? <Navigate to="/login" replace />
+            : (<NodesPage isAuthEnabled={isAuthEnabled} handleLogout={handleLogout} agentFlux={agentFlux} />)
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  )
+}
+
+function ResearchRouter() {
+  const [searchParams] = useSearchParams()
+  const taskId = searchParams.get("id")
+  const isNew = taskId === "new"
+  if (taskId && !isNew) {
+    return <ResearchTaskPage taskId={taskId} />
   }
-
-  // 3. Routing and Authentication guards
-  if (path === "/login") {
-    // If auth is not enabled, or user is already authenticated, redirect to /nodes
-    if (!isAuthEnabled || isAuthenticated) {
-      window.location.replace("/nodes")
-      return null
-    }
-  } else if (path === "/nodes" || path === "/agent" || path === "/research") {
-    // If auth is enabled and user is not authenticated, redirect to /login
-    if (isAuthEnabled && !isAuthenticated) {
-      window.location.replace("/login")
-      return null
-    }
-  } else if (path !== "/") {
-    // Fallback/wildcard: if they visit a page we don't know, redirect to /
-    window.location.replace("/")
-    return null
+  if (isNew) {
+    return <ResearchTaskPage taskId="" isNew />
   }
-
-  // --- Router switch ---
-
-  // / (landing page artwork)
-  if (path === "/") {
-    return (
-      <div className="h-screen w-screen overflow-hidden">
-        <TeaserPreview />
-      </div>
-    )
-  }
-
-  // /login (authentication page)
-  if (path === "/login") {
-    return (
-      <LoginPage
-        onPasswordSubmit={handlePasswordSubmit}
-        authError={authError}
-        onClearError={() => setAuthError(null)}
-      />
-    )
-  }
-
-  // /agent (agent page console)
-  if (path === "/agent") {
-    return (
-      <AgentPage
-        onGoHome={() => window.location.href = "/nodes"}
-      />
-    )
-  }
-
-  // /research (research pages)
-  if (path === "/research") {
-    const taskId = params.get("id")
-    const isNew = params.get("id") === "new"
-    if (taskId && !isNew) {
-      return <ResearchTaskPage taskId={taskId} />
-    }
-    if (isNew) {
-      return <ResearchTaskPage taskId="" isNew />
-    }
-    return <ResearchPage />
-  }
-
-  // /nodes (conversations workspace page)
-  if (path === "/nodes") {
-    return (
-      <NodesPage
-        isAuthEnabled={isAuthEnabled}
-        handleLogout={handleLogout}
-        agentFlux={agentFlux}
-      />
-    )
-  }
-
-  return null
+  return <ResearchPage />
 }
 
 /* --- Subcomponent for /nodes workspace to respect React rules of Hooks --- */
 
-interface NodesPageProps {
-  isAuthEnabled: boolean
-  handleLogout: () => void
-  agentFlux: boolean
-}
-
 function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
+  const navigate = useNavigate()
   const [isNewChatMode, setIsNewChatMode] = useState(false)
 
   const {
@@ -204,6 +173,7 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
     childNodes,
     treeNodes,
     history,
+    links,
   } = useChat(activeId)
 
   const handleNavigateToNotification = useCallback((convId: string, msgId: number) => {
@@ -268,72 +238,32 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
   }, [reprocess])
 
   // Collapsible and resizable left panel state (for Connection Cloud DAG)
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
-  const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
-    const saved = localStorage.getItem("aaa_leftPanelWidth")
-    return saved ? parseInt(saved, 10) : 320
+  const {
+    width: leftPanelWidth,
+    collapsed: leftPanelCollapsed,
+    setCollapsed: setLeftPanelCollapsed,
+    handleResizeStart,
+  } = usePanelResizer({
+    storageKey: "aaa_leftPanelWidth",
+    defaultWidth: 320,
+    computeMaxWidth: () => Math.floor(window.innerWidth * 0.5),
   })
-  const widthRef = useRef(leftPanelWidth)
-  widthRef.current = leftPanelWidth
-
-  const handleResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startWidth = leftPanelWidth
-    document.body.style.cursor = "col-resize"
-    document.body.style.userSelect = "none"
-
-    const onMove = (ev: MouseEvent) => {
-      const maxLeft = Math.floor(window.innerWidth * 0.5)
-      const w = Math.max(200, Math.min(maxLeft, startWidth + ev.clientX - startX))
-      widthRef.current = w
-      setLeftPanelWidth(w)
-    }
-    const onUp = () => {
-      localStorage.setItem("aaa_leftPanelWidth", String(widthRef.current))
-      document.removeEventListener("mousemove", onMove)
-      document.removeEventListener("mouseup", onUp)
-      document.body.style.cursor = ""
-      document.body.style.userSelect = ""
-    }
-    document.addEventListener("mousemove", onMove)
-    document.addEventListener("mouseup", onUp)
-  }
 
   // Collapsible and resizable right panel state (for SidePanel information)
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(true)
-  const [rightPanelWidth, setRightPanelWidth] = useState(() => {
-    const saved = localStorage.getItem("aaa_rightPanelWidth")
-    return saved ? parseInt(saved, 10) : 320
-  })
-  const rightWidthRef = useRef(rightPanelWidth)
-  rightWidthRef.current = rightPanelWidth
-
-  const handleRightResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startWidth = rightPanelWidth
-    document.body.style.cursor = "col-resize"
-    document.body.style.userSelect = "none"
-
-    const onMove = (ev: MouseEvent) => {
+  const {
+    width: rightPanelWidth,
+    collapsed: rightPanelCollapsed,
+    setCollapsed: setRightPanelCollapsed,
+    handleResizeStart: handleRightResizeStart,
+  } = usePanelResizer({
+    storageKey: "aaa_rightPanelWidth",
+    defaultWidth: 320,
+    computeMaxWidth: () => {
       const maxRight = Math.floor(window.innerWidth * 0.3)
       const minChat = Math.floor(window.innerWidth * 0.3)
-      const maxAllowed = Math.min(maxRight, window.innerWidth - leftPanelWidth - minChat)
-      const w = Math.max(200, Math.min(maxAllowed, startWidth - (ev.clientX - startX)))
-      rightWidthRef.current = w
-      setRightPanelWidth(w)
-    }
-    const onUp = () => {
-      localStorage.setItem("aaa_rightPanelWidth", String(rightWidthRef.current))
-      document.removeEventListener("mousemove", onMove)
-      document.removeEventListener("mouseup", onUp)
-      document.body.style.cursor = ""
-      document.body.style.userSelect = ""
-    }
-    document.addEventListener("mousemove", onMove)
-    document.addEventListener("mouseup", onUp)
-  }
+      return Math.min(maxRight, window.innerWidth - leftPanelWidth - minChat)
+    },
+  })
 
   const activeIdRef = useRef(activeId)
   activeIdRef.current = activeId
@@ -342,23 +272,8 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
   const conversationTitle = activeConv?.title || ""
   const conversationId = activeId
 
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [titleVal, setTitleVal] = useState("")
-
-  useEffect(() => {
-    setTitleVal(conversationTitle)
-  }, [conversationTitle])
-
   const handleRenameTitle = (title: string) => {
     if (activeId) renameConversation(activeId, title)
-  }
-
-  const handleTitleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    setEditingTitle(false)
-    if (titleVal.trim() && titleVal !== conversationTitle) {
-      handleRenameTitle(titleVal)
-    }
   }
 
   const handleGenerateTitle = async () => {
@@ -481,36 +396,11 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
           <HeaderLabel intent="green">entanglement</HeaderLabel>
           <HeaderSeparator className="hidden sm:inline" />
           
-          <div className="min-w-0 flex-1 sm:flex-initial hidden sm:block">
-            {editingTitle ? (
-              <form onSubmit={handleTitleSubmit} className="inline-block">
-                <input
-                  type="text"
-                  value={titleVal}
-                  onChange={(e) => setTitleVal(e.target.value)}
-                  onBlur={() => handleTitleSubmit()}
-                  className="bg-transparent border-b border-[#222]/40 px-1 py-0.5 text-xs text-[#ddd] font-mono outline-none focus:border-action-hover/50 w-32 sm:w-48 md:w-64"
-                  autoFocus
-                />
-              </form>
-            ) : (
-              <div className="flex items-center gap-2">
-                <h1
-                  onClick={() => setEditingTitle(true)}
-                  className="text-xs font-mono font-bold tracking-wider text-semantic-header hover:text-[#aaa] cursor-pointer truncate max-w-[120px] md:max-w-xs uppercase"
-                  title={conversationTitle || "Untitled Entanglement"}
-                >
-                  {conversationTitle || "Untitled Entanglement"}
-                </h1>
-                <HeaderActionButton
-                  onClick={handleGenerateTitle}
-                  title="Auto-generate title"
-                >
-                  #generate_title
-                </HeaderActionButton>
-              </div>
-            )}
-          </div>
+          <ConversationTitleBar
+            title={conversationTitle}
+            onRename={handleRenameTitle}
+            onGenerateTitle={handleGenerateTitle}
+          />
         </span>
 
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
@@ -545,11 +435,11 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
             onNavigateToNotification={handleNavigateToNotification}
           />
           
-          <HeaderActionButton onClick={() => window.location.href = '/agent'}>
+          <HeaderActionButton onClick={() => navigate('/agent')}>
             agent
           </HeaderActionButton>
 
-          <HeaderActionButton onClick={() => window.location.href = '/research'}>
+          <HeaderActionButton onClick={() => navigate('/research')}>
             research
           </HeaderActionButton>
 
@@ -568,50 +458,14 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
         </div>
       </HeaderContainer>
 
-      {/* For mobile screens: show title bar beneath header if screen is small */}
-      <div className="sm:hidden flex items-center justify-between px-4 py-2 border-b border-[#1a1a1a] shrink-0 font-mono text-[11px] bg-[#0d0d0d]">
-        <div className="min-w-0 flex-1">
-          {editingTitle ? (
-            <form onSubmit={handleTitleSubmit} className="w-full">
-              <input
-                type="text"
-                value={titleVal}
-                onChange={(e) => setTitleVal(e.target.value)}
-                onBlur={() => handleTitleSubmit()}
-                className="bg-transparent border-b border-[#222]/40 px-1 py-0.5 text-xs text-[#ddd] font-mono outline-none focus:border-action-hover/50 w-full"
-                autoFocus
-              />
-            </form>
-          ) : (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[#444]">title:</span>
-              <h1
-                onClick={() => setEditingTitle(true)}
-                className="text-xs font-mono font-bold tracking-wider text-semantic-header hover:text-[#aaa] cursor-pointer truncate flex-1 uppercase"
-                title={conversationTitle || "Untitled Entanglement"}
-              >
-                {conversationTitle || "Untitled Entanglement"}
-              </h1>
-              <HeaderActionButton
-                onClick={handleGenerateTitle}
-                title="Auto-generate title"
-                className="shrink-0"
-              >
-                #gen
-              </HeaderActionButton>
-            </div>
-          )}
-        </div>
-        {conversationId && (
-          <HeaderActionButton
-            onClick={handleExportConversation}
-            title="Export conversation as Markdown"
-            className="shrink-0 ml-2"
-          >
-            #export
-          </HeaderActionButton>
-        )}
-      </div>
+      <ConversationTitleBar
+        title={conversationTitle}
+        onRename={handleRenameTitle}
+        onGenerateTitle={handleGenerateTitle}
+        variant="mobile"
+        conversationId={conversationId}
+        onExport={handleExportConversation}
+      />
 
       {/* Workspace Area: Left Panel, NodeExplorer, SidePanel */}
       <div className="flex-1 flex flex-row min-h-0 overflow-hidden relative">
@@ -683,6 +537,8 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
                     onNavigateToMessage={navigateToMessage}
                     agentFlux={agentFlux}
                     onDeleteMessage={handleDeleteMessage}
+                    treeNodes={treeNodes}
+                    treeLinks={links}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-[#444] text-[10px] font-mono px-4 text-center select-none">

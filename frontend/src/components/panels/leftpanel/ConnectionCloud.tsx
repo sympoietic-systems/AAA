@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, memo, useCallback } from "react"
+import { useEffect, useRef, useState, memo } from "react"
 
-const EMPTY_NOTES: any[] = []
+import { buildNotesMap, EMPTY_NOTE_ARRAY } from "../../../utils/noteHelpers"
 
 import { COLOR_PALETTE } from "../../../config/colors"
 
@@ -21,7 +21,6 @@ const CANVAS_COLORS = {
   noteProposed: COLOR_PALETTE.semanticGold,
 }
 import type { ChatMessage, NoteInfo, ConversationTreeNode, ConversationTreeLink } from "../../../api/client"
-import { getConversationTree } from "../../../api/client"
 import type { SimNode, SimLink } from "./ConnectionCloudSimulation"
 import { computeSettledLayout, getDistanceToSegment } from "./ConnectionCloudSimulation"
 import { ConnectionCloudOverlays } from "./ConnectionCloudOverlays"
@@ -38,6 +37,8 @@ interface ConnectionCloudProps {
   onNavigateToMessage?: (messageId: number) => void
   agentFlux?: boolean
   onDeleteMessage?: (messageId: number) => void
+  treeNodes: ConversationTreeNode[]
+  treeLinks: ConversationTreeLink[]
 }
 
 function ConnectionCloud({
@@ -52,12 +53,16 @@ function ConnectionCloud({
   onNavigateToMessage,
   agentFlux,
   onDeleteMessage,
+  treeNodes,
+  treeLinks,
 }: ConnectionCloudProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const transitionTimerRef = useRef<number | null>(null)
 
   const [dimensions, setDimensions] = useState({ width: 300, height: 300 })
+  const dimensionsRef = useRef(dimensions)
+  dimensionsRef.current = dimensions
   const [simNodes, setSimNodes] = useState<SimNode[]>([])
   const [simLinks, setSimLinks] = useState<SimLink[]>([])
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null)
@@ -82,33 +87,19 @@ function ConnectionCloud({
     }
   })
 
-  // Zoom and pan state
-  const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  // Zoom and pan — stored in refs for smooth interaction without re-renders
+  const zoomRef = useRef(1)
+  const panRef = useRef({ x: 0, y: 0 })
+  const [redrawTick, setRedrawTick] = useState(0)
+
+  const requestRedraw = () => setRedrawTick((t) => t + 1)
 
   // Right-click context menu for message deletion
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: SimNode } | null>(null)
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef({ x: 0, y: 0 })
 
-  const [treeNodes, setTreeNodes] = useState<ConversationTreeNode[]>([])
-  const [treeLinks, setTreeLinks] = useState<ConversationTreeLink[]>([])
-
-  const fetchTree = useCallback(async () => {
-    if (!conversationId) return
-    try {
-      const data = await getConversationTree(conversationId)
-      setTreeNodes(data.nodes)
-      setTreeLinks(data.links)
-    } catch (err) {
-      console.error("Failed to fetch tree:", err)
-    }
-  }, [conversationId])
-
-  useEffect(() => {
-    fetchTree()
-  }, [conversationId, activeLoadedMessages.length, fetchTree])
-
+  // Build nodes and links from props treeNodes, treeLinks, and inline proposals
   const toggleSimulateSettling = () => {
     setSimulateSettling((prev) => {
       const next = !prev
@@ -134,6 +125,14 @@ function ConnectionCloud({
     })
     resizeObserver.observe(containerRef.current)
     return () => resizeObserver.disconnect()
+  }, [])
+
+  // Attach wheel listener non-passively for zoom
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    canvas.addEventListener("wheel", handleWheel, { passive: false })
+    return () => canvas.removeEventListener("wheel", handleWheel)
   }, [])
 
   // Helper to check if a link is part of the active path
@@ -463,8 +462,8 @@ function ConnectionCloud({
         const nodeMap = new Map<string, SimNode>()
         nodes.forEach((n) => nodeMap.set(n.id, n))
 
-        const cx = dimensions.width / 2
-        const cy = dimensions.height / 2
+    const cx = dimensionsRef.current.width / 2
+    const cy = dimensionsRef.current.height / 2
 
         // 1. Repulsion force
         for (let i = 0; i < nodes.length; i++) {
@@ -558,11 +557,13 @@ function ConnectionCloud({
     ctx.scale(dpr, dpr)
 
     // Save state for panning/zooming
+    const zoom = zoomRef.current
+    const pan = panRef.current
+
     ctx.save()
     ctx.translate(pan.x, pan.y)
     ctx.scale(zoom, zoom)
 
-    // 1. Draw Infinite Grid inside coordinate system
     ctx.strokeStyle = "rgba(255, 255, 255, 0.025)"
     ctx.lineWidth = 0.5
     ctx.setLineDash([])
@@ -626,15 +627,7 @@ function ConnectionCloud({
     const nodeMap = new Map<string, SimNode>()
     simNodes.forEach((n) => nodeMap.set(n.id, n))
 
-    const notesMap = new Map<number, NoteInfo[]>()
-    notes.forEach((note) => {
-      if (note.message_id !== undefined && note.message_id !== null) {
-        if (!notesMap.has(note.message_id)) {
-          notesMap.set(note.message_id, [])
-        }
-        notesMap.get(note.message_id)!.push(note)
-      }
-    })
+    const notesMap = buildNotesMap(notes)
 
     // 4. Draw Links
     simLinks.forEach((link) => {
@@ -725,7 +718,7 @@ function ConnectionCloud({
       const isLeaf = activeMessageId === node.dbId
       const isFuture = node.parentMsgId !== null && node.parentMsgId !== undefined && activePathIds.has(node.parentMsgId) && !isActive && !node.isProposed
       const isHovered = hoveredNode?.id === node.id
-      const nodeNotes = notesMap.get(node.dbId ?? -1) ?? EMPTY_NOTES
+      const nodeNotes = notesMap.get(node.dbId ?? -1) ?? EMPTY_NOTE_ARRAY
 
       let fill: string = CANVAS_COLORS.bg
       let stroke: string = CANVAS_COLORS.linkResonance
@@ -854,7 +847,7 @@ function ConnectionCloud({
     })
 
     ctx.restore()
-  }, [simNodes, simLinks, zoom, pan, hoveredNode, activeMessageId, activePathIds, notes, dimensions])
+  }, [simNodes, simLinks, redrawTick, hoveredNode, activeMessageId, activePathIds, notes, dimensions])
 
   const handleNodeClick = (node: SimNode) => {
     if (node.isProposed) {
@@ -885,7 +878,7 @@ function ConnectionCloud({
   // Zoom and pan event handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsPanning(true)
-    panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+    panStartRef.current = { x: e.clientX - panRef.current.x, y: e.clientY - panRef.current.y }
     setSelectedLink(null)
     setSelectedLinkPos(null)
   }
@@ -894,14 +887,15 @@ function ConnectionCloud({
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
-    const mouseX = (e.clientX - rect.left - pan.x) / zoom
-    const mouseY = (e.clientY - rect.top - pan.y) / zoom
+    const mouseX = (e.clientX - rect.left - panRef.current.x) / zoomRef.current
+    const mouseY = (e.clientY - rect.top - panRef.current.y) / zoomRef.current
 
     if (isPanning) {
-      setPan({
+      panRef.current = {
         x: e.clientX - panStartRef.current.x,
         y: e.clientY - panStartRef.current.y
-      })
+      }
+      requestRedraw()
     } else {
       let found: SimNode | null = null
       for (const node of simNodes) {
@@ -921,20 +915,21 @@ function ConnectionCloud({
     setIsPanning(false)
   }
 
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+  const handleWheel = (e: WheelEvent) => {
     e.preventDefault()
     const zoomFactor = 1.08
-    const nextZoom = Math.max(0.2, Math.min(4.0, e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor))
+    const nextZoom = Math.max(0.2, Math.min(4.0, e.deltaY < 0 ? zoomRef.current * zoomFactor : zoomRef.current / zoomFactor))
 
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
-    const scaleRatio = nextZoom / zoom
+    const scaleRatio = nextZoom / zoomRef.current
 
-    setPan({
-      x: cx - (cx - pan.x) * scaleRatio,
-      y: cy - (cy - pan.y) * scaleRatio
-    })
-    setZoom(nextZoom)
+    panRef.current = {
+      x: cx - (cx - panRef.current.x) * scaleRatio,
+      y: cy - (cy - panRef.current.y) * scaleRatio
+    }
+    zoomRef.current = nextZoom
+    requestRedraw()
   }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -943,8 +938,8 @@ function ConnectionCloud({
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
-    const mouseX = (e.clientX - rect.left - pan.x) / zoom
-    const mouseY = (e.clientY - rect.top - pan.y) / zoom
+    const mouseX = (e.clientX - rect.left - panRef.current.x) / zoomRef.current
+    const mouseY = (e.clientY - rect.top - panRef.current.y) / zoomRef.current
 
     // 1. Check if clicked a node
     let clickedNode: SimNode | null = null
@@ -1000,8 +995,8 @@ function ConnectionCloud({
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
-    const mouseX = (e.clientX - rect.left - pan.x) / zoom
-    const mouseY = (e.clientY - rect.top - pan.y) / zoom
+    const mouseX = (e.clientX - rect.left - panRef.current.x) / zoomRef.current
+    const mouseY = (e.clientY - rect.top - panRef.current.y) / zoomRef.current
 
     // Find node under cursor
     for (const node of simNodes) {
@@ -1026,34 +1021,37 @@ function ConnectionCloud({
 
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const nextZoom = Math.min(4.0, zoom * 1.2)
+    const nextZoom = Math.min(4.0, zoomRef.current * 1.2)
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
-    const scaleRatio = nextZoom / zoom
-    setPan({
-      x: cx - (cx - pan.x) * scaleRatio,
-      y: cy - (cy - pan.y) * scaleRatio
-    })
-    setZoom(nextZoom)
+    const scaleRatio = nextZoom / zoomRef.current
+    panRef.current = {
+      x: cx - (cx - panRef.current.x) * scaleRatio,
+      y: cy - (cy - panRef.current.y) * scaleRatio
+    }
+    zoomRef.current = nextZoom
+    requestRedraw()
   }
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const nextZoom = Math.max(0.2, zoom / 1.2)
+    const nextZoom = Math.max(0.2, zoomRef.current / 1.2)
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
-    const scaleRatio = nextZoom / zoom
-    setPan({
-      x: cx - (cx - pan.x) * scaleRatio,
-      y: cy - (cy - pan.y) * scaleRatio
-    })
-    setZoom(nextZoom)
+    const scaleRatio = nextZoom / zoomRef.current
+    panRef.current = {
+      x: cx - (cx - panRef.current.x) * scaleRatio,
+      y: cy - (cy - panRef.current.y) * scaleRatio
+    }
+    zoomRef.current = nextZoom
+    requestRedraw()
   }
 
   const handleResetZoom = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setZoom(1)
-    setPan({ x: 0, y: 0 })
+    zoomRef.current = 1
+    panRef.current = { x: 0, y: 0 }
+    requestRedraw()
   }
 
   return (
@@ -1093,7 +1091,6 @@ function ConnectionCloud({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUpOrLeave}
           onMouseLeave={handleMouseUpOrLeave}
-          onWheel={handleWheel}
           onClick={handleCanvasClick}
           onContextMenu={handleCanvasContextMenu}
         />
@@ -1103,8 +1100,8 @@ function ConnectionCloud({
           handleDeleteNode={handleDeleteNode}
           hoveredNode={hoveredNode}
           dimensions={dimensions}
-          zoom={zoom}
-          pan={pan}
+          zoom={zoomRef.current}
+          pan={panRef.current}
           committingNode={committingNode}
           setCommittingNode={setCommittingNode}
           commitContent={commitContent}

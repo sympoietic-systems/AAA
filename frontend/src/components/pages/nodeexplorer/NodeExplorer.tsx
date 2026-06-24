@@ -1,6 +1,7 @@
 import type { ConversationFile, ChatMessage, NoteInfo, ConversationTagInfo, ConversationTreeNode } from "../../../api/client"
 import { getMessagePath } from "../../../api/client"
 import { formatTime } from "../../../utils/dateFormat"
+import { buildNotesMap, EMPTY_NOTE_ARRAY } from "../../../utils/noteHelpers"
 import { InputBar } from "./InputBar"
 import { MessageBubble } from "./MessageBubble"
 import { TerminalButton } from "../../UI"
@@ -35,8 +36,6 @@ interface Props {
   history?: { id: number; speaker: string; snippet: string }[]
   onDeleteMessage?: (messageId: number) => void
 }
-
-const EMPTY_ARRAY: NoteInfo[] = []
 
 // Parent Message Card (Memoized)
 const ParentNodeCard = memo(function ParentNodeCard({
@@ -361,18 +360,7 @@ export const NodeExplorer = memo(function NodeExplorer({
     }
   }
 
-  const notesByMessageId = useMemo(() => {
-    const map = new Map<number, NoteInfo[]>()
-    notes.forEach((note) => {
-      if (note.message_id !== undefined && note.message_id !== null) {
-        if (!map.has(note.message_id)) {
-          map.set(note.message_id, [])
-        }
-        map.get(note.message_id)!.push(note)
-      }
-    })
-    return map
-  }, [notes])
+  const notesByMessageId = useMemo(() => buildNotesMap(notes), [notes])
 
   // Derive sibling message IDs for local regeneration navigation inside bubble
   const selectedNodeSiblings = useMemo(() => {
@@ -384,8 +372,8 @@ export const NodeExplorer = memo(function NodeExplorer({
       .map((n) => n.id)
   }, [treeNodes, selectedNode])
 
-  const parentNotes = parentNode ? (notesByMessageId.get(parentNode.id) || EMPTY_ARRAY) : EMPTY_ARRAY
-  const selectedNotes = selectedNode ? (notesByMessageId.get(selectedNode.id) || EMPTY_ARRAY) : EMPTY_ARRAY
+  const parentNotes = parentNode ? (notesByMessageId.get(parentNode.id) || EMPTY_NOTE_ARRAY) : EMPTY_NOTE_ARRAY
+  const selectedNotes = selectedNode ? (notesByMessageId.get(selectedNode.id) || EMPTY_NOTE_ARRAY) : EMPTY_NOTE_ARRAY
 
   return (
     <div className={`flex flex-col h-full ${className}`}>

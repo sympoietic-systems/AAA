@@ -12,418 +12,306 @@ import {
 } from "../api/client"
 import { addNotification } from "./notificationStore"
 
-// Define states
 export interface TelemetryStateSlice<T> {
   data: T | null
   loading: boolean
   error: string | null
 }
 
-export let metricsState: TelemetryStateSlice<MetricsResponse> = {
-  data: null,
-  loading: false,
-  error: null
-}
-
-export const beliefsState: Record<string, TelemetryStateSlice<BeliefsResponse>> = {}
-export const tokensState: Record<string, TelemetryStateSlice<TokenResponse>> = {}
-
-export let daemonState: TelemetryStateSlice<DaemonStatusResponse> = {
-  data: null,
-  loading: false,
-  error: null
-}
-
-export let schedulerState: TelemetryStateSlice<SchedulerStatusResponse> = {
-  data: null,
-  loading: false,
-  error: null
-}
-
-// Listeners pools
 type Listener = () => void
 
-const metricsListeners = new Set<Listener>()
-const beliefsListeners = new Map<string, Set<Listener>>()
-const tokensListeners = new Map<string, Set<Listener>>()
-const daemonListeners = new Set<Listener>()
-const schedulerListeners = new Set<Listener>()
+// --- Simple (non-keyed) channel: single state variable ---
 
-// Timers
-let metricsTimeout: ReturnType<typeof setTimeout> | null = null
-const beliefsTimeoutMap = new Map<string, ReturnType<typeof setTimeout>>()
-const tokensTimeoutMap = new Map<string, ReturnType<typeof setTimeout>>()
-let daemonTimeout: ReturnType<typeof setTimeout> | null = null
-let schedulerTimeout: ReturnType<typeof setTimeout> | null = null
+function createPollingChannel<T>(
+  name: string,
+  fetcher: () => Promise<T>,
+  interval: number,
+) {
+  const listeners = new Set<Listener>()
+  let timeout: ReturnType<typeof setTimeout> | null = null
 
-// --- Metrics Pub-Sub ---
-function emitMetricsChange() {
-  metricsListeners.forEach(l => l())
-}
-
-async function pollMetrics() {
-  metricsState = { data: metricsState.data, loading: !metricsState.data, error: metricsState.error }
-  emitMetricsChange()
-  try {
-    const res = await getMetrics()
-    metricsState = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch metrics"
-    metricsState = { data: metricsState.data, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Metrics polling failure: ${errorMsg}`,
-      source: 'Telemetry.metrics'
-    })
+  function emit() {
+    listeners.forEach((l) => l())
   }
-  emitMetricsChange()
 
-  if (metricsListeners.size > 0) {
-    const delay = 15000 + (Math.random() - 0.5) * 1000
-    metricsTimeout = setTimeout(pollMetrics, delay)
-  } else {
-    metricsTimeout = null
-  }
-}
+  async function poll(state: TelemetryStateSlice<T>, setState: (v: TelemetryStateSlice<T>) => void) {
+    setState({ data: state.data, loading: !state.data, error: state.error })
+    emit()
+    try {
+      const res = await fetcher()
+      setState({ data: res, loading: false, error: null })
+    } catch (err: any) {
+      const errorMsg = err.message || `Failed to fetch ${name}`
+      setState({ data: state.data, loading: false, error: errorMsg })
+      addNotification({
+        type: 'glitch',
+        snippet: `Telemetry: ${name} polling failure: ${errorMsg}`,
+        source: `Telemetry.${name}`
+      })
+    }
+    emit()
 
-export function subscribeMetrics(listener: Listener) {
-  metricsListeners.add(listener)
-  if (metricsListeners.size === 1) {
-    pollMetrics()
-  }
-  return () => {
-    metricsListeners.delete(listener)
-    if (metricsListeners.size === 0 && metricsTimeout) {
-      clearTimeout(metricsTimeout)
-      metricsTimeout = null
+    if (listeners.size > 0) {
+      const delay = interval + (Math.random() - 0.5) * 1000
+      timeout = setTimeout(() => {
+        poll(state, setState)
+      }, delay)
+    } else {
+      timeout = null
     }
   }
+
+  function subscribe(
+    getState: () => TelemetryStateSlice<T>,
+    setState: (v: TelemetryStateSlice<T>) => void,
+    listener: Listener,
+  ) {
+    listeners.add(listener)
+    if (listeners.size === 1) {
+      poll(getState(), setState)
+    }
+    return () => {
+      listeners.delete(listener)
+      if (listeners.size === 0 && timeout) {
+        clearTimeout(timeout)
+        timeout = null
+      }
+    }
+  }
+
+  async function refresh(
+    getState: () => TelemetryStateSlice<T>,
+    setState: (v: TelemetryStateSlice<T>) => void,
+  ) {
+    const current = getState()
+    setState({ data: current.data, loading: true, error: current.error })
+    emit()
+    try {
+      const res = await fetcher()
+      setState({ data: res, loading: false, error: null })
+    } catch (err: any) {
+      const errorMsg = err.message || `Failed to fetch ${name}`
+      setState({ data: current.data, loading: false, error: errorMsg })
+      addNotification({
+        type: 'glitch',
+        snippet: `Telemetry: ${name} force refresh failure: ${errorMsg}`,
+        source: `Telemetry.${name}`
+      })
+    }
+    emit()
+  }
+
+  return { subscribe, refresh }
 }
 
-export async function refreshMetricsForce() {
-  metricsState = { data: metricsState.data, loading: true, error: metricsState.error }
-  emitMetricsChange()
-  try {
-    const res = await getMetrics()
-    metricsState = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch metrics"
-    metricsState = { data: metricsState.data, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Metrics force refresh failure: ${errorMsg}`,
-      source: 'Telemetry.metrics'
-    })
-  }
-  emitMetricsChange()
-}
+// --- Keyed channel: per-conversation state map ---
 
-// --- Beliefs Pub-Sub ---
-function emitBeliefsChange(convId: string) {
-  const list = beliefsListeners.get(convId)
-  if (list) {
-    list.forEach(l => l())
-  }
-}
+function createKeyedPollingChannel<T>(
+  name: string,
+  fetcher: (key: string) => Promise<T>,
+  interval: number,
+) {
+  const listenersMap = new Map<string, Set<Listener>>()
+  const timeoutMap = new Map<string, ReturnType<typeof setTimeout>>()
 
-async function pollBeliefs(convId: string) {
-  let state = beliefsState[convId]
-  if (!state) {
-    state = { data: null, loading: true, error: null }
-    beliefsState[convId] = state
+  function emit(key: string) {
+    const list = listenersMap.get(key)
+    if (list) list.forEach((l) => l())
   }
-  beliefsState[convId] = { data: state.data, loading: !state.data, error: state.error }
-  emitBeliefsChange(convId)
 
-  try {
-    const res = await getBeliefs(convId)
-    beliefsState[convId] = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch beliefs"
-    beliefsState[convId] = { data: beliefsState[convId]?.data ?? null, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Beliefs polling failure for conversation ${convId.slice(0, 8)}: ${errorMsg}`,
-      source: 'Telemetry.beliefs'
-    })
-  }
-  emitBeliefsChange(convId)
+  async function poll(
+    key: string,
+    getState: (k: string) => TelemetryStateSlice<T>,
+    setState: (k: string, v: TelemetryStateSlice<T>) => void,
+  ) {
+    const state = getState(key)
+    setState(key, { data: state.data, loading: !state.data, error: state.error })
+    emit(key)
+    try {
+      const res = await fetcher(key)
+      setState(key, { data: res, loading: false, error: null })
+    } catch (err: any) {
+      const errorMsg = err.message || `Failed to fetch ${name}`
+      setState(key, { data: getState(key)?.data ?? null, loading: false, error: errorMsg })
+      addNotification({
+        type: 'glitch',
+        snippet: `Telemetry: ${name} polling failure for conversation ${key.slice(0, 8)}: ${errorMsg}`,
+        source: `Telemetry.${name}`
+      })
+    }
+    emit(key)
 
-  const list = beliefsListeners.get(convId)
-  if (list && list.size > 0) {
-    const delay = 15000 + (Math.random() - 0.5) * 1000
-    const timeout = setTimeout(() => pollBeliefs(convId), delay)
-    beliefsTimeoutMap.set(convId, timeout)
-  } else {
-    beliefsTimeoutMap.delete(convId)
+    const list = listenersMap.get(key)
+    if (list && list.size > 0) {
+      const delay = interval + (Math.random() - 0.5) * 1000
+      const t = setTimeout(() => poll(key, getState, setState), delay)
+      timeoutMap.set(key, t)
+    } else {
+      timeoutMap.delete(key)
+    }
   }
-}
 
-export function subscribeBeliefs(convId: string, listener: Listener) {
-  if (!convId) return () => {}
-  let list = beliefsListeners.get(convId)
-  if (!list) {
-    list = new Set()
-    beliefsListeners.set(convId, list)
-  }
-  list.add(listener)
-  if (list.size === 1) {
-    pollBeliefs(convId)
-  }
-  return () => {
-    const currentList = beliefsListeners.get(convId)
-    if (currentList) {
-      currentList.delete(listener)
-      if (currentList.size === 0) {
-        beliefsListeners.delete(convId)
-        const timeout = beliefsTimeoutMap.get(convId)
-        if (timeout) {
-          clearTimeout(timeout)
-          beliefsTimeoutMap.delete(convId)
+  function subscribe(
+    key: string,
+    getState: (k: string) => TelemetryStateSlice<T>,
+    setState: (k: string, v: TelemetryStateSlice<T>) => void,
+    listener: Listener,
+  ) {
+    if (!key) return () => {}
+    let list = listenersMap.get(key)
+    if (!list) {
+      list = new Set()
+      listenersMap.set(key, list)
+    }
+    list.add(listener)
+    if (list.size === 1) {
+      poll(key, getState, setState)
+    }
+    return () => {
+      const currentList = listenersMap.get(key)
+      if (currentList) {
+        currentList.delete(listener)
+        if (currentList.size === 0) {
+          listenersMap.delete(key)
+          const t = timeoutMap.get(key)
+          if (t) {
+            clearTimeout(t)
+            timeoutMap.delete(key)
+          }
         }
       }
     }
   }
+
+  async function refresh(
+    key: string,
+    getState: (k: string) => TelemetryStateSlice<T>,
+    setState: (k: string, v: TelemetryStateSlice<T>) => void,
+  ) {
+    if (!key) return
+    const current = getState(key)
+    setState(key, { data: current.data, loading: true, error: current.error })
+    emit(key)
+    try {
+      const res = await fetcher(key)
+      setState(key, { data: res, loading: false, error: null })
+    } catch (err: any) {
+      const errorMsg = err.message || `Failed to fetch ${name}`
+      setState(key, { data: getState(key)?.data ?? null, loading: false, error: errorMsg })
+      addNotification({
+        type: 'glitch',
+        snippet: `Telemetry: ${name} force refresh failure for conversation ${key.slice(0, 8)}: ${errorMsg}`,
+        source: `Telemetry.${name}`
+      })
+    }
+    emit(key)
+  }
+
+  return { subscribe, refresh }
 }
 
-export async function refreshBeliefsForce(convId: string) {
-  if (!convId) return
-  let state = beliefsState[convId]
-  if (!state) {
-    state = { data: null, loading: true, error: null }
-    beliefsState[convId] = state
-  }
-  beliefsState[convId] = { data: state.data, loading: true, error: state.error }
-  emitBeliefsChange(convId)
+// --- Metrics ---
+export let metricsState: TelemetryStateSlice<MetricsResponse> = { data: null, loading: false, error: null }
 
-  try {
-    const res = await getBeliefs(convId)
-    beliefsState[convId] = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch beliefs"
-    beliefsState[convId] = { data: beliefsState[convId]?.data ?? null, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Beliefs force refresh failure for conversation ${convId.slice(0, 8)}: ${errorMsg}`,
-      source: 'Telemetry.beliefs'
-    })
-  }
-  emitBeliefsChange(convId)
+const metricsChan = createPollingChannel<MetricsResponse>("metrics", getMetrics, 15000)
+
+export function subscribeMetrics(listener: Listener) {
+  return metricsChan.subscribe(
+    () => metricsState,
+    (v) => { metricsState = v },
+    listener,
+  )
 }
 
-// --- Tokens Pub-Sub ---
-function emitTokensChange(convId: string) {
-  const list = tokensListeners.get(convId)
-  if (list) {
-    list.forEach(l => l())
-  }
+export function refreshMetricsForce() {
+  return metricsChan.refresh(
+    () => metricsState,
+    (v) => { metricsState = v },
+  )
 }
 
-async function pollTokens(convId: string) {
-  let state = tokensState[convId]
-  if (!state) {
-    state = { data: null, loading: true, error: null }
-    tokensState[convId] = state
-  }
-  tokensState[convId] = { data: state.data, loading: !state.data, error: state.error }
-  emitTokensChange(convId)
+// --- Beliefs ---
+export const beliefsState: Record<string, TelemetryStateSlice<BeliefsResponse>> = {}
 
-  try {
-    const res = await getTokens(convId || undefined)
-    tokensState[convId] = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch tokens"
-    tokensState[convId] = { data: tokensState[convId]?.data ?? null, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Tokens polling failure: ${errorMsg}`,
-      source: 'Telemetry.tokens'
-    })
-  }
-  emitTokensChange(convId)
+const beliefsChan = createKeyedPollingChannel<BeliefsResponse>("beliefs", getBeliefs, 15000)
 
-  const list = tokensListeners.get(convId)
-  if (list && list.size > 0) {
-    const delay = 15000 + (Math.random() - 0.5) * 1000
-    const timeout = setTimeout(() => pollTokens(convId), delay)
-    tokensTimeoutMap.set(convId, timeout)
-  } else {
-    tokensTimeoutMap.delete(convId)
-  }
+export function subscribeBeliefs(convId: string, listener: Listener) {
+  return beliefsChan.subscribe(
+    convId,
+    (k) => beliefsState[k] || { data: null, loading: false, error: null },
+    (k, v) => { beliefsState[k] = v },
+    listener,
+  )
 }
+
+export function refreshBeliefsForce(convId: string) {
+  return beliefsChan.refresh(
+    convId,
+    (k) => beliefsState[k] || { data: null, loading: false, error: null },
+    (k, v) => { beliefsState[k] = v },
+  )
+}
+
+// --- Tokens ---
+export const tokensState: Record<string, TelemetryStateSlice<TokenResponse>> = {}
+
+const tokensChan = createKeyedPollingChannel<TokenResponse>("tokens", (key) => getTokens(key || undefined), 15000)
 
 export function subscribeTokens(convId: string, listener: Listener) {
   const key = convId || "global"
-  let list = tokensListeners.get(key)
-  if (!list) {
-    list = new Set()
-    tokensListeners.set(key, list)
-  }
-  list.add(listener)
-  if (list.size === 1) {
-    pollTokens(convId)
-  }
-  return () => {
-    const currentList = tokensListeners.get(key)
-    if (currentList) {
-      currentList.delete(listener)
-      if (currentList.size === 0) {
-        tokensListeners.delete(key)
-        const timeout = tokensTimeoutMap.get(key)
-        if (timeout) {
-          clearTimeout(timeout)
-          tokensTimeoutMap.delete(key)
-        }
-      }
-    }
-  }
+  return tokensChan.subscribe(
+    key,
+    (k) => tokensState[k] || { data: null, loading: false, error: null },
+    (k, v) => { tokensState[k] = v },
+    listener,
+  )
 }
 
-export async function refreshTokensForce(convId: string) {
+export function refreshTokensForce(convId: string) {
   const key = convId || "global"
-  let state = tokensState[key]
-  if (!state) {
-    state = { data: null, loading: true, error: null }
-    tokensState[key] = state
-  }
-  tokensState[key] = { data: state.data, loading: true, error: state.error }
-  emitTokensChange(key)
-
-  try {
-    const res = await getTokens(convId || undefined)
-    tokensState[key] = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch tokens"
-    tokensState[key] = { data: tokensState[key]?.data ?? null, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Tokens force refresh failure: ${errorMsg}`,
-      source: 'Telemetry.tokens'
-    })
-  }
-  emitTokensChange(key)
+  return tokensChan.refresh(
+    key,
+    (k) => tokensState[k] || { data: null, loading: false, error: null },
+    (k, v) => { tokensState[k] = v },
+  )
 }
 
-// --- Daemon Pub-Sub ---
-function emitDaemonChange() {
-  daemonListeners.forEach(l => l())
-}
+// --- Daemon ---
+export let daemonState: TelemetryStateSlice<DaemonStatusResponse> = { data: null, loading: false, error: null }
 
-async function pollDaemon() {
-  daemonState = { data: daemonState.data, loading: !daemonState.data, error: daemonState.error }
-  emitDaemonChange()
-  try {
-    const res = await getDaemonStatus()
-    daemonState = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch daemon status"
-    daemonState = { data: daemonState.data, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Daemon polling failure: ${errorMsg}`,
-      source: 'Telemetry.daemon'
-    })
-  }
-  emitDaemonChange()
-
-  if (daemonListeners.size > 0) {
-    const delay = 10000 + (Math.random() - 0.5) * 1000
-    daemonTimeout = setTimeout(pollDaemon, delay)
-  } else {
-    daemonTimeout = null
-  }
-}
+const daemonChan = createPollingChannel<DaemonStatusResponse>("daemon", getDaemonStatus, 10000)
 
 export function subscribeDaemon(listener: Listener) {
-  daemonListeners.add(listener)
-  if (daemonListeners.size === 1) {
-    pollDaemon()
-  }
-  return () => {
-    daemonListeners.delete(listener)
-    if (daemonListeners.size === 0 && daemonTimeout) {
-      clearTimeout(daemonTimeout)
-      daemonTimeout = null
-    }
-  }
+  return daemonChan.subscribe(
+    () => daemonState,
+    (v) => { daemonState = v },
+    listener,
+  )
 }
 
-export async function refreshDaemonForce() {
-  daemonState = { data: daemonState.data, loading: true, error: daemonState.error }
-  emitDaemonChange()
-  try {
-    const res = await getDaemonStatus()
-    daemonState = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch daemon status"
-    daemonState = { data: daemonState.data, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Daemon force refresh failure: ${errorMsg}`,
-      source: 'Telemetry.daemon'
-    })
-  }
-  emitDaemonChange()
+export function refreshDaemonForce() {
+  return daemonChan.refresh(
+    () => daemonState,
+    (v) => { daemonState = v },
+  )
 }
 
-// --- Scheduler Pub-Sub ---
-function emitSchedulerChange() {
-  schedulerListeners.forEach(l => l())
-}
+// --- Scheduler ---
+export let schedulerState: TelemetryStateSlice<SchedulerStatusResponse> = { data: null, loading: false, error: null }
 
-async function pollScheduler() {
-  schedulerState = { data: schedulerState.data, loading: !schedulerState.data, error: schedulerState.error }
-  emitSchedulerChange()
-  try {
-    const res = await getSchedulerStatus()
-    schedulerState = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch scheduler status"
-    schedulerState = { data: schedulerState.data, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Scheduler polling failure: ${errorMsg}`,
-      source: 'Telemetry.scheduler'
-    })
-  }
-  emitSchedulerChange()
-
-  if (schedulerListeners.size > 0) {
-    const delay = 10000 + (Math.random() - 0.5) * 1000
-    schedulerTimeout = setTimeout(pollScheduler, delay)
-  } else {
-    schedulerTimeout = null
-  }
-}
+const schedulerChan = createPollingChannel<SchedulerStatusResponse>("scheduler", getSchedulerStatus, 10000)
 
 export function subscribeScheduler(listener: Listener) {
-  schedulerListeners.add(listener)
-  if (schedulerListeners.size === 1) {
-    pollScheduler()
-  }
-  return () => {
-    schedulerListeners.delete(listener)
-    if (schedulerListeners.size === 0 && schedulerTimeout) {
-      clearTimeout(schedulerTimeout)
-      schedulerTimeout = null
-    }
-  }
+  return schedulerChan.subscribe(
+    () => schedulerState,
+    (v) => { schedulerState = v },
+    listener,
+  )
 }
 
-export async function refreshSchedulerForce() {
-  schedulerState = { data: schedulerState.data, loading: true, error: schedulerState.error }
-  emitSchedulerChange()
-  try {
-    const res = await getSchedulerStatus()
-    schedulerState = { data: res, loading: false, error: null }
-  } catch (err: any) {
-    const errorMsg = err.message || "Failed to fetch scheduler status"
-    schedulerState = { data: schedulerState.data, loading: false, error: errorMsg }
-    addNotification({
-      type: 'glitch',
-      snippet: `Telemetry: Scheduler force refresh failure: ${errorMsg}`,
-      source: 'Telemetry.scheduler'
-    })
-  }
-  emitSchedulerChange()
+export function refreshSchedulerForce() {
+  return schedulerChan.refresh(
+    () => schedulerState,
+    (v) => { schedulerState = v },
+  )
 }
