@@ -13,49 +13,22 @@ from backend.storage.repository import MessageRepository, BeliefRepository
 from backend.storage.models import BeliefNode
 from backend.modules.structural_engine import LEXICON_MAPPINGS, LexiconScorer, CompositeStructuralScorer
 from backend.storage.repositories.refusal import RefusalRepository
+from backend.utils.similarity import cosine_similarity
+from backend.modules.belief_math import (
+    calculate_concept_density,
+    parse_vector_16d,
+    compute_delta_mass,
+    compute_delta_confidence,
+    clamp_mass,
+    clamp_confidence,
+    compute_lifecycle_stage,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def calculate_concept_density(text: str, lambda_param: float = 3.0) -> float:
-    text_lower = text.lower()
-    matched_dims = 0
-    for stems in LEXICON_MAPPINGS:
-        matched = False
-        for stem in stems:
-            if stem in text_lower:
-                matched = True
-                break
-        if matched:
-            matched_dims += 1
-    return float(np.tanh(matched_dims / lambda_param))
-
-
-from backend.utils.similarity import cosine_similarity
-
-
-def parse_vector_16d(vector_json: str) -> Optional[np.ndarray]:
-    if not vector_json or vector_json == "[]":
-        return None
-    try:
-        data = json.loads(vector_json)
-    except (json.JSONDecodeError, ValueError, TypeError):
-        return None
-
-    if isinstance(data, dict):
-        for key in ("v16d", "v384d"):
-            if key in data and data[key]:
-                vec = np.array(data[key], dtype=np.float32)
-                if len(vec) == 16:
-                    return vec
-        return None
-
-    if isinstance(data, list):
-        vec = np.array(data, dtype=np.float32)
-        if len(vec) == 16:
-            return vec
-
-    return None
+# ── Re-exports for backwards compatibility ──────────────────────────
+# These were historically defined here; moved to belief_math.py.
 
 
 class BeliefDynamicsEngine(ProcessingModule):
@@ -197,20 +170,13 @@ class BeliefDynamicsEngine(ProcessingModule):
         source_type: str = "chat_turn",
         source_id: str | None = None,
     ) -> float:
-        eta = 0.02
-        current_mass = belief.ontological_mass
-        delta_m = eta * source_weight * alignment / (1.0 + current_mass)
+        delta_m = compute_delta_mass(source_weight, alignment, belief.ontological_mass)
+        new_mass = clamp_mass(belief.ontological_mass + delta_m)
 
-        new_mass = current_mass + delta_m
-        new_mass = max(0.0, min(3.0, new_mass))
+        delta_c = compute_delta_confidence(alignment, perturbation, belief.ontological_mass)
+        new_confidence = clamp_confidence(belief.confidence + delta_c)
 
-        new_confidence = belief.confidence
-        dc = 0.5
-        plasticity = dc * ((1.0 - alignment) / 2.0)
-        delta_c = (plasticity * alignment * perturbation) / max(current_mass, 0.01)
-        new_confidence = max(0.0, min(1.0, belief.confidence + delta_c))
-
-        new_stage = self._compute_lifecycle_stage(belief, new_mass, new_confidence)
+        new_stage = compute_lifecycle_stage(belief.lifecycle_stage, new_mass, new_confidence)
 
         if new_stage in ("collapsed", "faded"):
             self._belief_repo.delete_belief(belief.id)
@@ -358,32 +324,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         new_mass: float,
         new_confidence: float,
     ) -> str:
-        current_stage = belief.lifecycle_stage
-
-        if new_confidence < 0.20:
-            return "collapsed"
-        if new_mass < 0.02:
-            return "collapsed"
-        if new_mass < 0.001:
-            return "faded"
-
-        if new_mass >= 0.5 and current_stage in ("nucleation", "accretion"):
-            return "crystallized"
-
-        if current_stage == "crystallized":
-            return "crystallized"
-        if current_stage == "senescence":
-            if new_mass >= 0.5:
-                return "crystallized"
-            return "senescence"
-        if current_stage == "collapsed":
-            return "collapsed"
-        if current_stage == "faded":
-            return "faded"
-
-        if new_mass < 0.1:
-            return "nucleation"
-        return "accretion"
+        return compute_lifecycle_stage(belief.lifecycle_stage, new_mass, new_confidence)
 
     def _find_closest_active_belief(
         self,

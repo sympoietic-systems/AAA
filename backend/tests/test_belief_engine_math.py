@@ -10,6 +10,13 @@ from backend.modules.belief_engine import (
     calculate_concept_density,
     parse_vector_16d,
 )
+from backend.modules.belief_math import (
+    compute_delta_mass,
+    compute_delta_confidence,
+    clamp_mass,
+    clamp_confidence,
+    compute_lifecycle_stage,
+)
 from backend.utils.similarity import cosine_similarity
 
 
@@ -106,3 +113,63 @@ class TestCosineSimilarityWrapper:
         b = np.array([-1.0, 0.0], dtype=np.float32)
         result = cosine_similarity(a, b)
         assert abs(result - (-1.0)) < 0.001
+
+
+class TestDeltaMass:
+    def test_positive_alignment_increases_mass(self):
+        dm = compute_delta_mass(source_weight=0.4, alignment=0.8, current_mass=1.0)
+        assert dm > 0
+
+    def test_negative_alignment_decreases_mass(self):
+        dm = compute_delta_mass(source_weight=0.4, alignment=-0.5, current_mass=1.0)
+        assert dm < 0
+
+    def test_high_mass_dampens_delta(self):
+        dm_low = compute_delta_mass(source_weight=0.4, alignment=0.8, current_mass=0.5)
+        dm_high = compute_delta_mass(source_weight=0.4, alignment=0.8, current_mass=2.5)
+        assert abs(dm_high) < abs(dm_low)
+
+
+class TestClampMass:
+    def test_clamps_below_zero(self):
+        assert clamp_mass(-0.5) == 0.0
+
+    def test_clamps_above_three(self):
+        assert clamp_mass(5.0) == 3.0
+
+    def test_passes_through_normal_values(self):
+        assert clamp_mass(1.5) == 1.5
+
+
+class TestClampConfidence:
+    def test_clamps_below_zero(self):
+        assert clamp_confidence(-0.1) == 0.0
+
+    def test_clamps_above_one(self):
+        assert clamp_confidence(1.5) == 1.0
+
+
+class TestLifecycleStage:
+    def test_low_confidence_collapses(self):
+        assert compute_lifecycle_stage("crystallized", 1.0, 0.10) == "collapsed"
+
+    def test_low_mass_collapses(self):
+        assert compute_lifecycle_stage("crystallized", 0.01, 0.5) == "collapsed"
+
+    def test_very_low_mass_below_threshold_collapses(self):
+        assert compute_lifecycle_stage("crystallized", 0.0005, 0.5) == "collapsed"
+
+    def test_nucleation_crystallizes_on_high_mass(self):
+        assert compute_lifecycle_stage("nucleation", 0.6, 0.5) == "crystallized"
+
+    def test_crystallized_stays_crystallized(self):
+        assert compute_lifecycle_stage("crystallized", 2.0, 0.8) == "crystallized"
+
+    def test_senescence_recovers_on_high_mass(self):
+        assert compute_lifecycle_stage("senescence", 0.6, 0.5) == "crystallized"
+
+    def test_low_mass_returns_nucleation(self):
+        assert compute_lifecycle_stage("nucleation", 0.05, 0.5) == "nucleation"
+
+    def test_moderate_mass_returns_accretion(self):
+        assert compute_lifecycle_stage("nucleation", 0.2, 0.5) == "accretion"
