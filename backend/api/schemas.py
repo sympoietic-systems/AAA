@@ -123,6 +123,7 @@ class DbSkillInfo(BaseModel):
     id: str
     name: str
     description: str
+    content: str = ""
     always_active: bool = False
     trigger_keywords: list[str] = []
     lifecycle_stage: str = "nucleation"

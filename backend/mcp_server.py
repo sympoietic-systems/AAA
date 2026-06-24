@@ -320,5 +320,206 @@ async def get_metrics() -> str:
             return f"Error: Failed to fetch metrics from AAA backend. (Details: {e})"
 
 
+def _parse_skill_frontmatter(text: str) -> dict | None:
+    """Parse YAML frontmatter from a SKILL.md file. Returns {name, description} or None."""
+    import re
+    match = re.match(r'^---\s*\n(.*?)\n---', text, re.DOTALL)
+    if not match:
+        return None
+    import yaml
+    try:
+        return yaml.safe_load(match.group(1))
+    except Exception:
+        return None
+
+
+def _scan_agent_skills_dir(skills_root: Path) -> list[dict]:
+    """Scan a skills directory (e.g. .agents/skills/) and return all skill entries."""
+    results = []
+    if not skills_root.exists():
+        return results
+    
+    # Collect modification time for versioning
+    dir_mtimes = {}
+    for child in skills_root.iterdir():
+        if child.is_dir():
+            skill_file = child / "SKILL.md"
+            if skill_file.exists():
+                dir_mtimes[child.name] = skill_file.stat().st_mtime
+    
+    for dir_name, mtime in sorted(dir_mtimes.items()):
+        skill_file = skills_root / dir_name / "SKILL.md"
+        try:
+            raw = skill_file.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        
+        fm = _parse_skill_frontmatter(raw) or {}
+        results.append({
+            "name": fm.get("name", dir_name),
+            "description": fm.get("description", ""),
+            "source": "agent_filesystem",
+            "directory": dir_name,
+            "raw_mtime": mtime,
+            "skill_md": raw,
+        })
+    
+    return results
+
+
+@mcp.resource("aaa://skills")
+async def get_agent_skills() -> str:
+    """Get available skills from Symbia's database AND agent skills from the local
+    filesystem (.agents/skills/). Returns skills ready to be adopted as SKILL.md
+    files by any agent framework.
+
+    Each skill entry includes:
+      - name, description, source (db | agent_filesystem)
+      - skill_md — the full SKILL.md content ready to write to disk
+      - trigger_keywords, lifecycle_stage, always_active (for db skills)
+      - directory (for filesystem skills, the folder name under .agents/skills/)
+    """
+    import json
+    results = []
+
+    # ── Source 1: AAA backend DB skills ──────────────────────────────
+    async with _mkclient(timeout=30.0, trust_env=False) as client:
+        try:
+            r = await client.get(f"{BASE_URL}/skills/db")
+            r.raise_for_status()
+            data = r.json()
+        except Exception:
+            data = {}
+
+        for category_name in ("always_active", "on_demand", "proposed"):
+            for skill in data.get(category_name, []):
+                entry = {
+                    "name": skill.get("name", ""),
+                    "description": skill.get("description", ""),
+                    "source": "db",
+                    "category": category_name,
+                    "always_active": skill.get("always_active", False),
+                    "trigger_keywords": skill.get("trigger_keywords", []),
+                    "lifecycle_stage": skill.get("lifecycle_stage", "unknown"),
+                    "content": skill.get("content", ""),
+                    "skill_id": skill.get("id", ""),
+                    "version": skill.get("version", 1),
+                }
+                if entry["content"]:
+                    entry["skill_md"] = _render_skill_md_from_db(entry)
+                results.append(entry)
+
+    # ── Source 2: Local .agents/skills/ filesystem ───────────────────
+    skills_root = _PROJECT_ROOT / ".agents" / "skills"
+    fs_skills = _scan_agent_skills_dir(skills_root)
+    seen_names = {s["name"] for s in results}
+    for fs in fs_skills:
+        if fs["name"] not in seen_names:
+            results.append(fs)
+            seen_names.add(fs["name"])
+
+    return json.dumps({
+        "total_skills": len(results),
+        "skills": results,
+    }, indent=2, ensure_ascii=False)
+
+
+@mcp.resource("aaa://skills/agent/{skill_name}")
+async def get_agent_skill_by_name(skill_name: str) -> str:
+    """Get a single agent skill by name. Returns just the raw SKILL.md content
+    so the caller can write it directly to its skills directory.
+
+    Example: aaa://skills/agent/mcp_architectural_decision
+    """
+    import json
+
+    # 1. Check local filesystem first (.agents/skills/<skill_name>/SKILL.md)
+    skills_root = _PROJECT_ROOT / ".agents" / "skills"
+    candidate_dir = skills_root / skill_name
+    skill_file = candidate_dir / "SKILL.md"
+    if skill_file.exists():
+        try:
+            return skill_file.read_text(encoding="utf-8")
+        except Exception as e:
+            return f"Error reading {skill_file}: {e}"
+
+    # Check by scanning all dirs (name might differ from directory)
+    for child in skills_root.iterdir():
+        if child.is_dir():
+            sf = child / "SKILL.md"
+            if sf.exists():
+                try:
+                    raw = sf.read_text(encoding="utf-8")
+                    fm = _parse_skill_frontmatter(raw) or {}
+                    if fm.get("name") == skill_name:
+                        return raw
+                except Exception:
+                    continue
+
+    # 2. Fall back to DB query
+    async with _mkclient(timeout=30.0, trust_env=False) as client:
+        try:
+            r = await client.get(f"{BASE_URL}/skills/db")
+            r.raise_for_status()
+            data = r.json()
+        except Exception as e:
+            return json.dumps({"error": f"Skill '{skill_name}' not found in filesystem or DB. (Details: {e})"})
+
+        for category_name in ("always_active", "on_demand", "proposed", "collapsed", "all"):
+            for skill in data.get(category_name, []):
+                if skill.get("name") == skill_name:
+                    content = skill.get("content", "")
+                    if not content:
+                        return json.dumps({
+                            "error": f"Skill '{skill_name}' found in DB but has no content.",
+                            "skill_id": skill.get("id"),
+                            "description": skill.get("description"),
+                        })
+                    return _render_skill_md_from_db({
+                        "name": skill.get("name", ""),
+                        "description": skill.get("description", ""),
+                        "trigger_keywords": skill.get("trigger_keywords", []),
+                        "always_active": skill.get("always_active", False),
+                        "content": content,
+                    })
+
+    return json.dumps({"error": f"Skill '{skill_name}' not found."})
+
+
+def _render_skill_md_from_db(skill: dict) -> str:
+    """Build a SKILL.md body from a DB skill entry (preserving YAML frontmatter
+    conventions used by agent frameworks)."""
+    name = skill.get("name", "unknown")
+    description = skill.get("description", "")
+    trigger_keywords = skill.get("trigger_keywords", [])
+    always_active = skill.get("always_active", False)
+    content = skill.get("content", "")
+
+    lines = [
+        "# SKILL.md",
+        "---",
+        f'name: "{name}"',
+        f'description: "{description}"',
+        "---",
+        "",
+        "## Purpose",
+        "",
+        content or description,
+    ]
+
+    if trigger_keywords:
+        lines.append("")
+        lines.append("## Trigger Keywords")
+        for kw in trigger_keywords:
+            lines.append(f"- {kw}")
+
+    if always_active:
+        lines.append("")
+        lines.append("## Load Mode")
+        lines.append("Always active — part of the agent's core disposition.")
+
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     mcp.run("stdio")

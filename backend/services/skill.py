@@ -249,6 +249,7 @@ class SkillService:
             "id": skill.id,
             "name": skill.name,
             "description": skill.description,
+            "content": skill.content,
             "short_content": skill.short_content,
             "always_active": skill.always_active,
             "trigger_keywords": trigger_keywords,

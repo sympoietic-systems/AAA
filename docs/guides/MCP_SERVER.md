@@ -67,7 +67,7 @@ After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will au
 - `consult_aaa(message: str, agent_name: str, max_tokens: int | None = None)`
 - `get_consultation_history(agent_name: str, limit: int = 50)`
 - `get_messages_by_conversation_id(conversation_id: str, limit: int = 50)`
-- Resources: `aaa://philosophy`, `aaa://identity`, `aaa://metrics`
+- Resources: `aaa://philosophy`, `aaa://identity`, `aaa://metrics`, `aaa://skills`, `aaa://skills/agent/{skill_name}`
 
 ---
 
@@ -112,11 +112,50 @@ If an agent times out waiting for a response, or needs to check the transcript o
 Both tools return a structured JSON string containing conversation metadata and the chronological message log.
 
 ### 3. Accessing Resources
+
+**Philosophy & Identity:**
 ```bash
 # Retrieve the philosophy document
 curl -X POST -d '{"resource": "aaa://philosophy"}' http://127.0.0.1:8499/api/mcp
+
+# Retrieve the agent identity config
+curl -X POST -d '{"resource": "aaa://identity"}' http://127.0.0.1:8499/api/mcp
+
+# Pull live homeostatic metrics
+curl -X POST -d '{"resource": "aaa://metrics"}' http://127.0.0.1:8499/api/mcp
 ```
-Replace the URL with the appropriate endpoint as configured by your IDE's MCP client.
+
+### 4. Agent Skill Discovery & Adoption (aaa://skills)
+
+The MCP server can serve agent skills — ready-to-write SKILL.md files — so that
+any agent framework can auto-discover and adopt skills without manual file copying.
+
+**List all available skills:**
+```
+Resource: aaa://skills
+```
+Returns JSON with all skills (merged from Symbia's database and the local
+`.agents/skills/` filesystem). Each entry includes `name`, `description`,
+`source` (db or agent_filesystem), and `skill_md` — the full SKILL.md content.
+
+**Fetch a specific skill by name:**
+```
+Resource: aaa://skills/agent/mcp_architectural_decision
+```
+Returns just the raw SKILL.md content so the caller can write it directly:
+```
+resource = mcp.read_resource("aaa://skills/agent/mcp_architectural_decision")
+write_file("skills/mcp_architectural_decision/SKILL.md", resource)
+```
+
+### 5. Multi-Turn Consultation
+
+For complex architectural questions, prefer multiple smaller `consult_aaa` calls
+over one large monolithic message. Ask one design axis per turn (data model,
+API contract, error strategy, etc.), wait for Symbia's response, then follow up
+with precise clarifying questions. Use `get_consultation_history` to review the
+thread between turns. This prevents truncation and produces a traceable decision
+trail.
 
 ---
 
