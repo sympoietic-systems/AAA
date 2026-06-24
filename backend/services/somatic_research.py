@@ -18,6 +18,7 @@ import numpy as np
 
 from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import log_research_meta
+from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.utils.somatic_math import (
     calculate_diffractive_similarity,
     calculate_rhizomatic_utility,
@@ -85,13 +86,6 @@ class SomaticResearchEngine:
 
     def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: str = None) -> None:
         log_research_meta(self._meta_log_repo, task_id, event_type, data, branch_id)
-
-    def _anti_mastery(self, text: str) -> str:
-        try:
-            from backend.utils.anti_mastery import apply_anti_mastery_filter
-            return apply_anti_mastery_filter(text)
-        except ImportError:
-            return text
 
     # ── Main Entry Point ─────────────────────────────────────────────
 
@@ -478,7 +472,7 @@ class SomaticResearchEngine:
 
         system_text = prompt_data.get("system", "")
         if prompt_data.get("anti_mastery"):
-            system_text = self._anti_mastery(system_text)
+            system_text = apply_anti_mastery_filter(system_text)
 
         # Prepend persona context to system prompt
         if persona_context:
@@ -494,7 +488,7 @@ class SomaticResearchEngine:
         )
 
         if prompt_data.get("anti_mastery"):
-            user_text = self._anti_mastery(user_text)
+            user_text = apply_anti_mastery_filter(user_text)
 
         # Log the LLM prompt
         self._log_meta(task_id, "llm_prompt", {

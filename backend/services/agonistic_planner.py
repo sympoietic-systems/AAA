@@ -8,6 +8,8 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 11.
 """
 
 import json
+
+from backend.utils.anti_mastery import apply_anti_mastery_filter
 import logging
 from typing import Any
 
@@ -26,13 +28,6 @@ class AgonisticPlanner:
     @property
     def config(self) -> dict:
         return self._state.config.get("rhizome_research", {})
-
-    def _anti_mastery(self, text: str) -> str:
-        try:
-            from backend.utils.anti_mastery import apply_anti_mastery_filter
-            return apply_anti_mastery_filter(text)
-        except ImportError:
-            return text
 
     async def generate_queries(
         self,
@@ -65,7 +60,7 @@ class AgonisticPlanner:
 
         system_text = prompt_data.get("system", "")
         if prompt_data.get("anti_mastery"):
-            system_text = self._anti_mastery(system_text)
+            system_text = apply_anti_mastery_filter(system_text)
 
         if is_agonistic:
             belief_labels = [
@@ -93,7 +88,7 @@ class AgonisticPlanner:
             )
 
         if prompt_data.get("anti_mastery"):
-            user_text = self._anti_mastery(user_text)
+            user_text = apply_anti_mastery_filter(user_text)
 
         temperature = prompt_data.get("temperature", 0.7)
         max_tokens = prompt_data.get("max_tokens", 1024)
@@ -134,7 +129,7 @@ class AgonisticPlanner:
 
         system_text = prompt_data.get("system", "")
         if prompt_data.get("anti_mastery"):
-            system_text = self._anti_mastery(system_text)
+            system_text = apply_anti_mastery_filter(system_text)
 
         if is_agonistic:
             belief_labels = json.dumps([
@@ -155,7 +150,7 @@ class AgonisticPlanner:
             )
 
         if prompt_data.get("anti_mastery"):
-            user_text = self._anti_mastery(user_text)
+            user_text = apply_anti_mastery_filter(user_text)
 
         try:
             from backend.modules.llm_client import generate_unified

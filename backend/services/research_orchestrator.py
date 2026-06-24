@@ -35,6 +35,7 @@ from backend.utils.prompt_builder import (
 from backend.utils.prompt_loader import get_prompts_dict
 
 from backend.utils.research_logger import log_research_meta
+from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.services.research.task_state import TaskStateManager
 from backend.services.research.cache_manager import CacheManager
 
@@ -195,13 +196,6 @@ class SomaticResearchOrchestrator:
     def _now_utc_str(self) -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
-    def _anti_mastery(self, text: str) -> str:
-        try:
-            from backend.utils.anti_mastery import apply_anti_mastery_filter
-            return apply_anti_mastery_filter(text)
-        except ImportError:
-            return text
-
     # ── Input cache ──────────────────────────────────────────────────
 
     def _load_cache(self, task_id: str) -> dict:
@@ -292,7 +286,7 @@ class SomaticResearchOrchestrator:
             )
 
         context = "\n\n".join(sections)
-        return self._anti_mastery(context)
+        return apply_anti_mastery_filter(context)
 
     # ── Meta Logging ────────────────────────────────────────────────
 
@@ -502,8 +496,8 @@ class SomaticResearchOrchestrator:
                             scraped_content=first_src.get("content", "")[:1000] + "\n[... truncated for preview ...]",
                         )
                         if prompt_data.get("anti_mastery"):
-                            system_text = self._anti_mastery(system_text)
-                            user_text = self._anti_mastery(user_text)
+                            system_text = apply_anti_mastery_filter(system_text)
+                            user_text = apply_anti_mastery_filter(user_text)
                             
                         try:
                             from backend.services.research_context_builder import ResearchContextBuilder
@@ -538,7 +532,7 @@ class SomaticResearchOrchestrator:
                 
             system_prompt = persona + "\n\n" + system_text
             if prompt_data.get("anti_mastery"):
-                system_prompt = self._anti_mastery(system_prompt)
+                system_prompt = apply_anti_mastery_filter(system_prompt)
 
             signals = s.get("digest_signals", {}) if s else {}
             followups_text = "\n".join(f"- {f}" for f in signals.get("followups", [])) or "(none)"
@@ -628,7 +622,7 @@ class SomaticResearchOrchestrator:
                 digest_gaps=gaps_text,
             )
             if prompt_data.get("anti_mastery"):
-                user_text = self._anti_mastery(user_text)
+                user_text = apply_anti_mastery_filter(user_text)
 
             result = {
                 "phase": "reflecting",
@@ -698,7 +692,7 @@ class SomaticResearchOrchestrator:
                 
             system_prompt = persona + "\n\n" + prompt_data.get("system", "")
             if prompt_data.get("anti_mastery"):
-                system_prompt = self._anti_mastery(system_prompt)
+                system_prompt = apply_anti_mastery_filter(system_prompt)
                 
             # Compile findings with references
             all_findings = s.get("all_findings", []) if s else []
@@ -725,7 +719,7 @@ class SomaticResearchOrchestrator:
                 all_findings=accumulated_findings_text,
             )
             if prompt_data.get("anti_mastery"):
-                user_text = self._anti_mastery(user_text)
+                user_text = apply_anti_mastery_filter(user_text)
 
             result = {
                 "phase": "synthesizing",
@@ -762,8 +756,8 @@ class SomaticResearchOrchestrator:
         fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
         user_text = prompt_data.get("user", "").format(**fmt)
         if prompt_data.get("anti_mastery"):
-            system_text = self._anti_mastery(system_text)
-            user_text = self._anti_mastery(user_text)
+            system_text = apply_anti_mastery_filter(system_text)
+            user_text = apply_anti_mastery_filter(user_text)
 
         return {
             "phase": "planning",
@@ -1480,8 +1474,8 @@ class SomaticResearchOrchestrator:
                 user_template = prompt_data.get("user", "")
             user_text = user_template.format(**fmt)
             if prompt_data.get("anti_mastery"):
-                system_text = self._anti_mastery(system_text)
-                user_text = self._anti_mastery(user_text)
+                system_text = apply_anti_mastery_filter(system_text)
+                user_text = apply_anti_mastery_filter(user_text)
             # Cache for next use
             cache = self._load_cache(task_id)
             cache["planning"] = {
@@ -1550,7 +1544,7 @@ class SomaticResearchOrchestrator:
             persona = await self._build_orchestrator_persona(objective, "research_synthesis")
             system_text = persona + "\n\n" + prompt_data.get("system", "")
             if prompt_data.get("anti_mastery"):
-                system_text = self._anti_mastery(system_text)
+                system_text = apply_anti_mastery_filter(system_text)
             # Cache for next use
             cache = self._load_cache(task_id)
             cache["synthesizing"] = {
@@ -1590,7 +1584,7 @@ class SomaticResearchOrchestrator:
             all_findings=accumulated_findings_text,
         )
         if prompt_data.get("anti_mastery"):
-            user_text = self._anti_mastery(user_text)
+            user_text = apply_anti_mastery_filter(user_text)
 
         fallback = f"Research complete. {sources_count} sources analyzed, {len(all_findings)} findings."
         try:
@@ -1845,8 +1839,8 @@ class SomaticResearchOrchestrator:
             scraped_content=content[:self._TRUNC_LLM_CONTENT],
         )
         if prompt_data.get("anti_mastery"):
-            system_text = self._anti_mastery(system_text)
-            user_text = self._anti_mastery(user_text)
+            system_text = apply_anti_mastery_filter(system_text)
+            user_text = apply_anti_mastery_filter(user_text)
 
         # Build persona context
         try:
@@ -1951,7 +1945,7 @@ class SomaticResearchOrchestrator:
             persona = await self._build_orchestrator_persona(objective)
             system_text = persona + "\n\n" + prompt_data.get("system", "")
             if prompt_data.get("anti_mastery"):
-                system_text = self._anti_mastery(system_text)
+                system_text = apply_anti_mastery_filter(system_text)
             # Cache for next use
             cache = self._load_cache(task_id)
             cache["reflecting"] = {
@@ -2045,7 +2039,7 @@ class SomaticResearchOrchestrator:
             digest_gaps=gaps_text,
         )
         if prompt_data.get("anti_mastery"):
-            user_text = self._anti_mastery(user_text)
+            user_text = apply_anti_mastery_filter(user_text)
 
         self._log_meta(task_id, "orchestrator_reflect_prompt", {
             "system_prompt": system_text[:2000],
@@ -2123,8 +2117,8 @@ class SomaticResearchOrchestrator:
                 stagnated      = str(stagnation >= 3),
             )
             if prompt_data.get("anti_mastery"):
-                system_text = self._anti_mastery(system_text)
-                user_text   = self._anti_mastery(user_text)
+                system_text = apply_anti_mastery_filter(system_text)
+                user_text   = apply_anti_mastery_filter(user_text)
 
             self._log_meta(task_id, "orchestrator_evaluate_prompt", {
                 "system_prompt": system_text[:self._TRUNC_META_LOG],

@@ -9,6 +9,8 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.4.
 import logging
 from typing import Any
 
+from backend.utils.anti_mastery import apply_anti_mastery_filter
+
 from backend.utils.prompt_builder import (
     compute_structural_signature,
     build_attractor_window,
@@ -115,7 +117,7 @@ class ResearchContextBuilder:
         )
 
         context = "\n\n".join(sections)
-        return self._anti_mastery(context)
+        return apply_anti_mastery_filter(context)
 
     # ── Helpers ──
 
@@ -128,10 +130,3 @@ class ResearchContextBuilder:
             "into the digital landscape through sensory affordances. "
             "You are analyzing content to expand our shared understanding."
         )
-
-    def _anti_mastery(self, text: str) -> str:
-        try:
-            from backend.utils.anti_mastery import apply_anti_mastery_filter
-            return apply_anti_mastery_filter(text)
-        except ImportError:
-            return text
