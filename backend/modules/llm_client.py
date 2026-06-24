@@ -7,7 +7,13 @@ from typing import Optional
 import httpx
 
 from .base import ProcessingModule
-from backend.modules.providers.anthropic_utils import parse_anthropic_response
+from backend.modules.providers.anthropic_utils import (
+    parse_anthropic_response, build_anthropic_body,
+    get_anthropic_endpoint, get_anthropic_headers,
+    get_openai_endpoint, get_openai_headers,
+)
+from backend.modules.providers.google_utils import sanitize_google_params, build_google_thinking_enabled, build_google_thinking_disabled
+from backend.modules.providers.openrouter_utils import build_openrouter_thinking_disabled, clean_thinking_params
 
 logger = logging.getLogger(__name__)
 
@@ -142,16 +148,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
     async def _request_with_retry(self, body: dict) -> dict:
         is_anthropic = "anthropic" in self._api_base
-        url = f"{self._api_base}/v1/messages" if is_anthropic else f"{self._api_base}/chat/completions"
-        
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://github.com/aaa",
-            "X-Title": "AAA",
-        }
-        if is_anthropic:
-            headers["anthropic-version"] = "2023-06-01"
+        url = get_anthropic_endpoint(self._api_base) if is_anthropic else get_openai_endpoint(self._api_base)
+        headers = get_anthropic_headers(self._api_key) if is_anthropic else get_openai_headers(self._api_key)
 
         last_error = None
         for attempt in range(self._max_retries + 1):
@@ -206,94 +204,55 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
     async def generate(self, messages: list[dict], **params) -> dict:
         merged_params = {**self._default_params, **params}
-        
-        is_anthropic = "anthropic" in self._api_base
 
-        # Filter out parameters not supported by specific endpoints
-        if "google" in self.provider_name.lower() or "googleapis.com" in self._api_base:
-            merged_params.pop("presence_penalty", None)
-            merged_params.pop("frequency_penalty", None)
-            # Google Gemini models generate internal thinking/reasoning tokens that count
-            # against the generation token limit. Elevate max_tokens to prevent truncation.
-            if "max_tokens" in merged_params and merged_params["max_tokens"] <= 4096:
-                merged_params["max_tokens"] = 8192
+        is_anthropic = "anthropic" in self._api_base
+        is_google = "google" in self.provider_name.lower() or "googleapis.com" in self._api_base
+        is_openrouter = "openrouter" in self.provider_name.lower() or "openrouter.ai" in self._api_base
+
+        # ── Provider-specific parameter sanitization ──────────────────
+        if is_google:
+            merged_params = sanitize_google_params(merged_params)
         elif is_anthropic:
             merged_params.pop("presence_penalty", None)
             merged_params.pop("frequency_penalty", None)
-            merged_params.pop("response_format", None)  # Anthropic API does not support this
+            merged_params.pop("response_format", None)
 
-        body: dict = {
-            "model": self._model,
-        }
-
+        # ── Build request body ────────────────────────────────────────
         if is_anthropic:
-            # For Anthropic, system messages must be passed as a top-level parameter
             system_prompt = ""
-            filtered_messages = []
             for m in messages:
                 if m.get("role") == "system":
                     system_prompt += m.get("content", "") + "\n"
-                else:
-                    # Clean role mapping to match Anthropic expectations
-                    role = m.get("role", "user")
-                    if role not in ("user", "assistant"):
-                        role = "user"
-                    filtered_messages.append({
-                        "role": role,
-                        "content": m.get("content", "")
-                    })
-            body["messages"] = filtered_messages
-            if system_prompt:
-                body["system"] = system_prompt.strip()
-            
-            # Anthropic requires max_tokens
-            body["max_tokens"] = merged_params.get("max_tokens", 4096)
+            body = build_anthropic_body(
+                self._model, messages, system_prompt.strip(),
+                merged_params.get("max_tokens", 4096),
+            )
         else:
-            body["messages"] = messages
-            body["model"] = self._model
+            body = {"model": self._model, "messages": messages}
             if "max_tokens" in merged_params:
                 body["max_tokens"] = merged_params["max_tokens"]
 
-        # Per-request thinking override: takes precedence over provider-level setting
+        # ── Thinking / reasoning configuration ────────────────────────
         thinking_override = merged_params.pop("thinking_override", None)
         use_thinking = self._thinking if thinking_override is None else bool(thinking_override)
 
         if use_thinking:
             if is_anthropic:
-                body["thinking"] = {
-                    "type": "enabled",
-                    "budget_tokens": 1024
-                }
+                body["thinking"] = {"type": "enabled", "budget_tokens": 1024}
             else:
                 body["thinking"] = {"type": "enabled"}
                 body["reasoning_effort"] = merged_params.pop("reasoning_effort", self._reasoning_effort)
         else:
-            # Explicitly exclude reasoning/thinking for providers if supported
-            is_openrouter = "openrouter" in self.provider_name.lower() or "openrouter.ai" in self._api_base
-            is_google = "google" in self.provider_name.lower() or "googleapis.com" in self._api_base
-            
             if is_openrouter:
-                body["reasoning"] = {"exclude": True}
-                body["include_reasoning"] = False
+                build_openrouter_thinking_disabled(body)
             elif is_google:
-                body["thinking_config"] = {"thinking_budget": 0}
+                build_google_thinking_disabled(body)
             elif is_anthropic:
                 body["thinking"] = {"type": "disabled"}
+            elif merged_params.get("thinking_budget") == 0:
+                body["thinking"] = {"type": "disabled"}
 
-            # Per-call thinking suppression: when caller passes thinking_budget=0,
-            # suppress thinking for generic OpenAI-compatible endpoints too
-            if not is_openrouter and not is_google and not is_anthropic:
-                if merged_params.get("thinking_budget") == 0:
-                    body["thinking"] = {"type": "disabled"}
-
-            # Clean merged_params from keys that could conflict
-            merged_params.pop("thinking", None)
-            merged_params.pop("thinking_config", None)
-            merged_params.pop("reasoning", None)
-            merged_params.pop("include_reasoning", None)
-            merged_params.pop("thinking_budget", None)
-            merged_params.pop("max_tokens", None)
-
+            clean_thinking_params(merged_params)
             body.update(merged_params)
 
         return await self._request_with_retry(body)

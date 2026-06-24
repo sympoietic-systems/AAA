@@ -7,6 +7,33 @@ from the generic OpenAI-compatible code path.
 from typing import Any
 
 
+def get_anthropic_endpoint(api_base: str) -> str:
+    return f"{api_base.rstrip('/')}/v1/messages"
+
+
+def get_anthropic_headers(api_key: str) -> dict:
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/aaa",
+        "X-Title": "AAA",
+        "anthropic-version": "2023-06-01",
+    }
+
+
+def get_openai_endpoint(api_base: str) -> str:
+    return f"{api_base.rstrip('/')}/chat/completions"
+
+
+def get_openai_headers(api_key: str) -> dict:
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/aaa",
+        "X-Title": "AAA",
+    }
+
+
 def parse_anthropic_response(data: dict) -> dict:
     """Parse an Anthropic Messages API response into the standardized message format.
 
