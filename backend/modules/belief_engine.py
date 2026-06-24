@@ -33,15 +33,6 @@ def calculate_concept_density(text: str, lambda_param: float = 3.0) -> float:
 from backend.utils.similarity import cosine_similarity
 
 
-def compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-    if vec_a.shape != vec_b.shape:
-        logger.warning(
-            f"Vector dimension mismatch in cosine similarity: {vec_a.shape} vs {vec_b.shape}. Returning 0.0."
-        )
-        return 0.0
-    return cosine_similarity(vec_a, vec_b)
-
-
 def parse_vector_16d(vector_json: str) -> Optional[np.ndarray]:
     if not vector_json or vector_json == "[]":
         return None
@@ -165,7 +156,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                 if ghost_vec is None:
                     logger.warning(f"Ghost belief '{ghost.label}' (ID: {ghost.id}) has invalid or empty vector_16d: {ghost.vector_16d[:80]}")
                     continue
-                ghost_sim = compute_cosine_similarity(vector, ghost_vec)
+                ghost_sim = cosine_similarity(vector, ghost_vec)
                 if ghost_sim > 0.9:
                     jump_mass = 0.4 * source_weight / 0.5
                     initial_mass = max(initial_mass, jump_mass)
@@ -410,7 +401,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                 if b_vec is None:
                     logger.warning(f"Belief '{b.label}' (ID: {b.id}) has invalid or empty vector_16d: {b.vector_16d[:80]}")
                     continue
-                sim = compute_cosine_similarity(input_vector, b_vec)
+                sim = cosine_similarity(input_vector, b_vec)
                 if sim > best_sim:
                     best_sim = sim
                     best = b
@@ -580,7 +571,7 @@ class BeliefDynamicsEngine(ProcessingModule):
             source_weight = self._get_source_weight(source_type)
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
-                alignment = compute_cosine_similarity(user_vec, b_vec)
+                alignment = cosine_similarity(user_vec, b_vec)
                 self._accrete_belief(closest, user_vec, source_weight, alignment, perturbation,
                                      source_type=source_type, source_id=str(user_message_id))
             elif dc > 0.3:
@@ -617,7 +608,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                 sims = []
                 diffs = []
                 for k in range(len(signatures) - 1):
-                    sims.append(compute_cosine_similarity(signatures[k], signatures[k+1]))
+                    sims.append(cosine_similarity(signatures[k], signatures[k+1]))
                     diffs.append(float(np.linalg.norm(signatures[k] - signatures[k+1])))
 
                 c_avg = float(np.mean(sims))
@@ -750,7 +741,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                 if b_vec is None:
                     logger.warning(f"Skipping belief '{b.label}' with invalid or malformed vector_16d: {b.vector_16d[:80]}")
                     continue
-                alignment = compute_cosine_similarity(structural_signature, b_vec)
+                alignment = cosine_similarity(structural_signature, b_vec)
                 if alignment > best_sim:
                     best_sim = alignment
 
@@ -804,7 +795,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                 try:
                     b_vec = parse_vector_16d(best_match.vector_16d)
                     if b_vec is not None:
-                        best_sim = compute_cosine_similarity(note_vec, b_vec)
+                        best_sim = cosine_similarity(note_vec, b_vec)
                     else:
                         logger.warning(f"Shared note match belief '{best_match.label}' has invalid vector_16d")
                         best_sim = 0.0
@@ -846,7 +837,7 @@ class BeliefDynamicsEngine(ProcessingModule):
             closest = self._find_closest_active_belief(agent_id, web_vec, min_similarity=0.3)
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
-                alignment = compute_cosine_similarity(web_vec, b_vec)
+                alignment = cosine_similarity(web_vec, b_vec)
                 self._accrete_belief(closest, web_vec, source_weight, alignment, perturbation=1.0,
                                      source_type="web_probe", source_id=source_id)
             elif calculate_concept_density(extracted_text) > 0.3:
@@ -878,7 +869,7 @@ class BeliefDynamicsEngine(ProcessingModule):
             closest = self._find_closest_active_belief(agent_id, theme_vec, min_similarity=0.3)
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
-                alignment = compute_cosine_similarity(theme_vec, b_vec)
+                alignment = cosine_similarity(theme_vec, b_vec)
                 self._accrete_belief(closest, theme_vec, source_weight, alignment, perturbation=1.0,
                                      source_type="chat_turn", source_id=None)
             else:
@@ -914,7 +905,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                         vec_a = parse_vector_16d(active[i].vector_16d)
                         vec_b = parse_vector_16d(active[j].vector_16d)
                         if vec_a is not None and vec_b is not None:
-                            distances.append(1.0 - abs(compute_cosine_similarity(vec_a, vec_b)))
+                            distances.append(1.0 - abs(cosine_similarity(vec_a, vec_b)))
                     except Exception:
                         continue
             diversity = float(np.mean(distances)) if distances else 0.5
@@ -991,7 +982,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                     vec_a = parse_vector_16d(active[i].vector_16d)
                     vec_b = parse_vector_16d(active[j].vector_16d)
                     if vec_a is not None and vec_b is not None:
-                        sim = compute_cosine_similarity(vec_a, vec_b)
+                        sim = cosine_similarity(vec_a, vec_b)
 
                     if sim > 0.7:
                         symbiotic_count += 1
@@ -1067,7 +1058,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                     vec_a = parse_vector_16d(ghosts[i].vector_16d)
                     vec_b = parse_vector_16d(ghosts[j].vector_16d)
                     if vec_a is not None and vec_b is not None:
-                        sim = compute_cosine_similarity(vec_a, vec_b)
+                        sim = cosine_similarity(vec_a, vec_b)
                     if sim > 0.9:
                         keeper = ghosts[i] if ghosts[i].ontological_mass >= ghosts[j].ontological_mass else ghosts[j]
                         absorbed = ghosts[j] if keeper.id == ghosts[i].id else ghosts[i]

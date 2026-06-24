@@ -115,7 +115,8 @@ Active beliefs already in Symbia's database:
                     break
 
         # Math fallback check: if no target ID resolved, check cosine similarities
-        from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+        from backend.modules.belief_engine import parse_vector_16d
+        from backend.utils.similarity import cosine_similarity
         prop_vec = parse_vector_16d(proposal.initial_signature)
         if prop_vec is not None:
             best_sim = -1.0
@@ -124,7 +125,7 @@ Active beliefs already in Symbia's database:
                 if b.lifecycle_stage in ("crystallized", "senescence", "accretion"):
                     b_vec = parse_vector_16d(b.vector_16d)
                     if b_vec is not None:
-                        sim = compute_cosine_similarity(prop_vec, b_vec)
+                        sim = cosine_similarity(prop_vec, b_vec)
                         if sim > best_sim:
                             best_sim = sim
                             best_id = b.id

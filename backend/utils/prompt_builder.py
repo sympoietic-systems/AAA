@@ -18,7 +18,8 @@ from typing import Any
 
 import numpy as np
 
-from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+from backend.modules.belief_engine import parse_vector_16d
+from backend.utils.similarity import cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +164,7 @@ def build_attractor_window(
                     bv = parse_vector_16d(b.vector_16d)
                     if bv is None:
                         return -1.0
-                    return compute_cosine_similarity(signature_16d, bv)
+                    return cosine_similarity(signature_16d, bv)
                 except Exception:
                     logger.warning("Cosine similarity failed for belief resonance scoring")
                     return -1.0
@@ -217,7 +218,7 @@ def match_on_demand_skills(
                 if skv is None:
                     continue
                 try:
-                    sim = compute_cosine_similarity(signature_16d, skv)
+                    sim = cosine_similarity(signature_16d, skv)
                     if sim >= vector_threshold:
                         candidates[skill.name] = {
                             "skill": skill,

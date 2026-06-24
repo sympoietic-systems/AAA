@@ -14,7 +14,7 @@ os.chdir(root_path)
 
 from backend.metabolisation.daemon import AutopoieticDreamDaemon
 from backend.storage.models import BeliefNode, Message, Conversation
-from backend.modules.belief_engine import compute_cosine_similarity
+from backend.utils.similarity import cosine_similarity
 
 class MockMessageRepository:
     def __init__(self):

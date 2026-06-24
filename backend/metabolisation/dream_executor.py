@@ -13,11 +13,6 @@ from backend.utils.prompt_loader import get_prompt, get_prompts_dict
 from backend.metabolisation.sedimentation import store_daemon_metrics
 from backend.modules.llm_client import generate_unified
 
-def compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-    if vec_a.shape != vec_b.shape:
-        return 0.0
-    return cosine_similarity(vec_a, vec_b)
-
 logger = logging.getLogger(__name__)
 
 
@@ -275,7 +270,7 @@ class DreamExecutorMixin:
             v_b = np.frombuffer(sig_b, dtype=np.float32)
             if len(v_a) != 16 or len(v_b) != 16:
                 return False
-            sim = compute_cosine_similarity(v_a, v_b)
+            sim = cosine_similarity(v_a, v_b)
             logger.debug("Intra-dream stagnation similarity: %.4f (threshold: %.4f)", sim, self.resonance_stagnation)
             return sim > self.resonance_stagnation
         except Exception as e:

@@ -12,11 +12,6 @@ from backend.storage.models import BeliefNode
 from backend.utils.similarity import cosine_similarity
 from backend.utils.prompt_loader import get_prompts_dict
 
-def compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-    if vec_a.shape != vec_b.shape:
-        return 0.0
-    return cosine_similarity(vec_a, vec_b)
-
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +41,7 @@ class DreamContextMixin:
         try:
             vecs = [np.frombuffer(sig, dtype=np.float32) for sig in recent_sigs]
             for i in range(len(vecs) - 1):
-                similarities.append(compute_cosine_similarity(vecs[i], vecs[i + 1]))
+                similarities.append(cosine_similarity(vecs[i], vecs[i + 1]))
             avg_sim = float(np.mean(similarities))
             logger.debug("Stagnation check avg similarity: %.3f", avg_sim)
             return avg_sim > 0.92
@@ -72,7 +67,7 @@ class DreamContextMixin:
 
         similarities = []
         for i in range(len(vecs) - 1):
-            sim = compute_cosine_similarity(vecs[i], vecs[i + 1])
+            sim = cosine_similarity(vecs[i], vecs[i + 1])
             similarities.append(sim)
 
         mean_autocorr = float(np.mean(similarities))
@@ -120,7 +115,7 @@ class DreamContextMixin:
                     if i == j:
                         continue
                     vec_j = np.frombuffer(np.array(json.loads(b_j.vector_16d), dtype=np.float32))
-                    sim = compute_cosine_similarity(vec_i, vec_j)
+                    sim = cosine_similarity(vec_i, vec_j)
                     distances.append(1.0 - sim)
                 kappa = float(np.mean(distances)) if distances else 0.0
             except Exception:
@@ -154,8 +149,8 @@ class DreamContextMixin:
                     if emb_a is None or emb_b is None or sig_a is None or sig_b is None:
                         continue
 
-                    sem_sim = compute_cosine_similarity(emb_a, emb_b)
-                    struct_sim = compute_cosine_similarity(sig_a, sig_b)
+                    sem_sim = cosine_similarity(emb_a, emb_b)
+                    struct_sim = cosine_similarity(sig_a, sig_b)
 
                     if sem_sim < 0.45 and struct_sim > 0.75:
                         selected_pair = (idx_a, idx_b)
@@ -201,8 +196,8 @@ class DreamContextMixin:
                 for idx_b, emb_b, sig_b in records[30:60]:
                     if emb_a is None or emb_b is None or sig_a is None or sig_b is None:
                         continue
-                    sem_sim = compute_cosine_similarity(emb_a, emb_b)
-                    struct_sim = compute_cosine_similarity(sig_a, sig_b)
+                    sem_sim = cosine_similarity(emb_a, emb_b)
+                    struct_sim = cosine_similarity(sig_a, sig_b)
                     if sem_sim < 0.45 and struct_sim > 0.75:
                         selected_pair = (idx_a, idx_b)
                         break

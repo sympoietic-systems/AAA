@@ -8,9 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.modules.belief_engine import (
     calculate_concept_density,
-    compute_cosine_similarity,
     parse_vector_16d,
 )
+from backend.utils.similarity import cosine_similarity
 
 
 class TestConceptDensity:
@@ -86,23 +86,23 @@ class TestParseVector16d:
 class TestCosineSimilarityWrapper:
     def test_identical_vectors_return_one(self):
         a = np.array([1.0, 0.0, 0.0], dtype=np.float32)
-        result = compute_cosine_similarity(a, a)
+        result = cosine_similarity(a, a)
         assert abs(result - 1.0) < 0.001
 
     def test_orthogonal_vectors_return_zero(self):
         a = np.array([1.0, 0.0], dtype=np.float32)
         b = np.array([0.0, 1.0], dtype=np.float32)
-        result = compute_cosine_similarity(a, b)
+        result = cosine_similarity(a, b)
         assert abs(result) < 0.001
 
     def test_dimension_mismatch_returns_zero(self):
         a = np.array([1.0, 0.0], dtype=np.float32)
         b = np.array([1.0, 0.0, 0.0], dtype=np.float32)
-        result = compute_cosine_similarity(a, b)
+        result = cosine_similarity(a, b)
         assert result == 0.0
 
     def test_opposite_vectors_return_negative_one(self):
         a = np.array([1.0, 0.0], dtype=np.float32)
         b = np.array([-1.0, 0.0], dtype=np.float32)
-        result = compute_cosine_similarity(a, b)
+        result = cosine_similarity(a, b)
         assert abs(result - (-1.0)) < 0.001

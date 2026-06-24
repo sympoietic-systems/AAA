@@ -54,9 +54,13 @@ def cosine_similarity(
     Centralized version — replaces both:
     - backend/utils/similarity.py:cosine_similarity (numpy arrays)
     - backend/api/routes/agent.py:_cosine_sim (lists)
+
+    Returns 0.0 if vectors have mismatched shapes or zero norms.
     """
     va = np.asarray(a, dtype=np.float32)
     vb = np.asarray(b, dtype=np.float32)
+    if va.shape != vb.shape:
+        return 0.0
     na = float(np.linalg.norm(va))
     nb = float(np.linalg.norm(vb))
     if na == 0.0 or nb == 0.0:

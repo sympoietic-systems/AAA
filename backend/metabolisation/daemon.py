@@ -23,13 +23,6 @@ from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.utils.similarity import cosine_similarity
 from backend.metabolisation.mass_decay import MassDecayMixin
 from backend.metabolisation.dream_context import DreamContextMixin
-
-def compute_cosine_similarity(vec_a, vec_b) -> float:
-    # We can import numpy inside or use generic/duck-typed array objects
-    import numpy as np
-    if vec_a.shape != vec_b.shape:
-        return 0.0
-    return cosine_similarity(vec_a, vec_b)
 from backend.metabolisation.dream_prompts import DreamPromptMixin
 from backend.metabolisation.dream_executor import DreamExecutorMixin
 from backend.metabolisation.consolidation import ConsolidationMixin
@@ -656,10 +649,10 @@ class AutopoieticDreamDaemon(
                 for j in range(i + 1, len(records)):
                     knot_b_id, emb_b, sig_b, payload_b = records[j]
 
-                    sem_sim = compute_cosine_similarity(emb_a, emb_b)
+                    sem_sim = cosine_similarity(emb_a, emb_b)
                     struct_sim = 1.0
                     if sig_a is not None and sig_b is not None and len(sig_a) == 16 and len(sig_b) == 16:
-                        struct_sim = compute_cosine_similarity(sig_a, sig_b)
+                        struct_sim = cosine_similarity(sig_a, sig_b)
 
                     if sem_sim > 0.92 and struct_sim > 0.80:
                         target_pair = (records[i], records[j])

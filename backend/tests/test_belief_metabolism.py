@@ -10,7 +10,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from backend.storage.database import init_db, get_db_path
 from backend.storage.repository import BeliefRepository, MessageRepository, ConversationRepository
-from backend.modules.belief_engine import BeliefDynamicsEngine, calculate_concept_density, compute_cosine_similarity
+from backend.modules.belief_engine import BeliefDynamicsEngine, calculate_concept_density
+from backend.utils.similarity import cosine_similarity
 
 MOCK_IDENTITY_YAML = """
 personality:

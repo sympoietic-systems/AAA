@@ -531,7 +531,8 @@ Proposed Belief Statement:
         import uuid
         import json
         from backend.modules.structural_engine import CompositeStructuralScorer
-        from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+        from backend.modules.belief_engine import parse_vector_16d
+        from backend.utils.similarity import cosine_similarity
 
         try:
             structural_provider = getattr(state, "structural_provider", None) or getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
@@ -566,7 +567,7 @@ Proposed Belief Statement:
         
         speciation_triggered = False
         if old_vec is not None and new_vec is not None:
-            sim = compute_cosine_similarity(old_vec, new_vec)
+            sim = cosine_similarity(old_vec, new_vec)
             dist = 1.0 - sim
             if dist > 0.4:
                 speciation_triggered = True
@@ -722,7 +723,8 @@ Proposed Belief Statement:
         import uuid
         import json
         from backend.modules.structural_engine import CompositeStructuralScorer
-        from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+        from backend.modules.belief_engine import parse_vector_16d
+        from backend.utils.similarity import cosine_similarity
 
         # 1. Compute 16D vector
         try:
@@ -753,7 +755,7 @@ Proposed Belief Statement:
             old_vec = parse_vector_16d(target_belief.vector_16d)
             new_vec = parse_vector_16d(new_v16d_json)
             if old_vec is not None and new_vec is not None:
-                sim = compute_cosine_similarity(old_vec, new_vec)
+                sim = cosine_similarity(old_vec, new_vec)
                 dist = 1.0 - sim
                 if dist > 0.4:
                     speciation_triggered = True
@@ -864,7 +866,8 @@ Proposed Belief Statement:
             return {"status": "error", "message": "Belief not found"}
 
         import uuid
-        from backend.modules.belief_engine import parse_vector_16d, compute_cosine_similarity
+        from backend.modules.belief_engine import parse_vector_16d
+        from backend.utils.similarity import cosine_similarity
 
         label = target_belief.label
         statement = version_data.statement
@@ -877,7 +880,7 @@ Proposed Belief Statement:
         old_vec = parse_vector_16d(target_belief.vector_16d)
         new_vec = parse_vector_16d(vector_16d_str)
         if old_vec is not None and new_vec is not None:
-            sim = compute_cosine_similarity(old_vec, new_vec)
+            sim = cosine_similarity(old_vec, new_vec)
             dist = 1.0 - sim
             if dist > 0.4:
                 speciation_triggered = True
