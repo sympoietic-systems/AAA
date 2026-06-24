@@ -1,5 +1,7 @@
 import json
 import logging
+import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from backend.storage.connection import with_connection
@@ -99,8 +101,7 @@ class BeliefRepository(BaseRepository):
 
         # Automatic persistence notification for new belief creation
         try:
-            import uuid
-            from datetime import datetime, timezone
+
             snippet = f"New belief '{label}' crystallized (initial confidence: {confidence:.2f}). Origin: {origin}"
             conn.execute(
                 """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
@@ -137,8 +138,7 @@ class BeliefRepository(BaseRepository):
                     old_stage = row["lifecycle_stage"]
                     label = row["label"]
                     snippet = f"Belief '{label}' transitioned stage: {old_stage} \u2192 {lifecycle_stage}."
-                    import uuid
-                    from datetime import datetime, timezone
+
                     conn.execute(
                         """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                            VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
@@ -181,8 +181,7 @@ class BeliefRepository(BaseRepository):
                 old_stage = row["lifecycle_stage"]
                 label = row["label"]
                 snippet = f"Belief '{label}' transitioned stage: {old_stage} \u2192 {lifecycle_stage}."
-                import uuid
-                from datetime import datetime, timezone
+
                 conn.execute(
                     """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                        VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
@@ -208,8 +207,7 @@ class BeliefRepository(BaseRepository):
     ) -> None:
         """Create a notification entry in the notifications table."""
         try:
-            import uuid
-            from datetime import datetime, timezone
+
             conn = self._conn()
             conn.execute(
                 """INSERT INTO notifications (id, type, timestamp, snippet, source, source_type, source_id, read, dismissed)
@@ -318,9 +316,7 @@ class BeliefRepository(BaseRepository):
                     
                     snippet = f"Belief '{belief_label}' {event_type} (impact: {impact or 0.0:.2f}). {rationale or ''}"
                     snippet = snippet.strip()
-                    
-                    import uuid
-                    from datetime import datetime, timezone
+
                     conn.execute(
                         """INSERT INTO notifications (id, type, timestamp, snippet, source, source_type, source_id, read, dismissed)
                            VALUES (?, 'trace', ?, ?, ?, ?, ?, 0, 0)""",
@@ -471,8 +467,7 @@ class BeliefRepository(BaseRepository):
             if row and row["lifecycle_stage"] != lifecycle_stage:
                 old_stage = row["lifecycle_stage"]
                 snippet = f"Belief '{row['label']}' transitioned stage: {old_stage} \u2192 {lifecycle_stage}."
-                import uuid
-                from datetime import datetime, timezone
+
                 conn.execute(
                     """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                        VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
@@ -532,8 +527,7 @@ class BeliefRepository(BaseRepository):
         )
         
         # Automatic notification insertion
-        import uuid
-        from datetime import datetime, timezone
+
         snippet = f"A new belief proposal has emerged in the workshop ('{provisional_statement}')"
         conn.execute(
             """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
