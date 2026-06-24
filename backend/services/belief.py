@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Optional
 
+from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.services.belief_serializer import (
     serialize_belief_event,
     serialize_proposal,
@@ -9,6 +10,22 @@ from backend.services.belief_serializer import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+async def _score_statement_16d(state, statement: str, fallback: str | None = None) -> str:
+    """Score a statement as 16D vector and return JSON-serialized v16d dict."""
+    try:
+        provider = (
+            getattr(state, "structural_provider", None)
+            or getattr(state, "background_provider", None)
+            or getattr(state, "llm_provider", None)
+        )
+        scorer = CompositeStructuralScorer(llm_provider=provider)
+        v16d = await scorer.score_async(statement)
+        return json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
+    except Exception as e:
+        logger.error("Failed to score statement: %s", e)
+        return fallback or "[]"
 
 
 class BeliefService:
@@ -178,17 +195,10 @@ class BeliefService:
         belief_repo.update_proposal_status(proposal_id, "adopted")
 
         import uuid
-        import json
-        from backend.modules.structural_engine import CompositeStructuralScorer
-        try:
-            structural_provider = getattr(state, "structural_provider", None) or getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
-            scorer = CompositeStructuralScorer(llm_provider=structural_provider)
-            v16d = await scorer.score_async(statement)
-            v16d_json = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
-        except Exception as e:
-            logger.error("Failed to score adopted statement: %s", e)
-            v16d_json = p.initial_signature
-
+        from backend.modules.belief_engine import parse_vector_16d
+        from backend.utils.similarity import cosine_similarity
+        v16d_json = await _score_statement_16d(state, statement, fallback=p.initial_signature)
+        
         # Create belief node
         belief_repo.create_belief(
             id=p.id,
@@ -280,9 +290,6 @@ class BeliefService:
         new_conf = min(1.0, target_belief.confidence + 0.1)
 
         import uuid
-        import json
-        from backend.modules.structural_engine import CompositeStructuralScorer
-
         statement_updated = False
         new_v16d = target_belief.vector_16d
         new_version = target_belief.version
@@ -290,13 +297,7 @@ class BeliefService:
         if merged_statement and merged_statement.strip() and merged_statement.strip() != target_belief.statement.strip():
             statement_updated = True
             new_version = target_belief.version + 1
-            try:
-                structural_provider = getattr(state, "structural_provider", None) or getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
-                scorer = CompositeStructuralScorer(llm_provider=structural_provider)
-                v16d_scores = await scorer.score_async(merged_statement)
-                new_v16d = json.dumps({"v16d": v16d_scores.tolist() if hasattr(v16d_scores, "tolist") else list(v16d_scores)})
-            except Exception as e:
-                logger.error("Failed to score merged statement: %s", e)
+            new_v16d = await _score_statement_16d(state, merged_statement, fallback=target_belief.vector_16d)
 
         if statement_updated:
             belief_repo.update_belief_statement(
@@ -441,18 +442,11 @@ Proposed Belief Statement:
             return {"status": "error", "message": "Belief not found"}
 
         import uuid
-        import json
-        from backend.modules.structural_engine import CompositeStructuralScorer
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
-
-        try:
-            structural_provider = getattr(state, "structural_provider", None) or getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
-            scorer = CompositeStructuralScorer(llm_provider=structural_provider)
-            v16d = await scorer.score_async(statement)
-            new_v16d_json = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to score statement: {str(e)}"}
+        new_v16d_json = await _score_statement_16d(state, statement)
+        if not new_v16d_json or new_v16d_json == "[]":
+            return {"status": "error", "message": "Failed to score statement"}
 
         # Update belief statement and bump version
         new_version = target_belief.version + 1
@@ -547,18 +541,10 @@ Proposed Belief Statement:
 
         import uuid
         import json
-        from backend.modules.structural_engine import CompositeStructuralScorer
-        
         belief_id = str(uuid.uuid4())
-        
-        # 1. Compute 16D vector
-        try:
-            structural_provider = getattr(state, "structural_provider", None) or getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
-            scorer = CompositeStructuralScorer(llm_provider=structural_provider)
-            v16d = await scorer.score_async(statement)
-            v16d_json = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to score statement: {str(e)}"}
+        v16d_json = await _score_statement_16d(state, statement)
+        if not v16d_json or v16d_json == "[]":
+            return {"status": "error", "message": "Failed to score statement"}
 
         # 2. Save in database (initial version is 1)
         belief_repo.create_belief(
@@ -634,18 +620,11 @@ Proposed Belief Statement:
 
         import uuid
         import json
-        from backend.modules.structural_engine import CompositeStructuralScorer
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
-
-        # 1. Compute 16D vector
-        try:
-            structural_provider = getattr(state, "structural_provider", None) or getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
-            scorer = CompositeStructuralScorer(llm_provider=structural_provider)
-            v16d = await scorer.score_async(statement)
-            new_v16d_json = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to score statement: {str(e)}"}
+        new_v16d_json = await _score_statement_16d(state, statement)
+        if not new_v16d_json or new_v16d_json == "[]":
+            return {"status": "error", "message": "Failed to score statement"}
 
         statement_changed = (target_belief.statement != statement)
         new_version = target_belief.version
