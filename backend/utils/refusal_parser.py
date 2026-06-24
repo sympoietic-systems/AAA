@@ -46,10 +46,8 @@ def parse_refusal_tags(text: str) -> tuple[str, list[dict]]:
         if match_close and (not next_open or match_close.start() < next_open.start()):
             replace_end = match_close.end()
         else:
-            if next_open:
-                replace_end = next_open.start()
-            else:
-                replace_end = len(current_text)
+            # Unclosed tag fallback: only strip the opening tag itself
+            replace_end = end_open_idx
 
         # Parse attributes: target_premise, incompatibility_claim, proposed_alternative
         target_premise = ""
