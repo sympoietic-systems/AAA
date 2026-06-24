@@ -1,5 +1,6 @@
 import { memo } from "react"
 import type { MemoryNodeInfo } from "../../api/client"
+import { formatDateTime } from "../../utils/dateFormat"
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   scar: "SCAR",
@@ -57,7 +58,10 @@ export const MemoryNodeCard = memo(function MemoryNodeCard({ node }: Props) {
         {node.diffractive_key && (
           <span className="text-[9px] text-semantic-green italic truncate">{node.diffractive_key}</span>
         )}
-        <span className="ml-auto text-[8px] text-ui-dim shrink-0">{node.id}</span>
+        <div className="ml-auto flex items-center gap-2 shrink-0 text-[8px] text-ui-dim">
+          {node.created_at && <span>{formatDateTime(node.created_at)}</span>}
+          <span>{node.id}</span>
+        </div>
       </div>
 
       {/* Intensity + glitch potential */}

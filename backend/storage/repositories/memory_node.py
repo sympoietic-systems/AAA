@@ -62,6 +62,9 @@ class MemoryNodeRepository(BaseRepository):
             if nid and nid not in seen:
                 seen.add(nid)
                 result.append(node)
+
+        # Sort deduplicated nodes by created_at descending (latest at the top)
+        result.sort(key=lambda x: x.get("created_at") or "", reverse=True)
         return result
 
     @with_connection

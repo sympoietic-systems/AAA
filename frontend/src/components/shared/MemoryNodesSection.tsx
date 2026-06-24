@@ -85,13 +85,19 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false, classNam
     (n, i, a) => a.findIndex(x => x.id === n.id) === i
   )
 
+  const sortedNodes = [...uniqueNodes].sort((a, b) => {
+    const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+    const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+    return bTime - aTime
+  })
+
   return (
     <div className="mt-1.5 pt-1.5 font-mono">
       <div className="text-[8px] text-ui-dim mb-1.5 uppercase tracking-wider select-none font-bold">
-        Intra-Active Memory Nodes ({uniqueNodes.length})
+        Intra-Active Memory Nodes ({sortedNodes.length})
       </div>
       <div className={className || "flex flex-col gap-1.5"} style={style}>
-        {uniqueNodes.map((node) => (
+        {sortedNodes.map((node) => (
           <MemoryNodeCard key={node.id} node={node} />
         ))}
       </div>
