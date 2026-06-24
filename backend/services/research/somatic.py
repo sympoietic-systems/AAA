@@ -333,7 +333,7 @@ class SomaticResearchEngine:
             fetched_url = query  # Track what was actually fetched
             fetch_method = "none"
             try:
-                from backend.services.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
+                from backend.services.research.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
                 # Convert search phrases to URLs if needed
                 if query.startswith("http://") or query.startswith("https://"):
                     fetched_url = query
@@ -407,7 +407,7 @@ class SomaticResearchEngine:
             # 2. Build persona context and analyze
             context = ""
             try:
-                from backend.services.research_context_builder import ResearchContextBuilder
+                from backend.services.research.context_builder import ResearchContextBuilder
                 builder = ResearchContextBuilder(self._state)
                 context = await builder.build_node_context(
                     node_query=query, node_goal=goal, depth=depth,
@@ -555,7 +555,7 @@ class SomaticResearchEngine:
     ) -> list[dict]:
         """Generate initial sub-queries from a research objective."""
         try:
-            from backend.services.agonistic_planner import AgonisticPlanner
+            from backend.services.research.agonistic_planner import AgonisticPlanner
             planner = AgonisticPlanner(
                 llm_provider=getattr(self._state, "llm_provider", None),
                 app_state=self._state,

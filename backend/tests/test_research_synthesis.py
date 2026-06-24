@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 # Ensure parent directory is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.services.research_orchestrator import SomaticResearchOrchestrator
+from backend.services.research.orchestrator import SomaticResearchOrchestrator
 
 
 class MockAppState:
@@ -151,7 +151,7 @@ async def test_research_task_completion_triggers_sedimentation():
     state = MockAppState()
     state.perception_repo = MagicMock()
     
-    from backend.services.research_task_manager import ResearchTaskManager
+    from backend.services.research.task_manager import ResearchTaskManager
     manager = ResearchTaskManager(state)
     
     # Mock transition

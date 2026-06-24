@@ -497,7 +497,7 @@ class SomaticResearchOrchestrator:
                             user_text = apply_anti_mastery_filter(user_text)
                             
                         try:
-                            from backend.services.research_context_builder import ResearchContextBuilder
+                            from backend.services.research.context_builder import ResearchContextBuilder
                             builder = ResearchContextBuilder(self._state)
                             persona = await builder.build_node_context(node_query=q_text, node_goal=s["objective"], depth=s["current_depth"])
                             if persona:
@@ -1650,7 +1650,7 @@ class SomaticResearchOrchestrator:
 
             async with sem:
                 try:
-                    from backend.services.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
+                    from backend.services.research.sensory_affordances import select_and_fetch, is_crawl4ai_available, fetch_via_crawl4ai
                     # Try Jina Reader first (cloud service, handles anti-bot better),
                     # then Crawl4AI as local fallback
                     content = await select_and_fetch(url_or_query=url, task_type="single_url",
@@ -1810,7 +1810,7 @@ class SomaticResearchOrchestrator:
 
         # Build persona context
         try:
-            from backend.services.research_context_builder import ResearchContextBuilder
+            from backend.services.research.context_builder import ResearchContextBuilder
             builder = ResearchContextBuilder(self._state)
             persona = await builder.build_node_context(node_query=query, node_goal=goal, depth=depth)
             if persona:

@@ -12,7 +12,7 @@ from backend.storage.database import init_db, get_db_path
 from backend.storage.repositories.research_task import ResearchTaskRepository
 from backend.storage.repositories.research_plan import ResearchPlanRepository
 from backend.storage.repositories.research_step import ResearchStepRepository
-from backend.services.research_orchestrator import SomaticResearchOrchestrator
+from backend.services.research.orchestrator import SomaticResearchOrchestrator
 
 DB_PATH = str(get_db_path("data/aaa_test.db"))
 

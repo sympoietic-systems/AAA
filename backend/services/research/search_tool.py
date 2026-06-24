@@ -191,7 +191,7 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
 
 async def fetch_via_jina(url: str, config: dict) -> str:
     """Fetch page content via Jina through sensory affordances."""
-    from backend.services.sensory_affordances import select_and_fetch
+    from backend.services.research.sensory_affordances import select_and_fetch
     return (await select_and_fetch(url_or_query=url, task_type="single_url", config=config)) or ""
 
 
@@ -213,7 +213,7 @@ async def web_search(query: str, n: int = 3, config: dict | None = None) -> list
         List of dicts with 'url', 'title', and 'snippet' keys.
     """
     try:
-        from backend.services.sensory_affordances import is_crawl4ai_available
+        from backend.services.research.sensory_affordances import is_crawl4ai_available
 
         search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
 

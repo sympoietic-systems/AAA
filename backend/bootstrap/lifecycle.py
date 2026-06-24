@@ -157,7 +157,7 @@ async def lifespan(app: FastAPI):
     app.state.system_prompt_tokens = system_prompt_tokens
 
     # 10.5. Research Task Manager (autonomous research engine lifecycle)
-    from backend.services.research_task_manager import ResearchTaskManager
+    from backend.services.research.task_manager import ResearchTaskManager
     app.state.research_task_manager = ResearchTaskManager(app.state)
 
     # Wire app_state into the rhizome web probe module (created before app_state existed)

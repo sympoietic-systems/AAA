@@ -47,7 +47,7 @@ class ResearchTaskManager:
     def orchestrator(self):
         """Lazy-init the orchestrator singleton (shared across all tasks)."""
         if self._orchestrator is None:
-            from backend.services.research_orchestrator import SomaticResearchOrchestrator
+            from backend.services.research.orchestrator import SomaticResearchOrchestrator
             self._orchestrator = SomaticResearchOrchestrator(self._app_state)
         return self._orchestrator
 
@@ -268,7 +268,7 @@ class ResearchTaskManager:
                 if use_orchestrator:
                     result = await self.orchestrator.execute(task_id)
                 else:
-                    from backend.services.somatic_research import SomaticResearchEngine
+                    from backend.services.research.somatic import SomaticResearchEngine
                     engine = SomaticResearchEngine(self._app_state)
                     result = await engine.execute(task_id)
 

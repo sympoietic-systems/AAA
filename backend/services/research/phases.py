@@ -16,7 +16,7 @@ from backend.modules.llm_client import generate_unified
 from backend.services.research.search_tool import web_search
 from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.anti_mastery import apply_anti_mastery_filter
-from backend.services.research_context_builder import ResearchContextBuilder
+from backend.services.research.context_builder import ResearchContextBuilder
 from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
