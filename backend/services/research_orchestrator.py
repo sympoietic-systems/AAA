@@ -145,6 +145,46 @@ class SomaticResearchOrchestrator:
             self._semaphore = asyncio.Semaphore(self.max_concurrent)
         return self._semaphore
 
+    @staticmethod
+    def _format_reflection_markdown(reflection: dict, depth: int = 0, include_cycle: bool = False) -> str:
+        if not reflection or not isinstance(reflection, dict):
+            return "(none)"
+        parts = []
+        ref = reflection.get("reflection")
+        if ref:
+            prefix = f"Methodological Reflection (Cycle {depth}):\n" if include_cycle else "Methodological Reflection:\n"
+            parts.append(f"{prefix}{ref}")
+        insights = reflection.get("key_insights", [])
+        if insights:
+            prefix = f"Stabilized Key Insights (Cycle {depth} Anchor):\n" if include_cycle else "Stabilized Key Insights:\n"
+            parts.append(prefix + "\n".join(f"- {ins}" for ins in insights))
+        gaps = reflection.get("remaining_gaps", [])
+        if gaps:
+            prefix = "Remaining Gaps from Previous Cycle:\n" if include_cycle else "Remaining Gaps:\n"
+            parts.append(prefix + "\n".join(f"- {gap}" for gap in gaps))
+        if not parts:
+            return "(none)"
+        return "\n\n".join(parts)
+
+    def _get_parsed_urls(self, task_id: str) -> list[dict]:
+        result = []
+        if not self.step_result_repo:
+            return result
+        try:
+            task_results = self.step_result_repo.get_by_task(task_id)
+            seen_urls = set()
+            for r in task_results:
+                url = r.get("source_url")
+                raw_content = r.get("raw_content")
+                if url and url not in seen_urls and raw_content is not None:
+                    seen_urls.add(url)
+                    title = r.get("source_title") or url
+                    status = self._classify_source_status(raw_content)
+                    result.append({"url": url, "title": title, "status": status})
+        except Exception as e:
+            logger.warning("Failed to retrieve parsed URLs: %s", e)
+        return result
+
     def _now_utc_str(self) -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -653,22 +693,7 @@ class SomaticResearchOrchestrator:
             gaps_text = "\n".join(f"- {g}" for g in signals.get("gaps", [])) or "(none)"
             all_findings = s.get("all_findings", []) if s else []
 
-            parsed_urls_list = []
-            if self.step_result_repo:
-                try:
-                    task_results = self.step_result_repo.get_by_task(task_id)
-                    seen_urls = set()
-                    for r in task_results:
-                        url = r.get("source_url")
-                        raw_content = r.get("raw_content")
-                        if url and url not in seen_urls and raw_content is not None:
-                            seen_urls.add(url)
-                            title = r.get("source_title") or url
-                            status = self._classify_source_status(raw_content)
-                            parsed_urls_list.append({"url": url, "title": title, "status": status})
-                except Exception as e:
-                    logger.warning("Failed to retrieve parsed URLs: %s", e)
-
+            parsed_urls_list = self._get_parsed_urls(task_id)
             depth = s.get("current_depth", 0) if s else 0
             previous_reflection = s.get("last_reflection", {}) if (s and s.get("last_reflection")) else {}
 
@@ -735,19 +760,7 @@ class SomaticResearchOrchestrator:
             direct_urls_text = "\n".join(f"- {u}" for u in signals.get("direct_urls", [])) or "(none)"
 
             # Format previous_reflection as structured markdown
-            prev_refl_formatted = "(none)"
-            if previous_reflection and isinstance(previous_reflection, dict):
-                parts = []
-                if previous_reflection.get("reflection"):
-                    parts.append(f"Methodological Reflection (Cycle {depth}):\n{previous_reflection.get('reflection')}")
-                if previous_reflection.get("key_insights"):
-                    insights = [f"- {ins}" for ins in previous_reflection.get("key_insights", [])]
-                    parts.append(f"Stabilized Key Insights (Cycle {depth} Anchor):\n" + "\n".join(insights))
-                if previous_reflection.get("remaining_gaps"):
-                    gaps = [f"- {gap}" for gap in previous_reflection.get("remaining_gaps", [])]
-                    parts.append("Remaining Gaps from Previous Cycle:\n" + "\n".join(gaps))
-                if parts:
-                    prev_refl_formatted = "\n\n".join(parts)
+            prev_refl_formatted = self._format_reflection_markdown(previous_reflection, depth, include_cycle=True)
 
             user_text = prompt_data.get("user", "").format(
                 objective=task["objective"],
@@ -838,21 +851,7 @@ class SomaticResearchOrchestrator:
             all_findings = s.get("all_findings", []) if s else []
             sources_count = s.get("sources_analyzed", 0) if s else 0
             
-            parsed_urls_list = []
-            if self.step_result_repo:
-                try:
-                    task_results = self.step_result_repo.get_by_task(task_id)
-                    seen_urls = set()
-                    for r in task_results:
-                        url = r.get("source_url")
-                        raw_content = r.get("raw_content")
-                        if url and url not in seen_urls and raw_content is not None:
-                            seen_urls.add(url)
-                            title = r.get("source_title") or url
-                            status = self._classify_source_status(raw_content)
-                            parsed_urls_list.append({"url": url, "title": title, "status": status})
-                except Exception as e:
-                    logger.warning("Failed to retrieve parsed URLs for synthesize preview: %s", e)
+            parsed_urls_list = self._get_parsed_urls(task_id)
 
             formatted_urls, compressed_findings, _, _ = self._apply_unified_references(
                 parsed_urls_list, all_findings
@@ -864,19 +863,7 @@ class SomaticResearchOrchestrator:
 
             # Format reflection / consolidation details
             reflection = s.get("last_reflection", {}) if s else {}
-            prev_refl_formatted = "(none)"
-            if reflection and isinstance(reflection, dict):
-                parts = []
-                if reflection.get("reflection"):
-                    parts.append(f"Methodological Reflection:\n{reflection.get('reflection')}")
-                if reflection.get("key_insights"):
-                    insights = [f"- {ins}" for ins in reflection.get("key_insights", [])]
-                    parts.append("Stabilized Key Insights:\n" + "\n".join(insights))
-                if reflection.get("remaining_gaps"):
-                    gaps = [f"- {gap}" for gap in reflection.get("remaining_gaps", [])]
-                    parts.append("Remaining Gaps:\n" + "\n".join(gaps))
-                if parts:
-                    prev_refl_formatted = "\n\n".join(parts)
+            prev_refl_formatted = self._format_reflection_markdown(reflection)
 
             user_text = prompt_data.get("user", "").format(
                 objective=task["objective"],
@@ -1757,21 +1744,7 @@ class SomaticResearchOrchestrator:
             }
             self._save_cache(task_id, cache)
 
-        parsed_urls_list = []
-        if self.step_result_repo:
-            try:
-                task_results = self.step_result_repo.get_by_task(task_id)
-                seen_urls = set()
-                for r in task_results:
-                    url = r.get("source_url")
-                    raw_content = r.get("raw_content")
-                    if url and url not in seen_urls and raw_content is not None:
-                        seen_urls.add(url)
-                        title = r.get("source_title") or url
-                        status = self._classify_source_status(raw_content)
-                        parsed_urls_list.append({"url": url, "title": title, "status": status})
-            except Exception as e:
-                logger.warning("Failed to retrieve parsed URLs for synthesis: %s", e)
+        parsed_urls_list = self._get_parsed_urls(task_id)
 
         formatted_urls, compressed_findings, _, _ = self._apply_unified_references(
             parsed_urls_list, all_findings
@@ -1788,19 +1761,7 @@ class SomaticResearchOrchestrator:
         except Exception:
             reflection = {}
 
-        prev_refl_formatted = "(none)"
-        if reflection and isinstance(reflection, dict):
-            parts = []
-            if reflection.get("reflection"):
-                parts.append(f"Methodological Reflection:\n{reflection.get('reflection')}")
-            if reflection.get("key_insights"):
-                insights = [f"- {ins}" for ins in reflection.get("key_insights", [])]
-                parts.append("Stabilized Key Insights:\n" + "\n".join(insights))
-            if reflection.get("remaining_gaps"):
-                gaps = [f"- {gap}" for gap in reflection.get("remaining_gaps", [])]
-                parts.append("Remaining Gaps:\n" + "\n".join(gaps))
-            if parts:
-                prev_refl_formatted = "\n\n".join(parts)
+        prev_refl_formatted = self._format_reflection_markdown(reflection)
 
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
@@ -2185,21 +2146,7 @@ class SomaticResearchOrchestrator:
         # Build digest signals block for prompt injection
         signals = digest_signals or {}
 
-        parsed_urls_list = []
-        if self.step_result_repo:
-            try:
-                task_results = self.step_result_repo.get_by_task(task_id)
-                seen_urls = set()
-                for r in task_results:
-                    url = r.get("source_url")
-                    raw_content = r.get("raw_content")
-                    if url and url not in seen_urls and raw_content is not None:
-                        seen_urls.add(url)
-                        title = r.get("source_title") or url
-                        status = self._classify_source_status(raw_content)
-                        parsed_urls_list.append({"url": url, "title": title, "status": status})
-            except Exception as e:
-                logger.warning("Failed to retrieve parsed URLs: %s", e)
+        parsed_urls_list = self._get_parsed_urls(task_id)
 
         # Extract findings of the current cycle from the DB
         current_cycle_findings = []
@@ -2264,19 +2211,7 @@ class SomaticResearchOrchestrator:
         direct_urls_text = "\n".join(f"- {u}" for u in signals.get("direct_urls", [])) or "(none)"
 
         # Format previous_reflection as structured markdown
-        prev_refl_formatted = "(none)"
-        if previous_reflection and isinstance(previous_reflection, dict):
-            parts = []
-            if previous_reflection.get("reflection"):
-                parts.append(f"Methodological Reflection (Cycle {depth}):\n{previous_reflection.get('reflection')}")
-            if previous_reflection.get("key_insights"):
-                insights = [f"- {ins}" for ins in previous_reflection.get("key_insights", [])]
-                parts.append(f"Stabilized Key Insights (Cycle {depth} Anchor):\n" + "\n".join(insights))
-            if previous_reflection.get("remaining_gaps"):
-                gaps = [f"- {gap}" for gap in previous_reflection.get("remaining_gaps", [])]
-                parts.append("Remaining Gaps from Previous Cycle:\n" + "\n".join(gaps))
-            if parts:
-                prev_refl_formatted = "\n\n".join(parts)
+        prev_refl_formatted = self._format_reflection_markdown(previous_reflection, depth, include_cycle=True)
 
         user_text = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
