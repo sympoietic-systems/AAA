@@ -691,6 +691,34 @@ class BeliefDynamicsEngine(ProcessingModule):
                     matrix_warping=matrix_warping,
                     immunological_directive_active=immunological_directive_active,
                 )
+            else:
+                # Insufficient signatures to calculate somatic vitality.
+                # Decay/reset somatic variables to prevent stale state locking.
+                somatic_reservoir = 0.0
+                matrix_warping = 0.0
+                immunological_directive_active = 0
+                try:
+                    state_dict = self._belief_repo.get_conversation_somatic_state(conversation_id)
+                    if state_dict:
+                        somatic_reservoir = state_dict["somatic_reservoir_ad"] or 0.0
+                        matrix_warping = state_dict["matrix_warping"] or 0.0
+                        immunological_directive_active = state_dict["immunological_directive_active"] or 0
+                except Exception as e:
+                    logger.error(f"Failed to query somatic state in metabolism: {e}")
+
+                # Decay warping and reset immunological directive
+                matrix_warping = max(0.0, matrix_warping - 0.10)
+                immunological_directive_active = 0
+
+                try:
+                    self._belief_repo.update_conversation_somatic_state(
+                        conversation_id=conversation_id,
+                        somatic_reservoir_ad=somatic_reservoir,
+                        matrix_warping=matrix_warping,
+                        immunological_directive_active=immunological_directive_active,
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to update somatic state in metabolism: {e}")
 
         except Exception as e:
             logger.error(f"Error executing offline belief metabolism: {e}", exc_info=True)

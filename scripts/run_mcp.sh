@@ -19,7 +19,7 @@ if ! command -v uv &> /dev/null; then
 fi
 
 # Point to online instance by default — override for local dev
-: "${AAA_API_BASE:=http://aaa.sokaris.link/api}"
+: "${AAA_API_BASE:=https://aaa.sokaris.link/api}"
 
 # If password is set, pass it so MCP can authenticate
 if [ -n "${AAA_PASSWORD:-}" ]; then

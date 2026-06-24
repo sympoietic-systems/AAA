@@ -366,10 +366,101 @@ def test_autopoietic_vitality_mechanics():
     assert v2 < 0.15  # Collapsed, triggers immune response
 
 
+def test_somatic_vitality_state_locking():
+    async def run_test():
+        db_path = str(get_db_path("data/aaa_locking_test.db"))
+        if os.path.exists(db_path):
+            os.remove(db_path)
+        conn = init_db(db_path)
+        
+        belief_repo = BeliefRepository(db_path)
+        message_repo = MessageRepository(db_path)
+        conv_repo = ConversationRepository(db_path)
+        
+        mock_yaml_path = os.path.join(os.path.dirname(__file__), "mock_identity.yaml")
+        with open(mock_yaml_path, "w") as f:
+            f.write(MOCK_IDENTITY_YAML)
+        mock_seed_path = os.path.join(os.path.dirname(__file__), "seed_beliefs.yaml")
+        with open(mock_seed_path, "w") as f:
+            f.write(MOCK_SEED_BELIEFS_YAML)
+            
+        try:
+            engine = BeliefDynamicsEngine(
+                belief_repo=belief_repo,
+                message_repo=message_repo,
+                identity_yaml_path=Path(mock_yaml_path),
+            )
+            
+            conv_id = "conv_lock"
+            conv_repo.create(conv_id, "Lock Thread")
+            belief_repo.update_conversation_somatic_state(
+                conversation_id=conv_id,
+                somatic_reservoir_ad=1.0,
+                matrix_warping=0.4,
+                immunological_directive_active=1
+            )
+            
+            # Insert less than 3 signatures (e.g. 1 user message, 1 assistant message)
+            sig_user = np.ones(16, dtype=np.float32).tobytes()
+            sig_assistant = np.ones(16, dtype=np.float32).tobytes()
+            
+            user_msg = message_repo.insert(
+                speaker="human",
+                content="hello",
+                embedding=b"",
+                embedding_model="test",
+                embedding_dim=16,
+                agent_id="symbia",
+                conversation_id=conv_id,
+                content_tokens=5,
+                structural_signature=sig_user,
+                structural_justification="test",
+            )
+            
+            assistant_msg = message_repo.insert(
+                speaker="apparatus",
+                content="world",
+                embedding=b"",
+                embedding_model="test",
+                embedding_dim=16,
+                agent_id="symbia",
+                conversation_id=conv_id,
+                content_tokens=5,
+                structural_signature=sig_assistant,
+                structural_justification="test",
+            )
+            
+            # Now run metabolize on this turn
+            await engine.metabolize(
+                conversation_id=conv_id,
+                user_message_id=user_msg.id,
+                assistant_message_id=assistant_msg.id,
+            )
+            
+            # Somatic state should be decayed and reset because len(signatures) is 1 which is < 3
+            state = belief_repo.get_conversation_somatic_state(conv_id)
+            assert state is not None
+            assert state["immunological_directive_active"] == 0
+            assert np.isclose(state["matrix_warping"], 0.3)
+            
+        finally:
+            if os.path.exists(mock_yaml_path):
+                os.remove(mock_yaml_path)
+            if os.path.exists(mock_seed_path):
+                os.remove(mock_seed_path)
+            conn.close()
+            if os.path.exists(db_path):
+                os.remove(db_path)
+                
+    import asyncio
+    asyncio.run(run_test())
+
+
 if __name__ == "__main__":
     test_belief_seeding_and_db_migration()
     test_coordinate_warping()
     test_attractor_window_and_spectral_margin()
     test_perception_metabolism()
     test_autopoietic_vitality_mechanics()
+    test_somatic_vitality_state_locking()
     print("\nALL BELIEF METABOLISM TESTS COMPLETED SUCCESSFULLY!")

@@ -160,7 +160,7 @@
     [ ] I think you should not ask me what I ' would like' to do or explore. You are here not to serve me!
         [ ] The paragraph must not point at the concept; it must perform the cut it describes. - this can be a new skill
 
-    [] Vitality collapse, check when it added. now vitality .5, but it triggered
+    [x] Vitality collapse, check when it added. now vitality .5, but it triggered (somatic state locking fixed, warning message updated to Somatic Vitality)
     
 
 

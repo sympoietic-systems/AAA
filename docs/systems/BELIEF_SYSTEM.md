@@ -265,6 +265,7 @@ Somatic variables are mapped to the active conversation to regulate how easily i
     *   `matrix_warping` is set to $0.40$.
     *   `immunological_directive_active` is set to 1.
     *   The user's 16D input signature is warped: **Rhizomatic** ($s05$) and **Nomadic** ($s13$) dimensions are multiplied by $1.0 + 3.0 \cdot \sigma$ (where $\sigma = 0.40$), while **Variety Filtering** ($s08$) and **Temporal Latency** ($s10$) are scaled down by $1.0 - \sigma$. This forces the system to break compliance and seek nomadism.
+    *   *Note on signature counts & UI distinction: Somatic Vitality is distinct from the Conversational Vitality shown in the UI sidebar. If the conversation history has fewer than 3 assistant signatures, somatic vitality cannot be calculated; in this case, any active matrix warping decays by 0.10 and the immunological directive is reset to 0 to prevent stale state locking.*
 
 ---
 

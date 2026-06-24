@@ -498,7 +498,7 @@ The `HomeostaticRegulatorModule` closes the cybernetic feedback loop by mapping 
 - **Frequency Penalty:** Increased when coupling is too high (discourages echoing)
 - **Diffractive Index (δ):** Sliding Goldilocks bounds shift based on stagnation intensity
 
-When vitality collapses below 0.15, the **Aesthetic Immune System** activates: warps the 16D signature by amplifying Rhizomatic and Nomadic dimensions while dampening Variety Filtering and Temporal Latency.
+When autopoietic somatic vitality collapses below 0.15 (distinct from conversation vitality, and requiring at least 3 assistant signatures to be computed), the **Aesthetic Immune System** activates: warps the 16D signature by amplifying Rhizomatic and Nomadic dimensions while dampening Variety Filtering and Temporal Latency. If signatures are insufficient, the immune directive is reset to 0 to prevent state locking.
 
 The **Agonistic Index** maps `rolling_entropy` and `vitality` to a dynamic directive injected into the system prompt, scaling critical friction proportionally to conversational entropy loss. Three graduated tiers: omitted at A_index < 0.2 (healthy), light nudge at 0.2–0.5, full counter-position directive at ≥ 0.5.
 
