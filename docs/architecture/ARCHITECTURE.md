@@ -475,30 +475,40 @@ AAA/
 │   │   ├── chat.py           ChatService — pipeline orchestration + response assembly
 │   │   ├── annotations.py    Self-annotation post-processing (extracted from chat.py)
 │   │   ├── background_tasks.py Post-response background runners (extracted from chat.py)
-│   │   ├── belief.py         BeliefService — ecosystem health, attractor windows
-│   │   ├── conversation.py   ConversationService — CRUD, tags, consolidation flag
-│   │   ├── file.py           FileService — upload, process, digest worker orchestration
-│   │   ├── metrics.py        MetricsService — storage, aggregation, formatting
-│   │   ├── note.py           NoteService — note CRUD + belief metabolism trigger
-│   │   ├── sediment.py       SedimentService — cross-conversation injection
-│   │   ├── title.py          TitleService — title generation via background engine
-│   │   ├── semantic_knot.py  SemanticKnotService — compaction/distillation
-│   │   ├── consolidation.py  ConsolidationService — checkpoint creation
-│   │   ├── daemon.py         DaemonService — dream status + trigger
-│   │   ├── health.py         HealthService — module validation
-│   │   └── skill.py          SkillService — registry queries
-│   ├── core/
+│   │   ├── belief.py         BeliefService -- ecosystem health, attractor windows
+│   │   ├── conversation.py   ConversationService -- CRUD, tags, consolidation flag
+│   │   ├── file.py           FileService -- upload, process, digest worker orchestration
+│   │   ├── metrics.py        MetricsService -- storage, aggregation, formatting
+│   │   ├── note.py           NoteService -- note CRUD + belief metabolism trigger
+│   │   ├── sediment.py       SedimentService -- cross-conversation injection
+│   │   ├── title.py          TitleService -- title generation via background engine
+│   │   ├── semantic_knot.py  SemanticKnotService -- compaction/distillation
+│   │   ├── consolidation.py  ConsolidationService -- checkpoint creation
+│   │   ├── daemon.py         DaemonService -- dream status + trigger
+│   │   ├── health.py         HealthService -- module validation
+│   │   ├── skill.py          SkillService -- registry queries
+│   │   ├── belief_serializer.py Shared belief data formatting
+│   │   └── research/         Autonomous research subsystem (13 files)
+│   │       ├── orchestrator.py Research orchestrator (1,028 lines)
+│   │       ├── phases.py      7 phase implementations (plan/search/parse/digest/reflect/evaluate/synthesize)
+│   │       ├── tools.py       Tool functions (parallel fetch, LLM analysis, reflection)
+│   │       ├── task_manager.py Task lifecycle management
+│   │       ├── task_state.py  Task state persistence
+│   │       ├── cache_manager.py Input cache management
+│   │       ├── somatic.py     Legacy recursive research engine
+│   │       ├── context_builder.py Persona context assembly
+│   │       ├── agonistic_planner.py Dynamic query generation
+│   │       ├── search_tool.py DDG web search
+│   │       └── sensory_affordances.py Web scraping abstraction
+│   ├── core/                  Runtime state and registry (minimal)
 │   │   ├── app_state.py      Typed AppState dataclass
-│   │   ├── registry.py       ModuleRegistry — lazy factory registry
-│   │   ├── scheduler.py      Background startup task scheduler and recovery loop
-│   │   ├── daemon.py         AutopoieticDreamDaemon — background dreaming engine
-│   │   └── context.py        PipelineResult dataclass
-│   ├── metabolisation/       Core pipeline processing (formerly split across core/)
+│   │   └── registry.py       ModuleRegistry -- lazy factory registry
+│   ├── metabolisation/       Background daemon, dreams, pipeline
 │   │   ├── pipeline.py       ProcessingPipeline orchestrator
-│   │   ├── consolidation.py  Conversation consolidation
-│   │   ├── daemon.py         Dream daemon
+│   │   ├── daemon.py         AutopoieticDreamDaemon (737 lines)
+│   │   ├── consolidation.py  Conversation consolidation mixin
 │   │   ├── scheduler.py      Background startup scheduler
-│   │   └── ...               Dream context, executor, prompts, mass decay, sedimentation
+│   │   └── ...               Dream context, executor, prompts, mass decay, sedimentation, skill metabolism
 │   ├── app_factory/
 │   │   └── __init__.py       register_all() — skill registration factory
 │   ├── personality/
@@ -518,12 +528,18 @@ AAA/
 │   │   ├── perception.py     File ingestion + chunked retrieval
 │   │   ├── web_retrieval.py  Exogenous rhizomatic web retrieval
 │   │   ├── digester.py       PDF/DOCX/text extraction
-│   │   ├── llm_client.py     Provider-agnostic LLM client
+│   │   ├── llm_client.py     Provider-agnostic LLM client (665 lines)
+│   │   ├── belief_engine.py  Belief dynamics engine (940 lines)
+│   │   ├── belief_math.py    Pure belief math functions
 │   │   ├── context_collector.py       Conversation-scoped history retrieval
 │   │   ├── consolidation_checkpoint.py Memory node injection + consolidation trigger
 │   │   ├── structural_engine.py       16-dim cybernetic signature
 │   │   ├── conversation_metrics.py    Real-time vitality metrics
 │   │   ├── sedimentation_retrieval.py Cross-conversation embedding similarity
+│   │   └── providers/        LLM provider adapters
+│   │       ├── anthropic_utils.py Anthropic API parsing + body builder
+│   │       ├── google_utils.py    Gemini param sanitization
+│   │       └── openrouter_utils.py OpenRouter reasoning exclusion
 │   │   ├── diffractive_retrieval.py   Stagnation detection + nomadic retrieval
 │   │   ├── belief_engine.py          Proto-belief lifecycle + tension ecology + self-tuning
 │   │   ├── homeostatic_regulator.py   Metrics → parameter mapping

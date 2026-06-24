@@ -182,8 +182,8 @@ Key files:
 
 | File | Role |
 |------|------|
-| `backend/services/research_orchestrator.py` | Phase-based state machine, step execution, preview, resume. Includes `_log_llm_response()` safe logging helper (prevents truncated JSON in meta-log). |
-| `backend/services/research_task_manager.py` | Task lifecycle, manual vs auto routing |
+| `backend/services/research/orchestrator.py` | Phase-based state machine, step execution, preview, resume. Includes `_log_llm_response()` safe logging helper (prevents truncated JSON in meta-log). |
+| `backend/services/research/task_manager.py` | Task lifecycle, manual vs auto routing |
 | `backend/api/routes/research.py` | REST endpoints for step/run/rerun/preview/log |
 | `backend/storage/repositories/research_step.py` | DB step records (includes step_data for LLM responses) |
 | `backend/storage/repositories/research_meta_log.py` | Per-step traceability log (step_id column) |

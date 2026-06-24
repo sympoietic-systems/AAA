@@ -1011,8 +1011,8 @@ All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt ref
 | File | Purpose |
 |------|---------|
 | `backend/modules/rhizome_web_probe.py` | Pipeline module 4: stagnation/tension-triggered research proposal creation |
-| `backend/services/research_task_manager.py` | ResearchTaskManager — task creation, status management, active-conversation guard |
-| `backend/services/research_orchestrator.py` | Orchestrator state machine (7 phases), step execution, resume logic |
+| `backend/services/research/task_manager.py` | ResearchTaskManager — task creation, status management, active-conversation guard |
+| `backend/services/research/orchestrator.py` | Orchestrator state machine (7 phases), step execution, resume logic |
 | `backend/api/routes/research.py` | REST API for research tasks, steps, and meta-log |
 | `backend/api/routes/refusals.py` | REST API for structural refusals |
 | `backend/utils/refusal_parser.py` | Parses `<refusal>` XML tags from LLM response bodies |

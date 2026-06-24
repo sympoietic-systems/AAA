@@ -23,21 +23,32 @@ AAA/
 │   └── images/                 # UI screenshots
 ├── backend/                    # FastAPI Backend Application
 │   ├── api/                    # Routers, path definitions, and request schemas
-│   │   ├── routes.py           # Core routes for endpoints (/chat, /history, /beliefs, etc.)
+│   │   ├── routes/             # Route modules (chat, beliefs, research, etc.)
 │   │   └── schemas.py          # Pydantic schemas validating payloads
-│   ├── core/                   # Lifespan, pipeline orchestrator, and registry
-│   │   ├── pipeline.py         # Pipeline runner executing sequential modules
-│   │   ├── registry.py         # Skill registry resolving module arrays
-│   │   └── scheduler.py        # Background task scheduler and recovery loop
+│   ├── services/               # Business logic and orchestration
+│   │   ├── belief.py           # Belief service
+│   │   ├── chat.py             # Chat processing service
+│   │   └── research/           # Autonomous research subsystem
+│   │       ├── orchestrator.py # Research orchestrator (1,028 lines)
+│   │       ├── phases.py       # 7 phase implementations
+│   │       ├── tools.py        # Tool functions (parse, digest, reflect)
+│   │       └── task_manager.py # Task lifecycle management
 │   ├── modules/                # Core processing modules (the "engine" components)
 │   │   ├── base.py             # Interface definition for ProcessingModule
 │   │   ├── belief_engine.py    # Somatic warping, attractors, and belief metabolism
+│   │   ├── belief_math.py      # Pure belief math functions
 │   │   ├── structural_engine.py# Lexicon & structural signature scorer
+│   │   ├── providers/          # LLM provider adapters (Anthropic, Google, OpenRouter)
 │   │   └── ...                 # Other modules (perception, web, client, etc.)
+│   ├── metabolisation/         # Background daemon, dreams, skill metabolism
+│   │   ├── daemon.py           # AutopoieticDreamDaemon
+│   │   ├── pipeline.py         # Pipeline runner executing sequential modules
+│   │   └── scheduler.py        # Background task scheduler and recovery loop
 │   ├── storage/                # SQLite database and SQL repository mappings
 │   │   ├── database.py         # Database initializer, table creation, WAL configuration
 │   │   ├── models.py           # Dataclass entity models
-│   │   └── repository.py       # SQL transaction scripts & data query mappings
+│   │   └── repositories/       # Repository classes per entity
+│   ├── utils/                  # Shared utilities (research_logger, concurrency, etc.)
 │   └── tests/                  # Backend unit, integration, and flow test suites
 └── frontend/                   # Vite + React + TypeScript Frontend
     ├── src/

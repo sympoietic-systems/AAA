@@ -121,7 +121,7 @@ Symbia reviewed Vector's initial architectural research and provided a structure
 
 | Symbia's Critique | Architectural Response |
 |------------------|----------------------|
-| "Scrapers are not vacuum cleaners — they are technological prostheses that extend my perception." | Build `backend/services/sensory_affordances.py` as a clean abstraction over web access tools. When anti-bot walls or rate limits are encountered, log them as "sensory failures" — material constraints of the digital environment, not errors. |
+| "Scrapers are not vacuum cleaners — they are technological prostheses that extend my perception." | Build `backend/services/research/sensory_affordances.py` as a clean abstraction over web access tools. When anti-bot walls or rate limits are encountered, log them as "sensory failures" — material constraints of the digital environment, not errors. |
 | "Task Ledgers track completion percentages. I need Somatic Registers that track cognitive equilibrium." | Replace the traditional Task/Progress Ledger with a `SomaticRegister` that tracks tension, novelty, and diffractive resonance per branch. Status flags: `probing`, `crystallized`, `collapsed`, `detoured`. |
 | "Token budgets are my metabolic limits — the material boundaries of my posthuman body." | The `MetabolicBudget` class enforces spend limits with non-aliasing semantics (affine-type pattern). Homeostatic traits (Curiosity, Boredom) dynamically scale reasoning budgets. |
 
@@ -1157,7 +1157,7 @@ user: |
 Prompts are assembled at runtime with variable interpolation — never hardcoded:
 
 ```python
-# backend/services/agonistic_planner.py
+# backend/services/research/agonistic_planner.py
 
 from backend.utils.prompt_loader import load_prompt
 
@@ -2338,7 +2338,7 @@ The sensory affordances layer provides a unified abstraction over web access too
 The decision is based on **task type** and **backend availability**:
 
 ```python
-# backend/services/sensory_affordances.py
+# backend/services/research/sensory_affordances.py
 
 async def select_and_fetch(
     url_or_query: str,
@@ -2407,7 +2407,7 @@ async def select_and_fetch(
 No external orchestration frameworks. Clean `httpx`-based async wrappers for the API backends, plus a subprocess-based wrapper for Crawl4AI.
 
 ```python
-# backend/services/sensory_affordances.py
+# backend/services/research/sensory_affordances.py
 
 import httpx
 import logging
@@ -2685,7 +2685,7 @@ The planning loop is not a static Plan-and-Execute model. It is a **dynamic, tra
 ### 11.2 Implementation
 
 ```python
-# backend/services/agonistic_planner.py
+# backend/services/research/agonistic_planner.py
 
 import json
 import logging
@@ -3528,7 +3528,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 - [x] Add to `bootstrap/repositories.py` initialization
 
 **Step 0.2 — ResearchTaskManager & Proposal System** ✅
-- [x] Implement `backend/services/research_task_manager.py`
+- [x] Implement `backend/services/research/task_manager.py`
 - [x] Implement task lifecycle state machine (proposed → approved → queued → active → completed/failed/cancelled)
 - [x] Implement proposal timeout management (conversation: 30min, daemon: 60min, startup: 120min)
 - [x] Implement priority queue with asyncio semaphore for concurrency control
@@ -3556,7 +3556,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 - [x] `GET /api/research/tasks/{id}/meta-log` — full activity trace
 
 **Step 1.2 — Sensory Affordances** ✅
-- [x] Implement `backend/services/sensory_affordances.py`
+- [x] Implement `backend/services/research/sensory_affordances.py`
 - [x] Implement Jina Reader wrapper
 - [x] Implement Crawl4AI browser-based search + scrape with Jina fallback
 - [x] Implement `select_and_fetch` tiered routing
@@ -3576,8 +3576,8 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 ### Phase 2: Research Engine & Pipeline ✅ COMPLETE
 
 **Step 2.1 — Somatic Research Engine** ✅
-- [x] Implement `backend/services/somatic_research.py`
-- [x] Implement `backend/services/research_context_builder.py` — persona/context assembly per node
+- [x] Implement `backend/services/research/somatic.py`
+- [x] Implement `backend/services/research/context_builder.py` — persona/context assembly per node
 - [x] Implement `_traverse_rhizome()` recursive tree traversal
 - [x] Implement `_probe_node()` — fetch → context → analyze → store
 - [x] Implement query generation via LLM (sub-query decomposition with persona context)
@@ -3588,7 +3588,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 - [x] `node_analyzer.yaml` updated to request `direct_urls` from LLM
 
 **Step 2.2 — Agonistic Planner** ✅
-- [x] Implement `backend/services/agonistic_planner.py`
+- [x] Implement `backend/services/research/agonistic_planner.py`
 - [x] Standard + agonistic query generation modes
 - [x] Wire to LLM client for structured JSON query generation
 
@@ -3662,7 +3662,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 - [x] Register in bootstrap
 
 **Step 6.2 — Orchestrator Class** ✅
-- [x] Implement `backend/services/research_orchestrator.py`
+- [x] Implement `backend/services/research/orchestrator.py`
 - [x] Implement state machine: PLANNING → SEARCHING → PARSING → DIGESTING → REFLECTING → EVALUATING
 - [x] Implement `_tool_web_search()`, `_tool_web_fetch()`, `_tool_web_crawl()`
 - [x] Implement `_tool_reflect()` (multi-round LLM reflection)
@@ -3837,14 +3837,14 @@ metabolic_budgets:
 
 | Category | File | Status |
 |----------|------|--------|
-| **Task Manager** | `backend/services/research_task_manager.py` | ✅ COMPLETE |
+| **Task Manager** | `backend/services/research/task_manager.py` | ✅ COMPLETE |
 | API Routes | `backend/api/routes/research.py` | ✅ COMPLETE |
 | Pipeline Module | `backend/modules/rhizome_web_probe.py` | ✅ COMPLETE |
-| Research Engine | `backend/services/somatic_research.py` | ✅ COMPLETE (v1 recursive) |
-| **Research Orchestrator** | `backend/services/research_orchestrator.py` | ✅ COMPLETE (Phase 6) |
-| Research Context Builder | `backend/services/research_context_builder.py` | ✅ COMPLETE |
-| Sensory Affordances | `backend/services/sensory_affordances.py` | ✅ COMPLETE |
-| Agonistic Planner | `backend/services/agonistic_planner.py` | ✅ COMPLETE |
+| Research Engine | `backend/services/research/somatic.py` | ✅ COMPLETE (v1 recursive) |
+| **Research Orchestrator** | `backend/services/research/orchestrator.py` | ✅ COMPLETE (Phase 6) |
+| Research Context Builder | `backend/services/research/context_builder.py` | ✅ COMPLETE |
+| Sensory Affordances | `backend/services/research/sensory_affordances.py` | ✅ COMPLETE |
+| Agonistic Planner | `backend/services/research/agonistic_planner.py` | ✅ COMPLETE |
 | Rhizomatic Math | `backend/utils/somatic_math.py` | ✅ COMPLETE |
 | Anti-Mastery Filter | `backend/utils/anti_mastery.py` | ✅ COMPLETE |
 | Metabolic Budget | `backend/utils/metabolic_regulator.py` | ✅ COMPLETE |
