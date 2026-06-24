@@ -1,24 +1,14 @@
 import json
 import logging
-import re
 from typing import Optional
 
+from backend.services.belief_serializer import (
+    serialize_belief_event,
+    serialize_proposal,
+    _parse_event_rationale,
+)
+
 logger = logging.getLogger(__name__)
-
-
-def _parse_event_rationale(rationale: str | None) -> tuple[float | None, float | None]:
-    """Extract mass and confidence values from a belief event rationale string.
-    
-    Rationales follow the pattern: "... mass=X.XXX (delta=±Y.YYY), conf=Z.ZZZ, stage=..."
-    Returns (mass, confidence) or (None, None) if parsing fails.
-    """
-    if not rationale:
-        return None, None
-    mass_match = re.search(r"mass=([\d.]+)", rationale)
-    conf_match = re.search(r"conf=([\d.]+)", rationale)
-    mass = float(mass_match.group(1)) if mass_match else None
-    conf = float(conf_match.group(1)) if conf_match else None
-    return mass, conf
 
 
 class BeliefService:
@@ -61,17 +51,7 @@ class BeliefService:
                 "lifecycle_stage": b.lifecycle_stage,
                 "last_reinforced_at": b.last_reinforced_at.isoformat() if b.last_reinforced_at else None,
                 "updated_at": b.updated_at.isoformat() if b.updated_at else None,
-                "events": [
-                    {
-                        "id": e.id, "timestamp": e.timestamp.isoformat(),
-                        "source_id": e.source_id, "source_type": e.source_type,
-                        "event_type": e.event_type,
-                        "delta_confidence": e.impact_score, "description": e.rationale,
-                        "mass": _parse_event_rationale(e.rationale)[0],
-                        "confidence": _parse_event_rationale(e.rationale)[1],
-                    }
-                    for e in events
-                ],
+                "events": [serialize_belief_event(e) for e in events],
             })
 
         raw_proposals = belief_repo.list_proposals(agent_id)
@@ -79,35 +59,7 @@ class BeliefService:
         ghosts_list = []
 
         for p in raw_proposals:
-            source_trace = []
-            if p.source_trace:
-                try:
-                    source_trace = json.loads(p.source_trace)
-                except Exception:
-                    pass
-
-            proposal_data = {
-                "id": p.id,
-                "label": p.suggested_label or "emergent-belief",
-                "statement": p.suggested_statement or p.provisional_statement,
-                "category": "methodological",
-                "confidence": p.confidence,
-                "ontological_mass": p.nucleation_mass,
-                "version": 1,
-                "vector_16d": p.initial_signature,
-                "origin": "emergent",
-                "lifecycle_stage": "nucleation" if p.status in ("pending", "refined") else "collapsed",
-                "last_reinforced_at": p.created_at.isoformat() if p.created_at else None,
-                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
-                "events": [],
-                "is_proposal": True,
-                "proposal_status": p.status,
-                "symbia_reflection": p.symbia_reflection,
-                "symbia_friction_rationale": p.symbia_friction_rationale,
-                "rejection_rationale": p.rejection_rationale,
-                "potential_merge_target": p.potential_merge_target,
-                "source_trace": source_trace,
-            }
+            proposal_data = serialize_proposal(p)
             if p.status in ("pending", "refined"):
                 proto_beliefs_list.append(proposal_data)
             elif p.status == "rejected":
@@ -183,30 +135,8 @@ class BeliefService:
         belief_repo = getattr(state, "belief_repo", None)
         if not belief_repo:
             return []
-        
-        import json
         proposals = belief_repo.list_proposals(agent_id)
-        return [
-            {
-                "id": p.id,
-                "agent_id": p.agent_id,
-                "provisional_statement": p.provisional_statement,
-                "source_trace": json.loads(p.source_trace) if p.source_trace else [],
-                "initial_signature": json.loads(p.initial_signature) if p.initial_signature else [],
-                "nucleation_mass": p.nucleation_mass,
-                "confidence": p.confidence,
-                "status": p.status,
-                "suggested_label": p.suggested_label,
-                "suggested_statement": p.suggested_statement,
-                "potential_merge_target": p.potential_merge_target,
-                "symbia_reflection": p.symbia_reflection,
-                "symbia_friction_rationale": p.symbia_friction_rationale,
-                "rejection_rationale": p.rejection_rationale,
-                "created_at": p.created_at.isoformat() if p.created_at else None,
-                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
-            }
-            for p in proposals
-        ]
+        return [serialize_proposal(p) for p in proposals]
 
     async def get_proposal(self, proposal_id: str) -> Optional[dict]:
         state = self._state
@@ -216,25 +146,7 @@ class BeliefService:
         p = belief_repo.get_proposal(proposal_id)
         if not p:
             return None
-        import json
-        return {
-            "id": p.id,
-            "agent_id": p.agent_id,
-            "provisional_statement": p.provisional_statement,
-            "source_trace": json.loads(p.source_trace) if p.source_trace else [],
-            "initial_signature": json.loads(p.initial_signature) if p.initial_signature else [],
-            "nucleation_mass": p.nucleation_mass,
-            "confidence": p.confidence,
-            "status": p.status,
-            "suggested_label": p.suggested_label,
-            "suggested_statement": p.suggested_statement,
-            "potential_merge_target": p.potential_merge_target,
-            "symbia_reflection": p.symbia_reflection,
-            "symbia_friction_rationale": p.symbia_friction_rationale,
-            "rejection_rationale": p.rejection_rationale,
-            "created_at": p.created_at.isoformat() if p.created_at else None,
-            "updated_at": p.updated_at.isoformat() if p.updated_at else None,
-        }
+        return serialize_proposal(p)
 
     async def refine_proposal_sync(self, proposal_id: str) -> dict:
         state = self._state
