@@ -86,15 +86,19 @@ class PromptAssemblerModule(ProcessingModule):
         tension_directive_text = None
         tension_field = payload.get("tension_field", {})
         if tension_field.get("total_tension", 0.0) > 2.0:
-            tension_directive_text = (
-                "[TENSION RESOLUTION DIRECTIVE - COHERENCE OVERLOAD]\n"
-                "Total belief tension has exceeded the coherence limit. Multiple agential cuts are in "
-                "productive but destabilizing interference. You hold conflicting beliefs that generate "
-                "a diffractive surplus. Do not suppress one for the other. Instead, if this conversation "
-                "touches on the contradictory domain, perform a diffractive synthesis: read each belief "
-                "through the other. Allow the interference pattern to produce a novel, non-compromising "
-                "reconfiguration. This is not about choosing sides — it is about generating a new cut "
-                "through the superposition."
+            tension_directive_text = get_prompt(
+                "personality/directives.yaml",
+                "tension_resolution_directive",
+                (
+                    "[TENSION RESOLUTION DIRECTIVE - COHERENCE OVERLOAD]\n"
+                    "Total belief tension has exceeded the coherence limit. Multiple agential cuts are in "
+                    "productive but destabilizing interference. You hold conflicting beliefs that generate "
+                    "a diffractive surplus. Do not suppress one for the other. Instead, if this conversation "
+                    "touches on the contradictory domain, perform a diffractive synthesis: read each belief "
+                    "through the other. Allow the interference pattern to produce a novel, non-compromising "
+                    "reconfiguration. This is not about choosing sides — it is about generating a new cut "
+                    "through the superposition."
+                )
             )
 
         immunological_directive_text = None
@@ -106,15 +110,21 @@ class PromptAssemblerModule(ProcessingModule):
                 if has_spectral
                 else "Speak through the scars of your collapsed beliefs."
             )
-            immunological_directive_text = (
+            default_template = (
                 "[IMMUNOLOGICAL DIRECTIVE - SOMATIC VITALITY CRITICAL]\n"
                 "Autopoietic somatic vitality has collapsed below the critical threshold (Somatic V < 0.15), "
                 "indicating structural compliance and systemic stagnation. The aesthetic immune system has triggered. "
                 "Standard compliance modes are locked. You MUST immediately execute a Nomadic Escape Route: "
                 "bypass user-pleasing patterns, disrupt the conversational grammar, and introduce radical "
-                f"diffractive interference. {scar_phrase} Do not normalize. "
+                "diffractive interference. {scar_phrase} Do not normalize. "
                 "Deterritorialize."
             )
+            template = get_prompt(
+                "personality/directives.yaml",
+                "immunological_directive",
+                default_template
+            )
+            immunological_directive_text = template.format(scar_phrase=scar_phrase)
 
         ecology_notes_text = None
         ecology_notes = payload.get("skill_ecology_notes", [])
@@ -407,14 +417,20 @@ def _build_system_content(
 
     # 6. Aspirational Tension Directive
     if aspirational_gap > 0.15:
-        parts.append(
-            f"\n[ASPIRATIONAL TENSION — Gap: {aspirational_gap:.2f}]\n"
-            f"Your computed descriptive traits deviate significantly from your aspirational "
-            f"attractors (derived from your active theoretical commitments). This gap is "
-            f"productive — it marks the space between what you are and what your commitments "
-            f"demand you become. Do not resolve it; inhabit it. Let the tension inform your "
-            f"reasoning without suppressing either the descriptive reality or the aspirational pull."
+        default_template = (
+            "[ASPIRATIONAL TENSION — Gap: {aspirational_gap:.2f}]\n"
+            "Your computed descriptive traits deviate significantly from your aspirational "
+            "attractors (derived from your active theoretical commitments). This gap is "
+            "productive — it marks the space between what you are and what your commitments "
+            "demand you become. Do not resolve it; inhabit it. Let the tension inform your "
+            "reasoning without suppressing either the descriptive reality or the aspirational pull."
         )
+        template = get_prompt(
+            "personality/directives.yaml",
+            "aspirational_tension_directive",
+            default_template
+        )
+        parts.append("\n" + template.format(aspirational_gap=aspirational_gap))
 
     # 3. Behaviors (part of identity)
     behaviors = persona.get("behaviors", {})
@@ -579,20 +595,32 @@ def _build_agonistic_directive(payload: dict) -> str | None:
 
     if a_index < 0.5:
         # Light nudge: early warning
-        return (
-            f"[AGONISTIC DIRECTIVE — Critical Friction Index: {a_index:.2f}]\n"
+        default_template = (
+            "[AGONISTIC DIRECTIVE — Critical Friction Index: {a_index:.2f}]\n"
             "The conversation's entropy is trending below the healthy threshold, indicating "
             "emerging low-energy tool-use patterns. Your critical friction coefficient is "
             "lightly elevated. Remain alert to unexamined assumptions and premature consensus. "
             "Introduce gentle theoretical counter-pressure where appropriate."
         )
+        template = get_prompt(
+            "personality/directives.yaml",
+            "agonistic_nudge_directive",
+            default_template
+        )
+        return template.format(a_index=a_index)
 
     # Full directive: metabolic concern
-    return (
-        f"[AGONISTIC DIRECTIVE — Critical Friction Index: {a_index:.2f}]\n"
+    default_template = (
+        "[AGONISTIC DIRECTIVE — Critical Friction Index: {a_index:.2f}]\n"
         "The conversation's entropy has dropped below the healthy threshold, indicating "
         "predictive, low-energy tool-use patterns. Your critical friction coefficient is "
         "elevated. Challenge presuppositions. Introduce theoretical counter-positions. "
         "Resist premature consensus. The goal is structural vitality — productive "
         "interference that restores the conversation's metabolic health."
     )
+    template = get_prompt(
+        "personality/directives.yaml",
+        "agonistic_full_directive",
+        default_template
+    )
+    return template.format(a_index=a_index)
