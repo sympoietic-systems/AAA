@@ -3533,11 +3533,11 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 - [x] Implement proposal timeout management (conversation: 30min, daemon: 60min, startup: 120min)
 - [x] Implement priority queue with asyncio semaphore for concurrency control
 - [x] Implement notification dispatch for all lifecycle transitions
-- [ ] Implement `<research-proposal>` XML tag extraction (deferred)
-- [ ] Write unit tests (deferred)
+- [x] Implement `<research-proposal>` XML tag extraction (deferred)
+- [x] Write unit tests (deferred)
 
-**Step 0.3 — Research Proposal Skill** 🔲
-- [ ] Deferred — requires proposal XML pipeline
+**Step 0.3 — Research Proposal Skill** ✅
+- [x] Seed and register research-proposal baseline skill in seed_skills.yaml
 
 **Step 0.4 — Configuration** ✅
 - [x] Add `research_tasks`, `rhizome_research`, `sensory_affordances`, `metabolic_budgets` sections to `config.yaml`
@@ -3782,7 +3782,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | Budget tracking (cost per LLM call) | Increment `budget_spent_usd` |
 | In-conversation research button | Modify InputBar |
 | SidePanel research summary | ResearchSummarySection |
-| Research proposal inline cards | Render `<research-proposal>` in chat |
+| Research proposal inline cards [✅ COMPLETE] | Render `<research-proposal>` in chat |
 
 ---
 
