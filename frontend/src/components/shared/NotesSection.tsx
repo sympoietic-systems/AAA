@@ -53,8 +53,8 @@ function NotesSectionComponent({
   if (notes.length === 0) {
     return (
       <div className="text-[10px] text-ui-dim py-2 font-mono italic">
-        No notes or highlights in this conversation.
-        Select text in the conversation bubbles to create a note.
+        No notes or highlights yet.
+        Select text to create one.
       </div>
     )
   }

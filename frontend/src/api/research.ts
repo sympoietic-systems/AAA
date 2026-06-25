@@ -342,4 +342,15 @@ export async function getTaskNotes(taskId: string): Promise<NoteInfo[]> {
   return res.json()
 }
 
+export interface UnifiedNoteInfo extends NoteInfo {
+  step_number?: number | null
+  step_type?: string | null
+}
+
+export async function getTaskUnifiedNotes(taskId: string): Promise<UnifiedNoteInfo[]> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/notes/unified`)
+  if (!res.ok) throw new Error(`Unified notes fetch failed: ${res.status}`)
+  return res.json()
+}
+
 import type { NoteInfo } from "./types"

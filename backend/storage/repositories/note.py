@@ -203,6 +203,24 @@ class NoteRepository(BaseRepository):
         return [dict(row) for row in cursor.fetchall()]
 
     @with_connection
+    def get_notes_by_task_with_steps(self, task_id: str) -> list[dict]:
+        conn = self._conn()
+        cursor = conn.execute(
+            """
+            SELECT n.*, s.step_number, s.step_type
+            FROM notes n
+            LEFT JOIN research_steps s ON n.asset_type = 'research_step' AND n.asset_id = s.id
+            WHERE (n.asset_type = 'research_task' AND n.asset_id = ?)
+               OR (n.asset_type = 'research_step' AND n.asset_id IN (
+                   SELECT id FROM research_steps WHERE task_id = ?
+               ))
+            ORDER BY n.created_at ASC
+            """,
+            (task_id, task_id),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+    @with_connection
     def update_note(self, note_id: str, comment: Optional[str] = None, visibility: Optional[str] = None) -> Optional[dict]:
         conn = self._conn()
         updates = []

@@ -1,23 +1,15 @@
 // ResearchTaskPage — single research task detail with tabbed Info, Steps, Report, Notes.
-import { memo, useState, useEffect, useRef, useCallback, useMemo } from "react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import remarkBreaks from "remark-breaks"
-import rehypeRaw from "rehype-raw"
+import { memo, useState, useEffect, useRef } from "react"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter, TerminalButton } from "../../UI"
 import type { ResearchTask } from "../../../api/research"
-import { getResearchTask } from "../../../api/research"
-import { STATUS_COLORS } from "./constants/taskConstants"
+import { getResearchTask, getTaskUnifiedNotes, type UnifiedNoteInfo } from "../../../api/research"
+import { STATUS_COLORS, STEP_LABELS } from "./constants/taskConstants"
 import { useTaskPolling } from "./shared/useTaskPolling"
 import { InfoTab } from "./tabs/InfoTab"
 import { StepsTab } from "./tabs/StepsTab"
 import { NewResearchForm } from "./NewResearchForm"
-import { useNotes } from "../../../hooks/useNotes"
-import { NotesSection } from "../../shared/NotesSection"
-import { SelectionToolbar } from "../nodeexplorer/SelectionToolbar"
-import { NoteEditorPopover } from "../nodeexplorer/NoteEditorPopover"
+import { NotableMarkdown } from "../../shared/NotableMarkdown"
 import type { NoteInfo } from "../../../api/client"
-import { wrapSelectedTextInMarks } from "../../../utils/noteHighlight"
 import { copyToClipboard } from "../../../utils/clipboard"
 
 type SubTabId = "info" | "steps" | "report" | "notes"
@@ -41,162 +33,21 @@ function extractReportTitle(markdown: string): string | null {
 /* ── Shell — header, tab bar, content routing ── */
 const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask }) {
   const { current, orchPhase, refreshAll } = useTaskPolling(task.id, task.status, task)
-  const noteHook = useNotes("research_task", task.id)
+  const [taskNotes, setTaskNotes] = useState<NoteInfo[]>([])
+  const [unifiedNotes, setUnifiedNotes] = useState<UnifiedNoteInfo[]>([])
+  const [copied, setCopied] = useState(false)
+  const [navigateStepId, setNavigateStepId] = useState<string | null>(null)
+  const reportRef = useRef<HTMLDivElement>(null)
 
   const defaultTab: SubTabId = task.status === "completed" && task.result_summary ? "report" : "info"
   const [tab, setTab] = useState<SubTabId>(defaultTab)
-
-  const [selectedText, setSelectedText] = useState("")
-  const [showToolbar, setShowToolbar] = useState(false)
-  const [showEditor, setShowEditor] = useState(false)
-  const [noteComment, setNoteComment] = useState("")
-  const [noteVisibility, setNoteVisibility] = useState<"personal" | "shared" | "agent">("personal")
-  const [popupCoords, setPopupCoords] = useState<{ x: number; y: number } | null>(null)
-  const [editingNote, setEditingNote] = useState<NoteInfo | null>(null)
-  const [copied, setCopied] = useState(false)
-  const reportRef = useRef<HTMLDivElement>(null)
-  const [highlightedReport, setHighlightedReport] = useState(task.result_summary || "")
-
-  useEffect(() => {
-    try {
-      setHighlightedReport(wrapSelectedTextInMarks(task.result_summary || "", noteHook.notes))
-    } catch (e) {
-      console.error("wrapSelectedTextInMarks failed:", e)
-    }
-  }, [task.result_summary, noteHook.notes])
-
-  const handleMouseUp = useCallback(() => {
-    if (editingNote) return
-    const sel = window.getSelection()
-    if (!sel) return
-    const text = sel.toString().trim()
-    if (!text) return
-    const anchorNode = sel.anchorNode
-    if (!anchorNode || !reportRef.current?.contains(anchorNode)) return
-    setSelectedText(text)
-    setShowEditor(false)
-    setCopied(false)
-    if (sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0)
-      const rect = range.getBoundingClientRect()
-      setPopupCoords({ x: rect.left, y: rect.bottom + 8 })
-      setEditingNote(null)
-      setShowToolbar(true)
-    }
-  }, [editingNote])
-
-  const handleDismissToolbar = () => {
-    setShowToolbar(false)
-  }
-
-  const handleOpenEditor = () => {
-    setNoteComment("")
-    setNoteVisibility("personal")
-    setShowToolbar(false)
-    setShowEditor(true)
-  }
-
-  const handleSaveNote = async () => {
-    if (editingNote) {
-      await noteHook.editNote(editingNote.id, noteComment, noteVisibility)
-      setEditingNote(null)
-    } else if (selectedText) {
-      await noteHook.addNote(selectedText, noteComment, noteVisibility)
-    }
-    setShowEditor(false)
-    setSelectedText("")
-    setNoteComment("")
-    setPopupCoords(null)
-    window.getSelection()?.removeAllRanges()
-  }
-
-  const handleDismissEditor = () => {
-    setEditingNote(null)
-    setShowEditor(false)
-    setSelectedText("")
-    setNoteComment("")
-    setPopupCoords(null)
-    window.getSelection()?.removeAllRanges()
-  }
-
-  useEffect(() => {
-    if (!showToolbar && !showEditor) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        handleDismissEditor()
-        setShowToolbar(false)
-        setSelectedText("")
-        setPopupCoords(null)
-        window.getSelection()?.removeAllRanges()
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [showToolbar, showEditor])
-
-  const handleNoteGoto = (noteId: string) => {
-    setTab("report")
-    setTimeout(() => {
-      import("../../../utils/noteHighlight")
-        .then(({ scrollToNoteHighlight }) => scrollToNoteHighlight(noteId))
-        .catch(() => {})
-    }, 100)
-  }
-
-  const handleNoteClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    e.stopPropagation()
-    e.preventDefault()
-    const noteId = e.currentTarget.dataset.noteId
-    if (!noteId) return
-    const note = noteHook.notes.find(n => n.id === noteId)
-    if (!note) return
-    setSelectedText(note.selected_text)
-    setNoteComment(note.comment)
-    setNoteVisibility(note.visibility)
-    setEditingNote(note)
-    const rect = e.currentTarget.getBoundingClientRect()
-    const showAbove = rect.bottom + 180 > window.innerHeight
-    setPopupCoords({ x: rect.left, y: showAbove ? rect.top - 180 - 8 : rect.bottom + 8 })
-    setShowEditor(true)
-  }, [noteHook.notes])
-
-  const markComponents = useMemo(() => ({
-    mark: ({ node, ...props }: any) => {
-      const properties = node?.properties ?? {}
-      const noteId = properties['data-note-id'] ?? props['data-note-id']
-      const styleString = properties['style'] ?? ''
-      const styleObj: Record<string, string> = {}
-      if (typeof styleString === 'string' && styleString) {
-        styleString.split(';').forEach(pair => {
-          const [k, v] = pair.split(':').map(s => s.trim())
-          if (!k || !v) return
-          if (k.startsWith('--')) {
-            styleObj[k] = v
-          } else {
-            const camelKey = k.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-            styleObj[camelKey] = v
-          }
-        })
-      }
-      return (
-        <mark
-          {...{ 'data-note-id': noteId }}
-          className={properties['className'] || ''}
-          style={styleObj}
-          onClick={handleNoteClick}
-        >
-          {props.children}
-        </mark>
-      )
-    },
-  }), [handleNoteClick])
 
   const color = STATUS_COLORS[current.status] ?? "#666"
   const baseName = slugify(extractReportTitle(current.result_summary ?? "") ?? current.title)
   const reportContent = current.result_summary || ""
 
-  const notesAppendixMd = noteHook.notes.length > 0
-    ? "\n\n---\n\n## Notes\n\n" + noteHook.notes.map(n => {
+  const notesAppendixMd = taskNotes.length > 0
+    ? "\n\n---\n\n## Notes\n\n" + taskNotes.map(n => {
         const visLabel = n.visibility === "shared" ? "Shared" : n.visibility === "agent" ? "Agent" : "Personal"
         let md = `### ${visLabel} Note\n\n**Selected text:** "${n.selected_text}"\n`
         if (n.comment) md += `\n**Comment:**\n> ${n.comment.replace(/\n/g, '\n> ')}\n`
@@ -204,8 +55,8 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
       }).join("\n")
     : ""
 
-  const notesAppendixHtml = noteHook.notes.length > 0
-    ? `<hr><h2>Notes</h2>` + noteHook.notes.map(n => {
+  const notesAppendixHtml = taskNotes.length > 0
+    ? `<hr><h2>Notes</h2>` + taskNotes.map(n => {
         const visLabel = n.visibility === "shared" ? "Shared" : n.visibility === "agent" ? "Agent" : "Personal"
         const colorCode = n.visibility === "shared" ? "#a855f7" : n.visibility === "agent" ? "#22d3ee" : "#eab308"
         let html = `<div style="margin:1em 0;padding:0.5em 0;border-bottom:1px solid #ddd">`
@@ -216,8 +67,65 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
       }).join("")
     : ""
 
+  useEffect(() => {
+    if (tab === "notes") {
+      getTaskUnifiedNotes(task.id).then(setUnifiedNotes).catch(() => {})
+    }
+  }, [task.id, tab])
+
+  const handleUnifiedNoteGoto = (note: UnifiedNoteInfo) => {
+    if (note.asset_type === "research_task") {
+      setTab("report")
+      setTimeout(() => {
+        import("../../../utils/noteHighlight")
+          .then(({ scrollToNoteHighlight }) => scrollToNoteHighlight(note.id))
+          .catch(() => {})
+      }, 100)
+    } else if (note.asset_type === "research_step") {
+      setNavigateStepId(note.asset_id)
+      setTab("steps")
+    }
+  }
+
+  const handleExportNotes = () => {
+    const lines: string[] = [`# Research Notes — ${current.title}`, ""]
+    const groups = new Map<string, UnifiedNoteInfo[]>()
+    for (const n of unifiedNotes) {
+      const key = n.asset_type === "research_task"
+        ? "Report"
+        : n.step_number != null
+          ? `Step #${n.step_number}: ${STEP_LABELS[n.step_type || ""] || n.step_type || "?"}`
+          : "Unknown"
+      const existing = groups.get(key) || []
+      existing.push(n)
+      groups.set(key, existing)
+    }
+    for (const [group, notes] of groups) {
+      lines.push(`## ${group}`, "")
+      for (const n of notes) {
+        const visLabel = n.visibility === "shared" ? "Shared" : n.visibility === "agent" ? "Agent" : "Personal"
+        lines.push(`### ${visLabel} Note`)
+        lines.push("")
+        lines.push(`**Selected text:** "${n.selected_text}"`)
+        if (n.comment) {
+          lines.push("")
+          lines.push("**Comment:**")
+          lines.push(`> ${n.comment.replace(/\n/g, "\n> ")}`)
+        }
+        lines.push("")
+      }
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${slugify(current.title)}-notes.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
-    <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]" onMouseUp={tab === "report" ? handleMouseUp : undefined}>
+    <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       <HeaderContainer>
         <div className="flex items-center gap-2 min-w-0">
           <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</a>
@@ -249,7 +157,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
               onClick={() => setTab(t.key)}
               className={`cursor-pointer transition-colors ${tab === t.key ? "text-[#94a3b8]" : "text-[#444] hover:text-[#777]"}`}
             >
-              {t.label}{t.key === "notes" && noteHook.notes.length > 0 ? ` (${noteHook.notes.length})` : ""}
+              {t.label}{t.key === "notes" && unifiedNotes.length > 0 ? ` (${unifiedNotes.length})` : ""}
             </button>
           </span>
         ))}
@@ -257,25 +165,31 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
 
       <div className="flex-1 min-h-0 flex flex-col px-4 pb-4 pt-1">
         {tab === "info"     && <div className="flex-1 overflow-y-auto pr-1"><InfoTab task={current} orchPhase={orchPhase} onRefreshTask={refreshAll} /></div>}
-        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} onSelectTab={setTab} />}
+        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} onSelectTab={setTab} externalStepId={navigateStepId} />}
 
         {tab === "report"   && (
           <div className="flex-1 min-h-0 flex flex-col pr-1">
             {reportContent ? (
               <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex items-center justify-between mb-1 shrink-0">
-                  <span className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Research Synthesis Report ]</span>
-                  <div className="flex items-center gap-2">
-                    <TerminalButton onClick={async () => { const ok = await copyToClipboard(reportContent); if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1500) } }} intent="neutral">
-                      {copied ? "copied!" : "copy markdown"}
-                    </TerminalButton>
-                    <TerminalButton onClick={() => { const blob = new Blob([reportContent + notesAppendixMd], { type: "text/markdown;charset=utf-8" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${baseName}.md`; a.click(); URL.revokeObjectURL(url) }} intent="neutral">export markdown</TerminalButton>
-                    <TerminalButton onClick={() => { const html = (reportRef.current?.innerHTML ?? "") + notesAppendixHtml; const w = window.open("", "_blank", "width=800,height=900"); if (!w) return; w.document.write(`<!DOCTYPE html><html><head><title>${baseName}</title><style>body{font-family:-apple-system,Segoe UI,Roboto,monospace;padding:2.5rem;color:#222;max-width:800px;margin:0 auto;line-height:1.7;font-size:13px}h1,h2{color:#333;margin-top:1.2em}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:12px}th{background:#f5f5f5}code{background:#f0f0f0;padding:2px 5px;border-radius:3px;font-size:12px}pre{background:#f6f6f6;padding:10px}a{color:#06c}img{max-width:100%}</style></head><body>${html}</body></html>`); w.document.close(); w.focus(); setTimeout(() => w.print(), 300) }} intent="cyan">export pdf</TerminalButton>
-                  </div>
-                </div>
-                <div ref={reportRef} className="flex-1 min-h-0 overflow-y-auto text-[#94a3b8] text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]} components={markComponents}>{highlightedReport}</ReactMarkdown>
-                </div>
+                <NotableMarkdown
+                  assetType="research_task"
+                  assetId={task.id}
+                  content={reportContent}
+                  title="Research Synthesis Report"
+                  contentRef={reportRef}
+                  onNotesChange={setTaskNotes}
+                  className="flex-1 min-h-0 flex flex-col"
+                  contentClassName="flex-1 overflow-y-auto text-[#94a3b8] text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none"
+                  headerActions={
+                    <div className="flex items-center gap-2">
+                      <TerminalButton onClick={async () => { const ok = await copyToClipboard(reportContent); if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1500) } }} intent="neutral">
+                        {copied ? "copied!" : "copy markdown"}
+                      </TerminalButton>
+                      <TerminalButton onClick={() => { const blob = new Blob([reportContent + notesAppendixMd], { type: "text/markdown;charset=utf-8" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${baseName}.md`; a.click(); URL.revokeObjectURL(url) }} intent="neutral">export markdown</TerminalButton>
+                      <TerminalButton onClick={() => { const html = (reportRef.current?.innerHTML ?? "") + notesAppendixHtml; const w = window.open("", "_blank", "width=800,height=900"); if (!w) return; w.document.write(`<!DOCTYPE html><html><head><title>${baseName}</title><style>body{font-family:-apple-system,Segoe UI,Roboto,monospace;padding:2.5rem;color:#222;max-width:800px;margin:0 auto;line-height:1.7;font-size:13px}h1,h2{color:#333;margin-top:1.2em}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:12px}th{background:#f5f5f5}code{background:#f0f0f0;padding:2px 5px;border-radius:3px;font-size:12px}pre{background:#f6f6f6;padding:10px}a{color:#06c}img{max-width:100%}</style></head><body>${html}</body></html>`); w.document.close(); w.focus(); setTimeout(() => w.print(), 300) }} intent="cyan">export pdf</TerminalButton>
+                    </div>
+                  }
+                />
               </div>
             ) : (
               <div className="text-[10px] text-[#444] py-2 font-mono italic">
@@ -288,31 +202,66 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
         {tab === "notes"   && (
           <div className="flex-1 overflow-y-auto pr-1">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Notes ]</span>
-              <TerminalButton onClick={() => handleOpenEditor()}>+ new note</TerminalButton>
+              <span className="text-[#6c6c8a] uppercase text-[9px] tracking-wider">[ Unified Notes ]</span>
+              {unifiedNotes.length > 0 && (
+                <TerminalButton onClick={handleExportNotes} intent="neutral">export notes</TerminalButton>
+              )}
             </div>
-            <NotesSection notes={noteHook.notes} onNavigate={handleNoteGoto} onDeleteNote={noteHook.removeNote} />
+            {unifiedNotes.length === 0 ? (
+              <div className="text-[10px] text-ui-dim py-2 font-mono italic">
+                No notes yet. Add notes in the Report or any step's result panel.
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {unifiedNotes.map((note) => {
+                  const isAgent = note.visibility === "agent"
+                  const isShared = note.visibility === "shared"
+                  const label = isAgent ? "A" : isShared ? "SH" : "P"
+                  const labelColor = isAgent ? "text-semantic-blue" : isShared ? "text-semantic-purple" : "text-semantic-gold"
+                  const sourceLabel = note.asset_type === "research_task"
+                    ? "Report"
+                    : note.step_number != null
+                      ? `Step #${note.step_number}: ${STEP_LABELS[note.step_type || ""] || note.step_type || "?"}`
+                      : note.step_type
+                        ? `Step: ${STEP_LABELS[note.step_type] || note.step_type}`
+                        : "Unknown"
+
+                  return (
+                    <div key={note.id} className="flex flex-col gap-0.5 py-1 px-1.5 hover:bg-action-hover/5 transition-colors border border-transparent rounded-[2px] group/note">
+                      <div className="flex items-start gap-1 font-mono text-[10px] leading-tight">
+                        <span className={`${labelColor} font-bold shrink-0 w-3.5`}>{label}</span>
+                        <span className="text-ui-dim font-bold shrink-0">&gt;&gt;</span>
+                        <span className="text-ui-primary break-words flex-1 min-w-0 font-mono select-text">
+                          "{note.selected_text}"
+                        </span>
+                        <button
+                          onClick={() => handleUnifiedNoteGoto(note)}
+                          className="shrink-0 text-ui-dim hover:text-action-hover transition-colors opacity-0 group-hover/note:opacity-100 ml-0.5"
+                          title={note.asset_type === "research_task" ? "Go to Report" : "Go to Step"}
+                        >
+                          ↗
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1 pl-4 font-mono text-[9px] leading-tight">
+                        <span className="text-ui-dim shrink-0">source:</span>
+                        <span className="text-ui-dim/70">{sourceLabel}</span>
+                      </div>
+                      {note.comment && (
+                        <div className="flex items-start gap-1 pl-4 font-mono text-[9px] leading-tight text-ui-dim">
+                          <span className="shrink-0 font-bold">&gt;&gt;</span>
+                          <span className="break-words flex-1 min-w-0 italic font-mono select-text">
+                            {note.comment}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
-
-      {showToolbar && popupCoords && (
-        <SelectionToolbar selectedText={selectedText} popupCoords={popupCoords} onDismiss={handleDismissToolbar} onOpenNoteEditor={handleOpenEditor} copied={copied} onCopied={setCopied} />
-      )}
-      {showEditor && popupCoords && (
-        <NoteEditorPopover
-          selectedText={selectedText}
-          noteComment={noteComment}
-          noteVisibility={noteVisibility}
-          editingNote={editingNote}
-          popupCoords={popupCoords}
-          onCommentChange={setNoteComment}
-          onVisibilityChange={setNoteVisibility}
-          onSave={handleSaveNote}
-          onDismiss={handleDismissEditor}
-          onDeleteNote={editingNote ? noteHook.removeNote : undefined}
-        />
-      )}
 
       <UnifiedFooter />
     </div>

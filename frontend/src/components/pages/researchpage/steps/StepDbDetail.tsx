@@ -1,6 +1,6 @@
-type DetailTab = "input" | "result" | "log"
+type DetailTab = "input" | "result" | "log" | "notes"
 
-export const DETAIL_TABS: DetailTab[] = ["input", "result", "log"]
+export const DETAIL_TABS: DetailTab[] = ["input", "result", "log", "notes"]
 
 import { memo, useState, useEffect, useMemo } from "react"
 import type { MetaLogResponse, TaskStepsResponse, StepPreview, ResearchStep } from "../../../../api/research"
@@ -10,6 +10,8 @@ import { STEP_TO_PHASE, STEP_LABELS } from "../constants/taskConstants"
 import { StepResultTab, repairTruncatedJson } from "./StepResultTab"
 import { StepInputTab } from "./StepInputTab"
 import { StepLogTab } from "./StepLogTab"
+import { useNotes } from "../../../../hooks/useNotes"
+import { NotesSection } from "../../../shared/NotesSection"
 
 interface DbStepDetailProps {
   taskId: string
@@ -33,6 +35,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   const selected = steps.find(s => s.id === selectedId)
   if (!selected) return null
   const selectedResults = data ? (data.results_by_step[selectedId] || []) : []
+  const noteHook = useNotes("research_step", selectedId)
 
   // Fallback to find search/digest results for a query_group if the step itself has no saved results (older runs or digest updates stored under parse step)
   const resolvedSearchResults = useMemo(() => {
@@ -229,11 +232,12 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
     getTaskMetaLog(taskId, selectedId).then(setMetaLog).catch(() => {}).finally(() => setLogLoading(false))
   }
 
-  const tabBadges = entries.length > 0 ? {
-    input: inputEntries.length,
-    result: entries.length,
-    log: otherEntries.length + searchEntries.length,
-  } : undefined
+  const tabBadges = {
+    input: inputEntries.length || undefined,
+    result: entries.length || undefined,
+    log: (otherEntries.length + searchEntries.length) || undefined,
+    notes: noteHook.notes.length || undefined,
+  }
 
   return (
     <div className="space-y-2 text-[10px] font-mono">
@@ -267,6 +271,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           responseEntries={responseEntries}
           inputEntries={inputEntries}
           parentInputUrls={parentInputUrls}
+          noteHook={noteHook}
         />
       )}
 
@@ -284,6 +289,10 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
 
       {tab === "log" && (
         <StepLogTab entries={[...otherEntries, ...searchEntries]} loading={logLoading} />
+      )}
+
+      {tab === "notes" && (
+        <NotesSection notes={noteHook.notes} onDeleteNote={noteHook.removeNote} />
       )}
     </div>
   )

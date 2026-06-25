@@ -5,18 +5,26 @@ import { TwoPanelLayout } from "../shared/TwoPanelLayout"
 import { StepPipeline } from "../steps/StepPipeline"
 import { StepDetailPanel } from "../steps/StepDetailPanel"
 
-export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, onRefreshTask, onSelectTab }: {
+export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, onRefreshTask, onSelectTab, externalStepId }: {
   taskId: string
   orchPhase: string
   taskStatus: string
   onRefreshTask?: () => void
   onSelectTab?: (tabId: "info" | "steps" | "report") => void
+  externalStepId?: string | null
 }) {
   const [data, setData] = useState<TaskStepsResponse | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stepping, setStepping] = useState(false)
   const [preview, setPreview] = useState<StepPreview | null>(null)
   const [prevLoading, setPrevLoading] = useState(false)
+
+  useEffect(() => {
+    if (externalStepId && data) {
+      const step = data.steps.find(s => s.id === externalStepId)
+      if (step) setSelectedId(externalStepId)
+    }
+  }, [externalStepId, data])
 
   const load = useCallback(() => {
     getTaskSteps(taskId).then(setData).catch(() => {})

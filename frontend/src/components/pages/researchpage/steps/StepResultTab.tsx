@@ -1,9 +1,9 @@
 import { memo, useMemo } from "react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import remarkBreaks from "remark-breaks"
 import type { ResearchStep, ResearchStepResult } from "../../../../api/research"
 import { JsonBlock } from "../../../UI"
+import { NotableMarkdown } from "../../../shared/NotableMarkdown"
+import { NotableContent } from "../../../shared/NotableContent"
+import type { NotableContentHooks } from "../../../shared/NotableContent"
 
 interface StepResultTabProps {
   selected: ResearchStep
@@ -24,6 +24,7 @@ interface StepResultTabProps {
   responseEntries: any[]
   inputEntries?: any[]
   parentInputUrls?: { url: string; title: string }[]
+  noteHook: NotableContentHooks
 }
 
 /** Repair a JSON string that has been truncated by balancing braces, brackets, and quotes. */
@@ -120,7 +121,7 @@ function sourceStatusLabel(analysis: any): { label: string; color: string } {
 }
 
 export const StepResultTab = memo(function StepResultTab({
-  selected, selectedResults, parsedResult, responseEntries, inputEntries,
+  selected, selectedResults, parsedResult, responseEntries, inputEntries, noteHook,
 }: StepResultTabProps) {
   const searchQueries = inputEntries
     ?.filter(e => e.event_type === "orchestrator_search")
@@ -405,17 +406,15 @@ export const StepResultTab = memo(function StepResultTab({
           )}
 
           {parsedResult.reflection && (
-            <div>
-              <div className="text-ui-dim text-[8px] mb-1 uppercase">consolidated analysis</div>
+            <NotableContent hooks={noteHook} title="consolidated analysis">
               <div className="text-ui-secondary text-[9.5px] leading-relaxed whitespace-pre-wrap border border-ui-border p-2 bg-[#080808]/30 rounded-sm">
                 {parsedResult.reflection}
               </div>
-            </div>
+            </NotableContent>
           )}
 
           {parsedResult.key_insights && parsedResult.key_insights.length > 0 && (
-            <div>
-              <div className="text-ui-dim text-[8px] mb-1 uppercase">key insights ({parsedResult.key_insights.length})</div>
+            <NotableContent hooks={noteHook} title={`key insights (${parsedResult.key_insights.length})`}>
               <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30">
                 {parsedResult.key_insights.map((insight, i) => (
                   <div key={i} className="text-semantic-green text-[9px] pl-2 border-l border-ui-border leading-relaxed">
@@ -423,12 +422,11 @@ export const StepResultTab = memo(function StepResultTab({
                   </div>
                 ))}
               </div>
-            </div>
+            </NotableContent>
           )}
 
           {parsedResult.remaining_gaps && parsedResult.remaining_gaps.length > 0 && (
-            <div>
-              <div className="text-ui-dim text-[8px] mb-1 uppercase">remaining gaps ({parsedResult.remaining_gaps.length})</div>
+            <NotableContent hooks={noteHook} title={`remaining gaps (${parsedResult.remaining_gaps.length})`}>
               <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30">
                 {parsedResult.remaining_gaps.map((gap, i) => (
                   <div key={i} className="text-semantic-gold text-[9px] pl-2 border-l border-ui-border leading-relaxed">
@@ -436,18 +434,17 @@ export const StepResultTab = memo(function StepResultTab({
                   </div>
                 ))}
               </div>
-            </div>
+            </NotableContent>
           )}
 
           {parsedResult.next_queries && parsedResult.next_queries.length > 0 && (
-            <div>
-              <div className="text-ui-dim text-[8px] mb-1 uppercase">planned next search queries ({parsedResult.next_queries.length})</div>
+            <NotableContent hooks={noteHook} title={`planned next search queries (${parsedResult.next_queries.length})`}>
               <div className="space-y-0.5 pl-2">
                 {parsedResult.next_queries.map((q, i) => (
                   <div key={i} className="text-ui-secondary text-[9px]">· {q}</div>
                 ))}
               </div>
-            </div>
+            </NotableContent>
           )}
 
           {parsedResult.next_direct_urls && parsedResult.next_direct_urls.length > 0 && (
@@ -472,12 +469,13 @@ export const StepResultTab = memo(function StepResultTab({
       {/* ── Synthesize: answer ── */}
       {selected.step_type === "synthesize" && parsedResult.answer && (
         <div className="border-t border-ui-border pt-2 space-y-1.5 font-sans">
-          <div className="text-ui-dim text-[8px] font-mono uppercase">
-            synthesis report{parsedResult.confidence > 0 ? ` (confidence: ${Math.round(parsedResult.confidence*100)}%)` : ""}:
-          </div>
-          <div className="text-ui-secondary text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none max-h-[500px] overflow-y-auto border border-ui-border p-2 bg-[#080808]/30">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{parsedResult.answer}</ReactMarkdown>
-          </div>
+          <NotableMarkdown
+            assetType="research_step"
+            assetId={selected.id}
+            content={parsedResult.answer}
+            title={`synthesis report${parsedResult.confidence > 0 ? ` (confidence: ${Math.round(parsedResult.confidence*100)}%)` : ""}`}
+            contentClassName="text-ui-secondary text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none max-h-[500px] overflow-y-auto border border-ui-border p-2 bg-[#080808]/30"
+          />
         </div>
       )}
 

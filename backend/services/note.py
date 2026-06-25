@@ -60,6 +60,10 @@ class NoteService:
         return note_repo.get_notes_by_asset(asset_type, asset_id)
 
     @staticmethod
+    def list_by_task_with_steps(note_repo, task_id: str) -> list[dict]:
+        return note_repo.get_notes_by_task_with_steps(task_id)
+
+    @staticmethod
     def update(note_repo, note_id: str, comment: Optional[str] = None, visibility: Optional[str] = None) -> dict | None:
         return note_repo.update_note(note_id, comment=comment, visibility=visibility)
 

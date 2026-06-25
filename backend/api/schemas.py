@@ -344,7 +344,7 @@ class ConversationFilesResponse(BaseModel):
 
 
 class NoteCreateRequest(BaseModel):
-    asset_type: Literal["conversation_message", "research_task"] = "conversation_message"
+    asset_type: Literal["conversation_message", "research_task", "research_step"] = "conversation_message"
     asset_id: str = ""
     conversation_id: Optional[str] = None
     selected_text: str
@@ -369,6 +369,11 @@ class NoteResponse(BaseModel):
 class NoteUpdateRequest(BaseModel):
     comment: Optional[str] = None
     visibility: Optional[Literal["personal", "shared", "agent"]] = None
+
+
+class UnifiedNoteResponse(NoteResponse):
+    step_number: Optional[int] = None
+    step_type: Optional[str] = None
 
 
 class SedimentFileInfo(BaseModel):

@@ -525,6 +525,23 @@ async def get_task_notes(task_id: str, request: Request = None):
     return [NoteResponse(**n) for n in notes]
 
 
+@router.get("/research/tasks/{task_id}/notes/unified")
+async def get_task_unified_notes(task_id: str, request: Request = None):
+    state = request.app.state
+    note_repo = getattr(state, "note_repo", None)
+    if not note_repo:
+        raise HTTPException(status_code=503, detail="Note repository not available")
+
+    task = state.research_task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Research task not found")
+
+    from backend.services.note import NoteService
+    from backend.api.schemas import UnifiedNoteResponse
+    notes = NoteService.list_by_task_with_steps(note_repo, task_id)
+    return [UnifiedNoteResponse(**n) for n in notes]
+
+
 # ── Research Export ────────────────────────────────────────────────────
 
 @router.get("/research/tasks/{task_id}/export")
