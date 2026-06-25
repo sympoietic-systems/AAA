@@ -594,3 +594,30 @@ class ExportService:
         parts.append(f"| Note count | {len(notes)} |")
 
         return "\n".join(parts)
+
+    # ── Research JSON Export ────────────────────────────────────────────
+
+    @staticmethod
+    def build_research_export_json(
+        task: dict,
+        branches: list[dict],
+        assets: list[dict],
+        steps: list[dict],
+        plan: dict | None,
+        step_results: list[dict],
+        notes: list[dict],
+        meta_log: list[dict],
+    ) -> dict:
+        """Build a structured JSON export for re-import."""
+        return {
+            "export_format_version": "2.0",
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "task": task,
+            "branches": branches,
+            "assets": assets,
+            "plan": plan,
+            "steps": steps,
+            "step_results": step_results,
+            "meta_log": meta_log,
+            "notes": notes,
+        }
