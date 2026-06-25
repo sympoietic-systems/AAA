@@ -27,6 +27,11 @@
   --color-ui-secondary: #bbb;
   --color-ui-dim: #555;
   --color-ui-border: #222;
+
+  /* Note visibility accents */
+  --color-note-personal: #eab308;
+  --color-note-shared: #a855f7;
+  --color-note-agent: #22d3ee;
 }
 
 body {

@@ -32,6 +32,11 @@ export const COLOR_PALETTE = {
   // Agential/speaker variations
   humanBg: "#152a1d",
   apparatusBg: "#211a36",
+
+  // Note visibility accent colors (brighter than semantic palette)
+  notePersonal: "#eab308",
+  noteShared: "#a855f7",
+  noteAgent: "#22d3ee",
 } as const
 
 /**
@@ -54,4 +59,7 @@ export const CSS_VARS = {
   uiSecondary: "var(--color-ui-secondary)",
   uiDim: "var(--color-ui-dim)",
   uiBorder: "var(--color-ui-border)",
+  notePersonal: "var(--color-note-personal)",
+  noteShared: "var(--color-note-shared)",
+  noteAgent: "var(--color-note-agent)",
 } as const

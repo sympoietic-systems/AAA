@@ -2,6 +2,7 @@ import { memo, useState, useRef, useCallback, useEffect } from "react"
 import { SelectionToolbar } from "../pages/nodeexplorer/SelectionToolbar"
 import { NoteEditorPopover } from "../pages/nodeexplorer/NoteEditorPopover"
 import type { NoteInfo } from "../../api/client"
+import { COLOR_PALETTE } from "../../config/colors"
 
 export interface NotableContentHooks {
   addNote: (selectedText: string, comment?: string, visibility?: "personal" | "shared" | "agent", startOffset?: number) => Promise<NoteInfo | null>
@@ -18,9 +19,9 @@ interface NotableContentProps {
 }
 
 const VISIBILITY_COLORS: Record<string, string> = {
-  personal: "#eab308",
-  shared: "#a855f7",
-  agent: "#22d3ee",
+  personal: COLOR_PALETTE.notePersonal,
+  shared: COLOR_PALETTE.noteShared,
+  agent: COLOR_PALETTE.noteAgent,
 }
 
 function clearHighlights(container: HTMLElement) {

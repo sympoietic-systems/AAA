@@ -11,6 +11,7 @@ import { NewResearchForm } from "./NewResearchForm"
 import { NotableMarkdown } from "../../shared/NotableMarkdown"
 import type { NoteInfo } from "../../../api/client"
 import { copyToClipboard } from "../../../utils/clipboard"
+import { COLOR_PALETTE } from "../../../config/colors"
 
 type SubTabId = "info" | "steps" | "report" | "notes"
 
@@ -58,7 +59,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
   const notesAppendixHtml = taskNotes.length > 0
     ? `<hr><h2>Notes</h2>` + taskNotes.map(n => {
         const visLabel = n.visibility === "shared" ? "Shared" : n.visibility === "agent" ? "Agent" : "Personal"
-        const colorCode = n.visibility === "shared" ? "#a855f7" : n.visibility === "agent" ? "#22d3ee" : "#eab308"
+        const colorCode = n.visibility === "shared" ? COLOR_PALETTE.noteShared : n.visibility === "agent" ? COLOR_PALETTE.noteAgent : COLOR_PALETTE.notePersonal
         let html = `<div style="margin:1em 0;padding:0.5em 0;border-bottom:1px solid #ddd">`
         html += `<strong style="color:${colorCode}">[${visLabel}]</strong> <em>"${n.selected_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}"</em>`
         if (n.comment) html += `<blockquote style="border-left:3px solid #ccc;margin:0.3em 0;padding-left:1em;color:#555">${n.comment.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</blockquote>`
