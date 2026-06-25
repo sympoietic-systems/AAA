@@ -113,6 +113,20 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
         "approved_by": task_data.get("approved_by"),
     }
     task_repo.create(new_task)
+
+    # create() only inserts core columns — update the rest
+    extra_fields = {}
+    for key in (
+        "budget_spent_usd", "branches_created", "assets_harvested",
+        "lateral_flights", "bifurcation_triggered", "result_summary",
+        "approved_by", "approved_at", "started_at", "completed_at",
+    ):
+        val = task_data.get(key)
+        if val is not None:
+            extra_fields[key] = val
+    if extra_fields:
+        task_repo.update(new_task_id, **extra_fields)
+
     stats["task"] = "inserted"
     logger.info("Imported research task: %s (new ID: %s)", old_task_id, new_task_id)
 
