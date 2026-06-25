@@ -5,8 +5,9 @@ import type { NoteInfo } from '../../api/client'
 function makeNote(overrides: Partial<NoteInfo> = {}): NoteInfo {
   return {
     id: 'n1',
+    asset_type: 'conversation_message',
+    asset_id: '1',
     conversation_id: 'c1',
-    message_id: 1,
     selected_text: 'hello',
     comment: 'world',
     visibility: 'personal',
@@ -22,32 +23,32 @@ describe('buildNotesMap', () => {
     expect(result.size).toBe(0)
   })
 
-  it('groups notes by message_id', () => {
+  it('groups notes by asset_id (message_id)', () => {
     const notes = [
-      makeNote({ id: 'n1', message_id: 1 }),
-      makeNote({ id: 'n2', message_id: 1 }),
-      makeNote({ id: 'n3', message_id: 2 }),
+      makeNote({ id: 'n1', asset_id: '1' }),
+      makeNote({ id: 'n2', asset_id: '1' }),
+      makeNote({ id: 'n3', asset_id: '2' }),
     ]
     const result = buildNotesMap(notes)
     expect(result.get(1)).toHaveLength(2)
     expect(result.get(2)).toHaveLength(1)
   })
 
-  it('skips notes with null message_id', () => {
+  it('skips notes from non-conversation assets', () => {
     const notes = [
-      makeNote({ id: 'n1', message_id: 1 }),
-      makeNote({ id: 'n2', message_id: undefined as any }),
+      makeNote({ id: 'n1', asset_id: '1' }),
+      makeNote({ id: 'n2', asset_type: 'research_task', asset_id: 'r1' }),
     ]
     const result = buildNotesMap(notes)
     expect(result.get(1)).toHaveLength(1)
     expect(result.size).toBe(1)
   })
 
-  it('returns correct notes for each message_id', () => {
+  it('returns correct notes for each asset_id', () => {
     const notes = [
-      makeNote({ id: 'a', message_id: 10, comment: 'first' }),
-      makeNote({ id: 'b', message_id: 10, comment: 'second' }),
-      makeNote({ id: 'c', message_id: 20, comment: 'third' }),
+      makeNote({ id: 'a', asset_id: '10', comment: 'first' }),
+      makeNote({ id: 'b', asset_id: '10', comment: 'second' }),
+      makeNote({ id: 'c', asset_id: '20', comment: 'third' }),
     ]
     const result = buildNotesMap(notes)
     expect(result.get(10)?.map((n) => n.comment)).toEqual(['first', 'second'])

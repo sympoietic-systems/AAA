@@ -1,5 +1,6 @@
 import logging
 import uuid
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +25,22 @@ class NoteService:
             )
 
     @staticmethod
-    def create(note_repo, conversation_id: str, message_id: int, selected_text: str,
-               comment: str = "", visibility: str = "personal", start_offset: int = None) -> dict:
+    def create(
+        note_repo,
+        asset_type: str,
+        asset_id: str,
+        conversation_id: Optional[str] = None,
+        selected_text: str = "",
+        comment: str = "",
+        visibility: str = "personal",
+        start_offset: Optional[int] = None,
+    ) -> dict:
         note_id = str(uuid.uuid4())
         return note_repo.create_note(
             id=note_id,
+            asset_type=asset_type,
+            asset_id=asset_id,
             conversation_id=conversation_id,
-            message_id=message_id,
             selected_text=selected_text,
             comment=comment,
             visibility=visibility,
@@ -46,7 +56,11 @@ class NoteService:
         return note_repo.get_notes_by_conversation(conversation_id)
 
     @staticmethod
-    def update(note_repo, note_id: str, comment: str = None, visibility: str = None) -> dict | None:
+    def list_by_asset(note_repo, asset_type: str, asset_id: str) -> list[dict]:
+        return note_repo.get_notes_by_asset(asset_type, asset_id)
+
+    @staticmethod
+    def update(note_repo, note_id: str, comment: Optional[str] = None, visibility: Optional[str] = None) -> dict | None:
         return note_repo.update_note(note_id, comment=comment, visibility=visibility)
 
     @staticmethod

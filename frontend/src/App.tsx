@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react"
 import { Routes, Route, Navigate, useNavigate, useSearchParams } from "react-router-dom"
 import { useChat } from "./hooks/useChat"
 import { useConversations } from "./hooks/useConversations"
-import { useNotes } from "./hooks/useNotes"
+import { useConversationNotes } from "./hooks/useNotes"
 import { dismissByMatch } from "./stores/notificationStore"
 import { NodeExplorer } from "./components/pages/nodeexplorer/NodeExplorer"
 import { SidePanel } from "./components/panels/sidepanel/SidePanel"
@@ -192,7 +192,14 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
     editNote,
     removeNote,
     refreshNotes,
-  } = useNotes(activeId || "")
+  } = useConversationNotes(activeId || "")
+
+  const handleNavigateNode = useCallback((noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    if (!note) return
+    const msgId = Number(note.asset_id)
+    if (!Number.isNaN(msgId)) navigateToMessage(msgId)
+  }, [notes, navigateToMessage])
 
   const handleAddNote = async (
     messageId: number,
@@ -635,7 +642,7 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
           width={rightPanelWidth}
           panelCollapsed={rightPanelCollapsed}
           onPanelToggle={() => setRightPanelCollapsed(p => !p)}
-          onNavigateNode={navigateToMessage}
+          onNavigateNode={handleNavigateNode}
         />
       </div>
       <UnifiedFooter />

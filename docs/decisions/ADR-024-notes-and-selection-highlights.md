@@ -1,7 +1,7 @@
 # ADR-024: Conversational Selection Highlights, Shared Entanglements, and Personal Notes
 
 **Date:** 2026-06-04  
-**Status:** accepted  
+**Status:** superseded by [ADR-052](./ADR-052-unified-polymorphic-notes.md) (2026-06-25)
 **Deciders:** Symbia, Antigravity, Interlocutor
 
 ## Context

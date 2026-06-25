@@ -1,26 +1,30 @@
 // ResearchDetailPanel — detail view for a selected research task.
-// Tabs: Info, Steps, Meta Log, Actions.
-// Fetches full task detail + meta log + steps on selection.
-// Follows FRONTEND_DESIGN_PRINCIPLES.md §6: tabbed content, inline metadata, bracket headers.
+// Tabs: Info, Steps, Meta Log, Notes, Actions.
+// Fetches full task detail + meta log + steps + notes on selection.
 
-import { memo, useState, useEffect } from "react"
+import { memo, useState, useEffect, useCallback } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
+import rehypeRaw from "rehype-raw"
 import type { ResearchTask, MetaLogResponse, TaskStepsResponse } from "../../../api/research"
-import { getResearchTask, getTaskMetaLog, getTaskSteps } from "../../../api/research"
+import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
+import { NotesSection } from "../../shared/NotesSection"
+import type { NoteInfo } from "../../../api/client"
+import { wrapSelectedTextInMarks } from "../../../utils/noteHighlight"
 import {
   STATUS_COLORS, STEP_LABELS as STEP_TYPE_LABELS, STEP_TYPE_COLORS,
   EVENT_TYPE_LABELS, EVENT_TYPE_COLORS,
 } from "./constants/taskConstants"
 
-type TabId = "info" | "steps" | "meta_log" | "actions"
+type TabId = "info" | "steps" | "meta_log" | "notes" | "actions"
 
 const TABS: { key: TabId; label: string }[] = [
   { key: "info",     label: "Info" },
   { key: "steps",    label: "Steps" },
   { key: "meta_log", label: "Meta Log" },
+  { key: "notes",    label: "Notes" },
   { key: "actions",  label: "Actions" },
 ]
 
@@ -31,8 +35,8 @@ interface Props {
   onCancel?: (id: string) => Promise<void>
 }
 
-/* ── Info Tab (§6: inline key:value via KeyValueGrid, bracket headers) ── */
-function InfoTab({ task }: { task: ResearchTask }) {
+/* ── Info Tab — metrics + highlighted result summary ── */
+function InfoTab({ task, notes }: { task: ResearchTask; notes: NoteInfo[] }) {
   const color = STATUS_COLORS[task.status] ?? "var(--color-ui-dim)"
   const progress = task.budget_limit_usd > 0
     ? Math.round((task.budget_spent_usd / task.budget_limit_usd) * 100)
@@ -75,7 +79,9 @@ function InfoTab({ task }: { task: ResearchTask }) {
         <div>
           <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-1">[ Result Summary ]</div>
           <div className="text-ui-primary text-[10px] leading-relaxed max-h-48 overflow-y-auto prose prose-invert prose-xs max-w-none font-sans">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{task.result_summary}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>
+              {wrapSelectedTextInMarks(task.result_summary, notes)}
+            </ReactMarkdown>
           </div>
         </div>
       )}
@@ -337,12 +343,52 @@ function ActionsTab({
   )
 }
 
-/* ── Shell: Tab bar + content (§6) ── */
+/* ── Notes Tab ── */
+function NotesTab({
+  taskId, onNavigate,
+}: {
+  taskId: string
+  onNavigate?: (noteId: string, targetTab: TabId) => void
+}) {
+  const [notes, setNotes] = useState<NoteInfo[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    import("../../../api/research")
+      .then(({ getTaskNotes }) => getTaskNotes(taskId))
+      .then((data) => { if (!cancelled) setNotes(data) })
+      .catch(() => { if (!cancelled) setNotes([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [taskId])
+
+  if (loading) {
+    return <div className="text-ui-dim animate-pulse text-xs font-mono mt-4">[ loading notes… ]</div>
+  }
+
+  return (
+    <NotesSection
+      notes={notes}
+      onNavigate={(noteId) => {
+        if (onNavigate) onNavigate(noteId, "info")
+      }}
+    />
+  )
+}
+
+/* ── Shell: Tab bar + content ── */
 export const ResearchDetailPanel = memo(function ResearchDetailPanel({
   task: initialTask, onApprove, onReject, onCancel,
 }: Props) {
   const [task, setTask] = useState<ResearchTask>(initialTask)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [notes, setNotes] = useState<NoteInfo[]>([])
+
+  const loadNotes = useCallback((tid: string) => {
+    getTaskNotes(tid).then(setNotes).catch(() => setNotes([]))
+  }, [])
 
   useEffect(() => {
     setTask(initialTask)
@@ -351,9 +397,19 @@ export const ResearchDetailPanel = memo(function ResearchDetailPanel({
       .then(full => setTask(full))
       .catch(() => {})
       .finally(() => setDetailLoading(false))
+    loadNotes(initialTask.id)
   }, [initialTask.id])
 
   const [tab, setTab] = useState<TabId>("info")
+
+  const handleNotesNavigate = (noteId: string, targetTab: TabId) => {
+    setTab(targetTab)
+    setTimeout(() => {
+      import("../../../utils/noteHighlight")
+        .then(({ scrollToNoteHighlight }) => scrollToNoteHighlight(noteId))
+        .catch(() => {})
+    }, 150)
+  }
 
   return (
     <div className="flex flex-col h-full min-h-0 px-2 font-mono">
@@ -375,9 +431,10 @@ export const ResearchDetailPanel = memo(function ResearchDetailPanel({
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto pr-1">
-        {tab === "info"     && <InfoTab task={task} />}
+        {tab === "info"     && <InfoTab task={task} notes={notes} />}
         {tab === "steps"    && <StepsTab taskId={task.id} />}
         {tab === "meta_log" && <MetaLogTab taskId={task.id} />}
+        {tab === "notes"    && <NotesTab taskId={task.id} onNavigate={handleNotesNavigate} />}
         {tab === "actions"  && <ActionsTab task={task} onApprove={onApprove} onReject={onReject} onCancel={onCancel} />}
       </div>
     </div>

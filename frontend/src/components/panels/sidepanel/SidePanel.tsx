@@ -42,7 +42,7 @@ export const SidePanel = memo(function SidePanel({
   width?: number
   panelCollapsed?: boolean
   onPanelToggle?: () => void
-  onNavigateNode?: (messageId: number) => void
+  onNavigateNode?: (noteId: string) => void
 }) {
   const [collapsed, setCollapsed] = useState(true)
   const isCollapsed = panelCollapsed !== undefined ? panelCollapsed : collapsed

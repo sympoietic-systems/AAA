@@ -176,13 +176,20 @@ class ResearchTaskManager:
         task = self.task_repo.get(task_id)
         if task is None:
             return
-        # Cancel active task first if running
         if task_id in self._active_tasks:
             try:
                 self._active_tasks[task_id].cancel()
             except Exception:
                 pass
             self._active_tasks.pop(task_id, None)
+
+        note_repo = getattr(self._app_state, "note_repo", None)
+        if note_repo:
+            try:
+                note_repo.delete_notes_by_asset("research_task", task_id)
+            except Exception:
+                pass
+
         self.task_repo.delete(task_id)
         logger.info("Research task %s deleted", task_id)
 

@@ -4,8 +4,7 @@ import type { NoteInfo } from "../../api/client"
 interface NotesSectionProps {
   notes: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
-  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
-  onNavigate?: (messageId: number) => void
+  onNavigate?: (noteId: string) => void
 }
 
 function NotesSectionComponent({
@@ -19,7 +18,7 @@ function NotesSectionComponent({
   const handleGoToNote = (e: React.MouseEvent, note: NoteInfo) => {
     e.stopPropagation()
     if (onNavigate) {
-      onNavigate(note.message_id)
+      onNavigate(note.id)
       return
     }
     setScrollFailed(null)

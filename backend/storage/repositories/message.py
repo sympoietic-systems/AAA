@@ -653,7 +653,7 @@ class MessageRepository(BaseRepository):
         # Clean up related records
         conn.execute("DELETE FROM conversation_metrics WHERE message_id = ?", (message_id,))
         conn.execute("DELETE FROM message_links WHERE source_id = ? OR target_id = ?", (message_id, message_id))
-        conn.execute("DELETE FROM conversation_notes WHERE message_id = ?", (message_id,))
+        conn.execute("DELETE FROM notes WHERE asset_type = 'conversation_message' AND asset_id = ?", (str(message_id),))
         conn.execute("DELETE FROM conversation_log WHERE id = ?", (message_id,))
         conn.commit()
 

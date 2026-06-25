@@ -87,7 +87,7 @@ export interface DaemonStatusResponse { enabled: boolean; running: boolean; idle
 export interface DreamEntry { id: number; conversation_id: string; action: string; response_msg_id: number | null; turns: number; timestamp: string; title: string; msg_count: number; last_snippet: string | null; trigger_reason?: string | null; source_conversation_id?: string | null }
 export interface DreamHistoryResponse { dreams: DreamEntry[]; count: number }
 
-export interface NoteInfo { id: string; conversation_id: string; message_id: number; selected_text: string; comment: string; visibility: "personal" | "shared" | "agent"; created_at: string; updated_at: string }
+export interface NoteInfo { id: string; asset_type: string; asset_id: string; conversation_id: string | null; selected_text: string; comment: string; visibility: "personal" | "shared" | "agent"; created_at: string; updated_at: string }
 
 export interface SedimentFileInfo { conversation_id: string; conversation_title: string; file_name: string; file_type: string; summary: string | null; token_count: number; chunk_count: number; created_at: string | null; updated_at: string | null; display_name?: string | null }
 export interface SedimentInjectionInfo { id: string; source_conversation_id: string; source_file_name: string; source_conversation_title: string; file_type: string; token_count: number; chunk_count: number; summary: string | null; injected_at: string | null; status?: string | null }

@@ -126,7 +126,9 @@ class ContextCollectorModule(ProcessingModule):
         notes_by_id = {n["id"]: n for n in notes}
         notes_by_msg_id = {}
         for n in notes:
-            notes_by_msg_id.setdefault(n["message_id"], []).append(n)
+            msg_id = n.get("asset_id", "")
+            if msg_id.isdigit():
+                notes_by_msg_id.setdefault(int(msg_id), []).append(n)
 
         # R5: Load compressed blocks for middle history if LLM compression enabled
         compressed_blocks: dict[int, str] = {}

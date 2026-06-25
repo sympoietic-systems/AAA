@@ -410,7 +410,7 @@ class ExportService:
         ]
         for n in notes:
             note_id = n.get("id", "unknown")
-            message_id = n.get("message_id", "?")
+            message_id = n.get("asset_id", n.get("message_id", "?"))
             visibility = n.get("visibility", "personal")
             selected_text = n.get("selected_text", "")
             comment = n.get("comment", "")
@@ -448,3 +448,149 @@ class ExportService:
             f"| Memory node count | {len(memory_nodes)} |",
         ]
         return "\n".join(lines)
+
+    # ── Research Export ──────────────────────────────────────────────
+
+    @staticmethod
+    def build_research_export(
+        task: dict,
+        branches: list[dict],
+        assets: list[dict],
+        steps: list[dict],
+        plan: dict | None,
+        results_by_step: dict,
+        notes: list[dict],
+    ) -> str:
+        parts: list[str] = []
+
+        parts.append("---")
+        parts.append(f'task_id: "{task["id"]}"')
+        parts.append(f'title: "{task.get("title", "")}"')
+        parts.append(f'status: "{task.get("status", "")}"')
+        parts.append(f'trigger_source: "{task.get("trigger_source", "")}"')
+        parts.append(f"max_depth: {task.get('max_depth', 0)}")
+        parts.append(f"max_breadth: {task.get('max_breadth', 0)}")
+        parts.append(f"assets_harvested: {task.get('assets_harvested', 0)}")
+        parts.append(f"branches_created: {task.get('branches_created', 0)}")
+        parts.append(f"note_count: {len(notes)}")
+        parts.append(f'export_format_version: "1.0"')
+        parts.append(f'exported_at: "{datetime.now(timezone.utc).isoformat()}"')
+        parts.append("---")
+        parts.append("")
+
+        title = task.get("title", "") or "Untitled Research Task"
+        parts.append(f"# Research Task: {title}\n")
+
+        parts.append("## METADATA\n")
+        parts.append("| Field | Value |")
+        parts.append("|---|---|")
+        parts.append(f"| Task ID | `{task['id']}` |")
+        parts.append(f"| Status | {task.get('status', '')} |")
+        parts.append(f"| Trigger | {task.get('trigger_source', '')} |")
+        parts.append(f"| Max Depth | {task.get('max_depth', '')} |")
+        parts.append(f"| Max Breadth | {task.get('max_breadth', '')} |")
+        parts.append(f"| Budget Spent | ${task.get('budget_spent_usd', 0):.4f} / ${task.get('budget_limit_usd', 0):.2f} |")
+        if task.get("started_at"):
+            parts.append(f"| Started | {task['started_at']} |")
+        if task.get("completed_at"):
+            parts.append(f"| Completed | {task['completed_at']} |")
+        parts.append("")
+
+        parts.append("## OBJECTIVE\n")
+        objective = task.get("objective", "")
+        if objective:
+            parts.append(objective.strip())
+        else:
+            parts.append("_No objective provided._")
+        parts.append("")
+
+        if task.get("proposal_rationale"):
+            parts.append("## PROPOSAL RATIONALE\n")
+            parts.append(task["proposal_rationale"].strip())
+            parts.append("")
+
+        if task.get("result_summary"):
+            parts.append("## RESULT SUMMARY\n")
+            parts.append(task["result_summary"].strip())
+            parts.append("")
+
+        if plan:
+            parts.append("## RESEARCH PLAN\n")
+            try:
+                import json
+                plan_json = json.loads(plan.get("plan_json", "{}"))
+                parts.append("```json")
+                parts.append(json.dumps(plan_json, indent=2))
+                parts.append("```")
+            except Exception:
+                parts.append(f"```\n{plan.get('plan_json', '')}\n```")
+            parts.append("")
+
+        parts.append(f"## BRANCHES ({len(branches)})\n")
+        if not branches:
+            parts.append("_No branches created._\n")
+        else:
+            for b in branches:
+                parts.append(f"### Branch `{b['id'][:12]}…`")
+                parts.append(f"- **Query:** {b.get('query', '—')}")
+                parts.append(f"- **Goal:** {b.get('goal', '—')}")
+                parts.append(f"- **Depth:** {b.get('depth', 0)} | **Breadth:** {b.get('breadth', 0)}")
+                parts.append(f"- **Status:** {b.get('status', 'unknown')}")
+                parts.append("")
+
+        parts.append(f"## SCRAPED ASSETS ({len(assets)})\n")
+        if not assets:
+            parts.append("_No assets harvested._\n")
+        else:
+            for a in assets:
+                parts.append(f"### Asset `{a['id'][:12]}…`")
+                parts.append(f"- **URL:** {a.get('url', '—')}")
+                parts.append(f"- **Relevance:** {a.get('relevance_score', 0):.3f} | **Novelty:** {a.get('novelty_score', 0):.3f}")
+                parts.append("")
+                raw = a.get("raw_markdown", "")
+                if raw:
+                    parts.append(raw[:5000])
+                    if len(raw) > 5000:
+                        parts.append(f"\n\n_…truncated ({len(raw) - 5000} more chars)_")
+                parts.append("")
+
+        parts.append(f"## ORCHESTRATOR STEPS ({len(steps)})\n")
+        if not steps:
+            parts.append("_No steps recorded (legacy engine or not started)._")
+        else:
+            for step in steps:
+                results = results_by_step.get(step["id"], [])
+                parts.append(f"### Step #{step.get('step_number', '?')} — {step.get('step_type', 'unknown')}")
+                parts.append(f"- **Status:** {step.get('status', 'unknown')}")
+                if step.get("result_summary"):
+                    parts.append(f"- **Summary:** {step['result_summary']}")
+                for r in results:
+                    parts.append(f"- **Result:** [{r.get('source_title') or r.get('source_url', '—')}]({r.get('source_url', '')})")
+                parts.append("")
+
+        parts.append(f"## NOTES ({len(notes)})\n")
+        if not notes:
+            parts.append("_No notes attached to this research task._\n")
+        else:
+            for n in notes:
+                parts.append(f"### Note `{n.get('id', 'unknown')}` — {n.get('asset_type', '')}:{n.get('asset_id', '')[:12]}")
+                parts.append(f"**Visibility:** {n.get('visibility', 'personal')}")
+                if n.get("selected_text"):
+                    parts.append(f"**Selected text:** \"{n['selected_text']}\"")
+                if n.get("comment"):
+                    parts.append("**Comment:**")
+                    for line in n["comment"].strip().split("\n"):
+                        parts.append(f"> {line}")
+                parts.append("")
+
+        parts.append("## EXPORT METADATA\n")
+        parts.append("| Field | Value |")
+        parts.append("|---|---|")
+        parts.append(f"| Exported at | {datetime.now(timezone.utc).isoformat()} |")
+        parts.append(f"| Format version | 1.0 |")
+        parts.append(f"| Branch count | {len(branches)} |")
+        parts.append(f"| Asset count | {len(assets)} |")
+        parts.append(f"| Step count | {len(steps)} |")
+        parts.append(f"| Note count | {len(notes)} |")
+
+        return "\n".join(parts)

@@ -504,3 +504,77 @@ async def get_task_steps(task_id: str, request: Request = None):
         "steps": steps,
         "results_by_step": results_by_step,
     }
+
+
+# ── Research Notes ─────────────────────────────────────────────────────
+
+@router.get("/research/tasks/{task_id}/notes")
+async def get_task_notes(task_id: str, request: Request = None):
+    state = request.app.state
+    note_repo = getattr(state, "note_repo", None)
+    if not note_repo:
+        raise HTTPException(status_code=503, detail="Note repository not available")
+
+    task = state.research_task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Research task not found")
+
+    from backend.services.note import NoteService
+    notes = NoteService.list_by_asset(note_repo, "research_task", task_id)
+    from backend.api.schemas import NoteResponse
+    return [NoteResponse(**n) for n in notes]
+
+
+# ── Research Export ────────────────────────────────────────────────────
+
+@router.get("/research/tasks/{task_id}/export")
+async def export_research_task(task_id: str, request: Request):
+    from fastapi.responses import PlainTextResponse
+
+    state = request.app.state
+    manager = state.research_task_manager
+    note_repo = getattr(state, "note_repo", None)
+    branch_repo = getattr(state, "research_branch_repo", None)
+    asset_repo = getattr(state, "scraped_asset_repo", None)
+    step_repo = getattr(state, "research_step_repo", None)
+    result_repo = getattr(state, "research_step_result_repo", None)
+    plan_repo = getattr(state, "research_plan_repo", None)
+
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Research task not found")
+
+    branches = branch_repo.get_by_task(task_id) if branch_repo else []
+    assets = asset_repo.get_by_task(task_id) if asset_repo else []
+    steps = step_repo.get_by_task(task_id) if step_repo else []
+    plan = plan_repo.get_by_task(task_id) if plan_repo else None
+    notes = note_repo.get_notes_by_task(task_id) if note_repo else []
+
+    all_results = result_repo.get_by_task(task_id) if result_repo else []
+    results_by_step: dict = {}
+    for r in all_results:
+        sid = r.get("step_id", "")
+        if sid not in results_by_step:
+            results_by_step[sid] = []
+        results_by_step[sid].append(r)
+
+    from backend.services.export import ExportService
+
+    markdown = ExportService.build_research_export(
+        task=task,
+        branches=branches,
+        assets=assets,
+        steps=steps,
+        plan=plan,
+        results_by_step=results_by_step,
+        notes=notes,
+    )
+
+    safe_title = (task.get("title") or "research").strip().replace(" ", "_").replace("/", "_")[:80]
+    filename = f"research_{safe_title}_{task_id[:8]}.md"
+
+    return PlainTextResponse(
+        content=markdown,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

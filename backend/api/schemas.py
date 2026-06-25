@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -344,17 +344,21 @@ class ConversationFilesResponse(BaseModel):
 
 
 class NoteCreateRequest(BaseModel):
-    message_id: int
+    asset_type: Literal["conversation_message", "research_task"] = "conversation_message"
+    asset_id: str = ""
+    conversation_id: Optional[str] = None
     selected_text: str
     comment: str = ""
-    visibility: str = "personal"
+    visibility: Literal["personal", "shared", "agent"] = "personal"
     start_offset: Optional[int] = None
+    message_id: Optional[int] = None
 
 
 class NoteResponse(BaseModel):
     id: str
-    conversation_id: str
-    message_id: int
+    asset_type: str
+    asset_id: str
+    conversation_id: Optional[str] = None
     selected_text: str
     comment: str
     visibility: str
@@ -364,7 +368,7 @@ class NoteResponse(BaseModel):
 
 class NoteUpdateRequest(BaseModel):
     comment: Optional[str] = None
-    visibility: Optional[str] = None
+    visibility: Optional[Literal["personal", "shared", "agent"]] = None
 
 
 class SedimentFileInfo(BaseModel):

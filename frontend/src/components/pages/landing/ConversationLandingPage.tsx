@@ -461,7 +461,10 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                     ) : (
                       <NotesSection
                         notes={notes || []}
-                        onNavigate={(_messageId) => window.open(`/nodes?c=${displayConv.id}&m=${_messageId}`, '_blank')}
+                        onNavigate={(noteId) => {
+                          const note = (notes || []).find(n => n.id === noteId)
+                          if (note) window.open(`/nodes?c=${displayConv.id}&m=${note.asset_id}`, '_blank')
+                        }}
                         onDeleteNote={(noteId) => {
                           deleteNote(displayConv.id, noteId).then(() => {
                             setNotes(prev => (prev || []).filter(n => n.id !== noteId))

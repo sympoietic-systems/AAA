@@ -53,8 +53,9 @@ def process_self_annotations(
         if not existing:
             note_repo.create_self_note(
                 id=nid,
+                asset_type="conversation_message",
+                asset_id=str(message_id),
                 conversation_id=conversation_id,
-                message_id=message_id,
                 selected_text=text.strip(),
                 comment=comment,
                 visibility="agent",
@@ -97,8 +98,9 @@ def process_self_annotations(
 
         note_repo.create_self_note(
             id=note_id,
+            asset_type="conversation_message",
+            asset_id=str(message_id),
             conversation_id=conversation_id,
-            message_id=message_id,
             selected_text=text.strip(),
             comment=comment,
             visibility=visibility,

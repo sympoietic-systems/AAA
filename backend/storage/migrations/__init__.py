@@ -84,6 +84,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m038_rerun_version,
         m039_orchestrator_state,
         m040_dream_log_trigger_metadata,
+        m041_unified_notes,
     )
 
     runner = MigrationRunner(conn)
@@ -130,3 +131,4 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("038_rerun_version", m038_rerun_version.up)
     runner.run("039_orchestrator_state", m039_orchestrator_state.up)
     runner.run("040_dream_log_trigger_metadata", m040_dream_log_trigger_metadata.up)
+    runner.run("041_unified_notes", m041_unified_notes.up)
