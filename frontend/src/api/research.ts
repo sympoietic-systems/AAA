@@ -47,6 +47,39 @@ export interface DispatchPayload {
   max_breadth?: number
   is_agonistic?: boolean
   budget_limit_usd?: number
+  previous_context?: string
+  continue_from_task_id?: string
+  additional_cycles?: number
+  inject_file_id?: string
+  document_mode?: string
+  document_chunk_limit?: number
+}
+
+export interface ContinuePayload {
+  source_task_id: string
+  adjusted_objective?: string
+  title?: string
+  additional_cycles?: number
+  inject_file_id?: string
+  document_mode?: string
+  document_chunk_limit?: number
+  budget_limit_usd?: number
+  max_breadth?: number
+  is_agonistic?: boolean
+}
+
+export interface IndexedFile {
+  file_name: string
+  file_type: string
+  status: string
+  summary?: string
+  token_count: number
+  chunk_count: number
+}
+
+export interface FilesListResponse {
+  files: IndexedFile[]
+  count: number
 }
 
 // ── Queries ──────────────────────────────────────────────────────────
@@ -88,6 +121,26 @@ export async function dispatchResearch(payload: DispatchPayload): Promise<{ task
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error(`Research dispatch failed: ${res.status}`)
+  return res.json()
+}
+
+export async function continueResearch(payload: ContinuePayload): Promise<{ task_id: string; status: string; continued_from: string; max_depth: number }> {
+  const res = await fetch(`${BASE}/research/continue`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`Research continue failed: ${res.status}`)
+  return res.json()
+}
+
+export async function listIndexedFiles(conversationId?: string): Promise<FilesListResponse> {
+  const params = new URLSearchParams()
+  if (conversationId) params.set("conversation_id", conversationId)
+  const qs = params.toString()
+  const url = qs ? `${BASE}/research/files?${qs}` : `${BASE}/research/files`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Files list failed: ${res.status}`)
   return res.json()
 }
 

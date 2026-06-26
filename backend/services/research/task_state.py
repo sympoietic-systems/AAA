@@ -10,13 +10,25 @@ _ORCH_STATE_KEYS = {
     "phase", "objective", "max_depth", "budget", "plan_id", "plan",
     "all_findings", "sources_analyzed", "stagnation_counter",
     "step_number", "last_reflection", "current_depth", "query_index",
-    "search_results_cache", "digest_results_cache",
-    "digest_signals",
+    "search_results_cache", "parsed_sources_cache",
+    "digest_results_cache", "digest_signals",
     "should_stop", "stop_reason",
+    "inject_file_id", "document_mode", "document_chunk_limit",
+    "document_digested", "document_learnings",
+    "previous_context", "continue_from_task_id",
 }
 
 
 def make_initial_state(task: dict) -> dict:
+    import json as _json
+    extra = {}
+    orch_state_raw = task.get("orchestrator_state")
+    if orch_state_raw:
+        try:
+            extra = _json.loads(orch_state_raw) if isinstance(orch_state_raw, str) else orch_state_raw
+        except Exception:
+            pass
+
     return {
         "phase": "planning",
         "objective": task["objective"],
@@ -34,8 +46,16 @@ def make_initial_state(task: dict) -> dict:
         "search_results_cache": [],
         "parsed_sources_cache": [],
         "digest_results_cache": [],
+        "digest_signals": extra.get("digest_signals", {}),
         "should_stop": False,
         "stop_reason": "",
+        "inject_file_id": task.get("inject_file_id") or extra.get("inject_file_id"),
+        "document_mode": task.get("document_mode") or extra.get("document_mode", "chunks"),
+        "document_chunk_limit": task.get("document_chunk_limit") or extra.get("document_chunk_limit", 5),
+        "document_digested": extra.get("document_digested", False),
+        "document_learnings": extra.get("document_learnings", []),
+        "previous_context": extra.get("previous_context"),
+        "continue_from_task_id": extra.get("continue_from_task_id"),
     }
 
 
@@ -70,6 +90,11 @@ class TaskStateManager:
             loaded["objective"] = task["objective"]
             loaded["max_depth"] = task["max_depth"]
             loaded["budget"] = task["budget_limit_usd"]
+            for key, default in [("digest_signals", {}), ("inject_file_id", None),
+                                  ("document_mode", "chunks"), ("document_chunk_limit", 5),
+                                  ("document_digested", False), ("document_learnings", [])]:
+                if key not in loaded:
+                    loaded[key] = default
             self._states[task_id] = loaded
             logger.info("Resumed task %s from orchestrator_state at phase '%s' (step %d)",
                          task_id[:8], loaded.get("phase"), loaded.get("step_number", 0))
@@ -92,7 +117,7 @@ class TaskStateManager:
             "plan": "searching", "search": "parsing",
             "parallel_parse": "digesting", "digest": "reflecting",
             "reflect": "evaluating", "evaluate": "synthesizing",
-            "synthesize": "complete",
+            "synthesize": "complete", "document_digestion": "searching",
         }
         phase = phase_after.get(last_type, "planning") if last_type else "planning"
         state = {
@@ -103,7 +128,12 @@ class TaskStateManager:
             "stagnation_counter": 0, "step_number": step_number,
             "last_reflection": {}, "current_depth": 0, "query_index": 0,
             "search_results_cache": [], "parsed_sources_cache": [],
-            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
+            "digest_results_cache": [], "digest_signals": {},
+            "should_stop": False, "stop_reason": "",
+            "inject_file_id": task.get("inject_file_id"),
+            "document_mode": task.get("document_mode", "chunks"),
+            "document_chunk_limit": task.get("document_chunk_limit", 5),
+            "document_digested": False, "document_learnings": [],
         }
         self._states[task_id] = state
         logger.info("Resumed task %s from DB reconstruction at phase '%s' (step %d)",
@@ -161,8 +191,13 @@ class TaskStateManager:
             for key in ("all_findings", "search_results_cache", "parsed_sources_cache", "digest_results_cache"):
                 if key not in state:
                     state[key] = []
-            if "last_reflection" not in state:
-                state["last_reflection"] = {}
+            for key in ("last_reflection", "digest_signals"):
+                if key not in state:
+                    state[key] = {}
+            for key_def in [("document_digested", False), ("document_learnings", []),
+                            ("document_mode", "chunks"), ("document_chunk_limit", 5)]:
+                if key_def[0] not in state:
+                    state[key_def[0]] = key_def[1]
             return state
         except Exception:
             logger.warning("Failed to load orchestrator state for %s", task_id[:8], exc_info=True)

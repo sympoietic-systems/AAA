@@ -13,6 +13,7 @@ import { KeyValueGrid, TerminalButton } from "../../UI"
 import { NotesSection } from "../../shared/NotesSection"
 import type { NoteInfo } from "../../../api/client"
 import { wrapSelectedTextInMarks } from "../../../utils/noteHighlight"
+import { ContinueResearchModal } from "./ContinueResearchModal"
 import {
   STATUS_COLORS, STEP_LABELS as STEP_TYPE_LABELS, STEP_TYPE_COLORS,
   EVENT_TYPE_LABELS, EVENT_TYPE_COLORS,
@@ -284,8 +285,9 @@ function ActionsTab({
   onReject?: (id: string) => Promise<void>
   onCancel?: (id: string) => Promise<void>
 }) {
+  const [showContinue, setShowContinue] = useState(false)
   const retry = () => window.dispatchEvent(new CustomEvent("research-retry", { detail: task }))
-  const continueResearch = () => window.dispatchEvent(new CustomEvent("research-continue", { detail: task }))
+  const continueResearch = () => setShowContinue(true)
 
   return (
     <div className="space-y-3 font-mono">
@@ -330,6 +332,9 @@ function ActionsTab({
           )}
         </div>
       </div>
+      {showContinue && (
+        <ContinueResearchModal task={task} onClose={() => setShowContinue(false)} />
+      )}
       <div>
         <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-1">[ Timeline ]</div>
         <KeyValueGrid items={[

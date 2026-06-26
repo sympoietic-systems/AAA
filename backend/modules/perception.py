@@ -203,7 +203,7 @@ class PerceptionModule(ProcessingModule):
         return processed
 
     async def _retrieve_relevant_chunks(
-        self, query: str, conversation_id: str
+        self, query: str, conversation_id: str, filter_file_id: Optional[str] = None
     ) -> tuple[list[dict], int]:
         if not query or not conversation_id:
             return [], 0
@@ -300,12 +300,21 @@ class PerceptionModule(ProcessingModule):
 
         scored.sort(key=lambda x: x[0], reverse=True)
 
+        if filter_file_id:
+            filtered_ids: set = set()
+            for file_info in files:
+                if file_info.get("file_name") == filter_file_id:
+                    filtered_ids = {c.id for c in self._repo.get_by_file(conversation_id, filter_file_id)}
+                    break
+            if filtered_ids:
+                scored = [(s, cid) for s, cid in scored if cid in filtered_ids]
+
         top_sims = [s for s, _ in scored[:self._top_k_chunks]]
         logger.info("Retrieval: top-%d similarities (threshold=%s): %s",
                    len(top_sims), self._similarity_threshold, [f"{s:.3f}" for s in top_sims])
 
         cross_conv_matches: list[tuple[float, int]] = []
-        if len(scored) < self._top_k_chunks:
+        if len(scored) < self._top_k_chunks and not filter_file_id:
             try:
                 cross_embeddings = self._repo.get_all_chunk_embeddings_except(
                     exclude_conversation_id=conversation_id, limit=500

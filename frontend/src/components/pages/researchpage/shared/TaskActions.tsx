@@ -1,10 +1,12 @@
-import { memo } from "react"
+import { memo, useState } from "react"
 import {
   approveProposal, rejectProposal, cancelTask, retryTask, deleteTask,
   rerunTask, executeStep,
 } from "../../../../api/research"
 import { TerminalButton } from "../../../UI"
 import { doActionAndReload } from "./taskHelpers"
+import { ContinueResearchModal } from "../ContinueResearchModal"
+import type { ResearchTask } from "../../../../api/research"
 
 interface TaskActionsProps {
   taskId: string
@@ -16,13 +18,15 @@ interface TaskActionsProps {
   isAgonistic: boolean
   budgetLimitUsd: number
   onRefreshTask?: () => void
+  task?: ResearchTask
 }
 
 export const TaskActions = memo(function TaskActions({
   taskId, taskStatus, taskObjective, taskTitle,
   maxDepth, maxBreadth, isAgonistic, budgetLimitUsd,
-  onRefreshTask,
+  onRefreshTask, task,
 }: TaskActionsProps) {
+  const [showContinue, setShowContinue] = useState(false)
   const navigateHome = () => { window.location.href = "/research" }
 
   const doDelete = async () => {
@@ -37,13 +41,7 @@ export const TaskActions = memo(function TaskActions({
   }
 
   const doContinue = async () => {
-    const { dispatchResearch } = await import("../../../../api/research")
-    await dispatchResearch({
-      objective: taskObjective, title: taskTitle,
-      max_depth: (maxDepth || 2) + 1, max_breadth: maxBreadth || 2,
-      is_agonistic: !!isAgonistic, budget_limit_usd: budgetLimitUsd || 0.50,
-    })
-    navigateHome()
+    setShowContinue(true)
   }
 
   return (
@@ -94,6 +92,9 @@ export const TaskActions = memo(function TaskActions({
       )}
       {taskStatus === "rejected" && (
         <TerminalButton onClick={doDelete} intent="delete">✕ delete</TerminalButton>
+      )}
+      {showContinue && task && (
+        <ContinueResearchModal task={task} onClose={() => setShowContinue(false)} />
       )}
     </div>
   )

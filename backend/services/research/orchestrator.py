@@ -48,6 +48,7 @@ logger = logging.getLogger("aaa.research_orchestrator")
 
 PHASE_ORDER = [
     "planning",
+    "document_digestion",
     "searching",
     "parsing",
     "digesting",
@@ -886,6 +887,12 @@ class SomaticResearchOrchestrator:
             try:
                     if phase == "planning":
                         result.update(await ResearchPhases.step_plan(self, task_id, s))
+                    elif phase == "document_digestion":
+                        if s.get("inject_file_id") and not s.get("document_digested"):
+                            result.update(await ResearchPhases.step_document_digestion(self, task_id, s))
+                        else:
+                            s["phase"] = "searching"
+                            result["message"] = "no document to digest, skipping"
                     elif phase == "searching":
                         result.update(await ResearchPhases.step_search(self, task_id, s))
                     elif phase == "parsing":

@@ -3,8 +3,8 @@
 > **Status:** Implementation Active — Core Engine ✅ | Orchestrator ✅  
 > **Branch:** `feature/autonomous-research-engine`  
 > **Contributors:** Vector (Systems Architecture), Symbia (Philosophical Critique & Ontological Reconciliation)  
-> **Last Updated:** 2026-06-17  
-> **References:** [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md), ADR-001 through ADR-049  
+> **Last Updated:** 2026-06-26
+> **References:** [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md), ADR-001 through ADR-053
 > **User Guide:** [RESEARCH_MANUAL_MODE.md](../guides/RESEARCH_MANUAL_MODE.md) — step-by-step workflow
 
 ---
@@ -1718,6 +1718,16 @@ SomaticResearchOrchestrator.execute(task_id)
 │   }
 │   DB: INSERT research_plans
 │
+├─ Phase 1b — DOCUMENT DIGESTION [optional, if inject_file_id set]
+│   │   PerceptionModule._retrieve_relevant_chunks(objective, filter_file_id)
+│   │     → top-N cosine-similarity chunks from injected document
+│   │   Two modes: "full" (all chunks) or "chunks" (top-N, default 5)
+│   │   LLM: _analyze_source(document chunks, objective) →
+│   │     {learnings, followups, gaps}
+│   │   learnings → appended to all_findings
+│   │   followups + gaps → merged into digest_signals
+│   │   DB: INSERT research_steps (type=document_digestion)
+│   │
 ├─ Phase 2 — LOOP (until EVALUATE says STOP) ──────────────
 │   │
 │   ├─ SEARCH
@@ -3717,14 +3727,14 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | Direct URL fetching (followups starting with http) | ✅ | — | Bypasses DDG search |
 | `research_plans`, `research_steps`, `research_step_results` tables | ✅ | m034 | Orchestrator schema |
 | `ResearchPlanRepository`, `ResearchStepRepository`, `ResearchStepResultRepository` | ✅ | m034 | Orchestrator repos |
-| `SomaticResearchOrchestrator` class (multi-phase pipeline) | ✅ | — | PLANNING→SEARCHING→PARSING→DIGESTING→REFLECTING→EVALUATING |
+| `SomaticResearchOrchestrator` class (multi-phase pipeline) | ✅ | — | PLANNING→DOCUMENT_DIGESTION→SEARCHING→PARSING→DIGESTING→REFLECTING→EVALUATING |
 | Orchestrator tools (`_tool_web_search`, `_tool_web_fetch`, `_tool_web_crawl`, `_tool_reflect`, `_tool_download`, `_tool_evaluate`) | ✅ | — | 6 sensory affordance tools |
 | Config toggle (engine vs orchestrator) in `config.yaml` | ✅ | — | `research_orchestrator` section |
 | **Frontend** — ResearchPage (two-panel: list + detail/tabs) | ✅ | — | List + TaskCard preview |
 | **Frontend** — ResearchTaskPage (task detail, routed) | ✅ | — | Info · Steps · Report tabs, terminal aesthetic |
 | **Frontend** — `useResearch` hook + `researchStore` pub-sub | ✅ | — | Polling + subscriber-driven |
 | **Frontend** — NewResearchForm, TaskCard (consolidated) | ✅ | — | Terminal aesthetic |
-| **Frontend** — Retry + Continue Deeper buttons | ✅ | — | For completed/cancelled/failed |
+| **Frontend** — Retry + Continue Deeper buttons | ✅ | — | For completed/cancelled/failed; continue now uses modal with adjustable objective, cycles, document injection |
 | **Frontend** — Report tab (full-height markdown + export) | ✅ | — | Copy markdown, export .md, export PDF (print); filename from report heading |
 | **Frontend** — Step pipeline + per-step detail | ✅ | — | StepPipeline, StepDbDetail, StepPreviewPanel, StepResultTab |
 | **Frontend** — Consolidation preview (sources/findings/reflection) | ✅ | — | Structured synthesis preview in StepPreviewPanel |
@@ -3774,6 +3784,13 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | Cycle-scoped context + step filtering | — | Cycle-depth aware digestion lookup + UI step detail filtering (m040) |
 | Preview prompt caching + reuse | — | Cached persona/system prompt reused during step execution |
 | **Rerun/stale cascade architecture** | m038 | In-place update, cascade invalidation, stale UI (see §5.8.8) |
+| **Document digestion phase** (ADR-053) | — | New `document_digestion` phase after planning; two modes (full/chunks); inject indexed documents into research pipeline |
+| **Document injection in new research** | — | `NewResearchForm` document dropdown with mode selector; injects document before first search cycle |
+| **Continue with memory** (`POST /research/continue`) | — | Continuation inherits source task's synthesis as `previous_context`; planner uses `user_with_context` template |
+| **ContinueResearchModal** (frontend) | — | Editable objective, cycle count, document injection, budget; replaces blind fork in TaskActions and ResearchDetailPanel |
+| **`GET /research/files` endpoint** | — | Lists indexed `perception_files` for document injection dropdown |
+| **Planner continuation prompt** | — | Updated `user_with_context` to treat prior context as interrogatable partial view, not ground truth |
+| **Per-file filtered perception retrieval** | — | `filter_file_id` param on `_retrieve_relevant_chunks` for scoped document chunk retrieval |
 
 ### 🔲 Planned — Phase 7: Post-Orchestrator Polish
 

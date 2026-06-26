@@ -1,16 +1,18 @@
 // NewResearchForm — create and dispatch a research task.
 // Terminal aesthetic, uses shared UI components.
 
-import React, { memo, useState } from "react"
-import type { DispatchPayload } from "../../../api/research"
+import React, { memo, useState, useEffect } from "react"
+import type { DispatchPayload, IndexedFile } from "../../../api/research"
+import { listIndexedFiles } from "../../../api/research"
 import { TerminalInput, TerminalButton, TerminalHeader } from "../../UI"
 
 interface Props {
   onDispatch: (payload: DispatchPayload) => Promise<string | null>
   onClose: () => void
+  conversationId?: string
 }
 
-export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClose }: Props) {
+export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClose, conversationId }: Props) {
   const [objective, setObjective] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
@@ -57,6 +59,16 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
     return 0.50
   })
   const [sending, setSending] = useState(false)
+  const [files, setFiles] = useState<IndexedFile[]>([])
+  const [selectedFile, setSelectedFile] = useState("")
+  const [docMode, setDocMode] = useState<"full" | "chunks">("chunks")
+  const [chunkLimit, setChunkLimit] = useState(5)
+
+  useEffect(() => {
+    if (conversationId) {
+      listIndexedFiles(conversationId).then(r => setFiles(r.files)).catch(() => {})
+    }
+  }, [conversationId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,11 +80,16 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
       max_breadth: breadth,
       is_agonistic: agonistic,
       budget_limit_usd: budget,
+      inject_file_id: selectedFile || undefined,
+      document_mode: selectedFile ? docMode : undefined,
+      document_chunk_limit: selectedFile ? chunkLimit : undefined,
     })
     setSending(false)
     setObjective("")
     onClose()
   }
+
+  const selectedFileInfo = files.find(f => f.file_name === selectedFile)
 
   return (
     <form onSubmit={handleSubmit} className="mb-4">
@@ -138,6 +155,58 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
               className="w-16 bg-transparent border-b border-[#222]/40 text-[#94a3b8] outline-none"
             />
           </label>
+        </div>
+      )}
+
+      {/* Document injector */}
+      {files.length > 0 && (
+        <div className="mb-2 text-[10px] text-[#555]">
+          <div className="flex items-center gap-2 mb-1">
+            <span>document:</span>
+            <select
+              value={selectedFile}
+              onChange={e => setSelectedFile(e.target.value)}
+              className="bg-transparent border-b border-[#222]/40 text-[#94a3b8] outline-none flex-1"
+            >
+              <option value="">— none —</option>
+              {files.map(f => (
+                <option key={f.file_name} value={f.file_name}>
+                  {f.file_name} ({f.file_type})
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedFile && (
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+              <label className="flex items-center gap-1 text-[#666]">
+                <select
+                  value={docMode}
+                  onChange={e => setDocMode(e.target.value as "full" | "chunks")}
+                  className="bg-transparent border-b border-[#222]/40 text-[#777] outline-none"
+                >
+                  <option value="chunks">top chunks</option>
+                  <option value="full">full analysis</option>
+                </select>
+              </label>
+              {docMode === "chunks" && (
+                <label className="flex items-center gap-1 text-[#666]">
+                  n=
+                  <select
+                    value={chunkLimit}
+                    onChange={e => setChunkLimit(Number(e.target.value))}
+                    className="bg-transparent border-b border-[#222]/40 text-[#777] outline-none w-10"
+                  >
+                    {[3,5,8,10,15].map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
+          {selectedFileInfo?.summary && (
+            <div className="text-[#444] mt-1 text-[9px] leading-relaxed max-h-14 overflow-y-auto">
+              {selectedFileInfo.summary.slice(0, 200)}{(selectedFileInfo.summary.length > 200) ? "…" : ""}
+            </div>
+          )}
         </div>
       )}
 

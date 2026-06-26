@@ -29,7 +29,15 @@ class ResearchPhases:
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
 
-        plan = await _phase_plan(orch, task_id, s["objective"], s["max_depth"], s["budget"], step_id=step_id)
+        previous_context = s.get("previous_context", "") or ""
+
+        if s.get("inject_file_id") and previous_context:
+            previous_context = ("[Injected document will be digested against the objective "
+                               "in the next phase.]\n\n" + previous_context)
+
+        plan = await _phase_plan(orch, task_id, s["objective"], s["max_depth"],
+                                  s["budget"], previous_context=previous_context,
+                                  step_id=step_id)
         s["plan"] = plan
         s["plan_id"] = plan["id"]
 
@@ -45,7 +53,11 @@ class ResearchPhases:
         except Exception:
             pass
         orch._log_meta(task_id, "orchestrator_plan", {"plan": plan}, step_id=step_id)
-        s["phase"] = "searching"
+
+        if s.get("inject_file_id") and not s.get("document_digested"):
+            s["phase"] = "document_digestion"
+        else:
+            s["phase"] = "searching"
         return {"plan": plan, "plan_id": plan["id"], "step_id": step_id}
 
     @staticmethod
@@ -379,6 +391,162 @@ class ResearchPhases:
         return {"result_summary": result_summary,
                 "branches_created": s["step_number"],
                 "assets_harvested": s["sources_analyzed"]}
+
+    @staticmethod
+    async def step_document_digestion(orch, task_id: str, s: dict) -> dict:
+        logger.info("Step: DOCUMENT_DIGESTION — %s", ResearchPhases._lc(orch, task_id, "document_digestion"))
+        s["document_digested"] = True
+        inject_file_id = s.get("inject_file_id")
+        if not inject_file_id:
+            return {"message": "no document to digest", "step_id": None}
+
+        s["step_number"] += 1
+        step_id = str(uuid.uuid4())
+
+        conversation_id = None
+        task_row = orch.task_repo.get(task_id)
+        if task_row:
+            conversation_id = task_row.get("conversation_id")
+
+        doc_mode = s.get("document_mode", "chunks")
+        chunk_limit = s.get("document_chunk_limit", 5)
+        if doc_mode == "full":
+            chunk_limit = 50
+
+        perception = getattr(orch._state, "perception_module", None)
+        doc_summary = ""
+        doc_chunks: list[str] = []
+        if perception and conversation_id:
+            try:
+                chunk_entries, _ = await perception._retrieve_relevant_chunks(
+                    s["objective"], conversation_id,
+                    filter_file_id=inject_file_id,
+                )
+                for entry in chunk_entries:
+                    content = entry.get("content", "")
+                    if content.startswith("[File Manifest"):
+                        doc_summary = content
+                    elif content.startswith("[") and "sim=" in content[:120]:
+                        doc_chunks.append(content)
+                    elif content.startswith("[Cross-Conversation"):
+                        doc_chunks.append(content)
+
+                if doc_mode == "chunks":
+                    doc_chunks = doc_chunks[:chunk_limit]
+
+            except Exception as e:
+                logger.warning("Document chunk retrieval failed: %s", e)
+
+        if not doc_chunks:
+            orch.step_repo.create({
+                "id": step_id, "task_id": task_id,
+                "plan_id": s.get("plan_id", ""),
+                "step_number": s["step_number"], "step_type": "document_digestion",
+                "status": "completed", "started_at": now_utc_str(),
+                "result_summary": "No relevant document chunks found for digestion",
+            })
+            s["phase"] = "searching"
+            return {"step_id": step_id, "learnings": 0, "message": "no relevant chunks"}
+
+        combined_content = "\n\n---\n\n".join(doc_chunks[:chunk_limit])
+        combined_content = combined_content[:orch._TRUNC_LLM_CONTENT * 2]
+
+        llm = getattr(orch._state, "llm_provider", None)
+        learnings: list[str] = []
+        followups: list[str] = []
+        gaps: list[str] = []
+
+        if llm:
+            prompt_data = get_prompts_dict("research/node_analyzer.yaml")
+            system_text = prompt_data.get("system", "")
+            goal = s["plan"].get("goal", s["objective"]) if s.get("plan") else s["objective"]
+            user_text = prompt_data.get("user", "").format(
+                query=s["objective"],
+                goal=goal,
+                depth=0,
+                max_depth=s["max_depth"],
+                parent_findings="(injected document analysis)",
+                scraped_content=combined_content,
+            )
+            if prompt_data.get("anti_mastery"):
+                system_text = apply_anti_mastery_filter(system_text)
+                user_text = apply_anti_mastery_filter(user_text)
+
+            try:
+                from backend.services.research.context_builder import ResearchContextBuilder
+                builder = ResearchContextBuilder(orch._state)
+                persona = await builder.build_node_context(
+                    node_query=s["objective"], node_goal=goal, depth=0)
+                if persona:
+                    system_text = persona + "\n\n" + system_text
+            except Exception:
+                pass
+
+            orch._log_meta(task_id, "orchestrator_document_digest_prompt", {
+                "file_id": inject_file_id, "mode": doc_mode,
+                "chunks": len(doc_chunks), "system_prompt": system_text[:8000],
+                "user_prompt": user_text[:8000],
+            }, step_id=step_id)
+
+            fallback = {"learnings": [], "gaps": [], "followups": [], "direct_urls": [], "diffractive_notes": []}
+            try:
+                from backend.modules.llm_client import generate_unified
+                resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
+                    expect_json=True, fallback_value=fallback,
+                    temperature=prompt_data.get("temperature", 0.3),
+                    max_tokens=prompt_data.get("max_tokens", 2048))
+                result = resp.get("json_data") or resp.get("content") or {}
+                if isinstance(result, str):
+                    result = json.loads(result)
+                if isinstance(result, dict):
+                    learnings = result.get("learnings", [])
+                    followups = result.get("followups", [])
+                    gaps = result.get("gaps", [])
+                orch._log_llm_response(task_id, "orchestrator_document_digest_response", resp, extra={
+                    "file_id": inject_file_id, "learnings_count": len(learnings),
+                }, step_id=step_id)
+            except Exception as e:
+                logger.error("Document digestion failed: %s", e)
+                orch._log_meta(task_id, "orchestrator_document_digest_error",
+                              {"file_id": inject_file_id, "error": str(e)}, step_id=step_id)
+
+        s["all_findings"].extend(learnings)
+        s["document_learnings"] = learnings
+
+        existing_signals = s.get("digest_signals") or {}
+        existing_followups = existing_signals.get("followups", [])
+        existing_gaps = existing_signals.get("gaps", [])
+        s["digest_signals"] = {
+            "followups": existing_followups + followups,
+            "direct_urls": existing_signals.get("direct_urls", []),
+            "gaps": existing_gaps + gaps,
+        }
+
+        orch.step_repo.create({
+            "id": step_id, "task_id": task_id,
+            "plan_id": s.get("plan_id", ""),
+            "step_number": s["step_number"], "step_type": "document_digestion",
+            "status": "completed", "started_at": now_utc_str(),
+            "result_summary": f"{len(learnings)} learnings, {len(followups)} followups from document {inject_file_id}",
+        })
+        try:
+            orch.step_repo.update(step_id, step_data=json.dumps(
+                {"learnings": learnings, "followups": followups, "gaps": gaps,
+                 "file_id": inject_file_id, "mode": doc_mode},
+                default=str, ensure_ascii=False))
+        except Exception:
+            pass
+
+        orch._log_meta(task_id, "orchestrator_document_digest_complete", {
+            "file_id": inject_file_id, "learnings": len(learnings),
+            "followups": len(followups), "gaps": len(gaps),
+        }, step_id=step_id)
+
+        s["phase"] = "searching"
+        return {
+            "step_id": step_id, "learnings": len(learnings),
+            "followups": len(followups), "gaps": len(gaps),
+        }
 
     @staticmethod
     def _lc(orch, task_id: str, phase: str) -> str:

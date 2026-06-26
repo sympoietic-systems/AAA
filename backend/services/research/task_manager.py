@@ -90,6 +90,11 @@ class ResearchTaskManager:
         budget_limit_usd: float = 0.50,
         proposal_rationale: Optional[str] = None,
         proposal_message_id: Optional[int] = None,
+        previous_context: Optional[str] = None,
+        continue_from_task_id: Optional[str] = None,
+        inject_file_id: Optional[str] = None,
+        document_mode: Optional[str] = None,
+        document_chunk_limit: Optional[int] = None,
     ) -> str:
         """Create a new research task and persist it. Returns task_id."""
         if status not in VALID_STATUSES:
@@ -112,6 +117,22 @@ class ResearchTaskManager:
             "proposal_message_id": proposal_message_id,
         }
         self.task_repo.create(task_data)
+
+        extra_state: dict[str, Any] = {}
+        if previous_context:
+            extra_state["previous_context"] = previous_context
+        if continue_from_task_id:
+            extra_state["continue_from_task_id"] = continue_from_task_id
+        if inject_file_id:
+            extra_state["inject_file_id"] = inject_file_id
+        if document_mode:
+            extra_state["document_mode"] = document_mode
+        if document_chunk_limit is not None:
+            extra_state["document_chunk_limit"] = document_chunk_limit
+        if extra_state:
+            import json
+            self.task_repo.update(task_id, orchestrator_state=json.dumps(
+                extra_state, default=str, ensure_ascii=False))
         logger.info(
             "Research task created: %s [%s] status=%s trigger=%s",
             task_id, task_data["title"][:60], status, trigger_source,

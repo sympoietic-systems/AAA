@@ -18,21 +18,23 @@ export const STATUS_COLORS: Record<string, string> = {
 export const STEP_LABELS: Record<string, string> = {
   plan: "Plan", search: "Search", parallel_parse: "Parse Sources",
   digest: "Digest", reflect: "Consolidate", synthesize: "Synthesize",
-  evaluate: "Evaluate",
+  evaluate: "Evaluate", document_digestion: "Document Digest",
 }
 
 export const STEP_TO_PHASE: Record<string, string> = {
   plan: "planning", search: "searching", parallel_parse: "parsing",
   digest: "digesting", reflect: "reflecting", evaluate: "evaluating",
-  synthesize: "synthesizing",
+  synthesize: "synthesizing", document_digestion: "document_digestion",
 }
 
 export const PHASE_ORDER_DISPLAY = [
-  "planning", "searching", "parsing", "digesting", "reflecting", "evaluating", "synthesizing",
+  "planning", "document_digestion", "searching", "parsing", "digesting",
+  "reflecting", "evaluating", "synthesizing",
 ]
 
 export const PHASE_LABELS: Record<string, string> = {
-  planning: "Plan", searching: "Search", parsing: "Parse Sources",
+  planning: "Plan", document_digestion: "Document Digest",
+  searching: "Search", parsing: "Parse Sources",
   digesting: "Digest", reflecting: "Consolidate", evaluating: "Evaluate",
   synthesizing: "Synthesize", complete: "Complete",
 }
@@ -41,6 +43,7 @@ export const STEP_TYPE_COLORS: Record<string, string> = {
   search: CSS_VARS.semanticBlue,
   parallel_parse: CSS_VARS.semanticSand,
   digest: CSS_VARS.semanticPurple,
+  document_digestion: CSS_VARS.semanticSand,
   reflect: CSS_VARS.semanticSlate,
   synthesize: CSS_VARS.semanticGreen,
   evaluate: CSS_VARS.semanticGold,

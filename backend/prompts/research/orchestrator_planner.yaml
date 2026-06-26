@@ -28,9 +28,14 @@ user_with_context: |
   Objective: {objective}
   Depth limit: {max_depth}  Budget: ${budget_limit_usd}
 
-  Previous findings: {previous_context}
+  Previous research synthesis and remaining gaps:
+  {previous_context}
 
-  Generate the NEXT search plan. Target the most promising gap.
+  This context represents findings from prior research. Treat it as one partial
+  view to interrogate, not as ground truth. Identify what was missed, what new
+  angles emerge, and target the most promising unexplored gap.
+
+  Generate the NEXT search plan.
 
 response_format: "json"
 temperature: 0.3

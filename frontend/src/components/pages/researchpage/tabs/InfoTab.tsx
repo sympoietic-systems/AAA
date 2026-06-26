@@ -52,6 +52,7 @@ export const InfoTab = memo(function InfoTab({ task, orchPhase, onRefreshTask }:
           isAgonistic={!!task.is_agonistic}
           budgetLimitUsd={task.budget_limit_usd}
           onRefreshTask={onRefreshTask}
+          task={task}
         />
       </div>
     </div>

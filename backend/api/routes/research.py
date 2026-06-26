@@ -18,6 +18,25 @@ class DispatchPayload(BaseModel):
     max_breadth: int = 4
     is_agonistic: bool = False
     budget_limit_usd: float = 0.50
+    previous_context: Optional[str] = None
+    continue_from_task_id: Optional[str] = None
+    additional_cycles: Optional[int] = None
+    inject_file_id: Optional[str] = None
+    document_mode: Optional[str] = None
+    document_chunk_limit: Optional[int] = None
+
+
+class ContinuePayload(BaseModel):
+    source_task_id: str
+    adjusted_objective: Optional[str] = None
+    title: Optional[str] = None
+    additional_cycles: int = 1
+    inject_file_id: Optional[str] = None
+    document_mode: Optional[str] = None
+    document_chunk_limit: Optional[int] = None
+    budget_limit_usd: Optional[float] = None
+    max_breadth: Optional[int] = None
+    is_agonistic: Optional[bool] = None
 
 
 # ── Task CRUD ─────────────────────────────────────────────────────────
@@ -42,11 +61,102 @@ async def dispatch_research(payload: DispatchPayload, request: Request):
         max_breadth=payload.max_breadth,
         is_agonistic=payload.is_agonistic,
         budget_limit_usd=payload.budget_limit_usd,
+        previous_context=payload.previous_context,
+        continue_from_task_id=payload.continue_from_task_id,
+        inject_file_id=payload.inject_file_id,
+        document_mode=payload.document_mode,
+        document_chunk_limit=payload.document_chunk_limit,
     )
 
     manager.queue(task_id)
 
     return {"task_id": task_id, "status": "queued"}
+
+
+@router.post("/research/continue")
+async def continue_research(payload: ContinuePayload, request: Request):
+    """Continue a completed/failed/cancelled research task with adjusted parameters.
+
+    Reads the source task's result_summary as previous_context so the new
+    planner inherits the prior synthesis. Optionally injects a document
+    (from perception_files) for digestion against the objective.
+    """
+    state = request.app.state
+    manager = state.research_task_manager
+
+    source = manager.get_task(payload.source_task_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source task not found")
+
+    previous_context = source.get("result_summary") or ""
+    source_depth = source.get("max_depth", 3)
+    source_breadth = source.get("max_breadth", 4)
+    source_agonistic = bool(source.get("is_agonistic"))
+    source_budget = source.get("budget_limit_usd", 0.50)
+    source_conv_id = source.get("conversation_id")
+
+    objective = payload.adjusted_objective or source["objective"]
+    title = payload.title or source.get("title", objective[:80])
+    new_max_depth = source_depth + payload.additional_cycles
+    new_breadth = payload.max_breadth or source_breadth
+    is_agonistic = payload.is_agonistic if payload.is_agonistic is not None else source_agonistic
+    budget = payload.budget_limit_usd or source_budget
+
+    task_id = manager.create_task(
+        objective=objective,
+        trigger_source=source.get("trigger_source", "user_console"),
+        title=title,
+        conversation_id=source_conv_id,
+        status="approved",
+        priority=source.get("priority", 2),
+        max_depth=new_max_depth,
+        max_breadth=new_breadth,
+        is_agonistic=is_agonistic,
+        budget_limit_usd=budget,
+        previous_context=previous_context,
+        continue_from_task_id=payload.source_task_id,
+        inject_file_id=payload.inject_file_id,
+        document_mode=payload.document_mode,
+        document_chunk_limit=payload.document_chunk_limit,
+    )
+
+    manager.queue(task_id)
+
+    return {
+        "task_id": task_id,
+        "status": "queued",
+        "continued_from": payload.source_task_id,
+        "max_depth": new_max_depth,
+    }
+
+
+@router.get("/research/files")
+async def list_research_files(conversation_id: Optional[str] = None, request: Request = None):
+    """List indexed perception_files available for document injection.
+
+    Returns file metadata (name, type, summary, status, token_count, chunk_count).
+    Optionally filtered by conversation_id.
+    """
+    state = request.app.state
+    perception_repo = getattr(state, "perception_sediment_repo", None)
+    if not perception_repo:
+        return {"files": [], "count": 0}
+
+    if conversation_id:
+        files = perception_repo.get_files_by_conversation(conversation_id)
+    else:
+        files = perception_repo.list_all_files() if hasattr(perception_repo, "list_all_files") else []
+
+    result = [{
+        "file_name": f["file_name"],
+        "file_type": f.get("file_type", ""),
+        "status": f.get("status", ""),
+        "summary": f.get("summary"),
+        "token_count": f.get("token_count", 0),
+        "chunk_count": f.get("chunk_count", 0),
+    } for f in files if f.get("status") == "ready"]
+
+    return {"files": result, "count": len(result)}
 
 
 @router.get("/research/tasks")
@@ -286,7 +396,8 @@ async def execute_step(
     # Map step_type to orchestrator phase for rerun-to-target
     STEP_TYPE_TO_PHASE: dict[str, str] = {
         "plan": "planning", "search": "searching", "parallel_parse": "parsing",
-        "digest": "digesting", "reflect": "reflecting", "evaluate": "evaluating",
+        "digest": "digesting", "document_digestion": "document_digestion",
+        "reflect": "reflecting", "evaluate": "evaluating",
         "synthesize": "synthesizing",
     }
     target_phase = STEP_TYPE_TO_PHASE.get(rerun_step_type or "")
