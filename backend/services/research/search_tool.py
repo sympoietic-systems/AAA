@@ -18,11 +18,26 @@ logger = logging.getLogger(__name__)
 # ── URL cleaning ─────────────────────────────────────────────────────
 
 
+def _is_valid_http_url(url: str) -> bool:
+    """Reject obviously malformed URLs (missing hostname, no TLD, etc.)."""
+    if not url.startswith("http://") and not url.startswith("https://"):
+        return False
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname or ""
+        return "." in host and len(host) >= 4
+    except Exception:
+        return False
+
+
 def clean_ddg_url(url: str) -> str:
     """Extract real URL from DuckDuckGo redirect links (uddg= parameter).
 
+    Also resolves protocol-relative URLs to https.
     Handles both the /l/ redirect path and direct uddg= query parameter forms.
     """
+    if url.startswith("//"):
+        url = "https:" + url
     if "uddg=" in url or "duckduckgo.com/l/" in url:
         try:
             parsed = urlparse(url)
@@ -52,6 +67,8 @@ def extract_urls_from_content(content: str, n: int = 3, query: str = "") -> list
     # Strategy 1: Markdown link pattern [text](url)
     md_links = re.findall(r'\[([^\]]+)\]\((https?://[^\)]+)\)', content)
     for title, url in md_links[:n * 3]:
+        if not _is_valid_http_url(url):
+            continue
         if "duckduckgo.com" not in url and "localhost" not in url:
             title_clean = re.sub(r'<[^>]+>', '', title).strip()
             results.append({"url": url, "title": title_clean[:120], "snippet": ""})
@@ -64,6 +81,8 @@ def extract_urls_from_content(content: str, n: int = 3, query: str = "") -> list
             re.IGNORECASE | re.DOTALL,
         )
         for url, title in html_links[:n * 3]:
+            if not _is_valid_http_url(url):
+                continue
             if "duckduckgo.com" not in url and "localhost" not in url:
                 results.append({
                     "url": url,
@@ -75,6 +94,8 @@ def extract_urls_from_content(content: str, n: int = 3, query: str = "") -> list
     if not results:
         bare_urls = re.findall(r'(?:^|\s)(https?://[^\s<>"]+?)(?:$|\s|[,.?!;:])', content)
         for url in bare_urls[:n]:
+            if not _is_valid_http_url(url):
+                continue
             if "duckduckgo.com" not in url and "localhost" not in url:
                 results.append({"url": url, "title": url[:80], "snippet": ""})
 
@@ -85,14 +106,18 @@ def extract_urls_from_content(content: str, n: int = 3, query: str = "") -> list
             if line.strip() and not line.startswith("#") and "http" not in line:
                 for j in range(i + 1, min(i + 4, len(lines))):
                     url_match = re.search(r'(https?://[^\s<>"]+)', lines[j])
-                    if url_match and "duckduckgo" not in url_match.group(1):
-                        title = re.sub(r'^[\d.\s*#>-]+', '', line).strip()[:120]
-                        if title and title != query:
-                            results.append({
-                                "url": url_match.group(1),
-                                "title": title,
-                                "snippet": "",
-                            })
+                    if url_match:
+                        url = url_match.group(1)
+                        if not _is_valid_http_url(url):
+                            continue
+                        if "duckduckgo" not in url:
+                            title = re.sub(r'^[\d.\s*#>-]+', '', line).strip()[:120]
+                            if title and title != query:
+                                results.append({
+                                    "url": url,
+                                    "title": title,
+                                    "snippet": "",
+                                })
                         break
 
     return results[:n]
@@ -117,20 +142,34 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
             result = await crawler.arun(url=search_url)
 
             if not result:
+                print(f">>> search_via_crawl4ai: result is None/falsy", flush=True)
                 return []
 
             results: list[dict] = []
             seen_urls: set[str] = set()
 
+            print(f">>> search_via_crawl4ai: has_links={result.links is not None}, has_markdown={bool(result.markdown)}, markdown_len={len(result.markdown) if result.markdown else 0}", flush=True)
+
             # Strategy 1: Crawl4AI's structured links
             if result.links:
                 external = result.links.get("external", [])
                 internal = result.links.get("internal", [])
+                print(f">>> search_via_crawl4ai: links_keys={list(result.links.keys()) if isinstance(result.links, dict) else type(result.links).__name__}", flush=True)
+                print(f">>> search_via_crawl4ai: external_links={len(external)}, internal_links={len(internal)}", flush=True)
+                if external:
+                    sample_hrefs = [l.get("href", "")[:120] for l in external[:5]]
+                    print(f">>> search_via_crawl4ai: sample external hrefs={sample_hrefs}", flush=True)
+                if internal:
+                    sample_ihrefs = [l.get("href", "")[:120] for l in internal[:5]]
+                    print(f">>> search_via_crawl4ai: sample internal hrefs={sample_ihrefs}", flush=True)
                 for link in external + internal:
                     href = link.get("href", "")
-                    if not href.startswith("http"):
+                    # Accept http, https, and protocol-relative URLs
+                    if not (href.startswith("http") or href.startswith("//")):
                         continue
                     real_url = clean_ddg_url(href)
+                    if not _is_valid_http_url(real_url):
+                        continue
                     if any(skip in real_url for skip in ["duckduckgo.com", "spread.", "y.js", ".js?", ".css"]):
                         continue
                     if real_url in seen_urls:
@@ -148,8 +187,13 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
             # Strategy 2: Markdown links
             if not results and result.markdown:
                 md_links = re.findall(r'\[([^\]]{3,120})\]\((https?://[^\)]+)\)', result.markdown)
+                print(f">>> search_via_crawl4ai: strat2 md_links_found={len(md_links)}, markdown_len={len(result.markdown)}", flush=True)
+                if md_links:
+                    print(f">>> search_via_crawl4ai: strat2 sample={[(t[:60], u[:120]) for t,u in md_links[:3]]}", flush=True)
                 for title, url in md_links:
                     real_url = clean_ddg_url(url)
+                    if not _is_valid_http_url(real_url):
+                        continue
                     if any(skip in real_url for skip in ["duckduckgo.com", "spread.", ".js", ".css"]):
                         continue
                     if real_url in seen_urls:
@@ -163,8 +207,13 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
             # Strategy 3: Bare URLs from raw text
             if not results and result.markdown:
                 bare_urls = re.findall(r'https?://[^\s<>"\'\)\]\#]{10,300}', result.markdown)
+                print(f">>> search_via_crawl4ai: strat3 bare_urls_found={len(bare_urls)}", flush=True)
+                if bare_urls:
+                    print(f">>> search_via_crawl4ai: strat3 sample={bare_urls[:3]}", flush=True)
                 for url in bare_urls:
                     real_url = clean_ddg_url(url)
+                    if not _is_valid_http_url(real_url):
+                        continue
                     if any(skip in real_url for skip in ["duckduckgo", "spread.", ".js", ".css", "schema.org"]):
                         continue
                     if real_url in seen_urls:
@@ -178,6 +227,7 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
             if not results and result.markdown:
                 results = extract_urls_from_content(result.markdown, n)
 
+            print(f">>> search_via_crawl4ai: final result count={len(results)}", flush=True)
             return results[:n]
     except ImportError:
         return []
@@ -198,11 +248,82 @@ async def fetch_via_jina(url: str, config: dict) -> str:
 # ── Main entry point ─────────────────────────────────────────────────
 
 
+async def _search_ddg_lite(query: str, n: int = 3) -> list[dict]:
+    """Fetch DuckDuckGo Lite directly via HTTP and parse HTML for result links.
+
+    DuckDuckGo Lite returns clean HTML with direct result links in <a> tags.
+    No redirect URLs — plain, parseable HTML.
+    """
+    import html.parser
+
+    search_url = f"https://lite.duckduckgo.com/lite/?q={urllib.parse.quote(query)}"
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            resp = await client.get(search_url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            })
+            html_text = resp.text
+    except Exception as e:
+        logger.warning("DDG Lite fetch failed: %s", e)
+        return []
+
+    if not html_text:
+        print(f">>> _search_ddg_lite: empty response", flush=True)
+        return []
+
+    print(f">>> _search_ddg_lite: got {len(html_text)} bytes HTML", flush=True)
+
+    results: list[dict] = []
+    seen: set[str] = set()
+
+    class _ResultParser(html.parser.HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.in_link = False
+            self.pending_href = ""
+            self.pending_title = ""
+
+        def handle_starttag(self, tag, attrs):
+            attrs_d = dict(attrs)
+            href = attrs_d.get("href", "")
+            if tag == "a" and href.startswith("http") and "duckduckgo.com" not in href:
+                self.in_link = True
+                self.pending_href = href
+                self.pending_title = ""
+
+        def handle_data(self, data):
+            if self.in_link:
+                self.pending_title += data
+
+        def handle_endtag(self, tag):
+            if tag == "a" and self.in_link:
+                self.in_link = False
+                if self.pending_href and self.pending_href not in seen:
+                    seen.add(self.pending_href)
+                    results.append({
+                        "url": self.pending_href,
+                        "title": self.pending_title.strip()[:200] or self.pending_href[:80],
+                        "snippet": "",
+                    })
+
+    parser = _ResultParser()
+    try:
+        parser.feed(html_text)
+    except Exception:
+        pass
+
+    print(f">>> _search_ddg_lite: parsed {len(results)} result links", flush=True)
+    for r in results[:3]:
+        print(f">>> _search_ddg_lite:   {r['url'][:100]} | {r['title'][:60]}", flush=True)
+
+    return results[:n]
+
+
 async def web_search(query: str, n: int = 3, config: dict | None = None) -> list[dict]:
     """Search DuckDuckGo and return top N result URLs with titles and snippets.
 
-    Strategy: Crawl4AI → extract structured links from search result object.
-    Falls back to Jina + markdown URL pattern extraction.
+    Strategy: Direct DuckDuckGo Lite HTML parse → Crawl4AI → Jina fallback.
 
     Args:
         query: Search query string.
@@ -213,20 +334,27 @@ async def web_search(query: str, n: int = 3, config: dict | None = None) -> list
         List of dicts with 'url', 'title', and 'snippet' keys.
     """
     try:
+        # Strategy 1: Direct DuckDuckGo Lite (fast, reliable, no deps)
+        results = await _search_ddg_lite(query, n)
+        if results:
+            print(f">>> web_search: DDG Lite direct found {len(results)} results", flush=True)
+            return results
+
         from backend.services.research.sensory_affordances import is_crawl4ai_available
 
-        search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+        # Crawl4AI fallback uses the HTML version (more structured links)
+        html_search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
 
         if is_crawl4ai_available():
             try:
-                results = await search_via_crawl4ai(search_url, n)
+                results = await search_via_crawl4ai(html_search_url, n)
                 if results:
                     return results
             except (RuntimeError, Exception) as e:
                 logger.warning("Crawl4AI search failed, falling back: %s", str(e)[:80])
 
         # Jina fallback — get raw content and extract URLs
-        raw = await fetch_via_jina(search_url, config or {})
+        raw = await fetch_via_jina(html_search_url, config or {})
         if raw:
             return extract_urls_from_content(raw, n, query)
 
