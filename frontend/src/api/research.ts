@@ -51,6 +51,7 @@ export interface DispatchPayload {
   continue_from_task_id?: string
   additional_cycles?: number
   inject_file_id?: string
+  inject_conversation_id?: string
   document_mode?: string
   document_chunk_limit?: number
 }
@@ -59,8 +60,10 @@ export interface ContinuePayload {
   source_task_id: string
   adjusted_objective?: string
   title?: string
+  conversation_id?: string
   additional_cycles?: number
   inject_file_id?: string
+  inject_conversation_id?: string
   document_mode?: string
   document_chunk_limit?: number
   budget_limit_usd?: number
@@ -75,6 +78,7 @@ export interface IndexedFile {
   summary?: string
   token_count: number
   chunk_count: number
+  conversation_id: string
 }
 
 export interface FilesListResponse {
@@ -131,6 +135,26 @@ export async function continueResearch(payload: ContinuePayload): Promise<{ task
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error(`Research continue failed: ${res.status}`)
+  return res.json()
+}
+
+export interface ContinueTaskPayload {
+  adjusted_objective?: string
+  additional_cycles?: number
+  inject_file_id?: string
+  inject_conversation_id?: string
+  document_mode?: string
+  document_chunk_limit?: number
+  budget_limit_usd?: number
+}
+
+export async function continueTask(taskId: string, payload: ContinueTaskPayload): Promise<{ task_id: string; status: string; max_depth: number }> {
+  const res = await fetch(`${BASE}/research/${taskId}/continue`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`Continue task failed: ${res.status}`)
   return res.json()
 }
 
@@ -264,6 +288,12 @@ export interface StepPreview {
     direct_urls?: string[]
     gaps?: string[]
   }
+  file_id?: string
+  mode?: string
+  chunk_limit?: number
+  document_digested?: boolean
+  doc_summary?: string
+  doc_chunks?: { content: string; sim: number }[]
 }
 
 export async function getStepPreview(taskId: string, phase: string): Promise<StepPreview> {

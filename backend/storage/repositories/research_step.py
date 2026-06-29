@@ -88,14 +88,22 @@ class ResearchStepRepository(BaseRepository):
         return cur.rowcount
 
     @with_connection
-    def delete_downstream(self, task_id: str, after_step_number: int) -> int:
+    def delete_downstream(self, task_id: str, after_step_number: int, exclude_types: tuple[str, ...] = ()) -> int:
         """Delete all steps with step_number > after_step_number.
         Used when rerunning a step — downstream must be re-created.
+        Optionally exclude certain step_types from deletion.
         Returns count of deleted rows."""
         conn = self._conn()
-        cur = conn.execute(
-            "DELETE FROM research_steps WHERE task_id = ? AND step_number > ?",
-            (task_id, after_step_number),
-        )
+        if exclude_types:
+            placeholders = ", ".join("?" * len(exclude_types))
+            cur = conn.execute(
+                f"DELETE FROM research_steps WHERE task_id = ? AND step_number > ? AND step_type NOT IN ({placeholders})",
+                (task_id, after_step_number, *exclude_types),
+            )
+        else:
+            cur = conn.execute(
+                "DELETE FROM research_steps WHERE task_id = ? AND step_number > ?",
+                (task_id, after_step_number),
+            )
         conn.commit()
         return cur.rowcount

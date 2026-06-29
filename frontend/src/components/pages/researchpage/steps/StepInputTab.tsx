@@ -23,10 +23,92 @@ export const StepInputTab = memo(function StepInputTab({
 }: StepInputTabProps) {
   const isParse = stepType === "parallel_parse"
   const isDigest = stepType === "digest"
+  const isDocDigest = stepType === "document_digestion"
   const phaseLabel = (PHASE_LABELS[stepPhase] || stepPhase).toLowerCase()
 
   return (
     <div className="space-y-3">
+      {/* ── Document Digestion input: doc summary + chunks ── */}
+      {isDocDigest && (
+        <div className="space-y-3">
+          {!liveInput ? (
+            <div className="text-ui-dim italic text-[9px] font-mono">click reinitialize to load document preview</div>
+          ) : (
+            <>
+          {liveInput.file_id && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-semantic-purple text-[8px] font-mono px-1 py-0.5 bg-semantic-purple/10 border border-semantic-purple/30 rounded-sm">
+                file
+              </span>
+              <span className="text-ui-secondary text-[9px] truncate">{liveInput.file_id}</span>
+            </div>
+          )}
+          {liveInput?.mode && (
+            <div className="flex items-center gap-2 text-ui-dim text-[9px] font-mono">
+              <span className="text-ui-dim">mode:</span>
+              <span className="text-ui-secondary">{liveInput.mode}</span>
+              {liveInput.mode === "chunks" && liveInput.chunk_limit != null && (
+                <span className="text-ui-dim">(top {liveInput.chunk_limit} chunks)</span>
+              )}
+              {liveInput.mode === "full" && (
+                <span className="text-ui-dim">(entire document)</span>
+              )}
+            </div>
+          )}
+          {liveInput?.objective && (
+            <div>
+              <div className="text-ui-dim text-[8px] uppercase mb-0.5 font-mono">objective</div>
+              <div className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">{liveInput.objective}</div>
+            </div>
+          )}
+          {liveInput?.doc_summary && (
+            <div>
+              <div className="text-ui-dim text-[8px] uppercase mb-0.5 font-mono">document summary</div>
+              <div className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed max-h-32 overflow-y-auto">
+                {liveInput.doc_summary}
+              </div>
+            </div>
+          )}
+          {liveInput?.mode === "chunks" && liveInput?.doc_chunks && liveInput.doc_chunks.length > 0 && (
+            <div>
+              <div className="text-ui-dim text-[8px] uppercase mb-1 font-mono">
+                top chunks ({liveInput.doc_chunks.length})
+              </div>
+              <div className="space-y-1 border border-ui-border p-2 bg-[#080808]/30 max-h-64 overflow-y-auto">
+                {liveInput.doc_chunks.map((chunk, i) => {
+                  const simDisplay = chunk.sim > 0 ? ` (sim=${chunk.sim.toFixed(2)})` : ""
+                  return (
+                    <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed">
+                      <div className="text-ui-dim text-[8px] mb-0.5">chunk {i + 1}{simDisplay}</div>
+                      <div className="whitespace-pre-wrap break-all text-[8px]">{chunk.content.slice(0, 500)}{chunk.content.length > 500 ? "…" : ""}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {liveInput?.mode === "full" && liveInput?.doc_chunks && liveInput.doc_chunks.length > 0 && (
+            <div>
+              <div className="text-ui-dim text-[8px] uppercase mb-1 font-mono">
+                document text ({liveInput.doc_chunks.length} chunks)
+              </div>
+              <div className="border border-ui-border p-2 bg-[#080808]/30 max-h-64 overflow-y-auto">
+                <div className="text-ui-secondary text-[8px] whitespace-pre-wrap break-all leading-relaxed">
+                  {liveInput.doc_chunks.map(c => c.content).join("\n\n").slice(0, 1500)}
+                  {liveInput.doc_chunks.reduce((acc, c) => acc + c.content.length, 0) > 1500 ? "…" : ""}
+                </div>
+              </div>
+            </div>
+          )}
+          </>
+          )}
+          <div className="text-ui-dim italic text-[9px] font-mono border-t border-ui-border pt-2">
+            {liveInput?.doc_chunks && liveInput.doc_chunks.length > 0
+              ? `${liveInput.doc_chunks.length} chunks will be combined and analyzed via LLM`
+              : "no document chunks available"}
+          </div>
+        </div>
+      )}
       {/* ── Parse input: URLs to fetch ── */}
       {isParse && parentInputUrls && parentInputUrls.length > 0 && (
         <div>

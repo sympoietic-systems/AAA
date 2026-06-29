@@ -93,6 +93,7 @@ class ResearchTaskManager:
         previous_context: Optional[str] = None,
         continue_from_task_id: Optional[str] = None,
         inject_file_id: Optional[str] = None,
+        inject_conversation_id: Optional[str] = None,
         document_mode: Optional[str] = None,
         document_chunk_limit: Optional[int] = None,
     ) -> str:
@@ -125,6 +126,8 @@ class ResearchTaskManager:
             extra_state["continue_from_task_id"] = continue_from_task_id
         if inject_file_id:
             extra_state["inject_file_id"] = inject_file_id
+        if inject_conversation_id:
+            extra_state["inject_conversation_id"] = inject_conversation_id
         if document_mode:
             extra_state["document_mode"] = document_mode
         if document_chunk_limit is not None:
@@ -289,11 +292,15 @@ class ResearchTaskManager:
                     task_id, task.get("title", "")[:80],
                 )
 
-                # Check if orchestrator is enabled
+                # Check if orchestrator is enabled (or forced by continue)
                 orch_config = self._app_state.config.get("research_orchestrator", {})
                 use_orchestrator = orch_config.get("enabled", False)
+                is_continued = (task.get("rerun_count") or 0) > 0
 
-                if use_orchestrator:
+                logger.info("EXECUTING task %s — orchestrator=%s continued=%s",
+                             task_id[:8], use_orchestrator, is_continued)
+
+                if use_orchestrator or is_continued:
                     result = await self.orchestrator.execute(task_id)
                 else:
                     from backend.services.research.somatic import SomaticResearchEngine
@@ -455,6 +462,143 @@ class ResearchTaskManager:
         # In manual mode, stay queued. Otherwise auto-execute.
         if not self.config.get("manual_mode", False):
             asyncio.create_task(self._try_process_queue())
+
+    def continue_task(
+        self,
+        task_id: str,
+        additional_cycles: int = 1,
+        adjusted_objective: str = "",
+        inject_file_id: str = "",
+        inject_conversation_id: str = "",
+        document_mode: str = "",
+        document_chunk_limit: int = 5,
+        budget_limit_usd: float = 0.0,
+    ) -> None:
+        """Continue a completed task in-place — bumps depth, resets phase, re-queues.
+
+        Preserves the task ID and prior synthesis as planner context.
+        New document injection is optional (re-runs document_digestion phase).
+        """
+        import json
+        import sys
+
+        rt_config = self.config
+        print(f">>> continue_task START: manual_mode={rt_config.get('manual_mode', False)}, full_keys={list(rt_config.keys())}, enabled={rt_config.get('enabled', 'MISSING')}", flush=True)
+        import json as _json
+        print(f">>> continue_task FULL RT CONFIG: {_json.dumps({k:v for k,v in rt_config.items() if k not in ('auto_approve',)}, default=str)}", flush=True)
+
+        task = self.task_repo.get(task_id)
+        if task is None:
+            raise ValueError(f"Task not found: {task_id}")
+        if task["status"] not in ("completed", "failed", "cancelled"):
+            raise ValueError(
+                f"Can only continue terminal tasks, got: {task['status']}"
+            )
+
+        new_max_depth = task["max_depth"] + additional_cycles
+        new_objective = adjusted_objective or task["objective"]
+        new_budget = budget_limit_usd or task["budget_limit_usd"]
+
+        orch_state: dict[str, Any] = {}
+        previous_context = task.get("result_summary") or ""
+        if previous_context:
+            orch_state["previous_context"] = previous_context
+        if inject_file_id:
+            orch_state["inject_file_id"] = inject_file_id
+        if inject_conversation_id:
+            orch_state["inject_conversation_id"] = inject_conversation_id
+        if document_mode:
+            orch_state["document_mode"] = document_mode
+        if document_chunk_limit:
+            orch_state["document_chunk_limit"] = document_chunk_limit
+        orch_state["document_digested"] = False
+
+        step_count = 0
+        old_current_depth = 0
+        try:
+            steps_repo = getattr(self._app_state, "research_step_repo", None)
+            if steps_repo:
+                existing = steps_repo.get_by_task(task_id)
+                step_count = len(existing) if existing else 0
+                for s in (existing or []):
+                    sd = s.get("step_data")
+                    if sd:
+                        try:
+                            parsed = json.loads(sd) if isinstance(sd, str) else sd
+                            d = parsed.get("depth") if isinstance(parsed, dict) else 0
+                            if isinstance(d, (int, float)) and d > old_current_depth:
+                                old_current_depth = int(d)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+        old_raw = task.get("orchestrator_state")
+        if old_raw:
+            try:
+                old_orch = json.loads(old_raw) if isinstance(old_raw, str) else old_raw
+                orch_depth = old_orch.get("current_depth", 0)
+                if orch_depth > old_current_depth:
+                    old_current_depth = orch_depth
+            except Exception:
+                pass
+
+        orch_state["step_number"] = step_count
+        orch_state["current_depth"] = old_current_depth + 1
+
+        logger.info("continue_task: step_count=%d, previous_context=%d chars",
+                     step_count, len(previous_context))
+
+        rerun_count = (task.get("rerun_count") or 0) + 1
+        update_fields: dict[str, Any] = {
+            "status": "queued",
+            "objective": new_objective,
+            "max_depth": new_max_depth,
+            "budget_limit_usd": new_budget,
+            "budget_spent_usd": 0.0,
+            "branches_created": 0,
+            "assets_harvested": 0,
+            "lateral_flights": 0,
+            "bifurcation_triggered": 0,
+            "result_summary": None,
+            "started_at": None,
+            "completed_at": None,
+            "orchestrator_state": json.dumps(orch_state, default=str, ensure_ascii=False),
+        }
+        try:
+            update_fields["rerun_count"] = rerun_count
+            self.task_repo.update(task_id, **update_fields)
+        except Exception:
+            update_fields.pop("rerun_count", None)
+            self.task_repo.update(task_id, **update_fields)
+
+        manual = self.config.get("manual_mode", False)
+        logger.info("continue_task: spawning orchestrator for %s (manual_mode=%s)", task_id[:8], manual)
+        self.transition(task_id, "active")
+        coro = self._execute_continued_task(task_id)
+        asyncio_task = asyncio.create_task(coro)
+        self._active_tasks[task_id] = asyncio_task
+
+        logger.info(
+            "Research task %s continued (run #%d) — depth %d→%d, step_offset=%d, previous_context=%d chars",
+            task_id, rerun_count, task["max_depth"], new_max_depth, step_count, len(previous_context),
+        )
+
+    async def _execute_continued_task(self, task_id: str) -> None:
+        """Execute a continued task step-by-step via orchestrator, stopping after planning."""
+        import sys
+        print(f">>> _execute_continued_task STARTED for {task_id[:8]}", flush=True)
+        try:
+            logger.info("EXECUTING continued task %s via orchestrator (step-by-step)", task_id[:8])
+            await self._orchestrator_step_async(task_id, first_step=True)
+            logger.info("Continued task %s initial step executed", task_id[:8])
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Continued task %s failed", task_id)
+            self.fail(task_id, "Continued task execution failed")
+        finally:
+            self._active_tasks.pop(task_id, None)
 
     # ── Budget ────────────────────────────────────────────────────
 

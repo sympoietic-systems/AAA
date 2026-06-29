@@ -26,6 +26,8 @@ class ResearchPhases:
     @staticmethod
     async def step_plan(orch, task_id: str, s: dict) -> dict:
         logger.info("Step: PLANNING — %s", ResearchPhases._lc(orch, task_id, "planning"))
+        import sys
+        print(f">>> step_plan: current_depth={s['current_depth']}, step_number={s['step_number']}", flush=True)
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
 
@@ -46,13 +48,15 @@ class ResearchPhases:
             "step_number": s["step_number"], "step_type": "plan",
             "status": "completed", "started_at": now_utc_str(),
             "result_summary": f"{len(plan.get('search_queries',[]))} queries planned",
+            "step_data": json.dumps({"plan": plan, "depth": s["current_depth"]}, default=str, ensure_ascii=False),
         })
-        try:
-            orch.step_repo.update(step_id, step_data=json.dumps(
-                {"plan": plan, "depth": 0}, default=str, ensure_ascii=False))
-        except Exception:
-            pass
-        orch._log_meta(task_id, "orchestrator_plan", {"plan": plan}, step_id=step_id)
+        orch._log_meta(task_id, "orchestrator_plan", {
+            "plan": plan,
+            "previous_context_injected": bool(previous_context),
+            "previous_context_len": len(previous_context) if previous_context else 0,
+            "max_depth": s["max_depth"],
+            "continue_from_task_id": s.get("continue_from_task_id"),
+        }, step_id=step_id)
 
         if s.get("inject_file_id") and not s.get("document_digested"):
             s["phase"] = "document_digestion"
@@ -65,6 +69,19 @@ class ResearchPhases:
         raw_queries = s["plan"].get("search_queries", [s["objective"]])
         if s["current_depth"] > 0 and s["last_reflection"].get("next_queries"):
             raw_queries = s["last_reflection"]["next_queries"]
+
+        print(f">>> step_search: depth={s['current_depth']}, has_plan={s.get('plan') is not None}, has_search_queries={'search_queries' in s.get('plan', {})}, raw_query_count={len(raw_queries)}", flush=True)
+        print(f">>> step_search: queries={[str(q)[:100] for q in raw_queries]}", flush=True)
+
+        def _clean_query_for_ddg(q: str) -> str:
+            import re
+            q = re.sub(r'\b(AND|OR|NOT)\b', ' ', q, flags=re.IGNORECASE)
+            q = q.replace('(', ' ').replace(')', ' ')
+            q = ' '.join(q.split())
+            return q.strip()
+
+        raw_queries = [_clean_query_for_ddg(str(q)) for q in raw_queries]
+        print(f">>> step_search: cleaned queries={[str(q)[:100] for q in raw_queries]}", flush=True)
 
         search_queries = []
         direct_urls = []
@@ -173,6 +190,9 @@ class ResearchPhases:
         s["phase"] = "parsing"
         if not search_results:
             s["phase"] = "reflecting"
+            print(f">>> step_search: NO RESULTS, jumping to phase={s['phase']}", flush=True)
+        else:
+            print(f">>> step_search: got {len(search_results)} results, phase={s['phase']}", flush=True)
 
         return {
             "queries": pending_queries,
@@ -395,47 +415,72 @@ class ResearchPhases:
     @staticmethod
     async def step_document_digestion(orch, task_id: str, s: dict) -> dict:
         logger.info("Step: DOCUMENT_DIGESTION — %s", ResearchPhases._lc(orch, task_id, "document_digestion"))
-        s["document_digested"] = True
         inject_file_id = s.get("inject_file_id")
         if not inject_file_id:
+            s["document_digested"] = True
             return {"message": "no document to digest", "step_id": None}
 
         s["step_number"] += 1
-        step_id = str(uuid.uuid4())
+        rerun_step_id = s.pop("_rerun_step_id", None)
+        step_id = rerun_step_id or str(uuid.uuid4())
+        is_rerun = bool(rerun_step_id)
 
         conversation_id = None
         task_row = orch.task_repo.get(task_id)
         if task_row:
             conversation_id = task_row.get("conversation_id")
 
+        effective_conv_id = s.get("inject_conversation_id") or conversation_id
+        if not effective_conv_id:
+            perception_repo = getattr(orch._state, "perception_repo", None)
+            if perception_repo:
+                file_info = perception_repo.find_file_by_name(inject_file_id)
+                if file_info:
+                    effective_conv_id = file_info.get("conversation_id")
+
+        if not effective_conv_id:
+            orch.step_repo.create({
+                "id": step_id, "task_id": task_id,
+                "plan_id": s.get("plan_id", ""),
+                "step_number": s["step_number"], "step_type": "document_digestion",
+                "status": "completed", "started_at": now_utc_str(),
+                "result_summary": "Cannot resolve conversation for document; skipping digestion",
+            })
+            s["document_digested"] = True
+            s["phase"] = "searching"
+            return {"step_id": step_id, "learnings": 0, "message": "no conversation for document"}
+
+        perception_repo = getattr(orch._state, "perception_repo", None)
+        if perception_repo:
+            file_status = perception_repo.find_file_by_name(inject_file_id)
+            if file_status and file_status.get("status") != "ready":
+                logger.info("Document %s not yet ready (status=%s); retrying next tick",
+                            inject_file_id, file_status.get("status"))
+                return {"message": "document not yet indexed", "step_id": None}
+
         doc_mode = s.get("document_mode", "chunks")
         chunk_limit = s.get("document_chunk_limit", 5)
-        if doc_mode == "full":
-            chunk_limit = 50
 
-        perception = getattr(orch._state, "perception_module", None)
+        perception_repo = getattr(orch._state, "perception_repo", None)
         doc_summary = ""
         doc_chunks: list[str] = []
-        if perception and conversation_id:
+
+        if perception_repo:
             try:
-                chunk_entries, _ = await perception._retrieve_relevant_chunks(
-                    s["objective"], conversation_id,
-                    filter_file_id=inject_file_id,
-                )
-                for entry in chunk_entries:
-                    content = entry.get("content", "")
-                    if content.startswith("[File Manifest"):
-                        doc_summary = content
-                    elif content.startswith("[") and "sim=" in content[:120]:
-                        doc_chunks.append(content)
-                    elif content.startswith("[Cross-Conversation"):
-                        doc_chunks.append(content)
-
-                if doc_mode == "chunks":
-                    doc_chunks = doc_chunks[:chunk_limit]
-
+                db_chunks = perception_repo.get_by_file(effective_conv_id, inject_file_id)
+                doc_chunks = [c.chunk_text for c in db_chunks if c.chunk_text]
+                # Also collect file summary from the perception_files table
+                file_info = perception_repo.find_file_by_name(inject_file_id)
+                if file_info and file_info.get("summary"):
+                    doc_summary = f"[Document: {inject_file_id}]\n{file_info['summary']}"
+                print(f">>> doc_digest: {len(db_chunks)} chunks from repo, {len(doc_chunks)} with text, mode={doc_mode}", flush=True)
             except Exception as e:
                 logger.warning("Document chunk retrieval failed: %s", e)
+
+        if doc_mode == "chunks":
+            doc_chunks = doc_chunks[:chunk_limit]
+
+        print(f">>> doc_digest: {len(doc_chunks)} chunks after limit (mode={doc_mode}, limit={chunk_limit})", flush=True)
 
         if not doc_chunks:
             orch.step_repo.create({
@@ -444,74 +489,66 @@ class ResearchPhases:
                 "step_number": s["step_number"], "step_type": "document_digestion",
                 "status": "completed", "started_at": now_utc_str(),
                 "result_summary": "No relevant document chunks found for digestion",
+                "step_data": json.dumps({"depth": s["current_depth"]}, ensure_ascii=False),
             })
+            s["document_digested"] = True
             s["phase"] = "searching"
             return {"step_id": step_id, "learnings": 0, "message": "no relevant chunks"}
 
-        combined_content = "\n\n---\n\n".join(doc_chunks[:chunk_limit])
+        combined_content = "\n\n---\n\n".join(doc_chunks)
         combined_content = combined_content[:orch._TRUNC_LLM_CONTENT * 2]
 
-        llm = getattr(orch._state, "llm_provider", None)
-        learnings: list[str] = []
-        followups: list[str] = []
-        gaps: list[str] = []
+        goal = s["plan"].get("goal", s["objective"]) if s.get("plan") else s["objective"]
 
-        if llm:
-            prompt_data = get_prompts_dict("research/node_analyzer.yaml")
-            system_text = prompt_data.get("system", "")
-            goal = s["plan"].get("goal", s["objective"]) if s.get("plan") else s["objective"]
-            user_text = prompt_data.get("user", "").format(
-                query=s["objective"],
-                goal=goal,
-                depth=0,
-                max_depth=s["max_depth"],
-                parent_findings="(injected document analysis)",
-                scraped_content=combined_content,
+        from backend.services.research.tools import _analyze_source
+
+        analysis = await _analyze_source(orch,
+            task_id, f"document:{inject_file_id}", str(inject_file_id),
+            combined_content, s["objective"], goal, 0, s["max_depth"],
+            step_id=step_id,
+        )
+
+        learnings = analysis.get("learnings", [])
+        followups = analysis.get("followups", [])
+        gaps = analysis.get("gaps", [])
+
+        if is_rerun:
+            orch.step_repo.update(step_id,
+                status="completed",
+                result_summary=f"{len(learnings)} learnings, {len(followups)} followups from doc {inject_file_id} ({len(doc_chunks)} chunks)",
+                step_data=json.dumps({"depth": s["current_depth"], "learnings": learnings,
+                    "followups": followups, "gaps": gaps,
+                    "file_id": inject_file_id, "mode": doc_mode},
+                    default=str, ensure_ascii=False),
             )
-            if prompt_data.get("anti_mastery"):
-                system_text = apply_anti_mastery_filter(system_text)
-                user_text = apply_anti_mastery_filter(user_text)
+        else:
+            orch.step_repo.create({
+                "id": step_id, "task_id": task_id,
+                "plan_id": s.get("plan_id", ""),
+                "step_number": s["step_number"], "step_type": "document_digestion",
+                "status": "completed", "started_at": now_utc_str(),
+                "result_summary": f"{len(learnings)} learnings, {len(followups)} followups from doc {inject_file_id} ({len(doc_chunks)} chunks)",
+                "step_data": json.dumps({"depth": s["current_depth"], "learnings": learnings,
+                    "followups": followups, "gaps": gaps,
+                    "file_id": inject_file_id, "mode": doc_mode},
+                    default=str, ensure_ascii=False),
+            })
 
-            try:
-                from backend.services.research.context_builder import ResearchContextBuilder
-                builder = ResearchContextBuilder(orch._state)
-                persona = await builder.build_node_context(
-                    node_query=s["objective"], node_goal=goal, depth=0)
-                if persona:
-                    system_text = persona + "\n\n" + system_text
-            except Exception:
-                pass
+        orch.step_result_repo.create({
+            "id": str(uuid.uuid4()), "step_id": step_id, "task_id": task_id,
+            "source_url": f"document:{inject_file_id}",
+            "source_title": str(inject_file_id),
+            "raw_content": combined_content[:5000],
+            "relevance_score": 0.0, "novelty_score": 0.0,
+            "analyzed_json": json.dumps(analysis, ensure_ascii=False),
+        })
 
-            orch._log_meta(task_id, "orchestrator_document_digest_prompt", {
-                "file_id": inject_file_id, "mode": doc_mode,
-                "chunks": len(doc_chunks), "system_prompt": system_text[:8000],
-                "user_prompt": user_text[:8000],
-            }, step_id=step_id)
-
-            fallback = {"learnings": [], "gaps": [], "followups": [], "direct_urls": [], "diffractive_notes": []}
-            try:
-                from backend.modules.llm_client import generate_unified
-                resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
-                    expect_json=True, fallback_value=fallback,
-                    temperature=prompt_data.get("temperature", 0.3),
-                    max_tokens=prompt_data.get("max_tokens", 2048))
-                result = resp.get("json_data") or resp.get("content") or {}
-                if isinstance(result, str):
-                    result = json.loads(result)
-                if isinstance(result, dict):
-                    learnings = result.get("learnings", [])
-                    followups = result.get("followups", [])
-                    gaps = result.get("gaps", [])
-                orch._log_llm_response(task_id, "orchestrator_document_digest_response", resp, extra={
-                    "file_id": inject_file_id, "learnings_count": len(learnings),
-                }, step_id=step_id)
-            except Exception as e:
-                logger.error("Document digestion failed: %s", e)
-                orch._log_meta(task_id, "orchestrator_document_digest_error",
-                              {"file_id": inject_file_id, "error": str(e)}, step_id=step_id)
-
-        s["all_findings"].extend(learnings)
+        s["all_findings"].extend(
+            f"[{inject_file_id}]: " + l for l in learnings
+        )
+        s["sources_analyzed"] += 1
         s["document_learnings"] = learnings
+        s["document_digested"] = True
 
         existing_signals = s.get("digest_signals") or {}
         existing_followups = existing_signals.get("followups", [])
@@ -522,24 +559,9 @@ class ResearchPhases:
             "gaps": existing_gaps + gaps,
         }
 
-        orch.step_repo.create({
-            "id": step_id, "task_id": task_id,
-            "plan_id": s.get("plan_id", ""),
-            "step_number": s["step_number"], "step_type": "document_digestion",
-            "status": "completed", "started_at": now_utc_str(),
-            "result_summary": f"{len(learnings)} learnings, {len(followups)} followups from document {inject_file_id}",
-        })
-        try:
-            orch.step_repo.update(step_id, step_data=json.dumps(
-                {"learnings": learnings, "followups": followups, "gaps": gaps,
-                 "file_id": inject_file_id, "mode": doc_mode},
-                default=str, ensure_ascii=False))
-        except Exception:
-            pass
-
         orch._log_meta(task_id, "orchestrator_document_digest_complete", {
-            "file_id": inject_file_id, "learnings": len(learnings),
-            "followups": len(followups), "gaps": len(gaps),
+            "file_id": inject_file_id, "chunks_analyzed": len(doc_chunks),
+            "learnings": len(learnings), "followups": len(followups), "gaps": len(gaps),
         }, step_id=step_id)
 
         s["phase"] = "searching"
@@ -565,7 +587,10 @@ async def _phase_plan(orch, task_id, objective, max_depth, budget,
         persona = await orch._build_orchestrator_persona(objective)
         system_text = persona + "\n\n" + prompt_data.get("system", "")
         fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
-        user_template = prompt_data.get("user_with_context", prompt_data.get("user", "")) if previous_context else prompt_data.get("user", "")
+        user_template = prompt_data.get("user", "")
+        if previous_context:
+            fmt["previous_context"] = previous_context
+            user_template = prompt_data.get("user_with_context", user_template)
         user_text = user_template.format(**fmt)
         if prompt_data.get("anti_mastery"):
             system_text = apply_anti_mastery_filter(system_text)

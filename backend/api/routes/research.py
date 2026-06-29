@@ -22,6 +22,7 @@ class DispatchPayload(BaseModel):
     continue_from_task_id: Optional[str] = None
     additional_cycles: Optional[int] = None
     inject_file_id: Optional[str] = None
+    inject_conversation_id: Optional[str] = None
     document_mode: Optional[str] = None
     document_chunk_limit: Optional[int] = None
 
@@ -30,13 +31,25 @@ class ContinuePayload(BaseModel):
     source_task_id: str
     adjusted_objective: Optional[str] = None
     title: Optional[str] = None
+    conversation_id: Optional[str] = None
     additional_cycles: int = 1
     inject_file_id: Optional[str] = None
+    inject_conversation_id: Optional[str] = None
     document_mode: Optional[str] = None
     document_chunk_limit: Optional[int] = None
     budget_limit_usd: Optional[float] = None
     max_breadth: Optional[int] = None
     is_agonistic: Optional[bool] = None
+
+
+class ContinueTaskPayload(BaseModel):
+    adjusted_objective: Optional[str] = None
+    additional_cycles: int = 1
+    inject_file_id: Optional[str] = None
+    inject_conversation_id: Optional[str] = None
+    document_mode: Optional[str] = None
+    document_chunk_limit: Optional[int] = None
+    budget_limit_usd: Optional[float] = None
 
 
 # ── Task CRUD ─────────────────────────────────────────────────────────
@@ -64,6 +77,7 @@ async def dispatch_research(payload: DispatchPayload, request: Request):
         previous_context=payload.previous_context,
         continue_from_task_id=payload.continue_from_task_id,
         inject_file_id=payload.inject_file_id,
+        inject_conversation_id=payload.inject_conversation_id,
         document_mode=payload.document_mode,
         document_chunk_limit=payload.document_chunk_limit,
     )
@@ -101,12 +115,13 @@ async def continue_research(payload: ContinuePayload, request: Request):
     new_breadth = payload.max_breadth or source_breadth
     is_agonistic = payload.is_agonistic if payload.is_agonistic is not None else source_agonistic
     budget = payload.budget_limit_usd or source_budget
+    new_conv_id = payload.conversation_id or source_conv_id
 
     task_id = manager.create_task(
         objective=objective,
         trigger_source=source.get("trigger_source", "user_console"),
         title=title,
-        conversation_id=source_conv_id,
+        conversation_id=new_conv_id,
         status="approved",
         priority=source.get("priority", 2),
         max_depth=new_max_depth,
@@ -116,6 +131,7 @@ async def continue_research(payload: ContinuePayload, request: Request):
         previous_context=previous_context,
         continue_from_task_id=payload.source_task_id,
         inject_file_id=payload.inject_file_id,
+        inject_conversation_id=payload.inject_conversation_id,
         document_mode=payload.document_mode,
         document_chunk_limit=payload.document_chunk_limit,
     )
@@ -130,22 +146,53 @@ async def continue_research(payload: ContinuePayload, request: Request):
     }
 
 
+@router.post("/research/{task_id}/continue")
+async def continue_task(task_id: str, payload: ContinueTaskPayload, request: Request):
+    """Continue a completed/failed/cancelled research task in-place.
+
+    Does NOT create a new task. Bumps max_depth, resets phase to planning,
+    injects prior synthesis as planner context, and re-queues the task.
+    Optionally injects a document for digestion.
+    """
+    state = request.app.state
+    manager = state.research_task_manager
+
+    manager.continue_task(
+        task_id=task_id,
+        additional_cycles=payload.additional_cycles,
+        adjusted_objective=payload.adjusted_objective or "",
+        inject_file_id=payload.inject_file_id or "",
+        inject_conversation_id=payload.inject_conversation_id or "",
+        document_mode=payload.document_mode or "",
+        document_chunk_limit=payload.document_chunk_limit or 5,
+        budget_limit_usd=payload.budget_limit_usd or 0.0,
+    )
+
+    task = manager.get_task(task_id)
+    return {
+        "task_id": task_id,
+        "status": task["status"] if task else "queued",
+        "max_depth": task["max_depth"] if task else 0,
+    }
+
+
 @router.get("/research/files")
 async def list_research_files(conversation_id: Optional[str] = None, request: Request = None):
     """List indexed perception_files available for document injection.
 
-    Returns file metadata (name, type, summary, status, token_count, chunk_count).
+    Returns file metadata (name, type, summary, status, token_count, chunk_count)
+    along with the conversation_id each file belongs to.
     Optionally filtered by conversation_id.
     """
     state = request.app.state
-    perception_repo = getattr(state, "perception_sediment_repo", None)
+    perception_repo = getattr(state, "perception_repo", None)
     if not perception_repo:
         return {"files": [], "count": 0}
 
     if conversation_id:
         files = perception_repo.get_files_by_conversation(conversation_id)
     else:
-        files = perception_repo.list_all_files() if hasattr(perception_repo, "list_all_files") else []
+        files = perception_repo.get_all_files_across_conversations()
 
     result = [{
         "file_name": f["file_name"],
@@ -154,6 +201,7 @@ async def list_research_files(conversation_id: Optional[str] = None, request: Re
         "summary": f.get("summary"),
         "token_count": f.get("token_count", 0),
         "chunk_count": f.get("chunk_count", 0),
+        "conversation_id": f.get("conversation_id", ""),
     } for f in files if f.get("status") == "ready"]
 
     return {"files": result, "count": len(result)}
@@ -425,6 +473,10 @@ async def execute_step(
                 s2 = orch._state_mgr._states.get(task_id)
                 if s2 is not None:
                     s2["_rerun_step_id"] = existing["id"]
+                    # Reset digest-related flags so document_digestion re-runs fresh
+                    if rerun_step_type == "document_digestion":
+                        s2["document_digested"] = False
+                        s2["document_learnings"] = []
                     # Set query_index from the step's query_group
                     qg = existing.get("query_group")
                     if qg and rerun_step_type in ("search", "parallel_parse", "digest"):

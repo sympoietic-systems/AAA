@@ -13,7 +13,7 @@ _ORCH_STATE_KEYS = {
     "search_results_cache", "parsed_sources_cache",
     "digest_results_cache", "digest_signals",
     "should_stop", "stop_reason",
-    "inject_file_id", "document_mode", "document_chunk_limit",
+    "inject_file_id", "inject_conversation_id", "document_mode", "document_chunk_limit",
     "document_digested", "document_learnings",
     "previous_context", "continue_from_task_id",
 }
@@ -29,7 +29,7 @@ def make_initial_state(task: dict) -> dict:
         except Exception:
             pass
 
-    return {
+    state = {
         "phase": "planning",
         "objective": task["objective"],
         "max_depth": task["max_depth"],
@@ -39,9 +39,9 @@ def make_initial_state(task: dict) -> dict:
         "all_findings": [],
         "sources_analyzed": 0,
         "stagnation_counter": 0,
-        "step_number": 0,
+        "step_number": extra.get("step_number", 0),
         "last_reflection": {},
-        "current_depth": 0,
+        "current_depth": extra.get("current_depth", 0),
         "query_index": 0,
         "search_results_cache": [],
         "parsed_sources_cache": [],
@@ -50,6 +50,7 @@ def make_initial_state(task: dict) -> dict:
         "should_stop": False,
         "stop_reason": "",
         "inject_file_id": task.get("inject_file_id") or extra.get("inject_file_id"),
+        "inject_conversation_id": task.get("inject_conversation_id") or extra.get("inject_conversation_id"),
         "document_mode": task.get("document_mode") or extra.get("document_mode", "chunks"),
         "document_chunk_limit": task.get("document_chunk_limit") or extra.get("document_chunk_limit", 5),
         "document_digested": extra.get("document_digested", False),
@@ -57,6 +58,11 @@ def make_initial_state(task: dict) -> dict:
         "previous_context": extra.get("previous_context"),
         "continue_from_task_id": extra.get("continue_from_task_id"),
     }
+    logger.info("make_initial_state: step_number=%s, previous_context=%d chars",
+                 state["step_number"], len(state.get("previous_context") or ""))
+    import sys
+    print(f">>> make_initial_state: step_number={state['step_number']}, current_depth={state.get('current_depth')}", flush=True)
+    return state
 
 
 class TaskStateManager:
@@ -90,7 +96,10 @@ class TaskStateManager:
             loaded["objective"] = task["objective"]
             loaded["max_depth"] = task["max_depth"]
             loaded["budget"] = task["budget_limit_usd"]
+            if "phase" not in loaded:
+                loaded["phase"] = "planning"
             for key, default in [("digest_signals", {}), ("inject_file_id", None),
+                                  ("inject_conversation_id", None),
                                   ("document_mode", "chunks"), ("document_chunk_limit", 5),
                                   ("document_digested", False), ("document_learnings", [])]:
                 if key not in loaded:
@@ -131,6 +140,7 @@ class TaskStateManager:
             "digest_results_cache": [], "digest_signals": {},
             "should_stop": False, "stop_reason": "",
             "inject_file_id": task.get("inject_file_id"),
+            "inject_conversation_id": task.get("inject_conversation_id"),
             "document_mode": task.get("document_mode", "chunks"),
             "document_chunk_limit": task.get("document_chunk_limit", 5),
             "document_digested": False, "document_learnings": [],
@@ -169,7 +179,7 @@ class TaskStateManager:
         state = self._states.get(task_id)
         if state is None:
             state = self.resume_task(task_id)
-        return state["phase"] if state else ""
+        return state.get("phase", "") if state else ""
 
     def _persist_state(self, task_id: str) -> None:
         s = self._states.get(task_id)
@@ -195,6 +205,7 @@ class TaskStateManager:
                 if key not in state:
                     state[key] = {}
             for key_def in [("document_digested", False), ("document_learnings", []),
+                            ("inject_conversation_id", None),
                             ("document_mode", "chunks"), ("document_chunk_limit", 5)]:
                 if key_def[0] not in state:
                     state[key_def[0]] = key_def[1]

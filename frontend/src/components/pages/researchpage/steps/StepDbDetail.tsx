@@ -200,7 +200,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
         if (e.event_type === "orchestrator_plan_response") {
           r.goal = parsed.goal || ""
           r.queries = parsed.search_queries || []
-        } else if (e.event_type === "orchestrator_digest_response") {
+        } else if (e.event_type.includes("digest_response")) {
           if (parsed.learnings) r.learnings.push(...parsed.learnings)
         } else if (e.event_type.includes("reflect_response")) {
           r.completeness = parsed.completeness_score || parsed.completeness || 0
@@ -233,10 +233,10 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   }
 
   const tabBadges = {
-    input: inputEntries.length || undefined,
-    result: entries.length || undefined,
-    log: (otherEntries.length + searchEntries.length) || undefined,
-    notes: noteHook.notes.length || undefined,
+    input: inputEntries.length > 0 ? inputEntries.length : undefined,
+    result: entries.length > 0 ? entries.length : undefined,
+    log: (otherEntries.length + searchEntries.length) > 0 ? (otherEntries.length + searchEntries.length) : undefined,
+    notes: noteHook.notes.length > 0 ? noteHook.notes.length : undefined,
   }
 
   return (

@@ -354,7 +354,13 @@ class SomaticResearchOrchestrator:
     # ── In-memory task state (for step-by-step execution) ──────────
 
     def init_task(self, task_id: str) -> dict:
-        return self._state_mgr.init_task(task_id)
+        import sys
+        print(f">>> orchestrator.init_task CALLED for {task_id[:8]}", flush=True)
+        state = self._state_mgr.init_task(task_id)
+        print(f">>> orchestrator.init_task DONE: step_number={state.get('step_number')}, current_depth={state.get('current_depth')}, phase={state.get('phase')}", flush=True)
+        logger.info("INIT_TASK called: task=%s step_number=%s current_depth=%s phase=%s",
+                     task_id[:8], state.get("step_number"), state.get("current_depth"), state.get("phase"))
+        return state
 
     def resume_task(self, task_id: str) -> Optional[dict]:
         return self._state_mgr.resume_task(task_id)
@@ -393,6 +399,45 @@ class SomaticResearchOrchestrator:
 
         if phase == "planning":
             result = await self._preview_plan_inputs(task)
+        elif phase == "document_digestion":
+            inject_file_id = s.get("inject_file_id") if s else None
+            doc_mode = s.get("document_mode", "chunks") if s else "chunks"
+            chunk_limit = s.get("document_chunk_limit", 5) if s else 5
+            doc_summary = ""
+            doc_chunks: list[dict] = []
+
+            if inject_file_id and s:
+                conversation_id = None
+                task_row = self.task_repo.get(task_id)
+                if task_row:
+                    conversation_id = task_row.get("conversation_id")
+                effective_conv_id = s.get("inject_conversation_id") or conversation_id
+
+                perception_repo = getattr(self._state, "perception_repo", None)
+                if perception_repo and effective_conv_id:
+                    try:
+                        db_chunks = perception_repo.get_by_file(effective_conv_id, inject_file_id)
+                        doc_chunks = [{"content": c.chunk_text, "sim": 0} for c in db_chunks if c.chunk_text]
+                        file_info = perception_repo.find_file_by_name(inject_file_id)
+                        if file_info and file_info.get("summary"):
+                            doc_summary = f"[Document: {inject_file_id}]\n{file_info['summary']}"
+                    except Exception as e:
+                        logger.warning("Document chunk preview retrieval failed: %s", e)
+
+                if doc_mode == "chunks":
+                    doc_chunks = doc_chunks[:chunk_limit]
+
+            result = {
+                "phase": "document_digestion",
+                "file_id": inject_file_id,
+                "mode": doc_mode,
+                "chunk_limit": chunk_limit if doc_mode == "chunks" else None,
+                "document_digested": s.get("document_digested", False) if s else False,
+                "objective": task.get("objective", ""),
+                "doc_summary": doc_summary,
+                "doc_chunks": doc_chunks,
+                "cached_at": now_utc_str(),
+            }
         elif phase == "searching":
             if s and s.get("plan"):
                 raw_queries = s["plan"].get("search_queries", [s["objective"]])
@@ -836,11 +881,11 @@ class SomaticResearchOrchestrator:
         except Exception:
             return 0
 
-    def _delete_downstream(self, task_id: str, after_step_number: int) -> int:
+    def _delete_downstream(self, task_id: str, after_step_number: int, exclude_types: tuple[str, ...] = ()) -> int:
         """Delete all steps with step_number > after_step_number (for rerun)."""
         if not self.step_repo:
             return 0
-        return self.step_repo.delete_downstream(task_id, after_step_number)
+        return self.step_repo.delete_downstream(task_id, after_step_number, exclude_types)
 
     # ── Main step execution ───────────────────────────────────────
 
@@ -856,6 +901,8 @@ class SomaticResearchOrchestrator:
         async with self._state_mgr.locks[task_id]:
             s = self._get_state(task_id)
             phase = s["phase"]
+            import sys
+            print(f">>> execute_step: phase={phase}, depth={s.get('current_depth')}, step_number={s.get('step_number')}", flush=True)
 
             # On rerun, delete all downstream steps starting from the beginning of the rerun phase
             rerun_id = s.get("_rerun_step_id")
@@ -870,12 +917,11 @@ class SomaticResearchOrchestrator:
                         and abs(st["step_number"] - rerun_step["step_number"]) < 10
                     ]
                     min_step_num = min(st["step_number"] for st in same_phase_steps) if same_phase_steps else rerun_step["step_number"]
-                    deleted = self._delete_downstream(task_id, min_step_num - 1)
+                    deleted = self._delete_downstream(task_id, min_step_num - 1, exclude_types=("document_digestion",))
                     if deleted:
                         logger.info("Rerun: deleted %d downstream steps starting from step %d — %s",
                                      deleted, min_step_num, self._log_context(task_id, "rerun"))
                     s["step_number"] = min_step_num - 1
-                    s.pop("_rerun_step_id", None)
 
             result: dict = {
                 "task_id": task_id,

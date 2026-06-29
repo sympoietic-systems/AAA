@@ -39,6 +39,12 @@ function stepCountSuffix(step: ResearchStep, resultsByStep: Record<string, unkno
   // Reflect: "completeness: 0.75" → "(75%)"
   const completeness = summary.match(/completeness:\s*([\d.]+)/i)
   if (completeness) return ` (${Math.round(parseFloat(completeness[1]) * 100)}%)`
+  // Document digestion: "5 learnings, 3 followups from doc file.pdf (7 chunks)" → "(5L + 3F)"
+  const docDigest = summary.match(/(\d+)\s+learnings?[,\s]+(\d+)\s+followups?/i)
+  if (docDigest) return ` (${docDigest[1]}L + ${docDigest[2]}F)`
+  // Document digestion: "No relevant document chunks found for digestion" → "(0)"
+  const noChunks = summary.match(/no relevant/)
+  if (noChunks) return " (0)"
   // Fallback: check results_by_step count
   if (step.id && resultsByStep[step.id]) {
     const n = resultsByStep[step.id].length
@@ -107,15 +113,17 @@ export const StepPipeline = memo(function StepPipeline({
   const hasPipeline = orchPhase && orchPhase !== "complete" && orchPhase !== "not_started"
 
   // ── Plan-driven grouping using query_group and depth from DB ──
-  const { planStep, cycles, synthesizeStep, activeGroupIdx, planQueries, activeDepth } = useMemo(() => {
+  const { cycles, synthesizeStep, activeGroupIdx, planQueries, activeDepth } = useMemo(() => {
     const empty = {
-      planStep: null as ResearchStep | null,
       cycles: [] as {
         depth: number
+        planStep: ResearchStep | null
+        documentDigestionStep: ResearchStep | null
         groups: QueryGroup[]
         reflectStep: ResearchStep
         evaluateStep: ResearchStep
         queryTexts: Record<number, string>
+        planQueries: string[]
       }[],
       synthesizeStep: null as ResearchStep | null,
       activeGroupIdx: -1,
@@ -125,14 +133,11 @@ export const StepPipeline = memo(function StepPipeline({
     if (!data) return empty
 
     const steps = [...data.steps]
-    const plan = steps.find(s => s.step_type === "plan") ?? 
-      (orchPhase === "planning" ? { id: "", step_type: "plan", status: "pending" } as ResearchStep : null)
     const planQueryCount = getPlanQueryCount(data)
     const totalQ = planQueryCount || 1
 
     // Helper to retrieve depth from step_data JSON
     const getStepDepth = (step: ResearchStep): number => {
-      if (step.step_type === "plan") return 0
       if (!step.step_data) return 0
       try {
         const parsed = JSON.parse(step.step_data)
@@ -142,12 +147,22 @@ export const StepPipeline = memo(function StepPipeline({
       }
     }
 
-    // Get plan query texts for labels
-    const planQueries: string[] = []
+    // Helper to extract plan queries from a plan step's step_data
+    const getPlanQueriesFromStep = (step: ResearchStep | null): string[] => {
+      if (!step?.step_data) return []
+      try {
+        const parsed = JSON.parse(step.step_data)
+        if (parsed.plan?.search_queries) return parsed.plan.search_queries
+      } catch {}
+      return []
+    }
+
+    // Global fallback: latest plan from plan_repo
+    const globalPlanQueries: string[] = []
     try {
       if (data?.plan?.plan_json) {
         const pj = JSON.parse(data.plan.plan_json)
-        planQueries.push(...(pj.search_queries || []))
+        globalPlanQueries.push(...(pj.search_queries || []))
       }
     } catch {}
 
@@ -195,6 +210,11 @@ export const StepPipeline = memo(function StepPipeline({
     for (let d = 0; d <= actDepth; d++) {
       const depthSteps = steps.filter(s => getStepDepth(s) === d)
       
+      // Plan step for this depth
+      const depthPlan = depthSteps.find(s => s.step_type === "plan") ?? 
+        (d === actDepth && orchPhase === "planning" ? { id: "", step_type: "plan", status: "pending" } as ResearchStep : null)
+      
+      const depthPlanQueries = getPlanQueriesFromStep(depthPlan)
       // Determine how many query groups to display for this depth
       const queryGroupsInDepth = Array.from(new Set(depthSteps.map(s => s.query_group).filter(Boolean))) as number[]
       const depthQCount = queryGroupsInDepth.length || (d === actDepth ? (previewQueryCount || totalQ) : 1)
@@ -228,12 +248,18 @@ export const StepPipeline = memo(function StepPipeline({
       const evaluateStep = depthSteps.find(s => s.step_type === "evaluate") || 
         ({ id: "", step_type: "evaluate", step_number: 0, status: "pending" } as ResearchStep)
 
+      const docDigestStep = depthSteps.find(s => s.step_type === "document_digestion") || 
+        (d === actDepth && orchPhase === "document_digestion" ? { id: "", step_type: "document_digestion", status: "pending" } as ResearchStep : null)
+
       cyclesList.push({
         depth: d,
+        planStep: depthPlan,
+        documentDigestionStep: docDigestStep,
         groups,
         reflectStep,
         evaluateStep,
-        queryTexts
+        queryTexts,
+        planQueries: depthPlanQueries,
       })
     }
 
@@ -257,11 +283,10 @@ export const StepPipeline = memo(function StepPipeline({
     }
 
     return { 
-      planStep: plan, 
       cycles: cyclesList, 
       synthesizeStep: synth, 
       activeGroupIdx: activeGIdx, 
-      planQueries, 
+      planQueries: globalPlanQueries, 
       activeDepth: actDepth 
     }
   }, [data, orchPhase, preview])
@@ -290,23 +315,6 @@ export const StepPipeline = memo(function StepPipeline({
       <div>
         <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-1.5 font-mono">[ Pipeline ]</div>
 
-        {/* Planning step */}
-        {planStep && (
-          <div className="mb-2">
-            <PipelineRow
-              label={`Plan${planStep.status === "completed" ? stepCountSuffix(planStep, resultsByStep) : allComplete ? "" : " (" + planStep.status + ")"}`}
-              stepId={planStep.id || null}
-              isDone={allComplete || planStep.status === "completed"}
-              isCurrent={orchPhase === "planning"}
-              isStale={planStep.status === "stale"}
-              isSelected={planStep.id ? selectedId === planStep.id : (selectedId === null && orchPhase === "planning")}
-              onSelect={onSelect}
-              onDoStep={onDoStep}
-              stepping={stepping}
-            />
-          </div>
-        )}
-
         {/* Cycles list */}
         {cycles.map((cycle) => {
           const isCycleCurrent = cycle.depth === activeDepth
@@ -325,13 +333,64 @@ export const StepPipeline = memo(function StepPipeline({
 
               {!collapsed && (
                 <>
+                  {/* Plan step for this cycle */}
+                  {cycle.planStep && (
+                    <div className="mb-2 pl-1.5 border-l border-ui-border/50">
+                      {(() => {
+                        const ps = cycle.planStep
+                        const stale = ps.status === "stale"
+                        const suffix = (stale || ps.status === "completed") ? stepCountSuffix(ps, resultsByStep) : ""
+                        const pending = ps.id ? "" : " —"
+                        const done = allComplete || ps.status === "completed" || stale
+                        const isActive = !allComplete && hasPipeline && isCycleCurrent && orchPhase === "planning" && ps.status !== "completed"
+                        return (
+                          <PipelineRow
+                            label={`Plan${suffix}${pending}${ps.status === "completed" ? "" : allComplete ? "" : " (" + ps.status + ")"}`}
+                            stepId={ps.id || null}
+                            isDone={done}
+                            isCurrent={isActive}
+                            isStale={stale}
+                            isSelected={ps.id ? selectedId === ps.id : (selectedId === null && isActive)}
+                            onSelect={onSelect}
+                            onDoStep={onDoStep}
+                            stepping={stepping}
+                          />
+                        )
+                      })()}
+                    </div>
+                  )}
+                  {/* Document digestion step for this cycle */}
+                  {cycle.documentDigestionStep && (
+                    <div className="mb-2 pl-1.5 border-l border-ui-border/50">
+                      {(() => {
+                        const ds = cycle.documentDigestionStep
+                        const stale = ds.status === "stale"
+                        const suffix = (stale || ds.status === "completed") ? stepCountSuffix(ds, resultsByStep) : ""
+                        const pending = ds.id ? "" : " —"
+                        const done = allComplete || ds.status === "completed" || stale
+                        const isActive = !allComplete && hasPipeline && isCycleCurrent && orchPhase === "document_digestion" && ds.status !== "completed"
+                        return (
+                          <PipelineRow
+                            label={`Document Digest${suffix}${pending}${ds.status === "completed" ? "" : allComplete ? "" : " (" + ds.status + ")"}`}
+                            stepId={ds.id || null}
+                            isDone={done}
+                            isCurrent={isActive}
+                            isStale={stale}
+                            isSelected={ds.id ? selectedId === ds.id : (selectedId === null && isActive)}
+                            onSelect={onSelect}
+                            onDoStep={onDoStep}
+                            stepping={stepping}
+                          />
+                        )
+                      })()}
+                    </div>
+                  )}
                   {/* Query groups inside this cycle */}
                   {cycle.groups.map((group) => {
-                    let qText = ""
-                    if (group.queryIndex <= planQueries.length && cycle.depth === 0) {
-                      qText = planQueries[group.queryIndex - 1]
-                    } else {
-                      qText = cycle.queryTexts[group.queryIndex] || ""
+                    const depthQ = cycle.planQueries.length > 0 ? cycle.planQueries : planQueries
+                    let qText = cycle.queryTexts[group.queryIndex] || ""
+                    if (!qText && group.queryIndex <= depthQ.length) {
+                      qText = depthQ[group.queryIndex - 1]
                     }
 
                     if (!qText && cycle.depth === activeDepth && preview && preview.pending_queries) {

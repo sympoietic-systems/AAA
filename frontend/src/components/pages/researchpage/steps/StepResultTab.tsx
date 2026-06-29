@@ -390,6 +390,92 @@ export const StepResultTab = memo(function StepResultTab({
         <div className="text-ui-dim italic text-[9px] border-t border-ui-border pt-2">no digested results</div>
       )}
 
+      {/* ── Document Digestion: learnings, followups, gaps from injected file ── */}
+      {selected.step_type === "document_digestion" && (
+        <div className="border-t border-ui-border pt-2 space-y-3">
+          {(() => {
+            let fileId = ""
+            let mode = ""
+            try {
+              const d = selected.step_data ? JSON.parse(selected.step_data) : null
+              fileId = d?.file_id || ""
+              mode = d?.mode || ""
+            } catch {}
+            const docLearnings: string[] = parsedResult.learnings.length > 0 ? parsedResult.learnings : (() => {
+              try {
+                const d = selected.step_data ? JSON.parse(selected.step_data) : null
+                return d?.learnings || []
+              } catch { return [] }
+            })()
+            const ddFollowups: string[] = (() => {
+              try {
+                const d = selected.step_data ? JSON.parse(selected.step_data) : null
+                return d?.followups || []
+              } catch { return [] }
+            })()
+            const ddGaps: string[] = (() => {
+              try {
+                const d = selected.step_data ? JSON.parse(selected.step_data) : null
+                return d?.gaps || []
+              } catch { return [] }
+            })()
+            return (
+              <>
+                {fileId && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-semantic-purple text-[8px] font-mono px-1 py-0.5 bg-semantic-purple/10 border border-semantic-purple/30 rounded-sm">
+                      file
+                    </span>
+                    <span className="text-ui-secondary text-[9px] truncate">{fileId}{mode ? ` (${mode})` : ""}</span>
+                  </div>
+                )}
+                {docLearnings.length > 0 && (
+                  <div>
+                    <div className="text-ui-dim text-[8px] uppercase mb-1 font-mono">learnings ({docLearnings.length})</div>
+                    <div className="space-y-1 border border-ui-border p-2 bg-[#080808]/30 max-h-64 overflow-y-auto">
+                      {docLearnings.map((l, i) => (
+                        <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-semantic-green/30 leading-relaxed">
+                          <span className="text-ui-dim">{i+1}.</span> {l}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {ddFollowups.length > 0 && (
+                  <div>
+                    <div className="text-ui-dim text-[8px] uppercase mb-1 font-mono">followups ({ddFollowups.length})</div>
+                    <div className="space-y-1 border border-ui-border p-2 bg-[#080808]/30 max-h-48 overflow-y-auto">
+                      {ddFollowups.map((f, i) => (
+                        <div key={i} className="text-semantic-purple text-[9px] pl-2 border-l border-semantic-purple/30 leading-relaxed">
+                          → {f}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {ddGaps.length > 0 && (
+                  <div>
+                    <div className="text-ui-dim text-[8px] uppercase mb-1 font-mono">gaps ({ddGaps.length})</div>
+                    <div className="space-y-1 border border-ui-border p-2 bg-[#080808]/30 max-h-48 overflow-y-auto">
+                      {ddGaps.map((g, i) => (
+                        <div key={i} className="text-semantic-gold text-[9px] pl-2 border-l border-semantic-gold/30 leading-relaxed">
+                          ◇ {g}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {docLearnings.length === 0 && ddFollowups.length === 0 && ddGaps.length === 0 && (
+                  <div className="text-ui-dim italic text-[9px]">
+                    {selected.result_summary || "no document analysis results"}
+                  </div>
+                )}
+              </>
+            )
+          })()}
+        </div>
+      )}
+
       {/* ── Reflect: completeness, insights, gaps, next actions ── */}
       {selected.step_type === "reflect" && (
         <div className="border-t border-ui-border pt-2 space-y-3">
