@@ -59,6 +59,16 @@ class AgonisticPlanner:
         num_queries = 3 if is_agonistic else max(2, breadth)
 
         system_text = prompt_data.get("system", "")
+        # Build persona context via ResearchContextBuilder
+        try:
+            from backend.services.research.context_builder import ResearchContextBuilder
+            builder = ResearchContextBuilder(self._state)
+            persona = await builder.build_orchestration_context(objective, "research_planning")
+            if persona:
+                system_text = persona + "\n\n" + system_text
+        except Exception as e:
+            logger.warning("Failed to build planner persona: %s", e)
+
         if prompt_data.get("anti_mastery"):
             system_text = apply_anti_mastery_filter(system_text)
 
@@ -128,6 +138,16 @@ class AgonisticPlanner:
         is_agonistic = stagnation_index >= self.config.get("agonistic_stagnation_threshold", 0.7)
 
         system_text = prompt_data.get("system", "")
+        # Build persona context via ResearchContextBuilder
+        try:
+            from backend.services.research.context_builder import ResearchContextBuilder
+            builder = ResearchContextBuilder(self._state)
+            persona = await builder.build_orchestration_context(objective, "research_planning")
+            if persona:
+                system_text = persona + "\n\n" + system_text
+        except Exception as e:
+            logger.warning("Failed to build planner query gen persona: %s", e)
+
         if prompt_data.get("anti_mastery"):
             system_text = apply_anti_mastery_filter(system_text)
 

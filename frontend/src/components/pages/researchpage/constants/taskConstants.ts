@@ -17,25 +17,25 @@ export const STATUS_COLORS: Record<string, string> = {
 
 export const STEP_LABELS: Record<string, string> = {
   plan: "Plan", search: "Search", parallel_parse: "Parse Sources",
-  digest: "Digest", reflect: "Consolidate", synthesize: "Synthesize",
+  digest: "Digest", reflect: "Consolidate", reflection: "Reflection", synthesize: "Synthesize",
   evaluate: "Evaluate", document_digestion: "Document Digest",
 }
 
 export const STEP_TO_PHASE: Record<string, string> = {
   plan: "planning", search: "searching", parallel_parse: "parsing",
-  digest: "digesting", reflect: "reflecting", evaluate: "evaluating",
+  digest: "digesting", reflect: "consolidating", reflection: "reflection", evaluate: "evaluating",
   synthesize: "synthesizing", document_digestion: "document_digestion",
 }
 
 export const PHASE_ORDER_DISPLAY = [
   "planning", "document_digestion", "searching", "parsing", "digesting",
-  "reflecting", "evaluating", "synthesizing",
+  "consolidating", "reflection", "evaluating", "synthesizing",
 ]
 
 export const PHASE_LABELS: Record<string, string> = {
   planning: "Plan", document_digestion: "Document Digest",
   searching: "Search", parsing: "Parse Sources",
-  digesting: "Digest", reflecting: "Consolidate", evaluating: "Evaluate",
+  digesting: "Digest", consolidating: "Consolidate", reflection: "Reflection", evaluating: "Evaluate",
   synthesizing: "Synthesize", complete: "Complete",
 }
 
@@ -45,6 +45,7 @@ export const STEP_TYPE_COLORS: Record<string, string> = {
   digest: CSS_VARS.semanticPurple,
   document_digestion: CSS_VARS.semanticSand,
   reflect: CSS_VARS.semanticSlate,
+  reflection: CSS_VARS.semanticPurple,
   synthesize: CSS_VARS.semanticGreen,
   evaluate: CSS_VARS.semanticGold,
 }
@@ -78,6 +79,9 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   orchestrator_reflect: "Consolidate Result",
   orchestrator_reflect_prompt: "Consolidate Prompt",
   orchestrator_reflect_response: "Consolidate Response",
+  orchestrator_reflection: "Reflection Result",
+  orchestrator_reflection_prompt: "Reflection Prompt",
+  orchestrator_reflection_response: "Reflection Response",
   orchestrator_evaluate: "Evaluate",
   orchestrator_synthesize_start: "Synthesize Start",
   orchestrator_synthesize_prompt: "Synthesize Prompt",
@@ -115,6 +119,9 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   orchestrator_reflect: CSS_VARS.semanticPurple,
   orchestrator_reflect_prompt: CSS_VARS.semanticPurple,
   orchestrator_reflect_response: CSS_VARS.semanticPurple,
+  orchestrator_reflection: CSS_VARS.semanticPurple,
+  orchestrator_reflection_prompt: CSS_VARS.semanticPurple,
+  orchestrator_reflection_response: CSS_VARS.semanticPurple,
   orchestrator_evaluate: CSS_VARS.semanticGold,
   orchestrator_synthesize_start: CSS_VARS.semanticGold,
   orchestrator_synthesize_prompt: CSS_VARS.semanticPurple,

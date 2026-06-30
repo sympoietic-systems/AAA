@@ -396,9 +396,10 @@ class TestMultiCycleContinuation:
         state_mock.research_branch_repo = MagicMock()
 
         # Create a dummy plan to satisfy foreign key constraint on research_steps
+        plan_id = f"plan-{task_id}"
         plan_repo = ResearchPlanRepository(DB_PATH)
         plan_repo.create({
-            "id": "dummy-plan-id",
+            "id": plan_id,
             "task_id": task_id,
             "plan_json": "{}",
             "status": "active"
@@ -432,7 +433,7 @@ class TestMultiCycleContinuation:
             "objective": "Research objective",
             "max_depth": 4,
             "budget": 0.50,
-            "plan_id": "dummy-plan-id",
+            "plan_id": plan_id,
             "plan": {"goal": "Test goal"},
             "all_findings": [],
             "sources_analyzed": 0,
@@ -477,4 +478,188 @@ class TestMultiCycleContinuation:
             assert step_data["depth"] == 1
 
         conn.close()
+
+
+class TestPureReflectionInclusion:
+    @pytest.mark.asyncio
+    async def test_pure_reflection_calls_llm_with_metrics(self):
+        from backend.services.research.tools import _tool_reflection
+
+        orch = MagicMock()
+        orch.step_repo = MagicMock()
+        orch.step_result_repo = MagicMock()
+        orch._build_orchestrator_persona = AsyncMock(return_value="Mocked Persona")
+        orch._get_parsed_urls.return_value = [
+            {"url": "document:doc.pdf", "title": "doc.pdf", "status": "ok"},
+            {"url": "https://other.com", "title": "other.com", "status": "ok"},
+        ]
+
+        # Mock steps
+        orch.step_repo.get_by_task.return_value = [
+            {"id": "step1", "step_type": "document_digestion", "step_data": json.dumps({"depth": 0})},
+            {"id": "step2", "step_type": "parallel_parse", "step_data": json.dumps({"depth": 0})},
+        ]
+
+        # Mock step results
+        def get_by_step_mock(step_id):
+            if step_id == "step1":
+                return [{
+                    "source_title": "doc.pdf",
+                    "source_url": "document:doc.pdf",
+                    "analyzed_json": json.dumps({
+                        "learnings": ["digestion learning 1"],
+                        "followups": [],
+                        "gaps": ["gap 1"]
+                    })
+                }]
+            elif step_id == "step2":
+                return [{
+                    "source_title": "other.com",
+                    "source_url": "https://other.com",
+                    "analyzed_json": json.dumps({
+                        "learnings": ["web learning 1"],
+                        "followups": [],
+                        "gaps": ["gap 2"]
+                    })
+                }]
+            return []
+
+        orch.step_result_repo.get_by_step.side_effect = get_by_step_mock
+        orch._get_step_depth = lambda s: json.loads(s.get("step_data") or "{}").get("depth", 0)
+
+        all_findings = [
+            "[doc.pdf]: digestion learning 1",
+            "[other.com]: web learning 1",
+        ]
+
+        with patch("backend.modules.llm_client.generate_unified", new_callable=AsyncMock) as mock_generate:
+            mock_generate.return_value = {
+                "json_data": {
+                    "reflection_notes": "Highly integrated findings.",
+                    "detected_biases": ["None"],
+                    "knowledge_gaps": ["None"],
+                    "glitch_fidelity": 1.0,
+                    "contradiction_density": 0.0,
+                    "source_entropy": 0.5,
+                    "signal_flags": [],
+                    "refined_queries": [],
+                    "revised_confidence": 0.9,
+                    "monologue_trace": [{"register": "Integration", "notes": "Done"}]
+                }
+            }
+
+            res = await _tool_reflection(
+                orch,
+                task_id="task-id",
+                objective="Test pure reflection obj",
+                depth=0,
+                max_depth=3,
+                all_findings=all_findings,
+                step_id="step-id"
+            )
+
+            assert mock_generate.call_count == 3
+            c1_kwargs = mock_generate.call_args_list[0][1]
+            user_prompt_c1 = c1_kwargs.get("user_prompt", "")
+            assert "digestion learning 1" in user_prompt_c1
+            assert "web learning 1" in user_prompt_c1
+            assert "Glitch Fidelity" in user_prompt_c1
+            assert res["revised_confidence"] == 0.9
+            assert res["reflection_notes"] == "Highly integrated findings."
+
+
+class TestDynamicReroutingAndCacheClearance:
+    @pytest.mark.asyncio
+    async def test_reflection_reroutes_on_glitch_fidelity_low(self):
+        conn = init_db(DB_PATH)
+        task_id = _make_task_id()
+        task_repo = ResearchTaskRepository(DB_PATH)
+        plan_repo = ResearchPlanRepository(DB_PATH)
+        step_repo = ResearchStepRepository(DB_PATH)
+        _create_task(task_repo, task_id)
+
+        state_mock = _make_mock_state()
+        state_mock.research_task_repo = task_repo
+        state_mock.research_plan_repo = plan_repo
+        state_mock.research_step_repo = step_repo
+        state_mock.research_step_result_repo = MagicMock()
+        state_mock.research_meta_log_repo = MagicMock()
+        state_mock.scraped_asset_repo = MagicMock()
+        state_mock.research_branch_repo = MagicMock()
+
+        orch = SomaticResearchOrchestrator(state_mock)
+        
+        # Seed cache to verify cache-clearance
+        orch._save_cache(task_id, {"planning": {"cached_plan": True}})
+        
+        plan_id = f"plan-{task_id}"
+        plan_repo.create({
+            "id": plan_id,
+            "task_id": task_id,
+            "plan_json": json.dumps({"search_queries": []}),
+            "status": "active"
+        })
+
+        # Setup task state in reflection phase
+        orch._state_mgr.states[task_id] = {
+            "phase": "reflection",
+            "objective": "Research objective",
+            "max_depth": 3, "budget": 0.5,
+            "plan_id": plan_id, "plan": {"search_queries": []}, "all_findings": [],
+            "sources_analyzed": 0, "stagnation_counter": 0, "step_number": 2,
+            "last_reflection": {}, "current_depth": 0, "query_index": 0,
+            "search_results_cache": [], "parsed_sources_cache": [],
+            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
+        }
+
+        # Mock the Reflection step logic to output GLITCH_FIDELITY_LOW flag
+        from backend.services.research.steps.reflect import ReflectionPayload
+        mock_payload = ReflectionPayload(
+            reflection_notes="Low fidelity detected",
+            signal_flags=["GLITCH_FIDELITY_LOW"],
+            glitch_fidelity=0.2,
+            contradiction_density=0.8,
+            source_entropy=0.5,
+            revised_confidence=0.3
+        )
+
+        with patch("backend.services.research.steps.reflect.ReflectionStep.execute", new_callable=AsyncMock) as mock_execute:
+            # We mock execute to return our low fidelity output
+            async def mock_exec(orch_inst, env):
+                # Save step record in DB
+                step_id = f"step-reflect-{task_id}"
+                step_repo.create({
+                    "id": step_id,
+                    "task_id": task_id,
+                    "plan_id": plan_id,
+                    "step_number": 3,
+                    "step_type": "reflection",
+                    "step_data": mock_payload.model_dump_json(),
+                    "status": "completed"
+                })
+                from backend.services.research.task_state import StepOutput
+                return StepOutput(
+                    status="completed",
+                    message="Reflected",
+                    payload=mock_payload,
+                    signal_flags={"GLITCH_FIDELITY_LOW": True},
+                    step_ids=[step_id]
+                )
+            
+            mock_execute.side_effect = mock_exec
+            
+            # Run the task step loop for reflection phase
+            await orch.execute_step(task_id)
+
+        # Check that state machine transitioned back to planning
+        s = orch._state_mgr.states[task_id]
+        assert s["phase"] == "planning"
+
+        # Check that planning cache was cleared
+        cache = orch._load_cache(task_id)
+        assert "planning" not in cache
+
+        conn.close()
+
+
 

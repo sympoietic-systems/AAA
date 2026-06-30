@@ -285,7 +285,7 @@ class TestPersistAndLoadState:
 
         orch = SomaticResearchOrchestrator(state_mock)
         orch._state_mgr.states[task_id] = {
-            "phase": "reflecting",
+            "phase": "consolidating",
             "objective": "Test",
             "max_depth": 2,
             "budget": 0.3,
@@ -310,7 +310,7 @@ class TestPersistAndLoadState:
         loaded = orch._load_state(task_id)
 
         assert loaded is not None
-        assert loaded["phase"] == "reflecting"
+        assert loaded["phase"] == "consolidating"
         assert loaded["max_depth"] == 2
         assert loaded["budget"] == 0.3
         assert loaded["plan_id"] == "p1"

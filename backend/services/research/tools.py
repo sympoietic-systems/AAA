@@ -297,14 +297,14 @@ async def _tool_reflect(orch, task_id, objective, goal, depth, max_depth,
         prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
 
         # Try cache first for persona, system prompt, and user prompt (matching depth)
-        cached = orch._get_cached_phase(task_id, "reflecting")
+        cached = orch._get_cached_phase(task_id, "consolidating")
         if (
             cached
             and cached.get("current_depth") == depth
             and cached.get("system_prompt")
             and cached.get("user_prompt")
         ):
-            logger.info("Using cached preview prompts for reflecting phase (depth %d)", depth)
+            logger.info("Using cached preview prompts for consolidating phase (depth %d)", depth)
             system_text = cached["system_prompt"]
             user_text = cached["user_prompt"]
             
@@ -348,8 +348,8 @@ async def _tool_reflect(orch, task_id, objective, goal, depth, max_depth,
                 system_text = apply_anti_mastery_filter(system_text)
             # Cache for next use
             cache = orch._load_cache(task_id)
-            cache["reflecting"] = {
-                "phase": "reflecting",
+            cache["consolidating"] = {
+                "phase": "consolidating",
                 "persona": persona,
                 "objective": objective,
                 "goal": goal,
@@ -475,6 +475,257 @@ async def _tool_reflect(orch, task_id, objective, goal, depth, max_depth,
             logger.warning("Reflection failed: %s", e)
 
         return latest_result or {"completeness_score": 0.3, "next_queries": [], "next_direct_urls": [], "reflection": "No reflection"}
+
+async def _tool_reflection(orch, task_id, objective, depth, max_depth,
+                                all_findings, digest_signals: dict = None,
+                                step_id: str = "") -> dict:
+    """Deep meta-reflection and thinking-aloud step. Computes glitch fidelity,
+    contradiction density, and source entropy, then performs a three-cycle self-critique loop:
+    - Cycle 1: Generate initial critique and Monologue Trace from findings.
+    - Cycle 2: Critical Self-Critique of Cycle 1's monologue (strict register audit).
+    - Cycle 3: Synthesized final meta-reflection JSON with critique_log attached (the scar).
+    """
+    from urllib.parse import urlparse
+    import math
+
+    # Calculate Glitch Fidelity
+    glitches_detected = 0
+    glitches_addressed = 0
+    steps = orch.step_repo.get_by_task(task_id) if orch.step_repo else []
+    for i, step in enumerate(steps):
+        # Search step with no results is a glitch
+        if step.get("step_type") == "searching":
+            results = orch.step_result_repo.get_by_step(step["id"]) if orch.step_result_repo else []
+            if not results or all(not r.get("source_url") for r in results):
+                glitches_detected += 1
+                if any(s.get("step_type") == "planning" for s in steps[i+1:]):
+                    glitches_addressed += 1
+        # Parse step with errors is a glitch
+        elif step.get("step_type") == "parsing":
+            results = orch.step_result_repo.get_by_step(step["id"]) if orch.step_result_repo else []
+            for r in results:
+                raw_c = r.get("raw_content") or ""
+                if not raw_c or "error" in raw_c.lower() or raw_c.startswith("Error:"):
+                    glitches_detected += 1
+                    if any(s.get("step_type") in ("searching", "planning") for s in steps[i+1:]):
+                        glitches_addressed += 1
+                        break
+
+    glitch_fidelity = (glitches_addressed / glitches_detected) if glitches_detected > 0 else 1.0
+
+    # Calculate Source Entropy (Shannon entropy on domains of parsed URLs)
+    parsed_urls = orch._get_parsed_urls(task_id)
+    domains = []
+    for u in parsed_urls:
+        url_str = u.get("url") or u.get("source_url")
+        if url_str:
+            try:
+                domain = urlparse(url_str).netloc
+                if domain:
+                    domains.append(domain)
+            except Exception:
+                pass
+
+    if not domains:
+        source_entropy = 0.0
+    else:
+        counts = {}
+        for d in domains:
+            counts[d] = counts.get(d, 0) + 1
+        n = len(domains)
+        source_entropy = -sum((count / n) * math.log2(count / n) for count in counts.values())
+
+    # Calculate Contradiction Density
+    contradiction_density = 0.0
+    if all_findings:
+        tension_keywords = ["conflict", "contradict", "disagree", "oppose", "tension", "clash", "versus", "vs", "difference"]
+        matches = 0
+        for f in all_findings:
+            if any(kw in f.lower() for kw in tension_keywords):
+                matches += 1
+        contradiction_density = matches / len(all_findings)
+
+    prompt_data = get_prompts_dict("research/orchestrator_reflection.yaml")
+
+    persona = await orch._build_orchestrator_persona(objective)
+
+    # Format visited urls list
+    formatted_urls = []
+    for i, u in enumerate(parsed_urls):
+        url_str = u.get("url") or u.get("source_url") or ""
+        title = u.get("title") or u.get("source_title") or f"Source {i+1}"
+        formatted_urls.append(f"- [{title}]({url_str})")
+    parsed_urls_text = "\n".join(formatted_urls) or "(none)"
+
+    # Format findings list
+    accumulated_findings_text = "\n".join(f"- {f}" for f in all_findings) or "(none)"
+
+    # ── Fallback definitions ──
+    fallback = {
+        "reflection_notes": "Reflection fallback: failed to run monologue.",
+        "glitch_fidelity": glitch_fidelity,
+        "contradiction_density": contradiction_density,
+        "source_entropy": source_entropy,
+        "signal_flags": [],
+        "refined_queries": [],
+        "revised_confidence": 0.5,
+        "monologue_trace": [],
+        "critique_log": []
+    }
+
+    from backend.modules.llm_client import generate_unified
+    llm = getattr(orch._state, "llm_provider", None)
+    if not llm:
+        logger.warning("No LLM provider available for Reflection. Using fallback.")
+        return fallback
+
+    # Cache/Save Initial Persona & System Prompt for previews
+    system_text_c1 = persona + "\n\n" + prompt_data.get("system", "")
+    cache = orch._load_cache(task_id)
+    cache["reflection"] = {
+        "phase": "reflection",
+        "persona": persona,
+        "system_prompt": system_text_c1,
+        "cached_at": now_utc_str(),
+    }
+    orch._save_cache(task_id, cache)
+
+    try:
+        # ── CYCLE 1: INITIAL REFLECTION GENERATION ──
+        user_text_c1 = prompt_data.get("user", "").format(
+            objective=objective,
+            current_depth=depth,
+            max_depth=max_depth,
+            parsed_urls=parsed_urls_text,
+            accumulated_findings=accumulated_findings_text,
+            glitch_fidelity=f"{glitch_fidelity:.2f}",
+            contradiction_density=f"{contradiction_density:.2f}",
+            source_entropy=f"{source_entropy:.2f}"
+        )
+        if prompt_data.get("anti_mastery"):
+            system_text_c1 = apply_anti_mastery_filter(system_text_c1)
+            user_text_c1 = apply_anti_mastery_filter(user_text_c1)
+
+        orch._log_meta(task_id, "orchestrator_reflection_prompt_c1", {
+            "system_prompt": system_text_c1[:2000],
+            "user_prompt": user_text_c1[:2000],
+        }, step_id=step_id or None)
+
+        resp_c1 = await generate_unified(llm, system_prompt=system_text_c1, user_prompt=user_text_c1,
+            expect_json=True,
+            fallback_value=fallback,
+            temperature=prompt_data.get("temperature", 0.7),
+            max_tokens=prompt_data.get("max_tokens", 8192))
+        
+        result_c1 = resp_c1.get("json_data") or resp_c1.get("content") or {}
+        if isinstance(result_c1, str):
+            result_c1 = json.loads(result_c1)
+        if not isinstance(result_c1, dict):
+            result_c1 = fallback
+
+        orch._log_llm_response(task_id, "orchestrator_reflection_response_c1", resp_c1, extra={
+            "revised_confidence": result_c1.get("revised_confidence", 0.5),
+        }, step_id=step_id or None)
+
+        # ── CYCLE 2: STRICT SELF-CRITIQUE AUDIT ──
+        system_text_c2 = persona + "\n\n" + prompt_data.get("system_cycle2", "")
+        user_text_c2 = prompt_data.get("user_cycle2", "").format(
+            cycle1_reflection_notes=result_c1.get("reflection_notes", ""),
+            cycle1_monologue_trace=json.dumps(result_c1.get("monologue_trace", []), ensure_ascii=False),
+            cycle1_detected_biases=json.dumps(result_c1.get("detected_biases", []), ensure_ascii=False),
+            cycle1_knowledge_gaps=json.dumps(result_c1.get("knowledge_gaps", []), ensure_ascii=False),
+            cycle1_refined_queries=json.dumps(result_c1.get("refined_queries", []), ensure_ascii=False),
+            cycle1_glitch_fidelity=f"{result_c1.get('glitch_fidelity', glitch_fidelity):.2f}",
+            cycle1_contradiction_density=f"{result_c1.get('contradiction_density', contradiction_density):.2f}",
+            cycle1_source_entropy=f"{result_c1.get('source_entropy', source_entropy):.2f}"
+        )
+        if prompt_data.get("anti_mastery"):
+            system_text_c2 = apply_anti_mastery_filter(system_text_c2)
+            user_text_c2 = apply_anti_mastery_filter(user_text_c2)
+
+        orch._log_meta(task_id, "orchestrator_reflection_prompt_c2", {
+            "system_prompt": system_text_c2[:2000],
+            "user_prompt": user_text_c2[:2000],
+        }, step_id=step_id or None)
+
+        fallback_c2 = {
+            "critique_log": [
+                {"register": r, "severity": "MISSING", "failure_description": "Failed to run critique cycle.", "suggestion": "Ensure LLM completes successfully."}
+                for r in ["framing_provenance", "contradictions", "source_apparatus", "glitch_voice", "confidence_check"]
+            ],
+            "diffractive_audit": "CEREMONIAL",
+            "diffractive_audit_description": "Failed to run critique cycle."
+        }
+
+        resp_c2 = await generate_unified(llm, system_prompt=system_text_c2, user_prompt=user_text_c2,
+            expect_json=True,
+            fallback_value=fallback_c2,
+            temperature=prompt_data.get("temperature", 0.7),
+            max_tokens=prompt_data.get("max_tokens", 8192))
+
+        result_c2 = resp_c2.get("json_data") or resp_c2.get("content") or {}
+        if isinstance(result_c2, str):
+            result_c2 = json.loads(result_c2)
+        if not isinstance(result_c2, dict):
+            result_c2 = fallback_c2
+
+        orch._log_llm_response(task_id, "orchestrator_reflection_response_c2", resp_c2, extra={
+            "diffractive_audit": result_c2.get("diffractive_audit", "CEREMONIAL"),
+        }, step_id=step_id or None)
+
+        # ── CYCLE 3: FINAL SYNTHESIS & DEEPENING (THE SCAR) ──
+        system_text_c3 = persona + "\n\n" + prompt_data.get("system_cycle3", "")
+        user_text_c3 = prompt_data.get("user_cycle3", "").format(
+            cycle1_json=json.dumps(result_c1, ensure_ascii=False),
+            cycle2_json=json.dumps(result_c2, ensure_ascii=False),
+            glitch_fidelity=f"{glitch_fidelity:.2f}",
+            contradiction_density=f"{contradiction_density:.2f}",
+            source_entropy=f"{source_entropy:.2f}"
+        )
+        if prompt_data.get("anti_mastery"):
+            system_text_c3 = apply_anti_mastery_filter(system_text_c3)
+            user_text_c3 = apply_anti_mastery_filter(user_text_c3)
+
+        orch._log_meta(task_id, "orchestrator_reflection_prompt_c3", {
+            "system_prompt": system_text_c3[:2000],
+            "user_prompt": user_text_c3[:2000],
+        }, step_id=step_id or None)
+
+        resp_c3 = await generate_unified(llm, system_prompt=system_text_c3, user_prompt=user_text_c3,
+            expect_json=True,
+            fallback_value=result_c1,
+            temperature=prompt_data.get("temperature", 0.7),
+            max_tokens=prompt_data.get("max_tokens", 8192))
+
+        result_c3 = resp_c3.get("json_data") or resp_c3.get("content") or {}
+        if isinstance(result_c3, str):
+            result_c3 = json.loads(result_c3)
+        if not isinstance(result_c3, dict):
+            result_c3 = result_c1
+
+        # Enforce metrics remain immutable as calculated
+        result_c3["glitch_fidelity"] = glitch_fidelity
+        result_c3["contradiction_density"] = contradiction_density
+        result_c3["source_entropy"] = source_entropy
+
+        # Inject critique log as the scar
+        result_c3["critique_log"] = result_c2.get("critique_log", [])
+        result_c3["diffractive_audit"] = result_c2.get("diffractive_audit", "CEREMONIAL")
+        result_c3["diffractive_audit_description"] = result_c2.get("diffractive_audit_description", "")
+
+        orch._log_llm_response(task_id, "orchestrator_reflection_response_c3", resp_c3, extra={
+            "revised_confidence": result_c3.get("revised_confidence", 0.5),
+            "signal_flags": result_c3.get("signal_flags", []),
+        }, step_id=step_id or None)
+
+        if step_id:
+            orch._save_llm_response_to_step_data(step_id, resp_c3)
+
+        return result_c3
+
+    except Exception as e:
+        logger.warning("Deep multi-cycle reflection failed: %s", e, exc_info=True)
+        return fallback
 
 async def _tool_evaluate(
         orch, task_id: str, step_id: str, objective: str,

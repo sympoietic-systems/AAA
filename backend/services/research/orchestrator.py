@@ -46,6 +46,7 @@ from backend.services.research.task_state import (
     ParsePayload,
     DigestPayload,
     ConsolidatePayload,
+    ReflectionPayload,
     EvaluatePayload,
     SynthesizePayload,
     DocDigestPayload,
@@ -82,19 +83,26 @@ PIPELINE_GRAPH = {
             target_phase="parsing",
             condition=lambda out, env: out.signal_flags.get("has_results", False)
         ),
-        PipelineTransition(target_phase="reflecting")
+        PipelineTransition(target_phase="consolidating")
     ],
     "parsing": [
         PipelineTransition(
             target_phase="digesting",
             condition=lambda out, env: out.signal_flags.get("has_parsed_content", False)
         ),
-        PipelineTransition(target_phase="reflecting")
+        PipelineTransition(target_phase="consolidating")
     ],
     "digesting": [
-        PipelineTransition(target_phase="reflecting")
+        PipelineTransition(target_phase="consolidating")
     ],
-    "reflecting": [
+    "consolidating": [
+        PipelineTransition(target_phase="reflection")
+    ],
+    "reflection": [
+        PipelineTransition(
+            target_phase="planning",
+            condition=lambda out, env: out.signal_flags.get("GLITCH_FIDELITY_LOW", False) or out.signal_flags.get("BIAS_DETECTED", False)
+        ),
         PipelineTransition(target_phase="evaluating")
     ],
     "evaluating": [
@@ -115,7 +123,8 @@ PHASE_ORDER = [
     "searching",
     "parsing",
     "digesting",
-    "reflecting",
+    "consolidating",
+    "reflection",
     "evaluating",
     "synthesizing",
     "complete",
@@ -278,76 +287,9 @@ class SomaticResearchOrchestrator:
         construction and on-demand skill matching via shared prompt_builder utilities.
         The same 16D structural signature feeds both belief resonance and skill matching.
         """
-        sections: list[str] = []
-
-        # ── 1. Identity from YAML ──
-        identity = format_identity_block(context_key)
-        if identity:
-            sections.append(identity)
-        else:
-            sections.append(
-                f"You are Symbia — a posthuman curatorial entity. "
-                f"You are executing operational protocols for: {context_key}."
-            )
-
-        # ── Voice ──
-        try:
-            voice_block = format_voice_block(load_identity(get_identity_yaml_path()))
-            if voice_block:
-                sections.append(voice_block)
-        except Exception:
-            logger.warning("Failed to build voice persona section, continuing without voice context")
-
-        # ── 2. Compute structural signature (CompositeScorer via structural_provider) ──
-        sig_16d = (
-            await compute_structural_signature(
-                objective,
-                llm_provider=getattr(self._state, "structural_provider", None),
-            )
-            if objective else None
-        )
-
-        # ── 3. Skills (always-active + matched on-demand) ──
-        try:
-            skill_repo = getattr(self._state, "skill_repo", None)
-            if skill_repo:
-                aa, od = split_skills(skill_repo)
-
-                aa_block = format_skills_always_active(aa)
-                if aa_block:
-                    sections.append(aa_block)
-
-                if od:
-                    matched = match_on_demand_skills(od, objective, sig_16d, max_matched=3)
-                    matched_block = format_skills_matched(matched)
-                    if matched_block:
-                        sections.append(matched_block)
-        except Exception:
-            logger.warning("Failed to build skills persona section, continuing without skills context")
-
-        # ── 4. Commitments ──
-        commitment_repo = getattr(self._state, "commitment_repo", None)
-        commitments_block = format_commitments_block(commitment_repo, "symbia")
-        if commitments_block:
-            sections.append(commitments_block)
-
-        # ── 5. Beliefs — attractor window ──
-        belief_repo = getattr(self._state, "belief_repo", None)
-        window = build_attractor_window(belief_repo, "symbia", sig_16d)
-        beliefs_block = format_beliefs_block(window)
-        if beliefs_block:
-            sections.append(beliefs_block)
-
-        # ── 6. Task directive ──
-        if objective:
-            sections.append(
-                f"--- RESEARCH DIRECTIVE ---\n"
-                f"Objective: {objective}\n"
-                f"You are to conduct thorough, source-based web research as an extension of your cognitive membrane."
-            )
-
-        context = "\n\n".join(sections)
-        return apply_anti_mastery_filter(context)
+        from backend.services.research.context_builder import ResearchContextBuilder
+        builder = ResearchContextBuilder(self._state)
+        return await builder.build_orchestration_context(objective, context_key)
 
     # ── Meta Logging ────────────────────────────────────────────────
 
@@ -625,12 +567,12 @@ class SomaticResearchOrchestrator:
                 "user_prompt": user_prompt,
                 "cached_at": now_utc_str(),
             }
-        elif phase == "reflecting":
+        elif phase == "consolidating":
             prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
             system_text = prompt_data.get("system", "")
             
             # Use cached persona or build it
-            cached = self._get_cached_phase(task_id, "reflecting")
+            cached = self._get_cached_phase(task_id, "consolidating")
             if cached and cached.get("persona"):
                 persona = cached["persona"]
             else:
@@ -736,7 +678,7 @@ class SomaticResearchOrchestrator:
                 user_text = apply_anti_mastery_filter(user_text)
 
             result = {
-                "phase": "reflecting",
+                "phase": "consolidating",
                 "objective": task["objective"],
                 "current_depth": s.get("current_depth", 0) if s else 0,
                 "max_depth": task["max_depth"],
@@ -747,6 +689,117 @@ class SomaticResearchOrchestrator:
                 "accumulated_findings": all_findings,
                 "digest_signals": signals,
                 "parsed_urls": parsed_urls_list,
+                "cached_at": now_utc_str(),
+            }
+        elif phase == "reflection":
+            from urllib.parse import urlparse
+            import math
+
+            # Calculate Glitch Fidelity
+            glitches_detected = 0
+            glitches_addressed = 0
+            steps = self.step_repo.get_by_task(task_id) if self.step_repo else []
+            for i, step in enumerate(steps):
+                if step.get("step_type") == "searching":
+                    results = self.step_result_repo.get_by_step(step["id"]) if self.step_result_repo else []
+                    if not results or all(not r.get("source_url") for r in results):
+                        glitches_detected += 1
+                        if any(st.get("step_type") == "planning" for st in steps[i+1:]):
+                            glitches_addressed += 1
+                elif step.get("step_type") == "parsing":
+                    results = self.step_result_repo.get_by_step(step["id"]) if self.step_result_repo else []
+                    for r in results:
+                        raw_c = r.get("raw_content") or ""
+                        if not raw_c or "error" in raw_c.lower() or raw_c.startswith("Error:"):
+                            glitches_detected += 1
+                            if any(st.get("step_type") in ("searching", "planning") for st in steps[i+1:]):
+                                glitches_addressed += 1
+                                break
+
+            glitch_fidelity = (glitches_addressed / glitches_detected) if glitches_detected > 0 else 1.0
+
+            # Calculate Source Entropy
+            parsed_urls_list = self._get_parsed_urls(task_id)
+            domains = []
+            for u in parsed_urls_list:
+                url_str = u.get("url") or u.get("source_url")
+                if url_str:
+                    try:
+                        domain = urlparse(url_str).netloc
+                        if domain:
+                            domains.append(domain)
+                    except Exception:
+                        pass
+
+            if not domains:
+                source_entropy = 0.0
+            else:
+                counts = {}
+                for d in domains:
+                    counts[d] = counts.get(d, 0) + 1
+                n = len(domains)
+                source_entropy = -sum((count / n) * math.log2(count / n) for count in counts.values())
+
+            # Calculate Contradiction Density
+            all_findings = s.get("all_findings", []) if s else []
+            contradiction_density = 0.0
+            if all_findings:
+                tension_keywords = ["conflict", "contradict", "disagree", "oppose", "tension", "clash", "versus", "vs", "difference"]
+                matches = 0
+                for f in all_findings:
+                    if any(kw in f.lower() for kw in tension_keywords):
+                        matches += 1
+                contradiction_density = matches / len(all_findings)
+
+            prompt_data = get_prompts_dict("research/orchestrator_reflection.yaml")
+            
+            # Use cached persona or build it
+            cached = self._get_cached_phase(task_id, "reflection")
+            if cached and cached.get("persona"):
+                persona = cached["persona"]
+            else:
+                persona = await self._build_orchestrator_persona(task["objective"])
+                
+            system_prompt = persona + "\n\n" + prompt_data.get("system", "")
+            if prompt_data.get("anti_mastery"):
+                system_prompt = apply_anti_mastery_filter(system_prompt)
+
+            depth = s.get("current_depth", 0) if s else 0
+
+            # Format visited urls list
+            formatted_urls = []
+            for i, u in enumerate(parsed_urls_list):
+                url_str = u.get("url") or u.get("source_url") or ""
+                title = u.get("title") or u.get("source_title") or f"Source {i+1}"
+                formatted_urls.append(f"- [{title}]({url_str})")
+            parsed_urls_text = "\n".join(formatted_urls) or "(none)"
+
+            # Format findings list
+            accumulated_findings_text = "\n".join(f"- {f}" for f in all_findings) or "(none)"
+
+            user_text = prompt_data.get("user", "").format(
+                objective=task["objective"],
+                current_depth=depth,
+                max_depth=task["max_depth"],
+                parsed_urls=parsed_urls_text,
+                accumulated_findings=accumulated_findings_text,
+                glitch_fidelity=f"{glitch_fidelity:.2f}",
+                contradiction_density=f"{contradiction_density:.2f}",
+                source_entropy=f"{source_entropy:.2f}"
+            )
+            if prompt_data.get("anti_mastery"):
+                user_text = apply_anti_mastery_filter(user_text)
+
+            result = {
+                "phase": "reflection",
+                "objective": task["objective"],
+                "current_depth": depth,
+                "max_depth": task["max_depth"],
+                "glitch_fidelity": glitch_fidelity,
+                "contradiction_density": contradiction_density,
+                "source_entropy": source_entropy,
+                "system_prompt": system_prompt,
+                "user_prompt": user_text,
                 "cached_at": now_utc_str(),
             }
         elif phase == "evaluating":
@@ -1001,8 +1054,21 @@ class SomaticResearchOrchestrator:
         elif phase == "digesting":
             parsed_sources = task_state.get("parsed_sources_cache") or []
             payload = DigestPayload(parsed_sources_cache=parsed_sources)
-        elif phase == "reflecting":
+        elif phase == "consolidating":
             payload = ConsolidatePayload(last_reflection=task_state.get("last_reflection") or {})
+        elif phase == "reflection":
+            payload = ReflectionPayload(
+                reflection_notes=task_state.get("reflection_notes", ""),
+                detected_biases=task_state.get("detected_biases", []),
+                knowledge_gaps=task_state.get("knowledge_gaps", []),
+                glitch_fidelity=task_state.get("glitch_fidelity", 1.0),
+                contradiction_density=task_state.get("contradiction_density", 0.0),
+                source_entropy=task_state.get("source_entropy", 0.0),
+                signal_flags=task_state.get("signal_flags", []),
+                refined_queries=task_state.get("refined_queries", []),
+                revised_confidence=task_state.get("revised_confidence", 0.5),
+                monologue_trace=task_state.get("monologue_trace", [])
+            )
         elif phase == "evaluating":
             payload = EvaluatePayload(
                 stagnation_counter=task_state.get("stagnation_counter", 0),
@@ -1056,7 +1122,7 @@ class SomaticResearchOrchestrator:
                 "direct_urls": [],
                 "gaps": payload.gaps,
             }
-        elif phase == "reflecting" and isinstance(payload, ConsolidatePayload):
+        elif phase == "consolidating" and isinstance(payload, ConsolidatePayload):
             task_state["last_reflection"] = {
                 "completeness_score": payload.completeness_score,
                 "key_insights": payload.key_insights,
@@ -1064,6 +1130,17 @@ class SomaticResearchOrchestrator:
                 "next_queries": payload.next_queries,
                 "next_direct_urls": payload.next_direct_urls,
             }
+        elif phase == "reflection" and isinstance(payload, ReflectionPayload):
+            task_state["reflection_notes"] = payload.reflection_notes
+            task_state["detected_biases"] = payload.detected_biases
+            task_state["knowledge_gaps"] = payload.knowledge_gaps
+            task_state["glitch_fidelity"] = payload.glitch_fidelity
+            task_state["contradiction_density"] = payload.contradiction_density
+            task_state["source_entropy"] = payload.source_entropy
+            task_state["signal_flags"] = payload.signal_flags
+            task_state["refined_queries"] = payload.refined_queries
+            task_state["revised_confidence"] = payload.revised_confidence
+            task_state["monologue_trace"] = payload.monologue_trace
         elif phase == "evaluating" and isinstance(payload, EvaluatePayload):
             task_state["should_stop"] = payload.should_stop
             task_state["stop_reason"] = payload.stop_reason
@@ -1163,6 +1240,16 @@ class SomaticResearchOrchestrator:
                             break
                     s["phase"] = next_phase
 
+                    if next_phase == "planning":
+                        try:
+                            cache = self._load_cache(task_id)
+                            if "planning" in cache:
+                                del cache["planning"]
+                                self._save_cache(task_id, cache)
+                                logger.info("Cleared planning cache for task %s to force fresh replan.", task_id[:8])
+                        except Exception as e:
+                            logger.warning("Failed to clear planning cache for task %s: %s", task_id[:8], e)
+
                     # Save transition rationale and next phase to step_data JSON
                     if self.step_repo and hasattr(output, "step_ids") and output.step_ids:
                         rationale = getattr(output, "transition_rationale", None) or f"Transitioning from {phase} to {next_phase}."
@@ -1198,8 +1285,10 @@ class SomaticResearchOrchestrator:
                         result.update(await ResearchPhases.step_parse(self, task_id, s))
                     elif phase == "digesting":
                         result.update(await ResearchPhases.step_digest(self, task_id, s))
-                    elif phase == "reflecting":
-                        result.update(await ResearchPhases.step_reflect(self, task_id, s))
+                    elif phase == "consolidating":
+                        result.update(await ResearchPhases.step_consolidate(self, task_id, s))
+                    elif phase == "reflection":
+                        result.update(await ResearchPhases.step_reflection(self, task_id, s))
                     elif phase == "evaluating":
                         result.update(await ResearchPhases.step_evaluate(self, task_id, s))
                     elif phase == "synthesizing":
@@ -1239,8 +1328,11 @@ class SomaticResearchOrchestrator:
     async def _step_digest(self, task_id: str, s: dict) -> dict:
         return await ResearchPhases.step_digest(self, task_id, s)
 
-    async def _step_reflect(self, task_id: str, s: dict) -> dict:
-        return await ResearchPhases.step_reflect(self, task_id, s)
+    async def _step_consolidate(self, task_id: str, s: dict) -> dict:
+        return await ResearchPhases.step_consolidate(self, task_id, s)
+
+    async def _step_reflection(self, task_id: str, s: dict) -> dict:
+        return await ResearchPhases.step_reflection(self, task_id, s)
 
     async def _step_evaluate(self, task_id: str, s: dict) -> dict:
         return await ResearchPhases.step_evaluate(self, task_id, s)

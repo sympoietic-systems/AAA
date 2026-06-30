@@ -113,6 +113,16 @@ class ResearchMetabolismEngine:
             )
 
             system_text = prompt_data.get("system", "")
+            # Build persona context via ResearchContextBuilder
+            try:
+                from backend.services.research.context_builder import ResearchContextBuilder
+                builder = ResearchContextBuilder(self._state)
+                persona = await builder.build_orchestration_context(task.get("objective", ""), "research_synthesis")
+                if persona:
+                    system_text = persona + "\n\n" + system_text
+            except Exception as e:
+                logger.warning("Failed to build synthesis persona: %s", e)
+
             user_text = (prompt_data.get("user", "")).format(
                 task_title=task.get("title", ""),
                 objective=task.get("objective", ""),

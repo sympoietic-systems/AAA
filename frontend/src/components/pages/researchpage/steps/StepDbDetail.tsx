@@ -164,6 +164,19 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
       remaining_gaps?: string[]
       next_queries?: string[]
       next_direct_urls?: string[]
+      reflection_notes?: string
+      detected_biases?: string[]
+      knowledge_gaps?: string[]
+      glitch_fidelity?: number
+      contradiction_density?: number
+      source_entropy?: number
+      signal_flags?: string[]
+      refined_queries?: string[]
+      revised_confidence?: number
+      monologue_trace?: any[]
+      critique_log?: any[]
+      diffractive_audit?: string
+      diffractive_audit_description?: string
     } = {
       queries: [],
       goal: "",
@@ -202,13 +215,27 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
           r.queries = parsed.search_queries || []
         } else if (e.event_type.includes("digest_response")) {
           if (parsed.learnings) r.learnings.push(...parsed.learnings)
-        } else if (e.event_type.includes("reflect_response")) {
+        } else if (e.event_type.includes("reflect_response") || e.event_type.includes("reflection_response")) {
           r.completeness = parsed.completeness_score || parsed.completeness || 0
-          r.reflection = parsed.reflection || ""
+          r.reflection = parsed.reflection || parsed.reflection_notes || ""
           r.key_insights = parsed.key_insights || []
-          r.remaining_gaps = parsed.remaining_gaps || []
-          r.next_queries = parsed.next_queries || []
+          r.remaining_gaps = parsed.remaining_gaps || parsed.knowledge_gaps || []
+          r.next_queries = parsed.next_queries || parsed.refined_queries || []
           r.next_direct_urls = parsed.next_direct_urls || []
+          
+          r.reflection_notes = parsed.reflection_notes || parsed.reflection || ""
+          r.detected_biases = parsed.detected_biases || []
+          r.knowledge_gaps = parsed.knowledge_gaps || parsed.remaining_gaps || []
+          r.glitch_fidelity = parsed.glitch_fidelity ?? 1.0
+          r.contradiction_density = parsed.contradiction_density ?? 0.0
+          r.source_entropy = parsed.source_entropy ?? 0.0
+          r.signal_flags = parsed.signal_flags || []
+          r.refined_queries = parsed.refined_queries || parsed.next_queries || []
+          r.revised_confidence = parsed.revised_confidence ?? 0.5
+          r.monologue_trace = parsed.monologue_trace || []
+          r.critique_log = parsed.critique_log || []
+          r.diffractive_audit = parsed.diffractive_audit || "CEREMONIAL"
+          r.diffractive_audit_description = parsed.diffractive_audit_description || ""
         } else if (e.event_type === "orchestrator_synthesize_response") {
           r.answer = parsed.report_markdown || parsed.answer || ""
           r.confidence = parsed.confidence || 0
@@ -220,6 +247,29 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
         const plan = JSON.parse(data.plan.plan_json)
         r.goal = plan.goal || ""
         r.queries = plan.search_queries || []
+      } catch { /* skip */ }
+    }
+    if (selected && selected.step_type === "reflection" && selected.step_data) {
+      try {
+        const sd = JSON.parse(selected.step_data)
+        const llm_response = sd.llm_response || {}
+        
+        r.reflection_notes = sd.reflection_notes || llm_response.reflection_notes || r.reflection_notes
+        r.reflection = sd.reflection_notes || llm_response.reflection_notes || r.reflection
+        r.detected_biases = sd.detected_biases || llm_response.detected_biases || r.detected_biases
+        r.knowledge_gaps = sd.knowledge_gaps || llm_response.knowledge_gaps || r.knowledge_gaps
+        r.remaining_gaps = sd.knowledge_gaps || llm_response.knowledge_gaps || r.remaining_gaps
+        r.glitch_fidelity = sd.glitch_fidelity ?? llm_response.glitch_fidelity ?? r.glitch_fidelity
+        r.contradiction_density = sd.contradiction_density ?? llm_response.contradiction_density ?? r.contradiction_density
+        r.source_entropy = sd.source_entropy ?? llm_response.source_entropy ?? r.source_entropy
+        r.signal_flags = sd.signal_flags || llm_response.signal_flags || r.signal_flags
+        r.refined_queries = sd.refined_queries || llm_response.refined_queries || r.refined_queries
+        r.next_queries = sd.refined_queries || llm_response.refined_queries || r.next_queries
+        r.revised_confidence = sd.revised_confidence ?? llm_response.revised_confidence ?? r.revised_confidence
+        r.monologue_trace = sd.monologue_trace || llm_response.monologue_trace || r.monologue_trace
+        r.critique_log = sd.critique_log || llm_response.critique_log || r.critique_log
+        r.diffractive_audit = sd.diffractive_audit || llm_response.diffractive_audit || r.diffractive_audit
+        r.diffractive_audit_description = sd.diffractive_audit_description || llm_response.diffractive_audit_description || r.diffractive_audit_description
       } catch { /* skip */ }
     }
     if (!r.answer && selected && selected.step_type === "synthesize" && selected.step_data) {

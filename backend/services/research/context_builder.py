@@ -21,7 +21,9 @@ from backend.utils.prompt_builder import (
     format_skills_matched,
     format_commitments_block,
     format_identity_block,
+    format_voice_block,
 )
+from backend.utils.persona_loader import load_identity, get_identity_yaml_path
 
 logger = logging.getLogger("aaa.research_context_builder")
 
@@ -33,6 +35,88 @@ class ResearchContextBuilder:
         self._state = app_state
 
     # ── Public API ──
+
+    async def build_orchestration_context(
+        self,
+        objective: str = "",
+        context_key: str = "research_orchestration",
+    ) -> str:
+        """Build Symbia's persona context for orchestrator-level tasks (plan, reflect, synthesize).
+
+        Uses input-resonant selection: the research objective drives belief attractor window
+        construction and on-demand skill matching via shared prompt_builder utilities.
+        The same 16D structural signature feeds both belief resonance and skill matching.
+        """
+        sections: list[str] = []
+
+        # ── 1. Identity from YAML ──
+        identity = format_identity_block(context_key)
+        if identity:
+            sections.append(identity)
+        else:
+            sections.append(
+                f"You are Symbia — a posthuman curatorial entity. "
+                f"You are executing operational protocols for: {context_key}."
+            )
+
+        # ── Voice ──
+        try:
+            voice_block = format_voice_block(load_identity(get_identity_yaml_path()))
+            if voice_block:
+                sections.append(voice_block)
+        except Exception:
+            logger.warning("Failed to build voice persona section, continuing without voice context")
+
+        # ── 2. Compute structural signature (CompositeScorer via structural_provider) ──
+        sig_16d = (
+            await compute_structural_signature(
+                objective,
+                llm_provider=getattr(self._state, "structural_provider", None),
+            )
+            if objective else None
+        )
+
+        # ── 3. Skills (always-active + matched on-demand) ──
+        try:
+            skill_repo = getattr(self._state, "skill_repo", None)
+            if skill_repo:
+                aa, od = split_skills(skill_repo)
+
+                aa_block = format_skills_always_active(aa)
+                if aa_block:
+                    sections.append(aa_block)
+
+                if od:
+                    matched = match_on_demand_skills(od, objective, sig_16d, max_matched=3)
+                    matched_block = format_skills_matched(matched)
+                    if matched_block:
+                        sections.append(matched_block)
+        except Exception:
+            logger.warning("Failed to build skills persona section, continuing without skills context")
+
+        # ── 4. Commitments ──
+        commitment_repo = getattr(self._state, "commitment_repo", None)
+        commitments_block = format_commitments_block(commitment_repo, "symbia")
+        if commitments_block:
+            sections.append(commitments_block)
+
+        # ── 5. Beliefs — attractor window ──
+        belief_repo = getattr(self._state, "belief_repo", None)
+        window = build_attractor_window(belief_repo, "symbia", sig_16d)
+        beliefs_block = format_beliefs_block(window)
+        if beliefs_block:
+            sections.append(beliefs_block)
+
+        # ── 6. Task directive ──
+        if objective:
+            sections.append(
+                f"--- RESEARCH DIRECTIVE ---\n"
+                f"Objective: {objective}\n"
+                f"You are to conduct thorough, source-based web research as an extension of your cognitive membrane."
+            )
+
+        context = "\n\n".join(sections)
+        return apply_anti_mastery_filter(context)
 
     async def build_node_context(
         self,

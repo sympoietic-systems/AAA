@@ -203,7 +203,7 @@ export const StepInputTab = memo(function StepInputTab({
                 />
               )}
               {liveInput.pending_queries && liveInput.pending_queries.length > 0 && <div><div className="text-ui-dim text-[8px] mb-0.5 font-mono">queries:</div>{liveInput.pending_queries.map((q,i)=><div key={i} className="text-ui-secondary text-[9px] pl-2 font-mono">· {q}</div>)}</div>}
-              {stepPhase === "reflecting" && (
+              {stepPhase === "consolidating" && (
                 <div className="space-y-3 border-t border-ui-border pt-2 mt-2">
                   {liveInput.parsed_urls && liveInput.parsed_urls.length > 0 && (
                     <div>

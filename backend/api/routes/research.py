@@ -424,7 +424,7 @@ async def execute_step(
     rerun_step_id: Optional[str] = None,
 ):
     """Execute the next orchestrator phase (planning → searching → parsing →
-    digesting → reflecting → evaluating → synthesizing → complete).
+    digesting → consolidating → reflection → evaluating → synthesizing → complete).
 
     If rerun_step_type is provided (e.g., 'digest'), the existing DB state
     is preserved and only that single phase is re-executed (per-step rerun).
@@ -445,7 +445,7 @@ async def execute_step(
     STEP_TYPE_TO_PHASE: dict[str, str] = {
         "plan": "planning", "search": "searching", "parallel_parse": "parsing",
         "digest": "digesting", "document_digestion": "document_digestion",
-        "reflect": "reflecting", "evaluate": "evaluating",
+        "reflect": "consolidating", "reflection": "reflection", "evaluate": "evaluating",
         "synthesize": "synthesizing",
     }
     target_phase = STEP_TYPE_TO_PHASE.get(rerun_step_type or "")

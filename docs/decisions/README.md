@@ -82,6 +82,12 @@ What becomes easier/harder?
 | [048](ADR-048-dynamic-autopoietic-personality-cascade.md) | Dynamic Autopoietic Personality Cascade | accepted | 2026-06-14 |
 | [049](ADR-049-memory-system-sclerosis-remediation.md) | Memory System Sclerosis Remediation | accepted | 2026-06-15 |
 | [050](ADR-050-frontend-codebase-optimization-extraction-deduplication.md) | Frontend Codebase Optimization — Extraction, Deduplication & Code Splitting | accepted | 2026-06-24 |
+| [051](ADR-051-backend-refactoring-cycle-1.md) | Backend Refactoring Cycle 1 | accepted | 2026-06-25 |
+| [052](ADR-052-unified-polymorphic-notes.md) | Unified Polymorphic Notes | accepted | 2026-06-26 |
+| [053](ADR-053-research-continue-and-document-digestion.md) | Research Continue and Document Digestion | accepted | 2026-06-27 |
+| [054](ADR-054-decoupled-research-pipeline-routing.md) | Decoupled Research Pipeline Routing and Typed Context Envelopes | accepted | 2026-06-30 |
+| [055](ADR-055-transient-connection-retry-in-model-pool.md) | Transient Connection Retry in Model Pool | accepted | 2026-06-30 |
+| [056](ADR-056-metabolic-reflection-pipeline-and-observability.md) | Metabolic Reflection Pipeline, Unified Prompt Building, and Critique Observability | accepted | 2026-06-30 |
 
 ## Creating a New ADR
 

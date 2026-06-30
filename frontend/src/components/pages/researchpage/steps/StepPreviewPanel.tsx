@@ -176,7 +176,7 @@ export const StepPreviewPanel = memo(function StepPreviewPanel({
           </div>
         </div>
       )}
-      {preview.phase === "reflecting" && (
+      {preview.phase === "consolidating" && (
         <div className="space-y-3">
           <div>
             <div className="text-ui-dim text-[9px] uppercase font-mono mb-1">consolidation details</div>

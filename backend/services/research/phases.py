@@ -189,7 +189,7 @@ class ResearchPhases:
         s["parsed_sources_cache"] = []
         s["phase"] = "parsing"
         if not search_results:
-            s["phase"] = "reflecting"
+            s["phase"] = "consolidating"
             print(f">>> step_search: NO RESULTS, jumping to phase={s['phase']}", flush=True)
         else:
             print(f">>> step_search: got {len(search_results)} results, phase={s['phase']}", flush=True)
@@ -222,7 +222,7 @@ class ResearchPhases:
                 result_summary=f"parsed {len(parsed_for_group)} sources")
 
         s["parsed_sources_cache"] = parsed
-        s["phase"] = "digesting" if parsed else "reflecting"
+        s["phase"] = "digesting" if parsed else "consolidating"
 
         urls = [{"url": p["url"], "title": p.get("title", p["url"]), "query_group": p.get("query_group")} for p in parsed]
         cache = orch._load_cache(task_id)
@@ -318,7 +318,7 @@ class ResearchPhases:
             "gaps": cycle_gaps,
         }
 
-        s["phase"] = "reflecting"
+        s["phase"] = "consolidating"
 
         source_urls = [src.get("url", "") for src in parsed_sources]
         cache = orch._load_cache(task_id)
@@ -338,8 +338,8 @@ class ResearchPhases:
         }
 
     @staticmethod
-    async def step_reflect(orch, task_id: str, s: dict) -> dict:
-        logger.info("Step: REFLECTING — %s", ResearchPhases._lc(orch, task_id, "reflecting"))
+    async def step_consolidate(orch, task_id: str, s: dict) -> dict:
+        logger.info("Step: CONSOLIDATING — %s", ResearchPhases._lc(orch, task_id, "consolidating"))
         step_id = orch._create_or_update_step(s, task_id, "reflect")
         reflection = await orch._tool_reflect(
             task_id, s["objective"], s["plan"].get("goal", s["objective"]),
@@ -355,8 +355,48 @@ class ResearchPhases:
             "depth": s["current_depth"], "completeness": completeness,
             "total_findings": len(s["all_findings"]),
         }, step_id=step_id)
-        s["phase"] = "evaluating"
+        s["phase"] = "reflection"
         return {"completeness": completeness, "step_id": step_id}
+
+    @staticmethod
+    async def step_reflection(orch, task_id: str, s: dict) -> dict:
+        logger.info("Step: REFLECTION — %s", ResearchPhases._lc(orch, task_id, "reflection"))
+        step_id = orch._create_or_update_step(s, task_id, "reflection")
+        reflection = await orch._tool_reflection(
+            orch, task_id, s["objective"],
+            s["current_depth"], s["max_depth"],
+            s["all_findings"], s.get("digest_signals", {}), step_id=step_id,
+        )
+        s["last_reflection"] = reflection
+        fidelity = reflection.get("glitch_fidelity", 1.0)
+        density = reflection.get("contradiction_density", 0.0)
+        entropy = reflection.get("source_entropy", 0.0)
+        confidence = reflection.get("revised_confidence", 0.5)
+
+        if orch.step_repo:
+            orch.step_repo.update(step_id, status="completed",
+                result_summary=f"Fidelity: {fidelity:.2f} | Contradictions: {density:.2f} | Entropy: {entropy:.2f}")
+
+        orch._log_meta(task_id, "orchestrator_reflection", {
+            "depth": s["current_depth"],
+            "glitch_fidelity": fidelity,
+            "contradiction_density": density,
+            "source_entropy": entropy,
+            "revised_confidence": confidence
+        }, step_id=step_id)
+
+        # Merge the generated refined queries and signal flags to the active state so subsequent steps can see them
+        s["digest_signals"] = s.get("digest_signals", {})
+        if reflection.get("refined_queries"):
+            s["digest_signals"]["refined_queries"] = reflection.get("refined_queries")
+
+        s["phase"] = "evaluating"
+        return {
+            "glitch_fidelity": fidelity,
+            "contradiction_density": density,
+            "source_entropy": entropy,
+            "step_id": step_id
+        }
 
     @staticmethod
     async def step_evaluate(orch, task_id: str, s: dict) -> dict:
@@ -588,9 +628,35 @@ async def _phase_plan(orch, task_id, objective, max_depth, budget,
         system_text = persona + "\n\n" + prompt_data.get("system", "")
         fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
         user_template = prompt_data.get("user", "")
-        if previous_context:
-            fmt["previous_context"] = previous_context
+        
+        s = orch._get_state(task_id)
+        digest_signals = s.get("digest_signals") or {}
+        refined_queries = digest_signals.get("refined_queries")
+        
+        reflection_hints = []
+        if refined_queries:
+            reflection_hints.append("Refined search queries proposed by meta-reflection:\n" + "\n".join(f"- {q}" for q in refined_queries))
+            
+        active_flags = []
+        for key in ("detected_biases", "knowledge_gaps"):
+            val = s.get(key)
+            if val:
+                active_flags.append(f"{key}: {val}")
+        if s.get("signal_flags"):
+            active_flags.append(f"signal_flags: {s['signal_flags']}")
+            
+        if active_flags:
+            reflection_hints.append("Active Meta-Cognitive Signal Flags:\n" + "\n".join(f"- {f}" for f in active_flags))
+            
+        combined_context = previous_context
+        if reflection_hints:
+            hints_text = "\n\n### Meta-Cognitive Feedback:\n" + "\n\n".join(reflection_hints)
+            combined_context = (combined_context + hints_text) if combined_context else hints_text.strip()
+            
+        if combined_context:
+            fmt["previous_context"] = combined_context
             user_template = prompt_data.get("user_with_context", user_template)
+            
         user_text = user_template.format(**fmt)
         if prompt_data.get("anti_mastery"):
             system_text = apply_anti_mastery_filter(system_text)

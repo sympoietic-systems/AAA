@@ -61,6 +61,21 @@ class ConsolidatePayload(BaseModel):
 
 ReflectPayload = ConsolidatePayload
 
+class ReflectionPayload(BaseModel):
+    reflection_notes: str = ""
+    detected_biases: List[str] = Field(default_factory=list)
+    knowledge_gaps: List[str] = Field(default_factory=list)
+    glitch_fidelity: float = 1.0
+    contradiction_density: float = 0.0
+    source_entropy: float = 0.0
+    signal_flags: List[str] = Field(default_factory=list)
+    refined_queries: List[str] = Field(default_factory=list)
+    revised_confidence: float = 0.5
+    monologue_trace: List[Dict[str, Any]] = Field(default_factory=list)
+    critique_log: List[Dict[str, Any]] = Field(default_factory=list)
+    diffractive_audit: str = "CEREMONIAL"
+    diffractive_audit_description: str = ""
+
 class EvaluatePayload(BaseModel):
     stagnation_counter: int
     sources_analyzed: int
@@ -210,8 +225,8 @@ class TaskStateManager:
                     plan = {}
         phase_after: dict[str, str] = {
             "plan": "searching", "search": "parsing",
-            "parallel_parse": "digesting", "digest": "reflecting",
-            "reflect": "evaluating", "evaluate": "synthesizing",
+            "parallel_parse": "digesting", "digest": "consolidating",
+            "reflect": "reflection", "reflection": "evaluating", "evaluate": "synthesizing",
             "synthesize": "complete", "document_digestion": "searching",
         }
         phase = phase_after.get(last_type, "planning") if last_type else "planning"

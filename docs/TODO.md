@@ -75,7 +75,9 @@
     [x] Backend: Unified global source reference mapping ([S##]) across findings, gaps, and follow-ups
     [x] Backend: Preview prompt caching and reuse during step execution
     [x] Backend: Automated cycle-scoped context compilation (structured hybrid reflection template)
-
+    [x] Backend: Non-linear metabolic routing on reflection signals (reroute to planning, clear cache on reroute)
+    [x] Backend/Frontend: Unified persona-aware prompt building via ResearchContextBuilder (orchestrator, agonistic planner, metabolizer synthesizer)
+    [x] Frontend: Step result critique log ("The Scar") & diffractive audit metrics visualization with severity-coded HSL badges
 
 ### Pending
     [ ] Document download tool (PDF/DOCX → digestion → index/vectorize)

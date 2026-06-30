@@ -265,6 +265,9 @@ export const StepPipeline = memo(function StepPipeline({
       const reflectStep = depthSteps.find(s => s.step_type === "reflect") || 
         ({ id: "", step_type: "reflect", step_number: 0, status: "pending" } as ResearchStep)
         
+      const reflectionStep = depthSteps.find(s => s.step_type === "reflection") || 
+        (d === actDepth && orchPhase === "reflection" ? { id: "", step_type: "reflection", status: "pending" } as ResearchStep : null)
+        
       const evaluateStep = depthSteps.find(s => s.step_type === "evaluate") || 
         ({ id: "", step_type: "evaluate", step_number: 0, status: "pending" } as ResearchStep)
 
@@ -280,6 +283,7 @@ export const StepPipeline = memo(function StepPipeline({
         documentDigestionStep: docDigestStep,
         groups,
         reflectStep,
+        reflectionStep,
         evaluateStep,
         synthesizeStep,
         queryTexts,
@@ -463,7 +467,7 @@ export const StepPipeline = memo(function StepPipeline({
                     {/* Reflect */}
                     {(() => {
                       const step = cycle.reflectStep
-                      const phase = "reflecting"
+                      const phase = "consolidating"
                       const baseLabel = PHASE_LABELS[phase] || step.step_type
                       const stale = step.status === "stale"
                       const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
@@ -473,6 +477,33 @@ export const StepPipeline = memo(function StepPipeline({
                       return (
                         <PipelineRow
                           key={step.id || `${cycle.depth}-reflect`}
+                          label={baseLabel + suffix + pending}
+                          stepId={step.id || null}
+                          isDone={done}
+                          isCurrent={isActive}
+                          isStale={stale}
+                          isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                          rationale={getStepRationale(step)}
+                          onSelect={onSelect}
+                          onDoStep={onDoStep}
+                          stepping={stepping}
+                        />
+                      )
+                    })()}
+
+                    {/* Reflection */}
+                    {cycle.reflectionStep && (() => {
+                      const step = cycle.reflectionStep
+                      const phase = "reflection"
+                      const baseLabel = PHASE_LABELS[phase] || step.step_type
+                      const stale = step.status === "stale"
+                      const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
+                      const pending = step.id ? "" : " —"
+                      const done = allComplete || step.status === "completed" || stale
+                      const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed"
+                      return (
+                        <PipelineRow
+                          key={step.id || `${cycle.depth}-reflection`}
                           label={baseLabel + suffix + pending}
                           stepId={step.id || null}
                           isDone={done}
