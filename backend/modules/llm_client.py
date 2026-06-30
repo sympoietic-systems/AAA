@@ -72,6 +72,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         thinking: bool = False,
         reasoning_effort: str = "high",
         max_retries: int = 3,
+        timeout: float = 60.0,
     ):
         self._api_key = api_key
         self._model = model
@@ -84,6 +85,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         self._thinking = thinking
         self._reasoning_effort = reasoning_effort
         self._max_retries = max_retries
+        self._timeout = timeout
 
     @property
     def provider_name(self) -> str:
@@ -153,7 +155,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
         last_error = None
         for attempt in range(self._max_retries + 1):
-            async with httpx.AsyncClient(timeout=300.0) as client:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
                 try:
                     response = await client.post(
                         url,
@@ -278,6 +280,7 @@ class OpenRouterProvider(OpenAICompatibleProvider):
         thinking: bool = False,
         reasoning_effort: str = "high",
         max_retries: int = 3,
+        timeout: float = 60.0,
     ):
         super().__init__(
             api_key=api_key,
@@ -288,6 +291,7 @@ class OpenRouterProvider(OpenAICompatibleProvider):
             thinking=thinking,
             reasoning_effort=reasoning_effort,
             max_retries=max_retries,
+            timeout=timeout,
         )
 
 
@@ -340,6 +344,7 @@ class ModelPoolProvider(BaseLLMProvider):
         thinking: bool = False,
         reasoning_effort: str = "high",
         default_params: Optional[dict] = None,
+        timeout: float = 60.0,
     ):
         self._api_key = api_key
         self._models = models
@@ -355,6 +360,7 @@ class ModelPoolProvider(BaseLLMProvider):
         self._exhausted: dict[str, float] = {}
         self._last_model_used: str = ""
         self._last_model_time: float = 0.0
+        self._timeout = timeout
 
         # Setup key managers
         self._google_key_mgr = KeyManager(google_keys or [], cooldown_seconds=cooldown_seconds)
@@ -469,6 +475,7 @@ class ModelPoolProvider(BaseLLMProvider):
                     reasoning_effort=self._reasoning_effort,
                     max_retries=self._max_retries_per_model,
                     default_params=self._default_params,
+                    timeout=self._timeout,
                 )
 
                 try:

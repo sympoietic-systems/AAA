@@ -72,6 +72,7 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_LLM_MODELS", "llm", "models", _parse_list),
     EnvOverride("AAA_LLM_PROVIDER", "llm", "provider"),
     EnvOverride("AAA_LLM_API_BASE", "llm", "api_base"),
+    EnvOverride("AAA_LLM_TIMEOUT", "llm", "timeout", _parse_float),
     EnvOverride("AAA_DB_PATH", "database", "path"),
     EnvOverride("AAA_IDENTITY_PATH", "personality", "path"),
     EnvOverride("AAA_SERVER_HOST", "server", "host"),

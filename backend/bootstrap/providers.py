@@ -51,6 +51,7 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
         )
         deepseek_api_base = cfg.get("deepseek_api_base", "https://api.deepseek.com")
         cooldown_seconds = cfg.get("cooldown_seconds", 300)
+        timeout = cfg.get("timeout", 60.0)
         if label:
             logger.info("%s model pool: %s (fallback: %s)", label, models, fallback)
 
@@ -70,9 +71,11 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             thinking=thinking,
             reasoning_effort=reasoning_effort,
             default_params=default_params,
+            timeout=timeout,
         )
 
     effective_model = model
+    timeout = cfg.get("timeout", 60.0)
 
     # ── Router-prefix dispatch ────────────────────────────────────────
     if model.startswith("google_router/"):
@@ -82,6 +85,7 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             key, effective_model,
             cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai"),
             "google", default_params,
+            timeout=timeout,
         )
 
     if model.startswith("deepseek_router/"):
@@ -92,6 +96,7 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             cfg.get("deepseek_api_base", "https://api.deepseek.com"),
             "deepseek", default_params,
             thinking=thinking, reasoning_effort=reasoning_effort,
+            timeout=timeout,
         )
 
     if model.startswith("openrouter_router/"):
@@ -102,6 +107,7 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             api_base or "https://openrouter.ai/api/v1",
             default_params=default_params,
             thinking=thinking, reasoning_effort=reasoning_effort,
+            timeout=timeout,
         )
 
     # ── Standard provider dispatch ────────────────────────────────────
@@ -111,11 +117,13 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             api_base or "https://openrouter.ai/api/v1",
             default_params=default_params,
             thinking=thinking, reasoning_effort=reasoning_effort,
+            timeout=timeout,
         )
 
     return _create_openai_compatible(
         api_key, model, api_base, provider_name, default_params,
         thinking=thinking, reasoning_effort=reasoning_effort,
+        timeout=timeout,
     )
 
 
@@ -129,6 +137,7 @@ def _create_openai_compatible(
     default_params=None,
     thinking: bool = False,
     reasoning_effort: str = "high",
+    timeout: float = 60.0,
 ):
     from backend.modules.llm_client import OpenAICompatibleProvider
     return OpenAICompatibleProvider(
@@ -139,6 +148,7 @@ def _create_openai_compatible(
         default_params=default_params,
         thinking=thinking,
         reasoning_effort=reasoning_effort,
+        timeout=timeout,
     )
 
 
@@ -149,6 +159,7 @@ def _create_openrouter(
     default_params=None,
     thinking: bool = False,
     reasoning_effort: str = "high",
+    timeout: float = 60.0,
 ):
     from backend.modules.llm_client import OpenRouterProvider
     return OpenRouterProvider(
@@ -158,6 +169,7 @@ def _create_openrouter(
         default_params=default_params,
         thinking=thinking,
         reasoning_effort=reasoning_effort,
+        timeout=timeout,
     )
 
 
