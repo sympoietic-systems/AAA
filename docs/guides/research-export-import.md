@@ -34,9 +34,9 @@ curl -H "Authorization: Bearer <token>" \
 
 ## Import to Another Server
 
-Supports both single-task and bulk (export all) payloads. The import generates fresh UUIDs
-for all records to avoid ID collisions.
+Supports both single-task and bulk (export all) payloads. The import generates fresh UUIDs for all records to avoid ID collisions.
 
+**For Linux/macOS (bash/zsh) or Windows CMD:**
 ```bash
 curl -X POST \
   -H "Authorization: Bearer <token>" \
@@ -45,7 +45,24 @@ curl -X POST \
   http://other-server:8000/api/research/import
 ```
 
-Works with output from both `export/all` and single-task export.
+**For Windows PowerShell:**
+PowerShell overrides `curl` as an alias for `Invoke-WebRequest` and treats `@` as a splatting operator. Use `curl.exe` with single quotes, or native `Invoke-RestMethod`:
+
+```powershell
+# Using curl.exe (quote the file reference with single quotes)
+curl.exe -X POST `
+  -H "Authorization: Bearer <token>" `
+  -H "Content-Type: application/json" `
+  -d '@research.json' `
+  http://other-server:8000/api/research/import
+
+# Or using native PowerShell Invoke-RestMethod
+Invoke-RestMethod -Uri "http://other-server:8000/api/research/import" `
+  -Method Post `
+  -Headers @{"Authorization"="Bearer <token>"} `
+  -ContentType "application/json" `
+  -InFile "research.json"
+```
 
 ## Import Behavior
 
@@ -61,11 +78,18 @@ Works with output from both `export/all` and single-task export.
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8000/api/research/export/all > backup.json
 
-# On prod server — import
+# On prod server — import (Bash/CMD)
 curl -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d @backup.json \
+  https://prod.example.com/api/research/import
+
+# On prod server — import (PowerShell)
+curl.exe -X POST `
+  -H "Authorization: Bearer $TOKEN" `
+  -H "Content-Type: application/json" `
+  -d '@backup.json' `
   https://prod.example.com/api/research/import
 ```
 
