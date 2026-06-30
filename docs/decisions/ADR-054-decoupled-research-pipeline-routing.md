@@ -280,3 +280,23 @@ To achieve transparency and visual trace clarity in a non-linear pipeline, we im
 - Decided to omit manual user-perturbation buttons to keep the system fully automated and prepared for headless/autonomous agent operations.
 
 
+## Amendment: Multi-Version Reports & Future Second-Order Extensions (2026-06-30)
+
+To support multiple synthesis plateaus and prepare the pipeline for second-order cybernetic closure, the following designs were implemented and codified:
+
+### 1. Multi-Version Report Switching
+- Added `getTaskSteps` integration to `ResearchTaskPage.tsx` to retrieve all historical steps on the Report tab.
+- Extracted all historical synthesis reports (status `"completed"` or `"stale"`) from their respective `step_data.report_markdown` keys.
+- Implemented a version toolbar in the Report tab UI allowing the user to select and view reports from past cycles, with fallback to the main task's `result_summary`.
+
+### 2. Design for Pure Reflection (Second-Order Observation)
+- **Conceptual Role**: A dedicated step distinct from Consolidation (which addresses query/feedback loops). Reflection operates inward, observing the system's own confidence trajectories, belief tension logs, and *Glitch Fidelity* (an aggregated score tracking how anomalies are valued rather than flattened).
+- **Interface/Signals**: Produces internal flags (e.g. `BIAS_DETECTED`, `GAP_CRITICAL`, `GLITCH_FIDELITY_LOW`) to perturb the Metabolic Router into inserting corrective sub-loops (e.g. `Source Diversity Audit`).
+
+### 3. Design for Plan-Driven Dynamic Routing (Perturbation Patches)
+- **Conceptual Separation**: Separates the planner's semantic reasoning from the router's syntactic state execution. The planner cannot directly execute steps; it proposes structural updates.
+- **Routing Patches**: The plan step outputs a `routing_patch` containing provisional graph additions/overrides (e.g. `{"inserts": [{"step_type": "decolonial_interrogation", "position": "after_current"}], "ttl": 3}`).
+- **Integrity Membrane**: The Metabolic Router ingests the patch, validates it against integrity guards (e.g. ensuring reachable terminal synthesis, avoiding deadlocks), merges it with the active graph policy, and auto-expires it when TTL reaches zero.
+
+
+
