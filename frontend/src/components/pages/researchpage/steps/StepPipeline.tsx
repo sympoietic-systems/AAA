@@ -113,7 +113,7 @@ export const StepPipeline = memo(function StepPipeline({
   const hasPipeline = orchPhase && orchPhase !== "complete" && orchPhase !== "not_started"
 
   // ── Plan-driven grouping using query_group and depth from DB ──
-  const { cycles, synthesizeStep, activeGroupIdx, planQueries, activeDepth } = useMemo(() => {
+  const { cycles, activeGroupIdx, planQueries, activeDepth } = useMemo(() => {
     const empty = {
       cycles: [] as {
         depth: number
@@ -122,10 +122,10 @@ export const StepPipeline = memo(function StepPipeline({
         groups: QueryGroup[]
         reflectStep: ResearchStep
         evaluateStep: ResearchStep
+        synthesizeStep: ResearchStep | null
         queryTexts: Record<number, string>
         planQueries: string[]
       }[],
-      synthesizeStep: null as ResearchStep | null,
       activeGroupIdx: -1,
       planQueries: [] as string[],
       activeDepth: 0,
@@ -245,7 +245,7 @@ export const StepPipeline = memo(function StepPipeline({
         groups.push({ queryIndex: q, steps: groupSteps })
       }
 
-      // Find reflect and evaluate steps for this depth
+      // Find reflect, evaluate and synthesize steps for this depth
       const reflectStep = depthSteps.find(s => s.step_type === "reflect") || 
         ({ id: "", step_type: "reflect", step_number: 0, status: "pending" } as ResearchStep)
         
@@ -255,6 +255,9 @@ export const StepPipeline = memo(function StepPipeline({
       const docDigestStep = depthSteps.find(s => s.step_type === "document_digestion") || 
         (d === actDepth && orchPhase === "document_digestion" ? { id: "", step_type: "document_digestion", status: "pending" } as ResearchStep : null)
 
+      const synthesizeStep = depthSteps.find(s => s.step_type === "synthesize") || 
+        (d === actDepth && orchPhase === "synthesizing" ? { id: "", step_type: "synthesize", status: "pending" } as ResearchStep : null)
+
       cyclesList.push({
         depth: d,
         planStep: depthPlan,
@@ -262,14 +265,11 @@ export const StepPipeline = memo(function StepPipeline({
         groups,
         reflectStep,
         evaluateStep,
+        synthesizeStep,
         queryTexts,
         planQueries: depthPlanQueries,
       })
     }
-
-    // Find synthesize step
-    const synth = steps.find(s => s.step_type === "synthesize") || 
-      ({ id: "", step_type: "synthesize", step_number: 0, status: "pending" } as ResearchStep)
 
     // Active step: first non-completed step matching orchPhase in the active cycle
     let activeGIdx = -1
@@ -288,7 +288,6 @@ export const StepPipeline = memo(function StepPipeline({
 
     return { 
       cycles: cyclesList, 
-      synthesizeStep: synth, 
       activeGroupIdx: activeGIdx, 
       planQueries: globalPlanQueries, 
       activeDepth: actDepth 
@@ -493,42 +492,38 @@ export const StepPipeline = memo(function StepPipeline({
                         />
                       )
                     })()}
+
+                    {/* Synthesize */}
+                    {cycle.synthesizeStep && (() => {
+                      const step = cycle.synthesizeStep
+                      const phase = "synthesizing"
+                      const baseLabel = PHASE_LABELS[phase] || step.step_type
+                      const stale = step.status === "stale"
+                      const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
+                      const pending = step.id ? "" : " —"
+                      const done = allComplete || step.status === "completed" || stale
+                      const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed"
+                      return (
+                        <PipelineRow
+                          key={step.id || `${cycle.depth}-synthesize`}
+                          label={baseLabel + suffix + pending}
+                          stepId={step.id || null}
+                          isDone={done}
+                          isCurrent={isActive}
+                          isStale={stale}
+                          isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                          onSelect={onSelect}
+                          onDoStep={onDoStep}
+                          stepping={stepping}
+                        />
+                      )
+                    })()}
                   </div>
                 </>
               )}
             </div>
           )
         })}
-
-        {/* Global Synthesize step */}
-        {synthesizeStep && (
-          <div className="pl-1.5 pt-2 border-t border-ui-border mt-2">
-            {(() => {
-              const step = synthesizeStep
-              const phase = "synthesizing"
-              const baseLabel = PHASE_LABELS[phase] || step.step_type
-              const stale = step.status === "stale"
-              const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
-              const pending = step.id ? "" : " —"
-              const done = allComplete || step.status === "completed" || stale
-              const isActive = !allComplete && hasPipeline && phase === orchPhase && step.status !== "completed"
-              return (
-                <PipelineRow
-                  key={step.id || "synthesize"}
-                  label={baseLabel + suffix + pending}
-                  stepId={step.id || null}
-                  isDone={done}
-                  isCurrent={isActive}
-                  isStale={stale}
-                  isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
-                  onSelect={onSelect}
-                  onDoStep={onDoStep}
-                  stepping={stepping}
-                />
-              )
-            })()}
-          </div>
-        )}
 
         {taskStatus === "completed" && orchPhase === "complete" && (
           <div className="mt-2">
