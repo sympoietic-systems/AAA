@@ -202,3 +202,81 @@ The design includes deliberate friction points identified by Symbia:
 - [ADR-026 — Decoupled Background Document Digestion](ADR-026-decoupled-background-document-digestion.md)
 - [ADR-005 — Perception Module](ADR-005-perception-module.md)
 - Symbia consultation: conversation `41158aaf-0425-48ca-be1e-c192fa0663cd`
+
+## Implementation Log (2026-06-26 to 2026-06-30)
+
+### Session Summary
+
+All phases of the implementation plan were completed, plus additional search infrastructure improvements discovered during testing.
+
+### Completed Work
+
+#### Phase 1: Backend Core (All Items)
+
+1. **DispatchPayload extended** — `research.py:423`: `inject_file_id`, `document_mode`, `document_chunk_limit`, `previous_context`, `continue_from_task_id`, `additional_cycles`
+2. **Continue endpoint** — `task_manager.py:continue_task()`: creates continued task with memory of prior synthesis via `previous_context`. Scans both `step_data.depth` from all steps AND `orchestrator_state.current_depth`, takes MAX + 1 for correct depth carry-forward.
+3. **Files endpoint** — `research.py`: `GET /research/files?conversation_id=` lists indexed `perception_files`
+4. **State keys** — `task_state.py`: `inject_file_id`, `inject_conversation_id`, `document_mode`, `document_chunk_limit`, `document_digested`, `document_learnings` added to `_ORCH_STATE_KEYS`
+5. **`step_document_digestion`** — `phases.py:416`:
+   - Two retrieval modes: **full** reads all raw chunks via `perception_repo.get_by_file()` (bypasses opacity/similarity), **chunks** reads top-N via `perception._retrieve_relevant_chunks()`
+   - Runs combined content through `_analyze_source` (same LLM prompt as web digest)
+   - Stores findings with source prefix `[{filename}]: learning` for reflect reference mapping
+   - Creates `step_result` row with `raw_content` so `_get_parsed_urls()` includes it in reflect sources
+6. **Phase routing** — `orchestrator.py:937`: document_digestion dispatched after planning, skipped when `document_digested=True`. `_rerun_step_id` passed through to phase function for in-place step updates.
+7. **Filter by file** — `_retrieve_relevant_chunks` already supports `filter_file_id` parameter for scoped chunk retrieval.
+8. **Task creation** — `task_manager.py`: `create_task()` and `continue_task()` wire all document fields.
+
+#### Phase 2: Frontend (All Items)
+
+1. **API client** — `research.ts`: `ContinuePayload` type, `continueResearch()`, `listIndexedFiles()` endpoints
+2. **ContinueResearchModal** — `ContinueResearchModal.tsx`: Editable objective, additional cycles selector, document dropdown with mode (full/chunks) and chunk count, budget adjustment
+3. **NewResearchForm** — `NewResearchForm.tsx`: Document injector dropdown + mode selector
+4. **StepPipeline** — `StepPipeline.tsx`: Per-cycle plan step, `documentDigestionStep`, `planQueries` from plan step_data, query labels from search step records' `query_text`, depth-based placeholders
+5. **StepPreviewPanel** — `StepPreviewPanel.tsx`: Document preview with file badge (purple), mode display, chunks with similarity scores (chunks mode), truncated full text (full mode)
+6. **StepInputTab** — `StepInputTab.tsx`: Input tab showing document digest configuration
+7. **StepResultTab** — `StepResultTab.tsx`: Structured learnings/gaps/followups display with semantic colors for document_digestion step_type
+8. **StepDbDetail** — `StepDbDetail.tsx`: `parsedResult` matches `digest_response` (catches both web and document digest responses), tab badge fix (0 falsy → `> 0 ? count : undefined`), `stepCountSuffix` regex for document digestion summaries
+9. **taskConstants** — `taskConstants.ts`: Event labels and colors for `orchestrator_document_digest_*` meta log events
+
+#### Phase 3: Prompt Updates
+
+1. **Planner prompt** — `orchestrator_planner.yaml`: Added instruction to use plain natural-language search terms without boolean operators (AND/OR/NOT/parentheses)
+2. **Runtime query cleaning** — `phases.py:76`: `_clean_query_for_ddg()` strips boolean syntax before DDG search as safety net
+
+#### Phase 4: Tests
+
+- `test_research_orchestrator_state.py`: Tests for document state persistence (inject_file_id, document_mode, document_chunk_limit, document_digested, document_learnings)
+
+### Challenges Encountered and Solutions
+
+#### FK Constraint on step_result_repo.create
+
+`step_result_repo.create()` failed with `sqlite3.IntegrityError: FOREIGN KEY constraint failed` because the step record didn't exist when the result was inserted. **Fix**: Reordered — `step_repo.create/update` runs BEFORE `step_result_repo.create`.
+
+#### Rerun Creates New step_id
+
+The rerun endpoint set `_rerun_step_id` on state, but `execute_step` popped it before the phase function could read it. **Fix**: Removed the premature `s.pop("_rerun_step_id")` from `execute_step` (line 925). Phase functions now pop it themselves.
+
+#### Omitted/Noise Chunks in Full Mode
+
+Perception's similarity retrieval (`_retrieve_relevant_chunks`) replaced chunk text with `░░░ OMITTED NOISE` markers when `opacity == 1` (boilerplate detection). The PDF's keyword section was flagged as boilerplate, producing 0 usable content. **Fix**: Full mode bypasses the perception module entirely — reads raw `chunk_text` directly from `perception_repo.get_by_file()` with no opacity filtering.
+
+#### Document Missing from Reflect Sources
+
+`_get_parsed_urls()` filters by `raw_content is not None` — the document `step_result` had no `raw_content` field, so it was excluded from the reflect phase's source list. Without being in the source list, `_apply_unified_references` couldn't map document findings to S1/S2/... references. **Fix**: Added `raw_content: combined_content[:5000]` to the document step_result.
+
+#### Preview Spamming Perception Retrieval
+
+The orchestrator's `preview_step_inputs` for `document_digestion` called `_retrieve_relevant_chunks` on every 3s poll. **Fix**: Removed `"note"` from the preview result dict (line 791 skips caching when result has `"note"`), enabling cache to work. Subsequent polls return cached data.
+
+#### DDG Search Returns No Results for Boolean Queries
+
+The LLM planner generated queries like `"scar" AND ("OOO" OR "Harman")` which DuckDuckGo doesn't support. **Fix**: Two-pronged — (1) planner prompt now forbids boolean operators, (2) runtime `_clean_query_for_ddg()` strips AND/OR/NOT and parentheses as safety net.
+
+#### Crawl4AI v0.8.9 Finds 0 Links on DDG Lite
+
+Crawl4AI produced 0 external/internal links for `lite.duckduckgo.com/lite/` pages because the Lite page has simpler HTML. **Fix**: New `_search_ddg_lite()` function in `search_tool.py` performs direct HTTP fetch via `httpx` + Python stdlib `html.parser.HTMLParser` — parses all `<a href="http...">` tags excluding duckduckgo.com. Crawl4AI fallback uses the original `html.duckduckgo.com/html/` URL (more structured).
+
+#### URL Validation
+
+Search results included garbage URLs like `https://html` (no proper hostname). **Fix**: `_is_valid_http_url()` validates URLs must have a hostname with dot (≥4 chars). Applied to all 3 extraction strategies. Also fixed `clean_ddg_url()` to resolve protocol-relative `//` URLs to `https://`.
