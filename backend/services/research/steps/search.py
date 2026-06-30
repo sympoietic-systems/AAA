@@ -159,9 +159,17 @@ class SearchStep(BaseResearchStep):
 
         signal_flags = {"has_results": len(search_results) > 0}
 
+        all_step_ids = list(group_steps.values())
+        if search_results:
+            rationale = f"Executed search queries at depth {current_depth}, retrieving {len(search_results)} search results."
+        else:
+            rationale = f"Executed search queries at depth {current_depth}, but no new search results were found."
+
         return StepOutput(
             status="completed",
             message=f"found {len(search_results)} results" if search_results else "no results found",
             payload=out_payload,
-            signal_flags=signal_flags
+            signal_flags=signal_flags,
+            step_ids=all_step_ids,
+            transition_rationale=rationale
         )

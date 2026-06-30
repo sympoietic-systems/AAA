@@ -98,9 +98,17 @@ class DigestStep(BaseResearchStep):
             gaps=gaps
         )
 
+        all_step_ids = list(group_steps.values())
+        if all_learnings:
+            rationale = f"Successfully digested content and extracted {len(all_learnings)} key learnings, identifying {len(gaps)} remaining information gaps."
+        else:
+            rationale = "Digested the extracted text content, but no significant new learnings could be found."
+
         return StepOutput(
             status="completed",
             message=f"digested {len(parsed_sources)} sources, got {len(all_learnings)} learnings",
             payload=out_payload,
-            new_findings=new_findings
+            new_findings=new_findings,
+            step_ids=all_step_ids,
+            transition_rationale=rationale
         )

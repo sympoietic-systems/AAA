@@ -20,6 +20,9 @@
     [x] Refactor StepPipeline.tsx to utilize backend-reported current_depth for cycle rendering
     [x] Preserve result_summary during continue_task in task_manager.py
     [x] Store synthesis reports in step_data JSON on the synthesize step for historical retrieval
+    [x] Implement transition rationale and next phase database logging in modular step execution
+    [x] Add transition rationale propagation to PipelineRow component in frontend StepPipeline.tsx
+
 
 ## Future Metrics & Refinements
     [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.

@@ -62,8 +62,17 @@ function getPlanQueryCount(data: TaskStepsResponse | null): number {
   } catch { return 0 }
 }
 
-function PipelineRow({ label, stepId, isDone, isCurrent, isStale, isSelected, onSelect, onDoStep, stepping }: {
-  label: string; stepId?: string | null; isDone: boolean; isCurrent: boolean; isStale: boolean; isSelected: boolean
+/** Safely extract transition rationale from step_data JSON. */
+function getStepRationale(step: ResearchStep | null): string | null {
+  if (!step?.step_data) return null
+  try {
+    const parsed = JSON.parse(step.step_data)
+    return parsed.transition_rationale || null
+  } catch { return null }
+}
+
+function PipelineRow({ label, stepId, isDone, isCurrent, isStale, isSelected, rationale, onSelect, onDoStep, stepping }: {
+  label: string; stepId?: string | null; isDone: boolean; isCurrent: boolean; isStale: boolean; isSelected: boolean; rationale?: string | null
   onSelect: (id: string | null) => void; onDoStep: () => void; stepping: boolean
 }) {
   const sc = isStale ? "var(--color-semantic-sand)" : isDone ? "var(--color-semantic-green)" : isCurrent ? "var(--color-semantic-gold)" : "var(--color-ui-dim)"
@@ -81,25 +90,32 @@ function PipelineRow({ label, stepId, isDone, isCurrent, isStale, isSelected, on
   }
 
   return (
-    <div
-      onClick={handleClick}
-      className={`flex items-center gap-2 text-[10px] px-2 py-1 rounded-sm transition-all
-        ${canClick ? "cursor-pointer hover:bg-[#111]" : ""}
-        ${isCurrent ? "bg-action-hover/5 border border-semantic-gold/20" : ""}
-        ${isStale ? "bg-action-hover/5 border border-semantic-sand/10" : ""}
-        ${isSelected ? "border border-action-hover/20 bg-action-hover/5" : ""}`}
-    >
-      <span style={{ color: sc }} className="text-[8px] shrink-0 w-3 font-mono">
-        {isStale ? "⟳" : isDone ? "✔" : isCurrent ? "▶" : "○"}
-      </span>
-      <span className={`font-mono flex-1 ${isSelected ? "text-action-hover" : isStale ? "text-semantic-sand/80" : isDone ? "text-ui-secondary" : isCurrent ? "text-semantic-gold" : "text-ui-dim"}`}>
-        {label}{isStale ? " (stale)" : ""}
-      </span>
-      {isCurrent && (
-        <button onClick={e => { e.stopPropagation(); onDoStep() }} disabled={stepping}
-          className="text-action-dim hover:text-action-hover text-[9px] font-mono disabled:text-[#333] cursor-pointer transition-colors">
-          [{stepping ? "…" : "▶ run"}]
-        </button>
+    <div className="space-y-0.5">
+      <div
+        onClick={handleClick}
+        className={`flex items-center gap-2 text-[10px] px-2 py-1 rounded-sm transition-all
+          ${canClick ? "cursor-pointer hover:bg-[#111]" : ""}
+          ${isCurrent ? "bg-action-hover/5 border border-semantic-gold/20" : ""}
+          ${isStale ? "bg-action-hover/5 border border-semantic-sand/10" : ""}
+          ${isSelected ? "border border-action-hover/20 bg-action-hover/5" : ""}`}
+      >
+        <span style={{ color: sc }} className="text-[8px] shrink-0 w-3 font-mono">
+          {isStale ? "⟳" : isDone ? "✔" : isCurrent ? "▶" : "○"}
+        </span>
+        <span className={`font-mono flex-1 ${isSelected ? "text-action-hover" : isStale ? "text-semantic-sand/80" : isDone ? "text-ui-secondary" : isCurrent ? "text-semantic-gold" : "text-ui-dim"}`}>
+          {label}{isStale ? " (stale)" : ""}
+        </span>
+        {isCurrent && (
+          <button onClick={e => { e.stopPropagation(); onDoStep() }} disabled={stepping}
+            className="text-action-dim hover:text-action-hover text-[9px] font-mono disabled:text-[#333] cursor-pointer transition-colors">
+            [{stepping ? "…" : "▶ run"}]
+          </button>
+        )}
+      </div>
+      {rationale && (
+        <div className="text-[8.5px] text-ui-dim/80 italic pl-5 pb-0.5 font-mono leading-tight whitespace-pre-wrap">
+          ↳ {rationale}
+        </div>
       )}
     </div>
   )
@@ -354,6 +370,7 @@ export const StepPipeline = memo(function StepPipeline({
                             isCurrent={isActive}
                             isStale={stale}
                             isSelected={ps.id ? selectedId === ps.id : (selectedId === null && isActive)}
+                            rationale={getStepRationale(ps)}
                             onSelect={onSelect}
                             onDoStep={onDoStep}
                             stepping={stepping}
@@ -380,6 +397,7 @@ export const StepPipeline = memo(function StepPipeline({
                             isCurrent={isActive}
                             isStale={stale}
                             isSelected={ds.id ? selectedId === ds.id : (selectedId === null && isActive)}
+                            rationale={getStepRationale(ds)}
                             onSelect={onSelect}
                             onDoStep={onDoStep}
                             stepping={stepping}
@@ -429,6 +447,7 @@ export const StepPipeline = memo(function StepPipeline({
                               isCurrent={isActive}
                               isStale={stale}
                               isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                              rationale={getStepRationale(step)}
                               onSelect={onSelect}
                               onDoStep={onDoStep}
                               stepping={stepping}
@@ -460,6 +479,7 @@ export const StepPipeline = memo(function StepPipeline({
                           isCurrent={isActive}
                           isStale={stale}
                           isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                          rationale={getStepRationale(step)}
                           onSelect={onSelect}
                           onDoStep={onDoStep}
                           stepping={stepping}
@@ -486,6 +506,7 @@ export const StepPipeline = memo(function StepPipeline({
                           isCurrent={isActive}
                           isStale={stale}
                           isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                          rationale={getStepRationale(step)}
                           onSelect={onSelect}
                           onDoStep={onDoStep}
                           stepping={stepping}
@@ -512,6 +533,7 @@ export const StepPipeline = memo(function StepPipeline({
                           isCurrent={isActive}
                           isStale={stale}
                           isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
+                          rationale={getStepRationale(step)}
                           onSelect={onSelect}
                           onDoStep={onDoStep}
                           stepping={stepping}

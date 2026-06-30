@@ -77,8 +77,12 @@ class SynthesizeStep(BaseResearchStep):
             result_summary=result_summary
         )
 
+        rationale = f"Synthesized findings from {sources_analyzed} sources into the final synthesis report."
+
         return StepOutput(
             status="completed",
             message="synthesis complete",
-            payload=out_payload
+            payload=out_payload,
+            step_ids=[step_id],
+            transition_rationale=rationale
         )

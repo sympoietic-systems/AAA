@@ -1163,6 +1163,25 @@ class SomaticResearchOrchestrator:
                             break
                     s["phase"] = next_phase
 
+                    # Save transition rationale and next phase to step_data JSON
+                    if self.step_repo and hasattr(output, "step_ids") and output.step_ids:
+                        rationale = getattr(output, "transition_rationale", None) or f"Transitioning from {phase} to {next_phase}."
+                        for sid in output.step_ids:
+                            try:
+                                db_step = self.step_repo.get(sid)
+                                if db_step:
+                                    step_data = {}
+                                    if db_step.get("step_data"):
+                                        try:
+                                            step_data = json.loads(db_step["step_data"]) if isinstance(db_step["step_data"], str) else db_step["step_data"]
+                                        except Exception:
+                                            pass
+                                    step_data["transition_rationale"] = rationale
+                                    step_data["next_phase"] = next_phase
+                                    self.step_repo.update(sid, step_data=json.dumps(step_data, default=str, ensure_ascii=False))
+                            except Exception as ex:
+                                logger.warning("Failed to update transition rationale for step %s: %s", sid, ex)
+
                 else:
                     # Legacy execution fallback
                     if phase == "planning":

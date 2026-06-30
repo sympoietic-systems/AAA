@@ -183,9 +183,13 @@ class DocumentDigestionStep(BaseResearchStep):
             gaps=gaps
         )
 
+        rationale = f"Successfully digested uploaded document {inject_file_id} in {doc_mode} mode, extracting {len(learnings)} key learnings."
+
         return StepOutput(
             status="completed",
             message=f"{len(learnings)} learnings from document",
             payload=out_payload,
-            new_findings=new_findings
+            new_findings=new_findings,
+            step_ids=[step_id],
+            transition_rationale=rationale
         )

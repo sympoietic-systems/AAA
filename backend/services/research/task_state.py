@@ -86,6 +86,8 @@ class StepOutput(BaseModel):
     payload: BaseModel
     new_findings: List[str] = Field(default_factory=list)
     signal_flags: Dict[str, Any] = Field(default_factory=dict)
+    transition_rationale: Optional[str] = None
+    step_ids: List[str] = Field(default_factory=list)
 
 
 _ORCH_STATE_KEYS = {

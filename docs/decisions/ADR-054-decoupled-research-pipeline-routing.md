@@ -263,3 +263,20 @@ During multi-cycle continuation testing, three major pipeline synchronization is
 - Modified `SynthesizeStep` (`synthesize.py`) to write the full markdown report to `step_data` JSON under the `"report_markdown"` key, along with the cycle's `"depth"`.
 - Updated `parsedResult` in `StepDbDetail.tsx` to fallback to reading `"report_markdown"` from `selected.step_data` if the meta-log response is missing or empty. This preserves and allows historical browsing of all incremental synthesis reports per cycle.
 
+
+## Amendment: Transition Rationale Tracking & Next Phase Logging (2026-06-30)
+
+To achieve transparency and visual trace clarity in a non-linear pipeline, we implemented a routing rationale propagation mechanism:
+
+### 1. Step Output Rationales
+- Added `transition_rationale` and `step_ids` fields to `StepOutput` to allow modular steps to report their unique ID(s) and express their semantic outcome (e.g. why they finished, what they found, and what gaps remain).
+
+### 2. Metabolic Router Updates
+- Extended `execute_step` in `orchestrator.py` to intercept step outputs, query the database for the executed step records matching `step_ids`, and insert both `transition_rationale` and `next_phase` into the `step_data` JSON field.
+
+### 3. Frontend Trace Visualization
+- Added a `rationale` prop to `PipelineRow` components in `StepPipeline.tsx`.
+- Extracted and rendered the rationale directly below each step's card in the pipeline sidebar to visually show the transition rationale and swerve decisions.
+- Decided to omit manual user-perturbation buttons to keep the system fully automated and prepared for headless/autonomous agent operations.
+
+

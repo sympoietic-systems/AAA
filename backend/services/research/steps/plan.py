@@ -70,5 +70,7 @@ class PlanStep(BaseResearchStep):
             status="completed",
             message=f"{len(plan.get('search_queries', []))} queries planned",
             payload=out_payload,
-            signal_flags={"plan_id": plan["id"]}
+            signal_flags={"plan_id": plan["id"]},
+            step_ids=[step_id],
+            transition_rationale=f"Planned {len(plan.get('search_queries', []))} search queries for depth {current_depth}."
         )

@@ -56,8 +56,12 @@ class ReflectStep(BaseResearchStep):
             next_direct_urls=reflection.get("next_direct_urls", [])
         )
 
+        rationale = f"Evaluated research completeness ({completeness * 100:.1f}%). Identified {len(reflection.get('remaining_gaps', []))} remaining gaps and planned {len(reflection.get('next_queries', []))} follow-up queries."
+
         return StepOutput(
             status="completed",
             message=f"completeness score: {completeness:.2f}",
-            payload=out_payload
+            payload=out_payload,
+            step_ids=[step_id],
+            transition_rationale=rationale
         )

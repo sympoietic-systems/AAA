@@ -48,9 +48,13 @@ class EvaluateStep(BaseResearchStep):
 
         signal_flags = {"should_stop": should_stop}
 
+        rationale = f"Evaluated research progress at depth {current_depth}: {'Synthesizing final findings' if should_stop else 'Proceeding to next depth level'} because: {stop_reason}."
+
         return StepOutput(
             status="completed",
             message=f"eval decision: {'stop' if should_stop else 'continue'} - {stop_reason}",
             payload=out_payload,
-            signal_flags=signal_flags
+            signal_flags=signal_flags,
+            step_ids=[step_id],
+            transition_rationale=rationale
         )

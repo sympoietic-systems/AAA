@@ -53,9 +53,17 @@ class ParseStep(BaseResearchStep):
 
         signal_flags = {"has_parsed_content": len(parsed) > 0}
 
+        all_step_ids = list(group_steps.values())
+        if parsed:
+            rationale = f"Successfully parsed and extracted text content from {len(parsed)} source URLs."
+        else:
+            rationale = "Attempted to parse search results, but no valid content could be extracted from any sources."
+
         return StepOutput(
             status="completed",
             message=f"parsed {len(parsed)} sources",
             payload=out_payload,
-            signal_flags=signal_flags
+            signal_flags=signal_flags,
+            step_ids=all_step_ids,
+            transition_rationale=rationale
         )
