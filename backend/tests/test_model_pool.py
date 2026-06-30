@@ -237,5 +237,60 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["max_tokens"], 456)
         self.assertNotIn("temperature", body)  # temperature not sent in thinking mode
 
+    @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate")
+    @patch("backend.modules.llm_client.asyncio.sleep")
+    async def test_connection_error_retry_and_exhaustion(self, mock_sleep, mock_generate):
+        provider = ModelPoolProvider(
+            api_key="or_key_default",
+            models=["google_router/gemini-2.5-flash"],
+            fallback_model="",
+            google_keys=["g_key1"],
+            cooldown_seconds=10,
+        )
+        
+        # Scenario: First call raises RequestError. Retry succeeds.
+        call_count = 0
+        def side_effect(messages, **params):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                import httpx
+                raise httpx.RequestError("connection lost")
+            return {"content": "Success after retry", "thinking": None}
+            
+        mock_generate.side_effect = side_effect
+        
+        result = await provider.generate([{"role": "user", "content": "hello"}])
+        self.assertEqual(result["content"], "Success after retry")
+        self.assertEqual(mock_generate.call_count, 2)
+        mock_sleep.assert_called_once_with(10)
+        
+        # Verify key g_key1 is NOT exhausted (since the retry succeeded)
+        self.assertEqual(provider._google_key_mgr.get_available_key(), "g_key1")
+
+    @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate")
+    @patch("backend.modules.llm_client.asyncio.sleep")
+    async def test_connection_error_retry_exhausts_key(self, mock_sleep, mock_generate):
+        provider = ModelPoolProvider(
+            api_key="or_key_default",
+            models=["google_router/gemini-2.5-flash"],
+            fallback_model="",
+            google_keys=["g_key1"],
+            cooldown_seconds=10,
+        )
+        
+        import httpx
+        mock_generate.side_effect = httpx.RequestError("connection lost")
+        
+        with self.assertRaises(RateLimitError):
+            await provider.generate([{"role": "user", "content": "hello"}])
+            
+        # 1 original attempt + 1 retry = 2 calls
+        self.assertEqual(mock_generate.call_count, 2)
+        mock_sleep.assert_called_once_with(10)
+        
+        # Since both failed, key is exhausted
+        self.assertIsNone(provider._google_key_mgr.get_available_key())
+
 if __name__ == "__main__":
     unittest.main()

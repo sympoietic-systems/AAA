@@ -493,6 +493,20 @@ class ModelPoolProvider(BaseLLMProvider):
                     key_mgr.mark_key_exhausted(key)
                     errors.append(f"{model} (key: {masked_key}): HTTP {e.response.status_code} - {e}")
                     logger.warning("Key %s HTTP error %s for model %s. Rotating key...", masked_key, e.response.status_code, model)
+                except (httpx.RequestError, TimeoutError, asyncio.TimeoutError) as e:
+                    logger.warning("Connection error '%s' on model %s with key %s. Waiting 10s to retry...", type(e).__name__, model, masked_key)
+                    await asyncio.sleep(10)
+                    try:
+                        result = await provider.generate(messages, **params)
+                        if self._last_model_used != model:
+                            self._last_model_used = model
+                            self._last_model_time = time.time()
+                        success = True
+                        break
+                    except Exception as retry_e:
+                        key_mgr.mark_key_exhausted(key)
+                        errors.append(f"{model} (key: {masked_key}): connection error after retry - {retry_e}")
+                        logger.warning("Retry failed for model %s with key %s. Rotating key...", model, masked_key)
                 except Exception as e:
                     key_mgr.mark_key_exhausted(key)
                     errors.append(f"{model} (key: {masked_key}): {e}")
