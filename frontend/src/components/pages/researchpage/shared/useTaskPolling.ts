@@ -3,12 +3,16 @@ import type { ResearchTask } from "../../../../api/research"
 import { getResearchTask, getTaskPhase } from "../../../../api/research"
 
 /** Visibility-aware polling hook for live task status */
-export function useTaskPolling(taskId: string, taskStatus: string, initialTask: ResearchTask) {
+export function useTaskPolling(taskId: string, _taskStatus: string, initialTask: ResearchTask) {
   const [liveTask, setLiveTask] = useState(initialTask)
   const [orchPhase, setOrchPhase] = useState(initialTask.status === "queued" ? "planning" : "")
 
+  // Track live status so we can detect the active→completed transition
+  const liveStatus = liveTask.status
+
   useEffect(() => {
-    if (taskStatus !== "active" && taskStatus !== "queued") return
+    // Poll while the task is active or queued (using the live status, not the stale prop)
+    if (liveStatus !== "active" && liveStatus !== "queued") return
     const poll = () => {
       if (document.hidden) return
       getResearchTask(taskId).then(t => { if (t) setLiveTask(t) }).catch(() => {})
@@ -24,7 +28,15 @@ export function useTaskPolling(taskId: string, taskStatus: string, initialTask: 
       clearInterval(timer)
       document.removeEventListener("visibilitychange", onVisible)
     }
-  }, [taskId, taskStatus])
+  }, [taskId, liveStatus])
+
+  // One-shot final fetch when the task transitions from active → terminal
+  // This ensures the result_summary (synthesis report) is captured after synthesis completes
+  useEffect(() => {
+    if (liveStatus === "completed" || liveStatus === "failed" || liveStatus === "cancelled") {
+      getResearchTask(taskId).then(t => { if (t) setLiveTask(t) }).catch(() => {})
+    }
+  }, [taskId, liveStatus])
 
   const refreshAll = useCallback(() => {
     getResearchTask(taskId).then(t => { if (t) setLiveTask(t) }).catch(() => {})

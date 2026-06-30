@@ -7,6 +7,16 @@
     [x] Background belief digester (integrated into BackgroundStartupScheduler on restart)
     [x] Belief Digestor for the documents too
 
+## Research Pipeline
+    [x] Integrate modular step processor architecture (StepEnvelope, PIPELINE_GRAPH, ResearchStepRegistry)
+    [x] Fix result_summary propagation from SynthesizeStep through execute_step result dict
+    [x] Fix apply_step_output to persist result_summary into task state for auto-mode loops
+    [x] Fix execute() (auto-run) to read result_summary from DB if state dict is empty
+    [x] Fix useTaskPolling: use liveTask.status (reactive) instead of stale taskStatus prop
+    [x] Fix useTaskPolling: add one-shot final fetch on active→terminal status transition
+    [x] Fix execute_step route: resume pending synthesize phase instead of wiping data on rerun
+    [x] Integrate PDF URL interception in sensory_affordances select_and_fetch (via SimpleChunkDigester)
+
 ## Future Metrics & Refinements
     [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.
     [ ] Implement Aesthetic Dissidence perplexity measurements to trace semantic and stylistic rebellion.
@@ -31,3 +41,7 @@
 
     [ ] MCP oftne fails when the response long or maybe because of markdown formatting? Need to check
     here some responses wa
+
+## Search & Document Digestion Refinements (Deferred)
+    [ ] Improve web search robustness (e.g. support fallback search backends, proxy rotation, or additional direct HTML parsing fallbacks).
+    [ ] Add ability to parse PDF/document search result URLs (download, extract via pdfplumber/other extractors, and include in the digestion pipeline instead of ignoring them).
