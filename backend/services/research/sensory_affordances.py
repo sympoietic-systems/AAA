@@ -265,6 +265,39 @@ async def select_and_fetch(
     if all backends are exhausted.
     """
     cfg = config or {}
+    # Check if URL points to a PDF file or PDF task is requested
+    if url_or_query.lower().split("?")[0].endswith(".pdf") or task_type == "pdf":
+        logger.info("PDF URL detected, downloading and extracting text: %s", url_or_query)
+        try:
+            from backend.modules.digester import SimpleChunkDigester
+            from tempfile import NamedTemporaryFile
+            import os
+            from pathlib import Path
+
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                response = await client.get(url_or_query)
+                response.raise_for_status()
+                pdf_bytes = response.content
+
+            with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                tmp_file.write(pdf_bytes)
+                tmp_path = Path(tmp_file.name)
+
+            try:
+                digester = SimpleChunkDigester()
+                extracted_text = digester.extract(tmp_path, "pdf")
+                if extracted_text and extracted_text.strip():
+                    return extracted_text
+                else:
+                    logger.warning("Extracted PDF text is empty: %s", url_or_query)
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.error("Failed to download and extract PDF from URL %s: %s", url_or_query, e)
+
     sa_config = cfg.get("sensory_affordances", {})
     strategy = sa_config.get("strategy", "tiered")
     routing = sa_config.get("task_type_routing", {})

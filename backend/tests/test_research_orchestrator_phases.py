@@ -228,3 +228,151 @@ class TestPhasePlanFallback:
         assert result["estimated_depth"] == 1
 
         conn.close()
+
+
+class TestDocumentDigestionStep:
+    @pytest.mark.asyncio
+    async def test_execute_document_digestion_with_plan_id(self):
+        conn = init_db(DB_PATH)
+        task_id = _make_task_id()
+        task_repo = ResearchTaskRepository(DB_PATH)
+        step_repo = ResearchStepRepository(DB_PATH)
+        plan_repo = ResearchPlanRepository(DB_PATH)
+        _create_task(task_repo, task_id)
+
+        plan_id = str(uuid.uuid4())
+        plan_repo.create({
+            "id": plan_id,
+            "task_id": task_id,
+            "plan_json": json.dumps({
+                "goal": "Test goal",
+                "search_queries": ["query"],
+                "n_results_per_query": 3,
+                "estimated_depth": 1,
+            })
+        })
+
+        state_mock = _make_mock_state()
+        state_mock.research_task_repo = task_repo
+        state_mock.research_step_repo = step_repo
+        state_mock.research_step_result_repo = MagicMock()
+        state_mock.research_meta_log_repo = MagicMock()
+        state_mock.perception_repo = MagicMock()
+        state_mock.perception_repo.find_file_by_name.return_value = {"status": "ready", "summary": "doc summary", "conversation_id": "conv-1"}
+        chunk_mock = MagicMock()
+        chunk_mock.chunk_text = "some relevant document content"
+        state_mock.perception_repo.get_by_file.return_value = [chunk_mock]
+
+        with patch("backend.services.research.tools._analyze_source", new_callable=AsyncMock) as mock_analyze:
+            mock_analyze.return_value = {"learnings": ["learning 1"], "followups": [], "gaps": []}
+            
+            from backend.services.research.steps.document_digestion import DocumentDigestionStep
+            from backend.services.research.task_state import StepEnvelope, DocDigestPayload
+
+            orch = SomaticResearchOrchestrator(state_mock)
+            orch._state_mgr.states[task_id] = {
+                "phase": "document_digestion",
+                "objective": "Test document",
+                "max_depth": 3,
+                "budget": 0.5,
+                "plan_id": plan_id,
+                "step_number": 1,
+                "current_depth": 0,
+            }
+
+            envelope = StepEnvelope(
+                task_id=task_id,
+                objective="Test document",
+                current_depth=0,
+                max_depth=3,
+                budget=0.5,
+                plan_id=plan_id,
+                payload=DocDigestPayload(
+                    inject_file_id="doc.txt",
+                    document_mode="summary",
+                    document_chunk_limit=5
+                )
+            )
+
+            step = DocumentDigestionStep()
+            output = await step.execute(orch, envelope)
+
+            assert output.status == "completed"
+            assert len(output.payload.learnings) == 1
+
+        conn.close()
+
+
+class TestReflectionFindingsInclusion:
+    @pytest.mark.asyncio
+    async def test_reflect_includes_digested_and_historical_findings(self):
+        from backend.services.research.tools import _tool_reflect
+
+        orch = MagicMock()
+        orch.step_repo = MagicMock()
+        orch.step_result_repo = MagicMock()
+        orch._get_parsed_urls.return_value = [
+            {"url": "document:doc.pdf", "title": "doc.pdf", "status": "ok"},
+            {"url": "https://other.com", "title": "other.com", "status": "ok"},
+        ]
+        
+        # Mock step list
+        orch.step_repo.get_by_task.return_value = [
+            {"id": "step1", "step_type": "document_digestion", "step_data": json.dumps({"depth": 0})},
+            {"id": "step2", "step_type": "parallel_parse", "step_data": json.dumps({"depth": 0})},
+        ]
+        
+        # Mock step results
+        def get_by_step_mock(step_id):
+            if step_id == "step1":
+                return [{
+                    "source_title": "doc.pdf",
+                    "source_url": "document:doc.pdf",
+                    "analyzed_json": json.dumps({
+                        "learnings": ["digestion learning 1"],
+                        "followups": [],
+                        "gaps": []
+                    })
+                }]
+            elif step_id == "step2":
+                return [{
+                    "source_title": "other.com",
+                    "source_url": "https://other.com",
+                    "analyzed_json": json.dumps({
+                        "learnings": ["web learning 1"],
+                        "followups": [],
+                        "gaps": []
+                    })
+                }]
+            return []
+
+        orch.step_result_repo.get_by_step.side_effect = get_by_step_mock
+        orch._get_step_depth = lambda s: json.loads(s.get("step_data") or "{}").get("depth", 0)
+        orch._format_reflection_markdown.return_value = ""
+
+        all_findings = [
+            "[doc.pdf]: digestion learning 1",
+            "[other.com]: web learning 1",
+        ]
+
+        with patch("backend.modules.llm_client.generate_unified", new_callable=AsyncMock) as mock_generate:
+            mock_generate.return_value = {"json_data": {}}
+            await _tool_reflect(
+                orch,
+                task_id="task-id",
+                objective="Test obj",
+                goal="Test goal",
+                depth=0,
+                max_depth=3,
+                all_findings=all_findings,
+                previous_reflection={},
+                digest_signals={},
+                step_id="step-id"
+            )
+            
+            called_args, called_kwargs = mock_generate.call_args
+            user_prompt = called_kwargs.get("user_prompt", "")
+            
+            assert "digestion learning 1" in user_prompt
+            assert "web learning 1" in user_prompt
+

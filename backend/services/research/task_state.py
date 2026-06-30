@@ -1,10 +1,92 @@
 import json
 import logging
-from typing import Optional
+from typing import Any, Dict, List, Optional, Generic, TypeVar
+
+from pydantic import BaseModel, Field
 
 from backend.utils.research_logger import log_research_meta
 
 logger = logging.getLogger("aaa.research_orchestrator")
+
+# ── Generic Step Envelope & Payloads ─────────────────────────────────
+
+T = TypeVar("T", bound=BaseModel)
+
+class StepEnvelope(BaseModel, Generic[T]):
+    """Unified container for executing any phase. Can be serialized directly."""
+    task_id: str
+    objective: str
+    current_depth: int
+    max_depth: int
+    budget: float
+    all_findings: List[str] = Field(default_factory=list)
+    digest_signals: Dict[str, Any] = Field(default_factory=dict)
+    inject_file_id: Optional[str] = None
+    document_digested: bool = False
+    plan_id: Optional[str] = None
+    
+    # Step-specific payload configuration/data
+    payload: T
+
+class PlanPayload(BaseModel):
+    previous_context: Optional[str] = None
+    inject_file_id: Optional[str] = None
+    goal: Optional[str] = None
+    search_queries: List[str] = Field(default_factory=list)
+    n_results_per_query: int = 3
+    estimated_depth: int = 1
+
+class SearchPayload(BaseModel):
+    queries: List[str] = Field(default_factory=list)
+    direct_urls: List[str] = Field(default_factory=list)
+    search_results: List[dict] = Field(default_factory=list)
+
+class ParsePayload(BaseModel):
+    search_results_cache: List[dict] = Field(default_factory=list)
+    parsed_sources: List[dict] = Field(default_factory=list)
+
+class DigestPayload(BaseModel):
+    parsed_sources_cache: List[dict] = Field(default_factory=list)
+    learnings: List[str] = Field(default_factory=list)
+    followups: List[str] = Field(default_factory=list)
+    gaps: List[str] = Field(default_factory=list)
+
+class ReflectPayload(BaseModel):
+    last_reflection: Dict[str, Any] = Field(default_factory=dict)
+    completeness_score: float = 0.0
+    key_insights: List[str] = Field(default_factory=list)
+    remaining_gaps: List[str] = Field(default_factory=list)
+    next_queries: List[str] = Field(default_factory=list)
+    next_direct_urls: List[str] = Field(default_factory=list)
+
+class EvaluatePayload(BaseModel):
+    stagnation_counter: int
+    sources_analyzed: int
+    reflection: Dict[str, Any] = Field(default_factory=dict)
+    should_stop: bool = False
+    stop_reason: str = ""
+
+class SynthesizePayload(BaseModel):
+    sources_analyzed: int
+    result_summary: str = ""
+
+class DocDigestPayload(BaseModel):
+    inject_file_id: str
+    inject_conversation_id: Optional[str] = None
+    document_mode: str = "chunks"
+    document_chunk_limit: int = 5
+    learnings: List[str] = Field(default_factory=list)
+    followups: List[str] = Field(default_factory=list)
+    gaps: List[str] = Field(default_factory=list)
+
+class StepOutput(BaseModel):
+    """Result of step execution returned by any phase processor."""
+    status: str = "completed"  # completed, failed, error
+    message: str = ""
+    payload: BaseModel
+    new_findings: List[str] = Field(default_factory=list)
+    signal_flags: Dict[str, Any] = Field(default_factory=dict)
+
 
 _ORCH_STATE_KEYS = {
     "phase", "objective", "max_depth", "budget", "plan_id", "plan",

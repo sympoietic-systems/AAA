@@ -249,20 +249,27 @@ async def fetch_via_jina(url: str, config: dict) -> str:
 
 
 async def _search_ddg_lite(query: str, n: int = 3) -> list[dict]:
-    """Fetch DuckDuckGo Lite directly via HTTP and parse HTML for result links.
+    """Fetch DuckDuckGo Lite directly via HTTP POST and parse HTML for result links.
 
     DuckDuckGo Lite returns clean HTML with direct result links in <a> tags.
     No redirect URLs — plain, parseable HTML.
     """
     import html.parser
 
-    search_url = f"https://lite.duckduckgo.com/lite/?q={urllib.parse.quote(query)}"
+    search_url = "https://lite.duckduckgo.com/lite/"
     try:
         import httpx
         async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            resp = await client.get(search_url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            })
+            resp = await client.post(
+                search_url,
+                data={"q": query},
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Referer": "https://lite.duckduckgo.com/",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
+                }
+            )
             html_text = resp.text
     except Exception as e:
         logger.warning("DDG Lite fetch failed: %s", e)

@@ -37,14 +37,77 @@ from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import log_research_meta, now_utc_str
 from backend.utils.concurrency import ensure_semaphore
 from backend.utils.anti_mastery import apply_anti_mastery_filter
-from backend.services.research.task_state import TaskStateManager
+from backend.services.research.task_state import (
+    TaskStateManager,
+    StepEnvelope,
+    StepOutput,
+    PlanPayload,
+    SearchPayload,
+    ParsePayload,
+    DigestPayload,
+    ReflectPayload,
+    EvaluatePayload,
+    SynthesizePayload,
+    DocDigestPayload,
+)
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.phases import ResearchPhases
+from backend.services.research.steps.base import ResearchStepRegistry
+import backend.services.research.steps
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
-# ── Phase ordering for step-by-step execution ─────────────────────
+# ── Declarative Routing Graph ───────────────────────────────────────
+
+class PipelineTransition:
+    def __init__(self, target_phase: str, condition: Optional[Any] = None):
+        self.target_phase = target_phase
+        self.condition = condition or (lambda out, env: True)
+
+
+PIPELINE_GRAPH = {
+    "planning": [
+        PipelineTransition(
+            target_phase="document_digestion",
+            condition=lambda out, env: env.inject_file_id is not None and not env.document_digested
+        ),
+        PipelineTransition(target_phase="searching")
+    ],
+    "document_digestion": [
+        PipelineTransition(target_phase="searching")
+    ],
+    "searching": [
+        PipelineTransition(
+            target_phase="parsing",
+            condition=lambda out, env: out.signal_flags.get("has_results", False)
+        ),
+        PipelineTransition(target_phase="reflecting")
+    ],
+    "parsing": [
+        PipelineTransition(
+            target_phase="digesting",
+            condition=lambda out, env: out.signal_flags.get("has_parsed_content", False)
+        ),
+        PipelineTransition(target_phase="reflecting")
+    ],
+    "digesting": [
+        PipelineTransition(target_phase="reflecting")
+    ],
+    "reflecting": [
+        PipelineTransition(target_phase="evaluating")
+    ],
+    "evaluating": [
+        PipelineTransition(
+            target_phase="synthesizing",
+            condition=lambda out, env: out.signal_flags.get("should_stop", False)
+        ),
+        PipelineTransition(target_phase="searching")
+    ],
+    "synthesizing": [
+        PipelineTransition(target_phase="complete")
+    ]
+}
 
 PHASE_ORDER = [
     "planning",
@@ -594,7 +657,7 @@ class SomaticResearchOrchestrator:
                     steps = self.step_repo.get_by_task(task_id)
                     current_parse_steps = [
                         st for st in steps
-                        if st.get("step_type") == "parallel_parse" and self._get_step_depth(st) == depth
+                        if st.get("step_type") in ("parallel_parse", "document_digestion") and self._get_step_depth(st) == depth
                     ]
                     for ps in current_parse_steps:
                         db_results = self.step_result_repo.get_by_step(ps["id"])
@@ -644,6 +707,11 @@ class SomaticResearchOrchestrator:
                     )
             else:
                 accumulated_findings_text = "\n".join(compressed_current)
+                if historical_findings:
+                    accumulated_findings_text += (
+                        "\n\n### Digested Document/Other Findings:\n" +
+                        "\n".join(compressed_historical)
+                    )
 
             followups_text = "\n".join(f"- {f}" for f in compressed_followups) or "(none)"
             gaps_text = "\n".join(f"- {g}" for g in compressed_gaps) or "(none)"
@@ -887,6 +955,125 @@ class SomaticResearchOrchestrator:
             return 0
         return self.step_repo.delete_downstream(task_id, after_step_number, exclude_types)
 
+    # ── Input/Output reconstruction and mapping ────────────────────
+
+    def reconstruct_step_input(self, task_id: str, task_state: dict, phase: str) -> StepEnvelope:
+        """Constructs the clean, typed StepEnvelope for the current phase using task state."""
+        envelope_data = {
+            "task_id": task_id,
+            "objective": task_state["objective"],
+            "current_depth": task_state.get("current_depth", 0),
+            "max_depth": task_state.get("max_depth", 3),
+            "budget": task_state.get("budget", 0.50),
+            "all_findings": task_state.get("all_findings") or [],
+            "digest_signals": task_state.get("digest_signals") or {},
+            "inject_file_id": task_state.get("inject_file_id"),
+            "document_digested": task_state.get("document_digested", False),
+            "plan_id": task_state.get("plan_id"),
+        }
+
+        # Build step-specific payload
+        if phase == "planning":
+            payload = PlanPayload(
+                previous_context=task_state.get("previous_context"),
+                inject_file_id=task_state.get("inject_file_id")
+            )
+        elif phase == "document_digestion":
+            payload = DocDigestPayload(
+                inject_file_id=task_state.get("inject_file_id") or "",
+                inject_conversation_id=task_state.get("inject_conversation_id"),
+                document_mode=task_state.get("document_mode", "chunks"),
+                document_chunk_limit=task_state.get("document_chunk_limit", 5)
+            )
+        elif phase == "searching":
+            plan_queries = []
+            if task_state.get("plan") and isinstance(task_state["plan"], dict):
+                plan_queries = task_state["plan"].get("search_queries", [task_state["objective"]])
+
+            last_refl = task_state.get("last_reflection") or {}
+            queries = last_refl.get("next_queries") if (task_state.get("current_depth", 0) > 0 and last_refl.get("next_queries")) else plan_queries
+            direct_urls = last_refl.get("next_direct_urls", []) if task_state.get("current_depth", 0) > 0 else []
+
+            payload = SearchPayload(queries=queries, direct_urls=direct_urls)
+        elif phase == "parsing":
+            search_results = task_state.get("search_results_cache") or []
+            payload = ParsePayload(search_results_cache=search_results)
+        elif phase == "digesting":
+            parsed_sources = task_state.get("parsed_sources_cache") or []
+            payload = DigestPayload(parsed_sources_cache=parsed_sources)
+        elif phase == "reflecting":
+            payload = ReflectPayload(last_reflection=task_state.get("last_reflection") or {})
+        elif phase == "evaluating":
+            payload = EvaluatePayload(
+                stagnation_counter=task_state.get("stagnation_counter", 0),
+                sources_analyzed=task_state.get("sources_analyzed", 0),
+                reflection=task_state.get("last_reflection") or {}
+            )
+        elif phase == "synthesizing":
+            payload = SynthesizePayload(sources_analyzed=task_state.get("sources_analyzed", 0))
+        else:
+            raise ValueError(f"Unknown phase payload reconstruction: {phase}")
+
+        return StepEnvelope(payload=payload, **envelope_data)
+
+    def apply_step_output(self, task_state: dict, phase: str, output: StepOutput) -> None:
+        """Applies a StepOutput's payload back to the legacy task state dictionary."""
+        payload = output.payload
+        if phase == "planning" and isinstance(payload, PlanPayload):
+            task_state["plan"] = {
+                "goal": payload.goal or task_state["objective"],
+                "search_queries": payload.search_queries,
+                "n_results_per_query": payload.n_results_per_query,
+                "estimated_depth": payload.estimated_depth,
+            }
+            if output.signal_flags.get("plan_id"):
+                task_state["plan_id"] = output.signal_flags["plan_id"]
+        elif phase == "document_digestion" and isinstance(payload, DocDigestPayload):
+            task_state["document_digested"] = True
+            task_state["document_learnings"] = payload.learnings
+            # Merge digest signals
+            existing_signals = task_state.get("digest_signals") or {}
+            task_state["digest_signals"] = {
+                "followups": (existing_signals.get("followups") or []) + payload.followups,
+                "direct_urls": existing_signals.get("direct_urls") or [],
+                "gaps": (existing_signals.get("gaps") or []) + payload.gaps,
+            }
+            task_state["sources_analyzed"] = task_state.get("sources_analyzed", 0) + 1
+        elif phase == "searching" and isinstance(payload, SearchPayload):
+            task_state["search_results_cache"] = payload.search_results
+            task_state["parsed_sources_cache"] = []
+        elif phase == "parsing" and isinstance(payload, ParsePayload):
+            task_state["parsed_sources_cache"] = payload.parsed_sources
+        elif phase == "digesting" and isinstance(payload, DigestPayload):
+            task_state["sources_analyzed"] = task_state.get("sources_analyzed", 0) + len(payload.parsed_sources_cache)
+            if not payload.learnings:
+                task_state["stagnation_counter"] = task_state.get("stagnation_counter", 0) + 1
+            else:
+                task_state["stagnation_counter"] = 0
+            # Merge followups/gaps
+            task_state["digest_signals"] = {
+                "followups": payload.followups,
+                "direct_urls": [],
+                "gaps": payload.gaps,
+            }
+        elif phase == "reflecting" and isinstance(payload, ReflectPayload):
+            task_state["last_reflection"] = {
+                "completeness_score": payload.completeness_score,
+                "key_insights": payload.key_insights,
+                "remaining_gaps": payload.remaining_gaps,
+                "next_queries": payload.next_queries,
+                "next_direct_urls": payload.next_direct_urls,
+            }
+        elif phase == "evaluating" and isinstance(payload, EvaluatePayload):
+            task_state["should_stop"] = payload.should_stop
+            task_state["stop_reason"] = payload.stop_reason
+            if not payload.should_stop:
+                task_state["current_depth"] = task_state.get("current_depth", 0) + 1
+                task_state["query_index"] = 0
+        elif phase == "synthesizing" and isinstance(payload, SynthesizePayload):
+            # Persist result_summary into state so auto-mode execute() can retrieve it
+            task_state["result_summary"] = payload.result_summary
+
     # ── Main step execution ───────────────────────────────────────
 
     async def execute_step(self, task_id: str) -> dict:
@@ -923,6 +1110,17 @@ class SomaticResearchOrchestrator:
                                      deleted, min_step_num, self._log_context(task_id, "rerun"))
                     s["step_number"] = min_step_num - 1
 
+            if phase == "complete":
+                return {
+                    "task_id": task_id,
+                    "phase": phase,
+                    "message": "already complete",
+                    "next_phase": "complete"
+                }
+
+            # 1. Reconstruct clean typed StepEnvelope
+            envelope = self.reconstruct_step_input(task_id, s, phase)
+
             result: dict = {
                 "task_id": task_id,
                 "phase": phase,
@@ -931,6 +1129,42 @@ class SomaticResearchOrchestrator:
             }
 
             try:
+                # 2. Check if the step is registered in ResearchStepRegistry
+                try:
+                    step_processor = ResearchStepRegistry.get_step(phase)
+                except ValueError:
+                    step_processor = None
+
+                if step_processor:
+                    logger.info("Executing modular step: %s", phase)
+                    output: StepOutput = await step_processor.execute(self, envelope)
+
+                    s["step_number"] += 1
+
+                    # Merge findings
+                    if output.new_findings:
+                        s["all_findings"].extend(output.new_findings)
+
+                    # Apply output payloads back to legacy task state dict
+                    self.apply_step_output(s, phase, output)
+
+                    result.update({
+                        "status": output.status,
+                        "message": output.message,
+                    })
+                    if hasattr(output.payload, "result_summary") and getattr(output.payload, "result_summary"):
+                        result["result_summary"] = getattr(output.payload, "result_summary")
+
+                    # Determine next phase via Declarative Membrane (PIPELINE_GRAPH)
+                    next_phase = "complete"
+                    for transition in PIPELINE_GRAPH.get(phase, []):
+                        if transition.condition(output, envelope):
+                            next_phase = transition.target_phase
+                            break
+                    s["phase"] = next_phase
+
+                else:
+                    # Legacy execution fallback
                     if phase == "planning":
                         result.update(await ResearchPhases.step_plan(self, task_id, s))
                     elif phase == "document_digestion":
@@ -951,14 +1185,8 @@ class SomaticResearchOrchestrator:
                         result.update(await ResearchPhases.step_evaluate(self, task_id, s))
                     elif phase == "synthesizing":
                         result.update(await ResearchPhases.step_synthesize(self, task_id, s))
-
-                    elif phase == "complete":
-                        result["message"] = "already complete"
-                        return result
-
                     else:
                         raise ValueError(f"Unknown phase: {phase}")
-
 
             except Exception as e:
                 logger.exception("Step %s failed for task %s", phase, task_id)
@@ -1022,12 +1250,18 @@ class SomaticResearchOrchestrator:
             await self.execute_step(task_id)
 
         s = self._state_mgr.states.pop(task_id, {})
+        # result_summary is written directly to the DB by SynthesizeStep;
+        # read it back from DB so the auto-mode caller gets the real content.
+        result_summary = s.get("result_summary", "")
+        if not result_summary:
+            fresh = self.task_repo.get(task_id)
+            result_summary = (fresh or {}).get("result_summary", "") or ""
         return {
             "task_id": task_id,
             "branches_created": s.get("step_number", 0),
             "assets_harvested": s.get("sources_analyzed", 0),
             "lateral_flights": 0,
-            "result_summary": s.get("result_summary", ""),
+            "result_summary": result_summary,
         }
 
     # ── Phase 1: PLAN ───────────────────────────────────────────────

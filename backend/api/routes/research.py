@@ -491,10 +491,23 @@ async def execute_step(
     else:
         # Normal sequential step execution
         if task["status"] in ("completed", "failed"):
-            manager.rerun_task(task_id)
-            task = manager.get_task(task_id)  # refresh after rerun
-            manager.transition(task_id, "active")
-            manager.orchestrator.init_task(task_id)
+            # Check if the orchestrator state has an unfinished phase we can resume
+            # (e.g. synthesizing was never run because the task was incorrectly marked complete).
+            # In that case, just resume the existing state rather than wiping all research data.
+            orch = manager.orchestrator
+            try:
+                existing_phase = orch.get_task_phase(task_id)
+            except Exception:
+                existing_phase = None
+            if existing_phase and existing_phase not in ("complete", ""):
+                # Task marked completed but still has work to do — resume it
+                manager.task_repo.update(task_id, status="active")
+                orch.ensure_state(task_id)  # already loaded, no-op
+            else:
+                manager.rerun_task(task_id)
+                task = manager.get_task(task_id)  # refresh after rerun
+                manager.transition(task_id, "active")
+                manager.orchestrator.init_task(task_id)
         elif task["status"] == "queued":
             orch_config = state.config.get("research_orchestrator", {})
             if orch_config.get("enabled") and manager.config.get("manual_mode", False):

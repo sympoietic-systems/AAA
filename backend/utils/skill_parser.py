@@ -44,12 +44,13 @@ def parse_skill_nucleation_tags(text: str) -> tuple[str, list[dict]]:
             content = current_text[end_open_idx:match_close.start()]
             replace_end = match_close.end()
         else:
-            # Unclosed tag fallback: only strip the opening tag itself, keeping the content
+            # Unclosed tag fallback: treat the content up to the next opening tag or end of text as the skill content, and remove it from the cleaned text
             if next_open:
                 content = current_text[end_open_idx:next_open.start()]
+                replace_end = next_open.start()
             else:
                 content = current_text[end_open_idx:]
-            replace_end = end_open_idx
+                replace_end = len(current_text)
                 
         # Parse attributes: name, always_active, trigger_keywords
         name_val = "unnamed-skill"

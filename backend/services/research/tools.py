@@ -370,7 +370,7 @@ async def _tool_reflect(orch, task_id, objective, goal, depth, max_depth,
                 steps = orch.step_repo.get_by_task(task_id)
                 current_parse_steps = [
                     st for st in steps
-                    if st.get("step_type") == "parallel_parse" and orch._get_step_depth(st) == depth
+                    if st.get("step_type") in ("parallel_parse", "document_digestion") and orch._get_step_depth(st) == depth
                 ]
                 for ps in current_parse_steps:
                     db_results = orch.step_result_repo.get_by_step(ps["id"])
@@ -420,6 +420,11 @@ async def _tool_reflect(orch, task_id, objective, goal, depth, max_depth,
                 )
         else:
             accumulated_findings_text = "\n".join(compressed_current)
+            if historical_findings:
+                accumulated_findings_text += (
+                    "\n\n### Digested Document/Other Findings:\n" +
+                    "\n".join(compressed_historical)
+                )
 
         followups_text = "\n".join(f"- {f}" for f in compressed_followups) or "(none)"
         gaps_text = "\n".join(f"- {g}" for g in compressed_gaps) or "(none)"
