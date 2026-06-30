@@ -118,10 +118,8 @@ class DocumentDigestionStep(BaseResearchStep):
         combined_content = combined_content[:orch._TRUNC_LLM_CONTENT * 2]
 
         goal = objective
-
-        from backend.services.research.tools import _analyze_source
-
-        analysis = await _analyze_source(
+        from backend.services.research.steps.digest_helper import analyze_source_content
+        analysis = await analyze_source_content(
             orch, task_id, f"document:{inject_file_id}", str(inject_file_id),
             combined_content, objective, goal, 0, max_depth, step_id=step_id
         )

@@ -263,7 +263,7 @@ class TestDocumentDigestionStep:
         chunk_mock.chunk_text = "some relevant document content"
         state_mock.perception_repo.get_by_file.return_value = [chunk_mock]
 
-        with patch("backend.services.research.tools._analyze_source", new_callable=AsyncMock) as mock_analyze:
+        with patch("backend.services.research.steps.digest_helper.analyze_source_content", new_callable=AsyncMock) as mock_analyze:
             mock_analyze.return_value = {"learnings": ["learning 1"], "followups": [], "gaps": []}
             
             from backend.services.research.steps.document_digestion import DocumentDigestionStep
@@ -459,7 +459,7 @@ class TestMultiCycleContinuation:
             payload=SynthesizePayload(sources_analyzed=5)
         )
 
-        with patch("backend.services.research.orchestrator.SomaticResearchOrchestrator._phase_synthesize", new_callable=AsyncMock) as mock_synth:
+        with patch("backend.services.research.steps.synthesize.run_synthesis", new_callable=AsyncMock) as mock_synth:
             mock_synth.return_value = "New Cycle 2 Report"
             step = SynthesizeStep()
             await step.execute(manager.orchestrator, envelope)
