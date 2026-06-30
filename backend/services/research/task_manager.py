@@ -560,7 +560,7 @@ class ResearchTaskManager:
             "assets_harvested": 0,
             "lateral_flights": 0,
             "bifurcation_triggered": 0,
-            "result_summary": None,
+            "result_summary": task.get("result_summary"),
             "started_at": None,
             "completed_at": None,
             "orchestrator_state": json.dumps(orch_state, default=str, ensure_ascii=False),
@@ -571,6 +571,12 @@ class ResearchTaskManager:
         except Exception:
             update_fields.pop("rerun_count", None)
             self.task_repo.update(task_id, **update_fields)
+
+        # Clear cached phase inputs so they recalculate for the new depth/context
+        try:
+            self.orchestrator.reinitialize(task_id)
+        except Exception:
+            logger.exception("Failed to reinitialize cache during continue_task")
 
         manual = self.config.get("manual_mode", False)
         logger.info("continue_task: spawning orchestrator for %s (manual_mode=%s)", task_id[:8], manual)

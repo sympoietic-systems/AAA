@@ -187,6 +187,10 @@ export const StepPipeline = memo(function StepPipeline({
       }
     }
 
+    if (data && typeof data.current_depth === "number") {
+      actDepth = Math.max(actDepth, data.current_depth)
+    }
+
     // Calculate active query count from preview if available
     let previewQueryCount = 0
     if (preview) {

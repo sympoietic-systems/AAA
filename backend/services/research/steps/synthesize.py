@@ -50,8 +50,20 @@ class SynthesizeStep(BaseResearchStep):
             )
 
         if orch.step_repo:
+            import json
+            existing_data = {}
+            try:
+                existing = orch.step_repo.get(step_id)
+                if existing and existing.get("step_data"):
+                    existing_data = json.loads(existing["step_data"]) if isinstance(existing["step_data"], str) else existing["step_data"]
+            except Exception:
+                pass
+            existing_data["report_markdown"] = result_summary
+            existing_data["depth"] = current_depth
+
             orch.step_repo.update(step_id, status="completed",
-                result_summary=f"{sources_analyzed} sources, {len(all_findings)} findings")
+                result_summary=f"{sources_analyzed} sources, {len(all_findings)} findings",
+                step_data=json.dumps(existing_data, default=str, ensure_ascii=False))
 
         orch._log_meta(task_id, "orchestrator_complete", {
             "steps": step_number,

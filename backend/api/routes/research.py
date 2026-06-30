@@ -674,11 +674,27 @@ async def get_task_steps(task_id: str, request: Request = None):
             "content_preview": content_preview,
         })
 
+    # Retrieve current depth from orchestrator state
+    current_depth = 0
+    if hasattr(state, "research_task_manager"):
+        task = state.research_task_manager.get_task(task_id)
+        if task:
+            orch_state_raw = task.get("orchestrator_state")
+            if orch_state_raw:
+                try:
+                    import json
+                    state_dict = json.loads(orch_state_raw) if isinstance(orch_state_raw, str) else orch_state_raw
+                    if isinstance(state_dict, dict):
+                        current_depth = state_dict.get("current_depth", 0)
+                except Exception:
+                    pass
+
     return {
         "task_id": task_id,
         "plan": plan,
         "steps": steps,
         "results_by_step": results_by_step,
+        "current_depth": current_depth,
     }
 
 

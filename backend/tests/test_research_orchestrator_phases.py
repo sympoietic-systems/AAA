@@ -376,3 +376,105 @@ class TestReflectionFindingsInclusion:
             assert "digestion learning 1" in user_prompt
             assert "web learning 1" in user_prompt
 
+
+class TestMultiCycleContinuation:
+    @pytest.mark.asyncio
+    async def test_continue_task_and_synthesis_reporting(self):
+        conn = init_db(DB_PATH)
+        task_id = _make_task_id()
+        task_repo = ResearchTaskRepository(DB_PATH)
+        step_repo = ResearchStepRepository(DB_PATH)
+        _create_task(task_repo, task_id, status="completed", max_depth=3)
+        task_repo.update(task_id, result_summary="Original Synthesis Report")
+
+        state_mock = _make_mock_state()
+        state_mock.research_task_repo = task_repo
+        state_mock.research_step_repo = step_repo
+        state_mock.research_step_result_repo = MagicMock()
+        state_mock.research_meta_log_repo = MagicMock()
+        state_mock.scraped_asset_repo = MagicMock()
+        state_mock.research_branch_repo = MagicMock()
+
+        # Create a dummy plan to satisfy foreign key constraint on research_steps
+        plan_repo = ResearchPlanRepository(DB_PATH)
+        plan_repo.create({
+            "id": "dummy-plan-id",
+            "task_id": task_id,
+            "plan_json": "{}",
+            "status": "active"
+        })
+
+        from backend.services.research.task_manager import ResearchTaskManager
+        manager = ResearchTaskManager(state_mock)
+        manager._orchestrator = SomaticResearchOrchestrator(state_mock)
+
+        # 1. Test continuation: old result_summary is preserved, depth is incremented
+        with patch.object(ResearchTaskManager, "_execute_continued_task", return_value=AsyncMock()) as mock_exec:
+            manager.continue_task(task_id, additional_cycles=1)
+        task = task_repo.get(task_id)
+        assert task["status"] == "active"
+        assert task["max_depth"] == 4
+        assert task["result_summary"] == "Original Synthesis Report"
+
+        # 2. Check orchestrator_state has correct depth
+        import json
+        orch_state = json.loads(task["orchestrator_state"])
+        assert orch_state["current_depth"] == 1
+        assert orch_state["previous_context"] == "Original Synthesis Report"
+
+        # 3. Verify synthesis step saves report to step_data JSON
+        from backend.services.research.steps.synthesize import SynthesizeStep
+        from backend.services.research.task_state import StepEnvelope, SynthesizePayload
+
+        # Initialize the orchestrator state manager for this task
+        manager.orchestrator._state_mgr.states[task_id] = {
+            "phase": "synthesizing",
+            "objective": "Research objective",
+            "max_depth": 4,
+            "budget": 0.50,
+            "plan_id": "dummy-plan-id",
+            "plan": {"goal": "Test goal"},
+            "all_findings": [],
+            "sources_analyzed": 0,
+            "stagnation_counter": 0,
+            "step_number": 2,
+            "last_reflection": {},
+            "current_depth": 1,
+            "query_index": 0,
+            "search_results_cache": [],
+            "parsed_sources_cache": [],
+            "digest_results_cache": [],
+            "should_stop": False,
+            "stop_reason": "",
+        }
+
+        envelope = StepEnvelope(
+            task_id=task_id,
+            objective="Research objective",
+            current_depth=1,
+            max_depth=4,
+            budget=0.50,
+            all_findings=["Finding 1"],
+            payload=SynthesizePayload(sources_analyzed=5)
+        )
+
+        with patch("backend.services.research.orchestrator.SomaticResearchOrchestrator._phase_synthesize", new_callable=AsyncMock) as mock_synth:
+            mock_synth.return_value = "New Cycle 2 Report"
+            step = SynthesizeStep()
+            await step.execute(manager.orchestrator, envelope)
+
+            # Check that task's result_summary is updated
+            updated_task = task_repo.get(task_id)
+            assert updated_task["result_summary"] == "New Cycle 2 Report"
+
+            # Check that step_repo has step_data with report_markdown
+            steps = step_repo.get_by_task(task_id)
+            synth_steps = [s for s in steps if s["step_type"] == "synthesize"]
+            assert len(synth_steps) > 0
+            latest_synth = synth_steps[-1]
+            step_data = json.loads(latest_synth["step_data"])
+            assert step_data["report_markdown"] == "New Cycle 2 Report"
+            assert step_data["depth"] == 1
+
+        conn.close()
+

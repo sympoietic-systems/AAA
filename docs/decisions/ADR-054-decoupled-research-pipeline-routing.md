@@ -166,20 +166,6 @@ The `signal_flags` in `StepOutput` serve as the boundary interface. A step does 
 
 ## Implementation Plan
 
-```mermaid
-gantt
-    title Decoupled Pipeline Implementation
-    dateFormat  YYYY-MM-DD
-    section Phase 1: Schemas
-    Define payload models & envelopes    :active, p1, 2026-06-30, 1d
-    section Phase 2: Routing Engine
-    Implement Routing Graph & transition loop : p2, after p1, 2d
-    section Phase 3: Phase Migration
-    Migrate phases in phases.py        : p3, after p2, 2d
-    section Phase 4: Verification
-    Verify state reconstruction & tests : p4, after p3, 1d
-```
-
 ### Phase 1: Define Schemas (`task_state.py`)
 1. Add `StepEnvelope` generic model.
 2. Define payloads for all 8 phases.
@@ -241,4 +227,39 @@ During end-to-end testing of the modular pipeline, three interconnected bugs wer
 - Before calling `rerun_task()`, check the persisted orchestrator state phase via `orch.get_task_phase()`.
 - If an unfinished phase exists (e.g., `"synthesizing"`), resume from that phase by transitioning to `"active"` without wiping data.
 - Only fall back to `rerun_task()` if the orchestrator state is fully `"complete"` or absent.
+
+
+## Amendment: Multi-Cycle Continuation & Depth Transitions (2026-06-30)
+
+During multi-cycle continuation testing, three major pipeline synchronization issues were identified and fixed to ensure a seamless transition and continuous reporting experience:
+
+### Fix 4 — Planning step caching causing reversion to previous cycle queries
+
+**Symptom:** After triggering a "continue deeper" operation (initiating Cycle 2), the system regenerated the exact same search queries from Cycle 1 and ignored the new `previous_context` (the first cycle's synthesis report).
+
+**Root cause:** The `_phase_plan` logic in `orchestrator.py` checks a prompt cache. Because the cache key was generic (`"planning"`), the planning step for Cycle 2 reused the cached prompts from Cycle 1. This bypassed prompt formatting, omitting `previous_context` and forcing a reversion to the original cycle's plan.
+
+**Fix:**
+- Cleared the task's cache by calling `self.orchestrator.reinitialize(task_id)` inside `continue_task` in `task_manager.py`. This ensures prompt caching is reset and freshly formatted prompts (containing the previous synthesis context) are fed to the model for Cycle 2.
+
+### Fix 5 — Frontend pipeline rendering lag during depth transition
+
+**Symptom:** Immediately after clicking "Continue Deeper," the frontend remained stuck showing the old cycle (e.g. Cycle 1) because the first step of Cycle 2 had not yet been created in the database.
+
+**Root cause:** The `actDepth` calculation in `StepPipeline.tsx` computed the active depth purely based on database-persisted step records. Since the backend is async and does not create the planning step record until it starts running, there was a lag in updating the UI depth.
+
+**Fix:**
+- Exposed `current_depth` from the task's `orchestrator_state` via the `/steps` API response (`get_task_steps` in `backend/api/routes/research.py`).
+- Updated the frontend's `TaskStepsResponse` interface to include `current_depth`.
+- Modified the `actDepth` computation in `StepPipeline.tsx` to prioritize `Math.max(actDepth, data.current_depth)`, forcing the frontend to immediately render Cycle 2 elements before step persistence occurs.
+
+### Fix 6 — Incremental Synthesis Reports overwritten and lost
+
+**Symptom:** Since `result_summary` is overwritten on the main task table, only the latest synthesis report was accessible; previous cycle reports were lost.
+
+**Root cause:** The synthesis report was only persisted to the task record's `result_summary` column and not to the individual step records.
+
+**Fix:**
+- Modified `SynthesizeStep` (`synthesize.py`) to write the full markdown report to `step_data` JSON under the `"report_markdown"` key, along with the cycle's `"depth"`.
+- Updated `parsedResult` in `StepDbDetail.tsx` to fallback to reading `"report_markdown"` from `selected.step_data` if the meta-log response is missing or empty. This preserves and allows historical browsing of all incremental synthesis reports per cycle.
 

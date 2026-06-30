@@ -222,8 +222,16 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
         r.queries = plan.search_queries || []
       } catch { /* skip */ }
     }
+    if (!r.answer && selected && selected.step_type === "synthesize" && selected.step_data) {
+      try {
+        const sd = JSON.parse(selected.step_data)
+        if (sd.report_markdown) {
+          r.answer = sd.report_markdown
+        }
+      } catch { /* skip */ }
+    }
     return r
-  }, [responseEntries, data])
+  }, [responseEntries, data, selected])
 
   const handleRerunStep = async () => {
     setLogLoading(true)

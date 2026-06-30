@@ -379,6 +379,7 @@ export interface TaskStepsResponse {
   plan: ResearchPlanInfo | null
   steps: ResearchStep[]
   results_by_step: Record<string, ResearchStepResult[]>
+  current_depth?: number
 }
 
 export async function getTaskSteps(taskId: string): Promise<TaskStepsResponse> {

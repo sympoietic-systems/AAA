@@ -16,6 +16,10 @@
     [x] Fix useTaskPolling: add one-shot final fetch on active→terminal status transition
     [x] Fix execute_step route: resume pending synthesize phase instead of wiping data on rerun
     [x] Integrate PDF URL interception in sensory_affordances select_and_fetch (via SimpleChunkDigester)
+    [x] Implement current_depth tracking in get_task_steps API
+    [x] Refactor StepPipeline.tsx to utilize backend-reported current_depth for cycle rendering
+    [x] Preserve result_summary during continue_task in task_manager.py
+    [x] Store synthesis reports in step_data JSON on the synthesize step for historical retrieval
 
 ## Future Metrics & Refinements
     [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.
