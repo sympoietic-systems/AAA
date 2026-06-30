@@ -24,6 +24,18 @@
     [x] Add transition rationale propagation to PipelineRow component in frontend StepPipeline.tsx
     [x] Implement report version selector in the Report tab for switching historical cycle reports
 
+    [ ] Pure Reflection Node:
+        - Add new step type `pure_reflection` in backend PIPELINE_GRAPH.
+        - Pass full accumulated State Envelope to the reflection engine.
+        - Calculate/update Glitch Fidelity metric (0.0 to 1.0) and emit signals like `BIAS_DETECTED`, `GAP_CRITICAL`, `GLITCH_FIDELITY_LOW`.
+        - Implement specialized UI card for reflection steps showing the Glitch Fidelity meter.
+    [ ] Plan-Driven Dynamic Routing (Perturbation Patches):
+        - Define dynamic `routing_patch` schema (inserts, overrides, removes with TTL) in StepOutput.
+        - Extend Metabolic Router to ingest, validate, and merge patches with the base PIPELINE_GRAPH.
+        - Add router safety integrity guards to prevent deadlocks or unreachable synthesis states.
+        - Surface patch application events as system meta-actions in the UI trace.
+
+
 
 
 ## Future Metrics & Refinements

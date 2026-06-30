@@ -51,13 +51,15 @@ class DigestPayload(BaseModel):
     followups: List[str] = Field(default_factory=list)
     gaps: List[str] = Field(default_factory=list)
 
-class ReflectPayload(BaseModel):
+class ConsolidatePayload(BaseModel):
     last_reflection: Dict[str, Any] = Field(default_factory=dict)
     completeness_score: float = 0.0
     key_insights: List[str] = Field(default_factory=list)
     remaining_gaps: List[str] = Field(default_factory=list)
     next_queries: List[str] = Field(default_factory=list)
     next_direct_urls: List[str] = Field(default_factory=list)
+
+ReflectPayload = ConsolidatePayload
 
 class EvaluatePayload(BaseModel):
     stagnation_counter: int

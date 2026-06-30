@@ -1754,11 +1754,11 @@ SomaticResearchOrchestrator.execute(task_id)
 │   │   └─ each → {learnings, gaps, followups, direct_urls, score}
 │   │   DB: UPDATE research_step_results.analyzed_json
 │   │
-│   ├─ REFLECT (separate phase — configurable max 3 rounds)
+│   ├─ CONSOLIDATE (separate phase — configurable max 3 rounds)
 │   │   for round in (1 … max_reflect_rounds):
-│   │     LLM: "You've gathered {N} findings from {M} sources. Reflect:
+│   │     LLM: "You've gathered {N} findings from {M} sources. Consolidate:
 │   │           what's complete, what's missing, what should be
-│   │           searched next? Evaluate confidence 0.0–1.0"
+│   │           searched next? Evaluate completeness 0.0–1.0"
 │   │     → {reflection, completeness_score, next_queries: […]}
 │   │     if completeness ≥ 0.8 → break early
 │   │   DB: INSERT research_steps (type=reflect)

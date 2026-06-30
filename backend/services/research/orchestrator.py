@@ -45,7 +45,7 @@ from backend.services.research.task_state import (
     SearchPayload,
     ParsePayload,
     DigestPayload,
-    ReflectPayload,
+    ConsolidatePayload,
     EvaluatePayload,
     SynthesizePayload,
     DocDigestPayload,
@@ -1002,7 +1002,7 @@ class SomaticResearchOrchestrator:
             parsed_sources = task_state.get("parsed_sources_cache") or []
             payload = DigestPayload(parsed_sources_cache=parsed_sources)
         elif phase == "reflecting":
-            payload = ReflectPayload(last_reflection=task_state.get("last_reflection") or {})
+            payload = ConsolidatePayload(last_reflection=task_state.get("last_reflection") or {})
         elif phase == "evaluating":
             payload = EvaluatePayload(
                 stagnation_counter=task_state.get("stagnation_counter", 0),
@@ -1056,7 +1056,7 @@ class SomaticResearchOrchestrator:
                 "direct_urls": [],
                 "gaps": payload.gaps,
             }
-        elif phase == "reflecting" and isinstance(payload, ReflectPayload):
+        elif phase == "reflecting" and isinstance(payload, ConsolidatePayload):
             task_state["last_reflection"] = {
                 "completeness_score": payload.completeness_score,
                 "key_insights": payload.key_insights,

@@ -1,12 +1,12 @@
 import logging
 
 from backend.services.research.steps.base import BaseResearchStep
-from backend.services.research.task_state import ReflectPayload, StepEnvelope, StepOutput
+from backend.services.research.task_state import ConsolidatePayload, StepEnvelope, StepOutput
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
-class ReflectStep(BaseResearchStep):
+class ConsolidateStep(BaseResearchStep):
     @property
     def step_type(self) -> str:
         return "reflect"
@@ -19,7 +19,7 @@ class ReflectStep(BaseResearchStep):
         all_findings = envelope.all_findings
         digest_signals = envelope.digest_signals
 
-        payload: ReflectPayload = envelope.payload
+        payload: ConsolidatePayload = envelope.payload
 
         goal = objective
         state = orch._get_state(task_id)
@@ -47,7 +47,7 @@ class ReflectStep(BaseResearchStep):
             "total_findings": len(all_findings),
         }, step_id=step_id)
 
-        out_payload = ReflectPayload(
+        out_payload = ConsolidatePayload(
             last_reflection=reflection,
             completeness_score=completeness,
             key_insights=reflection.get("key_insights", []),

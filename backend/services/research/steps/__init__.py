@@ -4,7 +4,7 @@ from backend.services.research.steps.document_digestion import DocumentDigestion
 from backend.services.research.steps.search import SearchStep
 from backend.services.research.steps.parse import ParseStep
 from backend.services.research.steps.digest import DigestStep
-from backend.services.research.steps.reflect import ReflectStep
+from backend.services.research.steps.consolidate import ConsolidateStep
 from backend.services.research.steps.evaluate import EvaluateStep
 from backend.services.research.steps.synthesize import SynthesizeStep
 
@@ -14,6 +14,6 @@ ResearchStepRegistry.register("document_digestion", DocumentDigestionStep)
 ResearchStepRegistry.register("searching", SearchStep)
 ResearchStepRegistry.register("parsing", ParseStep)
 ResearchStepRegistry.register("digesting", DigestStep)
-ResearchStepRegistry.register("reflecting", ReflectStep)
+ResearchStepRegistry.register("reflecting", ConsolidateStep)
 ResearchStepRegistry.register("evaluating", EvaluateStep)
 ResearchStepRegistry.register("synthesizing", SynthesizeStep)
