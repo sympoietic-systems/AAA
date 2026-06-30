@@ -1,8 +1,8 @@
 // ResearchTaskPage — single research task detail with tabbed Info, Steps, Report, Notes.
-import { memo, useState, useEffect, useRef } from "react"
+import { memo, useState, useEffect, useRef, useMemo } from "react"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter, TerminalButton } from "../../UI"
-import type { ResearchTask } from "../../../api/research"
-import { getResearchTask, getTaskUnifiedNotes, type UnifiedNoteInfo } from "../../../api/research"
+import type { ResearchTask, ResearchStep } from "../../../api/research"
+import { getResearchTask, getTaskUnifiedNotes, getTaskSteps, type UnifiedNoteInfo } from "../../../api/research"
 import { STATUS_COLORS, STEP_LABELS } from "./constants/taskConstants"
 import { useTaskPolling } from "./shared/useTaskPolling"
 import { InfoTab } from "./tabs/InfoTab"
@@ -43,9 +43,65 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
   const defaultTab: SubTabId = task.status === "completed" && task.result_summary ? "report" : "info"
   const [tab, setTab] = useState<SubTabId>(defaultTab)
 
+  const [steps, setSteps] = useState<ResearchStep[]>([])
+  
+  useEffect(() => {
+    if (tab === "report") {
+      getTaskSteps(task.id)
+        .then(res => setSteps(res.steps || []))
+        .catch(() => {})
+    }
+  }, [task.id, tab, current.status, current.result_summary])
+
+  const reportVersions = useMemo(() => {
+    const versions: { depth: number; stepId: string; markdown: string }[] = []
+    for (const step of steps) {
+      if (step.step_type === "synthesize" && step.status === "completed" && step.step_data) {
+        try {
+          const parsed = JSON.parse(step.step_data)
+          if (parsed.report_markdown) {
+            versions.push({
+              depth: parsed.depth ?? 0,
+              stepId: step.id,
+              markdown: parsed.report_markdown,
+            })
+          }
+        } catch {}
+      }
+    }
+    versions.sort((a, b) => a.depth - b.depth)
+    
+    if (versions.length === 0 && current.result_summary) {
+      const fallbackDepth = steps.reduce((max, s) => {
+        try {
+          const parsed = JSON.parse(s.step_data)
+          return typeof parsed.depth === "number" ? Math.max(max, parsed.depth) : max
+        } catch { return max }
+      }, 0)
+      
+      versions.push({
+        depth: fallbackDepth,
+        stepId: "",
+        markdown: current.result_summary,
+      })
+    }
+    return versions
+  }, [steps, current.result_summary])
+
+  const [activeReportIndex, setActiveReportIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (reportVersions.length > 0) {
+      setActiveReportIndex(reportVersions.length - 1)
+    } else {
+      setActiveReportIndex(null)
+    }
+  }, [reportVersions.length])
+
   const color = STATUS_COLORS[current.status] ?? "#666"
-  const baseName = slugify(extractReportTitle(current.result_summary ?? "") ?? current.title)
-  const reportContent = current.result_summary || ""
+  const activeReport = activeReportIndex !== null && reportVersions[activeReportIndex] ? reportVersions[activeReportIndex] : null
+  const reportContent = activeReport ? activeReport.markdown : (current.result_summary || "")
+  const baseName = slugify(extractReportTitle(reportContent) ?? current.title)
 
   const notesAppendixMd = taskNotes.length > 0
     ? "\n\n---\n\n## Notes\n\n" + taskNotes.map(n => {
@@ -170,13 +226,33 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
 
         {tab === "report"   && (
           <div className="flex-1 min-h-0 flex flex-col pr-1">
+            {reportVersions.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-ui-border pb-2 mb-3 text-[9px] font-mono select-none shrink-0">
+                <span className="text-ui-dim mr-1.5 uppercase font-bold">[ Versions ]</span>
+                {reportVersions.map((ver, idx) => {
+                  const isSelected = activeReportIndex === idx
+                  return (
+                    <button
+                      key={ver.stepId || idx}
+                      onClick={() => setActiveReportIndex(idx)}
+                      className={`px-1.5 py-0.5 rounded-[2px] cursor-pointer transition-colors border font-mono
+                        ${isSelected 
+                          ? "text-semantic-gold border-semantic-gold/30 bg-action-hover/5 font-bold" 
+                          : "text-ui-dim border-transparent hover:text-ui-secondary hover:bg-action-hover/5"}`}
+                    >
+                      {idx === reportVersions.length - 1 ? `Cycle ${ver.depth + 1} (Latest)` : `Cycle ${ver.depth + 1}`}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             {reportContent ? (
               <div className="flex-1 flex flex-col min-h-0">
                 <NotableMarkdown
                   assetType="research_task"
                   assetId={task.id}
                   content={reportContent}
-                  title="Research Synthesis Report"
+                  title={activeReport ? `Cycle ${activeReport.depth + 1} Report` : "Research Synthesis Report"}
                   contentRef={reportRef}
                   onNotesChange={setTaskNotes}
                   className="flex-1 min-h-0 flex flex-col"
