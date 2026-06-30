@@ -71,6 +71,18 @@ Invoke-RestMethod -Uri "http://other-server:8000/api/research/import" `
 - **External references nullified**: `conversation_id`, `message_id`, `memory_node_id` are set to null (they may not exist on target)
 - **Always inserts**: Each import creates net-new records; existing data is never overwritten
 
+### Plan Resolution (3-tier fallback)
+
+Research steps have a `NOT NULL FOREIGN KEY` to a `research_plans` row. The importer resolves `plan_id` using a three-tier strategy so no `FOREIGN KEY constraint failed` error can occur:
+
+1. **Known plan** — If a step's `plan_id` exists in the export payload, it is remapped to the new plan UUID.
+2. **Fallback to exported plan** — If a step references a plan ID *not* in the export (e.g. a task that ran across multiple planning cycles), it falls back to the primary exported plan.
+3. **Synthetic dummy plan** — If there is *no* plan at all in the payload (e.g. legacy or partial exports) but steps do exist, a minimal stub plan is created automatically so the steps can still be inserted.
+
+### Step Result Safety
+
+Step results that reference a `step_id` not present in the export are **silently skipped** rather than causing a crash. A warning is recorded in the import response under `"warnings"` for each skipped record.
+
 ## Full Workflow
 
 ```bash

@@ -85,7 +85,9 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
         if old and old in id_map:
             return id_map[old]
         if old:
-            warnings.append(f"Unknown reference ID: {old}")
+            msg = f"Unknown reference ID: {old}"
+            if msg not in warnings:
+                warnings.append(msg)
         return None
 
     # ── 1. Insert Task ──────────────────────────────────────────────
@@ -132,6 +134,7 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
 
     # ── 2. Insert Plan ─────────────────────────────────────────────
     plan_data = payload.get("plan")
+    fallback_plan_id = None
     if plan_data:
         plan_repo = app_state.research_plan_repo
         new_plan_id = _remap_id(plan_data.get("id"))
@@ -144,6 +147,20 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
                 "created_at": plan_data.get("created_at") or _now_str(),
             })
             stats["plan"] = 1
+            fallback_plan_id = new_plan_id
+
+    if not fallback_plan_id and payload.get("steps"):
+        plan_repo = app_state.research_plan_repo
+        fallback_plan_id = str(uuid.uuid4())
+        plan_repo.create({
+            "id": fallback_plan_id,
+            "task_id": new_task_id,
+            "plan_json": "{}",
+            "status": "draft",
+            "created_at": _now_str(),
+        })
+        stats["plan"] = 1
+        logger.info("No plan found in payload for steps; created dummy plan %s", fallback_plan_id)
 
     # ── 3. Insert Branches ─────────────────────────────────────────
     branches = payload.get("branches", [])
@@ -210,7 +227,7 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
             step_repo.create({
                 "id": new_sid,
                 "task_id": new_task_id,
-                "plan_id": old_plan_id_remapped or new_task_id,
+                "plan_id": old_plan_id_remapped or fallback_plan_id or new_task_id,
                 "step_number": s.get("step_number", 0),
                 "step_type": s.get("step_type", ""),
                 "step_data": s.get("step_data", "{}"),
@@ -233,6 +250,10 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
         for r in step_results_data:
             old_step_id = r.get("step_id", "")
             new_step_id = _remap_id(old_step_id)
+            if not new_step_id:
+                logger.warning("Skipping step result referencing unknown step: %s", old_step_id)
+                warnings.append(f"Skipping step result referencing unknown step: {old_step_id}")
+                continue
             result_repo.create({
                 "id": str(uuid.uuid4()),
                 "step_id": new_step_id,
