@@ -51,12 +51,12 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
         .then(res => setSteps(res.steps || []))
         .catch(() => {})
     }
-  }, [task.id, tab, current.status, current.result_summary])
+  }, [task.id, tab, current])
 
   const reportVersions = useMemo(() => {
     const versions: { depth: number; stepId: string; markdown: string }[] = []
     for (const step of steps) {
-      if (step.step_type === "synthesize" && step.status === "completed" && step.step_data) {
+      if (step.step_type === "synthesize" && (step.status === "completed" || step.status === "stale") && step.step_data) {
         try {
           const parsed = JSON.parse(step.step_data)
           if (parsed.report_markdown) {
