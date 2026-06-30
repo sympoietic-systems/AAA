@@ -22,6 +22,8 @@
     [x] Store synthesis reports in step_data JSON on the synthesize step for historical retrieval
     [x] Implement transition rationale and next phase database logging in modular step execution
     [x] Add transition rationale propagation to PipelineRow component in frontend StepPipeline.tsx
+    [x] Implement report version selector in the Report tab for switching historical cycle reports
+
 
 
 ## Future Metrics & Refinements
