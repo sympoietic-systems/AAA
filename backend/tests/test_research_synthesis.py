@@ -106,7 +106,7 @@ async def test_synthesize_phase_uses_synthesis_persona():
         "provider_used": "test-provider",
     }
 
-    with patch("backend.modules.llm_client.generate_unified", AsyncMock(return_value=mock_resp)) as mock_gen:
+    with patch("backend.services.research.steps.synthesize.generate_unified", AsyncMock(return_value=mock_resp)) as mock_gen:
         # Patch the persona builder helper to verify context_key
         with patch.object(orchestrator, "_build_orchestrator_persona", wraps=orchestrator._build_orchestrator_persona) as mock_persona:
             report = await orchestrator._phase_synthesize(

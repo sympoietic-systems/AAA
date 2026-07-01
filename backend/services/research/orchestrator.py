@@ -52,7 +52,6 @@ from backend.services.research.task_state import (
     DocDigestPayload,
 )
 from backend.services.research.cache_manager import CacheManager
-from backend.services.research.phases import ResearchPhases
 from backend.services.research.steps.base import ResearchStepRegistry
 import backend.services.research.steps
 
@@ -1206,95 +1205,63 @@ class SomaticResearchOrchestrator:
             }
 
             try:
-                # 2. Check if the step is registered in ResearchStepRegistry
-                try:
-                    step_processor = ResearchStepRegistry.get_step(phase)
-                except ValueError:
-                    step_processor = None
+                # 2. Retrieve step from ResearchStepRegistry and execute
+                step_processor = ResearchStepRegistry.get_step(phase)
+                logger.info("Executing modular step: %s", phase)
+                output: StepOutput = await step_processor.execute(self, envelope)
 
-                if step_processor:
-                    logger.info("Executing modular step: %s", phase)
-                    output: StepOutput = await step_processor.execute(self, envelope)
+                s["step_number"] += 1
 
-                    s["step_number"] += 1
+                # Merge findings
+                if output.new_findings:
+                    s["all_findings"].extend(output.new_findings)
 
-                    # Merge findings
-                    if output.new_findings:
-                        s["all_findings"].extend(output.new_findings)
+                # Apply output payloads back to legacy task state dict
+                self.apply_step_output(s, phase, output)
 
-                    # Apply output payloads back to legacy task state dict
-                    self.apply_step_output(s, phase, output)
+                result.update({
+                    "status": output.status,
+                    "message": output.message,
+                })
+                if hasattr(output.payload, "result_summary") and getattr(output.payload, "result_summary"):
+                    result["result_summary"] = getattr(output.payload, "result_summary")
 
-                    result.update({
-                        "status": output.status,
-                        "message": output.message,
-                    })
-                    if hasattr(output.payload, "result_summary") and getattr(output.payload, "result_summary"):
-                        result["result_summary"] = getattr(output.payload, "result_summary")
+                # Determine next phase via Declarative Membrane (PIPELINE_GRAPH)
+                next_phase = "complete"
+                for transition in PIPELINE_GRAPH.get(phase, []):
+                    if transition.condition(output, envelope):
+                        next_phase = transition.target_phase
+                        break
+                s["phase"] = next_phase
 
-                    # Determine next phase via Declarative Membrane (PIPELINE_GRAPH)
-                    next_phase = "complete"
-                    for transition in PIPELINE_GRAPH.get(phase, []):
-                        if transition.condition(output, envelope):
-                            next_phase = transition.target_phase
-                            break
-                    s["phase"] = next_phase
+                if next_phase == "planning":
+                    try:
+                        cache = self._load_cache(task_id)
+                        if "planning" in cache:
+                            del cache["planning"]
+                            self._save_cache(task_id, cache)
+                            logger.info("Cleared planning cache for task %s to force fresh replan.", task_id[:8])
+                    except Exception as e:
+                        logger.warning("Failed to clear planning cache for task %s: %s", task_id[:8], e)
 
-                    if next_phase == "planning":
+                # Save transition rationale and next phase to step_data JSON
+                if self.step_repo and hasattr(output, "step_ids") and output.step_ids:
+                    rationale = getattr(output, "transition_rationale", None) or f"Transitioning from {phase} to {next_phase}."
+                    for sid in output.step_ids:
                         try:
-                            cache = self._load_cache(task_id)
-                            if "planning" in cache:
-                                del cache["planning"]
-                                self._save_cache(task_id, cache)
-                                logger.info("Cleared planning cache for task %s to force fresh replan.", task_id[:8])
-                        except Exception as e:
-                            logger.warning("Failed to clear planning cache for task %s: %s", task_id[:8], e)
-
-                    # Save transition rationale and next phase to step_data JSON
-                    if self.step_repo and hasattr(output, "step_ids") and output.step_ids:
-                        rationale = getattr(output, "transition_rationale", None) or f"Transitioning from {phase} to {next_phase}."
-                        for sid in output.step_ids:
-                            try:
-                                db_step = self.step_repo.get(sid)
-                                if db_step:
-                                    step_data = {}
-                                    if db_step.get("step_data"):
-                                        try:
-                                            step_data = json.loads(db_step["step_data"]) if isinstance(db_step["step_data"], str) else db_step["step_data"]
-                                        except Exception:
-                                            pass
-                                    step_data["transition_rationale"] = rationale
-                                    step_data["next_phase"] = next_phase
-                                    self.step_repo.update(sid, step_data=json.dumps(step_data, default=str, ensure_ascii=False))
-                            except Exception as ex:
-                                logger.warning("Failed to update transition rationale for step %s: %s", sid, ex)
-
-                else:
-                    # Legacy execution fallback
-                    if phase == "planning":
-                        result.update(await ResearchPhases.step_plan(self, task_id, s))
-                    elif phase == "document_digestion":
-                        if s.get("inject_file_id") and not s.get("document_digested"):
-                            result.update(await ResearchPhases.step_document_digestion(self, task_id, s))
-                        else:
-                            s["phase"] = "searching"
-                            result["message"] = "no document to digest, skipping"
-                    elif phase == "searching":
-                        result.update(await ResearchPhases.step_search(self, task_id, s))
-                    elif phase == "parsing":
-                        result.update(await ResearchPhases.step_parse(self, task_id, s))
-                    elif phase == "digesting":
-                        result.update(await ResearchPhases.step_digest(self, task_id, s))
-                    elif phase == "consolidating":
-                        result.update(await ResearchPhases.step_consolidate(self, task_id, s))
-                    elif phase == "reflection":
-                        result.update(await ResearchPhases.step_reflection(self, task_id, s))
-                    elif phase == "evaluating":
-                        result.update(await ResearchPhases.step_evaluate(self, task_id, s))
-                    elif phase == "synthesizing":
-                        result.update(await ResearchPhases.step_synthesize(self, task_id, s))
-                    else:
-                        raise ValueError(f"Unknown phase: {phase}")
+                            db_step = self.step_repo.get(sid)
+                            if db_step:
+                                step_data = {}
+                                if db_step.get("step_data"):
+                                    try:
+                                        step_data = json.loads(db_step["step_data"]) if isinstance(db_step["step_data"], str) else db_step["step_data"]
+                                    except Exception:
+                                        pass
+                                step_data["transition_rationale"] = rationale
+                                step_data["next_phase"] = next_phase
+                                self.step_repo.update(sid, step_data=json.dumps(step_data, default=str, ensure_ascii=False))
+                        except Exception as ex:
+                            logger.warning("Failed to update transition rationale for step %s: %s", sid, ex)
 
             except Exception as e:
                 logger.exception("Step %s failed for task %s", phase, task_id)
@@ -1314,48 +1281,7 @@ class SomaticResearchOrchestrator:
 
             return result
 
-    # ── Phase step implementations ─────────────────────────────────
 
-    async def _step_plan(self, task_id: str, s: dict) -> dict:
-        envelope = self.reconstruct_step_input(task_id, s, "planning")
-        from backend.services.research.steps.plan import PlanStep
-        step = PlanStep()
-        output = await step.execute(self, envelope)
-        
-        # Sync output properties back to legacy task state dict
-        s["plan_id"] = output.signal_flags.get("plan_id")
-        plan_dict = {
-            "goal": output.payload.goal,
-            "search_queries": output.payload.search_queries,
-            "n_results_per_query": output.payload.n_results_per_query,
-            "estimated_depth": output.payload.estimated_depth
-        }
-        s["plan"] = plan_dict
-        s["step_number"] += 1
-        s["phase"] = "searching" if not (s.get("inject_file_id") and not s.get("document_digested")) else "document_digestion"
-        
-        return {"plan": plan_dict, "plan_id": s["plan_id"], "step_id": output.step_ids[0]}
-
-    async def _step_search(self, task_id: str, s: dict) -> dict:
-        return await ResearchPhases.step_search(self, task_id, s)
-
-    async def _step_parse(self, task_id: str, s: dict) -> dict:
-        return await ResearchPhases.step_parse(self, task_id, s)
-
-    async def _step_digest(self, task_id: str, s: dict) -> dict:
-        return await ResearchPhases.step_digest(self, task_id, s)
-
-    async def _step_consolidate(self, task_id: str, s: dict) -> dict:
-        return await ResearchPhases.step_consolidate(self, task_id, s)
-
-    async def _step_reflection(self, task_id: str, s: dict) -> dict:
-        return await ResearchPhases.step_reflection(self, task_id, s)
-
-    async def _step_evaluate(self, task_id: str, s: dict) -> dict:
-        return await ResearchPhases.step_evaluate(self, task_id, s)
-
-    async def _step_synthesize(self, task_id: str, s: dict) -> dict:
-        return await ResearchPhases.step_synthesize(self, task_id, s)
 
     async def execute(self, task_id: str) -> dict:
         """Execute a complete research task via the orchestrator pipeline (auto mode)."""

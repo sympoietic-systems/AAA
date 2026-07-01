@@ -90,14 +90,12 @@ class TestExecuteStepRouting:
             "digest_results_cache": [], "should_stop": False, "stop_reason": "",
         }
 
-        result = await orch._step_plan(task_id, orch._state_mgr.states[task_id])
+        result = await orch.execute_step(task_id)
 
         s = orch._state_mgr.states[task_id]
         assert s["phase"] == "searching"
         assert s["plan_id"] is not None
-        assert "search_queries" in result["plan"]
-        assert "plan_id" in result
-        assert "step_id" in result
+        assert "search_queries" in s["plan"]
         assert s["step_number"] == 1
 
         conn.close()
@@ -136,7 +134,7 @@ class TestExecuteStepRouting:
             "digest_results_cache": [], "should_stop": False, "stop_reason": "",
         }
 
-        await orch._step_plan(task_id, orch._state_mgr.states[task_id])
+        await orch.execute_step(task_id)
 
         assert orch._state_mgr.states[task_id]["phase"] == "searching"
         assert orch._state_mgr.states[task_id]["step_number"] == 6
@@ -306,7 +304,7 @@ class TestDocumentDigestionStep:
 class TestReflectionFindingsInclusion:
     @pytest.mark.asyncio
     async def test_reflect_includes_digested_and_historical_findings(self):
-        from backend.services.research.tools import _tool_reflect
+        from backend.services.research.steps.consolidate import run_consolidation
 
         orch = MagicMock()
         orch.step_repo = MagicMock()
@@ -355,9 +353,9 @@ class TestReflectionFindingsInclusion:
             "[other.com]: web learning 1",
         ]
 
-        with patch("backend.modules.llm_client.generate_unified", new_callable=AsyncMock) as mock_generate:
+        with patch("backend.services.research.steps.consolidate.generate_unified", new_callable=AsyncMock) as mock_generate:
             mock_generate.return_value = {"json_data": {}}
-            await _tool_reflect(
+            await run_consolidation(
                 orch,
                 task_id="task-id",
                 objective="Test obj",
@@ -483,7 +481,7 @@ class TestMultiCycleContinuation:
 class TestPureReflectionInclusion:
     @pytest.mark.asyncio
     async def test_pure_reflection_calls_llm_with_metrics(self):
-        from backend.services.research.tools import _tool_reflection
+        from backend.services.research.steps.reflect import run_deep_reflection
 
         orch = MagicMock()
         orch.step_repo = MagicMock()
@@ -532,7 +530,7 @@ class TestPureReflectionInclusion:
             "[other.com]: web learning 1",
         ]
 
-        with patch("backend.modules.llm_client.generate_unified", new_callable=AsyncMock) as mock_generate:
+        with patch("backend.services.research.steps.reflect.generate_unified", new_callable=AsyncMock) as mock_generate:
             mock_generate.return_value = {
                 "json_data": {
                     "reflection_notes": "Highly integrated findings.",
@@ -548,7 +546,7 @@ class TestPureReflectionInclusion:
                 }
             }
 
-            res = await _tool_reflection(
+            res = await run_deep_reflection(
                 orch,
                 task_id="task-id",
                 objective="Test pure reflection obj",
