@@ -625,6 +625,11 @@ async def reinitialize_task(task_id: str, request: Request = None):
         raise HTTPException(status_code=404, detail="Task not found")
 
     manager.orchestrator.reinitialize(task_id)
+    # Also evict the in-memory state so the next execute_step call reloads it fresh from DB
+    try:
+        manager.orchestrator._state_mgr.states.pop(task_id, None)
+    except Exception:
+        pass
     return {"task_id": task_id, "status": "reinitialized"}
 
 

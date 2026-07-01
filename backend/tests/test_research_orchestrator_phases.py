@@ -653,12 +653,112 @@ class TestDynamicReroutingAndCacheClearance:
         # Check that state machine transitioned back to planning
         s = orch._state_mgr.states[task_id]
         assert s["phase"] == "planning"
+        assert s["current_depth"] == 1
+        assert s["query_index"] == 0
 
         # Check that planning cache was cleared
         cache = orch._load_cache(task_id)
         assert "planning" not in cache
 
         conn.close()
+
+    @pytest.mark.asyncio
+    async def test_planning_includes_detailed_reflection_monologue_and_critique_log(self):
+        conn = init_db(DB_PATH)
+        task_id = _make_task_id()
+        task_repo = ResearchTaskRepository(DB_PATH)
+        _create_task(task_repo, task_id)
+
+        state_mock = _make_mock_state()
+        state_mock.research_task_repo = task_repo
+        state_mock.research_plan_repo = MagicMock()
+        state_mock.research_step_repo = MagicMock()
+        state_mock.research_step_result_repo = MagicMock()
+        state_mock.research_meta_log_repo = MagicMock()
+        state_mock.scraped_asset_repo = MagicMock()
+        state_mock.research_branch_repo = MagicMock()
+
+        orch = SomaticResearchOrchestrator(state_mock)
+
+        # Setup task state with reflection notes, monologue_trace, and critique_log
+        orch._state_mgr.states[task_id] = {
+            "phase": "planning",
+            "objective": "Test Objective",
+            "max_depth": 3,
+            "budget": 0.5,
+            "plan_id": None,
+            "plan": None,
+            "all_findings": [],
+            "sources_analyzed": 0,
+            "stagnation_counter": 0,
+            "step_number": 3,
+            "last_reflection": {},
+            "current_depth": 1,
+            "query_index": 0,
+            "search_results_cache": [],
+            "parsed_sources_cache": [],
+            "digest_results_cache": [],
+            "should_stop": False,
+            "stop_reason": "",
+            "reflection_notes": "Epistemic Reflection: we are biased towards Western trauma metaphors.",
+            "detected_biases": ["Western resilience bias"],
+            "knowledge_gaps": ["Indigenous cosmologies"],
+            "signal_flags": ["BIAS_DETECTED"],
+            "glitch_fidelity": 0.9,
+            "contradiction_density": 0.4,
+            "source_entropy": 0.6,
+            "revised_confidence": 0.35,
+            "monologue_trace": [
+                {"register": "framing_provenance", "utterance": "Deepened thought on kintsugi metaphor..."}
+            ],
+            "critique_log": [
+                {
+                    "register": "source_apparatus",
+                    "severity": "SHALLOW",
+                    "failure_description": "Vague gesture at Indigenous epistemologies.",
+                    "suggestion": "Select a specific source like Diné Hózhó."
+                }
+            ],
+            "diffractive_audit": "CEREMONIAL",
+            "diffractive_audit_description": "Theoretical lens was just name-dropped."
+        }
+
+        # Let's preview the plan step
+        from backend.services.research.task_state import PlanPayload, StepEnvelope
+        envelope = StepEnvelope(
+            task_id=task_id,
+            objective="Test Objective",
+            current_depth=1,
+            max_depth=3,
+            budget=0.5,
+            payload=PlanPayload(previous_context="Old context")
+        )
+
+        from backend.services.research.steps.plan import PlanStep
+        step = PlanStep()
+        preview_data = await step.preview(orch, envelope, orch._state_mgr.states[task_id])
+
+        user_prompt = preview_data.get("user_prompt", "")
+        
+        # Verify user prompt contains our details
+        assert "Epistemic Reflection Notes:" in user_prompt
+        assert "Epistemic Reflection: we are biased towards Western trauma metaphors." in user_prompt
+        assert "Agent Monologue Trace (Meta-Cognitive Flow):" in user_prompt
+        assert "↳ [ framing_provenance ]" in user_prompt
+        assert "Deepened thought on kintsugi metaphor..." in user_prompt
+        assert "Diffractive Audit & Critique Log (The Scar):" in user_prompt
+        assert "- source_apparatus (SHALLOW):" in user_prompt
+        assert "Vague gesture at Indigenous epistemologies." in user_prompt
+        assert "Select a specific source like Diné Hózhó." in user_prompt
+        assert "Diffractive Audit: CEREMONIAL" in user_prompt
+        assert "Theoretical lens was just name-dropped." in user_prompt
+        assert "- glitch_fidelity: 0.9" in user_prompt
+        assert "- contradiction_density: 0.4" in user_prompt
+        assert "- source_entropy: 0.6" in user_prompt
+        assert "- revised_confidence: 0.35" in user_prompt
+
+        conn.close()
+
 
 
 

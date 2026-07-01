@@ -714,6 +714,10 @@ class SomaticResearchOrchestrator:
                 s["phase"] = next_phase
 
                 if next_phase == "planning":
+                    if phase == "reflection":
+                        s["current_depth"] = s.get("current_depth", 0) + 1
+                        s["query_index"] = 0
+                        logger.info("Transitioning from reflection back to planning. Incremented current_depth to %d", s["current_depth"])
                     try:
                         cache = self._load_cache(task_id)
                         if "planning" in cache:

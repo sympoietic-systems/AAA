@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+from typing import List, Dict, Any, Optional
 
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import StepEnvelope, StepOutput, PlanPayload
@@ -10,6 +11,89 @@ from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.modules.llm_client import generate_unified
 
 logger = logging.getLogger("aaa.research_orchestrator")
+
+
+def _build_reflection_hints(state: dict) -> List[str]:
+    """Extracts and formats all meta-cognitive reflection details (notes, traces, critique logs) into helpful context hints for the planner."""
+    hints = []
+    
+    # 1. Refined queries
+    digest_signals = state.get("digest_signals") or {}
+    refined_queries = digest_signals.get("refined_queries")
+    if refined_queries:
+        hints.append("Refined search queries proposed by meta-reflection:\n" + "\n".join(f"- {q}" for q in refined_queries))
+        
+    # 2. Detected Biases, Knowledge Gaps, Signal Flags
+    active_flags = []
+    for key in ("detected_biases", "knowledge_gaps"):
+        val = state.get(key)
+        if val:
+            if isinstance(val, list):
+                active_flags.append(f"{key}:\n" + "\n".join(f"  - {item}" for item in val))
+            else:
+                active_flags.append(f"{key}: {val}")
+                
+    flags = state.get("signal_flags")
+    if flags:
+        if isinstance(flags, list):
+            active_flags.append("signal_flags:\n" + "\n".join(f"  - {f}" for f in flags))
+        else:
+            active_flags.append(f"signal_flags: {flags}")
+            
+    if active_flags:
+        hints.append("Active Meta-Cognitive Signal Flags:\n" + "\n".join(active_flags))
+        
+    # 3. Vitality & Confidence Metrics
+    metrics = []
+    for key in ("glitch_fidelity", "contradiction_density", "source_entropy", "revised_confidence"):
+        val = state.get(key)
+        if val is not None:
+            metrics.append(f"- {key}: {val}")
+    if metrics:
+        hints.append("Vitality & Confidence Metrics:\n" + "\n".join(metrics))
+        
+    # 4. Epistemic Reflection Notes
+    notes = state.get("reflection_notes")
+    if notes:
+        hints.append(f"Epistemic Reflection Notes:\n{notes}")
+        
+    # 5. Monologue Trace
+    monologue = state.get("monologue_trace")
+    if monologue and isinstance(monologue, list):
+        trace_lines = []
+        for entry in monologue:
+            if isinstance(entry, dict):
+                reg = entry.get("register") or entry.get("channel") or "unknown"
+                utt = entry.get("utterance") or entry.get("content") or entry.get("thought") or ""
+                if utt:
+                    trace_lines.append(f"↳ [ {reg} ]\n{utt.strip()}")
+        if trace_lines:
+            hints.append("Agent Monologue Trace (Meta-Cognitive Flow):\n" + "\n".join(trace_lines))
+            
+    # 6. Critique Log (The Scar)
+    critique = state.get("critique_log")
+    if critique and isinstance(critique, list):
+        critique_lines = []
+        for item in critique:
+            if isinstance(item, dict):
+                reg = item.get("register") or "unknown"
+                severity = item.get("severity") or "unknown"
+                fail = item.get("failure_description") or ""
+                sugg = item.get("suggestion") or ""
+                critique_lines.append(f"- {reg} ({severity}):\n  Failure: {fail}\n  Suggestion: {sugg}")
+        if critique_lines:
+            hints.append("Diffractive Audit & Critique Log (The Scar):\n" + "\n".join(critique_lines))
+            
+    # 7. Diffractive Audit Summary
+    diff_audit = state.get("diffractive_audit")
+    diff_desc = state.get("diffractive_audit_description")
+    if diff_audit or diff_desc:
+        audit_text = f"Diffractive Audit: {diff_audit or 'N/A'}"
+        if diff_desc:
+            audit_text += f"\nDescription: {diff_desc}"
+        hints.append(audit_text)
+        
+    return hints
 
 
 async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int, budget: float,
@@ -36,23 +120,7 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
         user_template = prompt_data.get("user", "")
         
         s = orch._get_state(task_id)
-        digest_signals = s.get("digest_signals") or {}
-        refined_queries = digest_signals.get("refined_queries")
-        
-        reflection_hints = []
-        if refined_queries:
-            reflection_hints.append("Refined search queries proposed by meta-reflection:\n" + "\n".join(f"- {q}" for q in refined_queries))
-            
-        active_flags = []
-        for key in ("detected_biases", "knowledge_gaps"):
-            val = s.get(key)
-            if val:
-                active_flags.append(f"{key}: {val}")
-        if s.get("signal_flags"):
-            active_flags.append(f"signal_flags: {s['signal_flags']}")
-            
-        if active_flags:
-            reflection_hints.append("Active Meta-Cognitive Signal Flags:\n" + "\n".join(f"- {f}" for f in active_flags))
+        reflection_hints = _build_reflection_hints(s)
             
         combined_context = previous_context
         if reflection_hints:
@@ -148,23 +216,7 @@ class PlanStep(BaseResearchStep):
         fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
         user_template = prompt_data.get("user", "")
 
-        digest_signals = state.get("digest_signals") or {}
-        refined_queries = digest_signals.get("refined_queries")
-
-        reflection_hints = []
-        if refined_queries:
-            reflection_hints.append("Refined search queries proposed by meta-reflection:\n" + "\n".join(f"- {q}" for q in refined_queries))
-
-        active_flags = []
-        for key in ("detected_biases", "knowledge_gaps"):
-            val = state.get(key)
-            if val:
-                active_flags.append(f"{key}: {val}")
-        if state.get("signal_flags"):
-            active_flags.append(f"signal_flags: {state['signal_flags']}")
-
-        if active_flags:
-            reflection_hints.append("Active Meta-Cognitive Signal Flags:\n" + "\n".join(f"- {f}" for f in active_flags))
+        reflection_hints = _build_reflection_hints(state)
 
         combined_context = previous_context
         if reflection_hints:
