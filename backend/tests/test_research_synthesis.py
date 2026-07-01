@@ -280,3 +280,101 @@ async def test_inject_global_research_task_lazy_provisions():
                 file_type="research-synthesis",
                 status="uploading",
             )
+
+
+@pytest.mark.asyncio
+async def test_synthesize_compiles_reflection_history():
+    state = MockAppState()
+    orchestrator = SomaticResearchOrchestrator(state)
+
+    task_id = "test_task_synthesis_history"
+    state.research_task_repo.get.return_value = {
+        "id": task_id,
+        "objective": "History test",
+        "max_depth": 3,
+        "budget_limit_usd": 5.0,
+        "cached_inputs": None,
+    }
+    
+    orchestrator._state_mgr.states[task_id] = {
+        "phase": "synthesizing",
+        "objective": "History test",
+        "max_depth": 3,
+        "budget": 5.0,
+        "all_findings": ["Finding A", "Finding B"],
+        "sources_analyzed": 2,
+        "step_number": 5,
+        "current_depth": 2,
+        "last_reflection": {}
+    }
+
+    # Setup step_repo to return two historical reflection steps
+    state.research_step_repo.get_by_task.return_value = [
+        {
+            "step_number": 10,
+            "step_type": "reflection",
+            "status": "completed",
+            "step_data": json.dumps({
+                "depth": 0,
+                "reflection_notes": "Cycle 1 notes",
+                "detected_biases": ["Bias 1"],
+                "knowledge_gaps": ["Gap 1"],
+                "glitch_fidelity": 0.9,
+                "contradiction_density": 0.1,
+            })
+        },
+        {
+            "step_number": 20,
+            "step_type": "reflection",
+            "status": "completed",
+            "step_data": json.dumps({
+                "depth": 1,
+                "reflection_notes": "Cycle 2 notes",
+                "detected_biases": ["Bias 2"],
+                "knowledge_gaps": ["Gap 2"],
+                "glitch_fidelity": 0.85,
+                "contradiction_density": 0.15,
+            })
+        }
+    ]
+
+    state.research_step_result_repo.get_by_task.return_value = []
+
+    mock_resp = {
+        "json_data": {
+            "report_markdown": "# Report",
+            "confidence": 0.9,
+            "key_takeaway": "Done"
+        },
+        "content": None,
+        "thinking": "Thinking...",
+        "model": "test-model",
+        "provider_used": "test-provider",
+    }
+
+    with patch("backend.services.research.steps.synthesize.generate_unified", AsyncMock(return_value=mock_resp)) as mock_gen:
+        with patch.object(orchestrator, "_build_orchestrator_persona", AsyncMock(return_value="Synthesis Persona")):
+            from backend.services.research.steps.synthesize import run_synthesis
+            await run_synthesis(
+                orchestrator,
+                task_id=task_id,
+                objective="History test",
+                goal="Autonomous research",
+                all_findings=["Finding A", "Finding B"],
+                sources_count=2,
+                step_id="mock_step_id",
+            )
+            
+            mock_gen.assert_called_once()
+            args, kwargs = mock_gen.call_args
+            user_prompt = kwargs.get("user_prompt", "")
+            
+            # Verify history is formatted correctly
+            assert "Cycle 1" in user_prompt
+            assert "Cycle 2" in user_prompt
+            assert "Cycle 1 notes" in user_prompt
+            assert "Cycle 2 notes" in user_prompt
+            assert "Bias 1" in user_prompt
+            assert "Bias 2" in user_prompt
+            assert "Glitch Fidelity: 0.9000" in user_prompt
+            assert "Glitch Fidelity: 0.8500" in user_prompt

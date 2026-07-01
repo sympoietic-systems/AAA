@@ -99,16 +99,16 @@ PIPELINE_GRAPH = {
         PipelineTransition(target_phase="reflection")
     ],
     "reflection": [
-        PipelineTransition(
-            target_phase="planning",
-            condition=lambda out, env: out.signal_flags.get("GLITCH_FIDELITY_LOW", False) or out.signal_flags.get("BIAS_DETECTED", False)
-        ),
         PipelineTransition(target_phase="evaluating")
     ],
     "evaluating": [
         PipelineTransition(
             target_phase="synthesizing",
             condition=lambda out, env: out.signal_flags.get("should_stop", False)
+        ),
+        PipelineTransition(
+            target_phase="planning",
+            condition=lambda out, env: out.signal_flags.get("GLITCH_FIDELITY_LOW", False) or out.signal_flags.get("BIAS_DETECTED", False)
         ),
         PipelineTransition(target_phase="searching")
     ],
@@ -230,19 +230,56 @@ class SomaticResearchOrchestrator:
     def _format_reflection_markdown(reflection: dict, depth: int = 0, include_cycle: bool = False) -> str:
         if not reflection or not isinstance(reflection, dict):
             return "(none)"
+        
+        # Extract nested content from llm_response if present
+        if "llm_response" in reflection and isinstance(reflection["llm_response"], dict):
+            llm_resp = reflection["llm_response"]
+            content = llm_resp.get("content") or llm_resp.get("json_data")
+            if isinstance(content, str):
+                try:
+                    reflection = json.loads(content)
+                except Exception:
+                    pass
+            elif isinstance(content, dict):
+                reflection = content
+
         parts = []
-        ref = reflection.get("reflection")
+        
+        # Methodological notes / core reflection
+        ref = reflection.get("reflection_notes") or reflection.get("reflection")
         if ref:
             prefix = f"Methodological Reflection (Cycle {depth}):\n" if include_cycle else "Methodological Reflection:\n"
             parts.append(f"{prefix}{ref}")
+            
+        # Key insights / findings
         insights = reflection.get("key_insights", [])
         if insights:
             prefix = f"Stabilized Key Insights (Cycle {depth} Anchor):\n" if include_cycle else "Stabilized Key Insights:\n"
             parts.append(prefix + "\n".join(f"- {ins}" for ins in insights))
-        gaps = reflection.get("remaining_gaps", [])
+            
+        # Biases
+        biases = reflection.get("detected_biases", [])
+        if biases:
+            parts.append("Detected Biases:\n" + "\n".join(f"- {b}" for b in biases))
+            
+        # Gaps
+        gaps = reflection.get("knowledge_gaps", []) or reflection.get("remaining_gaps", [])
         if gaps:
-            prefix = "Remaining Gaps from Previous Cycle:\n" if include_cycle else "Remaining Gaps:\n"
+            prefix = f"Remaining Gaps (Cycle {depth}):\n" if include_cycle else "Remaining Gaps:\n"
             parts.append(prefix + "\n".join(f"- {gap}" for gap in gaps))
+            
+        # Metrics
+        metrics = []
+        for metric_name in ("glitch_fidelity", "contradiction_density", "source_entropy", "revised_confidence"):
+            if metric_name in reflection:
+                val = reflection[metric_name]
+                if isinstance(val, float):
+                    metrics.append(f"- {metric_name.replace('_', ' ').title()}: {val:.4f}")
+                else:
+                    metrics.append(f"- {metric_name.replace('_', ' ').title()}: {val}")
+        if metrics:
+            parts.append("Cognitive Metrics:\n" + "\n".join(metrics))
+            
         if not parts:
             return "(none)"
         return "\n\n".join(parts)
@@ -714,10 +751,9 @@ class SomaticResearchOrchestrator:
                 s["phase"] = next_phase
 
                 if next_phase == "planning":
-                    if phase == "reflection":
-                        s["current_depth"] = s.get("current_depth", 0) + 1
+                    if phase == "evaluating":
                         s["query_index"] = 0
-                        logger.info("Transitioning from reflection back to planning. Incremented current_depth to %d", s["current_depth"])
+                        logger.info("Transitioning from evaluating back to planning. current_depth is %d", s["current_depth"])
                     try:
                         cache = self._load_cache(task_id)
                         if "planning" in cache:

@@ -195,6 +195,14 @@ class EvaluateStep(BaseResearchStep):
         )
 
         signal_flags = {"should_stop": should_stop}
+        refl_flags = payload.reflection.get("signal_flags", [])
+        if isinstance(refl_flags, list):
+            for flag in refl_flags:
+                signal_flags[flag] = True
+        elif isinstance(refl_flags, dict):
+            for flag, val in refl_flags.items():
+                if val:
+                    signal_flags[flag] = True
 
         rationale = f"Evaluated research progress at depth {current_depth}: {'Synthesizing final findings' if should_stop else 'Proceeding to next depth level'} because: {stop_reason}."
 

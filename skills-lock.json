@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "skills": {
+    "backprop": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/backprop/SKILL.md",
+      "computedHash": "7d23e415bf412ff01fa8c3d920c269f6ac7a9ca0c337eafda861d412ba8f946c"
+    },
+    "build": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/build/SKILL.md",
+      "computedHash": "6cf3f7fc11d4c9892bd9b71002715ab9b5915aabef15d2da30d955d117f1052d"
+    },
+    "caveman": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/caveman/SKILL.md",
+      "computedHash": "b7296730e7d074253e6806b9e71dab4a6e1cbfeb643cafc000f9ce7bec0a825c"
+    },
+    "check": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/check/SKILL.md",
+      "computedHash": "28e8c45a027c7c1c9832417100aff4d78b9981d45d3672c0797eb606e020c2d9"
+    },
+    "context-canary": {
+      "source": "JuliusBrussee/skills",
+      "sourceType": "github",
+      "skillPath": "skills/context-canary/SKILL.md",
+      "computedHash": "a485f38ed39b8fb0deff35d9b9409f6b944d4370c60584382c34f7f084ac6da1"
+    },
+    "deepen": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/deepen/SKILL.md",
+      "computedHash": "5e0fe183377f9b12811ce6a05173d72a8f9194055a519d4a0b26000f0c776392"
+    },
+    "fuck-slop": {
+      "source": "JuliusBrussee/skills",
+      "sourceType": "github",
+      "skillPath": "skills/fuck-slop/SKILL.md",
+      "computedHash": "17ae400cf721c286c187c6613795091c4fb81aed02ce52cc23e86c2f6b170f4d"
+    },
+    "grill": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/grill/SKILL.md",
+      "computedHash": "2bad4607d6fb2b0538d6f3e57f151064d219133bc4cd08a941c0850a0967d6ca"
+    },
+    "grill-me": {
+      "source": "JuliusBrussee/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grill-me/SKILL.md",
+      "computedHash": "0c496d8ea7a6c1011a6a3e045e9d927e67e582c83c84497f5010eba8fb65c45d"
+    },
+    "interface-kit": {
+      "source": "JuliusBrussee/skills",
+      "sourceType": "github",
+      "skillPath": "skills/interface-kit/SKILL.md",
+      "computedHash": "4a0a01c7e6954a89749869d5daf2394ef953f21a30ca5c1238bfd2139a1d1847"
+    },
+    "junior-to-senior": {
+      "source": "JuliusBrussee/skills",
+      "sourceType": "github",
+      "skillPath": "skills/junior-to-senior/SKILL.md",
+      "computedHash": "816d1cbcefd81bbd69628d04a7d67fe2762d63fb81092e0914c721d43fcd91fb"
+    },
+    "loop-factory": {
+      "source": "JuliusBrussee/skills",
+      "sourceType": "github",
+      "skillPath": "skills/loop-factory/SKILL.md",
+      "computedHash": "f210ad4e024c49581e3818a9cc42c3a6c5e595160a2689a857cf2a5852008abe"
+    },
+    "research": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/research/SKILL.md",
+      "computedHash": "91566d23ee13a46fe8d1094c9e5b25dc2a622e4b5ea2ecc97179a58f4f901b8d"
+    },
+    "review": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/review/SKILL.md",
+      "computedHash": "eb74a6bf82fff552294e7c3ce0a281d6e668f6b61ce93b1f8ffa2a10bf99a7d3"
+    },
+    "spec": {
+      "source": "JuliusBrussee/cavekit",
+      "sourceType": "github",
+      "skillPath": "skills/spec/SKILL.md",
+      "computedHash": "80ec98e14d6e5bb009d2f36d57cfc073f3cd136cf83ddf2176efb39a581ef072"
+    }
+  }
+}

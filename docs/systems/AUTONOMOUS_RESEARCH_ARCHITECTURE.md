@@ -3803,7 +3803,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | `_build_system_content()` — unified formatting | — | Assembler now uses shared format_beliefs_block/format_skills_* functions |
 | All 7 consumers updated to `get_persona_text()` | — | assembler, orchestrator, context builder, refine_skill/belief, metabolize, BeliefService |
 | Step-by-step execution mode + preview | — | `execute_step()`, `preview_step_inputs()`, manual pipeline control |
-| Consolidation reflections + gaps injected into synthesis | — | `last_reflection` passed to `_phase_synthesize` for context-aware reports |
+| Consolidation reflections + gaps injected into synthesis | — | All completed `reflect` + `reflection` steps from task history formatted sequentially in synthesis prompt |
 | Unified [S##] source reference mapping | — | Global source legend across findings, gaps, and follow-ups |
 | Cycle-scoped context + step filtering | — | Cycle-depth aware digestion lookup + UI step detail filtering (m040) |
 | Preview prompt caching + reuse | — | Cached persona/system prompt reused during step execution |

@@ -41,7 +41,7 @@
     [x] Frontend: Step synthesis report parsed from report_markdown, rendered as formatted markdown
     [x] Frontend: remark-gfm + remark-breaks enabled in all ReactMarkdown renderers (tables, breaks)
     [x] Frontend: Structured synthesis preview (sources, findings, reflection) in StepPreviewPanel
-    [x] Backend: Consolidation reflections + remaining gaps injected into final synthesis prompt context
+    [x] Backend: All completed reflect + reflection steps from task history formatted sequentially in synthesis prompt
     [x] Backend: Unified [S##] source reference mapping across findings, gaps, and follow-ups
     [x] Backend: Cycle-scoped context compilation + step filtering (m040)
     [x] Backend: Preview prompt caching and reuse during step execution

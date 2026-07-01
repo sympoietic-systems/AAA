@@ -622,10 +622,10 @@ class TestDynamicReroutingAndCacheClearance:
             revised_confidence=0.3
         )
 
-        with patch("backend.services.research.steps.reflect.ReflectionStep.execute", new_callable=AsyncMock) as mock_execute:
+        with patch("backend.services.research.steps.reflect.ReflectionStep.execute", new_callable=AsyncMock) as mock_execute, \
+             patch("backend.services.research.steps.evaluate.EvaluateStep.execute", new_callable=AsyncMock) as mock_eval_execute:
             # We mock execute to return our low fidelity output
             async def mock_exec(orch_inst, env):
-                # Save step record in DB
                 step_id = f"step-reflect-{task_id}"
                 step_repo.create({
                     "id": step_id,
@@ -646,8 +646,42 @@ class TestDynamicReroutingAndCacheClearance:
                 )
             
             mock_execute.side_effect = mock_exec
+
+            async def mock_eval_exec(orch_inst, env):
+                step_id = f"step-eval-{task_id}"
+                step_repo.create({
+                    "id": step_id,
+                    "task_id": task_id,
+                    "plan_id": plan_id,
+                    "step_number": 4,
+                    "step_type": "evaluate",
+                    "step_data": json.dumps({}),
+                    "status": "completed"
+                })
+                from backend.services.research.task_state import EvaluatePayload, StepOutput
+                eval_payload = EvaluatePayload(
+                    stagnation_counter=0,
+                    sources_analyzed=0,
+                    reflection=mock_payload.model_dump(),
+                    should_stop=False,
+                    stop_reason=""
+                )
+                return StepOutput(
+                    status="completed",
+                    message="Evaluated",
+                    payload=eval_payload,
+                    signal_flags={"should_stop": False, "GLITCH_FIDELITY_LOW": True},
+                    step_ids=[step_id]
+                )
+
+            mock_eval_execute.side_effect = mock_eval_exec
             
-            # Run the task step loop for reflection phase
+            # Run the task step loop for reflection phase: should transition to evaluating
+            await orch.execute_step(task_id)
+            s = orch._state_mgr.states[task_id]
+            assert s["phase"] == "evaluating"
+
+            # Run the task step loop for evaluation phase: should transition to planning
             await orch.execute_step(task_id)
 
         # Check that state machine transitioned back to planning
@@ -659,6 +693,103 @@ class TestDynamicReroutingAndCacheClearance:
         # Check that planning cache was cleared
         cache = orch._load_cache(task_id)
         assert "planning" not in cache
+
+        conn.close()
+
+    @pytest.mark.asyncio
+    async def test_reflection_bypasses_planning_when_depth_budget_exhausted(self):
+        conn = init_db(DB_PATH)
+        task_id = _make_task_id()
+        task_repo = ResearchTaskRepository(DB_PATH)
+        plan_repo = ResearchPlanRepository(DB_PATH)
+        step_repo = ResearchStepRepository(DB_PATH)
+        _create_task(task_repo, task_id)
+
+        state_mock = _make_mock_state()
+        state_mock.research_task_repo = task_repo
+        state_mock.research_plan_repo = plan_repo
+        state_mock.research_step_repo = step_repo
+        state_mock.research_step_result_repo = MagicMock()
+        state_mock.research_meta_log_repo = MagicMock()
+        state_mock.scraped_asset_repo = MagicMock()
+        state_mock.research_branch_repo = MagicMock()
+
+        orch = SomaticResearchOrchestrator(state_mock)
+
+        plan_id = f"plan-{task_id}"
+        plan_repo.create({
+            "id": plan_id,
+            "task_id": task_id,
+            "plan_json": json.dumps({"search_queries": []}),
+            "status": "active"
+        })
+
+        # Setup task state in reflection phase at max depth (3/3)
+        orch._state_mgr.states[task_id] = {
+            "phase": "reflection",
+            "objective": "Research objective",
+            "max_depth": 3, "budget": 0.5,
+            "plan_id": plan_id, "plan": {"search_queries": []}, "all_findings": [],
+            "sources_analyzed": 0, "stagnation_counter": 0, "step_number": 2,
+            "last_reflection": {}, "current_depth": 3, "query_index": 0,
+            "search_results_cache": [], "parsed_sources_cache": [],
+            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
+        }
+
+        # Mock the Reflection step logic to output GLITCH_FIDELITY_LOW flag
+        from backend.services.research.steps.reflect import ReflectionPayload
+        mock_payload = ReflectionPayload(
+            reflection_notes="Low fidelity detected",
+            signal_flags=["GLITCH_FIDELITY_LOW"],
+            glitch_fidelity=0.2,
+            contradiction_density=0.8,
+            source_entropy=0.5,
+            revised_confidence=0.3
+        )
+
+        with patch("backend.services.research.steps.reflect.ReflectionStep.execute", new_callable=AsyncMock) as mock_execute:
+            async def mock_exec(orch_inst, env):
+                step_id = f"step-reflect-{task_id}"
+                step_repo.create({
+                    "id": step_id,
+                    "task_id": task_id,
+                    "plan_id": plan_id,
+                    "step_number": 3,
+                    "step_type": "reflection",
+                    "step_data": mock_payload.model_dump_json(),
+                    "status": "completed"
+                })
+                from backend.services.research.task_state import StepOutput
+                return StepOutput(
+                    status="completed",
+                    message="Reflected",
+                    payload=mock_payload,
+                    signal_flags={"GLITCH_FIDELITY_LOW": True},
+                    step_ids=[step_id]
+                )
+
+            mock_execute.side_effect = mock_exec
+
+            # Run the task step loop for reflection phase: should transition to evaluating
+            await orch.execute_step(task_id)
+            s = orch._state_mgr.states[task_id]
+            assert s["phase"] == "evaluating"
+            assert s["current_depth"] == 3
+
+            # Run the task step loop for evaluation phase (real execution): should transition to synthesizing
+            await orch.execute_step(task_id)
+
+        # Check that state machine transitioned to synthesizing instead of planning
+        s = orch._state_mgr.states[task_id]
+        assert s["phase"] == "synthesizing"
+        # Depth should NOT be incremented
+        assert s["current_depth"] == 3
+
+        # Check that the depth limit stopping reason was recorded in the database step record for evaluation
+        steps = step_repo.get_by_task(task_id)
+        eval_steps = [st for st in steps if st["step_type"] == "evaluate"]
+        assert len(eval_steps) == 1
+        assert "depth limit reached" in eval_steps[0]["result_summary"]
 
         conn.close()
 

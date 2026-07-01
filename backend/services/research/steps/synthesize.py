@@ -51,13 +51,30 @@ async def run_synthesis(orch, task_id: str, objective: str, goal: str,
         "Sources Legend:\n" + sources_legend_text + "\n\n" + "\n".join(compressed_findings)
     )
 
-    try:
-        s = orch._get_state(task_id)
-        reflection = s.get("last_reflection", {})
-    except Exception:
-        reflection = {}
+    reflections_history = []
+    if orch.step_repo:
+        try:
+            steps = orch.step_repo.get_by_task(task_id)
+            refl_steps = [st for st in steps if st.get("step_type") in ("reflect", "reflection") and st.get("status") == "completed"]
+            refl_steps.sort(key=lambda st: st.get("step_number", 0))
+            for step_item in refl_steps:
+                step_data = json.loads(step_item.get("step_data") or "{}")
+                depth_val = step_data.get("depth", 0)
+                formatted = orch._format_reflection_markdown(step_data, depth=depth_val + 1, include_cycle=True)
+                if formatted and formatted != "(none)":
+                    reflections_history.append(formatted)
+        except Exception as e:
+            logger.warning("Failed to fetch reflection steps history: %s", e)
 
-    prev_refl_formatted = orch._format_reflection_markdown(reflection)
+    if reflections_history:
+        prev_refl_formatted = "\n\n---\n\n".join(reflections_history)
+    else:
+        try:
+            s = orch._get_state(task_id)
+            reflection = s.get("last_reflection", {})
+        except Exception:
+            reflection = {}
+        prev_refl_formatted = orch._format_reflection_markdown(reflection)
 
     user_text = prompt_data.get("user", "").format(
         objective=objective, goal=goal,
@@ -136,8 +153,26 @@ class SynthesizeStep(BaseResearchStep):
             "Sources Legend:\n" + sources_legend_text + "\n\n" + "\n".join(compressed_findings)
         )
 
-        reflection = state.get("last_reflection", {})
-        prev_refl_formatted = orch._format_reflection_markdown(reflection)
+        reflections_history = []
+        if orch.step_repo:
+            try:
+                steps = orch.step_repo.get_by_task(task_id)
+                refl_steps = [st for st in steps if st.get("step_type") in ("reflect", "reflection") and st.get("status") == "completed"]
+                refl_steps.sort(key=lambda st: st.get("step_number", 0))
+                for step_item in refl_steps:
+                    step_data = json.loads(step_item.get("step_data") or "{}")
+                    depth_val = step_data.get("depth", 0)
+                    formatted = orch._format_reflection_markdown(step_data, depth=depth_val + 1, include_cycle=True)
+                    if formatted and formatted != "(none)":
+                        reflections_history.append(formatted)
+            except Exception:
+                pass
+
+        if reflections_history:
+            prev_refl_formatted = "\n\n---\n\n".join(reflections_history)
+        else:
+            reflection = state.get("last_reflection", {})
+            prev_refl_formatted = orch._format_reflection_markdown(reflection)
 
         user_prompt = prompt_data.get("user", "").format(
             objective=objective, goal=goal,
