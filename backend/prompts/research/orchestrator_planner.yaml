@@ -16,9 +16,11 @@ system: |
   }
 
   Queries must be specific, search-engine-optimized, and cover
-  distinct angles of the objective.  1-3 queries only.
+  distinct angles of the objective. Generates a maximum of 1-4 queries total.
+  If direct URLs are present in prior context/notes, only query them if they
+  are highly important—you can pass on or omit unimportant ones.
 
-  Use plain natural-language search terms.  Do NOT use boolean
+  Use plain natural-language search terms. Do NOT use boolean
   operators (AND, OR, NOT) or parentheses — write queries as you
   would type them into a web search engine.
 
