@@ -204,7 +204,7 @@ class SearchStep(BaseResearchStep):
             group_steps[direct_group] = step_id
 
         search_results_list = []
-        candidate_count = max(8, orch.default_top_n * 2)
+        candidate_count = max(10, orch.default_top_n * 3)
         llm = getattr(orch._state, "llm_provider", None)
 
         for i, q in enumerate(search_queries):
