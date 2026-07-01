@@ -759,6 +759,55 @@ class TestDynamicReroutingAndCacheClearance:
 
         conn.close()
 
+    @pytest.mark.asyncio
+    async def test_search_step_uses_lightweight_llm_selector(self):
+        from backend.services.research.steps.search import _select_high_fidelity_results
+        
+        # Test 1: Fallback if no LLM
+        results = [
+            {"title": "Commercial Ad", "url": "http://ad.com", "snippet": "Buy now"},
+            {"title": "Academic Study", "url": "http://univ.edu", "snippet": "A study on kintsugi"},
+            {"title": "Blog Post", "url": "http://blog.org", "snippet": "Discussion"}
+        ]
+        
+        res = await _select_high_fidelity_results(
+            llm=None,
+            objective="kintsugi research",
+            query="kintsugi",
+            results=results,
+            target_count=2
+        )
+        assert len(res) == 2
+        assert res[0]["url"] == "http://ad.com"
+
+        # Test 2: Selector selects correct indices using LLM
+        mock_llm = MagicMock()
+        mock_response = {
+            "json_data": {
+                "selected_indices": [1, 2],
+                "rationale": "Prioritize university study and deep blog post over ad."
+            }
+        }
+        
+        with patch("backend.services.research.steps.search.generate_unified", AsyncMock(return_value=mock_response)) as mock_gen:
+            res = await _select_high_fidelity_results(
+                llm=mock_llm,
+                objective="kintsugi research",
+                query="kintsugi",
+                results=results,
+                target_count=2
+            )
+            assert len(res) == 2
+            assert res[0]["url"] == "http://univ.edu"
+            assert res[1]["url"] == "http://blog.org"
+            
+            # Check mock generate_unified was called with correct parameters
+            mock_gen.assert_called_once()
+            args, kwargs = mock_gen.call_args
+            assert kwargs["temperature"] == 0.1
+            assert kwargs["max_tokens"] == 500
+
+
 
 
 

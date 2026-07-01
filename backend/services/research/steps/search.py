@@ -3,13 +3,97 @@ import json
 import logging
 import re
 import uuid
+from typing import List, Dict, Any, Optional
 
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import SearchPayload, StepEnvelope, StepOutput
 from backend.services.research.search_tool import web_search
 from backend.utils.research_logger import now_utc_str
+from backend.modules.llm_client import generate_unified
 
 logger = logging.getLogger("aaa.research_orchestrator")
+
+
+async def _select_high_fidelity_results(
+    llm,
+    objective: str,
+    query: str,
+    results: List[dict],
+    target_count: int
+) -> List[dict]:
+    """Uses a lightweight LLM call to filter/rank and select the most high-fidelity, high-relevance search results from the pool, avoiding commercial noise and SEO landing pages."""
+    if not results:
+        return []
+    if len(results) <= target_count:
+        return results
+    if not llm:
+        return results[:target_count]
+
+    # Format the results list for the LLM
+    formatted_results = []
+    for idx, r in enumerate(results):
+        formatted_results.append(
+            f"[{idx}] Title: {r.get('title', '')}\n"
+            f"    URL: {r.get('url', '')}\n"
+            f"    Snippet: {r.get('snippet', '')}\n"
+        )
+    results_text = "\n".join(formatted_results)
+
+    system_prompt = (
+        "You are a research selector selecting high-fidelity, high-relevance search results.\n"
+        "Avoid generic commercial landing pages, advertisements, social media noise, or shallow SEO articles.\n"
+        "Prioritize academic publications, PDF documents, primary sources, niche archives, deep blogs, or highly relevant reporting.\n"
+        f"You must select exactly {target_count} results from the list by their indices.\n\n"
+        "Return ONLY a JSON object with this format:\n"
+        "{\n"
+        "  \"selected_indices\": [index1, index2],\n"
+        "  \"rationale\": \"Brief 1-2 sentence selection justification\"\n"
+        "}"
+    )
+
+    user_prompt = (
+        f"Research Objective: {objective}\n"
+        f"Search Query: {query}\n\n"
+        f"Search Results List:\n{results_text}\n"
+    )
+
+    fallback = {"selected_indices": list(range(min(len(results), target_count))), "rationale": "Fallback to top results"}
+    try:
+        resp = await generate_unified(
+            llm,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            expect_json=True,
+            fallback_value=fallback,
+            temperature=0.1,
+            max_tokens=500
+        )
+        data = resp.get("json_data") or {}
+        indices = data.get("selected_indices")
+        if isinstance(indices, list):
+            # Clean and validate indices
+            valid_indices = []
+            for idx in indices:
+                try:
+                    i = int(idx)
+                    if 0 <= i < len(results) and i not in valid_indices:
+                        valid_indices.append(i)
+                except (ValueError, TypeError):
+                    continue
+            
+            # If we don't have enough valid indices, fill up with other top results
+            for i in range(len(results)):
+                if len(valid_indices) >= target_count:
+                    break
+                if i not in valid_indices:
+                    valid_indices.append(i)
+                    
+            logger.info("Selector chose indices %s with rationale: %s", valid_indices, data.get("rationale"))
+            return [results[i] for i in valid_indices[:target_count]]
+    except Exception as e:
+        logger.warning("Search result selection failed: %s. Falling back to top results.", e)
+
+    return results[:target_count]
 
 
 class SearchStep(BaseResearchStep):
@@ -120,12 +204,22 @@ class SearchStep(BaseResearchStep):
             group_steps[direct_group] = step_id
 
         search_results_list = []
+        candidate_count = max(8, orch.default_top_n * 2)
+        llm = getattr(orch._state, "llm_provider", None)
+
         for i, q in enumerate(search_queries):
             if i > 0:
                 logger.info("Staggering search: sleeping 1.5s between requests...")
                 await asyncio.sleep(1.5)
-            res = await web_search(q, orch.default_top_n, orch._state.config)
-            search_results_list.append(res)
+            raw_res = await web_search(q, candidate_count, orch._state.config)
+            selected_res = await _select_high_fidelity_results(
+                llm=llm,
+                objective=envelope.objective,
+                query=q,
+                results=raw_res,
+                target_count=orch.default_top_n
+            )
+            search_results_list.append(selected_res)
 
         search_results = []
         for i, results in enumerate(search_results_list):
