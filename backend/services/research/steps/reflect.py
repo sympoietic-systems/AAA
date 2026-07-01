@@ -266,7 +266,7 @@ class ReflectionStep(BaseResearchStep):
         max_depth = envelope.max_depth
 
         payload: ReflectionPayload = envelope.payload
-        all_findings = payload.findings or []
+        all_findings = envelope.all_findings or []
 
         # ── Calculate Glitch Fidelity ──
         glitches_detected = 0
