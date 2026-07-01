@@ -16,6 +16,10 @@ class BaseResearchStep(ABC):
         """Executes the step, reading from envelope and returning StepOutput."""
         pass
 
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        """Previews step inputs/prompts without executing the step."""
+        return {"phase": self.step_type, "note": "Preview not implemented for this step"}
+
 
 class ResearchStepRegistry:
     _registry: dict[str, Type[BaseResearchStep]] = {}

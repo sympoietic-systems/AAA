@@ -14,6 +14,52 @@ class DocumentDigestionStep(BaseResearchStep):
     def step_type(self) -> str:
         return "document_digestion"
 
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        task_id = envelope.task_id
+        objective = envelope.objective
+
+        payload: DocDigestPayload = envelope.payload
+        inject_file_id = payload.inject_file_id
+        inject_conv_id = payload.inject_conversation_id
+        doc_mode = payload.document_mode
+        chunk_limit = payload.document_chunk_limit
+
+        doc_summary = ""
+        doc_chunks: list[dict] = []
+
+        if inject_file_id:
+            conversation_id = None
+            task_row = orch.task_repo.get(task_id) if orch.task_repo else None
+            if task_row:
+                conversation_id = task_row.get("conversation_id")
+            effective_conv_id = inject_conv_id or conversation_id
+
+            perception_repo = getattr(orch._state, "perception_repo", None)
+            if perception_repo and effective_conv_id:
+                try:
+                    db_chunks = perception_repo.get_by_file(effective_conv_id, inject_file_id)
+                    doc_chunks = [{"content": c.chunk_text, "sim": 0} for c in db_chunks if c.chunk_text]
+                    file_info = perception_repo.find_file_by_name(inject_file_id)
+                    if file_info and file_info.get("summary"):
+                        doc_summary = f"[Document: {inject_file_id}]\n{file_info['summary']}"
+                except Exception as e:
+                    logger.warning("Document chunk preview retrieval failed: %s", e)
+
+            if doc_mode == "chunks":
+                doc_chunks = doc_chunks[:chunk_limit]
+
+        return {
+            "phase": "document_digestion",
+            "file_id": inject_file_id,
+            "mode": doc_mode,
+            "chunk_limit": chunk_limit if doc_mode == "chunks" else None,
+            "document_digested": state.get("document_digested", False),
+            "objective": objective,
+            "doc_summary": doc_summary,
+            "doc_chunks": doc_chunks,
+            "cached_at": now_utc_str(),
+        }
+
     async def execute(self, orch, envelope: StepEnvelope) -> StepOutput:
         task_id = envelope.task_id
         objective = envelope.objective

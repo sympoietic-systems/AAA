@@ -78,6 +78,7 @@
     [x] Backend: Non-linear metabolic routing on reflection signals (reroute to planning, clear cache on reroute)
     [x] Backend/Frontend: Unified persona-aware prompt building via ResearchContextBuilder (orchestrator, agonistic planner, metabolizer synthesizer)
     [x] Frontend: Step result critique log ("The Scar") & diffractive audit metrics visualization with severity-coded HSL badges
+    [x] Backend: Decouple and modularize phase-specific preview prompt generation into registry-based step classes
 
 ### Pending
     [ ] Document download tool (PDF/DOCX → digestion → index/vectorize)

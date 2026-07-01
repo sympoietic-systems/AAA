@@ -6,6 +6,7 @@ from backend.services.research.task_state import EvaluatePayload, StepEnvelope, 
 from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.modules.llm_client import generate_unified
+from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
@@ -102,6 +103,61 @@ class EvaluateStep(BaseResearchStep):
     @property
     def step_type(self) -> str:
         return "evaluate"
+
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        task_id = envelope.task_id
+        objective = envelope.objective
+        depth = envelope.current_depth
+        max_depth = envelope.max_depth
+
+        payload: EvaluatePayload = envelope.payload
+        reflection = payload.reflection or {}
+        sources = payload.sources_analyzed
+        stagnation = payload.stagnation_counter
+
+        prompt_data = get_prompts_dict("research/orchestrator_evaluate.yaml")
+        try:
+            from backend.services.research.context_builder import ResearchContextBuilder
+            builder = ResearchContextBuilder(orch._state)
+            persona = await builder.build_orchestration_context(objective)
+            system_prompt = persona + "\n\n" + prompt_data.get("system", "")
+        except Exception:
+            system_prompt = await orch._build_orchestrator_persona(objective) + "\n\n" + prompt_data.get("system", "")
+
+        completeness = reflection.get("completeness_score", 0.5)
+        key_insights = reflection.get("key_insights", [])
+        remaining_gaps = reflection.get("remaining_gaps", [])
+        next_queries = reflection.get("next_queries", [])
+        next_direct = reflection.get("next_direct_urls", [])
+
+        user_text = prompt_data.get("user", "").format(
+            objective=objective,
+            current_depth=depth,
+            max_depth=max_depth,
+            sources_analyzed=sources,
+            completeness_score=f"{completeness:.2f}",
+            key_insights="\n".join(f"- {i}" for i in key_insights) or "(none)",
+            remaining_gaps="\n".join(f"- {g}" for g in remaining_gaps) or "(none)",
+            next_queries="\n".join(f"- {q}" for q in next_queries) or "(none)",
+            next_direct_urls="\n".join(f"- {u}" for u in next_direct) or "(none)",
+            depth_reached=str(depth >= max_depth),
+            stagnation_steps=stagnation,
+            stagnated=str(stagnation >= 3),
+        )
+
+        if prompt_data.get("anti_mastery"):
+            system_prompt = apply_anti_mastery_filter(system_prompt)
+            user_text = apply_anti_mastery_filter(user_text)
+
+        return {
+            "phase": "evaluating",
+            "system_prompt": system_prompt,
+            "user_prompt": user_text,
+            "model": getattr(orch._state, "llm_provider", None) and getattr(orch._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "temperature": prompt_data.get("temperature", 0.2),
+            "max_tokens": prompt_data.get("max_tokens", 1024),
+            "cached_at": now_utc_str(),
+        }
 
     async def execute(self, orch, envelope: StepEnvelope) -> StepOutput:
         task_id = envelope.task_id

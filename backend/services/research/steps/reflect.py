@@ -259,6 +259,110 @@ class ReflectionStep(BaseResearchStep):
     def step_type(self) -> str:
         return "reflection"
 
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        task_id = envelope.task_id
+        objective = envelope.objective
+        depth = envelope.current_depth
+        max_depth = envelope.max_depth
+
+        payload: ReflectionPayload = envelope.payload
+        all_findings = payload.findings or []
+
+        # ── Calculate Glitch Fidelity ──
+        glitches_detected = 0
+        glitches_addressed = 0
+        steps = orch.step_repo.get_by_task(task_id) if orch.step_repo else []
+        for i, step in enumerate(steps):
+            if step.get("step_type") == "searching":
+                results = orch.step_result_repo.get_by_step(step["id"]) if orch.step_result_repo else []
+                if not results or all(not r.get("source_url") for r in results):
+                    glitches_detected += 1
+                    if any(s.get("step_type") == "planning" for s in steps[i + 1:]):
+                        glitches_addressed += 1
+            elif step.get("step_type") == "parsing":
+                results = orch.step_result_repo.get_by_step(step["id"]) if orch.step_result_repo else []
+                for r in results:
+                    raw_c = r.get("raw_content") or ""
+                    if not raw_c or "error" in raw_c.lower() or raw_c.startswith("Error:"):
+                        glitches_detected += 1
+                        if any(s.get("step_type") in ("searching", "planning") for s in steps[i + 1:]):
+                            glitches_addressed += 1
+                            break
+
+        glitch_fidelity = (glitches_addressed / glitches_detected) if glitches_detected > 0 else 1.0
+
+        # ── Calculate Source Entropy (Shannon entropy on domains) ──
+        parsed_urls = orch._get_parsed_urls(task_id)
+        domains = []
+        for u in parsed_urls:
+            url_str = u.get("url") or u.get("source_url")
+            if url_str:
+                try:
+                    domain = urlparse(url_str).netloc
+                    if domain:
+                        domains.append(domain)
+                except Exception:
+                    pass
+
+        if not domains:
+            source_entropy = 0.0
+        else:
+            counts: dict[str, int] = {}
+            for d in domains:
+                counts[d] = counts.get(d, 0) + 1
+            n = len(domains)
+            source_entropy = -sum((count / n) * math.log2(count / n) for count in counts.values())
+
+        # ── Calculate Contradiction Density ──
+        contradiction_density = 0.0
+        if all_findings:
+            tension_keywords = ["conflict", "contradict", "disagree", "oppose", "tension",
+                                "clash", "versus", "vs", "difference"]
+            matches = sum(1 for f in all_findings if any(kw in f.lower() for kw in tension_keywords))
+            contradiction_density = matches / len(all_findings)
+
+        prompt_data = get_prompts_dict("research/orchestrator_reflection.yaml")
+        try:
+            from backend.services.research.context_builder import ResearchContextBuilder
+            builder = ResearchContextBuilder(orch._state)
+            persona = await builder.build_reflection_context(objective, depth)
+        except Exception:
+            persona = await orch._build_orchestrator_persona(objective)
+
+        system_prompt = persona + "\n\n" + prompt_data.get("system", "")
+
+        formatted_urls = [
+            f"- [{u.get('title') or u.get('source_title') or f'Source {i+1}'}]({u.get('url') or u.get('source_url', '')})"
+            for i, u in enumerate(parsed_urls)
+        ]
+        parsed_urls_text = "\n".join(formatted_urls) or "(none)"
+        accumulated_findings_text = "\n".join(f"- {f}" for f in all_findings) or "(none)"
+
+        user_prompt = prompt_data.get("user", "").format(
+            objective=objective,
+            current_depth=depth,
+            max_depth=max_depth,
+            parsed_urls=parsed_urls_text,
+            accumulated_findings=accumulated_findings_text,
+            glitch_fidelity=f"{glitch_fidelity:.2f}",
+            contradiction_density=f"{contradiction_density:.2f}",
+            source_entropy=f"{source_entropy:.2f}"
+        )
+
+        if prompt_data.get("anti_mastery"):
+            system_prompt = apply_anti_mastery_filter(system_prompt)
+            user_prompt = apply_anti_mastery_filter(user_prompt)
+
+        return {
+            "phase": "reflection",
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt,
+            "model": getattr(orch._state, "llm_provider", None) and getattr(orch._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "temperature": prompt_data.get("temperature", 0.7),
+            "max_tokens": prompt_data.get("max_tokens", 8192),
+            "cached_at": now_utc_str(),
+        }
+
     async def execute(self, orch, envelope: StepEnvelope) -> StepOutput:
         task_id = envelope.task_id
         objective = envelope.objective

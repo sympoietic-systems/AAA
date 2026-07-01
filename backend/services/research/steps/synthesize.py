@@ -105,6 +105,60 @@ class SynthesizeStep(BaseResearchStep):
     def step_type(self) -> str:
         return "synthesize"
 
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        task_id = envelope.task_id
+        objective = envelope.objective
+        all_findings = envelope.all_findings
+
+        payload: SynthesizePayload = envelope.payload
+        sources_analyzed = payload.sources_analyzed
+
+        goal = objective
+        if state.get("plan") and isinstance(state["plan"], dict):
+            goal = state["plan"].get("goal", objective)
+
+        prompt_data = get_prompts_dict("research/orchestrator_synthesize.yaml")
+        try:
+            from backend.services.research.context_builder import ResearchContextBuilder
+            builder = ResearchContextBuilder(orch._state)
+            persona = await builder.build_synthesis_context(objective)
+            system_prompt = persona + "\n\n" + prompt_data.get("system", "")
+        except Exception:
+            system_prompt = await orch._build_orchestrator_persona(objective, "research_synthesis") + "\n\n" + prompt_data.get("system", "")
+
+        parsed_urls_list = orch._get_parsed_urls(task_id)
+        from backend.services.research.steps.source_utils import apply_unified_references
+        formatted_urls, compressed_findings, _, _ = apply_unified_references(
+            parsed_urls_list, all_findings
+        )
+        sources_legend_text = "\n".join(formatted_urls) or "(none)"
+        accumulated_findings_text = (
+            "Sources Legend:\n" + sources_legend_text + "\n\n" + "\n".join(compressed_findings)
+        )
+
+        reflection = state.get("last_reflection", {})
+        prev_refl_formatted = orch._format_reflection_markdown(reflection)
+
+        user_prompt = prompt_data.get("user", "").format(
+            objective=objective, goal=goal,
+            reflection=prev_refl_formatted,
+            all_findings=accumulated_findings_text,
+        )
+
+        if prompt_data.get("anti_mastery"):
+            system_prompt = apply_anti_mastery_filter(system_prompt)
+            user_prompt = apply_anti_mastery_filter(user_prompt)
+
+        return {
+            "phase": "synthesizing",
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt,
+            "model": getattr(orch._state, "llm_provider", None) and getattr(orch._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "temperature": prompt_data.get("temperature", 0.4),
+            "max_tokens": prompt_data.get("max_tokens", 4096),
+            "cached_at": now_utc_str(),
+        }
+
     async def execute(self, orch, envelope: StepEnvelope) -> StepOutput:
         task_id = envelope.task_id
         objective = envelope.objective

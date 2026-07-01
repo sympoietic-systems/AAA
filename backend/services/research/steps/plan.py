@@ -118,6 +118,82 @@ class PlanStep(BaseResearchStep):
     def step_type(self) -> str:
         return "plan"
 
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        task_id = envelope.task_id
+        objective = envelope.objective
+        max_depth = envelope.max_depth
+        budget = envelope.budget
+
+        payload: PlanPayload = envelope.payload
+        previous_context = payload.previous_context or ""
+        inject_file_id = payload.inject_file_id
+
+        if inject_file_id and previous_context:
+            previous_context = (
+                "[Injected document will be digested against the objective "
+                "in the next phase.]\n\n" + previous_context
+            )
+
+        prompt_data = get_prompts_dict("research/orchestrator_planner.yaml")
+
+        try:
+            from backend.services.research.context_builder import ResearchContextBuilder
+            builder = ResearchContextBuilder(orch._state)
+            persona = await builder.build_orchestration_context(objective)
+        except Exception:
+            logger.warning("Failed to build orchestration context via builder, falling back to legacy persona.")
+            persona = await orch._build_orchestrator_persona(objective)
+
+        system_text = persona + "\n\n" + prompt_data.get("system", "")
+        fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
+        user_template = prompt_data.get("user", "")
+
+        digest_signals = state.get("digest_signals") or {}
+        refined_queries = digest_signals.get("refined_queries")
+
+        reflection_hints = []
+        if refined_queries:
+            reflection_hints.append("Refined search queries proposed by meta-reflection:\n" + "\n".join(f"- {q}" for q in refined_queries))
+
+        active_flags = []
+        for key in ("detected_biases", "knowledge_gaps"):
+            val = state.get(key)
+            if val:
+                active_flags.append(f"{key}: {val}")
+        if state.get("signal_flags"):
+            active_flags.append(f"signal_flags: {state['signal_flags']}")
+
+        if active_flags:
+            reflection_hints.append("Active Meta-Cognitive Signal Flags:\n" + "\n".join(f"- {f}" for f in active_flags))
+
+        combined_context = previous_context
+        if reflection_hints:
+            hints_text = "\n\n### Meta-Cognitive Feedback:\n" + "\n\n".join(reflection_hints)
+            combined_context = (combined_context + hints_text) if combined_context else hints_text.strip()
+
+        if combined_context:
+            fmt["previous_context"] = combined_context
+            user_template = prompt_data.get("user_with_context", user_template)
+
+        user_text = user_template.format(**fmt)
+        if prompt_data.get("anti_mastery"):
+            system_text = apply_anti_mastery_filter(system_text)
+            user_text = apply_anti_mastery_filter(user_text)
+
+        return {
+            "phase": "planning",
+            "persona": persona,
+            "objective": objective,
+            "max_depth": max_depth,
+            "budget_limit_usd": budget,
+            "system_prompt": system_text,
+            "user_prompt": user_text,
+            "model": getattr(orch._state, "llm_provider", None) and getattr(orch._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "temperature": prompt_data.get("temperature", 0.4),
+            "max_tokens": prompt_data.get("max_tokens", 1024),
+            "cached_at": now_utc_str(),
+        }
+
     async def execute(self, orch, envelope: StepEnvelope) -> StepOutput:
         task_id = envelope.task_id
         objective = envelope.objective

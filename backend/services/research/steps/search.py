@@ -17,6 +17,38 @@ class SearchStep(BaseResearchStep):
     def step_type(self) -> str:
         return "search"
 
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        task_id = envelope.task_id
+        objective = envelope.objective
+        payload: SearchPayload = envelope.payload
+
+        raw_queries = payload.queries
+        search_queries = []
+        direct_urls = []
+
+        for u in payload.direct_urls:
+            if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://")):
+                if u not in direct_urls:
+                    direct_urls.append(u)
+
+        for q in raw_queries:
+            if isinstance(q, str) and (q.startswith("http://") or q.startswith("https://")):
+                if q not in direct_urls:
+                    direct_urls.append(q)
+            else:
+                search_queries.append(q)
+
+        direct_urls = direct_urls[:5]
+        pending_queries = search_queries + (["Direct URL Parse Pointers"] if direct_urls else [])
+
+        return {
+            "phase": "searching",
+            "pending_queries": pending_queries,
+            "query_index": state.get("query_index", 0),
+            "top_n": orch.default_top_n,
+            "cached_at": now_utc_str(),
+        }
+
     async def execute(self, orch, envelope: StepEnvelope) -> StepOutput:
         task_id = envelope.task_id
         current_depth = envelope.current_depth

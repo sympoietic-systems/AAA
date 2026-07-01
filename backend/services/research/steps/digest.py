@@ -178,6 +178,98 @@ class DigestStep(BaseResearchStep):
     def step_type(self) -> str:
         return "digest"
 
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        task_id = envelope.task_id
+        objective = envelope.objective
+        current_depth = envelope.current_depth
+        max_depth = envelope.max_depth
+
+        payload: DigestPayload = envelope.payload
+        parsed_sources = payload.parsed_sources_cache or []
+
+        # Re-hydrate parsed_sources_cache from database if empty
+        if not parsed_sources and orch.step_repo and orch.step_result_repo:
+            steps = orch.step_repo.get_by_task(task_id)
+            parse_steps = [
+                st for st in steps
+                if st["step_type"] == "parallel_parse" and st["status"] == "completed"
+                and orch._get_step_depth(st) == current_depth
+            ]
+            if parse_steps:
+                parsed_sources = []
+                for ps in parse_steps:
+                    db_results = orch.step_result_repo.get_by_step(ps["id"])
+                    for r in db_results:
+                        parsed_sources.append({
+                            "id": r["id"],
+                            "url": r["source_url"],
+                            "title": r["source_title"],
+                            "content": r["raw_content"],
+                            "query_group": ps.get("query_group", 1),
+                        })
+
+        sources = [
+            {
+                "url": src["url"],
+                "title": src.get("title", ""),
+                "snippet": src.get("content", "")[:300] + "...",
+                "query_group": src.get("query_group"),
+            }
+            for src in parsed_sources
+        ]
+
+        system_prompt = ""
+        user_prompt = ""
+
+        if parsed_sources:
+            try:
+                first_src = parsed_sources[0]
+                prompt_data = get_prompts_dict("research/node_analyzer.yaml")
+                system_prompt = prompt_data.get("system", "")
+
+                q_group = first_src.get("query_group", 1)
+                q_text = objective
+                if state and state.get("plan") and state["plan"].get("search_queries"):
+                    sq = state["plan"]["search_queries"]
+                    if isinstance(sq, list) and 0 <= (q_group - 1) < len(sq):
+                        q_text = sq[q_group - 1]
+
+                user_prompt = prompt_data.get("user", "").format(
+                    query=q_text,
+                    goal=objective,
+                    depth=current_depth,
+                    max_depth=max_depth,
+                    parent_findings="(orchestrator — multi-source analysis)",
+                    scraped_content=first_src.get("content", "")[:3000] + "\n[Content Truncated for Preview]"
+                )
+
+                if prompt_data.get("anti_mastery"):
+                    system_prompt = apply_anti_mastery_filter(system_prompt)
+                    user_prompt = apply_anti_mastery_filter(user_prompt)
+
+                try:
+                    from backend.services.research.context_builder import ResearchContextBuilder
+                    builder = ResearchContextBuilder(orch._state)
+                    persona = await builder.build_node_context(node_query=q_text, node_goal=objective, depth=current_depth)
+                    if persona:
+                        system_prompt = persona + "\n\n" + system_prompt
+                except Exception:
+                    logger.warning("Failed to build research context persona for node digest preview")
+                    pass
+            except Exception as e:
+                logger.warning("Failed to prepare digest prompt preview: %s", e)
+
+        return {
+            "phase": "digesting",
+            "sources": sources,
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt,
+            "model": getattr(orch._state, "llm_provider", None) and getattr(orch._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "temperature": 0.3,
+            "max_tokens": 2048,
+            "cached_at": now_utc_str(),
+        }
+
     async def execute(self, orch, envelope: StepEnvelope) -> StepOutput:
         task_id = envelope.task_id
         objective = envelope.objective

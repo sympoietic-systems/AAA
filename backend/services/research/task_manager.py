@@ -292,20 +292,8 @@ class ResearchTaskManager:
                     task_id, task.get("title", "")[:80],
                 )
 
-                # Check if orchestrator is enabled (or forced by continue)
-                orch_config = self._app_state.config.get("research_orchestrator", {})
-                use_orchestrator = orch_config.get("enabled", False)
-                is_continued = (task.get("rerun_count") or 0) > 0
-
-                logger.info("EXECUTING task %s — orchestrator=%s continued=%s",
-                             task_id[:8], use_orchestrator, is_continued)
-
-                if use_orchestrator or is_continued:
-                    result = await self.orchestrator.execute(task_id)
-                else:
-                    from backend.services.research.somatic import SomaticResearchEngine
-                    engine = SomaticResearchEngine(self._app_state)
-                    result = await engine.execute(task_id)
+                logger.info("EXECUTING task %s via orchestrator", task_id[:8])
+                result = await self.orchestrator.execute(task_id)
 
                 summary = result.get("result_summary", "")
                 if not summary:

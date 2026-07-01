@@ -147,6 +147,16 @@ class ParseStep(BaseResearchStep):
     def step_type(self) -> str:
         return "parse"
 
+    async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
+        payload: ParsePayload = envelope.payload
+        search_cache = payload.search_results_cache or []
+        urls = [{"url": r.get("url", ""), "title": r.get("title", r.get("url", "")), "query_group": r.get("query_group")} for r in search_cache]
+        return {
+            "phase": "parsing",
+            "urls_to_fetch": urls,
+            "cached_at": now_utc_str(),
+        }
+
     async def execute(self, orch, envelope: StepEnvelope) -> StepOutput:
         task_id = envelope.task_id
         current_depth = envelope.current_depth
