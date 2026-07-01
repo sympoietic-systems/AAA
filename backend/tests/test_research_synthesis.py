@@ -109,7 +109,9 @@ async def test_synthesize_phase_uses_synthesis_persona():
     with patch("backend.services.research.steps.synthesize.generate_unified", AsyncMock(return_value=mock_resp)) as mock_gen:
         # Patch the persona builder helper to verify context_key
         with patch.object(orchestrator, "_build_orchestrator_persona", wraps=orchestrator._build_orchestrator_persona) as mock_persona:
-            report = await orchestrator._phase_synthesize(
+            from backend.services.research.steps.synthesize import run_synthesis
+            report = await run_synthesis(
+                orchestrator,
                 task_id=task_id,
                 objective="Understand Barad's diffractive methodology",
                 goal="Autonomous research",

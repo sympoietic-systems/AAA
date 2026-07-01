@@ -54,6 +54,7 @@ from backend.services.research.task_state import (
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.steps.base import ResearchStepRegistry
 import backend.services.research.steps
+from backend.services.research.steps.source_utils import classify_source_status, apply_unified_references
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
@@ -259,7 +260,7 @@ class SomaticResearchOrchestrator:
                 if url and url not in seen_urls and raw_content is not None:
                     seen_urls.add(url)
                     title = r.get("source_title") or url
-                    status = self._classify_source_status(raw_content)
+                    status = classify_source_status(raw_content)
                     result.append({"url": url, "title": title, "status": status})
         except Exception as e:
             logger.warning("Failed to retrieve parsed URLs: %s", e)
@@ -625,7 +626,7 @@ class SomaticResearchOrchestrator:
 
             # Compress findings and extract sources map globally
             all_to_compress = current_cycle_findings + historical_findings
-            formatted_urls, compressed_all, compressed_followups, compressed_gaps = self._apply_unified_references(
+            formatted_urls, compressed_all, compressed_followups, compressed_gaps = apply_unified_references(
                 parsed_urls_list,
                 all_to_compress,
                 signals.get("followups", []),
@@ -863,7 +864,7 @@ class SomaticResearchOrchestrator:
             
             parsed_urls_list = self._get_parsed_urls(task_id)
 
-            formatted_urls, compressed_findings, _, _ = self._apply_unified_references(
+            formatted_urls, compressed_findings, _, _ = apply_unified_references(
                 parsed_urls_list, all_findings
             )
             sources_legend_text = "\n".join(formatted_urls) or "(none)"
@@ -1318,59 +1319,3 @@ class SomaticResearchOrchestrator:
             "result_summary": result_summary,
         }
 
-    # ── Phase 1: PLAN ───────────────────────────────────────────────
-
-    async def _phase_plan(self, task_id, objective, max_depth, budget,
-                          previous_context: str = "", step_id: str = "") -> dict:
-        from backend.services.research.steps.plan import run_plan_generation
-        return await run_plan_generation(self, task_id, objective, max_depth, budget,
-                                         previous_context, step_id)
-
-    async def _tool_reflection(self, orch, task_id, objective, depth, max_depth,
-                               all_findings, digest_signals: dict = None,
-                               step_id: str = "") -> dict:
-        from backend.services.research.steps.reflect import run_deep_reflection
-        return await run_deep_reflection(self, task_id, objective, depth, max_depth, all_findings, digest_signals, step_id)
-
-
-    async def _phase_synthesize(self, task_id, objective, goal, all_findings, sources_count, step_id: str = "") -> str:
-        from backend.services.research.steps.synthesize import run_synthesis
-        return await run_synthesis(self, task_id, objective, goal, all_findings, sources_count, step_id)
-
-    async def _tool_parallel_parse_grouped(self, task_id, group_steps, search_results, plan_id) -> list[dict]:
-        from backend.services.research.steps.parse_helper import parallel_parse_grouped
-        return await parallel_parse_grouped(self, task_id, group_steps, search_results, plan_id)
-
-    async def _tool_parallel_digest_grouped(self, task_id, group_steps, parsed_sources,
-                                            queries, objective, depth, max_depth) -> list[dict]:
-        from backend.services.research.steps.digest_helper import parallel_digest_grouped
-        return await parallel_digest_grouped(self, task_id, group_steps, parsed_sources, queries, objective, depth, max_depth)
-
-    async def _analyze_source(self, task_id, url, title, content, query, goal, depth, max_depth, step_id: str = "") -> dict:
-        from backend.services.research.steps.digest_helper import analyze_source_content
-        return await analyze_source_content(self, task_id, url, title, content, query, goal, depth, max_depth, step_id)
-
-    async def _tool_reflect(self, task_id, objective, goal, depth, max_depth,
-                             all_findings, previous_reflection,
-                             digest_signals: dict = None,
-                             step_id: str = "") -> dict:
-        from backend.services.research.steps.consolidate import run_consolidation
-        return await run_consolidation(self, task_id, objective, goal, depth, max_depth, all_findings, previous_reflection, digest_signals, step_id)
-
-    async def _tool_evaluate(
-        self, task_id: str, step_id: str, objective: str,
-        depth: int, max_depth: int, sources: int,
-        reflection: dict, stagnation: int,
-    ) -> tuple[bool, str]:
-        from backend.services.research.steps.evaluate import run_evaluation
-        return await run_evaluation(self, task_id, step_id, objective, depth, max_depth, sources, reflection, stagnation)
-
-    def _classify_source_status(self, raw_content: str | None) -> str:
-        from backend.services.research.steps.source_utils import classify_source_status
-        return classify_source_status(raw_content)
-
-    def _apply_unified_references(
-        self, parsed_urls_list: list[dict], findings: list[str], followups: list[str] = None, gaps: list[str] = None
-    ) -> tuple[list[str], list[str], list[str], list[str]]:
-        from backend.services.research.steps.source_utils import apply_unified_references
-        return apply_unified_references(parsed_urls_list, findings, followups, gaps)
