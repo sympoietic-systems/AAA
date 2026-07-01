@@ -471,9 +471,8 @@ class ResearchTaskManager:
         import sys
 
         rt_config = self.config
-        print(f">>> continue_task START: manual_mode={rt_config.get('manual_mode', False)}, full_keys={list(rt_config.keys())}, enabled={rt_config.get('enabled', 'MISSING')}", flush=True)
-        import json as _json
-        print(f">>> continue_task FULL RT CONFIG: {_json.dumps({k:v for k,v in rt_config.items() if k not in ('auto_approve',)}, default=str)}", flush=True)
+        logger.debug("continue_task START: manual_mode=%s, enabled=%s",
+                     rt_config.get('manual_mode', False), rt_config.get('enabled', 'MISSING'))
 
         task = self.task_repo.get(task_id)
         if task is None:
@@ -580,8 +579,6 @@ class ResearchTaskManager:
 
     async def _execute_continued_task(self, task_id: str) -> None:
         """Execute a continued task step-by-step via orchestrator, stopping after planning."""
-        import sys
-        print(f">>> _execute_continued_task STARTED for {task_id[:8]}", flush=True)
         try:
             logger.info("EXECUTING continued task %s via orchestrator (step-by-step)", task_id[:8])
             await self._orchestrator_step_async(task_id, first_step=True)

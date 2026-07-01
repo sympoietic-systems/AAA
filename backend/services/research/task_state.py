@@ -159,10 +159,8 @@ def make_initial_state(task: dict) -> dict:
         "previous_context": extra.get("previous_context"),
         "continue_from_task_id": extra.get("continue_from_task_id"),
     }
-    logger.info("make_initial_state: step_number=%s, previous_context=%d chars",
-                 state["step_number"], len(state.get("previous_context") or ""))
-    import sys
-    print(f">>> make_initial_state: step_number={state['step_number']}, current_depth={state.get('current_depth')}", flush=True)
+    logger.debug("make_initial_state: step_number=%s, current_depth=%s",
+                 state["step_number"], state.get("current_depth"))
     return state
 
 

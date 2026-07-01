@@ -142,26 +142,20 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
             result = await crawler.arun(url=search_url)
 
             if not result:
-                print(f">>> search_via_crawl4ai: result is None/falsy", flush=True)
+                logger.warning("search_via_crawl4ai: result is None/falsy")
                 return []
 
             results: list[dict] = []
             seen_urls: set[str] = set()
 
-            print(f">>> search_via_crawl4ai: has_links={result.links is not None}, has_markdown={bool(result.markdown)}, markdown_len={len(result.markdown) if result.markdown else 0}", flush=True)
+            logger.debug("search_via_crawl4ai: has_links=%s, has_markdown=%s, markdown_len=%s",
+                         result.links is not None, bool(result.markdown), len(result.markdown) if result.markdown else 0)
 
             # Strategy 1: Crawl4AI's structured links
             if result.links:
                 external = result.links.get("external", [])
                 internal = result.links.get("internal", [])
-                print(f">>> search_via_crawl4ai: links_keys={list(result.links.keys()) if isinstance(result.links, dict) else type(result.links).__name__}", flush=True)
-                print(f">>> search_via_crawl4ai: external_links={len(external)}, internal_links={len(internal)}", flush=True)
-                if external:
-                    sample_hrefs = [l.get("href", "")[:120] for l in external[:5]]
-                    print(f">>> search_via_crawl4ai: sample external hrefs={sample_hrefs}", flush=True)
-                if internal:
-                    sample_ihrefs = [l.get("href", "")[:120] for l in internal[:5]]
-                    print(f">>> search_via_crawl4ai: sample internal hrefs={sample_ihrefs}", flush=True)
+                logger.debug("search_via_crawl4ai: external_links=%d, internal_links=%d", len(external), len(internal))
                 for link in external + internal:
                     href = link.get("href", "")
                     # Accept http, https, and protocol-relative URLs
@@ -187,9 +181,7 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
             # Strategy 2: Markdown links
             if not results and result.markdown:
                 md_links = re.findall(r'\[([^\]]{3,120})\]\((https?://[^\)]+)\)', result.markdown)
-                print(f">>> search_via_crawl4ai: strat2 md_links_found={len(md_links)}, markdown_len={len(result.markdown)}", flush=True)
-                if md_links:
-                    print(f">>> search_via_crawl4ai: strat2 sample={[(t[:60], u[:120]) for t,u in md_links[:3]]}", flush=True)
+                logger.debug("search_via_crawl4ai: strat2 md_links_found=%d", len(md_links))
                 for title, url in md_links:
                     real_url = clean_ddg_url(url)
                     if not _is_valid_http_url(real_url):
@@ -207,9 +199,7 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
             # Strategy 3: Bare URLs from raw text
             if not results and result.markdown:
                 bare_urls = re.findall(r'https?://[^\s<>"\'\)\]\#]{10,300}', result.markdown)
-                print(f">>> search_via_crawl4ai: strat3 bare_urls_found={len(bare_urls)}", flush=True)
-                if bare_urls:
-                    print(f">>> search_via_crawl4ai: strat3 sample={bare_urls[:3]}", flush=True)
+                logger.debug("search_via_crawl4ai: strat3 bare_urls_found=%d", len(bare_urls))
                 for url in bare_urls:
                     real_url = clean_ddg_url(url)
                     if not _is_valid_http_url(real_url):
@@ -227,7 +217,7 @@ async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
             if not results and result.markdown:
                 results = extract_urls_from_content(result.markdown, n)
 
-            print(f">>> search_via_crawl4ai: final result count={len(results)}", flush=True)
+            logger.debug("search_via_crawl4ai: final result count=%d", len(results))
             return results[:n]
     except ImportError:
         return []
@@ -276,10 +266,10 @@ async def _search_ddg_lite(query: str, n: int = 3) -> list[dict]:
         return []
 
     if not html_text:
-        print(f">>> _search_ddg_lite: empty response", flush=True)
+        logger.debug("_search_ddg_lite: empty response")
         return []
 
-    print(f">>> _search_ddg_lite: got {len(html_text)} bytes HTML", flush=True)
+    logger.debug("_search_ddg_lite: got %d bytes HTML", len(html_text))
 
     results: list[dict] = []
     seen: set[str] = set()
@@ -320,9 +310,7 @@ async def _search_ddg_lite(query: str, n: int = 3) -> list[dict]:
     except Exception:
         pass
 
-    print(f">>> _search_ddg_lite: parsed {len(results)} result links", flush=True)
-    for r in results[:3]:
-        print(f">>> _search_ddg_lite:   {r['url'][:100]} | {r['title'][:60]}", flush=True)
+    logger.debug("_search_ddg_lite: parsed %d result links", len(results))
 
     return results[:n]
 
@@ -344,7 +332,7 @@ async def web_search(query: str, n: int = 3, config: dict | None = None) -> list
         # Strategy 1: Direct DuckDuckGo Lite (fast, reliable, no deps)
         results = await _search_ddg_lite(query, n)
         if results:
-            print(f">>> web_search: DDG Lite direct found {len(results)} results", flush=True)
+            logger.info("web_search: DDG Lite direct found %d results", len(results))
             return results
 
         from backend.services.research.sensory_affordances import is_crawl4ai_available

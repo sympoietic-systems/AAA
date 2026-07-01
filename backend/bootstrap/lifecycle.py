@@ -120,9 +120,8 @@ async def lifespan(app: FastAPI):
 
     # 10. Wire app state
     app.state.config = config
-    import json as _json, sys
     rt = config.get("research_tasks", {})
-    print(f">>> BOOTSTRAP CONFIG: research_tasks.manual_mode={rt.get('manual_mode', 'MISSING')} (type={type(rt.get('manual_mode')).__name__})", flush=True, file=sys.stderr)
+    logger.info("BOOTSTRAP CONFIG: research_tasks.manual_mode=%s", rt.get('manual_mode', 'MISSING'))
     app.state.agent_name = agent_name
     app.state.message_repo = repos["message_repo"]
     app.state.error_repo = repos["error_repo"]

@@ -359,10 +359,7 @@ class SomaticResearchOrchestrator:
     # ── In-memory task state (for step-by-step execution) ──────────
 
     def init_task(self, task_id: str) -> dict:
-        import sys
-        print(f">>> orchestrator.init_task CALLED for {task_id[:8]}", flush=True)
         state = self._state_mgr.init_task(task_id)
-        print(f">>> orchestrator.init_task DONE: step_number={state.get('step_number')}, current_depth={state.get('current_depth')}, phase={state.get('phase')}", flush=True)
         logger.info("INIT_TASK called: task=%s step_number=%s current_depth=%s phase=%s",
                      task_id[:8], state.get("step_number"), state.get("current_depth"), state.get("phase"))
         return state
@@ -646,8 +643,8 @@ class SomaticResearchOrchestrator:
         async with self._state_mgr.locks[task_id]:
             s = self._get_state(task_id)
             phase = s["phase"]
-            import sys
-            print(f">>> execute_step: phase={phase}, depth={s.get('current_depth')}, step_number={s.get('step_number')}", flush=True)
+            logger.info("execute_step: phase=%s, depth=%s, step_number=%s",
+                        phase, s.get('current_depth'), s.get('step_number'))
 
             # On rerun, delete all downstream steps starting from the beginning of the rerun phase
             rerun_id = s.get("_rerun_step_id")
