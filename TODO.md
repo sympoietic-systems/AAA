@@ -64,5 +64,7 @@
     here some responses wa
 
 ## Search & Document Digestion Refinements (Deferred)
+    [x] Implement lightweight LLM-driven high-fidelity search result selection (prioritize academic/primary sources, filter SEO noise)
+    [x] Implement planner search query truncation safety caps (max_queries limit)
     [ ] Improve web search robustness (e.g. support fallback search backends, proxy rotation, or additional direct HTML parsing fallbacks).
     [ ] Add ability to parse PDF/document search result URLs (download, extract via pdfplumber/other extractors, and include in the digestion pipeline instead of ignoring them).

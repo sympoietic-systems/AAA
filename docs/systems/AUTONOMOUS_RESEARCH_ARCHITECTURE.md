@@ -1731,8 +1731,10 @@ SomaticResearchOrchestrator.execute(task_id)
 ├─ Phase 2 — LOOP (until EVALUATE says STOP) ──────────────
 │   │
 │   ├─ SEARCH
-│   │   _tool_web_search(query, n=3)
-│   │   → [{url, title, snippet}, …]
+│   │   _tool_web_search(query, candidate_count=10)
+│   │   → [{url, title, snippet}, …] (retrieves search_candidates, default 10)
+│   │   LLM: _select_high_fidelity_results() evaluates candidates,
+│   │        prioritizes primary/academic sources, and filters SEO noise.
 │   │   DB: INSERT research_steps + research_step_results
 │   │
 │   ├─ PARALLEL PARSE (gather — wait all)
@@ -1851,6 +1853,8 @@ research_orchestrator:
   enabled: true
   max_reflect_rounds: 3           # Default; overridable per-task
   default_top_n: 3                # Sources to fetch per search query
+  max_queries: 4                  # Maximum search queries planned per step (env: AAA_RESEARCH_MAX_QUERIES)
+  search_candidates: 10           # Candidate search results fetched before LLM selection (env: AAA_RESEARCH_SEARCH_CANDIDATES)
   satisfaction_threshold: 0.7     # Completeness score to stop
   early_stop_threshold: 0.8       # Break consolidation early if reached
   max_concurrent_parses: 3        # Async semaphore for source fetching
@@ -3791,6 +3795,8 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | **`GET /research/files` endpoint** | — | Lists indexed `perception_files` for document injection dropdown |
 | **Planner continuation prompt** | — | Updated `user_with_context` to treat prior context as interrogatable partial view, not ground truth |
 | **Per-file filtered perception retrieval** | — | `filter_file_id` param on `_retrieve_relevant_chunks` for scoped document chunk retrieval |
+| **High-fidelity search selector** | — | Lightweight LLM evaluation of candidates prioritizing primary/academic sources over SEO noise |
+| **Safety query caps** | — | Cap planned search queries per step to `max_queries` limit to prevent token bloating |
 
 ### 🔲 Planned — Phase 7: Post-Orchestrator Polish
 
