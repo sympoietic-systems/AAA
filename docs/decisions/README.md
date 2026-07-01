@@ -88,6 +88,8 @@ What becomes easier/harder?
 | [054](ADR-054-decoupled-research-pipeline-routing.md) | Decoupled Research Pipeline Routing and Typed Context Envelopes | accepted | 2026-06-30 |
 | [055](ADR-055-transient-connection-retry-in-model-pool.md) | Transient Connection Retry in Model Pool | accepted | 2026-06-30 |
 | [056](ADR-056-metabolic-reflection-pipeline-and-observability.md) | Metabolic Reflection Pipeline, Unified Prompt Building, and Critique Observability | accepted | 2026-06-30 |
+| [057](ADR-057-registry-driven-preview-architecture.md) | Decoupled and Registry-Driven Research Step Preview Architecture | accepted | 2026-07-01 |
+| [058](ADR-058-lightweight-llm-search-filtering.md) | Lightweight LLM-Driven Search Selection and Query Limits | accepted | 2026-07-01 |
 
 ## Creating a New ADR
 
