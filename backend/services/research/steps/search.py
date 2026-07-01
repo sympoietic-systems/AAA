@@ -204,7 +204,8 @@ class SearchStep(BaseResearchStep):
             group_steps[direct_group] = step_id
 
         search_results_list = []
-        candidate_count = max(10, orch.default_top_n * 3)
+        config_orchestrator = orch._state.config.get("research_orchestrator") or {}
+        candidate_count = config_orchestrator.get("search_candidates", 10)
         llm = getattr(orch._state, "llm_provider", None)
 
         for i, q in enumerate(search_queries):

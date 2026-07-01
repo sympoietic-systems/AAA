@@ -318,6 +318,8 @@ research_orchestrator:
   enabled: true                                    # Use orchestrator instead of legacy engine
   max_reflect_rounds: 3                            # Reflection rounds per iteration
   default_top_n: 3                                 # Sources to fetch per search query
+  max_queries: 4                                   # Maximum search queries planned per step
+  search_candidates: 10                            # Candidate search results fetched before LLM selection
   satisfaction_threshold: 0.7                      # Completeness score to stop
   early_stop_threshold: 0.8                        # Break reflection early if reached
   max_concurrent_parses: 3                         # Async semaphore for source fetching

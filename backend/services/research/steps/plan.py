@@ -168,9 +168,11 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
             if isinstance(result, str):
                 result = json.loads(result)
             if isinstance(result, dict) and result.get("search_queries"):
-                if len(result["search_queries"]) > 4:
-                    logger.info("Enforcing a maximum of 4 planned search queries. Truncating from %d.", len(result["search_queries"]))
-                    result["search_queries"] = result["search_queries"][:4]
+                config_orchestrator = orch._state.config.get("research_orchestrator") or {}
+                max_queries = config_orchestrator.get("max_queries", 4)
+                if len(result["search_queries"]) > max_queries:
+                    logger.info("Enforcing a maximum of %d planned search queries. Truncating from %d.", max_queries, len(result["search_queries"]))
+                    result["search_queries"] = result["search_queries"][:max_queries]
                 plan_json = result
     except Exception as e:
         logger.warning("Plan generation failed, using default: %s", e)
