@@ -2012,6 +2012,26 @@ To achieve token-efficient, cycle-aware research execution and guarantee synchro
    - Stores prompt previews in the task's cache.
    - The execution phase (`_tool_reflect`) retrieves and executes the cached prompt directly if it exists, ensuring the executed prompt matches the UI-previewed prompt exactly.
 
+#### 5.8.11 Non-Linear Metabolic Routing and Dynamic Rerouting (ADR-056)
+
+To enable self-correcting research behavior, we replaced the linear pipeline flow with a dynamic, non-linear routing system:
+- **Dynamic Rerouting:** If the `reflection` phase detects low source fidelity or strong cognitive bias (emitting signals like `GLITCH_FIDELITY_LOW` or `BIAS_DETECTED`), the metabolic router halts progression to synthesis. Instead, it reroutes the task back to the `planning` phase.
+- **Membrane Cache Purging:** Re-entering the planning phase automatically clears all cached values (such as search results, markdown parses, and intermediate findings) for subsequent phases, forcing the engine to generate fresh queries and fetch new information rather than relying on cached data.
+- **Critique Observability ("The Scar"):**Surfaces detailed reflection diagnostic outputs (e.g. framing provenance failures, contradiction densities, voice audits, and target recommendations) directly to the step detail viewer in the UI.
+- **Unified Persona Prepend:** Centralizes all persona context building in `ResearchContextBuilder.build_orchestration_context()` to ensure consistency of Symbia's attractor beliefs and commitments across every LLM call.
+
+#### 5.8.12 Decoupled Registry-Driven Step Previews (ADR-057)
+
+We migrated the monolithic and highly-coupled prompt-preview rendering logic out of `SomaticResearchOrchestrator` into a clean, modular design:
+- **Modular Step Contract:** Every step class in `backend/services/research/steps/` implements a `preview()` method with a standardized signature.
+- **Registry Delegation:** The orchestrator delegates the compilation of previews directly to the steps registry:
+  ```python
+  envelope = self.reconstruct_step_input(task_id, s, phase)
+  step_obj = ResearchStepRegistry.get_step(phase)
+  result = await step_obj.preview(self, envelope, s)
+  ```
+- **State Rehydration Parity:** Each step's `preview()` method rehydrates step history from the database in the exact same manner as its `execute()` method, guaranteeing 100% prompt parity between what is shown in the UI preview panel and what is actually run during research execution.
+
 ---
 
 ## 6. Mathematical Foundation — The Rhizomatic Utility Function
