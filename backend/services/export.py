@@ -797,51 +797,65 @@ class ExportService:
 
             parts.append(f"## {cycle_label}\n")
 
-            # ── Sources ──
-            all_source_urls: dict[str, dict] = {}
+            # ── Sources (with insights and gaps per parsed link) ──
+            # Digest step updates existing parse results' analyzed_json in-place,
+            # so we read learnings/gaps directly from parse step results.
             parse_steps = [s for s in cycle_steps if s.get("step_type") == "parallel_parse"]
-            doc_steps = [s for s in cycle_steps if s.get("step_type") == "document_digestion"]
-            for ps in parse_steps + doc_steps:
+            doc_digest_steps = [s for s in cycle_steps if s.get("step_type") == "document_digestion"]
+
+            sources: list[dict] = []  # [{url, title, learnings, gaps}]
+            seen_urls: set[str] = set()
+
+            for ps in parse_steps + doc_digest_steps:
                 for r in results_by_step.get(ps["id"], []):
                     url = r.get("source_url", "")
                     title = r.get("source_title") or url
-                    if url and url not in all_source_urls:
-                        all_source_urls[url] = {"title": title, "url": url}
+                    if not url or url in seen_urls:
+                        continue
+                    seen_urls.add(url)
 
-            if all_source_urls:
+                    analyzed = {}
+                    raw_analyzed = r.get("analyzed_json")
+                    if raw_analyzed:
+                        try:
+                            if isinstance(raw_analyzed, str):
+                                analyzed = json.loads(raw_analyzed)
+                            elif isinstance(raw_analyzed, dict):
+                                analyzed = raw_analyzed
+                        except Exception:
+                            pass
+
+                    sources.append({
+                        "title": title,
+                        "url": url,
+                        "learnings": analyzed.get("learnings", []),
+                        "gaps": analyzed.get("gaps", []),
+                    })
+
+            if sources:
                 parts.append("### Sources\n")
-                for idx, (url, info) in enumerate(all_source_urls.items(), 1):
-                    name = info["title"]
+                for idx, s in enumerate(sources, 1):
+                    name = s["title"]
                     if len(name) > 100:
                         name = name[:97] + "..."
-                    parts.append(f"- [{idx}] [{name}]({url})")
-                parts.append("")
+                    if s["url"] and s["url"] != s["title"]:
+                        parts.append(f"#### [{idx}] [{name}]({s['url']})\n")
+                    elif s["url"]:
+                        parts.append(f"#### [{idx}] {s['url']}\n")
+                    else:
+                        parts.append(f"#### [{idx}] {name}\n")
 
-            # ── Findings (from digest steps) ──
-            digest_steps = [s for s in cycle_steps if s.get("step_type") == "digest"]
-            all_findings: list[str] = []
-            if digest_steps:
-                for ds in digest_steps:
-                    for r in results_by_step.get(ds["id"], []):
-                        analyzed = {}
-                        raw_analyzed = r.get("analyzed_json")
-                        if raw_analyzed:
-                            try:
-                                if isinstance(raw_analyzed, str):
-                                    analyzed = json.loads(raw_analyzed)
-                                elif isinstance(raw_analyzed, dict):
-                                    analyzed = raw_analyzed
-                            except Exception:
-                                pass
-                        learnings = analyzed.get("learnings", [])
-                        source_title = r.get("source_title") or r.get("source_url", "")[:80]
-                        for l in learnings:
-                            all_findings.append(f"[{source_title}]: {l}")
+                    if s["learnings"]:
+                        parts.append("**Insights:**")
+                        for l in s["learnings"]:
+                            parts.append(f"- {l}")
+                        parts.append("")
 
-            if all_findings:
-                parts.append("### Findings\n")
-                for f in all_findings:
-                    parts.append(f"- {f}")
+                    if s["gaps"]:
+                        parts.append("**Gaps:**")
+                        for g in s["gaps"]:
+                            parts.append(f"- {g}")
+                        parts.append("")
                 parts.append("")
 
             # ── Consolidation (from "reflect" step — the consolidation phase) ──

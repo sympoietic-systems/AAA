@@ -3,6 +3,7 @@
 See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 4.8 and 5.
 """
 
+import re
 from typing import Any, Optional
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
@@ -828,7 +829,8 @@ async def export_research_stages(task_id: str, request: Request):
     )
 
     safe_title = (task.get("title") or "research").strip().replace(" ", "_").replace("/", "_")[:80]
-    filename = f"research_stages_{safe_title}_{task_id[:8]}.md"
+    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', safe_title).strip('_') or "research"
+    filename = f"{safe_name}.md"
 
     return PlainTextResponse(
         content=markdown,

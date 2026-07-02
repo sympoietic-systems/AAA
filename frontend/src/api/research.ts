@@ -420,15 +420,19 @@ export function downloadResearchExport(taskId: string): void {
   document.body.removeChild(a)
 }
 
-export function downloadResearchStagesExport(taskId: string): void {
-  const token = localStorage.getItem("aaa_token")
-  const qs = token ? `?token=${encodeURIComponent(token)}` : ""
+export async function downloadResearchStagesExport(taskId: string, title?: string): Promise<void> {
+  const res = await fetch(`${BASE}/research/tasks/${taskId}/export/stages`)
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
-  a.href = `${BASE}/research/tasks/${taskId}/export/stages${qs}`
-  a.download = `research_stages_${taskId.slice(0, 8)}.md`
+  a.href = url
+  const safeName = (title || "research").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 60) || "research"
+  a.download = `${safeName}.md`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 export async function getTaskNotes(taskId: string): Promise<NoteInfo[]> {
