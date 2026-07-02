@@ -2,19 +2,21 @@
 // Pattern matches ConversationLandingPage: two-column, select to inspect.
 
 import React, { memo, useState, useCallback } from "react"
+import { useNavigate } from "react-router-dom"
 import { useResearch } from "../../../hooks/useResearch"
 import type { ResearchTask } from "../../../api/research"
+import { CSS_VARS } from "../../../config/colors"
 import { CollapsibleSection } from "../agentpage/shared/CollapsibleSection"
 import { TerminalButton, KeyValueGrid, HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "../../UI"
 
 const STATUS_GROUPS: { key: string; label: string; icon: string; color: string; defaultOpen: boolean }[] = [
-  { key: "proposed",  label: "Pending Proposals",   icon: "●", color: "#f59e0b", defaultOpen: true },
-  { key: "active",    label: "Active",               icon: "●", color: "#4ade80", defaultOpen: true },
-  { key: "queued",    label: "Queued",               icon: "●", color: "#8b5cf6", defaultOpen: true },
-  { key: "completed", label: "Completed",             icon: "●", color: "#22d3ee", defaultOpen: true },
-  { key: "failed",    label: "Failed",                icon: "●", color: "#ef4444", defaultOpen: true },
-  { key: "cancelled", label: "Cancelled",             icon: "●", color: "#666666", defaultOpen: false },
-  { key: "rejected",  label: "Rejected",              icon: "●", color: "#f97316", defaultOpen: false },
+  { key: "proposed",  label: "Pending Proposals",   icon: "●", color: CSS_VARS.semanticGold,   defaultOpen: true },
+  { key: "active",    label: "Active",               icon: "●", color: CSS_VARS.semanticGreen,  defaultOpen: true },
+  { key: "queued",    label: "Queued",               icon: "●", color: CSS_VARS.semanticPurple, defaultOpen: true },
+  { key: "completed", label: "Completed",             icon: "●", color: CSS_VARS.semanticSlate,  defaultOpen: true },
+  { key: "failed",    label: "Failed",                icon: "●", color: CSS_VARS.semanticRed,    defaultOpen: true },
+  { key: "cancelled", label: "Cancelled",             icon: "●", color: CSS_VARS.uiDim,          defaultOpen: false },
+  { key: "rejected",  label: "Rejected",              icon: "●", color: CSS_VARS.semanticSand,   defaultOpen: false },
 ]
 
 const STATUS_COLORS: Record<string, string> = Object.fromEntries(STATUS_GROUPS.map(g => [g.key, g.color]))
@@ -27,7 +29,7 @@ const TRIGGER_BADGES: Record<string, string> = {
 
 /* ── Row item ── */
 const TaskRow = memo(function TaskRow({ task, isSelected }: { task: ResearchTask; isSelected: boolean }) {
-  const color = STATUS_COLORS[task.status] ?? "#666"
+  const color = STATUS_COLORS[task.status] ?? CSS_VARS.uiDim
   const badge = TRIGGER_BADGES[task.trigger_source] || task.trigger_source
   const date = task.proposed_at?.slice(0, 16) || ""
 
@@ -35,7 +37,7 @@ const TaskRow = memo(function TaskRow({ task, isSelected }: { task: ResearchTask
     <div
       data-task-id={task.id}
       className={`flex items-center gap-2 px-1.5 py-1 cursor-pointer border-l-2 transition-colors ${
-        isSelected ? "border-[#a78bfa] bg-[#1a1a2e]/50" : "border-transparent hover:bg-[#111]"
+        isSelected ? "border-action-hover bg-action-hover/5" : "border-transparent hover:bg-[#111]"
       }`}
     >
       <span className="text-[9px] leading-none shrink-0" style={{ color }}>●</span>
@@ -57,7 +59,7 @@ interface TaskPreviewProps {
 }
 
 function TaskPreview({ task, onEnter, onApprove, onCancel }: TaskPreviewProps) {
-  const color = STATUS_COLORS[task.status] ?? "#666"
+  const color = STATUS_COLORS[task.status] ?? CSS_VARS.uiDim
   const progress = task.budget_limit_usd > 0 ? Math.round((task.budget_spent_usd / task.budget_limit_usd) * 100) : 0
 
   return (
@@ -108,6 +110,7 @@ function TaskPreview({ task, onEnter, onApprove, onCancel }: TaskPreviewProps) {
 }
 
 export const ResearchPage = memo(function ResearchPage() {
+  const navigate = useNavigate()
   const { tasks, summary, loading, error, approve, cancel } = useResearch()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -123,8 +126,8 @@ export const ResearchPage = memo(function ResearchPage() {
     const el = (e.target as HTMLElement).closest("[data-task-id]") as HTMLElement | null
     if (!el) return
     const id = el.getAttribute("data-task-id")
-    if (id) window.location.href = `/research?id=${id}`
-  }, [])
+    if (id) navigate(`/research?id=${id}`)
+  }, [navigate])
 
   const groups: Record<string, ResearchTask[]> = {}
   for (const g of STATUS_GROUPS) groups[g.key] = tasks.filter(t => t.status === g.key)
@@ -136,7 +139,7 @@ export const ResearchPage = memo(function ResearchPage() {
       <HeaderContainer>
         <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5">
           <HeaderIndicator intent="gold" />
-          <HeaderLogo onClick={() => window.location.href = '/nodes'} />
+          <HeaderLogo onClick={() => navigate('/nodes')} />
           <HeaderSeparator />
           <HeaderLabel intent="gold">research</HeaderLabel>
           <span className="text-[#555] text-[10px] ml-2 normal-case hidden sm:inline">
@@ -146,17 +149,17 @@ export const ResearchPage = memo(function ResearchPage() {
         <div className="flex items-center gap-4">
           {loading && <span className="text-[#555] text-[10px] animate-pulse">polling…</span>}
           <CreasesDropdown />
-          <HeaderActionButton onClick={() => window.location.href = '/agent'}>
+          <HeaderActionButton onClick={() => navigate('/agent')}>
             agent
           </HeaderActionButton>
-          <HeaderActionButton onClick={() => window.location.href = '/research?id=new'}>
+          <HeaderActionButton onClick={() => navigate('/research?id=new')}>
             + new research
           </HeaderActionButton>
         </div>
       </HeaderContainer>
 
       {error && (
-        <div className="text-[#ef4444] text-[10px] font-mono px-6 py-1 border-b border-[#1a1a1a]">[{error}]</div>
+        <div className="text-semantic-red text-[10px] font-mono px-6 py-1 border-b border-[#1a1a1a]">[{error}]</div>
       )}
 
       {/* Two-column layout */}
@@ -189,7 +192,7 @@ export const ResearchPage = memo(function ResearchPage() {
           {selected ? (
             <TaskPreview
               task={selected}
-              onEnter={() => window.location.href = `/research?id=${selected.id}`}
+              onEnter={() => navigate(`/research?id=${selected.id}`)}
               onApprove={approve}
               onCancel={cancel}
             />

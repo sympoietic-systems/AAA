@@ -12,9 +12,10 @@ const POLL_INTERVAL = 2000
 interface Props {
   task: ResearchTask
   onClose: () => void
+  onContinued?: () => void
 }
 
-export const ContinueResearchModal = memo(function ContinueResearchModal({ task, onClose }: Props) {
+export const ContinueResearchModal = memo(function ContinueResearchModal({ task, onClose, onContinued }: Props) {
   const [objective, setObjective] = useState(task.objective)
   const [cycles, setCycles] = useState(1)
   const [budget, setBudget] = useState(task.budget_limit_usd || 0.50)
@@ -141,7 +142,11 @@ export const ContinueResearchModal = memo(function ContinueResearchModal({ task,
         document_chunk_limit: injectFileId ? chunkLimit : undefined,
       })
       onClose()
-      window.location.reload()
+      if (onContinued) {
+        onContinued()
+      } else {
+        window.location.reload()
+      }
     } catch (err: any) {
       console.error("Continue task failed:", err)
       alert(`Failed to continue task: ${err.message || err}`)

@@ -1,5 +1,6 @@
 // ResearchTaskPage — single research task detail with tabbed Info, Steps, Report, Notes.
 import { memo, useState, useEffect, useRef, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter, TerminalButton } from "../../UI"
 import type { ResearchTask, ResearchStep } from "../../../api/research"
 import { getResearchTask, getTaskUnifiedNotes, getTaskSteps, type UnifiedNoteInfo } from "../../../api/research"
@@ -33,6 +34,7 @@ function extractReportTitle(markdown: string): string | null {
 
 /* ── Shell — header, tab bar, content routing ── */
 const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask }) {
+  const navigate = useNavigate()
   const { current, orchPhase, refreshAll } = useTaskPolling(task.id, task.status, task)
   const [taskNotes, setTaskNotes] = useState<NoteInfo[]>([])
   const [unifiedNotes, setUnifiedNotes] = useState<UnifiedNoteInfo[]>([])
@@ -98,7 +100,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
     }
   }, [reportVersions.length])
 
-  const color = STATUS_COLORS[current.status] ?? "#666"
+  const color = STATUS_COLORS[current.status] ?? COLOR_PALETTE.uiDim
   const activeReport = activeReportIndex !== null && reportVersions[activeReportIndex] ? reportVersions[activeReportIndex] : null
   const reportContent = activeReport ? activeReport.markdown : (current.result_summary || "")
   const baseName = slugify(extractReportTitle(reportContent) ?? current.title)
@@ -185,11 +187,11 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       <HeaderContainer>
         <div className="flex items-center gap-2 min-w-0">
-          <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</a>
+          <button onClick={() => navigate('/research')} className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</button>
           <span className="text-[#333]">|</span>
           <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
             <HeaderIndicator intent="gold" />
-            <HeaderLogo onClick={() => window.location.href = '/nodes'} />
+            <HeaderLogo onClick={() => navigate('/nodes')} />
           </span>
           <HeaderSeparator />
           <span className="text-[#bbb] text-xs truncate font-bold">{current.title}</span>
@@ -200,7 +202,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
         </div>
         <div className="flex items-center gap-4 shrink-0">
           <CreasesDropdown />
-          <HeaderActionButton onClick={() => window.location.href = '/agent'}>
+          <HeaderActionButton onClick={() => navigate('/agent')}>
             agent
           </HeaderActionButton>
         </div>
@@ -235,10 +237,10 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
                     <button
                       key={ver.stepId || idx}
                       onClick={() => setActiveReportIndex(idx)}
-                      className={`px-1.5 py-0.5 rounded-[2px] cursor-pointer transition-colors border font-mono
-                        ${isSelected 
-                          ? "text-semantic-gold border-semantic-gold/30 bg-action-hover/5 font-bold" 
-                          : "text-ui-dim border-transparent hover:text-ui-secondary hover:bg-action-hover/5"}`}
+                      className={`px-1.5 py-0.5 cursor-pointer transition-colors font-mono
+                        ${isSelected
+                          ? "text-semantic-gold font-bold"
+                          : "text-ui-dim hover:text-ui-secondary"}`}
                     >
                       {idx === reportVersions.length - 1 ? `Cycle ${ver.depth + 1} (Latest)` : `Cycle ${ver.depth + 1}`}
                     </button>
@@ -304,7 +306,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
                         : "Unknown"
 
                   return (
-                    <div key={note.id} className="flex flex-col gap-0.5 py-1 px-1.5 hover:bg-action-hover/5 transition-colors border border-transparent rounded-[2px] group/note">
+                    <div key={note.id} className="flex flex-col gap-0.5 py-1 px-1.5 hover:bg-action-hover/5 transition-colors border-l-2 border-transparent group/note">
                       <div className="flex items-start gap-1 font-mono text-[10px] leading-tight">
                         <span className={`${labelColor} font-bold shrink-0 w-3.5`}>{label}</span>
                         <span className="text-ui-dim font-bold shrink-0">&gt;&gt;</span>
@@ -347,24 +349,25 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
 
 /* ── New Task Form Shell ── */
 const NewTaskInline = memo(function NewTaskInline() {
+  const navigate = useNavigate()
   const handleDispatch = async (payload: any): Promise<string | null> => {
     const { dispatchResearch } = await import("../../../api/research")
     const result = await dispatchResearch(payload)
-    if (result) window.location.href = `/research?id=${result.task_id}`
+    if (result) navigate(`/research?id=${result.task_id}`)
     return result?.task_id ?? null
   }
 
-  const handleClose = () => { window.location.href = "/research" }
+  const handleClose = () => { navigate("/research") }
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       <HeaderContainer>
         <div className="flex items-center gap-2">
-          <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</a>
+          <button onClick={() => navigate('/research')} className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</button>
           <span className="text-[#333]">|</span>
           <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
             <HeaderIndicator intent="gold" />
-            <HeaderLogo onClick={() => window.location.href = '/nodes'} />
+            <HeaderLogo onClick={() => navigate('/nodes')} />
           </span>
           <HeaderSeparator />
           <HeaderLabel intent="gold">new research</HeaderLabel>
@@ -397,7 +400,7 @@ export const ResearchTaskPage = memo(function ResearchTaskPage({ taskId, isNew }
   }, [taskId])
 
   if (error) return (
-    <div className="flex flex-col h-screen bg-[#0c0c0c] items-center justify-between text-[#ef4444] text-xs font-mono">
+    <div className="flex flex-col h-screen bg-[#0c0c0c] items-center justify-between text-semantic-red text-xs font-mono">
       <div className="flex-1 flex flex-col items-center justify-center">
         {error}
         <a href="/research" className="text-[#666] hover:text-[#bbb] mt-2">◀ back</a>

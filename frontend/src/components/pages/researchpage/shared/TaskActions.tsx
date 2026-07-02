@@ -1,4 +1,5 @@
 import { memo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   approveProposal, rejectProposal, cancelTask, retryTask, deleteTask,
   rerunTask, executeStep, downloadResearchStagesExport,
@@ -27,7 +28,8 @@ export const TaskActions = memo(function TaskActions({
   onRefreshTask, task,
 }: TaskActionsProps) {
   const [showContinue, setShowContinue] = useState(false)
-  const navigateHome = () => { window.location.href = "/research" }
+  const navigate = useNavigate()
+  const navigateHome = () => { navigate("/research") }
 
   const doDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this research task?")) return
@@ -112,7 +114,7 @@ export const TaskActions = memo(function TaskActions({
         </>
       )}
       {showContinue && task && (
-        <ContinueResearchModal task={task} onClose={() => setShowContinue(false)} />
+        <ContinueResearchModal task={task} onClose={() => setShowContinue(false)} onContinued={onRefreshTask} />
       )}
     </div>
   )

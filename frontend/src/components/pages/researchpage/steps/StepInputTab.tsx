@@ -2,7 +2,7 @@ import { memo } from "react"
 import type { StepPreview } from "../../../../api/research"
 import { JsonBlock } from "../../../UI"
 import { LogEntries } from "./LogEntries"
-import { parseStatus } from "./StepResultTab"
+import { parseStatus } from "./results/helpers"
 import { PHASE_LABELS } from "../constants/taskConstants"
 
 interface StepInputTabProps {
@@ -37,9 +37,7 @@ export const StepInputTab = memo(function StepInputTab({
             <>
           {liveInput.file_id && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-semantic-purple text-[8px] font-mono px-1 py-0.5 bg-semantic-purple/10 border border-semantic-purple/30 rounded-sm">
-                file
-              </span>
+              <span className="text-semantic-purple text-[8px] font-mono">▪ file</span>
               <span className="text-ui-secondary text-[9px] truncate">{liveInput.file_id}</span>
             </div>
           )}
@@ -74,7 +72,7 @@ export const StepInputTab = memo(function StepInputTab({
               <div className="text-ui-dim text-[8px] uppercase mb-1 font-mono">
                 top chunks ({liveInput.doc_chunks.length})
               </div>
-              <div className="space-y-1 border border-ui-border p-2 bg-[#080808]/30 max-h-64 overflow-y-auto">
+              <div className="space-y-1 max-h-64 overflow-y-auto">
                 {liveInput.doc_chunks.map((chunk, i) => {
                   const simDisplay = chunk.sim > 0 ? ` (sim=${chunk.sim.toFixed(2)})` : ""
                   return (
@@ -92,7 +90,7 @@ export const StepInputTab = memo(function StepInputTab({
               <div className="text-ui-dim text-[8px] uppercase mb-1 font-mono">
                 document text ({liveInput.doc_chunks.length} chunks)
               </div>
-              <div className="border border-ui-border p-2 bg-[#080808]/30 max-h-64 overflow-y-auto">
+              <div className="max-h-64 overflow-y-auto pl-2 border-l border-ui-border">
                 <div className="text-ui-secondary text-[8px] whitespace-pre-wrap break-all leading-relaxed">
                   {liveInput.doc_chunks.map(c => c.content).join("\n\n").slice(0, 1500)}
                   {liveInput.doc_chunks.reduce((acc, c) => acc + c.content.length, 0) > 1500 ? "…" : ""}
@@ -142,7 +140,7 @@ export const StepInputTab = memo(function StepInputTab({
             {parentInputUrls.map((u, i) => {
               const errorMsg = u.error
               const st = errorMsg
-                ? { icon: "✗", label: errorMsg.toLowerCase().replace("error: ", ""), color: "#b86a6a" }
+                ? { icon: "✗", label: errorMsg.toLowerCase().replace("error: ", ""), color: "var(--color-semantic-red)" }
                 : parseStatus(u.content_preview)
               return (
                 <div key={i} className="text-ui-secondary text-[9px] pl-2 border-l border-ui-border leading-relaxed flex items-center justify-between gap-2 max-w-full">
@@ -208,7 +206,7 @@ export const StepInputTab = memo(function StepInputTab({
                   {liveInput.parsed_urls && liveInput.parsed_urls.length > 0 && (
                     <div>
                       <div className="text-ui-dim text-[8px] mb-1 uppercase font-mono font-semibold">visited/parsed urls ({liveInput.parsed_urls.length})</div>
-                      <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30">
+                      <div className="space-y-0.5 max-h-36 overflow-y-auto pr-1">
                         {liveInput.parsed_urls.map((u, i) => {
                           const statusColor = u.status === "ok"
                             ? "var(--color-semantic-green)"
@@ -239,7 +237,7 @@ export const StepInputTab = memo(function StepInputTab({
                   {liveInput.accumulated_findings && liveInput.accumulated_findings.length > 0 && (
                     <div>
                       <div className="text-ui-dim text-[8px] mb-1 uppercase font-mono font-semibold">accumulated findings ({liveInput.accumulated_findings.length})</div>
-                      <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30">
+                      <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1">
                         {liveInput.accumulated_findings.map((f, i) => (
                           <div key={i} className="text-ui-secondary text-[8px] pl-2 border-l border-ui-border leading-relaxed font-mono">
                             <span className="text-ui-dim">{i+1}.</span> {f}
@@ -254,7 +252,7 @@ export const StepInputTab = memo(function StepInputTab({
                       {liveInput.digest_signals.gaps && liveInput.digest_signals.gaps.length > 0 && (
                         <div>
                           <div className="text-ui-dim text-[8px] mb-1 uppercase font-mono font-semibold">gaps to consolidate ({liveInput.digest_signals.gaps.length})</div>
-                          <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30 font-mono">
+                          <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 font-mono">
                             {liveInput.digest_signals.gaps.map((g, i) => (
                               <div key={i} className="text-semantic-gold text-[8px] pl-2 border-l border-ui-border leading-relaxed">
                                 ◇ {g}
@@ -266,7 +264,7 @@ export const StepInputTab = memo(function StepInputTab({
                       {liveInput.digest_signals.followups && liveInput.digest_signals.followups.length > 0 && (
                         <div>
                           <div className="text-ui-dim text-[8px] mb-1 uppercase font-mono font-semibold">followups ({liveInput.digest_signals.followups.length})</div>
-                          <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 border border-ui-border p-2 bg-[#080808]/30 font-mono">
+                          <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1 font-mono">
                             {liveInput.digest_signals.followups.map((f, i) => (
                               <div key={i} className="text-semantic-purple text-[8px] pl-2 border-l border-ui-border leading-relaxed">
                                 → {f}

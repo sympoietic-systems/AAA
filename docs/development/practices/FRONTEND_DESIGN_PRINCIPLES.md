@@ -446,3 +446,47 @@ All primary views (Chat/Home, Agent, Research, and Conversation NodeExplorer) mu
 *   `<HeaderLabel>`: Highlights the current page/context title using uppercase, tracking, and desaturated colors matching the indicator.
 *   `<HeaderActionButton>`: Standardizes the bracketed action button links (`[name]`). Default resting state is desaturated (`text-action-dim`), highlighting to vibrant orange (`text-action-hover`) on hover/focus. Action buttons are strictly formatted as `[text]` with no background or borders.
 
+---
+
+## 16. Research Page (`/research`)
+
+The autonomous-research views follow the same terminal-aesthetic and self-supporting principles as the `/agent` page. Two top-level routes render under `ResearchRouter` (driven by `?id=`): the task **list** (`ResearchPage`) and the single-task **detail** (`ResearchTaskPage`, with an inline `new` form).
+
+### Architecture
+
+```
+ResearchRouter (reads ?id= via useSearchParams)
+├── ResearchPage                     ← task list + right-side preview (§3/§4 two-panel)
+│   ├── TaskRow (memo'd)             ← border-l-2 selection, status dot colored by STATUS_COLORS
+│   └── TaskPreview                  ← KeyValueGrid metrics + quick actions
+└── ResearchTaskPage (?id=<uuid>)
+    ├── TaskPageInner                ← header + sub-tabs (Info • Steps • Report • Notes)
+    │   ├── InfoTab / StepsTab
+    │   ├── Report tab               ← NotableMarkdown + version selector (plain text tabs)
+    │   └── Notes tab                ← unified notes, border-l-2 rows
+    └── NewTaskInline (?id=new)      ← NewResearchForm
+
+StepsTab
+├── StepPipeline (memo'd)           ← thin shell over the pipeline model
+│   ├── usePipelineCycles()         ← cycle-model builder hook (pipeline/usePipelineCycles.ts)
+│   └── CycleBlock (memo'd)         ← one depth-cycle; renders PipelineRow list
+│       └── PipelineRow (memo'd)    ← border-l-2 selection, no rounded/box chrome
+└── StepDetailPanel
+    ├── DbStepDetail → StepResultTab (dispatcher on step_type)
+    │   └── results/*               ← Search, Parse, Plan, Digest, DocumentDigestion,
+    │                                  Reflect, Reflection, Synthesize, Evaluate, LlmMetaLog
+    └── StepPreviewPanel (dispatcher on phase)
+        └── preview/*               ← DocumentDigestion, Consolidating, Evaluating, Synthesizing
+```
+
+### Design Rules
+*   **Dispatcher + renderer split**: `StepResultTab` and `StepPreviewPanel` are thin dispatchers that select one memo'd renderer per `step_type` / `phase`. Each renderer lives in `steps/results/` or `steps/preview/` and receives only the props it needs. No renderer exceeds ~180 lines (largest is `ReflectionResult`). Pure parsing helpers (`repairTruncatedJson`, `parseStatus`, `sourceStatusLabel`) live in `steps/results/helpers.ts` — the single import source, never re-exported through a component file (keeps React Fast Refresh valid).
+*   **Pipeline model extracted**: The plan-driven cycle-grouping logic lives in the `usePipelineCycles` hook (`steps/pipeline/`), not inline in the component. `CycleBlock` and `PipelineRow` are standalone memo'd components; `types.ts`/`helpers.ts` hold shared shapes and label logic.
+*   **No container chrome**: Step detail blocks use plain `[ SECTION ]` bracket labels (`shared/BracketHeader` or `text-ui-dim text-[8px] uppercase`) + bare content. NEVER `border border-ui-border … bg-[#080808]/… rounded-sm` boxed wrappers. `max-h-*`/`overflow-y-auto` for scroll only. Subtle `border-t`/`border-l` dividers and `border-b` header rules are permitted as separators.
+*   **Badges stripped**: Type/mode badges (e.g. `⤷ direct fetch`, `▪ file`, decision `■ STOP`/`▶ CONTINUE`, audit classification, critique severity) render as plain colored text — no `bg-*/border/rounded/px/py` pill wrappers (matches §11).
+*   **Progress bars**: Metric bars keep `bg-ui-border` track + semantic-colored fill but drop `rounded-sm` for a squared terminal feel. Bars are treated as meaningful data-viz, not decorative chrome.
+*   **Selection state**: `TaskRow`, `PipelineRow`, and note rows use the §4 pattern — `border-l-2 border-action-hover bg-action-hover/5` selected, `border-transparent hover:bg-[#111]` unselected.
+*   **Semantic color only**: All status/stage colors resolve to the desaturated palette via `STATUS_COLORS` (from `constants/taskConstants.ts`, itself sourced from `config/colors.ts` `CSS_VARS`) or `var(--color-*)` for canvas/inline styles. No vibrant ad-hoc hex (`#f59e0b`, `#ef4444`, …) for status.
+*   **SPA routing (§5 best-practices)**: All in-app navigation uses `useNavigate()` from `react-router-dom` — never `window.location.href`. Post-mutation refreshes thread an explicit callback (e.g. `ContinueResearchModal` → `onContinued`) rather than `window.location.reload()`.
+*   **Header**: Uses the §15 `UnifiedHeader` sub-components with `gold` intent.
+
