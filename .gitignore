@@ -35,3 +35,4 @@ backend/.agents/*
 backend/scratch/*
 .agents/
 backend/services/data/uploads/*
+.opencode/*
