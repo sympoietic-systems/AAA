@@ -420,6 +420,17 @@ export function downloadResearchExport(taskId: string): void {
   document.body.removeChild(a)
 }
 
+export function downloadResearchStagesExport(taskId: string): void {
+  const token = localStorage.getItem("aaa_token")
+  const qs = token ? `?token=${encodeURIComponent(token)}` : ""
+  const a = document.createElement("a")
+  a.href = `${BASE}/research/tasks/${taskId}/export/stages${qs}`
+  a.download = `research_stages_${taskId.slice(0, 8)}.md`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
 export async function getTaskNotes(taskId: string): Promise<NoteInfo[]> {
   const res = await fetch(`${BASE}/research/tasks/${taskId}/notes`)
   if (!res.ok) throw new Error(`Task notes fetch failed: ${res.status}`)

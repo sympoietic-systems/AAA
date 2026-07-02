@@ -794,6 +794,49 @@ async def export_research_task(task_id: str, request: Request):
     )
 
 
+@router.get("/research/tasks/{task_id}/export/stages")
+async def export_research_stages(task_id: str, request: Request):
+    """Export all research stages and findings as a clean markdown file,
+    organized by cycle. Excludes raw source materials — only source links and names.
+    """
+    from fastapi.responses import PlainTextResponse
+
+    state = request.app.state
+    manager = state.research_task_manager
+    note_repo = getattr(state, "note_repo", None)
+    step_repo = getattr(state, "research_step_repo", None)
+    result_repo = getattr(state, "research_step_result_repo", None)
+    plan_repo = getattr(state, "research_plan_repo", None)
+
+    task = manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Research task not found")
+
+    steps = step_repo.get_by_task(task_id) if step_repo else []
+    step_results = result_repo.get_by_task(task_id) if result_repo else []
+    plan = plan_repo.get_by_task(task_id) if plan_repo else None
+    notes = note_repo.get_notes_by_task(task_id) if note_repo else []
+
+    from backend.services.export import ExportService
+
+    markdown = ExportService.build_research_stages_export(
+        task=task,
+        steps=steps,
+        step_results=step_results,
+        plan=plan,
+        notes=notes,
+    )
+
+    safe_title = (task.get("title") or "research").strip().replace(" ", "_").replace("/", "_")[:80]
+    filename = f"research_stages_{safe_title}_{task_id[:8]}.md"
+
+    return PlainTextResponse(
+        content=markdown,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/research/tasks/{task_id}/export/json")
 async def export_research_task_json(task_id: str, request: Request):
     """Export a single research task and all its children as structured JSON for re-import."""

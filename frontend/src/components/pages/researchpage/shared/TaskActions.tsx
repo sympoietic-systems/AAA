@@ -1,7 +1,7 @@
 import { memo, useState } from "react"
 import {
   approveProposal, rejectProposal, cancelTask, retryTask, deleteTask,
-  rerunTask, executeStep,
+  rerunTask, executeStep, downloadResearchStagesExport,
 } from "../../../../api/research"
 import { TerminalButton } from "../../../UI"
 import { doActionAndReload } from "./taskHelpers"
@@ -71,6 +71,7 @@ export const TaskActions = memo(function TaskActions({
           <TerminalButton onClick={() => doActionAndReload(() => rerunTask(taskId))} intent="edit">⟳ rerun</TerminalButton>
           <TerminalButton onClick={() => doActionAndReload(() => retryTask(taskId))} intent="neutral">↻ retry (clone)</TerminalButton>
           <TerminalButton onClick={doContinue} intent="cyan">▶ continue deeper</TerminalButton>
+          <TerminalButton onClick={() => downloadResearchStagesExport(taskId)} intent="neutral">⇲ export stages</TerminalButton>
           <TerminalButton onClick={doDelete} intent="delete">✕ delete</TerminalButton>
         </>
       )}
@@ -79,6 +80,7 @@ export const TaskActions = memo(function TaskActions({
           <TerminalButton onClick={() => doActionAndReload(() => rerunTask(taskId))} intent="edit">⟳ rerun</TerminalButton>
           <TerminalButton onClick={() => doActionAndReload(() => retryTask(taskId))} intent="save">↻ retry (clone)</TerminalButton>
           <TerminalButton onClick={doContinue} intent="cyan">▶ continue deeper</TerminalButton>
+          <TerminalButton onClick={() => downloadResearchStagesExport(taskId)} intent="neutral">⇲ export stages</TerminalButton>
           <TerminalButton onClick={doDelete} intent="delete">✕ delete</TerminalButton>
         </>
       )}
@@ -87,6 +89,7 @@ export const TaskActions = memo(function TaskActions({
           <TerminalButton onClick={() => doActionAndReload(() => rerunTask(taskId))} intent="edit">⟳ rerun</TerminalButton>
           <TerminalButton onClick={() => doActionAndReload(() => retryTask(taskId))} intent="neutral">↻ retry (clone)</TerminalButton>
           <TerminalButton onClick={doContinue} intent="cyan">▶ continue deeper</TerminalButton>
+          <TerminalButton onClick={() => downloadResearchStagesExport(taskId)} intent="neutral">⇲ export stages</TerminalButton>
           <TerminalButton onClick={doDelete} intent="delete">✕ delete</TerminalButton>
         </>
       )}

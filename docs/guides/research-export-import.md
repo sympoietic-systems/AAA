@@ -1,16 +1,58 @@
 # Research Export / Import
 
-Transfer research tasks from one AAA server to another via JSON.
+Export and transfer research tasks in multiple formats — full data dumps,
+clean process traces, or structured JSON for re-import.
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/research/tasks/{id}/export/json` | Export a single task |
-| GET | `/api/research/export/all` | Export all tasks |
-| POST | `/api/research/import` | Import task(s) |
+| GET | `/api/research/tasks/{id}/export` | Export full task as Markdown (raw data: branches, assets, steps, notes) |
+| GET | `/api/research/tasks/{id}/export/stages` | Export research stages & findings as clean Markdown (no raw content) |
+| GET | `/api/research/tasks/{id}/export/json` | Export a single task as structured JSON |
+| GET | `/api/research/export/all` | Export all tasks as JSON array |
+| POST | `/api/research/import` | Import task(s) from JSON |
 
 All endpoints require Bearer token auth (same as all `/api` routes).
+
+## Markdown Exports
+
+Two Markdown export formats are available, serving different purposes:
+
+### Full Export (`/export`)
+
+Complete data dump including raw scraped content. Suitable for archival or offline review.
+
+```bash
+curl -H "Authorization: Bearer <token>" \
+  http://localhost:8000/api/research/tasks/<TASK_ID>/export \
+  -o research_full.md
+```
+
+**Includes:** YAML frontmatter, metadata, objective, proposal rationale, result summary,
+research plan, all branches with queries/goals, scraped assets with raw markdown (truncated),
+orchestrator step details, and notes.
+
+### Stages Export (`/export/stages`)
+
+Clean process trace organized by research cycle. Excludes raw source material —
+only source links and names. Suitable for sharing the research methodology
+and findings without the harvested content.
+
+```bash
+curl -H "Authorization: Bearer <token>" \
+  http://localhost:8000/api/research/tasks/<TASK_ID>/export/stages \
+  -o research_stages.md
+```
+
+**Includes:** Objectives, limits (depth/breadth/budget), document digestion results
+(learnings, follow-ups, gaps), and per-cycle breakdown:
+- **Sources** — links with names (no raw content)
+- **Findings** — learnings from each source with source attribution
+- **Consolidation** — completeness score, key insights, remaining gaps, next queries
+- **Meta-Reflection** — biases detected, cognitive metrics (glitch fidelity, source entropy, etc.)
+- **Evaluation** — stop/continue decision and rationale
+- **Synthesis** — final report (if task completed)
 
 ## Export All Tasks
 
