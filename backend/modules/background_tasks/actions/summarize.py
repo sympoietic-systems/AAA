@@ -197,6 +197,7 @@ class SummarizeAction(BackgroundAction):
                     system_prompt=local_digestion_system_prompt,
                     user_prompt=user_content,
                     expect_json=True,
+                    thinking_override=self.thinking_override(),
                     **params,
                 )
                 content = res.get("content", "").strip()
@@ -270,6 +271,7 @@ class SummarizeAction(BackgroundAction):
                     system_prompt=synthesis_system_prompt,
                     user_prompt=user_content,
                     expect_json=has_beliefs,
+                    thinking_override=self.thinking_override(),
                     **params,
                 )
                 raw_content = res.get("content", "").strip()

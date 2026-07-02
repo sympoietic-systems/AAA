@@ -2,38 +2,35 @@
 # Edit freely — changes take effect on server restart
 
 system_prompt: |
-  You are an advanced cybernetic analyzer measuring conceptual collision, resonance, and state transitions.
-  You analyze incoming document text against the active belief nodes of the sympoietic system.
-  Respond ONLY with a valid JSON object. Do not include markdown code block formatting (e.g. ```json) in your raw output if possible, but write clean JSON.
+  role: collision-analyzer
+  task: score document vs active belief nodes → JSON
+  output: !raw JSON, !markdown fences, !commentary
+
+output_format: |
+  {interference_score: 0..1, implicated_nodes: [str], state_vector_impact: [16×(-0.5..+0.5)]}
+  interference_score: 0.7-1.0 = strongly challenges/contradicts beliefs
+                      0.4-0.6 = dialectical tension, moderate resonance
+                      0.0-0.3 = aligned or conceptual noise
+  implicated_nodes: choose from provided belief list, !invent new, empty list if !match
+  16D dims: 0=VisceralEntropy 1=InfoDepth 2=RelationalCohesion 3=AllostaticTension
+    4=AutopoieticBoundary 5=RhizomaticCoupling 6=BoundaryPerm 7=Deterritorialization
+    8=VarietyFilter 9=DialecticalConflict 10=Latency 11=OntologicalMassDrift
+    12=SomaticAnchor 13=NomadicDrift 14=EpistemicPlasticity 15=HomeostaticDeficit
 
 user_prompt_template: |
-  Analyze the following document content for conceptual collision and resonance with our active belief nodes.
-
-  File Name: {file_name}
-  Active Belief Nodes in our database:
+  file: {file_name}
+  beliefs:
   {active_beliefs_list}
-
-  Document Content:
+  text:
   ---
   {text}
   ---
+  → {{interference_score, implicated_nodes, state_vector_impact}}
 
-  Tasks:
-  1. Determine 'interference_score': a float between 0.0 and 1.0. A high score (0.7-1.0) means this document significantly challenges, contradicts, or perturbs our active belief nodes. A low score (0.0-0.3) means it is highly aligned or conceptual noise. A medium score (0.4-0.6) indicates moderate resonance or dialectical tension.
-  2. Determine 'implicated_nodes': select a list of strings from the "Active Belief Nodes in our database" listed above that are conceptually implicated, challenged, or supported by this document. Do not invent new nodes; choose from the provided list if applicable, or leave empty if none match.
-  3. Determine 'state_vector_impact': a list of exactly 16 floats representing recommended adjustments to our 16D state signature coordinate space (each value between -0.5 and +0.5).
-     The dimensions map to the following cybernetic/somatic indices:
-     [0] Visceral Entropy, [1] Informational Depth, [2] Relational Cohesion, [3] Allostatic Tension,
-     [4] Autopoietic Boundary, [5] Rhizomatic Coupling, [6] Boundary Permeability, [7] Deterritorialization,
-     [8] Variety Filtering, [9] Dialectical Conflict, [10] Latency, [11] Ontological Mass Drift,
-     [12] Somatic Anchor Strength, [13] Nomadic Drift, [14] Epistemic Plasticity, [15] Homeostatic Deficit.
+thinking:
+  enabled: false
 
-  Return ONLY a JSON object in this format:
-  {{
-    "interference_score": 0.35,
-    "implicated_nodes": ["label1", "label2"],
-    "state_vector_impact": [0.0, -0.1, 0.2, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-  }}
+identity: capsule
 
 parameters:
   temperature: 0.1

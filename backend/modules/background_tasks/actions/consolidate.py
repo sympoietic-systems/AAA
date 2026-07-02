@@ -31,6 +31,7 @@ class ConsolidateAction(BackgroundAction):
             provider,
             system_prompt=self.system_prompt(),
             user_prompt=f"Perform sedimentation on this encounter:\n\n{input_content}",
+            thinking_override=self.thinking_override(),
             **params,
         )
 

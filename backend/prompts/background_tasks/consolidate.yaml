@@ -81,6 +81,10 @@ system_prompt: |
   - tendrils should link nodes that form a conceptual cluster.
   - agential_symmetry must be one of: imposed, negotiated, co-constituted.
 
+thinking:
+  enabled: true
+  effort: "high"
+
 parameters:
   temperature: 0.3
   max_tokens: 3072

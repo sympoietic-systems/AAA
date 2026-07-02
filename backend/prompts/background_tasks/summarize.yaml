@@ -105,6 +105,10 @@ global_synthesis_with_beliefs_prompt: |
     "state_vector_impact": [0.0, -0.1, 0.2, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
   }
 
+thinking:
+  enabled: true
+  effort: "high"
+
 parameters:
   temperature: 0.1
   max_tokens: 4096

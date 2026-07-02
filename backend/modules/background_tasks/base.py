@@ -43,5 +43,14 @@ class BackgroundAction(ABC):
     def default_params(self) -> dict:
         return self._load_prompt().get("parameters", {})
 
+    def thinking_override(self) -> bool | None:
+        thinking_cfg = self._load_prompt().get("thinking", {})
+        if not thinking_cfg:
+            return None
+        return thinking_cfg.get("enabled")
+
+    def identity_mode(self) -> str:
+        return self._load_prompt().get("identity", "full")
+
     @abstractmethod
     async def execute(self, provider: BaseLLMProvider, payload: dict) -> dict: ...

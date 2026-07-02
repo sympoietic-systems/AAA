@@ -251,7 +251,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 build_google_thinking_disabled(body)
             elif is_anthropic:
                 body["thinking"] = {"type": "disabled"}
-            elif merged_params.get("thinking_budget") == 0:
+            else:
                 body["thinking"] = {"type": "disabled"}
 
             clean_thinking_params(merged_params)
@@ -699,6 +699,7 @@ async def generate_unified(
     messages: Optional[list[dict]] = None,
     expect_json: bool = False,
     fallback_value: Optional[dict] = None,
+    thinking_override: Optional[bool] = None,
     **params
 ) -> dict:
     """Standardized wrapper for LLM calls with automatic message list construction, cleaning, and JSON parsing."""
@@ -720,6 +721,8 @@ async def generate_unified(
 
     # 2. Invoke the provider
     try:
+        if thinking_override is not None:
+            params["thinking_override"] = thinking_override
         res = await provider.generate(messages=formatted_messages, **params)
         content = res.get("content", "").strip()
         thinking = res.get("thinking")

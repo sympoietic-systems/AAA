@@ -96,3 +96,24 @@ def load_persona_for_context(protocol_key: str = "conversation") -> str:
     path = get_identity_yaml_path()
     identity = load_identity(path)
     return get_persona_text(identity, protocol_key)
+
+
+_CAPSULE_CACHE: str | None = None
+
+
+def get_identity_capsule() -> str:
+    """Return the compressed identity capsule for lightweight background tasks."""
+    global _CAPSULE_CACHE
+    if _CAPSULE_CACHE is not None:
+        return _CAPSULE_CACHE
+    capsule_path = (
+        Path(__file__).resolve().parent.parent
+        / "prompts" / "personality" / "identity_capsule.yaml"
+    )
+    if capsule_path.exists():
+        with open(capsule_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+            _CAPSULE_CACHE = data.get("capsule", "").strip()
+    else:
+        _CAPSULE_CACHE = ""
+    return _CAPSULE_CACHE

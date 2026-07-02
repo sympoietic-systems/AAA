@@ -26,6 +26,7 @@ class ConversationSummaryAction(BackgroundAction):
             provider,
             system_prompt=self.system_prompt(),
             user_prompt=f"Write a consolidation summary of this conversation:\n\n{text}",
+            thinking_override=self.thinking_override(),
             **params,
         )
 

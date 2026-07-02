@@ -58,6 +58,7 @@ Metabolic Feedback Signals:
             system_prompt=assembled_system_prompt,
             user_prompt=user_prompt,
             expect_json=True,
+            thinking_override=self.thinking_override(),
             **params,
         )
 

@@ -19,6 +19,7 @@ class SemanticKnotAction(BackgroundAction):
             provider,
             system_prompt=self.system_prompt(),
             user_prompt=f"Here is the conversation segment to distill:\n\n{text}",
+            thinking_override=self.thinking_override(),
             **params,
         )
 

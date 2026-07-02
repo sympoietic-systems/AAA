@@ -81,6 +81,7 @@ class GenerateTitleAction(BackgroundAction):
             provider,
             system_prompt=self.system_prompt(),
             user_prompt=f"Name this encounter based on its opening: \"{text[:300]}\"",
+            thinking_override=self.thinking_override(),
             **params,
         )
 

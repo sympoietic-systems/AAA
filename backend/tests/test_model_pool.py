@@ -12,6 +12,7 @@ from backend.modules.llm_client import (
     KeyManager,
     RateLimitError,
     OpenAICompatibleProvider,
+    generate_unified,
 )
 
 class TestModelPool(unittest.IsolatedAsyncioTestCase):
@@ -291,6 +292,41 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         
         # Since both failed, key is exhausted
         self.assertIsNone(provider._google_key_mgr.get_available_key())
+
+    @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate")
+    async def test_generate_unified_forwards_thinking_override(self, mock_generate):
+        mock_generate.return_value = {"content": "ok", "thinking": None, "model": "test"}
+        provider = OpenAICompatibleProvider(
+            api_key="key", model="test-model",
+            api_base="https://api.example.com", provider_name="test",
+            thinking=False,
+        )
+        result = await generate_unified(
+            provider,
+            system_prompt="s",
+            user_prompt="u",
+            thinking_override=True,
+        )
+        self.assertEqual(result["content"], "ok")
+        call_kwargs = mock_generate.call_args[1]
+        self.assertTrue(call_kwargs.get("thinking_override"))
+
+    @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate")
+    async def test_generate_unified_thinking_override_absent(self, mock_generate):
+        mock_generate.return_value = {"content": "ok", "thinking": None, "model": "test"}
+        provider = OpenAICompatibleProvider(
+            api_key="key", model="test-model",
+            api_base="https://api.example.com", provider_name="test",
+            thinking=False,
+        )
+        result = await generate_unified(
+            provider,
+            system_prompt="s",
+            user_prompt="u",
+        )
+        self.assertEqual(result["content"], "ok")
+        call_kwargs = mock_generate.call_args[1]
+        self.assertNotIn("thinking_override", call_kwargs)
 
 if __name__ == "__main__":
     unittest.main()

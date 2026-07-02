@@ -36,6 +36,10 @@ system_prompt: |
     "changelog": "Auto-revised: [detailed summary of signals and changes made]"
   }
 
+thinking:
+  enabled: true
+  effort: "high"
+
 parameters:
   temperature: 0.2
   max_tokens: 2048

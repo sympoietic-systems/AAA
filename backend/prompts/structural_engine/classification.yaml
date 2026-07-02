@@ -1,13 +1,15 @@
 # Structural Engine Taxonomy Classification Prompts
 # Path: backend/prompts/structural_engine/classification.yaml
 
-system_prompt: "You are a cybernetic taxonomy classifier. Output ONLY raw JSON, no markdown, no explanation outside the JSON."
+system_prompt: "role: cybernetic-taxonomy-classifier | output: !raw JSON, !markdown, !commentary"
 
 user_prompt_template: |
-  Score this text across 16 cybernetic dimensions (each 0.0-1.0). Output ONLY this JSON, no markdown fences:
-  {{"scores":[16 floats],"justification":"brief reason"}}
+  Score this text across 16 cybernetic dimensions (0.0-1.0 each).
+  dims: 01=Homeostatic(stability,dampening) 02=Amplifying(positive feedback,cascade) 03=Cyclic(loops,self-ref) 04=Bifurcated(thresholds,phase shifts) 05=Decentralized(distributed,mesh) 06=Rhizomatic(lateral network links) 07=BoundaryPerm(border selectivity) 08=Recursion(nested systems,fractals) 09=VarietyFilter(attenuation,control) 10=Negentropic(ordered complexity) 11=TemporalLag(feedback delay) 12=AttractorDepth(resilience vs plasticity) 13=Symbiotic(co-evolution,coupling) 14=Nomadic(boundary crossing,drift) 15=Conversational(dialogue dynamics) 16=SubstrateMaterial(physical vs virtual)
 
-  Dimensions: 01:Homeostatic(stability,dampening) 02:Amplifying(positive feedback,cascade) 03:Cyclic(loops,self-ref) 04:Bifurcated(thresholds,phase shifts) 05:Decentralized(distributed,mesh) 06:Rhizomatic(lateral network links) 07:BoundaryPerm(border selectivity) 08:Recursion(nested systems,fractals) 09:VarietyFilter(attenuation,control) 10:Negentropic(ordered complexity) 11:TemporalLag(feedback delay) 12:AttractorDepth(resilience vs plasticity) 13:Symbiotic(co-evolution,coupling) 14:Nomadic(boundary crossing,drift) 15:Conversational(dialogue dynamics) 16:SubstrateMaterial(physical vs virtual)
+  output: {{"scores":[16×float],"justification":"brief"}}
 
   TEXT:
   {text}
+
+output_format: '{{"scores":[16×0..1],"justification":"brief reason"}}'

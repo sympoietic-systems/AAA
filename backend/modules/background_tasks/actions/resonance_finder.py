@@ -39,6 +39,7 @@ class ResonanceFinderAction(BackgroundAction):
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 expect_json=True,
+                thinking_override=self.thinking_override(),
                 **params
             )
             data = res.get("json_data") or {}

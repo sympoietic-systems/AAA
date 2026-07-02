@@ -220,6 +220,9 @@ llm_compression:
 # Models are tried in order. If one is rate-limited, the next is used.
 # When all are exhausted, falls back to the fallback model.
 background_llm:
+  thinking:
+    enabled: false    # background tasks do not need chain-of-thought reasoning
+    effort: "low"
   models:
     - "google/gemma-4-26b-a4b-it:free"
     - "deepseek/deepseek-v4-flash-20260423:free"

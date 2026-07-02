@@ -76,6 +76,10 @@ system_prompt: |
     "reason": "Clear explanation of why the skill was refused (e.g. duplicate of existing skill x, violates anti-mastery, unnecessary)."
   }
 
+thinking:
+  enabled: true
+  effort: "high"
+
 parameters:
   temperature: 0.2
   max_tokens: 2048

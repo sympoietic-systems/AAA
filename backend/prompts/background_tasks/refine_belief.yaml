@@ -23,6 +23,10 @@ system_prompt: |
     "rationale": "A brief explanation of the refinement choices, conceptual grounding, and overlap analysis."
   }
 
+thinking:
+  enabled: true
+  effort: "high"
+
 parameters:
   temperature: 0.2
   max_tokens: 1024
