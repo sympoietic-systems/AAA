@@ -70,6 +70,35 @@ Changes:
 
 Usage: add `thinking: {enabled: true, effort: "high"}` to any prompt YAML to enable deep reasoning for that specific phase. Omit the block to keep the default (fast/no thinking).
 
+### 2026-07-02 Update — Background Task Override + Caveman Prompt Compression
+
+The two-speed brain was extended from research-only to all background task actions:
+
+1. **`generate_unified()` now natively supports `thinking_override`** — any caller can pass `thinking_override=True|False` without manually constructing `**params`. The function forwards it to `provider.generate()`.
+
+2. **All 11 background task actions** now pass `thinking_override=self.thinking_override()` to every `generate_unified()` call. The value comes from the prompt YAML `thinking` field — no hard-coded logic in action files.
+
+3. **Per-task YAML thinking declarations** — each prompt YAML declares its thinking preference:
+   - COMPRESS tasks (title, document_collision, semantic_knot, resonance_finder, dream_topic_decision): `thinking: {enabled: false}`
+   - NORMAL tasks (consolidate, summarize, conversation_summary, refine_skill, refine_belief, metabolize_skill): `thinking: {enabled: true, effort: "high"}`
+
+4. **DeepSeek native API fix** — DeepSeek's API defaults thinking to `enabled` even when no thinking config is sent. The provider now explicitly sends `{"thinking": {"type": "disabled"}}` for all OpenAI-compatible providers when thinking=False, covering the previously-missed raw DeepSeek case.
+
+5. **Caveman-compressed prompt architecture** — 9 structural/simple-background prompt YAMLs rewritten in caveman grammar:
+   - Grammar: drop articles/filler/hedging, use symbols (`→ !`), fragments ok
+   - Struct notation: `role:`, `task:`, `output_format:`, explicit JSON schemas
+   - Critical domain definitions (scoring rubrics, concept meanings) preserved
+   - Estimted ~50-60% token reduction per prompt
+
+6. **Identity capsule** — a ~10-line compressed persona (`identity_capsule.yaml`) for COMPRESS tasks that need personality context without the full identity. Contains core axioms, voice constraints, and Cartesian vocabulary rules. Identity YAML declares mode: `identity: capsule | full | none`.
+
+7. **Config additions**:
+   - `background_llm.thinking.enabled: false` — background tasks default to fast mode
+   - `structural_llm.thinking.enabled: false` — structural scoring default to fast mode
+   - Env overrides: `AAA_BACKGROUND_THINKING`, `AAA_STRUCTURAL_THINKING`
+
+8. **Provider default hardening** — `background_llm` and `structural_llm` config blocks now explicitly declare `thinking.enabled: false`, ensuring they default to fast mode regardless of the main `llm.thinking` setting.
+
 ---
 
 ## Consequences

@@ -120,12 +120,18 @@ vision_llm:
 # Endpoint routing is resolved automatically from the model prefix
 # (google_router/, deepseek_router/, openrouter_router/) — no api_base needed.
 structural_llm:
+  thinking:
+    enabled: false            # Structural scoring defaults to fast mode
+    effort: "low"
   models:
     - "google_router/gemini-3.5-flash"
     - "google_router/gemini-3.1-flash-lite"
   fallback_model: "openrouter_router/google/gemma-4-26b-a4b-it:free"
 # ── Background Tasks ──────────────────────────────
 background_llm:
+  thinking:
+    enabled: false
+    effort: "low"
   models:
     - "google/gemma-4-26b-a4b-it:free"
   fallback_model: "openrouter/free"
@@ -174,8 +180,15 @@ and `top_p` are silently ignored by the model.
 
 **Per-request override**: Prompt YAML files (e.g. `orchestrator_planner.yaml`)
 can declare `thinking: {enabled: true, effort: "high"}` to enable thinking
-for that specific LLM call, independent of the global setting. See
+for that specific LLM call, independent of the global setting. All background
+task prompt YAMLs declare their thinking preference inline. See
 ADR-021 for details.
+
+**Prompt compression**: Structural and lightweight background task prompts
+use caveman-encoded grammar (dropped articles/filler, symbols, struct notation)
+to reduce input tokens by ~50-60%. Reflective tasks (consolidation, summarization,
+skill/belief refinement) retain full prose prompts. The compressed prompts carry
+an `output_format` field with explicit JSON schemas to constrain model output.
 
 ### Embedding
 
@@ -216,6 +229,7 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_BACKGROUND_FALLBACK_MODEL` | `openrouter/free` | Model used when all pool models are rate-limited |
 | `AAA_BACKGROUND_API_BASE` | `https://openrouter.ai/api/v1` | API base for background models |
 | `AAA_BACKGROUND_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key |
+| `AAA_BACKGROUND_THINKING` | `false` | Enable thinking for background tasks (overrides config default) |
 
 ### Vision Model Pool
 
@@ -235,6 +249,7 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_STRUCTURAL_FALLBACK_MODEL` | — | Model used when all pool models are rate-limited |
 | `AAA_STRUCTURAL_API_BASE` | (auto-routed from prefix) | API base for structural models |
 | `AAA_STRUCTURAL_API_KEY` | (inherits `AAA_LLM_API_KEY`) | Optional separate API key for structural tasks |
+| `AAA_STRUCTURAL_THINKING` | `false` | Enable thinking for structural scoring (overrides config default) |
 
 ### Database
 
