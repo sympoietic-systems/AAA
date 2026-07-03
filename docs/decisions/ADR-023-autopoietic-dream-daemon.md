@@ -85,4 +85,12 @@ The dream daemon now uses full LLM-based structural scoring (`use_llm_scorer=Tru
 ### Affected Code Paths
 - `backend/metabolisation/daemon.py`: Dream prompt and response structural scoring now uses `use_llm_scorer=True`, with `get_justification()` called after scoring and `structural_justification` passed to both `message_repo.insert()` calls.
 - `backend/scripts/digest_worker.py`: System messages for ingested documents now also store `structural_justification`.
+
+## Amendments
+
+### 2026-07-03 — Ghost ecology decoupled from dream budget
+
+Ghost ecology (belief merging, fading, resurrection) was previously inside `check_and_trigger_dream()`, gated by both the two-tier dream budget (`MAX_DAILY_DREAMS`) and the idle threshold. Since ghost ecology is a background maintenance task (not a dream/reflection cycle), it now runs on its **own hourly schedule** in `_run_loop()`, independent of dream budget and idle gates.
+
+The dream budget (`MAX_DAILY_DREAMS`, `SHORT_WINDOW_MAX`) now gates only the actual LLM dream cycles (nomadic synthesis, intra-active monologue, web harvesting, compaction, somatic drift). All other background maintenance (consolidation, research scanning, skill metabolism, belief atrophy, ghost ecology) runs independently from the dream daemon's core loop.
 - `backend/api/routes.py` (`_insert_system_message`): System message inserts during file ingestion now also store `structural_justification`.

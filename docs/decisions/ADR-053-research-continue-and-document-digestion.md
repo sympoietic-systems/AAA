@@ -280,3 +280,11 @@ Crawl4AI produced 0 external/internal links for `lite.duckduckgo.com/lite/` page
 #### URL Validation
 
 Search results included garbage URLs like `https://html` (no proper hostname). **Fix**: `_is_valid_http_url()` validates URLs must have a hostname with dot (≥4 chars). Applied to all 3 extraction strategies. Also fixed `clean_ddg_url()` to resolve protocol-relative `//` URLs to `https://`.
+
+## Amendments
+
+### 2026-07-03 — Research step findings metabolized into belief system
+
+Each research step that produces conceptual findings (`document_digestion`, `digesting`, `consolidating`, `reflection`, `synthesizing`) now feeds its output through `belief_metabolism.metabolize_perception()`. This enables research findings to nucleate new proto-beliefs and accrete existing beliefs, closing the loop between autonomous research and belief ecology.
+
+Implementation: `SomaticResearchOrchestrator._metabolize_step()` computes a 16D structural signature via `LexiconScorer` from the step's findings text, then calls `metabolize_perception()` with `source_type="research_step"` (weight: 0.35). Skills are already injected into research LLM prompts via `ResearchContextBuilder` using the research objective for on-demand skill matching.

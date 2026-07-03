@@ -37,6 +37,7 @@ from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import log_research_meta, now_utc_str
 from backend.utils.concurrency import ensure_semaphore
 from backend.utils.anti_mastery import apply_anti_mastery_filter
+from backend.modules.structural_engine import LexiconScorer
 from backend.services.research.task_state import (
     TaskStateManager,
     StepEnvelope,
@@ -140,6 +141,7 @@ class SomaticResearchOrchestrator:
     def __init__(self, app_state: Any):
         self._state = app_state
         self._semaphore: Optional[asyncio.Semaphore] = None
+        self._lexicon = LexiconScorer()
         self._state_mgr = TaskStateManager(
             task_repo=app_state.research_task_repo,
             plan_repo=getattr(app_state, "research_plan_repo", None),
@@ -668,6 +670,47 @@ class SomaticResearchOrchestrator:
 
     # ── Main step execution ───────────────────────────────────────
 
+    async def _metabolize_step(self, task_id: str, phase: str, findings: list[str]) -> None:
+        """Feed research findings into the belief system for nucleation/accretion.
+
+        Runs after each research step that produces conceptual findings.
+        Computes a 16D structural signature from the findings text and feeds
+        it through the belief metabolism pipeline, updating existing beliefs
+        and nucleating new proto-beliefs for truly novel concepts.
+        """
+        if not findings:
+            return
+
+        belief_metabolism = getattr(self._state, "belief_metabolism", None)
+        if not belief_metabolism:
+            return
+
+        # Only metabolize phases that produce meaningful conceptual content
+        _metabolism_phases = {
+            "document_digestion", "digesting", "consolidating",
+            "reflection", "synthesizing",
+        }
+        if phase not in _metabolism_phases:
+            return
+
+        try:
+            findings_text = " | ".join(findings[-10:])[:4000]
+            sig_vec = self._lexicon.score(findings_text)
+            source_id = f"research:{task_id[:8]}:{phase}"
+
+            await belief_metabolism.metabolize_perception(
+                conversation_id="",
+                source_id=source_id,
+                source_type="research_step",
+                structural_signature=sig_vec,
+                perturbation=1.0,
+            )
+            logger.info("Research metabolism: phase=%s task=%s findings=%d chars=%d",
+                        phase, task_id[:8], len(findings), len(findings_text))
+        except Exception as e:
+            logger.error("Research metabolism failed for phase=%s task=%s: %s",
+                        phase, task_id[:8], e)
+
     async def execute_step(self, task_id: str) -> dict:
         """Execute exactly ONE phase of the research pipeline.
 
@@ -734,6 +777,11 @@ class SomaticResearchOrchestrator:
 
                 # Apply output payloads back to legacy task state dict
                 self.apply_step_output(s, phase, output)
+
+                # Metabolize research findings into belief system
+                await self._metabolize_step(
+                    task_id, phase, output.new_findings or []
+                )
 
                 result.update({
                     "status": output.status,

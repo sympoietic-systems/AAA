@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 import uuid
 from datetime import datetime, timezone, timedelta
 import numpy as np
@@ -32,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 
 class BeliefDynamicsEngine(ProcessingModule):
+    _NUCLEATION_THRESHOLD: float = float(os.getenv("AAA_BELIEF_NUCLEATION_THRESHOLD", "0.2"))
+
     def __init__(
         self,
         belief_repo: BeliefRepository,
@@ -54,6 +57,7 @@ class BeliefDynamicsEngine(ProcessingModule):
             "shared_note": 0.5,
             "web_retrieval": 0.15,
             "dream_turn": 0.05,
+            "research_step": 0.35,
         }
 
     def _get_source_weight(self, source_type: str) -> float:
@@ -509,14 +513,14 @@ class BeliefDynamicsEngine(ProcessingModule):
 
             perturbation = 1.0 + surprise_index
 
-            closest = self._find_closest_active_belief(agent_id, user_vec, min_similarity=0.3)
+            closest = self._find_closest_active_belief(agent_id, user_vec, min_similarity=self._NUCLEATION_THRESHOLD)
             source_weight = self._get_source_weight(source_type)
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
                 alignment = cosine_similarity(user_vec, b_vec)
                 self._accrete_belief(closest, user_vec, source_weight, alignment, perturbation,
                                      source_type=source_type, source_id=str(user_message_id))
-            elif dc > 0.3:
+            elif dc > self._NUCLEATION_THRESHOLD:
                 self._nucleate_proto_belief(
                     agent_id=agent_id,
                     statement=user_msg.content[:200],
@@ -700,7 +704,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                                      source_type=source_type, source_id=source_id)
 
             # 2. Draft proposal if this is a completely new concept (similarity < 0.25)
-            if best_sim < 0.25:
+            if best_sim < self._NUCLEATION_THRESHOLD:
                 statement = f"Emergent concept from ingested perception '{source_id}'."
                 self._nucleate_proto_belief(
                     agent_id=agent_id,
@@ -744,7 +748,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                     best_sim = 0.0
 
             source_weight = self._get_source_weight("shared_note")
-            if best_match and best_sim > 0.75:
+            if best_match and best_sim > 0.85:
                 # Accrete the existing belief
                 self._accrete_belief(
                     best_match, note_vec, source_weight, alignment=best_sim, perturbation=1.5
@@ -775,13 +779,13 @@ class BeliefDynamicsEngine(ProcessingModule):
             source_weight = self._get_source_weight("web_retrieval")
             web_vec = self._scorer.score(extracted_text)
 
-            closest = self._find_closest_active_belief(agent_id, web_vec, min_similarity=0.3)
+            closest = self._find_closest_active_belief(agent_id, web_vec, min_similarity=self._NUCLEATION_THRESHOLD)
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
                 alignment = cosine_similarity(web_vec, b_vec)
                 self._accrete_belief(closest, web_vec, source_weight, alignment, perturbation=1.0,
                                      source_type="web_probe", source_id=source_id)
-            elif calculate_concept_density(extracted_text) > 0.3:
+            elif calculate_concept_density(extracted_text) > self._NUCLEATION_THRESHOLD:
                 self._nucleate_proto_belief(
                     agent_id=agent_id,
                     statement=extracted_text[:200],
@@ -804,10 +808,10 @@ class BeliefDynamicsEngine(ProcessingModule):
             theme_vec = self._scorer.score(theme_text)
             dc = calculate_concept_density(theme_text)
 
-            if dc < 0.3:
+            if dc < self._NUCLEATION_THRESHOLD:
                 return
 
-            closest = self._find_closest_active_belief(agent_id, theme_vec, min_similarity=0.3)
+            closest = self._find_closest_active_belief(agent_id, theme_vec, min_similarity=self._NUCLEATION_THRESHOLD)
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
                 alignment = cosine_similarity(theme_vec, b_vec)

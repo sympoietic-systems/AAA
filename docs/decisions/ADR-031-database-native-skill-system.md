@@ -342,3 +342,9 @@ Hardcoded fallback pipeline order in `main.py` now includes `skill_activator` an
 - [ADR-027](ADR-027-proto-belief-lifecycle-tension-ecology-self-tuning.md) — Proto-belief lifecycle, tension ecology, ghost ecology, and self-tuning
 - [ADR-001](ADR-001-personality-storage.md) — Personality storage and identity.yaml architecture
 - [ADR-023](ADR-023-autopoietic-dream-daemon.md) — Dream Daemon and mass decay
+
+## Amendments
+
+### 2026-07-03 — Skill workshop keyword auto-trigger from chat
+
+`SkillWorkshopModule.process()` now detects registered trigger keywords (`"skill workshop"`, `"create skill"`, `"new skill"`, etc.) in the user's chat message text. When a keyword match is found, the module auto-injects a `list` command so the workshop responds in chat without requiring a separate API call. Previously the workshop was only reachable via the dedicated skills API endpoint — the registered triggers had no injection mechanism in the chat pipeline.

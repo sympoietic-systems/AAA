@@ -60,16 +60,15 @@ def parse_belief_nucleate_tags(text: str) -> tuple[str, list[dict]]:
 
         if attribs_str:
             conf_match = re.search(
-                r'(?i)confidence\s*[:=]\s*([\d.]+)',
+                r'(?i)confidence\s*[:=]\s*(?:\\?([\'"])([\d.]+)\\?\1|([\d.]+))',
                 attribs_str
             )
             if conf_match:
                 try:
-                    confidence_val = float(conf_match.group(1))
+                    confidence_val = float(conf_match.group(2) or conf_match.group(3))
                     confidence_val = max(0.0, min(1.0, confidence_val))
-                except ValueError:
+                except (ValueError, TypeError):
                     pass
-
             label_match = re.search(
                 r'(?i)label\s*[:=]\s*(?:\\?([\'"])(.*?)\\?\1|([^\s>]+))',
                 attribs_str

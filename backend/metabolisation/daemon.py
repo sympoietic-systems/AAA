@@ -136,6 +136,8 @@ class AutopoieticDreamDaemon(
         await asyncio.sleep(5)
         _last_atrophy_time = 0.0
         _atrophy_interval = 900.0  # Run belief atrophy every 15 minutes
+        _last_ghost_ecology_time = 0.0
+        _ghost_ecology_interval = 3600.0  # Run ghost ecology every hour
         while self.is_running:
             try:
                 await self.consolidate_pending_conversations()
@@ -171,6 +173,19 @@ class AutopoieticDreamDaemon(
                                         result["atrophied"], result.get("collapsed", 0))
                 except Exception as e:
                     logger.exception("Error in daemon atrophy cycle: %s", e)
+            # Periodic ghost ecology (merging, fading, resurrection — independent of dream budget)
+            if now_ts - _last_ghost_ecology_time >= _ghost_ecology_interval:
+                _last_ghost_ecology_time = now_ts
+                try:
+                    engine = getattr(self.app_state, "belief_metabolism", None)
+                    if engine:
+                        ghost_result = await engine.process_ghost_ecology("symbia")
+                        resurrected = await engine.check_ghost_resurrection("symbia")
+                        if ghost_result["merged"] > 0 or ghost_result["faded"] > 0 or resurrected > 0:
+                            logger.info("Ghost ecology: merged=%d, faded=%d, resurrected=%d",
+                                        ghost_result["merged"], ghost_result["faded"], resurrected)
+                except Exception as e:
+                    logger.error("Ghost ecology error: %s", e)
             try:
                 await self.check_and_trigger_dream()
             except asyncio.CancelledError:
@@ -269,17 +284,6 @@ class AutopoieticDreamDaemon(
 
         # We are triggered! Execute dream cycle
         logger.info("Autopoietic Dream Daemon triggered! Inactivity duration: %.1fs", idle_duration)
-
-        # Process Ghost Ecology (merging, fading, resurrection)
-        try:
-            engine = getattr(self.app_state, "belief_metabolism", None)
-            if engine:
-                ghost_result = await engine.process_ghost_ecology("symbia")
-                resurrected = await engine.check_ghost_resurrection("symbia")
-                if ghost_result["merged"] > 0 or ghost_result["faded"] > 0 or resurrected > 0:
-                    logger.info(f"Ghost ecology: merged={ghost_result['merged']}, faded={ghost_result['faded']}, resurrected={resurrected}")
-        except Exception as e:
-            logger.error(f"Ghost ecology error: {e}")
 
         # Select active target conversation to read context from (usually the last updated conversation)
         active_convo_id = await self._get_active_conversation_id()

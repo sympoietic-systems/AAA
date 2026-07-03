@@ -47,6 +47,14 @@ class SkillWorkshopModule(ProcessingModule):
 
     async def process(self, payload: dict) -> dict:
         command = payload.get("skill_workshop_command")
+        if not command and self._skill_repo:
+            user_text = payload.get("content", "")
+            triggers = [
+                "skill workshop", "create skill", "new skill",
+                "develop skill", "load skill", "review skill",
+            ]
+            if any(t.lower() in user_text.lower() for t in triggers):
+                command = {"action": "list"}
         if not command or not self._skill_repo:
             return payload
 

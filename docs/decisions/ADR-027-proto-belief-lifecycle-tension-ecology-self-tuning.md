@@ -155,4 +155,16 @@ CREATE TABLE belief_events (
 
 - [ADR-017](ADR-017-dynamic-autopoietic-belief-metabolism.md) — Original dynamic belief metabolism
 - [ADR-023](ADR-023-autopoietic-dream-daemon.md) — Dream Daemon and somatic drift
+
+## Amendments
+
+### 2026-07-03 — Nucleation thresholds lowered, env-configurable
+
+Nucleation and accretion similarity thresholds (previously hardcoded at 0.3 for chat/pattern/web and 0.25 for perception) are now **env-configurable** via `AAA_BELIEF_NUCLEATION_THRESHOLD` (default: 0.2). All 7 hardcoded sites in `belief_engine.py` replaced with `self._NUCLEATION_THRESHOLD`.
+
+Shared note accretion threshold raised from `0.75` → `0.85` to increase nucleation from shared notes (existing dense belief ecologies were routing all notes to accretion).
+
+Nucleation tag placement instructions in `seed_skills.yaml` moved from terminal boundary of response to BEGINNING to avoid token-truncation loss of `<belief_nucleate>` / `<skill-nucleation>` XML blocks.
+
+Confidence regex in `belief_parser.py` fixed to handle quoted attribute values (`confidence="0.35"`) — was silently falling back to 0.15.
 - [ADR-024](ADR-024-notes-and-selection-highlights.md) — Shared notes and belief entanglement
