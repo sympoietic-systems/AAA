@@ -951,3 +951,99 @@ async def import_research_task(payload: dict[str, Any], request: Request):
         raise HTTPException(status_code=400, detail=result.to_dict())
 
     return result.to_dict()
+
+
+# ── Memory Nodes & Semantic Knots ─────────────────────────────────────
+
+class MemoryNodeResponse(BaseModel):
+    id: str
+    node_type: str
+    intensity: float
+    scar: str
+    intra_active_text: str
+    surface_fragment: str = ""
+    diffractive_key: str = ""
+    agential_symmetry: str = ""
+    source_type: str = "conversation"
+    source_id: str = ""
+    created_at: Optional[str] = None
+
+class MemoryNodesResponse(BaseModel):
+    task_id: str
+    nodes: list[MemoryNodeResponse]
+    count: int
+
+class KnotResponse(BaseModel):
+    id: str
+    weight: float
+    concept_payload: str
+    token_count: int
+    created_at: Optional[str] = None
+
+class KnotsResponse(BaseModel):
+    task_id: str
+    knots: list[KnotResponse]
+    count: int
+
+
+@router.get("/research/{task_id}/memory-nodes", response_model=MemoryNodesResponse)
+async def get_research_memory_nodes(task_id: str, request: Request):
+    state = request.app.state
+    memory_node_repo = getattr(state, "memory_node_repo", None)
+    if not memory_node_repo:
+        return {"task_id": task_id, "nodes": [], "count": 0}
+
+    nodes = memory_node_repo.get_by_source("research", task_id)
+    if not nodes:
+        task_repo = getattr(state, "research_task_repo", None)
+        if task_repo:
+            task = task_repo.get(task_id)
+            conv_id = task.get("conversation_id") if task else None
+            if conv_id:
+                nodes = memory_node_repo.get_nodes(conv_id)
+
+    result_nodes = []
+    for n in (nodes or []):
+        result_nodes.append(MemoryNodeResponse(
+            id=n.get("id", ""),
+            node_type=n.get("node_type", "concept"),
+            intensity=n.get("intensity", 0.0),
+            scar=n.get("scar", ""),
+            intra_active_text=n.get("intra_active_text", ""),
+            surface_fragment=n.get("surface_fragment", ""),
+            diffractive_key=n.get("diffractive_key", ""),
+            agential_symmetry=n.get("agential_symmetry", ""),
+            source_type=n.get("source_type", "conversation"),
+            source_id=n.get("source_id", ""),
+            created_at=str(n.get("created_at", "")),
+        ))
+    return {"task_id": task_id, "nodes": result_nodes, "count": len(result_nodes)}
+
+
+@router.get("/research/{task_id}/semantic-knots", response_model=KnotsResponse)
+async def get_research_semantic_knots(task_id: str, request: Request):
+    state = request.app.state
+    knot_repo = getattr(state, "semantic_knot_repo", None)
+    if not knot_repo:
+        return {"task_id": task_id, "knots": [], "count": 0}
+
+    task_repo = getattr(state, "research_task_repo", None)
+    conv_id = None
+    if task_repo:
+        task = task_repo.get(task_id)
+        conv_id = task.get("conversation_id") if task else None
+
+    if not conv_id:
+        conv_id = f"research_{task_id}"
+
+    knots = knot_repo.get_by_conversation(conv_id)
+    result_knots = []
+    for k in (knots or []):
+        result_knots.append(KnotResponse(
+            id=k.id,
+            weight=k.weight,
+            concept_payload=k.concept_payload,
+            token_count=k.token_count,
+            created_at=str(k.created_at) if k.created_at else None,
+        ))
+    return {"task_id": task_id, "knots": result_knots, "count": len(result_knots)}
