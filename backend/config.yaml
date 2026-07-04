@@ -23,6 +23,7 @@ embedding:
 llm:
   provider: "openrouter"
   cooldown_seconds: 300  # Cooldown in seconds for exhausted keys/models in pool (default: 300)
+  timeout: 300  # HTTP timeout per LLM request in seconds (5 min for long research steps)
   # model and api_base are optional — leave empty to use provider defaults
   model: ""
   api_base: ""
