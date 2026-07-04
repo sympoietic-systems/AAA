@@ -452,6 +452,50 @@ class ExportService:
     # ── Research Export ──────────────────────────────────────────────
 
     @staticmethod
+    def build_research_report_content(app_state, task_id: str) -> str:
+        """Gather all research data from app_state and produce a full stages export
+        as a markdown string. Falls back to a short summary if repos are unavailable.
+
+        Used by task completion and sediment injection to generate the full report
+        for LLM context injection, instead of just the result_summary string.
+        """
+        import logging
+        logger = logging.getLogger("aaa.export")
+
+        task_repo = getattr(app_state, "research_task_repo", None)
+        task = task_repo.get(task_id) if task_repo else None
+        if not task:
+            return "Research task not found."
+
+        step_repo = getattr(app_state, "research_step_repo", None)
+        result_repo = getattr(app_state, "research_step_result_repo", None)
+        plan_repo = getattr(app_state, "research_plan_repo", None)
+        note_repo = getattr(app_state, "note_repo", None)
+
+        try:
+            steps = step_repo.get_by_task(task_id) if step_repo else []
+            step_results = result_repo.get_by_task(task_id) if result_repo else []
+            plan = plan_repo.get_by_task(task_id) if plan_repo else None
+            notes = note_repo.get_notes_by_task(task_id) if note_repo else []
+
+            markdown = ExportService.build_research_stages_export(
+                task=task,
+                steps=steps,
+                step_results=step_results,
+                plan=plan,
+                notes=notes,
+            )
+
+            if markdown and markdown.strip():
+                return markdown
+
+            logger.warning("build_research_stages_export returned empty for task %s, falling back to result_summary", task_id)
+        except Exception as e:
+            logger.error("Failed to build research stages export for task %s: %s", task_id, e)
+
+        return task.get("result_summary") or "No synthesis result generated."
+
+    @staticmethod
     def build_research_export(
         task: dict,
         branches: list[dict],

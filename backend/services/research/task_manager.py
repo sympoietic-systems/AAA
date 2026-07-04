@@ -229,7 +229,9 @@ class ResearchTaskManager:
                 filename = f"research-synthesis-{task_id}.md"
                 from backend.services.file import FileService
                 
-                content_bytes = result_summary.encode("utf-8") if result_summary else b"No synthesis result generated."
+                from backend.services.export import ExportService
+                full_report = ExportService.build_research_report_content(self._app_state, task_id)
+                content_bytes = full_report.encode("utf-8")
                 
                 # Cache on disk
                 FileService.cache_file(conversation_id, filename, content_bytes)

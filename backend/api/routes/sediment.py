@@ -92,8 +92,9 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
                 # Fetch task result
                 task = task_repo.get(task_id)
                 if task:
-                    result_summary = task.get("result_summary") or "No synthesis result."
-                    content_bytes = result_summary.encode("utf-8")
+                    from backend.services.export import ExportService
+                    full_report = ExportService.build_research_report_content(request.app.state, task_id)
+                    content_bytes = full_report.encode("utf-8")
                     
                     # Cache file under global-research
                     from backend.services.file import FileService
