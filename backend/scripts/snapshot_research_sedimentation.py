@@ -132,6 +132,165 @@ def _parse_crystallization_output(content: str) -> list[dict]:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# Export / Import — transfer memory nodes between servers
+# ═══════════════════════════════════════════════════════════════════════
+
+EXPORTABLE_FIELDS = [
+    "id", "node_type", "intensity", "scar", "intra_active_text",
+    "surface_fragment", "diffractive_key", "agential_symmetry",
+    "glitch_potential", "tendril_ids",
+]
+
+
+async def do_export(path: str) -> None:
+    """Export all research memory nodes to a JSON file, keyed by task objective."""
+    from backend.config import load_config
+    from backend.storage.database import get_db_path, init_db
+    os.environ.setdefault("AAA_RUN_MIGRATIONS", "true")
+    config = load_config()
+    db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
+    init_db(db_path).close()
+
+    from backend.storage.repository import ResearchTaskRepository, MemoryNodeRepository
+    task_repo = ResearchTaskRepository(db_path)
+    memory_node_repo = MemoryNodeRepository(db_path)
+
+    tasks = task_repo.list_all(status="completed", limit=500)
+    exported = []
+    found = 0
+    no_nodes = 0
+
+    for task in tasks:
+        nodes = memory_node_repo.get_by_source("research", task["id"])
+        if not nodes:
+            no_nodes += 1
+            continue
+        entry = {
+            "objective": (task.get("objective") or task.get("title") or "").strip(),
+            "source_task_id": task["id"][:18],  # partial for reference only
+            "nodes": [{k: n.get(k) for k in EXPORTABLE_FIELDS} for n in nodes],
+        }
+        exported.append(entry)
+        found += 1
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"version": 1, "tasks": exported}, f, indent=2, ensure_ascii=False, default=str)
+
+    print(f"Exported {len(exported)} tasks ({sum(len(e['nodes']) for e in exported)} nodes) to {path}")
+    print(f"  Tasks with nodes: {found}")
+    print(f"  Tasks without nodes: {no_nodes}")
+
+
+async def do_import(path: str) -> None:
+    """Import memory nodes from a JSON export file. Matches tasks by objective string."""
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    entries = data.get("tasks", [])
+    if not entries:
+        print("No tasks found in import file.")
+        return
+
+    from backend.config import load_config
+    from backend.storage.database import get_db_path, init_db
+    os.environ.setdefault("AAA_RUN_MIGRATIONS", "true")
+    config = load_config()
+    db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
+    init_db(db_path).close()
+
+    from backend.storage.repository import ResearchTaskRepository, MemoryNodeRepository, ConsolidationCheckpointRepository
+    import sqlite3 as _sqlite3
+
+    task_repo = ResearchTaskRepository(db_path)
+    memory_node_repo = MemoryNodeRepository(db_path)
+    checkpoint_repo = ConsolidationCheckpointRepository(db_path)
+
+    all_tasks = task_repo.list_all(status="completed", limit=500)
+
+    imported = 0
+    matched = 0
+    unmatched = 0
+    already_has = 0
+
+    for entry in entries:
+        objective = entry.get("objective", "").strip()
+        if not objective:
+            unmatched += 1
+            continue
+
+        # Find matching task by objective (exact match first, then substring)
+        match = None
+        for t in all_tasks:
+            t_obj = (t.get("objective") or t.get("title") or "").strip()
+            if t_obj == objective:
+                match = t
+                break
+        if not match:
+            for t in all_tasks:
+                t_obj = (t.get("objective") or t.get("title") or "").strip()
+                if objective in t_obj or t_obj in objective:
+                    match = t
+                    break
+
+        if not match:
+            print(f"  UNMATCHED: {objective[:60]}")
+            unmatched += 1
+            continue
+
+        task_id = match["id"]
+        existing = memory_node_repo.get_by_source("research", task_id)
+        if existing:
+            already_has += 1
+            continue
+
+        conversation_id = match.get("conversation_id") or f"research_{task_id}"
+
+        # Ensure conversation exists for FK
+        try:
+            db_conn = _sqlite3.connect(db_path)
+            db_conn.execute("PRAGMA foreign_keys=ON")
+            db_conn.execute(
+                "INSERT OR IGNORE INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
+                (conversation_id, f"Research: {objective[:100]}", "symbia"),
+            )
+            db_conn.commit()
+            db_conn.close()
+        except Exception:
+            pass
+
+        # Get or create checkpoint
+        checkpoint_id = -1
+        try:
+            latest = checkpoint_repo.get_latest(conversation_id)
+            if latest:
+                checkpoint_id = latest["id"]
+            else:
+                checkpoint_id = checkpoint_repo.save(
+                    conversation_id=conversation_id,
+                    message_count=0,
+                    summary=f"Research: {objective[:200]}",
+                    model="import",
+                )
+        except Exception:
+            pass
+
+        nodes = entry["nodes"]
+        for n in nodes:
+            n["source_type"] = "research"
+            n["source_id"] = task_id
+
+        memory_node_repo.save_nodes(conversation_id, checkpoint_id, nodes)
+        imported += len(nodes)
+        matched += 1
+        print(f"  -> {objective[:60]}: {len(nodes)} nodes")
+
+    print(f"\nDone.")
+    print(f"  Matched + imported: {matched} tasks ({imported} nodes)")
+    print(f"  Already had nodes:  {already_has}")
+    print(f"  Unmatched:          {unmatched}")
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -140,7 +299,22 @@ async def main() -> None:
     parser.add_argument("--dry-run", action="store_true", help="Compute packets but don't crystallize")
     parser.add_argument("--limit", type=int, default=0, help="Max tasks to process (0 = all)")
     parser.add_argument("--task", type=str, default="", help="Process a single task by ID")
+    parser.add_argument("--export", type=str, default="", metavar="FILE", help="Export memory nodes for completed research tasks to JSON file")
+    parser.add_argument("--import", type=str, default="", metavar="FILE", dest="import_file", help="Import memory nodes from JSON export file into matching tasks")
     args = parser.parse_args()
+
+    # ── Dispatch: export mode ──
+    if args.export:
+        await do_export(args.export)
+        return
+
+    # ── Dispatch: import mode ──
+    if args.import_file:
+        await do_import(args.import_file)
+        return
+
+    # ── Normal mode: reconstruct + crystallize ──
+    # ... existing main() body continues below ...
 
     from backend.config import load_config
     from backend.storage.database import get_db_path, init_db
