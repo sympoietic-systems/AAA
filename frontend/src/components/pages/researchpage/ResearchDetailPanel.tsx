@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
 import type { ResearchTask, MetaLogResponse, TaskStepsResponse } from "../../../api/research"
-import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes } from "../../../api/research"
+import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes, getResearchMemoryNodes, getResearchSemanticKnots, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
 import { NotesSection } from "../../shared/NotesSection"
 import type { NoteInfo } from "../../../api/client"
@@ -19,7 +19,7 @@ import {
   EVENT_TYPE_LABELS, EVENT_TYPE_COLORS,
 } from "./constants/taskConstants"
 
-type TabId = "info" | "steps" | "meta_log" | "notes" | "actions"
+type TabId = "info" | "steps" | "meta_log" | "notes" | "actions" | "memory"
 
 const TABS: { key: TabId; label: string }[] = [
   { key: "info",     label: "Info" },
@@ -27,6 +27,7 @@ const TABS: { key: TabId; label: string }[] = [
   { key: "meta_log", label: "Meta Log" },
   { key: "notes",    label: "Notes" },
   { key: "actions",  label: "Actions" },
+  { key: "memory",   label: "Memory" },
 ]
 
 interface Props {
@@ -383,6 +384,87 @@ function NotesTab({
   )
 }
 
+/* ── Memory Tab (Detail Panel) ── */
+const DET_NODE_TYPE_COLORS: Record<string, string> = {
+  scar: "var(--color-semantic-red)",
+  concept: "var(--color-semantic-blue)",
+  tension: "var(--color-semantic-red)",
+  pattern: "var(--color-semantic-purple)",
+  bifurcation: "var(--color-semantic-gold)",
+  belief_seed: "var(--color-semantic-sand)",
+  method_choice: "var(--color-semantic-slate)",
+}
+
+function DetailMemoryTab({ taskId }: { taskId: string }) {
+  const [nodes, setNodes] = useState<ResearchMemoryNode[]>([])
+  const [knots, setKnots] = useState<ResearchKnot[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    Promise.all([
+      getResearchMemoryNodes(taskId).catch(() => ({ task_id: taskId, nodes: [], count: 0 })),
+      getResearchSemanticKnots(taskId).catch(() => ({ task_id: taskId, knots: [], count: 0 })),
+    ])
+      .then(([nodeData, knotData]) => {
+        if (cancelled) return
+        setNodes(nodeData.nodes)
+        setKnots(knotData.knots)
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [taskId])
+
+  if (loading) {
+    return <div className="text-ui-dim animate-pulse text-xs font-mono mt-4">[ loading memory tissue… ]</div>
+  }
+
+  return (
+    <div className="space-y-3 font-mono">
+      <div>
+        <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-1">[ Memory Nodes ({nodes.length}) ]</div>
+        {nodes.length === 0 ? (
+          <div className="text-[10px] text-ui-dim italic">No memory nodes yet.</div>
+        ) : (
+          <div className="space-y-1">
+            {nodes.map((node) => {
+              const nc = DET_NODE_TYPE_COLORS[node.node_type] || "var(--color-ui-dim)"
+              return (
+                <div key={node.id} className="border-l-2 border-ui-border/40 pl-2 py-1">
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    <span style={{ color: nc }} className="text-[8px] shrink-0">●</span>
+                    <span className="text-ui-secondary font-bold">{node.node_type}</span>
+                    <span className="text-ui-dim text-[8px] ml-auto">{(node.intensity * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="text-ui-dim text-[9px] mt-1 leading-relaxed select-text">
+                    {node.intra_active_text.slice(0, 240)}{node.intra_active_text.length > 240 ? "…" : ""}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+      <div>
+        <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-1">[ Semantic Knots ({knots.length}) ]</div>
+        {knots.length === 0 ? (
+          <div className="text-[10px] text-ui-dim italic">No semantic knots yet.</div>
+        ) : (
+          <div className="space-y-1">
+            {knots.map((k) => (
+              <div key={k.id} className="border-l-2 border-ui-border/40 pl-2 py-1">
+                <div className="text-ui-secondary text-[10px] select-text">{k.concept_payload.slice(0, 160)}{k.concept_payload.length > 160 ? "…" : ""}</div>
+                <div className="text-ui-dim text-[8px] mt-0.5">w:{k.weight.toFixed(2)} · {k.token_count} tokens</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /* ── Shell: Tab bar + content ── */
 export const ResearchDetailPanel = memo(function ResearchDetailPanel({
   task: initialTask, onApprove, onReject, onCancel,
@@ -441,6 +523,7 @@ export const ResearchDetailPanel = memo(function ResearchDetailPanel({
         {tab === "meta_log" && <MetaLogTab taskId={task.id} />}
         {tab === "notes"    && <NotesTab taskId={task.id} onNavigate={handleNotesNavigate} />}
         {tab === "actions"  && <ActionsTab task={task} onApprove={onApprove} onReject={onReject} onCancel={onCancel} />}
+        {tab === "memory"   && <DetailMemoryTab taskId={task.id} />}
       </div>
     </div>
   )

@@ -3,7 +3,7 @@ import { memo, useState, useEffect, useRef, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter, TerminalButton } from "../../UI"
 import type { ResearchTask, ResearchStep } from "../../../api/research"
-import { getResearchTask, getTaskUnifiedNotes, getTaskSteps, type UnifiedNoteInfo } from "../../../api/research"
+import { getResearchTask, getTaskUnifiedNotes, getTaskSteps, getResearchMemoryNodes, getResearchSemanticKnots, type UnifiedNoteInfo, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
 import { STATUS_COLORS, STEP_LABELS } from "./constants/taskConstants"
 import { useTaskPolling } from "./shared/useTaskPolling"
 import { InfoTab } from "./tabs/InfoTab"
@@ -14,13 +14,14 @@ import type { NoteInfo } from "../../../api/client"
 import { copyToClipboard } from "../../../utils/clipboard"
 import { COLOR_PALETTE } from "../../../config/colors"
 
-type SubTabId = "info" | "steps" | "report" | "notes"
+type SubTabId = "info" | "steps" | "report" | "notes" | "memory"
 
 const SUB_TABS: { key: SubTabId; label: string }[] = [
   { key: "info",     label: "Info" },
   { key: "steps",    label: "Steps" },
   { key: "report",   label: "Report" },
   { key: "notes",    label: "Notes" },
+  { key: "memory",   label: "Memory" },
 ]
 
 function slugify(text: string): string {
@@ -30,6 +31,118 @@ function slugify(text: string): string {
 function extractReportTitle(markdown: string): string | null {
   const match = markdown.match(/^#{1,2}\s+(.+)$/m)
   return match?.[1]?.trim() ?? null
+}
+
+/* ── Memory Tab — self-fetching, displays research sedimented memory nodes + semantic knots ── */
+const NODE_TYPE_COLORS: Record<string, string> = {
+  scar: "var(--color-semantic-red)",
+  concept: "var(--color-semantic-blue)",
+  tension: "var(--color-semantic-red)",
+  pattern: "var(--color-semantic-purple)",
+  bifurcation: "var(--color-semantic-gold)",
+  belief_seed: "var(--color-semantic-sand)",
+  method_choice: "var(--color-semantic-slate)",
+}
+
+function MemoryTab({ taskId }: { taskId: string }) {
+  const [nodes, setNodes] = useState<ResearchMemoryNode[]>([])
+  const [knots, setKnots] = useState<ResearchKnot[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    Promise.all([
+      getResearchMemoryNodes(taskId).catch(() => ({ task_id: taskId, nodes: [], count: 0 })),
+      getResearchSemanticKnots(taskId).catch(() => ({ task_id: taskId, knots: [], count: 0 })),
+    ])
+      .then(([nodeData, knotData]) => {
+        if (cancelled) return
+        setNodes(nodeData.nodes)
+        setKnots(knotData.knots)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [taskId])
+
+  if (loading) {
+    return <div className="text-ui-dim animate-pulse text-xs font-mono mt-2">[ loading memory tissue… ]</div>
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+      {/* Memory Nodes */}
+      <div>
+        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-2">
+          [ Memory Nodes ({nodes.length}) ]
+        </div>
+        {nodes.length === 0 ? (
+          <div className="text-[10px] text-ui-dim italic font-mono">
+            No memory nodes crystallized yet. Nodes appear when reflection surfaces tensions, synthesis stabilizes concepts, or consolidation identifies patterns.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {nodes.map((node) => {
+              const nc = NODE_TYPE_COLORS[node.node_type] || "var(--color-ui-dim)"
+              return (
+                <div key={node.id} className="border-l-2 border-ui-border/40 pl-2 py-1">
+                  <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                    <span style={{ color: nc }} className="text-[8px] shrink-0">●</span>
+                    <span className="text-ui-secondary font-bold">{node.node_type}</span>
+                    <span className="text-ui-dim text-[8px] ml-auto">{(node.intensity * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <div className="flex-1 h-[2px] bg-ui-border">
+                      <div style={{ width: `${node.intensity * 100}%`, height: "100%", background: nc }} />
+                    </div>
+                  </div>
+                  <div className="text-ui-dim text-[9px] mt-1 leading-relaxed font-mono select-text">
+                    {node.scar && <span className="text-semantic-gold">_{node.scar}_ </span>}
+                    {node.intra_active_text.slice(0, 280)}{node.intra_active_text.length > 280 ? "…" : ""}
+                  </div>
+                  {node.surface_fragment && (
+                    <div className="text-ui-dim/60 text-[8px] mt-0.5 italic select-text">
+                      "{node.surface_fragment.slice(0, 150)}{node.surface_fragment.length > 150 ? "…" : ""}"
+                    </div>
+                  )}
+                  {node.diffractive_key && (
+                    <div className="text-ui-dim text-[8px] mt-0.5">{node.diffractive_key}</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Semantic Knots */}
+      <div>
+        <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-2">
+          [ Semantic Knots ({knots.length}) ]
+        </div>
+        {knots.length === 0 ? (
+          <div className="text-[10px] text-ui-dim italic font-mono">
+            No semantic knots yet. High-intensity research findings (intensity &gt; 0.7) become permanent gravitational anchors.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {knots.map((k) => (
+              <div key={k.id} className="border-l-2 border-ui-border/40 pl-2 py-1">
+                <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                  <span className="text-semantic-purple text-[8px] shrink-0">◆</span>
+                  <span className="text-ui-secondary font-bold select-text">{k.concept_payload.slice(0, 200)}{k.concept_payload.length > 200 ? "…" : ""}</span>
+                  <span className="text-ui-dim text-[8px] ml-auto shrink-0">w:{k.weight.toFixed(2)}</span>
+                </div>
+                <div className="text-ui-dim text-[8px] mt-0.5">tokens: {k.token_count} · {k.created_at?.slice(0, 10) || "—"}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 /* ── Shell — header, tab bar, content routing ── */
@@ -340,6 +453,8 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
             )}
           </div>
         )}
+
+        {tab === "memory"  && <MemoryTab taskId={current.id} />}
       </div>
 
       <UnifiedFooter />

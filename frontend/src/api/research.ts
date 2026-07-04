@@ -452,4 +452,52 @@ export async function getTaskUnifiedNotes(taskId: string): Promise<UnifiedNoteIn
   return res.json()
 }
 
+// ── Memory Nodes & Semantic Knots ──
+
+export interface ResearchMemoryNode {
+  id: string
+  node_type: string
+  intensity: number
+  scar: string
+  intra_active_text: string
+  surface_fragment: string
+  diffractive_key: string
+  agential_symmetry: string
+  source_type: string
+  source_id: string
+  created_at: string | null
+}
+
+export interface ResearchMemoryNodesResponse {
+  task_id: string
+  nodes: ResearchMemoryNode[]
+  count: number
+}
+
+export interface ResearchKnot {
+  id: string
+  weight: number
+  concept_payload: string
+  token_count: number
+  created_at: string | null
+}
+
+export interface ResearchKnotsResponse {
+  task_id: string
+  knots: ResearchKnot[]
+  count: number
+}
+
+export async function getResearchMemoryNodes(taskId: string): Promise<ResearchMemoryNodesResponse> {
+  const res = await fetch(`${BASE}/research/${taskId}/memory-nodes`)
+  if (!res.ok) throw new Error(`Memory nodes fetch failed: ${res.status}`)
+  return res.json()
+}
+
+export async function getResearchSemanticKnots(taskId: string): Promise<ResearchKnotsResponse> {
+  const res = await fetch(`${BASE}/research/${taskId}/semantic-knots`)
+  if (!res.ok) throw new Error(`Semantic knots fetch failed: ${res.status}`)
+  return res.json()
+}
+
 import type { NoteInfo } from "./types"
