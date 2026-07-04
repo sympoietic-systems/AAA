@@ -368,6 +368,19 @@ class ConsolidateStep(BaseResearchStep):
             "total_findings": len(all_findings),
         }, step_id=step_id)
 
+        key_insights = reflection.get("key_insights", [])
+
+        # ── Sedimentation: push pattern packet if completeness threshold met ──
+        if completeness > 0.7 and key_insights:
+            orch._push_sedimentation_packet(
+                task_id=task_id,
+                phase="consolidate",
+                trigger_thresholds={"completeness_score": completeness},
+                raw_context=json.dumps(key_insights)[:8000],
+                proposed_node_type="pattern",
+                confidence=completeness,
+            )
+
         out_payload = ConsolidatePayload(
             last_reflection=reflection,
             completeness_score=completeness,

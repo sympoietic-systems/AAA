@@ -100,6 +100,25 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
                           previous_context: str = "", step_id: str = "") -> dict:
     """Core plan generation logic migrated from legacy phases.py."""
     prompt_data = get_prompts_dict("research/orchestrator_planner.yaml")
+
+    # Inject conversation memory context into planning if research was triggered
+    # from a conversation. The LLM incorporates relevant nodes into goals/queries.
+    task = orch.task_repo.get(task_id) if orch.task_repo else None
+    conversation_id = task.get("conversation_id") if task else None
+    if conversation_id:
+        try:
+            from backend.services.research.context_builder import ResearchContextBuilder
+            builder = ResearchContextBuilder(orch._state)
+            memory_block = await builder.build_memory_context_block(conversation_id)
+            if memory_block:
+                previous_context = (
+                    previous_context + "\n\n" + memory_block
+                    if previous_context else memory_block
+                )
+                logger.info("Injected conversation memory into planning context for task %s", task_id[:8])
+        except Exception as e:
+            logger.warning("Failed to inject memory context for planning: %s", e)
+
     cached = orch._get_cached_phase(task_id, "planning")
     if cached and cached.get("persona") and cached.get("system_prompt") and cached.get("user_prompt"):
         persona = cached["persona"]

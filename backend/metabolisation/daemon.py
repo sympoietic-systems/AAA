@@ -156,6 +156,12 @@ class AutopoieticDreamDaemon(
             except Exception as e:
                 logger.debug("Research metabolism skipped: %s", e)
 
+            # Research sedimentation rake — crystallizes in-phase memory nodes
+            try:
+                await self.rake_research_sedimentation()
+            except Exception as e:
+                logger.debug("Research sedimentation rake skipped: %s", e)
+
             try:
                 await self.run_skill_metabolism()
             except Exception as e:

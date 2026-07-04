@@ -162,6 +162,64 @@ class ResearchMetabolismEngine:
 
     # ── Memory Consolidation ─────────────────────────────────────────
 
+    async def _rake_sedimentation_queue(self, task_id: str) -> int:
+        """Rake pending sedimentation packets through ResearchCrystallization.
+
+        Called asynchronously by the daemon's consolidation cycle. Fetches
+        pending packets from the orchestrator state, runs crystallization
+        via the background engine, persists nodes, and clears the queue.
+        See: docs/decisions/ADR-060-research-memory-integration.md
+        """
+        try:
+            # We need the orchestrator to access the task state queue
+            orchestrator = getattr(self._state, "research_orchestrator", None)
+            if not orchestrator:
+                return 0
+
+            packets = orchestrator._pending_sedimentation_packets(task_id)
+            if not packets:
+                return 0
+
+            bg_engine = getattr(self._state, "background_engine", None)
+            if not bg_engine:
+                logger.debug("No background engine — skipping sedimentation rake")
+                return 0
+
+            task = self._state.research_task_repo.get(task_id)
+            conversation_id = (
+                task.get("conversation_id") or f"research_{task_id}"
+                if task else f"research_{task_id}"
+            )
+
+            nodes_created = 0
+            for packet in packets:
+                try:
+                    result = await bg_engine.run("research_crystallize", {
+                        "text": packet.get("raw_context", ""),
+                        "phase": packet.get("phase", "unknown"),
+                        "node_type": packet.get("proposed_node_type", "concept"),
+                        "conversation_id": conversation_id,
+                        "source_type": "research",
+                        "source_id": task_id,
+                    })
+                    if result and result.get("status") == "ok":
+                        node_count = result.get("nodes_created", 0)
+                        nodes_created += node_count
+                        logger.info(
+                            "Sedimentation rake: task=%s phase=%s → %d nodes",
+                            task_id[:8], packet.get("phase"), node_count,
+                        )
+                except Exception as e:
+                    logger.warning("Sedimentation rake failed for packet: %s", e)
+
+            if nodes_created > 0:
+                orchestrator._clear_sedimentation_queue(task_id)
+
+            return nodes_created
+        except Exception as e:
+            logger.warning("Sedimentation rake failed for task %s: %s", task_id[:8], e)
+            return 0
+
     async def _consolidate_to_memory(self, task: dict, all_content: str) -> int:
         """Consolidate research findings into memory_nodes.
 
@@ -217,3 +275,80 @@ class ResearchMetabolismMixin:
                     logger.error("Metabolism failed for task %s: %s", task["id"], e)
         except Exception as e:
             logger.warning("Research metabolism scan failed: %s", e)
+
+    async def rake_research_sedimentation(self) -> int:
+        """Rake pending sedimentation packets from all active/completed research tasks.
+
+        Called during daemon idle cycles. Processes packets through ResearchCrystallization
+        and persists resulting memory nodes. Does not depend on the orchestrator
+        being alive — reloads state from the task's orchestrator_state JSON.
+        See: docs/decisions/ADR-060-research-memory-integration.md
+        """
+        try:
+            task_repo = getattr(self, "research_task_repo", None)
+            if not task_repo:
+                task_repo = getattr(self.app_state, "research_task_repo", None)
+            if not task_repo:
+                return 0
+
+            bg_engine = getattr(self, "background_engine", None)
+            bg_engine = bg_engine or getattr(self.app_state, "background_engine", None)
+            if not bg_engine:
+                return 0
+
+            active_tasks = task_repo.list_all(status="active", limit=5)
+            pending_tasks = task_repo.list_all(status="completed", limit=5)
+            tasks_to_rake = (active_tasks or []) + (pending_tasks or [])
+
+            total_nodes = 0
+            for task in tasks_to_rake:
+                orch_state_raw = task.get("orchestrator_state")
+                if not orch_state_raw:
+                    continue
+                try:
+                    state = (json.loads(orch_state_raw)
+                             if isinstance(orch_state_raw, str) else orch_state_raw)
+                except Exception:
+                    continue
+
+                packets = state.get("sedimentation_queue", [])
+                if not packets:
+                    continue
+
+                conversation_id = (
+                    task.get("conversation_id") or f"research_{task['id']}"
+                )
+                task_id = task["id"]
+                cleared = 0
+
+                for packet in packets:
+                    try:
+                        result = await bg_engine.run("research_crystallize", {
+                            "text": packet.get("raw_context", ""),
+                            "phase": packet.get("phase", "unknown"),
+                            "node_type": packet.get("proposed_node_type", "concept"),
+                            "conversation_id": conversation_id,
+                            "source_type": "research",
+                            "source_id": task_id,
+                        })
+                        if result and result.get("status") == "ok":
+                            cleared += 1
+                            total_nodes += result.get("nodes_created", 0)
+                    except Exception:
+                        pass
+
+                if cleared > 0:
+                    state["sedimentation_queue"] = []
+                    task_repo.update(
+                        task_id,
+                        orchestrator_state=json.dumps(state, default=str, ensure_ascii=False),
+                    )
+                    logger.info(
+                        "Sedimentation rake: task=%s cleared=%d packets → %d nodes",
+                        task_id[:8], cleared, total_nodes,
+                    )
+
+            return total_nodes
+        except Exception as e:
+            logger.warning("Research sedimentation rake failed: %s", e)
+            return 0

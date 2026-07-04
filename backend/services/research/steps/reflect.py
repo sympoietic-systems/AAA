@@ -419,6 +419,27 @@ class ReflectionStep(BaseResearchStep):
         if out_payload.refined_queries:
             s["digest_signals"]["refined_queries"] = out_payload.refined_queries
 
+        # ── Sedimentation: push tension packet if thresholds trip ──
+        if density > 0.3 or fidelity < 0.7:
+            critique_context = json.dumps({
+                "phase": "reflection",
+                "critique_log": reflection.get("critique_log", []),
+                "reflection_notes": reflection.get("reflection_notes", ""),
+                "contradiction_density": density,
+                "glitch_fidelity": fidelity,
+            })
+            orch._push_sedimentation_packet(
+                task_id=task_id,
+                phase="reflection",
+                trigger_thresholds={
+                    "contradiction_density": density,
+                    "glitch_fidelity": fidelity,
+                },
+                raw_context=critique_context,
+                proposed_node_type="tension",
+                confidence=max(density, 1.0 - fidelity),
+            )
+
         signal_flags = {flag: True for flag in out_payload.signal_flags}
 
         rationale = (

@@ -205,6 +205,55 @@ class ResearchContextBuilder:
 
     # ── Helpers ──
 
+    async def build_memory_context_block(
+        self,
+        conversation_id: str,
+        max_nodes: int = 6,
+    ) -> str:
+        """Fetch type-diverse memory nodes + semantic knots for research planning context.
+
+        Returns a formatted block suitable for injection into the planning phase's
+        previous_context. The planning LLM incorporates relevant nodes into research
+        goals and search queries — no other phase receives direct memory injection.
+        See: docs/decisions/ADR-060-research-memory-integration.md
+        """
+        memory_node_repo = getattr(self._state, "memory_node_repo", None)
+        semantic_knot_repo = getattr(self._state, "semantic_knot_repo", None)
+        if not memory_node_repo:
+            return ""
+
+        nodes = memory_node_repo.get_nodes(conversation_id)
+        if not nodes:
+            return ""
+
+        from backend.modules.consolidation_checkpoint import (
+            _select_type_diverse_nodes,
+        )
+        selected = _select_type_diverse_nodes(nodes, max_nodes)
+
+        lines = ["[Conversation Memory Sediment — available for planning context]", ""]
+        for n in selected:
+            lines.append(
+                f"- [{n.get('node_type', 'concept')}] "
+                f"(intensity: {n.get('intensity', 0):.2f}) "
+                f"{n.get('intra_active_text', '')[:300]}"
+            )
+
+        if semantic_knot_repo:
+            try:
+                knots = semantic_knot_repo.get_by_conversation(conversation_id)
+                if knots:
+                    lines.append("")
+                    lines.append("[Semantic Knots]")
+                    for k in knots[:5]:
+                        lines.append(
+                            f"- (weight: {k.weight:.2f}) {k.concept_payload[:200]}"
+                        )
+            except Exception:
+                pass
+
+        return "\n".join(lines)
+
     @staticmethod
     def _fallback_identity() -> str:
         return (

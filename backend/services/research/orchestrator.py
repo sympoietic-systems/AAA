@@ -848,6 +848,46 @@ class SomaticResearchOrchestrator:
 
             return result
 
+    # ── Sedimentation Crystallization ──────────────────────────────────
+
+    def _push_sedimentation_packet(self, task_id: str, phase: str,
+                                    trigger_thresholds: dict,
+                                    raw_context: str,
+                                    proposed_node_type: str,
+                                    confidence: float = 0.0) -> None:
+        """Push a sedimentation packet to the task's persistent queue.
+
+        Packets are stored in orchestrator_state and raked asynchronously
+        by the daemon's consolidation cycle.
+        See: docs/decisions/ADR-060-research-memory-integration.md
+        """
+        from backend.utils.research_logger import now_utc_str
+        s = self._state_mgr.ensure_state(task_id)
+        packet = {
+            "phase": phase,
+            "trigger_thresholds": trigger_thresholds,
+            "raw_context": raw_context[:8000],
+            "proposed_node_type": proposed_node_type,
+            "confidence": confidence,
+            "pushed_at": now_utc_str(),
+        }
+        s.setdefault("sedimentation_queue", []).append(packet)
+        self._persist_state(task_id)
+        logger.info("Sedimentation packet pushed: task=%s phase=%s type=%s",
+                     task_id[:8], phase, proposed_node_type)
+
+    def _pending_sedimentation_packets(self, task_id: str) -> list[dict]:
+        """Return all unraked sedimentation packets for a task (non-destructive)."""
+        s = self._state_mgr.get_state(task_id)
+        return list(s.get("sedimentation_queue", []))
+
+    def _clear_sedimentation_queue(self, task_id: str) -> int:
+        """Clear all packets from the queue after successful rake. Returns count cleared."""
+        s = self._state_mgr.get_state(task_id)
+        count = len(s.get("sedimentation_queue", []))
+        s["sedimentation_queue"] = []
+        self._persist_state(task_id)
+        return count
 
 
     async def execute(self, task_id: str) -> dict:

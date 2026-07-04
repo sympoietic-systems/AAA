@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import SynthesizePayload, StepEnvelope, StepOutput
@@ -252,6 +253,64 @@ class SynthesizeStep(BaseResearchStep):
             "findings": len(all_findings),
             "depth": current_depth,
         }, step_id=step_id)
+
+        # ── Sedimentation: push concept + belief_seed packets ──
+        if result_summary and sources_analyzed > 0:
+            # Compute stability_delta — compare with prior cycle synthesis if exists
+            try:
+                from backend.modules.embedder import generate_embedding
+                current_emb = generate_embedding(result_summary[:2000])
+                prior_emb = None
+                if orch.step_repo and current_depth > 0:
+                    steps = orch.step_repo.get_by_task(task_id)
+                    prior_synth_steps = [
+                        st for st in steps
+                        if st.get("step_type") == "synthesize" and st.get("status") == "completed"
+                        and st.get("id") != step_id
+                    ]
+                    if prior_synth_steps:
+                        prior_data = json.loads(prior_synth_steps[-1].get("step_data") or "{}")
+                        prior_report = prior_data.get("report_markdown", "")
+                        if prior_report:
+                            prior_emb = generate_embedding(prior_report[:2000])
+                stability_delta = 0.0
+                if prior_emb is not None and current_emb is not None:
+                    import numpy as np
+                    cos_sim = float(np.dot(current_emb, prior_emb) / (
+                        np.linalg.norm(current_emb) * np.linalg.norm(prior_emb) + 1e-10
+                    ))
+                    stability_delta = 1.0 - cos_sim
+            except Exception as e:
+                logger.debug("stability_delta computation skipped: %s", e)
+                stability_delta = 0.0
+
+            if stability_delta > 0.2:
+                orch._push_sedimentation_packet(
+                    task_id=task_id,
+                    phase="synthesize",
+                    trigger_thresholds={"stability_delta": stability_delta},
+                    raw_context=result_summary[:8000],
+                    proposed_node_type="concept",
+                    confidence=min(stability_delta * 2.0, 1.0),
+                )
+
+            # Extract confidence from result_summary for belief_seed
+            conf_match = None
+            try:
+                conf_match = re.search(r'confidence:\s*(\d+(?:\.\d+)?)%', result_summary)
+            except Exception:
+                pass
+            synth_confidence = float(conf_match.group(1)) / 100.0 if conf_match else 0.0
+
+            if synth_confidence > 0.8:
+                orch._push_sedimentation_packet(
+                    task_id=task_id,
+                    phase="synthesize",
+                    trigger_thresholds={"confidence": synth_confidence},
+                    raw_context=result_summary[:8000],
+                    proposed_node_type="belief_seed",
+                    confidence=synth_confidence,
+                )
 
         out_payload = SynthesizePayload(
             sources_analyzed=sources_analyzed,
