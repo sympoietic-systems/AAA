@@ -178,21 +178,27 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
       convId = uploadedConvId
     }
 
-    await onDispatch({
-      objective: objective.trim(),
-      conversation_id: convId,
-      max_depth: depth,
-      max_breadth: breadth,
-      is_agonistic: agonistic,
-      budget_limit_usd: budget,
-      inject_file_id: injectFileId,
-      inject_conversation_id: injectConvId,
-      document_mode: injectFileId ? docMode : undefined,
-      document_chunk_limit: injectFileId ? chunkLimit : undefined,
-    })
-    setSending(false)
-    setObjective("")
-    onClose()
+    try {
+      await onDispatch({
+        objective: objective.trim(),
+        conversation_id: convId,
+        max_depth: depth,
+        max_breadth: breadth,
+        is_agonistic: agonistic,
+        budget_limit_usd: budget,
+        inject_file_id: injectFileId,
+        inject_conversation_id: injectConvId,
+        document_mode: injectFileId ? docMode : undefined,
+        document_chunk_limit: injectFileId ? chunkLimit : undefined,
+      })
+      setObjective("")
+      onClose()
+    } catch (err: any) {
+      console.error("Dispatch failed:", err)
+      alert(`Dispatch failed: ${err?.message || err || "Unknown error"}`)
+    } finally {
+      setSending(false)
+    }
   }
 
   const selectedFileInfo = files.find(f => f.file_name === selectedFile)

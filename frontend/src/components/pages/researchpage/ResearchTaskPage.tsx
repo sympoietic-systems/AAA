@@ -3,7 +3,7 @@ import { memo, useState, useEffect, useRef, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter, TerminalButton } from "../../UI"
 import type { ResearchTask, ResearchStep } from "../../../api/research"
-import { getResearchTask, getTaskUnifiedNotes, getTaskSteps, getResearchMemoryNodes, getResearchSemanticKnots, type UnifiedNoteInfo, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
+import { getResearchTask, getTaskUnifiedNotes, getTaskSteps, getResearchMemoryNodes, getResearchSemanticKnots, dispatchResearch, type UnifiedNoteInfo, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
 import { STATUS_COLORS, STEP_LABELS } from "./constants/taskConstants"
 import { useTaskPolling } from "./shared/useTaskPolling"
 import { InfoTab } from "./tabs/InfoTab"
@@ -435,7 +435,6 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
 const NewTaskInline = memo(function NewTaskInline() {
   const navigate = useNavigate()
   const handleDispatch = async (payload: any): Promise<string | null> => {
-    const { dispatchResearch } = await import("../../../api/research")
     const result = await dispatchResearch(payload)
     if (result) navigate(`/research?id=${result.task_id}`)
     return result?.task_id ?? null
