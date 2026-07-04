@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
 import type { ResearchTask, MetaLogResponse, TaskStepsResponse } from "../../../api/research"
-import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes, getResearchMemoryNodes, getResearchSemanticKnots, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
+import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes, getResearchMemoryNodes, getResearchSemanticKnots, runTask, rerunTask, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
 import { NotesSection } from "../../shared/NotesSection"
 import type { NoteInfo } from "../../../api/client"
@@ -289,8 +289,13 @@ function ActionsTab({
   onCancel?: (id: string) => Promise<void>
 }) {
   const [showContinue, setShowContinue] = useState(false)
+  const [acting, setActing] = useState(false)
   const retry = () => window.dispatchEvent(new CustomEvent("research-retry", { detail: task }))
   const continueResearch = () => setShowContinue(true)
+  const doRun = async () => {
+    setActing(true)
+    try { await runTask(task.id) } catch {} finally { setActing(false) }
+  }
 
   return (
     <div className="space-y-3 font-mono">
@@ -302,6 +307,11 @@ function ActionsTab({
               {onApprove && <TerminalButton onClick={() => onApprove(task.id)} intent="save">✓ approve & dispatch</TerminalButton>}
               {onReject && <TerminalButton onClick={() => onReject(task.id)} intent="delete">✗ dismiss</TerminalButton>}
             </>
+          )}
+          {task.status === "queued" && (
+            <TerminalButton onClick={doRun} disabled={acting} intent="save">
+              {acting ? "running..." : "▶ run task"}
+            </TerminalButton>
           )}
           {(task.status === "queued" || task.status === "active") && onCancel && (
             <TerminalButton onClick={() => onCancel(task.id)} intent="delete">✕ cancel task</TerminalButton>

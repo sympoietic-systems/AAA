@@ -179,9 +179,7 @@ class ResearchTaskManager:
     def queue(self, task_id: str) -> None:
         """Move an approved task into the execution queue."""
         self.transition(task_id, "queued")
-        # In manual mode, don't auto-drain — user clicks "Run"
-        if not self.config.get("manual_mode", False):
-            asyncio.create_task(self._try_process_queue())
+        asyncio.create_task(self._try_process_queue())
 
     def cancel(self, task_id: str) -> None:
         """Cancel a queued or active task."""
@@ -449,9 +447,7 @@ class ResearchTaskManager:
             "Research task %s rerun #%d (in-place reset)", task_id, rerun_count,
         )
 
-        # In manual mode, stay queued. Otherwise auto-execute.
-        if not self.config.get("manual_mode", False):
-            asyncio.create_task(self._try_process_queue())
+        asyncio.create_task(self._try_process_queue())
 
     def continue_task(
         self,

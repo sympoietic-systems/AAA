@@ -155,9 +155,9 @@ class DreamResearchMixin:
             if not manager:
                 return
 
-            # Respect manual_mode — user wants explicit control
-            if manager.config.get("manual_mode", False):
-                return
+            # Drain any queued task regardless of manual_mode.
+            # User-dispatched tasks should always execute; manual_mode only
+            # controls daemon-initiated proposals, not task execution.
 
             # Only drain if slots are available
             semaphore = getattr(manager, "_active_semaphore", None)
