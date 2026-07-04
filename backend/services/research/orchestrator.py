@@ -726,23 +726,44 @@ class SomaticResearchOrchestrator:
             logger.info("execute_step: phase=%s, depth=%s, step_number=%s",
                         phase, s.get('current_depth'), s.get('step_number'))
 
-            # On rerun, delete all downstream steps starting from the beginning of the rerun phase
+            # On rerun, delete all downstream steps starting from the beginning of the rerun phase.
+            # Scope deletions to the same depth (cycle) to avoid eating steps from other cycles.
             rerun_id = s.get("_rerun_step_id")
             if rerun_id:
                 rerun_step = self.step_repo.get(rerun_id) if self.step_repo else None
                 if rerun_step:
-                    # Find all steps of the same type at this phase depth to reset the phase cleanly
+                    rerun_depth = s.get("current_depth", 0)
                     all_steps = self.step_repo.get_by_task(task_id) if self.step_repo else []
-                    same_phase_steps = [
+                    # Find same-phase steps at the SAME depth to determine the phase's earliest step
+                    same_type_same_depth = [
                         st for st in all_steps
                         if st["step_type"] == rerun_step["step_type"]
-                        and abs(st["step_number"] - rerun_step["step_number"]) < 10
+                        and self._get_step_depth(st) == rerun_depth
                     ]
-                    min_step_num = min(st["step_number"] for st in same_phase_steps) if same_phase_steps else rerun_step["step_number"]
-                    deleted = self._delete_downstream(task_id, min_step_num - 1, exclude_types=("document_digestion",))
+                    min_step_num = min(st["step_number"] for st in same_type_same_depth) if same_type_same_depth else rerun_step["step_number"]
+                    # Delete only steps at the same depth, starting from the phase's first step
+                    same_depth_steps = [st for st in all_steps if self._get_step_depth(st) == rerun_depth
+                                        and st["step_number"] >= min_step_num]
+                    for st in same_depth_steps:
+                        if st["step_type"] == "document_digestion":
+                            continue
+                        try:
+                            self.step_repo.delete(st["id"])
+                        except Exception:
+                            pass
+                    # Also delete any later-depth steps (they're downstream of this cycle)
+                    later_steps = [st for st in all_steps if self._get_step_depth(st) > rerun_depth]
+                    for st in later_steps:
+                        if st["step_type"] == "document_digestion":
+                            continue
+                        try:
+                            self.step_repo.delete(st["id"])
+                        except Exception:
+                            pass
+                    deleted = len(same_depth_steps) + len(later_steps)
                     if deleted:
-                        logger.info("Rerun: deleted %d downstream steps starting from step %d — %s",
-                                     deleted, min_step_num, self._log_context(task_id, "rerun"))
+                        logger.info("Rerun: deleted %d downstream steps at depth>=%d starting from step %d — %s",
+                                     deleted, rerun_depth, min_step_num, self._log_context(task_id, "rerun"))
                     s["step_number"] = min_step_num - 1
 
             if phase == "complete":
