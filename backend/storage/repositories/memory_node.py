@@ -18,8 +18,9 @@ class MemoryNodeRepository(BaseRepository):
                 """INSERT OR REPLACE INTO memory_nodes
                    (id, conversation_id, checkpoint_id, node_type, intensity,
                     scar, glitch_potential, intra_active_text, surface_fragment,
-                    agential_symmetry, diffractive_key, tendril_ids)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    agential_symmetry, diffractive_key, tendril_ids,
+                    source_type, source_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     node_id,
                     conversation_id,
@@ -33,6 +34,8 @@ class MemoryNodeRepository(BaseRepository):
                     node.get("agential_symmetry", "negotiated"),
                     node.get("diffractive_key", ""),
                     json.dumps(node.get("tendrils", [])),
+                    node.get("source_type", "conversation"),
+                    node.get("source_id", node.get("research_task_id", "")),
                 ),
             )
             ids.append(node_id)
@@ -105,7 +108,23 @@ class MemoryNodeRepository(BaseRepository):
         return [_row_to_memory_node(r) for r in rows]
 
     @with_connection
-    def get_diffractive_keys(self, conversation_id: str) -> list[str]:
+    def get_by_source(self, source_type: str, source_id: str) -> list[dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM memory_nodes WHERE source_type = ? AND source_id = ? "
+            "ORDER BY revision_count DESC, intensity DESC",
+            (source_type, source_id),
+        ).fetchall()
+        seen: set[str] = set()
+        result: list[dict] = []
+        for r in rows:
+            node = _row_to_memory_node(r)
+            nid = node.get("id", "")
+            if nid and nid not in seen:
+                seen.add(nid)
+                result.append(node)
+        result.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+        return result
         conn = self._conn()
         rows = conn.execute(
             "SELECT diffractive_key FROM memory_nodes WHERE conversation_id = ? AND diffractive_key != ''",

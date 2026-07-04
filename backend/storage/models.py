@@ -36,6 +36,9 @@ class MemoryNode:
     # R4: Merge observability — track when and how many times a node has been revised
     revision_count: int = 0
     last_merged_at: Optional[datetime] = None
+    # Universal source attachment — ADR-060
+    source_type: str = "conversation"
+    source_id: str = ""
 
     def __post_init__(self):
         if self.tendril_ids is None:

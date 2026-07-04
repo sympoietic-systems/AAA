@@ -131,6 +131,18 @@ def _row_to_memory_node(row: sqlite3.Row) -> dict:
         tendril_ids = json.loads(row["tendril_ids"]) if row["tendril_ids"] else []
     except (json.JSONDecodeError, TypeError):
         pass
+    source_type = "conversation"
+    try:
+        source_type = row["source_type"] or "conversation"
+    except (IndexError, KeyError):
+        pass
+
+    source_id = ""
+    try:
+        source_id = row["source_id"] or ""
+    except (IndexError, KeyError):
+        pass
+
     return {
         "id": row["id"],
         "conversation_id": row["conversation_id"],
@@ -145,6 +157,8 @@ def _row_to_memory_node(row: sqlite3.Row) -> dict:
         "diffractive_key": row["diffractive_key"],
         "tendril_ids": tendril_ids,
         "created_at": row["created_at"],
+        "source_type": source_type,
+        "source_id": source_id,
     }
 
 
