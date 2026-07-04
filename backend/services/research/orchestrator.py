@@ -746,6 +746,20 @@ class SomaticResearchOrchestrator:
                     s["step_number"] = min_step_num - 1
 
             if phase == "complete":
+                # Safety: force-complete the DB task if it's still stuck at "active"
+                try:
+                    db_task = self.task_repo.get(task_id)
+                    if db_task and db_task.get("status") == "active":
+                        logger.warning(
+                            "execute_step called with phase=complete but task %s still active — "
+                            "force-transitioning to completed to break stuck loop",
+                            task_id[:8],
+                        )
+                        self.task_repo.transition_status(task_id, "completed")
+                        result_summary = s.get("result_summary") or db_task.get("result_summary") or ""
+                        self.task_repo.update(task_id, result_summary=result_summary)
+                except Exception as e:
+                    logger.warning("Failed to force-complete stuck task %s: %s", task_id[:8], e)
                 return {
                     "task_id": task_id,
                     "phase": phase,
@@ -907,7 +921,27 @@ class SomaticResearchOrchestrator:
             "mode": "auto",
         })
 
+        max_iterations = max(s.get("max_depth", 3) * 15, 200)
+        iteration_count = 0
         while s["phase"] != "complete":
+            iteration_count += 1
+            if iteration_count > max_iterations:
+                reason = f"iteration limit exceeded ({iteration_count}/{max_iterations}) — phase stuck at: {s['phase']}"
+                logger.error("Orchestrator circuit breaker: %s", reason)
+                self._log_meta(task_id, "orchestrator_circuit_breaker", {
+                    "iteration_count": iteration_count, "max_iterations": max_iterations,
+                    "stuck_phase": s["phase"], "depth": s.get("current_depth"),
+                })
+                self.task_repo.transition_status(task_id, "failed")
+                self.task_repo.update(task_id, result_summary=f"FAILED: {reason}")
+                self._state_mgr.states.pop(task_id, None)
+                return {
+                    "task_id": task_id,
+                    "branches_created": s.get("step_number", 0),
+                    "assets_harvested": s.get("sources_analyzed", 0),
+                    "lateral_flights": 0,
+                    "result_summary": f"FAILED: {reason}",
+                }
             await self.execute_step(task_id)
 
         s = self._state_mgr.states.pop(task_id, {})
