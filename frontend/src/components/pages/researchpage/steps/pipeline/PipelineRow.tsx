@@ -3,6 +3,7 @@ import { memo } from "react"
 interface PipelineRowProps {
   label: string
   stepId?: string | null
+  stepType?: string | null
   isDone: boolean
   isCurrent: boolean
   isStale: boolean
@@ -11,14 +12,17 @@ interface PipelineRowProps {
   rationale?: string | null
   onSelect: (id: string | null) => void
   onDoStep: () => void
+  onRerunPhase?: (stepType: string) => void
   stepping: boolean
 }
 
 export const PipelineRow = memo(function PipelineRow({
-  label, stepId, isDone, isCurrent, isStale, isFailed, isSelected, rationale, onSelect, onDoStep, stepping,
+  label, stepId, stepType, isDone, isCurrent, isStale, isFailed, isSelected, rationale, onSelect, onDoStep, onRerunPhase, stepping,
 }: PipelineRowProps) {
   const sc = isFailed ? "var(--color-semantic-red)" : isStale ? "var(--color-semantic-sand)" : isDone ? "var(--color-semantic-green)" : isCurrent ? "var(--color-semantic-gold)" : "var(--color-ui-dim)"
+  const isPending = !isDone && !isCurrent && !isStale && !isFailed
   const canClick = (isDone || isStale || isFailed) ? !!stepId : isCurrent
+  const canRerunPhase = isPending && !!stepType && !!onRerunPhase
 
   const handleClick = () => {
     if (!canClick) return
@@ -57,6 +61,12 @@ export const PipelineRow = memo(function PipelineRow({
           <button onClick={e => { e.stopPropagation(); onDoStep() }} disabled={stepping}
             className="text-action-dim hover:text-action-hover text-[9px] font-mono disabled:text-[#333] cursor-pointer transition-colors">
             [{stepping ? "…" : "▶ run"}]
+          </button>
+        )}
+        {canRerunPhase && (
+          <button onClick={e => { e.stopPropagation(); onRerunPhase!(stepType!) }} disabled={stepping}
+            className="text-[#b37e5d] hover:text-[#ff6b00] text-[9px] font-mono disabled:text-[#333] cursor-pointer transition-colors">
+            [{stepping ? "…" : "↻ rerun"}]
           </button>
         )}
       </div>

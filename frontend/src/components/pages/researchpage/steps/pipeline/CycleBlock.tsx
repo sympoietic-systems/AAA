@@ -21,11 +21,12 @@ interface CycleBlockProps {
   resultsByStep: Record<string, unknown[]>
   onSelect: (id: string | null) => void
   onDoStep: () => void
+  onRerunPhase: (stepType: string) => void
 }
 
 export const CycleBlock = memo(function CycleBlock({
   cycle, collapsed, onToggle, allComplete, hasPipeline, orchPhase, selectedId, stepping,
-  activeDepth, activeGroupIdx, planQueries, preview, resultsByStep, onSelect, onDoStep,
+  activeDepth, activeGroupIdx, planQueries, preview, resultsByStep, onSelect, onDoStep, onRerunPhase,
 }: CycleBlockProps) {
   const isCycleCurrent = cycle.depth === activeDepth
 
@@ -41,6 +42,7 @@ export const CycleBlock = memo(function CycleBlock({
         key={step.id || `${cycle.depth}-${keySuffix}`}
         label={baseLabel + suffix + pending}
         stepId={step.id || null}
+        stepType={step.step_type || null}
         isDone={done}
         isCurrent={isActive}
         isStale={stale}
@@ -49,6 +51,7 @@ export const CycleBlock = memo(function CycleBlock({
         rationale={getStepRationale(step)}
         onSelect={onSelect}
         onDoStep={onDoStep}
+        onRerunPhase={onRerunPhase}
         stepping={stepping}
       />
     )
@@ -83,6 +86,7 @@ export const CycleBlock = memo(function CycleBlock({
                   <PipelineRow
                     label={`Plan${suffix}${pending}${ps.status === "completed" ? "" : allComplete ? "" : " (" + ps.status + ")"}`}
                     stepId={ps.id || null}
+                    stepType={ps.step_type || null}
                     isDone={done}
                     isCurrent={isActive}
                     isStale={stale}
@@ -91,6 +95,7 @@ export const CycleBlock = memo(function CycleBlock({
                     rationale={getStepRationale(ps)}
                     onSelect={onSelect}
                     onDoStep={onDoStep}
+                    onRerunPhase={onRerunPhase}
                     stepping={stepping}
                   />
                 )
@@ -112,6 +117,7 @@ export const CycleBlock = memo(function CycleBlock({
                   <PipelineRow
                     label={`Document Digest${suffix}${pending}${ds.status === "completed" ? "" : allComplete ? "" : " (" + ds.status + ")"}`}
                     stepId={ds.id || null}
+                    stepType={ds.step_type || null}
                     isDone={done}
                     isCurrent={isActive}
                     isStale={stale}
@@ -120,6 +126,7 @@ export const CycleBlock = memo(function CycleBlock({
                     rationale={getStepRationale(ds)}
                     onSelect={onSelect}
                     onDoStep={onDoStep}
+                    onRerunPhase={onRerunPhase}
                     stepping={stepping}
                   />
                 )
@@ -164,6 +171,7 @@ export const CycleBlock = memo(function CycleBlock({
                       key={step.id || `${cycle.depth}-${group.queryIndex}-${step.step_type}`}
                       label={baseLabel + suffix + pending}
                       stepId={step.id || null}
+                      stepType={step.step_type || null}
                       isDone={done}
                       isCurrent={isActive}
                       isStale={stale}
@@ -172,6 +180,7 @@ export const CycleBlock = memo(function CycleBlock({
                       rationale={getStepRationale(step)}
                       onSelect={onSelect}
                       onDoStep={onDoStep}
+                      onRerunPhase={onRerunPhase}
                       stepping={stepping}
                     />
                   )

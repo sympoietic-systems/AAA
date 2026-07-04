@@ -97,6 +97,15 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
     onRefreshTask?.()
   }
 
+  const doRerunPhase = async (stepType: string) => {
+    setStepping(true)
+    try { await executeStep(taskId, stepType) } catch {}
+    setStepping(false)
+    load()
+    fetchPreview()
+    onRefreshTask?.()
+  }
+
   return (
     <TwoPanelLayout
       left={
@@ -110,6 +119,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
           onSelect={setSelectedId}
           onDoStep={doStep}
           onDoRerun={doRerun}
+          onRerunPhase={doRerunPhase}
         />
       }
       right={

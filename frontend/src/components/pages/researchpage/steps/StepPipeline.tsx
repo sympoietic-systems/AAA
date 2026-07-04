@@ -14,11 +14,12 @@ interface StepPipelineProps {
   onSelect: (id: string | null) => void
   onDoStep: () => void
   onDoRerun: () => void
+  onRerunPhase: (stepType: string) => void
 }
 
 export const StepPipeline = memo(function StepPipeline({
   data, preview, orchPhase, taskStatus, selectedId, stepping,
-  onSelect, onDoStep, onDoRerun,
+  onSelect, onDoStep, onDoRerun, onRerunPhase,
 }: StepPipelineProps) {
   const allComplete = taskStatus === "completed" && orchPhase === "complete"
   const hasPipeline = !!orchPhase && orchPhase !== "complete" && orchPhase !== "not_started"
@@ -66,6 +67,7 @@ export const StepPipeline = memo(function StepPipeline({
             resultsByStep={resultsByStep}
             onSelect={onSelect}
             onDoStep={onDoStep}
+            onRerunPhase={onRerunPhase}
           />
         ))}
 
