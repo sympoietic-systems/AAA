@@ -10,6 +10,7 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Sections 5.6 and 5.7.
 
 import json
 import logging
+import sqlite3
 from typing import Any
 
 logger = logging.getLogger("aaa.research_metabolism")
@@ -191,6 +192,24 @@ class ResearchMetabolismEngine:
                 if task else f"research_{task_id}"
             )
 
+            memory_node_repo = getattr(self._state, "memory_node_repo", None)
+            checkpoint_repo = getattr(self._state, "checkpoint_repo", None)
+            checkpoint_id = -1
+            if checkpoint_repo:
+                try:
+                    latest = checkpoint_repo.get_latest(conversation_id)
+                    if latest:
+                        checkpoint_id = latest["id"]
+                    else:
+                        checkpoint_id = checkpoint_repo.save(
+                            conversation_id=conversation_id,
+                            message_count=0,
+                            summary=f"Research: {task.get('objective', '')[:200]}" if task else "Research",
+                            model="research_crystallize",
+                        )
+                except Exception:
+                    pass
+
             nodes_created = 0
             for packet in packets:
                 try:
@@ -198,17 +217,26 @@ class ResearchMetabolismEngine:
                         "text": packet.get("raw_context", ""),
                         "phase": packet.get("phase", "unknown"),
                         "node_type": packet.get("proposed_node_type", "concept"),
-                        "conversation_id": conversation_id,
-                        "source_type": "research",
-                        "source_id": task_id,
                     })
-                    if result and result.get("status") == "ok":
-                        node_count = result.get("nodes_created", 0)
-                        nodes_created += node_count
-                        logger.info(
-                            "Sedimentation rake: task=%s phase=%s → %d nodes",
-                            task_id[:8], packet.get("phase"), node_count,
-                        )
+                    content = result.get("content", "")
+                    if not content:
+                        continue
+
+                    from backend.metabolisation.sedimentation import parse_sedimentation_yaml
+                    nodes, _tier = parse_sedimentation_yaml(content)
+                    if not nodes:
+                        continue
+
+                    for n in nodes:
+                        n["source_type"] = "research"
+                        n["source_id"] = task_id
+
+                    memory_node_repo.save_nodes(conversation_id, checkpoint_id, nodes)
+                    nodes_created += len(nodes)
+                    logger.info(
+                        "Sedimentation rake: task=%s phase=%s -> %d nodes",
+                        task_id[:8], packet.get("phase"), len(nodes),
+                    )
                 except Exception as e:
                     logger.warning("Sedimentation rake failed for packet: %s", e)
 
@@ -319,7 +347,46 @@ class ResearchMetabolismMixin:
                     task.get("conversation_id") or f"research_{task['id']}"
                 )
                 task_id = task["id"]
-                cleared = 0
+                task_nodes = 0
+
+                memory_node_repo = getattr(self.app_state, "memory_node_repo", None)
+                checkpoint_repo = getattr(self.app_state, "checkpoint_repo", None)
+                if not memory_node_repo:
+                    continue
+
+                # Ensure conversation record exists for FK constraint
+                if checkpoint_repo:
+                    try:
+                        db_path = getattr(self.app_state, "config", {}).get("database", {}).get("path", "")
+                        if db_path:
+                            from backend.storage.database import get_db_path
+                            db_conn = sqlite3.connect(str(get_db_path(db_path)))
+                            db_conn.execute("PRAGMA foreign_keys=ON")
+                            db_conn.execute(
+                                "INSERT OR IGNORE INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
+                                (conversation_id, f"Research: {task.get('objective', '')[:100]}", "symbia"),
+                            )
+                            db_conn.commit()
+                            db_conn.close()
+                    except Exception:
+                        pass
+
+                # Get or create a checkpoint
+                checkpoint_id = -1
+                if checkpoint_repo:
+                    try:
+                        latest = checkpoint_repo.get_latest(conversation_id)
+                        if latest:
+                            checkpoint_id = latest["id"]
+                        else:
+                            checkpoint_id = checkpoint_repo.save(
+                                conversation_id=conversation_id,
+                                message_count=0,
+                                summary=f"Research: {task.get('objective', '')[:200]}",
+                                model="research_crystallize",
+                            )
+                    except Exception:
+                        pass
 
                 for packet in packets:
                     try:
@@ -327,25 +394,35 @@ class ResearchMetabolismMixin:
                             "text": packet.get("raw_context", ""),
                             "phase": packet.get("phase", "unknown"),
                             "node_type": packet.get("proposed_node_type", "concept"),
-                            "conversation_id": conversation_id,
-                            "source_type": "research",
-                            "source_id": task_id,
                         })
-                        if result and result.get("status") == "ok":
-                            cleared += 1
-                            total_nodes += result.get("nodes_created", 0)
+                        content = result.get("content", "")
+                        if not content:
+                            continue
+
+                        from backend.metabolisation.sedimentation import parse_sedimentation_yaml
+                        nodes, _tier = parse_sedimentation_yaml(content)
+                        if not nodes:
+                            continue
+
+                        for n in nodes:
+                            n["source_type"] = "research"
+                            n["source_id"] = task_id
+
+                        memory_node_repo.save_nodes(conversation_id, checkpoint_id, nodes)
+                        task_nodes += len(nodes)
                     except Exception:
                         pass
 
-                if cleared > 0:
+                if task_nodes > 0:
                     state["sedimentation_queue"] = []
                     task_repo.update(
                         task_id,
                         orchestrator_state=json.dumps(state, default=str, ensure_ascii=False),
                     )
+                    total_nodes += task_nodes
                     logger.info(
-                        "Sedimentation rake: task=%s cleared=%d packets → %d nodes",
-                        task_id[:8], cleared, total_nodes,
+                        "Sedimentation rake: task=%s %d packets -> %d nodes",
+                        task_id[:8], len(packets), task_nodes,
                     )
 
             return total_nodes
