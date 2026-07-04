@@ -490,7 +490,30 @@ class ResearchTaskManager:
         new_objective = adjusted_objective or task["objective"]
         new_budget = budget_limit_usd or task["budget_limit_usd"]
 
+        # Carry forward old orchestrator state so the planner sees previous
+        # findings, consolidation report, reflection notes, etc.
         orch_state: dict[str, Any] = {}
+        old_raw = task.get("orchestrator_state")
+        if old_raw:
+            try:
+                old_orch = json.loads(old_raw) if isinstance(old_raw, str) else old_raw
+            except Exception:
+                old_orch = {}
+
+            carry_keys = (
+                "plan", "all_findings", "last_reflection",
+                "search_results_cache", "parsed_sources_cache", "digest_results_cache",
+                "digest_signals", "sedimentation_queue",
+                "reflection_notes", "detected_biases", "knowledge_gaps",
+                "glitch_fidelity", "contradiction_density", "source_entropy",
+                "signal_flags", "refined_queries", "revised_confidence",
+                "monologue_trace", "critique_log", "diffractive_audit", "diffractive_audit_description",
+            )
+            for k in carry_keys:
+                if k in old_orch:
+                    orch_state[k] = old_orch[k]
+
+        # Always override these with current values
         previous_context = task.get("result_summary") or ""
         if previous_context:
             orch_state["previous_context"] = previous_context
@@ -524,15 +547,9 @@ class ResearchTaskManager:
         except Exception:
             pass
 
-        old_raw = task.get("orchestrator_state")
-        if old_raw:
-            try:
-                old_orch = json.loads(old_raw) if isinstance(old_raw, str) else old_raw
-                orch_depth = old_orch.get("current_depth", 0)
-                if orch_depth > old_current_depth:
-                    old_current_depth = orch_depth
-            except Exception:
-                pass
+        old_cur_depth = old_orch.get("current_depth", 0) if old_raw else 0
+        if old_cur_depth > old_current_depth:
+            old_current_depth = old_cur_depth
 
         orch_state["step_number"] = step_count
         orch_state["current_depth"] = old_current_depth + 1

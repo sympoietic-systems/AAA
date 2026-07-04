@@ -658,6 +658,9 @@ class SomaticResearchOrchestrator:
             task_state["refined_queries"] = payload.refined_queries
             task_state["revised_confidence"] = payload.revised_confidence
             task_state["monologue_trace"] = payload.monologue_trace
+            task_state["critique_log"] = payload.critique_log
+            task_state["diffractive_audit"] = payload.diffractive_audit
+            task_state["diffractive_audit_description"] = payload.diffractive_audit_description
         elif phase == "evaluating" and isinstance(payload, EvaluatePayload):
             task_state["should_stop"] = payload.should_stop
             task_state["stop_reason"] = payload.stop_reason
