@@ -96,6 +96,33 @@ def _build_reflection_hints(state: dict) -> List[str]:
     return hints
 
 
+def _build_prior_cycle_summary(state: dict) -> str:
+    """Build a plain summary of prior-cycle findings and consolidation
+    so the planner always sees what was already discovered and where gaps remain,
+    even when meta-cognitive reflection hints are sparse."""
+    parts = []
+
+    all_findings = state.get("all_findings") or []
+    if all_findings:
+        parts.append("Prior Research Findings:\n" + "\n".join(f"- {f}" for f in all_findings))
+
+    last_refl = state.get("last_reflection") or {}
+    report_parts = []
+    if last_refl.get("key_insights"):
+        report_parts.append("Key Insights:\n" + "\n".join(f"- {i}" for i in last_refl["key_insights"]))
+    if last_refl.get("remaining_gaps"):
+        report_parts.append("Remaining Gaps:\n" + "\n".join(f"- {g}" for g in last_refl["remaining_gaps"]))
+    if last_refl.get("next_queries"):
+        report_parts.append("Next Queries:\n" + "\n".join(f"- {q}" for q in last_refl["next_queries"]))
+    completeness = last_refl.get("completeness_score")
+    if completeness is not None:
+        report_parts.append(f"Completeness Score: {completeness:.2f}")
+    if report_parts:
+        parts.append("Prior Consolidation Report:\n" + "\n\n".join(report_parts))
+
+    return "\n\n".join(parts)
+
+
 async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int, budget: float,
                           previous_context: str = "", step_id: str = "") -> dict:
     """Core plan generation logic migrated from legacy phases.py."""
@@ -139,9 +166,12 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
         user_template = prompt_data.get("user", "")
         
         s = orch._get_state(task_id)
+        prior_summary = _build_prior_cycle_summary(s)
         reflection_hints = _build_reflection_hints(s)
-            
+
         combined_context = previous_context
+        if prior_summary:
+            combined_context = (combined_context + "\n\n" + prior_summary) if combined_context else prior_summary
         if reflection_hints:
             hints_text = "\n\n### Meta-Cognitive Feedback:\n" + "\n\n".join(reflection_hints)
             combined_context = (combined_context + hints_text) if combined_context else hints_text.strip()
@@ -240,9 +270,12 @@ class PlanStep(BaseResearchStep):
         fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
         user_template = prompt_data.get("user", "")
 
+        prior_summary = _build_prior_cycle_summary(state)
         reflection_hints = _build_reflection_hints(state)
 
         combined_context = previous_context
+        if prior_summary:
+            combined_context = (combined_context + "\n\n" + prior_summary) if combined_context else prior_summary
         if reflection_hints:
             hints_text = "\n\n### Meta-Cognitive Feedback:\n" + "\n\n".join(reflection_hints)
             combined_context = (combined_context + hints_text) if combined_context else hints_text.strip()
