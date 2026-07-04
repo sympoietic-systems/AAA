@@ -393,6 +393,16 @@ class ModelPoolProvider(BaseLLMProvider):
     def _mark_exhausted(self, model: str):
         self._exhausted[model] = time.time() + self._cooldown_seconds
 
+    def reset_exhaustion(self):
+        """Clear all exhaustion timers — call on server startup."""
+        self._exhausted.clear()
+        self._google_key_mgr._exhausted.clear()
+        self._deepseek_key_mgr._exhausted.clear()
+        self._openrouter_key_mgr._exhausted.clear()
+        self._last_model_used = ""
+        self._last_model_time = 0.0
+        logger.info("Model pool exhaustion state reset — all models and keys available.")
+
     def _mask_key(self, key: str) -> str:
         if not key:
             return "None"
@@ -518,6 +528,9 @@ class ModelPoolProvider(BaseLLMProvider):
             self._mark_exhausted(model)
             logger.warning("All keys exhausted for model %s. Moving to next in pool.", model)
 
+        if not errors:
+            logger.error("Model pool: no models were attempted. models_to_try=%s, exhausted=%s",
+                         models_to_try, list(self._exhausted.keys()))
         error_msg = f"All models in pool exhausted. Errors: {'; '.join(errors)}"
         logger.error(error_msg)
         raise RateLimitError(error_msg)

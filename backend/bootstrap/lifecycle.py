@@ -76,6 +76,10 @@ async def lifespan(app: FastAPI):
     llm_provider, structural_provider, vision_provider = _init_providers(config)
     llm_module = LLMClientModule(llm_provider)
 
+    # Reset any stale exhaustion timers (fresh process, no actual rate limits in effect)
+    if hasattr(llm_provider, "reset_exhaustion"):
+        llm_provider.reset_exhaustion()
+
     # 4. Processing modules
     modules = _init_modules(config, repos, embedder, structural_provider, vision_provider)
 
