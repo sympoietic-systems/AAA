@@ -20,7 +20,7 @@ conn = sqlite3.connect(db_path)
 conn.row_factory = sqlite3.Row
 
 cfg = config.get("daemon", {})
-print("══ Daemon Config ══")
+print("== Daemon Config ==")
 print(f"  check_interval     = {cfg.get('check_interval', '?')}s")
 print(f"  idle_threshold     = {cfg.get('idle_threshold', '?')}s ({cfg.get('idle_threshold', 1800)//60}min)")
 print(f"  min_dream_interval = {cfg.get('min_dream_interval', '?')}s ({cfg.get('min_dream_interval', 3600)//60}min)")
@@ -28,7 +28,7 @@ print(f"  max_daily_dreams   = {cfg.get('max_daily_dreams', '?')}")
 print(f"  short_window_max   = {cfg.get('short_window_max', '?')}")
 print()
 
-print("══ Dreams ══")
+print("-- Dreams --")
 count = conn.execute("SELECT COUNT(*) as c FROM dream_log").fetchone()["c"]
 latest = conn.execute("SELECT MAX(timestamp) as t FROM dream_log").fetchone()["t"]
 print(f"  Total dreams logged: {count}")
@@ -40,7 +40,7 @@ print(f"  Last 8h:  {d8h} / {cfg.get('short_window_max', '?')}")
 print(f"  Budget exhausted (24h): {'YES' if d24h >= 30 else 'no'}")
 print()
 
-print("══ Conversations ══")
+print("-- Conversations --")
 rows = conn.execute("""
     SELECT c.id, c.title,
            COUNT(cl.id) as msg_count,
@@ -62,14 +62,14 @@ for r in rows:
     print(f"  [{cid}] {title}: {msg} msgs | last_consol: {lc} | reconsol: {req} | {first}")
 print()
 
-print("══ Checkpoints ══")
+print("-- Checkpoints --")
 cp_count = conn.execute("SELECT COUNT(*) as c FROM consolidation_checkpoints").fetchone()["c"]
 cp_latest = conn.execute("SELECT MAX(id) as m FROM consolidation_checkpoints").fetchone()["m"]
 print(f"  Total checkpoints: {cp_count}")
 print(f"  Latest checkpoint ID: {cp_latest}")
 print()
 
-print("══ Memory Nodes ══")
+print("-- Memory Nodes --")
 mn_count = conn.execute("SELECT COUNT(*) as c FROM memory_nodes").fetchone()["c"]
 mn_src = conn.execute("SELECT source_type, COUNT(*) as c FROM memory_nodes GROUP BY source_type").fetchall()
 print(f"  Total nodes: {mn_count}")
@@ -77,7 +77,7 @@ for s in mn_src:
     print(f"    {s['source_type']}: {s['c']}")
 print()
 
-print("══ Beliefs ══")
+print("-- Beliefs --")
 rows = conn.execute("SELECT lifecycle_stage, COUNT(*) as c FROM belief_nodes GROUP BY lifecycle_stage").fetchall()
 if rows:
     for r in rows:
@@ -86,7 +86,7 @@ else:
     print("  NO BELIEFS AT ALL")
 print()
 
-print("══ Message Metabolism ══")
+print("-- Message Metabolism --")
 meta = conn.execute("""
     SELECT
         COUNT(*) as total,
@@ -97,18 +97,26 @@ meta = conn.execute("""
 print(f"  Human messages: {meta['total']} total | {meta['done']} metabolized | {meta['pending']} pending")
 print()
 
-print("══ Skills ══")
-sk = conn.execute("SELECT COUNT(*) as c FROM skills").fetchone()["c"]
-sk_cryst = conn.execute("SELECT COUNT(*) as c FROM skills WHERE lifecycle_stage = 'crystallized'").fetchone()["c"]
-print(f"  Total: {sk} | Crystallized: {sk_cryst}")
+print("-- Skills --")
+try:
+    sk = conn.execute("SELECT COUNT(*) as c FROM skills").fetchone()["c"]
+    sk_cryst = conn.execute("SELECT COUNT(*) as c FROM skills WHERE lifecycle_stage = 'crystallized'").fetchone()["c"]
+    print(f"  Total: {sk} | Crystallized: {sk_cryst}")
+except Exception:
+    sk = conn.execute("SELECT COUNT(*) as c FROM skill_nodes").fetchone()["c"]
+    sk_cryst = conn.execute("SELECT COUNT(*) as c FROM skill_nodes WHERE lifecycle_stage = 'crystallized'").fetchone()["c"]
+    print(f"  Total: {sk} | Crystallized: {sk_cryst}")
 print()
 
-print("══ Research Sedimentation ══")
-tasks = conn.execute("SELECT id, status FROM research_tasks WHERE status = 'completed' LIMIT 20").fetchall()
+print("-- Research Sedimentation --")
+tasks = conn.execute("SELECT id, orchestrator_state FROM research_tasks WHERE status = 'completed' LIMIT 20").fetchall()
 for t in tasks:
-    q = json.loads(t.get("orchestrator_state", "{}") or "{}").get("sedimentation_queue", [])
-    nodes = conn.execute("SELECT COUNT(*) as c FROM memory_nodes WHERE source_type = 'research' AND source_id = ?", (t["id"],)).fetchone()["c"]
-    print(f"  [{t['id'][:12]}] queue: {len(q)} | nodes: {nodes}")
+    tid = t["id"]
+    state_raw = t["orchestrator_state"] or "{}"
+    state = json.loads(state_raw) if isinstance(state_raw, str) else state_raw
+    q = state.get("sedimentation_queue", [])
+    nodes = conn.execute("SELECT COUNT(*) as c FROM memory_nodes WHERE source_type = 'research' AND source_id = ?", (tid,)).fetchone()["c"]
+    print(f"  [{tid[:12]}] queue: {len(q)} | nodes: {nodes}")
 print()
 
 conn.close()
