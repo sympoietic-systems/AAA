@@ -12,6 +12,8 @@ import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes, getResearc
 import { KeyValueGrid, TerminalButton } from "../../UI"
 import { NotesSection } from "../../shared/NotesSection"
 import type { NoteInfo } from "../../../api/client"
+import { MemoryNodeCard } from "../../shared/MemoryNodeCard"
+import type { MemoryNodeInfo } from "../../../api/client"
 import { wrapSelectedTextInMarks } from "../../../utils/noteHighlight"
 import { ContinueResearchModal } from "./ContinueResearchModal"
 import {
@@ -385,16 +387,6 @@ function NotesTab({
 }
 
 /* ── Memory Tab (Detail Panel) ── */
-const DET_NODE_TYPE_COLORS: Record<string, string> = {
-  scar: "var(--color-semantic-red)",
-  concept: "var(--color-semantic-blue)",
-  tension: "var(--color-semantic-red)",
-  pattern: "var(--color-semantic-purple)",
-  bifurcation: "var(--color-semantic-gold)",
-  belief_seed: "var(--color-semantic-sand)",
-  method_choice: "var(--color-semantic-slate)",
-}
-
 function DetailMemoryTab({ taskId }: { taskId: string }) {
   const [nodes, setNodes] = useState<ResearchMemoryNode[]>([])
   const [knots, setKnots] = useState<ResearchKnot[]>([])
@@ -417,32 +409,23 @@ function DetailMemoryTab({ taskId }: { taskId: string }) {
   }, [taskId])
 
   if (loading) {
-    return <div className="text-ui-dim animate-pulse text-xs font-mono mt-4">[ loading memory tissue… ]</div>
+    return <div className="text-ui-dim animate-pulse text-xs font-mono mt-4">[ loading memory tissue... ]</div>
   }
 
   return (
-    <div className="space-y-3 font-mono">
+    <div className="space-y-4">
       <div>
-        <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-1">[ Memory Nodes ({nodes.length}) ]</div>
+        <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-2">[ Memory Nodes ({nodes.length}) ]</div>
         {nodes.length === 0 ? (
           <div className="text-[10px] text-ui-dim italic">No memory nodes yet.</div>
         ) : (
-          <div className="space-y-1">
-            {nodes.map((node) => {
-              const nc = DET_NODE_TYPE_COLORS[node.node_type] || "var(--color-ui-dim)"
-              return (
-                <div key={node.id} className="border-l-2 border-ui-border/40 pl-2 py-1">
-                  <div className="flex items-center gap-1.5 text-[10px]">
-                    <span style={{ color: nc }} className="text-[8px] shrink-0">●</span>
-                    <span className="text-ui-secondary font-bold">{node.node_type}</span>
-                    <span className="text-ui-dim text-[8px] ml-auto">{(node.intensity * 100).toFixed(0)}%</span>
-                  </div>
-                  <div className="text-ui-dim text-[9px] mt-1 leading-relaxed select-text">
-                    {node.intra_active_text.slice(0, 240)}{node.intra_active_text.length > 240 ? "…" : ""}
-                  </div>
-                </div>
-              )
-            })}
+          <div
+            className="grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 420px), 1fr))" }}
+          >
+            {nodes.map((node) => (
+              <MemoryNodeCard key={node.id} node={node as unknown as MemoryNodeInfo} />
+            ))}
           </div>
         )}
       </div>

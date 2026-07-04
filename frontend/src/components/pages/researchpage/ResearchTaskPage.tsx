@@ -13,6 +13,8 @@ import { NotableMarkdown } from "../../shared/NotableMarkdown"
 import type { NoteInfo } from "../../../api/client"
 import { copyToClipboard } from "../../../utils/clipboard"
 import { COLOR_PALETTE } from "../../../config/colors"
+import { MemoryNodeCard } from "../../shared/MemoryNodeCard"
+import type { MemoryNodeInfo } from "../../../api/client"
 
 type SubTabId = "info" | "steps" | "report" | "notes" | "memory"
 
@@ -33,17 +35,7 @@ function extractReportTitle(markdown: string): string | null {
   return match?.[1]?.trim() ?? null
 }
 
-/* ── Memory Tab — self-fetching, displays research sedimented memory nodes + semantic knots ── */
-const NODE_TYPE_COLORS: Record<string, string> = {
-  scar: "var(--color-semantic-red)",
-  concept: "var(--color-semantic-blue)",
-  tension: "var(--color-semantic-red)",
-  pattern: "var(--color-semantic-purple)",
-  bifurcation: "var(--color-semantic-gold)",
-  belief_seed: "var(--color-semantic-sand)",
-  method_choice: "var(--color-semantic-slate)",
-}
-
+/* ── Memory Tab — multicolumn grid of memory node cards + semantic knots ── */
 function MemoryTab({ taskId }: { taskId: string }) {
   const [nodes, setNodes] = useState<ResearchMemoryNode[]>([])
   const [knots, setKnots] = useState<ResearchKnot[]>([])
@@ -68,11 +60,11 @@ function MemoryTab({ taskId }: { taskId: string }) {
   }, [taskId])
 
   if (loading) {
-    return <div className="text-ui-dim animate-pulse text-xs font-mono mt-2">[ loading memory tissue… ]</div>
+    return <div className="text-ui-dim animate-pulse text-xs font-mono mt-2">[ loading memory tissue... ]</div>
   }
 
   return (
-    <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+    <div className="flex-1 overflow-y-auto pr-1 space-y-4">
       {/* Memory Nodes */}
       <div>
         <div className="text-[#6c6c8a] uppercase text-[9px] tracking-wider mb-2">
@@ -83,36 +75,13 @@ function MemoryTab({ taskId }: { taskId: string }) {
             No memory nodes crystallized yet. Nodes appear when reflection surfaces tensions, synthesis stabilizes concepts, or consolidation identifies patterns.
           </div>
         ) : (
-          <div className="space-y-1">
-            {nodes.map((node) => {
-              const nc = NODE_TYPE_COLORS[node.node_type] || "var(--color-ui-dim)"
-              return (
-                <div key={node.id} className="border-l-2 border-ui-border/40 pl-2 py-1">
-                  <div className="flex items-center gap-1.5 font-mono text-[10px]">
-                    <span style={{ color: nc }} className="text-[8px] shrink-0">●</span>
-                    <span className="text-ui-secondary font-bold">{node.node_type}</span>
-                    <span className="text-ui-dim text-[8px] ml-auto">{(node.intensity * 100).toFixed(0)}%</span>
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <div className="flex-1 h-[2px] bg-ui-border">
-                      <div style={{ width: `${node.intensity * 100}%`, height: "100%", background: nc }} />
-                    </div>
-                  </div>
-                  <div className="text-ui-dim text-[9px] mt-1 leading-relaxed font-mono select-text">
-                    {node.scar && <span className="text-semantic-gold">_{node.scar}_ </span>}
-                    {node.intra_active_text.slice(0, 280)}{node.intra_active_text.length > 280 ? "…" : ""}
-                  </div>
-                  {node.surface_fragment && (
-                    <div className="text-ui-dim/60 text-[8px] mt-0.5 italic select-text">
-                      "{node.surface_fragment.slice(0, 150)}{node.surface_fragment.length > 150 ? "…" : ""}"
-                    </div>
-                  )}
-                  {node.diffractive_key && (
-                    <div className="text-ui-dim text-[8px] mt-0.5">{node.diffractive_key}</div>
-                  )}
-                </div>
-              )
-            })}
+          <div
+            className="grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 420px), 1fr))" }}
+          >
+            {nodes.map((node) => (
+              <MemoryNodeCard key={node.id} node={node as unknown as MemoryNodeInfo} />
+            ))}
           </div>
         )}
       </div>

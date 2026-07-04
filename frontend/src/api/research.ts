@@ -465,6 +465,8 @@ export interface ResearchMemoryNode {
   agential_symmetry: string
   source_type: string
   source_id: string
+  glitch_potential?: number
+  tendril_ids?: string[]
   created_at: string | null
 }
 
