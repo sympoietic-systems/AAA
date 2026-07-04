@@ -846,10 +846,26 @@ class SomaticResearchOrchestrator:
 
             except Exception as e:
                 logger.exception("Step %s failed for task %s", phase, task_id)
+
+                # Mark running steps as failed so they're visible in the UI for rerun
+                if self.step_repo:
+                    try:
+                        all_steps = self.step_repo.get_by_task(task_id) or []
+                        for st in all_steps:
+                            if st["status"] == "running":
+                                self.step_repo.update(st["id"], status="failed",
+                                    result_summary=f"Step failed: {e}")
+                    except Exception:
+                        pass
+
+                # Force phase to complete so the while-loop exits.
+                # But preserve the failing phase name so the caller knows which step failed.
                 s["phase"] = "complete"
+                s["_failed_phase"] = phase
                 result.update({
                     "status": "error",
                     "message": f"Step '{phase}' failed: {e}",
+                    "failed_phase": phase,
                 })
                 self.task_repo.update(task_id, status="failed",
                     result_summary=f"Step '{phase}' failed: {e}")

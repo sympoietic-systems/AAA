@@ -31,10 +31,11 @@ export const CycleBlock = memo(function CycleBlock({
 
   const renderRow = (step: ResearchStep, phase: string, baseLabel: string, keySuffix: string) => {
     const stale = step.status === "stale"
+    const failed = step.status === "failed"
     const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
     const pending = step.id ? "" : " —"
-    const done = allComplete || step.status === "completed" || stale
-    const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed"
+    const done = !failed && (allComplete || step.status === "completed" || stale)
+    const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed" && step.status !== "failed"
     return (
       <PipelineRow
         key={step.id || `${cycle.depth}-${keySuffix}`}
@@ -43,6 +44,7 @@ export const CycleBlock = memo(function CycleBlock({
         isDone={done}
         isCurrent={isActive}
         isStale={stale}
+        isFailed={failed}
         isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
         rationale={getStepRationale(step)}
         onSelect={onSelect}
@@ -72,10 +74,11 @@ export const CycleBlock = memo(function CycleBlock({
               {(() => {
                 const ps = cycle.planStep!
                 const stale = ps.status === "stale"
+                const failed = ps.status === "failed"
                 const suffix = (stale || ps.status === "completed") ? stepCountSuffix(ps, resultsByStep) : ""
                 const pending = ps.id ? "" : " —"
-                const done = allComplete || ps.status === "completed" || stale
-                const isActive = !allComplete && hasPipeline && isCycleCurrent && orchPhase === "planning" && ps.status !== "completed"
+                const done = !failed && (allComplete || ps.status === "completed" || stale)
+                const isActive = !allComplete && hasPipeline && isCycleCurrent && orchPhase === "planning" && ps.status !== "completed" && ps.status !== "failed"
                 return (
                   <PipelineRow
                     label={`Plan${suffix}${pending}${ps.status === "completed" ? "" : allComplete ? "" : " (" + ps.status + ")"}`}
@@ -83,6 +86,7 @@ export const CycleBlock = memo(function CycleBlock({
                     isDone={done}
                     isCurrent={isActive}
                     isStale={stale}
+                    isFailed={failed}
                     isSelected={ps.id ? selectedId === ps.id : (selectedId === null && isActive)}
                     rationale={getStepRationale(ps)}
                     onSelect={onSelect}
@@ -99,10 +103,11 @@ export const CycleBlock = memo(function CycleBlock({
               {(() => {
                 const ds = cycle.documentDigestionStep!
                 const stale = ds.status === "stale"
+                const failed = ds.status === "failed"
                 const suffix = (stale || ds.status === "completed") ? stepCountSuffix(ds, resultsByStep) : ""
                 const pending = ds.id ? "" : " —"
-                const done = allComplete || ds.status === "completed" || stale
-                const isActive = !allComplete && hasPipeline && isCycleCurrent && orchPhase === "document_digestion" && ds.status !== "completed"
+                const done = !failed && (allComplete || ds.status === "completed" || stale)
+                const isActive = !allComplete && hasPipeline && isCycleCurrent && orchPhase === "document_digestion" && ds.status !== "completed" && ds.status !== "failed"
                 return (
                   <PipelineRow
                     label={`Document Digest${suffix}${pending}${ds.status === "completed" ? "" : allComplete ? "" : " (" + ds.status + ")"}`}
@@ -110,6 +115,7 @@ export const CycleBlock = memo(function CycleBlock({
                     isDone={done}
                     isCurrent={isActive}
                     isStale={stale}
+                    isFailed={failed}
                     isSelected={ds.id ? selectedId === ds.id : (selectedId === null && isActive)}
                     rationale={getStepRationale(ds)}
                     onSelect={onSelect}
@@ -143,14 +149,16 @@ export const CycleBlock = memo(function CycleBlock({
                 {group.steps.map((step) => {
                   const baseLabel = STEP_LABELS[step.step_type] || step.step_type
                   const stale = step.status === "stale"
+                  const failed = step.status === "failed"
                   const suffix = (stale || step.status === "completed") ? stepCountSuffix(step, resultsByStep) : ""
                   const pending = step.id ? "" : " —"
-                  const done = allComplete || step.status === "completed" || stale
+                  const done = !failed && (allComplete || step.status === "completed" || stale)
                   const isActive = !allComplete && hasPipeline
                     && isCycleCurrent
                     && group.queryIndex - 1 === activeGroupIdx
                     && STEP_TO_PHASE[step.step_type] === orchPhase
                     && step.status !== "completed"
+                    && step.status !== "failed"
                   return (
                     <PipelineRow
                       key={step.id || `${cycle.depth}-${group.queryIndex}-${step.step_type}`}
@@ -159,6 +167,7 @@ export const CycleBlock = memo(function CycleBlock({
                       isDone={done}
                       isCurrent={isActive}
                       isStale={stale}
+                      isFailed={failed}
                       isSelected={step.id ? selectedId === step.id : (selectedId === null && isActive)}
                       rationale={getStepRationale(step)}
                       onSelect={onSelect}

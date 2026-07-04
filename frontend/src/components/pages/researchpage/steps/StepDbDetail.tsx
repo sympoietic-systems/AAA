@@ -315,11 +315,11 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
       <div className="flex items-center justify-between">
         <div className="text-semantic-header uppercase text-[9px] tracking-wider">
           [ Step #{selected.step_number}: {STEP_LABELS[selected.step_type] || selected.step_type}
-          <span className={selected.status === "stale" ? "text-semantic-sand ml-1" : "text-ui-dim ml-1"}>
+          <span className={selected.status === "stale" ? "text-semantic-sand ml-1" : selected.status === "failed" ? "text-semantic-red ml-1" : "text-ui-dim ml-1"}>
             ({selected.status})
           </span> ]
         </div>
-        {(selected.status === "completed" || selected.status === "stale") && (
+        {(selected.status === "completed" || selected.status === "stale" || selected.status === "failed" || selected.status === "running") && (
           <TerminalButton onClick={handleRerunStep} intent="edit">⟳ rerun step</TerminalButton>
         )}
       </div>

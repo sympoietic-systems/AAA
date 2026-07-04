@@ -468,7 +468,7 @@ async def execute_step(
             else:
                 all_steps = step_repo.get_by_task(task_id)
                 matching = [s for s in all_steps
-                            if s["step_type"] == rerun_step_type and s["status"] == "completed"]
+                            if s["step_type"] == rerun_step_type and s["status"] in ("completed", "failed", "running")]
                 existing = matching[-1] if matching else None
             if existing:
                 s2 = orch._state_mgr._states.get(task_id)

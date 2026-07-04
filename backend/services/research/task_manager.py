@@ -377,8 +377,14 @@ class ResearchTaskManager:
         phase = self.orchestrator.get_task_phase(task_id)
 
         if phase == "complete":
-            summary = result.get("result_summary", "Research complete.")
-            self.complete(task_id, result_summary=summary)
+            if result.get("status") == "error":
+                # Task was already set to "failed" by execute_step's exception handler;
+                # don't overwrite with "completed".
+                logger.warning("orchestrator_step: phase=complete but result is error — skipping complete(), "
+                               "task already failed for %s", result.get("failed_phase", task_id[:8]))
+            else:
+                summary = result.get("result_summary", "Research complete.")
+                self.complete(task_id, result_summary=summary)
 
         return result
 

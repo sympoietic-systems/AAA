@@ -6,6 +6,7 @@ interface PipelineRowProps {
   isDone: boolean
   isCurrent: boolean
   isStale: boolean
+  isFailed: boolean
   isSelected: boolean
   rationale?: string | null
   onSelect: (id: string | null) => void
@@ -14,10 +15,10 @@ interface PipelineRowProps {
 }
 
 export const PipelineRow = memo(function PipelineRow({
-  label, stepId, isDone, isCurrent, isStale, isSelected, rationale, onSelect, onDoStep, stepping,
+  label, stepId, isDone, isCurrent, isStale, isFailed, isSelected, rationale, onSelect, onDoStep, stepping,
 }: PipelineRowProps) {
-  const sc = isStale ? "var(--color-semantic-sand)" : isDone ? "var(--color-semantic-green)" : isCurrent ? "var(--color-semantic-gold)" : "var(--color-ui-dim)"
-  const canClick = (isDone || isStale) ? !!stepId : isCurrent
+  const sc = isFailed ? "var(--color-semantic-red)" : isStale ? "var(--color-semantic-sand)" : isDone ? "var(--color-semantic-green)" : isCurrent ? "var(--color-semantic-gold)" : "var(--color-ui-dim)"
+  const canClick = (isDone || isStale || isFailed) ? !!stepId : isCurrent
 
   const handleClick = () => {
     if (!canClick) return
@@ -36,6 +37,8 @@ export const PipelineRow = memo(function PipelineRow({
     ? "border-l-2 border-semantic-gold bg-action-hover/5"
     : isStale
     ? "border-l-2 border-semantic-sand bg-action-hover/5"
+    : isFailed
+    ? "border-l-2 border-semantic-red bg-action-hover/5"
     : "border-l-2 border-transparent"
 
   return (
@@ -45,10 +48,10 @@ export const PipelineRow = memo(function PipelineRow({
         className={`flex items-center gap-2 text-[10px] px-2 py-1 transition-colors ${edge} ${canClick ? "cursor-pointer hover:bg-[#111]" : ""}`}
       >
         <span style={{ color: sc }} className="text-[8px] shrink-0 w-3 font-mono">
-          {isStale ? "⟳" : isDone ? "✔" : isCurrent ? "▶" : "○"}
+          {isFailed ? "✕" : isStale ? "⟳" : isDone ? "✔" : isCurrent ? "▶" : "○"}
         </span>
-        <span className={`font-mono flex-1 ${isSelected ? "text-action-hover" : isStale ? "text-semantic-sand/80" : isDone ? "text-ui-secondary" : isCurrent ? "text-semantic-gold" : "text-ui-dim"}`}>
-          {label}{isStale ? " (stale)" : ""}
+        <span className={`font-mono flex-1 ${isSelected ? "text-action-hover" : isFailed ? "text-semantic-red/80" : isStale ? "text-semantic-sand/80" : isDone ? "text-ui-secondary" : isCurrent ? "text-semantic-gold" : "text-ui-dim"}`}>
+          {label}{isFailed ? " (failed)" : isStale ? " (stale)" : ""}
         </span>
         {isCurrent && (
           <button onClick={e => { e.stopPropagation(); onDoStep() }} disabled={stepping}
