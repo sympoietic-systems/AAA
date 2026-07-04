@@ -158,7 +158,7 @@ def make_initial_state(task: dict) -> dict:
         "plan_id": None,
         "plan": extra.get("plan"),
         "all_findings": extra.get("all_findings", []),
-        "sources_analyzed": 0,
+        "sources_analyzed": extra.get("sources_analyzed", 0),
         "stagnation_counter": 0,
         "step_number": extra.get("step_number", 0),
         "last_reflection": extra.get("last_reflection", {}),

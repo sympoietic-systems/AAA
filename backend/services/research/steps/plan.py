@@ -123,6 +123,68 @@ def _build_prior_cycle_summary(state: dict) -> str:
     return "\n\n".join(parts)
 
 
+async def _recover_context_from_steps(orch, task_id: str) -> str:
+    """Fallback: reconstruct prior-cycle context from step records
+    when orchestrator_state is empty or wiped by a legacy bug."""
+    parts = []
+    try:
+        if not orch.step_repo:
+            return ""
+        all_steps = orch.step_repo.get_by_task(task_id)
+        if not all_steps:
+            return ""
+
+        consolidate_steps = [
+            s for s in all_steps
+            if s.get("step_type") in ("reflect", "consolidating")
+            and s.get("status") == "completed"
+        ]
+        consolidate_steps.sort(key=lambda s: s.get("step_number", 0), reverse=True)
+
+        if consolidate_steps:
+            latest = consolidate_steps[0]
+            sd = latest.get("step_data")
+            if sd:
+                try:
+                    data = json.loads(sd) if isinstance(sd, str) else sd
+                except Exception:
+                    data = {}
+                if data:
+                    depth = data.get("depth", 0)
+                    formatted = orch._format_reflection_markdown(data, depth=depth + 1, include_cycle=True)
+                    if formatted and formatted != "(none)":
+                        parts.append(f"Prior Consolidation Report (from step records):\n{formatted}")
+
+        digest_steps = [
+            s for s in all_steps
+            if s.get("step_type") == "digest"
+            and s.get("status") == "completed"
+        ]
+        digest_steps.sort(key=lambda s: s.get("step_number", 0))
+
+        if digest_steps:
+            findings: list[str] = []
+            seen = set()
+            for ds in digest_steps:
+                sd = ds.get("step_data")
+                if sd:
+                    try:
+                        data = json.loads(sd) if isinstance(sd, str) else sd
+                    except Exception:
+                        data = {}
+                    for item in data.get("learnings") or []:
+                        if item not in seen:
+                            findings.append(item)
+                            seen.add(item)
+            if findings:
+                parts.append("Prior Research Findings (reconstructed from steps):\n" + "\n".join(f"- {f}" for f in findings))
+
+    except Exception:
+        logger.warning("Failed to recover prior context from steps for %s", task_id[:8], exc_info=True)
+
+    return "\n\n".join(parts)
+
+
 async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int, budget: float,
                           previous_context: str = "", step_id: str = "") -> dict:
     """Core plan generation logic migrated from legacy phases.py."""
@@ -167,6 +229,8 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
         
         s = orch._get_state(task_id)
         prior_summary = _build_prior_cycle_summary(s)
+        if not prior_summary:
+            prior_summary = await _recover_context_from_steps(orch, task_id)
         reflection_hints = _build_reflection_hints(s)
 
         combined_context = previous_context
@@ -271,6 +335,8 @@ class PlanStep(BaseResearchStep):
         user_template = prompt_data.get("user", "")
 
         prior_summary = _build_prior_cycle_summary(state)
+        if not prior_summary:
+            prior_summary = await _recover_context_from_steps(orch, envelope.task_id)
         reflection_hints = _build_reflection_hints(state)
 
         combined_context = previous_context
