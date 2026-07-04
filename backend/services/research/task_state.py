@@ -76,6 +76,21 @@ class ReflectionPayload(BaseModel):
     diffractive_audit: str = "CEREMONIAL"
     diffractive_audit_description: str = ""
 
+class SedimentationPacket(BaseModel):
+    """Buffered memory crystallization request from a research phase.
+
+    Pushed to the task's sedimentation_queue when phase-specific thresholds trip.
+    Raked asynchronously by the daemon's consolidation cycle via ResearchCrystallization.
+    See: docs/decisions/ADR-060-research-memory-integration.md
+    """
+    phase: str
+    trigger_thresholds: Dict[str, float] = Field(default_factory=dict)
+    raw_context: str = ""
+    proposed_node_type: str = "concept"
+    confidence: float = 0.0
+    pushed_at: str = ""
+
+
 class EvaluatePayload(BaseModel):
     stagnation_counter: int
     sources_analyzed: int
@@ -117,6 +132,7 @@ _ORCH_STATE_KEYS = {
     "inject_file_id", "inject_conversation_id", "document_mode", "document_chunk_limit",
     "document_digested", "document_learnings",
     "previous_context", "continue_from_task_id",
+    "sedimentation_queue",
 }
 
 
@@ -158,6 +174,7 @@ def make_initial_state(task: dict) -> dict:
         "document_learnings": extra.get("document_learnings", []),
         "previous_context": extra.get("previous_context"),
         "continue_from_task_id": extra.get("continue_from_task_id"),
+        "sedimentation_queue": [],
     }
     logger.debug("make_initial_state: step_number=%s, current_depth=%s",
                  state["step_number"], state.get("current_depth"))
@@ -243,6 +260,7 @@ class TaskStateManager:
             "document_mode": task.get("document_mode", "chunks"),
             "document_chunk_limit": task.get("document_chunk_limit", 5),
             "document_digested": False, "document_learnings": [],
+            "sedimentation_queue": [],
         }
         self._states[task_id] = state
         logger.info("Resumed task %s from DB reconstruction at phase '%s' (step %d)",

@@ -115,6 +115,9 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     from backend.modules.background_tasks.actions.semantic_knot import SemanticKnotAction
     from backend.modules.background_tasks.actions.summarize import SummarizeAction
     from backend.modules.background_tasks.actions.title import GenerateTitleAction
+    from backend.modules.background_tasks.actions.research_crystallize import (
+        ResearchCrystallizeAction,
+    )
 
     engine.register(GenerateTitleAction())
     engine.register(SummarizeAction())
@@ -127,6 +130,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     engine.register(RefineSkillAction())
     engine.register(MetabolizeSkillAction())
     engine.register(RefineBeliefAction())
+    engine.register(ResearchCrystallizeAction())
 
     logger.info(
         "Background task engine initialized with actions: %s", engine.list_actions()
