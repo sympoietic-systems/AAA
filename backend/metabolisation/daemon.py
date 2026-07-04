@@ -150,6 +150,12 @@ class AutopoieticDreamDaemon(
             except Exception as e:
                 logger.debug("Research proposal scan skipped: %s", e)
 
+            # Drain queued research tasks — safety net for dropped fire-and-forget dispatches
+            try:
+                await self._drain_research_queue()
+            except Exception as e:
+                logger.debug("Research queue drain skipped: %s", e)
+
             # Post-research metabolism for completed tasks
             try:
                 await self.metabolize_research_on_idle()

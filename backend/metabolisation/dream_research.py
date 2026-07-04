@@ -7,6 +7,7 @@ and creates PROPOSED research tasks for user review.
 See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 13.
 """
 
+import asyncio
 import logging
 
 logger = logging.getLogger("aaa.dream_research")
@@ -140,3 +141,38 @@ class DreamResearchMixin:
             await mixin.metabolize_completed_research()
         except Exception as e:
             logger.warning("Research metabolism during idle failed: %s", e)
+
+    async def _drain_research_queue(self) -> None:
+        """Periodic safety net: drain queued research tasks that weren't auto-activated.
+
+        The primary dispatch path is fire-and-forget via asyncio.create_task()
+        in ResearchTaskManager.queue(). This method catches tasks that slipped
+        through (e.g., event loop under load dropped the task, or rapid queuing
+        exceeded concurrent slots temporarily).
+        """
+        try:
+            manager = getattr(self.app_state, "research_task_manager", None)
+            if not manager:
+                return
+
+            # Respect manual_mode — user wants explicit control
+            if manager.config.get("manual_mode", False):
+                return
+
+            # Only drain if slots are available
+            semaphore = getattr(manager, "_active_semaphore", None)
+            if semaphore and semaphore.locked():
+                return
+
+            task = manager.task_repo.get_next_queued()
+            if not task:
+                return
+
+            task_id = task["id"]
+            logger.info("Daemon safety net: activating stuck research task %s", task_id[:8])
+            manager.transition(task_id, "active")
+            coro = manager._execute_task(task_id)
+            asyncio_task = asyncio.create_task(coro)
+            manager._active_tasks[task_id] = asyncio_task
+        except Exception as e:
+            logger.debug("Research queue drain: %s", e)
