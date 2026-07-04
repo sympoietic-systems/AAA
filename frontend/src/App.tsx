@@ -398,7 +398,7 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
       <HeaderContainer>
         <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5 min-w-0">
           <HeaderIndicator intent="green" />
-          <HeaderLogo onClick={handleGoHome} />
+          <HeaderLogo href="/nodes" />
           <HeaderSeparator />
           <HeaderLabel intent="green">entanglement</HeaderLabel>
           <HeaderSeparator className="hidden sm:inline" />
@@ -442,11 +442,11 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
             onNavigateToNotification={handleNavigateToNotification}
           />
           
-          <HeaderActionButton onClick={() => navigate('/agent')}>
+          <HeaderActionButton href="/agent">
             agent
           </HeaderActionButton>
 
-          <HeaderActionButton onClick={() => navigate('/research')}>
+          <HeaderActionButton href="/research">
             research
           </HeaderActionButton>
 

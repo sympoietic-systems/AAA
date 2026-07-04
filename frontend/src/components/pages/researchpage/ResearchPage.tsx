@@ -139,7 +139,7 @@ export const ResearchPage = memo(function ResearchPage() {
       <HeaderContainer>
         <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5">
           <HeaderIndicator intent="gold" />
-          <HeaderLogo onClick={() => navigate('/nodes')} />
+          <HeaderLogo href="/nodes" />
           <HeaderSeparator />
           <HeaderLabel intent="gold">research</HeaderLabel>
           <span className="text-[#555] text-[10px] ml-2 normal-case hidden sm:inline">
@@ -149,10 +149,10 @@ export const ResearchPage = memo(function ResearchPage() {
         <div className="flex items-center gap-4">
           {loading && <span className="text-[#555] text-[10px] animate-pulse">polling…</span>}
           <CreasesDropdown />
-          <HeaderActionButton onClick={() => navigate('/agent')}>
+          <HeaderActionButton href="/agent">
             agent
           </HeaderActionButton>
-          <HeaderActionButton onClick={() => navigate('/research?id=new')}>
+          <HeaderActionButton href="/research?id=new">
             + new research
           </HeaderActionButton>
         </div>

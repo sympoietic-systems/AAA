@@ -269,11 +269,11 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       <HeaderContainer>
         <div className="flex items-center gap-2 min-w-0">
-          <button onClick={() => navigate('/research')} className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</button>
+          <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold" style={{textDecoration:"none"}}>[◀ back]</a>
           <span className="text-[#333]">|</span>
           <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
             <HeaderIndicator intent="gold" />
-            <HeaderLogo onClick={() => navigate('/nodes')} />
+            <HeaderLogo href="/nodes" />
           </span>
           <HeaderSeparator />
           <span className="text-[#bbb] text-xs truncate font-bold">{current.title}</span>
@@ -284,7 +284,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
         </div>
         <div className="flex items-center gap-4 shrink-0">
           <CreasesDropdown />
-          <HeaderActionButton onClick={() => navigate('/agent')}>
+          <HeaderActionButton href="/agent">
             agent
           </HeaderActionButton>
         </div>
@@ -447,11 +447,11 @@ const NewTaskInline = memo(function NewTaskInline() {
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       <HeaderContainer>
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate('/research')} className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold">[◀ back]</button>
+          <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold" style={{textDecoration:"none"}}>[◀ back]</a>
           <span className="text-[#333]">|</span>
           <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
             <HeaderIndicator intent="gold" />
-            <HeaderLogo onClick={() => navigate('/nodes')} />
+            <HeaderLogo href="/nodes" />
           </span>
           <HeaderSeparator />
           <HeaderLabel intent="gold">new research</HeaderLabel>

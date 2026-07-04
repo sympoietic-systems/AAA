@@ -38,7 +38,8 @@ export const HeaderIndicator = memo(function HeaderIndicator({
 
 // Standardized bracketed action button, desaturated by default, hot orange on hover
 interface HeaderActionButtonProps {
-  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
+  href?: string
   children: React.ReactNode
   className?: string
   title?: string
@@ -47,17 +48,26 @@ interface HeaderActionButtonProps {
 
 export const HeaderActionButton = memo(function HeaderActionButton({
   onClick,
+  href,
   children,
   className = "",
   title,
   disabled,
 }: HeaderActionButtonProps) {
+  const sharedClass = `text-[11px] text-action-dim hover:text-action-hover disabled:opacity-50 disabled:pointer-events-none transition-colors cursor-pointer select-none ${className}`
+  if (href) {
+    return (
+      <a href={href} title={title} className={sharedClass} style={{ textDecoration: "none", color: "inherit" }}>
+        [{children}]
+      </a>
+    )
+  }
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`text-[11px] text-action-dim hover:text-action-hover disabled:opacity-50 disabled:pointer-events-none transition-colors cursor-pointer select-none ${className}`}
+      className={sharedClass}
     >
       [{children}]
     </button>
@@ -67,6 +77,7 @@ export const HeaderActionButton = memo(function HeaderActionButton({
 // Standardized symbia logo button/label
 interface HeaderLogoProps {
   onClick?: () => void
+  href?: string
   children?: React.ReactNode
   className?: string
   title?: string
@@ -74,25 +85,30 @@ interface HeaderLogoProps {
 
 export const HeaderLogo = memo(function HeaderLogo({
   onClick,
+  href,
   children = "symbia",
   className = "",
   title = "Home",
 }: HeaderLogoProps) {
-  if (!onClick) {
+  const sharedClass = `text-[11px] text-semantic-header hover:text-[#eee] tracking-widest uppercase transition-colors ${className}`
+  if (href) {
     return (
-      <span className={`text-[11px] text-semantic-header tracking-widest uppercase ${className}`}>
+      <a href={href} title={title} className={sharedClass} style={{ textDecoration: "none", color: "inherit" }}>
         {children}
-      </span>
+      </a>
+    )
+  }
+  if (onClick) {
+    return (
+      <button onClick={onClick} title={title} className={`cursor-pointer ${sharedClass}`}>
+        {children}
+      </button>
     )
   }
   return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={`text-[11px] text-semantic-header hover:text-[#eee] tracking-widest uppercase cursor-pointer transition-colors ${className}`}
-    >
+    <span className={`text-[11px] text-semantic-header tracking-widest uppercase ${className}`}>
       {children}
-    </button>
+    </span>
   )
 })
 

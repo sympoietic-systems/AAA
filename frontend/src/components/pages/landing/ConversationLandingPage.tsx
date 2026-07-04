@@ -198,12 +198,9 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
       <HeaderContainer>
         <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5">
           <HeaderIndicator intent="green" />
-          <HeaderLogo onClick={() => window.location.href = '/nodes'} />
+          <HeaderLogo href="/nodes" />
           <HeaderSeparator />
-          <HeaderLogo
-            onClick={() => window.location.href = '/research'}
-            title="Research console"
-          >
+          <HeaderLogo href="/research" title="Research console">
             research
           </HeaderLogo>
           <HeaderSeparator />
@@ -211,7 +208,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
         </span>
         <div className="flex items-center gap-4">
           <CreasesDropdown conversations={conversations} />
-          <HeaderActionButton onClick={() => window.location.href = '/agent'}>
+          <HeaderActionButton href="/agent">
             agent
           </HeaderActionButton>
           <HeaderActionButton onClick={onNew}>
