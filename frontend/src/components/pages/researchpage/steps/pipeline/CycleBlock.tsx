@@ -2,7 +2,7 @@ import { memo } from "react"
 import type { ResearchStep, StepPreview } from "../../../../../api/research"
 import { STEP_TO_PHASE, STEP_LABELS, PHASE_LABELS } from "../../constants/taskConstants"
 import { PipelineRow } from "./PipelineRow"
-import { stepCountSuffix, getStepRationale } from "./helpers"
+import { stepCountSuffix, getStepRationale, formatStepId } from "./helpers"
 import type { Cycle } from "./types"
 
 interface CycleBlockProps {
@@ -37,10 +37,12 @@ export const CycleBlock = memo(function CycleBlock({
     const pending = step.id ? "" : " —"
     const done = !failed && (allComplete || step.status === "completed" || stale)
     const isActive = !allComplete && hasPipeline && isCycleCurrent && phase === orchPhase && step.status !== "completed" && step.status !== "failed"
+    const stepIdPrefix = (step.phase_group != null || step.sub_sequence != null)
+      ? `[${formatStepId(step)}] ` : ""
     return (
       <PipelineRow
         key={step.id || `${cycle.depth}-${keySuffix}`}
-        label={baseLabel + suffix + pending}
+        label={stepIdPrefix + baseLabel + suffix + pending}
         stepId={step.id || null}
         stepType={step.step_type || null}
         isDone={done}

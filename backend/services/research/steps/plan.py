@@ -393,19 +393,16 @@ class PlanStep(BaseResearchStep):
             previous_context=previous_context, step_id=step_id
         )
 
-        # Save to database step log
+        # Save to database step log via orchestrator for consistent numbering
         if orch.step_repo:
-            orch.step_repo.create({
-                "id": step_id,
-                "task_id": task_id,
-                "plan_id": plan["id"],
-                "step_number": envelope.current_depth + 1,  # fallback tracking
-                "step_type": "plan",
-                "status": "completed",
-                "started_at": now_utc_str(),
-                "result_summary": f"{len(plan.get('search_queries', []))} queries planned",
-                "step_data": json.dumps({"plan": plan, "depth": current_depth}, default=str, ensure_ascii=False),
-            })
+            s = orch._get_state(task_id)
+            s["plan_id"] = plan["id"]
+            step_id = orch._create_or_update_step(s, task_id, "plan")
+            orch.step_repo.update(step_id, status="completed",
+                started_at=now_utc_str(),
+                result_summary=f"{len(plan.get('search_queries', []))} queries planned",
+                step_data=json.dumps({"plan": plan, "depth": current_depth}, default=str, ensure_ascii=False),
+            )
 
         orch._log_meta(task_id, "orchestrator_plan", {
             "plan": plan,

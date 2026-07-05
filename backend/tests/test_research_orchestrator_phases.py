@@ -96,7 +96,7 @@ class TestExecuteStepRouting:
         assert s["phase"] == "searching"
         assert s["plan_id"] is not None
         assert "search_queries" in s["plan"]
-        assert s["step_number"] == 1
+        assert s.get("phase_group") == 1
 
         conn.close()
 
@@ -132,12 +132,13 @@ class TestExecuteStepRouting:
             "last_reflection": {}, "current_depth": 0, "query_index": 0,
             "search_results_cache": [], "parsed_sources_cache": [],
             "digest_results_cache": [], "should_stop": False, "stop_reason": "",
+            "phase_group": 5, "last_block": "",
         }
 
         await orch.execute_step(task_id)
 
         assert orch._state_mgr.states[task_id]["phase"] == "searching"
-        assert orch._state_mgr.states[task_id]["step_number"] == 6
+        assert orch._state_mgr.states[task_id]["phase_group"] == 6
 
         conn.close()
 

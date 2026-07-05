@@ -364,6 +364,8 @@ export interface ResearchStep {
   completed_at: string | null
   query_group?: number
   query_text?: string
+  phase_group?: number
+  sub_sequence?: number
 }
 
 export interface ResearchPlanInfo {

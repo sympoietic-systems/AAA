@@ -137,6 +137,7 @@ _ORCH_STATE_KEYS = {
     "glitch_fidelity", "contradiction_density", "source_entropy",
     "signal_flags", "refined_queries", "revised_confidence",
     "monologue_trace", "critique_log", "diffractive_audit", "diffractive_audit_description",
+    "phase_group", "sub_sequence", "last_block",
 }
 
 
@@ -192,6 +193,9 @@ def make_initial_state(task: dict) -> dict:
         "critique_log": extra.get("critique_log", []),
         "diffractive_audit": extra.get("diffractive_audit", "CEREMONIAL"),
         "diffractive_audit_description": extra.get("diffractive_audit_description", ""),
+        "phase_group": extra.get("phase_group", 0),
+        "sub_sequence": extra.get("sub_sequence", 0),
+        "last_block": extra.get("last_block", ""),
     }
     logger.debug("make_initial_state: step_number=%s, current_depth=%s",
                  state["step_number"], state.get("current_depth"))
@@ -278,6 +282,7 @@ class TaskStateManager:
             "document_chunk_limit": task.get("document_chunk_limit", 5),
             "document_digested": False, "document_learnings": [],
             "sedimentation_queue": [],
+            "phase_group": 0, "sub_sequence": 0, "last_block": "",
         }
         self._states[task_id] = state
         logger.info("Resumed task %s from DB reconstruction at phase '%s' (step %d)",

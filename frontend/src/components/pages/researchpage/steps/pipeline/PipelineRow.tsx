@@ -22,7 +22,7 @@ export const PipelineRow = memo(function PipelineRow({
   const sc = isFailed ? "var(--color-semantic-red)" : isStale ? "var(--color-semantic-sand)" : isDone ? "var(--color-semantic-green)" : isCurrent ? "var(--color-semantic-gold)" : "var(--color-ui-dim)"
   const isPending = !isDone && !isCurrent && !isStale && !isFailed
   const canClick = (isDone || isStale || isFailed) ? !!stepId : isCurrent
-  const canRerunPhase = isPending && !!stepType && !!onRerunPhase
+  const canRerunPhase = (isDone || isStale || isFailed) && !!stepType && !!onRerunPhase
 
   const handleClick = () => {
     if (!canClick) return

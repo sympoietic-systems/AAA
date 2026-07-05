@@ -474,7 +474,9 @@ async def execute_step(
                      if s["step_type"] == rerun_step_type
                      and s["status"] in ("completed", "failed", "running")
                      and orch._get_step_depth(s) == current_depth),
-                    key=lambda s: s.get("step_number", 0)
+                    key=lambda s: (s.get("phase_group", s.get("step_number", 0)),
+                                   s.get("query_group", 0),
+                                   s.get("sub_sequence", 0))
                 )
                 existing = matching[0] if matching else None
             if existing:

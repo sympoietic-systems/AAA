@@ -1,5 +1,16 @@
 import type { ResearchStep, TaskStepsResponse } from "../../../../../api/research"
 
+/** Format the hierarchical step ID from phase_group, query_group, sub_sequence. */
+export function formatStepId(step: ResearchStep): string {
+  const pg = step.phase_group ?? step.step_number
+  const qg = step.query_group ?? 0
+  const ss = step.sub_sequence ?? 0
+  if (qg > 0) {
+    return `${pg}.${qg}.${ss}`
+  }
+  return `${pg}`
+}
+
 /** Parse result_summary or results_by_step into a compact count label. */
 export function stepCountSuffix(step: ResearchStep, resultsByStep: Record<string, unknown[]>): string {
   const summary = step.result_summary || ""

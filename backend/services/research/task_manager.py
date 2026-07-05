@@ -527,14 +527,16 @@ class ResearchTaskManager:
             orch_state["document_chunk_limit"] = document_chunk_limit
         orch_state["document_digested"] = False
 
-        step_count = 0
+        max_phase_group = 0
         old_current_depth = 0
         try:
             steps_repo = getattr(self._app_state, "research_step_repo", None)
             if steps_repo:
                 existing = steps_repo.get_by_task(task_id)
-                step_count = len(existing) if existing else 0
                 for s in (existing or []):
+                    pg = s.get("phase_group", 0) or s.get("step_number", 0)
+                    if pg > max_phase_group:
+                        max_phase_group = pg
                     sd = s.get("step_data")
                     if sd:
                         try:
@@ -551,11 +553,14 @@ class ResearchTaskManager:
         if old_cur_depth > old_current_depth:
             old_current_depth = old_cur_depth
 
-        orch_state["step_number"] = step_count
+        orch_state["phase_group"] = max_phase_group
+        orch_state["step_number"] = max_phase_group
+        orch_state["last_block"] = ""
+        orch_state["sub_sequence"] = 0
         orch_state["current_depth"] = old_current_depth + 1
 
-        logger.info("continue_task: step_count=%d, previous_context=%d chars",
-                     step_count, len(previous_context))
+        logger.info("continue_task: max_phase_group=%d, previous_context=%d chars",
+                     max_phase_group, len(previous_context))
 
         rerun_count = (task.get("rerun_count") or 0) + 1
         update_fields: dict[str, Any] = {
@@ -594,8 +599,8 @@ class ResearchTaskManager:
         self._active_tasks[task_id] = asyncio_task
 
         logger.info(
-            "Research task %s continued (run #%d) — depth %d→%d, step_offset=%d, previous_context=%d chars",
-            task_id, rerun_count, task["max_depth"], new_max_depth, step_count, len(previous_context),
+            "Research task %s continued (run #%d) — depth %d→%d, pg_offset=%d, previous_context=%d chars",
+            task_id, rerun_count, task["max_depth"], new_max_depth, max_phase_group, len(previous_context),
         )
 
     async def _execute_continued_task(self, task_id: str) -> None:

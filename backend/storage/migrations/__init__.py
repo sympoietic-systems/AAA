@@ -86,6 +86,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m040_dream_log_trigger_metadata,
         m041_unified_notes,
         m042_memory_node_source_columns,
+        m043_step_sort_key,
     )
 
     runner = MigrationRunner(conn)
@@ -134,3 +135,4 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("040_dream_log_trigger_metadata", m040_dream_log_trigger_metadata.up)
     runner.run("041_unified_notes", m041_unified_notes.up)
     runner.run("042_memory_node_source_columns", m042_memory_node_source_columns.up)
+    runner.run("043_step_sort_key", m043_step_sort_key.up)

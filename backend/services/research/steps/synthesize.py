@@ -223,11 +223,11 @@ class SynthesizeStep(BaseResearchStep):
             all_findings, sources_analyzed, step_id=step_id,
         )
 
-        step_number = state.get("step_number", current_depth + 2)
+        branch_count = state.get("phase_group", current_depth + 2)
 
         if orch.task_repo:
             orch.task_repo.update(task_id,
-                branches_created=step_number,
+                branches_created=branch_count,
                 assets_harvested=sources_analyzed,
                 result_summary=result_summary,
             )
@@ -248,7 +248,7 @@ class SynthesizeStep(BaseResearchStep):
                 step_data=json.dumps(existing_data, default=str, ensure_ascii=False))
 
         orch._log_meta(task_id, "orchestrator_complete", {
-            "steps": step_number,
+            "steps": branch_count,
             "sources": sources_analyzed,
             "findings": len(all_findings),
             "depth": current_depth,

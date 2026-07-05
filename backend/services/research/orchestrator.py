@@ -131,6 +131,32 @@ PHASE_ORDER = [
     "complete",
 ]
 
+# ── Hierarchical Step Identity ──────────────────────────────────────
+# Phases that share the same "block" get the same phase_group.
+# E.g. searching, parsing, and digesting all live within one group
+# and are distinguished by sub_sequence (0=search, 1=parse, 2=digest).
+# Cycle-level phases (plan, consolidate, reflection, evaluate, synthesize)
+# each own a unique phase_group with sub_sequence=0.
+
+PHASE_BLOCK: dict[str, str] = {
+    "planning": "plan",
+    "document_digestion": "document_digestion",
+    "searching": "query_block",
+    "parsing": "query_block",
+    "digesting": "query_block",
+    "consolidating": "consolidation",
+    "reflection": "reflection",
+    "evaluating": "evaluation",
+    "synthesizing": "synthesis",
+}
+
+PHASE_SUB_SEQUENCE: dict[str, int] = {
+    "searching": 0,
+    "parsing": 1,
+    "digesting": 2,
+    # All others default to 0
+}
+
 
 class SomaticResearchOrchestrator:
     """Multi-phase research execution engine with tool-based orchestration.
@@ -466,11 +492,11 @@ class SomaticResearchOrchestrator:
 
     def _create_or_update_step(self, s: dict, task_id: str, step_type: str,
                                 query_group: int = 0, query_text: str = "") -> str:
-        """Create a new step, or update an existing one in-place for reruns.
+        """Create a new step or update an existing one in-place for reruns.
         
-        If the rerun step was already deleted by downstream cleanup (e.g. the
-        rerun deletion in execute_step removes steps at the same depth before
-        the phase re-executes), falls back to creating a new step.
+        Uses the composite key (phase_group, query_group, sub_sequence) from
+        orchestrator state — no internal increment. step_number is set to
+        phase_group for backward compatibility with existing queries.
         """
         rerun_id = s.pop("_rerun_step_id", None)
         if rerun_id:
@@ -480,15 +506,17 @@ class SomaticResearchOrchestrator:
                 self.step_repo.update(rerun_id, status="running",
                     started_at=now_utc_str(), query_text=query_text, step_data=step_data)
                 return rerun_id
-        s["step_number"] += 1
+        pg = s.get("phase_group", 0)
+        ss = s.get("sub_sequence", 0)
         step_id = str(uuid.uuid4())
         step_data = json.dumps({"depth": s.get("current_depth", 0)})
         self.step_repo.create({
             "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
-            "step_number": s["step_number"], "step_type": step_type,
+            "step_number": pg, "step_type": step_type,
             "step_data": step_data,
             "status": "running", "started_at": now_utc_str(),
             "query_group": query_group, "query_text": query_text,
+            "phase_group": pg, "sub_sequence": ss,
         })
         return step_id
 
@@ -732,50 +760,51 @@ class SomaticResearchOrchestrator:
         async with self._state_mgr.locks[task_id]:
             s = self._get_state(task_id)
             phase = s["phase"]
-            logger.info("execute_step: phase=%s, depth=%s, step_number=%s",
-                        phase, s.get('current_depth'), s.get('step_number'))
+            logger.info("execute_step: phase=%s, depth=%s, phase_group=%s",
+                        phase, s.get('current_depth'), s.get('phase_group'))
 
-            # On rerun, delete all downstream steps starting from the beginning of the rerun phase.
-            # Scope deletions to the same depth (cycle) to avoid eating steps from other cycles.
-            rerun_id = s.get("_rerun_step_id")
-            if rerun_id:
-                rerun_step = self.step_repo.get(rerun_id) if self.step_repo else None
+            # ── Block tracking: advance phase_group when entering a new block ──
+            block = PHASE_BLOCK.get(phase, phase)
+            if s.get("last_block") != block:
+                s["phase_group"] = s.get("phase_group", 0) + 1
+                s["last_block"] = block
+            s["sub_sequence"] = PHASE_SUB_SEQUENCE.get(phase, 0)
+
+            # ── Rerun: delete downstream steps using composite-key scoping ──
+            rerun_id = s.pop("_rerun_step_id", None)
+            if rerun_id and self.step_repo:
+                rerun_step = self.step_repo.get(rerun_id)
                 if rerun_step:
-                    rerun_depth = s.get("current_depth", 0)
-                    rerun_step_depth = self._get_step_depth(rerun_step)
-                    all_steps = self.step_repo.get_by_task(task_id) if self.step_repo else []
-                    # Delete downstream from the rerun step onward. Use the step's own
-                    # step_number as the lower bound — preserves steps created BEFORE
-                    # this one (e.g. Q1 stays when rerunning Q2).
-                    if rerun_step_depth == rerun_depth:
-                        min_step_num = rerun_step["step_number"]
-                    else:
-                        # Cross-depth rerun (shouldn't happen after API fix) — don't
-                        # touch same-depth steps, only clear later depths.
-                        min_step_num = s.get("step_number", 0) + 1
-                    same_depth_steps = [st for st in all_steps if self._get_step_depth(st) == rerun_depth
-                                        and st["step_number"] >= min_step_num]
-                    for st in same_depth_steps:
-                        if st["step_type"] == "document_digestion":
-                            continue
-                        try:
-                            self.step_repo.delete(st["id"])
-                        except Exception:
-                            pass
-                    # Also delete any later-depth steps (they're downstream of this cycle)
-                    later_steps = [st for st in all_steps if self._get_step_depth(st) > rerun_depth]
-                    for st in later_steps:
-                        if st["step_type"] == "document_digestion":
-                            continue
-                        try:
-                            self.step_repo.delete(st["id"])
-                        except Exception:
-                            pass
-                    deleted = len(same_depth_steps) + len(later_steps)
+                    r_pg = rerun_step.get("phase_group", 0)
+                    r_qg = rerun_step.get("query_group", 0)
+                    r_ss = rerun_step.get("sub_sequence", 0)
+                    all_steps = self.step_repo.get_by_task(task_id)
+                    deleted = 0
+                    for st in all_steps:
+                        spg = st.get("phase_group", 0)
+                        sqg = st.get("query_group", 0)
+                        sss = st.get("sub_sequence", 0)
+                        drop = False
+                        if r_qg == 0:
+                            # Cycle-level step: delete all later phase_groups
+                            if spg > r_pg:
+                                drop = True
+                        else:
+                            # Query substep: subtree scope — same (PG, QG), higher SS
+                            if spg == r_pg and sqg == r_qg and sss > r_ss:
+                                drop = True
+                        if drop:
+                            try:
+                                self.step_repo.delete(st["id"])
+                                deleted += 1
+                            except Exception:
+                                pass
                     if deleted:
-                        logger.info("Rerun: deleted %d downstream steps at depth>=%d starting from step %d — %s",
-                                     deleted, rerun_depth, min_step_num, self._log_context(task_id, "rerun"))
-                    s["step_number"] = min_step_num - 1
+                        logger.info("Rerun: deleted %d downstream steps from (pg=%d,qg=%d,ss=%d) — %s",
+                                     deleted, r_pg, r_qg, r_ss, self._log_context(task_id, "rerun"))
+                # Clear the rerun flag used for doc digestion
+                s["document_digested"] = False
+                s["document_learnings"] = []
 
             if phase == "complete":
                 # Safety: force-complete the DB task if it's still stuck at "active"
@@ -814,8 +843,6 @@ class SomaticResearchOrchestrator:
                 step_processor = ResearchStepRegistry.get_step(phase)
                 logger.info("Executing modular step: %s", phase)
                 output: StepOutput = await step_processor.execute(self, envelope)
-
-                s["step_number"] += 1
 
                 # Merge findings
                 if output.new_findings:

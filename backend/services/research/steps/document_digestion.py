@@ -80,8 +80,7 @@ class DocumentDigestionStep(BaseResearchStep):
             )
 
         s = orch._get_state(task_id)
-        s["step_number"] = s.get("step_number", 0) + 1
-        step_id = str(uuid.uuid4())
+        step_id = orch._create_or_update_step(s, task_id, "document_digestion")
 
         conversation_id = None
         task_row = orch.task_repo.get(task_id) if orch.task_repo else None
@@ -98,16 +97,8 @@ class DocumentDigestionStep(BaseResearchStep):
 
         if not effective_conv_id:
             if orch.step_repo:
-                orch.step_repo.create({
-                    "id": step_id,
-                    "task_id": task_id,
-                    "plan_id": s.get("plan_id"),
-                    "step_number": s["step_number"],
-                    "step_type": "document_digestion",
-                    "status": "completed",
-                    "started_at": now_utc_str(),
-                    "result_summary": "Cannot resolve conversation for document; skipping digestion",
-                })
+                orch.step_repo.update(step_id, status="completed",
+                    result_summary="Cannot resolve conversation for document; skipping digestion")
             return StepOutput(
                 status="completed",
                 message="no conversation for document",
@@ -143,17 +134,9 @@ class DocumentDigestionStep(BaseResearchStep):
 
         if not doc_chunks:
             if orch.step_repo:
-                orch.step_repo.create({
-                    "id": step_id,
-                    "task_id": task_id,
-                    "plan_id": s.get("plan_id"),
-                    "step_number": s["step_number"],
-                    "step_type": "document_digestion",
-                    "status": "completed",
-                    "started_at": now_utc_str(),
-                    "result_summary": "No relevant document chunks found for digestion",
-                    "step_data": json.dumps({"depth": current_depth}, ensure_ascii=False),
-                })
+                orch.step_repo.update(step_id, status="completed",
+                    result_summary="No relevant document chunks found for digestion",
+                    step_data=json.dumps({"depth": current_depth}, ensure_ascii=False))
             return StepOutput(
                 status="completed",
                 message="no relevant chunks",
@@ -175,16 +158,9 @@ class DocumentDigestionStep(BaseResearchStep):
         gaps = analysis.get("gaps", [])
 
         if orch.step_repo:
-            orch.step_repo.create({
-                "id": step_id,
-                "task_id": task_id,
-                "plan_id": s.get("plan_id"),
-                "step_number": s["step_number"],
-                "step_type": "document_digestion",
-                "status": "completed",
-                "started_at": now_utc_str(),
-                "result_summary": f"{len(learnings)} learnings, {len(followups)} followups from doc {inject_file_id} ({len(doc_chunks)} chunks)",
-                "step_data": json.dumps({
+            orch.step_repo.update(step_id, status="completed",
+                result_summary=f"{len(learnings)} learnings, {len(followups)} followups from doc {inject_file_id} ({len(doc_chunks)} chunks)",
+                step_data=json.dumps({
                     "depth": current_depth,
                     "learnings": learnings,
                     "followups": followups,
@@ -192,7 +168,7 @@ class DocumentDigestionStep(BaseResearchStep):
                     "file_id": inject_file_id,
                     "mode": doc_mode
                 }, default=str, ensure_ascii=False),
-            })
+            )
 
         if orch.step_result_repo:
             orch.step_result_repo.create({

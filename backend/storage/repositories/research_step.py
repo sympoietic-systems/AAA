@@ -15,8 +15,8 @@ class ResearchStepRepository(BaseRepository):
             """INSERT INTO research_steps (
                 id, task_id, plan_id, step_number, step_type,
                 step_data, status, result_summary, started_at, completed_at, created_at,
-                query_group, query_text
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                query_group, query_text, phase_group, sub_sequence
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 step["id"],
                 step["task_id"],
@@ -31,6 +31,8 @@ class ResearchStepRepository(BaseRepository):
                 step.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 step.get("query_group"),
                 step.get("query_text"),
+                step.get("phase_group", 0),
+                step.get("sub_sequence", 0),
             ),
         )
         conn.commit()
@@ -64,7 +66,7 @@ class ResearchStepRepository(BaseRepository):
 
     @with_connection
     def update(self, step_id: str, **kwargs) -> None:
-        allowed = {"status", "result_summary", "started_at", "completed_at", "step_data", "rerun_version", "query_group", "query_text"}
+        allowed = {"status", "result_summary", "started_at", "completed_at", "step_data", "rerun_version", "query_group", "query_text", "phase_group", "sub_sequence"}
         updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
         if not updates:
             return
