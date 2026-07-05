@@ -414,13 +414,14 @@ class TestMultiCycleContinuation:
             manager.continue_task(task_id, additional_cycles=1)
         task = task_repo.get(task_id)
         assert task["status"] == "active"
-        assert task["max_depth"] == 4
+        assert task["max_depth"] == 1  # set to current_depth for hard-stop after one cycle
         assert task["result_summary"] == "Original Synthesis Report"
 
         # 2. Check orchestrator_state has correct depth
         import json
         orch_state = json.loads(task["orchestrator_state"])
         assert orch_state["current_depth"] == 1
+        assert orch_state["max_depth"] == 1  # one cycle then hard-stop
         assert orch_state["previous_context"] == "Original Synthesis Report"
 
         # 3. Verify synthesis step saves report to step_data JSON

@@ -486,7 +486,6 @@ class ResearchTaskManager:
                 f"Can only continue terminal tasks, got: {task['status']}"
             )
 
-        new_max_depth = task["max_depth"] + additional_cycles
         new_objective = adjusted_objective or task["objective"]
         new_budget = budget_limit_usd or task["budget_limit_usd"]
 
@@ -558,6 +557,7 @@ class ResearchTaskManager:
         orch_state["last_block"] = ""
         orch_state["sub_sequence"] = 0
         orch_state["current_depth"] = old_current_depth + 1
+        orch_state["max_depth"] = orch_state["current_depth"]  # one cycle then hard-stop
 
         logger.info("continue_task: max_phase_group=%d, previous_context=%d chars",
                      max_phase_group, len(previous_context))
@@ -566,7 +566,7 @@ class ResearchTaskManager:
         update_fields: dict[str, Any] = {
             "status": "queued",
             "objective": new_objective,
-            "max_depth": new_max_depth,
+            "max_depth": orch_state["current_depth"],
             "budget_limit_usd": new_budget,
             "budget_spent_usd": 0.0,
             "branches_created": 0,
@@ -600,7 +600,7 @@ class ResearchTaskManager:
 
         logger.info(
             "Research task %s continued (run #%d) — depth %d→%d, pg_offset=%d, previous_context=%d chars",
-            task_id, rerun_count, task["max_depth"], new_max_depth, max_phase_group, len(previous_context),
+            task_id, rerun_count, task["max_depth"], orch_state["current_depth"], max_phase_group, len(previous_context),
         )
 
     async def _execute_continued_task(self, task_id: str) -> None:
