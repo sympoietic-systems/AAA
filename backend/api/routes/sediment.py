@@ -40,6 +40,22 @@ async def list_all_sediment_files(request: Request, exclude_conversation_id: str
         task_repo = request.app.state.research_task_repo
         completed_tasks = task_repo.list_all(status="completed", limit=100)
         
+        # Map task_id -> task for backfilling display names
+        task_map: dict[str, dict] = {t["id"]: t for t in completed_tasks if t.get("id")}
+        for f in files:
+            fn = f.get("file_name", "")
+            if fn.startswith("research-synthesis-") and not f.get("display_name"):
+                base = fn.replace("research-synthesis-", "").replace(".md", "")
+                base = re.sub(r"_v\d+(?:_d\d+)?$", "", base)
+                if base in task_map:
+                    obj = task_map[base].get("objective") or task_map[base].get("title") or ""
+                    if obj:
+                        f["display_name"] = obj
+                        try:
+                            perception_repo.set_display_name(f["conversation_id"], fn, obj)
+                        except Exception:
+                            pass
+
         # Check files already present to avoid duplicates.
         # Match any filename starting with research-synthesis-{task_id}
         # regardless of version/depth suffix format.
@@ -140,6 +156,16 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
                         request.app.state, "global-research", src_file, "research-synthesis"
                     )
                     asyncio.create_task(coro)
+            else:
+                # Backfill display_name for existing files
+                task = task_repo.get(task_id)
+                if task:
+                    dn = task.get("objective") or task.get("title") or ""
+                    if dn:
+                        try:
+                            perception_repo.set_display_name("global-research", src_file, dn)
+                        except Exception:
+                            pass
                     
         processed_files.append(entry)
 

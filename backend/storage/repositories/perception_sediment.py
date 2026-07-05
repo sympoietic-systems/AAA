@@ -198,6 +198,16 @@ class PerceptionSedimentRepository(BaseRepository):
         conn.commit()
 
     @with_connection
+    def set_display_name(self, conversation_id: str, file_name: str, display_name: str) -> None:
+        conn = self._conn()
+        conn.execute(
+            """UPDATE perception_files SET display_name = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE conversation_id = ? AND file_name = ? AND (display_name IS NULL OR display_name = '')""",
+            (display_name, conversation_id, file_name),
+        )
+        conn.commit()
+
+    @with_connection
     def check_file_exists(self, conversation_id: str, file_name: str) -> bool:
         conn = self._conn()
         row = conn.execute(

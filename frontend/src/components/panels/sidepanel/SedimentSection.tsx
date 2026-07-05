@@ -491,7 +491,7 @@ function SedimentSectionComponent({
                     : "text-ui-secondary"
                 }`}>
                   {f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment"
-                    ? `synthesis: ${f.file_name.replace("research-synthesis-", "").replace(".md", "")}`
+                    ? (f.display_name || `synthesis: ${f.file_name.replace("research-synthesis-", "").replace(".md", "")}`)
                     : f.file_name}
                 </span>
 
