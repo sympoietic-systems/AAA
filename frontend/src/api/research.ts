@@ -28,6 +28,7 @@ export interface ResearchTask {
   approved_at: string | null
   started_at: string | null
   completed_at: string | null
+  rerun_count?: number
   branches?: any[]
   assets?: { id: string; url: string; relevance_score: number; novelty_score: number; diffractive_score: number; created_at: string | null }[]
   asset_count?: number
@@ -422,7 +423,7 @@ export function downloadResearchExport(taskId: string): void {
   document.body.removeChild(a)
 }
 
-export async function downloadResearchStagesExport(taskId: string, title?: string): Promise<void> {
+export async function downloadResearchStagesExport(taskId: string, title?: string, rerunCount?: number): Promise<void> {
   const res = await fetch(`${BASE}/research/tasks/${taskId}/export/stages`)
   if (!res.ok) throw new Error(`Export failed: ${res.status}`)
   const blob = await res.blob()
@@ -430,7 +431,8 @@ export async function downloadResearchStagesExport(taskId: string, title?: strin
   const a = document.createElement("a")
   a.href = url
   const safeName = (title || "research").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 60) || "research"
-  a.download = `${safeName}.md`
+  const v = rerunCount ?? 0
+  a.download = `${safeName}_v${v}.md`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

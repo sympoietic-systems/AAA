@@ -48,7 +48,7 @@ export const TaskActions = memo(function TaskActions({
 
   const doExportStages = async () => {
     try {
-      await downloadResearchStagesExport(taskId, taskTitle)
+      await downloadResearchStagesExport(taskId, taskTitle, task?.rerun_count)
     } catch (err: any) {
       console.error("Stage export failed:", err)
       alert(`Export failed: ${err.message || err}`)
