@@ -736,20 +736,17 @@ class SomaticResearchOrchestrator:
                 rerun_step = self.step_repo.get(rerun_id) if self.step_repo else None
                 if rerun_step:
                     rerun_depth = s.get("current_depth", 0)
+                    rerun_step_depth = self._get_step_depth(rerun_step)
                     all_steps = self.step_repo.get_by_task(task_id) if self.step_repo else []
-                    # Find same-phase steps at the SAME depth to determine the phase's earliest step
-                    same_type_same_depth = [
-                        st for st in all_steps
-                        if st["step_type"] == rerun_step["step_type"]
-                        and self._get_step_depth(st) == rerun_depth
-                    ]
-                    if same_type_same_depth:
-                        min_step_num = min(st["step_number"] for st in same_type_same_depth)
+                    # Delete downstream from the rerun step onward. Use the step's own
+                    # step_number as the lower bound — preserves steps created BEFORE
+                    # this one (e.g. Q1 stays when rerunning Q2).
+                    if rerun_step_depth == rerun_depth:
+                        min_step_num = rerun_step["step_number"]
                     else:
-                        # No same-type steps at this depth — fresh phase, nothing to delete.
-                        # Use next step_number so same-depth filter picks up nothing.
+                        # Cross-depth rerun (shouldn't happen after API fix) — don't
+                        # touch same-depth steps, only clear later depths.
                         min_step_num = s.get("step_number", 0) + 1
-                    # Delete only steps at the same depth, starting from the phase's first step
                     same_depth_steps = [st for st in all_steps if self._get_step_depth(st) == rerun_depth
                                         and st["step_number"] >= min_step_num]
                     for st in same_depth_steps:
