@@ -466,14 +466,20 @@ class SomaticResearchOrchestrator:
 
     def _create_or_update_step(self, s: dict, task_id: str, step_type: str,
                                 query_group: int = 0, query_text: str = "") -> str:
-        """Create a new step, or update an existing one in-place for reruns."""
+        """Create a new step, or update an existing one in-place for reruns.
+        
+        If the rerun step was already deleted by downstream cleanup (e.g. the
+        rerun deletion in execute_step removes steps at the same depth before
+        the phase re-executes), falls back to creating a new step.
+        """
         rerun_id = s.pop("_rerun_step_id", None)
         if rerun_id:
-            # Update depth in step_data for the rerun step
-            step_data = json.dumps({"depth": s.get("current_depth", 0)})
-            self.step_repo.update(rerun_id, status="running",
-                started_at=now_utc_str(), query_text=query_text, step_data=step_data)
-            return rerun_id
+            existing_after_cleanup = self.step_repo.get(rerun_id) if self.step_repo else None
+            if existing_after_cleanup:
+                step_data = json.dumps({"depth": s.get("current_depth", 0)})
+                self.step_repo.update(rerun_id, status="running",
+                    started_at=now_utc_str(), query_text=query_text, step_data=step_data)
+                return rerun_id
         s["step_number"] += 1
         step_id = str(uuid.uuid4())
         step_data = json.dumps({"depth": s.get("current_depth", 0)})
