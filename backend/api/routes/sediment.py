@@ -95,7 +95,7 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
         src_file = entry.get("source_file_name", "")
         if src_conv == "global-research" and src_file.startswith("research-synthesis-"):
             task_id = src_file.replace("research-synthesis-", "").replace(".md", "")
-            task_id = re.sub(r"_v\d+$", "", task_id)  # strip version suffix
+            task_id = re.sub(r"_v\d+(?:_d\d+)?$", "", task_id)  # strip version+depth suffix
             
             # Lazily ensure "global-research" exists in conversations to satisfy DB foreign keys
             try:
