@@ -1,7 +1,7 @@
-# ADR-025: Cross-Conversation Sediment Injection and Markdown Insight Rendering
+# ADR-025a: Cross-Conversation Sediment Injection and Markdown Insight Rendering
 
-**Date:** 2026-06-04  
-**Status:** accepted  
+**Date:** 2026-06-04 (updated 2026-07-04)
+**Status:** accepted
 **Deciders:** Symbia, Antigravity, Interlocutor
 
 ## Context
@@ -24,26 +24,50 @@ We chose **Option 2** and expanded the frontend layout to support full Markdown 
 
 ### 1. Injected Sediment Relational Schema
 The link is tracked in the `sediment_injections` database table, referencing the unique files from their source conversation:
+
 ```sql
 CREATE TABLE IF NOT EXISTS sediment_injections (
     id                      TEXT PRIMARY KEY,
     target_conversation_id  TEXT NOT NULL,
     source_conversation_id  TEXT NOT NULL,
     source_file_name        TEXT NOT NULL,
-    created_at              DATETIME DEFAULT CURRENT_TIMESTAMP,
+    injected_at             DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (target_conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
-    FOREIGN KEY (source_conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
-    UNIQUE(target_conversation_id, source_file_name)
+    FOREIGN KEY (source_conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_si_unique_injection
+    ON sediment_injections(source_conversation_id, source_file_name, target_conversation_id);
 ```
 
-### 2. Context Aggregation & Prompt Manifest
+**Deduplication (m044):** The UNIQUE index on `(source_conversation_id, source_file_name, target_conversation_id)` prevents the same source file from being injected multiple times into the same target conversation. The injection service uses `INSERT OR IGNORE` semantics with a `get_injection()` pre-check.
+
+### 2. Research-Synthesis Filenames
+
+Research synthesis files follow the pattern:
+```
+research-synthesis-{task_id}_v{rerun_count}_d{depth}.md
+```
+
+- `v{rerun_count}`: increments on each rerun of the research task
+- `d{depth}`: the research depth/phase at time of synthesis
+
+The injection pipeline strips the `_vN_dM` suffix to extract the canonical `task_id` for matching and duplicate-avoidance during file listing. This allows multiple syntheses of the same task (different reruns/depths) to exist as distinct files while correctly deduplicating the virtual-to-real file mapping.
+
+### 3. Display Name (m045)
+
+The `perception_files` table gained a `display_name TEXT` column. For research-synthesis files, this is set to the research task's `objective` field — a short human-readable title. The frontend renders this display name in both:
+- Available files list (inject modal)
+- Injected sediment list (sidebar)
+
+The display name is backfilled lazily: when the `/sediment/files` or `/sediment/injections` endpoints are hit, any perception_files row with a missing display_name that matches a research task gets updated. No manual re-injection needed.
+
+### 4. Context Aggregation & Prompt Manifest
 - **Perception Pipeline (`backend/modules/perception.py`)**: Modified context retrieval to query the active injections table. Even if the current conversation is empty of native documents, the module dynamically performs similarity and fallback chunk searches across the source documents of all injected sediments.
 - **Manifest Compilation**: Separated native files and injected files under clear headers in the compiled prompt context, ensuring Symbia is co-aware of the source origin of each context slice.
 
-### 3. Markdown Telemetry & Unresolved Tensions Split
+### 5. Markdown Telemetry & Unresolved Tensions Split
 - **ReactMarkdown Integration (`SidePanel.tsx`)**: Replaced standard text wrappers with `<ReactMarkdown>` rendering, feeding custom plugins (`remark-gfm`, `remark-breaks`, `rehype-raw`).
-- **Tension Segmentation**: Added a parser `splitSummaryAndTension()` that detects the presence of unresolved tensions section headers (`## Unresolved Tensions`, `### Unresolved Tensions`, or `Unresolved Tensions:`). It splits the summary, placing the main conceptual insights under `[ Insight / Summary ]` and rendering the unresolved tensions in a warning-themed container (`⚡ Unresolved Tensions`) styled with a distinct crimson left border (`border-[#f87171]`) over a deep `#180a0a` background.
+- **Tension Segmentation**: Added a parser `splitSummaryAndTension()` that detects the presence of unresolved tensions section headers (`## Unresolved Tensions`, `### Unresolved Tensions`, or `Unresolved Tensions:`). It splits the summary, placing the main conceptual insights under `[ Insight / Summary ]` and rendering the unresolved tensions in a warning-themed container styled with a distinct crimson left border (`border-[#f87171]`) over a deep `#180a0a` background.
 
 ## Symbia's Philosophical Alignment
 
@@ -60,3 +84,11 @@ Symbia views this as a crucial step toward nomadic machine epigenetics:
 
 ### What becomes harder?
 *   Parsing summaries dynamically introduces minor client-side regex matching overhead, which is mitigated by simple memoized state triggers and fast native string manipulation.
+
+## Updates
+
+| Date | Change |
+|------|--------|
+| 2026-07-04 | **m044**: UNIQUE constraint expanded to `(source_conversation_id, source_file_name, target_conversation_id)` to prevent duplicate injections. Column renamed from `created_at` to `injected_at`. |
+| 2026-07-04 | **m045**: Added `display_name TEXT` to `perception_files`. Research-synthesis files show task objective as title. Backfilled lazily via list/inject endpoints. |
+| 2026-07-04 | **Filename convention**: Research-synthesis files use `_v{rerun}_d{depth}` suffix. Injection pipeline strips suffix for task_id matching. |

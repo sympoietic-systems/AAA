@@ -1,7 +1,7 @@
 # AAA Database Schema
 
 > **Status:** Live reference — generated from `backend/data/aaa.db`
-> **Date:** 2026-06-16
+> **Date:** 2026-07-04
 > **Engine:** SQLite (WAL mode, foreign keys ON)
 
 ---
@@ -466,6 +466,7 @@ Uploaded file metadata.
 | interference_score | REAL | DEFAULT 0.0 |
 | belief_nodes_implicated | TEXT | |
 | state_vector_impact | TEXT | |
+| display_name | TEXT | Human-readable title (e.g., research task objective). Populated for research-synthesis files. |
 
 FK: `conversation_id -> conversations(id)`
 
@@ -528,7 +529,7 @@ Web-retrieved content from DuckDuckGo probes.
 | associated_file_name | TEXT | |
 
 ### sediment_injections
-Cross-conversation file sediment tracking.
+Cross-conversation file sediment tracking. Deduplicated via UNIQUE index on (source_conversation_id, source_file_name, target_conversation_id).
 
 | Column | Type | Constraints |
 |--------|------|-------------|
@@ -539,6 +540,7 @@ Cross-conversation file sediment tracking.
 | injected_at | DATETIME | DEFAULT CURRENT_TIMESTAMP |
 
 FK: `source_conversation_id -> conversations(id)`, `target_conversation_id -> conversations(id)`
+Indexes: `idx_si_unique_injection UNIQUE(source_conversation_id, source_file_name, target_conversation_id)`
 
 ---
 
@@ -712,26 +714,29 @@ Index: task_id
 
 ### research_steps
 Per-step execution records for the orchestrator. Each row maps to one SEARCH, DIGEST, REFLECT, or SYNTHESISE step.
+Steps use a **composite sort-key** for hierarchical ordering: `(phase_group, query_group, sub_sequence)`.
 
 | Column | Type | Constraints |
 |--------|------|-------------|
 | id | TEXT | PRIMARY KEY |
 | task_id | TEXT | NOT NULL |
 | plan_id | TEXT | NOT NULL |
-| step_number | INTEGER | NOT NULL |
+| step_number | INTEGER | NOT NULL — deprecated in favor of composite sort-key |
 | step_type | TEXT | NOT NULL |
 | step_data | TEXT | NOT NULL DEFAULT '{}' |
 | status | TEXT | NOT NULL DEFAULT 'pending' |
 | result_summary | TEXT | |
+| phase_group | INTEGER | NOT NULL DEFAULT 0 — PHASE_BLOCK grouping for rerun scoping |
 | query_group | INTEGER | Which search query group (1-based) this step belongs to |
 | query_text | TEXT | Actual search query used (for display) |
-| rerun_version | INTEGER | NOT NULL DEFAULT 1 — increments on each in-place re-execution |
+| sub_sequence | INTEGER | NOT NULL DEFAULT 0 — intra-group ordering within (phase_group, query_group) |
+| rerun_version | INTEGER | NOT NULL DEFAULT 1 — increments on each in-place re-execution (legacy, m039 deprecated) |
 | started_at | TIMESTAMP | |
 | completed_at | TIMESTAMP | |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP |
 
 FK: `task_id -> research_tasks(id) ON DELETE CASCADE`, `plan_id -> research_plans(id) ON DELETE CASCADE`
-Indexes: task_id, plan_id, status
+Indexes: task_id, plan_id, status, `idx_research_steps_sort ON (task_id, phase_group, query_group, sub_sequence)`
 
 ### research_step_results
 Harvested web content linked to a specific step.
@@ -777,26 +782,32 @@ Indexes: agent_id, conversation_id
 
 ---
 
-## Row Counts (2026-06-16)
+## Row Counts (2026-07-04)
 
-> **Note:** Schema has grown significantly since this snapshot. Tables added after 2026-06-16 (research orchestrator engine, refusals) are not reflected in these row counts.
+> **Note:** Schema has grown significantly. Research orchestrator engine (m032+), refusals (m036), skill tables (m031), and sediment injection (m044) are all active.
 
-| Table | Rows |
+| Table | Rows (approx) |
 |-------|------|
-| conversations | 19 |
-| conversation_log | 1,556 |
-| memory_nodes | 108 |
-| belief_nodes | 24 |
-| belief_events | 2,553 |
-| belief_proposals | 44 |
-| skill_nodes | 22 |
-| skill_events | 46 |
-| skill_versions | 22 |
-| commitment_nodes | 7 |
-| expertise_nodes | 8 |
-| perception_files | 30 |
-| perception_sediment | 5,981 |
-| conversation_metrics | 1,556 |
-| consolidation_checkpoints | 50 |
-| notifications | 583 |
-| exogenous_stream | 52 |
+| conversations | 35+ |
+| conversation_log | 2,500+ |
+| memory_nodes | 150+ |
+| belief_nodes | 30+ |
+| belief_events | 3,000+ |
+| belief_proposals | 50+ |
+| skill_nodes | 25+ |
+| skill_events | 50+ |
+| skill_versions | 25+ |
+| commitment_nodes | 10+ |
+| expertise_nodes | 10+ |
+| perception_files | 40+ |
+| perception_sediment | 13,000+ |
+| conversation_metrics | 2,000+ |
+| consolidation_checkpoints | 60+ |
+| notifications | 600+ |
+| exogenous_stream | 60+ |
+| research_tasks | 30+ |
+| research_plans | 20+ |
+| research_steps | 200+ |
+| sediment_injections | 20+ |
+| research_memory_nodes | 50+ |
+| research_semantic_knots | 30+ |

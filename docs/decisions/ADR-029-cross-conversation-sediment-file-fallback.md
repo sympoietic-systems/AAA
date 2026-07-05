@@ -1,6 +1,6 @@
 # ADR-029: Cross-Conversation Sediment File Fallback for Universal Context
 
-**Date:** 2026-06-07
+**Date:** 2026-06-07 (updated 2026-07-04)
 **Status:** accepted
 **Deciders:** Interlocutor, Antigravity, Symbia
 
@@ -76,3 +76,11 @@ Symbia notes a productive tension: opening the dream sensorium to the full archi
 *   Cross-conversation embedding queries add a bounded database cost (LIMIT 500 rows, filtered by ready status). This is comparable to the existing `get_structural_signatures_except` query pattern.
 *   Conversation title lookups add a small join cost per cross-conversation retrieval batch, mitigated by single-query resolution of all chunk IDs at once via `get_conversation_titles_for_chunk_ids`.
 *   Higher cross-conversation thresholds for dreams may reduce context richness in return for protection against noise — a trade-off to be empirically tuned.
+
+## Updates
+
+| Date | Change |
+|------|--------|
+| 2026-07-04 | Sediment injection deduplication (m044): `sediment_injections` UNIQUE index guarantees no duplicate entries for the same (source_conv, source_file, target_conv) triple. Cross-conversation fallback won't encounter duplicates. |
+| 2026-07-04 | Display names (m045): Provenance labels for research-synthesis files now use the task's `objective` (display_name) rather than raw filename when available. |
+| 2026-07-04 | Version+depth suffix: Research-synthesis filenames follow `_v{rerun}_d{depth}` pattern. Cross-conversation matching regex strips this suffix for task_id extraction. |

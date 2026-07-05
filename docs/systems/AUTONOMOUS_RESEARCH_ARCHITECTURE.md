@@ -1,9 +1,9 @@
 # AAA Autonomous Research System — Architecture & Implementation Plan
 
-> **Status:** Implementation Active — Core Engine ✅ | Orchestrator ✅  
+> **Status:** Implementation Active — Core Engine ✅ | Orchestrator ✅ | Step Hierarchy (m043) ✅ | Sediment Display (m044-m045) ✅  
 > **Branch:** `feature/autonomous-research-engine`  
 > **Contributors:** Vector (Systems Architecture), Symbia (Philosophical Critique & Ontological Reconciliation)  
-> **Last Updated:** 2026-06-26
+> **Last Updated:** 2026-07-04
 > **References:** [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md), ADR-001 through ADR-053
 > **User Guide:** [RESEARCH_MANUAL_MODE.md](../guides/RESEARCH_MANUAL_MODE.md) — step-by-step workflow
 
@@ -1389,6 +1389,8 @@ Post-research metabolism results are displayed in:
 ### 5.7 Research Memory Sedimentation — Creating Persistent Memory Tissue
 
 > **Why this matters:** Research findings that are not sedimented into memory nodes are lost after the task completes. They exist only as scraped assets in a database table — invisible to future conversations. For research to genuinely affect Symbia's knowledge base and personality, harvested content must undergo the same consolidation process as normal conversation — producing `memory_nodes` (scars, concepts, tensions, patterns) and, for high-resonance findings, `semantic_knots` that exert gravitational pull on future retrievals.
+>
+> **File export & display names (m045):** Completed research syntheses are exported as `research-synthesis-{task_id}_v{rerun_count}_d{depth}.md` and stored in `perception_files` under `conversation_id = "global-research"`. The `display_name` column is populated from the task's `objective` field for human-readable rendering in the sediment injection UI.
 
 #### 5.7.1 Memory Nodes Created from Research
 
@@ -1826,19 +1828,39 @@ PLANNING → SEARCHING → PARSING → DIGESTING → REFLECTING → EVALUATING
 
 Each state transition persists to `research_steps` table via the meta-log. The full pipeline is observable in the frontend Meta Log tab.
 
-#### 5.8.5 New Database Tables (m034)
+#### 5.8.5 New Database Tables (m034, updated m043)
 
 ```
 research_plans
 ├── id, task_id (FK), plan_json (TEXT), status, created_at
 
 research_steps
-├── id, task_id (FK), plan_id (FK), step_number (INT)
+├── id, task_id (FK), plan_id (FK), step_number (INT) — deprecated for ordering
 ├── step_type: search | parallel_parse | digest | synthesize | reflect | evaluate
 ├── step_data (TEXT JSON), status: pending | running | completed | failed
-├── started_at, completed_at
+├── phase_group (INT DEFAULT 0) — PHASE_BLOCK grouping for rerun scoping (m043)
+├── sub_sequence (INT DEFAULT 0) — intra-group ordering (m043)
+├── query_group (INT) — search query group index (1-based)
+├── query_text (TEXT) — search query string for display
+├── rerun_version (INT DEFAULT 1) — legacy counter, m039 deprecated, still present in DB
+├── result_summary (TEXT)
+├── started_at, completed_at, created_at (TIMESTAMP)
+```
 
-research_step_results
+**Composite sort-key (m043):** Steps are ordered by `(phase_group, query_group, sub_sequence)`. The `phase_group` column maps to PHASE_BLOCK boundaries — rerun deletion is scoped to the subtree of a given phase_group rather than deleting all downstream steps globally.
+
+**PHASE_BLOCK mapping:**
+```
+PLANNING(p) → PHASE_BLOCK 0
+SEARCH(q)   → PHASE_BLOCK 1×q + 1
+PARSE       → PHASE_BLOCK 1×q + 2
+DIGEST      → PHASE_BLOCK 1×q + 3
+REFLECT     → PHASE_BLOCK 1×max_queries + 4
+SYNTHESISE  → PHASE_BLOCK 1×max_queries + 5
+```
+
+**research_step_results:**
+```
 ├── id, step_id (FK), task_id (FK)
 ├── source_url, source_title
 ├── raw_content (TEXT), analyzed_json (TEXT JSON)
@@ -1874,9 +1896,10 @@ The orchestrator does NOT replace the `SomaticResearchEngine` immediately. Inste
 3. **Toggle**: Once validated, a config flag switches to `orchestrator.execute()`.
 4. **Coexistence**: The existing engine handles simple recursive search; the orchestrator handles deep multi-source research.
 
-#### 5.8.8 Step Rerun & Cascade Staleness (m038)
+#### 5.8.8 Step Rerun & Cascade Staleness (m038) — SUPERSEDED
 
-> **Reference Decision:** 2026-06-17 — In-place step rerun with automatic downstream invalidation, ensuring the pipeline always uses fresh upstream results.
+> **Reference Decision:** 2026-06-17 — In-place step rerun with automatic downstream invalidation.
+> **Status:** ⚠️ This section describes the legacy m038 approach, superseded by m039 (delete-and-recreate, Section 5.8.9) and m043 (hierarchical step identity, Section 5.8.13). Retained for historical context only. Rerun now uses `delete_downstream()` scoped by `phase_group`. See Section 5.8.13 for the current mechanism.
 
 **Motivation:** When a step is re-executed (e.g., a search was redone with a better query), all downstream steps that consumed the old result are stale. The user must be able to rerun any individual step and have the pipeline reflect which steps need re-execution.
 
@@ -1933,9 +1956,10 @@ ALTER TABLE research_steps ADD COLUMN rerun_version INTEGER NOT NULL DEFAULT 1
 - `StepPipeline.tsx` — `PipelineRow` shows stale icon/label; grouping uses plan query count
 - `StepDbDetail.tsx` — rerun button on stale steps; orange status text
 
-#### 5.8.9 Simplified Pipeline — Orchestrator State Persistence (m039)
+#### 5.8.9 Simplified Pipeline — Orchestrator State Persistence (m039, updated m043)
 
 > **Reference Decision:** 2026-06-17 — Eliminated stale/cascade complexity. The orchestrator state is the single source of truth. The DB is a log.
+> **Update (m043, 2026-07-05):** Hierarchical step identity added. Rerun deletion is now subtree-scoped via `phase_group` rather than deleting all downstream steps globally. See Section 5.8.13.
 
 **Motivation:** The stale cascade architecture (m038) introduced too many edge cases — stale steps appearing at the bottom, wrong active step detection, query_index mismatches, and fragile frontend grouping. A simpler approach was needed.
 
@@ -2031,6 +2055,57 @@ We migrated the monolithic and highly-coupled prompt-preview rendering logic out
   result = await step_obj.preview(self, envelope, s)
   ```
 - **State Rehydration Parity:** Each step's `preview()` method rehydrates step history from the database in the exact same manner as its `execute()` method, guaranteeing 100% prompt parity between what is shown in the UI preview panel and what is actually run during research execution.
+
+#### 5.8.13 Hierarchical Step Identity with Composite Sort-Key (m043)
+
+> **Reference Decision:** 2026-07-05 — Replaced flat `step_number` ordering with a hierarchical `(phase_group, query_group, sub_sequence)` composite sort-key. Rerun deletion is subtree-scoped. `continue_task` hard-stops after one cycle.
+
+**Motivation:** Flat `step_number` ordering caused problems:
+1. **Rerun deletion too aggressive** — deleting "downstream" from any step meant deleting ALL later steps, even unrelated ones from the same query group.
+2. **Re-insertion at wrong position** — new steps were appended at the end regardless of their logical position in the pipeline flow.
+3. **continue_task ran multiple cycles** — `max_depth` was set to `old_max + N`, so the evaluator could loop through multiple complete cycles before stopping.
+
+**New design:**
+
+1. **Composite sort-key:** Steps are ordered by `(phase_group, query_group, sub_sequence)`:
+   - `phase_group` maps to PHASE_BLOCK boundaries (see Section 5.8.5)
+   - `query_group` is the 1-based search query index
+   - `sub_sequence` orders steps within the same (phase_group, query_group)
+
+2. **Subtree-scoped rerun deletion:** `delete_downstream()` takes a `phase_group` parameter. When rerunning a step, only steps within the same or later phase_groups for the same query are deleted — similar steps from different query groups are preserved.
+
+3. **Earliest-step rerun:** When rerunning a step_type that appears multiple times (e.g., two DIGEST steps from two query groups), the rerun targets the **earliest** matching step by sort order. If a specific step ID is requested, that exact step is targeted.
+
+4. **continue_task hard-stop:** `continue_task` now sets `max_depth = current_depth` instead of `current_depth + N`. The evaluator runs exactly one cycle and then halts. If more depth is desired, the user must click "Continue" again.
+
+5. **State recovery from steps:** When `orchestrator_state` is empty (legacy state-wipe bugs, server restart with lost in-memory state), `_recover_context_from_steps()` reconstructs findings and consolidation from step records in the database, enabling tasks to resume even when the JSON blob was wiped.
+
+6. **Legacy state carry-forward:** On `continue_task`, reflection fields (`prior_consolidation_state`, `stabilized_insights`, etc.) are preserved from the old state into the new, ensuring cumulative knowledge across cycles.
+
+**Database changes (m043):**
+```sql
+ALTER TABLE research_steps ADD COLUMN phase_group INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE research_steps ADD COLUMN sub_sequence INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_research_steps_sort
+    ON research_steps(task_id, phase_group, query_group, sub_sequence);
+```
+
+**Key files:**
+- `m043_add_step_hierarchy.py` — migration
+- `research_orchestrator.py` — `_phase_block_for()`, subtree-scoped `_delete_downstream()`, `_recover_context_from_steps()`, `continue_task()` hard-stop, phase_group bumping in `execute_step()`
+- `backend/storage/repositories/research_step.py` — sort by composite key
+- `backend/services/research/steps/*.py` — each step returns `step_ids` list for new step insertion at correct position
+- `StepPipeline.tsx` — ordering by `phase_group, query_group, sub_sequence`
+
+**Synthesis filename convention:**
+Research syntheses are exported as:
+```
+research-synthesis-{task_id}_v{rerun_count}_d{depth}.md
+```
+The `_vN_dM` suffix encodes the rerun version and research depth, enabling multiple syntheses of the same task to coexist. The sediment injection pipeline strips this suffix for task_id matching.
+
+**Display names for injected sediment (m045):**
+`perception_files` gained a `display_name TEXT` column. For research-synthesis files, this is set to the task's `objective` field. The frontend renders this human-readable title instead of the raw UUID-based filename in both the available-files list and the injected-sediment list. Display names are backfilled lazily when the relevant API endpoints are called.
 
 ---
 
@@ -3808,6 +3883,11 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 | Cycle-scoped context + step filtering | — | Cycle-depth aware digestion lookup + UI step detail filtering (m040) |
 | Preview prompt caching + reuse | — | Cached persona/system prompt reused during step execution |
 | **Rerun/stale cascade architecture** | m038 | In-place update, cascade invalidation, stale UI (see §5.8.8) |
+| **Orchestrator state persistence** | m039 | JSON blob in `research_tasks.orchestrator_state`, delete-and-recreate, simplified pipeline (see §5.8.9) |
+| **Cycle-scoped context + unified references** | m040 | Split findings by depth, [S##] source mapping, preview caching (see §5.8.10) |
+| **Hierarchical step identity** | m043 | `phase_group` + `sub_sequence` columns, composite sort-key `(phase_group, query_group, sub_sequence)`, subtree-scoped rerun deletion, `continue_task` hard-stop, state recovery from steps (see §5.8.13) |
+| **Sediment injection deduplication** | m044 | UNIQUE index on `sediment_injections(source_conversation_id, source_file_name, target_conversation_id)`, `INSERT OR IGNORE` semantics |
+| **Display names for research syntheses** | m045 | `display_name TEXT` on `perception_files`, populated from `research_tasks.objective`, backfilled lazily via API endpoints |
 | **Document digestion phase** (ADR-053) | — | New `document_digestion` phase after planning; two modes (full/chunks); inject indexed documents into research pipeline |
 | **Document injection in new research** | — | `NewResearchForm` document dropdown with mode selector; injects document before first search cycle |
 | **Continue with memory** (`POST /research/continue`) | — | Continuation inherits source task's synthesis as `previous_context`; planner uses `user_with_context` template |
