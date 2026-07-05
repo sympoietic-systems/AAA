@@ -408,6 +408,7 @@ class SedimentInjectionInfo(BaseModel):
     summary: Optional[str] = None
     injected_at: Optional[str] = None
     status: str = "ready"
+    display_name: Optional[str] = None
     display_name: str = ""
 
 

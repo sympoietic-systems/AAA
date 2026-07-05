@@ -179,6 +179,26 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
 async def get_conversation_injections(conversation_id: str, request: Request):
     perception_repo = request.app.state.perception_repo
     injections = SedimentService.get_injections(perception_repo, conversation_id)
+
+    # Backfill display_name for existing injected files
+    try:
+        task_repo = request.app.state.research_task_repo
+        for inj in injections:
+            fn = inj.get("source_file_name", "")
+            if fn.startswith("research-synthesis-") and not inj.get("display_name"):
+                task_id = fn.replace("research-synthesis-", "").replace(".md", "")
+                task_id = re.sub(r"_v\d+(?:_d\d+)?$", "", task_id)
+                task = task_repo.get(task_id)
+                if task:
+                    dn = task.get("objective") or task.get("title") or ""
+                    if dn:
+                        inj["display_name"] = dn
+                        try:
+                            perception_repo.set_display_name(inj["source_conversation_id"], fn, dn)
+                        except Exception:
+                            pass
+    except Exception:
+        pass
     return SedimentInjectionsResponse(
         injections=[
             SedimentInjectionInfo(
@@ -189,6 +209,7 @@ async def get_conversation_injections(conversation_id: str, request: Request):
                 token_count=inj.get("token_count", 0), chunk_count=inj.get("chunk_count", 0),
                 summary=inj.get("summary"), injected_at=inj.get("injected_at"),
                 status=inj.get("status") or "ready",
+                display_name=inj.get("display_name"),
             )
             for inj in injections
         ]
