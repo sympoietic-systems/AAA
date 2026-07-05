@@ -34,6 +34,20 @@ VALID_TRANSITIONS = {
 TERMINAL_STATUSES = {"completed", "failed", "cancelled", "rejected", "expired"}
 
 
+def _extract_task_depth(task: dict) -> int:
+    import json
+    try:
+        orch_raw = task.get("orchestrator_state")
+        if orch_raw:
+            orch = json.loads(orch_raw) if isinstance(orch_raw, str) else orch_raw
+            d = orch.get("current_depth", 0)
+            if d:
+                return int(d)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return task.get("max_depth", 0)
+
+
 class ResearchTaskManager:
     """Singleton service managing the lifecycle of all research tasks."""
 
@@ -225,7 +239,8 @@ class ResearchTaskManager:
             conversation_id = task["conversation_id"]
             try:
                 v = task.get("rerun_count") or 0
-                filename = f"research-synthesis-{task_id}_v{v}.md"
+                d = _extract_task_depth(task)
+                filename = f"research-synthesis-{task_id}_v{v}_d{d}.md"
                 from backend.services.file import FileService
                 
                 from backend.services.export import ExportService

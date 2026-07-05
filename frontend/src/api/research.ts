@@ -423,7 +423,7 @@ export function downloadResearchExport(taskId: string): void {
   document.body.removeChild(a)
 }
 
-export async function downloadResearchStagesExport(taskId: string, title?: string, rerunCount?: number): Promise<void> {
+export async function downloadResearchStagesExport(taskId: string, title?: string, rerunCount?: number, maxDepth?: number): Promise<void> {
   const res = await fetch(`${BASE}/research/tasks/${taskId}/export/stages`)
   if (!res.ok) throw new Error(`Export failed: ${res.status}`)
   const blob = await res.blob()
@@ -432,7 +432,8 @@ export async function downloadResearchStagesExport(taskId: string, title?: strin
   a.href = url
   const safeName = (title || "research").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 60) || "research"
   const v = rerunCount ?? 0
-  a.download = `${safeName}_v${v}.md`
+  const d = maxDepth ?? 0
+  a.download = `${safeName}_v${v}_d${d}.md`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

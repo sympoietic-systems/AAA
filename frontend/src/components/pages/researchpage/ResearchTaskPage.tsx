@@ -185,7 +185,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
   const color = STATUS_COLORS[current.status] ?? COLOR_PALETTE.uiDim
   const activeReport = activeReportIndex !== null && reportVersions[activeReportIndex] ? reportVersions[activeReportIndex] : null
   const reportContent = activeReport ? activeReport.markdown : (current.result_summary || "")
-  const baseName = slugify(extractReportTitle(reportContent) ?? current.title) + `_v${current.rerun_count ?? 0}`
+  const baseName = slugify(extractReportTitle(reportContent) ?? current.title) + `_v${current.rerun_count ?? 0}_d${current.max_depth ?? 0}`
 
   const notesAppendixMd = taskNotes.length > 0
     ? "\n\n---\n\n## Notes\n\n" + taskNotes.map(n => {

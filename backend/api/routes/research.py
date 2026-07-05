@@ -53,6 +53,22 @@ class ContinueTaskPayload(BaseModel):
     budget_limit_usd: Optional[float] = None
 
 
+# ── Helpers ────────────────────────────────────────────────────────────
+
+def _extract_depth(task: dict) -> int:
+    import json
+    try:
+        orch_raw = task.get("orchestrator_state")
+        if orch_raw:
+            orch = json.loads(orch_raw) if isinstance(orch_raw, str) else orch_raw
+            d = orch.get("current_depth", 0)
+            if d:
+                return int(d)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return task.get("max_depth", 0)
+
+
 # ── Task CRUD ─────────────────────────────────────────────────────────
 
 @router.post("/research/dispatch")
@@ -796,7 +812,8 @@ async def export_research_task(task_id: str, request: Request):
 
     safe_title = (task.get("title") or "research").strip().replace(" ", "_").replace("/", "_")[:80]
     v = task.get("rerun_count") or 0
-    filename = f"research_{safe_title}_{task_id[:8]}_v{v}.md"
+    d = _extract_depth(task)
+    filename = f"research_{safe_title}_{task_id[:8]}_v{v}_d{d}.md"
 
     return PlainTextResponse(
         content=markdown,
@@ -841,7 +858,8 @@ async def export_research_stages(task_id: str, request: Request):
     safe_title = (task.get("title") or "research").strip().replace(" ", "_").replace("/", "_")[:80]
     safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', safe_title).strip('_') or "research"
     v = task.get("rerun_count") or 0
-    filename = f"{safe_name}_v{v}.md"
+    d = _extract_depth(task)
+    filename = f"{safe_name}_v{v}_d{d}.md"
 
     return PlainTextResponse(
         content=markdown,

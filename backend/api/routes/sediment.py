@@ -16,6 +16,20 @@ logger = logging.getLogger("aaa.api.sediment")
 router = APIRouter()
 
 
+def _extract_depth(task: dict) -> int:
+    import json
+    try:
+        orch_raw = task.get("orchestrator_state")
+        if orch_raw:
+            orch = json.loads(orch_raw) if isinstance(orch_raw, str) else orch_raw
+            d = orch.get("current_depth", 0)
+            if d:
+                return int(d)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return task.get("max_depth", 0)
+
+
 @router.get("/sediment/files", response_model=SedimentFilesResponse)
 async def list_all_sediment_files(request: Request, exclude_conversation_id: str = "", search: str = ""):
     perception_repo = request.app.state.perception_repo
@@ -32,7 +46,8 @@ async def list_all_sediment_files(request: Request, exclude_conversation_id: str
         for task in completed_tasks:
             task_id = task["id"]
             v = task.get("rerun_count") or 0
-            filename = f"research-synthesis-{task_id}_v{v}.md"
+            d = _extract_depth(task)
+            filename = f"research-synthesis-{task_id}_v{v}_d{d}.md"
             if filename in existing_filenames:
                 continue
                 
