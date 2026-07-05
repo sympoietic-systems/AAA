@@ -224,7 +224,8 @@ class ResearchTaskManager:
         if task and task.get("conversation_id"):
             conversation_id = task["conversation_id"]
             try:
-                filename = f"research-synthesis-{task_id}.md"
+                v = task.get("rerun_count") or 0
+                filename = f"research-synthesis-{task_id}_v{v}.md"
                 from backend.services.file import FileService
                 
                 from backend.services.export import ExportService

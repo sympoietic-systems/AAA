@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import re
 from fastapi import APIRouter, Request
 
 from backend.api.schemas import (
@@ -30,7 +31,8 @@ async def list_all_sediment_files(request: Request, exclude_conversation_id: str
         
         for task in completed_tasks:
             task_id = task["id"]
-            filename = f"research-synthesis-{task_id}.md"
+            v = task.get("rerun_count") or 0
+            filename = f"research-synthesis-{task_id}_v{v}.md"
             if filename in existing_filenames:
                 continue
                 
@@ -78,6 +80,7 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
         src_file = entry.get("source_file_name", "")
         if src_conv == "global-research" and src_file.startswith("research-synthesis-"):
             task_id = src_file.replace("research-synthesis-", "").replace(".md", "")
+            task_id = re.sub(r"_v\d+$", "", task_id)  # strip version suffix
             
             # Lazily ensure "global-research" exists in conversations to satisfy DB foreign keys
             try:

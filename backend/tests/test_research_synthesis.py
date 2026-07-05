@@ -181,12 +181,12 @@ async def test_research_task_completion_triggers_sedimentation():
         state.research_task_repo.update.assert_called_once_with(task_id, result_summary="This is the final result markdown")
         
         # Verify file caching occurred
-        mock_cache.assert_called_once_with("test-conv-abc", f"research-synthesis-{task_id}.md", b"This is the final result markdown")
+        mock_cache.assert_called_once_with("test-conv-abc", f"research-synthesis-{task_id}_v0.md", b"This is the final result markdown")
         
         # Verify file creation in perception repo
         state.perception_repo.create_file.assert_called_once_with(
             conversation_id="test-conv-abc",
-            file_name=f"research-synthesis-{task_id}.md",
+            file_name=f"research-synthesis-{task_id}_v0.md",
             file_type="research-synthesis",
             status="uploading",
         )
@@ -239,7 +239,7 @@ async def test_inject_global_research_task_lazy_provisions():
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["files"]) == 1
-    assert data["files"][0]["file_name"] == f"research-synthesis-{task_id}.md"
+    assert data["files"][0]["file_name"] == f"research-synthesis-{task_id}_v0.md"
     assert data["files"][0]["conversation_id"] == "global-research"
     assert data["files"][0]["display_name"] == "Global test task"
     
@@ -252,14 +252,14 @@ async def test_inject_global_research_task_lazy_provisions():
             "files": [
                 {
                     "source_conversation_id": "global-research",
-                    "source_file_name": f"research-synthesis-{task_id}.md"
+                    "source_file_name": f"research-synthesis-{task_id}_v0.md"
                 }
             ]
         }
         
         # Mock service inject call
         from backend.services.sediment import SedimentService
-        with patch.object(SedimentService, "inject", return_value=[{"id": "inj-999", "source_conversation_id": "global-research", "source_file_name": f"research-synthesis-{task_id}.md"}]) as mock_inj_service:
+        with patch.object(SedimentService, "inject", return_value=[{"id": "inj-999", "source_conversation_id": "global-research", "source_file_name": f"research-synthesis-{task_id}_v0.md"}]) as mock_inj_service:
             
             resp_inject = client.post(
                 "/conversations/conv-xyz/sediment/inject",
@@ -273,10 +273,10 @@ async def test_inject_global_research_task_lazy_provisions():
             )
             
             # Verify file was cached and created in repo
-            mock_cache.assert_called_once_with("global-research", f"research-synthesis-{task_id}.md", b"Report synthesis text content")
+            mock_cache.assert_called_once_with("global-research", f"research-synthesis-{task_id}_v0.md", b"Report synthesis text content")
             mock_app.state.perception_repo.create_file.assert_called_once_with(
                 conversation_id="global-research",
-                file_name=f"research-synthesis-{task_id}.md",
+                file_name=f"research-synthesis-{task_id}_v0.md",
                 file_type="research-synthesis",
                 status="uploading",
             )
