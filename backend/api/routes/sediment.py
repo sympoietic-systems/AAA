@@ -40,15 +40,23 @@ async def list_all_sediment_files(request: Request, exclude_conversation_id: str
         task_repo = request.app.state.research_task_repo
         completed_tasks = task_repo.list_all(status="completed", limit=100)
         
-        # Check files already present to avoid duplicates
+        # Check files already present to avoid duplicates.
+        # Match any filename starting with research-synthesis-{task_id}
+        # regardless of version/depth suffix format.
         existing_filenames = {f["file_name"] for f in files}
-        
+        existing_prefixes: set[str] = set()
+        for fn in existing_filenames:
+            if fn.startswith("research-synthesis-"):
+                base = fn.replace("research-synthesis-", "").replace(".md", "")
+                base = re.sub(r"_v\d+(?:_d\d+)?$", "", base)
+                existing_prefixes.add(base)
+
         for task in completed_tasks:
             task_id = task["id"]
             v = task.get("rerun_count") or 0
             d = _extract_depth(task)
             filename = f"research-synthesis-{task_id}_v{v}_d{d}.md"
-            if filename in existing_filenames:
+            if filename in existing_filenames or task_id in existing_prefixes:
                 continue
                 
             # Create virtual file info

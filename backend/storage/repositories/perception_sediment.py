@@ -500,6 +500,19 @@ class PerceptionSedimentRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     @with_connection
+    def get_injection(self, source_conversation_id: str, source_file_name: str, target_conversation_id: str) -> dict | None:
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT id, source_conversation_id, source_file_name
+               FROM sediment_injections
+               WHERE source_conversation_id = ?
+                 AND source_file_name = ?
+                 AND target_conversation_id = ?""",
+            (source_conversation_id, source_file_name, target_conversation_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+    @with_connection
     def remove_injection(self, injection_id: str) -> None:
         conn = self._conn()
         conn.execute("DELETE FROM sediment_injections WHERE id = ?", (injection_id,))

@@ -17,6 +17,10 @@ class SedimentService:
             src_file = entry.get("source_file_name", "")
             if not src_conv or not src_file:
                 continue
+            existing = perception_repo.get_injection(src_conv, src_file, target_conversation_id)
+            if existing:
+                created.append(existing)
+                continue
             injection_id = str(uuid.uuid4())
             perception_repo.inject_sediment(
                 injection_id=injection_id,
