@@ -466,9 +466,15 @@ async def execute_step(
             if rerun_step_id:
                 existing = step_repo.get(rerun_step_id)
             else:
+                s2 = orch._state_mgr._states.get(task_id)
+                current_depth = s2.get("current_depth", 0) if s2 else 0
                 all_steps = step_repo.get_by_task(task_id)
-                matching = [s for s in all_steps
-                            if s["step_type"] == rerun_step_type and s["status"] in ("completed", "failed", "running")]
+                matching = [
+                    s for s in all_steps
+                    if s["step_type"] == rerun_step_type
+                    and s["status"] in ("completed", "failed", "running")
+                    and orch._get_step_depth(s) == current_depth
+                ]
                 existing = matching[-1] if matching else None
             if existing:
                 s2 = orch._state_mgr._states.get(task_id)

@@ -743,7 +743,12 @@ class SomaticResearchOrchestrator:
                         if st["step_type"] == rerun_step["step_type"]
                         and self._get_step_depth(st) == rerun_depth
                     ]
-                    min_step_num = min(st["step_number"] for st in same_type_same_depth) if same_type_same_depth else rerun_step["step_number"]
+                    if same_type_same_depth:
+                        min_step_num = min(st["step_number"] for st in same_type_same_depth)
+                    else:
+                        # No same-type steps at this depth — fresh phase, nothing to delete.
+                        # Use next step_number so same-depth filter picks up nothing.
+                        min_step_num = s.get("step_number", 0) + 1
                     # Delete only steps at the same depth, starting from the phase's first step
                     same_depth_steps = [st for st in all_steps if self._get_step_depth(st) == rerun_depth
                                         and st["step_number"] >= min_step_num]
