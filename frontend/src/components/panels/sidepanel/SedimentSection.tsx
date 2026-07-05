@@ -414,7 +414,7 @@ function SedimentSectionComponent({
                       : "text-ui-secondary"
                   }`}>
                     {inj.file_type === "research-synthesis" || inj.file_type === "synthesis-sediment"
-                      ? `synthesis: ${inj.source_file_name.replace("research-synthesis-", "").replace(".md", "")}`
+                      ? (inj.display_name || `synthesis: ${inj.source_file_name.replace("research-synthesis-", "").replace(".md", "")}`)
                       : inj.source_file_name}
                   </span>
                   <span className="text-[7px] text-ui-dim font-mono truncate block">

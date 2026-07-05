@@ -174,12 +174,12 @@ class PerceptionSedimentRepository(BaseRepository):
         return text[:max_chars].rstrip() + "..."
 
     @with_connection
-    def create_file(self, conversation_id: str, file_name: str, file_type: str, status: str = 'uploading') -> None:
+    def create_file(self, conversation_id: str, file_name: str, file_type: str, status: str = 'uploading', display_name: str = '') -> None:
         conn = self._conn()
         conn.execute(
-            """INSERT OR IGNORE INTO perception_files (conversation_id, file_name, file_type, status)
-               VALUES (?, ?, ?, ?)""",
-            (conversation_id, file_name, file_type, status),
+            """INSERT OR IGNORE INTO perception_files (conversation_id, file_name, file_type, status, display_name)
+               VALUES (?, ?, ?, ?, ?)""",
+            (conversation_id, file_name, file_type, status, display_name),
         )
         conn.execute(
             """UPDATE perception_files SET status = ?, updated_at = CURRENT_TIMESTAMP
@@ -485,9 +485,10 @@ class PerceptionSedimentRepository(BaseRepository):
         conn = self._conn()
         rows = conn.execute(
             """SELECT si.id, si.source_conversation_id, si.source_file_name,
-                      si.target_conversation_id, si.injected_at,
-                      pf.file_type, pf.status, pf.summary, pf.token_count, pf.chunk_count,
-                      c.title AS source_conversation_title
+                       si.target_conversation_id, si.injected_at,
+                       pf.file_type, pf.status, pf.summary, pf.token_count, pf.chunk_count,
+                       pf.display_name,
+                       c.title AS source_conversation_title
                FROM sediment_injections si
                JOIN perception_files pf
                  ON si.source_conversation_id = pf.conversation_id

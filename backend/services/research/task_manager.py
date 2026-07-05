@@ -258,6 +258,7 @@ class ResearchTaskManager:
                         file_name=filename,
                         file_type="research-synthesis",
                         status="uploading",
+                        display_name=task.get("objective") or task.get("title") or "",
                     )
                     
                     # Spawn async digest worker

@@ -132,6 +132,7 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
                         file_name=src_file,
                         file_type="research-synthesis",
                         status="uploading",
+                        display_name=task.get("objective") or task.get("title") or "",
                     )
                     
                     # Spawn digest worker

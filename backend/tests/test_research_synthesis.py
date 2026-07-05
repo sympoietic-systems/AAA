@@ -191,6 +191,7 @@ async def test_research_task_completion_triggers_sedimentation():
             file_name=f"research-synthesis-{task_id}_v0_d0.md",
             file_type="research-synthesis",
             status="uploading",
+            display_name="Test task completion",
         )
 
 
@@ -283,6 +284,7 @@ async def test_inject_global_research_task_lazy_provisions():
                 file_name=f"research-synthesis-{task_id}_v0_d0.md",
                 file_type="research-synthesis",
                 status="uploading",
+                display_name="Global test task",
             )
 
 
