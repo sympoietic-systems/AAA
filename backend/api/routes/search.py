@@ -181,10 +181,18 @@ async def search_archive(
             
             g_score = glitch_map.get(m_id, 0.0)
             
-            # Combine scores
-            # Diffractive mode: structural similarity and semantic distance (isomorphism)
-            # diff_score = s_str * (1.0 - s_sem) if both are calculated, or just s_str
-            diff_score = s_str * (1.0 - s_sem) if (w_structural > 0.0 and query_emb is not None) else s_str
+            # Diffractive Goldilocks gate (pure diffractive mode only):
+            # Structural isomorphism = high s_str (≥0.80) AND low s_sem (≤0.45).
+            # This mirrors the convention in diffractive_retrieval.py.
+            # In composite/weighted mode we fall back to continuous scoring.
+            if mode == "diffractive" and w_semantic == 0.0:
+                # Hard gate: skip unless structurally isomorphic
+                if s_str < 0.80 or s_sem > 0.45:
+                    continue
+                diff_score = s_str
+            else:
+                # Continuous weighted scoring: structural minus semantic overlap
+                diff_score = s_str * (1.0 - s_sem) if (w_structural > 0.0 and query_emb is not None) else s_str
             
             comp_score = (
                 (w_semantic * max(0.0, s_sem)) +

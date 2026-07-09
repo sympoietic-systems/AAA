@@ -474,6 +474,15 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
             />
           </form>
 
+          {/* Mobile search icon — navigates to /search */}
+          <HeaderActionButton
+            onClick={() => navigate("/search")}
+            title="Search"
+            className="md:hidden"
+          >
+            ⌕
+          </HeaderActionButton>
+
           <HeaderActionButton onClick={handleNewConversation}>
             + new
           </HeaderActionButton>
