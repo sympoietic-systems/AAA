@@ -125,9 +125,31 @@ class MemoryNodeRepository(BaseRepository):
                 result.append(node)
         result.sort(key=lambda x: x.get("created_at") or "", reverse=True)
         return result
+
+    @with_connection
+    def get_diffractive_keys(self, conversation_id: str) -> list[str]:
         conn = self._conn()
         rows = conn.execute(
             "SELECT diffractive_key FROM memory_nodes WHERE conversation_id = ? AND diffractive_key != ''",
             (conversation_id,),
         ).fetchall()
         return [r["diffractive_key"] for r in rows]
+
+    @with_connection
+    def search_memory_nodes_text(self, query_str: str) -> list[dict]:
+        conn = self._conn()
+        tokens = [t.strip() for t in query_str.split() if len(t.strip()) >= 2] or [query_str.strip()]
+        clauses = ["(scar LIKE ? OR intra_active_text LIKE ? OR surface_fragment LIKE ?)" for _ in tokens]
+        params = [v for t in tokens for v in (f"%{t}%", f"%{t}%", f"%{t}%")]
+        sql = f"SELECT * FROM memory_nodes WHERE ({' OR '.join(clauses)}) ORDER BY created_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+        seen = set()
+        result = []
+        for r in rows:
+            node = _row_to_memory_node(r)
+            nid = node.get("id", "")
+            if nid and nid not in seen:
+                seen.add(nid)
+                result.append(node)
+        return result
+

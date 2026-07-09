@@ -763,3 +763,91 @@ class MessageRepository(BaseRepository):
         
         results.sort(key=lambda x: x["similarity"], reverse=True)
         return results[:limit]
+
+    @with_connection
+    def search_text(self, query_str: str, conversation_id: Optional[str] = None) -> list[Message]:
+        conn = self._conn()
+        # Broad keyword search: split into tokens and OR-match each across
+        # both the content and thinking columns.
+        tokens = [t.strip() for t in query_str.split() if len(t.strip()) >= 2]
+        if not tokens:
+            tokens = [query_str.strip()]
+
+        # Build: (content LIKE %t1% OR thinking LIKE %t1% OR content LIKE %t2% ...)
+        clauses = []
+        params = []
+        for token in tokens:
+            clauses.append("(content LIKE ? OR thinking LIKE ?)")
+            params.extend([f"%{token}%", f"%{token}%"])
+
+        where_body = " OR ".join(clauses)
+        sql = f"SELECT * FROM conversation_log WHERE ({where_body})"
+        if conversation_id:
+            sql += " AND conversation_id = ?"
+            params.append(conversation_id)
+        sql += " ORDER BY id DESC"
+        rows = conn.execute(sql, params).fetchall()
+        return [_row_to_message(r) for r in rows]
+
+
+    @with_connection
+    def get_embeddings_and_signatures_for_search(self, conversation_id: Optional[str] = None) -> list[tuple]:
+        conn = self._conn()
+        if conversation_id:
+            rows = conn.execute(
+                """SELECT id, speaker, content, conversation_id, timestamp, embedding, structural_signature 
+                   FROM conversation_log 
+                   WHERE conversation_id = ? AND embedding IS NOT NULL""",
+                (conversation_id,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT id, speaker, content, conversation_id, timestamp, embedding, structural_signature 
+                   FROM conversation_log 
+                   WHERE conversation_id != '' AND embedding IS NOT NULL""",
+            ).fetchall()
+        return [
+            (
+                r["id"],
+                r["speaker"],
+                r["content"],
+                r["conversation_id"],
+                r["timestamp"],
+                r["embedding"],
+                r["structural_signature"]
+            )
+            for r in rows
+        ]
+
+    @with_connection
+    def get_glitch_salience_messages(self, conversation_id: Optional[str] = None, limit: int = 50) -> list[tuple]:
+        conn = self._conn()
+        query = """
+            SELECT cl.id, cl.speaker, cl.content, cl.conversation_id, cl.timestamp,
+                   cm.surprise_index, cm.novelty, cm.deficit
+            FROM conversation_log cl
+            JOIN conversation_metrics cm ON cl.id = cm.message_id
+            WHERE cm.surprise_index > 0.6 OR cm.novelty > 0.6 OR cm.deficit > 0.6
+        """
+        params = []
+        if conversation_id:
+            query += " AND cl.conversation_id = ?"
+            params.append(conversation_id)
+        query += " ORDER BY cl.id DESC LIMIT ?"
+        params.append(limit)
+        
+        rows = conn.execute(query, params).fetchall()
+        return [
+            (
+                r["id"],
+                r["speaker"],
+                r["content"],
+                r["conversation_id"],
+                r["timestamp"],
+                r["surprise_index"],
+                r["novelty"],
+                r["deficit"]
+            )
+            for r in rows
+        ]
+

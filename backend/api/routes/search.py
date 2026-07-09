@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Request, Query, HTTPException
 from typing import Optional, List
+import logging
 import numpy as np
 import re
 from pydantic import BaseModel
 
 from backend.utils.vector import cosine_similarity
 from backend.storage.models import Message
+
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter()
 
@@ -132,19 +136,20 @@ async def search_archive(
         query_sig = None
         
         # Precompute query semantic embedding
+        # embedder is EmbedderModule — use embedder.service.encode_async()
         if w_semantic > 0.0 and q:
             try:
-                emb_res = await embedder.embed_text(q)
-                query_emb = emb_res["embedding"]
-            except Exception:
-                pass
+                query_emb = await embedder.service.encode_async(q)
+            except Exception as e:
+                logger.warning("Semantic embedding failed: %s", e)
                 
         # Precompute query structural signature
+        # structural_scorer is StructuralScorerModule — use ._scorer.score_async()
         if w_structural > 0.0 and q:
             try:
-                query_sig = await structural_scorer.score_async(q, use_llm_scorer=False)
-            except Exception:
-                pass
+                query_sig = await structural_scorer._scorer.score_async(q, use_llm_scorer=False)
+            except Exception as e:
+                logger.warning("Structural scoring failed: %s", e)
         
         # Load all messages candidates with embeddings and signatures
         candidates = message_repo.get_embeddings_and_signatures_for_search(conversation_id)

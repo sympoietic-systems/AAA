@@ -193,6 +193,7 @@ class NoteRepository(BaseRepository):
         )
         return [dict(row) for row in cursor.fetchall()]
 
+
     @with_connection
     def get_notes_by_task(self, task_id: str) -> list[dict]:
         conn = self._conn()
@@ -288,3 +289,14 @@ class NoteRepository(BaseRepository):
             (asset_type, asset_id),
         )
         conn.commit()
+
+    @with_connection
+    def search_notes_text(self, query_str: str) -> list[dict]:
+        conn = self._conn()
+        tokens = [t.strip() for t in query_str.split() if len(t.strip()) >= 2] or [query_str.strip()]
+        clauses = ["(selected_text LIKE ? OR comment LIKE ?)" for _ in tokens]
+        params = [v for t in tokens for v in (f"%{t}%", f"%{t}%")]
+        sql = f"SELECT * FROM notes WHERE ({' OR '.join(clauses)}) ORDER BY created_at DESC"
+        cursor = conn.execute(sql, params)
+        return [dict(row) for row in cursor.fetchall()]
+

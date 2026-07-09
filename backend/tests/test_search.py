@@ -45,16 +45,20 @@ def test_search_endpoint(client: TestClient):
     client.app.state.memory_node_repo = memory_node_repo
 
     # Set up mocks for embedder and structural scorer
+    # embedder is EmbedderModule: route uses embedder.service.encode_async()
     embedder = AsyncMock()
     mock_emb = np.zeros(384, dtype=np.float32)
     mock_emb[0] = 1.0
-    embedder.embed_text.return_value = {"embedding": mock_emb, "model": "all-MiniLM-L6-v2"}
+    embedder.service = AsyncMock()
+    embedder.service.encode_async = AsyncMock(return_value=mock_emb)
     client.app.state.embedder = embedder
 
+    # structural_scorer is StructuralScorerModule: route uses structural_scorer._scorer.score_async()
     structural_scorer = AsyncMock()
     mock_sig = np.zeros(16, dtype=np.float32)
     mock_sig[0] = 1.0
-    structural_scorer.score_async.return_value = mock_sig
+    structural_scorer._scorer = AsyncMock()
+    structural_scorer._scorer.score_async = AsyncMock(return_value=mock_sig)
     client.app.state.structural_scorer = structural_scorer
 
     emb_bytes = mock_emb.tobytes()
