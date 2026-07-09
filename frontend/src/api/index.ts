@@ -12,3 +12,5 @@ export * from "./telemetry"
 export * from "./sediment"
 export * from "./notifications"
 export * from "./research"
+export * from "./search"
+

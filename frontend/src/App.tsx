@@ -8,6 +8,7 @@ import { NodeExplorer } from "./components/pages/nodeexplorer/NodeExplorer"
 import { SidePanel } from "./components/panels/sidepanel/SidePanel"
 import ConnectionCloud from "./components/panels/leftpanel/ConnectionCloud"
 import { SpectralEchoes } from "./components/panels/leftpanel/SpectralEchoes"
+import SearchTab from "./components/panels/leftpanel/SearchTab"
 import { checkAuthStatus, verifyPassword, logout, addConversationTag, getAgent, deleteMessage, downloadExport } from "./api/client"
 import { usePanelResizer } from "./hooks/usePanelResizer"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "./components/UI"
@@ -19,6 +20,7 @@ const AgentPage = lazy(() => import("./components/pages/agentpage/AgentPage").th
 const ResearchPage = lazy(() => import("./components/pages/researchpage/ResearchPage").then(m => ({ default: m.ResearchPage })))
 const ResearchTaskPage = lazy(() => import("./components/pages/researchpage/ResearchTaskPage").then(m => ({ default: m.ResearchTaskPage })))
 const ConversationLandingPage = lazy(() => import("./components/pages/landing/ConversationLandingPage").then(m => ({ default: m.ConversationLandingPage })))
+const SearchPage = lazy(() => import("./components/pages/search/SearchPage").then(m => ({ default: m.SearchPage })))
 
 function PageLoader() {
   return (
@@ -102,6 +104,11 @@ export default function App() {
           isAuthEnabled && !isAuthenticated
             ? <Navigate to="/login" replace />
             : (<NodesPage isAuthEnabled={isAuthEnabled} handleLogout={handleLogout} agentFlux={agentFlux} />)
+        } />
+        <Route path="/search" element={
+          isAuthEnabled && !isAuthenticated
+            ? <Navigate to="/login" replace />
+            : <SearchPage />
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -243,6 +250,9 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
   const handleReprocessFile = useCallback((fileName: string) => {
     reprocess(fileName)
   }, [reprocess])
+
+  // Left panel tab: "cloud" | "search"
+  const [leftPanelTab, setLeftPanelTab] = useState<"cloud" | "search">("cloud")
 
   // Collapsible and resizable left panel state (for Connection Cloud DAG)
   const {
@@ -450,6 +460,20 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
             research
           </HeaderActionButton>
 
+          {/* Compact search box in header (desktop) */}
+          <form
+            onSubmit={(e) => { e.preventDefault(); navigate("/search?q=" + encodeURIComponent((e.currentTarget.elements.namedItem("hq") as HTMLInputElement)?.value || "")) }}
+            className="hidden md:flex items-center bg-[#141414] border border-[#2a2a2a] rounded px-2.5 gap-1.5 focus-within:border-emerald-400/40 transition-colors"
+          >
+            <span className="text-[#555] text-xs select-none">⌕</span>
+            <input
+              name="hq"
+              type="text"
+              placeholder="search..."
+              className="bg-transparent text-xs text-[#c8c8c8] placeholder-[#555] focus:outline-none w-28 py-1"
+            />
+          </form>
+
           <HeaderActionButton onClick={handleNewConversation}>
             + new
           </HeaderActionButton>
@@ -500,79 +524,123 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
           style={!leftPanelCollapsed ? { width: `${leftPanelWidth}px` } : undefined}
         >
           {leftPanelCollapsed ? (
-            <button
-              onClick={() => setLeftPanelCollapsed(false)}
-              className="
-                flex items-center gap-1.5 shrink-0
-                text-xs text-[#555] hover:text-[#888]
-                transition-colors
-                md:flex-col md:justify-start md:gap-2 md:py-3 md:px-0
-                md:h-full
-                select-none cursor-pointer
-              "
-            >
-              <span className="text-[10px]">▶</span>
-              <span className="md:[writing-mode:vertical-rl] md:text-[10px] md:tracking-wider text-[11px] font-mono">
-                CONNECTION CLOUD
-              </span>
-            </button>
+            <div className="flex flex-col items-center gap-3 py-3">
+              <button
+                onClick={() => { setLeftPanelCollapsed(false); setLeftPanelTab("cloud") }}
+                title="Connection Cloud"
+                className="flex flex-col items-center gap-1 text-[#555] hover:text-[#888] transition-colors cursor-pointer select-none"
+              >
+                <span className="text-[10px]">▶</span>
+                <span className="[writing-mode:vertical-rl] text-[9px] font-mono tracking-wider uppercase">Cloud</span>
+              </button>
+              <button
+                onClick={() => { setLeftPanelCollapsed(false); setLeftPanelTab("search") }}
+                title="Search"
+                className="flex flex-col items-center gap-1 text-[#555] hover:text-emerald-400 transition-colors cursor-pointer select-none mt-1"
+              >
+                <span className="text-[12px]">⌕</span>
+                <span className="[writing-mode:vertical-rl] text-[9px] font-mono tracking-wider uppercase">Search</span>
+              </button>
+            </div>
           ) : (
             <>
-              <div className="flex items-center justify-between shrink-0 px-3 py-2 border-b border-[#222]">
-                <span className="text-[10px] font-mono uppercase text-[#666]">Connection Cloud</span>
+              {/* Tab bar: Cloud | Search */}
+              <div className="flex items-center shrink-0 border-b border-[#222]">
+                <button
+                  onClick={() => setLeftPanelTab("cloud")}
+                  className={`flex-1 text-[9px] font-mono uppercase tracking-wider py-2 transition-colors cursor-pointer border-b-2 ${
+                    leftPanelTab === "cloud"
+                      ? "text-[#aaa] border-emerald-400"
+                      : "text-[#555] border-transparent hover:text-[#888]"
+                  }`}
+                >
+                  Cloud
+                </button>
+                <button
+                  onClick={() => setLeftPanelTab("search")}
+                  className={`flex-1 text-[9px] font-mono uppercase tracking-wider py-2 transition-colors cursor-pointer border-b-2 ${
+                    leftPanelTab === "search"
+                      ? "text-emerald-400 border-emerald-400"
+                      : "text-[#555] border-transparent hover:text-[#888]"
+                  }`}
+                >
+                  ⌕ Search
+                </button>
                 <button
                   onClick={() => setLeftPanelCollapsed(true)}
-                  className="flex items-center gap-1 text-[10px] text-[#555] hover:text-[#888] transition-colors cursor-pointer"
+                  className="px-2 py-2 text-[10px] text-[#555] hover:text-[#888] transition-colors cursor-pointer"
+                  title="Collapse panel"
                 >
-                  <span>◀</span>
-                  <span>collapse</span>
+                  ◀
                 </button>
               </div>
 
-              {/* DAG — 2/3 height */}
-              <div className="overflow-hidden relative" style={{ flex: 2 }}>
-                {activeId ? (
-                  <ConnectionCloud
-                    activeLoadedMessages={fullTreeMessages}
-                    notes={notes}
-                    activeMessageId={activeMessageId}
-                    activePathIds={activePathIds}
-                    setActiveMessageId={setActiveMessageId}
-                    commitProposedBranch={commitProposedBranch}
-                    refreshTree={refreshTree}
-                    conversationId={activeId}
-                    onNavigateToMessage={navigateToMessage}
-                    agentFlux={agentFlux}
-                    onDeleteMessage={handleDeleteMessage}
-                    treeNodes={treeNodes}
-                    treeLinks={links}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-[#444] text-[10px] font-mono px-4 text-center select-none">
-                    DAG will initialize upon first message inscription
+              {/* Cloud tab content */}
+              {leftPanelTab === "cloud" && (
+                <>
+                  {/* DAG — 2/3 height */}
+                  <div className="overflow-hidden relative" style={{ flex: 2 }}>
+                    {activeId ? (
+                      <ConnectionCloud
+                        activeLoadedMessages={fullTreeMessages}
+                        notes={notes}
+                        activeMessageId={activeMessageId}
+                        activePathIds={activePathIds}
+                        setActiveMessageId={setActiveMessageId}
+                        commitProposedBranch={commitProposedBranch}
+                        refreshTree={refreshTree}
+                        conversationId={activeId}
+                        onNavigateToMessage={navigateToMessage}
+                        agentFlux={agentFlux}
+                        onDeleteMessage={handleDeleteMessage}
+                        treeNodes={treeNodes}
+                        treeLinks={links}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-[#444] text-[10px] font-mono px-4 text-center select-none">
+                        DAG will initialize upon first message inscription
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Spectral Echoes — 1/3 height, always open */}
-              <div className="flex flex-col shrink-0 border-t border-[#222] overflow-y-auto" style={{ flex: 1 }}>
-                <div className="px-3 py-1.5 shrink-0">
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-[#555]">Spectral Echoes</span>
-                </div>
-                <div className="flex-1 overflow-y-auto px-2 pb-2">
-                  {activeId ? (
-                    <SpectralEchoes
-                      conversationId={activeId}
-                      activeMessageId={activeMessageId}
-                      refreshTree={refreshTree}
-                    />
-                  ) : (
-                    <div className="text-[10px] font-mono text-[#333] px-2 select-none">
-                      no active node
+                  {/* Spectral Echoes — 1/3 height */}
+                  <div className="flex flex-col shrink-0 border-t border-[#222] overflow-y-auto" style={{ flex: 1 }}>
+                    <div className="px-3 py-1.5 shrink-0">
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-[#555]">Spectral Echoes</span>
                     </div>
-                  )}
+                    <div className="flex-1 overflow-y-auto px-2 pb-2">
+                      {activeId ? (
+                        <SpectralEchoes
+                          conversationId={activeId}
+                          activeMessageId={activeMessageId}
+                          refreshTree={refreshTree}
+                        />
+                      ) : (
+                        <div className="text-[10px] font-mono text-[#333] px-2 select-none">
+                          no active node
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Search tab content */}
+              {leftPanelTab === "search" && (
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <SearchTab
+                    conversationId={activeId || null}
+                    onNavigateFromSearch={(convId, msgId) => {
+                      if (convId !== activeId) {
+                        setActiveId(convId, msgId > 0 ? msgId : undefined)
+                      } else if (msgId > 0) {
+                        navigateToMessage(msgId)
+                      }
+                      setLeftPanelCollapsed(false)
+                    }}
+                  />
                 </div>
-              </div>
+              )}
             </>
           )}
         </div>
