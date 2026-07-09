@@ -284,6 +284,9 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
         </div>
         <div className="flex items-center gap-4 shrink-0">
           <CreasesDropdown />
+          <HeaderActionButton href="/search">
+            ⌕ search
+          </HeaderActionButton>
           <HeaderActionButton href="/agent">
             agent
           </HeaderActionButton>
@@ -457,6 +460,9 @@ const NewTaskInline = memo(function NewTaskInline() {
         </div>
         <div className="flex items-center gap-4 shrink-0">
           <CreasesDropdown />
+          <HeaderActionButton href="/search">
+            ⌕ search
+          </HeaderActionButton>
         </div>
       </HeaderContainer>
       <div className="flex-1 overflow-y-auto px-4 py-4 max-w-lg">

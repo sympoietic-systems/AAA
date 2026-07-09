@@ -149,6 +149,9 @@ export const ResearchPage = memo(function ResearchPage() {
         <div className="flex items-center gap-4">
           {loading && <span className="text-[#555] text-[10px] animate-pulse">polling…</span>}
           <CreasesDropdown />
+          <HeaderActionButton href="/search">
+            ⌕ search
+          </HeaderActionButton>
           <HeaderActionButton href="/agent">
             agent
           </HeaderActionButton>

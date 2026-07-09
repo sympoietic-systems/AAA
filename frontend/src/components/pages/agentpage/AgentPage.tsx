@@ -80,6 +80,9 @@ export function AgentPage({ onGoHome }: Props) {
         </span>
         <div className="flex items-center gap-4">
           <CreasesDropdown />
+          <HeaderActionButton href="/search">
+            ⌕ search
+          </HeaderActionButton>
           <HeaderActionButton href="/research">
             research
           </HeaderActionButton>

@@ -208,6 +208,9 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
         </span>
         <div className="flex items-center gap-4">
           <CreasesDropdown conversations={conversations} />
+          <HeaderActionButton href="/search">
+            ⌕ search
+          </HeaderActionButton>
           <HeaderActionButton href="/agent">
             agent
           </HeaderActionButton>
