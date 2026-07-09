@@ -24,6 +24,7 @@ from backend.api.routes.sediment import router as sediment_router
 from backend.api.routes.skills import router as skills_router
 from backend.api.routes.tags import router as tags_router
 from backend.api.routes.tokens import router as tokens_router
+from backend.api.routes.search import router as search_router
 
 router = APIRouter(prefix="/api", dependencies=[Depends(verify_password)])
 
@@ -49,3 +50,5 @@ router.include_router(tags_router)
 router.include_router(memory_nodes_router)
 router.include_router(refusals_router)
 router.include_router(research_router)
+router.include_router(search_router)
+
