@@ -466,16 +466,18 @@ Handles ingestion of external documents as "sediment" into the cognitive apparat
 - Plain text
 
 **Ingestion Pipeline:**
-1. Parse document → extract text
-2. Chunk text (512 chars, 64-char overlap)
+1. Parse document → extract text (heading hierarchy preserved as markdown `#` markers: HTML family emits them natively; DOCX via `p.style.name`; PDF via `PDFHeadingExtractor` font-size heuristics)
+2. Chunk text (512 chars, 64-char overlap); each chunk stamped with its `heading_path` ancestry in `opacity_meta` (ADR-062)
 3. Embed chunks
 4. Store chunks in database with structural signatures
 5. Trigger belief collision analysis (single LLM pass producing interference score + 16D state impact vector)
 
 **Runtime Retrieval (per chat turn):**
 1. Compute query embedding
-2. Top-K chunk retrieval via cosine similarity (K=6, threshold=0.25)
-3. Inject chunks as `[File Sediment]` system messages
+2. Top-K chunk retrieval via cosine similarity (K=6, threshold=0.25) — ranking is flat/diffractive; heading-path is annotation, not a proximity signal
+3. Inject chunks as `[File Sediment]` system messages, headed with a structural breadcrumb `[file › Section › 2.1 · chunk #N sim=X]` when a heading-path exists
+
+**Structure Migration (ADR-062):** existing (pre-heading-path) sediment is backfilled during idle by `StructureExtractionAction` (daemon `backfill_structure_on_idle`, every 30 min) — DB-marker parse or re-extract from the retained original, no LLM/re-embed. A navigable section-tree (Phase 2) is deliberately unbuilt, gated behind observed structural demand (`structural_demand_detected` logging).
 
 ---
 
