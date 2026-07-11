@@ -91,6 +91,9 @@ What becomes easier/harder?
 | [057](ADR-057-registry-driven-preview-architecture.md) | Decoupled and Registry-Driven Research Step Preview Architecture | accepted | 2026-07-01 |
 | [058](ADR-058-lightweight-llm-search-filtering.md) | Lightweight LLM-Driven Search Selection and Query Limits | accepted | 2026-07-01 |
 | [059](ADR-059-research-stages-export.md) | Research Stages Export (Clean Process Trace) | accepted | 2026-07-02 |
+| [060](ADR-060-research-memory-integration.md) | Research Memory Integration — In-Phase Crystallization & Universal Source Attachment | accepted | 2026-07-04 |
+| [061](ADR-061-rhizomatic-search-and-unified-modulation-membrane.md) | Rhizomatic Search and Unified Modulation Membrane | accepted | 2026-07-09 |
+| [062](ADR-062-hierarchy-aware-digestion-scar-folds.md) | Hierarchy-Aware Digestion (Structural Scar-Folds) | accepted | 2026-07-11 |
 
 ## Creating a New ADR
 

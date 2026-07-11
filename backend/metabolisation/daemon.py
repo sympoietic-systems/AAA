@@ -55,6 +55,8 @@ class AutopoieticDreamDaemon(
         self.dream_log_repo = getattr(app_state, "dream_log_repo", None)
         self.background_engine = getattr(app_state, "background_engine", None)
         self.pipeline = app_state.pipeline
+        self.perception_repo = getattr(app_state, "perception_repo", None)
+        self.notification_repo = getattr(app_state, "notification_repo", None)
 
         # Daemon Configuration
         daemon_cfg = self.config.get("daemon", {})
@@ -138,6 +140,8 @@ class AutopoieticDreamDaemon(
         _atrophy_interval = 900.0  # Run belief atrophy every 15 minutes
         _last_ghost_ecology_time = 0.0
         _ghost_ecology_interval = 3600.0  # Run ghost ecology every hour
+        _last_structure_time = 0.0
+        _structure_interval = 1800.0  # Backfill heading-paths every 30 minutes
         while self.is_running:
             try:
                 await self.consolidate_pending_conversations()
@@ -172,6 +176,15 @@ class AutopoieticDreamDaemon(
                 await self.run_skill_metabolism()
             except Exception as e:
                 logger.exception("Error in Autopoietic Dream Daemon skill metabolism: %s", e)
+
+            # Periodic structure-extraction backfill (ADR-062 migration)
+            now_ts_struct = time.time()
+            if now_ts_struct - _last_structure_time >= _structure_interval:
+                _last_structure_time = now_ts_struct
+                try:
+                    await self.backfill_structure_on_idle()
+                except Exception as e:
+                    logger.debug("Structure backfill skipped: %s", e)
             # Periodic belief atrophy (logged, covers all non-ghost stages)
             now_ts = time.time()
             if now_ts - _last_atrophy_time >= _atrophy_interval:
@@ -649,11 +662,91 @@ class AutopoieticDreamDaemon(
             logger.exception("Failed to execute self-triggered dream: %s", e)
             return None
 
+    async def backfill_structure_on_idle(self, max_files: int = 5) -> Optional[dict]:
+        """Backfill heading-paths onto pre-ADR-062 sediment during idle.
+
+        Scans ready files; for those whose chunks lack a heading_path, runs the
+        structure_extraction background action (DB-only markers or re-extract
+        from the retained original). No LLM, no re-embedding. Emits a trace
+        notification per file that gains structure. See ADR-062.
+        """
+        if not self.perception_repo or not self.background_engine:
+            return None
+
+        import json as _json
+
+        try:
+            files = self.perception_repo.get_all_files_across_conversations()
+        except Exception as e:
+            logger.debug("Structure backfill: cannot list files: %s", e)
+            return None
+
+        processed = 0
+        for f in files:
+            if processed >= max_files:
+                break
+            conversation_id = f.get("conversation_id")
+            file_name = f.get("file_name")
+            if not conversation_id or not file_name:
+                continue
+
+            try:
+                chunks = self.perception_repo.get_by_file(conversation_id, file_name)
+            except Exception:
+                continue
+            if not chunks:
+                continue
+
+            already = False
+            for c in chunks:
+                if c.opacity_meta:
+                    try:
+                        if _json.loads(c.opacity_meta).get("heading_path"):
+                            already = True
+                            break
+                    except Exception:
+                        pass
+            if already:
+                continue
+
+            try:
+                result = await self.background_engine.run("structure_extraction", {
+                    "perception_repo": self.perception_repo,
+                    "conversation_id": conversation_id,
+                    "file_name": file_name,
+                })
+            except Exception as e:
+                logger.debug("Structure extraction failed for %s: %s", file_name, e)
+                continue
+
+            if result.get("status") == "completed" and result.get("chunks_updated", 0) > 0:
+                processed += 1
+                if self.notification_repo:
+                    try:
+                        self.notification_repo.create(
+                            type="trace",
+                            snippet=(
+                                f"Structure extracted: '{file_name}' — "
+                                f"{result['chunks_updated']} heading paths recovered "
+                                f"({result.get('source')})."
+                            ),
+                            conversation_id=conversation_id,
+                            source=f"perception:{file_name}",
+                            source_type="conversation",
+                            source_id=conversation_id,
+                        )
+                    except Exception as ne:
+                        logger.debug("Structure backfill notification failed: %s", ne)
+
+        if processed:
+            logger.info("Structure backfill: %d file(s) gained heading-paths", processed)
+            return {"files_updated": processed}
+        return None
+
     async def compact_memory(self) -> Optional[dict]:
         """Zettelkasten-style memory compaction: merge highly similar semantic knots."""
         if not self.semantic_knot_repo:
             return None
-
         try:
             records = self.semantic_knot_repo.get_embeddings_and_signatures_except("", limit=1000)
             if len(records) < 2:

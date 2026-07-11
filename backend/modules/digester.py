@@ -8,6 +8,12 @@ from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
+# pdfminer (under pdfplumber) emits noisy WARNING lines when a font descriptor
+# lacks a parseable FontBBox; it falls back to defaults and extraction is
+# unaffected. Silence these to keep logs readable.
+logging.getLogger("pdfminer.pdffont").setLevel(logging.ERROR)
+logging.getLogger("pdfminer.pdfinterp").setLevel(logging.ERROR)
+
 TEXT_EXTENSIONS = {".txt", ".md", ".py", ".json", ".yaml", ".yml", ".csv", ".xml", ".html", ".css", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go", ".java", ".c", ".h", ".cpp", ".hpp", ".sh", ".bat", ".ps1", ".toml", ".ini", ".cfg", ".env", ".log"}
 
 
@@ -71,14 +77,17 @@ class SimpleChunkDigester(FileDigester):
                 "pdfplumber is required for PDF extraction. Install with: pip install pdfplumber"
             )
 
-        text_parts: list[str] = []
-        with pdfplumber.open(str(file_path)) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text_parts.append(page_text)
-
-        return "\n\n".join(text_parts)
+        try:
+            return PDFHeadingExtractor.extract(file_path, pdfplumber)
+        except Exception as e:
+            logger.warning("PDF font-aware heading extraction failed (%s); falling back to plain text", e)
+            text_parts: list[str] = []
+            with pdfplumber.open(str(file_path)) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_parts.append(page_text)
+            return "\n\n".join(text_parts)
 
     @staticmethod
     def _extract_docx(file_path: Path) -> str:
@@ -90,8 +99,18 @@ class SimpleChunkDigester(FileDigester):
             )
 
         doc = Document(str(file_path))
-        paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
-        return "\n\n".join(paragraphs)
+        parts: list[str] = []
+        for p in doc.paragraphs:
+            if not p.text.strip():
+                continue
+            style_name = (p.style.name if p.style else "") or ""
+            m = re.match(r'^Heading\s+(\d+)$', style_name)
+            if m:
+                level = min(int(m.group(1)), 6)
+                parts.append("#" * level + " " + p.text.strip())
+            else:
+                parts.append(p.text)
+        return "\n\n".join(parts)
 
     @staticmethod
     def _extract_epub(file_path: Path) -> str:
@@ -190,11 +209,131 @@ class EPUBMOBIHTMLParser(HTMLParser):
         return cleaned.strip()
 
 
+HEADING_RE = re.compile(r'^(#{1,6})\s+(.*)$')
+
+
+class PDFHeadingExtractor:
+    """Derive markdown ATX headings from PDF font geometry.
+
+    PDFs carry no semantic heading markup — a heading is only visually
+    distinct. We reconstruct it heuristically from per-character font size
+    (via ``page.chars``) plus a dotted-number prefix fallback, emitting the
+    same ``#``-dialect the HTML parsers produce. This is the *heuristic*
+    confidence tier of ADR-062; misses degrade gracefully to body text.
+    """
+
+    NUMBERING_RE = re.compile(r'^(\d+(?:\.\d+)*)\s+\S')
+
+    @classmethod
+    def extract(cls, file_path: Path, pdfplumber) -> str:
+        line_records: list[tuple[str, float]] = []
+        with pdfplumber.open(str(file_path)) as pdf:
+            for page in pdf.pages:
+                line_records.extend(cls._page_lines(page))
+
+        if not line_records:
+            return ""
+
+        sizes = [size for _, size in line_records if size > 0]
+        body_size = cls._mode(sizes) if sizes else 0.0
+
+        distinct_larger = sorted(
+            {round(s, 1) for s in sizes if s > body_size * 1.15},
+            reverse=True,
+        )
+        size_to_level = {sz: min(idx + 1, 6) for idx, sz in enumerate(distinct_larger)}
+
+        out: list[str] = []
+        for text, size in line_records:
+            level = cls._heading_level(text, size, body_size, size_to_level)
+            if level:
+                out.append("#" * level + " " + text.strip())
+            else:
+                out.append(text)
+        joined = "\n".join(out)
+        return re.sub(r'\n\s*\n+', '\n\n', joined).strip()
+
+    @staticmethod
+    def _page_lines(page) -> list[tuple[str, float]]:
+        chars = page.chars or []
+        if not chars:
+            txt = page.extract_text()
+            return [(line, 0.0) for line in (txt.split("\n") if txt else [])]
+
+        lines: dict[float, list[dict]] = {}
+        for ch in chars:
+            key = round(ch.get("top", 0.0), 0)
+            lines.setdefault(key, []).append(ch)
+
+        records: list[tuple[str, float]] = []
+        for key in sorted(lines):
+            row = sorted(lines[key], key=lambda c: c.get("x0", 0.0))
+            text = "".join(c.get("text", "") for c in row).strip()
+            if not text:
+                continue
+            char_sizes = [c.get("size", 0.0) for c in row if c.get("size")]
+            median_size = sorted(char_sizes)[len(char_sizes) // 2] if char_sizes else 0.0
+            records.append((text, median_size))
+        return records
+
+    @classmethod
+    def _heading_level(cls, text: str, size: float, body_size: float,
+                       size_to_level: dict[float, int]) -> int:
+        stripped = text.strip()
+        if not stripped or len(stripped.split()) > 25:
+            return 0
+        if body_size and size > body_size * 1.15:
+            rounded = round(size, 1)
+            if rounded in size_to_level:
+                return size_to_level[rounded]
+            return 1
+        m = cls.NUMBERING_RE.match(stripped)
+        if m and len(stripped.split()) <= 12:
+            depth = m.group(1).count(".") + 1
+            return min(depth, 6)
+        return 0
+
+    @staticmethod
+    def _mode(values: list[float]) -> float:
+        counts: dict[float, int] = {}
+        for v in values:
+            r = round(v, 1)
+            counts[r] = counts.get(r, 0) + 1
+        return max(counts, key=counts.get) if counts else 0.0
+
+
+def _heading_path_for_paragraphs(paragraphs: list[str]) -> list[list[str]]:
+    """Compute the running heading ancestry for each paragraph.
+
+    Walks the paragraph sequence maintaining a level-indexed heading stack.
+    A paragraph beginning with markdown ATX headings (``#``..``######``)
+    updates the stack; every paragraph is tagged with the ancestry in force
+    at its position. The heading-path is a contingent striation recorded as
+    metadata, never a governing structure (see ADR-062).
+    """
+    stack: dict[int, str] = {}
+    paths: list[list[str]] = []
+    for para in paragraphs:
+        first_line = para.split("\n", 1)[0].strip()
+        m = HEADING_RE.match(first_line)
+        if m:
+            level = len(m.group(1))
+            title = m.group(2).strip()
+            for deeper in [lvl for lvl in stack if lvl >= level]:
+                del stack[deeper]
+            if title:
+                stack[level] = title
+        paths.append([stack[lvl] for lvl in sorted(stack)])
+    return paths
+
+
 class RhizomaticDigester(SimpleChunkDigester):
     def chunk_with_metadata(self, text: str, chunk_size: int = 512, overlap: int = 64) -> list[dict]:
         paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
         if not paragraphs:
             return []
+
+        para_paths = _heading_path_for_paragraphs(paragraphs)
 
         chunks = []
         i = 0
@@ -213,7 +352,8 @@ class RhizomaticDigester(SimpleChunkDigester):
             chunk_text = "\n\n".join(current_chunk_paragraphs)
             chunks.append({
                 "text": chunk_text,
-                "paragraph_indices": list(range(i, j))
+                "paragraph_indices": list(range(i, j)),
+                "heading_path": para_paths[i] if i < len(para_paths) else []
             })
             
             advance = j - i

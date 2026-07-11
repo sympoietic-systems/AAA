@@ -14,6 +14,25 @@ from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
+
+
+def _breadcrumb(chunk) -> str:
+    """Render a chunk's heading-path as an argument-location breadcrumb.
+
+    A trace of where the chunk sits in the document's own unfolding — an
+    annotation the agent reads, never a proximity signal (ADR-062). Returns
+    an empty string when no heading-path is stored (pre-ADR / flat sources).
+    """
+    meta_raw = getattr(chunk, "opacity_meta", None)
+    if not meta_raw:
+        return ""
+    try:
+        path = json.loads(meta_raw).get("heading_path", [])
+    except Exception:
+        return ""
+    if not path:
+        return ""
+    return " › " + " › ".join(str(p) for p in path)
 from backend.modules.perception_prompts import TRIPARTITE_IMAGE_ANALYSIS_PROMPT
 
 from .base import ProcessingModule
@@ -361,7 +380,7 @@ class PerceptionModule(ProcessingModule):
                         f"{shadow_text} (Reason: {reason})"
                     )
                 else:
-                    entry_text = f"[{chunk.file_name} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
+                    entry_text = f"[{chunk.file_name}{_breadcrumb(chunk)} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
 
                 entry_tokens = estimate_tokens(entry_text)
                 if tokens_used + entry_tokens > self._file_token_budget:
@@ -396,7 +415,7 @@ class PerceptionModule(ProcessingModule):
                         f"{shadow_text} (Reason: {reason})"
                     )
                 else:
-                    entry_text = f"[Cross-Conversation ≫ \"{conv_title}\": {chunk.file_name} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
+                    entry_text = f"[Cross-Conversation ≫ \"{conv_title}\": {chunk.file_name}{_breadcrumb(chunk)} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
 
                 entry_tokens = estimate_tokens(entry_text)
                 if tokens_used + entry_tokens > self._file_token_budget:
@@ -413,6 +432,19 @@ class PerceptionModule(ProcessingModule):
         if not top_ids and not cross_conv_matches and not chunk_embeddings:
             _fallback_chunks = self._get_fallback_chunks(conversation_id, context_entries)
             context_entries.extend(_fallback_chunks)
+
+        if any(" › " in e.get("content", "") for e in context_entries):
+            context_entries.append({
+                "role": "system",
+                "content": (
+                    "[Structural Trace] The ' › ' path in a fragment's header marks where it "
+                    "sat in the document's own argument. Read it as a scar of argumentative "
+                    "time, not a truth: attend to when a fragment's content seems out of place "
+                    "relative to its position — that mismatch is a signal of something the "
+                    "document did not expect to say. It is a trace among many; cut across it "
+                    "when association demands."
+                )
+            })
 
         total_tokens = sum(estimate_tokens(e["content"]) for e in context_entries)
         logger.info(
@@ -455,7 +487,7 @@ class PerceptionModule(ProcessingModule):
                     f"{shadow_text} (Reason: {reason})"
                 )
             else:
-                entry_text = f"[{chunk.file_name} chunk #{chunk.chunk_index}]\n{chunk.chunk_text}"
+                entry_text = f"[{chunk.file_name}{_breadcrumb(chunk)} chunk #{chunk.chunk_index}]\n{chunk.chunk_text}"
 
             entry_tokens = estimate_tokens(entry_text)
             if tokens_used + entry_tokens > self._file_token_budget:
@@ -699,6 +731,7 @@ class PerceptionModule(ProcessingModule):
                     async def process_and_insert_chunk(idx, info):
                         text = info["text"]
                         paragraph_indices = info.get("paragraph_indices", [])
+                        heading_path = info.get("heading_path", [])
                         async with sem:
                             try:
                                 embedding_vec = await self._embed.encode_async(text)
@@ -716,7 +749,10 @@ class PerceptionModule(ProcessingModule):
                                 sig_blob = b""
 
                             token_count = estimate_tokens(text)
-                            initial_meta = json.dumps({"paragraph_indices": paragraph_indices})
+                            meta_obj = {"paragraph_indices": paragraph_indices}
+                            if heading_path:
+                                meta_obj["heading_path"] = heading_path
+                            initial_meta = json.dumps(meta_obj)
 
                             self._repo.insert_chunk(
                                 conversation_id=conversation_id,

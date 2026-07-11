@@ -36,6 +36,40 @@ def test_rhizomatic_digester_chunking():
     assert super_chunks[0]["start_paragraph_idx"] == 0
 
 
+def test_heading_path_tracking():
+    digester = RhizomaticDigester()
+    text = (
+        "# Introduction\n\n"
+        "This is the intro paragraph with several words in it.\n\n"
+        "## Method\n\n"
+        "### Sampling\n\n"
+        "We sampled some data here for the study to proceed.\n\n"
+        "## Results\n\n"
+        "The results were significant and worth reporting in detail."
+    )
+    chunks = digester.chunk_with_metadata(text, chunk_size=8, overlap=2)
+    assert len(chunks) > 0
+    for chunk in chunks:
+        assert "heading_path" in chunk
+        assert isinstance(chunk["heading_path"], list)
+
+    sampling = [c for c in chunks if "sampled some data" in c["text"]]
+    assert sampling, "expected a chunk with the sampling body"
+    assert sampling[0]["heading_path"] == ["Introduction", "Method", "Sampling"]
+
+    results = [c for c in chunks if "results were significant" in c["text"]]
+    assert results, "expected a chunk with the results body"
+    assert results[0]["heading_path"] == ["Introduction", "Results"]
+
+
+def test_heading_path_absent_when_no_headings():
+    digester = RhizomaticDigester()
+    text = "Plain paragraph one here.\n\nPlain paragraph two here."
+    chunks = digester.chunk_with_metadata(text, chunk_size=20, overlap=5)
+    for chunk in chunks:
+        assert chunk["heading_path"] == []
+
+
 def test_parse_json_safely():
     # Simple brace parsing
     content_raw = 'Some model chat: {"local_summary": "Test text", "opacity_map": [{"paragraph_index": 1, "reason": "dense"}]} and some ending.'

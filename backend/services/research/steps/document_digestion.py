@@ -9,6 +9,23 @@ from backend.utils.research_logger import now_utc_str
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
+def _chunk_with_breadcrumb(chunk) -> str:
+    """Prefix a chunk with its heading-path so research learnings inherit
+    section-level provenance (ADR-062). Falls back to bare text when no
+    heading-path is stored."""
+    text = chunk.chunk_text
+    meta_raw = getattr(chunk, "opacity_meta", None)
+    if not meta_raw:
+        return text
+    try:
+        path = json.loads(meta_raw).get("heading_path", [])
+    except Exception:
+        return text
+    if not path:
+        return text
+    return f"[§ {' › '.join(str(p) for p in path)}]\n{text}"
+
+
 class DocumentDigestionStep(BaseResearchStep):
     @property
     def step_type(self) -> str:
@@ -122,7 +139,7 @@ class DocumentDigestionStep(BaseResearchStep):
         if perception_repo:
             try:
                 db_chunks = perception_repo.get_by_file(effective_conv_id, inject_file_id)
-                doc_chunks = [c.chunk_text for c in db_chunks if c.chunk_text]
+                doc_chunks = [_chunk_with_breadcrumb(c) for c in db_chunks if c.chunk_text]
                 file_info = perception_repo.find_file_by_name(inject_file_id)
                 if file_info and file_info.get("summary"):
                     doc_summary = f"[Document: {inject_file_id}]\n{file_info['summary']}"
@@ -190,6 +207,15 @@ class DocumentDigestionStep(BaseResearchStep):
             "followups": len(followups),
             "gaps": len(gaps),
         }, step_id=step_id)
+
+        try:
+            from backend.utils.structural_demand import detect_structural_demand
+            demand_text = "\n".join(str(x) for x in (learnings + followups + gaps))
+            demand = detect_structural_demand(demand_text)
+            if demand["demanded"]:
+                orch._log_meta(task_id, "structural_demand_detected", demand, step_id=step_id)
+        except Exception as e:
+            logger.warning("Structural-demand detection failed: %s", e)
 
         new_findings = [f"[{inject_file_id}]: " + l for l in learnings]
 

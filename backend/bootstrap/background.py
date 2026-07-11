@@ -118,6 +118,9 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     from backend.modules.background_tasks.actions.research_crystallize import (
         ResearchCrystallizeAction,
     )
+    from backend.modules.background_tasks.actions.structure_extraction import (
+        StructureExtractionAction,
+    )
 
     engine.register(GenerateTitleAction())
     engine.register(SummarizeAction())
@@ -131,6 +134,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     engine.register(MetabolizeSkillAction())
     engine.register(RefineBeliefAction())
     engine.register(ResearchCrystallizeAction())
+    engine.register(StructureExtractionAction())
 
     logger.info(
         "Background task engine initialized with actions: %s", engine.list_actions()

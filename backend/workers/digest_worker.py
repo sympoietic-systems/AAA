@@ -195,6 +195,8 @@ async def process_and_summarize_file(
                                 "reason": "; ".join(reasons),
                                 "shadow_text": "\n\n".join(shadows),
                             }
+                            if meta.get("heading_path"):
+                                new_meta["heading_path"] = meta["heading_path"]
                             perception_repo.update_chunk_opacity(
                                 chunk_id=chunk.id,
                                 opacity=1,
@@ -389,6 +391,8 @@ async def reprocess_and_summarize_file_background(
                             "reason": "; ".join(reasons),
                             "shadow_text": "\n\n".join(shadows),
                         }
+                        if meta.get("heading_path"):
+                            new_meta["heading_path"] = meta["heading_path"]
                         perception_repo.update_chunk_opacity(
                             chunk_id=chunk.id,
                             opacity=1,
