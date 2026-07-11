@@ -42,13 +42,15 @@ const FONT_SIZE_CASCADE = [12, 11.5, 11, 10.5, 10, 9.5, 9, 9, 7.5, 7, 7, 7, 7, 7
 const MAX_ACTIVE = 8
 const MAX_TOTAL = 30
 
-function drawBreath(count: number): { kind: "exhale" | "inhale" | "silence"; delay: number } {
-  if (count <= 3) return { kind: "exhale", delay: 6000 + Math.random() * 4000 }
+function drawBreath(count: number, speed = 1): { kind: "exhale" | "inhale" | "silence"; delay: number } {
+  const div = (ms: number) => Math.round(ms / speed)
+
+  if (count <= 3) return { kind: "exhale", delay: div(6000 + Math.random() * 4000) }
 
   const r = Math.random()
-  if (r < 0.60) return { kind: "exhale", delay: 12000 + Math.random() * 6000 }
-  if (r < 0.85) return { kind: "inhale", delay: 3000 + Math.random() * 2000 }
-  return { kind: "silence", delay: 25000 + Math.random() * 15000 }
+  if (r < 0.60) return { kind: "exhale", delay: div(12000 + Math.random() * 6000) }
+  if (r < 0.85) return { kind: "inhale", delay: div(3000 + Math.random() * 2000) }
+  return { kind: "silence", delay: div(25000 + Math.random() * 15000) }
 }
 
 function obfuscateText(text: string, ratio = 0.33, offset = "start"): string {
@@ -100,6 +102,15 @@ let lineId = 0
 export const TeaserPreview = memo(function TeaserPreview() {
   const [stack, setStack] = useState<VisibleLine[]>([])
   const breathCountRef = useRef(0)
+  const speedRef = useRef(1)
+
+  if (typeof window !== "undefined") {
+    const p = new URLSearchParams(window.location.search).get("speed")
+    const s = parseFloat(p || "")
+    if (s > 0) speedRef.current = s
+  }
+
+  const div = useCallback((ms: number) => Math.round(ms / speedRef.current), [])
 
   // ── Inhale overlay (never joins sediment) ──
   const [inhaleLine, setInhaleLine] = useState<Line | null>(null)
@@ -126,7 +137,7 @@ export const TeaserPreview = memo(function TeaserPreview() {
       if (!alive.current) return
 
       breathCountRef.current += 1
-      const breath = drawBreath(breathCountRef.current)
+      const breath = drawBreath(breathCountRef.current, speedRef.current)
 
       if (breath.kind === "silence") {
         timeout = setTimeout(cycle, breath.delay)
@@ -135,7 +146,7 @@ export const TeaserPreview = memo(function TeaserPreview() {
 
       fetchLine().then(line => {
         if (!alive.current || !line) {
-          timeout = setTimeout(cycle, 4000)
+          timeout = setTimeout(cycle, div(4000))
           return
         }
 
@@ -146,12 +157,10 @@ export const TeaserPreview = memo(function TeaserPreview() {
           setInhaleStruck(false)
           setInhaleFading(false)
 
-          // After 5s: strike through
           timeout = setTimeout(() => {
             if (!alive.current) return
             setInhaleStruck(true)
 
-            // After 5s more: fade out, then remove
             timeout = setTimeout(() => {
               if (!alive.current) return
               setInhaleFading(true)
@@ -159,11 +168,10 @@ export const TeaserPreview = memo(function TeaserPreview() {
               timeout = setTimeout(() => {
                 if (!alive.current) return
                 setInhaleLine(null)
-                // Recovery silence (8-12s), then next breath
-                timeout = setTimeout(cycle, 8000 + Math.random() * 4000)
-              }, 5000) // fade duration
-            }, 5000) // struck delay
-          }, 5000)
+                timeout = setTimeout(cycle, div(8000 + Math.random() * 4000))
+              }, div(5000))
+            }, div(5000))
+          }, div(5000))
           return
         }
 
@@ -184,7 +192,7 @@ export const TeaserPreview = memo(function TeaserPreview() {
       })
     }
 
-    timeout = setTimeout(cycle, 2000)
+    timeout = setTimeout(cycle, div(2000))
     return () => { alive.current = false; clearTimeout(timeout) }
   }, [fetchLine])
 

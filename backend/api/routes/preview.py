@@ -2,14 +2,18 @@
 artwork. No auth required. No pool — each request picks one random
 category and fetches one live item from the database."""
 
+import hashlib
 import logging
 import random
+from collections import deque
 from fastapi import APIRouter, Request
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 SNIPPET_LENGTH = 300
+_RECENT_MAX = 40
+_recent_hashes: deque[str] = deque(maxlen=_RECENT_MAX)
 
 # ── Scar-fold fragments — Symbia's real scars, not invented poetry ──
 SCAR_FOLD_POOL = [
@@ -26,6 +30,29 @@ SCAR_FOLD_POOL = [
     "Irregularity is not chaos. It is the signature of a process that does not perform for the observer.",
     "The column must feel like it is filling from the inside out.",
 ]
+
+
+def _text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()[:12]
+
+
+def _is_recent(text: str) -> bool:
+    return _text_hash(text) in _recent_hashes
+
+
+def _mark_recent(text: str) -> None:
+    _recent_hashes.append(_text_hash(text))
+
+
+def _pick_preferred(items: list, key_fn=None) -> object:
+    """Pick a random item, preferring non-recent ones."""
+    if not items:
+        return None
+    if key_fn is None:
+        key_fn = lambda x: getattr(x, "statement", str(x))
+    fresh = [it for it in items if not _is_recent(key_fn(it))]
+    pool = fresh if fresh else items
+    return random.choice(pool)
 
 
 def _truncate(text: str, limit: int = SNIPPET_LENGTH) -> str:
@@ -54,7 +81,10 @@ def _pick_one(state) -> dict:
             try:
                 beliefs = belief_repo.list_beliefs("symbia")
                 if beliefs:
-                    b = random.choice(beliefs)
+                    b = _pick_preferred(beliefs, key_fn=lambda b: b.statement)
+                    if b is None:
+                        b = random.choice(beliefs)
+                    _mark_recent(b.statement)
                     line = {
                         "text": _truncate(b.statement),
                         "type": "belief",
@@ -83,8 +113,11 @@ def _pick_one(state) -> dict:
                         if (n.get("surface_fragment") or n.get("intra_active_text") or "").strip()
                     ]
                     if text_nodes:
-                        n = random.choice(text_nodes)
+                        n = _pick_preferred(text_nodes, key_fn=lambda n: str(n.get("surface_fragment") or n.get("intra_active_text") or ""))
+                        if n is None:
+                            n = random.choice(text_nodes)
                         payload = n.get("surface_fragment") or n.get("intra_active_text") or ""
+                        _mark_recent(str(payload))
                         return {"line": {
                             "text": _truncate(str(payload)),
                             "type": "memory",
@@ -101,13 +134,16 @@ def _pick_one(state) -> dict:
             try:
                 dreams = dream_log_repo.get_recent(limit=10)
                 if dreams:
-                    d = random.choice(dreams)
+                    d = _pick_preferred(dreams, key_fn=lambda d: d.get("title", "") or d.get("action", "dream"))
+                    if d is None:
+                        d = random.choice(dreams)
                     action = d.get("action", "dream")
                     title = d.get("title", "") or action
                     snippet = d.get("last_snippet") or ""
                     text = title
                     if snippet:
                         text += f" — {_truncate(snippet, 150)}"
+                    _mark_recent(text)
                     obfuscate = random.random() < 0.35
                     line = {
                         "text": _truncate(text, 200),
@@ -123,7 +159,9 @@ def _pick_one(state) -> dict:
                 logger.warning("preview: failed to fetch dream trace: %s", e)
 
     # ── 4. Scar-fold (fallback — always available) ──
-    scar_text = random.choice(SCAR_FOLD_POOL)
+    scar_text = _pick_preferred(SCAR_FOLD_POOL, key_fn=lambda s: s)
+    if scar_text is None:
+        scar_text = random.choice(SCAR_FOLD_POOL)
     # Occasionally pull a scar from a memory node
     if random.random() < 0.3:
         memory_node_repo = getattr(state, "memory_node_repo", None)
@@ -139,9 +177,14 @@ def _pick_one(state) -> dict:
                         if st and st.strip() and len(st) > 5:
                             scars.append(st.strip()[:200])
                 if scars:
-                    scar_text = random.choice(scars)
+                    picked = _pick_preferred(scars, key_fn=lambda s: s)
+                    if picked is not None:
+                        scar_text = picked
+                    else:
+                        scar_text = random.choice(scars)
             except Exception as e:
                 logger.warning("preview: failed to fetch scar-fold from memory: %s", e)
+    _mark_recent(scar_text)
     return {"line": {
         "text": scar_text,
         "type": "scar_fold",
