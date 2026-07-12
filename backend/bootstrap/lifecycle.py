@@ -221,4 +221,9 @@ def create_app() -> FastAPI:
 
     app.include_router(preview_router)
 
+    # Public artwork endpoint for The Diffractive Grain (/av) — no auth
+    from backend.api.routes.av import router as av_router
+
+    app.include_router(av_router)
+
     return app
