@@ -13,6 +13,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [query, setQuery] = useState("")
   const [scope, setScope] = useState<"current" | "all">("current")
   const [mode, setMode] = useState<"text" | "semantic" | "diffractive" | "glitch">("text")
+  const [typeFilter, setTypeFilter] = useState<"all" | "message" | "note" | "memory_node">("all")
   const [results, setResults] = useState<SearchMatch[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,6 +91,48 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     }
   }
 
+  const TYPE_META: Record<SearchMatch["type"], { label: string; badge: string; bar: string; dot: string }> = {
+    message: {
+      label: "message",
+      badge: "bg-semantic-green/10 text-semantic-green border border-semantic-green/20",
+      bar: "bg-semantic-green/60",
+      dot: "bg-semantic-green",
+    },
+    note: {
+      label: "note",
+      badge: "bg-semantic-gold/10 text-semantic-gold border border-semantic-gold/20",
+      bar: "bg-semantic-gold/60",
+      dot: "bg-semantic-gold",
+    },
+    memory_node: {
+      label: "memory",
+      badge: "bg-semantic-blue/10 text-semantic-blue border border-semantic-blue/20",
+      bar: "bg-semantic-blue/60",
+      dot: "bg-semantic-blue",
+    },
+  }
+
+  // Type counts (before filtering) so the filter chips can show totals
+  const typeCounts = results.reduce(
+    (acc, m) => {
+      acc[m.type] = (acc[m.type] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
+
+  // Filter by selected type, then sort messages to the top (preserving
+  // the backend relevance/recency order within each group)
+  const visibleResults = results
+    .filter((m) => typeFilter === "all" || m.type === typeFilter)
+    .map((m, i) => ({ m, i }))
+    .sort((a, b) => {
+      const rank = (t: SearchMatch["type"]) => (t === "message" ? 0 : 1)
+      const byType = rank(a.m.type) - rank(b.m.type)
+      return byType !== 0 ? byType : a.i - b.i
+    })
+    .map(({ m }) => m)
+
   return (
     <div className="flex flex-col h-full bg-[#0c0c0c] text-[#c8c8c8] font-mono">
       {/* Search inputs */}
@@ -148,6 +191,29 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             [ Global ]
           </button>
         </div>
+
+        {/* Type filter toggles */}
+        <div className="flex flex-wrap gap-1 items-center text-[10px]">
+          <span className="text-ui-dim uppercase tracking-wider text-[9px] mr-0.5">Type:</span>
+          {(["all", "message", "note", "memory_node"] as const).map((t) => {
+            const active = typeFilter === t
+            const count = t === "all" ? results.length : (typeCounts[t] || 0)
+            const dot = t === "all" ? "" : TYPE_META[t].dot
+            return (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={`flex items-center gap-1 px-1.5 py-0.5 border rounded-sm transition-colors cursor-pointer capitalize ${
+                  active ? "bg-[#161616] text-ui-primary border-[#444]" : "bg-transparent text-[#666] border-ui-border hover:text-ui-secondary"
+                }`}
+              >
+                {dot && <span className={`w-1.5 h-1.5 rounded-full ${dot}`}></span>}
+                {t === "memory_node" ? "memory" : t}
+                <span className="text-ui-dim">{count}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Results Container */}
@@ -158,22 +224,27 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </div>
         )}
 
-        {!loading && results.length === 0 && (
+        {!loading && visibleResults.length === 0 && (
           <div className="flex flex-col items-center justify-center h-32 text-center text-[#444] text-[10px] select-none p-4">
-            {mode === "glitch" ? "No salience metrics detected above thresholds." : "No nodes mapped to query."}
+            {results.length > 0
+              ? "No results of this type."
+              : mode === "glitch" ? "No salience metrics detected above thresholds." : "No nodes mapped to query."}
           </div>
         )}
 
         <div className="flex flex-col gap-2">
-          {results.map((match) => (
+          {visibleResults.map((match) => {
+            const meta = TYPE_META[match.type]
+            return (
             <button
               key={`${match.type}-${match.id}`}
               onClick={() => handleResultClick(match)}
-              className="w-full text-left bg-[#111] hover:bg-[#161616] border border-[#222] hover:border-emerald-400/20 rounded p-2.5 transition-all group flex flex-col gap-1 cursor-pointer"
+              className="w-full text-left bg-[#111] hover:bg-[#161616] border border-[#222] hover:border-emerald-400/20 rounded p-2.5 pl-3 transition-all group flex flex-col gap-1 cursor-pointer relative overflow-hidden"
             >
+              <span className={`absolute left-0 top-0 bottom-0 w-0.5 ${meta.bar}`}></span>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[9px] uppercase font-bold tracking-wider px-1 py-0.5 rounded bg-[#1c1c1c] text-[#777] group-hover:text-emerald-400/80 transition-colors">
-                  {match.type.replace('_', ' ')}
+                <span className={`text-[9px] uppercase font-bold tracking-wider px-1 py-0.5 rounded ${meta.badge}`}>
+                  {meta.label}
                 </span>
                 <span className="text-[9px] text-[#555]">
                   {formatTimestamp(match.timestamp)}
@@ -191,7 +262,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 </div>
               )}
             </button>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

@@ -351,6 +351,20 @@ App.tsx
 *   **SpectralEchoes**: No `bg/border/rounded` on container/items, `[link]` `[ignore]` `[cancel]` `[confirm link]` text actions, `border-b` input
 *   **All action buttons**: `text-[#666]` default, colored on hover — matching all other panels
 
+### Search Tab (Left Panel `search` tab)
+
+`SearchTab.tsx` renders archive search results (`message` | `note` | `memory_node`). Result type is conveyed by **semantic color only** (§1), sourced from the unified palette — never raw Tailwind hues:
+
+| Result type | Token | Rationale |
+|-------------|-------|-----------|
+| `message` | `semantic-green` (`#5c9e7a`) | Matches conversation/message accent |
+| `note` | `semantic-gold` (`#b89553`) | Matches `NotesSection` note convention |
+| `memory_node` | `semantic-blue` (`#6b88a3`) | Matches concept-node color in `MemoryNodeCard` |
+
+*   **Type badge + accent bar**: each result carries a `bg-<token>/10 text-<token> border-<token>/20` badge and a left `w-0.5` accent bar in the same token.
+*   **Type filter chips**: a `Type:` row (`all` / `message` / `note` / `memory`) with per-type counts and matching color dots; `all` is the default.
+*   **Messages-first ordering**: within the backend's relevance/recency order, `message` results sort above `note`/`memory_node` (stable within each group).
+
 ---
 
 ## 13. Center Column (NodeExplorer + MessageBubble)
