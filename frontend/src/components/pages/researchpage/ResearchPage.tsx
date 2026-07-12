@@ -8,6 +8,7 @@ import type { ResearchTask } from "../../../api/research"
 import { CSS_VARS } from "../../../config/colors"
 import { CollapsibleSection } from "../agentpage/shared/CollapsibleSection"
 import { TerminalButton, KeyValueGrid, HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "../../UI"
+import SearchTab from "../../panels/leftpanel/SearchTab"
 
 const STATUS_GROUPS: { key: string; label: string; icon: string; color: string; defaultOpen: boolean }[] = [
   { key: "proposed",  label: "Pending Proposals",   icon: "●", color: CSS_VARS.semanticGold,   defaultOpen: true },
@@ -113,6 +114,7 @@ export const ResearchPage = memo(function ResearchPage() {
   const navigate = useNavigate()
   const { tasks, summary, loading, error, approve, cancel } = useResearch()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [rightTab, setRightTab] = useState<"preview" | "search">("preview")
 
   const handleListClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el = (e.target as HTMLElement).closest("[data-task-id]") as HTMLElement | null
@@ -190,20 +192,58 @@ export const ResearchPage = memo(function ResearchPage() {
           )}
         </div>
 
-        {/* Right: detail preview */}
-        <div className="flex-1 min-w-0 w-full md:flex md:flex-col md:min-h-0 overflow-y-auto">
-          {selected ? (
-            <TaskPreview
-              task={selected}
-              onEnter={() => navigate(`/research?id=${selected.id}`)}
-              onApprove={approve}
-              onCancel={cancel}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-[#444] italic text-xs select-none">
-              [ select a task to preview, double-click or [enter] for full detail ]
-            </div>
-          )}
+        {/* Right: detail preview or search tab */}
+        <div className="flex-1 min-w-0 w-full md:flex md:flex-col md:min-h-0 border border-[#1a1a1a] rounded p-4 bg-[#111]/30">
+          <div className="flex items-center shrink-0 border-b border-[#222] mb-3">
+            <button
+              onClick={() => setRightTab("preview")}
+              className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-colors cursor-pointer border-b-2 ${
+                rightTab === "preview"
+                  ? "text-[#aaa] border-emerald-400"
+                  : "text-[#555] border-transparent hover:text-[#888]"
+              }`}
+            >
+              Preview
+            </button>
+            <button
+              onClick={() => setRightTab("search")}
+              className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-colors cursor-pointer border-b-2 ${
+                rightTab === "search"
+                  ? "text-emerald-400 border-emerald-400"
+                  : "text-[#555] border-transparent hover:text-[#888]"
+              }`}
+            >
+              ⌕ Search
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {rightTab === "preview" ? (
+              selected ? (
+                <TaskPreview
+                  task={selected}
+                  onEnter={() => navigate(`/research?id=${selected.id}`)}
+                  onApprove={approve}
+                  onCancel={cancel}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-[#444] italic text-xs select-none">
+                  [ select a task to preview, double-click or [enter] for full detail ]
+                </div>
+              )
+            ) : (
+              <SearchTab
+                conversationId={selected?.conversation_id || null}
+                onNavigateFromSearch={(convId, msgId) => {
+                  if (msgId > 0) {
+                    navigate(`/nodes?c=${convId}&m=${msgId}`)
+                  } else {
+                    navigate(`/nodes?c=${convId}`)
+                  }
+                }}
+              />
+            )}
+          </div>
         </div>
       </div>
       <UnifiedFooter />

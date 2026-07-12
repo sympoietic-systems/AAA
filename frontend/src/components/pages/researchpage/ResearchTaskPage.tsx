@@ -15,8 +15,9 @@ import { copyToClipboard } from "../../../utils/clipboard"
 import { COLOR_PALETTE } from "../../../config/colors"
 import { MemoryNodeCard } from "../../shared/MemoryNodeCard"
 import type { MemoryNodeInfo } from "../../../api/client"
+import SearchTab from "../../panels/leftpanel/SearchTab"
 
-type SubTabId = "info" | "steps" | "report" | "notes" | "memory"
+type SubTabId = "info" | "steps" | "report" | "notes" | "memory" | "search"
 
 const SUB_TABS: { key: SubTabId; label: string }[] = [
   { key: "info",     label: "Info" },
@@ -24,6 +25,7 @@ const SUB_TABS: { key: SubTabId; label: string }[] = [
   { key: "report",   label: "Report" },
   { key: "notes",    label: "Notes" },
   { key: "memory",   label: "Memory" },
+  { key: "search",   label: "Search" },
 ]
 
 function slugify(text: string): string {
@@ -427,6 +429,21 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
         )}
 
         {tab === "memory"  && <MemoryTab taskId={current.id} />}
+
+        {tab === "search"  && (
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col border border-[#1a1a1a] rounded">
+            <SearchTab
+              conversationId={current.conversation_id || null}
+              onNavigateFromSearch={(convId, msgId) => {
+                if (msgId > 0) {
+                  navigate(`/nodes?c=${convId}&m=${msgId}`)
+                } else {
+                  navigate(`/nodes?c=${convId}`)
+                }
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <UnifiedFooter />
