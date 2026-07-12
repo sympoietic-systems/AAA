@@ -9,6 +9,7 @@ Firecrawl and Crawl4AI are optional upgrades.
 See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 9.
 """
 
+import asyncio
 import contextlib
 import logging
 from typing import Any
@@ -297,7 +298,7 @@ async def select_and_fetch(
 
             try:
                 digester = SimpleChunkDigester()
-                extracted_text = digester.extract(tmp_path, "pdf")
+                extracted_text = await asyncio.to_thread(digester.extract, tmp_path, "pdf")
                 if extracted_text and extracted_text.strip():
                     return extracted_text
                 else:

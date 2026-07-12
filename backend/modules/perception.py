@@ -175,7 +175,9 @@ class PerceptionModule(ProcessingModule):
                     with open(file_path, "wb") as f:
                         f.write(file_content)
                     try:
-                        extracted_text = self._digester.extract(Path(file_path), file_type)
+                        extracted_text = await asyncio.to_thread(
+                            self._digester.extract, Path(file_path), file_type
+                        )
                         logger.debug("Extracted %d chars from %s", len(extracted_text), file_name)
                     except Exception as e:
                         logger.warning("Failed to extract %s: %s", file_name, e)
@@ -187,10 +189,11 @@ class PerceptionModule(ProcessingModule):
                     logger.warning("Empty extracted text for %s", file_name)
                     continue
 
-                chunks = self._digester.chunk(
+                chunks = await asyncio.to_thread(
+                    self._digester.chunk,
                     extracted_text,
-                    chunk_size=self._chunk_size,
-                    overlap=self._chunk_overlap,
+                    self._chunk_size,
+                    self._chunk_overlap,
                 )
                 logger.debug("Chunked %s into %d chunks", file_name, len(chunks))
 

@@ -66,6 +66,15 @@ FastAPI executes async endpoints on the main event loop thread. Any blocking syn
 *   **Thread Safety in Background Tasks**: Since background tasks run outside the main request context, ensure they catch their own exceptions and manage connection scopes safely to prevent connection leakages.
 *   **Avoid Global Locks**: Do not block the entire application to synchronize mutations. If serialization is required (e.g., ensuring two messages in the same conversation are metabolized sequentially), implement per-conversation locks using local dictionaries of `asyncio.Lock` instances.
 
+### Non-Blocking Processing (mandatory)
+
+Any CPU-bound or blocking-synchronous work reached from an `async def` running on the server event loop **must** yield the loop. Freezes of the server/frontend are almost always a blocking call awaited nowhere — e.g. document parsing (`pdfplumber`, `python-docx`), model inference (`SentenceTransformer.encode`), heavy regex/tokenization, or synchronous file I/O invoked directly inside a coroutine.
+
+*   **Default tool — `asyncio.to_thread`.** Wrap the blocking callable and `await` it: `result = await asyncio.to_thread(fn, arg1, arg2)`. This is the standard offload mechanism across the backend. Embeddings (`EmbeddingService.encode_async`, `embedder.py`) and the idle structure-extraction backfill (ADR-062) both use it — follow that same pattern rather than inventing a new one.
+*   **One mechanism, consistently.** Do **not** proliferate concurrency mechanisms. Prefer `asyncio.to_thread` for occasional blocking calls; reserve `asyncio.gather` + a bounded `asyncio.Semaphore` for fan-out (see ADR-020). Do not reach for `ThreadPoolExecutor`, `multiprocessing`, or a fresh `run_in_executor` pool when `to_thread` does the job — matching the existing idiom keeps the codebase legible and avoids GIL/pool-sizing surprises.
+*   **Subprocess only for sustained, heavy pipelines.** A standalone OS subprocess (`asyncio.create_subprocess_exec`) is reserved for the foreground document-digestion pipeline (ADR-026), where GIL contention from PyTorch model loading would starve Uvicorn even under a thread pool. Do not introduce new subprocesses for one-off blocking calls; that is what `to_thread` is for. The rule of thumb: **`to_thread` for a blocking call inside an otherwise-async flow; subprocess only for a whole long-running pipeline that must not share the server process at all.**
+*   **Don't double-offload.** Work already isolated in the digest-worker subprocess (`ingest_single_file`) needs no further threading — wrapping it again adds overhead for no benefit. Offload at exactly one layer.
+
 ---
 
 ## 4. Structured Error Representation (The Glitch)
