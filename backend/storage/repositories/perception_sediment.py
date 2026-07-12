@@ -625,7 +625,7 @@ class PerceptionSedimentRepository(BaseRepository):
             "a_d_score": row["a_d_score"],
             "structural_vector_16d": row["structural_vector_16d"],
             "timestamp": row["timestamp"],
-            "belief_nodes_implicated": row["belief_nodes_implicated"] if "belief_nodes_implicated" in row else None,
+            "belief_nodes_implicated": row["belief_nodes_implicated"] if "belief_nodes_implicated" in row.keys() else None,
         }
 
     @with_connection

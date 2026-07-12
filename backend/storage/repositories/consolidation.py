@@ -106,7 +106,7 @@ def _row_to_checkpoint(row) -> dict:
         "message_count": row["message_count"],
         "summary": row["summary"],
         "model": row["model"],
-        "human_summary": row["human_summary"] if "human_summary" in row else "",
-        "message_id": row["message_id"] if "message_id" in row else None,
+        "human_summary": row["human_summary"] if "human_summary" in row.keys() else "",
+        "message_id": row["message_id"] if "message_id" in row.keys() else None,
         "created_at": row["created_at"],
     }

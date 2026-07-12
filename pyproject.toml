@@ -64,6 +64,7 @@ ignore = [
     "E501",  # line-too-long (handled by formatter)
     "B008",  # do not perform function calls in argument defaults
     "C408",  # unnecessary (dict/list/tuple) call — project style
+    "SIM118",  # sqlite3.Row "key" in row checks values not cols (tuple subclass)
     "SIM401",  # sqlite3.Row objects don't support .get()
 ]
 
