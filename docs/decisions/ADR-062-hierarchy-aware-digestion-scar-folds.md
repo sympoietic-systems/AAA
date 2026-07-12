@@ -154,6 +154,11 @@ A new action registered on the existing `BackgroundTaskEngine` (`backend/modules
 
 This keeps the migration fully lazy and self-healing: the corpus gains its scars opportunistically during idle, never blocking interaction, never spending LLM/embedding budget, and every extraction surfaces as a notification.
 
+**Implementation notes (2026-07-12):**
+
+- **Non-blocking re-extract.** The Option-B re-extract path (`digester.extract()` + `chunk_with_metadata()`) is CPU/IO-heavy — pdfplumber parsing and `PDFHeadingExtractor` font-metric heuristics. It runs via `asyncio.to_thread` so the idle backfill (up to 5 files/cycle) never blocks the daemon's event loop and starves the server/frontend.
+- **Once-only idempotency.** Truthy `heading_path` alone cannot mark a file done, because flat / heading-less files legitimately produce an empty path and would be retried every cycle forever. Every terminal path now stamps a `structure_extracted: true` sentinel on all of a file's chunks (including the "no signal, no original" pass). Both the action guard (`structure_extraction.py`) and the daemon pre-filter (`daemon.py backfill_structure_on_idle`) skip on `structure_extracted OR heading_path`, so a digested+extracted document is never reprocessed. Legacy chunks carrying `heading_path` but no sentinel remain correctly skipped via the `OR`.
+
 ## Conformance & Verification
 
 - **§V.1 (No clamping):** With no explicit structural query, retrieval output is identical to pre-ADR behavior. Test: golden retrieval snapshot before/after Phase 1 is byte-identical.

@@ -728,7 +728,8 @@ class AutopoieticDreamDaemon(
             for c in chunks:
                 if c.opacity_meta:
                     try:
-                        if _json.loads(c.opacity_meta).get("heading_path"):
+                        _m = _json.loads(c.opacity_meta)
+                        if _m.get("structure_extracted") or _m.get("heading_path"):
                             already = True
                             break
                     except Exception:

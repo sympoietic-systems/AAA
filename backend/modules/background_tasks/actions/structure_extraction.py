@@ -15,6 +15,7 @@ This action performs no LLM calls and no re-embedding: it only adds the
 ``heading_path`` key to each chunk's ``opacity_meta`` JSON.
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -71,8 +72,9 @@ class StructureExtractionAction(BackgroundAction):
         for c in chunks:
             if c.opacity_meta:
                 try:
-                    if json.loads(c.opacity_meta).get("heading_path"):
-                        return {"status": "skipped", "reason": "already has heading_path"}
+                    meta = json.loads(c.opacity_meta)
+                    if meta.get("structure_extracted") or meta.get("heading_path"):
+                        return {"status": "skipped", "reason": "already extracted"}
                 except Exception:
                     pass
 
@@ -85,9 +87,13 @@ class StructureExtractionAction(BackgroundAction):
                 from backend.modules.digester import RhizomaticDigester
 
                 file_type = chunks[0].file_type
-                digester = RhizomaticDigester()
-                text = digester.extract(Path(file_path), file_type)
-                meta_chunks = digester.chunk_with_metadata(text)
+
+                def _reextract() -> list[dict]:
+                    digester = RhizomaticDigester()
+                    text = digester.extract(Path(file_path), file_type)
+                    return digester.chunk_with_metadata(text)
+
+                meta_chunks = await asyncio.to_thread(_reextract)
                 for idx, mc in enumerate(meta_chunks):
                     index_to_path[idx] = mc.get("heading_path", [])
                 source = "reextract"
@@ -103,18 +109,29 @@ class StructureExtractionAction(BackgroundAction):
                 source = "db_markers"
 
         if not index_to_path:
-            return {"status": "skipped", "reason": "no signal, no original"}
+            for c in chunks:
+                try:
+                    meta = json.loads(c.opacity_meta) if c.opacity_meta else {}
+                except Exception:
+                    meta = {}
+                meta["structure_extracted"] = True
+                perception_repo.update_chunk_opacity(
+                    chunk_id=c.id,
+                    opacity=getattr(c, "opacity", 0) or 0,
+                    opacity_meta=json.dumps(meta),
+                )
+            return {"status": "completed", "source": "none", "chunks_updated": 0}
 
         updated = 0
         for c in chunks:
-            path = index_to_path.get(c.chunk_index)
-            if not path:
-                continue
+            path = index_to_path.get(c.chunk_index, [])
             try:
                 meta = json.loads(c.opacity_meta) if c.opacity_meta else {}
             except Exception:
                 meta = {}
-            meta["heading_path"] = path
+            if path:
+                meta["heading_path"] = path
+            meta["structure_extracted"] = True
             perception_repo.update_chunk_opacity(
                 chunk_id=c.id,
                 opacity=getattr(c, "opacity", 0) or 0,
