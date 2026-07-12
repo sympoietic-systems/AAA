@@ -263,7 +263,7 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
   } = usePanelResizer({
     storageKey: "aaa_leftPanelWidth",
     defaultWidth: 320,
-    computeMaxWidth: () => Math.floor(window.innerWidth * 0.5),
+    computeMaxWidth: () => Math.floor(window.innerWidth * 0.35),
   })
 
   // Collapsible and resizable right panel state (for SidePanel information)
@@ -275,11 +275,8 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
   } = usePanelResizer({
     storageKey: "aaa_rightPanelWidth",
     defaultWidth: 320,
-    computeMaxWidth: () => {
-      const maxRight = Math.floor(window.innerWidth * 0.3)
-      const minChat = Math.floor(window.innerWidth * 0.3)
-      return Math.min(maxRight, window.innerWidth - leftPanelWidth - minChat)
-    },
+    direction: "left",
+    computeMaxWidth: () => Math.floor(window.innerWidth * 0.35),
   })
 
   const activeIdRef = useRef(activeId)

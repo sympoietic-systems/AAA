@@ -5,6 +5,12 @@ interface PanelResizerOptions {
   defaultWidth: number
   minWidth?: number
   computeMaxWidth: () => number
+  /**
+   * Drag direction relative to the panel edge the handle sits on.
+   * "right" (default): handle on the panel's right edge — dragging right grows it (left panel).
+   * "left": handle on the panel's left edge — dragging left grows it (right panel).
+   */
+  direction?: "left" | "right"
 }
 
 export function usePanelResizer({
@@ -12,6 +18,7 @@ export function usePanelResizer({
   defaultWidth,
   minWidth = 200,
   computeMaxWidth,
+  direction = "right",
 }: PanelResizerOptions) {
   const [collapsed, setCollapsed] = useState(false)
   const [width, setWidth] = useState(() => {
@@ -37,9 +44,10 @@ export function usePanelResizer({
 
     const onMove = (ev: MouseEvent) => {
       const maxWidth = maxWidthRef.current()
+      const delta = direction === "left" ? startX - ev.clientX : ev.clientX - startX
       const w = Math.max(
         minWidth,
-        Math.min(maxWidth, startWidth + ev.clientX - startX)
+        Math.min(maxWidth, startWidth + delta)
       )
       widthRef.current = w
       setWidth(w)
@@ -57,7 +65,7 @@ export function usePanelResizer({
 
     document.addEventListener("mousemove", onMove)
     document.addEventListener("mouseup", onUp)
-  }, [minWidth, storageKey])
+  }, [minWidth, storageKey, direction])
 
   return { width, collapsed, setCollapsed, handleResizeStart }
 }

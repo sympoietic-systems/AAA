@@ -323,6 +323,19 @@ SidePanel (memo'd, collapse router only)
 
 ---
 
+## 11.5. Resizable & Collapsible Panels
+
+Both the left panel (§12) and right SidePanel (§11) are horizontally resizable and collapsible, driven by the shared `usePanelResizer` hook (`frontend/src/hooks/usePanelResizer.ts`).
+
+### Rules
+*   **Drag handle**: a `w-1 cursor-col-resize hover:bg-action-hover/20 active:bg-action-hover/40` strip (`hidden md:block`) sits on the panel's inner edge — right edge for the left panel, left edge for the right panel.
+*   **Direction-aware**: the hook takes `direction` (`"right"` default for the left panel, `"left"` for the right panel) so dragging outward grows each panel regardless of which edge the handle is on.
+*   **Max width 35%**: both panels cap at `Math.floor(window.innerWidth * 0.35)` via `computeMaxWidth`; `minWidth` defaults to 200px.
+*   **Persistence**: the final width is written to `localStorage` on mouseup (`aaa_leftPanelWidth`, `aaa_rightPanelWidth`) and restored on next load, surviving refresh.
+*   **Collapsed state**: panels collapse to a `md:w-9` rail with vertical-text toggles; the width style is only applied when expanded.
+
+---
+
 ## 12. Left Panel (ConnectionCloud + SpectralEchoes)
 
 The left panel renders the conversation's DAG as an interactive canvas force graph. The design follows terminal aesthetics for all UI chrome surrounding the canvas — the graph rendering itself is left untouched.

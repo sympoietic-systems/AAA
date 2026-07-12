@@ -68,4 +68,60 @@ describe('usePanelResizer', () => {
     )
     expect(result.current.width).toBe(150)
   })
+
+  it('grows on rightward drag with default direction and persists on mouseup', () => {
+    const { result } = renderHook(() =>
+      usePanelResizer({
+        storageKey: 'test_panel',
+        defaultWidth: 300,
+        computeMaxWidth: () => 500,
+      })
+    )
+    act(() => {
+      result.current.handleResizeStart({ clientX: 100, preventDefault: () => {} } as any)
+    })
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 180 }))
+    })
+    expect(result.current.width).toBe(380)
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mouseup'))
+    })
+    expect(localStorage.getItem('test_panel')).toBe('380')
+  })
+
+  it('grows on leftward drag when direction is "left"', () => {
+    const { result } = renderHook(() =>
+      usePanelResizer({
+        storageKey: 'test_panel',
+        defaultWidth: 300,
+        direction: 'left',
+        computeMaxWidth: () => 500,
+      })
+    )
+    act(() => {
+      result.current.handleResizeStart({ clientX: 200, preventDefault: () => {} } as any)
+    })
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 120 }))
+    })
+    expect(result.current.width).toBe(380)
+  })
+
+  it('clamps width to computeMaxWidth', () => {
+    const { result } = renderHook(() =>
+      usePanelResizer({
+        storageKey: 'test_panel',
+        defaultWidth: 300,
+        computeMaxWidth: () => 400,
+      })
+    )
+    act(() => {
+      result.current.handleResizeStart({ clientX: 0, preventDefault: () => {} } as any)
+    })
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 999 }))
+    })
+    expect(result.current.width).toBe(400)
+  })
 })
