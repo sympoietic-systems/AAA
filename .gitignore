@@ -38,3 +38,6 @@ backend/scratch/*
 .agents/
 backend/services/data/uploads/*
 .opencode/*
+
+# Enactment — detached artwork apps, each its own git repo
+enactment/
