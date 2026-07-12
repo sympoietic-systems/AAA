@@ -1,19 +1,21 @@
-from pathlib import Path
-import sys
-import os
 import asyncio
-import numpy as np
 import json
+import os
+import sys
+from pathlib import Path
+
+import numpy as np
 
 root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 os.chdir(root_path)
 
-from backend.modules.web_retrieval import DuckDuckGoParser, HTMLToTextParser, RhizomeWebProbe, WebRetrievalModule
-from backend.modules.perception import PerceptionModule
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repository import PerceptionSedimentRepository
-from backend.modules.embedder import EmbeddingService
+from backend.modules.embedder import EmbeddingService  # noqa: E402
+from backend.modules.perception import PerceptionModule  # noqa: E402
+from backend.modules.web_retrieval import DuckDuckGoParser, HTMLToTextParser  # noqa: E402
+from backend.storage.database import get_db_path, init_db  # noqa: E402
+from backend.storage.repository import PerceptionSedimentRepository  # noqa: E402
+
 
 class MockLLMProvider:
     def __init__(self, response_text: str):
@@ -70,7 +72,7 @@ async def test_html_to_text():
 async def test_coordinates_warping():
     db_path = str(get_db_path("data/aaa_warp_test.db"))
     conn = init_db(db_path)
-    
+
     # Clean DB
     conn.execute("DELETE FROM perception_sediment")
     conn.execute("DELETE FROM perception_log")
@@ -80,8 +82,9 @@ async def test_coordinates_warping():
 
     repo = PerceptionSedimentRepository(db_path)
     from backend.storage.repository import ConversationRepository
+
     conv_repo = ConversationRepository(db_path)
-    
+
     conv_id = "test_conv_warp"
     file_name = "somatic_journal_page.png"
 
@@ -100,38 +103,35 @@ async def test_coordinates_warping():
         "belief_nodes_implicated": ["autopoiesis", "somatic_exhaustion"],
         "g_f_score": 0.5,
         "a_d_score": 0.8,
-        "structural_vector_16d": [0.5] * 16
+        "structural_vector_16d": [0.5] * 16,
     }
-    
+
     vision_provider = MockLLMProvider(json.dumps(mock_response))
-    
+
     perception_module = PerceptionModule(
-        perception_repo=repo,
-        embedding_service=embed,
-        llm_provider=vision_provider,
-        vision_provider=vision_provider
+        perception_repo=repo, embedding_service=embed, llm_provider=vision_provider, vision_provider=vision_provider
     )
-    
+
     # Ingest mock image file
     total_tokens, chunk_count, desc = await perception_module.ingest_single_file(
-        conversation_id=conv_id,
-        file_name=file_name,
-        file_type="image",
-        file_content=b"fake_image_bytes"
+        conversation_id=conv_id, file_name=file_name, file_type="image", file_content=b"fake_image_bytes"
     )
-    
+
     assert chunk_count > 0
     assert "TEST HANDWRITTEN WORD" in desc
     assert "Ink intensity high" in desc
 
     # Verify database record in perception_log
-    cursor = conn.execute("SELECT artifact_type, g_f_score, a_d_score, belief_nodes_implicated FROM perception_log WHERE image_path=?", (file_name,))
+    cursor = conn.execute(
+        "SELECT artifact_type, g_f_score, a_d_score, belief_nodes_implicated FROM perception_log WHERE image_path=?",
+        (file_name,),
+    )
     row = cursor.fetchone()
     assert row is not None
     assert row["artifact_type"] == "external_diagram"
     assert abs(row["g_f_score"] - 0.5) < 1e-5
     assert abs(row["a_d_score"] - 0.8) < 1e-5
-    
+
     implicated = json.loads(row["belief_nodes_implicated"])
     assert "autopoiesis" in implicated
     assert "somatic_exhaustion" in implicated
@@ -141,7 +141,7 @@ async def test_coordinates_warping():
     chunks = repo.get_by_file(conv_id, file_name)
     assert len(chunks) > 0
     chunk = chunks[0]
-    
+
     sig_vec = np.frombuffer(chunk.structural_signature, dtype=np.float32)
     assert len(sig_vec) == 16
 
@@ -155,7 +155,7 @@ async def test_coordinates_warping():
     # index 10 (Temporal Latency): 0.5 * (1.0 - 0.8) = 0.1
     # index 13 (Nomadic): 0.5 * (1.0 + 0.8 * 3.0) = 1.7 -> clipped to 1.0
     # index 6 (Boundary Permeability): 0.5 * (1.0 + 0.8 * 3.0) = 1.7 -> clipped to 1.0
-    
+
     assert abs(sig_vec[0] - 0.25) < 1e-5
     assert abs(sig_vec[2] - 0.25) < 1e-5
     assert abs(sig_vec[3] - 1.0) < 1e-5
@@ -177,7 +177,7 @@ async def test_coordinates_warping():
 async def test_sediment_entanglement():
     db_path = str(get_db_path("data/aaa_entangle_test.db"))
     conn = init_db(db_path)
-    
+
     # Clean DB
     conn.execute("DELETE FROM perception_sediment")
     conn.execute("DELETE FROM perception_files")
@@ -187,8 +187,9 @@ async def test_sediment_entanglement():
 
     repo = PerceptionSedimentRepository(db_path)
     from backend.storage.repository import ConversationRepository
+
     conv_repo = ConversationRepository(db_path)
-    
+
     source_conv = "conv_source_1"
     target_conv = "conv_target_2"
     file_name = "nomadic_sediment.txt"
@@ -206,13 +207,13 @@ async def test_sediment_entanglement():
         summary="A text on rhizomatic connections.",
         summary_model="mock-gpt",
         token_count=150,
-        chunk_count=1
+        chunk_count=1,
     )
 
     # 3. Add chunk to source file
     embed = EmbeddingService(model_name="all-MiniLM-L6-v2", device="cpu")
     embed.load()
-    
+
     embed_vec = await embed.encode_async("Autonomous agents deterritorialize space.")
     embed_blob = np.array(embed_vec, dtype=np.float32).tobytes()
     repo.insert_chunk(
@@ -224,7 +225,7 @@ async def test_sediment_entanglement():
         embedding=embed_blob,
         embedding_model="all-MiniLM-L6-v2",
         token_count=10,
-        structural_signature=b"\x00" * 64
+        structural_signature=b"\x00" * 64,
     )
 
     # 4. Verify find across conversations (excluding target_conv)
@@ -235,6 +236,7 @@ async def test_sediment_entanglement():
 
     # 5. Inject source file into target conversation
     import uuid
+
     repo.inject_sediment(
         injection_id=str(uuid.uuid4()),
         source_conversation_id=source_conv,
@@ -259,16 +261,12 @@ async def test_sediment_entanglement():
     embed = EmbeddingService(model_name="all-MiniLM-L6-v2", device="cpu")
     embed.load()
 
-    perception_module = PerceptionModule(
-        perception_repo=repo,
-        embedding_service=embed
-    )
+    perception_module = PerceptionModule(perception_repo=repo, embedding_service=embed)
 
     context_entries, tokens = await perception_module._retrieve_relevant_chunks(
-        query="deterritorialize",
-        conversation_id=target_conv
+        query="deterritorialize", conversation_id=target_conv
     )
-    
+
     # Verify the manifest entry for injected file was included
     manifest_entry = context_entries[0]["content"]
     assert "Injected Sediment" in manifest_entry
@@ -306,6 +304,7 @@ async def test_cross_conversation_sediment_fallback():
 
     repo = PerceptionSedimentRepository(db_path)
     from backend.storage.repository import ConversationRepository
+
     conv_repo = ConversationRepository(db_path)
 
     source_conv = "conv_source_x"
@@ -372,9 +371,9 @@ async def test_cross_conversation_sediment_fallback():
         conversation_id=target_conv,
     )
 
-    assert any(
-        "Cross-Conversation" in entry["content"] for entry in context_entries
-    ), f"Expected cross-conversation entries, got: {[e['content'][:80] for e in context_entries]}"
+    assert any("Cross-Conversation" in entry["content"] for entry in context_entries), (
+        f"Expected cross-conversation entries, got: {[e['content'][:80] for e in context_entries]}"
+    )
 
     cross_entries = [e for e in context_entries if "Cross-Conversation" in e["content"]]
     assert len(cross_entries) > 0
@@ -401,6 +400,7 @@ async def main():
     await test_sediment_entanglement()
     await test_cross_conversation_sediment_fallback()
     print("All perception extensions tests passed successfully!")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

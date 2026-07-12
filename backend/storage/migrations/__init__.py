@@ -1,5 +1,5 @@
-import sqlite3
 import logging
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +18,11 @@ class MigrationRunner:
         """)
 
     def _is_applied(self, name: str) -> bool:
-        row = self._conn.execute(
-            "SELECT 1 FROM _migrations WHERE name = ?", (name,)
-        ).fetchone()
+        row = self._conn.execute("SELECT 1 FROM _migrations WHERE name = ?", (name,)).fetchone()
         return row is not None
 
     def _mark_applied(self, name: str):
-        self._conn.execute(
-            "INSERT INTO _migrations (name) VALUES (?)", (name,)
-        )
+        self._conn.execute("INSERT INTO _migrations (name) VALUES (?)", (name,))
 
     def run(self, name: str, up_func) -> None:
         if self._is_applied(name):

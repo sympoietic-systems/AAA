@@ -53,10 +53,22 @@ class ConversationMetricsModule(ProcessingModule):
             category="perception",
             always_run=True,
             children=[
-                ModuleMeta(name="surprise_index", description="Exponentially decaying weighted surprise (d=0.75)", category="perception"),
-                ModuleMeta(name="boringness", description="Joint failure of mutual perturbation: (1 - rP_t) * (1 - MPI_{t-1})", category="perception"),
-                ModuleMeta(name="conceptual_velocity", description="Disjoint window centroid drift rate (k=3)", category="perception"),
-            ]
+                ModuleMeta(
+                    name="surprise_index",
+                    description="Exponentially decaying weighted surprise (d=0.75)",
+                    category="perception",
+                ),
+                ModuleMeta(
+                    name="boringness",
+                    description="Joint failure of mutual perturbation: (1 - rP_t) * (1 - MPI_{t-1})",
+                    category="perception",
+                ),
+                ModuleMeta(
+                    name="conceptual_velocity",
+                    description="Disjoint window centroid drift rate (k=3)",
+                    category="perception",
+                ),
+            ],
         )
 
     def validate(self) -> bool:
@@ -64,7 +76,6 @@ class ConversationMetricsModule(ProcessingModule):
 
     async def process(self, payload: dict) -> dict:
         current_blob = payload.get("embedding")
-        embedding_dim = payload.get("embedding_dim", 384)
         conversation_id = payload.get("conversation_id", "")
         exclude_message_id = payload.get("exclude_message_id")
 
@@ -98,14 +109,14 @@ class ConversationMetricsModule(ProcessingModule):
         prior_agent_msgs = [m for m in reversed(ancestor_msgs) if m.speaker == "apparatus"]
 
         prior_human = []
-        for m in prior_human_msgs[:self._pairwise_window]:
+        for m in prior_human_msgs[: self._pairwise_window]:
             if m.embedding and m.embedding_dim:
                 vec = np.frombuffer(m.embedding, dtype="float32")
                 if len(vec) == m.embedding_dim:
                     prior_human.append(vec)
 
         prior_agent = []
-        for m in prior_agent_msgs[:self._agent_self_window]:
+        for m in prior_agent_msgs[: self._agent_self_window]:
             if m.embedding and m.embedding_dim:
                 vec = np.frombuffer(m.embedding, dtype="float32")
                 if len(vec) == m.embedding_dim:
@@ -117,7 +128,7 @@ class ConversationMetricsModule(ProcessingModule):
                 vec = np.frombuffer(m.embedding, dtype="float32")
                 if len(vec) == m.embedding_dim:
                     all_recent.append(vec)
-        all_recent = all_recent[:self._pairwise_window + self._agent_self_window]
+        all_recent = all_recent[: self._pairwise_window + self._agent_self_window]
 
         metrics: dict = {}
 
@@ -225,11 +236,20 @@ class ConversationMetricsModule(ProcessingModule):
 
         logger.debug(
             "metrics: sim=%.3f nov=%.3f ent=%s coup=%s divr=%s rP=%s srp=%s mpi=%s bore=%s vel=%s drr=%s ph=%s vit=%s \u0394=%.3f shifts=%s",
-            _fmt(s_t), _fmt(novelty),
-            _fmt4(rolling_entropy), _fmt(coupling), _fmt(agent_divergence),
-            _fmt(rp_t), _fmt(surprise), _fmt(mpi),
-            _fmt(boringness), _fmt(conceptual_velocity), _fmt(drr), _fmt(pask_health),
-            _fmt(vitality), deficit if deficit is not None else -1,
+            _fmt(s_t),
+            _fmt(novelty),
+            _fmt4(rolling_entropy),
+            _fmt(coupling),
+            _fmt(agent_divergence),
+            _fmt(rp_t),
+            _fmt(surprise),
+            _fmt(mpi),
+            _fmt(boringness),
+            _fmt(conceptual_velocity),
+            _fmt(drr),
+            _fmt(pask_health),
+            _fmt(vitality),
+            deficit if deficit is not None else -1,
             phase_shifts,
         )
 
@@ -290,9 +310,15 @@ def _build_similarity_pairs(
     return pairs
 
 
-def _compute_coupling_coherence(repo: MessageRepository, conversation_id: str | None = None, exclude_message_id: int | None = None) -> float | None:
-    last_human = repo.get_last_embedding_by_speaker("human", conversation_id=conversation_id, exclude_message_id=exclude_message_id)
-    last_agent = repo.get_last_embedding_by_speaker("apparatus", conversation_id=conversation_id, exclude_message_id=exclude_message_id)
+def _compute_coupling_coherence(
+    repo: MessageRepository, conversation_id: str | None = None, exclude_message_id: int | None = None
+) -> float | None:
+    last_human = repo.get_last_embedding_by_speaker(
+        "human", conversation_id=conversation_id, exclude_message_id=exclude_message_id
+    )
+    last_agent = repo.get_last_embedding_by_speaker(
+        "apparatus", conversation_id=conversation_id, exclude_message_id=exclude_message_id
+    )
     if last_human is None or last_agent is None:
         return None
     c = float(np.dot(last_human, last_agent))
@@ -468,14 +494,16 @@ def _detect_phase_shifts(
             delta = abs(cur - prev)
             if delta > threshold:
                 direction = "rise" if cur > prev else "drop"
-                shifts.append({
-                    "metric": key,
-                    "event": label,
-                    "delta": round(delta, 4),
-                    "direction": direction,
-                    "from": round(prev, 4),
-                    "to": round(cur, 4),
-                })
+                shifts.append(
+                    {
+                        "metric": key,
+                        "event": label,
+                        "delta": round(delta, 4),
+                        "direction": direction,
+                        "from": round(prev, 4),
+                        "to": round(cur, 4),
+                    }
+                )
 
     return shifts
 

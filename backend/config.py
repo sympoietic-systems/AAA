@@ -69,7 +69,11 @@ def _apply_env_overrides(config: dict) -> dict:
     if vision_api_key:
         config.setdefault("vision_llm", {})["api_key"] = vision_api_key
 
-    structural_api_key = os.environ.get("AAA_STRUCTURAL_API_KEY") or os.environ.get("AAA_BACKGROUND_API_KEY") or os.environ.get("AAA_LLM_API_KEY")
+    structural_api_key = (
+        os.environ.get("AAA_STRUCTURAL_API_KEY")
+        or os.environ.get("AAA_BACKGROUND_API_KEY")
+        or os.environ.get("AAA_LLM_API_KEY")
+    )
     if structural_api_key:
         config.setdefault("structural_llm", {})["api_key"] = structural_api_key
 
@@ -115,7 +119,7 @@ def load_config(path: Path | None = None) -> dict:
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     config = _resolve_env_recursive(config)

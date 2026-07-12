@@ -1,8 +1,7 @@
+import contextlib
 import json
 import sqlite3
 from datetime import datetime
-
-import numpy as np
 
 from .models import (
     BeliefEvent,
@@ -12,7 +11,6 @@ from .models import (
     CommitmentEvent,
     CommitmentNode,
     Conversation,
-    ErrorLogEntry,
     ExpertiseNode,
     Message,
     MessageLink,
@@ -29,24 +27,26 @@ def _row_to_message(row: sqlite3.Row) -> Message:
     return Message(
         id=row["id"],
         timestamp=datetime.fromisoformat(row["timestamp"]),
-        agent_id=row["agent_id"] if "agent_id" in row.keys() else "",
-        conversation_id=row["conversation_id"] if "conversation_id" in row.keys() else "",
+        agent_id=row["agent_id"] if "agent_id" in row else "",
+        conversation_id=row["conversation_id"] if "conversation_id" in row else "",
         speaker=row["speaker"],
         content=row["content"],
-        content_tokens=row["content_tokens"] if "content_tokens" in row.keys() else 0,
-        thinking=row["thinking"] if "thinking" in row.keys() else None,
-        thinking_tokens=row["thinking_tokens"] if "thinking_tokens" in row.keys() else None,
-        context_sent=row["context_sent"] if "context_sent" in row.keys() else None,
+        content_tokens=row["content_tokens"] if "content_tokens" in row else 0,
+        thinking=row["thinking"] if "thinking" in row else None,
+        thinking_tokens=row["thinking_tokens"] if "thinking_tokens" in row else None,
+        context_sent=row["context_sent"] if "context_sent" in row else None,
         embedding=row["embedding"],
         embedding_model=row["embedding_model"],
         embedding_dim=row["embedding_dim"],
-        model_used=row["model_used"] if "model_used" in row.keys() else None,
-        provider_used=row["provider_used"] if "provider_used" in row.keys() else None,
-        structural_signature=row["structural_signature"] if ("structural_signature" in row.keys() and row["structural_signature"] is not None) else b"",
-        structural_justification=row["structural_justification"] if "structural_justification" in row.keys() else None,
-        note_count=row["note_count"] if "note_count" in row.keys() else 0,
-        metabolized=row["metabolized"] if "metabolized" in row.keys() else 0,
-        parent_message_id=row["parent_message_id"] if "parent_message_id" in row.keys() else None,
+        model_used=row["model_used"] if "model_used" in row else None,
+        provider_used=row["provider_used"] if "provider_used" in row else None,
+        structural_signature=row["structural_signature"]
+        if ("structural_signature" in row and row["structural_signature"] is not None)
+        else b"",
+        structural_justification=row["structural_justification"] if "structural_justification" in row else None,
+        note_count=row["note_count"] if "note_count" in row else 0,
+        metabolized=row["metabolized"] if "metabolized" in row else 0,
+        parent_message_id=row["parent_message_id"] if "parent_message_id" in row else None,
     )
 
 
@@ -58,8 +58,8 @@ def _row_to_message_link(row: sqlite3.Row) -> MessageLink:
         target_id=row["target_id"],
         link_type=row["link_type"],
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
-        status=row["status"] if "status" in row.keys() else "active",
-        justification=row["justification"] if "justification" in row.keys() else "",
+        status=row["status"] if "status" in row else "active",
+        justification=row["justification"] if "justification" in row else "",
     )
 
 
@@ -70,12 +70,14 @@ def _row_to_conversation(row: sqlite3.Row) -> Conversation:
         agent_id=row["agent_id"],
         created_at=datetime.fromisoformat(row["created_at"]),
         updated_at=datetime.fromisoformat(row["updated_at"]),
-        message_count=row["message_count"] if "message_count" in row.keys() else 0,
-        somatic_reservoir_ad=row["somatic_reservoir_ad"] if "somatic_reservoir_ad" in row.keys() else 0.0,
-        matrix_warping=row["matrix_warping"] if "matrix_warping" in row.keys() else 0.0,
-        immunological_directive_active=row["immunological_directive_active"] if "immunological_directive_active" in row.keys() else 0,
-        requires_consolidation=row["requires_consolidation"] if "requires_consolidation" in row.keys() else 0,
-        last_consolidated_at=datetime.fromisoformat(row["last_consolidated_at"]) if ("last_consolidated_at" in row.keys() and row["last_consolidated_at"]) else None,
+        message_count=row["message_count"] if "message_count" in row else 0,
+        somatic_reservoir_ad=row["somatic_reservoir_ad"] if "somatic_reservoir_ad" in row else 0.0,
+        matrix_warping=row["matrix_warping"] if "matrix_warping" in row else 0.0,
+        immunological_directive_active=row["immunological_directive_active"] if "immunological_directive_active" in row else 0,
+        requires_consolidation=row["requires_consolidation"] if "requires_consolidation" in row else 0,
+        last_consolidated_at=datetime.fromisoformat(row["last_consolidated_at"])
+        if ("last_consolidated_at" in row and row["last_consolidated_at"])
+        else None,
     )
 
 
@@ -83,31 +85,35 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
     return MetricsRecord(
         message_id=row["message_id"],
         s_t=row["s_t"],
-        rolling_entropy=row["rolling_entropy"] if "rolling_entropy" in row.keys() else None,
-        novelty=row["novelty"] if "novelty" in row.keys() else 0.0,
-        coupling=row["coupling"] if "coupling" in row.keys() else None,
-        agent_divergence=row["agent_divergence"] if "agent_divergence" in row.keys() else None,
-        deficit=row["deficit"] if "deficit" in row.keys() else 0.0,
-        reverse_perturbation=row["reverse_perturbation"] if "reverse_perturbation" in row.keys() else None,
-        surprise_index=row["surprise_index"] if "surprise_index" in row.keys() else None,
-        mutual_perturbation=row["mutual_perturbation"] if "mutual_perturbation" in row.keys() else None,
-        vitality=row["vitality"] if "vitality" in row.keys() else None,
-        phase_shifts=row["phase_shifts"] if "phase_shifts" in row.keys() else None,
-        boringness=row["boringness"] if "boringness" in row.keys() else None,
-        conceptual_velocity=row["conceptual_velocity"] if "conceptual_velocity" in row.keys() else None,
-        divergence_resolution_ratio=row["divergence_resolution_ratio"] if "divergence_resolution_ratio" in row.keys() else None,
-        paskian_health=row["paskian_health"] if "paskian_health" in row.keys() else None,
-        temperature_rec=row["temperature_rec"] if "temperature_rec" in row.keys() else None,
-        presence_penalty_rec=row["presence_penalty_rec"] if "presence_penalty_rec" in row.keys() else None,
-        frequency_penalty_rec=row["frequency_penalty_rec"] if "frequency_penalty_rec" in row.keys() else None,
-        homeostatic_state=row["homeostatic_state"] if "homeostatic_state" in row.keys() else None,
+        rolling_entropy=row["rolling_entropy"] if "rolling_entropy" in row else None,
+        novelty=row["novelty"] if "novelty" in row else 0.0,
+        coupling=row["coupling"] if "coupling" in row else None,
+        agent_divergence=row["agent_divergence"] if "agent_divergence" in row else None,
+        deficit=row["deficit"] if "deficit" in row else 0.0,
+        reverse_perturbation=row["reverse_perturbation"] if "reverse_perturbation" in row else None,
+        surprise_index=row["surprise_index"] if "surprise_index" in row else None,
+        mutual_perturbation=row["mutual_perturbation"] if "mutual_perturbation" in row else None,
+        vitality=row["vitality"] if "vitality" in row else None,
+        phase_shifts=row["phase_shifts"] if "phase_shifts" in row else None,
+        boringness=row["boringness"] if "boringness" in row else None,
+        conceptual_velocity=row["conceptual_velocity"] if "conceptual_velocity" in row else None,
+        divergence_resolution_ratio=row["divergence_resolution_ratio"] if "divergence_resolution_ratio" in row else None,
+        paskian_health=row["paskian_health"] if "paskian_health" in row else None,
+        temperature_rec=row["temperature_rec"] if "temperature_rec" in row else None,
+        presence_penalty_rec=row["presence_penalty_rec"] if "presence_penalty_rec" in row else None,
+        frequency_penalty_rec=row["frequency_penalty_rec"] if "frequency_penalty_rec" in row else None,
+        homeostatic_state=row["homeostatic_state"] if "homeostatic_state" in row else None,
     )
 
 
 def _row_to_perception_sediment(row: sqlite3.Row) -> PerceptionSediment:
-    opacity = row["opacity"] if "opacity" in row.keys() else 0
-    opacity_meta = row["opacity_meta"] if "opacity_meta" in row.keys() else None
-    structural_signature = row["structural_signature"] if ("structural_signature" in row.keys() and row["structural_signature"] is not None) else b""
+    opacity = row["opacity"] if "opacity" in row else 0
+    opacity_meta = row["opacity_meta"] if "opacity_meta" in row else None
+    structural_signature = (
+        row["structural_signature"]
+        if ("structural_signature" in row and row["structural_signature"] is not None)
+        else b""
+    )
     return PerceptionSediment(
         id=row["id"],
         conversation_id=row["conversation_id"],
@@ -127,21 +133,15 @@ def _row_to_perception_sediment(row: sqlite3.Row) -> PerceptionSediment:
 
 def _row_to_memory_node(row: sqlite3.Row) -> dict:
     tendril_ids = []
-    try:
+    with contextlib.suppress((json.JSONDecodeError, TypeError)):
         tendril_ids = json.loads(row["tendril_ids"]) if row["tendril_ids"] else []
-    except (json.JSONDecodeError, TypeError):
-        pass
     source_type = "conversation"
-    try:
+    with contextlib.suppress((IndexError, KeyError)):
         source_type = row["source_type"] or "conversation"
-    except (IndexError, KeyError):
-        pass
 
     source_id = ""
-    try:
+    with contextlib.suppress((IndexError, KeyError)):
         source_id = row["source_id"] or ""
-    except (IndexError, KeyError):
-        pass
 
     return {
         "id": row["id"],
@@ -169,41 +169,39 @@ def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
     try:
         last_reinforced_raw = row["last_reinforced_at"]
         if last_reinforced_raw:
-            last_reinforced = datetime.fromisoformat(last_reinforced_raw) if isinstance(last_reinforced_raw, str) else last_reinforced_raw
+            last_reinforced = (
+                datetime.fromisoformat(last_reinforced_raw)
+                if isinstance(last_reinforced_raw, str)
+                else last_reinforced_raw
+            )
     except (IndexError, KeyError):
         pass
 
     lifecycle = "crystallized"
-    try:
+    with contextlib.suppress((IndexError, KeyError)):
         lifecycle = row["lifecycle_stage"] or "crystallized"
-    except (IndexError, KeyError):
-        pass
 
     last_dreamed = None
     try:
         last_dreamed_raw = row["last_dreamed_at"]
         if last_dreamed_raw:
-            last_dreamed = datetime.fromisoformat(last_dreamed_raw) if isinstance(last_dreamed_raw, str) else last_dreamed_raw
+            last_dreamed = (
+                datetime.fromisoformat(last_dreamed_raw) if isinstance(last_dreamed_raw, str) else last_dreamed_raw
+            )
     except (IndexError, KeyError):
         pass
 
     evolved_from = None
-    try:
+    with contextlib.suppress((IndexError, KeyError)):
         evolved_from = row["evolved_from_proposal"]
-    except (IndexError, KeyError):
-        pass
 
     genesis_mats = None
-    try:
+    with contextlib.suppress((IndexError, KeyError)):
         genesis_mats = row["genesis_materials"]
-    except (IndexError, KeyError):
-        pass
 
     version = 1
-    try:
+    with contextlib.suppress((IndexError, KeyError)):
         version = row["version"] or 1
-    except (IndexError, KeyError):
-        pass
 
     return BeliefNode(
         id=row["id"],
@@ -229,12 +227,10 @@ def _row_to_belief_node(row: sqlite3.Row) -> BeliefNode:
 def _row_to_belief_proposal(row: sqlite3.Row) -> BeliefProposal:
     created = row["created_at"]
     updated = row["updated_at"]
-    
+
     potential_target = None
-    try:
+    with contextlib.suppress((IndexError, KeyError)):
         potential_target = row["potential_merge_target"]
-    except (IndexError, KeyError):
-        pass
 
     return BeliefProposal(
         id=row["id"],
@@ -351,15 +347,15 @@ def _row_to_commitment_node(row: sqlite3.Row) -> CommitmentNode:
     updated = row["updated_at"]
     return CommitmentNode(
         id=row["id"],
-        agent_id=row["agent_id"] if "agent_id" in row.keys() else "symbia",
+        agent_id=row["agent_id"] if "agent_id" in row else "symbia",
         label=row["label"],
         statement=row["statement"],
         lifecycle_stage=row["lifecycle_stage"] or "active",
         confidence=row["confidence"] or 0.0,
         ontological_mass=row["ontological_mass"] or 1.0,
         vector_16d=row["vector_16d"] or "[]",
-        nucleation_rationale=row["nucleation_rationale"] if "nucleation_rationale" in row.keys() else None,
-        collapse_rationale=row["collapse_rationale"] if "collapse_rationale" in row.keys() else None,
+        nucleation_rationale=row["nucleation_rationale"] if "nucleation_rationale" in row else None,
+        collapse_rationale=row["collapse_rationale"] if "collapse_rationale" in row else None,
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
         updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
     )
@@ -371,11 +367,11 @@ def _row_to_commitment_event(row: sqlite3.Row) -> CommitmentEvent:
         id=row["id"],
         commitment_id=row["commitment_id"],
         event_type=row["event_type"] or "",
-        rationale=row["rationale"] if "rationale" in row.keys() else None,
-        mass_before=row["mass_before"] if "mass_before" in row.keys() else None,
-        mass_after=row["mass_after"] if "mass_after" in row.keys() else None,
-        confidence_before=row["confidence_before"] if "confidence_before" in row.keys() else None,
-        confidence_after=row["confidence_after"] if "confidence_after" in row.keys() else None,
+        rationale=row["rationale"] if "rationale" in row else None,
+        mass_before=row["mass_before"] if "mass_before" in row else None,
+        mass_after=row["mass_after"] if "mass_after" in row else None,
+        confidence_before=row["confidence_before"] if "confidence_before" in row else None,
+        confidence_after=row["confidence_after"] if "confidence_after" in row else None,
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
     )
 
@@ -391,13 +387,11 @@ def _row_to_expertise_node(row: sqlite3.Row) -> ExpertiseNode:
     except (IndexError, KeyError):
         pass
     description = ""
-    try:
+    with contextlib.suppress((IndexError, KeyError)):
         description = row["description"] or ""
-    except (IndexError, KeyError):
-        pass
     return ExpertiseNode(
         id=row["id"],
-        agent_id=row["agent_id"] if "agent_id" in row.keys() else "symbia",
+        agent_id=row["agent_id"] if "agent_id" in row else "symbia",
         domain=row["domain"],
         description=description,
         lifecycle_stage=row["lifecycle_stage"] or "proto",
@@ -406,7 +400,7 @@ def _row_to_expertise_node(row: sqlite3.Row) -> ExpertiseNode:
         vector_16d=row["vector_16d"] or "[]",
         signal_count=row["signal_count"] or 0,
         last_signal_at=last_signal,
-        crystallization_rationale=row["crystallization_rationale"] if "crystallization_rationale" in row.keys() else None,
+        crystallization_rationale=row["crystallization_rationale"] if "crystallization_rationale" in row else None,
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
         updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
     )
@@ -423,7 +417,7 @@ def _row_to_personality_state(row: sqlite3.Row) -> PersonalityState:
         pass
     return PersonalityState(
         id=row["id"],
-        agent_id=row["agent_id"] if "agent_id" in row.keys() else "symbia",
+        agent_id=row["agent_id"] if "agent_id" in row else "symbia",
         aspirational_traits_json=row["aspirational_traits_json"] or "{}",
         active_commitment_ids_json=row["active_commitment_ids_json"] or "[]",
         trait_computation_version=row["trait_computation_version"] or 1,

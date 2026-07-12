@@ -27,7 +27,7 @@ from ..base import BackgroundAction
 
 logger = logging.getLogger(__name__)
 
-_HEADING_LINE_RE = re.compile(r'^(#{1,6})\s+(.*)$')
+_HEADING_LINE_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 
 
 def _running_paths_from_chunk_texts(chunk_texts: list[str]) -> list[list[str]]:
@@ -83,6 +83,7 @@ class StructureExtractionAction(BackgroundAction):
         if Path(file_path).exists():
             try:
                 from backend.modules.digester import RhizomaticDigester
+
                 file_type = chunks[0].file_type
                 digester = RhizomaticDigester()
                 text = digester.extract(Path(file_path), file_type)
@@ -97,7 +98,7 @@ class StructureExtractionAction(BackgroundAction):
             ordered = sorted(chunks, key=lambda c: c.chunk_index)
             if any("#" in (c.chunk_text or "") for c in ordered):
                 paths = _running_paths_from_chunk_texts([c.chunk_text or "" for c in ordered])
-                for c, p in zip(ordered, paths):
+                for c, p in zip(ordered, paths, strict=False):
                     index_to_path[c.chunk_index] = p
                 source = "db_markers"
 

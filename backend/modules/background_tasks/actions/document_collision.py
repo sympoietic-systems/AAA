@@ -1,29 +1,29 @@
+import json
 import logging
 import re
-import json
+
 from backend.modules.llm_client import BaseLLMProvider, generate_unified
+
 from ..base import BackgroundAction
 
 logger = logging.getLogger(__name__)
 
 
 def parse_json_safely(text: str) -> dict:
-    import json
-    import re
 
     # 1. Clean think tags
-    cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
     # 2. Extract starting from first {
     first_brace = cleaned.find("{")
     if first_brace == -1:
         return json.loads(cleaned)
-    
+
     json_part = cleaned[first_brace:]
 
     # 3. Helper to clean control characters and commas inside string
     def sanitize(s: str) -> str:
-        s = re.sub(r',\s*([\]\}])', r'\1', s)
+        s = re.sub(r",\s*([\]\}])", r"\1", s)
         chars = []
         in_string = False
         escape = False
@@ -32,21 +32,18 @@ def parse_json_safely(text: str) -> dict:
                 in_string = not in_string
                 chars.append(char)
             elif in_string:
-                if char == '\n':
-                    chars.append('\\n')
-                elif char == '\t':
-                    chars.append('\\t')
-                elif char == '\r':
-                    chars.append('\\r')
+                if char == "\n":
+                    chars.append("\\n")
+                elif char == "\t":
+                    chars.append("\\t")
+                elif char == "\r":
+                    chars.append("\\r")
                 else:
                     chars.append(char)
             else:
                 chars.append(char)
-                
-            if char == '\\' and in_string:
-                escape = not escape
-            else:
-                escape = False
+
+            escape = not escape if (char == "\\" and in_string) else False
         return "".join(chars)
 
     # 4. Helper to auto-close open structures in truncated string
@@ -58,27 +55,23 @@ def parse_json_safely(text: str) -> dict:
             if char == '"' and not escape:
                 in_string = not in_string
             elif in_string:
-                if char == '\\':
-                    escape = not escape
-                else:
-                    escape = False
+                escape = not escape if char == "\\" else False
             else:
-                if char in ('{', '['):
+                if char in ("{", "["):
                     stack.append(char)
-                elif char in ('}', ']'):
-                    if stack:
-                         top = stack[-1]
-                         if (char == '}' and top == '{') or (char == ']' and top == '['):
-                             stack.pop()
-        
+                elif char in ("}", "]") and stack:
+                    top = stack[-1]
+                    if (char == "}" and top == "{") or (char == "]" and top == "["):
+                        stack.pop()
+
         repaired = s
         if in_string:
             repaired += '"'
         for item in reversed(stack):
-            if item == '{':
-                repaired += '}'
-            elif item == '[':
-                repaired += ']'
+            if item == "{":
+                repaired += "}"
+            elif item == "[":
+                repaired += "]"
         return repaired
 
     # Try standard sanitize and parse
@@ -99,7 +92,7 @@ def parse_json_safely(text: str) -> dict:
     last_brace = sanitized.rfind("}")
     if last_brace != -1:
         try:
-            return json.loads(sanitized[:last_brace + 1])
+            return json.loads(sanitized[: last_brace + 1])
         except Exception:
             pass
 
@@ -121,7 +114,7 @@ class DocumentCollisionAction(BackgroundAction):
                 "interference_score": 0.0,
                 "implicated_nodes": [],
                 "state_vector_impact": [0.0] * 16,
-                "error": "No text provided for collision analysis"
+                "error": "No text provided for collision analysis",
             }
 
         # Truncate text to fit prompt constraints
@@ -132,11 +125,7 @@ class DocumentCollisionAction(BackgroundAction):
         system_prompt = self.system_prompt()
         user_tmpl = prompt_data.get("user_prompt_template", "")
 
-        user_prompt = user_tmpl.format(
-            file_name=file_name,
-            active_beliefs_list=beliefs_str,
-            text=truncated_text
-        )
+        user_prompt = user_tmpl.format(file_name=file_name, active_beliefs_list=beliefs_str, text=truncated_text)
 
         params = {**self.default_params(), **payload.get("params", {})}
 
@@ -147,14 +136,14 @@ class DocumentCollisionAction(BackgroundAction):
                 user_prompt=user_prompt,
                 expect_json=True,
                 thinking_override=self.thinking_override(),
-                **params
+                **params,
             )
             data = res.get("json_data") or {}
-            
+
             interference_score = float(data.get("interference_score", 0.0))
             implicated_nodes = data.get("implicated_nodes", [])
             state_vector_impact = data.get("state_vector_impact", [])
-            
+
             if isinstance(state_vector_impact, list):
                 while len(state_vector_impact) < 16:
                     state_vector_impact.append(0.0)
@@ -166,7 +155,7 @@ class DocumentCollisionAction(BackgroundAction):
                 "interference_score": interference_score,
                 "implicated_nodes": implicated_nodes,
                 "state_vector_impact": state_vector_impact,
-                "model": res.get("model", "")
+                "model": res.get("model", ""),
             }
 
         except Exception as e:
@@ -175,5 +164,5 @@ class DocumentCollisionAction(BackgroundAction):
                 "interference_score": 0.0,
                 "implicated_nodes": [],
                 "state_vector_impact": [0.0] * 16,
-                "error": str(e)
+                "error": str(e),
             }

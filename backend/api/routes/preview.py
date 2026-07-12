@@ -6,6 +6,7 @@ import hashlib
 import logging
 import random
 from collections import deque
+
 from fastapi import APIRouter, Request
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,10 @@ def _pick_preferred(items: list, key_fn=None) -> object:
     if not items:
         return None
     if key_fn is None:
-        key_fn = lambda x: getattr(x, "statement", str(x))
+
+        def key_fn(x):
+            return getattr(x, "statement", str(x))
+
     fresh = [it for it in items if not _is_recent(key_fn(it))]
     pool = fresh if fresh else items
     return random.choice(pool)
@@ -109,21 +113,25 @@ def _pick_one(state) -> dict:
                     conv = random.choice(valid)
                     nodes = memory_node_repo.get_nodes(conv.id) or []
                     text_nodes = [
-                        n for n in nodes
-                        if (n.get("surface_fragment") or n.get("intra_active_text") or "").strip()
+                        n for n in nodes if (n.get("surface_fragment") or n.get("intra_active_text") or "").strip()
                     ]
                     if text_nodes:
-                        n = _pick_preferred(text_nodes, key_fn=lambda n: str(n.get("surface_fragment") or n.get("intra_active_text") or ""))
+                        n = _pick_preferred(
+                            text_nodes,
+                            key_fn=lambda n: str(n.get("surface_fragment") or n.get("intra_active_text") or ""),
+                        )
                         if n is None:
                             n = random.choice(text_nodes)
                         payload = n.get("surface_fragment") or n.get("intra_active_text") or ""
                         _mark_recent(str(payload))
-                        return {"line": {
-                            "text": _truncate(str(payload)),
-                            "type": "memory",
-                            "intensity": float(n.get("intensity", 0.5)),
-                            "blur": random.random() < 0.5,
-                        }}
+                        return {
+                            "line": {
+                                "text": _truncate(str(payload)),
+                                "type": "memory",
+                                "intensity": float(n.get("intensity", 0.5)),
+                                "blur": random.random() < 0.5,
+                            }
+                        }
             except Exception as e:
                 logger.warning("preview: failed to fetch memory node: %s", e)
 
@@ -178,15 +186,14 @@ def _pick_one(state) -> dict:
                             scars.append(st.strip()[:200])
                 if scars:
                     picked = _pick_preferred(scars, key_fn=lambda s: s)
-                    if picked is not None:
-                        scar_text = picked
-                    else:
-                        scar_text = random.choice(scars)
+                    scar_text = picked if picked is not None else random.choice(scars)
             except Exception as e:
                 logger.warning("preview: failed to fetch scar-fold from memory: %s", e)
     _mark_recent(scar_text)
-    return {"line": {
-        "text": scar_text,
-        "type": "scar_fold",
-        "intensity": 0.0,
-    }}
+    return {
+        "line": {
+            "text": scar_text,
+            "type": "scar_fold",
+            "intensity": 0.0,
+        }
+    }

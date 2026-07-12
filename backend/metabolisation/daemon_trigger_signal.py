@@ -12,10 +12,9 @@ Usage:
     trigger = dequeue_dream_trigger(app_state)
 """
 
-from collections import deque
-from datetime import datetime, timezone
 import logging
-from typing import Optional
+from collections import deque
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +45,7 @@ def enqueue_dream_trigger(
     trigger = {
         "reason": reason,
         "conversation_id": conversation_id,
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.now(UTC),
     }
     queue.append(trigger)
     logger.info(
@@ -58,7 +57,7 @@ def enqueue_dream_trigger(
     )
 
 
-def dequeue_dream_trigger(app_state) -> Optional[dict]:
+def dequeue_dream_trigger(app_state) -> dict | None:
     """Pop the next pending dream trigger. Returns None if queue is empty."""
     queue = getattr(app_state, _QUEUE_ATTR, None)
     if not queue:

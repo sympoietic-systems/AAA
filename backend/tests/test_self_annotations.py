@@ -1,13 +1,14 @@
-from pathlib import Path
-import sys
 import os
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 os.chdir(root_path)
 
-from backend.services.annotations import process_self_annotations
+from backend.services.annotations import process_self_annotations  # noqa: E402
+
 
 def test_process_self_annotations():
     # Setup mocks
@@ -17,7 +18,7 @@ def test_process_self_annotations():
     # Case 1: Standard tags
     text = 'Here is a <mark comment="standard comment">highlighted text</mark>.'
     processed = process_self_annotations(text, "conv-1", 123, note_repo_mock, message_repo_mock)
-    
+
     assert "id=" in processed
     assert "<mark id=" in processed
     assert "highlighted text" in processed
@@ -26,7 +27,7 @@ def test_process_self_annotations():
     assert kwargs["selected_text"] == "highlighted text"
     assert kwargs["comment"] == "standard comment"
     assert kwargs["visibility"] == "agent"
-    
+
     # Reset mocks
     note_repo_mock.reset_mock()
     message_repo_mock.reset_mock()
@@ -34,7 +35,7 @@ def test_process_self_annotations():
     # Case 2: Swapped attributes and single quotes, with extra spacing
     text = "Let's check <aaa-note visibility='shared'   comment='swapped single quotes'>node contents</aaa-note>."
     processed = process_self_annotations(text, "conv-1", 123, note_repo_mock, message_repo_mock)
-    
+
     assert "id=" in processed
     assert "<aaa-note id=" in processed
     assert note_repo_mock.create_self_note.called
@@ -66,6 +67,7 @@ def test_process_self_annotations():
     message_repo_mock.update_content.assert_called_with(123, processed)
 
     print("All process_self_annotations tests passed!")
+
 
 if __name__ == "__main__":
     test_process_self_annotations()

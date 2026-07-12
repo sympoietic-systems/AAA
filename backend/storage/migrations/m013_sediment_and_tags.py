@@ -15,7 +15,9 @@ def up(conn):
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_si_target ON sediment_injections(target_conversation_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_si_source ON sediment_injections(source_conversation_id, source_file_name)")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_si_source ON sediment_injections(source_conversation_id, source_file_name)"
+        )
     except sqlite3.OperationalError:
         pass
 

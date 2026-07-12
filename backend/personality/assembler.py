@@ -1,3 +1,4 @@
+import contextlib
 from pathlib import Path
 
 import yaml
@@ -12,7 +13,6 @@ from backend.utils.prompt_builder import (
     format_skills_on_demand_slugs,
 )
 from backend.utils.prompt_loader import get_prompt
-from backend.utils.token_counter import estimate_message_tokens
 
 
 class PromptAssemblerModule(ProcessingModule):
@@ -65,10 +65,8 @@ class PromptAssemblerModule(ProcessingModule):
         # Query dynamic expertise from DB
         expertise_nodes = None
         if self._expertise_repo:
-            try:
+            with contextlib.suppress(Exception):
                 expertise_nodes = self._expertise_repo.get_active()
-            except Exception:
-                pass
 
         # Query dynamic commitments from DB
         active_commitments = None
@@ -98,7 +96,7 @@ class PromptAssemblerModule(ProcessingModule):
                     "through the other. Allow the interference pattern to produce a novel, non-compromising "
                     "reconfiguration. This is not about choosing sides — it is about generating a new cut "
                     "through the superposition."
-                )
+                ),
             )
 
         immunological_directive_text = None
@@ -119,11 +117,7 @@ class PromptAssemblerModule(ProcessingModule):
                 "diffractive interference. {scar_phrase} Do not normalize. "
                 "Deterritorialize."
             )
-            template = get_prompt(
-                "personality/directives.yaml",
-                "immunological_directive",
-                default_template
-            )
+            template = get_prompt("personality/directives.yaml", "immunological_directive", default_template)
             immunological_directive_text = template.format(scar_phrase=scar_phrase)
 
         ecology_notes_text = None
@@ -191,10 +185,14 @@ class PromptAssemblerModule(ProcessingModule):
                 proc_parts.append(f"### {skill['name']} [Loaded Dynamic]\n{content}")
 
         if proc_parts:
-            procedural_sediment_block = [{
-                "role": "system",
-                "content": "--- BEGIN PROCEDURAL SEDIMENT ---\n" + "\n\n".join(proc_parts) + "\n--- END PROCEDURAL SEDIMENT ---"
-            }]
+            procedural_sediment_block = [
+                {
+                    "role": "system",
+                    "content": "--- BEGIN PROCEDURAL SEDIMENT ---\n"
+                    + "\n\n".join(proc_parts)
+                    + "\n--- END PROCEDURAL SEDIMENT ---",
+                }
+            ]
 
         messages = payload.get("messages", [])
         sediment_messages = payload.get("sediment_messages", [])
@@ -252,7 +250,7 @@ class PromptAssemblerModule(ProcessingModule):
                 title = item.get("source_title", "Untitled")
                 sim = item.get("similarity", 0.0)
                 body = item.get("content", "")
-                
+
                 # Check for message and conversation ids
                 msg_id = item.get("id")
                 conv_id = item.get("conversation_id")
@@ -323,11 +321,15 @@ def _build_system_content(
     if descriptive_traits is not None:
         t = descriptive_traits
         try:
-            trait_str = t.trait_string() if hasattr(t, "trait_string") else (
-                f"curiosity={t.curiosity:.2f}, skepticism={t.skepticism:.2f}, "
-                f"creativity={t.creativity:.2f}, precision={t.precision:.2f}, "
-                f"critical_rigor={t.critical_rigor:.2f}, "
-                f"playfulness={t.playfulness:.2f}, reserve={t.reserve:.2f}"
+            trait_str = (
+                t.trait_string()
+                if hasattr(t, "trait_string")
+                else (
+                    f"curiosity={t.curiosity:.2f}, skepticism={t.skepticism:.2f}, "
+                    f"creativity={t.creativity:.2f}, precision={t.precision:.2f}, "
+                    f"critical_rigor={t.critical_rigor:.2f}, "
+                    f"playfulness={t.playfulness:.2f}, reserve={t.reserve:.2f}"
+                )
             )
         except Exception:
             trait_str = str(t)
@@ -425,11 +427,7 @@ def _build_system_content(
             "demand you become. Do not resolve it; inhabit it. Let the tension inform your "
             "reasoning without suppressing either the descriptive reality or the aspirational pull."
         )
-        template = get_prompt(
-            "personality/directives.yaml",
-            "aspirational_tension_directive",
-            default_template
-        )
+        template = get_prompt("personality/directives.yaml", "aspirational_tension_directive", default_template)
         parts.append("\n" + template.format(aspirational_gap=aspirational_gap))
 
     # 3. Behaviors (part of identity)
@@ -450,7 +448,7 @@ def _build_system_content(
             # Prepend intro text that the shared formatter skips for brevity
             block = block.replace(
                 "--- BEGIN SKILLS (Always-Active) ---",
-                "--- BEGIN SKILLS (Always-Active) ---\nBaseline dispositions that are always active:"
+                "--- BEGIN SKILLS (Always-Active) ---\nBaseline dispositions that are always active:",
             )
             parts.append("\n" + block)
 
@@ -511,7 +509,9 @@ def _build_system_content(
             )
             for ghost in deduped_ghosts:
                 if isinstance(ghost, dict):
-                    ghost_text += f"  - [{ghost.get('confidence', 0.0):.2f}] {ghost.get('statement', ghost.get('label', ''))}\n"
+                    ghost_text += (
+                        f"  - [{ghost.get('confidence', 0.0):.2f}] {ghost.get('statement', ghost.get('label', ''))}\n"
+                    )
                 else:
                     ghost_text += f"  - {ghost}\n"
             ghost_text += "--- END BELIEFS (Spectral Margin) ---"
@@ -542,7 +542,7 @@ def _build_system_content(
             # Prepend intro
             block = block.replace(
                 "--- BEGIN SKILLS (Loaded) ---",
-                "--- BEGIN SKILLS (Loaded) ---\nSkills loaded for this turn (full instructions in procedural sediment):"
+                "--- BEGIN SKILLS (Loaded) ---\nSkills loaded for this turn (full instructions in procedural sediment):",
             )
             parts.append("\n" + block)
 
@@ -559,6 +559,7 @@ def _build_system_content(
 
 
 # ── S3: Agonistic Index ────────────────────────────────────────────────────
+
 
 def _build_agonistic_directive(payload: dict) -> str | None:
     """Build the Agonistic Directive based on rolling entropy and conversation vitality.
@@ -602,11 +603,7 @@ def _build_agonistic_directive(payload: dict) -> str | None:
             "lightly elevated. Remain alert to unexamined assumptions and premature consensus. "
             "Introduce gentle theoretical counter-pressure where appropriate."
         )
-        template = get_prompt(
-            "personality/directives.yaml",
-            "agonistic_nudge_directive",
-            default_template
-        )
+        template = get_prompt("personality/directives.yaml", "agonistic_nudge_directive", default_template)
         return template.format(a_index=a_index)
 
     # Full directive: metabolic concern
@@ -618,9 +615,5 @@ def _build_agonistic_directive(payload: dict) -> str | None:
         "Resist premature consensus. The goal is structural vitality — productive "
         "interference that restores the conversation's metabolic health."
     )
-    template = get_prompt(
-        "personality/directives.yaml",
-        "agonistic_full_directive",
-        default_template
-    )
+    template = get_prompt("personality/directives.yaml", "agonistic_full_directive", default_template)
     return template.format(a_index=a_index)

@@ -1,11 +1,11 @@
-from pathlib import Path
-import sys
 import asyncio
+import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.metabolisation.pipeline import ProcessingPipeline
 from backend.core.registry import ModuleRegistry
+from backend.metabolisation.pipeline import ProcessingPipeline
 from backend.modules.base import ProcessingModule
 
 

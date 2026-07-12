@@ -6,11 +6,16 @@ existing imports like:
     from backend.api.routes import _process_and_summarize_file
 """
 
-from backend.services.chat import ChatService
+from backend.api.helpers import (  # noqa: F401
+    _build_response_attachments,  # noqa: F401
+    _ensure_structural_tags,  # noqa: F401
+    _parse_chat_request,  # noqa: F401
+)
+from backend.services.chat import ChatService  # noqa: F401
 from backend.services.consolidation import ConsolidationService
 from backend.services.file import FileService
 from backend.services.metrics import MetricsService
-from backend.services.note import NoteService
+from backend.services.note import NoteService  # noqa: F401
 from backend.services.semantic_knot import SemanticKnotService
 from backend.services.title import TitleService
 
@@ -28,9 +33,3 @@ _build_metrics_info = MetricsService.build_info
 _build_recommendations = MetricsService.build_recommendations
 _generate_title = TitleService.generate
 _generate_title_from_conversation = TitleService.generate_from_conversation
-
-from backend.api.helpers import (
-    _build_response_attachments,
-    _ensure_structural_tags,
-    _parse_chat_request,
-)

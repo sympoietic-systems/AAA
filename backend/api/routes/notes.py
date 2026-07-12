@@ -1,15 +1,13 @@
-from typing import Optional
-
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 
 from backend.api.deps import get_app_state, get_note_repo
-from backend.services.note import NoteService
 from backend.api.schemas import NoteCreateRequest, NoteResponse, NoteUpdateRequest
+from backend.services.note import NoteService
 
 router = APIRouter()
 
 
-def _resolve_create_params(req: NoteCreateRequest, conversation_id: Optional[str] = None):
+def _resolve_create_params(req: NoteCreateRequest, conversation_id: str | None = None):
     asset_type = req.asset_type
     asset_id = req.asset_id
     message_id = req.message_id
@@ -24,8 +22,7 @@ def _resolve_create_params(req: NoteCreateRequest, conversation_id: Optional[str
     return asset_type, asset_id, message_id
 
 
-def _create_note(note_repo, asset_type: str, asset_id: str, conversation_id: Optional[str],
-                 req: NoteCreateRequest):
+def _create_note(note_repo, asset_type: str, asset_id: str, conversation_id: str | None, req: NoteCreateRequest):
     return NoteService.create(
         note_repo,
         asset_type=asset_type,
@@ -38,12 +35,15 @@ def _create_note(note_repo, asset_type: str, asset_id: str, conversation_id: Opt
     )
 
 
-def _schedule_metabolism(background_tasks: BackgroundTasks, state, note: dict,
-                         conversation_id: Optional[str], message_id: Optional[int]):
-    if (note.get("visibility") == "shared"
-            and note.get("asset_type") == "conversation_message"
-            and conversation_id
-            and message_id is not None):
+def _schedule_metabolism(
+    background_tasks: BackgroundTasks, state, note: dict, conversation_id: str | None, message_id: int | None
+):
+    if (
+        note.get("visibility") == "shared"
+        and note.get("asset_type") == "conversation_message"
+        and conversation_id
+        and message_id is not None
+    ):
         background_tasks.add_task(
             NoteService.metabolize_background,
             state=state,
@@ -77,9 +77,9 @@ async def create_note(
 
 @router.get("/notes", response_model=list[NoteResponse])
 async def get_notes(
-    asset_type: Optional[str] = Query(None),
-    asset_id: Optional[str] = Query(None),
-    conversation_id: Optional[str] = Query(None),
+    asset_type: str | None = Query(None),
+    asset_id: str | None = Query(None),
+    conversation_id: str | None = Query(None),
     note_repo=Depends(get_note_repo),
 ):
     if not note_repo:

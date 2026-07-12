@@ -1,35 +1,36 @@
-from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Request, HTTPException
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 router = APIRouter()
 
 
 class NotificationCreatePayload(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     type: str  # 'sediment', 'glitch', 'trace'
     snippet: str
-    timestamp: Optional[str] = None
-    conversation_id: Optional[str] = None
-    message_id: Optional[int] = None
-    parent_message_id: Optional[int] = None
-    speaker: Optional[str] = None
-    source: Optional[str] = None
+    timestamp: str | None = None
+    conversation_id: str | None = None
+    message_id: int | None = None
+    parent_message_id: int | None = None
+    speaker: str | None = None
+    source: str | None = None
     read: int = 0
     dismissed: int = 0
-    source_type: Optional[str] = None
-    source_id: Optional[str] = None
+    source_type: str | None = None
+    source_id: str | None = None
 
 
 class ClearPayload(BaseModel):
-    type: Optional[str] = None
+    type: str | None = None
 
 
-@router.get("/notifications", response_model=List[Dict[str, Any]])
+@router.get("/notifications", response_model=list[dict[str, Any]])
 async def list_notifications(
-    dismissed: Optional[bool] = None,
-    type: Optional[str] = None,
-    search: Optional[str] = None,
+    dismissed: bool | None = None,
+    type: str | None = None,
+    search: str | None = None,
     limit: int = 100,
     offset: int = 0,
     request: Request = None,
@@ -45,7 +46,7 @@ async def list_notifications(
     )
 
 
-@router.get("/notifications/{id}", response_model=Dict[str, Any])
+@router.get("/notifications/{id}", response_model=dict[str, Any])
 async def get_notification(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
@@ -55,7 +56,7 @@ async def get_notification(id: str, request: Request = None):
     return notif
 
 
-@router.post("/notifications", response_model=Dict[str, Any])
+@router.post("/notifications", response_model=dict[str, Any])
 async def create_notification(
     payload: NotificationCreatePayload,
     request: Request = None,
@@ -79,10 +80,10 @@ async def create_notification(
             source_id=payload.source_id,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.patch("/notifications/{id}/read", response_model=Dict[str, Any])
+@router.patch("/notifications/{id}/read", response_model=dict[str, Any])
 async def mark_read(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
@@ -92,7 +93,7 @@ async def mark_read(id: str, request: Request = None):
     return notif
 
 
-@router.patch("/notifications/{id}/unread", response_model=Dict[str, Any])
+@router.patch("/notifications/{id}/unread", response_model=dict[str, Any])
 async def mark_unread(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
@@ -102,7 +103,7 @@ async def mark_unread(id: str, request: Request = None):
     return notif
 
 
-@router.patch("/notifications/{id}/dismiss", response_model=Dict[str, Any])
+@router.patch("/notifications/{id}/dismiss", response_model=dict[str, Any])
 async def dismiss_notification(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
@@ -112,12 +113,12 @@ async def dismiss_notification(id: str, request: Request = None):
     return notif
 
 
-@router.patch("/notifications/dismiss-match", response_model=Dict[str, Any])
+@router.patch("/notifications/dismiss-match", response_model=dict[str, Any])
 async def dismiss_by_match_endpoint(
     conversation_id: str,
     message_id: int,
     request: Request = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Dismiss notifications matching a specific conversation and message pair.
 
@@ -139,11 +140,9 @@ async def dismiss_by_match_endpoint(
     return {"status": "ok"}
 
 
-
-
 @router.post("/notifications/clear")
 async def clear_notifications(
-    payload: Optional[ClearPayload] = None,
+    payload: ClearPayload | None = None,
     request: Request = None,
 ):
     state = request.app.state
@@ -157,7 +156,7 @@ async def clear_notifications(
 
 @router.post("/notifications/read")
 async def mark_all_read_endpoint(
-    payload: Optional[ClearPayload] = None,
+    payload: ClearPayload | None = None,
     request: Request = None,
 ):
     state = request.app.state
@@ -167,4 +166,3 @@ async def mark_all_read_endpoint(
     else:
         notification_repo.mark_all_as_read()
     return {"status": "ok"}
-

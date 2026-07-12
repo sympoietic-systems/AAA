@@ -3,6 +3,7 @@
 These are pure helper functions with no step-class dependency,
 used across ParseStep, DigestStep, ConsolidateStep, and SynthesizeStep.
 """
+
 import logging
 import re
 
@@ -23,14 +24,11 @@ def classify_source_status(raw_content: str | None) -> str:
         return f"failed ({err[:40]})"
     if len(c) < 200:
         return "too short"
-    junk_patterns = [
-        "security check required", "cloudflare",
-        "enable javascript", "please complete the security check"
-    ]
+    junk_patterns = ["security check required", "cloudflare", "enable javascript", "please complete the security check"]
     c_lower = c[:1000].lower()
     if any(p in c_lower for p in junk_patterns):
         return "blocked (anti-bot)"
-    if re.match(r'^(skip|close|open navigation|sign in|sign up)', c[:100].strip(), re.IGNORECASE):
+    if re.match(r"^(skip|close|open navigation|sign in|sign up)", c[:100].strip(), re.IGNORECASE):
         return "paywall"
     return "ok"
 

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 # ── Identity loading ───────────────────────────────────────────────────
 
+
 def _load_identity(config: dict) -> tuple[dict, str, Path]:
     """Load agent identity from the configured YAML file.
 
@@ -38,6 +39,7 @@ def _load_identity(config: dict) -> tuple[dict, str, Path]:
 
 # ── Pipeline modules ───────────────────────────────────────────────────
 
+
 def _init_modules(
     config: dict,
     repos: dict,
@@ -51,6 +53,7 @@ def _init_modules(
 
     # ── Context Collector ──
     from backend.modules.context_collector import ContextCollectorModule
+
     context_collector = ContextCollectorModule(
         message_repo=repos["message_repo"],
         note_repo=repos["note_repo"],
@@ -64,6 +67,7 @@ def _init_modules(
     # ── Conversation Metrics ──
     metrics_cfg = config.get("homeostasis", {})
     from backend.modules.conversation_metrics import ConversationMetricsModule
+
     conversation_metrics = ConversationMetricsModule(
         message_repo=repos["message_repo"],
         pairwise_window=metrics_cfg.get("pairwise_window", 5),
@@ -73,11 +77,13 @@ def _init_modules(
 
     # ── Homeostatic Regulator ──
     from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
+
     homeostatic_regulator = HomeostaticRegulatorModule()
 
     # ── Trait Computer ──
     trait_cfg = config.get("dynamic_personality", {}).get("trait_computer", {})
     from backend.modules.trait_computer import TraitComputer
+
     trait_computer = TraitComputer(
         personality_state_repo=repos["personality_state_repo"],
         config=trait_cfg,
@@ -86,8 +92,9 @@ def _init_modules(
 
     # ── Expertise Engine ──
     expertise_cfg = config.get("dynamic_personality", {}).get("expertise", {})
-    from backend.modules.structural_engine import LexiconScorer
     from backend.modules.expertise_engine import ExpertiseEngine
+    from backend.modules.structural_engine import LexiconScorer
+
     expert_lexicon = LexiconScorer()
     expertise_engine = ExpertiseEngine(
         expertise_repo=repos["expertise_repo"],
@@ -99,6 +106,7 @@ def _init_modules(
     # ── Commitment Store ──
     commitment_cfg = config.get("dynamic_personality", {}).get("commitments", {})
     from backend.modules.commitment_store import CommitmentStore
+
     commitment_store = CommitmentStore(
         commitment_repo=repos["commitment_repo"],
         belief_repo=repos["belief_repo"],
@@ -110,6 +118,7 @@ def _init_modules(
     # ── Sedimentation Retrieval ──
     sediment_cfg = config.get("sedimentation", {})
     from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
+
     sedimentation_retrieval = SedimentationRetrievalModule(
         message_repo=repos["message_repo"],
         sediment_token_budget=sediment_cfg.get("sediment_token_budget", 2000),
@@ -123,6 +132,7 @@ def _init_modules(
     # ── Diffractive Retrieval ──
     diffractive_cfg = config.get("diffractive_retrieval", {})
     from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
+
     diffractive_retrieval = DiffractiveRetrievalModule(
         message_repo=repos["message_repo"],
         perception_repo=repos["perception_repo"],
@@ -143,6 +153,7 @@ def _init_modules(
         CompositeStructuralScorer,
         StructuralScorerModule,
     )
+
     structural_scorer = StructuralScorerModule(
         CompositeStructuralScorer(llm_provider=structural_provider, config=config)
     )
@@ -150,6 +161,7 @@ def _init_modules(
     # ── Perception Module ──
     perception_cfg = config.get("perception", {})
     from backend.modules.perception import PerceptionModule
+
     perception_module = PerceptionModule(
         perception_repo=repos["perception_repo"],
         embedding_service=embedder.service,
@@ -164,6 +176,7 @@ def _init_modules(
 
     # ── Web Retrieval ──
     from backend.modules.web_retrieval import WebRetrievalModule
+
     web_retrieval = WebRetrievalModule(
         perception_repo=repos["perception_repo"],
         embedder=embedder,
@@ -174,21 +187,19 @@ def _init_modules(
 
     # ── Rhizome Web Probe (autonomous deep research) ──
     from backend.modules.rhizome_web_probe import RhizomeWebProbeModule
+
     rhizome_web_probe = RhizomeWebProbeModule(config=config)
 
     # ── Consolidation Checkpoint ──
     from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
+
     consolidation_checkpoint = ConsolidationCheckpointModule(
         checkpoint_repo=repos["checkpoint_repo"],
         consolidate_threshold=ctx_cfg.get("consolidate_threshold", 15),
         memory_node_repo=repos["memory_node_repo"],
         max_memory_nodes=ctx_cfg.get("max_memory_nodes", 6),
-        guaranteed_node_types=ctx_cfg.get(
-            "guaranteed_node_types", ["scar", "concept", "tension"]
-        ),
-        cross_branch_similarity_threshold=ctx_cfg.get(
-            "cross_branch_similarity_threshold", 0.4
-        ),
+        guaranteed_node_types=ctx_cfg.get("guaranteed_node_types", ["scar", "concept", "tension"]),
+        cross_branch_similarity_threshold=ctx_cfg.get("cross_branch_similarity_threshold", 0.4),
     )
 
     return {
@@ -210,9 +221,11 @@ def _init_modules(
 
 # ── Belief Engine ──────────────────────────────────────────────────────
 
+
 def _init_belief_engine(repos: dict, identity_path: Path, llm_provider=None):
     """Create the Belief Dynamics Engine."""
     from backend.modules.belief_engine import BeliefDynamicsEngine
+
     return BeliefDynamicsEngine(
         belief_repo=repos["belief_repo"],
         message_repo=repos["message_repo"],

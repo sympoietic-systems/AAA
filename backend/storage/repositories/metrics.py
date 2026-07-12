@@ -41,12 +41,25 @@ class MetricsRepository(BaseRepository):
                 homeostatic_state)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                message_id, s_t, novelty, rolling_entropy, coupling,
-                agent_divergence, deficit, reverse_perturbation, surprise_index,
-                mutual_perturbation, vitality, phase_shifts,
-                boringness, conceptual_velocity, divergence_resolution_ratio,
+                message_id,
+                s_t,
+                novelty,
+                rolling_entropy,
+                coupling,
+                agent_divergence,
+                deficit,
+                reverse_perturbation,
+                surprise_index,
+                mutual_perturbation,
+                vitality,
+                phase_shifts,
+                boringness,
+                conceptual_velocity,
+                divergence_resolution_ratio,
                 paskian_health,
-                temperature_rec, presence_penalty_rec, frequency_penalty_rec,
+                temperature_rec,
+                presence_penalty_rec,
+                frequency_penalty_rec,
                 homeostatic_state,
             ),
         )
@@ -115,9 +128,7 @@ class MetricsRepository(BaseRepository):
     @with_connection
     def get_latest(self) -> MetricsRecord | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM conversation_metrics ORDER BY message_id DESC LIMIT 1"
-        ).fetchone()
+        row = conn.execute("SELECT * FROM conversation_metrics ORDER BY message_id DESC LIMIT 1").fetchone()
         if row is None:
             return None
         return _row_to_metrics(row)

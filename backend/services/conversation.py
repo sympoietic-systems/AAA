@@ -28,6 +28,7 @@ class ConversationService:
     @staticmethod
     def build_conversation_info(conv_repo, checkpoint_repo, conv):
         from backend.services.conversation import ConversationService as CS
+
         tags = CS.ensure_structural_tags(conv_repo, conv)
         summary = None
         human_summary = None

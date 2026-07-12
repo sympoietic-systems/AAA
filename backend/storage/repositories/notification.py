@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
@@ -12,22 +12,22 @@ class NotificationRepository(BaseRepository):
         self,
         type: str,
         snippet: str,
-        id: Optional[str] = None,
-        timestamp: Optional[str] = None,
-        conversation_id: Optional[str] = None,
-        message_id: Optional[int] = None,
-        parent_message_id: Optional[int] = None,
-        speaker: Optional[str] = None,
-        source: Optional[str] = None,
+        id: str | None = None,
+        timestamp: str | None = None,
+        conversation_id: str | None = None,
+        message_id: int | None = None,
+        parent_message_id: int | None = None,
+        speaker: str | None = None,
+        source: str | None = None,
         read: int = 0,
         dismissed: int = 0,
-        source_type: Optional[str] = None,
-        source_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        source_type: str | None = None,
+        source_id: str | None = None,
+    ) -> dict[str, Any]:
         conn = self._conn()
         notif_id = id or str(uuid.uuid4())
         ts = timestamp or datetime.utcnow().isoformat()
-        
+
         conn.execute(
             """INSERT INTO notifications (
                 id, type, timestamp, snippet, conversation_id, message_id,
@@ -54,23 +54,21 @@ class NotificationRepository(BaseRepository):
         return self.get(notif_id)
 
     @with_connection
-    def get(self, id: str) -> Optional[Dict[str, Any]]:
+    def get(self, id: str) -> dict[str, Any] | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM notifications WHERE id = ?", (id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM notifications WHERE id = ?", (id,)).fetchone()
         if not row:
             return None
         return dict(row)
 
     @with_connection
-    def list_active(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def list_active(self, limit: int = 100) -> list[dict[str, Any]]:
         """List un-dismissed notifications."""
         conn = self._conn()
         rows = conn.execute(
-            """SELECT * FROM notifications 
-               WHERE dismissed = 0 
-               ORDER BY timestamp DESC 
+            """SELECT * FROM notifications
+               WHERE dismissed = 0
+               ORDER BY timestamp DESC
                LIMIT ?""",
             (limit,),
         ).fetchall()
@@ -81,10 +79,10 @@ class NotificationRepository(BaseRepository):
         self,
         limit: int = 100,
         offset: int = 0,
-        dismissed: Optional[bool] = None,
-        type_filter: Optional[str] = None,
-        search_query: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        dismissed: bool | None = None,
+        type_filter: str | None = None,
+        search_query: str | None = None,
+    ) -> list[dict[str, Any]]:
         """List all notifications with filters and paging."""
         conn = self._conn()
         query = "SELECT * FROM notifications WHERE 1=1"
@@ -110,25 +108,21 @@ class NotificationRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     @with_connection
-    def mark_as_read(self, id: str) -> Optional[Dict[str, Any]]:
+    def mark_as_read(self, id: str) -> dict[str, Any] | None:
         conn = self._conn()
-        conn.execute(
-            "UPDATE notifications SET read = 1 WHERE id = ?", (id,)
-        )
+        conn.execute("UPDATE notifications SET read = 1 WHERE id = ?", (id,))
         conn.commit()
         return self.get(id)
 
     @with_connection
-    def mark_as_unread(self, id: str) -> Optional[Dict[str, Any]]:
+    def mark_as_unread(self, id: str) -> dict[str, Any] | None:
         conn = self._conn()
-        conn.execute(
-            "UPDATE notifications SET read = 0 WHERE id = ?", (id,)
-        )
+        conn.execute("UPDATE notifications SET read = 0 WHERE id = ?", (id,))
         conn.commit()
         return self.get(id)
 
     @with_connection
-    def mark_all_as_read(self, type_filter: Optional[str] = None) -> None:
+    def mark_all_as_read(self, type_filter: str | None = None) -> None:
         conn = self._conn()
         if type_filter:
             conn.execute(
@@ -140,21 +134,17 @@ class NotificationRepository(BaseRepository):
         conn.commit()
 
     @with_connection
-    def dismiss(self, id: str) -> Optional[Dict[str, Any]]:
+    def dismiss(self, id: str) -> dict[str, Any] | None:
         conn = self._conn()
-        conn.execute(
-            "UPDATE notifications SET dismissed = 1 WHERE id = ?", (id,)
-        )
+        conn.execute("UPDATE notifications SET dismissed = 1 WHERE id = ?", (id,))
         conn.commit()
         return self.get(id)
 
     @with_connection
-    def dismiss_by_match(
-        self, conversation_id: str, message_id: int
-    ) -> None:
+    def dismiss_by_match(self, conversation_id: str, message_id: int) -> None:
         conn = self._conn()
         conn.execute(
-            """UPDATE notifications SET dismissed = 1 
+            """UPDATE notifications SET dismissed = 1
                WHERE conversation_id = ? AND message_id = ?""",
             (conversation_id, message_id),
         )

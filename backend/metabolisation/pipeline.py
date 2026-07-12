@@ -1,9 +1,8 @@
 import logging
-from typing import Callable, Optional
-
-from backend.modules.base import ProcessingModule
+from collections.abc import Callable
 
 from backend.metabolisation.context import PipelineResult
+from backend.modules.base import ProcessingModule
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +11,7 @@ class ProcessingPipeline:
     def __init__(
         self,
         modules: list[ProcessingModule],
-        error_handler: Optional[Callable[[str, Exception, dict], None]] = None,
+        error_handler: Callable[[str, Exception, dict], None] | None = None,
     ):
         self._modules = modules
         self._error_handler = error_handler
@@ -33,9 +32,7 @@ class ProcessingPipeline:
                 }
                 result.errors.append(error_info)
                 result.status = "error"
-                logger.exception(
-                    f"Module '{module.name}' failed: {e}"
-                )
+                logger.exception(f"Module '{module.name}' failed: {e}")
                 if self._error_handler:
                     self._error_handler(module.name, e, result.payload)
                 break

@@ -1,8 +1,8 @@
+import json
 import logging
 import re
 import uuid
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from backend.modules.structural_engine import LexiconScorer
 
@@ -41,7 +41,9 @@ class SkillMetabolismMixin:
             recent_msgs = []
 
         # Parse annotations referencing any skill
-        note_pattern = re.compile(r'<aaa-note\s+[^>]*comment="([^"]+)"[^>]*context="skill:([^"]+)"[^>]*>', re.IGNORECASE)
+        note_pattern = re.compile(
+            r'<aaa-note\s+[^>]*comment="([^"]+)"[^>]*context="skill:([^"]+)"[^>]*>', re.IGNORECASE
+        )
         scar_fold_pattern = re.compile(r'<scar-fold\s+[^>]*skill="([^"]+)"[^>]*>(.*?)</scar-fold>', re.IGNORECASE)
 
         # Collect improvisation comments by skill name
@@ -55,7 +57,7 @@ class SkillMetabolismMixin:
                 if sk_name not in improvisations_by_skill:
                     improvisations_by_skill[sk_name] = []
                 improvisations_by_skill[sk_name].append(comment.strip())
-            
+
             # Scan for scar-fold
             for skill_name, comment in scar_fold_pattern.findall(msg.content):
                 sk_name = skill_name.strip()
@@ -68,7 +70,7 @@ class SkillMetabolismMixin:
             s_belief = 0.0
             s_sediment = 0.0
             s_performance = 0.0
-            
+
             # B. Belief-Tectonic Shift Signal
             try:
                 skill_beliefs = belief_repo.list_beliefs("symbia")
@@ -76,7 +78,7 @@ class SkillMetabolismMixin:
                 skill_beliefs = []
 
             belief = next((b for b in skill_beliefs if b.label == f"skill:{skill.name}"), None)
-            
+
             belief_status_info = "No linked belief found"
             if belief:
                 belief_status_info = f"linked belief '{belief.label}' (confidence: {belief.confidence:.2f}, stage: {belief.lifecycle_stage})"
@@ -102,12 +104,16 @@ class SkillMetabolismMixin:
 
             # Cumulative Signal Index
             cumulative_signal = max(s_belief, s_sediment, s_performance)
-            
+
             if cumulative_signal < 0.6:
                 continue
 
-            logger.info("Skill '%s' metabolic threshold exceeded: S=%.2f. Triggering self-revision.", skill.name, cumulative_signal)
-            
+            logger.info(
+                "Skill '%s' metabolic threshold exceeded: S=%.2f. Triggering self-revision.",
+                skill.name,
+                cumulative_signal,
+            )
+
             # Run self-revision pipeline
             try:
                 # 1. Diffractive Patching: Call the metabolize_skill background action
@@ -115,11 +121,13 @@ class SkillMetabolismMixin:
                     "skill_name": skill.name,
                     "skill_content": skill.content,
                     "belief_info": belief_status_info,
-                    "notes_info": notes_str if notes_str else "No direct friction notes. Self-correcting based on belief drift/confidence decay.",
+                    "notes_info": notes_str
+                    if notes_str
+                    else "No direct friction notes. Self-correcting based on belief drift/confidence decay.",
                 }
-                
+
                 result = await bg_engine.run("metabolize_skill", payload)
-                
+
                 data = result.get("json_data")
                 if not data:
                     logger.warning("Metabolize action for '%s' returned empty or invalid JSON", skill.name)
@@ -128,7 +136,9 @@ class SkillMetabolismMixin:
                 refined_content = data.get("content", "").strip()
                 refined_description = data.get("description", skill.description).strip()
                 refined_trigger_keywords = data.get("trigger_keywords", [])
-                changelog = data.get("changelog", f"Auto-metabolized on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}")
+                changelog = data.get(
+                    "changelog", f"Auto-metabolized on {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}"
+                )
 
                 if not refined_content:
                     logger.warning("Empty content generated for metabolized skill '%s'", skill.name)
@@ -139,7 +149,11 @@ class SkillMetabolismMixin:
                 content_lower = refined_content.lower()
                 violations = [w for w in prohibited_words if w in content_lower]
                 if violations:
-                    logger.warning("Skill '%s' auto-revision rejected due to anti-mastery violation. Contained prohibited words: %s", skill.name, violations)
+                    logger.warning(
+                        "Skill '%s' auto-revision rejected due to anti-mastery violation. Contained prohibited words: %s",
+                        skill.name,
+                        violations,
+                    )
                     try:
                         error_repo = getattr(self.app_state, "error_repo", None)
                         if error_repo:
@@ -148,7 +162,7 @@ class SkillMetabolismMixin:
                                 error_type="anti_mastery_violation",
                                 error_message=f"Self-revision of skill '{skill.name}' contained prohibited words: {violations}",
                                 traceback=None,
-                                context=refined_content[:500]
+                                context=refined_content[:500],
                             )
                     except Exception:
                         pass
@@ -164,7 +178,7 @@ class SkillMetabolismMixin:
                     logger.warning("Failed to score updated skill vector in metabolism: %s", se)
 
                 new_version = skill.version + 1
-                
+
                 skill_repo.update_skill(
                     skill_id=skill.id,
                     content=refined_content,
@@ -173,9 +187,9 @@ class SkillMetabolismMixin:
                     vector_16d=vector_16d,
                     version=new_version,
                     changelog=changelog,
-                    version_source="auto_metabolism"
+                    version_source="auto_metabolism",
                 )
-                
+
                 skill_repo.insert_event(
                     id=str(uuid.uuid4()),
                     skill_id=skill.id,
@@ -184,7 +198,9 @@ class SkillMetabolismMixin:
                     rationale=changelog,
                 )
 
-                logger.info("Skill '%s' successfully self-revised to version %d via metabolism daemon.", skill.name, new_version)
+                logger.info(
+                    "Skill '%s' successfully self-revised to version %d via metabolism daemon.", skill.name, new_version
+                )
 
             except Exception as metabolism_error:
                 logger.exception("Failed self-revision pipeline for skill '%s': %s", skill.name, metabolism_error)

@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from backend.modules.background_tasks.actions.dream_topic_decision import DreamTopicDecisionAction
 
@@ -17,7 +18,7 @@ async def test_dream_topic_decision_action_execute():
     mock_provider = AsyncMock()
     mock_provider.generate.return_value = {
         "content": '{"decision": "reuse", "conversation_id": "existing-convo-id", "new_title": null}',
-        "model": "test-background-model"
+        "model": "test-background-model",
     }
 
     payload = {
@@ -28,9 +29,9 @@ async def test_dream_topic_decision_action_execute():
                 "id": "existing-convo-id",
                 "title": "somatic-attractor-drift",
                 "message_count": 5,
-                "summary": "Exploring the somatic drift of identity nodes across temporal checkpoints."
+                "summary": "Exploring the somatic drift of identity nodes across temporal checkpoints.",
             }
-        ]
+        ],
     }
 
     res = await action.execute(mock_provider, payload)

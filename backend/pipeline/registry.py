@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from backend.core.registry import ModuleRegistry
 from backend.modules.base import ProcessingModule
@@ -20,7 +20,7 @@ class PipelineRegistry(ModuleRegistry):
         self.register(name, factory)
         self._meta[name] = meta
 
-    def get_meta(self, name: str) -> Optional[ModuleMeta]:
+    def get_meta(self, name: str) -> ModuleMeta | None:
         return self._meta.get(name)
 
     def list_always_on(self) -> list[tuple[str, ProcessingModule]]:

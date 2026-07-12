@@ -1,6 +1,4 @@
-import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.models import ExpertiseNode
@@ -30,7 +28,7 @@ class ExpertiseRepository(BaseRepository):
         return [_row_to_expertise_node(r) for r in rows]
 
     @with_connection
-    def get_by_id(self, expertise_id: str) -> Optional[ExpertiseNode]:
+    def get_by_id(self, expertise_id: str) -> ExpertiseNode | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT * FROM expertise_nodes WHERE id = ?",
@@ -41,7 +39,7 @@ class ExpertiseRepository(BaseRepository):
         return _row_to_expertise_node(row)
 
     @with_connection
-    def get_by_domain(self, domain: str, agent_id: str = "symbia") -> Optional[ExpertiseNode]:
+    def get_by_domain(self, domain: str, agent_id: str = "symbia") -> ExpertiseNode | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT * FROM expertise_nodes WHERE LOWER(agent_id) = LOWER(?) AND domain = ?",
@@ -81,11 +79,11 @@ class ExpertiseRepository(BaseRepository):
         level_label: str = "nascent",
         vector_16d: str = "[]",
         signal_count: int = 0,
-        last_signal_at: Optional[str] = None,
-        crystallization_rationale: Optional[str] = None,
+        last_signal_at: str | None = None,
+        crystallization_rationale: str | None = None,
     ) -> ExpertiseNode:
         conn = self._conn()
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         conn.execute(
             """INSERT INTO expertise_nodes
                (id, agent_id, domain, description, lifecycle_stage,
@@ -93,15 +91,24 @@ class ExpertiseRepository(BaseRepository):
                 last_signal_at, crystallization_rationale,
                 created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (id, agent_id.lower(), domain, description, lifecycle_stage,
-             ontological_mass, level_label, vector_16d, signal_count,
-             last_signal_at, crystallization_rationale,
-             now, now),
+            (
+                id,
+                agent_id.lower(),
+                domain,
+                description,
+                lifecycle_stage,
+                ontological_mass,
+                level_label,
+                vector_16d,
+                signal_count,
+                last_signal_at,
+                crystallization_rationale,
+                now,
+                now,
+            ),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM expertise_nodes WHERE id = ?", (id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM expertise_nodes WHERE id = ?", (id,)).fetchone()
         return _row_to_expertise_node(row)
 
     @with_connection
@@ -115,33 +122,48 @@ class ExpertiseRepository(BaseRepository):
                    crystallization_rationale = ?,
                    updated_at = CURRENT_TIMESTAMP
                WHERE id = ?""",
-            (node.domain, node.description, node.lifecycle_stage,
-             node.ontological_mass, node.level_label, node.vector_16d,
-             node.signal_count, node.last_signal_at,
-             node.crystallization_rationale,
-             node.id),
+            (
+                node.domain,
+                node.description,
+                node.lifecycle_stage,
+                node.ontological_mass,
+                node.level_label,
+                node.vector_16d,
+                node.signal_count,
+                node.last_signal_at,
+                node.crystallization_rationale,
+                node.id,
+            ),
         )
         conn.commit()
 
     @with_connection
     def upsert(self, node: ExpertiseNode) -> None:
         conn = self._conn()
-        existing = conn.execute(
-            "SELECT id FROM expertise_nodes WHERE id = ?", (node.id,)
-        ).fetchone()
+        existing = conn.execute("SELECT id FROM expertise_nodes WHERE id = ?", (node.id,)).fetchone()
         if existing:
             self.update(node)
         else:
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(UTC).isoformat()
             conn.execute(
                 """INSERT INTO expertise_nodes
                    (id, agent_id, domain, lifecycle_stage, ontological_mass, level_label,
                     vector_16d, signal_count, last_signal_at, crystallization_rationale,
                     created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (node.id, node.agent_id, node.domain, node.lifecycle_stage,
-                 node.ontological_mass, node.level_label, node.vector_16d,
-                 node.signal_count, node.last_signal_at, node.crystallization_rationale,
-                 now, now),
+                (
+                    node.id,
+                    node.agent_id,
+                    node.domain,
+                    node.lifecycle_stage,
+                    node.ontological_mass,
+                    node.level_label,
+                    node.vector_16d,
+                    node.signal_count,
+                    node.last_signal_at,
+                    node.crystallization_rationale,
+                    now,
+                    now,
+                ),
             )
             conn.commit()

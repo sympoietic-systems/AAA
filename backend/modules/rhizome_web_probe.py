@@ -11,9 +11,8 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 8.
 """
 
 import logging
-from typing import Optional
 
-from backend.modules.base import ProcessingModule, ModuleResult
+from backend.modules.base import ProcessingModule
 from backend.pipeline.metadata import ModuleMeta
 
 logger = logging.getLogger("aaa.rhizome_web_probe")
@@ -112,9 +111,7 @@ class RhizomeWebProbeModule(ProcessingModule):
 
         if task_manager:
             try:
-                rationale = (
-                    "Stagnation detected" if is_stagnant else "Belief tension detected"
-                )
+                rationale = "Stagnation detected" if is_stagnant else "Belief tension detected"
                 task_id = task_manager.create_task(
                     objective=target_query,
                     trigger_source="symbia_stagnation" if is_stagnant else "symbia_conflict",
@@ -132,7 +129,9 @@ class RhizomeWebProbeModule(ProcessingModule):
                 payload["research_proposal_id"] = task_id
                 logger.info(
                     "Rhizome web probe created proposal %s for conv %s (stagnation=%.2f)",
-                    task_id[:8], conversation_id, stagnation_index,
+                    task_id[:8],
+                    conversation_id,
+                    stagnation_index,
                 )
             except Exception as e:
                 logger.warning("Failed to create research proposal: %s", e)

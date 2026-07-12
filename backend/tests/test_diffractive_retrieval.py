@@ -1,7 +1,7 @@
-import asyncio
 import os
 import sys
 from unittest.mock import AsyncMock, MagicMock
+
 import numpy as np
 import pytest
 
@@ -127,12 +127,8 @@ async def test_adaptive_hysteresis_decay(mock_repos, monkeypatch):
         "metrics": {"boringness": 0.0, "rolling_entropy": 0.8},
     }
     res2 = await module.process(high_entropy_payload)
-    assert res2["diffractive_state"] == "FLOWING", (
-        "Adaptive hysteresis should return to FLOWING when entropy spikes"
-    )
-    assert module._timers["test_adaptive"] == 0, (
-        "Timer should be reset to 0 on adaptive decay"
-    )
+    assert res2["diffractive_state"] == "FLOWING", "Adaptive hysteresis should return to FLOWING when entropy spikes"
+    assert module._timers["test_adaptive"] == 0, "Timer should be reset to 0 on adaptive decay"
 
 
 @pytest.mark.anyio
@@ -168,12 +164,8 @@ async def test_adaptive_hysteresis_no_spike_stays_stagnant(mock_repos, monkeypat
         "metrics": {"boringness": 0.5, "rolling_entropy": 0.3},
     }
     res2 = await module.process(payload2)
-    assert res2["diffractive_state"] == "STAGNANT", (
-        "Small entropy delta should not trigger adaptive decay"
-    )
-    assert module._timers["test_no_spike"] == 2, (
-        "Timer should decrement normally when no spike detected"
-    )
+    assert res2["diffractive_state"] == "STAGNANT", "Small entropy delta should not trigger adaptive decay"
+    assert module._timers["test_no_spike"] == 2, "Timer should decrement normally when no spike detected"
 
 
 @pytest.mark.anyio
@@ -192,6 +184,7 @@ async def test_dynamic_bounds_and_budget(mock_repos, monkeypatch):
     # Setup mocks
     # We want to return some candidates for similarity matching
     from backend.modules.structural_engine import CompositeStructuralScorer
+
     monkeypatch.setattr(CompositeStructuralScorer, "score_async", AsyncMock(return_value=np.ones(16, dtype="float32")))
 
     msg_repo.get_embeddings_and_signatures_except.return_value = [
@@ -205,9 +198,27 @@ async def test_dynamic_bounds_and_budget(mock_repos, monkeypatch):
         (0.55, 103),
     ]
     msg_repo.get_sediment_messages_with_metadata.return_value = [
-        {"id": 101, "content": "Nomadic message one content details", "conversation_title": "Conv A", "timestamp": "2026-05-23", "conversation_id": "conv_a"},
-        {"id": 102, "content": "Nomadic message two content details", "conversation_title": "Conv B", "timestamp": "2026-05-23", "conversation_id": "conv_b"},
-        {"id": 103, "content": "Nomadic message three content details", "conversation_title": "Conv C", "timestamp": "2026-05-23", "conversation_id": "conv_c"},
+        {
+            "id": 101,
+            "content": "Nomadic message one content details",
+            "conversation_title": "Conv A",
+            "timestamp": "2026-05-23",
+            "conversation_id": "conv_a",
+        },
+        {
+            "id": 102,
+            "content": "Nomadic message two content details",
+            "conversation_title": "Conv B",
+            "timestamp": "2026-05-23",
+            "conversation_id": "conv_b",
+        },
+        {
+            "id": 103,
+            "content": "Nomadic message three content details",
+            "conversation_title": "Conv C",
+            "timestamp": "2026-05-23",
+            "conversation_id": "conv_c",
+        },
     ]
 
     perception_repo.get_chunks_in_similarity_range.return_value = [
@@ -250,4 +261,3 @@ async def test_dynamic_bounds_and_budget(mock_repos, monkeypatch):
     assert len(meta["sources"]) == len(res["diffractive_messages"])
     assert meta["sources"][0]["type"] == "nomadic"
     assert meta["sources"][0]["source_title"] == "Conv A"
-

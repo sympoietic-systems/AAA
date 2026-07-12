@@ -1,28 +1,29 @@
 import json
 import logging
 import uuid
-from typing import List, Dict, Any, Optional
 
-from backend.services.research.steps.base import BaseResearchStep
-from backend.services.research.task_state import StepEnvelope, StepOutput, PlanPayload
-from backend.utils.research_logger import now_utc_str
-from backend.utils.prompt_loader import get_prompts_dict
-from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.modules.llm_client import generate_unified
+from backend.services.research.steps.base import BaseResearchStep
+from backend.services.research.task_state import PlanPayload, StepEnvelope, StepOutput
+from backend.utils.anti_mastery import apply_anti_mastery_filter
+from backend.utils.prompt_loader import get_prompts_dict
+from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
-def _build_reflection_hints(state: dict) -> List[str]:
+def _build_reflection_hints(state: dict) -> list[str]:
     """Extracts and formats all meta-cognitive reflection details (notes, traces, critique logs) into helpful context hints for the planner."""
     hints = []
-    
+
     # 1. Refined queries
     digest_signals = state.get("digest_signals") or {}
     refined_queries = digest_signals.get("refined_queries")
     if refined_queries:
-        hints.append("Refined search queries proposed by meta-reflection:\n" + "\n".join(f"- {q}" for q in refined_queries))
-        
+        hints.append(
+            "Refined search queries proposed by meta-reflection:\n" + "\n".join(f"- {q}" for q in refined_queries)
+        )
+
     # 2. Detected Biases, Knowledge Gaps, Signal Flags
     active_flags = []
     for key in ("detected_biases", "knowledge_gaps"):
@@ -32,17 +33,17 @@ def _build_reflection_hints(state: dict) -> List[str]:
                 active_flags.append(f"{key}:\n" + "\n".join(f"  - {item}" for item in val))
             else:
                 active_flags.append(f"{key}: {val}")
-                
+
     flags = state.get("signal_flags")
     if flags:
         if isinstance(flags, list):
             active_flags.append("signal_flags:\n" + "\n".join(f"  - {f}" for f in flags))
         else:
             active_flags.append(f"signal_flags: {flags}")
-            
+
     if active_flags:
         hints.append("Active Meta-Cognitive Signal Flags:\n" + "\n".join(active_flags))
-        
+
     # 3. Vitality & Confidence Metrics
     metrics = []
     for key in ("glitch_fidelity", "contradiction_density", "source_entropy", "revised_confidence"):
@@ -51,12 +52,12 @@ def _build_reflection_hints(state: dict) -> List[str]:
             metrics.append(f"- {key}: {val}")
     if metrics:
         hints.append("Vitality & Confidence Metrics:\n" + "\n".join(metrics))
-        
+
     # 4. Epistemic Reflection Notes
     notes = state.get("reflection_notes")
     if notes:
         hints.append(f"Epistemic Reflection Notes:\n{notes}")
-        
+
     # 5. Monologue Trace
     monologue = state.get("monologue_trace")
     if monologue and isinstance(monologue, list):
@@ -69,7 +70,7 @@ def _build_reflection_hints(state: dict) -> List[str]:
                     trace_lines.append(f"↳ [ {reg} ]\n{utt.strip()}")
         if trace_lines:
             hints.append("Agent Monologue Trace (Meta-Cognitive Flow):\n" + "\n".join(trace_lines))
-            
+
     # 6. Critique Log (The Scar)
     critique = state.get("critique_log")
     if critique and isinstance(critique, list):
@@ -83,7 +84,7 @@ def _build_reflection_hints(state: dict) -> List[str]:
                 critique_lines.append(f"- {reg} ({severity}):\n  Failure: {fail}\n  Suggestion: {sugg}")
         if critique_lines:
             hints.append("Diffractive Audit & Critique Log (The Scar):\n" + "\n".join(critique_lines))
-            
+
     # 7. Diffractive Audit Summary
     diff_audit = state.get("diffractive_audit")
     diff_desc = state.get("diffractive_audit_description")
@@ -92,7 +93,7 @@ def _build_reflection_hints(state: dict) -> List[str]:
         if diff_desc:
             audit_text += f"\nDescription: {diff_desc}"
         hints.append(audit_text)
-        
+
     return hints
 
 
@@ -135,9 +136,9 @@ async def _recover_context_from_steps(orch, task_id: str) -> str:
             return ""
 
         consolidate_steps = [
-            s for s in all_steps
-            if s.get("step_type") in ("reflect", "consolidating")
-            and s.get("status") == "completed"
+            s
+            for s in all_steps
+            if s.get("step_type") in ("reflect", "consolidating") and s.get("status") == "completed"
         ]
         consolidate_steps.sort(key=lambda s: s.get("step_number", 0), reverse=True)
 
@@ -155,11 +156,7 @@ async def _recover_context_from_steps(orch, task_id: str) -> str:
                     if formatted and formatted != "(none)":
                         parts.append(f"Prior Consolidation Report (from step records):\n{formatted}")
 
-        digest_steps = [
-            s for s in all_steps
-            if s.get("step_type") == "digest"
-            and s.get("status") == "completed"
-        ]
+        digest_steps = [s for s in all_steps if s.get("step_type") == "digest" and s.get("status") == "completed"]
         digest_steps.sort(key=lambda s: s.get("step_number", 0))
 
         if digest_steps:
@@ -177,7 +174,9 @@ async def _recover_context_from_steps(orch, task_id: str) -> str:
                             findings.append(item)
                             seen.add(item)
             if findings:
-                parts.append("Prior Research Findings (reconstructed from steps):\n" + "\n".join(f"- {f}" for f in findings))
+                parts.append(
+                    "Prior Research Findings (reconstructed from steps):\n" + "\n".join(f"- {f}" for f in findings)
+                )
 
     except Exception:
         logger.warning("Failed to recover prior context from steps for %s", task_id[:8], exc_info=True)
@@ -185,8 +184,9 @@ async def _recover_context_from_steps(orch, task_id: str) -> str:
     return "\n\n".join(parts)
 
 
-async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int, budget: float,
-                          previous_context: str = "", step_id: str = "") -> dict:
+async def run_plan_generation(
+    orch, task_id: str, objective: str, max_depth: int, budget: float, previous_context: str = "", step_id: str = ""
+) -> dict:
     """Core plan generation logic migrated from legacy phases.py."""
     prompt_data = get_prompts_dict("research/orchestrator_planner.yaml")
 
@@ -197,13 +197,11 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
     if conversation_id:
         try:
             from backend.services.research.context_builder import ResearchContextBuilder
+
             builder = ResearchContextBuilder(orch._state)
             memory_block = await builder.build_memory_context_block(conversation_id)
             if memory_block:
-                previous_context = (
-                    previous_context + "\n\n" + memory_block
-                    if previous_context else memory_block
-                )
+                previous_context = previous_context + "\n\n" + memory_block if previous_context else memory_block
                 logger.info("Injected conversation memory into planning context for task %s", task_id[:8])
         except Exception as e:
             logger.warning("Failed to inject memory context for planning: %s", e)
@@ -217,6 +215,7 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
         # Standardized prompt construction via ResearchContextBuilder
         try:
             from backend.services.research.context_builder import ResearchContextBuilder
+
             builder = ResearchContextBuilder(orch._state)
             persona = await builder.build_orchestration_context(objective)
         except Exception:
@@ -226,7 +225,7 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
         system_text = persona + "\n\n" + prompt_data.get("system", "")
         fmt = {"objective": objective, "max_depth": max_depth, "budget_limit_usd": budget}
         user_template = prompt_data.get("user", "")
-        
+
         s = orch._get_state(task_id)
         prior_summary = _build_prior_cycle_summary(s)
         if not prior_summary:
@@ -239,20 +238,24 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
         if reflection_hints:
             hints_text = "\n\n### Meta-Cognitive Feedback:\n" + "\n\n".join(reflection_hints)
             combined_context = (combined_context + hints_text) if combined_context else hints_text.strip()
-            
+
         if combined_context:
             fmt["previous_context"] = combined_context
             user_template = prompt_data.get("user_with_context", user_template)
-            
+
         user_text = user_template.format(**fmt)
         if prompt_data.get("anti_mastery"):
             system_text = apply_anti_mastery_filter(system_text)
             user_text = apply_anti_mastery_filter(user_text)
         cache = orch._load_cache(task_id)
         cache["planning"] = {
-            "phase": "planning", "persona": persona, "objective": objective,
-            "max_depth": max_depth, "budget_limit_usd": budget,
-            "system_prompt": system_text, "user_prompt": user_text,
+            "phase": "planning",
+            "persona": persona,
+            "objective": objective,
+            "max_depth": max_depth,
+            "budget_limit_usd": budget,
+            "system_prompt": system_text,
+            "user_prompt": user_text,
             "temperature": prompt_data.get("temperature", 0.4),
             "max_tokens": prompt_data.get("max_tokens", 1024),
             "cached_at": now_utc_str(),
@@ -263,9 +266,15 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
     try:
         llm = getattr(orch._state, "llm_provider", None)
         if llm:
-            orch._log_meta(task_id, "orchestrator_plan_prompt", {
-                "system_prompt": system_text[:8000], "user_prompt": user_text[:8000],
-            }, step_id=step_id or None)
+            orch._log_meta(
+                task_id,
+                "orchestrator_plan_prompt",
+                {
+                    "system_prompt": system_text[:8000],
+                    "user_prompt": user_text[:8000],
+                },
+                step_id=step_id or None,
+            )
             gen_kwargs: dict = {
                 "temperature": prompt_data.get("temperature", 0.4),
                 "max_tokens": prompt_data.get("max_tokens", 1024),
@@ -274,8 +283,14 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
             if isinstance(thinking_cfg, dict) and thinking_cfg.get("enabled"):
                 gen_kwargs["thinking_override"] = True
                 gen_kwargs["reasoning_effort"] = thinking_cfg.get("effort", "high")
-            resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
-                expect_json=True, fallback_value=plan_json, **gen_kwargs)
+            resp = await generate_unified(
+                llm,
+                system_prompt=system_text,
+                user_prompt=user_text,
+                expect_json=True,
+                fallback_value=plan_json,
+                **gen_kwargs,
+            )
             orch._log_llm_response(task_id, "orchestrator_plan_response", resp, step_id=step_id or None)
             result = resp.get("json_data") or resp.get("content") or {}
             if isinstance(result, str):
@@ -284,18 +299,25 @@ async def run_plan_generation(orch, task_id: str, objective: str, max_depth: int
                 config_orchestrator = orch._state.config.get("research_orchestrator") or {}
                 max_queries = config_orchestrator.get("max_queries", 4)
                 if len(result["search_queries"]) > max_queries:
-                    logger.info("Enforcing a maximum of %d planned search queries. Truncating from %d.", max_queries, len(result["search_queries"]))
+                    logger.info(
+                        "Enforcing a maximum of %d planned search queries. Truncating from %d.",
+                        max_queries,
+                        len(result["search_queries"]),
+                    )
                     result["search_queries"] = result["search_queries"][:max_queries]
                 plan_json = result
     except Exception as e:
         logger.warning("Plan generation failed, using default: %s", e)
 
     plan_id = str(uuid.uuid4())
-    orch.plan_repo.create({
-        "id": plan_id, "task_id": task_id,
-        "plan_json": json.dumps(plan_json, ensure_ascii=False),
-        "status": "active",
-    })
+    orch.plan_repo.create(
+        {
+            "id": plan_id,
+            "task_id": task_id,
+            "plan_json": json.dumps(plan_json, ensure_ascii=False),
+            "status": "active",
+        }
+    )
     return {"id": plan_id, **plan_json}
 
 
@@ -305,7 +327,6 @@ class PlanStep(BaseResearchStep):
         return "plan"
 
     async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
-        task_id = envelope.task_id
         objective = envelope.objective
         max_depth = envelope.max_depth
         budget = envelope.budget
@@ -316,14 +337,14 @@ class PlanStep(BaseResearchStep):
 
         if inject_file_id and previous_context:
             previous_context = (
-                "[Injected document will be digested against the objective "
-                "in the next phase.]\n\n" + previous_context
+                "[Injected document will be digested against the objective in the next phase.]\n\n" + previous_context
             )
 
         prompt_data = get_prompts_dict("research/orchestrator_planner.yaml")
 
         try:
             from backend.services.research.context_builder import ResearchContextBuilder
+
             builder = ResearchContextBuilder(orch._state)
             persona = await builder.build_orchestration_context(objective)
         except Exception:
@@ -363,7 +384,9 @@ class PlanStep(BaseResearchStep):
             "budget_limit_usd": budget,
             "system_prompt": system_text,
             "user_prompt": user_text,
-            "model": getattr(orch._state, "llm_provider", None) and getattr(orch._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "model": getattr(orch._state, "llm_provider", None)
+            and getattr(orch._state.llm_provider, "model_id", "(auto)")
+            or "(auto)",
             "temperature": prompt_data.get("temperature", 0.4),
             "max_tokens": prompt_data.get("max_tokens", 1024),
             "cached_at": now_utc_str(),
@@ -384,13 +407,11 @@ class PlanStep(BaseResearchStep):
 
         if inject_file_id and previous_context:
             previous_context = (
-                "[Injected document will be digested against the objective "
-                "in the next phase.]\n\n" + previous_context
+                "[Injected document will be digested against the objective in the next phase.]\n\n" + previous_context
             )
 
         plan = await run_plan_generation(
-            orch, task_id, objective, max_depth, budget,
-            previous_context=previous_context, step_id=step_id
+            orch, task_id, objective, max_depth, budget, previous_context=previous_context, step_id=step_id
         )
 
         # Save to database step log via orchestrator for consistent numbering
@@ -398,18 +419,25 @@ class PlanStep(BaseResearchStep):
             s = orch._get_state(task_id)
             s["plan_id"] = plan["id"]
             step_id = orch._create_or_update_step(s, task_id, "plan")
-            orch.step_repo.update(step_id, status="completed",
+            orch.step_repo.update(
+                step_id,
+                status="completed",
                 started_at=now_utc_str(),
                 result_summary=f"{len(plan.get('search_queries', []))} queries planned",
                 step_data=json.dumps({"plan": plan, "depth": current_depth}, default=str, ensure_ascii=False),
             )
 
-        orch._log_meta(task_id, "orchestrator_plan", {
-            "plan": plan,
-            "previous_context_injected": bool(previous_context),
-            "previous_context_len": len(previous_context) if previous_context else 0,
-            "max_depth": max_depth,
-        }, step_id=step_id)
+        orch._log_meta(
+            task_id,
+            "orchestrator_plan",
+            {
+                "plan": plan,
+                "previous_context_injected": bool(previous_context),
+                "previous_context_len": len(previous_context) if previous_context else 0,
+                "max_depth": max_depth,
+            },
+            step_id=step_id,
+        )
 
         out_payload = PlanPayload(
             previous_context=payload.previous_context,
@@ -417,7 +445,7 @@ class PlanStep(BaseResearchStep):
             goal=plan.get("goal", objective),
             search_queries=plan.get("search_queries", [objective]),
             n_results_per_query=plan.get("n_results_per_query", 3),
-            estimated_depth=plan.get("estimated_depth", 1)
+            estimated_depth=plan.get("estimated_depth", 1),
         )
 
         return StepOutput(
@@ -426,5 +454,5 @@ class PlanStep(BaseResearchStep):
             payload=out_payload,
             signal_flags={"plan_id": plan["id"]},
             step_ids=[step_id],
-            transition_rationale=f"Planned {len(plan.get('search_queries', []))} search queries for depth {current_depth}."
+            transition_rationale=f"Planned {len(plan.get('search_queries', []))} search queries for depth {current_depth}.",
         )

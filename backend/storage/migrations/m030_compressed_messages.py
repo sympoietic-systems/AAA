@@ -4,6 +4,7 @@ Each row represents a batch of messages that exited the floating window together
 The compressed_block contains an LLM-produced dense summary preserving key
 decisions, novel concepts, tonal shifts, unresolved tensions, and factual claims.
 """
+
 import logging
 
 logger = logging.getLogger(__name__)

@@ -245,7 +245,15 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     if pask_health is not None and pask_health < 0.15:
         flags.append("pask_health_critical")
 
-    critical = {"high_similarity", "entropy_collapse", "agent_self_loop", "mutual_deadlock", "phase_disruption", "paskian_boredom", "pask_health_critical"}
+    critical = {
+        "high_similarity",
+        "entropy_collapse",
+        "agent_self_loop",
+        "mutual_deadlock",
+        "phase_disruption",
+        "paskian_boredom",
+        "pask_health_critical",
+    }
 
     if any(f in critical for f in flags):
         vitality_state = "disrupted"

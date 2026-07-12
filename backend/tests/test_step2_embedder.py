@@ -1,9 +1,12 @@
+import asyncio
+import sys
 from pathlib import Path
-import sys, asyncio
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.modules.embedder import EmbeddingService, EmbedderModule
+from backend.modules.embedder import EmbedderModule, EmbeddingService  # noqa: E402
 
 
 async def test_embedder():
@@ -29,5 +32,5 @@ async def test_embedder():
     print(f"Blob size: {len(result.get('embedding', b''))} bytes")
     print("All embedding tests passed!")
 
-import numpy as np
+
 asyncio.run(test_embedder())

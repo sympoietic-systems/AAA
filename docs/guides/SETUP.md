@@ -247,6 +247,20 @@ AgentName v0.1.0 — type a message below.
 
 Type a message and press Enter. The agent should respond within a few seconds.
 
+## Linting & Formatting
+
+```bash
+# Python linting (ruff)
+ruff check backend/            # Check for issues
+ruff check backend/ --fix      # Auto-fix safe issues
+ruff format backend/           # Apply consistent formatting
+
+# Pre-commit hooks (optional — auto-check on every commit)
+pre-commit install
+```
+
+Ruff is configured in `pyproject.toml` (120-char lines, double quotes, Python 3.11+ target). It replaces flake8, isort, pyupgrade, and black.
+
 ## Verify Endpoints (optional)
 
 ```bash

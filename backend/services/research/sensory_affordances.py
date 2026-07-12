@@ -9,8 +9,9 @@ Firecrawl and Crawl4AI are optional upgrades.
 See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 9.
 """
 
+import contextlib
 import logging
-from typing import Optional, Any
+from typing import Any
 
 import httpx
 
@@ -19,27 +20,33 @@ logger = logging.getLogger("aaa.sensory_affordances")
 
 # ── Custom Exceptions ───────────────────────────────────────────────
 
+
 class SensoryAffordanceError(Exception):
     """Base exception for sensory access failures."""
+
     pass
 
 
 class ShutterClosedError(SensoryAffordanceError):
     """The target has denied access (403, anti-bot wall)."""
+
     pass
 
 
 class RateLimitError(SensoryAffordanceError):
     """Rate limited — try again later or upgrade tier."""
+
     pass
 
 
 class BackendUnavailableError(SensoryAffordanceError):
     """A required backend is not configured."""
+
     pass
 
 
 # ── Configuration ───────────────────────────────────────────────────
+
 
 def _get_jina_config(config: dict) -> dict:
     return config.get("sensory_affordances", {}).get("jina_reader", {})
@@ -55,10 +62,11 @@ def _get_firecrawl_config(config: dict) -> dict:
 
 # ── Tier 1: Jina Reader (FREE — no API key needed) ──────────────────
 
+
 async def fetch_via_jina(
     url: str,
-    config: Optional[dict] = None,
-    api_key: Optional[str] = None,
+    config: dict | None = None,
+    api_key: str | None = None,
 ) -> str:
     """Jina Reader — prepend r.jina.ai to any URL for clean markdown.
 
@@ -98,10 +106,12 @@ async def fetch_via_jina(
 
 # ── Tier 2: Crawl4AI (SELF-HOSTED — open source, free) ─────────────
 
+
 def is_crawl4ai_available() -> bool:
     """Check if Crawl4AI is installed and Playwright browsers are available."""
     try:
         import crawl4ai  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -109,7 +119,7 @@ def is_crawl4ai_available() -> bool:
 
 async def fetch_via_crawl4ai(
     url: str,
-    config: Optional[dict] = None,
+    config: dict | None = None,
 ) -> str:
     """Crawl4AI — self-hosted, Playwright-based web scraper.
 
@@ -125,12 +135,11 @@ async def fetch_via_crawl4ai(
 
     if not is_crawl4ai_available():
         raise BackendUnavailableError(
-            "Crawl4AI not installed. Run: pip install crawl4ai && "
-            "python -m playwright install"
+            "Crawl4AI not installed. Run: pip install crawl4ai && python -m playwright install"
         )
 
     try:
-        from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
+        from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 
         browser_cfg = BrowserConfig(
             headless=True,
@@ -167,7 +176,7 @@ async def fetch_via_crawl4ai(
             return result.markdown if result and result.markdown else ""
 
     except ImportError:
-        raise BackendUnavailableError("Crawl4AI import failed despite availability check")
+        raise BackendUnavailableError("Crawl4AI import failed despite availability check") from None
     except Exception as e:
         logger.warning("Crawl4AI failed for %s: %s", url, e)
         return ""
@@ -175,10 +184,11 @@ async def fetch_via_crawl4ai(
 
 # ── Tier 3: Firecrawl (FREE TIER → paid upgrade) ───────────────────
 
+
 async def search_via_firecrawl(
     query: str,
     api_key: str,
-    config: Optional[dict] = None,
+    config: dict | None = None,
     limit: int = 5,
 ) -> dict[str, Any]:
     """Firecrawl Search — web search with structured results.
@@ -213,7 +223,7 @@ async def search_via_firecrawl(
 async def crawl_via_firecrawl(
     url: str,
     api_key: str,
-    config: Optional[dict] = None,
+    config: dict | None = None,
     limit: int = 10,
 ) -> dict[str, Any]:
     """Firecrawl Crawl — follows internal links, extracts site sections."""
@@ -243,11 +253,12 @@ async def crawl_via_firecrawl(
 
 # ── Unified Fetch Interface ─────────────────────────────────────────
 
+
 async def select_and_fetch(
     url_or_query: str,
     task_type: str = "single_url",
-    config: Optional[dict] = None,
-    api_keys: Optional[dict[str, str]] = None,
+    config: dict | None = None,
+    api_keys: dict[str, str] | None = None,
 ) -> str:
     """Tiered backend selection with graceful fallback.
 
@@ -269,10 +280,11 @@ async def select_and_fetch(
     if url_or_query.lower().split("?")[0].endswith(".pdf") or task_type == "pdf":
         logger.info("PDF URL detected, downloading and extracting text: %s", url_or_query)
         try:
-            from backend.modules.digester import SimpleChunkDigester
-            from tempfile import NamedTemporaryFile
             import os
             from pathlib import Path
+            from tempfile import NamedTemporaryFile
+
+            from backend.modules.digester import SimpleChunkDigester
 
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 response = await client.get(url_or_query)
@@ -291,15 +303,12 @@ async def select_and_fetch(
                 else:
                     logger.warning("Extracted PDF text is empty: %s", url_or_query)
             finally:
-                try:
+                with contextlib.suppress(Exception):
                     os.unlink(tmp_path)
-                except Exception:
-                    pass
         except Exception as e:
             logger.error("Failed to download and extract PDF from URL %s: %s", url_or_query, e)
 
     sa_config = cfg.get("sensory_affordances", {})
-    strategy = sa_config.get("strategy", "tiered")
     routing = sa_config.get("task_type_routing", {})
     keys = api_keys or {}
 
@@ -332,20 +341,13 @@ async def select_and_fetch(
                 if not enabled or "firecrawl" not in keys:
                     continue
                 if task_type == "web_search":
-                    search_result = await search_via_firecrawl(
-                        url_or_query, keys["firecrawl"], config=cfg
-                    )
+                    search_result = await search_via_firecrawl(url_or_query, keys["firecrawl"], config=cfg)
                     if search_result.get("success", True) and search_result.get("data"):
                         # Concatenate search results as text
-                        texts = [
-                            d.get("markdown", d.get("content", ""))
-                            for d in search_result["data"]
-                        ]
+                        texts = [d.get("markdown", d.get("content", "")) for d in search_result["data"]]
                         return "\n\n---\n\n".join(filter(None, texts))
                 elif task_type == "single_url":
-                    crawl_result = await crawl_via_firecrawl(
-                        url_or_query, keys["firecrawl"], config=cfg, limit=1
-                    )
+                    crawl_result = await crawl_via_firecrawl(url_or_query, keys["firecrawl"], config=cfg, limit=1)
                     if crawl_result.get("success"):
                         data = crawl_result.get("data", {})
                         if isinstance(data, dict):
@@ -361,6 +363,4 @@ async def select_and_fetch(
             errors.append(str(e))
             continue
 
-    raise SensoryAffordanceError(
-        f"All backends exhausted for {url_or_query}: {'; '.join(errors)}"
-    )
+    raise SensoryAffordanceError(f"All backends exhausted for {url_or_query}: {'; '.join(errors)}")

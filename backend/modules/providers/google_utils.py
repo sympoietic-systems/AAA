@@ -1,7 +1,5 @@
 """Google Gemini API utilities — parameter stripping and body building."""
 
-from typing import Any
-
 
 def sanitize_google_params(merged_params: dict) -> dict:
     """Strip unsupported parameters from a merged params dict for Gemini.

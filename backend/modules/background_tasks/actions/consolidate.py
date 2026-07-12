@@ -36,5 +36,3 @@ class ConsolidateAction(BackgroundAction):
         )
 
         return {"content": result.get("content", ""), "model": result.get("model", "")}
-
-

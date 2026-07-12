@@ -15,24 +15,24 @@ import re
 # 1. Agent cites a section ("see §2.3", "section 2.1") — checked against the
 #    heading-paths actually present in the retrieval set by the caller.
 _SECTION_CITATION_RE = re.compile(
-    r'(?:see\s+)?(?:§|section|sec\.?|chapter|ch\.?)\s*(\d+(?:\.\d+)*)',
+    r"(?:see\s+)?(?:§|section|sec\.?|chapter|ch\.?)\s*(\d+(?:\.\d+)*)",
     re.IGNORECASE,
 )
 
 # 2. Agent asks for more of a section / the surrounding argument.
 _MORE_CONTEXT_RE = re.compile(
-    r'(?:more\s+(?:from|of)\s+(?:section|§|chapter)'
-    r'|surrounding\s+(?:argument|context|section)'
-    r'|rest\s+of\s+(?:the\s+)?(?:section|chapter|argument))',
+    r"(?:more\s+(?:from|of)\s+(?:section|§|chapter)"
+    r"|surrounding\s+(?:argument|context|section)"
+    r"|rest\s+of\s+(?:the\s+)?(?:section|chapter|argument))",
     re.IGNORECASE,
 )
 
 # 3. Agent's plan wants to follow the thread / drill into adjacent structure.
 _FOLLOW_THREAD_RE = re.compile(
-    r'(?:follow\s+the\s+thread'
-    r'|adjacent\s+(?:section|topic|region)s?'
-    r'|drill\s+(?:down|into)'
-    r'|preceding\s+section|next\s+section|previous\s+section)',
+    r"(?:follow\s+the\s+thread"
+    r"|adjacent\s+(?:section|topic|region)s?"
+    r"|drill\s+(?:down|into)"
+    r"|preceding\s+section|next\s+section|previous\s+section)",
     re.IGNORECASE,
 )
 
@@ -62,7 +62,7 @@ def detect_structural_demand(
     if retrieved_heading_paths:
         for path in retrieved_heading_paths:
             for seg in path:
-                for m in re.finditer(r'\d+(?:\.\d+)*', str(seg)):
+                for m in re.finditer(r"\d+(?:\.\d+)*", str(seg)):
                     retrieved_tokens.add(m.group(0))
 
     unmet_citation = bool(cited) and not cited.issubset(retrieved_tokens)

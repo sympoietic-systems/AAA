@@ -17,6 +17,6 @@ async def get_scheduler_status(request: Request):
             "belief_turns_found": 0,
             "belief_turns_completed": 0,
             "belief_turns_failed": 0,
-            "error_details": "No startup scheduler registered on app state"
+            "error_details": "No startup scheduler registered on app state",
         }
     return scheduler.get_status()

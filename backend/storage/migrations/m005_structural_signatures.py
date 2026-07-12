@@ -1,3 +1,4 @@
+import contextlib
 import sqlite3
 
 
@@ -7,7 +8,5 @@ def up(conn):
         "ALTER TABLE conversation_log ADD COLUMN structural_justification TEXT",
         "ALTER TABLE perception_sediment ADD COLUMN structural_signature BLOB",
     ]:
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute(sql)
-        except sqlite3.OperationalError:
-            pass

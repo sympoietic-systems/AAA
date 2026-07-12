@@ -1,5 +1,7 @@
 import logging
+
 from backend.modules.llm_client import BaseLLMProvider, generate_unified
+
 from ..base import BackgroundAction
 
 logger = logging.getLogger(__name__)
@@ -47,7 +49,7 @@ class DreamTopicDecisionAction(BackgroundAction):
 
         user_prompt = (
             f"Proposed Dream Action: {action}\n"
-            f"Proposed Dream Prompt: \"{prompt_text}\"\n\n"
+            f'Proposed Dream Prompt: "{prompt_text}"\n\n'
             f"Currently available dream conversations:\n"
             f"{convo_list_str}\n\n"
             f"Choose the target conversation and decision."
@@ -67,6 +69,5 @@ class DreamTopicDecisionAction(BackgroundAction):
         return {
             "content": result.get("content", ""),
             "model": result.get("model", ""),
-            "json_data": result.get("json_data")
+            "json_data": result.get("json_data"),
         }
-

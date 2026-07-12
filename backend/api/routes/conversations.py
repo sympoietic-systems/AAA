@@ -1,25 +1,24 @@
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.api.deps import require_agent_flux, require_conversation, get_conversation_repo, get_app_state
+from backend.api.deps import require_agent_flux, require_conversation
 from backend.api.schemas import (
+    ChatResponse,
+    CommitBranchRequest,
+    CommitLinkRequest,
     ConversationInfo,
     ConversationListResponse,
-    ConversationUpdateRequest,
-    CommitBranchRequest,
     ConversationTreeResponse,
-    TreeNode,
-    TreeLink,
-    ChatResponse,
-    CommitLinkRequest,
+    ConversationUpdateRequest,
     SpectralSuggestion,
+    TreeLink,
+    TreeNode,
 )
+from backend.metabolisation.consolidation import generate_human_summary_text
 from backend.services.conversation import ConversationService
 from backend.services.title import TitleService
 from backend.utils.token_counter import estimate_tokens
-from backend.metabolisation.consolidation import generate_human_summary_text
 
 logger = logging.getLogger(__name__)
 
@@ -29,17 +28,17 @@ router = APIRouter()
 @router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
     request: Request,
-    tag: Optional[str] = None,
-    search: Optional[str] = None,
-    limit: Optional[int] = None,
-    offset: Optional[int] = None,
+    tag: str | None = None,
+    search: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
 ):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     checkpoint_repo = getattr(state, "checkpoint_repo", None)
     if not conv_repo:
         return ConversationListResponse(conversations=[], total_count=0, has_more=False)
-    
+
     if limit is not None and offset is None:
         offset = 0
 
@@ -55,11 +54,7 @@ async def list_conversations(
     if limit is not None and offset is not None:
         has_more = (offset + limit) < total_count
 
-    return ConversationListResponse(
-        conversations=res_convos,
-        total_count=total_count,
-        has_more=has_more
-    )
+    return ConversationListResponse(conversations=res_convos, total_count=total_count, has_more=has_more)
 
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationInfo)
@@ -73,9 +68,7 @@ async def get_conversation(conversation_id: str, request: Request):
 
 
 @router.patch("/conversations/{conversation_id}", response_model=ConversationInfo)
-async def update_conversation(
-    conversation_id: str, body: ConversationUpdateRequest, request: Request
-):
+async def update_conversation(conversation_id: str, body: ConversationUpdateRequest, request: Request):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
     checkpoint_repo = getattr(state, "checkpoint_repo", None)
@@ -91,7 +84,7 @@ async def delete_conversation(conversation_id: str, request: Request):
 
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
-    conv = require_conversation(conv_repo, conversation_id)
+    _conv = require_conversation(conv_repo, conversation_id)
     conv_repo.delete(conversation_id)
     return {"status": "deleted", "id": conversation_id}
 
@@ -154,8 +147,11 @@ async def generate_human_summary(conversation_id: str, request: Request):
         else:
             total_count = len(ancestor_msgs)
             checkpoint_repo.save(
-                conversation_id, total_count, "",
-                human_summary=human_summary, message_id=leaf_message_id,
+                conversation_id,
+                total_count,
+                "",
+                human_summary=human_summary,
+                message_id=leaf_message_id,
             )
 
     info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, conv)
@@ -187,7 +183,7 @@ async def commit_branch(conversation_id: str, body: CommitBranchRequest, request
     state = request.app.state
     repo = state.message_repo
     conv_repo = getattr(state, "conversation_repo", None)
-    
+
     if conv_repo:
         conv = conv_repo.get(conversation_id)
         if not conv:
@@ -197,7 +193,7 @@ async def commit_branch(conversation_id: str, body: CommitBranchRequest, request
     embedding = b""
     embedding_model = "unknown"
     embedding_dim = 0
-    
+
     embedder = getattr(state, "embedder", None)
     if embedder and embedder.service.is_loaded:
         try:
@@ -207,7 +203,7 @@ async def commit_branch(conversation_id: str, body: CommitBranchRequest, request
             embedding_dim = embedder.service.dim
         except Exception:
             logger.warning("Failed to embed committed branch message")
-            
+
     msg = repo.insert(
         speaker=body.speaker,
         content=body.content,
@@ -219,7 +215,7 @@ async def commit_branch(conversation_id: str, body: CommitBranchRequest, request
         content_tokens=estimate_tokens(body.content),
         parent_message_id=body.parent_message_id,
     )
-    
+
     return ChatResponse(
         id=msg.id,
         timestamp=msg.timestamp,
@@ -237,7 +233,7 @@ async def get_conversation_tree(conversation_id: str, request: Request):
     state = request.app.state
     repo = state.message_repo
     conv_repo = getattr(state, "conversation_repo", None)
-    
+
     if conv_repo:
         conv = conv_repo.get(conversation_id)
         if not conv:
@@ -247,26 +243,30 @@ async def get_conversation_tree(conversation_id: str, request: Request):
     nodes = []
     for m in raw_msgs:
         trimmed_content = m.content[:120] + "..." if len(m.content) > 120 else m.content
-        nodes.append(TreeNode(
-            id=m.id,
-            speaker=m.speaker,
-            content=trimmed_content,
-            parent_message_id=m.parent_message_id,
-            timestamp=m.timestamp,
-        ))
-        
+        nodes.append(
+            TreeNode(
+                id=m.id,
+                speaker=m.speaker,
+                content=trimmed_content,
+                parent_message_id=m.parent_message_id,
+                timestamp=m.timestamp,
+            )
+        )
+
     raw_links = repo.get_message_links(conversation_id)
     links = []
-    for l in raw_links:
-        links.append(TreeLink(
-            id=l.id,
-            source_id=l.source_id,
-            target_id=l.target_id,
-            link_type=l.link_type,
-            status=l.status,
-            justification=l.justification,
-        ))
-        
+    for link in raw_links:
+        links.append(
+            TreeLink(
+                id=link.id,
+                source_id=link.source_id,
+                target_id=link.target_id,
+                link_type=link.link_type,
+                status=link.status,
+                justification=link.justification,
+            )
+        )
+
     return ConversationTreeResponse(nodes=nodes, links=links)
 
 
@@ -274,7 +274,7 @@ async def get_conversation_tree(conversation_id: str, request: Request):
 async def create_resonance_link(conversation_id: str, body: CommitLinkRequest, request: Request):
     state = request.app.state
     repo = state.message_repo
-    
+
     link = repo.add_message_link(
         source_id=body.source_id,
         target_id=body.target_id,
@@ -377,30 +377,31 @@ async def export_conversation(conversation_id: str, request: Request):
     )
 
 
-@router.get("/conversations/{conversation_id}/messages/{message_id}/spectral-suggestions", response_model=list[SpectralSuggestion])
+@router.get(
+    "/conversations/{conversation_id}/messages/{message_id}/spectral-suggestions",
+    response_model=list[SpectralSuggestion],
+)
 async def get_spectral_suggestions(conversation_id: str, message_id: int, request: Request, threshold: float = 0.70):
     state = request.app.state
     repo = state.message_repo
-    
+
     # Get ancestor path for this message
     path_msgs = repo.get_ancestor_path(message_id)
     ancestor_ids = [m.id for m in path_msgs]
-    
+
     raw_suggestions = repo.get_parallel_messages_by_similarity(
-        conversation_id=conversation_id,
-        message_id=message_id,
-        ancestor_ids=ancestor_ids,
-        threshold=threshold,
-        limit=5
+        conversation_id=conversation_id, message_id=message_id, ancestor_ids=ancestor_ids, threshold=threshold, limit=5
     )
-    
+
     suggestions = []
     for s in raw_suggestions:
-        suggestions.append(SpectralSuggestion(
-            message_id=s["message_id"],
-            speaker=s["speaker"],
-            content=s["content"],
-            similarity=s["similarity"],
-            timestamp=s["timestamp"],
-        ))
+        suggestions.append(
+            SpectralSuggestion(
+                message_id=s["message_id"],
+                speaker=s["speaker"],
+                content=s["content"],
+                similarity=s["similarity"],
+                timestamp=s["timestamp"],
+            )
+        )
     return suggestions

@@ -26,10 +26,7 @@ class DreamPromptMixin:
             try:
                 if provider:
                     res = await generate_unified(
-                        provider,
-                        system_prompt=system_prompt,
-                        user_prompt=user_prompt,
-                        temperature=0.8
+                        provider, system_prompt=system_prompt, user_prompt=user_prompt, temperature=0.8
                     )
                     generated = res.get("content", "").strip()
                 else:

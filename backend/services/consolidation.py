@@ -20,13 +20,17 @@ class ConsolidationService:
                     lines.append(f"{label}: {content}")
                 text = "\n".join(lines)
 
-                result = await engine.run("consolidate", {
-                    "text": text,
-                    "context": {"messages": [
-                        {"speaker": r.get("speaker", "unknown"), "content": r.get("content", "")}
-                        for r in rows
-                    ]},
-                })
+                result = await engine.run(
+                    "consolidate",
+                    {
+                        "text": text,
+                        "context": {
+                            "messages": [
+                                {"speaker": r.get("speaker", "unknown"), "content": r.get("content", "")} for r in rows
+                            ]
+                        },
+                    },
+                )
 
                 summary = result.get("content", "").strip()
                 if summary and checkpoint_repo:

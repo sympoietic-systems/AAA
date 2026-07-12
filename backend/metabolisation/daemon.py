@@ -10,24 +10,16 @@ import json
 import logging
 import time
 from collections import deque
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict
+from datetime import UTC, datetime, timedelta
 
-from backend.storage.repository import (
-    MessageRepository,
-    BeliefRepository,
-    ConversationRepository,
-    SemanticKnotRepository,
-)
-from backend.modules.structural_engine import CompositeStructuralScorer
-from backend.utils.similarity import cosine_similarity
-from backend.metabolisation.mass_decay import MassDecayMixin
-from backend.metabolisation.dream_context import DreamContextMixin
-from backend.metabolisation.dream_prompts import DreamPromptMixin
-from backend.metabolisation.dream_executor import DreamExecutorMixin
 from backend.metabolisation.consolidation import ConsolidationMixin
-from backend.metabolisation.skill_metabolism import SkillMetabolismMixin
+from backend.metabolisation.dream_context import DreamContextMixin
+from backend.metabolisation.dream_executor import DreamExecutorMixin
+from backend.metabolisation.dream_prompts import DreamPromptMixin
 from backend.metabolisation.dream_research import DreamResearchMixin
+from backend.metabolisation.mass_decay import MassDecayMixin
+from backend.metabolisation.skill_metabolism import SkillMetabolismMixin
+from backend.utils.similarity import cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -78,17 +70,17 @@ class AutopoieticDreamDaemon(
         self.short_window_hours = daemon_cfg.get("short_window_hours", 8)
         self.short_window_max = daemon_cfg.get("short_window_max", 2)
         self.dream_counter = 0
-        self.last_reset_day = datetime.now(timezone.utc).day
+        self.last_reset_day = datetime.now(UTC).day
 
         # State tracking
         self.last_dream_time = 0.0
         self.last_drift_time = 0.0
         self.is_running = False
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
 
         # Dream telemetry
-        self.last_dream_action: Optional[str] = None
-        self.dream_action_counts: Dict[str, int] = {}
+        self.last_dream_action: str | None = None
+        self.dream_action_counts: dict[str, int] = {}
         self._recent_prompt_hashes: deque = deque(maxlen=self.prompt_hash_window)
 
     def start(self) -> None:
@@ -108,15 +100,18 @@ class AutopoieticDreamDaemon(
     def get_status(self) -> dict:
         now = time.time()
         last_msg_ts = self.message_repo.get_last_message_timestamp()
-        idle_time = now - last_msg_ts.replace(tzinfo=timezone.utc).timestamp() if last_msg_ts else 0.0
+        idle_time = now - last_msg_ts.replace(tzinfo=UTC).timestamp() if last_msg_ts else 0.0
 
         from backend.metabolisation.daemon_trigger_signal import queue_depth
+
         return {
             "enabled": self.enabled,
             "running": self.is_running,
             "idle_time_seconds": round(idle_time, 2),
             "idle_threshold_seconds": self.idle_threshold,
-            "last_dream_time": datetime.fromtimestamp(self.last_dream_time, tz=timezone.utc).isoformat() if self.last_dream_time else None,
+            "last_dream_time": datetime.fromtimestamp(self.last_dream_time, tz=UTC).isoformat()
+            if self.last_dream_time
+            else None,
             "dreams_today": self.dream_counter,
             "max_daily_dreams": self.max_daily_dreams,
             "short_window_hours": self.short_window_hours,
@@ -194,8 +189,11 @@ class AutopoieticDreamDaemon(
                     if engine:
                         result = await engine._atrophy_beliefs("symbia")
                         if result.get("atrophied", 0) > 0:
-                            logger.info("Daemon atrophy cycle: %d beliefs decayed (%d collapsed)",
-                                        result["atrophied"], result.get("collapsed", 0))
+                            logger.info(
+                                "Daemon atrophy cycle: %d beliefs decayed (%d collapsed)",
+                                result["atrophied"],
+                                result.get("collapsed", 0),
+                            )
                 except Exception as e:
                     logger.exception("Error in daemon atrophy cycle: %s", e)
             # Periodic ghost ecology (merging, fading, resurrection — independent of dream budget)
@@ -207,8 +205,12 @@ class AutopoieticDreamDaemon(
                         ghost_result = await engine.process_ghost_ecology("symbia")
                         resurrected = await engine.check_ghost_resurrection("symbia")
                         if ghost_result["merged"] > 0 or ghost_result["faded"] > 0 or resurrected > 0:
-                            logger.info("Ghost ecology: merged=%d, faded=%d, resurrected=%d",
-                                        ghost_result["merged"], ghost_result["faded"], resurrected)
+                            logger.info(
+                                "Ghost ecology: merged=%d, faded=%d, resurrected=%d",
+                                ghost_result["merged"],
+                                ghost_result["faded"],
+                                resurrected,
+                            )
                 except Exception as e:
                     logger.error("Ghost ecology error: %s", e)
             try:
@@ -219,7 +221,7 @@ class AutopoieticDreamDaemon(
                 logger.exception("Error in Autopoietic Dream Daemon cycle: %s", e)
             await asyncio.sleep(self.check_interval)
 
-    async def check_and_trigger_dream(self, force: bool = False) -> Optional[dict]:
+    async def check_and_trigger_dream(self, force: bool = False) -> dict | None:
         """Single dream cycle entry point — called once per daemon tick.
 
         Flow (one dream MAX per tick, strict two-tier budget enforcement):
@@ -238,7 +240,7 @@ class AutopoieticDreamDaemon(
         from backend.metabolisation.daemon_trigger_signal import dequeue_dream_trigger, queue_depth
 
         try:
-            now_utc = datetime.now(timezone.utc)
+            now_utc = datetime.now(UTC)
             short_ago = (now_utc - timedelta(hours=self.short_window_hours)).strftime("%Y-%m-%d %H:%M:%S")
             long_ago = (now_utc - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -246,12 +248,15 @@ class AutopoieticDreamDaemon(
             self.dream_counter = self.message_repo.count_dreams_since(long_ago)
             logger.debug(
                 "Daemon budget: %d/%d dreams in %dh, %d/%d dreams in 24h",
-                self.short_counter, self.short_window_max, self.short_window_hours,
-                self.dream_counter, self.max_daily_dreams,
+                self.short_counter,
+                self.short_window_max,
+                self.short_window_hours,
+                self.dream_counter,
+                self.max_daily_dreams,
             )
         except Exception as e:
             logger.warning("Failed to count dreams from database: %s. Falling back to in-memory tracking.", e)
-            current_day = datetime.now(timezone.utc).day
+            current_day = datetime.now(UTC).day
             if current_day != self.last_reset_day:
                 self.dream_counter = 0
                 self.dream_action_counts = {}
@@ -262,7 +267,11 @@ class AutopoieticDreamDaemon(
             pending = queue_depth(self.app_state)
             logger.warning(
                 "Short-window dream budget EXHAUSTED (%d/%d in %dh). %d self-triggered dream(s) queued — next slot frees in rolling %dh window.",
-                self.short_counter, self.short_window_max, self.short_window_hours, pending, self.short_window_hours,
+                self.short_counter,
+                self.short_window_max,
+                self.short_window_hours,
+                pending,
+                self.short_window_hours,
             )
             return None
 
@@ -270,7 +279,9 @@ class AutopoieticDreamDaemon(
             pending = queue_depth(self.app_state)
             logger.warning(
                 "Daily dream budget EXHAUSTED (%d/%d in 24h). %d self-triggered dream(s) queued — budget frees oldest slot in rolling 24h window.",
-                self.dream_counter, self.max_daily_dreams, pending,
+                self.dream_counter,
+                self.max_daily_dreams,
+                pending,
             )
             return None
 
@@ -282,14 +293,19 @@ class AutopoieticDreamDaemon(
             remaining = queue_depth(self.app_state)
             logger.info(
                 "Dream Daemon: consuming self-triggered dream (reason=%s, convo=%s, queue_remaining=%d)",
-                pending_trigger["reason"][:120], pending_trigger["conversation_id"][:8], remaining,
+                pending_trigger["reason"][:120],
+                pending_trigger["conversation_id"][:8],
+                remaining,
             )
             return await self._execute_self_triggered_dream(pending_trigger, now)
 
         # ── STEP 4: Rate-limit gate (normal dreams only) ──
         if not force and (now - self.last_dream_time < self.min_dream_interval):
-            logger.debug("Dream Daemon cooling down. Elapsed: %.1fs, Required: %ds",
-                         now - self.last_dream_time, self.min_dream_interval)
+            logger.debug(
+                "Dream Daemon cooling down. Elapsed: %.1fs, Required: %ds",
+                now - self.last_dream_time,
+                self.min_dream_interval,
+            )
             return None
 
         # ── STEP 5: Idle gate (normal dreams only) ──
@@ -299,12 +315,13 @@ class AutopoieticDreamDaemon(
             return None
 
         # Make timestamp offset-aware
-        last_msg_time = last_msg_ts.replace(tzinfo=timezone.utc).timestamp()
+        last_msg_time = last_msg_ts.replace(tzinfo=UTC).timestamp()
         idle_duration = now - last_msg_time
 
         if not force and idle_duration < self.idle_threshold:
-            logger.debug("System active. User idle duration: %.1fs (threshold: %ds)",
-                         idle_duration, self.idle_threshold)
+            logger.debug(
+                "System active. User idle duration: %.1fs (threshold: %ds)", idle_duration, self.idle_threshold
+            )
             return None
 
         # We are triggered! Execute dream cycle
@@ -383,8 +400,12 @@ class AutopoieticDreamDaemon(
 
         # Resolve Dream Conversation ID based on decided topic and agent decision
         dream_convo_id = await self._resolve_dream_conversation(action, prompt_text, topic_title)
-        logger.info("Triggered dream action: %s in conversation: %s (resonance turns: %d)",
-                     action, dream_convo_id, self.dream_resonance_turns)
+        logger.info(
+            "Triggered dream action: %s in conversation: %s (resonance turns: %d)",
+            action,
+            dream_convo_id,
+            self.dream_resonance_turns,
+        )
 
         self.last_dream_time = now
         self.dream_counter += 1
@@ -397,7 +418,7 @@ class AutopoieticDreamDaemon(
             "conversation_id": dream_convo_id,
             "include_structural_scoring": False,
             "is_dream_cycle": True,
-            "dream_action": action
+            "dream_action": action,
         }
 
         try:
@@ -408,7 +429,7 @@ class AutopoieticDreamDaemon(
             stop_reason = ""
             # Resolve parent for the first dream turn: chain to the last message
             # in the conversation if it already has messages; otherwise start a new root.
-            current_parent: Optional[int] = None
+            current_parent: int | None = None
             if self.message_repo:
                 try:
                     last_msgs = self.message_repo.get_recent(limit=1, conversation_id=dream_convo_id)
@@ -442,8 +463,9 @@ class AutopoieticDreamDaemon(
                 # Check token budget
                 cumulative_tokens += turn_result["content_tokens"]
                 if cumulative_tokens >= self.max_resonance_tokens:
-                    logger.info("Resonance token budget reached after turn %d (%d tokens). Stopping.",
-                                 turn, cumulative_tokens)
+                    logger.info(
+                        "Resonance token budget reached after turn %d (%d tokens). Stopping.", turn, cumulative_tokens
+                    )
                     stop_reason = "token_budget"
                     stopped_early = True
                     break
@@ -455,8 +477,14 @@ class AutopoieticDreamDaemon(
                     )
 
             actual_turns = len(turns_data)
-            logger.info("Resonance complete: %d turns executed (max=%d, early_stop=%s, reason=%s, tokens=%d)",
-                         actual_turns, max_turns, stopped_early, stop_reason, cumulative_tokens)
+            logger.info(
+                "Resonance complete: %d turns executed (max=%d, early_stop=%s, reason=%s, tokens=%d)",
+                actual_turns,
+                max_turns,
+                stopped_early,
+                stop_reason,
+                cumulative_tokens,
+            )
 
             # Update belief last_dreamed_at for hotspot-triggered dreams
             if hotspot and action in ("intra_active_monologue", "exogenous_web_harvesting"):
@@ -470,10 +498,7 @@ class AutopoieticDreamDaemon(
             if belief_metabolism:
                 for td in turns_data:
                     await belief_metabolism.metabolize(
-                        dream_convo_id,
-                        td["user_msg"].id,
-                        td["assistant_msg"].id,
-                        source_type="dream_turn"
+                        dream_convo_id, td["user_msg"].id, td["assistant_msg"].id, source_type="dream_turn"
                     )
 
             first_response = turns_data[0]["response_text"] if turns_data else ""
@@ -506,7 +531,7 @@ class AutopoieticDreamDaemon(
             logger.exception("Failed to execute resonance for Dream Daemon: %s", e)
             return None
 
-    async def _execute_self_triggered_dream(self, trigger: dict, now: float) -> Optional[dict]:
+    async def _execute_self_triggered_dream(self, trigger: dict, now: float) -> dict | None:
         """Execute a dream cycle requested by Symbia via <dream_trigger> tag.
 
         This uses the SAME unified pipeline as normal timer-driven dreams.
@@ -518,7 +543,7 @@ class AutopoieticDreamDaemon(
 
         # Use a distinct action type for self-triggered dreams
         action = "self_triggered"
-        topic_title = f"Self-Triggered Reflection"
+        topic_title = "Self-Triggered Reflection"
 
         # Build dream context from the trigger reason
         dream_context = {
@@ -549,7 +574,9 @@ class AutopoieticDreamDaemon(
         dream_convo_id = await self._resolve_dream_conversation(action, prompt_text, topic_title)
         logger.info(
             "Self-triggered dream: reason=%s, convo=%s, resonance_turns=%d",
-            reason[:80], dream_convo_id, self.dream_resonance_turns,
+            reason[:80],
+            dream_convo_id,
+            self.dream_resonance_turns,
         )
 
         self.last_dream_time = now
@@ -574,7 +601,7 @@ class AutopoieticDreamDaemon(
             stopped_early = False
             stop_reason = ""
 
-            current_parent: Optional[int] = None
+            current_parent: int | None = None
             if self.message_repo:
                 try:
                     last_msgs = self.message_repo.get_recent(limit=1, conversation_id=dream_convo_id)
@@ -662,7 +689,7 @@ class AutopoieticDreamDaemon(
             logger.exception("Failed to execute self-triggered dream: %s", e)
             return None
 
-    async def backfill_structure_on_idle(self, max_files: int = 5) -> Optional[dict]:
+    async def backfill_structure_on_idle(self, max_files: int = 5) -> dict | None:
         """Backfill heading-paths onto pre-ADR-062 sediment during idle.
 
         Scans ready files; for those whose chunks lack a heading_path, runs the
@@ -710,11 +737,14 @@ class AutopoieticDreamDaemon(
                 continue
 
             try:
-                result = await self.background_engine.run("structure_extraction", {
-                    "perception_repo": self.perception_repo,
-                    "conversation_id": conversation_id,
-                    "file_name": file_name,
-                })
+                result = await self.background_engine.run(
+                    "structure_extraction",
+                    {
+                        "perception_repo": self.perception_repo,
+                        "conversation_id": conversation_id,
+                        "file_name": file_name,
+                    },
+                )
             except Exception as e:
                 logger.debug("Structure extraction failed for %s: %s", file_name, e)
                 continue
@@ -743,7 +773,7 @@ class AutopoieticDreamDaemon(
             return {"files_updated": processed}
         return None
 
-    async def compact_memory(self) -> Optional[dict]:
+    async def compact_memory(self) -> dict | None:
         """Zettelkasten-style memory compaction: merge highly similar semantic knots."""
         if not self.semantic_knot_repo:
             return None
@@ -786,11 +816,7 @@ class AutopoieticDreamDaemon(
             k_a = full_knots[0] if full_knots[0].id == knot_a_id else full_knots[1]
             k_b = full_knots[1] if full_knots[1].id == knot_b_id else full_knots[0]
 
-            merged_payload = (
-                f"{k_a.concept_payload}\n\n"
-                f"[Consolidated Concept from {k_b.id}]:\n"
-                f"{k_b.concept_payload}"
-            )
+            merged_payload = f"{k_a.concept_payload}\n\n[Consolidated Concept from {k_b.id}]:\n{k_b.concept_payload}"
 
             try:
                 summary_prompt = (
@@ -805,7 +831,7 @@ class AutopoieticDreamDaemon(
                     "speaker": "human",
                     "conversation_id": k_a.conversation_id,
                     "is_dream_cycle": True,
-                    "dream_action": "compaction"
+                    "dream_action": "compaction",
                 }
                 result = await self.pipeline.run(payload)
                 resp = result.payload.get("response", "").strip()
@@ -821,7 +847,7 @@ class AutopoieticDreamDaemon(
                 concept_payload=merged_payload,
                 embedding=k_a.embedding,
                 weight=new_weight,
-                structural_signature=k_a.structural_signature
+                structural_signature=k_a.structural_signature,
             )
 
             self.semantic_knot_repo.delete_knot(k_b.id)
@@ -832,7 +858,7 @@ class AutopoieticDreamDaemon(
                 "retained_id": k_a.id,
                 "deleted_id": k_b.id,
                 "new_weight": new_weight,
-                "payload": merged_payload[:200] + "..."
+                "payload": merged_payload[:200] + "...",
             }
         except Exception as e:
             logger.exception("Error during memory compaction: %s", e)

@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import get_message_repo, get_app_state
+from backend.api.deps import get_message_repo
+from backend.api.schemas import HistoryMessage, HistoryResponse
 from backend.services.metrics import MetricsService
 from backend.utils.vector import build_history_message
-
-from backend.api.schemas import HistoryMessage, HistoryResponse
 
 router = APIRouter()
 

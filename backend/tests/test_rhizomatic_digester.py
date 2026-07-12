@@ -1,9 +1,9 @@
-import pytest
-import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
-from backend.modules.digester import RhizomaticDigester
+import pytest
+
 from backend.modules.background_tasks.actions.summarize import SummarizeAction, parse_json_safely
+from backend.modules.digester import RhizomaticDigester
 
 
 def test_rhizomatic_digester_chunking():
@@ -13,7 +13,7 @@ def test_rhizomatic_digester_chunking():
         "This is paragraph two. It has more words. We want to see how chunking works.\n\n"
         "This is paragraph three."
     )
-    
+
     # Test paragraph grouping chunker
     chunks = digester.chunk_with_metadata(text, chunk_size=20, overlap=5)
     assert len(chunks) > 0
@@ -91,24 +91,23 @@ def anyio_backend():
 @pytest.mark.anyio
 async def test_summarize_action_execute():
 
-
     action = SummarizeAction()
-    
+
     # Mock LLM provider
     mock_provider = AsyncMock()
     mock_provider.generate.return_value = {
         "content": '{"local_summary": "Block Summary 1", "opacity_map": [{"paragraph_index": 2, "reason": "dense metaphor", "shadow_text": "Metaphorical text"}]}',
-        "model": "test-model"
+        "model": "test-model",
     }
 
     text = "Paragraph 1.\n\nParagraph 2 is opaque.\n\nParagraph 3."
     payload = {"text": text}
-    
+
     res = await action.execute(mock_provider, payload)
-    
+
     assert "content" in res
     assert "opacity_map" in res
-    
+
     # Since there is only 1 super-chunk (<4000 words), it should return local summary directly
     assert res["content"] == "Block Summary 1"
     assert len(res["opacity_map"]) == 1

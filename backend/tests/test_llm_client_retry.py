@@ -133,7 +133,7 @@ class TestRetryLogic:
         with patch("httpx.AsyncClient", return_value=mock_client):
             try:
                 await p._request_with_retry({"model": "test", "messages": []})
-                assert False, "Expected RateLimitError"
+                raise AssertionError("Expected RateLimitError")
             except RateLimitError as e:
                 assert e.remaining == 0
                 assert e.limit == 100
@@ -158,6 +158,7 @@ class TestRetryLogic:
 
         mock_client.post = AsyncMock()
         import httpx
+
         mock_client.post.side_effect = [
             httpx.RequestError("Connection failed"),
             mock_response,

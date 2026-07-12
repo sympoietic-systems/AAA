@@ -1,11 +1,12 @@
 import warnings
+
 from backend.metabolisation.sedimentation import (
-    generate_node_id,
-    parse_sedimentation_yaml,
-    merge_nodes,
     build_compact_node_summary,
-    store_daemon_metrics,
     extract_human_summary,
+    generate_node_id,
+    merge_nodes,
+    parse_sedimentation_yaml,
+    store_daemon_metrics,
 )
 
 warnings.warn(

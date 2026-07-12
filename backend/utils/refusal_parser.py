@@ -1,7 +1,8 @@
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
+
 
 def parse_refusal_tags(text: str) -> tuple[str, list[dict]]:
     """Parse and strip <refusal> tags from text.
@@ -25,10 +26,10 @@ def parse_refusal_tags(text: str) -> tuple[str, list[dict]]:
         return "", []
 
     open_pat = re.compile(
-        r'(?i)<refusal'
-        r'(?:\s+([\s\S]*?))?>'
+        r"(?i)<refusal"
+        r"(?:\s+([\s\S]*?))?>"
     )
-    close_pat = re.compile(r'(?i)</refusal>')
+    close_pat = re.compile(r"(?i)</refusal>")
 
     current_text = text
     while True:
@@ -55,7 +56,7 @@ def parse_refusal_tags(text: str) -> tuple[str, list[dict]]:
         proposed_alternative = ""
 
         if attribs_str:
-            for attr_name, target_var in [
+            for attr_name, _target_var in [
                 ("target_premise", None),
                 ("incompatibility_claim", None),
                 ("proposed_alternative", None),
@@ -75,11 +76,13 @@ def parse_refusal_tags(text: str) -> tuple[str, list[dict]]:
                         proposed_alternative = val
 
         if target_premise and incompatibility_claim:
-            proposed_refusals.append({
-                "target_premise": target_premise,
-                "incompatibility_claim": incompatibility_claim,
-                "proposed_alternative": proposed_alternative,
-            })
+            proposed_refusals.append(
+                {
+                    "target_premise": target_premise,
+                    "incompatibility_claim": incompatibility_claim,
+                    "proposed_alternative": proposed_alternative,
+                }
+            )
 
         current_text = current_text[:start_idx] + current_text[replace_end:]
 

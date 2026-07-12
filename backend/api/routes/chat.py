@@ -1,9 +1,9 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
-from backend.api.deps import get_app_state, get_chat_service
+from backend.api.deps import get_chat_service
 from backend.api.exceptions import ServiceException
 from backend.api.helpers import _parse_chat_request
-from backend.api.schemas import ChatResponse, ChatRequest, GenerateRequest
+from backend.api.schemas import ChatRequest, ChatResponse, GenerateRequest
 
 router = APIRouter()
 
@@ -15,7 +15,16 @@ async def chat(
     service=Depends(get_chat_service),
 ):
     parsed = await _parse_chat_request(request)
-    content, speaker, conversation_id, attachments, include_structural_scoring, max_tokens_override, parent_message_id, agent_id = parsed
+    (
+        content,
+        speaker,
+        conversation_id,
+        attachments,
+        include_structural_scoring,
+        max_tokens_override,
+        parent_message_id,
+        agent_id,
+    ) = parsed
 
     try:
         return await service.process_chat(
@@ -30,7 +39,7 @@ async def chat(
             agent_id=agent_id,
         )
     except ValueError as e:
-        raise ServiceException(str(e), status_code=500)
+        raise ServiceException(str(e), status_code=500) from e
 
 
 @router.post("/chat/message", response_model=ChatResponse)
@@ -51,7 +60,7 @@ async def chat_message(
             agent_id=body.agent_id,
         )
     except ValueError as e:
-        raise ServiceException(str(e), status_code=500)
+        raise ServiceException(str(e), status_code=500) from e
 
 
 @router.post("/chat/generate", response_model=ChatResponse)
@@ -70,4 +79,4 @@ async def chat_generate(
             background_tasks=background_tasks,
         )
     except ValueError as e:
-        raise ServiceException(str(e), status_code=500)
+        raise ServiceException(str(e), status_code=500) from e

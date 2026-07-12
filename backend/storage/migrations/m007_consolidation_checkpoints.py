@@ -1,8 +1,9 @@
+import contextlib
 import sqlite3
 
 
 def up(conn):
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS consolidation_checkpoints (
                 id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -14,13 +15,7 @@ def up(conn):
                 FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
             )
         """)
-    except sqlite3.OperationalError:
-        pass
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("CREATE INDEX IF NOT EXISTS idx_cc_conv ON consolidation_checkpoints(conversation_id)")
-    except sqlite3.OperationalError:
-        pass
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("ALTER TABLE consolidation_checkpoints ADD COLUMN human_summary TEXT DEFAULT ''")
-    except sqlite3.OperationalError:
-        pass

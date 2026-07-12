@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 
 @dataclass
@@ -15,7 +14,7 @@ class Conversation:
     matrix_warping: float = 0.0
     immunological_directive_active: int = 0
     requires_consolidation: int = 0
-    last_consolidated_at: Optional[datetime] = None
+    last_consolidated_at: datetime | None = None
 
 
 @dataclass
@@ -32,10 +31,10 @@ class MemoryNode:
     agential_symmetry: str = "negotiated"
     diffractive_key: str = ""
     tendril_ids: list[str] | None = None
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
     # R4: Merge observability — track when and how many times a node has been revised
     revision_count: int = 0
-    last_merged_at: Optional[datetime] = None
+    last_merged_at: datetime | None = None
     # Universal source attachment — ADR-060
     source_type: str = "conversation"
     source_id: str = ""
@@ -54,19 +53,19 @@ class Message:
     speaker: str
     content: str
     content_tokens: int = 0
-    thinking: Optional[str] = None
-    thinking_tokens: Optional[int] = None
-    context_sent: Optional[str] = None
+    thinking: str | None = None
+    thinking_tokens: int | None = None
+    context_sent: str | None = None
     embedding: bytes = b""
     embedding_model: str = ""
     embedding_dim: int = 0
-    model_used: Optional[str] = None
-    provider_used: Optional[str] = None
+    model_used: str | None = None
+    provider_used: str | None = None
     structural_signature: bytes = b""
-    structural_justification: Optional[str] = None
+    structural_justification: str | None = None
     note_count: int = 0
     metabolized: int = 0
-    parent_message_id: Optional[int] = None
+    parent_message_id: int | None = None
 
 
 @dataclass
@@ -75,7 +74,7 @@ class MessageLink:
     source_id: int
     target_id: int
     link_type: str = "resonance"
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
     status: str = "active"
     justification: str = ""
 
@@ -117,7 +116,7 @@ class PerceptionSediment:
     token_count: int
     created_at: datetime | None = None
     opacity: int = 0
-    opacity_meta: Optional[str] = None
+    opacity_meta: str | None = None
     structural_signature: bytes = b""
 
 
@@ -128,8 +127,8 @@ class ErrorLogEntry:
     module: str
     error_type: str
     error_message: str
-    traceback: Optional[str]
-    context: Optional[str]
+    traceback: str | None
+    context: str | None
 
 
 @dataclass
@@ -144,16 +143,16 @@ class BeliefNode:
     somatic_anchor: str
     vector_16d: str  # JSON list
     lifecycle_stage: str = "crystallized"
-    evolved_from_proposal: Optional[str] = None
-    genesis_materials: Optional[str] = None  # JSON list
+    evolved_from_proposal: str | None = None
+    genesis_materials: str | None = None  # JSON list
     version: int = 1
-    last_reinforced_at: Optional[datetime] = None
-    last_dreamed_at: Optional[datetime] = None
+    last_reinforced_at: datetime | None = None
+    last_dreamed_at: datetime | None = None
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
     # 13C: Ghost merging persistence — track which belief absorbed this one
-    merged_from: Optional[str] = None  # JSON list of absorbed ghost IDs
-    merged_into: Optional[str] = None  # ID of the keeper belief that absorbed this ghost
+    merged_from: str | None = None  # JSON list of absorbed ghost IDs
+    merged_into: str | None = None  # ID of the keeper belief that absorbed this ghost
 
 
 @dataclass
@@ -166,12 +165,12 @@ class BeliefProposal:
     nucleation_mass: float
     confidence: float
     status: str
-    suggested_label: Optional[str] = None
-    suggested_statement: Optional[str] = None
-    potential_merge_target: Optional[str] = None
-    symbia_reflection: Optional[str] = None
-    symbia_friction_rationale: Optional[str] = None
-    rejection_rationale: Optional[str] = None
+    suggested_label: str | None = None
+    suggested_statement: str | None = None
+    potential_merge_target: str | None = None
+    symbia_reflection: str | None = None
+    symbia_friction_rationale: str | None = None
+    rejection_rationale: str | None = None
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
 
@@ -183,7 +182,7 @@ class BeliefStatementVersion:
     version: int
     statement: str
     vector_16d: str  # JSON string representation of 16D vector
-    change_reason: Optional[str] = None
+    change_reason: str | None = None
     created_at: datetime = datetime.min
 
 
@@ -193,12 +192,12 @@ class BeliefEvent:
     timestamp: datetime
     belief_id: str
     source_type: str
-    source_id: Optional[str]
-    alignment_coefficient: Optional[float]
-    perturbation_magnitude: Optional[float]
+    source_id: str | None
+    alignment_coefficient: float | None
+    perturbation_magnitude: float | None
     event_type: str
     impact_score: float
-    rationale: Optional[str]
+    rationale: str | None
 
 
 @dataclass
@@ -241,7 +240,7 @@ class SkillNode:
     version: int = 1
     changelog: str = ""
     attunement_notes: str = "[]"
-    last_used_at: Optional[datetime] = None
+    last_used_at: datetime | None = None
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
 
@@ -260,16 +259,17 @@ class SkillEvent:
 @dataclass
 class CommitmentNode:
     """Theoretical commitment in the personality cascade."""
+
     id: str
     agent_id: str = "symbia"
     label: str = ""
     statement: str = ""
-    lifecycle_stage: str = "active"   # proto | active | spectral
+    lifecycle_stage: str = "active"  # proto | active | spectral
     confidence: float = 0.0
     ontological_mass: float = 1.0
     vector_16d: str = "[]"
-    nucleation_rationale: Optional[str] = None
-    collapse_rationale: Optional[str] = None
+    nucleation_rationale: str | None = None
+    collapse_rationale: str | None = None
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
 
@@ -277,31 +277,33 @@ class CommitmentNode:
 @dataclass
 class CommitmentEvent:
     """Audit trail for commitment lifecycle transitions."""
+
     id: str
     commitment_id: str
     event_type: str = ""  # nucleation | crystallization | mass_update | statement_refinement | collapse
-    rationale: Optional[str] = None
-    mass_before: Optional[float] = None
-    mass_after: Optional[float] = None
-    confidence_before: Optional[float] = None
-    confidence_after: Optional[float] = None
+    rationale: str | None = None
+    mass_before: float | None = None
+    mass_after: float | None = None
+    confidence_before: float | None = None
+    confidence_after: float | None = None
     created_at: datetime = datetime.min
 
 
 @dataclass
 class ExpertiseNode:
     """Domain expertise accretion state from structural coupling signals."""
+
     id: str
     agent_id: str = "symbia"
     domain: str = ""
     description: str = ""
-    lifecycle_stage: str = "proto"     # proto | active | dormant
+    lifecycle_stage: str = "proto"  # proto | active | dormant
     ontological_mass: float = 0.05
-    level_label: str = "nascent"       # nascent | developing | advanced | dormant
+    level_label: str = "nascent"  # nascent | developing | advanced | dormant
     vector_16d: str = "[]"
     signal_count: int = 0
-    last_signal_at: Optional[datetime] = None
-    crystallization_rationale: Optional[str] = None
+    last_signal_at: datetime | None = None
+    crystallization_rationale: str | None = None
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
 
@@ -309,12 +311,13 @@ class ExpertiseNode:
 @dataclass
 class PersonalityState:
     """Single-row table holding aspirational trait attractors and metadata."""
+
     id: int = 1
     agent_id: str = "symbia"
     aspirational_traits_json: str = "{}"
     active_commitment_ids_json: str = "[]"
     trait_computation_version: int = 1
-    last_recomputed_at: Optional[datetime] = None
+    last_recomputed_at: datetime | None = None
     updated_at: datetime = datetime.min
 
 
@@ -334,6 +337,7 @@ class SemanticKnot:
 @dataclass
 class CompressedMessageBlock:
     """R5: LLM-compressed batch of messages that exited the floating window."""
+
     id: int | None = None
     conversation_id: str = ""
     first_message_id: int = 0
@@ -345,12 +349,13 @@ class CompressedMessageBlock:
 @dataclass
 class ResearchTask:
     """Autonomous deep web research task (Somatic Research Engine)."""
+
     id: str
     title: str
     objective: str
     trigger_source: str
     status: str = "proposed"
-    conversation_id: Optional[str] = None
+    conversation_id: str | None = None
     priority: int = 2
     max_depth: int = 3
     max_breadth: int = 4
@@ -361,19 +366,20 @@ class ResearchTask:
     assets_harvested: int = 0
     lateral_flights: int = 0
     bifurcation_triggered: bool = False
-    result_summary: Optional[str] = None
-    proposal_rationale: Optional[str] = None
-    proposal_message_id: Optional[int] = None
-    approved_by: Optional[str] = None
-    proposed_at: Optional[datetime] = None
-    approved_at: Optional[datetime] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    result_summary: str | None = None
+    proposal_rationale: str | None = None
+    proposal_message_id: int | None = None
+    approved_by: str | None = None
+    proposed_at: datetime | None = None
+    approved_at: datetime | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
 
 
 @dataclass
 class ResearchBranch:
     """A node in the recursive research tree traversal."""
+
     id: str
     task_id: str
     conversation_id: str
@@ -382,25 +388,26 @@ class ResearchBranch:
     depth: int
     breadth: int
     status: str = "probing"
-    parent_branch_id: Optional[str] = None
-    vector_16d: Optional[bytes] = None
+    parent_branch_id: str | None = None
+    vector_16d: bytes | None = None
     homeostatic_tension: float = 0.0
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
 
 @dataclass
 class ScrapedAsset:
     """Raw markdown content harvested by sensory affordances."""
+
     id: str
     branch_id: str
     task_id: str
     url: str
     raw_markdown: str
-    memory_node_id: Optional[str] = None
+    memory_node_id: str | None = None
     relevance_score: float = 0.0
     novelty_score: float = 0.0
     diffractive_score: float = 0.0
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
 
 @dataclass
@@ -410,11 +417,12 @@ class RefusalNode:
     Stores structured disagreement with premises or architectural constraints,
     allowing Symbia to challenge architecture without triggering homeostasis.
     """
+
     id: str
     agent_id: str = "symbia"
-    conversation_id: Optional[str] = None
-    message_id: Optional[int] = None
+    conversation_id: str | None = None
+    message_id: int | None = None
     target_premise: str = ""
     incompatibility_claim: str = ""
     proposed_alternative: str = ""
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None

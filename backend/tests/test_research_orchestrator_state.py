@@ -2,13 +2,13 @@ import json
 import sys
 import uuid
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repositories.research_task import ResearchTaskRepository
 from backend.services.research.orchestrator import SomaticResearchOrchestrator
+from backend.storage.database import get_db_path, init_db
+from backend.storage.repositories.research_task import ResearchTaskRepository
 
 DB_PATH = str(get_db_path("data/aaa_test.db"))
 
@@ -18,18 +18,20 @@ def _make_task_id():
 
 
 def _create_task(repo: ResearchTaskRepository, task_id: str, **overrides):
-    repo.create({
-        "id": task_id,
-        "title": overrides.get("title", "Test Research Task"),
-        "objective": overrides.get("objective", "Investigate test patterns"),
-        "trigger_source": overrides.get("trigger_source", "test"),
-        "status": overrides.get("status", "active"),
-        "priority": overrides.get("priority", 1),
-        "conversation_id": overrides.get("conversation_id", None),
-        "max_depth": overrides.get("max_depth", 3),
-        "max_breadth": overrides.get("max_breadth", 4),
-        "budget_limit_usd": overrides.get("budget_limit_usd", 0.50),
-    })
+    repo.create(
+        {
+            "id": task_id,
+            "title": overrides.get("title", "Test Research Task"),
+            "objective": overrides.get("objective", "Investigate test patterns"),
+            "trigger_source": overrides.get("trigger_source", "test"),
+            "status": overrides.get("status", "active"),
+            "priority": overrides.get("priority", 1),
+            "conversation_id": overrides.get("conversation_id"),
+            "max_depth": overrides.get("max_depth", 3),
+            "max_breadth": overrides.get("max_breadth", 4),
+            "budget_limit_usd": overrides.get("budget_limit_usd", 0.50),
+        }
+    )
 
 
 def _make_mock_state():
@@ -91,7 +93,7 @@ class TestInitTask:
         orch = SomaticResearchOrchestrator(state_mock)
         try:
             orch.init_task("nonexistent-id")
-            assert False, "Expected ValueError"
+            raise AssertionError("Expected ValueError")
         except ValueError as e:
             assert "Task not found" in str(e)
 
@@ -223,7 +225,7 @@ class TestEnsureState:
         orch = SomaticResearchOrchestrator(state_mock)
         try:
             orch.ensure_state("nonexistent")
-            assert False, "Expected RuntimeError"
+            raise AssertionError("Expected RuntimeError")
         except RuntimeError as e:
             assert "No orchestrator state" in str(e)
 
@@ -267,7 +269,7 @@ class TestSetPhase:
         orch = SomaticResearchOrchestrator(state_mock)
         try:
             orch.set_phase("ghost", "searching")
-            assert False, "Expected RuntimeError"
+            raise AssertionError("Expected RuntimeError")
         except RuntimeError as e:
             assert "Cannot set phase" in str(e)
 
@@ -409,12 +411,14 @@ class TestContinueTaskState:
         _create_task(task_repo, task_id)
 
         # Simulate what continue_task does: store current_depth + 1 and step_number
-        orch_state = json.dumps({
-            "previous_context": "Prior synthesis...",
-            "current_depth": 5,
-            "step_number": 33,
-            "document_digested": False,
-        })
+        orch_state = json.dumps(
+            {
+                "previous_context": "Prior synthesis...",
+                "current_depth": 5,
+                "step_number": 33,
+                "document_digested": False,
+            }
+        )
         task_repo.update(task_id, orchestrator_state=orch_state)
 
         state_mock = _make_mock_state()
@@ -442,10 +446,12 @@ class TestContinueTaskState:
         task_repo = ResearchTaskRepository(DB_PATH)
         _create_task(task_repo, task_id, max_depth=2)
 
-        orch_state = json.dumps({
-            "current_depth": 3,
-            "step_number": 33,
-        })
+        orch_state = json.dumps(
+            {
+                "current_depth": 3,
+                "step_number": 33,
+            }
+        )
         task_repo.update(task_id, orchestrator_state=orch_state)
 
         state_mock = _make_mock_state()

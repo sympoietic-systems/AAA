@@ -4,14 +4,13 @@ import json
 import logging
 import random
 import uuid
-from typing import Optional
 
 import numpy as np
 
-from backend.utils.similarity import cosine_similarity
-from backend.utils.prompt_loader import get_prompt, get_prompts_dict
 from backend.metabolisation.sedimentation import store_daemon_metrics
 from backend.modules.llm_client import generate_unified
+from backend.utils.prompt_loader import get_prompts_dict
+from backend.utils.similarity import cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -43,18 +42,15 @@ class DreamExecutorMixin:
         try:
             pipeline = getattr(self, "pipeline", None) or getattr(self.app_state, "pipeline", None)
             if pipeline and hasattr(pipeline, "_modules"):
-                temp_payload = {
-                    "conversation_id": dream_convo_id,
-                    "content": ""
-                }
+                temp_payload = {"conversation_id": dream_convo_id, "content": ""}
                 context_collector = next((m for m in pipeline._modules if m.name == "context_collector"), None)
                 if context_collector:
                     temp_payload = await context_collector.process(temp_payload)
-                
+
                 consolidation = next((m for m in pipeline._modules if m.name == "consolidation_checkpoint"), None)
                 if consolidation:
                     temp_payload = await consolidation.process(temp_payload)
-                
+
                 history_msgs = temp_payload.get("messages", [])
         except Exception as e:
             logger.warning("Failed to retrieve or compile dream history via pipeline modules: %s", e)
@@ -62,10 +58,7 @@ class DreamExecutorMixin:
         messages = [{"role": "system", "content": system_prompt}]
         for m in history_msgs:
             if m.get("content", "").strip():
-                messages.append({
-                    "role": m["role"],
-                    "content": m["content"]
-                })
+                messages.append({"role": m["role"], "content": m["content"]})
 
         user_tmpl = guide_data.get("user_prompt", "")
         if user_tmpl:
@@ -73,17 +66,13 @@ class DreamExecutorMixin:
         else:
             user_content = (
                 f"This is turn {turn} of a dream self-dialogue.\n\n"
-                f"The agent's last response was:\n\"{last_response[-800:]}\"\n\n"
+                f'The agent\'s last response was:\n"{last_response[-800:]}"\n\n'
                 f"Generate a fresh follow-up question."
             )
         messages.append({"role": "user", "content": user_content})
 
         try:
-            res = await generate_unified(
-                provider,
-                messages=messages,
-                temperature=0.9
-            )
+            res = await generate_unified(provider, messages=messages, temperature=0.9)
             generated = res.get("content", "").strip()
             if generated and len(generated) > 10:
                 logger.info("Generated dynamic resonance continuation for turn %d (%d chars)", turn, len(generated))
@@ -97,8 +86,8 @@ class DreamExecutorMixin:
         self,
         payload: dict,
         dream_convo_id: str,
-        parent_message_id: Optional[int] = None,
-    ) -> Optional[dict]:
+        parent_message_id: int | None = None,
+    ) -> dict | None:
         """Execute one turn of the dream pipeline and store messages + metrics.
 
         Args:
@@ -113,8 +102,8 @@ class DreamExecutorMixin:
         embedding_dim, response_emb_blob, response_emb_dim.
         Returns None on failure.
         """
-        from backend.utils.token_counter import estimate_tokens
         from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
+        from backend.utils.token_counter import estimate_tokens
 
         content = payload.get("content", "")
         try:
@@ -293,12 +282,7 @@ class DreamExecutorMixin:
                     cp = self.checkpoint_repo.get_latest(c.id)
                     if cp and cp.get("human_summary"):
                         summary = cp["human_summary"]
-                dream_convos.append({
-                    "id": c.id,
-                    "title": c.title,
-                    "message_count": msg_count,
-                    "summary": summary
-                })
+                dream_convos.append({"id": c.id, "title": c.title, "message_count": msg_count, "summary": summary})
 
         bg_engine = getattr(self.app_state, "background_engine", None)
 
@@ -309,12 +293,7 @@ class DreamExecutorMixin:
         if bg_engine and dream_convos and "dream_topic_decision" in bg_engine.list_actions():
             try:
                 res = await bg_engine.run(
-                    "dream_topic_decision",
-                    {
-                        "action": action,
-                        "prompt_text": prompt_text,
-                        "dream_convos": dream_convos
-                    }
+                    "dream_topic_decision", {"action": action, "prompt_text": prompt_text, "dream_convos": dream_convos}
                 )
                 raw_resp = res.get("content", "").strip()
                 cleaned_resp = raw_resp
@@ -334,16 +313,21 @@ class DreamExecutorMixin:
                     title_candidate = decision_data["new_title"].strip()
                     new_title = title_candidate
             except Exception as e:
-                logger.warning("Failed to let agent decide dream conversation via background action: %s. Falling back to legacy resolution.", e)
-        
+                logger.warning(
+                    "Failed to let agent decide dream conversation via background action: %s. Falling back to legacy resolution.",
+                    e,
+                )
+
         # Fallback to direct provider call if the action wasn't run/successful
         if decision == "create" and chosen_convo_id is None and new_title == default_title:
             provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
             if provider and dream_convos:
-                convo_list_str = "\n".join([
-                    f"- ID: {c['id']}, Title: '{c['title']}', Current Message Count: {c['message_count']}"
-                    for c in dream_convos
-                ])
+                convo_list_str = "\n".join(
+                    [
+                        f"- ID: {c['id']}, Title: '{c['title']}', Current Message Count: {c['message_count']}"
+                        for c in dream_convos
+                    ]
+                )
 
                 resolution_data = get_prompts_dict(_RESOLUTION_PATH)
                 system_prompt = resolution_data.get("reuse_system", "") or (
@@ -361,7 +345,7 @@ class DreamExecutorMixin:
                 else:
                     user_prompt = (
                         f"Proposed Dream Action: {action}\n"
-                        f"Proposed Dream Prompt Content: \"{prompt_text[:400]}\"\n\n"
+                        f'Proposed Dream Prompt Content: "{prompt_text[:400]}"\n\n'
                         f"Currently available dream conversations:\n{convo_list_str}\n\n"
                         "Choose the target conversation."
                     )
@@ -372,7 +356,7 @@ class DreamExecutorMixin:
                         system_prompt=system_prompt,
                         user_prompt=user_prompt,
                         expect_json=True,
-                        temperature=0.1
+                        temperature=0.1,
                     )
                     decision_data = res.get("json_data") or {}
                     if decision_data.get("decision") == "reuse" and decision_data.get("conversation_id"):
@@ -385,21 +369,21 @@ class DreamExecutorMixin:
                         title_candidate = decision_data["new_title"].strip()
                         new_title = title_candidate
                 except Exception as e:
-                    logger.warning("Failed to let agent decide dream conversation: %s. Falling back to default rules.", e)
+                    logger.warning(
+                        "Failed to let agent decide dream conversation: %s. Falling back to default rules.", e
+                    )
 
         if decision == "create":
             # Fallback/Default logic to find or create matching convo
-            matching_convos = [c for c in dream_convos if c["title"] == new_title or c["title"].startswith(f"{new_title} (Part ")]
+            matching_convos = [
+                c for c in dream_convos if c["title"] == new_title or c["title"].startswith(f"{new_title} (Part ")
+            ]
             if matching_convos:
                 latest_convo = matching_convos[0]
                 return latest_convo["id"]
             else:
                 convo_id = str(uuid.uuid4())
-                self.conversation_repo.create(
-                    conversation_id=convo_id,
-                    agent_id="symbia",
-                    title=new_title
-                )
+                self.conversation_repo.create(conversation_id=convo_id, agent_id="symbia", title=new_title)
                 if hasattr(self.conversation_repo, "add_tag"):
                     self.conversation_repo.add_tag(convo_id, "dreams", "structural")
                 logger.info("Created new dream conversation: '%s'", new_title)

@@ -4,8 +4,6 @@ Supports notes on any text-bearing asset: conversation messages, research tasks,
 Migrates existing conversation_notes data into the new table, then drops the old one.
 """
 
-import sqlite3
-
 
 def up(conn):
     conn.execute("""

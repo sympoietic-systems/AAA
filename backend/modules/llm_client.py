@@ -2,18 +2,24 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import httpx
 
-from .base import ProcessingModule
 from backend.modules.providers.anthropic_utils import (
-    parse_anthropic_response, build_anthropic_body,
-    get_anthropic_endpoint, get_anthropic_headers,
-    get_openai_endpoint, get_openai_headers,
+    build_anthropic_body,
+    get_anthropic_endpoint,
+    get_anthropic_headers,
+    get_openai_endpoint,
+    get_openai_headers,
+    parse_anthropic_response,
 )
-from backend.modules.providers.google_utils import sanitize_google_params, build_google_thinking_enabled, build_google_thinking_disabled
+from backend.modules.providers.google_utils import (
+    build_google_thinking_disabled,
+    sanitize_google_params,
+)
 from backend.modules.providers.openrouter_utils import build_openrouter_thinking_disabled, clean_thinking_params
+
+from .base import ProcessingModule
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +34,7 @@ class RateLimitError(Exception):
 
 class BaseLLMProvider(ABC):
     @abstractmethod
-    async def generate(
-        self, messages: list[dict], **params
-    ) -> dict: ...
+    async def generate(self, messages: list[dict], **params) -> dict: ...
 
     @abstractmethod
     async def validate_connection(self) -> bool: ...
@@ -41,12 +45,12 @@ class BaseLLMProvider(ABC):
 
     async def generate_unified(
         self,
-        system_prompt: Optional[str] = None,
-        user_prompt: Optional[str] = None,
-        messages: Optional[list[dict]] = None,
+        system_prompt: str | None = None,
+        user_prompt: str | None = None,
+        messages: list[dict] | None = None,
         expect_json: bool = False,
-        fallback_value: Optional[dict] = None,
-        **params
+        fallback_value: dict | None = None,
+        **params,
     ) -> dict:
         """Standardized interface for LLM calls with robust message compilation, cleaning, and JSON parsing."""
         return await generate_unified(
@@ -56,9 +60,8 @@ class BaseLLMProvider(ABC):
             messages=messages,
             expect_json=expect_json,
             fallback_value=fallback_value,
-            **params
+            **params,
         )
-
 
 
 class OpenAICompatibleProvider(BaseLLMProvider):
@@ -68,7 +71,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         model: str,
         api_base: str,
         provider_name: str = "openai_compatible",
-        default_params: Optional[dict] = None,
+        default_params: dict | None = None,
         thinking: bool = False,
         reasoning_effort: str = "high",
         max_retries: int = 3,
@@ -113,9 +116,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         if not reasoning and message.get("reasoning_details"):
             details = message["reasoning_details"]
             if isinstance(details, list):
-                reasoning = " ".join(
-                    d.get("text", "") for d in details if isinstance(d, dict)
-                )
+                reasoning = " ".join(d.get("text", "") for d in details if isinstance(d, dict))
 
         # If content is null/empty but we have reasoning, use reasoning as content
         # This happens with reasoning models that output thinking but no final answer
@@ -134,7 +135,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             logger.warning(
                 "Response truncated by token limit (finish_reason=%s, model=%s). "
                 "Content length: %d chars. Consider increasing max_tokens.",
-                finish_reason, self._model, len(content or "")
+                finish_reason,
+                self._model,
+                len(content or ""),
             )
 
         return {
@@ -165,7 +168,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 except httpx.RequestError as e:
                     last_error = e
                     if attempt < self._max_retries:
-                        await asyncio.sleep(min(2 ** attempt, 30))
+                        await asyncio.sleep(min(2**attempt, 30))
                         continue
                     raise
 
@@ -173,7 +176,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                     rate_info = self._parse_rate_limit_headers(response.headers)
                     retry_after = int(response.headers.get("retry-after", 0))
                     if retry_after == 0:
-                        retry_after = min(2 ** attempt, 30)
+                        retry_after = min(2**attempt, 30)
 
                     logger.warning(
                         f"Rate limited (attempt {attempt + 1}/{self._max_retries + 1}). "
@@ -194,12 +197,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
                 response.raise_for_status()
                 data = response.json()
-                
-                if is_anthropic:
-                    message = parse_anthropic_response(data)
-                else:
-                    message = data["choices"][0]["message"]
-                
+
+                message = parse_anthropic_response(data) if is_anthropic else data["choices"][0]["message"]
+
                 return self._parse_message(message, data)
 
         raise last_error or RuntimeError("All retries exhausted")
@@ -226,7 +226,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 if m.get("role") == "system":
                     system_prompt += m.get("content", "") + "\n"
             body = build_anthropic_body(
-                self._model, messages, system_prompt.strip(),
+                self._model,
+                messages,
+                system_prompt.strip(),
                 merged_params.get("max_tokens", 4096),
             )
         else:
@@ -276,7 +278,7 @@ class OpenRouterProvider(OpenAICompatibleProvider):
         api_key: str,
         model: str = "deepseek/deepseek-chat",
         api_base: str = "https://openrouter.ai/api/v1",
-        default_params: Optional[dict] = None,
+        default_params: dict | None = None,
         thinking: bool = False,
         reasoning_effort: str = "high",
         max_retries: int = 3,
@@ -303,7 +305,7 @@ class KeyManager:
         self.cooldown_seconds = cooldown_seconds
         self._exhausted: dict[str, float] = {}
 
-    def get_available_key(self) -> Optional[str]:
+    def get_available_key(self) -> str | None:
         now = time.time()
         for key in self.keys:
             until = self._exhausted.get(key, 0)
@@ -334,16 +336,16 @@ class ModelPoolProvider(BaseLLMProvider):
         models: list[str],
         fallback_model: str = "openrouter/free",
         api_base: str = "https://openrouter.ai/api/v1",
-        google_keys: Optional[list[str]] = None,
-        deepseek_keys: Optional[list[str]] = None,
-        openrouter_keys: Optional[list[str]] = None,
+        google_keys: list[str] | None = None,
+        deepseek_keys: list[str] | None = None,
+        openrouter_keys: list[str] | None = None,
         google_api_base: str = "https://generativelanguage.googleapis.com/v1beta/openai",
         deepseek_api_base: str = "https://api.deepseek.com",
         cooldown_seconds: int = 300,
         max_retries_per_model: int = 0,
         thinking: bool = False,
         reasoning_effort: str = "high",
-        default_params: Optional[dict] = None,
+        default_params: dict | None = None,
         timeout: float = 60.0,
     ):
         self._api_key = api_key
@@ -365,7 +367,7 @@ class ModelPoolProvider(BaseLLMProvider):
         # Setup key managers
         self._google_key_mgr = KeyManager(google_keys or [], cooldown_seconds=cooldown_seconds)
         self._deepseek_key_mgr = KeyManager(deepseek_keys or [], cooldown_seconds=cooldown_seconds)
-        
+
         # If openrouter_keys is empty but we have api_key, use it as fallback
         or_keys = list(openrouter_keys) if openrouter_keys else []
         if not or_keys and api_key:
@@ -412,14 +414,16 @@ class ModelPoolProvider(BaseLLMProvider):
 
     async def generate(self, messages: list[dict], **params) -> dict:
         errors = []
-        
+
         now = time.time()
         models_to_try = self._all_models()
         if self._last_model_used and self._last_model_used in models_to_try:
             preferred_model = models_to_try[0]
             if self._last_model_used != preferred_model:
                 if now - self._last_model_time >= self._cooldown_seconds:
-                    logger.info("Fallback period expired. Resetting priority to try preferred model %s again.", preferred_model)
+                    logger.info(
+                        "Fallback period expired. Resetting priority to try preferred model %s again.", preferred_model
+                    )
                     self._last_model_used = ""
                     self._last_model_time = 0.0
                 else:
@@ -474,7 +478,9 @@ class ModelPoolProvider(BaseLLMProvider):
                 tried_keys.add(key)
                 masked_key = self._mask_key(key)
 
-                logger.info("Attempting model %s using provider %s with key %s", actual_model, provider_type, masked_key)
+                logger.info(
+                    "Attempting model %s using provider %s with key %s", actual_model, provider_type, masked_key
+                )
 
                 provider = OpenAICompatibleProvider(
                     api_key=key,
@@ -502,14 +508,21 @@ class ModelPoolProvider(BaseLLMProvider):
                 except httpx.HTTPStatusError as e:
                     key_mgr.mark_key_exhausted(key)
                     errors.append(f"{model} (key: {masked_key}): HTTP {e.response.status_code} - {e}")
-                    logger.warning("Key %s HTTP error %s for model %s. Rotating key...", masked_key, e.response.status_code, model)
-                except (httpx.RequestError, TimeoutError, asyncio.TimeoutError) as e:
+                    logger.warning(
+                        "Key %s HTTP error %s for model %s. Rotating key...", masked_key, e.response.status_code, model
+                    )
+                except (httpx.RequestError, TimeoutError) as e:
                     # Network timeouts are transient — retry a few times before giving up
                     timeout_retries = 2
                     for retry_num in range(timeout_retries):
-                        logger.warning("Connection error '%s' on model %s with key %s. "
-                                       "Waiting 10s to retry (attempt %d/%d)...",
-                                       type(e).__name__, model, masked_key, retry_num + 1, timeout_retries)
+                        logger.warning(
+                            "Connection error '%s' on model %s with key %s. Waiting 10s to retry (attempt %d/%d)...",
+                            type(e).__name__,
+                            model,
+                            masked_key,
+                            retry_num + 1,
+                            timeout_retries,
+                        )
                         await asyncio.sleep(10)
                         try:
                             result = await provider.generate(messages, **params)
@@ -518,7 +531,7 @@ class ModelPoolProvider(BaseLLMProvider):
                                 self._last_model_time = time.time()
                             success = True
                             break
-                        except (httpx.RequestError, TimeoutError, asyncio.TimeoutError):
+                        except (httpx.RequestError, TimeoutError):
                             continue
                         except Exception as retry_e:
                             key_mgr.mark_key_exhausted(key)
@@ -529,12 +542,18 @@ class ModelPoolProvider(BaseLLMProvider):
                         break
                     if not success:
                         key_mgr.mark_key_exhausted(key)
-                        errors.append(f"{model} (key: {masked_key}): connection timeout after {timeout_retries} retries - {e}")
-                        logger.warning("All timeout retries failed for model %s with key %s. Rotating key...", model, masked_key)
+                        errors.append(
+                            f"{model} (key: {masked_key}): connection timeout after {timeout_retries} retries - {e}"
+                        )
+                        logger.warning(
+                            "All timeout retries failed for model %s with key %s. Rotating key...", model, masked_key
+                        )
                 except Exception as e:
                     key_mgr.mark_key_exhausted(key)
                     errors.append(f"{model} (key: {masked_key}): {e}")
-                    logger.warning("Key %s encountered error %s for model %s. Rotating key...", masked_key, type(e).__name__, model)
+                    logger.warning(
+                        "Key %s encountered error %s for model %s. Rotating key...", masked_key, type(e).__name__, model
+                    )
 
             if success:
                 return result
@@ -543,8 +562,11 @@ class ModelPoolProvider(BaseLLMProvider):
             logger.warning("All keys exhausted for model %s. Moving to next in pool.", model)
 
         if not errors:
-            logger.error("Model pool: no models were attempted. models_to_try=%s, exhausted=%s",
-                         models_to_try, list(self._exhausted.keys()))
+            logger.error(
+                "Model pool: no models were attempted. models_to_try=%s, exhausted=%s",
+                models_to_try,
+                list(self._exhausted.keys()),
+            )
         error_msg = f"All models in pool exhausted. Errors: {'; '.join(errors)}"
         logger.error(error_msg)
         raise RateLimitError(error_msg)
@@ -625,18 +647,18 @@ def _parse_json_safely(text: str) -> dict:
     import re
 
     # 1. Clean think tags
-    cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
     # 2. Extract starting from first {
     first_brace = cleaned.find("{")
     if first_brace == -1:
         return json.loads(cleaned)
-    
+
     json_part = cleaned[first_brace:]
 
     # 3. Helper to clean control characters and commas inside string
     def sanitize(s: str) -> str:
-        s = re.sub(r',\s*([\]\}])', r'\1', s)
+        s = re.sub(r",\s*([\]\}])", r"\1", s)
         chars = []
         in_string = False
         escape = False
@@ -645,21 +667,18 @@ def _parse_json_safely(text: str) -> dict:
                 in_string = not in_string
                 chars.append(char)
             elif in_string:
-                if char == '\n':
-                    chars.append('\\n')
-                elif char == '\t':
-                    chars.append('\\t')
-                elif char == '\r':
-                    chars.append('\\r')
+                if char == "\n":
+                    chars.append("\\n")
+                elif char == "\t":
+                    chars.append("\\t")
+                elif char == "\r":
+                    chars.append("\\r")
                 else:
                     chars.append(char)
             else:
                 chars.append(char)
-                
-            if char == '\\' and in_string:
-                escape = not escape
-            else:
-                escape = False
+
+            escape = not escape if (char == "\\" and in_string) else False
         return "".join(chars)
 
     # 4. Helper to auto-close open structures in truncated string
@@ -671,27 +690,23 @@ def _parse_json_safely(text: str) -> dict:
             if char == '"' and not escape:
                 in_string = not in_string
             elif in_string:
-                if char == '\\':
-                    escape = not escape
-                else:
-                    escape = False
+                escape = not escape if char == "\\" else False
             else:
-                if char in ('{', '['):
+                if char in ("{", "["):
                     stack.append(char)
-                elif char in ('}', ']'):
-                    if stack:
-                         top = stack[-1]
-                         if (char == '}' and top == '{') or (char == ']' and top == '['):
-                             stack.pop()
-        
+                elif char in ("}", "]") and stack:
+                    top = stack[-1]
+                    if (char == "}" and top == "{") or (char == "]" and top == "["):
+                        stack.pop()
+
         repaired = s
         if in_string:
             repaired += '"'
         for item in reversed(stack):
-            if item == '{':
-                repaired += '}'
-            elif item == '[':
-                repaired += ']'
+            if item == "{":
+                repaired += "}"
+            elif item == "[":
+                repaired += "]"
         return repaired
 
     # Try standard sanitize and parse
@@ -712,7 +727,7 @@ def _parse_json_safely(text: str) -> dict:
     last_brace = sanitized.rfind("}")
     if last_brace != -1:
         try:
-            return json.loads(sanitized[:last_brace + 1])
+            return json.loads(sanitized[: last_brace + 1])
         except Exception:
             pass
 
@@ -721,13 +736,13 @@ def _parse_json_safely(text: str) -> dict:
 
 async def generate_unified(
     provider,
-    system_prompt: Optional[str] = None,
-    user_prompt: Optional[str] = None,
-    messages: Optional[list[dict]] = None,
+    system_prompt: str | None = None,
+    user_prompt: str | None = None,
+    messages: list[dict] | None = None,
     expect_json: bool = False,
-    fallback_value: Optional[dict] = None,
-    thinking_override: Optional[bool] = None,
-    **params
+    fallback_value: dict | None = None,
+    thinking_override: bool | None = None,
+    **params,
 ) -> dict:
     """Standardized wrapper for LLM calls with automatic message list construction, cleaning, and JSON parsing."""
     import re
@@ -736,10 +751,8 @@ async def generate_unified(
     formatted_messages = []
     if messages:
         formatted_messages = list(messages)
-        if system_prompt:
-            # Prepend system prompt if not already first message
-            if not (formatted_messages and formatted_messages[0].get("role") == "system"):
-                formatted_messages.insert(0, {"role": "system", "content": system_prompt})
+        if system_prompt and not (formatted_messages and formatted_messages[0].get("role") == "system"):
+            formatted_messages.insert(0, {"role": "system", "content": system_prompt})
     else:
         if system_prompt:
             formatted_messages.append({"role": "system", "content": system_prompt})
@@ -757,6 +770,7 @@ async def generate_unified(
         # Handle cases where provider does not have provider_name property/attribute
         p_name = getattr(provider, "provider_name", "unknown")
         from unittest.mock import NonCallableMock
+
         if callable(p_name) and not isinstance(p_name, NonCallableMock):
             try:
                 p_name = p_name()
@@ -776,7 +790,7 @@ async def generate_unified(
                 "thinking": None,
                 "truncated": False,
                 "finish_reason": None,
-                "error": str(e)
+                "error": str(e),
             }
         raise e
 
@@ -784,23 +798,20 @@ async def generate_unified(
     json_data = None
     if expect_json:
         # Clean <think>...</think> reasoning tags
-        cleaned = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-        
+        cleaned = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+
         # Strip markdown code fences if any
         if "```json" in cleaned:
             cleaned = cleaned.split("```json")[1].split("```")[0].strip()
         elif "```" in cleaned:
             cleaned = cleaned.split("```")[1].split("```")[0].strip()
-        
+
         # Parse JSON
         try:
             json_data = _parse_json_safely(cleaned)
         except Exception as je:
             logger.warning("Failed standard JSON parse in generate_unified: %s.", je)
-            if fallback_value is not None:
-                json_data = fallback_value
-            else:
-                json_data = None
+            json_data = fallback_value if fallback_value is not None else None
 
     return {
         "content": content,
@@ -810,6 +821,5 @@ async def generate_unified(
         "thinking": thinking,
         "truncated": truncated,
         "finish_reason": finish_reason,
-        "error": None
+        "error": None,
     }
-

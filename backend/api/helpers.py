@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import Request
 
 from backend.utils.token_counter import estimate_tokens
@@ -7,7 +5,9 @@ from backend.utils.token_counter import estimate_tokens
 from .schemas import AttachmentInfo
 
 
-async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional[list[dict]], Optional[bool], Optional[int], Optional[int], Optional[str]]:
+async def _parse_chat_request(
+    request: Request,
+) -> tuple[str, str, str, list[dict] | None, bool | None, int | None, int | None, str | None]:
     content_type = request.headers.get("content-type", "")
 
     if "multipart/form-data" in content_type:
@@ -25,9 +25,13 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
             include_structural_scoring = None
         max_tokens_raw = form.get("max_tokens")
         max_tokens = int(max_tokens_raw) if max_tokens_raw is not None else None
-        
+
         parent_message_id_raw = form.get("parent_message_id")
-        parent_message_id = int(parent_message_id_raw) if parent_message_id_raw is not None and str(parent_message_id_raw).strip() != "" else None
+        parent_message_id = (
+            int(parent_message_id_raw)
+            if parent_message_id_raw is not None and str(parent_message_id_raw).strip() != ""
+            else None
+        )
 
         attachments: list[dict] = []
         for f in uploaded_files:
@@ -49,13 +53,24 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
                 file_type = "mobi"
             else:
                 file_type = "txt"
-            attachments.append({
-                "file_name": f.filename,
-                "file_type": file_type,
-                "content": file_bytes,
-            })
+            attachments.append(
+                {
+                    "file_name": f.filename,
+                    "file_type": file_type,
+                    "content": file_bytes,
+                }
+            )
 
-        return content, speaker, conversation_id, (attachments if attachments else None), include_structural_scoring, max_tokens, parent_message_id, agent_id
+        return (
+            content,
+            speaker,
+            conversation_id,
+            (attachments if attachments else None),
+            include_structural_scoring,
+            max_tokens,
+            parent_message_id,
+            agent_id,
+        )
 
     body = await request.json()
     content = body.get("content", "")
@@ -66,25 +81,40 @@ async def _parse_chat_request(request: Request) -> tuple[str, str, str, Optional
     include_structural_scoring = body.get("include_structural_scoring")
     max_tokens = body.get("max_tokens")
     parent_message_id_raw = body.get("parent_message_id")
-    parent_message_id = int(parent_message_id_raw) if parent_message_id_raw is not None and str(parent_message_id_raw).strip() != "" else None
-    
+    parent_message_id = (
+        int(parent_message_id_raw)
+        if parent_message_id_raw is not None and str(parent_message_id_raw).strip() != ""
+        else None
+    )
+
     parsed_attachments = None
     if json_attachments:
-        parsed_attachments = [
-            {
-                "file_name": a.get("file_name", ""),
-                "file_type": a.get("file_type", "txt"),
-                "content": a.get("content", ""),
-            }
-            for a in json_attachments
-        ] if isinstance(json_attachments, list) else None
+        parsed_attachments = (
+            [
+                {
+                    "file_name": a.get("file_name", ""),
+                    "file_type": a.get("file_type", "txt"),
+                    "content": a.get("content", ""),
+                }
+                for a in json_attachments
+            ]
+            if isinstance(json_attachments, list)
+            else None
+        )
 
-    return content, speaker, conversation_id, parsed_attachments, include_structural_scoring, max_tokens, parent_message_id, agent_id
+    return (
+        content,
+        speaker,
+        conversation_id,
+        parsed_attachments,
+        include_structural_scoring,
+        max_tokens,
+        parent_message_id,
+        agent_id,
+    )
 
 
-def _build_response_attachments(
-    attachments: list[dict] | None, result
-) -> list[AttachmentInfo] | None:
+def _build_response_attachments(attachments: list[dict] | None, result) -> list[AttachmentInfo] | None:
     if not attachments:
         return None
     response_attachments: list[AttachmentInfo] = []
@@ -96,12 +126,14 @@ def _build_response_attachments(
             content = content.decode("utf-8", errors="replace")
         token_count = estimate_tokens(content) if content else 0
         preview = content[:200] if content else None
-        response_attachments.append(AttachmentInfo(
-            file_name=file_name,
-            file_type=file_type,
-            token_count=token_count,
-            preview=preview,
-        ))
+        response_attachments.append(
+            AttachmentInfo(
+                file_name=file_name,
+                file_type=file_type,
+                token_count=token_count,
+                preview=preview,
+            )
+        )
     return response_attachments if response_attachments else None
 
 

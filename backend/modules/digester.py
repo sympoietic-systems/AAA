@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 from html.parser import HTMLParser
 from pathlib import Path
 
-from backend.utils.token_counter import estimate_tokens
-
 logger = logging.getLogger(__name__)
 
 # pdfminer (under pdfplumber) emits noisy WARNING lines when a font descriptor
@@ -14,7 +12,37 @@ logger = logging.getLogger(__name__)
 logging.getLogger("pdfminer.pdffont").setLevel(logging.ERROR)
 logging.getLogger("pdfminer.pdfinterp").setLevel(logging.ERROR)
 
-TEXT_EXTENSIONS = {".txt", ".md", ".py", ".json", ".yaml", ".yml", ".csv", ".xml", ".html", ".css", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go", ".java", ".c", ".h", ".cpp", ".hpp", ".sh", ".bat", ".ps1", ".toml", ".ini", ".cfg", ".env", ".log"}
+TEXT_EXTENSIONS = {
+    ".txt",
+    ".md",
+    ".py",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".csv",
+    ".xml",
+    ".html",
+    ".css",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".rs",
+    ".go",
+    ".java",
+    ".c",
+    ".h",
+    ".cpp",
+    ".hpp",
+    ".sh",
+    ".bat",
+    ".ps1",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".env",
+    ".log",
+}
 
 
 class FileDigester(ABC):
@@ -55,7 +83,7 @@ class SimpleChunkDigester(FileDigester):
         i = 0
 
         while i < len(words):
-            chunk_words = words[i:i + chunk_size]
+            chunk_words = words[i : i + chunk_size]
             chunks.append(" ".join(chunk_words))
             i += step
 
@@ -75,7 +103,7 @@ class SimpleChunkDigester(FileDigester):
         except ImportError:
             raise ImportError(
                 "pdfplumber is required for PDF extraction. Install with: pip install pdfplumber"
-            )
+            ) from None
 
         try:
             return PDFHeadingExtractor.extract(file_path, pdfplumber)
@@ -96,7 +124,7 @@ class SimpleChunkDigester(FileDigester):
         except ImportError:
             raise ImportError(
                 "python-docx is required for DOCX extraction. Install with: pip install python-docx"
-            )
+            ) from None
 
         doc = Document(str(file_path))
         parts: list[str] = []
@@ -104,7 +132,7 @@ class SimpleChunkDigester(FileDigester):
             if not p.text.strip():
                 continue
             style_name = (p.style.name if p.style else "") or ""
-            m = re.match(r'^Heading\s+(\d+)$', style_name)
+            m = re.match(r"^Heading\s+(\d+)$", style_name)
             if m:
                 level = min(int(m.group(1)), 6)
                 parts.append("#" * level + " " + p.text.strip())
@@ -118,9 +146,7 @@ class SimpleChunkDigester(FileDigester):
             import ebooklib
             from ebooklib import epub
         except ImportError:
-            raise ImportError(
-                "ebooklib is required for EPUB extraction. Install with: pip install EbookLib"
-            )
+            raise ImportError("ebooklib is required for EPUB extraction. Install with: pip install EbookLib") from None
 
         book = epub.read_epub(str(file_path))
         text_parts = []
@@ -131,7 +157,7 @@ class SimpleChunkDigester(FileDigester):
                     content_str = content_bytes.decode("utf-8")
                 except UnicodeDecodeError:
                     content_str = content_bytes.decode("latin-1", errors="ignore")
-                
+
                 parser = EPUBMOBIHTMLParser()
                 parser.feed(content_str)
                 cleaned_text = parser.get_text()
@@ -148,17 +174,15 @@ class SimpleChunkDigester(FileDigester):
         try:
             import mobi
         except ImportError:
-            raise ImportError(
-                "mobi is required for MOBI extraction. Install with: pip install mobi"
-            )
-        
+            raise ImportError("mobi is required for MOBI extraction. Install with: pip install mobi") from None
+
         import shutil
 
         tempdir, filepath = mobi.extract(str(file_path))
         try:
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+            with open(filepath, encoding="utf-8", errors="ignore") as f:
                 content_str = f.read()
-            
+
             parser = EPUBMOBIHTMLParser()
             parser.feed(content_str)
             cleaned_text = parser.get_text()
@@ -175,7 +199,18 @@ class EPUBMOBIHTMLParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.text_parts = []
-        self.ignore_tags = {"script", "style", "nav", "header", "footer", "form", "noscript", "head", "iframe", "button"}
+        self.ignore_tags = {
+            "script",
+            "style",
+            "nav",
+            "header",
+            "footer",
+            "form",
+            "noscript",
+            "head",
+            "iframe",
+            "button",
+        }
         self.ignore_stack = []
 
     def handle_starttag(self, tag, attrs):
@@ -198,18 +233,17 @@ class EPUBMOBIHTMLParser(HTMLParser):
     def handle_endtag(self, tag):
         if self.ignore_stack and tag == self.ignore_stack[-1]:
             self.ignore_stack.pop()
-        elif not self.ignore_stack:
-            if tag in {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"}:
-                self.text_parts.append("\n")
+        elif not self.ignore_stack and tag in {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"}:
+            self.text_parts.append("\n")
 
     def get_text(self) -> str:
         raw_text = "".join(self.text_parts)
-        cleaned = re.sub(r'[ \t]+', ' ', raw_text)
-        cleaned = re.sub(r'\n\s*\n+', '\n\n', cleaned)
+        cleaned = re.sub(r"[ \t]+", " ", raw_text)
+        cleaned = re.sub(r"\n\s*\n+", "\n\n", cleaned)
         return cleaned.strip()
 
 
-HEADING_RE = re.compile(r'^(#{1,6})\s+(.*)$')
+HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 
 
 class PDFHeadingExtractor:
@@ -222,7 +256,7 @@ class PDFHeadingExtractor:
     confidence tier of ADR-062; misses degrade gracefully to body text.
     """
 
-    NUMBERING_RE = re.compile(r'^(\d+(?:\.\d+)*)\s+\S')
+    NUMBERING_RE = re.compile(r"^(\d+(?:\.\d+)*)\s+\S")
 
     @classmethod
     def extract(cls, file_path: Path, pdfplumber) -> str:
@@ -251,7 +285,7 @@ class PDFHeadingExtractor:
             else:
                 out.append(text)
         joined = "\n".join(out)
-        return re.sub(r'\n\s*\n+', '\n\n', joined).strip()
+        return re.sub(r"\n\s*\n+", "\n\n", joined).strip()
 
     @staticmethod
     def _page_lines(page) -> list[tuple[str, float]]:
@@ -277,8 +311,7 @@ class PDFHeadingExtractor:
         return records
 
     @classmethod
-    def _heading_level(cls, text: str, size: float, body_size: float,
-                       size_to_level: dict[float, int]) -> int:
+    def _heading_level(cls, text: str, size: float, body_size: float, size_to_level: dict[float, int]) -> int:
         stripped = text.strip()
         if not stripped or len(stripped.split()) > 25:
             return 0
@@ -348,14 +381,16 @@ class RhizomaticDigester(SimpleChunkDigester):
                 current_chunk_paragraphs.append(paragraphs[j])
                 current_words_count += p_words
                 j += 1
-            
+
             chunk_text = "\n\n".join(current_chunk_paragraphs)
-            chunks.append({
-                "text": chunk_text,
-                "paragraph_indices": list(range(i, j)),
-                "heading_path": para_paths[i] if i < len(para_paths) else []
-            })
-            
+            chunks.append(
+                {
+                    "text": chunk_text,
+                    "paragraph_indices": list(range(i, j)),
+                    "heading_path": para_paths[i] if i < len(para_paths) else [],
+                }
+            )
+
             advance = j - i
             if advance <= 1:
                 i += 1
@@ -394,12 +429,14 @@ class RhizomaticDigester(SimpleChunkDigester):
                 current_paragraphs.append(paragraphs[j])
                 current_words += p_words
                 j += 1
-            
-            super_chunks.append({
-                "text": "\n\n".join(current_paragraphs),
-                "start_paragraph_idx": i,
-                "end_paragraph_idx": j - 1,
-            })
+
+            super_chunks.append(
+                {
+                    "text": "\n\n".join(current_paragraphs),
+                    "start_paragraph_idx": i,
+                    "end_paragraph_idx": j - 1,
+                }
+            )
             i = j
         return super_chunks
 
@@ -408,4 +445,3 @@ def get_preview(text: str, max_chars: int = 200) -> str:
     if len(text) <= max_chars:
         return text
     return text[:max_chars].rstrip() + "..."
-

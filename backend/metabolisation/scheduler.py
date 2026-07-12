@@ -1,10 +1,11 @@
-import os
-import logging
 import asyncio
-import numpy as np
-from typing import Callable, Any, List, Dict
+import logging
+import os
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
 
 class BackgroundStartupScheduler:
     def __init__(self, app_state: Any, process_file_func: Callable):
@@ -14,13 +15,13 @@ class BackgroundStartupScheduler:
         self.message_repo = app_state.message_repo
         self.belief_metabolism = getattr(app_state, "belief_metabolism", None)
         self.config = getattr(app_state, "config", {})
-        
+
         # State tracking for UI visibility
         self._status = "pending"
         self._indexing_tasks_found = 0
         self._indexing_tasks_completed = 0
         self._indexing_tasks_failed = 0
-        self._active_indexing_jobs: List[str] = []
+        self._active_indexing_jobs: list[str] = []
         self._belief_turns_found = 0
         self._belief_turns_completed = 0
         self._belief_turns_failed = 0
@@ -32,7 +33,7 @@ class BackgroundStartupScheduler:
     def start(self) -> None:
         asyncio.create_task(self._run_scheduler())
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         return {
             "status": self._status,
             "indexing_tasks_found": self._indexing_tasks_found,
@@ -51,7 +52,7 @@ class BackgroundStartupScheduler:
         logger.info("Initializing Background Startup Scheduler...")
         self._status = "running"
         await asyncio.sleep(2)
-        
+
         # 1. Resume unfinished file indexing tasks
         try:
             await self._resume_indexing_tasks()
@@ -88,7 +89,7 @@ class BackgroundStartupScheduler:
                 self._error_details += f" | Belief metabolism catch-up failure: {str(e)}"
             else:
                 self._error_details = f"Belief metabolism catch-up failure: {str(e)}"
-        
+
         self._status = "completed"
         logger.info("Background Startup Scheduler caught up successfully.")
 
@@ -123,7 +124,7 @@ class BackgroundStartupScheduler:
 
         self._indexing_tasks_found = len(unfinished_files)
         logger.info("Found %d unfinished/errored indexing tasks. Initializing resumption...", len(unfinished_files))
-        
+
         max_jobs = self.config.get("perception", {}).get("max_concurrent_indexing_jobs", 2)
         sem = asyncio.Semaphore(max_jobs)
 
@@ -133,33 +134,29 @@ class BackgroundStartupScheduler:
                 file_name = f["file_name"]
                 file_type = f["file_type"]
                 from backend.utils.filesystem import get_upload_path
+
                 cache_path = get_upload_path(convo_id, file_name)
-                
+
                 self._active_indexing_jobs.append(file_name)
                 try:
                     if not os.path.exists(cache_path):
                         logger.warning(
                             "Upload cache missing for file %s in conversation %s. Setting status to error.",
-                            file_name, convo_id
+                            file_name,
+                            convo_id,
                         )
                         self.perception_repo.update_file(
                             conversation_id=convo_id,
                             file_name=file_name,
                             status="error",
-                            summary="Source file cache missing on restart. Please delete and re-upload."
+                            summary="Source file cache missing on restart. Please delete and re-upload.",
                         )
                         self._indexing_tasks_failed += 1
                         return
 
                     logger.info("Resuming indexing for file: %s (conversation: %s)", file_name, convo_id)
                     try:
-                        await self.process_file_func(
-                            self.app_state,
-                            convo_id,
-                            file_name,
-                            file_type,
-                            None
-                        )
+                        await self.process_file_func(self.app_state, convo_id, file_name, file_type, None)
                         logger.info("Successfully finished resumed indexing for: %s", file_name)
                         self._indexing_tasks_completed += 1
                     except Exception as e:
@@ -168,7 +165,7 @@ class BackgroundStartupScheduler:
                             conversation_id=convo_id,
                             file_name=file_name,
                             status="error",
-                            summary=f"Failed during background resumption: {str(e)}"
+                            summary=f"Failed during background resumption: {str(e)}",
                         )
                         self._indexing_tasks_failed += 1
                 finally:
@@ -184,6 +181,7 @@ class BackgroundStartupScheduler:
             return 0
 
         from backend.modules.structural_engine import CompositeStructuralScorer
+
         scorer = CompositeStructuralScorer(llm_provider=None)
         count = 0
         logger.info("Backfilling %d messages with missing structural signatures...", len(messages))
@@ -209,7 +207,7 @@ class BackgroundStartupScheduler:
             return 0
 
         # Group by conversation, ordered chronologically
-        by_convo: Dict[str, list] = {}
+        by_convo: dict[str, list] = {}
         for msg in messages_without_metrics:
             cid = msg.conversation_id or ""
             by_convo.setdefault(cid, []).append(msg)
@@ -222,8 +220,11 @@ class BackgroundStartupScheduler:
             return 0
 
         count = 0
-        logger.info("Backfilling conversation metrics for %d messages across %d conversations...",
-                     len(messages_without_metrics), len(by_convo))
+        logger.info(
+            "Backfilling conversation metrics for %d messages across %d conversations...",
+            len(messages_without_metrics),
+            len(by_convo),
+        )
 
         for cid, msgs in by_convo.items():
             metrics_module._prior_metrics = {}
@@ -232,8 +233,8 @@ class BackgroundStartupScheduler:
                 if not content.strip():
                     continue
                 try:
-                    embedding_blob = getattr(msg, 'embedding', None) or b""
-                    embedding_dim = getattr(msg, 'embedding_dim', 0) or 384
+                    embedding_blob = getattr(msg, "embedding", None) or b""
+                    embedding_dim = getattr(msg, "embedding_dim", 0) or 384
 
                     # For assistant messages, embed the response text to get a proper embedding
                     if msg.speaker == "apparatus" and embedder and embedder.service.is_loaded and content.strip():
@@ -242,8 +243,10 @@ class BackgroundStartupScheduler:
                             embedding_blob = embedder.service.serialize(assistant_emb)
                             embedding_dim = embedder.service.dim
                             self.message_repo.update_embedding(
-                                msg.id, embedding_blob,
-                                embedder.service.model_name, embedder.service.dim,
+                                msg.id,
+                                embedding_blob,
+                                embedder.service.model_name,
+                                embedder.service.dim,
                             )
                         except Exception as e:
                             logger.warning("Failed to embed assistant msg %d: %s", msg.id, e)
@@ -254,8 +257,10 @@ class BackgroundStartupScheduler:
                             embedding_blob = embedder.service.serialize(emb)
                             embedding_dim = embedder.service.dim
                             self.message_repo.update_embedding(
-                                msg.id, embedding_blob,
-                                embedder.service.model_name, embedder.service.dim,
+                                msg.id,
+                                embedding_blob,
+                                embedder.service.model_name,
+                                embedder.service.dim,
                             )
                         except Exception as e:
                             logger.warning("Failed to embed message %d: %s", msg.id, e)
@@ -277,8 +282,7 @@ class BackgroundStartupScheduler:
                         _store_metrics_backfill(metrics_repo, msg.id, metrics)
                         count += 1
                 except Exception as e:
-                    logger.warning("Failed to backfill metrics for message %d in convo %s: %s",
-                                   msg.id, cid, e)
+                    logger.warning("Failed to backfill metrics for message %d in convo %s: %s", msg.id, cid, e)
 
         self._metrics_backfilled += count
         logger.info("Conversation metrics backfill complete: %d messages updated", count)
@@ -295,18 +299,16 @@ class BackgroundStartupScheduler:
 
         self._belief_turns_found = len(missed_turns)
         logger.info("Found %d missed chat turns for belief metabolism catch-up. Processing...", len(missed_turns))
-        
+
         for turn in missed_turns:
             user_id = int(turn["user_id"])
             convo_id = turn["conversation_id"]
             assistant_id = int(turn["assistant_id"])
-            
+
             logger.info("Catching up belief metabolism for turn user_msg_id=%d in conversation=%s", user_id, convo_id)
             try:
                 await self.belief_metabolism.metabolize(
-                    conversation_id=convo_id,
-                    user_message_id=user_id,
-                    assistant_message_id=assistant_id
+                    conversation_id=convo_id, user_message_id=user_id, assistant_message_id=assistant_id
                 )
                 self._belief_turns_completed += 1
             except Exception as e:
@@ -326,6 +328,7 @@ def _store_metrics_backfill(metrics_repo, message_id: int, metrics: dict) -> Non
     phase_shifts_json = None
     if phase_shifts:
         import json as _json
+
         phase_shifts_json = _json.dumps(phase_shifts)
 
     metrics_repo.insert(
@@ -335,14 +338,24 @@ def _store_metrics_backfill(metrics_repo, message_id: int, metrics: dict) -> Non
         deficit=float(metrics["homeostatic_deficit"]) if metrics.get("homeostatic_deficit") is not None else 0.0,
         rolling_entropy=float(metrics["rolling_entropy"]) if metrics.get("rolling_entropy") is not None else None,
         coupling=float(metrics["coupling_coherence"]) if metrics.get("coupling_coherence") is not None else None,
-        agent_divergence=float(metrics["agent_self_divergence"]) if metrics.get("agent_self_divergence") is not None else None,
-        reverse_perturbation=float(metrics["reverse_perturbation"]) if metrics.get("reverse_perturbation") is not None else None,
+        agent_divergence=float(metrics["agent_self_divergence"])
+        if metrics.get("agent_self_divergence") is not None
+        else None,
+        reverse_perturbation=float(metrics["reverse_perturbation"])
+        if metrics.get("reverse_perturbation") is not None
+        else None,
         surprise_index=float(metrics["surprise_index"]) if metrics.get("surprise_index") is not None else None,
-        mutual_perturbation=float(metrics["mutual_perturbation"]) if metrics.get("mutual_perturbation") is not None else None,
+        mutual_perturbation=float(metrics["mutual_perturbation"])
+        if metrics.get("mutual_perturbation") is not None
+        else None,
         vitality=float(metrics["conversation_vitality"]) if metrics.get("conversation_vitality") is not None else None,
         phase_shifts=phase_shifts_json,
         boringness=float(metrics["boringness"]) if metrics.get("boringness") is not None else None,
-        conceptual_velocity=float(metrics["conceptual_velocity"]) if metrics.get("conceptual_velocity") is not None else None,
-        divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"]) if metrics.get("divergence_resolution_ratio") is not None else None,
+        conceptual_velocity=float(metrics["conceptual_velocity"])
+        if metrics.get("conceptual_velocity") is not None
+        else None,
+        divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"])
+        if metrics.get("divergence_resolution_ratio") is not None
+        else None,
         paskian_health=float(metrics["paskian_health"]) if metrics.get("paskian_health") is not None else None,
     )

@@ -12,6 +12,7 @@ See backend/bootstrap/ for individual initialization modules:
 """
 
 import os
+
 from dotenv import load_dotenv
 
 # ── Load .env BEFORE any module imports ──────────────────────────────
@@ -20,7 +21,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Disable Windows Console QuickEdit mode to prevent suspension when clicking in terminal
-from backend.utils.console import disable_quick_edit
+from backend.utils.console import disable_quick_edit  # noqa: E402
+
 disable_quick_edit()
 
 # Bypass system registry proxy settings
@@ -32,21 +34,22 @@ for k in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy",
 
 # ── Re-export from bootstrap for backward compatibility ────────────────
 # External scripts and tests depend on these being importable from backend.main
+from backend.bootstrap.lifecycle import create_app  # noqa: E402
+from backend.bootstrap.modules import (  # noqa: E402, F401
+    _init_belief_engine,
+)
 from backend.bootstrap.providers import (  # noqa: E402, F401
     _create_llm_provider,
     _create_provider_from_config,
     _init_providers,
 )
-from backend.bootstrap.modules import (  # noqa: E402, F401
-    _init_belief_engine,
-)
-from backend.bootstrap.lifecycle import create_app  # noqa: E402
 
 # ── Module-level FastAPI app instance ──────────────────────────────────
 app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
+
     from backend.config import load_config
 
     try:

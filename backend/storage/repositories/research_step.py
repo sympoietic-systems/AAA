@@ -1,7 +1,6 @@
 """Repository for research_steps table."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
@@ -28,7 +27,7 @@ class ResearchStepRepository(BaseRepository):
                 step.get("result_summary"),
                 step.get("started_at"),
                 step.get("completed_at"),
-                step.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                step.get("created_at") or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
                 step.get("query_group"),
                 step.get("query_text"),
                 step.get("phase_group", 0),
@@ -39,11 +38,9 @@ class ResearchStepRepository(BaseRepository):
         return step["id"]
 
     @with_connection
-    def get(self, step_id: str) -> Optional[dict]:
+    def get(self, step_id: str) -> dict | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM research_steps WHERE id = ?", (step_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM research_steps WHERE id = ?", (step_id,)).fetchone()
         return dict(row) if row else None
 
     @with_connection
@@ -66,7 +63,18 @@ class ResearchStepRepository(BaseRepository):
 
     @with_connection
     def update(self, step_id: str, **kwargs) -> None:
-        allowed = {"status", "result_summary", "started_at", "completed_at", "step_data", "rerun_version", "query_group", "query_text", "phase_group", "sub_sequence"}
+        allowed = {
+            "status",
+            "result_summary",
+            "started_at",
+            "completed_at",
+            "step_data",
+            "rerun_version",
+            "query_group",
+            "query_text",
+            "phase_group",
+            "sub_sequence",
+        }
         updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
         if not updates:
             return

@@ -1,20 +1,19 @@
+import json
 import logging
 import re
-import json
 import uuid
 from html.parser import HTMLParser
-from urllib.parse import urlparse, parse_qs, urljoin
-from typing import Optional, List, Tuple
 from pathlib import Path
-import yaml
-import httpx
-import numpy as np
+from urllib.parse import parse_qs, urlparse
 
-from backend.modules.base import ProcessingModule, ModuleResult
+import httpx
+import yaml
+
+from backend.modules.base import ProcessingModule
+from backend.modules.llm_client import generate_unified
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
-from backend.modules.llm_client import generate_unified
 
 logger = logging.getLogger(__name__)
 PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts" / "web_retrieval"
@@ -40,7 +39,11 @@ class DuckDuckGoParser(HTMLParser):
             self.in_snippet = True
 
         # Check lite.duckduckgo.com format
-        elif tag == "a" and self.current_result is None and ("result-link" in class_name or "result-link" in attrs_dict.get("id", "")):
+        elif (
+            tag == "a"
+            and self.current_result is None
+            and ("result-link" in class_name or "result-link" in attrs_dict.get("id", ""))
+        ):
             self._start_new_result(attrs_dict.get("href", ""))
             self.in_title = True
         elif tag == "td" and "result-snippet" in class_name:
@@ -49,7 +52,7 @@ class DuckDuckGoParser(HTMLParser):
     def _start_new_result(self, raw_url):
         if self.current_result:
             self.results.append(self.current_result)
-        
+
         # Decode URL redirect
         if "uddg=" in raw_url:
             parsed = urlparse(raw_url)
@@ -69,9 +72,7 @@ class DuckDuckGoParser(HTMLParser):
     def handle_endtag(self, tag):
         if tag == "a" and self.in_title:
             self.in_title = False
-        elif tag == "a" and self.in_snippet:
-            self.in_snippet = False
-        elif tag == "td" and self.in_snippet:
+        elif tag == "a" and self.in_snippet or tag == "td" and self.in_snippet:
             self.in_snippet = False
 
     def get_results(self):
@@ -88,7 +89,18 @@ class HTMLToTextParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.text_parts = []
-        self.ignore_tags = {"script", "style", "nav", "header", "footer", "form", "noscript", "head", "iframe", "button"}
+        self.ignore_tags = {
+            "script",
+            "style",
+            "nav",
+            "header",
+            "footer",
+            "form",
+            "noscript",
+            "head",
+            "iframe",
+            "button",
+        }
         self.ignore_stack = []
 
     def handle_starttag(self, tag, attrs):
@@ -111,14 +123,13 @@ class HTMLToTextParser(HTMLParser):
     def handle_endtag(self, tag):
         if self.ignore_stack and tag == self.ignore_stack[-1]:
             self.ignore_stack.pop()
-        elif not self.ignore_stack:
-            if tag in {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"}:
-                self.text_parts.append("\n")
+        elif not self.ignore_stack and tag in {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"}:
+            self.text_parts.append("\n")
 
     def get_text(self) -> str:
         raw_text = "".join(self.text_parts)
-        cleaned = re.sub(r'[ \t]+', ' ', raw_text)
-        cleaned = re.sub(r'\n\s*\n+', '\n\n', cleaned)
+        cleaned = re.sub(r"[ \t]+", " ", raw_text)
+        cleaned = re.sub(r"\n\s*\n+", "\n\n", cleaned)
         return cleaned.strip()
 
 
@@ -128,7 +139,7 @@ class RhizomeWebProbe:
         perception_repo: PerceptionSedimentRepository,
         embedder,
         structural_scorer,
-        llm_provider = None,
+        llm_provider=None,
     ):
         self.repo = perception_repo
         self.embedder = embedder
@@ -141,7 +152,7 @@ class RhizomeWebProbe:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5",
         }
-        
+
         # Try html interface first
         try:
             async with httpx.AsyncClient(headers=headers, timeout=10.0) as client:
@@ -212,12 +223,16 @@ class RhizomeWebProbe:
         if self.llm:
             try:
                 from backend.utils.prompt_loader import get_prompt
+
                 sys_prompt = get_prompt(
-                    "web_retrieval/belief_collision.yaml", "system_prompt",
+                    "web_retrieval/belief_collision.yaml",
+                    "system_prompt",
                     "You are a diffractive scorer checking external web nodes. Respond ONLY with JSON.",
                 )
                 user_tmpl = get_prompt(
-                    "web_retrieval/belief_collision.yaml", "user_prompt_template", "",
+                    "web_retrieval/belief_collision.yaml",
+                    "user_prompt_template",
+                    "",
                 )
 
                 if user_tmpl:
@@ -230,7 +245,7 @@ class RhizomeWebProbe:
                     user_prompt=prompt,
                     expect_json=True,
                     temperature=0.1,
-                    max_tokens=300
+                    max_tokens=300,
                 )
                 data = res.get("json_data") or {}
                 interference_score = float(data.get("interference_score", 0.5))
@@ -244,9 +259,9 @@ class RhizomeWebProbe:
                 logger.warning("LLM calculation of belief collision failed: %s", e)
 
         virtual_file_name = f"web_probe_{uuid.uuid4().hex[:8]}.txt"
-        
+
         # Rhizomatic chunking
-        chunks = [crawled_text[i:i+1000] for i in range(0, len(crawled_text), 800)]
+        chunks = [crawled_text[i : i + 1000] for i in range(0, len(crawled_text), 800)]
         chunk_count = 0
         for idx, chunk_text in enumerate(chunks):
             try:
@@ -323,8 +338,8 @@ class WebRetrievalModule(ProcessingModule):
         perception_repo: PerceptionSedimentRepository,
         embedder,
         structural_scorer,
-        llm_provider = None,
-        config: Optional[dict] = None,
+        llm_provider=None,
+        config: dict | None = None,
     ):
         self._probe = RhizomeWebProbe(
             perception_repo=perception_repo,
@@ -353,8 +368,8 @@ class WebRetrievalModule(ProcessingModule):
 
         search_query = None
         explicit_patterns = [
-            r'^(?:search the web for|web search:|google for|search for|look up)\s+(.+)$',
-            r'^search\s+(.+)$'
+            r"^(?:search the web for|web search:|google for|search for|look up)\s+(.+)$",
+            r"^search\s+(.+)$",
         ]
         for pattern in explicit_patterns:
             match = re.match(pattern, content, re.IGNORECASE)
@@ -362,7 +377,7 @@ class WebRetrievalModule(ProcessingModule):
                 search_query = match.group(1).strip()
                 break
 
-        url_match = re.search(r'(https?://\S+)', content)
+        url_match = re.search(r"(https?://\S+)", content)
         if url_match and not search_query:
             url = url_match.group(1)
             logger.info("WebRetrievalModule: Crawling URL %s directly", url)
@@ -377,9 +392,11 @@ class WebRetrievalModule(ProcessingModule):
             try:
                 routing_yaml = PROMPTS_DIR / "query_routing.yaml"
                 if routing_yaml.exists():
-                    with open(routing_yaml, "r", encoding="utf-8") as f:
+                    with open(routing_yaml, encoding="utf-8") as f:
                         r_data = yaml.safe_load(f) or {}
-                    sys_prompt = r_data.get("system_prompt", "You are a query router. Respond ONLY with YES: <query> or NO.")
+                    sys_prompt = r_data.get(
+                        "system_prompt", "You are a query router. Respond ONLY with YES: <query> or NO."
+                    )
                     user_tmpl = r_data.get("user_prompt_template", "")
                 else:
                     sys_prompt = "You are a query router. Respond ONLY with YES: <query> or NO."
@@ -394,11 +411,7 @@ class WebRetrievalModule(ProcessingModule):
                         f"Reply with exactly 'yes' or 'no' followed by a search query if yes. Format: YES: <query> or NO."
                     )
                 res = await generate_unified(
-                    self._probe.llm,
-                    system_prompt=sys_prompt,
-                    user_prompt=route_prompt,
-                    temperature=0.1,
-                    max_tokens=50
+                    self._probe.llm, system_prompt=sys_prompt, user_prompt=route_prompt, temperature=0.1, max_tokens=50
                 )
                 ans = res.get("content", "").strip()
                 if ans.upper().startswith("YES:"):
@@ -419,12 +432,15 @@ class WebRetrievalModule(ProcessingModule):
                             f"Source URL: {result['url']}\n"
                             f"Snippet: {result['snippet']}\n"
                             f"Scraped page content:\n{result['content'][:3000]}"
-                        )
+                        ),
                     }
                 ]
             else:
                 payload["web_context"] = [
-                    {"role": "system", "content": f"[Web Search] No search results returned for query: '{search_query}'."}
+                    {
+                        "role": "system",
+                        "content": f"[Web Search] No search results returned for query: '{search_query}'.",
+                    }
                 ]
 
         return payload

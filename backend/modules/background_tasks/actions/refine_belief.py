@@ -1,13 +1,10 @@
-from pathlib import Path
-import yaml
 import json
 import logging
-from typing import Optional
 
 from backend.config import load_config
+from backend.modules.llm_client import BaseLLMProvider, generate_unified
 from backend.storage.database import get_db_path
 from backend.storage.repository import BeliefRepository
-from backend.modules.llm_client import BaseLLMProvider, generate_unified
 
 from ..base import BackgroundAction
 
@@ -55,7 +52,8 @@ class RefineBeliefAction(BackgroundAction):
         # 4. Load Symbia core personality
         personality_prompt = ""
         try:
-            from backend.utils.persona_loader import get_identity_yaml_path, load_identity, get_persona_text
+            from backend.utils.persona_loader import get_identity_yaml_path, get_persona_text, load_identity
+
             identity_path = get_identity_yaml_path()
             if identity_path.exists():
                 identity_data = load_identity(identity_path)
@@ -99,7 +97,7 @@ Active beliefs already in Symbia's database:
                 "decision": "error",
                 "error": "Failed to generate valid JSON decision",
                 "content": content,
-                "model": model_used
+                "model": model_used,
             }
 
         suggested_label = data.get("suggested_label", "").strip()
@@ -118,6 +116,7 @@ Active beliefs already in Symbia's database:
         # Math fallback check: if no target ID resolved, check cosine similarities
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
+
         prop_vec = parse_vector_16d(proposal.initial_signature)
         if prop_vec is not None:
             best_sim = -1.0
@@ -132,7 +131,9 @@ Active beliefs already in Symbia's database:
                             best_id = b.id
             if best_sim >= 0.70 and not resolved_target_id:
                 resolved_target_id = best_id
-                logger.info(f"Mathematical overlap threshold reached (similarity={best_sim:.2f}) for belief ID {best_id}. Auto-nominated target.")
+                logger.info(
+                    f"Mathematical overlap threshold reached (similarity={best_sim:.2f}) for belief ID {best_id}. Auto-nominated target."
+                )
 
         # Update the proposal with daemon suggestions
         belief_repo.update_proposal_suggestions(
@@ -140,12 +141,11 @@ Active beliefs already in Symbia's database:
             suggested_label=suggested_label,
             suggested_statement=suggested_statement,
             potential_merge_target=resolved_target_id,
-            status="refined"
+            status="refined",
         )
         if data.get("rationale"):
             belief_repo.update_proposal_symbia_reflection(
-                proposal_id=proposal_id,
-                symbia_reflection=data.get("rationale").strip()
+                proposal_id=proposal_id, symbia_reflection=data.get("rationale").strip()
             )
         logger.info(f"Successfully refined belief proposal {proposal_id} with label: {suggested_label}")
 
@@ -154,5 +154,5 @@ Active beliefs already in Symbia's database:
             "suggested_label": suggested_label,
             "suggested_statement": suggested_statement,
             "potential_merge_target": resolved_target_id,
-            "model": model_used
+            "model": model_used,
         }

@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from backend.modules.base import ProcessingModule
 
@@ -8,12 +8,10 @@ class ModuleRegistry:
         self._factories: dict[str, Callable[[], ProcessingModule]] = {}
         self._modules: dict[str, ProcessingModule] = {}
 
-    def register(
-        self, name: str, factory: Callable[[], ProcessingModule]
-    ) -> None:
+    def register(self, name: str, factory: Callable[[], ProcessingModule]) -> None:
         self._factories[name] = factory
 
-    def get(self, name: str) -> Optional[ProcessingModule]:
+    def get(self, name: str) -> ProcessingModule | None:
         if name not in self._modules:
             if name not in self._factories:
                 return None

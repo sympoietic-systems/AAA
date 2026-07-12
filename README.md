@@ -85,6 +85,16 @@ bash scripts/run_all.sh
 
 Open **`http://localhost:5173`** to begin.
 
+### Linting & Code Quality
+
+```bash
+ruff check backend/            # Lint Python code
+ruff check backend/ --fix      # Auto-fix safe issues
+ruff format backend/           # Format Python code
+pre-commit install             # Install git hooks for auto-checking on commit
+```
+
+> Ruff supersedes flake8, isort, pyupgrade, and black. Configuration in `pyproject.toml`.  
 > For a guided walkthrough, see the [Non-Technical Quickstart](docs/guides/QUICKSTART_NON_TECHNICAL.md).  
 > For advanced configuration, see the [Setup Guide](docs/guides/SETUP.md).
 

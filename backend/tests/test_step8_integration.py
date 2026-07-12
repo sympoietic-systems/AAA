@@ -1,24 +1,26 @@
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-mock_generate = AsyncMock(return_value={
-    "content": "Intra-action is Barad's key concept — the mutual constitution of entangled agencies.",
-    "thinking": None,
-    "model": "mock-gemini-model",
-    "provider_used": "mock-provider",
-})
+mock_generate = AsyncMock(
+    return_value={
+        "content": "Intra-action is Barad's key concept — the mutual constitution of entangled agencies.",
+        "thinking": None,
+        "model": "mock-gemini-model",
+        "provider_used": "mock-provider",
+    }
+)
 
 with patch(
     "backend.modules.llm_client.OpenAICompatibleProvider.generate",
     new=mock_generate,
 ):
-    from backend.main import app
-
     from fastapi.testclient import TestClient
+
+    from backend.main import app
 
     with TestClient(app) as client:
         headers = {}
@@ -47,15 +49,19 @@ with patch(
         assert apparatus_msg["provider_used"] == "mock-provider"
 
         import sqlite3
-        from backend.storage.database import get_db_path
+
         from backend.config import load_config
+        from backend.storage.database import get_db_path
+
         config = load_config()
         db = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
         conn = sqlite3.connect(db)
         conn.row_factory = sqlite3.Row
         rows = conn.execute("SELECT id, agent_id, speaker, model_used, provider_used FROM conversation_log").fetchall()
         for r in rows:
-            print(f"  DB row {r['id']}: agent_id={r['agent_id']!r}, speaker={r['speaker']}, model_used={r['model_used']!r}, provider_used={r['provider_used']!r}")
+            print(
+                f"  DB row {r['id']}: agent_id={r['agent_id']!r}, speaker={r['speaker']}, model_used={r['model_used']!r}, provider_used={r['provider_used']!r}"
+            )
         conn.close()
 
         assert rows[-2]["agent_id"].lower() == "symbia"

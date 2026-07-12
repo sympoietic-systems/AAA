@@ -13,21 +13,20 @@ class AttachmentInfo(BaseModel):
 
 class ChatRequest(BaseModel):
     content: str
-    speaker: str = Field(default="human", pattern="^(human|apparatus|[\w-]+)$")
+    speaker: str = Field(default="human", pattern=r"^(human|apparatus|[\w-]+)$")
     conversation_id: str = Field(default="", description="Conversation ID; auto-created if empty")
     attachments: list[AttachmentInfo] | None = None
-    include_structural_scoring: Optional[bool] = None
-    max_tokens: Optional[int] = Field(default=None, description="Override max_tokens for this request")
-    parent_message_id: Optional[int] = Field(default=None, description="Parent message ID for conversation branching")
-    agent_id: Optional[str] = Field(default=None, description="Optional calling agent name")
+    include_structural_scoring: bool | None = None
+    max_tokens: int | None = Field(default=None, description="Override max_tokens for this request")
+    parent_message_id: int | None = Field(default=None, description="Parent message ID for conversation branching")
+    agent_id: str | None = Field(default=None, description="Optional calling agent name")
 
 
 class GenerateRequest(BaseModel):
     conversation_id: str
     user_message_id: int
-    max_tokens: Optional[int] = Field(default=None, description="Override max_tokens for this request")
-    include_structural_scoring: Optional[bool] = None
-
+    max_tokens: int | None = Field(default=None, description="Override max_tokens for this request")
+    include_structural_scoring: bool | None = None
 
 
 class ProposedBranch(BaseModel):
@@ -41,27 +40,29 @@ class ChatResponse(BaseModel):
     conversation_id: str = ""
     speaker: str
     content: str
-    thinking: Optional[str] = None
+    thinking: str | None = None
     content_tokens: int = 0
-    thinking_tokens: Optional[int] = None
+    thinking_tokens: int | None = None
     embedding_generated: bool = False
     error: str | None = None
     metrics: Optional["MetricsInfo"] = None
     homeostatic_recommendations: Optional["HomeostaticRecommendations"] = None
     attachments: list[AttachmentInfo] | None = None
     context_sent: str | None = None
-    model_used: Optional[str] = None
-    provider_used: Optional[str] = None
-    structural_justification: Optional[str] = None
-    user_message_id: Optional[int] = None
-    user_structural_signature: Optional[list[float]] = None
-    user_structural_justification: Optional[str] = None
-    truncated: Optional[bool] = Field(default=None, description="Whether response was truncated by token limit")
-    finish_reason: Optional[str] = Field(default=None, description="LLM finish reason (stop, length, max_tokens)")
+    model_used: str | None = None
+    provider_used: str | None = None
+    structural_justification: str | None = None
+    user_message_id: int | None = None
+    user_structural_signature: list[float] | None = None
+    user_structural_justification: str | None = None
+    truncated: bool | None = Field(default=None, description="Whether response was truncated by token limit")
+    finish_reason: str | None = Field(default=None, description="LLM finish reason (stop, length, max_tokens)")
     active_skills: list[str] = Field(default_factory=list, description="Skill names active for this response")
-    active_beliefs: list[str] = Field(default_factory=list, description="Belief labels in the attractor window for this response")
-    parent_message_id: Optional[int] = None
-    proposed_branches: Optional[list[ProposedBranch]] = None
+    active_beliefs: list[str] = Field(
+        default_factory=list, description="Belief labels in the attractor window for this response"
+    )
+    parent_message_id: int | None = None
+    proposed_branches: list[ProposedBranch] | None = None
 
 
 class HistoryMessage(BaseModel):
@@ -69,17 +70,17 @@ class HistoryMessage(BaseModel):
     timestamp: datetime
     speaker: str
     content: str
-    thinking: Optional[str] = None
-    context_sent: Optional[str] = None
-    has_context: Optional[bool] = None
+    thinking: str | None = None
+    context_sent: str | None = None
+    has_context: bool | None = None
     content_tokens: int = 0
-    thinking_tokens: Optional[int] = None
+    thinking_tokens: int | None = None
     metrics: Optional["MetricsInfo"] = None
-    model_used: Optional[str] = None
-    provider_used: Optional[str] = None
-    structural_signature: Optional[list[float]] = None
-    structural_justification: Optional[str] = None
-    parent_message_id: Optional[int] = None
+    model_used: str | None = None
+    provider_used: str | None = None
+    structural_signature: list[float] | None = None
+    structural_justification: str | None = None
+    parent_message_id: int | None = None
 
 
 class HistoryResponse(BaseModel):
@@ -133,10 +134,10 @@ class DbSkillInfo(BaseModel):
     source: str = "authored"
     version: int = 1
     changelog: str = ""
-    last_used_at: Optional[datetime] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    refusal_reason: Optional[str] = None
+    last_used_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    refusal_reason: str | None = None
 
 
 class DbSkillsResponse(BaseModel):
@@ -148,15 +149,15 @@ class DbSkillsResponse(BaseModel):
 
 
 class SkillUpdateRequest(BaseModel):
-    description: Optional[str] = None
-    content: Optional[str] = None
-    trigger_keywords: Optional[list[str]] = None
+    description: str | None = None
+    content: str | None = None
+    trigger_keywords: list[str] | None = None
 
 
 class SkillCreateRequest(BaseModel):
     name: str
     description: str
-    content: Optional[str] = None
+    content: str | None = None
     always_active: bool = False
     trigger_keywords: list[str] = []
 
@@ -188,7 +189,7 @@ class WorkshopResponse(BaseModel):
     anti_mastery_assessment: dict = {}
     skills: list[dict] = []
     count: int = 0
-    skill: Optional[dict] = None
+    skill: dict | None = None
     events: list[dict] = []
 
 
@@ -250,7 +251,6 @@ class DiffractiveInfo(BaseModel):
     sources: list[DiffractiveSourceInfo] = []
 
 
-
 class ConversationTagInfo(BaseModel):
     tag: str
     tag_type: str
@@ -267,7 +267,7 @@ class MemoryNodeInfo(BaseModel):
     agential_symmetry: str = "negotiated"
     diffractive_key: str = ""
     tendril_ids: list[str] = []
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
 
 class MemoryNodeListResponse(BaseModel):
@@ -277,13 +277,13 @@ class MemoryNodeListResponse(BaseModel):
 class ConversationInfo(BaseModel):
     id: str
     title: str
-    agent_id: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    agent_id: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
     message_count: int = 0
     tags: list[ConversationTagInfo] = []
-    summary: Optional[str] = None
-    human_summary: Optional[str] = None
+    summary: str | None = None
+    human_summary: str | None = None
 
 
 class ConversationListResponse(BaseModel):
@@ -330,12 +330,12 @@ class ConversationFile(BaseModel):
     file_name: str
     file_type: str
     status: str
-    summary: Optional[str] = None
-    summary_model: Optional[str] = None
+    summary: str | None = None
+    summary_model: str | None = None
     token_count: int = 0
     chunk_count: int = 0
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class ConversationFilesResponse(BaseModel):
@@ -346,19 +346,19 @@ class ConversationFilesResponse(BaseModel):
 class NoteCreateRequest(BaseModel):
     asset_type: Literal["conversation_message", "research_task", "research_step"] = "conversation_message"
     asset_id: str = ""
-    conversation_id: Optional[str] = None
+    conversation_id: str | None = None
     selected_text: str
     comment: str = ""
     visibility: Literal["personal", "shared", "agent"] = "personal"
-    start_offset: Optional[int] = None
-    message_id: Optional[int] = None
+    start_offset: int | None = None
+    message_id: int | None = None
 
 
 class NoteResponse(BaseModel):
     id: str
     asset_type: str
     asset_id: str
-    conversation_id: Optional[str] = None
+    conversation_id: str | None = None
     selected_text: str
     comment: str
     visibility: str
@@ -367,13 +367,13 @@ class NoteResponse(BaseModel):
 
 
 class NoteUpdateRequest(BaseModel):
-    comment: Optional[str] = None
-    visibility: Optional[Literal["personal", "shared", "agent"]] = None
+    comment: str | None = None
+    visibility: Literal["personal", "shared", "agent"] | None = None
 
 
 class UnifiedNoteResponse(NoteResponse):
-    step_number: Optional[int] = None
-    step_type: Optional[str] = None
+    step_number: int | None = None
+    step_type: str | None = None
 
 
 class SedimentFileInfo(BaseModel):
@@ -381,12 +381,12 @@ class SedimentFileInfo(BaseModel):
     conversation_title: str = ""
     file_name: str
     file_type: str
-    summary: Optional[str] = None
+    summary: str | None = None
     token_count: int = 0
     chunk_count: int = 0
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-    display_name: Optional[str] = None
+    created_at: str | None = None
+    updated_at: str | None = None
+    display_name: str | None = None
 
 
 class SedimentFilesResponse(BaseModel):
@@ -405,10 +405,10 @@ class SedimentInjectionInfo(BaseModel):
     file_type: str = ""
     token_count: int = 0
     chunk_count: int = 0
-    summary: Optional[str] = None
-    injected_at: Optional[str] = None
+    summary: str | None = None
+    injected_at: str | None = None
     status: str = "ready"
-    display_name: Optional[str] = None
+    display_name: str | None = None
     display_name: str = ""
 
 
@@ -430,7 +430,7 @@ class TreeNode(BaseModel):
     id: int
     speaker: str
     content: str
-    parent_message_id: Optional[int] = None
+    parent_message_id: int | None = None
     timestamp: datetime
 
 
@@ -440,7 +440,7 @@ class TreeLink(BaseModel):
     target_id: int
     link_type: str
     status: str = "active"
-    justification: Optional[str] = ""
+    justification: str | None = ""
 
 
 class ConversationTreeResponse(BaseModel):
@@ -461,4 +461,4 @@ class CommitLinkRequest(BaseModel):
     target_id: int
     link_type: str = "resonance"
     status: str = "active"
-    justification: Optional[str] = ""
+    justification: str | None = ""

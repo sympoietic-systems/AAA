@@ -9,9 +9,7 @@ import sqlite3
 
 
 def up(conn: sqlite3.Connection) -> None:
-    conn.execute(
-        "ALTER TABLE research_steps ADD COLUMN rerun_version INTEGER NOT NULL DEFAULT 1"
-    )
+    conn.execute("ALTER TABLE research_steps ADD COLUMN rerun_version INTEGER NOT NULL DEFAULT 1")
     conn.commit()
 
 

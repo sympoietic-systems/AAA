@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 
-from backend.api.deps import require_conversation, get_conversation_repo
+from backend.api.deps import get_conversation_repo, require_conversation
 from backend.api.schemas import TagCreateRequest
 
 router = APIRouter()

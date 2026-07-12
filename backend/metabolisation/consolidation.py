@@ -1,12 +1,12 @@
 """Conversation consolidation mixin for the Dream Daemon."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from backend.metabolisation.sedimentation import (
-    parse_sedimentation_yaml,
-    merge_nodes,
     build_compact_node_summary,
+    merge_nodes,
+    parse_sedimentation_yaml,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,12 +62,15 @@ class ConsolidationMixin:
                                 self._sync_diffractive_tags(c.id, parsed_nodes)
                                 logger.info(
                                     "Backfilled %d memory nodes from existing checkpoint for %s",
-                                    len(parsed_nodes), c.id,
+                                    len(parsed_nodes),
+                                    c.id,
                                 )
                                 continue
                             except Exception as e:
                                 logger.warning(
-                                    "Failed to backfill memory nodes for %s: %s", c.id, e,
+                                    "Failed to backfill memory nodes for %s: %s",
+                                    c.id,
+                                    e,
                                 )
                         else:
                             needs_reconsolidation = True
@@ -106,8 +109,8 @@ class ConsolidationMixin:
                 if last_time:
                     # Rule 1: Previously consolidated — consolidate if >cooldown AND ≥N new messages
                     if last_time.tzinfo is None:
-                        last_time = last_time.replace(tzinfo=timezone.utc)
-                    elapsed = datetime.now(timezone.utc) - last_time
+                        last_time = last_time.replace(tzinfo=UTC)
+                    elapsed = datetime.now(UTC) - last_time
                     if elapsed.total_seconds() < self.consolidate_cooldown_hours * 3600:
                         continue
                     if new_msg_count < self.consolidate_min_new_messages:
@@ -139,7 +142,9 @@ class ConsolidationMixin:
         checkpoint = self.checkpoint_repo.get_latest_checkpoint_for_path(conversation_id, ancestor_ids)
 
         checkpoint_id = checkpoint.get("id") if checkpoint else None
-        existing_nodes = memory_node_repo.get_nodes_by_checkpoint(checkpoint_id) if (memory_node_repo and checkpoint_id) else []
+        existing_nodes = (
+            memory_node_repo.get_nodes_by_checkpoint(checkpoint_id) if (memory_node_repo and checkpoint_id) else []
+        )
 
         total_msg_count = len(ancestor_msgs)
         is_reconsolidation = bool(checkpoint and not existing_nodes and checkpoint.get("summary"))
@@ -148,7 +153,8 @@ class ConsolidationMixin:
             new_messages = ancestor_msgs
             logger.info(
                 "Re-consolidating %s from scratch (old-format checkpoint, %d total messages)",
-                conversation_id, total_msg_count,
+                conversation_id,
+                total_msg_count,
             )
         else:
             if checkpoint:
@@ -160,7 +166,7 @@ class ConsolidationMixin:
                             idx = i
                             break
                     if idx != -1:
-                        new_messages = ancestor_msgs[idx + 1:]
+                        new_messages = ancestor_msgs[idx + 1 :]
                     else:
                         checkpoint_msg_count = checkpoint.get("message_count", 0)
                         new_messages = ancestor_msgs[checkpoint_msg_count:]
@@ -192,17 +198,14 @@ class ConsolidationMixin:
             prompt_text = (
                 "We are incrementally updating the intra-active memory nodes from a conversation.\n\n"
                 "Existing Memory Nodes (preserve unchanged ones by not including them in output):\n"
-                f"\"\"\"\n{compact_summary}\n\"\"\"\n\n"
+                f'"""\n{compact_summary}\n"""\n\n'
                 "New Messages to integrate:\n"
-                f"\"\"\"\n{new_messages_text}\n\"\"\"\n\n"
+                f'"""\n{new_messages_text}\n"""\n\n'
                 "Return ONLY new nodes and nodes whose stance, intensity, or shape has shifted due to the new messages. "
                 "Use existing node IDs for modifications. Omit nodes that are unchanged."
             )
         else:
-            prompt_text = (
-                "Perform sedimentation on this conversation encounter.\n\n"
-                "\"\"\"\n{new_messages_text}\n\"\"\"\n"
-            ).format(new_messages_text=new_messages_text)
+            prompt_text = f'Perform sedimentation on this conversation encounter.\n\n"""\n{new_messages_text}\n"""\n'
 
         bg_engine = getattr(self.app_state, "background_engine", None)
         if not bg_engine:
@@ -212,7 +215,8 @@ class ConsolidationMixin:
         # ── Call 1: Memory nodes (YAML) ──
         logger.info(
             "Running node consolidation for conversation %s (messages count along branch: %d)",
-            conversation_id, total_msg_count,
+            conversation_id,
+            total_msg_count,
         )
         node_result = await bg_engine.run("consolidate", {"text": prompt_text})
 
@@ -234,8 +238,12 @@ class ConsolidationMixin:
 
         # Save checkpoint with both raw nodes output and human summary
         checkpoint_id = self.checkpoint_repo.save(
-            conversation_id, total_msg_count, raw_output, model_used,
-            human_summary=human_summary, message_id=leaf_message_id,
+            conversation_id,
+            total_msg_count,
+            raw_output,
+            model_used,
+            human_summary=human_summary,
+            message_id=leaf_message_id,
         )
         logger.info("Consolidation checkpoint saved for %s (%d msgs)", conversation_id, total_msg_count)
 
@@ -262,7 +270,10 @@ class ConsolidationMixin:
 
         logger.info(
             "Consolidated %s: %d nodes (tier %d, %d chars raw output)",
-            conversation_id, len(merged_nodes), parse_tier, len(raw_output),
+            conversation_id,
+            len(merged_nodes),
+            parse_tier,
+            len(raw_output),
         )
 
     def _sync_diffractive_tags(self, conversation_id: str, nodes: list[dict]) -> None:
@@ -278,8 +289,8 @@ class ConsolidationMixin:
             if seen_keys:
                 logger.info(
                     "Synced %d diffractive keys for conversation %s",
-                    len(seen_keys), conversation_id,
+                    len(seen_keys),
+                    conversation_id,
                 )
         except Exception as e:
             logger.warning("Failed to sync diffractive tags for %s: %s", conversation_id, e)
-

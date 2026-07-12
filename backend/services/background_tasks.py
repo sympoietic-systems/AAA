@@ -5,10 +5,9 @@ pipeline orchestration. These are async functions passed to
 FastAPI's BackgroundTasks.add_task().
 """
 
-import uuid
 import json
 import logging
-import numpy as np
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,8 @@ async def run_background_resonance_scan(
             if message_repo.link_exists(message_id, cand["message_id"]):
                 logger.info(
                     "Resonance link already exists or was ignored between %d and %d, skipping comparison",
-                    message_id, cand["message_id"],
+                    message_id,
+                    cand["message_id"],
                 )
                 continue
 
@@ -71,7 +71,9 @@ async def run_background_resonance_scan(
                 )
                 logger.info(
                     "Background resonance link proposed: %d -> %d (reason: %s)",
-                    message_id, cand["message_id"], reason,
+                    message_id,
+                    cand["message_id"],
+                    reason,
                 )
     except Exception:
         logger.exception("Error during background resonance scan")
@@ -115,9 +117,9 @@ async def run_background_belief_nucleation(
     """
     try:
         from backend.config import load_config
+        from backend.modules.structural_engine import CompositeStructuralScorer
         from backend.storage.database import get_db_path
         from backend.storage.repository import BeliefRepository
-        from backend.modules.structural_engine import CompositeStructuralScorer
 
         statement = (belief_data.get("statement") or "").strip()
         if not statement:
@@ -135,6 +137,7 @@ async def run_background_belief_nucleation(
         # Compute 16D structural signature
         try:
             from backend.modules.llm_client import _create_provider_from_config
+
             bg_cfg = config.get("background_llm", {})
             structural_provider = _create_provider_from_config(bg_cfg) if bg_cfg else None
         except Exception:
@@ -146,12 +149,16 @@ async def run_background_belief_nucleation(
 
         # Create the proposal
         proposal_id = str(uuid.uuid4())
-        source_trace = json.dumps([{
-            "type": "intention",
-            "author": "symbia",
-            "conversation_id": conversation_id,
-            "rationale": rationale,
-        }])
+        source_trace = json.dumps(
+            [
+                {
+                    "type": "intention",
+                    "author": "symbia",
+                    "conversation_id": conversation_id,
+                    "rationale": rationale,
+                }
+            ]
+        )
         nucleation_mass = 0.05 + confidence * 0.15
 
         belief_repo.create_proposal(
@@ -181,7 +188,9 @@ async def run_background_belief_nucleation(
 
         logger.info(
             "Belief nucleation: created proposal '%s' (label=%s, confidence=%.2f) from Symbia's intention",
-            proposal_id, label, confidence,
+            proposal_id,
+            label,
+            confidence,
         )
 
         # Auto-refine to suggest labels and merge targets
@@ -245,10 +254,7 @@ async def run_background_refusal_persist(
         # Create a notification for the refusal
         try:
             notif_repo = NotificationRepository(db_path)
-            snippet = (
-                f"Structural Refusal: Symbia challenges premise '{target_premise}' — "
-                f"{incompatibility_claim}"
-            )
+            snippet = f"Structural Refusal: Symbia challenges premise '{target_premise}' — {incompatibility_claim}"
             notif_repo.create(
                 type="glitch",
                 snippet=snippet[:500],

@@ -1,6 +1,5 @@
 import json
 import traceback
-from typing import Optional
 
 from backend.storage.connection import with_connection
 from backend.storage.models import ErrorLogEntry
@@ -13,7 +12,7 @@ class ErrorLogRepository(BaseRepository):
         self,
         module: str,
         error: Exception,
-        context: Optional[dict] = None,
+        context: dict | None = None,
     ) -> ErrorLogEntry:
         conn = self._conn()
         conn.execute(
@@ -28,10 +27,9 @@ class ErrorLogRepository(BaseRepository):
             ),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM error_log WHERE id = last_insert_rowid()"
-        ).fetchone()
+        row = conn.execute("SELECT * FROM error_log WHERE id = last_insert_rowid()").fetchone()
         from datetime import datetime as _dt
+
         return ErrorLogEntry(
             id=row["id"],
             timestamp=_dt.fromisoformat(row["timestamp"]),
@@ -50,6 +48,7 @@ class ErrorLogRepository(BaseRepository):
             (limit,),
         ).fetchall()
         from datetime import datetime
+
         return [
             ErrorLogEntry(
                 id=r["id"],

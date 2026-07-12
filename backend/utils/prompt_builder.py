@@ -32,9 +32,7 @@ def split_skills(skill_repo: Any) -> tuple[list[Any], list[Any]]:
     Handles both list_crystallized() and list_skills() APIs.
     """
     all_skills = (
-        skill_repo.list_crystallized()
-        if hasattr(skill_repo, "list_crystallized")
-        else skill_repo.list_skills()
+        skill_repo.list_crystallized() if hasattr(skill_repo, "list_crystallized") else skill_repo.list_skills()
     )
     aa = [s for s in all_skills if getattr(s, "always_active", False)]
     od = [s for s in all_skills if not getattr(s, "always_active", False)]
@@ -60,19 +58,23 @@ async def compute_structural_signature(
     try:
         if llm_provider is not None:
             from backend.modules.structural_engine import CompositeStructuralScorer
+
             scorer = CompositeStructuralScorer(llm_provider=llm_provider)
             try:
                 sig = await asyncio.wait_for(scorer.score_async(text), timeout=llm_timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.debug("LLM structural scorer timed out after %.1fs, falling back to lexicon", llm_timeout)
                 from backend.modules.structural_engine import LexiconScorer
+
                 sig = LexiconScorer().score(text)
             except Exception:
                 logger.exception("LLM structural scorer failed, falling back to lexicon")
                 from backend.modules.structural_engine import LexiconScorer
+
                 sig = LexiconScorer().score(text)
         else:
             from backend.modules.structural_engine import LexiconScorer
+
             sig = LexiconScorer().score(text)
 
         norm = np.linalg.norm(sig)
@@ -103,11 +105,7 @@ def build_attractor_window(
             return []
 
         all_beliefs = belief_repo.list_beliefs(agent_id)
-        active = [
-            b for b in all_beliefs
-            if b.lifecycle_stage not in ("collapsed", "faded")
-            and b.confidence >= 0.20
-        ]
+        active = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
         if not active:
             return []
 
@@ -123,9 +121,7 @@ def build_attractor_window(
                     "mass": b.ontological_mass,
                     "fallback": True,
                 }
-                for i, b in enumerate(
-                    sorted(active, key=lambda x: x.ontological_mass, reverse=True)[:4]
-                )
+                for i, b in enumerate(sorted(active, key=lambda x: x.ontological_mass, reverse=True)[:4])
             ]
 
         slots: list[Any] = [None] * 6
@@ -150,15 +146,14 @@ def build_attractor_window(
                 slots[3] = min(remaining, key=lambda x: x.confidence)
                 used_ids.add(slots[3].id)
         else:
-            for i, b in enumerate(
-                sorted([b for b in active if b.id not in used_ids], key=lambda x: x.confidence)[:2]
-            ):
+            for i, b in enumerate(sorted([b for b in active if b.id not in used_ids], key=lambda x: x.confidence)[:2]):
                 slots[2 + i] = b
                 used_ids.add(b.id)
 
         # Slots 5-6: resonance
         resonance_pool = [b for b in active if b.id not in used_ids]
         if resonance_pool:
+
             def _sim(b: Any) -> float:
                 try:
                     bv = parse_vector_16d(b.vector_16d)
@@ -340,7 +335,8 @@ def format_skills_always_active(
         return ""
 
     filtered = [
-        s for s in always_active
+        s
+        for s in always_active
         if _val(s, "name") not in ("research-proposal", "skill-nucleation", "belief-nucleation")
     ][:max_count]
     if not filtered:
@@ -453,6 +449,7 @@ def format_identity_block(protocol_key: str) -> str:
     """Load identity from YAML: core_identity + operational_protocols[protocol_key]."""
     try:
         from backend.utils.persona_loader import load_persona_for_context
+
         return load_persona_for_context(protocol_key)
     except Exception:
         logger.warning("Failed to load identity block for protocol_key '%s'", protocol_key)

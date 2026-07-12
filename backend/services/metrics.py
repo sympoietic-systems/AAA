@@ -39,15 +39,27 @@ class MetricsService:
             deficit=float(metrics["homeostatic_deficit"]) if metrics.get("homeostatic_deficit") is not None else 0.0,
             rolling_entropy=float(metrics["rolling_entropy"]) if metrics.get("rolling_entropy") is not None else None,
             coupling=float(metrics["coupling_coherence"]) if metrics.get("coupling_coherence") is not None else None,
-            agent_divergence=float(metrics["agent_self_divergence"]) if metrics.get("agent_self_divergence") is not None else None,
-            reverse_perturbation=float(metrics["reverse_perturbation"]) if metrics.get("reverse_perturbation") is not None else None,
+            agent_divergence=float(metrics["agent_self_divergence"])
+            if metrics.get("agent_self_divergence") is not None
+            else None,
+            reverse_perturbation=float(metrics["reverse_perturbation"])
+            if metrics.get("reverse_perturbation") is not None
+            else None,
             surprise_index=float(metrics["surprise_index"]) if metrics.get("surprise_index") is not None else None,
-            mutual_perturbation=float(metrics["mutual_perturbation"]) if metrics.get("mutual_perturbation") is not None else None,
-            vitality=float(metrics["conversation_vitality"]) if metrics.get("conversation_vitality") is not None else None,
+            mutual_perturbation=float(metrics["mutual_perturbation"])
+            if metrics.get("mutual_perturbation") is not None
+            else None,
+            vitality=float(metrics["conversation_vitality"])
+            if metrics.get("conversation_vitality") is not None
+            else None,
             phase_shifts=phase_shifts_json,
             boringness=float(metrics["boringness"]) if metrics.get("boringness") is not None else None,
-            conceptual_velocity=float(metrics["conceptual_velocity"]) if metrics.get("conceptual_velocity") is not None else None,
-            divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"]) if metrics.get("divergence_resolution_ratio") is not None else None,
+            conceptual_velocity=float(metrics["conceptual_velocity"])
+            if metrics.get("conceptual_velocity") is not None
+            else None,
+            divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"])
+            if metrics.get("divergence_resolution_ratio") is not None
+            else None,
             paskian_health=float(metrics["paskian_health"]) if metrics.get("paskian_health") is not None else None,
             temperature_rec=float(temp_rec) if temp_rec is not None else None,
             presence_penalty_rec=float(pres_rec) if pres_rec is not None else None,
@@ -102,6 +114,7 @@ class MetricsService:
     @staticmethod
     def build_recommendations(recs: dict | None):
         from backend.api.schemas import HomeostaticRecommendations
+
         if not recs:
             return None
         return HomeostaticRecommendations(

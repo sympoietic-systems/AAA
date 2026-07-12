@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional
+from datetime import UTC
 
 from backend.storage.connection import with_connection
 from backend.storage.models import SkillEvent, SkillNode
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class SkillRepository(BaseRepository):
     @with_connection
-    def get_skill(self, skill_id: str) -> Optional[SkillNode]:
+    def get_skill(self, skill_id: str) -> SkillNode | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT * FROM skill_nodes WHERE id = ?",
@@ -23,7 +23,7 @@ class SkillRepository(BaseRepository):
         return _row_to_skill_node(row)
 
     @with_connection
-    def get_skill_by_name(self, name: str) -> Optional[SkillNode]:
+    def get_skill_by_name(self, name: str) -> SkillNode | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT * FROM skill_nodes WHERE name = ?",
@@ -51,9 +51,7 @@ class SkillRepository(BaseRepository):
     @with_connection
     def list_crystallized(self) -> list[SkillNode]:
         conn = self._conn()
-        rows = conn.execute(
-            "SELECT * FROM skill_nodes WHERE lifecycle_stage = 'crystallized'"
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM skill_nodes WHERE lifecycle_stage = 'crystallized'").fetchall()
         return [_row_to_skill_node(r) for r in rows]
 
     @with_connection
@@ -96,8 +94,21 @@ class SkillRepository(BaseRepository):
                (id, name, description, content, short_content, always_active, trigger_keywords,
                 lifecycle_stage, confidence, ontological_mass, vector_16d, source, version, changelog)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)""",
-            (id, name, description, content, short_content, int(always_active), trigger_keywords,
-             lifecycle_stage, confidence, ontological_mass, vector_16d, source, changelog),
+            (
+                id,
+                name,
+                description,
+                content,
+                short_content,
+                int(always_active),
+                trigger_keywords,
+                lifecycle_stage,
+                confidence,
+                ontological_mass,
+                vector_16d,
+                source,
+                changelog,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM skill_nodes WHERE id = ?", (id,)).fetchone()
@@ -105,11 +116,20 @@ class SkillRepository(BaseRepository):
 
         try:
             import uuid
+
             conn.execute(
                 """INSERT OR IGNORE INTO skill_versions
                    (id, skill_id, version, content, description, trigger_keywords, changelog, source)
                    VALUES (?, ?, 1, ?, ?, ?, ?, ?)""",
-                (str(uuid.uuid4()), node.id, node.content, node.description, node.trigger_keywords, node.changelog, version_source),
+                (
+                    str(uuid.uuid4()),
+                    node.id,
+                    node.content,
+                    node.description,
+                    node.trigger_keywords,
+                    node.changelog,
+                    version_source,
+                ),
             )
             conn.commit()
         except Exception as ve:
@@ -133,7 +153,7 @@ class SkillRepository(BaseRepository):
         changelog: str = None,
         attunement_notes: str = None,
         version_source: str = "user",
-    ) -> Optional[SkillNode]:
+    ) -> SkillNode | None:
         conn = self._conn()
         row = conn.execute("SELECT * FROM skill_nodes WHERE id = ?", (skill_id,)).fetchone()
         if row is None:
@@ -161,12 +181,20 @@ class SkillRepository(BaseRepository):
                vector_16d = ?, version = ?, changelog = ?, attunement_notes = ?,
                updated_at = CURRENT_TIMESTAMP
                WHERE id = ?""",
-            (updates["content"], updates["description"], updates["short_content"],
-             updates["trigger_keywords"], updates["lifecycle_stage"],
-             updates["confidence"], updates["ontological_mass"],
-             updates["vector_16d"],
-             updates["version"], updates["changelog"], updates["attunement_notes"],
-             skill_id),
+            (
+                updates["content"],
+                updates["description"],
+                updates["short_content"],
+                updates["trigger_keywords"],
+                updates["lifecycle_stage"],
+                updates["confidence"],
+                updates["ontological_mass"],
+                updates["vector_16d"],
+                updates["version"],
+                updates["changelog"],
+                updates["attunement_notes"],
+                skill_id,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM skill_nodes WHERE id = ?", (skill_id,)).fetchone()
@@ -175,11 +203,21 @@ class SkillRepository(BaseRepository):
         if node:
             try:
                 import uuid
+
                 conn.execute(
                     """INSERT OR IGNORE INTO skill_versions
                        (id, skill_id, version, content, description, trigger_keywords, changelog, source)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (str(uuid.uuid4()), node.id, node.version, node.content, node.description, node.trigger_keywords, node.changelog, version_source),
+                    (
+                        str(uuid.uuid4()),
+                        node.id,
+                        node.version,
+                        node.content,
+                        node.description,
+                        node.trigger_keywords,
+                        node.changelog,
+                        version_source,
+                    ),
                 )
                 conn.commit()
             except Exception as ve:
@@ -188,9 +226,7 @@ class SkillRepository(BaseRepository):
         return node
 
     @with_connection
-    def update_skill_mass(
-        self, skill_id: str, ontological_mass: float, confidence: float = None
-    ) -> Optional[SkillNode]:
+    def update_skill_mass(self, skill_id: str, ontological_mass: float, confidence: float = None) -> SkillNode | None:
         conn = self._conn()
         if confidence is not None:
             conn.execute(
@@ -207,7 +243,7 @@ class SkillRepository(BaseRepository):
         return _row_to_skill_node(row) if row else None
 
     @with_connection
-    def update_confidence(self, skill_id: str, confidence: float, lifecycle_stage: str = None) -> Optional[SkillNode]:
+    def update_confidence(self, skill_id: str, confidence: float, lifecycle_stage: str = None) -> SkillNode | None:
         conn = self._conn()
         if lifecycle_stage is not None:
             conn.execute(
@@ -253,9 +289,13 @@ class SkillRepository(BaseRepository):
         try:
             skill_row = conn.execute("SELECT name FROM skill_nodes WHERE id = ?", (skill_id,)).fetchone()
             skill_name = skill_row["name"] if skill_row else "unknown"
-            
-            source_label = "agent" if source_type in ("agent", "symbia", "emergent") else ("system" if source_type == "auto_metabolism" else "user")
-            
+
+            source_label = (
+                "agent"
+                if source_type in ("agent", "symbia", "emergent")
+                else ("system" if source_type == "auto_metabolism" else "user")
+            )
+
             if event_type == "emergence":
                 snippet = f"New skill '{skill_name}' nucleated (emergence) by {source_label}."
                 if rationale:
@@ -278,17 +318,19 @@ class SkillRepository(BaseRepository):
                     snippet += f" Context: {rationale}"
 
             snippet = snippet.strip()
-            
+
             import uuid
-            from datetime import datetime, timezone
+            from datetime import datetime
+
             conn.execute(
                 """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                    VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
-                (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"skill:{skill_name}"),
+                (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet, f"skill:{skill_name}"),
             )
             conn.commit()
         except Exception as ne:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning("Failed to automatically insert notification for skill event: %s", ne)
 
@@ -352,11 +394,11 @@ class SkillRepository(BaseRepository):
         ]
 
     @with_connection
-    def get_version(self, skill_id: str, version: int) -> Optional[dict]:
+    def get_version(self, skill_id: str, version: int) -> dict | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT content, description, trigger_keywords, changelog FROM skill_versions WHERE skill_id = ? AND version = ?",
-            (skill_id, version)
+            (skill_id, version),
         ).fetchone()
         if not row:
             return None
@@ -364,7 +406,7 @@ class SkillRepository(BaseRepository):
             "content": row[0],
             "description": row[1],
             "trigger_keywords": json.loads(row[2]) if row[2] else [],
-            "changelog": row[3]
+            "changelog": row[3],
         }
 
     @with_connection

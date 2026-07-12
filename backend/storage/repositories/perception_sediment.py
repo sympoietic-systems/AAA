@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 
 from backend.storage.connection import with_connection
@@ -56,7 +54,7 @@ class PerceptionSedimentRepository(BaseRepository):
         embedding_model: str,
         token_count: int,
         opacity: int = 0,
-        opacity_meta: Optional[str] = None,
+        opacity_meta: str | None = None,
         structural_signature: bytes = b"",
     ) -> PerceptionSediment:
         conn = self._conn()
@@ -65,19 +63,26 @@ class PerceptionSedimentRepository(BaseRepository):
                (conversation_id, file_name, file_type, chunk_index, chunk_text,
                 embedding, embedding_model, token_count, opacity, opacity_meta, structural_signature)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (conversation_id, file_name, file_type, chunk_index, chunk_text,
-             embedding, embedding_model, token_count, opacity, opacity_meta, structural_signature),
+            (
+                conversation_id,
+                file_name,
+                file_type,
+                chunk_index,
+                chunk_text,
+                embedding,
+                embedding_model,
+                token_count,
+                opacity,
+                opacity_meta,
+                structural_signature,
+            ),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM perception_sediment WHERE id = last_insert_rowid()"
-        ).fetchone()
+        row = conn.execute("SELECT * FROM perception_sediment WHERE id = last_insert_rowid()").fetchone()
         return _row_to_perception_sediment(row)
 
     @with_connection
-    def get_by_conversation(
-        self, conversation_id: str
-    ) -> list[PerceptionSediment]:
+    def get_by_conversation(self, conversation_id: str) -> list[PerceptionSediment]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT ps.* FROM perception_sediment ps
@@ -89,9 +94,7 @@ class PerceptionSedimentRepository(BaseRepository):
         return [_row_to_perception_sediment(r) for r in rows]
 
     @with_connection
-    def get_embeddings_by_conversation(
-        self, conversation_id: str
-    ) -> list[tuple[int, np.ndarray]]:
+    def get_embeddings_by_conversation(self, conversation_id: str) -> list[tuple[int, np.ndarray]]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT ps.id, ps.embedding, ps.embedding_model FROM perception_sediment ps
@@ -139,9 +142,7 @@ class PerceptionSedimentRepository(BaseRepository):
         return [id_to_row[cid] for cid in chunk_ids if cid in id_to_row]
 
     @with_connection
-    def get_file_summary(
-        self, conversation_id: str
-    ) -> list[dict]:
+    def get_file_summary(self, conversation_id: str) -> list[dict]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT file_name, file_type,
@@ -156,9 +157,7 @@ class PerceptionSedimentRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     @with_connection
-    def get_file_preview(
-        self, conversation_id: str, file_name: str, max_chars: int = 400
-    ) -> str | None:
+    def get_file_preview(self, conversation_id: str, file_name: str, max_chars: int = 400) -> str | None:
         conn = self._conn()
         row = conn.execute(
             """SELECT chunk_text FROM perception_sediment
@@ -174,7 +173,9 @@ class PerceptionSedimentRepository(BaseRepository):
         return text[:max_chars].rstrip() + "..."
 
     @with_connection
-    def create_file(self, conversation_id: str, file_name: str, file_type: str, status: str = 'uploading', display_name: str = '') -> None:
+    def create_file(
+        self, conversation_id: str, file_name: str, file_type: str, status: str = "uploading", display_name: str = ""
+    ) -> None:
         conn = self._conn()
         conn.execute(
             """INSERT OR IGNORE INTO perception_files (conversation_id, file_name, file_type, status, display_name)
@@ -222,13 +223,13 @@ class PerceptionSedimentRepository(BaseRepository):
         conversation_id: str,
         file_name: str,
         status: str,
-        summary: Optional[str] = None,
-        summary_model: Optional[str] = None,
-        token_count: Optional[int] = None,
-        chunk_count: Optional[int] = None,
-        interference_score: Optional[float] = None,
-        belief_nodes_implicated: Optional[str] = None,
-        state_vector_impact: Optional[str] = None,
+        summary: str | None = None,
+        summary_model: str | None = None,
+        token_count: int | None = None,
+        chunk_count: int | None = None,
+        interference_score: float | None = None,
+        belief_nodes_implicated: str | None = None,
+        state_vector_impact: str | None = None,
     ) -> None:
         conn = self._conn()
         updates = ["status = ?", "updated_at = CURRENT_TIMESTAMP"]
@@ -305,9 +306,7 @@ class PerceptionSedimentRepository(BaseRepository):
         conn.commit()
 
     @with_connection
-    def get_by_file(
-        self, conversation_id: str, file_name: str
-    ) -> list[PerceptionSediment]:
+    def get_by_file(self, conversation_id: str, file_name: str) -> list[PerceptionSediment]:
         conn = self._conn()
         rows = conn.execute(
             "SELECT * FROM perception_sediment WHERE conversation_id = ? AND file_name = ? ORDER BY chunk_index",
@@ -345,7 +344,7 @@ class PerceptionSedimentRepository(BaseRepository):
         conn.commit()
 
     @with_connection
-    def find_file_by_name(self, file_name: str) -> Optional[dict]:
+    def find_file_by_name(self, file_name: str) -> dict | None:
         conn = self._conn()
         row = conn.execute(
             """SELECT conversation_id, file_name, file_type, status, summary, summary_model, token_count, chunk_count, created_at, updated_at
@@ -369,9 +368,7 @@ class PerceptionSedimentRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     @with_connection
-    def get_structural_signatures_by_conversation(
-        self, conversation_id: str
-    ) -> list[tuple[int, np.ndarray]]:
+    def get_structural_signatures_by_conversation(self, conversation_id: str) -> list[tuple[int, np.ndarray]]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT ps.id, ps.structural_signature FROM perception_sediment ps
@@ -431,9 +428,7 @@ class PerceptionSedimentRepository(BaseRepository):
         return result
 
     @with_connection
-    def get_conversation_titles_for_chunk_ids(
-        self, chunk_ids: list[int]
-    ) -> dict[int, str]:
+    def get_conversation_titles_for_chunk_ids(self, chunk_ids: list[int]) -> dict[int, str]:
         conn = self._conn()
         if not chunk_ids:
             return {}
@@ -511,7 +506,9 @@ class PerceptionSedimentRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     @with_connection
-    def get_injection(self, source_conversation_id: str, source_file_name: str, target_conversation_id: str) -> dict | None:
+    def get_injection(
+        self, source_conversation_id: str, source_file_name: str, target_conversation_id: str
+    ) -> dict | None:
         conn = self._conn()
         row = conn.execute(
             """SELECT id, source_conversation_id, source_file_name
@@ -544,9 +541,7 @@ class PerceptionSedimentRepository(BaseRepository):
         return [_row_to_perception_sediment(r) for r in rows]
 
     @with_connection
-    def get_injected_structural_signatures(
-        self, target_conversation_id: str
-    ) -> list[tuple[int, np.ndarray]]:
+    def get_injected_structural_signatures(self, target_conversation_id: str) -> list[tuple[int, np.ndarray]]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT ps.id, ps.structural_signature FROM perception_sediment ps
@@ -577,14 +572,14 @@ class PerceptionSedimentRepository(BaseRepository):
         id: str,
         image_path: str,
         artifact_type: str,
-        raw_transcription: Optional[str] = None,
-        somatic_notes: Optional[str] = None,
-        diffractive_analysis: Optional[str] = None,
+        raw_transcription: str | None = None,
+        somatic_notes: str | None = None,
+        diffractive_analysis: str | None = None,
         g_f_score: float = 0.0,
         a_d_score: float = 0.0,
         structural_vector_16d: str = "[]",
-        associated_day: Optional[int] = None,
-        belief_nodes_implicated: Optional[str] = None,
+        associated_day: int | None = None,
+        belief_nodes_implicated: str | None = None,
     ) -> None:
         conn = self._conn()
         conn.execute(
@@ -592,13 +587,24 @@ class PerceptionSedimentRepository(BaseRepository):
                (id, image_path, artifact_type, raw_transcription, somatic_notes,
                 diffractive_analysis, g_f_score, a_d_score, structural_vector_16d, associated_day, belief_nodes_implicated)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (id, image_path, artifact_type, raw_transcription, somatic_notes,
-             diffractive_analysis, g_f_score, a_d_score, structural_vector_16d, associated_day, belief_nodes_implicated),
+            (
+                id,
+                image_path,
+                artifact_type,
+                raw_transcription,
+                somatic_notes,
+                diffractive_analysis,
+                g_f_score,
+                a_d_score,
+                structural_vector_16d,
+                associated_day,
+                belief_nodes_implicated,
+            ),
         )
         conn.commit()
 
     @with_connection
-    def get_perception_log_by_image(self, image_path: str) -> Optional[dict]:
+    def get_perception_log_by_image(self, image_path: str) -> dict | None:
         conn = self._conn()
         row = conn.execute(
             """SELECT * FROM perception_log
@@ -619,7 +625,7 @@ class PerceptionSedimentRepository(BaseRepository):
             "a_d_score": row["a_d_score"],
             "structural_vector_16d": row["structural_vector_16d"],
             "timestamp": row["timestamp"],
-            "belief_nodes_implicated": row["belief_nodes_implicated"] if "belief_nodes_implicated" in row.keys() else None,
+            "belief_nodes_implicated": row["belief_nodes_implicated"] if "belief_nodes_implicated" in row else None,
         }
 
     @with_connection
@@ -630,9 +636,9 @@ class PerceptionSedimentRepository(BaseRepository):
         source_url: str,
         raw_content: str,
         interference_score: float = 0.0,
-        belief_nodes_implicated: Optional[str] = None,
-        state_vector_impact: Optional[str] = None,
-        associated_file_name: Optional[str] = None,
+        belief_nodes_implicated: str | None = None,
+        state_vector_impact: str | None = None,
+        associated_file_name: str | None = None,
     ) -> None:
         conn = self._conn()
         conn.execute(
@@ -640,13 +646,21 @@ class PerceptionSedimentRepository(BaseRepository):
                (id, query_used, source_url, raw_content, interference_score,
                 belief_nodes_implicated, state_vector_impact, associated_file_name)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (id, query_used, source_url, raw_content, interference_score,
-             belief_nodes_implicated, state_vector_impact, associated_file_name),
+            (
+                id,
+                query_used,
+                source_url,
+                raw_content,
+                interference_score,
+                belief_nodes_implicated,
+                state_vector_impact,
+                associated_file_name,
+            ),
         )
         conn.commit()
 
     @with_connection
-    def get_exogenous_stream_by_file(self, file_name: str) -> Optional[dict]:
+    def get_exogenous_stream_by_file(self, file_name: str) -> dict | None:
         conn = self._conn()
         row = conn.execute(
             """SELECT * FROM exogenous_stream

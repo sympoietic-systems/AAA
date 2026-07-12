@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import Optional
 
 import numpy as np
 
@@ -58,10 +57,7 @@ class SkillActivatorModule(ProcessingModule):
             }
             for s in always_active_skills
         ]
-        payload["on_demand_skills"] = [
-            {"name": s.name, "description": s.description}
-            for s in on_demand_skills
-        ]
+        payload["on_demand_skills"] = [{"name": s.name, "description": s.description} for s in on_demand_skills]
 
         if not on_demand_skills:
             payload["loaded_skills"] = []
@@ -78,6 +74,7 @@ class SkillActivatorModule(ProcessingModule):
         user_message = self._get_user_message(payload)
         if on_demand_skills and (current_vector is not None or user_message):
             from backend.utils.prompt_builder import match_on_demand_skills
+
             matched = match_on_demand_skills(
                 on_demand_skills,
                 user_message or "",
@@ -105,14 +102,16 @@ class SkillActivatorModule(ProcessingModule):
             if len(content) > MAX_SKILL_CONTENT_CHARS:
                 truncated += "\n... [truncated — call load_skill for full content]"
 
-            loaded_skills.append({
-                "id": skill.id,
-                "name": skill.name,
-                "description": skill.short_content or skill.description,
-                "content_truncated": truncated,
-                "match_reason": candidate["reason"],
-                "score": candidate.get("score"),
-            })
+            loaded_skills.append(
+                {
+                    "id": skill.id,
+                    "name": skill.name,
+                    "description": skill.short_content or skill.description,
+                    "content_truncated": truncated,
+                    "match_reason": candidate["reason"],
+                    "score": candidate.get("score"),
+                }
+            )
 
             try:
                 self._skill_repo.record_usage(skill.id)
@@ -150,7 +149,7 @@ class SkillActivatorModule(ProcessingModule):
                         }
                     break
 
-    def _get_current_vector(self, payload: dict) -> Optional[np.ndarray]:
+    def _get_current_vector(self, payload: dict) -> np.ndarray | None:
         vector_raw = payload.get("current_vector_16d")
         if vector_raw is not None:
             if isinstance(vector_raw, np.ndarray):
@@ -183,7 +182,7 @@ class SkillActivatorModule(ProcessingModule):
                 return None
         return None
 
-    def _get_user_message(self, payload: dict) -> Optional[str]:
+    def _get_user_message(self, payload: dict) -> str | None:
         messages = payload.get("messages", [])
         if not messages:
             return None
@@ -192,7 +191,7 @@ class SkillActivatorModule(ProcessingModule):
                 return msg.get("content", "")
         return None
 
-    def _parse_vector(self, vector_json: str, target_dim: int = None) -> Optional[np.ndarray]:
+    def _parse_vector(self, vector_json: str, target_dim: int = None) -> np.ndarray | None:
         if not vector_json or vector_json == "[]":
             return None
         try:
@@ -214,5 +213,3 @@ class SkillActivatorModule(ProcessingModule):
             return np.array(data, dtype=np.float32)
 
         return None
-
-

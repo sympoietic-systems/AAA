@@ -12,10 +12,18 @@ class FileService:
     def map_extension_to_type(filename: str) -> str:
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "txt"
         mapping = {
-            "jpg": "image", "jpeg": "image", "png": "image", "gif": "image",
-            "webp": "image", "bmp": "image", "svg": "image",
-            "pdf": "pdf", "docx": "docx", "md": "md",
-            "epub": "epub", "mobi": "mobi",
+            "jpg": "image",
+            "jpeg": "image",
+            "png": "image",
+            "gif": "image",
+            "webp": "image",
+            "bmp": "image",
+            "svg": "image",
+            "pdf": "pdf",
+            "docx": "docx",
+            "md": "md",
+            "epub": "epub",
+            "mobi": "mobi",
         }
         return mapping.get(ext, "txt")
 
@@ -30,10 +38,15 @@ class FileService:
     @staticmethod
     async def run_digest_worker(conversation_id: str, file_name: str, file_type: str, reprocess: bool = False):
         cmd = [
-            sys.executable, "-m", "backend.workers.digest_worker",
-            "--conversation_id", conversation_id,
-            "--file_name", file_name,
-            "--file_type", file_type,
+            sys.executable,
+            "-m",
+            "backend.workers.digest_worker",
+            "--conversation_id",
+            conversation_id,
+            "--file_name",
+            file_name,
+            "--file_type",
+            file_type,
         ]
         if reprocess:
             cmd.append("--reprocess")
@@ -47,10 +60,12 @@ class FileService:
             )
             stdout, stderr = await proc.communicate()
             if proc.returncode != 0:
-                err_msg = stderr.decode('utf-8', errors='replace').strip()
-                logger.error("Digest worker failed with code %d for %s. Stderr:\n%s", proc.returncode, file_name, err_msg)
+                err_msg = stderr.decode("utf-8", errors="replace").strip()
+                logger.error(
+                    "Digest worker failed with code %d for %s. Stderr:\n%s", proc.returncode, file_name, err_msg
+                )
             else:
-                out_msg = stdout.decode('utf-8', errors='replace').strip()
+                out_msg = stdout.decode("utf-8", errors="replace").strip()
                 logger.info("Digest worker completed successfully for %s. Output:\n%s", file_name, out_msg)
         except Exception:
             logger.exception("Failed to run digest worker subprocess for %s", file_name)

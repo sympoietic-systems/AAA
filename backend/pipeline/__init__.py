@@ -1,2 +1,2 @@
-from backend.pipeline.metadata import ModuleMeta
-from backend.pipeline.registry import PipelineRegistry
+from backend.pipeline.metadata import ModuleMeta  # noqa: F401
+from backend.pipeline.registry import PipelineRegistry  # noqa: F401

@@ -1,10 +1,11 @@
 """Sedimentation parsing, merging, and metrics utilities for the Dream Daemon."""
 
+import contextlib
 import json
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import yaml
 
@@ -30,7 +31,7 @@ def parse_sedimentation_yaml(raw_output: str) -> tuple[list[dict], int]:
     # Strip markdown code fences
     for fence in ("```yaml", "```yml", "```json", "```"):
         if raw.startswith(fence):
-            raw = raw[len(fence):]
+            raw = raw[len(fence) :]
             if raw.endswith("```"):
                 raw = raw[:-3]
             raw = raw.strip()
@@ -87,38 +88,36 @@ def parse_sedimentation_yaml(raw_output: str) -> tuple[list[dict], int]:
                 continue
 
             node = {}
-            m = re.search(r'id:\s*(mem_\w{4})', block)
+            m = re.search(r"id:\s*(mem_\w{4})", block)
             if m:
                 node["id"] = m.group(1)
 
             m = re.search(
-                r'type:\s*(scar|concept|tension|pattern|bifurcation)',
-                block, re.IGNORECASE,
+                r"type:\s*(scar|concept|tension|pattern|bifurcation)",
+                block,
+                re.IGNORECASE,
             )
             if m:
                 node["type"] = m.group(1).lower()
 
-            m = re.search(r'intensity:\s*([\d.]+)', block)
+            m = re.search(r"intensity:\s*([\d.]+)", block)
             if m:
-                try:
+                with contextlib.suppress(ValueError):
                     node["intensity"] = float(m.group(1))
-                except ValueError:
-                    pass
 
-            m = re.search(r'scar:\s*(.+?)(?=\n\s*\w+:|$)', block, re.DOTALL)
+            m = re.search(r"scar:\s*(.+?)(?=\n\s*\w+:|$)", block, re.DOTALL)
             if m:
                 node["scar"] = m.group(1).strip()
 
-            m = re.search(r'glitch_potential:\s*([\d.]+)', block)
+            m = re.search(r"glitch_potential:\s*([\d.]+)", block)
             if m:
-                try:
+                with contextlib.suppress(ValueError):
                     node["glitch_potential"] = float(m.group(1))
-                except ValueError:
-                    pass
 
             m = re.search(
-                r'intra_active_text:\s*>\s*\n\s*(.+?)(?=\n\s*\w+:|$)',
-                block, re.DOTALL,
+                r"intra_active_text:\s*>\s*\n\s*(.+?)(?=\n\s*\w+:|$)",
+                block,
+                re.DOTALL,
             )
             if m:
                 node["intra_active_text"] = m.group(1).strip()
@@ -132,28 +131,27 @@ def parse_sedimentation_yaml(raw_output: str) -> tuple[list[dict], int]:
 
             m = re.search(r'diffractive_key:\s*"([^"]+)"', block)
             if not m:
-                m = re.search(r'diffractive_key:\s*(.+?)(?=\n|$)', block)
+                m = re.search(r"diffractive_key:\s*(.+?)(?=\n|$)", block)
             if m:
                 node["diffractive_key"] = m.group(1).strip().strip('"')
 
             m = re.search(r'surface_fragment:\s*"([^"]+)"', block)
             if not m:
-                m = re.search(r'surface_fragment:\s*(.+?)(?=\n|$)', block)
+                m = re.search(r"surface_fragment:\s*(.+?)(?=\n|$)", block)
             if m:
                 node["surface_fragment"] = m.group(1).strip().strip('"')
 
             m = re.search(
-                r'agential_symmetry:\s*(imposed|negotiated|co-constituted)',
-                block, re.IGNORECASE,
+                r"agential_symmetry:\s*(imposed|negotiated|co-constituted)",
+                block,
+                re.IGNORECASE,
             )
             if m:
                 node["agential_symmetry"] = m.group(1).lower()
 
-            m = re.search(r'tendrils:\s*\[(.+?)\]', block)
+            m = re.search(r"tendrils:\s*\[(.+?)\]", block)
             if m:
-                tendril_ids = [
-                    tid.strip().strip("'\"") for tid in m.group(1).split(",") if tid.strip()
-                ]
+                tendril_ids = [tid.strip().strip("'\"") for tid in m.group(1).split(",") if tid.strip()]
                 node["tendrils"] = tendril_ids
 
             if node.get("intra_active_text"):
@@ -222,11 +220,14 @@ def merge_nodes(existing_nodes: list[dict], new_nodes: list[dict]) -> list[dict]
             new_intensity = node.get("intensity", old_intensity)
             # R4: Increment revision count and set merge timestamp
             existing["revision_count"] = existing.get("revision_count", 0) + 1
-            existing["last_merged_at"] = datetime.now(timezone.utc).isoformat()
+            existing["last_merged_at"] = datetime.now(UTC).isoformat()
             existing.update(node)
             logger.info(
                 "[mem] node %s revised (v%d) — intensity %.2f→%.2f",
-                node_id, existing["revision_count"], old_intensity, new_intensity,
+                node_id,
+                existing["revision_count"],
+                old_intensity,
+                new_intensity,
             )
         elif node_id:
             merged[node_id] = node
@@ -270,15 +271,25 @@ def store_daemon_metrics(metrics_repo, message_id: int, metrics: dict) -> None:
         deficit=float(metrics.get("homeostatic_deficit", 0.0)),
         rolling_entropy=float(metrics["rolling_entropy"]) if metrics.get("rolling_entropy") is not None else None,
         coupling=float(metrics["coupling_coherence"]) if metrics.get("coupling_coherence") is not None else None,
-        agent_divergence=float(metrics["agent_self_divergence"]) if metrics.get("agent_self_divergence") is not None else None,
-        reverse_perturbation=float(metrics["reverse_perturbation"]) if metrics.get("reverse_perturbation") is not None else None,
+        agent_divergence=float(metrics["agent_self_divergence"])
+        if metrics.get("agent_self_divergence") is not None
+        else None,
+        reverse_perturbation=float(metrics["reverse_perturbation"])
+        if metrics.get("reverse_perturbation") is not None
+        else None,
         surprise_index=float(metrics["surprise_index"]) if metrics.get("surprise_index") is not None else None,
-        mutual_perturbation=float(metrics["mutual_perturbation"]) if metrics.get("mutual_perturbation") is not None else None,
+        mutual_perturbation=float(metrics["mutual_perturbation"])
+        if metrics.get("mutual_perturbation") is not None
+        else None,
         vitality=float(metrics["conversation_vitality"]) if metrics.get("conversation_vitality") is not None else None,
         phase_shifts=phase_shifts_json,
         boringness=float(metrics["boringness"]) if metrics.get("boringness") is not None else None,
-        conceptual_velocity=float(metrics["conceptual_velocity"]) if metrics.get("conceptual_velocity") is not None else None,
-        divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"]) if metrics.get("divergence_resolution_ratio") is not None else None,
+        conceptual_velocity=float(metrics["conceptual_velocity"])
+        if metrics.get("conceptual_velocity") is not None
+        else None,
+        divergence_resolution_ratio=float(metrics["divergence_resolution_ratio"])
+        if metrics.get("divergence_resolution_ratio") is not None
+        else None,
         paskian_health=float(metrics["paskian_health"]) if metrics.get("paskian_health") is not None else None,
     )
 
@@ -287,7 +298,8 @@ def extract_human_summary(raw_output: str) -> str:
     """Extract the human-readable CONSOLIDATION SUMMARY block from raw LLM output."""
     m = re.search(
         r"---\s*CONSOLIDATION SUMMARY\s*---\s*\n(.*?)\n\s*---\s*END SUMMARY\s*---",
-        raw_output, re.DOTALL | re.IGNORECASE,
+        raw_output,
+        re.DOTALL | re.IGNORECASE,
     )
     if m:
         return m.group(1).strip()

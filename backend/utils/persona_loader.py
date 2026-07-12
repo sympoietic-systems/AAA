@@ -20,7 +20,7 @@ def load_identity(identity_path: Path) -> dict:
     """Load the identity YAML, cached in memory."""
     global _IDENTITY_CACHE, _CACHE_PATH
     path_str = str(identity_path.resolve())
-    if _IDENTITY_CACHE is not None and _CACHE_PATH == path_str:
+    if _IDENTITY_CACHE is not None and path_str == _CACHE_PATH:
         return _IDENTITY_CACHE
     if identity_path.exists():
         with open(identity_path, encoding="utf-8") as f:
@@ -57,9 +57,7 @@ def get_persona_text(
         )
 
     # Task-specific operational protocols
-    protocols = (
-        persona.get("operational_protocols", {}).get(protocol_key, "").strip()
-    )
+    protocols = persona.get("operational_protocols", {}).get(protocol_key, "").strip()
 
     def strip_comments(text: str) -> str:
         if not text:
@@ -87,8 +85,7 @@ def get_identity_yaml_path() -> Path:
     The project root is 2 levels up: ../../ = workspace root.
     Config is at: <root>/config/personality/identity.yaml
     """
-    return (Path(__file__).resolve().parent.parent.parent
-            / "config" / "personality" / "identity.yaml")
+    return Path(__file__).resolve().parent.parent.parent / "config" / "personality" / "identity.yaml"
 
 
 def load_persona_for_context(protocol_key: str = "conversation") -> str:
@@ -106,10 +103,7 @@ def get_identity_capsule() -> str:
     global _CAPSULE_CACHE
     if _CAPSULE_CACHE is not None:
         return _CAPSULE_CACHE
-    capsule_path = (
-        Path(__file__).resolve().parent.parent
-        / "prompts" / "personality" / "identity_capsule.yaml"
-    )
+    capsule_path = Path(__file__).resolve().parent.parent / "prompts" / "personality" / "identity_capsule.yaml"
     if capsule_path.exists():
         with open(capsule_path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}

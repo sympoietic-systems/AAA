@@ -1,7 +1,6 @@
 """Repository for research_branches table — recursive tree traversal nodes."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
@@ -29,18 +28,16 @@ class ResearchBranchRepository(BaseRepository):
                 branch.get("status", "probing"),
                 branch.get("vector_16d"),
                 branch.get("homeostatic_tension", 0.0),
-                datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
             ),
         )
         conn.commit()
         return branch["id"]
 
     @with_connection
-    def get(self, branch_id: str) -> Optional[dict]:
+    def get(self, branch_id: str) -> dict | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM research_branches WHERE id = ?", (branch_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM research_branches WHERE id = ?", (branch_id,)).fetchone()
         return dict(row) if row else None
 
     @with_connection
@@ -68,9 +65,7 @@ class ResearchBranchRepository(BaseRepository):
         conn = self._conn()
         set_clause = ", ".join(f"{k} = ?" for k in fields)
         values = list(fields.values()) + [branch_id]
-        conn.execute(
-            f"UPDATE research_branches SET {set_clause} WHERE id = ?", values
-        )
+        conn.execute(f"UPDATE research_branches SET {set_clause} WHERE id = ?", values)
         conn.commit()
 
     @with_connection
@@ -85,9 +80,7 @@ class ResearchBranchRepository(BaseRepository):
     @with_connection
     def delete_by_task(self, task_id: str) -> int:
         conn = self._conn()
-        cursor = conn.execute(
-            "DELETE FROM research_branches WHERE task_id = ?", (task_id,)
-        )
+        cursor = conn.execute("DELETE FROM research_branches WHERE task_id = ?", (task_id,))
         conn.commit()
         return cursor.rowcount
 

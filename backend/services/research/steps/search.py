@@ -1,26 +1,20 @@
 import asyncio
-import json
 import logging
 import re
 import uuid
-from typing import List, Dict, Any, Optional
 
+from backend.modules.llm_client import generate_unified
+from backend.services.research.search_tool import web_search
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import SearchPayload, StepEnvelope, StepOutput
-from backend.services.research.search_tool import web_search
 from backend.utils.research_logger import now_utc_str
-from backend.modules.llm_client import generate_unified
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
 async def _select_high_fidelity_results(
-    llm,
-    objective: str,
-    query: str,
-    results: List[dict],
-    target_count: int
-) -> List[dict]:
+    llm, objective: str, query: str, results: list[dict], target_count: int
+) -> list[dict]:
     """Uses a lightweight LLM call to filter/rank and select the most high-fidelity, high-relevance search results from the pool, avoiding commercial noise and SEO landing pages."""
     if not results:
         return []
@@ -33,9 +27,7 @@ async def _select_high_fidelity_results(
     formatted_results = []
     for idx, r in enumerate(results):
         formatted_results.append(
-            f"[{idx}] Title: {r.get('title', '')}\n"
-            f"    URL: {r.get('url', '')}\n"
-            f"    Snippet: {r.get('snippet', '')}\n"
+            f"[{idx}] Title: {r.get('title', '')}\n    URL: {r.get('url', '')}\n    Snippet: {r.get('snippet', '')}\n"
         )
     results_text = "\n".join(formatted_results)
 
@@ -46,18 +38,17 @@ async def _select_high_fidelity_results(
         f"You must select exactly {target_count} results from the list by their indices.\n\n"
         "Return ONLY a JSON object with this format:\n"
         "{\n"
-        "  \"selected_indices\": [index1, index2],\n"
-        "  \"rationale\": \"Brief 1-2 sentence selection justification\"\n"
+        '  "selected_indices": [index1, index2],\n'
+        '  "rationale": "Brief 1-2 sentence selection justification"\n'
         "}"
     )
 
-    user_prompt = (
-        f"Research Objective: {objective}\n"
-        f"Search Query: {query}\n\n"
-        f"Search Results List:\n{results_text}\n"
-    )
+    user_prompt = f"Research Objective: {objective}\nSearch Query: {query}\n\nSearch Results List:\n{results_text}\n"
 
-    fallback = {"selected_indices": list(range(min(len(results), target_count))), "rationale": "Fallback to top results"}
+    fallback = {
+        "selected_indices": list(range(min(len(results), target_count))),
+        "rationale": "Fallback to top results",
+    }
     try:
         resp = await generate_unified(
             llm,
@@ -66,7 +57,7 @@ async def _select_high_fidelity_results(
             expect_json=True,
             fallback_value=fallback,
             temperature=0.1,
-            max_tokens=500
+            max_tokens=500,
         )
         data = resp.get("json_data") or {}
         indices = data.get("selected_indices")
@@ -80,14 +71,14 @@ async def _select_high_fidelity_results(
                         valid_indices.append(i)
                 except (ValueError, TypeError):
                     continue
-            
+
             # If we don't have enough valid indices, fill up with other top results
             for i in range(len(results)):
                 if len(valid_indices) >= target_count:
                     break
                 if i not in valid_indices:
                     valid_indices.append(i)
-                    
+
             logger.info("Selector chose indices %s with rationale: %s", valid_indices, data.get("rationale"))
             return [results[i] for i in valid_indices[:target_count]]
     except Exception as e:
@@ -102,8 +93,6 @@ class SearchStep(BaseResearchStep):
         return "search"
 
     async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
-        task_id = envelope.task_id
-        objective = envelope.objective
         payload: SearchPayload = envelope.payload
 
         raw_queries = payload.queries
@@ -111,9 +100,8 @@ class SearchStep(BaseResearchStep):
         direct_urls = []
 
         for u in payload.direct_urls:
-            if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://")):
-                if u not in direct_urls:
-                    direct_urls.append(u)
+            if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://")) and u not in direct_urls:
+                direct_urls.append(u)
 
         for q in raw_queries:
             if isinstance(q, str) and (q.startswith("http://") or q.startswith("https://")):
@@ -142,17 +130,14 @@ class SearchStep(BaseResearchStep):
         def _clean_query_for_ddg(q: str) -> str:
             q = q.strip()
             # Strip outer double quotes if query is wrapped in quotes
-            if q.startswith('"') and q.endswith('"'):
-                if q.startswith('""') and q.endswith('""'):
-                    q = q[1:-1]
-                elif q.count('"') == 2:
-                    q = q[1:-1]
+            if q.startswith('"') and q.endswith('"') and (q.startswith('""') and q.endswith('""') or q.count('"') == 2):
+                q = q[1:-1]
             # Deduplicate internal double quotes
             while '""' in q:
                 q = q.replace('""', '"')
-            q = re.sub(r'\b(AND|OR|NOT)\b', ' ', q, flags=re.IGNORECASE)
-            q = q.replace('(', ' ').replace(')', ' ')
-            q = ' '.join(q.split())
+            q = re.sub(r"\b(AND|OR|NOT)\b", " ", q, flags=re.IGNORECASE)
+            q = q.replace("(", " ").replace(")", " ")
+            q = " ".join(q.split())
             return q.strip()
 
         raw_queries = [_clean_query_for_ddg(str(q)) for q in raw_queries]
@@ -162,9 +147,8 @@ class SearchStep(BaseResearchStep):
 
         # Load direct URLs from payload
         for u in payload.direct_urls:
-            if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://")):
-                if u not in direct_urls:
-                    direct_urls.append(u)
+            if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://")) and u not in direct_urls:
+                direct_urls.append(u)
 
         for q in raw_queries:
             if isinstance(q, str) and (q.startswith("http://") or q.startswith("https://")):
@@ -192,15 +176,15 @@ class SearchStep(BaseResearchStep):
 
         for i, q in enumerate(search_queries):
             q_group = i + 1
-            step_id = orch._create_or_update_step(s, task_id, "search",
-                query_group=q_group, query_text=q[:300])
+            step_id = orch._create_or_update_step(s, task_id, "search", query_group=q_group, query_text=q[:300])
             group_steps[q_group] = step_id
 
         direct_group = len(search_queries) + 1 if direct_urls else None
         if direct_group:
             direct_label = f"Direct: {direct_urls[0][:60]}{'…' if len(direct_urls) > 1 else ''}"
-            step_id = orch._create_or_update_step(s, task_id, "search",
-                query_group=direct_group, query_text=direct_label)
+            step_id = orch._create_or_update_step(
+                s, task_id, "search", query_group=direct_group, query_text=direct_label
+            )
             group_steps[direct_group] = step_id
 
         search_results_list = []
@@ -214,11 +198,7 @@ class SearchStep(BaseResearchStep):
                 await asyncio.sleep(1.5)
             raw_res = await web_search(q, candidate_count, orch._state.config)
             selected_res = await _select_high_fidelity_results(
-                llm=llm,
-                objective=envelope.objective,
-                query=q,
-                results=raw_res,
-                target_count=orch.default_top_n
+                llm=llm, objective=envelope.objective, query=q, results=raw_res, target_count=orch.default_top_n
             )
             search_results_list.append(selected_res)
 
@@ -226,29 +206,37 @@ class SearchStep(BaseResearchStep):
         for i, results in enumerate(search_results_list):
             q_group = i + 1
             step_id = group_steps[q_group]
-            orch._log_meta(task_id, "orchestrator_search", {
-                "query": search_queries[i], "results_count": len(results),
-            }, step_id=step_id)
-            
+            orch._log_meta(
+                task_id,
+                "orchestrator_search",
+                {
+                    "query": search_queries[i],
+                    "results_count": len(results),
+                },
+                step_id=step_id,
+            )
+
             if orch.step_repo:
                 if not results:
                     orch.step_repo.update(step_id, status="completed", result_summary="no results")
                 else:
-                    orch.step_repo.update(step_id, status="completed",
-                        result_summary=f"{len(results)} results")
-                    
+                    orch.step_repo.update(step_id, status="completed", result_summary=f"{len(results)} results")
+
             for r in results:
                 url = r.get("url")
                 if url and orch.step_result_repo:
                     try:
-                        orch.step_result_repo.create({
-                            "id": str(uuid.uuid4()),
-                            "step_id": step_id, "task_id": task_id,
-                            "source_url": url,
-                            "source_title": r.get("title", url[:100]),
-                            "relevance_score": r.get("relevance", 0.0),
-                            "novelty_score": r.get("novelty", 0.0),
-                        })
+                        orch.step_result_repo.create(
+                            {
+                                "id": str(uuid.uuid4()),
+                                "step_id": step_id,
+                                "task_id": task_id,
+                                "source_url": url,
+                                "source_title": r.get("title", url[:100]),
+                                "relevance_score": r.get("relevance", 0.0),
+                                "novelty_score": r.get("novelty", 0.0),
+                            }
+                        )
                     except Exception as e:
                         logger.warning("Failed to save search step result to DB: %s", e)
                 r_copy = dict(r)
@@ -257,38 +245,55 @@ class SearchStep(BaseResearchStep):
 
         if direct_group and direct_urls:
             step_id = group_steps[direct_group]
-            orch._log_meta(task_id, "orchestrator_search", {
-                "query": "direct_urls", "results_count": len(direct_urls), "urls": direct_urls,
-            }, step_id=step_id)
+            orch._log_meta(
+                task_id,
+                "orchestrator_search",
+                {
+                    "query": "direct_urls",
+                    "results_count": len(direct_urls),
+                    "urls": direct_urls,
+                },
+                step_id=step_id,
+            )
             if orch.step_repo:
-                orch.step_repo.update(step_id, status="completed",
-                    result_summary=f"{len(direct_urls)} direct URL(s) queued")
+                orch.step_repo.update(
+                    step_id, status="completed", result_summary=f"{len(direct_urls)} direct URL(s) queued"
+                )
             for url in direct_urls:
                 if orch.step_result_repo:
                     try:
-                        orch.step_result_repo.create({
-                            "id": str(uuid.uuid4()),
-                            "step_id": step_id, "task_id": task_id,
-                            "source_url": url, "source_title": url[:100],
-                            "relevance_score": 1.0, "novelty_score": 1.0,
-                        })
+                        orch.step_result_repo.create(
+                            {
+                                "id": str(uuid.uuid4()),
+                                "step_id": step_id,
+                                "task_id": task_id,
+                                "source_url": url,
+                                "source_title": url[:100],
+                                "relevance_score": 1.0,
+                                "novelty_score": 1.0,
+                            }
+                        )
                     except Exception as e:
                         logger.warning("Failed to save direct URL result: %s", e)
-                search_results.append({
-                    "url": url, "title": url[:100], "query_group": direct_group,
-                })
+                search_results.append(
+                    {
+                        "url": url,
+                        "title": url[:100],
+                        "query_group": direct_group,
+                    }
+                )
 
         out_payload = SearchPayload(
-            queries=payload.queries,
-            direct_urls=payload.direct_urls,
-            search_results=search_results
+            queries=payload.queries, direct_urls=payload.direct_urls, search_results=search_results
         )
 
         signal_flags = {"has_results": len(search_results) > 0}
 
         all_step_ids = list(group_steps.values())
         if search_results:
-            rationale = f"Executed search queries at depth {current_depth}, retrieving {len(search_results)} search results."
+            rationale = (
+                f"Executed search queries at depth {current_depth}, retrieving {len(search_results)} search results."
+            )
         else:
             rationale = f"Executed search queries at depth {current_depth}, but no new search results were found."
 
@@ -298,5 +303,5 @@ class SearchStep(BaseResearchStep):
             payload=out_payload,
             signal_flags=signal_flags,
             step_ids=all_step_ids,
-            transition_rationale=rationale
+            transition_rationale=rationale,
         )

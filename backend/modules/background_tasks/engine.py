@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from backend.modules.llm_client import BaseLLMProvider, RateLimitError
 
@@ -12,7 +11,7 @@ class BackgroundTaskEngine:
     def __init__(
         self,
         provider: BaseLLMProvider,
-        vision_provider: Optional[BaseLLMProvider] = None,
+        vision_provider: BaseLLMProvider | None = None,
     ):
         self._provider = provider
         self._vision_provider = vision_provider
@@ -23,13 +22,13 @@ class BackgroundTaskEngine:
         return self._provider
 
     @property
-    def vision_provider(self) -> Optional[BaseLLMProvider]:
+    def vision_provider(self) -> BaseLLMProvider | None:
         return self._vision_provider
 
     def register(self, action: BackgroundAction) -> None:
         self._actions[action.action_type] = action
 
-    def get_action(self, action_type: str) -> Optional[BackgroundAction]:
+    def get_action(self, action_type: str) -> BackgroundAction | None:
         return self._actions.get(action_type)
 
     def list_actions(self) -> list[str]:

@@ -10,20 +10,19 @@ import logging
 from typing import Any
 
 from backend.utils.anti_mastery import apply_anti_mastery_filter
-
+from backend.utils.persona_loader import get_identity_yaml_path, load_identity
 from backend.utils.prompt_builder import (
-    compute_structural_signature,
     build_attractor_window,
-    match_on_demand_skills,
-    split_skills,
+    compute_structural_signature,
     format_beliefs_block,
-    format_skills_always_active,
-    format_skills_matched,
     format_commitments_block,
     format_identity_block,
+    format_skills_always_active,
+    format_skills_matched,
     format_voice_block,
+    match_on_demand_skills,
+    split_skills,
 )
-from backend.utils.persona_loader import load_identity, get_identity_yaml_path
 
 logger = logging.getLogger("aaa.research_context_builder")
 
@@ -73,7 +72,8 @@ class ResearchContextBuilder:
                 objective,
                 llm_provider=getattr(self._state, "structural_provider", None),
             )
-            if objective else None
+            if objective
+            else None
         )
 
         # ── 3. Skills (always-active + matched on-demand) ──
@@ -138,7 +138,8 @@ class ResearchContextBuilder:
                 node_query,
                 llm_provider=getattr(self._state, "structural_provider", None),
             )
-            if node_query else None
+            if node_query
+            else None
         )
 
         # 3. Skills
@@ -153,7 +154,10 @@ class ResearchContextBuilder:
 
                 if od:
                     matched = match_on_demand_skills(
-                        od, node_query, sig, max_matched=2,
+                        od,
+                        node_query,
+                        sig,
+                        max_matched=2,
                     )
                     matched_block = format_skills_matched(
                         matched,
@@ -169,7 +173,8 @@ class ResearchContextBuilder:
         # 4. Commitments
         commitment_repo = getattr(self._state, "commitment_repo", None)
         commitments_block = format_commitments_block(
-            commitment_repo, "symbia",
+            commitment_repo,
+            "symbia",
             active_header="--- BEGIN ACTIVE COMMITMENTS ---",
             active_footer="--- END ACTIVE COMMITMENTS ---",
             proto_header="--- BEGIN PROTO-COMMITMENTS (diffractive consideration) ---",
@@ -193,12 +198,7 @@ class ResearchContextBuilder:
             sections.append(beliefs_block)
 
         # 6. Directive
-        sections.append(
-            f"--- RESEARCH DIRECTIVE ---\n"
-            f"Query: {node_query}\n"
-            f"Goal: {node_goal}\n"
-            f"Depth: {depth}\n"
-        )
+        sections.append(f"--- RESEARCH DIRECTIVE ---\nQuery: {node_query}\nGoal: {node_goal}\nDepth: {depth}\n")
 
         context = "\n\n".join(sections)
         return apply_anti_mastery_filter(context)
@@ -229,6 +229,7 @@ class ResearchContextBuilder:
         from backend.modules.consolidation_checkpoint import (
             _select_type_diverse_nodes,
         )
+
         selected = _select_type_diverse_nodes(nodes, max_nodes)
 
         lines = ["[Conversation Memory Sediment — available for planning context]", ""]
@@ -246,9 +247,7 @@ class ResearchContextBuilder:
                     lines.append("")
                     lines.append("[Semantic Knots]")
                     for k in knots[:5]:
-                        lines.append(
-                            f"- (weight: {k.weight:.2f}) {k.concept_payload[:200]}"
-                        )
+                        lines.append(f"- (weight: {k.weight:.2f}) {k.concept_payload[:200]}")
             except Exception:
                 pass
 

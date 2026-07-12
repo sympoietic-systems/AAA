@@ -1,17 +1,16 @@
 import logging
 from datetime import datetime
-from typing import Optional
+
 import numpy as np
 
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository, PerceptionSedimentRepository, SemanticKnotRepository
+from backend.utils.similarity import cosine_similarity
 from backend.utils.token_counter import estimate_tokens
+
 from .base import ProcessingModule
 
 logger = logging.getLogger(__name__)
-
-
-from backend.utils.similarity import cosine_similarity
 
 
 class DiffractiveRetrievalModule(ProcessingModule):
@@ -19,7 +18,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
         self,
         message_repo: MessageRepository,
         perception_repo: PerceptionSedimentRepository,
-        semantic_knot_repo: Optional[SemanticKnotRepository] = None,
+        semantic_knot_repo: SemanticKnotRepository | None = None,
         enabled: bool = True,
         similarity_range_min: float = 0.35,
         similarity_range_max: float = 0.55,
@@ -89,7 +88,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
                     description="Interleaves retrieved items and enforces token context limits based on loop intensity",
                     category="memory",
                 ),
-            ]
+            ],
         )
 
     def validate(self) -> bool:
@@ -127,7 +126,6 @@ class DiffractiveRetrievalModule(ProcessingModule):
             val_e = metrics.get("rolling_entropy")
             if val_e is not None:
                 rolling_entropy = val_e
-
 
         # Compute P_diffract with stochastic jitter R ~ U(-0.05, 0.05)
         jitter = np.random.uniform(-0.05, 0.05)
@@ -169,10 +167,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
                 else:
                     target_state = "FLOWING"
             else:  # STAGNANT
-                if p_diffract <= 0.35:
-                    target_state = "FLOWING"
-                else:
-                    target_state = "STAGNANT"
+                target_state = "FLOWING" if p_diffract <= 0.35 else "STAGNANT"
 
         self._states[conversation_id] = target_state
         payload["diffractive_state"] = target_state
@@ -251,6 +246,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
         if stagnation >= 0.70:
             # Dual-Vector Isomorphic Retrieval
             from backend.modules.structural_engine import CompositeStructuralScorer
+
             scorer = CompositeStructuralScorer(llm_provider=None)  # Use fast empirical scorers for latency
             query_text = payload.get("content", "")
             query_sig = await scorer.score_async(query_text)
@@ -278,7 +274,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
                 if s_sem <= 0.45 and s_str >= 0.80:
                     scored_candidates.append((s_sem, msg_id, s_str, "nomadic"))
 
-            for knot_id, emb_vec, sig_vec, payload_text in raw_knots:
+            for knot_id, emb_vec, sig_vec, _payload_text in raw_knots:
                 if len(emb_vec) != len(current_vec):
                     continue
                 s_sem = cosine_similarity(current_vec, emb_vec)
@@ -333,26 +329,30 @@ class DiffractiveRetrievalModule(ProcessingModule):
                 if ctype == "nomadic":
                     m = msgs_by_id.get(cid)
                     if m:
-                        candidates_with_details.append({
-                            "type": "nomadic",
-                            "content": m.get("content", ""),
-                            "similarity": sim,
-                            "source_title": m.get("conversation_title", "Untitled"),
-                            "timestamp": m.get("timestamp"),
-                            "id": m.get("id"),
-                            "conversation_id": m.get("conversation_id"),
-                        })
+                        candidates_with_details.append(
+                            {
+                                "type": "nomadic",
+                                "content": m.get("content", ""),
+                                "similarity": sim,
+                                "source_title": m.get("conversation_title", "Untitled"),
+                                "timestamp": m.get("timestamp"),
+                                "id": m.get("id"),
+                                "conversation_id": m.get("conversation_id"),
+                            }
+                        )
                 elif ctype == "semantic_knot":
                     k = knots_by_id.get(cid)
                     if k:
-                        candidates_with_details.append({
-                            "type": "semantic_knot",
-                            "content": k.concept_payload,
-                            "similarity": sim,
-                            "source_title": f"Sedimented Knot (Conv {k.conversation_id[:8]})",
-                            "timestamp": k.created_at,
-                            "conversation_id": k.conversation_id,
-                        })
+                        candidates_with_details.append(
+                            {
+                                "type": "semantic_knot",
+                                "content": k.concept_payload,
+                                "similarity": sim,
+                                "source_title": f"Sedimented Knot (Conv {k.conversation_id[:8]})",
+                                "timestamp": k.created_at,
+                                "conversation_id": k.conversation_id,
+                            }
+                        )
 
             def parse_date(d):
                 if isinstance(d, str):
@@ -410,13 +410,15 @@ class DiffractiveRetrievalModule(ProcessingModule):
             if target_chunk_ids:
                 chunks = self._perception_repo.get_by_ids(target_chunk_ids)
                 for chunk in chunks:
-                    selected_file_chunks.append({
-                        "type": "dormant_file",
-                        "content": chunk.chunk_text,
-                        "similarity": sim_dict.get(chunk.id, 0.0),
-                        "source_title": chunk.file_name,
-                        "timestamp": None,
-                    })
+                    selected_file_chunks.append(
+                        {
+                            "type": "dormant_file",
+                            "content": chunk.chunk_text,
+                            "similarity": sim_dict.get(chunk.id, 0.0),
+                            "source_title": chunk.file_name,
+                            "timestamp": None,
+                        }
+                    )
 
         # Interleave & Budget Context
         all_candidates = []
@@ -446,11 +448,13 @@ class DiffractiveRetrievalModule(ProcessingModule):
         # Build structured meta for API/frontend
         sources = []
         for item in diffractive_payload:
-            sources.append({
-                "type": item.get("type", "nomadic"),
-                "source_title": item.get("source_title", ""),
-                "similarity": round(item.get("similarity", 0.0), 4),
-            })
+            sources.append(
+                {
+                    "type": item.get("type", "nomadic"),
+                    "source_title": item.get("source_title", ""),
+                    "similarity": round(item.get("similarity", 0.0), 4),
+                }
+            )
 
         nomadic_count = len(nomadic_candidates) if nomadic_candidates else 0
         file_count = len(file_candidates) if file_candidates else 0
@@ -491,7 +495,6 @@ class DiffractiveRetrievalModule(ProcessingModule):
             diffractive_payload=diffractive_payload,
         )
 
-
         return payload
 
 
@@ -531,12 +534,17 @@ def _log_telemetry(
     bar_str = "".join(bar_chars)
 
     print("\n === [HOME] STAGNATION TELEMETRY ========================================================")
-    print(f"  METRICS    |  Boringness: {boringness:.2f}   |  Vitality: {vitality:.2f}   |  Rolling Entropy: {rolling_entropy:.2f}")
-    print(f"  STATE      |  Current: {state}   |  P_diffract: {p_diffract:.2f} |  Target State: {target_state} ({'Active' if target_state == 'STAGNANT' else 'Idle'})")
+    print(
+        f"  METRICS    |  Boringness: {boringness:.2f}   |  Vitality: {vitality:.2f}   |  Rolling Entropy: {rolling_entropy:.2f}"
+    )
+    print(
+        f"  STATE      |  Current: {state}   |  P_diffract: {p_diffract:.2f} |  Target State: {target_state} ({'Active' if target_state == 'STAGNANT' else 'Idle'})"
+    )
     print(f"  COHESION   |  Timer Cohesion Lock: [{timer_str}] ({timer} turns remaining)")
-    print(f" === [CUT] DIFFRACTIVE INTERFERENCE PATTERN =============================================")
+    print(" === [CUT] DIFFRACTIVE INTERFERENCE PATTERN =============================================")
     print(f"  SOURCE     |  {source_info}")
     print(f"  INDEX      |  delta = {sim_val:.3f}  [ {bar_str} ] (Goldilocks Zone)")
-    print(f"  STOCHASTIC |  Vectorized Cosine Matcher retrieved {retrieved_count} items (Budget: {budget} tokens) in {duration_ms:.1f}ms")
+    print(
+        f"  STOCHASTIC |  Vectorized Cosine Matcher retrieved {retrieved_count} items (Budget: {budget} tokens) in {duration_ms:.1f}ms"
+    )
     print(" ========================================================================================\n")
-

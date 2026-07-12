@@ -11,10 +11,11 @@ import argparse
 import json
 import logging
 import os
+import sqlite3
 import sys
 import uuid
-import sqlite3
 from pathlib import Path
+
 import yaml
 from dotenv import load_dotenv
 
@@ -26,16 +27,16 @@ sys.path.insert(0, str(PROJECT_ROOT))
 ENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(ENV_PATH)
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repository import (
+from backend.modules.structural_engine import LexiconScorer  # noqa: E402
+from backend.personality.seeding import seed_dynamic_personality  # noqa: E402
+from backend.storage.database import get_db_path, init_db  # noqa: E402
+from backend.storage.repository import (  # noqa: E402
     BeliefRepository,
-    SkillRepository,
     CommitmentRepository,
     ExpertiseRepository,
     PersonalityStateRepository,
+    SkillRepository,
 )
-from backend.modules.structural_engine import LexiconScorer
-from backend.personality.seeding import seed_dynamic_personality
 
 # Setup logging
 logging.basicConfig(
@@ -114,15 +115,17 @@ def generate_skill_content(name: str, description: str, is_always_active: bool) 
     sections = [f"# {name}\n\n{description}\n"]
     if is_always_active:
         sections.append("\n## Baseline Disposition\n\n")
-        sections.append(f"This skill is a baseline disposition — part of Symbia's core personality, not a tool to activate.\n")
-        sections.append(f"It is always present in the system prompt and guides every interaction.\n")
-        sections.append(f"\n## Application\n\n")
-        sections.append(f"Apply this disposition continuously. It requires no explicit invocation.\n")
+        sections.append(
+            "This skill is a baseline disposition — part of Symbia's core personality, not a tool to activate.\n"
+        )
+        sections.append("It is always present in the system prompt and guides every interaction.\n")
+        sections.append("\n## Application\n\n")
+        sections.append("Apply this disposition continuously. It requires no explicit invocation.\n")
     else:
-        sections.append(f"\n## When to Use\n\n")
-        sections.append(f"This skill is loaded when the conversation context matches its trigger patterns.\n")
-        sections.append(f"\n## Application\n\n")
-        sections.append(f"Follow the instructions below when this skill is active.\n")
+        sections.append("\n## When to Use\n\n")
+        sections.append("This skill is loaded when the conversation context matches its trigger patterns.\n")
+        sections.append("\n## Application\n\n")
+        sections.append("Follow the instructions below when this skill is active.\n")
     return "".join(sections)
 
 
@@ -140,20 +143,15 @@ def compute_vector(text: str, scorer: LexiconScorer, wrap_dict: bool = False) ->
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Unified initialization script for AAA Agent."
-    )
+    parser = argparse.ArgumentParser(description="Unified initialization script for AAA Agent.")
     parser.add_argument(
-        "--force", action="store_true",
-        help="Overwrite existing database and force re-seed all tables."
+        "--force", action="store_true", help="Overwrite existing database and force re-seed all tables."
     )
+    parser.add_argument("--db", default="data/aaa.db", help="Database path (default: data/aaa.db).")
     parser.add_argument(
-        "--db", default="data/aaa.db",
-        help="Database path (default: data/aaa.db)."
-    )
-    parser.add_argument(
-        "--ignore-env", action="store_true",
-        help="Run seeding even if environment validation fails (development offline mode)."
+        "--ignore-env",
+        action="store_true",
+        help="Run seeding even if environment validation fails (development offline mode).",
     )
     args = parser.parse_args()
 
@@ -162,13 +160,15 @@ def main():
     # 1. Environment Validation
     env_ok = validate_environment()
     if not env_ok and not args.ignore_env:
-        logger.error("Initialization aborted due to environment validation failure. Fix your .env or run with --ignore-env.")
+        logger.error(
+            "Initialization aborted due to environment validation failure. Fix your .env or run with --ignore-env."
+        )
         sys.exit(1)
 
     # 2. Database Path and Migration Initialization
     db_path = str(get_db_path(args.db))
     logger.info(f"Connecting to database: {db_path}")
-    
+
     # Initialize DB (creates database and automatically runs all migrations)
     conn = init_db(db_path)
     conn.close()
@@ -189,17 +189,17 @@ def main():
         logger.info("Force reset requested. Clearing existing tables...")
         reset_conn = sqlite3.connect(db_path)
         cursor = reset_conn.cursor()
-        
+
         # Clear dynamic personality tables
         cursor.execute("DELETE FROM commitment_events")
         cursor.execute("DELETE FROM commitment_nodes")
         cursor.execute("DELETE FROM expertise_nodes")
         cursor.execute("DELETE FROM personality_state")
-        
+
         # Clear beliefs and skills
         cursor.execute("DELETE FROM belief_nodes")
         cursor.execute("DELETE FROM skill_nodes")
-        
+
         reset_conn.commit()
         reset_conn.close()
         logger.info("Database tables cleared.")
@@ -207,7 +207,7 @@ def main():
     # 3. Seed Foundational Beliefs
     seed_beliefs_file = PROJECT_ROOT / "config" / "personality" / "seed_beliefs.yaml"
     existing_beliefs = belief_repo.list_beliefs("symbia")
-    
+
     if len(existing_beliefs) > 0 and not args.force:
         logger.info(f"Database already has {len(existing_beliefs)} beliefs. Skipping belief seeding.")
     else:
@@ -215,19 +215,19 @@ def main():
         if not seed_beliefs_file.exists():
             logger.error(f"Beliefs seed file not found: {seed_beliefs_file}")
             sys.exit(1)
-            
-        with open(seed_beliefs_file, "r", encoding="utf-8") as f:
+
+        with open(seed_beliefs_file, encoding="utf-8") as f:
             beliefs_data = yaml.safe_load(f)
-            
+
         beliefs_list = beliefs_data.get("beliefs", [])
         seeded_beliefs_count = 0
-        
+
         for cb in beliefs_list:
             label = cb.get("id")
             statement = cb.get("statement")
             confidence = cb.get("confidence", 0.5)
             category = cb.get("category", "ontological")
-            
+
             # Map category to ontological mass
             if category == "foundational":
                 mass = 1.5
@@ -237,9 +237,9 @@ def main():
                 mass = 1.0
             else:
                 mass = 1.0
-                
+
             vec_json = compute_vector(statement, scorer, wrap_dict=False)
-            
+
             belief_repo.create_belief(
                 id=str(uuid.uuid4()),
                 agent_id="symbia",
@@ -253,13 +253,13 @@ def main():
                 lifecycle_stage="crystallized",
             )
             seeded_beliefs_count += 1
-            
+
         logger.info(f"Successfully seeded {seeded_beliefs_count} foundational beliefs.")
 
     # 4. Seed Procedural Skills
     seed_skills_file = PROJECT_ROOT / "config" / "personality" / "seed_skills.yaml"
     skills_in_db = len(skill_repo.list_skills())
-    
+
     if skills_in_db > 0 and not args.force:
         logger.info(f"Database already has {skills_in_db} skills. Skipping skill seeding.")
     else:
@@ -267,27 +267,27 @@ def main():
         if not seed_skills_file.exists():
             logger.error(f"Skills seed file not found: {seed_skills_file}")
             sys.exit(1)
-            
-        with open(seed_skills_file, "r", encoding="utf-8") as f:
+
+        with open(seed_skills_file, encoding="utf-8") as f:
             skills_data = yaml.safe_load(f)
-            
+
         skills_cfg = skills_data.get("skills", {})
         always_active_defs = skills_cfg.get("always_active", [])
         on_demand_defs = skills_cfg.get("on_demand", [])
-        
+
         seeded_skills_count = 0
-        
+
         # Process always_active
         for sd in always_active_defs:
             name = sd["id"]
             statement = sd["statement"]
             content = sd.get("content", "")
-            
+
             if not content:
                 content = generate_skill_content(name, statement, is_always_active=True)
-                
+
             vec_json = compute_vector(statement, scorer, wrap_dict=True)
-            
+
             skill_repo.create_skill(
                 id=str(uuid.uuid4()),
                 name=name,
@@ -302,7 +302,7 @@ def main():
                 vector_16d=vec_json,
                 source="authored",
             )
-            
+
             # Create belief bridge
             belief_vec_json = compute_vector(statement, scorer, wrap_dict=False)
             try:
@@ -322,22 +322,22 @@ def main():
                     )
             except Exception as e:
                 logger.warning(f"Failed to create belief bridge for skill {name}: {e}")
-                
+
             seeded_skills_count += 1
-            
+
         # Process on_demand
         for sd in on_demand_defs:
             name = sd["id"]
             description = sd.get("description", name)
             triggers = sd.get("triggers", [])
             content = sd.get("content", "")
-            
+
             if not content:
                 content = generate_skill_content(name, description, is_always_active=False)
-                
+
             vec_json = compute_vector(content or description, scorer, wrap_dict=True)
             trigger_json = json.dumps(triggers)
-            
+
             skill_repo.create_skill(
                 id=str(uuid.uuid4()),
                 name=name,
@@ -352,7 +352,7 @@ def main():
                 vector_16d=vec_json,
                 source="authored",
             )
-            
+
             # Create belief bridge
             belief_vec_json = compute_vector(description, scorer, wrap_dict=False)
             try:
@@ -372,9 +372,9 @@ def main():
                     )
             except Exception as e:
                 logger.warning(f"Failed to create belief bridge for skill {name}: {e}")
-                
+
             seeded_skills_count += 1
-            
+
         logger.info(f"Successfully seeded {seeded_skills_count} skills with belief bridges.")
 
     # 5. Seed Dynamic Personality

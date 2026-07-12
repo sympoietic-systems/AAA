@@ -18,11 +18,13 @@ logger = logging.getLogger("aaa.metabolic_budget")
 
 class MetabolicDepletionError(Exception):
     """Hard budget boundary reached — no further spending permitted."""
+
     pass
 
 
 class BudgetDelegationError(Exception):
     """Attempted to spend from a delegated (locked) budget context."""
+
     pass
 
 
@@ -66,13 +68,10 @@ class MetabolicBudget:
     def spend(self, amount_usd: float) -> None:
         """Record a metabolic expenditure."""
         if self._is_delegated:
-            raise BudgetDelegationError(
-                f"Budget '{self._name}' is delegated — cannot spend directly."
-            )
+            raise BudgetDelegationError(f"Budget '{self._name}' is delegated — cannot spend directly.")
         if self._spent_usd + amount_usd > self._limit_usd:
             raise MetabolicDepletionError(
-                f"Metabolic budget '{self._name}' exhausted: "
-                f"${self._spent_usd:.4f} / ${self._limit_usd:.2f}"
+                f"Metabolic budget '{self._name}' exhausted: ${self._spent_usd:.4f} / ${self._limit_usd:.2f}"
             )
         self._spent_usd += amount_usd
 
@@ -84,7 +83,7 @@ class MetabolicBudget:
         except (MetabolicDepletionError, BudgetDelegationError):
             return False
 
-    def delegate(self, limit_usd: float) -> 'MetabolicBudget':
+    def delegate(self, limit_usd: float) -> "MetabolicBudget":
         """Create a child budget for a sub-branch (research branch).
 
         Locks the parent from direct spending until the child is reclaimed.
@@ -100,10 +99,10 @@ class MetabolicBudget:
         self._child_budgets.append(child)
         return child
 
-    def reclaim(self, child: 'MetabolicBudget') -> None:
+    def reclaim(self, child: "MetabolicBudget") -> None:
         """Reclaim a child budget, adding its spent amount to parent."""
         if child not in self._child_budgets:
-            raise ValueError(f"Cannot reclaim unrecognized child budget.")
+            raise ValueError("Cannot reclaim unrecognized child budget.")
         self._spent_usd += child._spent_usd
         self._child_budgets.remove(child)
         self._is_delegated = bool(self._child_budgets)
@@ -117,6 +116,7 @@ class MetabolicBudget:
 
 
 # ── Homeostatic → Reasoning Parameter Mapping ───────────────────────
+
 
 def get_llm_execution_parameters(
     traits: dict[str, float],
@@ -141,9 +141,7 @@ def get_llm_execution_parameters(
     return {
         "max_completion_tokens": int(base_completion_tokens * metabolic_multiplier),
         "thinking_budget_tokens": int(base_thinking_budget * metabolic_multiplier),
-        "reasoning_effort": (
-            "high" if curiosity > 0.8 else ("low" if boredom > 0.7 else "medium")
-        ),
+        "reasoning_effort": ("high" if curiosity > 0.8 else ("low" if boredom > 0.7 else "medium")),
         "depth_limit": 4 if curiosity > 0.8 else 2,
         "breadth_limit": 4 if curiosity > 0.7 else 2,
     }

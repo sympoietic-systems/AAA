@@ -12,8 +12,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.router import router as api_router
-from backend.bootstrap.providers import _init_providers
-from backend.bootstrap.repositories import _init_repos
+from backend.bootstrap.background import (
+    _init_background_engine,
+    _start_background_services,
+)
 from backend.bootstrap.embedder import _init_embedder
 from backend.bootstrap.modules import (
     _init_belief_engine,
@@ -21,14 +23,12 @@ from backend.bootstrap.modules import (
     _load_identity,
 )
 from backend.bootstrap.pipeline import _build_pipeline, _register_skills
-from backend.bootstrap.background import (
-    _init_background_engine,
-    _start_background_services,
-)
+from backend.bootstrap.providers import _init_providers
+from backend.bootstrap.repositories import _init_repos
 from backend.config import load_config
 from backend.modules.llm_client import LLMClientModule
-from backend.pipeline.registry import PipelineRegistry
 from backend.personality.assembler import PromptAssemblerModule, _build_system_content
+from backend.pipeline.registry import PipelineRegistry
 from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)
@@ -36,9 +36,10 @@ logger = logging.getLogger(__name__)
 
 class _ColorFormatter(logging.Formatter):
     """ANSI color-coded log formatter: red for ERROR, yellow for WARNING, reset for others."""
+
     _COLORS = {
-        "ERROR":    "\033[31;1m",   # bold red
-        "WARNING":  "\033[33;1m",   # bold yellow
+        "ERROR": "\033[31;1m",  # bold red
+        "WARNING": "\033[33;1m",  # bold yellow
         "CRITICAL": "\033[41;97m",  # white on red background
     }
     _RESET = "\033[0m"
@@ -57,6 +58,7 @@ logging.basicConfig(level=logging.INFO, handlers=[_handler])
 
 
 # ── App lifecycle ──────────────────────────────────────────────────────
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -101,12 +103,14 @@ async def lifespan(app: FastAPI):
 
     # 6b. Skill activator
     from backend.modules.skill_activator import SkillActivatorModule
+
     skill_activator = SkillActivatorModule()
     skill_activator.set_repos(repos["skill_repo"], repos["belief_repo"])
     modules["skill_activator"] = skill_activator
 
     # 6c. Skill workshop
     from backend.modules.skill_workshop import SkillWorkshopModule
+
     skill_workshop = SkillWorkshopModule()
     skill_workshop.set_repos(repos["skill_repo"], repos["belief_repo"])
     modules["skill_workshop"] = skill_workshop
@@ -125,7 +129,7 @@ async def lifespan(app: FastAPI):
     # 10. Wire app state
     app.state.config = config
     rt = config.get("research_tasks", {})
-    logger.info("BOOTSTRAP CONFIG: research_tasks.manual_mode=%s", rt.get('manual_mode', 'MISSING'))
+    logger.info("BOOTSTRAP CONFIG: research_tasks.manual_mode=%s", rt.get("manual_mode", "MISSING"))
     app.state.agent_name = agent_name
     app.state.message_repo = repos["message_repo"]
     app.state.error_repo = repos["error_repo"]
@@ -164,6 +168,7 @@ async def lifespan(app: FastAPI):
 
     # 10.5. Research Task Manager (autonomous research engine lifecycle)
     from backend.services.research.task_manager import ResearchTaskManager
+
     app.state.research_task_manager = ResearchTaskManager(app.state)
 
     # Wire app_state into the rhizome web probe module (created before app_state existed)
@@ -172,7 +177,9 @@ async def lifespan(app: FastAPI):
 
     # 11. Background engine
     background_engine, background_provider = _init_background_engine(
-        config, llm_provider, vision_provider,
+        config,
+        llm_provider,
+        vision_provider,
     )
     app.state.background_engine = background_engine
     app.state.background_provider = background_provider
@@ -190,6 +197,7 @@ async def lifespan(app: FastAPI):
 
 # ── App factory ────────────────────────────────────────────────────────
 
+
 def create_app() -> FastAPI:
     """Build and return the FastAPI application."""
     app = FastAPI(title="AAA Backend", version="0.1.0", lifespan=lifespan)
@@ -203,12 +211,14 @@ def create_app() -> FastAPI:
 
     # Register global error handlers
     from backend.api.exceptions import register_error_handlers
+
     register_error_handlers(app)
 
     app.include_router(api_router)
 
     # Public preview endpoint (no auth — mounted separately from the authed /api router)
     from backend.api.routes.preview import router as preview_router
+
     app.include_router(preview_router)
 
     return app

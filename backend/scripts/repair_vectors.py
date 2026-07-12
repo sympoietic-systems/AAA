@@ -1,15 +1,11 @@
-import os
-import sqlite3
 import json
-import numpy as np
+import sqlite3
+
+from backend.modules.structural_engine import LexiconScorer
 
 # Ensure path is correct for execution from workspace root
 DB_PATH = "backend/data/aaa.db"
-if not os.path.exists(DB_PATH):
-    # Try local data directory if running from within backend/scripts etc.
-    DB_PATH = "data/aaa.db"
 
-from backend.modules.structural_engine import LexiconScorer
 
 def main():
     print(f"Connecting to database: {DB_PATH}")
@@ -57,18 +53,18 @@ def main():
         if needs_repair:
             print(f"-> Repairing belief: {label} (ID: {belief_id})")
             print(f"   Old vector: {vector_str[:80]}...")
-            
+
             # Recompute vector from statement using LexiconScorer
             text = statement or label or ""
             sig = scorer.score(text)
             new_vector = sig.tolist() if hasattr(sig, "tolist") else list(sig)
-            
+
             # Formulate as plain JSON list
             new_vector_str = json.dumps(new_vector)
-            
+
             cursor.execute(
                 "UPDATE belief_nodes SET vector_16d = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                (new_vector_str, belief_id)
+                (new_vector_str, belief_id),
             )
             print(f"   New vector: {new_vector_str}")
             repaired_beliefs += 1
@@ -78,7 +74,7 @@ def main():
             new_vector_str = json.dumps(parsed_vector)
             cursor.execute(
                 "UPDATE belief_nodes SET vector_16d = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                (new_vector_str, belief_id)
+                (new_vector_str, belief_id),
             )
             repaired_beliefs += 1
 
@@ -124,19 +120,19 @@ def main():
         if needs_repair:
             print(f"-> Repairing skill: {name} (ID: {skill_id})")
             print(f"   Old vector: {vector_str[:80]}...")
-            
+
             # Recompute vector from content/description
             text = content or description or name or ""
             sig = scorer.score(text)
             new_v16d = sig.tolist() if hasattr(sig, "tolist") else list(sig)
-            
+
             # Formulate as skill node JSON dictionary
             new_dict = {"v16d": new_v16d, "v384d": []}
             new_vector_str = json.dumps(new_dict)
-            
+
             cursor.execute(
                 "UPDATE skill_nodes SET vector_16d = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                (new_vector_str, skill_id)
+                (new_vector_str, skill_id),
             )
             print(f"   New vector: {new_vector_str}")
             repaired_skills += 1
@@ -147,7 +143,7 @@ def main():
             new_vector_str = json.dumps(new_dict)
             cursor.execute(
                 "UPDATE skill_nodes SET vector_16d = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                (new_vector_str, skill_id)
+                (new_vector_str, skill_id),
             )
             repaired_skills += 1
 
@@ -155,6 +151,7 @@ def main():
     conn.close()
 
     print(f"\nDone! Repaired/normalised {repaired_beliefs} beliefs and {repaired_skills} skills.")
+
 
 if __name__ == "__main__":
     main()

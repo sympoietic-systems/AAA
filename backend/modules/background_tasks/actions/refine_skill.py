@@ -1,14 +1,11 @@
-from pathlib import Path
-import yaml
 import json
 import logging
-from typing import Optional
 
 from backend.config import load_config
-from backend.storage.database import get_db_path
-from backend.storage.repository import SkillRepository, BeliefRepository
 from backend.modules.llm_client import BaseLLMProvider, generate_unified
 from backend.modules.skill_workshop import SkillWorkshopModule
+from backend.storage.database import get_db_path
+from backend.storage.repository import BeliefRepository, SkillRepository
 
 from ..base import BackgroundAction
 
@@ -28,9 +25,7 @@ class RefineSkillAction(BackgroundAction):
             skill_data = payload["context"].get("skill_data")
         if not skill_data:
             skill_data = {}
-            
-        conversation_id = payload.get("conversation_id")
-        
+
         if not skill_data or not skill_data.get("name"):
             return {"content": "", "model": "", "error": "No skill data or name provided"}
 
@@ -55,7 +50,8 @@ class RefineSkillAction(BackgroundAction):
         # 3. Load Symbia core personality
         personality_prompt = ""
         try:
-            from backend.utils.persona_loader import get_identity_yaml_path, load_identity, get_persona_text
+            from backend.utils.persona_loader import get_identity_yaml_path, get_persona_text, load_identity
+
             identity_path = get_identity_yaml_path()
             if identity_path.exists():
                 identity_data = load_identity(identity_path)
@@ -69,12 +65,12 @@ class RefineSkillAction(BackgroundAction):
 
         # 5. Formulate user prompt
         user_prompt = f"""Proposed Skill for Nucleation:
-Name: {skill_data.get('name')}
-Always Active: {skill_data.get('always_active')}
-Trigger Keywords: {skill_data.get('trigger_keywords')}
+Name: {skill_data.get("name")}
+Always Active: {skill_data.get("always_active")}
+Trigger Keywords: {skill_data.get("trigger_keywords")}
 Draft Content / Idea:
 \"\"\"
-{skill_data.get('content')}
+{skill_data.get("content")}
 \"\"\"
 
 Active Skills already in Symbia's database:
@@ -95,7 +91,7 @@ Active Skills already in Symbia's database:
 
         model_used = result.get("model", "")
         data = result.get("json_data")
-        
+
         if not data:
             # Fallback if JSON parsing failed
             content = result.get("content", "").strip()
@@ -103,12 +99,12 @@ Active Skills already in Symbia's database:
                 "decision": "refuse",
                 "reason": "Failed to generate valid JSON decision",
                 "content": content,
-                "model": model_used
+                "model": model_used,
             }
 
         decision = data.get("decision", "refuse").lower()
         reason = data.get("reason", "No reason provided.")
-        
+
         # 7. Apply decision
         if decision == "accept":
             refined_name = data.get("name", skill_data.get("name"))
@@ -119,7 +115,7 @@ Active Skills already in Symbia's database:
 
             # Instantiate workshop and repositories to propose the skill
             workshop = SkillWorkshopModule(skill_repo=skill_repo, belief_repo=belief_repo)
-            
+
             propose_cmd = {
                 "action": "propose",
                 "name": refined_name,
@@ -128,22 +124,31 @@ Active Skills already in Symbia's database:
                 "trigger_keywords": refined_trigger_keywords,
                 "content": refined_content,
             }
-            
+
             # Execute propose action (inserts in nucleation stage)
             prop_res = workshop._propose(propose_cmd)
-            
+
             if prop_res.get("status") == "ok":
                 skill_id = prop_res.get("skill_id")
                 # Run review action to compute confidence and anti-mastery check
                 rev_res = workshop._review({"skill_id": skill_id})
-                
+
                 # Check confidence for auto-crystallization of non-always-active skills
                 confidence = rev_res.get("confidence", 0.0)
                 if confidence >= 0.85 and not refined_always_active:
                     workshop._apply({"skill_id": skill_id, "human_approved": False})
-                    logger.info("Successfully nucleated, reviewed, and auto-crystallized skill: %s (confidence=%.2f)", refined_name, confidence)
+                    logger.info(
+                        "Successfully nucleated, reviewed, and auto-crystallized skill: %s (confidence=%.2f)",
+                        refined_name,
+                        confidence,
+                    )
                 else:
-                    logger.info("Successfully nucleated and reviewed skill: %s (confidence=%.2f, always_active=%s)", refined_name, confidence, refined_always_active)
+                    logger.info(
+                        "Successfully nucleated and reviewed skill: %s (confidence=%.2f, always_active=%s)",
+                        refined_name,
+                        confidence,
+                        refined_always_active,
+                    )
             else:
                 logger.warning("Propose failed: %s", prop_res.get("message"))
         elif decision == "update":
@@ -151,7 +156,7 @@ Active Skills already in Symbia's database:
             refined_content = data.get("content", "")
             refined_trigger_keywords = data.get("trigger_keywords", [])
             refined_changelog = data.get("changelog", f"Merged aspects from proposal '{skill_data.get('name')}'")
-            
+
             # Find target skill in active repository list
             target_skill = skill_repo.get_skill_by_name(target_name)
             if not target_skill and target_name:
@@ -160,10 +165,11 @@ Active Skills already in Symbia's database:
                     if s.name.lower() == str(target_name).lower():
                         target_skill = s
                         break
-            
+
             if target_skill:
                 # Recalculate 16D vector using LexiconScorer
                 from backend.modules.structural_engine import LexiconScorer
+
                 try:
                     scorer = LexiconScorer()
                     v16d = scorer.score(refined_content)
@@ -183,9 +189,10 @@ Active Skills already in Symbia's database:
                     changelog=refined_changelog,
                     version_source="auto_metabolism",
                 )
-                
+
                 # Log revision event
                 import uuid
+
                 try:
                     skill_repo.insert_event(
                         id=str(uuid.uuid4()),
@@ -196,14 +203,16 @@ Active Skills already in Symbia's database:
                     )
                 except Exception as se:
                     logger.warning("Failed to log revision event: %s", se)
-                
+
                 # Archive original proposed candidate as a collapsed node (integration trace)
                 try:
                     prop_skill_id = str(uuid.uuid4())
                     skill_repo.create_skill(
                         id=prop_skill_id,
                         name=skill_data.get("name"),
-                        description=skill_data.get("content")[:200] if skill_data.get("content") else skill_data.get("name"),
+                        description=skill_data.get("content")[:200]
+                        if skill_data.get("content")
+                        else skill_data.get("name"),
                         content=skill_data.get("content") or "",
                         always_active=skill_data.get("always_active", False),
                         lifecycle_stage="collapsed",
@@ -217,29 +226,32 @@ Active Skills already in Symbia's database:
                         skill_id=prop_skill_id,
                         event_type="collapse",
                         source_type="agent",
-                        rationale=f"Merged into active skill '{target_skill.name}'. Daemon rationale: {reason}"
+                        rationale=f"Merged into active skill '{target_skill.name}'. Daemon rationale: {reason}",
                     )
                 except Exception as se:
                     logger.warning("Failed to record merged proposal trace: %s", se)
-                    
+
                 logger.info("Successfully accreted/updated skill '%s' to version %d", target_skill.name, new_version)
             else:
                 logger.warning("Target skill '%s' not found for update, falling back to refusal.", target_name)
                 decision = "refuse"
                 # Fall through to the refuse logic below
-                
+
         # Re-check in case update fell back to refuse
         if decision not in ("accept", "update"):
             # Refused - insert as collapsed skill with the refusal reason!
             logger.info("Skill proposal '%s' refused/collapsed: %s", skill_data.get("name"), reason)
             # Create a collapsed node
             import uuid
+
             skill_id = str(uuid.uuid4())
             try:
                 skill_repo.create_skill(
                     id=skill_id,
                     name=skill_data.get("name"),
-                    description=skill_data.get("content")[:200] if skill_data.get("content") else skill_data.get("name"),
+                    description=skill_data.get("content")[:200]
+                    if skill_data.get("content")
+                    else skill_data.get("name"),
                     content=skill_data.get("content") or "",
                     always_active=skill_data.get("always_active", False),
                     lifecycle_stage="collapsed",
@@ -253,14 +265,9 @@ Active Skills already in Symbia's database:
                     skill_id=skill_id,
                     event_type="collapse",
                     source_type="agent",
-                    rationale=reason
+                    rationale=reason,
                 )
             except Exception as se:
                 logger.warning("Failed to record collapsed skill: %s", se)
 
-        return {
-            "decision": decision,
-            "reason": reason,
-            "data": data,
-            "model": model_used
-        }
+        return {"decision": decision, "reason": reason, "data": data, "model": model_used}

@@ -72,8 +72,7 @@ def _compute_stability_delta(task_id: str, result_summary: str, steps: list) -> 
 
         current_emb = generate_embedding(result_summary[:2000])
         prior_synth_steps = [
-            st for st in steps
-            if st.get("step_type") == "synthesize" and st.get("status") == "completed"
+            st for st in steps if st.get("step_type") == "synthesize" and st.get("status") == "completed"
         ]
         if len(prior_synth_steps) < 2:
             return 0.0
@@ -86,8 +85,7 @@ def _compute_stability_delta(task_id: str, result_summary: str, steps: list) -> 
         import numpy as np
 
         cos_sim = float(
-            np.dot(current_emb, prior_emb)
-            / (np.linalg.norm(current_emb) * np.linalg.norm(prior_emb) + 1e-10)
+            np.dot(current_emb, prior_emb) / (np.linalg.norm(current_emb) * np.linalg.norm(prior_emb) + 1e-10)
         )
         return 1.0 - cos_sim
     except Exception as e:
@@ -113,12 +111,14 @@ def _parse_step_data(step: dict) -> dict:
 
 def _now_iso() -> str:
     from backend.utils.research_logger import now_utc_str
+
     return now_utc_str()
 
 
 # ═══════════════════════════════════════════════════════════════════════
 # YAML output parser — extracts nodes from ResearchCrystallization output
 # ═══════════════════════════════════════════════════════════════════════
+
 
 def _parse_crystallization_output(content: str) -> list[dict]:
     """Parse YAML output from ResearchCrystallizeAction into memory node dicts.
@@ -127,6 +127,7 @@ def _parse_crystallization_output(content: str) -> list[dict]:
     if not content or not content.strip():
         return []
     from backend.metabolisation.sedimentation import parse_sedimentation_yaml
+
     nodes, _tier = parse_sedimentation_yaml(content)
     return nodes
 
@@ -136,9 +137,16 @@ def _parse_crystallization_output(content: str) -> list[dict]:
 # ═══════════════════════════════════════════════════════════════════════
 
 EXPORTABLE_FIELDS = [
-    "id", "node_type", "intensity", "scar", "intra_active_text",
-    "surface_fragment", "diffractive_key", "agential_symmetry",
-    "glitch_potential", "tendril_ids",
+    "id",
+    "node_type",
+    "intensity",
+    "scar",
+    "intra_active_text",
+    "surface_fragment",
+    "diffractive_key",
+    "agential_symmetry",
+    "glitch_potential",
+    "tendril_ids",
 ]
 
 
@@ -146,12 +154,14 @@ async def do_export(path: str) -> None:
     """Export all research memory nodes to a JSON file, keyed by task objective."""
     from backend.config import load_config
     from backend.storage.database import get_db_path, init_db
+
     os.environ.setdefault("AAA_RUN_MIGRATIONS", "true")
     config = load_config()
     db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
     init_db(db_path).close()
 
-    from backend.storage.repository import ResearchTaskRepository, MemoryNodeRepository
+    from backend.storage.repository import MemoryNodeRepository, ResearchTaskRepository
+
     task_repo = ResearchTaskRepository(db_path)
     memory_node_repo = MemoryNodeRepository(db_path)
 
@@ -183,7 +193,7 @@ async def do_export(path: str) -> None:
 
 async def do_import(path: str) -> None:
     """Import memory nodes from a JSON export file. Matches tasks by objective string."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
     entries = data.get("tasks", [])
@@ -193,13 +203,19 @@ async def do_import(path: str) -> None:
 
     from backend.config import load_config
     from backend.storage.database import get_db_path, init_db
+
     os.environ.setdefault("AAA_RUN_MIGRATIONS", "true")
     config = load_config()
     db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
     init_db(db_path).close()
 
-    from backend.storage.repository import ResearchTaskRepository, MemoryNodeRepository, ConsolidationCheckpointRepository
     import sqlite3 as _sqlite3
+
+    from backend.storage.repository import (
+        ConsolidationCheckpointRepository,
+        MemoryNodeRepository,
+        ResearchTaskRepository,
+    )
 
     task_repo = ResearchTaskRepository(db_path)
     memory_node_repo = MemoryNodeRepository(db_path)
@@ -284,7 +300,7 @@ async def do_import(path: str) -> None:
         matched += 1
         print(f"  -> {objective[:60]}: {len(nodes)} nodes")
 
-    print(f"\nDone.")
+    print("\nDone.")
     print(f"  Matched + imported: {matched} tasks ({imported} nodes)")
     print(f"  Already had nodes:  {already_has}")
     print(f"  Unmatched:          {unmatched}")
@@ -294,13 +310,27 @@ async def do_import(path: str) -> None:
 # Main
 # ═══════════════════════════════════════════════════════════════════════
 
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Snapshot research sedimentation")
     parser.add_argument("--dry-run", action="store_true", help="Compute packets but don't crystallize")
     parser.add_argument("--limit", type=int, default=0, help="Max tasks to process (0 = all)")
     parser.add_argument("--task", type=str, default="", help="Process a single task by ID")
-    parser.add_argument("--export", type=str, default="", metavar="FILE", help="Export memory nodes for completed research tasks to JSON file")
-    parser.add_argument("--import", type=str, default="", metavar="FILE", dest="import_file", help="Import memory nodes from JSON export file into matching tasks")
+    parser.add_argument(
+        "--export",
+        type=str,
+        default="",
+        metavar="FILE",
+        help="Export memory nodes for completed research tasks to JSON file",
+    )
+    parser.add_argument(
+        "--import",
+        type=str,
+        default="",
+        metavar="FILE",
+        dest="import_file",
+        help="Import memory nodes from JSON export file into matching tasks",
+    )
     args = parser.parse_args()
 
     # ── Dispatch: export mode ──
@@ -330,11 +360,11 @@ async def main() -> None:
     db_path_str = str(full_db_path)
 
     from backend.storage.repository import (
-        ResearchTaskRepository,
+        ConsolidationCheckpointRepository,
+        MemoryNodeRepository,
         ResearchStepRepository,
         ResearchStepResultRepository,
-        MemoryNodeRepository,
-        ConsolidationCheckpointRepository,
+        ResearchTaskRepository,
     )
 
     task_repo = ResearchTaskRepository(db_path_str)
@@ -407,56 +437,67 @@ async def main() -> None:
         glitch_fidelity, _, _ = _compute_glitch_metrics(steps, step_result_repo)
 
         if density > 0.3 or glitch_fidelity < 0.7:
-            critique_ctx = json.dumps({
-                "phase": "reflect",
-                "contradiction_density": density,
-                "glitch_fidelity": glitch_fidelity,
-            }, ensure_ascii=False)
-            reconstructed.append({
-                "phase": "reflection",
-                "trigger_thresholds": {"contradiction_density": density, "glitch_fidelity": glitch_fidelity},
-                "raw_context": critique_ctx[:8000],
-                "proposed_node_type": "tension",
-                "confidence": max(density, 1.0 - glitch_fidelity),
-                "pushed_at": _now_iso(),
-            })
+            critique_ctx = json.dumps(
+                {
+                    "phase": "reflect",
+                    "contradiction_density": density,
+                    "glitch_fidelity": glitch_fidelity,
+                },
+                ensure_ascii=False,
+            )
+            reconstructed.append(
+                {
+                    "phase": "reflection",
+                    "trigger_thresholds": {"contradiction_density": density, "glitch_fidelity": glitch_fidelity},
+                    "raw_context": critique_ctx[:8000],
+                    "proposed_node_type": "tension",
+                    "confidence": max(density, 1.0 - glitch_fidelity),
+                    "pushed_at": _now_iso(),
+                }
+            )
 
         # ── SYNTHESIZE → concept + belief_seed ──
         if result_summary:
             stability_delta = _compute_stability_delta(task_id, result_summary, steps)
             if stability_delta > 0.2:
-                reconstructed.append({
-                    "phase": "synthesize",
-                    "trigger_thresholds": {"stability_delta": stability_delta},
-                    "raw_context": result_summary[:8000],
-                    "proposed_node_type": "concept",
-                    "confidence": min(stability_delta * 2.0, 1.0),
-                    "pushed_at": _now_iso(),
-                })
+                reconstructed.append(
+                    {
+                        "phase": "synthesize",
+                        "trigger_thresholds": {"stability_delta": stability_delta},
+                        "raw_context": result_summary[:8000],
+                        "proposed_node_type": "concept",
+                        "confidence": min(stability_delta * 2.0, 1.0),
+                        "pushed_at": _now_iso(),
+                    }
+                )
 
             conf = _extract_confidence(result_summary)
             if conf > 0.8:
-                reconstructed.append({
-                    "phase": "synthesize",
-                    "trigger_thresholds": {"confidence": conf},
-                    "raw_context": result_summary[:8000],
-                    "proposed_node_type": "belief_seed",
-                    "confidence": conf,
-                    "pushed_at": _now_iso(),
-                })
+                reconstructed.append(
+                    {
+                        "phase": "synthesize",
+                        "trigger_thresholds": {"confidence": conf},
+                        "raw_context": result_summary[:8000],
+                        "proposed_node_type": "belief_seed",
+                        "confidence": conf,
+                        "pushed_at": _now_iso(),
+                    }
+                )
 
             # Always crystallize the final synthesis as at least one concept node.
             # Snapshot mode: even if individual phase thresholds weren't met,
             # the completed research result is valuable memory tissue.
             if not any(p["proposed_node_type"] == "concept" for p in reconstructed):
-                reconstructed.append({
-                    "phase": "completed",
-                    "trigger_thresholds": {"snapshot": True},
-                    "raw_context": result_summary[:8000],
-                    "proposed_node_type": "concept",
-                    "confidence": 0.6,
-                    "pushed_at": _now_iso(),
-                })
+                reconstructed.append(
+                    {
+                        "phase": "completed",
+                        "trigger_thresholds": {"snapshot": True},
+                        "raw_context": result_summary[:8000],
+                        "proposed_node_type": "concept",
+                        "confidence": 0.6,
+                        "pushed_at": _now_iso(),
+                    }
+                )
 
         # ── CONSOLIDATE → pattern ──
         for step in steps:
@@ -477,14 +518,16 @@ async def main() -> None:
             key_insights = json_data.get("key_insights", [])
 
             if completeness > 0.7 and key_insights:
-                reconstructed.append({
-                    "phase": "consolidate",
-                    "trigger_thresholds": {"completeness_score": completeness},
-                    "raw_context": json.dumps(key_insights, ensure_ascii=False)[:8000],
-                    "proposed_node_type": "pattern",
-                    "confidence": completeness,
-                    "pushed_at": _now_iso(),
-                })
+                reconstructed.append(
+                    {
+                        "phase": "consolidate",
+                        "trigger_thresholds": {"completeness_score": completeness},
+                        "raw_context": json.dumps(key_insights, ensure_ascii=False)[:8000],
+                        "proposed_node_type": "pattern",
+                        "confidence": completeness,
+                        "pushed_at": _now_iso(),
+                    }
+                )
                 break  # one pattern packet per task is enough
 
         if reconstructed:
@@ -516,8 +559,8 @@ async def main() -> None:
     # ═══════════════════════════════════════════════════════════════
 
     print("\nInitializing LLM and background engine...")
-    from backend.bootstrap.providers import _init_providers
     from backend.bootstrap.background import _init_background_engine
+    from backend.bootstrap.providers import _init_providers
 
     llm_provider, structural_provider, vision_provider = _init_providers(config)
     bg_engine, bg_provider = _init_background_engine(config, llm_provider, vision_provider)
@@ -534,6 +577,7 @@ async def main() -> None:
         # Ensure a synthetic conversation exists for the FK constraint
         try:
             import sqlite3 as _sqlite3
+
             db_conn = _sqlite3.connect(db_path_str)
             db_conn.execute("PRAGMA foreign_keys=ON")
             db_conn.execute(
@@ -564,16 +608,23 @@ async def main() -> None:
         task_nodes = 0
         for packet in packets:
             try:
-                print(f"  [{task_id[:8]}] {packet['phase']:>12s} -> {packet['proposed_node_type']:<14s} ...", end=" ", flush=True)
+                print(
+                    f"  [{task_id[:8]}] {packet['phase']:>12s} -> {packet['proposed_node_type']:<14s} ...",
+                    end=" ",
+                    flush=True,
+                )
 
-                result = await bg_engine.run("research_crystallize", {
-                    "text": packet.get("raw_context", ""),
-                    "phase": packet.get("phase", "unknown"),
-                    "node_type": packet.get("proposed_node_type", "concept"),
-                    "conversation_id": conversation_id,
-                    "source_type": "research",
-                    "source_id": task_id,
-                })
+                result = await bg_engine.run(
+                    "research_crystallize",
+                    {
+                        "text": packet.get("raw_context", ""),
+                        "phase": packet.get("phase", "unknown"),
+                        "node_type": packet.get("proposed_node_type", "concept"),
+                        "conversation_id": conversation_id,
+                        "source_type": "research",
+                        "source_id": task_id,
+                    },
+                )
 
                 content = result.get("content", "")
                 if not content:
@@ -592,7 +643,7 @@ async def main() -> None:
 
                 memory_node_repo.save_nodes(conversation_id, checkpoint_id, nodes)
                 task_nodes += len(nodes)
-                node_types = set(n.get("type", "?") for n in nodes)
+                node_types = {n.get("type", "?") for n in nodes}
                 print(f"{len(nodes)} nodes ({', '.join(node_types)})")
 
             except Exception as e:
@@ -615,7 +666,7 @@ async def main() -> None:
 
         print(f"  -- {task_id[:8]}: {task_nodes} nodes total\n")
 
-    print(f"\nDone.")
+    print("\nDone.")
     print(f"  Tasks with new nodes: {tasks_processed}")
     print(f"  Total nodes created:  {total_nodes}")
 

@@ -1,6 +1,4 @@
 """R5: Repository for LLM-compressed message blocks."""
-from datetime import datetime
-from typing import Optional
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
@@ -25,15 +23,11 @@ class CompressedMessageRepository(BaseRepository):
             (conversation_id, first_message_id, last_message_id, compressed_block),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT id FROM compressed_messages WHERE id = last_insert_rowid()"
-        ).fetchone()
+        row = conn.execute("SELECT id FROM compressed_messages WHERE id = last_insert_rowid()").fetchone()
         return row["id"] if row else 0
 
     @with_connection
-    def get_for_messages(
-        self, conversation_id: str, message_ids: list[int]
-    ) -> list[dict]:
+    def get_for_messages(self, conversation_id: str, message_ids: list[int]) -> list[dict]:
         """Get compressed blocks that span the given message IDs."""
         conn = self._conn()
         if not message_ids:

@@ -6,7 +6,6 @@ composite key for correct rerun scoping and dynamic step ordering.
 
 import sqlite3
 
-
 ADD_COLUMNS = """
 ALTER TABLE research_steps ADD COLUMN phase_group INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE research_steps ADD COLUMN sub_sequence INTEGER NOT NULL DEFAULT 0;

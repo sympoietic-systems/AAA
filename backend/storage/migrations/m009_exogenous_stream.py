@@ -1,8 +1,9 @@
+import contextlib
 import sqlite3
 
 
 def up(conn):
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS exogenous_stream (
                 id                      TEXT PRIMARY KEY,
@@ -16,13 +17,9 @@ def up(conn):
                 associated_file_name    TEXT
             )
         """)
-    except sqlite3.OperationalError:
-        pass
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("ALTER TABLE exogenous_stream ADD COLUMN associated_file_name TEXT")
-    except sqlite3.OperationalError:
-        pass
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             UPDATE exogenous_stream
             SET associated_file_name = (
@@ -33,5 +30,3 @@ def up(conn):
             )
             WHERE associated_file_name IS NULL
         """)
-    except sqlite3.OperationalError:
-        pass

@@ -1,11 +1,13 @@
+import os
+import sys
 from pathlib import Path
-import sys, os
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repository import MessageRepository, ErrorLogRepository
 import numpy as np
+
+from backend.storage.database import get_db_path, init_db
+from backend.storage.repository import ErrorLogRepository, MessageRepository
 
 db_path = str(get_db_path("data/aaa_test.db"))
 conn = init_db(db_path)

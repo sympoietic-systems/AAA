@@ -9,9 +9,10 @@ Usage in config.py:
         ov.apply(config)
 """
 
-from dataclasses import dataclass, field
-from typing import Any, Callable
 import os
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -49,6 +50,7 @@ class EnvOverride:
 
 # ── Parser helpers ─────────────────────────────────────────────────────
 
+
 def _parse_bool(v: str) -> bool:
     return v.lower() in ("true", "1", "yes")
 
@@ -77,60 +79,48 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_IDENTITY_PATH", "personality", "path"),
     EnvOverride("AAA_SERVER_HOST", "server", "host"),
     EnvOverride("AAA_SERVER_PORT", "server", "port", _parse_int),
-
     # ── Embedding ──
     EnvOverride("AAA_EMBEDDING_MODEL", "embedding", "model"),
     EnvOverride("AAA_EMBEDDING_DEVICE", "embedding", "device"),
     EnvOverride("AAA_EMBEDDING_CACHE_DIR", "embedding", "cache_dir"),
     EnvOverride("AAA_EMBEDDING_OFFLINE", "embedding", "offline", _parse_bool),
-
     # ── Background LLM ──
     EnvOverride("AAA_BACKGROUND_MODELS", "background_llm", "models", _parse_list),
     EnvOverride("AAA_BACKGROUND_API_BASE", "background_llm", "api_base"),
     EnvOverride("AAA_BACKGROUND_FALLBACK_MODEL", "background_llm", "fallback_model"),
     EnvOverride("AAA_BACKGROUND_THINKING", "background_llm", "thinking", lambda v: {"enabled": _parse_bool(v)}),
-
     # ── Structural LLM ──
     EnvOverride("AAA_STRUCTURAL_MODELS", "structural_llm", "models", _parse_list),
     EnvOverride("AAA_STRUCTURAL_API_BASE", "structural_llm", "api_base"),
     EnvOverride("AAA_STRUCTURAL_FALLBACK_MODEL", "structural_llm", "fallback_model"),
     EnvOverride("AAA_STRUCTURAL_THINKING", "structural_llm", "thinking", lambda v: {"enabled": _parse_bool(v)}),
-
     # ── Vision LLM ──
     EnvOverride("AAA_VISION_MODELS", "vision_llm", "models", _parse_list),
     EnvOverride("AAA_VISION_API_BASE", "vision_llm", "api_base"),
     EnvOverride("AAA_VISION_FALLBACK_MODEL", "vision_llm", "fallback_model"),
-
     # ── Context ──
     EnvOverride("AAA_CONTEXT_MAX_TOKENS", "context", "max_tokens", _parse_int),
     EnvOverride("AAA_CONTEXT_FLOATING_WINDOW", "context", "floating_window", _parse_int),
     EnvOverride("AAA_CONTEXT_CAVEMAN", "context", "caveman_enabled", _parse_bool),
     EnvOverride("AAA_CONTEXT_CONSOLIDATE_THRESHOLD", "context", "consolidate_threshold", _parse_int),
-
     # ── Sedimentation ──
     EnvOverride("AAA_SEDIMENT_TOKEN_BUDGET", "sedimentation", "sediment_token_budget", _parse_int),
     EnvOverride("AAA_SEDIMENT_COUNT", "sedimentation", "sediment_count", _parse_int),
-
     # ── Diffractive retrieval ──
     EnvOverride("AAA_DIFFRACTIVE_ENABLED", "diffractive_retrieval", "enabled", _parse_bool),
     EnvOverride("AAA_DIFFRACTIVE_TOKEN_BUDGET", "diffractive_retrieval", "token_budget", _parse_int),
     EnvOverride("AAA_DIFFRACTIVE_MAX_COUNT", "diffractive_retrieval", "max_diffractive_count", _parse_int),
-
     # ── Web retrieval ──
     EnvOverride("AAA_WEB_RETRIEVAL_ENABLED", "web_retrieval", "enabled", _parse_bool),
     EnvOverride("AAA_WEB_RETRIEVAL_AUTONOMOUS_ROUTING", "web_retrieval", "autonomous_routing", _parse_bool),
-
     # ── Sensory affordances ──
     EnvOverride("AAA_CRAWL4AI_ENABLED", "sensory_affordances", "crawl4ai", sub_key="enabled", parser=_parse_bool),
     EnvOverride("AAA_JINA_ENABLED", "sensory_affordances", "jina_reader", sub_key="enabled", parser=_parse_bool),
-
     # ── Structural signature ──
     EnvOverride("AAA_LLM_SCORER_ENABLED", "structural_signature", "llm_scorer_enabled", _parse_bool),
-
     # ── LLM thinking ──
     EnvOverride("AAA_LLM_THINKING", "llm", "thinking", lambda v: {"enabled": _parse_bool(v)}),
     EnvOverride("AAA_LLM_REASONING_EFFORT", "llm", "thinking", lambda v: {"effort": v}),
-
     # ── Daemon ──
     EnvOverride("AAA_DAEMON_ENABLED", "daemon", "enabled", _parse_bool),
     EnvOverride("AAA_DAEMON_CHECK_INTERVAL", "daemon", "check_interval", _parse_int),
@@ -140,7 +130,6 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_DAEMON_SHORT_WINDOW_HOURS", "daemon", "short_window_hours", _parse_int),
     EnvOverride("AAA_DAEMON_SHORT_WINDOW_MAX", "daemon", "short_window_max", _parse_int),
     EnvOverride("AAA_DAEMON_DRIFT_COEFFICIENT", "daemon", "drift_coefficient", _parse_float),
-
     # ── Research tasks ──
     EnvOverride("AAA_RESEARCH_MANUAL_MODE", "research_tasks", "manual_mode", _parse_bool),
     EnvOverride("AAA_RESEARCH_MAX_QUERIES", "research_orchestrator", "max_queries", _parse_int),

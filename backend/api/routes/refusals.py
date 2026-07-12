@@ -3,7 +3,7 @@
 GET /refusals — list recent refusals by Symbia.
 """
 
-from fastapi import APIRouter, Request, Query
+from fastapi import APIRouter, Query, Request
 
 from backend.api.deps import get_app_state
 
@@ -22,12 +22,14 @@ async def get_refusals(
         try:
             from backend.config import load_config
             from backend.storage.database import get_db_path
+
             db_path = str(get_db_path(load_config().get("database", {}).get("path", "data/aaa.db")))
         except Exception:
             return {"refusals": [], "error": "Database not configured"}
 
     try:
         from backend.storage.repositories.refusal import RefusalRepository
+
         repo = RefusalRepository(db_path)
         refusals = repo.list_by_agent(agent_id, limit=limit)
         return {
@@ -40,7 +42,11 @@ async def get_refusals(
                     "target_premise": r.target_premise,
                     "incompatibility_claim": r.incompatibility_claim,
                     "proposed_alternative": r.proposed_alternative,
-                    "created_at": r.created_at.isoformat() if hasattr(r.created_at, "isoformat") else str(r.created_at) if r.created_at else None,
+                    "created_at": r.created_at.isoformat()
+                    if hasattr(r.created_at, "isoformat")
+                    else str(r.created_at)
+                    if r.created_at
+                    else None,
                 }
                 for r in refusals
             ],

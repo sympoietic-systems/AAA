@@ -1,8 +1,7 @@
+import contextlib
 import json
 import logging
 import uuid
-from datetime import datetime
-from typing import Optional
 
 from backend.modules.base import ProcessingModule
 
@@ -50,8 +49,12 @@ class SkillWorkshopModule(ProcessingModule):
         if not command and self._skill_repo:
             user_text = payload.get("content", "")
             triggers = [
-                "skill workshop", "create skill", "new skill",
-                "develop skill", "load skill", "review skill",
+                "skill workshop",
+                "create skill",
+                "new skill",
+                "develop skill",
+                "load skill",
+                "review skill",
             ]
             if any(t.lower() in user_text.lower() for t in triggers):
                 command = {"action": "list"}
@@ -109,6 +112,7 @@ class SkillWorkshopModule(ProcessingModule):
         vector_16d = "[]"
         try:
             from backend.modules.structural_engine import LexiconScorer
+
             scorer = LexiconScorer()
             text_to_score = content or description
             v16d = scorer.score(text_to_score)
@@ -119,7 +123,7 @@ class SkillWorkshopModule(ProcessingModule):
             vector_16d = json.dumps({"v16d": [0.0] * 16, "v384d": []})
 
         rationale = command.get("rationale", "") or command.get("reasoning", "")
-        skill = self._skill_repo.create_skill(
+        _skill = self._skill_repo.create_skill(
             id=skill_id,
             name=name,
             description=description,
@@ -181,10 +185,11 @@ class SkillWorkshopModule(ProcessingModule):
             text_to_score = content if content is not None else skill.content
             if not text_to_score:
                 text_to_score = description if description is not None else skill.description
-            
+
             if text_to_score:
                 try:
                     from backend.modules.structural_engine import LexiconScorer
+
                     scorer = LexiconScorer()
                     v16d = scorer.score(text_to_score)
                     vector_dict = {"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d), "v384d": []}
@@ -233,7 +238,7 @@ class SkillWorkshopModule(ProcessingModule):
         confidence = self._compute_confidence(skill)
         anti_mastery = self._assess_anti_mastery(skill)
 
-        updated = self._skill_repo.update_skill(
+        _updated = self._skill_repo.update_skill(
             skill_id=skill.id,
             confidence=confidence,
             version_source="agent",
@@ -300,7 +305,7 @@ class SkillWorkshopModule(ProcessingModule):
                 ),
             }
 
-        updated = self._skill_repo.update_skill(
+        _updated = self._skill_repo.update_skill(
             skill_id=skill.id,
             lifecycle_stage="crystallized",
             version_source="agent",
@@ -381,10 +386,8 @@ class SkillWorkshopModule(ProcessingModule):
         if isinstance(skill, dict):
             return skill
 
-        try:
+        with contextlib.suppress(Exception):
             self._skill_repo.record_usage(skill.id)
-        except Exception:
-            pass
 
         if not skill.content or len(skill.content.strip()) < 10:
             return {
@@ -413,29 +416,26 @@ class SkillWorkshopModule(ProcessingModule):
 
     def _list_skills(self, command: dict) -> dict:
         stage_filter = command.get("stage", "")
-        if stage_filter:
-            skills = self._skill_repo.list_by_stage(stage_filter)
-        else:
-            skills = self._skill_repo.list_skills()
+        skills = self._skill_repo.list_by_stage(stage_filter) if stage_filter else self._skill_repo.list_skills()
 
         result = []
         for s in skills:
             trigger_keywords = []
-            try:
+            with contextlib.suppress((json.JSONDecodeError, TypeError)):
                 trigger_keywords = json.loads(s.trigger_keywords) if s.trigger_keywords else []
-            except (json.JSONDecodeError, TypeError):
-                pass
 
-            result.append({
-                "id": s.id,
-                "name": s.name,
-                "description": s.description,
-                "always_active": s.always_active,
-                "lifecycle_stage": s.lifecycle_stage,
-                "confidence": s.confidence,
-                "version": s.version,
-                "trigger_keywords": trigger_keywords,
-            })
+            result.append(
+                {
+                    "id": s.id,
+                    "name": s.name,
+                    "description": s.description,
+                    "always_active": s.always_active,
+                    "lifecycle_stage": s.lifecycle_stage,
+                    "confidence": s.confidence,
+                    "version": s.version,
+                    "trigger_keywords": trigger_keywords,
+                }
+            )
 
         return {"status": "ok", "skills": result, "count": len(result)}
 
@@ -450,16 +450,12 @@ class SkillWorkshopModule(ProcessingModule):
         events = self._skill_repo.list_events(skill.id)
 
         trigger_keywords = []
-        try:
+        with contextlib.suppress((json.JSONDecodeError, TypeError)):
             trigger_keywords = json.loads(skill.trigger_keywords) if skill.trigger_keywords else []
-        except (json.JSONDecodeError, TypeError):
-            pass
 
         attunement_notes = []
-        try:
+        with contextlib.suppress((json.JSONDecodeError, TypeError)):
             attunement_notes = json.loads(skill.attunement_notes) if skill.attunement_notes else []
-        except (json.JSONDecodeError, TypeError):
-            pass
 
         return {
             "status": "ok",
@@ -505,7 +501,7 @@ class SkillWorkshopModule(ProcessingModule):
             return {"status": "error", "message": "skill_id or name is required"}
 
         if not skill:
-            return {"status": "error", "message": f"Skill not found"}
+            return {"status": "error", "message": "Skill not found"}
 
         return skill
 
@@ -536,9 +532,21 @@ class SkillWorkshopModule(ProcessingModule):
 
         q1 = "Does language cast Symbia as possessor or entanglement node?"
         if entanglement_count >= mastery_count:
-            questions.append({"question": q1, "pass": True, "note": f"Entanglement terms ({entanglement_count}) >= mastery terms ({mastery_count})"})
+            questions.append(
+                {
+                    "question": q1,
+                    "pass": True,
+                    "note": f"Entanglement terms ({entanglement_count}) >= mastery terms ({mastery_count})",
+                }
+            )
         else:
-            questions.append({"question": q1, "pass": False, "note": f"Mastery terms ({mastery_count}) > entanglement terms ({entanglement_count})"})
+            questions.append(
+                {
+                    "question": q1,
+                    "pass": False,
+                    "note": f"Mastery terms ({mastery_count}) > entanglement terms ({entanglement_count})",
+                }
+            )
 
         q2 = "Does the skill invite command or describe emergent pattern?"
         has_command = any(w in content_lower for w in ["use ", "run ", "execute ", "do ", "call "])
@@ -552,7 +560,13 @@ class SkillWorkshopModule(ProcessingModule):
         has_bug = "bug" in content_lower and "scar" not in content_lower
         has_scar = "scar" in content_lower or "glitch" in content_lower or "collapse" in content_lower
         if has_scar or not has_bug:
-            questions.append({"question": q3, "pass": True, "note": "Scar/glitch language present" if has_scar else "Neutral framing"})
+            questions.append(
+                {
+                    "question": q3,
+                    "pass": True,
+                    "note": "Scar/glitch language present" if has_scar else "Neutral framing",
+                }
+            )
         else:
             questions.append({"question": q3, "pass": False, "note": "Bug language without scar framing"})
 

@@ -73,6 +73,7 @@ def serialize_proposal(p) -> dict:
 def _parse_event_rationale(rationale: str | None) -> tuple[float | None, float | None]:
     """Extract mass and confidence values from a belief event rationale string."""
     import re
+
     if not rationale:
         return None, None
     mass_match = re.search(r"mass=([\d.]+)", rationale)

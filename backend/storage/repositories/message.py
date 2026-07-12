@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 import numpy as np
 
@@ -20,15 +19,15 @@ class MessageRepository(BaseRepository):
         try:
             # Delete duplicates where source_id > target_id and the correctly-ordered version exists
             conn.execute(
-                """DELETE FROM message_links 
-                   WHERE source_id > target_id 
+                """DELETE FROM message_links
+                   WHERE source_id > target_id
                    AND (target_id || '_' || source_id || '_' || link_type) IN (SELECT id FROM message_links)"""
             )
             # Update remaining reversed links to be correctly ordered
             conn.execute(
-                """UPDATE message_links 
+                """UPDATE message_links
                    SET id = target_id || '_' || source_id || '_' || link_type,
-                       source_id = target_id, 
+                       source_id = target_id,
                        target_id = source_id
                    WHERE source_id > target_id"""
             )
@@ -45,29 +44,44 @@ class MessageRepository(BaseRepository):
         embedding: bytes,
         embedding_model: str,
         embedding_dim: int,
-        thinking: Optional[str] = None,
+        thinking: str | None = None,
         agent_id: str = "",
         conversation_id: str = "",
         content_tokens: int = 0,
         thinking_tokens: int | None = None,
-        model_used: Optional[str] = None,
-        provider_used: Optional[str] = None,
-        context_sent: Optional[str] = None,
+        model_used: str | None = None,
+        provider_used: str | None = None,
+        context_sent: str | None = None,
         structural_signature: bytes = b"",
-        structural_justification: Optional[str] = None,
-        parent_message_id: Optional[int] = None,
+        structural_justification: str | None = None,
+        parent_message_id: int | None = None,
     ) -> Message:
         conn = self._conn()
         conn.execute(
             """INSERT INTO conversation_log
                (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id),
+            (
+                agent_id,
+                speaker,
+                content,
+                thinking,
+                context_sent,
+                embedding,
+                embedding_model,
+                embedding_dim,
+                conversation_id,
+                content_tokens,
+                thinking_tokens,
+                model_used,
+                provider_used,
+                structural_signature,
+                structural_justification,
+                parent_message_id,
+            ),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM conversation_log WHERE id = last_insert_rowid()"
-        ).fetchone()
+        row = conn.execute("SELECT * FROM conversation_log WHERE id = last_insert_rowid()").fetchone()
         return _row_to_message(row)
 
     @with_connection
@@ -96,7 +110,7 @@ class MessageRepository(BaseRepository):
         return messages[last_message_count:]
 
     @with_connection
-    def get_last_message_timestamp(self, conversation_id: Optional[str] = None) -> Optional[datetime]:
+    def get_last_message_timestamp(self, conversation_id: str | None = None) -> datetime | None:
         conn = self._conn()
         if conversation_id:
             row = conn.execute(
@@ -115,11 +129,9 @@ class MessageRepository(BaseRepository):
             return None
 
     @with_connection
-    def get_by_id(self, message_id: int) -> Optional[Message]:
+    def get_by_id(self, message_id: int) -> Message | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM conversation_log WHERE id = ?", (message_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM conversation_log WHERE id = ?", (message_id,)).fetchone()
         if row is None:
             return None
         return _row_to_message(row)
@@ -217,13 +229,20 @@ class MessageRepository(BaseRepository):
 
     @with_connection
     def get_embeddings_by_speaker(
-        self, speaker: str, limit: int = 5, conversation_id: str | None = None,
+        self,
+        speaker: str,
+        limit: int = 5,
+        conversation_id: str | None = None,
         exclude_message_id: int | None = None,
     ) -> list[np.ndarray]:
         conn = self._conn()
         exclude_clause = "AND id != ?" if exclude_message_id is not None else ""
         if conversation_id is not None:
-            params = (speaker, conversation_id) + ((exclude_message_id,) if exclude_message_id is not None else ()) + (limit,)
+            params = (
+                (speaker, conversation_id)
+                + ((exclude_message_id,) if exclude_message_id is not None else ())
+                + (limit,)
+            )
             rows = conn.execute(
                 f"SELECT embedding, embedding_dim FROM conversation_log "
                 f"WHERE speaker = ? AND conversation_id = ? {exclude_clause} ORDER BY id DESC LIMIT ?",
@@ -247,7 +266,9 @@ class MessageRepository(BaseRepository):
         return result
 
     @with_connection
-    def get_last_embedding_by_speaker(self, speaker: str, conversation_id: str | None = None, exclude_message_id: int | None = None) -> np.ndarray | None:
+    def get_last_embedding_by_speaker(
+        self, speaker: str, conversation_id: str | None = None, exclude_message_id: int | None = None
+    ) -> np.ndarray | None:
         conn = self._conn()
         exclude_clause = "AND id != ?" if exclude_message_id is not None else ""
         if conversation_id is not None:
@@ -276,7 +297,9 @@ class MessageRepository(BaseRepository):
         return vec
 
     @with_connection
-    def get_recent_embeddings(self, limit: int = 10, conversation_id: str | None = None, exclude_message_id: int | None = None) -> list[np.ndarray]:
+    def get_recent_embeddings(
+        self, limit: int = 10, conversation_id: str | None = None, exclude_message_id: int | None = None
+    ) -> list[np.ndarray]:
         conn = self._conn()
         exclude_clause = "AND id != ?" if exclude_message_id is not None else ""
         if conversation_id is not None:
@@ -288,8 +311,7 @@ class MessageRepository(BaseRepository):
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT embedding, embedding_dim FROM conversation_log "
-                "ORDER BY id DESC LIMIT ?",
+                "SELECT embedding, embedding_dim FROM conversation_log ORDER BY id DESC LIMIT ?",
                 (limit,),
             ).fetchall()
         result: list[np.ndarray] = []
@@ -303,11 +325,19 @@ class MessageRepository(BaseRepository):
         return result
 
     @with_connection
-    def get_recent_with_metrics(self, limit: int = 50, offset: int = 0, conversation_id: str | None = None, exclude_message_id: int | None = None) -> list[dict]:
+    def get_recent_with_metrics(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        conversation_id: str | None = None,
+        exclude_message_id: int | None = None,
+    ) -> list[dict]:
         conn = self._conn()
         exclude_clause = "AND cl.id != ?" if exclude_message_id is not None else ""
         if conversation_id is not None:
-            params = (conversation_id,) + ((exclude_message_id,) if exclude_message_id is not None else ()) + (limit, offset)
+            params = (
+                (conversation_id,) + ((exclude_message_id,) if exclude_message_id is not None else ()) + (limit, offset)
+            )
             rows = conn.execute(
                 f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
@@ -345,7 +375,9 @@ class MessageRepository(BaseRepository):
         return [dict(r) for r in reversed(rows)]
 
     @with_connection
-    def get_recent_with_metrics_for_path(self, message_ids: list[int], limit: int = 5, exclude_message_id: int | None = None) -> list[dict]:
+    def get_recent_with_metrics_for_path(
+        self, message_ids: list[int], limit: int = 5, exclude_message_id: int | None = None
+    ) -> list[dict]:
         if not message_ids:
             return []
         conn = self._conn()
@@ -383,9 +415,7 @@ class MessageRepository(BaseRepository):
                 (conversation_id,),
             ).fetchone()
         else:
-            row = conn.execute(
-                "SELECT COUNT(*) as cnt FROM conversation_log"
-            ).fetchone()
+            row = conn.execute("SELECT COUNT(*) as cnt FROM conversation_log").fetchone()
         return row["cnt"] if row else 0
 
     @with_connection
@@ -420,7 +450,7 @@ class MessageRepository(BaseRepository):
     ) -> list[tuple[float, int]]:
         candidates = self.get_all_embeddings_except(exclude_conversation_id, limit=limit)
         scored: list[tuple[float, int]] = []
-        for msg_id, speaker, vec in candidates:
+        for msg_id, _speaker, vec in candidates:
             if len(vec) != len(query_vec):
                 continue
             sim = float(np.dot(query_vec, vec))
@@ -450,7 +480,7 @@ class MessageRepository(BaseRepository):
     @with_connection
     def get_embeddings_and_signatures_except(
         self, exclude_conversation_id: str, limit: int = 500
-    ) -> list[tuple[int, np.ndarray, Optional[np.ndarray]]]:
+    ) -> list[tuple[int, np.ndarray, np.ndarray | None]]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT id, embedding, embedding_dim, structural_signature FROM conversation_log
@@ -505,14 +535,16 @@ class MessageRepository(BaseRepository):
         ).fetchall()
         results = []
         for row in rows:
-            results.append({
-                "id": row["id"],
-                "timestamp": datetime.fromisoformat(row["timestamp"]) if row["timestamp"] else datetime.now(),
-                "conversation_id": row["conversation_id"],
-                "speaker": row["speaker"],
-                "content": row["content"],
-                "conversation_title": row["conversation_title"] or "Untitled Conversation",
-            })
+            results.append(
+                {
+                    "id": row["id"],
+                    "timestamp": datetime.fromisoformat(row["timestamp"]) if row["timestamp"] else datetime.now(),
+                    "conversation_id": row["conversation_id"],
+                    "speaker": row["speaker"],
+                    "content": row["content"],
+                    "conversation_title": row["conversation_title"] or "Untitled Conversation",
+                }
+            )
         return results
 
     @with_connection
@@ -598,21 +630,28 @@ class MessageRepository(BaseRepository):
         return row["cnt"] > 0 if row else False
 
     @with_connection
-    def add_message_link(self, source_id: int, target_id: int, link_type: str = "resonance", status: str = "active", justification: str = "") -> MessageLink:
+    def add_message_link(
+        self,
+        source_id: int,
+        target_id: int,
+        link_type: str = "resonance",
+        status: str = "active",
+        justification: str = "",
+    ) -> MessageLink:
         conn = self._conn()
         # Consistent undirected link_id ordering to prevent duplicates/cross-talk
         link_id = f"{min(source_id, target_id)}_{max(source_id, target_id)}_{link_type}"
         conn.execute(
             """INSERT INTO message_links (id, source_id, target_id, link_type, status, justification)
                VALUES (?, ?, ?, ?, ?, ?)
-               ON CONFLICT(id) DO UPDATE SET 
-                   status = CASE 
-                       WHEN excluded.status = 'proposed' AND message_links.status IN ('active', 'ignored') THEN message_links.status 
-                       ELSE excluded.status 
+               ON CONFLICT(id) DO UPDATE SET
+                   status = CASE
+                       WHEN excluded.status = 'proposed' AND message_links.status IN ('active', 'ignored') THEN message_links.status
+                       ELSE excluded.status
                    END,
-                   justification = CASE 
-                       WHEN excluded.status = 'proposed' AND message_links.status IN ('active', 'ignored') THEN message_links.justification 
-                       ELSE excluded.justification 
+                   justification = CASE
+                       WHEN excluded.status = 'proposed' AND message_links.status IN ('active', 'ignored') THEN message_links.justification
+                       ELSE excluded.justification
                    END""",
             (link_id, source_id, target_id, link_type, status, justification),
         )
@@ -639,9 +678,7 @@ class MessageRepository(BaseRepository):
         conn = self._conn()
 
         # Get the parent of the message being deleted
-        row = conn.execute(
-            "SELECT parent_message_id FROM conversation_log WHERE id = ?", (message_id,)
-        ).fetchone()
+        row = conn.execute("SELECT parent_message_id FROM conversation_log WHERE id = ?", (message_id,)).fetchone()
         grandparent_id = row["parent_message_id"] if row else None
 
         # Reparent direct children to the deleted message's parent
@@ -689,6 +726,7 @@ class MessageRepository(BaseRepository):
         limit: int = 5,
     ) -> list[dict]:
         import numpy as np
+
         conn = self._conn()
         row = conn.execute(
             "SELECT embedding, embedding_dim FROM conversation_log WHERE id = ?",
@@ -696,12 +734,12 @@ class MessageRepository(BaseRepository):
         ).fetchone()
         if not row or not row["embedding"] or not row["embedding_dim"]:
             return []
-        
+
         query_vec = np.frombuffer(row["embedding"], dtype="float32")
         query_dim = row["embedding_dim"]
         if len(query_vec) != query_dim:
             return []
-            
+
         norm = np.linalg.norm(query_vec)
         if norm > 0:
             query_vec = query_vec / norm
@@ -720,13 +758,13 @@ class MessageRepository(BaseRepository):
             (message_id,),
         ).fetchall()
         descendant_ids = [r["id"] for r in descendant_rows]
-        
+
         exclude_ids = list(set((ancestor_ids or []) + descendant_ids))
         exclude_placeholders = ",".join(["?"] * len(exclude_ids)) if exclude_ids else "NULL"
 
         query_str = f"""
-            SELECT id, speaker, content, embedding, embedding_dim, timestamp 
-            FROM conversation_log 
+            SELECT id, speaker, content, embedding, embedding_dim, timestamp
+            FROM conversation_log
             WHERE conversation_id = ? AND id != ? AND id NOT IN ({exclude_placeholders})
               AND id NOT IN (
                   SELECT source_id FROM message_links WHERE target_id = ?
@@ -746,26 +784,28 @@ class MessageRepository(BaseRepository):
             vec = np.frombuffer(blob, dtype="float32")
             if len(vec) != dim or len(vec) != len(query_vec):
                 continue
-            
+
             v_norm = np.linalg.norm(vec)
             if v_norm > 0:
                 vec = vec / v_norm
             sim = float(np.dot(query_vec, vec))
-            
+
             if sim >= threshold:
-                results.append({
-                    "message_id": r["id"],
-                    "speaker": r["speaker"],
-                    "content": r["content"],
-                    "similarity": sim,
-                    "timestamp": r["timestamp"],
-                })
-        
+                results.append(
+                    {
+                        "message_id": r["id"],
+                        "speaker": r["speaker"],
+                        "content": r["content"],
+                        "similarity": sim,
+                        "timestamp": r["timestamp"],
+                    }
+                )
+
         results.sort(key=lambda x: x["similarity"], reverse=True)
         return results[:limit]
 
     @with_connection
-    def search_text(self, query_str: str, conversation_id: Optional[str] = None) -> list[Message]:
+    def search_text(self, query_str: str, conversation_id: str | None = None) -> list[Message]:
         conn = self._conn()
         # Broad keyword search: split into tokens and OR-match each across
         # both the content and thinking columns.
@@ -789,21 +829,20 @@ class MessageRepository(BaseRepository):
         rows = conn.execute(sql, params).fetchall()
         return [_row_to_message(r) for r in rows]
 
-
     @with_connection
-    def get_embeddings_and_signatures_for_search(self, conversation_id: Optional[str] = None) -> list[tuple]:
+    def get_embeddings_and_signatures_for_search(self, conversation_id: str | None = None) -> list[tuple]:
         conn = self._conn()
         if conversation_id:
             rows = conn.execute(
-                """SELECT id, speaker, content, conversation_id, timestamp, embedding, structural_signature 
-                   FROM conversation_log 
+                """SELECT id, speaker, content, conversation_id, timestamp, embedding, structural_signature
+                   FROM conversation_log
                    WHERE conversation_id = ? AND embedding IS NOT NULL""",
                 (conversation_id,),
             ).fetchall()
         else:
             rows = conn.execute(
-                """SELECT id, speaker, content, conversation_id, timestamp, embedding, structural_signature 
-                   FROM conversation_log 
+                """SELECT id, speaker, content, conversation_id, timestamp, embedding, structural_signature
+                   FROM conversation_log
                    WHERE conversation_id != '' AND embedding IS NOT NULL""",
             ).fetchall()
         return [
@@ -814,13 +853,13 @@ class MessageRepository(BaseRepository):
                 r["conversation_id"],
                 r["timestamp"],
                 r["embedding"],
-                r["structural_signature"]
+                r["structural_signature"],
             )
             for r in rows
         ]
 
     @with_connection
-    def get_glitch_salience_messages(self, conversation_id: Optional[str] = None, limit: int = 50) -> list[tuple]:
+    def get_glitch_salience_messages(self, conversation_id: str | None = None, limit: int = 50) -> list[tuple]:
         conn = self._conn()
         query = """
             SELECT cl.id, cl.speaker, cl.content, cl.conversation_id, cl.timestamp,
@@ -835,7 +874,7 @@ class MessageRepository(BaseRepository):
             params.append(conversation_id)
         query += " ORDER BY cl.id DESC LIMIT ?"
         params.append(limit)
-        
+
         rows = conn.execute(query, params).fetchall()
         return [
             (
@@ -846,8 +885,7 @@ class MessageRepository(BaseRepository):
                 r["timestamp"],
                 r["surprise_index"],
                 r["novelty"],
-                r["deficit"]
+                r["deficit"],
             )
             for r in rows
         ]
-

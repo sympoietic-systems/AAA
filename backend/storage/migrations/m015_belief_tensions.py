@@ -1,3 +1,4 @@
+import contextlib
 import sqlite3
 
 
@@ -7,19 +8,15 @@ def up(conn):
         "ALTER TABLE belief_nodes ADD COLUMN last_reinforced_at DATETIME",
         "ALTER TABLE belief_nodes ADD COLUMN last_dreamed_at DATETIME",
     ]:
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute(sql)
-        except sqlite3.OperationalError:
-            pass
 
     conn.execute(
         "UPDATE belief_nodes SET lifecycle_stage = 'collapsed' WHERE origin = 'collapsed' AND lifecycle_stage = 'crystallized'"
     )
-    conn.execute(
-        "UPDATE belief_nodes SET last_reinforced_at = updated_at WHERE last_reinforced_at IS NULL"
-    )
+    conn.execute("UPDATE belief_nodes SET last_reinforced_at = updated_at WHERE last_reinforced_at IS NULL")
 
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS belief_tensions (
                 belief_a_id TEXT NOT NULL,
@@ -32,5 +29,3 @@ def up(conn):
                 FOREIGN KEY (belief_b_id) REFERENCES belief_nodes(id) ON DELETE CASCADE
             )
         """)
-    except sqlite3.OperationalError:
-        pass

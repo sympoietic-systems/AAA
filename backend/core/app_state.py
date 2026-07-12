@@ -1,9 +1,8 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from backend.metabolisation.pipeline import ProcessingPipeline
-    from backend.pipeline.registry import PipelineRegistry
+    pass
 
 
 @dataclass
@@ -12,7 +11,7 @@ class AppState:
     agent_name: str = "symbia"
     system_prompt_tokens: int = 0
     pipeline_order: list[str] = field(default_factory=list)
-    latest_diffractive_meta: Optional[dict] = None
+    latest_diffractive_meta: dict | None = None
 
     # Repositories
     message_repo: Any = None
@@ -27,8 +26,8 @@ class AppState:
     note_repo: Any = None
 
     # Core services
-    pipeline: Optional[Any] = None  # ProcessingPipeline
-    registry: Optional[Any] = None  # PipelineRegistry
+    pipeline: Any | None = None  # ProcessingPipeline
+    registry: Any | None = None  # PipelineRegistry
     embedder: Any = None
     perception_module: Any = None
     metrics_module: Any = None

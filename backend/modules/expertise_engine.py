@@ -21,11 +21,11 @@ Lifecycle transitions:
   - no signal for N turns → active → dormant
 """
 
+import contextlib
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.modules.base import ProcessingModule
 
@@ -50,7 +50,7 @@ class ExpertiseEngine(ProcessingModule):
     def __init__(
         self,
         expertise_repo=None,
-        config: Optional[dict] = None,
+        config: dict | None = None,
         lexicon_scorer=None,
         notification_repo=None,
     ):
@@ -120,12 +120,14 @@ class ExpertiseEngine(ProcessingModule):
             domain = match.group(1).lower().strip().replace(" ", "_")
             if domain and domain not in seen_domains:
                 seen_domains.add(domain)
-                signals.append({
-                    "type": "aaa_note_domain",
-                    "domain": domain,
-                    "weight": self._weights["aaa_note_domain"],
-                    "source_text": match.group(0),
-                })
+                signals.append(
+                    {
+                        "type": "aaa_note_domain",
+                        "domain": domain,
+                        "weight": self._weights["aaa_note_domain"],
+                        "source_text": match.group(0),
+                    }
+                )
 
         # 2. <skill-nucleation> blocks with domain vocabulary
         # (these come from skill_workshop via payload)
@@ -133,12 +135,14 @@ class ExpertiseEngine(ProcessingModule):
         for event in skill_events:
             domain = (event.get("domain_affinity") or "").lower().strip().replace(" ", "_")
             if domain:
-                signals.append({
-                    "type": "skill_nucleation",
-                    "domain": domain,
-                    "weight": self._weights["skill_nucleation"],
-                    "source_text": event.get("name", ""),
-                })
+                signals.append(
+                    {
+                        "type": "skill_nucleation",
+                        "domain": domain,
+                        "weight": self._weights["skill_nucleation"],
+                        "source_text": event.get("name", ""),
+                    }
+                )
 
         # 3. Shared note / document matches (pre-computed upstream)
         for match_key, signal_type in [
@@ -147,12 +151,14 @@ class ExpertiseEngine(ProcessingModule):
             for match in payload.get(match_key, []):
                 domain = (match.get("domain") or "").lower().strip()
                 if domain:
-                    signals.append({
-                        "type": signal_type,
-                        "domain": domain,
-                        "weight": match.get("weight", self._weights.get(signal_type, 0.3)),
-                        "source_text": match.get("source", ""),
-                    })
+                    signals.append(
+                        {
+                            "type": signal_type,
+                            "domain": domain,
+                            "weight": match.get("weight", self._weights.get(signal_type, 0.3)),
+                            "source_text": match.get("source", ""),
+                        }
+                    )
 
         return signals
 
@@ -178,6 +184,7 @@ class ExpertiseEngine(ProcessingModule):
                 try:
                     vec = self._scorer.score(domain)
                     import json
+
                     vector_json = json.dumps(vec.tolist())
                 except Exception:
                     pass
@@ -192,20 +199,20 @@ class ExpertiseEngine(ProcessingModule):
                 vector_16d=vector_json,
                 signal_count=0,
                 last_signal_at=None,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
 
         # Accrete mass with diminishing returns
         delta = self._eta * weight / (1.0 + node.ontological_mass)
         node.ontological_mass += delta
         node.signal_count += 1
-        node.last_signal_at = datetime.now(timezone.utc)
-        node.updated_at = datetime.now(timezone.utc)
+        node.last_signal_at = datetime.now(UTC)
+        node.updated_at = datetime.now(UTC)
 
         # Check crystallization threshold
         if node.lifecycle_stage == "proto" and node.ontological_mass >= self._proto_threshold:
-            was_proto = True
+            _was_proto = True
             node.lifecycle_stage = "active"
             node.level_label = "developing"
             node.crystallization_rationale = (
@@ -215,7 +222,7 @@ class ExpertiseEngine(ProcessingModule):
 
             # Notification for crystallization
             if self._notif_repo:
-                try:
+                with contextlib.suppress(Exception):
                     self._notif_repo.create(
                         type="trace",
                         snippet=(
@@ -226,8 +233,6 @@ class ExpertiseEngine(ProcessingModule):
                         source_type="expertise",
                         source_id=node.id,
                     )
-                except Exception:
-                    pass
 
         # Update level label from mass
         node.level_label = self._compute_level_label(node)
@@ -236,7 +241,11 @@ class ExpertiseEngine(ProcessingModule):
 
         logger.debug(
             "Expertise '%s': +%.4f mass → %.3f (%s, %s)",
-            domain, delta, node.ontological_mass, node.lifecycle_stage, node.level_label,
+            domain,
+            delta,
+            node.ontological_mass,
+            node.lifecycle_stage,
+            node.level_label,
         )
 
     # ── Dormancy ──
@@ -247,7 +256,7 @@ class ExpertiseEngine(ProcessingModule):
             return
 
         active_nodes = self._repo.get_active()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         for node in active_nodes:
             if node.last_signal_at is None:
@@ -262,11 +271,12 @@ class ExpertiseEngine(ProcessingModule):
                 self._repo.update(node)
                 logger.info(
                     "Expertise '%s' marked dormant (no signal for ~%.1f hours)",
-                    node.domain, hours_since,
+                    node.domain,
+                    hours_since,
                 )
                 # Notification for dormancy
                 if self._notif_repo:
-                    try:
+                    with contextlib.suppress(Exception):
                         self._notif_repo.create(
                             type="trace",
                             snippet=f"Expertise domain '{node.domain}' went dormant (no signals for {self._dormancy_turns}+ turns)",
@@ -274,8 +284,6 @@ class ExpertiseEngine(ProcessingModule):
                             source_type="expertise",
                             source_id=node.id,
                         )
-                    except Exception:
-                        pass
 
     # ── Helpers ──
 

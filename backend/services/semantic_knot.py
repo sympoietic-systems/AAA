@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import uuid
-from typing import Optional
 
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.utils.token_counter import estimate_tokens

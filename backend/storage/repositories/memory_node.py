@@ -7,9 +7,7 @@ from backend.storage.row_mappers import _row_to_memory_node
 
 class MemoryNodeRepository(BaseRepository):
     @with_connection
-    def save_nodes(
-        self, conversation_id: str, checkpoint_id: int, nodes: list[dict]
-    ) -> list[str]:
+    def save_nodes(self, conversation_id: str, checkpoint_id: int, nodes: list[dict]) -> list[str]:
         conn = self._conn()
         ids = []
         for node in nodes:
@@ -73,9 +71,7 @@ class MemoryNodeRepository(BaseRepository):
     @with_connection
     def get_node(self, node_id: str) -> dict | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM memory_nodes WHERE id = ?", (node_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM memory_nodes WHERE id = ?", (node_id,)).fetchone()
         if row is None:
             return None
         return _row_to_memory_node(row)
@@ -152,4 +148,3 @@ class MemoryNodeRepository(BaseRepository):
                 seen.add(nid)
                 result.append(node)
         return result
-

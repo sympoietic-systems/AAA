@@ -1,29 +1,28 @@
-import logging
 import json
+import logging
 import os
 import uuid
-from datetime import datetime, timezone, timedelta
-import numpy as np
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Optional, List, Dict
-import yaml
+
+import numpy as np
 
 from backend.modules.base import ProcessingModule
-from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import MessageRepository, BeliefRepository
-from backend.storage.models import BeliefNode
-from backend.modules.structural_engine import LEXICON_MAPPINGS, LexiconScorer, CompositeStructuralScorer
-from backend.storage.repositories.refusal import RefusalRepository
-from backend.utils.similarity import cosine_similarity
 from backend.modules.belief_math import (
     calculate_concept_density,
-    parse_vector_16d,
-    compute_delta_mass,
-    compute_delta_confidence,
-    clamp_mass,
     clamp_confidence,
+    clamp_mass,
+    compute_delta_confidence,
+    compute_delta_mass,
     compute_lifecycle_stage,
+    parse_vector_16d,
 )
+from backend.modules.structural_engine import CompositeStructuralScorer, LexiconScorer
+from backend.pipeline.metadata import ModuleMeta
+from backend.storage.models import BeliefNode
+from backend.storage.repositories.refusal import RefusalRepository
+from backend.storage.repository import BeliefRepository, MessageRepository
+from backend.utils.similarity import cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         message_repo: MessageRepository,
         identity_yaml_path: Path,
         learning_rate_beta: float = 0.05,
-        llm_provider: Optional[any] = None,
+        llm_provider: object | None = None,
     ):
         self._belief_repo = belief_repo
         self._message_repo = message_repo
@@ -75,10 +74,22 @@ class BeliefDynamicsEngine(ProcessingModule):
             category="reasoning",
             always_run=True,
             children=[
-                ModuleMeta(name="somatic_warping", description="Warps perceptual vectors under high aesthetic tension", category="reasoning"),
-                ModuleMeta(name="attractor_window", description="Filters active beliefs into three attentional slots", category="reasoning"),
-                ModuleMeta(name="immune_system", description="Triggers emergency deterritorialization directives under stagnation", category="reasoning"),
-            ]
+                ModuleMeta(
+                    name="somatic_warping",
+                    description="Warps perceptual vectors under high aesthetic tension",
+                    category="reasoning",
+                ),
+                ModuleMeta(
+                    name="attractor_window",
+                    description="Filters active beliefs into three attentional slots",
+                    category="reasoning",
+                ),
+                ModuleMeta(
+                    name="immune_system",
+                    description="Triggers emergency deterritorialization directives under stagnation",
+                    category="reasoning",
+                ),
+            ],
         )
 
     def validate(self) -> bool:
@@ -87,7 +98,7 @@ class BeliefDynamicsEngine(ProcessingModule):
     async def _ensure_signature(self, msg, current_sig_bytes: bytes) -> bytes:
         if current_sig_bytes:
             return current_sig_bytes
-        content = getattr(msg, 'content', '') or ''
+        content = getattr(msg, "content", "") or ""
         if not content.strip():
             return b""
         try:
@@ -95,22 +106,28 @@ class BeliefDynamicsEngine(ProcessingModule):
             sig = await scorer.score_async(content, use_llm_scorer=True)
             sig_bytes = sig.tobytes()
         except Exception as e:
-            logger.warning("Failed LLM-based signature computation for message %d, falling back to empirical: %s", getattr(msg, 'id', None), e)
+            logger.warning(
+                "Failed LLM-based signature computation for message %d, falling back to empirical: %s",
+                getattr(msg, "id", None),
+                e,
+            )
             try:
                 scorer = CompositeStructuralScorer(llm_provider=None)
                 sig = await scorer.score_async(content, use_llm_scorer=False)
                 sig_bytes = sig.tobytes()
             except Exception as e2:
-                logger.warning("Failed fallback signature computation for message %d: %s", getattr(msg, 'id', None), e2)
+                logger.warning("Failed fallback signature computation for message %d: %s", getattr(msg, "id", None), e2)
                 return b""
 
         try:
-            if hasattr(msg, 'id') and msg.id:
+            if hasattr(msg, "id") and msg.id:
                 self._message_repo.update_signature(msg.id, sig_bytes)
             logger.info("Lazy-computed structural signature for message %d (LLM enabled)", msg.id)
             return sig_bytes
         except Exception as e:
-            logger.warning("Failed updating lazy signature database record for message %d: %s", getattr(msg, 'id', None), e)
+            logger.warning(
+                "Failed updating lazy signature database record for message %d: %s", getattr(msg, "id", None), e
+            )
             return sig_bytes
 
     def _nucleate_proto_belief(
@@ -121,9 +138,9 @@ class BeliefDynamicsEngine(ProcessingModule):
         source_type: str,
         source_id: str,
         source_weight: float,
-    ) -> Optional[str]:
+    ) -> str | None:
         existing = self._belief_repo.list_beliefs(agent_id)
-        
+
         initial_mass = 0.05 * source_weight / 0.5
 
         ghosts = [b for b in existing if b.lifecycle_stage == "collapsed"]
@@ -132,19 +149,25 @@ class BeliefDynamicsEngine(ProcessingModule):
             try:
                 ghost_vec = parse_vector_16d(ghost.vector_16d)
                 if ghost_vec is None:
-                    logger.warning(f"Ghost belief '{ghost.label}' (ID: {ghost.id}) has invalid or empty vector_16d: {ghost.vector_16d[:80]}")
+                    logger.warning(
+                        f"Ghost belief '{ghost.label}' (ID: {ghost.id}) has invalid or empty vector_16d: {ghost.vector_16d[:80]}"
+                    )
                     continue
                 ghost_sim = cosine_similarity(vector, ghost_vec)
                 if ghost_sim > 0.9:
                     jump_mass = 0.4 * source_weight / 0.5
                     initial_mass = max(initial_mass, jump_mass)
                     resonance_jumped = True
-                    logger.info(f"Resonance jump: ghost '{ghost.label}' (sim={ghost_sim:.2f}) boosted nucleation mass to {initial_mass:.3f}")
+                    logger.info(
+                        f"Resonance jump: ghost '{ghost.label}' (sim={ghost_sim:.2f}) boosted nucleation mass to {initial_mass:.3f}"
+                    )
                     break
                 elif ghost_sim > 0.7 and not resonance_jumped:
                     dampen = 1.0 - (ghost_sim - 0.7) * 1.67
                     initial_mass *= max(0.3, dampen)
-                    logger.info(f"Ghost dampening: '{ghost.label}' (sim={ghost_sim:.2f}) reduced nucleation mass to {initial_mass:.3f}")
+                    logger.info(
+                        f"Ghost dampening: '{ghost.label}' (sim={ghost_sim:.2f}) reduced nucleation mass to {initial_mass:.3f}"
+                    )
             except Exception:
                 pass
 
@@ -158,10 +181,12 @@ class BeliefDynamicsEngine(ProcessingModule):
             initial_signature=json.dumps(vector.tolist() if hasattr(vector, "tolist") else list(vector)),
             nucleation_mass=initial_mass,
             confidence=0.10,
-            status="pending"
+            status="pending",
         )
 
-        logger.info(f"Created pending belief proposal '{proposal_id}' in the workshop (nucleation mass={initial_mass:.3f})")
+        logger.info(
+            f"Created pending belief proposal '{proposal_id}' in the workshop (nucleation mass={initial_mass:.3f})"
+        )
         return proposal_id
 
     def _accrete_belief(
@@ -197,7 +222,7 @@ class BeliefDynamicsEngine(ProcessingModule):
             self._belief_repo.update_proposal_status(
                 belief.id,
                 "rejected",
-                rejection_rationale=f"Belief collapsed during autopoietic metabolism. Final Mass: {new_mass:.3f}, Final Confidence: {new_confidence:.3f}"
+                rejection_rationale=f"Belief collapsed during autopoietic metabolism. Final Mass: {new_mass:.3f}, Final Confidence: {new_confidence:.3f}",
             )
         else:
             self._belief_repo.update_belief(
@@ -211,7 +236,13 @@ class BeliefDynamicsEngine(ProcessingModule):
 
         event_type = "support" if alignment >= 0.0 else "collision"
         if new_stage != belief.lifecycle_stage:
-            event_type = "crystallization" if new_stage == "crystallized" else "collapse" if new_stage == "collapsed" else event_type
+            event_type = (
+                "crystallization"
+                if new_stage == "crystallized"
+                else "collapse"
+                if new_stage == "collapsed"
+                else event_type
+            )
 
         # Suppress notification for routine accretion/support events.
         # Only lifecycle transitions (crystallization, collapse) should generate notifications.
@@ -234,15 +265,15 @@ class BeliefDynamicsEngine(ProcessingModule):
 
     async def _atrophy_beliefs(self, agent_id: str) -> dict:
         """Apply time-based mass decay to active beliefs that haven't been reinforced recently.
-        
+
         Decay rate: ~0.1% per hour of inactivity. Beliefs that are actively engaged
         (frequently matched in metabolism) stay stable; neglected beliefs slowly lose mass
         and can eventually collapse. Covers all non-collapsed, non-faded stages.
         """
         all_beliefs = self._belief_repo.list_beliefs(agent_id)
         active = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
-        
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
         decay_rate_per_hour = 0.001  # 0.1% mass loss per hour of inactivity
         atrophied = 0
         collapsed = 0
@@ -260,7 +291,7 @@ class BeliefDynamicsEngine(ProcessingModule):
 
                 # Ensure both are offset-aware for comparison
                 if last_dt.tzinfo is None:
-                    last_dt = last_dt.replace(tzinfo=timezone.utc)
+                    last_dt = last_dt.replace(tzinfo=UTC)
 
                 hours_since = (now - last_dt).total_seconds() / 3600.0
                 if hours_since <= 0.5:  # Skip if reinforced within last 30 minutes
@@ -335,7 +366,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         agent_id: str,
         input_vector: np.ndarray,
         min_similarity: float = 0.3,
-    ) -> Optional[BeliefNode]:
+    ) -> BeliefNode | None:
         all_beliefs = self._belief_repo.list_beliefs(agent_id)
         active = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
 
@@ -345,7 +376,9 @@ class BeliefDynamicsEngine(ProcessingModule):
             try:
                 b_vec = parse_vector_16d(b.vector_16d)
                 if b_vec is None:
-                    logger.warning(f"Belief '{b.label}' (ID: {b.id}) has invalid or empty vector_16d: {b.vector_16d[:80]}")
+                    logger.warning(
+                        f"Belief '{b.label}' (ID: {b.id}) has invalid or empty vector_16d: {b.vector_16d[:80]}"
+                    )
                     continue
                 sim = cosine_similarity(input_vector, b_vec)
                 if sim > best_sim:
@@ -393,17 +426,17 @@ class BeliefDynamicsEngine(ProcessingModule):
                 if len(sig_vec) == 16:
                     sigma = matrix_warping
                     # Dampen Variety Filtering (index 8) and Latency (index 10)
-                    sig_vec[8] *= (1.0 - sigma)
-                    sig_vec[10] *= (1.0 - sigma)
+                    sig_vec[8] *= 1.0 - sigma
+                    sig_vec[10] *= 1.0 - sigma
                     # Multiply Rhizomatic (index 5) and Nomadic (index 13)
-                    sig_vec[5] *= (1.0 + sigma * 3.0)
-                    sig_vec[13] *= (1.0 + sigma * 3.0)
-                    
+                    sig_vec[5] *= 1.0 + sigma * 3.0
+                    sig_vec[13] *= 1.0 + sigma * 3.0
+
                     # Normalize back to unit sphere if needed (or keep absolute values)
                     norm = np.linalg.norm(sig_vec)
                     if norm > 1e-8:
                         sig_vec = sig_vec / norm
-                    
+
                     payload["structural_signature"] = sig_vec.tobytes()
                     logger.info(f"Somatic coordinate warping active (\u03c3={sigma:.2f}). Input signature warped.")
             except Exception as e:
@@ -416,23 +449,29 @@ class BeliefDynamicsEngine(ProcessingModule):
         sig_bytes = payload.get("structural_signature")
         sig_16d = np.frombuffer(sig_bytes, dtype=np.float32) if sig_bytes else None
         attractor_window = build_attractor_window(
-            self._belief_repo, agent_id, sig_16d,
+            self._belief_repo,
+            agent_id,
+            sig_16d,
         )
 
         # Spectral Margin (up to 2 collapsed beliefs)
         all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        collapsed_beliefs = [b for b in all_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20]
+        collapsed_beliefs = [
+            b for b in all_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20
+        ]
 
         # Spectral Margin (up to 2 collapsed beliefs)
         spectral_margin = []
         # Sort collapsed by updating time or just list up to 2
         for cb in collapsed_beliefs[:2]:
-            spectral_margin.append({
-                "id": cb.id,
-                "label": cb.label,
-                "statement": cb.statement,
-                "confidence": cb.confidence,
-            })
+            spectral_margin.append(
+                {
+                    "id": cb.id,
+                    "label": cb.label,
+                    "statement": cb.statement,
+                    "confidence": cb.confidence,
+                }
+            )
 
         # Place in payload
         payload["attractor_window"] = attractor_window
@@ -484,7 +523,9 @@ class BeliefDynamicsEngine(ProcessingModule):
                 user_sig_bytes = await self._ensure_signature(user_msg, user_sig_bytes)
                 assistant_sig_bytes = await self._ensure_signature(assistant_msg, assistant_sig_bytes)
                 if not user_sig_bytes or not assistant_sig_bytes:
-                    logger.warning("Structural signatures could not be computed. Marking as metabolized to avoid retry loop.")
+                    logger.warning(
+                        "Structural signatures could not be computed. Marking as metabolized to avoid retry loop."
+                    )
                     try:
                         self._message_repo.mark_message_metabolized(user_message_id)
                     except Exception as e:
@@ -518,8 +559,15 @@ class BeliefDynamicsEngine(ProcessingModule):
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
                 alignment = cosine_similarity(user_vec, b_vec)
-                self._accrete_belief(closest, user_vec, source_weight, alignment, perturbation,
-                                     source_type=source_type, source_id=str(user_message_id))
+                self._accrete_belief(
+                    closest,
+                    user_vec,
+                    source_weight,
+                    alignment,
+                    perturbation,
+                    source_type=source_type,
+                    source_id=str(user_message_id),
+                )
             elif dc > self._NUCLEATION_THRESHOLD:
                 self._nucleate_proto_belief(
                     agent_id=agent_id,
@@ -554,14 +602,16 @@ class BeliefDynamicsEngine(ProcessingModule):
                 sims = []
                 diffs = []
                 for k in range(len(signatures) - 1):
-                    sims.append(cosine_similarity(signatures[k], signatures[k+1]))
-                    diffs.append(float(np.linalg.norm(signatures[k] - signatures[k+1])))
+                    sims.append(cosine_similarity(signatures[k], signatures[k + 1]))
+                    diffs.append(float(np.linalg.norm(signatures[k] - signatures[k + 1])))
 
                 c_avg = float(np.mean(sims))
                 n_avg = float(np.mean(diffs))
                 vitality = n_avg * (1.0 - c_avg)
 
-                logger.info(f"Self-similarity Convergence C: {c_avg:.3f}, Novelty N: {n_avg:.3f}, Vitality V: {vitality:.3f}")
+                logger.info(
+                    f"Self-similarity Convergence C: {c_avg:.3f}, Novelty N: {n_avg:.3f}, Vitality V: {vitality:.3f}"
+                )
 
                 # Retrieve current somatic variables
                 somatic_reservoir = 0.0
@@ -584,9 +634,9 @@ class BeliefDynamicsEngine(ProcessingModule):
                         refusal_repo = RefusalRepository(self._belief_repo._db_path)
                         recent_refusals = refusal_repo.list_by_conversation(conversation_id, limit=3)
                         # Check if any refusal was created in the last 15 minutes
-                        now_ts = datetime.now(timezone.utc)
+                        now_ts = datetime.now(UTC)
                         has_recent_refusal = any(
-                            r.created_at and now_ts - r.created_at.replace(tzinfo=timezone.utc) < timedelta(minutes=15)
+                            r.created_at and now_ts - r.created_at.replace(tzinfo=UTC) < timedelta(minutes=15)
                             for r in recent_refusals
                             if r.created_at
                         )
@@ -603,8 +653,8 @@ class BeliefDynamicsEngine(ProcessingModule):
                             matrix_warping = 0.40
                             immunological_directive_active = 1
                             logger.warning(
-                                f"Vitality collapse! Aesthetic Immune System triggered: "
-                                f"matrix warping=0.40, directive active."
+                                "Vitality collapse! Aesthetic Immune System triggered: "
+                                "matrix warping=0.40, directive active."
                             )
                     except Exception as ref_e:
                         logger.warning("Failed to check refusals for immune suppression: %s", ref_e)
@@ -612,8 +662,8 @@ class BeliefDynamicsEngine(ProcessingModule):
                         matrix_warping = 0.40
                         immunological_directive_active = 1
                         logger.warning(
-                            f"Vitality collapse! Aesthetic Immune System triggered: "
-                            f"matrix warping=0.40, directive active."
+                            "Vitality collapse! Aesthetic Immune System triggered: "
+                            "matrix warping=0.40, directive active."
                         )
                 else:
                     # Decay warping and immune state slowly if vitality recovered
@@ -665,12 +715,14 @@ class BeliefDynamicsEngine(ProcessingModule):
         source_id: str,
         source_type: str,
         structural_signature: np.ndarray,
-        belief_nodes_implicated: Optional[List[str]] = None,
+        belief_nodes_implicated: list[str] | None = None,
         perturbation: float = 1.0,
     ) -> None:
         try:
             if len(structural_signature) != 16:
-                logger.warning(f"Incorrect structural vector dimension for perception metabolism: {len(structural_signature)}")
+                logger.warning(
+                    f"Incorrect structural vector dimension for perception metabolism: {len(structural_signature)}"
+                )
                 return
 
             agent_id = "symbia"
@@ -684,24 +736,33 @@ class BeliefDynamicsEngine(ProcessingModule):
 
                 b_vec = parse_vector_16d(b.vector_16d)
                 if b_vec is None:
-                    logger.warning(f"Skipping belief '{b.label}' with invalid or malformed vector_16d: {b.vector_16d[:80]}")
+                    logger.warning(
+                        f"Skipping belief '{b.label}' with invalid or malformed vector_16d: {b.vector_16d[:80]}"
+                    )
                     continue
                 alignment = cosine_similarity(structural_signature, b_vec)
                 if alignment > best_sim:
                     best_sim = alignment
 
                 dc = 0.80
-                plasticity = dc * ((1.0 - alignment) / 2.0)
+                _plasticity = dc * ((1.0 - alignment) / 2.0)
 
-                impact_multiplier = 1.0
-                is_implicated = False
+                _impact_multiplier = 1.0
+                _is_implicated = False
                 if belief_nodes_implicated and (b.label in belief_nodes_implicated or b.id in belief_nodes_implicated):
-                    impact_multiplier = 2.5
-                    is_implicated = True
+                    _impact_multiplier = 2.5
+                    _is_implicated = True
 
                 source_weight = self._get_source_weight("ingested_document")
-                self._accrete_belief(b, structural_signature, source_weight, alignment, perturbation,
-                                     source_type=source_type, source_id=source_id)
+                self._accrete_belief(
+                    b,
+                    structural_signature,
+                    source_weight,
+                    alignment,
+                    perturbation,
+                    source_type=source_type,
+                    source_id=source_id,
+                )
 
             # 2. Draft proposal if this is a completely new concept (similarity < 0.25)
             if best_sim < self._NUCLEATION_THRESHOLD:
@@ -730,7 +791,9 @@ class BeliefDynamicsEngine(ProcessingModule):
     ) -> None:
         try:
             agent_id = "symbia"
-            note_full_text = f'Selected: "{selected_text}" | Comment: "{comment}"' if comment else f'Selected: "{selected_text}"'
+            note_full_text = (
+                f'Selected: "{selected_text}" | Comment: "{comment}"' if comment else f'Selected: "{selected_text}"'
+            )
             note_vec = self._scorer.score(note_full_text)
 
             # Find the closest active belief node (excluding ghosts)
@@ -750,10 +813,10 @@ class BeliefDynamicsEngine(ProcessingModule):
             source_weight = self._get_source_weight("shared_note")
             if best_match and best_sim > 0.85:
                 # Accrete the existing belief
-                self._accrete_belief(
-                    best_match, note_vec, source_weight, alignment=best_sim, perturbation=1.5
+                self._accrete_belief(best_match, note_vec, source_weight, alignment=best_sim, perturbation=1.5)
+                logger.info(
+                    f"Metabolized shared note {note_id}: accreted belief '{best_match.label}' (sim={best_sim:.2f})"
                 )
-                logger.info(f"Metabolized shared note {note_id}: accreted belief '{best_match.label}' (sim={best_sim:.2f})")
             else:
                 # Nucleate a proto-belief instead of instant creation
                 self._nucleate_proto_belief(
@@ -783,8 +846,15 @@ class BeliefDynamicsEngine(ProcessingModule):
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
                 alignment = cosine_similarity(web_vec, b_vec)
-                self._accrete_belief(closest, web_vec, source_weight, alignment, perturbation=1.0,
-                                     source_type="web_probe", source_id=source_id)
+                self._accrete_belief(
+                    closest,
+                    web_vec,
+                    source_weight,
+                    alignment,
+                    perturbation=1.0,
+                    source_type="web_probe",
+                    source_id=source_id,
+                )
             elif calculate_concept_density(extracted_text) > self._NUCLEATION_THRESHOLD:
                 self._nucleate_proto_belief(
                     agent_id=agent_id,
@@ -815,8 +885,15 @@ class BeliefDynamicsEngine(ProcessingModule):
             b_vec = parse_vector_16d(closest.vector_16d) if closest else None
             if closest is not None and b_vec is not None:
                 alignment = cosine_similarity(theme_vec, b_vec)
-                self._accrete_belief(closest, theme_vec, source_weight, alignment, perturbation=1.0,
-                                     source_type="chat_turn", source_id=None)
+                self._accrete_belief(
+                    closest,
+                    theme_vec,
+                    source_weight,
+                    alignment,
+                    perturbation=1.0,
+                    source_type="chat_turn",
+                    source_id=None,
+                )
             else:
                 self._nucleate_proto_belief(
                     agent_id=agent_id,
@@ -878,7 +955,7 @@ class BeliefDynamicsEngine(ProcessingModule):
 
         # Self-tuning logic
         tuning = {}
-        config = self._source_weights  # use as initial config
+        _config = self._source_weights  # use as initial config
         crystallization_threshold = 0.5
 
         if diversity < 0.2:
@@ -935,9 +1012,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                         tension = (1.0 + abs(sim)) * min(active[i].ontological_mass, active[j].ontological_mass)
                         total_tension += tension
                         antagonistic_count += 1
-                        self._belief_repo.upsert_tension(
-                            active[i].id, active[j].id, sim, tension
-                        )
+                        self._belief_repo.upsert_tension(active[i].id, active[j].id, sim, tension)
                 except Exception:
                     continue
 
@@ -954,7 +1029,8 @@ class BeliefDynamicsEngine(ProcessingModule):
         for ghost in ghosts:
             events = self._belief_repo.get_events_for_belief(ghost.id)
             resurrection_events = [
-                e for e in events
+                e
+                for e in events
                 if e.event_type == "support" and e.alignment_coefficient and e.alignment_coefficient > 0.6
             ]
             if len(resurrection_events) >= 3:
@@ -1009,7 +1085,6 @@ class BeliefDynamicsEngine(ProcessingModule):
                         absorbed = ghosts[j] if keeper.id == ghosts[i].id else ghosts[i]
                         merged_ids.add(absorbed.id)
                         merged += 1
-                        keeper_statement = f"{keeper.statement} [absorbed: {absorbed.statement}]"
                         new_keeper_mass = min(keeper.ontological_mass + 0.1, 1.5)
                         mass_delta = new_keeper_mass - keeper.ontological_mass
                         self._belief_repo.update_belief(
@@ -1047,10 +1122,9 @@ class BeliefDynamicsEngine(ProcessingModule):
             if ghost.id in merged_ids:
                 continue
             last_active = ghost.last_reinforced_at or ghost.updated_at
-            if last_active and (datetime.now(timezone.utc) - last_active.replace(tzinfo=timezone.utc)) > timedelta(days=30):
+            if last_active and (datetime.now(UTC) - last_active.replace(tzinfo=UTC)) > timedelta(days=30):
                 self._belief_repo.update_belief_stage(ghost.id, "faded")
                 faded += 1
                 logger.info(f"Ghost '{ghost.label}' faded permanently (30+ days inactive)")
 
         return {"merged": merged, "faded": faded}
-

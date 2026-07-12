@@ -9,6 +9,7 @@ See: docs/decisions/ADR-060-research-memory-integration.md
 """
 
 from backend.modules.llm_client import BaseLLMProvider, generate_unified
+
 from ..base import BackgroundAction
 
 

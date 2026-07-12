@@ -1,8 +1,9 @@
+import contextlib
 import sqlite3
 
 
 def up(conn):
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS perception_sediment (
                 id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,22 +22,14 @@ def up(conn):
                 FOREIGN KEY (conversation_id) REFERENCES conversations(id)
             )
         """)
-    except sqlite3.OperationalError:
-        pass
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("CREATE INDEX IF NOT EXISTS idx_ps_conv ON perception_sediment(conversation_id)")
-    except sqlite3.OperationalError:
-        pass
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("CREATE INDEX IF NOT EXISTS idx_ps_file ON perception_sediment(conversation_id, file_name)")
-    except sqlite3.OperationalError:
-        pass
 
     for col, col_type in [
         ("opacity", "INTEGER DEFAULT 0"),
         ("opacity_meta", "TEXT"),
     ]:
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute(f"ALTER TABLE perception_sediment ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError:
-            pass

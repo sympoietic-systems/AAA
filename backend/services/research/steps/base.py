@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Any, Type
 
 from backend.services.research.task_state import StepEnvelope, StepOutput
 
@@ -22,10 +21,10 @@ class BaseResearchStep(ABC):
 
 
 class ResearchStepRegistry:
-    _registry: dict[str, Type[BaseResearchStep]] = {}
+    _registry: dict[str, type[BaseResearchStep]] = {}
 
     @classmethod
-    def register(cls, step_type: str, step_class: Type[BaseResearchStep]):
+    def register(cls, step_type: str, step_class: type[BaseResearchStep]):
         cls._registry[step_type] = step_class
 
     @classmethod

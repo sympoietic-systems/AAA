@@ -1,14 +1,15 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from fastapi.testclient import TestClient
-from backend.main import app
 
+from backend.main import app
 
 with TestClient(app) as client:
     import os
+
     password = os.environ.get("AAA_PASSWORD", "").strip()
     if password:
         client.headers.update({"Authorization": f"Bearer {password}"})

@@ -1,3 +1,4 @@
+import contextlib
 import sqlite3
 
 
@@ -14,7 +15,5 @@ def up(conn):
         "ALTER TABLE conversation_log ADD COLUMN provider_used TEXT",
         "ALTER TABLE conversation_log ADD COLUMN note_count INTEGER DEFAULT 0",
     ]:
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute(sql)
-        except sqlite3.OperationalError:
-            pass

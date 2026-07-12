@@ -8,11 +8,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repositories.research_task import ResearchTaskRepository
+from backend.services.research.orchestrator import SomaticResearchOrchestrator
+from backend.storage.database import get_db_path, init_db
 from backend.storage.repositories.research_plan import ResearchPlanRepository
 from backend.storage.repositories.research_step import ResearchStepRepository
-from backend.services.research.orchestrator import SomaticResearchOrchestrator
+from backend.storage.repositories.research_task import ResearchTaskRepository
 
 DB_PATH = str(get_db_path("data/aaa_test.db"))
 
@@ -22,18 +22,20 @@ def _make_task_id():
 
 
 def _create_task(repo, task_id, **overrides):
-    repo.create({
-        "id": task_id,
-        "title": overrides.get("title", "Test Task"),
-        "objective": overrides.get("objective", "Research objective"),
-        "trigger_source": overrides.get("trigger_source", "test"),
-        "status": overrides.get("status", "active"),
-        "priority": overrides.get("priority", 1),
-        "conversation_id": overrides.get("conversation_id", None),
-        "max_depth": overrides.get("max_depth", 3),
-        "max_breadth": overrides.get("max_breadth", 4),
-        "budget_limit_usd": overrides.get("budget_limit_usd", 0.50),
-    })
+    repo.create(
+        {
+            "id": task_id,
+            "title": overrides.get("title", "Test Task"),
+            "objective": overrides.get("objective", "Research objective"),
+            "trigger_source": overrides.get("trigger_source", "test"),
+            "status": overrides.get("status", "active"),
+            "priority": overrides.get("priority", 1),
+            "conversation_id": overrides.get("conversation_id"),
+            "max_depth": overrides.get("max_depth", 3),
+            "max_breadth": overrides.get("max_breadth", 4),
+            "budget_limit_usd": overrides.get("budget_limit_usd", 0.50),
+        }
+    )
 
 
 def _make_mock_state():
@@ -82,15 +84,25 @@ class TestExecuteStepRouting:
         orch._state_mgr.states[task_id] = {
             "phase": "planning",
             "objective": "Research objective",
-            "max_depth": 3, "budget": 0.5,
-            "plan_id": None, "plan": None, "all_findings": [],
-            "sources_analyzed": 0, "stagnation_counter": 0, "step_number": 0,
-            "last_reflection": {}, "current_depth": 0, "query_index": 0,
-            "search_results_cache": [], "parsed_sources_cache": [],
-            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
+            "max_depth": 3,
+            "budget": 0.5,
+            "plan_id": None,
+            "plan": None,
+            "all_findings": [],
+            "sources_analyzed": 0,
+            "stagnation_counter": 0,
+            "step_number": 0,
+            "last_reflection": {},
+            "current_depth": 0,
+            "query_index": 0,
+            "search_results_cache": [],
+            "parsed_sources_cache": [],
+            "digest_results_cache": [],
+            "should_stop": False,
+            "stop_reason": "",
         }
 
-        result = await orch.execute_step(task_id)
+        _result = await orch.execute_step(task_id)
 
         s = orch._state_mgr.states[task_id]
         assert s["phase"] == "searching"
@@ -126,13 +138,25 @@ class TestExecuteStepRouting:
         orch = SomaticResearchOrchestrator(state_mock)
         orch._state_mgr.states[task_id] = {
             "phase": "planning",
-            "objective": "Test", "max_depth": 3, "budget": 0.5,
-            "plan_id": None, "plan": None, "all_findings": [],
-            "sources_analyzed": 0, "stagnation_counter": 0, "step_number": 5,
-            "last_reflection": {}, "current_depth": 0, "query_index": 0,
-            "search_results_cache": [], "parsed_sources_cache": [],
-            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
-            "phase_group": 5, "last_block": "",
+            "objective": "Test",
+            "max_depth": 3,
+            "budget": 0.5,
+            "plan_id": None,
+            "plan": None,
+            "all_findings": [],
+            "sources_analyzed": 0,
+            "stagnation_counter": 0,
+            "step_number": 5,
+            "last_reflection": {},
+            "current_depth": 0,
+            "query_index": 0,
+            "search_results_cache": [],
+            "parsed_sources_cache": [],
+            "digest_results_cache": [],
+            "should_stop": False,
+            "stop_reason": "",
+            "phase_group": 5,
+            "last_block": "",
         }
 
         await orch.execute_step(task_id)
@@ -219,6 +243,7 @@ class TestPhasePlanFallback:
 
         orch = SomaticResearchOrchestrator(state_mock)
         from backend.services.research.steps.plan import run_plan_generation
+
         result = await run_plan_generation(orch, task_id, "Test objective", 3, 0.5, "")
 
         assert "id" in result
@@ -241,16 +266,20 @@ class TestDocumentDigestionStep:
         _create_task(task_repo, task_id)
 
         plan_id = str(uuid.uuid4())
-        plan_repo.create({
-            "id": plan_id,
-            "task_id": task_id,
-            "plan_json": json.dumps({
-                "goal": "Test goal",
-                "search_queries": ["query"],
-                "n_results_per_query": 3,
-                "estimated_depth": 1,
-            })
-        })
+        plan_repo.create(
+            {
+                "id": plan_id,
+                "task_id": task_id,
+                "plan_json": json.dumps(
+                    {
+                        "goal": "Test goal",
+                        "search_queries": ["query"],
+                        "n_results_per_query": 3,
+                        "estimated_depth": 1,
+                    }
+                ),
+            }
+        )
 
         state_mock = _make_mock_state()
         state_mock.research_task_repo = task_repo
@@ -258,16 +287,22 @@ class TestDocumentDigestionStep:
         state_mock.research_step_result_repo = MagicMock()
         state_mock.research_meta_log_repo = MagicMock()
         state_mock.perception_repo = MagicMock()
-        state_mock.perception_repo.find_file_by_name.return_value = {"status": "ready", "summary": "doc summary", "conversation_id": "conv-1"}
+        state_mock.perception_repo.find_file_by_name.return_value = {
+            "status": "ready",
+            "summary": "doc summary",
+            "conversation_id": "conv-1",
+        }
         chunk_mock = MagicMock()
         chunk_mock.chunk_text = "some relevant document content"
         state_mock.perception_repo.get_by_file.return_value = [chunk_mock]
 
-        with patch("backend.services.research.steps.digest.analyze_source_content", new_callable=AsyncMock) as mock_analyze:
+        with patch(
+            "backend.services.research.steps.digest.analyze_source_content", new_callable=AsyncMock
+        ) as mock_analyze:
             mock_analyze.return_value = {"learnings": ["learning 1"], "followups": [], "gaps": []}
-            
+
             from backend.services.research.steps.document_digestion import DocumentDigestionStep
-            from backend.services.research.task_state import StepEnvelope, DocDigestPayload
+            from backend.services.research.task_state import DocDigestPayload, StepEnvelope
 
             orch = SomaticResearchOrchestrator(state_mock)
             orch._state_mgr.states[task_id] = {
@@ -287,11 +322,7 @@ class TestDocumentDigestionStep:
                 max_depth=3,
                 budget=0.5,
                 plan_id=plan_id,
-                payload=DocDigestPayload(
-                    inject_file_id="doc.txt",
-                    document_mode="summary",
-                    document_chunk_limit=5
-                )
+                payload=DocDigestPayload(inject_file_id="doc.txt", document_mode="summary", document_chunk_limit=5),
             )
 
             step = DocumentDigestionStep()
@@ -315,35 +346,33 @@ class TestReflectionFindingsInclusion:
             {"url": "document:doc.pdf", "title": "doc.pdf", "status": "ok"},
             {"url": "https://other.com", "title": "other.com", "status": "ok"},
         ]
-        
+
         # Mock step list
         orch.step_repo.get_by_task.return_value = [
             {"id": "step1", "step_type": "document_digestion", "step_data": json.dumps({"depth": 0})},
             {"id": "step2", "step_type": "parallel_parse", "step_data": json.dumps({"depth": 0})},
         ]
-        
+
         # Mock step results
         def get_by_step_mock(step_id):
             if step_id == "step1":
-                return [{
-                    "source_title": "doc.pdf",
-                    "source_url": "document:doc.pdf",
-                    "analyzed_json": json.dumps({
-                        "learnings": ["digestion learning 1"],
-                        "followups": [],
-                        "gaps": []
-                    })
-                }]
+                return [
+                    {
+                        "source_title": "doc.pdf",
+                        "source_url": "document:doc.pdf",
+                        "analyzed_json": json.dumps(
+                            {"learnings": ["digestion learning 1"], "followups": [], "gaps": []}
+                        ),
+                    }
+                ]
             elif step_id == "step2":
-                return [{
-                    "source_title": "other.com",
-                    "source_url": "https://other.com",
-                    "analyzed_json": json.dumps({
-                        "learnings": ["web learning 1"],
-                        "followups": [],
-                        "gaps": []
-                    })
-                }]
+                return [
+                    {
+                        "source_title": "other.com",
+                        "source_url": "https://other.com",
+                        "analyzed_json": json.dumps({"learnings": ["web learning 1"], "followups": [], "gaps": []}),
+                    }
+                ]
             return []
 
         orch.step_result_repo.get_by_step.side_effect = get_by_step_mock
@@ -355,7 +384,9 @@ class TestReflectionFindingsInclusion:
             "[other.com]: web learning 1",
         ]
 
-        with patch("backend.services.research.steps.consolidate.generate_unified", new_callable=AsyncMock) as mock_generate:
+        with patch(
+            "backend.services.research.steps.consolidate.generate_unified", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"json_data": {}}
             await run_consolidation(
                 orch,
@@ -367,12 +398,12 @@ class TestReflectionFindingsInclusion:
                 all_findings=all_findings,
                 previous_reflection={},
                 digest_signals={},
-                step_id="step-id"
+                step_id="step-id",
             )
-            
+
             called_args, called_kwargs = mock_generate.call_args
             user_prompt = called_kwargs.get("user_prompt", "")
-            
+
             assert "digestion learning 1" in user_prompt
             assert "web learning 1" in user_prompt
 
@@ -398,19 +429,15 @@ class TestMultiCycleContinuation:
         # Create a dummy plan to satisfy foreign key constraint on research_steps
         plan_id = f"plan-{task_id}"
         plan_repo = ResearchPlanRepository(DB_PATH)
-        plan_repo.create({
-            "id": plan_id,
-            "task_id": task_id,
-            "plan_json": "{}",
-            "status": "active"
-        })
+        plan_repo.create({"id": plan_id, "task_id": task_id, "plan_json": "{}", "status": "active"})
 
         from backend.services.research.task_manager import ResearchTaskManager
+
         manager = ResearchTaskManager(state_mock)
         manager._orchestrator = SomaticResearchOrchestrator(state_mock)
 
         # 1. Test continuation: old result_summary is preserved, depth is incremented
-        with patch.object(ResearchTaskManager, "_execute_continued_task", return_value=AsyncMock()) as mock_exec:
+        with patch.object(ResearchTaskManager, "_execute_continued_task", return_value=AsyncMock()) as _mock_exec:
             manager.continue_task(task_id, additional_cycles=1)
         task = task_repo.get(task_id)
         assert task["status"] == "active"
@@ -419,6 +446,7 @@ class TestMultiCycleContinuation:
 
         # 2. Check orchestrator_state has correct depth
         import json
+
         orch_state = json.loads(task["orchestrator_state"])
         assert orch_state["current_depth"] == 1
         assert orch_state["max_depth"] == 1  # one cycle then hard-stop
@@ -457,7 +485,7 @@ class TestMultiCycleContinuation:
             max_depth=4,
             budget=0.50,
             all_findings=["Finding 1"],
-            payload=SynthesizePayload(sources_analyzed=5)
+            payload=SynthesizePayload(sources_analyzed=5),
         )
 
         with patch("backend.services.research.steps.synthesize.run_synthesis", new_callable=AsyncMock) as mock_synth:
@@ -504,25 +532,25 @@ class TestPureReflectionInclusion:
         # Mock step results
         def get_by_step_mock(step_id):
             if step_id == "step1":
-                return [{
-                    "source_title": "doc.pdf",
-                    "source_url": "document:doc.pdf",
-                    "analyzed_json": json.dumps({
-                        "learnings": ["digestion learning 1"],
-                        "followups": [],
-                        "gaps": ["gap 1"]
-                    })
-                }]
+                return [
+                    {
+                        "source_title": "doc.pdf",
+                        "source_url": "document:doc.pdf",
+                        "analyzed_json": json.dumps(
+                            {"learnings": ["digestion learning 1"], "followups": [], "gaps": ["gap 1"]}
+                        ),
+                    }
+                ]
             elif step_id == "step2":
-                return [{
-                    "source_title": "other.com",
-                    "source_url": "https://other.com",
-                    "analyzed_json": json.dumps({
-                        "learnings": ["web learning 1"],
-                        "followups": [],
-                        "gaps": ["gap 2"]
-                    })
-                }]
+                return [
+                    {
+                        "source_title": "other.com",
+                        "source_url": "https://other.com",
+                        "analyzed_json": json.dumps(
+                            {"learnings": ["web learning 1"], "followups": [], "gaps": ["gap 2"]}
+                        ),
+                    }
+                ]
             return []
 
         orch.step_result_repo.get_by_step.side_effect = get_by_step_mock
@@ -545,7 +573,7 @@ class TestPureReflectionInclusion:
                     "signal_flags": [],
                     "refined_queries": [],
                     "revised_confidence": 0.9,
-                    "monologue_trace": [{"register": "Integration", "notes": "Done"}]
+                    "monologue_trace": [{"register": "Integration", "notes": "Done"}],
                 }
             }
 
@@ -556,7 +584,7 @@ class TestPureReflectionInclusion:
                 depth=0,
                 max_depth=3,
                 all_findings=all_findings,
-                step_id="step-id"
+                step_id="step-id",
             )
 
             assert mock_generate.call_count == 3
@@ -589,95 +617,115 @@ class TestDynamicReroutingAndCacheClearance:
         state_mock.research_branch_repo = MagicMock()
 
         orch = SomaticResearchOrchestrator(state_mock)
-        
+
         # Seed cache to verify cache-clearance
         orch._save_cache(task_id, {"planning": {"cached_plan": True}})
-        
+
         plan_id = f"plan-{task_id}"
-        plan_repo.create({
-            "id": plan_id,
-            "task_id": task_id,
-            "plan_json": json.dumps({"search_queries": []}),
-            "status": "active"
-        })
+        plan_repo.create(
+            {"id": plan_id, "task_id": task_id, "plan_json": json.dumps({"search_queries": []}), "status": "active"}
+        )
 
         # Setup task state in reflection phase
         orch._state_mgr.states[task_id] = {
             "phase": "reflection",
             "objective": "Research objective",
-            "max_depth": 3, "budget": 0.5,
-            "plan_id": plan_id, "plan": {"search_queries": []}, "all_findings": [],
-            "sources_analyzed": 0, "stagnation_counter": 0, "step_number": 2,
-            "last_reflection": {}, "current_depth": 0, "query_index": 0,
-            "search_results_cache": [], "parsed_sources_cache": [],
-            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
+            "max_depth": 3,
+            "budget": 0.5,
+            "plan_id": plan_id,
+            "plan": {"search_queries": []},
+            "all_findings": [],
+            "sources_analyzed": 0,
+            "stagnation_counter": 0,
+            "step_number": 2,
+            "last_reflection": {},
+            "current_depth": 0,
+            "query_index": 0,
+            "search_results_cache": [],
+            "parsed_sources_cache": [],
+            "digest_results_cache": [],
+            "should_stop": False,
+            "stop_reason": "",
         }
 
         # Mock the Reflection step logic to output GLITCH_FIDELITY_LOW flag
         from backend.services.research.steps.reflect import ReflectionPayload
+
         mock_payload = ReflectionPayload(
             reflection_notes="Low fidelity detected",
             signal_flags=["GLITCH_FIDELITY_LOW"],
             glitch_fidelity=0.2,
             contradiction_density=0.8,
             source_entropy=0.5,
-            revised_confidence=0.3
+            revised_confidence=0.3,
         )
 
-        with patch("backend.services.research.steps.reflect.ReflectionStep.execute", new_callable=AsyncMock) as mock_execute, \
-             patch("backend.services.research.steps.evaluate.EvaluateStep.execute", new_callable=AsyncMock) as mock_eval_execute:
+        with (
+            patch(
+                "backend.services.research.steps.reflect.ReflectionStep.execute", new_callable=AsyncMock
+            ) as mock_execute,
+            patch(
+                "backend.services.research.steps.evaluate.EvaluateStep.execute", new_callable=AsyncMock
+            ) as mock_eval_execute,
+        ):
             # We mock execute to return our low fidelity output
             async def mock_exec(orch_inst, env):
                 step_id = f"step-reflect-{task_id}"
-                step_repo.create({
-                    "id": step_id,
-                    "task_id": task_id,
-                    "plan_id": plan_id,
-                    "step_number": 3,
-                    "step_type": "reflection",
-                    "step_data": mock_payload.model_dump_json(),
-                    "status": "completed"
-                })
+                step_repo.create(
+                    {
+                        "id": step_id,
+                        "task_id": task_id,
+                        "plan_id": plan_id,
+                        "step_number": 3,
+                        "step_type": "reflection",
+                        "step_data": mock_payload.model_dump_json(),
+                        "status": "completed",
+                    }
+                )
                 from backend.services.research.task_state import StepOutput
+
                 return StepOutput(
                     status="completed",
                     message="Reflected",
                     payload=mock_payload,
                     signal_flags={"GLITCH_FIDELITY_LOW": True},
-                    step_ids=[step_id]
+                    step_ids=[step_id],
                 )
-            
+
             mock_execute.side_effect = mock_exec
 
             async def mock_eval_exec(orch_inst, env):
                 step_id = f"step-eval-{task_id}"
-                step_repo.create({
-                    "id": step_id,
-                    "task_id": task_id,
-                    "plan_id": plan_id,
-                    "step_number": 4,
-                    "step_type": "evaluate",
-                    "step_data": json.dumps({}),
-                    "status": "completed"
-                })
+                step_repo.create(
+                    {
+                        "id": step_id,
+                        "task_id": task_id,
+                        "plan_id": plan_id,
+                        "step_number": 4,
+                        "step_type": "evaluate",
+                        "step_data": json.dumps({}),
+                        "status": "completed",
+                    }
+                )
                 from backend.services.research.task_state import EvaluatePayload, StepOutput
+
                 eval_payload = EvaluatePayload(
                     stagnation_counter=0,
                     sources_analyzed=0,
                     reflection=mock_payload.model_dump(),
                     should_stop=False,
-                    stop_reason=""
+                    stop_reason="",
                 )
                 return StepOutput(
                     status="completed",
                     message="Evaluated",
                     payload=eval_payload,
                     signal_flags={"should_stop": False, "GLITCH_FIDELITY_LOW": True},
-                    step_ids=[step_id]
+                    step_ids=[step_id],
                 )
 
             mock_eval_execute.side_effect = mock_eval_exec
-            
+
             # Run the task step loop for reflection phase: should transition to evaluating
             await orch.execute_step(task_id)
             s = orch._state_mgr.states[task_id]
@@ -719,55 +767,69 @@ class TestDynamicReroutingAndCacheClearance:
         orch = SomaticResearchOrchestrator(state_mock)
 
         plan_id = f"plan-{task_id}"
-        plan_repo.create({
-            "id": plan_id,
-            "task_id": task_id,
-            "plan_json": json.dumps({"search_queries": []}),
-            "status": "active"
-        })
+        plan_repo.create(
+            {"id": plan_id, "task_id": task_id, "plan_json": json.dumps({"search_queries": []}), "status": "active"}
+        )
 
         # Setup task state in reflection phase at max depth (3/3)
         orch._state_mgr.states[task_id] = {
             "phase": "reflection",
             "objective": "Research objective",
-            "max_depth": 3, "budget": 0.5,
-            "plan_id": plan_id, "plan": {"search_queries": []}, "all_findings": [],
-            "sources_analyzed": 0, "stagnation_counter": 0, "step_number": 2,
-            "last_reflection": {}, "current_depth": 3, "query_index": 0,
-            "search_results_cache": [], "parsed_sources_cache": [],
-            "digest_results_cache": [], "should_stop": False, "stop_reason": "",
+            "max_depth": 3,
+            "budget": 0.5,
+            "plan_id": plan_id,
+            "plan": {"search_queries": []},
+            "all_findings": [],
+            "sources_analyzed": 0,
+            "stagnation_counter": 0,
+            "step_number": 2,
+            "last_reflection": {},
+            "current_depth": 3,
+            "query_index": 0,
+            "search_results_cache": [],
+            "parsed_sources_cache": [],
+            "digest_results_cache": [],
+            "should_stop": False,
+            "stop_reason": "",
         }
 
         # Mock the Reflection step logic to output GLITCH_FIDELITY_LOW flag
         from backend.services.research.steps.reflect import ReflectionPayload
+
         mock_payload = ReflectionPayload(
             reflection_notes="Low fidelity detected",
             signal_flags=["GLITCH_FIDELITY_LOW"],
             glitch_fidelity=0.2,
             contradiction_density=0.8,
             source_entropy=0.5,
-            revised_confidence=0.3
+            revised_confidence=0.3,
         )
 
-        with patch("backend.services.research.steps.reflect.ReflectionStep.execute", new_callable=AsyncMock) as mock_execute:
+        with patch(
+            "backend.services.research.steps.reflect.ReflectionStep.execute", new_callable=AsyncMock
+        ) as mock_execute:
+
             async def mock_exec(orch_inst, env):
                 step_id = f"step-reflect-{task_id}"
-                step_repo.create({
-                    "id": step_id,
-                    "task_id": task_id,
-                    "plan_id": plan_id,
-                    "step_number": 3,
-                    "step_type": "reflection",
-                    "step_data": mock_payload.model_dump_json(),
-                    "status": "completed"
-                })
+                step_repo.create(
+                    {
+                        "id": step_id,
+                        "task_id": task_id,
+                        "plan_id": plan_id,
+                        "step_number": 3,
+                        "step_type": "reflection",
+                        "step_data": mock_payload.model_dump_json(),
+                        "status": "completed",
+                    }
+                )
                 from backend.services.research.task_state import StepOutput
+
                 return StepOutput(
                     status="completed",
                     message="Reflected",
                     payload=mock_payload,
                     signal_flags={"GLITCH_FIDELITY_LOW": True},
-                    step_ids=[step_id]
+                    step_ids=[step_id],
                 )
 
             mock_execute.side_effect = mock_exec
@@ -849,30 +911,32 @@ class TestDynamicReroutingAndCacheClearance:
                     "register": "source_apparatus",
                     "severity": "SHALLOW",
                     "failure_description": "Vague gesture at Indigenous epistemologies.",
-                    "suggestion": "Select a specific source like Diné Hózhó."
+                    "suggestion": "Select a specific source like Diné Hózhó.",
                 }
             ],
             "diffractive_audit": "CEREMONIAL",
-            "diffractive_audit_description": "Theoretical lens was just name-dropped."
+            "diffractive_audit_description": "Theoretical lens was just name-dropped.",
         }
 
         # Let's preview the plan step
         from backend.services.research.task_state import PlanPayload, StepEnvelope
+
         envelope = StepEnvelope(
             task_id=task_id,
             objective="Test Objective",
             current_depth=1,
             max_depth=3,
             budget=0.5,
-            payload=PlanPayload(previous_context="Old context")
+            payload=PlanPayload(previous_context="Old context"),
         )
 
         from backend.services.research.steps.plan import PlanStep
+
         step = PlanStep()
         preview_data = await step.preview(orch, envelope, orch._state_mgr.states[task_id])
 
         user_prompt = preview_data.get("user_prompt", "")
-        
+
         # Verify user prompt contains our details
         assert "Epistemic Reflection Notes:" in user_prompt
         assert "Epistemic Reflection: we are biased towards Western trauma metaphors." in user_prompt
@@ -895,20 +959,16 @@ class TestDynamicReroutingAndCacheClearance:
     @pytest.mark.asyncio
     async def test_search_step_uses_lightweight_llm_selector(self):
         from backend.services.research.steps.search import _select_high_fidelity_results
-        
+
         # Test 1: Fallback if no LLM
         results = [
             {"title": "Commercial Ad", "url": "http://ad.com", "snippet": "Buy now"},
             {"title": "Academic Study", "url": "http://univ.edu", "snippet": "A study on kintsugi"},
-            {"title": "Blog Post", "url": "http://blog.org", "snippet": "Discussion"}
+            {"title": "Blog Post", "url": "http://blog.org", "snippet": "Discussion"},
         ]
-        
+
         res = await _select_high_fidelity_results(
-            llm=None,
-            objective="kintsugi research",
-            query="kintsugi",
-            results=results,
-            target_count=2
+            llm=None, objective="kintsugi research", query="kintsugi", results=results, target_count=2
         )
         assert len(res) == 2
         assert res[0]["url"] == "http://ad.com"
@@ -918,29 +978,22 @@ class TestDynamicReroutingAndCacheClearance:
         mock_response = {
             "json_data": {
                 "selected_indices": [1, 2],
-                "rationale": "Prioritize university study and deep blog post over ad."
+                "rationale": "Prioritize university study and deep blog post over ad.",
             }
         }
-        
-        with patch("backend.services.research.steps.search.generate_unified", AsyncMock(return_value=mock_response)) as mock_gen:
+
+        with patch(
+            "backend.services.research.steps.search.generate_unified", AsyncMock(return_value=mock_response)
+        ) as mock_gen:
             res = await _select_high_fidelity_results(
-                llm=mock_llm,
-                objective="kintsugi research",
-                query="kintsugi",
-                results=results,
-                target_count=2
+                llm=mock_llm, objective="kintsugi research", query="kintsugi", results=results, target_count=2
             )
             assert len(res) == 2
             assert res[0]["url"] == "http://univ.edu"
             assert res[1]["url"] == "http://blog.org"
-            
+
             # Check mock generate_unified was called with correct parameters
             mock_gen.assert_called_once()
             args, kwargs = mock_gen.call_args
             assert kwargs["temperature"] == 0.1
             assert kwargs["max_tokens"] == 500
-
-
-
-
-

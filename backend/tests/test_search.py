@@ -1,13 +1,15 @@
 import os
-import numpy as np
 import sqlite3
-from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 
-from backend.storage.database import init_db, get_db_path
+import numpy as np
+from fastapi.testclient import TestClient
+
+from backend.storage.database import get_db_path, init_db
+from backend.storage.repositories.memory_node import MemoryNodeRepository
 from backend.storage.repositories.message import MessageRepository
 from backend.storage.repositories.note import NoteRepository
-from backend.storage.repositories.memory_node import MemoryNodeRepository
+
 
 def test_search_endpoint(client: TestClient):
     # Set up auth header if password exists
@@ -27,10 +29,14 @@ def test_search_endpoint(client: TestClient):
     conn.execute("DELETE FROM conversation_metrics")
     conn.execute("DELETE FROM conversation_log")
     conn.execute("DELETE FROM conversations")
-    
+
     # Insert required foreign key records first
-    conn.execute("INSERT INTO conversations (id, agent_id, title) VALUES ('conv-1', 'antigravity', 'Test Conversation')")
-    conn.execute("INSERT INTO consolidation_checkpoints (id, conversation_id, message_count, summary) VALUES (1, 'conv-1', 0, 'Test Summary')")
+    conn.execute(
+        "INSERT INTO conversations (id, agent_id, title) VALUES ('conv-1', 'antigravity', 'Test Conversation')"
+    )
+    conn.execute(
+        "INSERT INTO consolidation_checkpoints (id, conversation_id, message_count, summary) VALUES (1, 'conv-1', 0, 'Test Summary')"
+    )
     conn.commit()
     conn.close()
 
@@ -72,7 +78,7 @@ def test_search_endpoint(client: TestClient):
         embedding_model="all-MiniLM-L6-v2",
         embedding_dim=384,
         conversation_id="conv-1",
-        structural_signature=sig_bytes
+        structural_signature=sig_bytes,
     )
 
     # 2. Insert dummy note
@@ -83,30 +89,32 @@ def test_search_endpoint(client: TestClient):
         conversation_id="conv-1",
         selected_text="rhizomes",
         comment="This note highlights the rhizomatic connection.",
-        visibility="shared"
+        visibility="shared",
     )
 
     # 3. Insert dummy memory node
     memory_node_repo.save_nodes(
         conversation_id="conv-1",
         checkpoint_id=1,
-        nodes=[{
-            "id": "mem-1",
-            "type": "concept",
-            "scar": "autopoiesis-scar",
-            "intra_active_text": "An autopoietic membrane of cognitive resonance.",
-            "intensity": 0.9,
-            "glitch_potential": 0.8
-        }]
+        nodes=[
+            {
+                "id": "mem-1",
+                "type": "concept",
+                "scar": "autopoiesis-scar",
+                "intra_active_text": "An autopoietic membrane of cognitive resonance.",
+                "intensity": 0.9,
+                "glitch_potential": 0.8,
+            }
+        ],
     )
 
     # 4. Insert glitch metrics
     conn_insert = sqlite3.connect(db_path)
     conn_insert.execute(
-        """INSERT INTO conversation_metrics 
-           (message_id, s_t, novelty, deficit, surprise_index) 
+        """INSERT INTO conversation_metrics
+           (message_id, s_t, novelty, deficit, surprise_index)
            VALUES (?, ?, ?, ?, ?)""",
-        (msg.id, 0.0, 0.8, 0.7, 0.9)
+        (msg.id, 0.0, 0.8, 0.7, 0.9),
     )
     conn_insert.commit()
     conn_insert.close()
@@ -118,7 +126,7 @@ def test_search_endpoint(client: TestClient):
     assert response.status_code == 200
     results = response.json()
     assert len(results) >= 2  # Match message and note
-    
+
     types = [r["type"] for r in results]
     assert "message" in types
     assert "note" in types

@@ -74,19 +74,14 @@ class DreamResearchMixin:
 
             # ── Guard: Don't duplicate proposals for same belief ──
             already_proposed = task_repo.list_all(status="proposed", limit=50)
-            duplicate = any(
-                belief.get("label", "") in p.get("objective", "")
-                for p in already_proposed
-            )
+            duplicate = any(belief.get("label", "") in p.get("objective", "") for p in already_proposed)
             if duplicate:
                 continue
 
             # ── Create proposal ──
             belief_label = belief.get("label", "unknown")
             belief_statement = belief.get("statement", "")
-            objective = (
-                f"Critical analysis regarding: {belief_label} — {belief_statement[:100]}"
-            )
+            objective = f"Critical analysis regarding: {belief_label} — {belief_statement[:100]}"
             rationale = (
                 f"Tension hotspot detected during idle monitoring. "
                 f"Belief '{belief_label}' has confidence {confidence:.2f} "
@@ -127,7 +122,9 @@ class DreamResearchMixin:
 
                 logger.info(
                     "Dream Daemon proposed research: '%s' (stress=%.2f) -> %s",
-                    belief_label, stress_score, task_id[:8],
+                    belief_label,
+                    stress_score,
+                    task_id[:8],
                 )
             except Exception as e:
                 logger.warning("Dream daemon failed to create proposal: %s", e)
@@ -136,6 +133,7 @@ class DreamResearchMixin:
         """Run post-research metabolism for completed tasks during idle."""
         try:
             from backend.metabolisation.research_metabolism import ResearchMetabolismMixin
+
             mixin = ResearchMetabolismMixin()
             mixin.app_state = self.app_state
             await mixin.metabolize_completed_research()

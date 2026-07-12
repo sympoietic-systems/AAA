@@ -20,8 +20,7 @@ class DreamLogRepository(BaseRepository):
                (conversation_id, action, prompt_msg_id, response_msg_id, turns,
                 trigger_reason, source_conversation_id)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (conversation_id, action, prompt_msg_id, response_msg_id, turns,
-             trigger_reason, source_conversation_id),
+            (conversation_id, action, prompt_msg_id, response_msg_id, turns, trigger_reason, source_conversation_id),
         )
         conn.commit()
         return cursor.lastrowid

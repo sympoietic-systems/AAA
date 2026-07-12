@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from typing import Optional
 
 import numpy as np
 
@@ -44,7 +43,7 @@ class SedimentationRetrievalModule(ProcessingModule):
         sediment_token_budget: int = 2000,
         sediment_count: int = 10,
         similarity_threshold: float = 0.3,
-        semantic_knot_repo: Optional[SemanticKnotRepository] = None,
+        semantic_knot_repo: SemanticKnotRepository | None = None,
         knot_warping_enabled: bool = True,
         knot_warping_weight: float = 1.0,
     ):
@@ -123,7 +122,7 @@ class SedimentationRetrievalModule(ProcessingModule):
                 scored.append((sim, msg_id))
 
         scored.sort(key=lambda x: x[0], reverse=True)
-        top_ids = [msg_id for _, msg_id in scored[:self._sediment_count]]
+        top_ids = [msg_id for _, msg_id in scored[: self._sediment_count]]
 
         if not top_ids:
             payload["sediment_messages"] = []
@@ -134,16 +133,16 @@ class SedimentationRetrievalModule(ProcessingModule):
 
         sediment: list[dict] = []
         tokens_used = 0
-        for _, msg_id in scored[:self._sediment_count]:
+        for _, msg_id in scored[: self._sediment_count]:
             msg = id_to_msg.get(msg_id)
             if msg is None:
                 continue
             original_speaker = "apparatus" if msg["speaker"] == "apparatus" else "human"
             rel_time = _format_relative_time(msg["timestamp"])
             title = msg["conversation_title"]
-            
+
             content_formatted = f'[Memory from "{title}" | {rel_time} | Speaker: {original_speaker} | msg: {msg["id"]} | conv: {msg["conversation_id"]}]:\n"{msg["content"]}"'
-            
+
             entry = {"role": "system", "content": content_formatted}
             entry_tokens = estimate_message_tokens(entry)
             if tokens_used + entry_tokens > self._sediment_token_budget:

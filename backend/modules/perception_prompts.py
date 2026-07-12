@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -30,20 +31,21 @@ DEFAULT_TRIPARTITE_IMAGE_ANALYSIS_PROMPT = (
     "}"
 )
 
+
 def _load_prompts() -> dict:
     if not PROMPTS_FILE.exists():
         logger.warning("Perception prompts YAML file not found: %s", PROMPTS_FILE)
         return {}
     try:
-        with open(PROMPTS_FILE, "r", encoding="utf-8") as f:
+        with open(PROMPTS_FILE, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     except Exception as e:
         logger.warning("Failed to parse perception prompts YAML file: %s", e)
         return {}
 
+
 _prompts = _load_prompts()
 
 TRIPARTITE_IMAGE_ANALYSIS_PROMPT = _prompts.get(
-    "tripartite_image_analysis_prompt",
-    DEFAULT_TRIPARTITE_IMAGE_ANALYSIS_PROMPT
+    "tripartite_image_analysis_prompt", DEFAULT_TRIPARTITE_IMAGE_ANALYSIS_PROMPT
 ).strip()

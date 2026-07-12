@@ -1,5 +1,6 @@
 import sys
 
+
 def disable_quick_edit() -> None:
     """Disable QuickEdit Mode in Windows Console to prevent the application
     from suspending/freezing when the user clicks inside the terminal window.
@@ -9,6 +10,7 @@ def disable_quick_edit() -> None:
 
     try:
         import ctypes
+
         kernel32 = ctypes.windll.kernel32
         # -10 corresponds to STD_INPUT_HANDLE
         h_stdin = kernel32.GetStdHandle(-10)

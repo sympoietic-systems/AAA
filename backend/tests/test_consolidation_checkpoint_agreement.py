@@ -6,26 +6,24 @@ This locks the invariant described in MEMORY_SYSTEM.md Section 13A:
   "A divergence would cause the inline module to inject one checkpoint while the daemon
    consolidates against a different one, producing inconsistent context."
 """
+
 import os
 import sys
+
 import numpy as np
-import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.storage.database import init_db
 from backend.storage.repository import (
-    MessageRepository,
-    ConversationRepository,
     ConsolidationCheckpointRepository,
+    ConversationRepository,
     MemoryNodeRepository,
+    MessageRepository,
 )
-from backend.modules.consolidation_checkpoint import ConsolidationCheckpointModule
 
 
-def _build_tree(
-    msg_repo, checkpoint_repo, memory_node_repo, conv_repo, conv_id: str
-):
+def _build_tree(msg_repo, checkpoint_repo, memory_node_repo, conv_repo, conv_id: str):
     """Build a multi-branch conversation tree with checkpoints at key nodes.
 
     Tree structure:
@@ -45,83 +43,144 @@ def _build_tree(
 
     # Root
     msg1 = msg_repo.insert(
-        speaker="human", content="Root message",
-        embedding=emb, embedding_model="test", embedding_dim=384,
+        speaker="human",
+        content="Root message",
+        embedding=emb,
+        embedding_model="test",
+        embedding_dim=384,
         conversation_id=conv_id,
     )
 
     # Trunk
     msg2 = msg_repo.insert(
-        speaker="apparatus", content="Trunk response",
-        embedding=emb, embedding_model="test", embedding_dim=384,
-        conversation_id=conv_id, parent_message_id=msg1.id,
+        speaker="apparatus",
+        content="Trunk response",
+        embedding=emb,
+        embedding_model="test",
+        embedding_dim=384,
+        conversation_id=conv_id,
+        parent_message_id=msg1.id,
     )
 
     # Branch A
     msg3a = msg_repo.insert(
-        speaker="human", content="Branch A message",
-        embedding=emb, embedding_model="test", embedding_dim=384,
-        conversation_id=conv_id, parent_message_id=msg2.id,
+        speaker="human",
+        content="Branch A message",
+        embedding=emb,
+        embedding_model="test",
+        embedding_dim=384,
+        conversation_id=conv_id,
+        parent_message_id=msg2.id,
     )
     msg4a = msg_repo.insert(
-        speaker="apparatus", content="Branch A continuation",
-        embedding=emb, embedding_model="test", embedding_dim=384,
-        conversation_id=conv_id, parent_message_id=msg3a.id,
+        speaker="apparatus",
+        content="Branch A continuation",
+        embedding=emb,
+        embedding_model="test",
+        embedding_dim=384,
+        conversation_id=conv_id,
+        parent_message_id=msg3a.id,
     )
 
     # Branch B
     msg3b = msg_repo.insert(
-        speaker="human", content="Branch B message",
-        embedding=emb, embedding_model="test", embedding_dim=384,
-        conversation_id=conv_id, parent_message_id=msg2.id,
+        speaker="human",
+        content="Branch B message",
+        embedding=emb,
+        embedding_model="test",
+        embedding_dim=384,
+        conversation_id=conv_id,
+        parent_message_id=msg2.id,
     )
     msg4b = msg_repo.insert(
-        speaker="apparatus", content="Branch B continuation",
-        embedding=emb, embedding_model="test", embedding_dim=384,
-        conversation_id=conv_id, parent_message_id=msg3b.id,
+        speaker="apparatus",
+        content="Branch B continuation",
+        embedding=emb,
+        embedding_model="test",
+        embedding_dim=384,
+        conversation_id=conv_id,
+        parent_message_id=msg3b.id,
     )
 
     # Checkpoint at msg2 (trunk — visible to both branches)
     cp2_id = checkpoint_repo.save(
-        conversation_id=conv_id, message_count=2,
+        conversation_id=conv_id,
+        message_count=2,
         summary="yaml: checkpoint at trunk",
-        model="test", message_id=msg2.id,
+        model="test",
+        message_id=msg2.id,
         human_summary="Trunk checkpoint summary",
     )
-    memory_node_repo.save_nodes(conv_id, cp2_id, [
-        {"id": "n1", "type": "concept", "intensity": 0.7,
-         "intra_active_text": "Trunk concept", "diffractive_key": "trunk"}
-    ])
+    memory_node_repo.save_nodes(
+        conv_id,
+        cp2_id,
+        [
+            {
+                "id": "n1",
+                "type": "concept",
+                "intensity": 0.7,
+                "intra_active_text": "Trunk concept",
+                "diffractive_key": "trunk",
+            }
+        ],
+    )
 
     # Checkpoint at msg3a (branch A only)
     cp3a_id = checkpoint_repo.save(
-        conversation_id=conv_id, message_count=3,
+        conversation_id=conv_id,
+        message_count=3,
         summary="yaml: checkpoint at branch A",
-        model="test", message_id=msg3a.id,
+        model="test",
+        message_id=msg3a.id,
         human_summary="Branch A checkpoint summary",
     )
-    memory_node_repo.save_nodes(conv_id, cp3a_id, [
-        {"id": "n2", "type": "scar", "intensity": 0.9,
-         "intra_active_text": "Branch A scar", "diffractive_key": "branch_a"}
-    ])
+    memory_node_repo.save_nodes(
+        conv_id,
+        cp3a_id,
+        [
+            {
+                "id": "n2",
+                "type": "scar",
+                "intensity": 0.9,
+                "intra_active_text": "Branch A scar",
+                "diffractive_key": "branch_a",
+            }
+        ],
+    )
 
     # Checkpoint at msg4b (branch B only, further down)
     cp4b_id = checkpoint_repo.save(
-        conversation_id=conv_id, message_count=4,
+        conversation_id=conv_id,
+        message_count=4,
         summary="yaml: checkpoint at branch B",
-        model="test", message_id=msg4b.id,
+        model="test",
+        message_id=msg4b.id,
         human_summary="Branch B checkpoint summary",
     )
-    memory_node_repo.save_nodes(conv_id, cp4b_id, [
-        {"id": "n3", "type": "tension", "intensity": 0.6,
-         "intra_active_text": "Branch B tension", "diffractive_key": "branch_b"}
-    ])
+    memory_node_repo.save_nodes(
+        conv_id,
+        cp4b_id,
+        [
+            {
+                "id": "n3",
+                "type": "tension",
+                "intensity": 0.6,
+                "intra_active_text": "Branch B tension",
+                "diffractive_key": "branch_b",
+            }
+        ],
+    )
 
     return {
-        "msg1": msg1, "msg2": msg2,
-        "msg3a": msg3a, "msg4a": msg4a,
-        "msg3b": msg3b, "msg4b": msg4b,
-        "cp2": cp2_id, "cp3a": cp3a_id, "cp4b": cp4b_id,
+        "msg1": msg1,
+        "msg2": msg2,
+        "msg3a": msg3a,
+        "msg4a": msg4a,
+        "msg3b": msg3b,
+        "msg4b": msg4b,
+        "cp2": cp2_id,
+        "cp3a": cp3a_id,
+        "cp4b": cp4b_id,
     }
 
 
@@ -132,6 +191,7 @@ def _get_ancestor_ids_from_repo(msg_repo, leaf_msg_id: int) -> list[int]:
 
 
 # ── Tests ─────────────────────────────────────────────────────────
+
 
 def test_checkpoint_agreement_branch_a(tmp_path):
     """Leaf msg4a: inline path should match daemon path — both resolve cp3a."""
@@ -161,9 +221,7 @@ def test_checkpoint_agreement_branch_a(tmp_path):
         f"Checkpoint mismatch! daemon={daemon_cp['id']}, inline={inline_cp['id']}"
     )
     # Branch A should resolve to cp3a (latest in A's ancestor chain: msg1→msg2→msg3a→msg4a)
-    assert daemon_cp["id"] == tree["cp3a"], (
-        f"Expected cp3a ({tree['cp3a']}), got {daemon_cp['id']}"
-    )
+    assert daemon_cp["id"] == tree["cp3a"], f"Expected cp3a ({tree['cp3a']}), got {daemon_cp['id']}"
     assert daemon_cp["message_id"] == tree["msg3a"].id
 
 
@@ -237,9 +295,9 @@ def test_checkpoint_agreement_all_leaves(tmp_path):
         "msg4a": ("cp3a", tree["msg3a"].id),
         "msg4b": ("cp4b", tree["msg4b"].id),
         "msg3a": ("cp3a", tree["msg3a"].id),
-        "msg3b": ("cp2",  tree["msg2"].id),
-        "msg2":  ("cp2",  tree["msg2"].id),
-        "msg1":  (None,   None),  # No checkpoint at msg1 or before
+        "msg3b": ("cp2", tree["msg2"].id),
+        "msg2": ("cp2", tree["msg2"].id),
+        "msg1": (None, None),  # No checkpoint at msg1 or before
     }
 
     for leaf_key, (expected_cp_key, expected_msg_id) in leaf_expectations.items():
@@ -257,10 +315,8 @@ def test_checkpoint_agreement_all_leaves(tmp_path):
                 f"{leaf_key}: mismatch daemon={daemon_cp['id']} vs inline={inline_cp['id']}"
             )
             assert daemon_cp["id"] == tree[expected_cp_key], (
-                f"{leaf_key}: expected {expected_cp_key} ({tree[expected_cp_key]}), "
-                f"got {daemon_cp['id']}"
+                f"{leaf_key}: expected {expected_cp_key} ({tree[expected_cp_key]}), got {daemon_cp['id']}"
             )
             assert daemon_cp["message_id"] == expected_msg_id, (
-                f"{leaf_key}: expected message_id {expected_msg_id}, "
-                f"got {daemon_cp['message_id']}"
+                f"{leaf_key}: expected message_id {expected_msg_id}, got {daemon_cp['message_id']}"
             )

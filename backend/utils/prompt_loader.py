@@ -24,7 +24,7 @@ def _load_prompts_file(relative_path: str) -> dict[str, Any]:
         if not path.exists():
             logger.warning("Prompt file not found: %s", path)
             return {}
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     except Exception as e:
         logger.warning("Failed to load prompt file %s: %s", path, e)

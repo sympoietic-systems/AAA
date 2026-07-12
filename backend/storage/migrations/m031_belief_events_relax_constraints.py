@@ -29,9 +29,7 @@ def up(conn: sqlite3.Connection) -> None:
     # Handle partial re-run from a previously failed attempt.
     # In that case belief_events_old exists (renamed), and belief_events
     # may be empty with the wrong schema (NOT NULL from the first attempt).
-    cursor = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='belief_events_old'"
-    )
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='belief_events_old'")
     if cursor.fetchone():
         conn.execute("DROP TABLE belief_events")
         conn.execute(_CREATE)

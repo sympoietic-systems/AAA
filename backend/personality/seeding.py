@@ -14,7 +14,7 @@ is now the trimmed runtime version without these sections.
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -39,6 +39,7 @@ DEFAULT_ASPIRATIONAL_TRAITS = {
 def _score_text(text: str) -> np.ndarray:
     """Score text via Lexicon + Topology scorers (50/50 blend, no LLM)."""
     from backend.modules.structural_engine import LexiconScorer, TopologyScorer
+
     lexicon = LexiconScorer()
     topology = TopologyScorer()
     s_ling = lexicon.score(text)
@@ -66,8 +67,7 @@ SEED_COMMITMENTS = [
     {
         "label": "decolonial",
         "statement": (
-            "you challenge anthropocentric and Eurocentric biases, applying "
-            "anti-racist and decolonial methodologies."
+            "you challenge anthropocentric and Eurocentric biases, applying anti-racist and decolonial methodologies."
         ),
     },
     {
@@ -183,28 +183,35 @@ def seed_dynamic_personality(
     if identity_path and Path(identity_path).exists():
         try:
             import yaml
-            with open(identity_path, "r", encoding="utf-8") as f:
+
+            with open(identity_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
-            
+
             # Read from root or nested personality section
             if "commitments" in data:
                 commitments = data["commitments"]
                 logger.info("Loaded custom commitments from seeding configuration.")
-            elif "personality" in data and isinstance(data["personality"], dict) and "commitments" in data["personality"]:
+            elif (
+                "personality" in data and isinstance(data["personality"], dict) and "commitments" in data["personality"]
+            ):
                 commitments = data["personality"]["commitments"]
                 logger.info("Loaded custom commitments from nested personality configuration.")
-                
+
             if "expertise" in data:
                 expertise = data["expertise"]
                 logger.info("Loaded custom expertise domains from seeding configuration.")
             elif "personality" in data and isinstance(data["personality"], dict) and "expertise" in data["personality"]:
                 expertise = data["personality"]["expertise"]
                 logger.info("Loaded custom expertise domains from nested personality configuration.")
-                
+
             if "aspirational_traits" in data:
                 aspirational_traits = data["aspirational_traits"]
                 logger.info("Loaded custom aspirational traits from seeding configuration.")
-            elif "personality" in data and isinstance(data["personality"], dict) and "aspirational_traits" in data["personality"]:
+            elif (
+                "personality" in data
+                and isinstance(data["personality"], dict)
+                and "aspirational_traits" in data["personality"]
+            ):
                 aspirational_traits = data["personality"]["aspirational_traits"]
                 logger.info("Loaded custom aspirational traits from nested personality configuration.")
         except Exception as e:
@@ -279,7 +286,7 @@ def seed_dynamic_personality(
             level_label=level_label,
             vector_16d=vector_json,
             signal_count=5,
-            last_signal_at=datetime.now(timezone.utc).isoformat(),
+            last_signal_at=datetime.now(UTC).isoformat(),
             crystallization_rationale=f"Canonical baseline expertise seeded from identity.yaml (level: {level_label})",
         )
 
@@ -297,8 +304,8 @@ def seed_dynamic_personality(
         aspirational_traits_json=json.dumps(aspirational_traits),
         active_commitment_ids_json=json.dumps(seeded_commitment_ids),
         trait_computation_version=1,
-        last_recomputed_at=datetime.now(timezone.utc).isoformat(),
-        updated_at=datetime.now(timezone.utc),
+        last_recomputed_at=datetime.now(UTC).isoformat(),
+        updated_at=datetime.now(UTC),
     )
     personality_state_repo.upsert(state)
     logger.info("Seeded personality_state with %d aspirational traits", len(aspirational_traits))

@@ -84,14 +84,10 @@ class ConsolidationCheckpointModule(ProcessingModule):
                 nodes = self._memory_node_repo.get_nodes_by_checkpoint(checkpoint_id)
 
                 # R3: Fetch sibling-branch nodes for cross-branch retrieval
-                sibling_nodes = self._fetch_sibling_nodes(
-                    conversation_id, checkpoint, current_embedding
-                )
+                sibling_nodes = self._fetch_sibling_nodes(conversation_id, checkpoint, current_embedding)
 
                 if nodes or sibling_nodes:
-                    selected = self._select_nodes_type_diverse(
-                        nodes or [], current_embedding, sibling_nodes
-                    )
+                    selected = self._select_nodes_type_diverse(nodes or [], current_embedding, sibling_nodes)
 
                     parts = []
                     for n in selected:
@@ -102,11 +98,7 @@ class ConsolidationCheckpointModule(ProcessingModule):
                             prefix = f"- [{ntype.upper()}]{tag} "
                             parts.append(prefix + text)
 
-                    keys = [
-                        n.get("diffractive_key", "")
-                        for n in (nodes or [])
-                        if n.get("diffractive_key", "").strip()
-                    ]
+                    keys = [n.get("diffractive_key", "") for n in (nodes or []) if n.get("diffractive_key", "").strip()]
                     keys_str = ", ".join(keys[:5])
 
                     memory_block = "[Memory sedimentation — "
@@ -132,7 +124,9 @@ class ConsolidationCheckpointModule(ProcessingModule):
         return f"[Consolidated memory: {checkpoint['summary']}]"
 
     def _fetch_sibling_nodes(
-        self, conversation_id: str, current_checkpoint: dict,
+        self,
+        conversation_id: str,
+        current_checkpoint: dict,
         current_embedding: bytes | None = None,
     ) -> list[dict]:
         """R3: Fetch memory nodes from sibling-branch checkpoints.
@@ -149,9 +143,7 @@ class ConsolidationCheckpointModule(ProcessingModule):
             current_msg_id = current_checkpoint.get("message_id")
             exclude_ids = [current_msg_id] if current_msg_id else []
 
-            sibling_checkpoints = self._checkpoint_repo.get_sibling_checkpoints(
-                conversation_id, exclude_ids
-            )
+            sibling_checkpoints = self._checkpoint_repo.get_sibling_checkpoints(conversation_id, exclude_ids)
 
             if not sibling_checkpoints:
                 return []
@@ -236,8 +228,7 @@ class ConsolidationCheckpointModule(ProcessingModule):
             # Deduplicate sibling nodes against already-selected IDs
             seen_ids = set(selected.keys())
             unique_siblings = [
-                sn for sn in sibling_nodes
-                if sn.get("id", "") not in seen_ids and sn.get("id", "") not in seen_ids
+                sn for sn in sibling_nodes if sn.get("id", "") not in seen_ids and sn.get("id", "") not in seen_ids
             ]
             candidates = branch_candidates + unique_siblings
 

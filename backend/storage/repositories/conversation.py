@@ -1,5 +1,3 @@
-from typing import Optional
-
 from backend.storage.connection import with_connection
 from backend.storage.models import Conversation
 from backend.storage.repositories.base import BaseRepository
@@ -16,17 +14,13 @@ class ConversationRepository(BaseRepository):
             (conversation_id, title, agent_id),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
         return _row_to_conversation(row)
 
     @with_connection
-    def get(self, conversation_id: str) -> Optional[Conversation]:
+    def get(self, conversation_id: str) -> Conversation | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
         if row is None:
             return None
         return _row_to_conversation(row)
@@ -34,10 +28,10 @@ class ConversationRepository(BaseRepository):
     @with_connection
     def list_all(
         self,
-        tag: Optional[str] = None,
-        search: Optional[str] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        tag: str | None = None,
+        search: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> list[Conversation]:
         conn = self._conn()
         where_clauses = ["c.id IS NOT NULL", "c.id != ''"]
@@ -73,7 +67,7 @@ class ConversationRepository(BaseRepository):
         return [_row_to_conversation(r) for r in rows]
 
     @with_connection
-    def count_all(self, tag: Optional[str] = None, search: Optional[str] = None) -> int:
+    def count_all(self, tag: str | None = None, search: str | None = None) -> int:
         conn = self._conn()
         where_clauses = ["c.id IS NOT NULL", "c.id != ''"]
         params = []
@@ -193,13 +187,10 @@ class ConversationRepository(BaseRepository):
             )
         conn.commit()
 
-
     @with_connection
     def get_all_unique_tags(self) -> list[dict]:
         conn = self._conn()
-        rows = conn.execute(
-            "SELECT DISTINCT tag, tag_type FROM conversation_tags ORDER BY tag ASC"
-        ).fetchall()
+        rows = conn.execute("SELECT DISTINCT tag, tag_type FROM conversation_tags ORDER BY tag ASC").fetchall()
         return [dict(r) for r in rows]
 
     @with_connection

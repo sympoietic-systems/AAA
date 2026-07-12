@@ -13,19 +13,17 @@ import sys
 import uuid
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repositories.research_task import ResearchTaskRepository
+from backend.services.research.import_service import import_research_task
+from backend.storage.database import get_db_path, init_db
+from backend.storage.repositories.note import NoteRepository
+from backend.storage.repositories.research_branch import ResearchBranchRepository
+from backend.storage.repositories.research_meta_log import ResearchMetaLogRepository
 from backend.storage.repositories.research_plan import ResearchPlanRepository
 from backend.storage.repositories.research_step import ResearchStepRepository
 from backend.storage.repositories.research_step_result import ResearchStepResultRepository
-from backend.storage.repositories.research_meta_log import ResearchMetaLogRepository
-from backend.storage.repositories.research_branch import ResearchBranchRepository
-from backend.storage.repositories.note import NoteRepository
-from backend.services.research.import_service import import_research_task
+from backend.storage.repositories.research_task import ResearchTaskRepository
 
 DB_PATH = str(get_db_path("data/aaa_import_test.db"))
 
@@ -139,11 +137,11 @@ class TestImportWithMultiplePlanIds:
         """Steps referencing a second (legacy) plan_id fall back to the primary exported plan."""
         state = _setup_state()
         primary_plan_id = _make_plan_id()
-        orphan_plan_id = _make_plan_id()   # never in export — simulates legacy multi-plan task
+        orphan_plan_id = _make_plan_id()  # never in export — simulates legacy multi-plan task
 
         steps = [
             _make_step(plan_id=primary_plan_id),  # known plan
-            _make_step(plan_id=orphan_plan_id),   # unknown plan
+            _make_step(plan_id=orphan_plan_id),  # unknown plan
         ]
         payload = _make_payload(plan_id=primary_plan_id, steps=steps)
 
@@ -176,7 +174,7 @@ class TestImportWithNoPlan:
         result = import_research_task(payload, state)
 
         assert result.imported is True
-        assert result.stats["plan"] == 1      # dummy plan was created
+        assert result.stats["plan"] == 1  # dummy plan was created
         assert result.stats["steps"] == 1
 
         steps_in_db = state.research_step_repo.get_by_task(result.new_task_id)
@@ -192,12 +190,12 @@ class TestImportStepResultsSafety:
         state = _setup_state()
         plan_id = _make_plan_id()
         step = _make_step(plan_id=plan_id)
-        ghost_step_id = str(uuid.uuid4())   # not in the export steps list
+        ghost_step_id = str(uuid.uuid4())  # not in the export steps list
 
         step_results = [
             {
                 "id": str(uuid.uuid4()),
-                "step_id": step["id"],       # valid reference
+                "step_id": step["id"],  # valid reference
                 "source_url": "https://example.com",
                 "source_title": "Example",
                 "relevance_score": 0.8,
@@ -205,7 +203,7 @@ class TestImportStepResultsSafety:
             },
             {
                 "id": str(uuid.uuid4()),
-                "step_id": ghost_step_id,    # broken reference
+                "step_id": ghost_step_id,  # broken reference
                 "source_url": "https://ghost.com",
                 "source_title": "Ghost",
                 "relevance_score": 0.1,

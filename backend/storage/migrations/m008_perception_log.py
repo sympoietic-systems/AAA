@@ -1,8 +1,9 @@
+import contextlib
 import sqlite3
 
 
 def up(conn):
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS perception_log (
                 id                    TEXT PRIMARY KEY,
@@ -19,9 +20,5 @@ def up(conn):
                 belief_nodes_implicated TEXT
             )
         """)
-    except sqlite3.OperationalError:
-        pass
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("ALTER TABLE perception_log ADD COLUMN belief_nodes_implicated TEXT")
-    except sqlite3.OperationalError:
-        pass

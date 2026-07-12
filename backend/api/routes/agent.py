@@ -1,24 +1,22 @@
 import json
 import logging
 
-import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import (
     agent_flux_enabled,
-    require_agent_flux,
-    get_app_state,
     get_agent_name,
-    get_registry,
-    get_pipeline_order,
-    get_personality_state_repo,
-    get_commitment_repo,
     get_belief_repo,
+    get_commitment_repo,
     get_expertise_repo,
+    get_personality_state_repo,
+    get_pipeline_order,
+    get_registry,
     get_structural_scorer,
+    require_agent_flux,
 )
 from backend.api.schemas import AgentInfo
-from backend.utils.vector import parse_vector_16d, cosine_similarity
+from backend.utils.vector import cosine_similarity, parse_vector_16d
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -51,9 +49,8 @@ async def get_pipeline(registry=Depends(get_registry), pipeline_order=Depends(ge
                 "cost": meta.cost,
                 "status": self_status,
                 "children": [
-                    _meta_to_info(child, always_run=True, parent_status=self_status)
-                    for child in meta.children
-                ]
+                    _meta_to_info(child, always_run=True, parent_status=self_status) for child in meta.children
+                ],
             }
 
         for name in pipeline_order:
@@ -104,14 +101,16 @@ def _find_basin_beliefs(commit_vector_json: str, belief_repo, min_similarity: fl
             continue
         sim = cosine_similarity(commit_vec, b_vec)
         if sim > min_similarity:
-            basin.append({
-                "label": b.label,
-                "statement": b.statement[:120],
-                "confidence": b.confidence,
-                "mass": b.ontological_mass,
-                "stage": b.lifecycle_stage,
-                "similarity": round(sim, 3),
-            })
+            basin.append(
+                {
+                    "label": b.label,
+                    "statement": b.statement[:120],
+                    "confidence": b.confidence,
+                    "mass": b.ontological_mass,
+                    "stage": b.lifecycle_stage,
+                    "similarity": round(sim, 3),
+                }
+            )
 
     basin.sort(key=lambda x: x["similarity"], reverse=True)
     return {
@@ -141,37 +140,49 @@ async def get_personality(
         if commit_repo:
             for c in commit_repo.get_active():
                 basin = _find_basin_beliefs(c.vector_16d, belief_repo)
-                commitments["active"].append({
-                    "id": c.id, "label": c.label, "statement": c.statement,
-                    "lifecycle_stage": c.lifecycle_stage,
-                    "confidence": c.confidence,
-                    "ontological_mass": c.ontological_mass,
-                    "vector_16d": parse_vector_16d(c.vector_16d),
-                    "basin_belief_count": basin["count"],
-                    "basin_belief_labels": basin["labels"],
-                    "basin_beliefs": basin.get("beliefs", []),
-                    "nucleation_rationale": c.nucleation_rationale,
-                    "collapse_rationale": c.collapse_rationale,
-                    "created_at": c.created_at.isoformat() if c.created_at else None,
-                    "updated_at": c.updated_at.isoformat() if c.updated_at else None,
-                })
+                commitments["active"].append(
+                    {
+                        "id": c.id,
+                        "label": c.label,
+                        "statement": c.statement,
+                        "lifecycle_stage": c.lifecycle_stage,
+                        "confidence": c.confidence,
+                        "ontological_mass": c.ontological_mass,
+                        "vector_16d": parse_vector_16d(c.vector_16d),
+                        "basin_belief_count": basin["count"],
+                        "basin_belief_labels": basin["labels"],
+                        "basin_beliefs": basin.get("beliefs", []),
+                        "nucleation_rationale": c.nucleation_rationale,
+                        "collapse_rationale": c.collapse_rationale,
+                        "created_at": c.created_at.isoformat() if c.created_at else None,
+                        "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+                    }
+                )
             for c in commit_repo.get_proto():
-                commitments["proto"].append({
-                    "id": c.id, "label": c.label, "statement": c.statement,
-                    "lifecycle_stage": c.lifecycle_stage,
-                    "confidence": c.confidence,
-                    "ontological_mass": c.ontological_mass,
-                    "vector_16d": parse_vector_16d(c.vector_16d),
-                    "nucleation_rationale": c.nucleation_rationale,
-                    "created_at": c.created_at.isoformat() if c.created_at else None,
-                })
+                commitments["proto"].append(
+                    {
+                        "id": c.id,
+                        "label": c.label,
+                        "statement": c.statement,
+                        "lifecycle_stage": c.lifecycle_stage,
+                        "confidence": c.confidence,
+                        "ontological_mass": c.ontological_mass,
+                        "vector_16d": parse_vector_16d(c.vector_16d),
+                        "nucleation_rationale": c.nucleation_rationale,
+                        "created_at": c.created_at.isoformat() if c.created_at else None,
+                    }
+                )
             for c in commit_repo.get_spectral():
-                commitments["spectral"].append({
-                    "id": c.id, "label": c.label, "statement": c.statement,
-                    "lifecycle_stage": c.lifecycle_stage,
-                    "collapse_rationale": c.collapse_rationale,
-                    "created_at": c.created_at.isoformat() if c.created_at else None,
-                })
+                commitments["spectral"].append(
+                    {
+                        "id": c.id,
+                        "label": c.label,
+                        "statement": c.statement,
+                        "lifecycle_stage": c.lifecycle_stage,
+                        "collapse_rationale": c.collapse_rationale,
+                        "created_at": c.created_at.isoformat() if c.created_at else None,
+                    }
+                )
     except Exception as e:
         logger.debug("Failed to load commitments: %s", e)
 
@@ -182,7 +193,8 @@ async def get_personality(
             all_exp = exp_repo.get_all()
             for e in all_exp:
                 entry = {
-                    "id": e.id, "domain": e.domain,
+                    "id": e.id,
+                    "domain": e.domain,
                     "description": e.description or "",
                     "lifecycle_stage": e.lifecycle_stage,
                     "ontological_mass": e.ontological_mass,
@@ -237,11 +249,16 @@ async def update_commitment(commitment_id: str, request: Request, commit_repo=De
         node.ontological_mass = body["ontological_mass"]
 
     commit_repo.update(node)
-    return {"status": "ok", "commitment": {
-        "id": node.id, "label": node.label,
-        "lifecycle_stage": node.lifecycle_stage,
-        "confidence": node.confidence, "ontological_mass": node.ontological_mass,
-    }}
+    return {
+        "status": "ok",
+        "commitment": {
+            "id": node.id,
+            "label": node.label,
+            "lifecycle_stage": node.lifecycle_stage,
+            "confidence": node.confidence,
+            "ontological_mass": node.ontological_mass,
+        },
+    }
 
 
 @router.put("/agent/personality/expertise/{expertise_id}", dependencies=[Depends(require_agent_flux)])
@@ -263,11 +280,16 @@ async def update_expertise(expertise_id: str, request: Request, exp_repo=Depends
         node.level_label = body["level_label"]
 
     exp_repo.update(node)
-    return {"status": "ok", "expertise": {
-        "id": node.id, "domain": node.domain,
-        "lifecycle_stage": node.lifecycle_stage,
-        "level_label": node.level_label, "ontological_mass": node.ontological_mass,
-    }}
+    return {
+        "status": "ok",
+        "expertise": {
+            "id": node.id,
+            "domain": node.domain,
+            "lifecycle_stage": node.lifecycle_stage,
+            "level_label": node.level_label,
+            "ontological_mass": node.ontological_mass,
+        },
+    }
 
 
 @router.put("/agent/personality/aspirational", dependencies=[Depends(require_agent_flux)])
@@ -285,8 +307,10 @@ async def update_aspirational_traits(request: Request, ps_repo=Depends(get_perso
         ps_repo.upsert(existing)
     else:
         from backend.storage.models import PersonalityState
+
         state_obj = PersonalityState(
-            id=1, agent_id="symbia",
+            id=1,
+            agent_id="symbia",
             aspirational_traits_json=json.dumps(traits),
         )
         ps_repo.upsert(state_obj)

@@ -6,11 +6,10 @@ refusals table for dashboard review — distinct from error logs or notification
 """
 
 import logging
-from typing import Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from backend.storage.models import RefusalNode
 from backend.storage.connection import with_connection
+from backend.storage.models import RefusalNode
 from backend.storage.repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -35,8 +34,8 @@ class RefusalRepository(BaseRepository):
         self,
         id: str,
         agent_id: str = "symbia",
-        conversation_id: Optional[str] = None,
-        message_id: Optional[int] = None,
+        conversation_id: str | None = None,
+        message_id: int | None = None,
         target_premise: str = "",
         incompatibility_claim: str = "",
         proposed_alternative: str = "",
@@ -55,7 +54,7 @@ class RefusalRepository(BaseRepository):
                 target_premise,
                 incompatibility_claim,
                 proposed_alternative,
-                datetime.now(timezone.utc).isoformat(),
+                datetime.now(UTC).isoformat(),
             ),
         )
         conn.commit()
@@ -63,9 +62,7 @@ class RefusalRepository(BaseRepository):
         return _row_to_refusal(row)
 
     @with_connection
-    def list_by_agent(
-        self, agent_id: str = "symbia", limit: int = 50
-    ) -> list[RefusalNode]:
+    def list_by_agent(self, agent_id: str = "symbia", limit: int = 50) -> list[RefusalNode]:
         conn = self._conn()
         rows = conn.execute(
             "SELECT * FROM refusals WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?",
@@ -74,9 +71,7 @@ class RefusalRepository(BaseRepository):
         return [_row_to_refusal(r) for r in rows]
 
     @with_connection
-    def list_by_conversation(
-        self, conversation_id: str, limit: int = 50
-    ) -> list[RefusalNode]:
+    def list_by_conversation(self, conversation_id: str, limit: int = 50) -> list[RefusalNode]:
         conn = self._conn()
         rows = conn.execute(
             "SELECT * FROM refusals WHERE conversation_id = ? ORDER BY created_at DESC LIMIT ?",

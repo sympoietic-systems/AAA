@@ -90,11 +90,7 @@ class DocumentDigestionStep(BaseResearchStep):
         chunk_limit = payload.document_chunk_limit
 
         if not inject_file_id:
-            return StepOutput(
-                status="completed",
-                message="no document to digest",
-                payload=payload
-            )
+            return StepOutput(status="completed", message="no document to digest", payload=payload)
 
         s = orch._get_state(task_id)
         step_id = orch._create_or_update_step(s, task_id, "document_digestion")
@@ -114,26 +110,23 @@ class DocumentDigestionStep(BaseResearchStep):
 
         if not effective_conv_id:
             if orch.step_repo:
-                orch.step_repo.update(step_id, status="completed",
-                    result_summary="Cannot resolve conversation for document; skipping digestion")
-            return StepOutput(
-                status="completed",
-                message="no conversation for document",
-                payload=payload
-            )
+                orch.step_repo.update(
+                    step_id,
+                    status="completed",
+                    result_summary="Cannot resolve conversation for document; skipping digestion",
+                )
+            return StepOutput(status="completed", message="no conversation for document", payload=payload)
 
         if perception_repo:
             file_status = perception_repo.find_file_by_name(inject_file_id)
             if file_status and file_status.get("status") != "ready":
-                logger.info("Document %s not yet ready (status=%s); retrying next tick",
-                            inject_file_id, file_status.get("status"))
-                return StepOutput(
-                    status="failed",
-                    message="document not yet indexed",
-                    payload=payload
+                logger.info(
+                    "Document %s not yet ready (status=%s); retrying next tick",
+                    inject_file_id,
+                    file_status.get("status"),
                 )
+                return StepOutput(status="failed", message="document not yet indexed", payload=payload)
 
-        doc_summary = ""
         doc_chunks: list[str] = []
 
         if perception_repo:
@@ -142,7 +135,7 @@ class DocumentDigestionStep(BaseResearchStep):
                 doc_chunks = [_chunk_with_breadcrumb(c) for c in db_chunks if c.chunk_text]
                 file_info = perception_repo.find_file_by_name(inject_file_id)
                 if file_info and file_info.get("summary"):
-                    doc_summary = f"[Document: {inject_file_id}]\n{file_info['summary']}"
+                    pass
             except Exception as e:
                 logger.warning("Document chunk retrieval failed: %s", e)
 
@@ -151,23 +144,31 @@ class DocumentDigestionStep(BaseResearchStep):
 
         if not doc_chunks:
             if orch.step_repo:
-                orch.step_repo.update(step_id, status="completed",
+                orch.step_repo.update(
+                    step_id,
+                    status="completed",
                     result_summary="No relevant document chunks found for digestion",
-                    step_data=json.dumps({"depth": current_depth}, ensure_ascii=False))
-            return StepOutput(
-                status="completed",
-                message="no relevant chunks",
-                payload=payload
-            )
+                    step_data=json.dumps({"depth": current_depth}, ensure_ascii=False),
+                )
+            return StepOutput(status="completed", message="no relevant chunks", payload=payload)
 
         combined_content = "\n\n---\n\n".join(doc_chunks)
-        combined_content = combined_content[:orch._TRUNC_LLM_CONTENT * 2]
+        combined_content = combined_content[: orch._TRUNC_LLM_CONTENT * 2]
 
         goal = objective
         from backend.services.research.steps.digest import analyze_source_content
+
         analysis = await analyze_source_content(
-            orch, task_id, f"document:{inject_file_id}", str(inject_file_id),
-            combined_content, objective, goal, 0, max_depth, step_id=step_id
+            orch,
+            task_id,
+            f"document:{inject_file_id}",
+            str(inject_file_id),
+            combined_content,
+            objective,
+            goal,
+            0,
+            max_depth,
+            step_id=step_id,
         )
 
         learnings = analysis.get("learnings", [])
@@ -175,41 +176,55 @@ class DocumentDigestionStep(BaseResearchStep):
         gaps = analysis.get("gaps", [])
 
         if orch.step_repo:
-            orch.step_repo.update(step_id, status="completed",
+            orch.step_repo.update(
+                step_id,
+                status="completed",
                 result_summary=f"{len(learnings)} learnings, {len(followups)} followups from doc {inject_file_id} ({len(doc_chunks)} chunks)",
-                step_data=json.dumps({
-                    "depth": current_depth,
-                    "learnings": learnings,
-                    "followups": followups,
-                    "gaps": gaps,
-                    "file_id": inject_file_id,
-                    "mode": doc_mode
-                }, default=str, ensure_ascii=False),
+                step_data=json.dumps(
+                    {
+                        "depth": current_depth,
+                        "learnings": learnings,
+                        "followups": followups,
+                        "gaps": gaps,
+                        "file_id": inject_file_id,
+                        "mode": doc_mode,
+                    },
+                    default=str,
+                    ensure_ascii=False,
+                ),
             )
 
         if orch.step_result_repo:
-            orch.step_result_repo.create({
-                "id": str(uuid.uuid4()),
-                "step_id": step_id,
-                "task_id": task_id,
-                "source_url": f"document:{inject_file_id}",
-                "source_title": str(inject_file_id),
-                "raw_content": combined_content[:5000],
-                "relevance_score": 0.0,
-                "novelty_score": 0.0,
-                "analyzed_json": json.dumps(analysis, ensure_ascii=False),
-            })
+            orch.step_result_repo.create(
+                {
+                    "id": str(uuid.uuid4()),
+                    "step_id": step_id,
+                    "task_id": task_id,
+                    "source_url": f"document:{inject_file_id}",
+                    "source_title": str(inject_file_id),
+                    "raw_content": combined_content[:5000],
+                    "relevance_score": 0.0,
+                    "novelty_score": 0.0,
+                    "analyzed_json": json.dumps(analysis, ensure_ascii=False),
+                }
+            )
 
-        orch._log_meta(task_id, "orchestrator_document_digest_complete", {
-            "file_id": inject_file_id,
-            "chunks_analyzed": len(doc_chunks),
-            "learnings": len(learnings),
-            "followups": len(followups),
-            "gaps": len(gaps),
-        }, step_id=step_id)
+        orch._log_meta(
+            task_id,
+            "orchestrator_document_digest_complete",
+            {
+                "file_id": inject_file_id,
+                "chunks_analyzed": len(doc_chunks),
+                "learnings": len(learnings),
+                "followups": len(followups),
+                "gaps": len(gaps),
+            },
+            step_id=step_id,
+        )
 
         try:
             from backend.utils.structural_demand import detect_structural_demand
+
             demand_text = "\n".join(str(x) for x in (learnings + followups + gaps))
             demand = detect_structural_demand(demand_text)
             if demand["demanded"]:
@@ -217,7 +232,7 @@ class DocumentDigestionStep(BaseResearchStep):
         except Exception as e:
             logger.warning("Structural-demand detection failed: %s", e)
 
-        new_findings = [f"[{inject_file_id}]: " + l for l in learnings]
+        new_findings = [f"[{inject_file_id}]: " + learning for learning in learnings]
 
         out_payload = DocDigestPayload(
             inject_file_id=inject_file_id,
@@ -226,7 +241,7 @@ class DocumentDigestionStep(BaseResearchStep):
             document_chunk_limit=chunk_limit,
             learnings=learnings,
             followups=followups,
-            gaps=gaps
+            gaps=gaps,
         )
 
         rationale = f"Successfully digested uploaded document {inject_file_id} in {doc_mode} mode, extracting {len(learnings)} key learnings."
@@ -237,5 +252,5 @@ class DocumentDigestionStep(BaseResearchStep):
             payload=out_payload,
             new_findings=new_findings,
             step_ids=[step_id],
-            transition_rationale=rationale
+            transition_rationale=rationale,
         )

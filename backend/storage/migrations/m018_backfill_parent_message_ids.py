@@ -1,5 +1,5 @@
-import sqlite3
 import logging
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def up(conn: sqlite3.Connection):
             conversations[c_id].append(r)
 
         updates = []
-        for c_id, msgs in conversations.items():
+        for _c_id, msgs in conversations.items():
             for i in range(1, len(msgs)):
                 current = msgs[i]
                 # If current message has no parent_message_id, link it to the previous message's ID
@@ -29,10 +29,7 @@ def up(conn: sqlite3.Connection):
                     updates.append((parent_id, current[0]))
 
         if updates:
-            conn.executemany(
-                "UPDATE conversation_log SET parent_message_id = ? WHERE id = ?",
-                updates
-            )
+            conn.executemany("UPDATE conversation_log SET parent_message_id = ? WHERE id = ?", updates)
             logger.info("Backfilled parent_message_id for %d legacy messages.", len(updates))
     except Exception as e:
         logger.exception("Failed to backfill parent_message_ids: %s", e)

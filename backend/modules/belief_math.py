@@ -5,7 +5,6 @@ Extracted from belief_engine.py to improve modularity and testability.
 
 import json
 import logging
-from typing import Optional
 
 import numpy as np
 
@@ -28,7 +27,7 @@ def calculate_concept_density(text: str, lambda_param: float = 3.0) -> float:
     return float(np.tanh(matched_dims / lambda_param))
 
 
-def parse_vector_16d(vector_json: str) -> Optional[np.ndarray]:
+def parse_vector_16d(vector_json: str) -> np.ndarray | None:
     if not vector_json or vector_json == "[]":
         return None
     try:

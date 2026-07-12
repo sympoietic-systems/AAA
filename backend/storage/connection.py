@@ -1,3 +1,4 @@
+import contextlib
 import sqlite3
 import threading
 
@@ -24,12 +25,11 @@ def with_connection(func):
             tracker.depth -= 1
             if tracker.depth == 0:
                 for conn in tracker.conns:
-                    try:
+                    with contextlib.suppress(Exception):
                         conn.close()
-                    except Exception:
-                        pass
                 tracker.conns = []
                 _thread_conns.tracker = None
+
     return wrapper
 
 
@@ -37,6 +37,7 @@ def _get_tracked_connection(db_path: str) -> sqlite3.Connection:
     if not hasattr(_thread_conns, "tracker") or _thread_conns.tracker is None:
         raise RuntimeError("Database connection requested outside of @with_connection context")
     from .database import get_connection
+
     conn = get_connection(db_path)
     _thread_conns.tracker.conns.append(conn)
     return conn

@@ -20,6 +20,7 @@ PROVIDER_DEFAULTS: dict[str, dict[str, str]] = {
 
 # ── Core provider factory ──────────────────────────────────────────────
 
+
 def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str = ""):
     """Create an LLM provider instance from a configuration dict.
 
@@ -82,9 +83,11 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
         effective_model = model.split("google_router/", 1)[1]
         key = (cfg.get("google_keys", []) or [api_key])[0]
         return _create_openai_compatible(
-            key, effective_model,
+            key,
+            effective_model,
             cfg.get("google_api_base", "https://generativelanguage.googleapis.com/v1beta/openai"),
-            "google", default_params,
+            "google",
+            default_params,
             timeout=timeout,
         )
 
@@ -92,10 +95,13 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
         effective_model = model.split("deepseek_router/", 1)[1]
         key = (cfg.get("deepseek_keys", []) or [api_key])[0]
         return _create_openai_compatible(
-            key, effective_model,
+            key,
+            effective_model,
             cfg.get("deepseek_api_base", "https://api.deepseek.com"),
-            "deepseek", default_params,
-            thinking=thinking, reasoning_effort=reasoning_effort,
+            "deepseek",
+            default_params,
+            thinking=thinking,
+            reasoning_effort=reasoning_effort,
             timeout=timeout,
         )
 
@@ -103,31 +109,41 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
         effective_model = model.split("openrouter_router/", 1)[1]
         key = (cfg.get("openrouter_keys", []) or [api_key])[0]
         return _create_openrouter(
-            key, effective_model,
+            key,
+            effective_model,
             api_base or "https://openrouter.ai/api/v1",
             default_params=default_params,
-            thinking=thinking, reasoning_effort=reasoning_effort,
+            thinking=thinking,
+            reasoning_effort=reasoning_effort,
             timeout=timeout,
         )
 
     # ── Standard provider dispatch ────────────────────────────────────
     if provider_name == "openrouter" or model:
         return _create_openrouter(
-            api_key, model,
+            api_key,
+            model,
             api_base or "https://openrouter.ai/api/v1",
             default_params=default_params,
-            thinking=thinking, reasoning_effort=reasoning_effort,
+            thinking=thinking,
+            reasoning_effort=reasoning_effort,
             timeout=timeout,
         )
 
     return _create_openai_compatible(
-        api_key, model, api_base, provider_name, default_params,
-        thinking=thinking, reasoning_effort=reasoning_effort,
+        api_key,
+        model,
+        api_base,
+        provider_name,
+        default_params,
+        thinking=thinking,
+        reasoning_effort=reasoning_effort,
         timeout=timeout,
     )
 
 
 # ── Provider constructors ──────────────────────────────────────────────
+
 
 def _create_openai_compatible(
     api_key: str,
@@ -140,6 +156,7 @@ def _create_openai_compatible(
     timeout: float = 60.0,
 ):
     from backend.modules.llm_client import OpenAICompatibleProvider
+
     return OpenAICompatibleProvider(
         api_key=api_key,
         model=model,
@@ -162,6 +179,7 @@ def _create_openrouter(
     timeout: float = 60.0,
 ):
     from backend.modules.llm_client import OpenRouterProvider
+
     return OpenRouterProvider(
         api_key=api_key,
         model=model,
@@ -175,6 +193,7 @@ def _create_openrouter(
 
 # ── Backward-compatible wrappers ───────────────────────────────────────
 
+
 def _create_llm_provider(cfg: dict):
     """Create provider with default_params included (legacy)."""
     return _create_provider(cfg, use_default_params=True, label="Main")
@@ -186,6 +205,7 @@ def _create_provider_from_config(cfg: dict):
 
 
 # ── Multi-provider initializer ─────────────────────────────────────────
+
 
 def _init_providers(config: dict):
     """Create the primary, structural, and (optional) vision LLM providers."""

@@ -3,14 +3,13 @@
 import json
 import logging
 import math
-from datetime import datetime, timezone
-from typing import Optional, List, Tuple
+from datetime import UTC, datetime
 
 import numpy as np
 
 from backend.storage.models import BeliefNode
-from backend.utils.similarity import cosine_similarity
 from backend.utils.prompt_loader import get_prompts_dict
+from backend.utils.similarity import cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 class DreamContextMixin:
     """Handles dream context building, stagnation evaluation, and tension hotspot detection."""
 
-    async def _get_active_conversation_id(self) -> Optional[str]:
+    async def _get_active_conversation_id(self) -> str | None:
         convos = self.conversation_repo.list_all()
         if not convos:
             return None
@@ -49,7 +48,7 @@ class DreamContextMixin:
             logger.error("Failed evaluation of signature stagnation: %s", e)
             return False
 
-    def _calculate_somatic_vitality(self, signatures: List[bytes]) -> float:
+    def _calculate_somatic_vitality(self, signatures: list[bytes]) -> float:
         if len(signatures) < 2:
             return 0.0
 
@@ -73,13 +72,15 @@ class DreamContextMixin:
         mean_autocorr = float(np.mean(similarities))
         return max(0.0, min(1.0, 1.0 - mean_autocorr))
 
-    async def _evaluate_tension_hotspot(self) -> Tuple[Optional[BeliefNode], float]:
+    async def _evaluate_tension_hotspot(self) -> tuple[BeliefNode | None, float]:
         beliefs = self.belief_repo.list_beliefs("symbia")
-        active_beliefs = [b for b in beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
+        active_beliefs = [
+            b for b in beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20
+        ]
         if not active_beliefs:
             return None, 0.0
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cooldown_seconds = self.belief_dream_cooldown_minutes * 60
 
         active_convo_id = await self._get_active_conversation_id()
@@ -99,11 +100,15 @@ class DreamContextMixin:
             if b_i.last_dreamed_at:
                 last_dreamed = b_i.last_dreamed_at
                 if last_dreamed.tzinfo is None:
-                    last_dreamed = last_dreamed.replace(tzinfo=timezone.utc)
+                    last_dreamed = last_dreamed.replace(tzinfo=UTC)
                 elapsed = (now - last_dreamed).total_seconds()
                 if elapsed < cooldown_seconds:
-                    logger.debug("Belief '%s' is in dream cooldown (%.0fs since last dream, need %ds)",
-                                 b_i.label, elapsed, cooldown_seconds)
+                    logger.debug(
+                        "Belief '%s' is in dream cooldown (%.0fs since last dream, need %ds)",
+                        b_i.label,
+                        elapsed,
+                        cooldown_seconds,
+                    )
                     continue
 
             tau = 1.0 - abs(b_i.confidence - 0.5) / 0.5
@@ -137,10 +142,12 @@ class DreamContextMixin:
         try:
             records = self.message_repo.get_embeddings_and_signatures_except(exclude_convo_id, limit=100)
             if len(records) < 2:
-                return nomadic.get("fallback_insufficient_records",
-                                   "Compare our past states and describe our current trajectory.")
+                return nomadic.get(
+                    "fallback_insufficient_records", "Compare our past states and describe our current trajectory."
+                )
 
             import random
+
             random.shuffle(records)
 
             selected_pair = None
@@ -165,8 +172,7 @@ class DreamContextMixin:
             msg_b = self.message_repo.get_by_id(selected_pair[1])
 
             if not msg_a or not msg_b:
-                return nomadic.get("fallback_no_messages",
-                                   "Synthesize our historical memories and reflect on them.")
+                return nomadic.get("fallback_no_messages", "Synthesize our historical memories and reflect on them.")
 
             tmpl = nomadic.get("user_prompt", "")
             if tmpl:
@@ -178,8 +184,7 @@ class DreamContextMixin:
             )
         except Exception as e:
             logger.error("Failed to compile nomadic synthesis prompt: %s", e)
-            return nomadic.get("fallback_error",
-                               "Reflect on our historical memories and synthesize a dream note.")
+            return nomadic.get("fallback_error", "Reflect on our historical memories and synthesize a dream note.")
 
     async def _build_nomadic_synthesis_context(self, exclude_convo_id: str) -> dict:
         ctx = {"action": "nomadic_synthesis"}
@@ -189,6 +194,7 @@ class DreamContextMixin:
                 return ctx
 
             import random
+
             random.shuffle(records)
 
             selected_pair = None
@@ -239,8 +245,7 @@ class DreamContextMixin:
             events = self.belief_repo.get_events_for_belief(belief.id, limit=5)
             if events:
                 ctx["recent_events"] = "\n".join(
-                    f"- [{e.timestamp.isoformat()}] {e.event_type}: {e.rationale or ''}"[:200]
-                    for e in events
+                    f"- [{e.timestamp.isoformat()}] {e.event_type}: {e.rationale or ''}"[:200] for e in events
                 )
         except Exception as e:
             logger.debug("Could not fetch belief events: %s", e)
@@ -249,8 +254,8 @@ class DreamContextMixin:
         if belief.last_dreamed_at:
             last_dreamed = belief.last_dreamed_at
             if last_dreamed.tzinfo is None:
-                last_dreamed = last_dreamed.replace(tzinfo=timezone.utc)
-            hours = (datetime.now(timezone.utc) - last_dreamed).total_seconds() / 3600.0
+                last_dreamed = last_dreamed.replace(tzinfo=UTC)
+            hours = (datetime.now(UTC) - last_dreamed).total_seconds() / 3600.0
             ctx["hours_since_last_dream"] = round(hours, 1)
 
         # Ecosystem health snapshot
@@ -266,7 +271,7 @@ class DreamContextMixin:
 
         return ctx
 
-    async def _get_last_dream_response_for_belief(self, belief_label: str) -> Optional[str]:
+    async def _get_last_dream_response_for_belief(self, belief_label: str) -> str | None:
         try:
             convos = self.conversation_repo.list_all()
             for c in convos:

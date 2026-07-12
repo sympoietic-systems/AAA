@@ -42,7 +42,6 @@ class ResearchMetabolismEngine:
         }
 
         task_id = task["id"]
-        conversation_id = task.get("conversation_id") or f"research_{task_id}"
 
         # Collect all harvested content
         assets = self._state.scraped_asset_repo.get_by_task(task_id)
@@ -70,6 +69,7 @@ class ResearchMetabolismEngine:
         # ── Step 3: Bifurcation evaluation ──
         try:
             from backend.metabolisation.bifurcation import evaluate_evidence_perturbation
+
             for asset in assets:
                 diff_score = asset.get("diffractive_score", 0.0)
                 if diff_score > 0.78:
@@ -91,7 +91,10 @@ class ResearchMetabolismEngine:
 
         logger.info(
             "Research metabolism complete for %s: %d beliefs, %d nodes, %d bifurcations",
-            task_id, results["beliefs_updated"], results["memory_nodes_created"], results["bifurcations"],
+            task_id,
+            results["beliefs_updated"],
+            results["memory_nodes_created"],
+            results["bifurcations"],
         )
         return results
 
@@ -101,6 +104,7 @@ class ResearchMetabolismEngine:
         """Generate a cross-branch executive summary of research findings."""
         try:
             from backend.utils.prompt_loader import get_prompts_dict
+
             prompt_data = get_prompts_dict("research/synthesizer.yaml")
 
             llm_provider = getattr(self._state, "llm_provider", None)
@@ -109,7 +113,7 @@ class ResearchMetabolismEngine:
 
             branches = self._state.research_branch_repo.get_by_task(task["id"])
             branch_summaries = "\n\n".join(
-                f"Branch {b.get('id','?')[:8]}: {b.get('query','')[:200]} (depth={b.get('depth',0)}, status={b.get('status','?')})"
+                f"Branch {b.get('id', '?')[:8]}: {b.get('query', '')[:200]} (depth={b.get('depth', 0)}, status={b.get('status', '?')})"
                 for b in branches[:10]
             )
 
@@ -117,6 +121,7 @@ class ResearchMetabolismEngine:
             # Build persona context via ResearchContextBuilder
             try:
                 from backend.services.research.context_builder import ResearchContextBuilder
+
                 builder = ResearchContextBuilder(self._state)
                 persona = await builder.build_orchestration_context(task.get("objective", ""), "research_synthesis")
                 if persona:
@@ -134,10 +139,12 @@ class ResearchMetabolismEngine:
             )
 
             from backend.utils.anti_mastery import apply_anti_mastery_filter
+
             system_text = apply_anti_mastery_filter(system_text)
             user_text = apply_anti_mastery_filter(user_text)
 
             from backend.modules.llm_client import generate_unified
+
             response = await generate_unified(
                 provider=llm_provider,
                 system_prompt=system_text,
@@ -187,10 +194,7 @@ class ResearchMetabolismEngine:
                 return 0
 
             task = self._state.research_task_repo.get(task_id)
-            conversation_id = (
-                task.get("conversation_id") or f"research_{task_id}"
-                if task else f"research_{task_id}"
-            )
+            conversation_id = task.get("conversation_id") or f"research_{task_id}" if task else f"research_{task_id}"
 
             memory_node_repo = getattr(self._state, "memory_node_repo", None)
             checkpoint_repo = getattr(self._state, "checkpoint_repo", None)
@@ -213,16 +217,20 @@ class ResearchMetabolismEngine:
             nodes_created = 0
             for packet in packets:
                 try:
-                    result = await bg_engine.run("research_crystallize", {
-                        "text": packet.get("raw_context", ""),
-                        "phase": packet.get("phase", "unknown"),
-                        "node_type": packet.get("proposed_node_type", "concept"),
-                    })
+                    result = await bg_engine.run(
+                        "research_crystallize",
+                        {
+                            "text": packet.get("raw_context", ""),
+                            "phase": packet.get("phase", "unknown"),
+                            "node_type": packet.get("proposed_node_type", "concept"),
+                        },
+                    )
                     content = result.get("content", "")
                     if not content:
                         continue
 
                     from backend.metabolisation.sedimentation import parse_sedimentation_yaml
+
                     nodes, _tier = parse_sedimentation_yaml(content)
                     if not nodes:
                         continue
@@ -235,7 +243,9 @@ class ResearchMetabolismEngine:
                     nodes_created += len(nodes)
                     logger.info(
                         "Sedimentation rake: task=%s phase=%s -> %d nodes",
-                        task_id[:8], packet.get("phase"), len(nodes),
+                        task_id[:8],
+                        packet.get("phase"),
+                        len(nodes),
                     )
                 except Exception as e:
                     logger.warning("Sedimentation rake failed for packet: %s", e)
@@ -261,12 +271,15 @@ class ResearchMetabolismEngine:
                 logger.debug("No background engine — skipping memory consolidation")
                 return 0
 
-            result = await bg_engine.run("consolidate", {
-                "text": all_content[:8000],
-                "source_type": "research",
-                "source_id": task["id"],
-                "conversation_id": task.get("conversation_id") or f"research_{task['id']}",
-            })
+            result = await bg_engine.run(
+                "consolidate",
+                {
+                    "text": all_content[:8000],
+                    "source_type": "research",
+                    "source_id": task["id"],
+                    "conversation_id": task.get("conversation_id") or f"research_{task['id']}",
+                },
+            )
 
             if result and result.get("status") == "ok":
                 return result.get("nodes_created", 0)
@@ -334,8 +347,7 @@ class ResearchMetabolismMixin:
                 if not orch_state_raw:
                     continue
                 try:
-                    state = (json.loads(orch_state_raw)
-                             if isinstance(orch_state_raw, str) else orch_state_raw)
+                    state = json.loads(orch_state_raw) if isinstance(orch_state_raw, str) else orch_state_raw
                 except Exception:
                     continue
 
@@ -343,9 +355,7 @@ class ResearchMetabolismMixin:
                 if not packets:
                     continue
 
-                conversation_id = (
-                    task.get("conversation_id") or f"research_{task['id']}"
-                )
+                conversation_id = task.get("conversation_id") or f"research_{task['id']}"
                 task_id = task["id"]
                 task_nodes = 0
 
@@ -360,6 +370,7 @@ class ResearchMetabolismMixin:
                         db_path = getattr(self.app_state, "config", {}).get("database", {}).get("path", "")
                         if db_path:
                             from backend.storage.database import get_db_path
+
                             db_conn = sqlite3.connect(str(get_db_path(db_path)))
                             db_conn.execute("PRAGMA foreign_keys=ON")
                             db_conn.execute(
@@ -390,16 +401,20 @@ class ResearchMetabolismMixin:
 
                 for packet in packets:
                     try:
-                        result = await bg_engine.run("research_crystallize", {
-                            "text": packet.get("raw_context", ""),
-                            "phase": packet.get("phase", "unknown"),
-                            "node_type": packet.get("proposed_node_type", "concept"),
-                        })
+                        result = await bg_engine.run(
+                            "research_crystallize",
+                            {
+                                "text": packet.get("raw_context", ""),
+                                "phase": packet.get("phase", "unknown"),
+                                "node_type": packet.get("proposed_node_type", "concept"),
+                            },
+                        )
                         content = result.get("content", "")
                         if not content:
                             continue
 
                         from backend.metabolisation.sedimentation import parse_sedimentation_yaml
+
                         nodes, _tier = parse_sedimentation_yaml(content)
                         if not nodes:
                             continue
@@ -422,7 +437,9 @@ class ResearchMetabolismMixin:
                     total_nodes += task_nodes
                     logger.info(
                         "Sedimentation rake: task=%s %d packets -> %d nodes",
-                        task_id[:8], len(packets), task_nodes,
+                        task_id[:8],
+                        len(packets),
+                        task_nodes,
                     )
 
             return total_nodes

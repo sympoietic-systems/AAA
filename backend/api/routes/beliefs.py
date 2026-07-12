@@ -1,10 +1,8 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from backend.api.deps import require_agent_flux, get_belief_service, get_belief_repo, get_app_state
-from backend.api.exceptions import raise_if_error, ServiceException
+from backend.api.deps import get_belief_repo, get_belief_service, require_agent_flux
+from backend.api.exceptions import raise_if_error
 
 router = APIRouter()
 
@@ -28,16 +26,16 @@ class BeliefUpdateRequest(BaseModel):
 
 class VetProposalRequest(BaseModel):
     action: str  # "adopt", "reject", or "merge"
-    suggested_label: Optional[str] = None
-    suggested_statement: Optional[str] = None
-    rejection_rationale: Optional[str] = None
-    target_belief_id: Optional[str] = None
-    merged_statement: Optional[str] = None
+    suggested_label: str | None = None
+    suggested_statement: str | None = None
+    rejection_rationale: str | None = None
+    target_belief_id: str | None = None
+    merged_statement: str | None = None
 
 
 class EditStatementRequest(BaseModel):
     statement: str
-    change_reason: Optional[str] = None
+    change_reason: str | None = None
 
 
 class SynthesizeMergeRequest(BaseModel):
@@ -47,7 +45,7 @@ class SynthesizeMergeRequest(BaseModel):
 @router.get("/beliefs")
 async def get_beliefs(
     request: Request,
-    conversation_id: Optional[str] = None,
+    conversation_id: str | None = None,
     agent_id: str = "symbia",
     belief_repo=Depends(get_belief_repo),
     service=Depends(get_belief_service),
@@ -82,10 +80,12 @@ async def synthesize_merge(
     request: Request,
     service=Depends(get_belief_service),
 ):
-    return raise_if_error(await service.synthesize_merge_statement(
-        proposal_id=proposal_id,
-        target_belief_id=payload.target_belief_id,
-    ))
+    return raise_if_error(
+        await service.synthesize_merge_statement(
+            proposal_id=proposal_id,
+            target_belief_id=payload.target_belief_id,
+        )
+    )
 
 
 @router.post("/beliefs/proposals/{proposal_id}/vet")
@@ -128,11 +128,13 @@ async def edit_belief_statement(
     request: Request,
     service=Depends(get_belief_service),
 ):
-    return raise_if_error(await service.update_belief_statement(
-        belief_id,
-        statement=payload.statement,
-        change_reason=payload.change_reason,
-    ))
+    return raise_if_error(
+        await service.update_belief_statement(
+            belief_id,
+            statement=payload.statement,
+            change_reason=payload.change_reason,
+        )
+    )
 
 
 @router.get("/beliefs/{belief_id}/versions")
@@ -142,14 +144,16 @@ async def get_belief_versions(belief_id: str, request: Request, service=Depends(
 
 @router.post("/beliefs", dependencies=[Depends(require_agent_flux)])
 async def create_belief(payload: BeliefCreateRequest, request: Request, service=Depends(get_belief_service)):
-    return raise_if_error(await service.create_new_belief(
-        label=payload.label,
-        statement=payload.statement,
-        confidence=payload.confidence,
-        ontological_mass=payload.ontological_mass,
-        lifecycle_stage=payload.lifecycle_stage,
-        agent_id=payload.agent_id,
-    ))
+    return raise_if_error(
+        await service.create_new_belief(
+            label=payload.label,
+            statement=payload.statement,
+            confidence=payload.confidence,
+            ontological_mass=payload.ontological_mass,
+            lifecycle_stage=payload.lifecycle_stage,
+            agent_id=payload.agent_id,
+        )
+    )
 
 
 @router.put("/beliefs/{belief_id}", dependencies=[Depends(require_agent_flux)])
@@ -159,14 +163,16 @@ async def update_belief(
     request: Request,
     service=Depends(get_belief_service),
 ):
-    return raise_if_error(await service.update_belief_details(
-        belief_id=belief_id,
-        label=payload.label,
-        statement=payload.statement,
-        confidence=payload.confidence,
-        ontological_mass=payload.ontological_mass,
-        lifecycle_stage=payload.lifecycle_stage,
-    ))
+    return raise_if_error(
+        await service.update_belief_details(
+            belief_id=belief_id,
+            label=payload.label,
+            statement=payload.statement,
+            confidence=payload.confidence,
+            ontological_mass=payload.ontological_mass,
+            lifecycle_stage=payload.lifecycle_stage,
+        )
+    )
 
 
 @router.delete("/beliefs/{belief_id}", dependencies=[Depends(require_agent_flux)])
@@ -187,10 +193,12 @@ async def get_belief_timeseries(
     service=Depends(get_belief_service),
 ):
     """Return bucketed mass/confidence timeseries for charting.
-    
+
     Bucketing is automatic: hourly if span <= 7 days, daily if > 7 days.
     """
     result = await service.get_belief_timeseries(belief_id, days=days)
     if result.get("status") == "error":
-        raise HTTPException(status_code=404 if "not found" in result.get("message", "").lower() else 503, detail=result["message"])
+        raise HTTPException(
+            status_code=404 if "not found" in result.get("message", "").lower() else 503, detail=result["message"]
+        )
     return result

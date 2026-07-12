@@ -12,9 +12,7 @@ async def get_tokens(conversation_id: str = "", request: Request = None):
     conv_repo = getattr(state, "conversation_repo", None)
     system_prompt_tokens = getattr(state, "system_prompt_tokens", 0)
 
-    totals = repo.get_token_totals(
-        conversation_id=conversation_id if conversation_id else None
-    )
+    totals = repo.get_token_totals(conversation_id=conversation_id if conversation_id else None)
 
     conversation_tokens: list[ConversationTokenInfo] = []
     for t in totals:
@@ -25,14 +23,16 @@ async def get_tokens(conversation_id: str = "", request: Request = None):
             if conv:
                 title = conv.title
         total = t["user_tokens"] + t["agent_tokens"] + t["thinking_tokens"]
-        conversation_tokens.append(ConversationTokenInfo(
-            conversation_id=conv_id,
-            title=title,
-            user_tokens=t["user_tokens"],
-            agent_tokens=t["agent_tokens"],
-            thinking_tokens=t["thinking_tokens"],
-            total_tokens=total,
-        ))
+        conversation_tokens.append(
+            ConversationTokenInfo(
+                conversation_id=conv_id,
+                title=title,
+                user_tokens=t["user_tokens"],
+                agent_tokens=t["agent_tokens"],
+                thinking_tokens=t["thinking_tokens"],
+                total_tokens=total,
+            )
+        )
 
     grand_total = system_prompt_tokens + sum(c.total_tokens for c in conversation_tokens)
 

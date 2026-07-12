@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import get_background_engine
 from backend.api.exceptions import ServiceException
@@ -31,7 +31,7 @@ async def run_background_task(body: BackgroundTaskRequest, engine=Depends(get_ba
             error=result.get("error"),
         )
     except ValueError as e:
-        raise ServiceException(str(e))
+        raise ServiceException(str(e)) from e
     except Exception as e:
         logger.exception("Background task error")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

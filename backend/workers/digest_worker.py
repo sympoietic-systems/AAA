@@ -1,37 +1,34 @@
-import os
-import sys
 import argparse
 import asyncio
+import contextlib
 import json
 import logging
+import os
+import sys
 from pathlib import Path
-from typing import Optional
 
 # Adjust path to find backend modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.config import load_config
-from backend.storage.database import get_db_path
-from backend.storage.repository import (
-    PerceptionSedimentRepository,
-    BeliefRepository,
-    MessageRepository,
-    ErrorLogRepository,
-    NotificationRepository,
-)
-from backend.modules.embedder import EmbedderModule
-from backend.modules.llm_client import (
-    LLMClientModule,
-)
 from backend.main import _create_llm_provider, _create_provider_from_config
-from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
-from backend.modules.perception import PerceptionModule
-from backend.modules.belief_engine import BeliefDynamicsEngine
-from backend.modules.background_tasks.engine import BackgroundTaskEngine
-from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.actions.document_collision import DocumentCollisionAction
 from backend.modules.background_tasks.actions.dream_topic_decision import DreamTopicDecisionAction
 from backend.modules.background_tasks.actions.refine_skill import RefineSkillAction
+from backend.modules.background_tasks.actions.summarize import SummarizeAction
+from backend.modules.background_tasks.engine import BackgroundTaskEngine
+from backend.modules.belief_engine import BeliefDynamicsEngine
+from backend.modules.embedder import EmbedderModule
+from backend.modules.perception import PerceptionModule
+from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
+from backend.storage.database import get_db_path
+from backend.storage.repository import (
+    BeliefRepository,
+    ErrorLogRepository,
+    MessageRepository,
+    NotificationRepository,
+    PerceptionSedimentRepository,
+)
 from backend.utils.token_counter import estimate_tokens
 
 # Set up logging for the worker process
@@ -104,11 +101,7 @@ async def process_and_summarize_file(
     agent_name: str,
 ):
     try:
-        perception_repo.update_file(
-            conversation_id=conversation_id,
-            file_name=file_name,
-            status="processing"
-        )
+        perception_repo.update_file(conversation_id=conversation_id, file_name=file_name, status="processing")
 
         # file_content=None so it loads from the persisted disk cache path
         token_count, chunk_count, extracted_text = await perception_module.ingest_single_file(
@@ -152,15 +145,22 @@ async def process_and_summarize_file(
                 if proposed_skills:
                     for skill_data in proposed_skills:
                         try:
-                            logger.info("Found proposed skill in document digestion: %s. Launching refinement.", skill_data.get("name"))
+                            logger.info(
+                                "Found proposed skill in document digestion: %s. Launching refinement.",
+                                skill_data.get("name"),
+                            )
                             refine_res = await background_engine.run(
                                 "refine_skill",
                                 {
                                     "skill_data": skill_data,
                                     "conversation_id": conversation_id,
-                                }
+                                },
                             )
-                            logger.info("Skill refinement complete for %s. Decision: %s", skill_data.get("name"), refine_res.get("decision"))
+                            logger.info(
+                                "Skill refinement complete for %s. Decision: %s",
+                                skill_data.get("name"),
+                                refine_res.get("decision"),
+                            )
                         except Exception as re:
                             logger.error("Failed to run skill refinement daemon for %s: %s", skill_data.get("name"), re)
 
@@ -169,26 +169,26 @@ async def process_and_summarize_file(
                     collision_score = float(res.get("interference_score", 0.0))
                     belief_nodes_implicated = res.get("implicated_nodes", [])
                     state_vector_impact = res.get("state_vector_impact", [0.0] * 16)
-                
+
                 # Apply opacity updates to chunks
                 opacity_map = res.get("opacity_map", [])
                 if opacity_map:
                     chunks = perception_repo.get_by_file(conversation_id, file_name)
                     op_map_by_p = {item["paragraph_index"]: item for item in opacity_map}
-                    
+
                     for chunk in chunks:
                         try:
                             meta = json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
                         except Exception:
                             meta = {}
-                        
+
                         p_indices = meta.get("paragraph_indices", [])
                         opaque_hits = [op_map_by_p[pi] for pi in p_indices if pi in op_map_by_p]
-                        
+
                         if opaque_hits:
                             reasons = [h["reason"] for h in opaque_hits if h.get("reason")]
                             shadows = [h["shadow_text"] for h in opaque_hits if h.get("shadow_text")]
-                            
+
                             new_meta = {
                                 "paragraph_indices": p_indices,
                                 "opaque_hits": opaque_hits,
@@ -215,7 +215,9 @@ async def process_and_summarize_file(
             token_count=token_count,
             chunk_count=chunk_count,
             interference_score=collision_score,
-            belief_nodes_implicated=json.dumps(belief_nodes_implicated) if belief_nodes_implicated is not None else None,
+            belief_nodes_implicated=json.dumps(belief_nodes_implicated)
+            if belief_nodes_implicated is not None
+            else None,
             state_vector_impact=json.dumps(state_vector_impact) if state_vector_impact is not None else None,
         )
 
@@ -224,7 +226,7 @@ async def process_and_summarize_file(
             try:
                 scorer = CompositeStructuralScorer(llm_provider=structural_provider)
                 sig_vec = await scorer.score_async(extracted_text[:4000])
-                
+
                 # Check for somatic/visual anchor shock if image
                 perturbation = 1.0
                 if file_type == "image":
@@ -233,7 +235,7 @@ async def process_and_summarize_file(
                     perturbation = 2.0
                 else:
                     perturbation = 1.0 + collision_score * 2.0
-                
+
                 await belief_metabolism.metabolize_perception(
                     conversation_id=conversation_id,
                     source_id=file_name,
@@ -282,15 +284,13 @@ async def process_and_summarize_file(
             )
         except Exception as ne:
             logger.error(f"Failed to create file indexing error notification: {ne}")
-        try:
+        with contextlib.suppress(Exception):
             perception_repo.update_file(
                 conversation_id=conversation_id,
                 file_name=file_name,
                 status="error",
-                summary=f"Failed to process file: {str(e)}"
+                summary=f"Failed to process file: {str(e)}",
             )
-        except Exception:
-            pass
         raise e
 
 
@@ -350,15 +350,22 @@ async def reprocess_and_summarize_file_background(
             if proposed_skills:
                 for skill_data in proposed_skills:
                     try:
-                        logger.info("Found proposed skill in document digestion: %s. Launching refinement.", skill_data.get("name"))
+                        logger.info(
+                            "Found proposed skill in document digestion: %s. Launching refinement.",
+                            skill_data.get("name"),
+                        )
                         refine_res = await background_engine.run(
                             "refine_skill",
                             {
                                 "skill_data": skill_data,
                                 "conversation_id": conversation_id,
-                            }
+                            },
                         )
-                        logger.info("Skill refinement complete for %s. Decision: %s", skill_data.get("name"), refine_res.get("decision"))
+                        logger.info(
+                            "Skill refinement complete for %s. Decision: %s",
+                            skill_data.get("name"),
+                            refine_res.get("decision"),
+                        )
                     except Exception as re:
                         logger.error("Failed to run skill refinement daemon for %s: %s", skill_data.get("name"), re)
 
@@ -367,24 +374,24 @@ async def reprocess_and_summarize_file_background(
                 collision_score = float(res.get("interference_score", 0.0))
                 belief_nodes_implicated = res.get("implicated_nodes", [])
                 state_vector_impact = res.get("state_vector_impact", [0.0] * 16)
-            
+
             opacity_map = res.get("opacity_map", [])
             if opacity_map:
                 op_map_by_p = {item["paragraph_index"]: item for item in opacity_map}
-                
+
                 for chunk in sorted_chunks:
                     try:
                         meta = json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
                     except Exception:
                         meta = {}
-                    
+
                     p_indices = meta.get("paragraph_indices", [])
                     opaque_hits = [op_map_by_p[pi] for pi in p_indices if pi in op_map_by_p]
-                    
+
                     if opaque_hits:
                         reasons = [h["reason"] for h in opaque_hits if h.get("reason")]
                         shadows = [h["shadow_text"] for h in opaque_hits if h.get("shadow_text")]
-                        
+
                         new_meta = {
                             "paragraph_indices": p_indices,
                             "opaque_hits": opaque_hits,
@@ -408,7 +415,9 @@ async def reprocess_and_summarize_file_background(
             token_count=token_count,
             chunk_count=chunk_count,
             interference_score=collision_score,
-            belief_nodes_implicated=json.dumps(belief_nodes_implicated) if belief_nodes_implicated is not None else None,
+            belief_nodes_implicated=json.dumps(belief_nodes_implicated)
+            if belief_nodes_implicated is not None
+            else None,
             state_vector_impact=json.dumps(state_vector_impact) if state_vector_impact is not None else None,
         )
 
@@ -417,7 +426,7 @@ async def reprocess_and_summarize_file_background(
             try:
                 scorer = CompositeStructuralScorer(llm_provider=structural_provider)
                 sig_vec = await scorer.score_async(extracted_text[:4000])
-                
+
                 perturbation = 1.0
                 if file_type == "image":
                     belief_nodes_implicated = ["glitch-as-voice"]
@@ -473,15 +482,13 @@ async def reprocess_and_summarize_file_background(
             )
         except Exception as ne:
             logger.error(f"Failed to create file reprocessing error notification: {ne}")
-        try:
+        with contextlib.suppress(Exception):
             perception_repo.update_file(
                 conversation_id=conversation_id,
                 file_name=file_name,
                 status="error",
-                summary=f"Failed to process file: {str(e)}"
+                summary=f"Failed to process file: {str(e)}",
             )
-        except Exception:
-            pass
         raise e
 
 
@@ -494,8 +501,13 @@ async def main():
 
     args = parser.parse_args()
 
-    logger.info("Initializing worker modules for conversation_id=%s, file_name=%s, file_type=%s, reprocess=%s",
-                args.conversation_id, args.file_name, args.file_type, args.reprocess)
+    logger.info(
+        "Initializing worker modules for conversation_id=%s, file_name=%s, file_type=%s, reprocess=%s",
+        args.conversation_id,
+        args.file_name,
+        args.file_type,
+        args.reprocess,
+    )
 
     # 1. Load config and resolve database path
     config = load_config()
@@ -533,10 +545,8 @@ async def main():
     vision_llm_cfg = config.get("vision_llm", {})
     vision_provider = None
     if vision_llm_cfg.get("models") or vision_llm_cfg.get("model"):
-        try:
+        with contextlib.suppress(Exception):
             vision_provider = _create_provider_from_config(vision_llm_cfg)
-        except Exception:
-            pass
 
     # 5. Initialize PerceptionModule
     perception_cfg = config.get("perception", {})
@@ -561,6 +571,7 @@ async def main():
     agent_name = "symbia"
     if identity_path.exists():
         import yaml
+
         with open(identity_path) as f:
             identity_data = yaml.safe_load(f)
             agent_name = identity_data.get("agent", {}).get("name", "symbia")
@@ -624,6 +635,7 @@ async def main():
             structural_provider=structural_provider,
             agent_name=agent_name,
         )
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,3 +1,4 @@
+import contextlib
 import sqlite3
 
 
@@ -13,12 +14,8 @@ def up(conn):
         ("divergence_resolution_ratio", "REAL"),
         ("paskian_health", "REAL"),
     ]:
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute(f"ALTER TABLE conversation_metrics ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError:
-            pass
     for idx_col in ["deficit", "vitality"]:
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute(f"CREATE INDEX IF NOT EXISTS idx_metrics_{idx_col} ON conversation_metrics({idx_col})")
-        except sqlite3.OperationalError:
-            pass

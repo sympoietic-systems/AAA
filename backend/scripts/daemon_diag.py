@@ -4,26 +4,32 @@ Usage:
     uv run backend/scripts/daemon_diag.py
 """
 
-import json, os, sys
+import json
+import os
+import sqlite3
+import sys
+
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent.parent))
-from dotenv import load_dotenv; load_dotenv()
+from dotenv import load_dotenv  # noqa: I001
+
+load_dotenv()
 os.environ.setdefault("AAA_RUN_MIGRATIONS", "true")
 
-from backend.config import load_config
-from backend.storage.database import get_db_path, init_db
+from backend.config import load_config  # noqa: E402
+from backend.storage.database import get_db_path, init_db  # noqa: E402
+
 config = load_config()
 db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
 init_db(db_path).close()
 
-import sqlite3
 conn = sqlite3.connect(db_path)
 conn.row_factory = sqlite3.Row
 
 cfg = config.get("daemon", {})
 print("== Daemon Config ==")
 print(f"  check_interval     = {cfg.get('check_interval', '?')}s")
-print(f"  idle_threshold     = {cfg.get('idle_threshold', '?')}s ({cfg.get('idle_threshold', 1800)//60}min)")
-print(f"  min_dream_interval = {cfg.get('min_dream_interval', '?')}s ({cfg.get('min_dream_interval', 3600)//60}min)")
+print(f"  idle_threshold     = {cfg.get('idle_threshold', '?')}s ({cfg.get('idle_threshold', 1800) // 60}min)")
+print(f"  min_dream_interval = {cfg.get('min_dream_interval', '?')}s ({cfg.get('min_dream_interval', 3600) // 60}min)")
 print(f"  max_daily_dreams   = {cfg.get('max_daily_dreams', '?')}")
 print(f"  short_window_max   = {cfg.get('short_window_max', '?')}")
 print()
@@ -33,7 +39,9 @@ count = conn.execute("SELECT COUNT(*) as c FROM dream_log").fetchone()["c"]
 latest = conn.execute("SELECT MAX(timestamp) as t FROM dream_log").fetchone()["t"]
 print(f"  Total dreams logged: {count}")
 print(f"  Latest dream: {latest or 'never'}")
-d24h = conn.execute("SELECT COUNT(*) as c FROM dream_log WHERE timestamp >= datetime('now', '-24 hours')").fetchone()["c"]
+d24h = conn.execute("SELECT COUNT(*) as c FROM dream_log WHERE timestamp >= datetime('now', '-24 hours')").fetchone()[
+    "c"
+]
 d8h = conn.execute("SELECT COUNT(*) as c FROM dream_log WHERE timestamp >= datetime('now', '-8 hours')").fetchone()["c"]
 print(f"  Last 24h: {d24h} / {cfg.get('max_daily_dreams', '?')}")
 print(f"  Last 8h:  {d8h} / {cfg.get('short_window_max', '?')}")
@@ -58,7 +66,7 @@ for r in rows:
     msg = r["msg_count"] or 0
     lc = str(r["last_consolidated_at"] or "never")[:19]
     req = r["requires_consolidation"]
-    first = "CAN consolidate" if msg >= 12 else f"need {12-msg} more msgs"
+    first = "CAN consolidate" if msg >= 12 else f"need {12 - msg} more msgs"
     print(f"  [{cid}] {title}: {msg} msgs | last_consol: {lc} | reconsol: {req} | {first}")
 print()
 
@@ -104,7 +112,9 @@ try:
     print(f"  Total: {sk} | Crystallized: {sk_cryst}")
 except Exception:
     sk = conn.execute("SELECT COUNT(*) as c FROM skill_nodes").fetchone()["c"]
-    sk_cryst = conn.execute("SELECT COUNT(*) as c FROM skill_nodes WHERE lifecycle_stage = 'crystallized'").fetchone()["c"]
+    sk_cryst = conn.execute("SELECT COUNT(*) as c FROM skill_nodes WHERE lifecycle_stage = 'crystallized'").fetchone()[
+        "c"
+    ]
     print(f"  Total: {sk} | Crystallized: {sk_cryst}")
 print()
 
@@ -115,7 +125,9 @@ for t in tasks:
     state_raw = t["orchestrator_state"] or "{}"
     state = json.loads(state_raw) if isinstance(state_raw, str) else state_raw
     q = state.get("sedimentation_queue", [])
-    nodes = conn.execute("SELECT COUNT(*) as c FROM memory_nodes WHERE source_type = 'research' AND source_id = ?", (tid,)).fetchone()["c"]
+    nodes = conn.execute(
+        "SELECT COUNT(*) as c FROM memory_nodes WHERE source_type = 'research' AND source_id = ?", (tid,)
+    ).fetchone()["c"]
     print(f"  [{tid[:12]}] queue: {len(q)} | nodes: {nodes}")
 print()
 

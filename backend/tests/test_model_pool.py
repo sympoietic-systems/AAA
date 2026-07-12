@@ -1,45 +1,45 @@
-import asyncio
-import unittest
-from unittest.mock import AsyncMock, patch
 import sys
+import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.modules.llm_client import (
-    ModelPoolProvider,
     KeyManager,
-    RateLimitError,
+    ModelPoolProvider,
     OpenAICompatibleProvider,
+    RateLimitError,
     generate_unified,
 )
+
 
 class TestModelPool(unittest.IsolatedAsyncioTestCase):
     def test_key_manager_basic(self):
         km = KeyManager(["key1", "key2"], cooldown_seconds=2)
         self.assertTrue(km.has_keys())
-        
+
         # Get key 1
         k1 = km.get_available_key()
         self.assertEqual(k1, "key1")
-        
+
         # Get key 2 (key1 was not marked exhausted, but KeyManager iterates keys sequentially)
         # Wait, get_available_key returns the first non-exhausted key in the list.
         # So it should return "key1" again if it is not exhausted.
         k1_again = km.get_available_key()
         self.assertEqual(k1_again, "key1")
-        
+
         # Exhaust key1
         km.mark_key_exhausted("key1")
-        
+
         # Now get_available_key should return "key2"
         k2 = km.get_available_key()
         self.assertEqual(k2, "key2")
-        
+
         # Exhaust key2 too
         km.mark_key_exhausted("key2")
-        
+
         # Now no key should be available
         self.assertIsNone(km.get_available_key())
 
@@ -48,7 +48,7 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         # We set up a ModelPoolProvider with two models:
         # 1. google_router/gemini-2.5-flash (uses google_keys)
         # 2. openrouter_router/google/gemma-4-26b-a4b-it:free (uses openrouter_keys)
-        
+
         provider = ModelPoolProvider(
             api_key="or_key_default",
             models=["google_router/gemini-2.5-flash", "openrouter_router/google/gemma-4-26b-a4b-it:free"],
@@ -61,8 +61,9 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         # Setup mock generate behaviour:
         # Call 1: for gemini-2.5-flash with g_key1 -> raise RateLimitError
         # Call 2: for gemini-2.5-flash with g_key2 -> success!
-        
+
         call_count = 0
+
         def side_effect(messages, **params):
             nonlocal call_count
             call_count += 1
@@ -77,16 +78,20 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         mock_generate.side_effect = side_effect
 
         result = await provider.generate([{"role": "user", "content": "hello"}])
-        
+
         # Check that we succeeded
         self.assertEqual(result["content"], "Success from call 2")
-        
+
         # Verify the providers created and their parameters
         # Total calls to mock_generate should be 2
         self.assertEqual(mock_generate.call_count, 2)
-        
+
         # The first call failed, key g_key1 should be marked exhausted
-        self.assertIsNone(provider._google_key_mgr.get_available_key() if "g_key1" == provider._google_key_mgr.get_available_key() else None)
+        self.assertIsNone(
+            provider._google_key_mgr.get_available_key()
+            if provider._google_key_mgr.get_available_key() == "g_key1"
+            else None
+        )
         # Wait, if g_key1 is exhausted, the next available key should be g_key2
         self.assertEqual(provider._google_key_mgr.get_available_key(), "g_key2")
 
@@ -129,14 +134,13 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         result = await provider.generate([{"role": "user", "content": "hello"}])
         self.assertEqual(result["content"], "DeepSeek response")
         self.assertEqual(result["thinking"], "thinking trace")
-        
+
         # Verify the OpenAICompatibleProvider was initialized with thinking=True
         # We can inspect the parameters passed during generate() or the mock call args
         self.assertEqual(mock_generate.call_count, 1)
 
     @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate", autospec=True)
     async def test_last_working_model_stateful_prioritization(self, mock_generate):
-        import time
         provider = ModelPoolProvider(
             api_key="or_key_default",
             models=["google_router/gemini-2.5-flash", "openrouter_router/google/gemma-4-26b-a4b-it:free"],
@@ -184,6 +188,7 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         async def side_effect_success(provider_inst, messages, **params):
             calls.append(provider_inst._model)
             return {"content": f"Success from {provider_inst._model}", "thinking": None}
+
         mock_generate.side_effect = side_effect_success
 
         result3 = await provider.generate([{"role": "user", "content": "hello after cooldown"}])
@@ -195,14 +200,7 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
     async def test_openai_compatible_max_tokens(self, mock_post):
         mock_response = unittest.mock.MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{
-                "message": {
-                    "role": "assistant",
-                    "content": "hello"
-                }
-            }]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"role": "assistant", "content": "hello"}}]}
         mock_post.return_value = mock_response
 
         # 1. Non-thinking provider
@@ -212,7 +210,7 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
             api_base="https://api.test.com",
         )
         await provider.generate([{"role": "user", "content": "hi"}], max_tokens=123)
-        
+
         # Check mock_post call arguments
         self.assertEqual(mock_post.call_count, 1)
         args, kwargs = mock_post.call_args
@@ -231,7 +229,7 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
             thinking=True,
         )
         await provider_thinking.generate([{"role": "user", "content": "hi"}], max_tokens=456)
-        
+
         self.assertEqual(mock_post.call_count, 1)
         args, kwargs = mock_post.call_args
         body = kwargs["json"]
@@ -248,24 +246,26 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
             google_keys=["g_key1"],
             cooldown_seconds=10,
         )
-        
+
         # Scenario: First call raises RequestError. Retry succeeds.
         call_count = 0
+
         def side_effect(messages, **params):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
                 import httpx
+
                 raise httpx.RequestError("connection lost")
             return {"content": "Success after retry", "thinking": None}
-            
+
         mock_generate.side_effect = side_effect
-        
+
         result = await provider.generate([{"role": "user", "content": "hello"}])
         self.assertEqual(result["content"], "Success after retry")
         self.assertEqual(mock_generate.call_count, 2)
         mock_sleep.assert_called_once_with(10)
-        
+
         # Verify key g_key1 is NOT exhausted (since the retry succeeded)
         self.assertEqual(provider._google_key_mgr.get_available_key(), "g_key1")
 
@@ -279,17 +279,18 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
             google_keys=["g_key1"],
             cooldown_seconds=10,
         )
-        
+
         import httpx
+
         mock_generate.side_effect = httpx.RequestError("connection lost")
-        
+
         with self.assertRaises(RateLimitError):
             await provider.generate([{"role": "user", "content": "hello"}])
-            
+
         # 1 original attempt + 1 retry = 2 calls
         self.assertEqual(mock_generate.call_count, 2)
         mock_sleep.assert_called_once_with(10)
-        
+
         # Since both failed, key is exhausted
         self.assertIsNone(provider._google_key_mgr.get_available_key())
 
@@ -297,8 +298,10 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
     async def test_generate_unified_forwards_thinking_override(self, mock_generate):
         mock_generate.return_value = {"content": "ok", "thinking": None, "model": "test"}
         provider = OpenAICompatibleProvider(
-            api_key="key", model="test-model",
-            api_base="https://api.example.com", provider_name="test",
+            api_key="key",
+            model="test-model",
+            api_base="https://api.example.com",
+            provider_name="test",
             thinking=False,
         )
         result = await generate_unified(
@@ -315,8 +318,10 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
     async def test_generate_unified_thinking_override_absent(self, mock_generate):
         mock_generate.return_value = {"content": "ok", "thinking": None, "model": "test"}
         provider = OpenAICompatibleProvider(
-            api_key="key", model="test-model",
-            api_base="https://api.example.com", provider_name="test",
+            api_key="key",
+            model="test-model",
+            api_base="https://api.example.com",
+            provider_name="test",
             thinking=False,
         )
         result = await generate_unified(
@@ -327,6 +332,7 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["content"], "ok")
         call_kwargs = mock_generate.call_args[1]
         self.assertNotIn("thinking_override", call_kwargs)
+
 
 if __name__ == "__main__":
     unittest.main()

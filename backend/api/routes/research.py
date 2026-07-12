@@ -3,9 +3,11 @@
 See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 4.8 and 5.
 """
 
+import contextlib
 import re
-from typing import Any, Optional
-from fastapi import APIRouter, Request, HTTPException
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -13,50 +15,52 @@ router = APIRouter()
 
 class DispatchPayload(BaseModel):
     objective: str
-    title: Optional[str] = None
-    conversation_id: Optional[str] = None
+    title: str | None = None
+    conversation_id: str | None = None
     max_depth: int = 3
     max_breadth: int = 4
     is_agonistic: bool = False
     budget_limit_usd: float = 0.50
-    previous_context: Optional[str] = None
-    continue_from_task_id: Optional[str] = None
-    additional_cycles: Optional[int] = None
-    inject_file_id: Optional[str] = None
-    inject_conversation_id: Optional[str] = None
-    document_mode: Optional[str] = None
-    document_chunk_limit: Optional[int] = None
+    previous_context: str | None = None
+    continue_from_task_id: str | None = None
+    additional_cycles: int | None = None
+    inject_file_id: str | None = None
+    inject_conversation_id: str | None = None
+    document_mode: str | None = None
+    document_chunk_limit: int | None = None
 
 
 class ContinuePayload(BaseModel):
     source_task_id: str
-    adjusted_objective: Optional[str] = None
-    title: Optional[str] = None
-    conversation_id: Optional[str] = None
+    adjusted_objective: str | None = None
+    title: str | None = None
+    conversation_id: str | None = None
     additional_cycles: int = 1
-    inject_file_id: Optional[str] = None
-    inject_conversation_id: Optional[str] = None
-    document_mode: Optional[str] = None
-    document_chunk_limit: Optional[int] = None
-    budget_limit_usd: Optional[float] = None
-    max_breadth: Optional[int] = None
-    is_agonistic: Optional[bool] = None
+    inject_file_id: str | None = None
+    inject_conversation_id: str | None = None
+    document_mode: str | None = None
+    document_chunk_limit: int | None = None
+    budget_limit_usd: float | None = None
+    max_breadth: int | None = None
+    is_agonistic: bool | None = None
 
 
 class ContinueTaskPayload(BaseModel):
-    adjusted_objective: Optional[str] = None
+    adjusted_objective: str | None = None
     additional_cycles: int = 1
-    inject_file_id: Optional[str] = None
-    inject_conversation_id: Optional[str] = None
-    document_mode: Optional[str] = None
-    document_chunk_limit: Optional[int] = None
-    budget_limit_usd: Optional[float] = None
+    inject_file_id: str | None = None
+    inject_conversation_id: str | None = None
+    document_mode: str | None = None
+    document_chunk_limit: int | None = None
+    budget_limit_usd: float | None = None
 
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
+
 def _extract_depth(task: dict) -> int:
     import json
+
     try:
         orch_raw = task.get("orchestrator_state")
         if orch_raw:
@@ -70,6 +74,7 @@ def _extract_depth(task: dict) -> int:
 
 
 # ── Task CRUD ─────────────────────────────────────────────────────────
+
 
 @router.post("/research/dispatch")
 async def dispatch_research(payload: DispatchPayload, request: Request):
@@ -194,7 +199,7 @@ async def continue_task(task_id: str, payload: ContinueTaskPayload, request: Req
 
 
 @router.get("/research/files")
-async def list_research_files(conversation_id: Optional[str] = None, request: Request = None):
+async def list_research_files(conversation_id: str | None = None, request: Request = None):
     """List indexed perception_files available for document injection.
 
     Returns file metadata (name, type, summary, status, token_count, chunk_count)
@@ -211,24 +216,28 @@ async def list_research_files(conversation_id: Optional[str] = None, request: Re
     else:
         files = perception_repo.get_all_files_across_conversations()
 
-    result = [{
-        "file_name": f["file_name"],
-        "file_type": f.get("file_type", ""),
-        "status": f.get("status", ""),
-        "summary": f.get("summary"),
-        "token_count": f.get("token_count", 0),
-        "chunk_count": f.get("chunk_count", 0),
-        "conversation_id": f.get("conversation_id", ""),
-    } for f in files if f.get("status") == "ready"]
+    result = [
+        {
+            "file_name": f["file_name"],
+            "file_type": f.get("file_type", ""),
+            "status": f.get("status", ""),
+            "summary": f.get("summary"),
+            "token_count": f.get("token_count", 0),
+            "chunk_count": f.get("chunk_count", 0),
+            "conversation_id": f.get("conversation_id", ""),
+        }
+        for f in files
+        if f.get("status") == "ready"
+    ]
 
     return {"files": result, "count": len(result)}
 
 
 @router.get("/research/tasks")
 async def list_tasks(
-    status: Optional[str] = None,
-    trigger_source: Optional[str] = None,
-    conversation_id: Optional[str] = None,
+    status: str | None = None,
+    trigger_source: str | None = None,
+    conversation_id: str | None = None,
     limit: int = 50,
     request: Request = None,
 ):
@@ -277,18 +286,22 @@ async def get_task(task_id: str, request: Request):
     assets = state.scraped_asset_repo.get_by_task(task_id)
     task["branches"] = branches
     task["asset_count"] = len(assets)
-    task["assets"] = [{
-        "id": a["id"],
-        "url": a.get("url", ""),
-        "relevance_score": a.get("relevance_score", 0),
-        "novelty_score": a.get("novelty_score", 0),
-        "diffractive_score": a.get("diffractive_score", 0),
-        "created_at": a.get("created_at"),
-    } for a in assets]
+    task["assets"] = [
+        {
+            "id": a["id"],
+            "url": a.get("url", ""),
+            "relevance_score": a.get("relevance_score", 0),
+            "novelty_score": a.get("novelty_score", 0),
+            "diffractive_score": a.get("diffractive_score", 0),
+            "created_at": a.get("created_at"),
+        }
+        for a in assets
+    ]
     return task
 
 
 # ── Proposal Actions ──────────────────────────────────────────────────
+
 
 @router.post("/research/proposals/{task_id}/approve")
 async def approve_proposal(task_id: str, request: Request):
@@ -325,6 +338,7 @@ async def reject_proposal(task_id: str, request: Request):
 
 
 # ── Task Control ──────────────────────────────────────────────────────
+
 
 @router.post("/research/tasks/{task_id}/cancel")
 async def cancel_task(task_id: str, request: Request):
@@ -389,6 +403,7 @@ async def retry_task(task_id: str, request: Request):
 
 # ── Manual Execution (debug / manual mode) ────────────────────────────
 
+
 @router.post("/research/tasks/{task_id}/run")
 async def run_task(task_id: str, request: Request):
     """Manually trigger execution of a queued task. Used in manual mode."""
@@ -433,12 +448,13 @@ async def rerun_task(task_id: str, request: Request):
 
 # ── Orchestrator Step-by-Step ──────────────────────────────────────────
 
+
 @router.post("/research/tasks/{task_id}/step")
 async def execute_step(
     task_id: str,
     request: Request,
-    rerun_step_type: Optional[str] = None,
-    rerun_step_id: Optional[str] = None,
+    rerun_step_type: str | None = None,
+    rerun_step_id: str | None = None,
 ):
     """Execute the next orchestrator phase (planning → searching → parsing →
     digesting → consolidating → reflection → evaluating → synthesizing → complete).
@@ -460,9 +476,14 @@ async def execute_step(
 
     # Map step_type to orchestrator phase for rerun-to-target
     STEP_TYPE_TO_PHASE: dict[str, str] = {
-        "plan": "planning", "search": "searching", "parallel_parse": "parsing",
-        "digest": "digesting", "document_digestion": "document_digestion",
-        "reflect": "consolidating", "reflection": "reflection", "evaluate": "evaluating",
+        "plan": "planning",
+        "search": "searching",
+        "parallel_parse": "parsing",
+        "digest": "digesting",
+        "document_digestion": "document_digestion",
+        "reflect": "consolidating",
+        "reflection": "reflection",
+        "evaluate": "evaluating",
         "synthesize": "synthesizing",
     }
     target_phase = STEP_TYPE_TO_PHASE.get(rerun_step_type or "")
@@ -486,13 +507,18 @@ async def execute_step(
                 current_depth = s2.get("current_depth", 0) if s2 else 0
                 all_steps = step_repo.get_by_task(task_id)
                 matching = sorted(
-                    (s for s in all_steps
-                     if s["step_type"] == rerun_step_type
-                     and s["status"] in ("completed", "failed", "running")
-                     and orch._get_step_depth(s) == current_depth),
-                    key=lambda s: (s.get("phase_group", s.get("step_number", 0)),
-                                   s.get("query_group", 0),
-                                   s.get("sub_sequence", 0))
+                    (
+                        s
+                        for s in all_steps
+                        if s["step_type"] == rerun_step_type
+                        and s["status"] in ("completed", "failed", "running")
+                        and orch._get_step_depth(s) == current_depth
+                    ),
+                    key=lambda s: (
+                        s.get("phase_group", s.get("step_number", 0)),
+                        s.get("query_group", 0),
+                        s.get("sub_sequence", 0),
+                    ),
                 )
                 existing = matching[0] if matching else None
             if existing:
@@ -511,7 +537,8 @@ async def execute_step(
                         # Fallback: count searches before this step
                         all_steps = step_repo.get_by_task(task_id)
                         s2["query_index"] = sum(
-                            1 for s in all_steps
+                            1
+                            for s in all_steps
                             if s["step_type"] == "search" and s["step_number"] < existing["step_number"]
                         )
     else:
@@ -543,15 +570,17 @@ async def execute_step(
     try:
         result = await manager.orchestrator_step(task_id)
     except RuntimeError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return result
 
 
 # ── Meta Log ──────────────────────────────────────────────────────────
 
+
 def _parse_event_data(entry: dict) -> dict:
     import json
+
     try:
         entry["event_data"] = json.loads(entry["event_data"])
     except (json.JSONDecodeError, TypeError):
@@ -563,8 +592,8 @@ def _parse_event_data(entry: dict) -> dict:
 async def get_task_meta_log(
     task_id: str,
     limit: int = 200,
-    branch_id: Optional[str] = None,
-    step_id: Optional[str] = None,
+    branch_id: str | None = None,
+    step_id: str | None = None,
     request: Request = None,
 ):
     """Full activity log for a research task.  Pass ?step_id=<step_id> to
@@ -602,6 +631,7 @@ async def get_task_meta_log(
 
 # ── Orchestrator Phase ────────────────────────────────────────────────
 
+
 @router.get("/research/tasks/{task_id}/phase")
 async def get_task_phase(task_id: str, request: Request = None):
     """Return the current orchestrator phase for a task (manual step-by-step mode)."""
@@ -616,6 +646,7 @@ async def get_task_phase(task_id: str, request: Request = None):
 
 
 # ── Step Input Preview (inspect before running) ────────────────────────
+
 
 @router.get("/research/tasks/{task_id}/preview/{phase}")
 async def preview_step_inputs(task_id: str, phase: str, request: Request = None):
@@ -633,13 +664,14 @@ async def preview_step_inputs(task_id: str, phase: str, request: Request = None)
     try:
         result = await manager.orchestrator.preview_step_inputs(task_id, phase)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     return result
 
 
 # ── Reinitialize ───────────────────────────────────────────────────────
+
 
 @router.post("/research/tasks/{task_id}/reinitialize")
 async def reinitialize_task(task_id: str, request: Request = None):
@@ -652,14 +684,13 @@ async def reinitialize_task(task_id: str, request: Request = None):
 
     manager.orchestrator.reinitialize(task_id)
     # Also evict the in-memory state so the next execute_step call reloads it fresh from DB
-    try:
+    with contextlib.suppress(Exception):
         manager.orchestrator._state_mgr.states.pop(task_id, None)
-    except Exception:
-        pass
     return {"task_id": task_id, "status": "reinitialized"}
 
 
 # ── Orchestrator Steps ────────────────────────────────────────────────
+
 
 @router.get("/research/tasks/{task_id}/steps")
 async def get_task_steps(task_id: str, request: Request = None):
@@ -693,17 +724,19 @@ async def get_task_steps(task_id: str, request: Request = None):
         raw_content = r.get("raw_content") or ""
         error_msg = raw_content if raw_content.startswith("Error:") else None
         content_preview = raw_content[:1000] if (raw_content and not error_msg) else ""
-        results_by_step[sid].append({
-            "id": r.get("id"),
-            "source_url": r.get("source_url"),
-            "source_title": r.get("source_title"),
-            "analyzed_json": r.get("analyzed_json"),
-            "relevance_score": r.get("relevance_score"),
-            "novelty_score": r.get("novelty_score"),
-            "raw_file_path": r.get("raw_file_path"),
-            "error": error_msg,
-            "content_preview": content_preview,
-        })
+        results_by_step[sid].append(
+            {
+                "id": r.get("id"),
+                "source_url": r.get("source_url"),
+                "source_title": r.get("source_title"),
+                "analyzed_json": r.get("analyzed_json"),
+                "relevance_score": r.get("relevance_score"),
+                "novelty_score": r.get("novelty_score"),
+                "raw_file_path": r.get("raw_file_path"),
+                "error": error_msg,
+                "content_preview": content_preview,
+            }
+        )
 
     # Retrieve current depth from orchestrator state
     current_depth = 0
@@ -714,6 +747,7 @@ async def get_task_steps(task_id: str, request: Request = None):
             if orch_state_raw:
                 try:
                     import json
+
                     state_dict = json.loads(orch_state_raw) if isinstance(orch_state_raw, str) else orch_state_raw
                     if isinstance(state_dict, dict):
                         current_depth = state_dict.get("current_depth", 0)
@@ -731,6 +765,7 @@ async def get_task_steps(task_id: str, request: Request = None):
 
 # ── Research Notes ─────────────────────────────────────────────────────
 
+
 @router.get("/research/tasks/{task_id}/notes")
 async def get_task_notes(task_id: str, request: Request = None):
     state = request.app.state
@@ -743,8 +778,10 @@ async def get_task_notes(task_id: str, request: Request = None):
         raise HTTPException(status_code=404, detail="Research task not found")
 
     from backend.services.note import NoteService
+
     notes = NoteService.list_by_asset(note_repo, "research_task", task_id)
     from backend.api.schemas import NoteResponse
+
     return [NoteResponse(**n) for n in notes]
 
 
@@ -759,13 +796,15 @@ async def get_task_unified_notes(task_id: str, request: Request = None):
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
-    from backend.services.note import NoteService
     from backend.api.schemas import UnifiedNoteResponse
+    from backend.services.note import NoteService
+
     notes = NoteService.list_by_task_with_steps(note_repo, task_id)
     return [UnifiedNoteResponse(**n) for n in notes]
 
 
 # ── Research Export ────────────────────────────────────────────────────
+
 
 @router.get("/research/tasks/{task_id}/export")
 async def export_research_task(task_id: str, request: Request):
@@ -856,7 +895,7 @@ async def export_research_stages(task_id: str, request: Request):
     )
 
     safe_title = (task.get("title") or "research").strip().replace(" ", "_").replace("/", "_")[:80]
-    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', safe_title).strip('_') or "research"
+    safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", safe_title).strip("_") or "research"
     v = task.get("rerun_count") or 0
     d = _extract_depth(task)
     filename = f"{safe_name}_v{v}_d{d}.md"
@@ -881,8 +920,8 @@ async def export_research_task_json(task_id: str, request: Request):
 @router.get("/research/export/all")
 async def export_all_research_tasks(
     request: Request,
-    status: Optional[str] = None,
-    limit: Optional[int] = None,
+    status: str | None = None,
+    limit: int | None = None,
 ):
     """Export all research tasks (optionally filtered by status) as a JSON array.
 
@@ -984,6 +1023,7 @@ async def import_research_task(payload: dict[str, Any], request: Request):
 
 # ── Memory Nodes & Semantic Knots ─────────────────────────────────────
 
+
 class MemoryNodeResponse(BaseModel):
     id: str
     node_type: str
@@ -995,19 +1035,22 @@ class MemoryNodeResponse(BaseModel):
     agential_symmetry: str = ""
     source_type: str = "conversation"
     source_id: str = ""
-    created_at: Optional[str] = None
+    created_at: str | None = None
+
 
 class MemoryNodesResponse(BaseModel):
     task_id: str
     nodes: list[MemoryNodeResponse]
     count: int
 
+
 class KnotResponse(BaseModel):
     id: str
     weight: float
     concept_payload: str
     token_count: int
-    created_at: Optional[str] = None
+    created_at: str | None = None
+
 
 class KnotsResponse(BaseModel):
     task_id: str
@@ -1032,20 +1075,22 @@ async def get_research_memory_nodes(task_id: str, request: Request):
                 nodes = memory_node_repo.get_nodes(conv_id)
 
     result_nodes = []
-    for n in (nodes or []):
-        result_nodes.append(MemoryNodeResponse(
-            id=n.get("id", ""),
-            node_type=n.get("node_type", "concept"),
-            intensity=n.get("intensity", 0.0),
-            scar=n.get("scar", ""),
-            intra_active_text=n.get("intra_active_text", ""),
-            surface_fragment=n.get("surface_fragment", ""),
-            diffractive_key=n.get("diffractive_key", ""),
-            agential_symmetry=n.get("agential_symmetry", ""),
-            source_type=n.get("source_type", "conversation"),
-            source_id=n.get("source_id", ""),
-            created_at=str(n.get("created_at", "")),
-        ))
+    for n in nodes or []:
+        result_nodes.append(
+            MemoryNodeResponse(
+                id=n.get("id", ""),
+                node_type=n.get("node_type", "concept"),
+                intensity=n.get("intensity", 0.0),
+                scar=n.get("scar", ""),
+                intra_active_text=n.get("intra_active_text", ""),
+                surface_fragment=n.get("surface_fragment", ""),
+                diffractive_key=n.get("diffractive_key", ""),
+                agential_symmetry=n.get("agential_symmetry", ""),
+                source_type=n.get("source_type", "conversation"),
+                source_id=n.get("source_id", ""),
+                created_at=str(n.get("created_at", "")),
+            )
+        )
     return {"task_id": task_id, "nodes": result_nodes, "count": len(result_nodes)}
 
 
@@ -1067,12 +1112,14 @@ async def get_research_semantic_knots(task_id: str, request: Request):
 
     knots = knot_repo.get_by_conversation(conv_id)
     result_knots = []
-    for k in (knots or []):
-        result_knots.append(KnotResponse(
-            id=k.id,
-            weight=k.weight,
-            concept_payload=k.concept_payload,
-            token_count=k.token_count,
-            created_at=str(k.created_at) if k.created_at else None,
-        ))
+    for k in knots or []:
+        result_knots.append(
+            KnotResponse(
+                id=k.id,
+                weight=k.weight,
+                concept_payload=k.concept_payload,
+                token_count=k.token_count,
+                created_at=str(k.created_at) if k.created_at else None,
+            )
+        )
     return {"task_id": task_id, "knots": result_knots, "count": len(result_knots)}

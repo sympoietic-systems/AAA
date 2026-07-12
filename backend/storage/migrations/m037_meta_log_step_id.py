@@ -17,6 +17,5 @@ def up(conn: sqlite3.Connection) -> None:
             raise
 
 
-
 def down(conn: sqlite3.Connection) -> None:
     pass

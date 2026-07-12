@@ -12,6 +12,4 @@ async def get_memory_nodes(conversation_id: str, request: Request):
     if not repo:
         return MemoryNodeListResponse(nodes=[])
     nodes = repo.get_nodes(conversation_id)
-    return MemoryNodeListResponse(
-        nodes=[MemoryNodeInfo(**n) for n in nodes]
-    )
+    return MemoryNodeListResponse(nodes=[MemoryNodeInfo(**n) for n in nodes])

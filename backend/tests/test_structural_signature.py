@@ -1,14 +1,16 @@
-import sys
+import contextlib
 import os
+import sys
+
 import numpy as np
 
 # Ensure parent directory is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repository import MessageRepository, PerceptionSedimentRepository
-from backend.modules.structural_engine import LexiconScorer, TopologyScorer, CompositeStructuralScorer
 from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
+from backend.modules.structural_engine import CompositeStructuralScorer, LexiconScorer, TopologyScorer
+from backend.storage.database import get_db_path, init_db
+from backend.storage.repository import MessageRepository, PerceptionSedimentRepository
 
 
 def test_scorers():
@@ -50,6 +52,7 @@ def test_repository_signatures():
     conn = init_db(db_path)
 
     from backend.storage.repository import ConversationRepository
+
     conv_repo = ConversationRepository(db_path)
     conv_repo.create("conv_1", "Conversation 1")
     conv_repo.create("conv_2", "Conversation 2")
@@ -60,7 +63,7 @@ def test_repository_signatures():
     # Insert message with signature
     emb = np.random.randn(384).astype(np.float32)
     sig = np.random.uniform(0, 1, 16).astype(np.float32)
-    
+
     msg = msg_repo.insert(
         speaker="human",
         content="Testing signature storage",
@@ -68,7 +71,7 @@ def test_repository_signatures():
         embedding_model="test-model",
         embedding_dim=384,
         conversation_id="conv_1",
-        structural_signature=sig.tobytes()
+        structural_signature=sig.tobytes(),
     )
 
     # Query message and verify signature
@@ -98,7 +101,7 @@ def test_repository_signatures():
         embedding=emb.tobytes(),
         embedding_model="test-model",
         token_count=10,
-        structural_signature=sig.tobytes()
+        structural_signature=sig.tobytes(),
     )
 
     # Query sediment and verify signature
@@ -123,13 +126,12 @@ async def test_dual_vector_isomorphic_retrieval():
     print("--- Testing Dual-Vector Isomorphic Retrieval Hysteresis ---")
     db_path = str(get_db_path("data/aaa_dual_test.db"))
     if os.path.exists(db_path):
-        try:
+        with contextlib.suppress(Exception):
             os.remove(db_path)
-        except Exception:
-            pass
     conn = init_db(db_path)
 
     from backend.storage.repository import ConversationRepository
+
     conv_repo = ConversationRepository(db_path)
     conv_repo.create("conv_1", "Conversation 1")
     conv_repo.create("conv_2", "Conversation 2")
@@ -141,7 +143,7 @@ async def test_dual_vector_isomorphic_retrieval():
     # The target has semantic similarity low (orthogonal) to query, but identical structural signature!
     query_emb = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
     candidate_emb = np.array([0.0, 1.0, 0.0, 0.0], dtype=np.float32)  # Orthogonal: cosine similarity = 0.0
-    
+
     # Matching structural signatures
     matching_sig = np.array([1.0] * 16, dtype=np.float32)
 
@@ -152,7 +154,7 @@ async def test_dual_vector_isomorphic_retrieval():
         embedding_model="test-model",
         embedding_dim=4,
         conversation_id="conv_2",
-        structural_signature=matching_sig.tobytes()
+        structural_signature=matching_sig.tobytes(),
     )
 
     module = DiffractiveRetrievalModule(
@@ -188,10 +190,10 @@ async def test_dual_vector_isomorphic_retrieval():
 
     # Force the module state machine to stay stagnant for selection
     module._states["conv_1"] = "STAGNANT"
-    
+
     # Force dynamic_max to be > 0
     module._max_diffractive_count = 3
-    
+
     # We execute process
     res_stagnant = await module.process(payload_stagnant)
     # Let's inspect the diffractive_messages or details
@@ -200,39 +202,39 @@ async def test_dual_vector_isomorphic_retrieval():
 
     conn.close()
     if os.path.exists(db_path):
-        try:
+        with contextlib.suppress(Exception):
             os.remove(db_path)
-        except Exception:
-            pass
 
 
 def test_robust_parser():
     print("--- Testing Robust Parser for LLM Scorer ---")
     from backend.modules.structural_engine import parse_scorer_response
-    
+
     # 1. Perfect JSON
     content_perfect = '{\n  "scores": [0.1, 0.2, 0.3],\n  "justification": "this is simple"\n}'
     scores, just = parse_scorer_response(content_perfect)
     assert scores == [0.1, 0.2, 0.3]
     assert just == "this is simple"
-    
+
     # 2. Trailing comma in list
     content_comma = '{\n  "scores": [0.1, 0.2, 0.3,],\n  "justification": "trailing comma"\n}'
     scores, just = parse_scorer_response(content_comma)
     assert scores == [0.1, 0.2, 0.3]
     assert just == "trailing comma"
-    
+
     # 3. With <think> tags
-    content_think = '<think>\nLet us analyze...\n</think>\n{\n  "scores": [0.5, 0.6],\n  "justification": "reasoning"\n}'
+    content_think = (
+        '<think>\nLet us analyze...\n</think>\n{\n  "scores": [0.5, 0.6],\n  "justification": "reasoning"\n}'
+    )
     scores, just = parse_scorer_response(content_think)
     assert scores == [0.5, 0.6]
     assert just == "reasoning"
-    
+
     # 4. Truncated scores array (missing end bracket and brace)
     content_trunc_array = '{\n  "scores": [0.1, 0.2, 0.05, 0.4'
     scores, just = parse_scorer_response(content_trunc_array)
     assert scores == [0.1, 0.2, 0.05, 0.4]
-    
+
     # 5. Truncated justification
     content_trunc_just = '{\n  "scores": [0.1, 0.2],\n  "justification": "this was cut off'
     scores, just = parse_scorer_response(content_trunc_just)
@@ -247,6 +249,6 @@ if __name__ == "__main__":
     test_scorers()
     test_repository_signatures()
     import asyncio
+
     asyncio.run(test_dual_vector_isomorphic_retrieval())
     print("\nALL VERIFICATION TESTS COMPLETED SUCCESSFULLY!")
-

@@ -1,11 +1,18 @@
-from typing import Optional
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
 
 
 class ConsolidationCheckpointRepository(BaseRepository):
     @with_connection
-    def save(self, conversation_id: str, message_count: int, summary: str, model: str = "", human_summary: str = "", message_id: Optional[int] = None) -> int:
+    def save(
+        self,
+        conversation_id: str,
+        message_count: int,
+        summary: str,
+        model: str = "",
+        human_summary: str = "",
+        message_id: int | None = None,
+    ) -> int:
         conn = self._conn()
         conn.execute(
             """INSERT INTO consolidation_checkpoints (conversation_id, message_count, summary, model, human_summary, message_id)
@@ -13,9 +20,7 @@ class ConsolidationCheckpointRepository(BaseRepository):
             (conversation_id, message_count, summary, model, human_summary, message_id),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT id FROM consolidation_checkpoints WHERE id = last_insert_rowid()"
-        ).fetchone()
+        row = conn.execute("SELECT id FROM consolidation_checkpoints WHERE id = last_insert_rowid()").fetchone()
         return row["id"] if row else 0
 
     @with_connection
@@ -66,9 +71,7 @@ class ConsolidationCheckpointRepository(BaseRepository):
         return _row_to_checkpoint(row)
 
     @with_connection
-    def get_sibling_checkpoints(
-        self, conversation_id: str, exclude_message_ids: list[int]
-    ) -> list[dict]:
+    def get_sibling_checkpoints(self, conversation_id: str, exclude_message_ids: list[int]) -> list[dict]:
         """R3: Get checkpoints from sibling branches (same conversation, different paths).
 
         Returns checkpoints whose message_id is NOT in the current ancestor path,
@@ -103,7 +106,7 @@ def _row_to_checkpoint(row) -> dict:
         "message_count": row["message_count"],
         "summary": row["summary"],
         "model": row["model"],
-        "human_summary": row["human_summary"] if "human_summary" in row.keys() else "",
-        "message_id": row["message_id"] if "message_id" in row.keys() else None,
+        "human_summary": row["human_summary"] if "human_summary" in row else "",
+        "message_id": row["message_id"] if "message_id" in row else None,
         "created_at": row["created_at"],
     }

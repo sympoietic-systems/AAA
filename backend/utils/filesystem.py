@@ -1,6 +1,5 @@
 import os
-from datetime import datetime, timezone
-
+from datetime import UTC, datetime
 
 UPLOAD_DIR = os.path.join("backend", "data", "uploads")
 
@@ -21,9 +20,9 @@ def ensure_upload_dir(conversation_id: str) -> str:
 
 def to_utc(ts) -> datetime:
     if ts is None:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
     if isinstance(ts, str):
         ts = datetime.fromisoformat(ts)
     if ts.tzinfo is None:
-        return ts.replace(tzinfo=timezone.utc)
+        return ts.replace(tzinfo=UTC)
     return ts

@@ -1,8 +1,9 @@
+import contextlib
 import sqlite3
 
 
 def up(conn):
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS skill_nodes (
                 id TEXT PRIMARY KEY,
@@ -25,10 +26,8 @@ def up(conn):
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
-    except sqlite3.OperationalError:
-        pass
 
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS skill_events (
                 id TEXT PRIMARY KEY,
@@ -41,5 +40,3 @@ def up(conn):
                 FOREIGN KEY(skill_id) REFERENCES skill_nodes(id) ON DELETE CASCADE
             )
         """)
-    except sqlite3.OperationalError:
-        pass

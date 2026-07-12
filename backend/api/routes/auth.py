@@ -1,6 +1,6 @@
 import os
+
 from fastapi import APIRouter, Header, Request
-from typing import Optional
 
 router = APIRouter()
 
@@ -10,7 +10,7 @@ _AAA_PASSWORD = os.environ.get("AAA_PASSWORD", "").strip()
 @router.get("/auth/verify")
 async def verify_auth(
     request: Request,
-    authorization: Optional[str] = Header(None),
+    authorization: str | None = Header(None),
 ):
     auth_enabled = bool(_AAA_PASSWORD)
 
@@ -18,7 +18,7 @@ async def verify_auth(
         return {"status": "authenticated", "auth_enabled": False}
 
     # Check if a valid password was provided
-    token: Optional[str] = None
+    token: str | None = None
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:]
 

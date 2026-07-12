@@ -1,7 +1,5 @@
-import json
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.models import CommitmentEvent, CommitmentNode
@@ -15,11 +13,9 @@ class CommitmentRepository(BaseRepository):
     # ─── Node CRUD ───
 
     @with_connection
-    def get_by_id(self, commitment_id: str) -> Optional[CommitmentNode]:
+    def get_by_id(self, commitment_id: str) -> CommitmentNode | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM commitment_nodes WHERE id = ?", (commitment_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM commitment_nodes WHERE id = ?", (commitment_id,)).fetchone()
         if row is None:
             return None
         return _row_to_commitment_node(row)
@@ -80,24 +76,32 @@ class CommitmentRepository(BaseRepository):
         confidence: float = 0.7,
         ontological_mass: float = 1.0,
         vector_16d: str = "[]",
-        nucleation_rationale: Optional[str] = None,
+        nucleation_rationale: str | None = None,
     ) -> CommitmentNode:
         conn = self._conn()
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         conn.execute(
             """INSERT INTO commitment_nodes
                (id, agent_id, label, statement, lifecycle_stage, confidence,
                 ontological_mass, vector_16d, nucleation_rationale,
                 created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (id, agent_id.lower(), label, statement, lifecycle_stage, confidence,
-             ontological_mass, vector_16d, nucleation_rationale,
-             now, now),
+            (
+                id,
+                agent_id.lower(),
+                label,
+                statement,
+                lifecycle_stage,
+                confidence,
+                ontological_mass,
+                vector_16d,
+                nucleation_rationale,
+                now,
+                now,
+            ),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM commitment_nodes WHERE id = ?", (id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM commitment_nodes WHERE id = ?", (id,)).fetchone()
         return _row_to_commitment_node(row)
 
     @with_connection
@@ -110,33 +114,48 @@ class CommitmentRepository(BaseRepository):
                    nucleation_rationale = ?, collapse_rationale = ?,
                    updated_at = CURRENT_TIMESTAMP
                WHERE id = ?""",
-            (node.label, node.statement, node.lifecycle_stage, node.confidence,
-             node.ontological_mass, node.vector_16d,
-             node.nucleation_rationale, node.collapse_rationale,
-             node.id),
+            (
+                node.label,
+                node.statement,
+                node.lifecycle_stage,
+                node.confidence,
+                node.ontological_mass,
+                node.vector_16d,
+                node.nucleation_rationale,
+                node.collapse_rationale,
+                node.id,
+            ),
         )
         conn.commit()
 
     @with_connection
     def upsert(self, node: CommitmentNode) -> None:
         conn = self._conn()
-        existing = conn.execute(
-            "SELECT id FROM commitment_nodes WHERE id = ?", (node.id,)
-        ).fetchone()
+        existing = conn.execute("SELECT id FROM commitment_nodes WHERE id = ?", (node.id,)).fetchone()
         if existing:
             self.update(node)
         else:
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(UTC).isoformat()
             conn.execute(
                 """INSERT INTO commitment_nodes
                    (id, agent_id, label, statement, lifecycle_stage, confidence,
                     ontological_mass, vector_16d, nucleation_rationale,
                     collapse_rationale, created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (node.id, node.agent_id, node.label, node.statement, node.lifecycle_stage,
-                 node.confidence, node.ontological_mass, node.vector_16d,
-                 node.nucleation_rationale, node.collapse_rationale,
-                 now, now),
+                (
+                    node.id,
+                    node.agent_id,
+                    node.label,
+                    node.statement,
+                    node.lifecycle_stage,
+                    node.confidence,
+                    node.ontological_mass,
+                    node.vector_16d,
+                    node.nucleation_rationale,
+                    node.collapse_rationale,
+                    now,
+                    now,
+                ),
             )
             conn.commit()
 
@@ -147,11 +166,11 @@ class CommitmentRepository(BaseRepository):
         self,
         commitment_id: str,
         event_type: str,
-        rationale: Optional[str] = None,
-        mass_before: Optional[float] = None,
-        mass_after: Optional[float] = None,
-        confidence_before: Optional[float] = None,
-        confidence_after: Optional[float] = None,
+        rationale: str | None = None,
+        mass_before: float | None = None,
+        mass_after: float | None = None,
+        confidence_before: float | None = None,
+        confidence_after: float | None = None,
     ) -> CommitmentEvent:
         conn = self._conn()
         event_id = str(uuid.uuid4())
@@ -160,13 +179,19 @@ class CommitmentRepository(BaseRepository):
                (id, commitment_id, event_type, rationale,
                 mass_before, mass_after, confidence_before, confidence_after)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (event_id, commitment_id, event_type, rationale,
-             mass_before, mass_after, confidence_before, confidence_after),
+            (
+                event_id,
+                commitment_id,
+                event_type,
+                rationale,
+                mass_before,
+                mass_after,
+                confidence_before,
+                confidence_after,
+            ),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM commitment_events WHERE id = ?", (event_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM commitment_events WHERE id = ?", (event_id,)).fetchone()
         return _row_to_commitment_event(row)
 
     @with_connection

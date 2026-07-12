@@ -8,62 +8,41 @@ See: docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8
 """
 
 import asyncio
+import contextlib
 import json
 import logging
-import re
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-import numpy as np
-
-from backend.services.research.search_tool import web_search
-from backend.utils.persona_loader import get_identity_yaml_path, load_identity
-from backend.utils.prompt_builder import (
-    compute_structural_signature,
-    build_attractor_window,
-    match_on_demand_skills,
-    split_skills,
-    format_beliefs_block,
-    format_skills_always_active,
-    format_skills_matched,
-    format_commitments_block,
-    format_identity_block,
-    format_voice_block,
-)
-from backend.utils.prompt_loader import get_prompts_dict
-
-from backend.utils.research_logger import log_research_meta, now_utc_str
-from backend.utils.concurrency import ensure_semaphore
-from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.modules.structural_engine import LexiconScorer
-from backend.services.research.task_state import (
-    TaskStateManager,
-    StepEnvelope,
-    StepOutput,
-    PlanPayload,
-    SearchPayload,
-    ParsePayload,
-    DigestPayload,
-    ConsolidatePayload,
-    ReflectionPayload,
-    EvaluatePayload,
-    SynthesizePayload,
-    DocDigestPayload,
-)
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.steps.base import ResearchStepRegistry
-import backend.services.research.steps
-from backend.services.research.steps.source_utils import classify_source_status, apply_unified_references
+from backend.services.research.steps.source_utils import classify_source_status
+from backend.services.research.task_state import (
+    ConsolidatePayload,
+    DigestPayload,
+    DocDigestPayload,
+    EvaluatePayload,
+    ParsePayload,
+    PlanPayload,
+    ReflectionPayload,
+    SearchPayload,
+    StepEnvelope,
+    StepOutput,
+    SynthesizePayload,
+    TaskStateManager,
+)
+from backend.utils.concurrency import ensure_semaphore
+from backend.utils.research_logger import log_research_meta, now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
 # ── Declarative Routing Graph ───────────────────────────────────────
 
+
 class PipelineTransition:
-    def __init__(self, target_phase: str, condition: Optional[Any] = None):
+    def __init__(self, target_phase: str, condition: Any | None = None):
         self.target_phase = target_phase
         self.condition = condition or (lambda out, env: True)
 
@@ -72,50 +51,39 @@ PIPELINE_GRAPH = {
     "planning": [
         PipelineTransition(
             target_phase="document_digestion",
-            condition=lambda out, env: env.inject_file_id is not None and not env.document_digested
+            condition=lambda out, env: env.inject_file_id is not None and not env.document_digested,
         ),
-        PipelineTransition(target_phase="searching")
+        PipelineTransition(target_phase="searching"),
     ],
-    "document_digestion": [
-        PipelineTransition(target_phase="searching")
-    ],
+    "document_digestion": [PipelineTransition(target_phase="searching")],
     "searching": [
         PipelineTransition(
-            target_phase="parsing",
-            condition=lambda out, env: out.signal_flags.get("has_results", False)
+            target_phase="parsing", condition=lambda out, env: out.signal_flags.get("has_results", False)
         ),
-        PipelineTransition(target_phase="consolidating")
+        PipelineTransition(target_phase="consolidating"),
     ],
     "parsing": [
         PipelineTransition(
-            target_phase="digesting",
-            condition=lambda out, env: out.signal_flags.get("has_parsed_content", False)
+            target_phase="digesting", condition=lambda out, env: out.signal_flags.get("has_parsed_content", False)
         ),
-        PipelineTransition(target_phase="consolidating")
+        PipelineTransition(target_phase="consolidating"),
     ],
-    "digesting": [
-        PipelineTransition(target_phase="consolidating")
-    ],
-    "consolidating": [
-        PipelineTransition(target_phase="reflection")
-    ],
-    "reflection": [
-        PipelineTransition(target_phase="evaluating")
-    ],
+    "digesting": [PipelineTransition(target_phase="consolidating")],
+    "consolidating": [PipelineTransition(target_phase="reflection")],
+    "reflection": [PipelineTransition(target_phase="evaluating")],
     "evaluating": [
         PipelineTransition(
-            target_phase="synthesizing",
-            condition=lambda out, env: out.signal_flags.get("should_stop", False)
+            target_phase="synthesizing", condition=lambda out, env: out.signal_flags.get("should_stop", False)
         ),
         PipelineTransition(
             target_phase="planning",
-            condition=lambda out, env: out.signal_flags.get("GLITCH_FIDELITY_LOW", False) or out.signal_flags.get("BIAS_DETECTED", False)
+            condition=lambda out, env: (
+                out.signal_flags.get("GLITCH_FIDELITY_LOW", False) or out.signal_flags.get("BIAS_DETECTED", False)
+            ),
         ),
-        PipelineTransition(target_phase="searching")
+        PipelineTransition(target_phase="searching"),
     ],
-    "synthesizing": [
-        PipelineTransition(target_phase="complete")
-    ]
+    "synthesizing": [PipelineTransition(target_phase="complete")],
 }
 
 PHASE_ORDER = [
@@ -166,7 +134,7 @@ class SomaticResearchOrchestrator:
 
     def __init__(self, app_state: Any):
         self._state = app_state
-        self._semaphore: Optional[asyncio.Semaphore] = None
+        self._semaphore: asyncio.Semaphore | None = None
         self._lexicon = LexiconScorer()
         self._state_mgr = TaskStateManager(
             task_repo=app_state.research_task_repo,
@@ -252,50 +220,52 @@ class SomaticResearchOrchestrator:
         return f"task={task_id[:8]} phase={phase}"
 
     def _get_semaphore(self) -> asyncio.Semaphore:
-        return ensure_semaphore(self, '_semaphore', self.max_concurrent)
+        return ensure_semaphore(self, "_semaphore", self.max_concurrent)
 
     @staticmethod
     def _format_reflection_markdown(reflection: dict, depth: int = 0, include_cycle: bool = False) -> str:
         if not reflection or not isinstance(reflection, dict):
             return "(none)"
-        
+
         # Extract nested content from llm_response if present
         if "llm_response" in reflection and isinstance(reflection["llm_response"], dict):
             llm_resp = reflection["llm_response"]
             content = llm_resp.get("content") or llm_resp.get("json_data")
             if isinstance(content, str):
-                try:
+                with contextlib.suppress(Exception):
                     reflection = json.loads(content)
-                except Exception:
-                    pass
             elif isinstance(content, dict):
                 reflection = content
 
         parts = []
-        
+
         # Methodological notes / core reflection
         ref = reflection.get("reflection_notes") or reflection.get("reflection")
         if ref:
-            prefix = f"Methodological Reflection (Cycle {depth}):\n" if include_cycle else "Methodological Reflection:\n"
+            prefix = (
+                f"Methodological Reflection (Cycle {depth}):\n" if include_cycle else "Methodological Reflection:\n"
+            )
             parts.append(f"{prefix}{ref}")
-            
+
         # Key insights / findings
         insights = reflection.get("key_insights", [])
         if insights:
-            prefix = f"Stabilized Key Insights (Cycle {depth} Anchor):\n" if include_cycle else "Stabilized Key Insights:\n"
+            prefix = (
+                f"Stabilized Key Insights (Cycle {depth} Anchor):\n" if include_cycle else "Stabilized Key Insights:\n"
+            )
             parts.append(prefix + "\n".join(f"- {ins}" for ins in insights))
-            
+
         # Biases
         biases = reflection.get("detected_biases", [])
         if biases:
             parts.append("Detected Biases:\n" + "\n".join(f"- {b}" for b in biases))
-            
+
         # Gaps
         gaps = reflection.get("knowledge_gaps", []) or reflection.get("remaining_gaps", [])
         if gaps:
             prefix = f"Remaining Gaps (Cycle {depth}):\n" if include_cycle else "Remaining Gaps:\n"
             parts.append(prefix + "\n".join(f"- {gap}" for gap in gaps))
-            
+
         # Metrics
         metrics = []
         for metric_name in ("glitch_fidelity", "contradiction_density", "source_entropy", "revised_confidence"):
@@ -307,7 +277,7 @@ class SomaticResearchOrchestrator:
                     metrics.append(f"- {metric_name.replace('_', ' ').title()}: {val}")
         if metrics:
             parts.append("Cognitive Metrics:\n" + "\n".join(metrics))
-            
+
         if not parts:
             return "(none)"
         return "\n\n".join(parts)
@@ -339,13 +309,15 @@ class SomaticResearchOrchestrator:
     def _save_cache(self, task_id: str, cache: dict) -> None:
         self._cache.save_cache(task_id, cache)
 
-    def _get_cached_phase(self, task_id: str, phase: str) -> Optional[dict]:
+    def _get_cached_phase(self, task_id: str, phase: str) -> dict | None:
         return self._cache.get_cached_phase(task_id, phase)
 
     def reinitialize(self, task_id: str) -> None:
         self._cache.reinitialize(task_id)
 
-    async def _build_orchestrator_persona(self, objective: str = "", context_key: str = "research_orchestration") -> str:
+    async def _build_orchestrator_persona(
+        self, objective: str = "", context_key: str = "research_orchestration"
+    ) -> str:
         """Build Symbia's persona context for orchestrator-level tasks (plan, reflect, synthesize).
 
         Uses input-resonant selection: the research objective drives belief attractor window
@@ -353,15 +325,20 @@ class SomaticResearchOrchestrator:
         The same 16D structural signature feeds both belief resonance and skill matching.
         """
         from backend.services.research.context_builder import ResearchContextBuilder
+
         builder = ResearchContextBuilder(self._state)
         return await builder.build_orchestration_context(objective, context_key)
 
     # ── Meta Logging ────────────────────────────────────────────────
 
-    def _log_meta(self, task_id: str, event_type: str, data: dict, branch_id: Optional[str] = None, step_id: Optional[str] = None) -> None:
+    def _log_meta(
+        self, task_id: str, event_type: str, data: dict, branch_id: str | None = None, step_id: str | None = None
+    ) -> None:
         log_research_meta(self._meta_log_repo, task_id, event_type, data, branch_id, step_id)
 
-    def _log_llm_response(self, task_id: str, event_type: str, resp: dict, extra: Optional[dict] = None, step_id: Optional[str] = None) -> None:
+    def _log_llm_response(
+        self, task_id: str, event_type: str, resp: dict, extra: dict | None = None, step_id: str | None = None
+    ) -> None:
         """Log an LLM response safely by truncating large fields within the dictionary,
         ensuring the serialized JSON is always valid. Writes to both raw_response and raw.
         """
@@ -371,12 +348,12 @@ class SomaticResearchOrchestrator:
                 log_resp["thinking"] = log_resp["thinking"][:3000]
             if "content" in log_resp and isinstance(log_resp["content"], str):
                 log_resp["content"] = log_resp["content"][:12000]
-            
+
             event_data = extra.copy() if extra else {}
             serialized = json.dumps(log_resp, default=str, ensure_ascii=False)
             event_data["raw_response"] = serialized
             event_data["raw"] = serialized
-            
+
             self._log_meta(task_id, event_type, event_data, step_id=step_id)
         except Exception:
             logger.warning("Failed to log LLM response for task %s event %s", task_id, event_type, exc_info=True)
@@ -393,7 +370,7 @@ class SomaticResearchOrchestrator:
         # Create a default/dummy branch
         task = self.task_repo.get(task_id)
         conv_id = (task or {}).get("conversation_id") or "default_conv"
-        
+
         # Ensure the conversation exists to satisfy the branch FK constraint
         try:
             conn = self.branch_repo._conn()
@@ -401,35 +378,42 @@ class SomaticResearchOrchestrator:
             if not exists:
                 conn.execute(
                     "INSERT OR IGNORE INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
-                    (conv_id, "System Generated Conversation", "system")
+                    (conv_id, "System Generated Conversation", "system"),
                 )
                 conn.commit()
         except Exception as e:
             logger.warning("Failed to verify/create dummy conversation %s: %s", conv_id, e)
 
         branch_id = str(uuid.uuid4())
-        self.branch_repo.create({
-            "id": branch_id,
-            "task_id": task_id,
-            "conversation_id": conv_id,
-            "parent_branch_id": None,
-            "query": (task or {}).get("objective", "default"),
-            "goal": "Autonomous research execution",
-            "depth": 0,
-            "breadth": 0,
-            "status": "crystallized",
-        })
+        self.branch_repo.create(
+            {
+                "id": branch_id,
+                "task_id": task_id,
+                "conversation_id": conv_id,
+                "parent_branch_id": None,
+                "query": (task or {}).get("objective", "default"),
+                "goal": "Autonomous research execution",
+                "depth": 0,
+                "breadth": 0,
+                "status": "crystallized",
+            }
+        )
         return branch_id
 
     # ── In-memory task state (for step-by-step execution) ──────────
 
     def init_task(self, task_id: str) -> dict:
         state = self._state_mgr.init_task(task_id)
-        logger.info("INIT_TASK called: task=%s step_number=%s current_depth=%s phase=%s",
-                     task_id[:8], state.get("step_number"), state.get("current_depth"), state.get("phase"))
+        logger.info(
+            "INIT_TASK called: task=%s step_number=%s current_depth=%s phase=%s",
+            task_id[:8],
+            state.get("step_number"),
+            state.get("current_depth"),
+            state.get("phase"),
+        )
         return state
 
-    def resume_task(self, task_id: str) -> Optional[dict]:
+    def resume_task(self, task_id: str) -> dict | None:
         return self._state_mgr.resume_task(task_id)
 
     def set_phase(self, task_id: str, phase: str) -> None:
@@ -485,15 +469,16 @@ class SomaticResearchOrchestrator:
     def _persist_state(self, task_id: str) -> None:
         self._state_mgr._persist_state(task_id)
 
-    def _load_state(self, task_id: str) -> Optional[dict]:
+    def _load_state(self, task_id: str) -> dict | None:
         return self._state_mgr._load_state(task_id)
 
     # ── Step record helpers ─────────────────────────────────────────
 
-    def _create_or_update_step(self, s: dict, task_id: str, step_type: str,
-                                query_group: int = 0, query_text: str = "") -> str:
+    def _create_or_update_step(
+        self, s: dict, task_id: str, step_type: str, query_group: int = 0, query_text: str = ""
+    ) -> str:
         """Create a new step or update an existing one in-place for reruns.
-        
+
         Uses the composite key (phase_group, query_group, sub_sequence) from
         orchestrator state — no internal increment. step_number is set to
         phase_group for backward compatibility with existing queries.
@@ -503,21 +488,30 @@ class SomaticResearchOrchestrator:
             existing_after_cleanup = self.step_repo.get(rerun_id) if self.step_repo else None
             if existing_after_cleanup:
                 step_data = json.dumps({"depth": s.get("current_depth", 0)})
-                self.step_repo.update(rerun_id, status="running",
-                    started_at=now_utc_str(), query_text=query_text, step_data=step_data)
+                self.step_repo.update(
+                    rerun_id, status="running", started_at=now_utc_str(), query_text=query_text, step_data=step_data
+                )
                 return rerun_id
         pg = s.get("phase_group", 0)
         ss = s.get("sub_sequence", 0)
         step_id = str(uuid.uuid4())
         step_data = json.dumps({"depth": s.get("current_depth", 0)})
-        self.step_repo.create({
-            "id": step_id, "task_id": task_id, "plan_id": s["plan_id"],
-            "step_number": pg, "step_type": step_type,
-            "step_data": step_data,
-            "status": "running", "started_at": now_utc_str(),
-            "query_group": query_group, "query_text": query_text,
-            "phase_group": pg, "sub_sequence": ss,
-        })
+        self.step_repo.create(
+            {
+                "id": step_id,
+                "task_id": task_id,
+                "plan_id": s["plan_id"],
+                "step_number": pg,
+                "step_type": step_type,
+                "step_data": step_data,
+                "status": "running",
+                "started_at": now_utc_str(),
+                "query_group": query_group,
+                "query_text": query_text,
+                "phase_group": pg,
+                "sub_sequence": ss,
+            }
+        )
         return step_id
 
     def _save_llm_response_to_step_data(self, step_id: str, resp: dict) -> None:
@@ -528,19 +522,15 @@ class SomaticResearchOrchestrator:
             existing = self.step_repo.get(step_id)
             existing_data = {}
             if existing and existing.get("step_data"):
-                try:
+                with contextlib.suppress(Exception):
                     existing_data = json.loads(existing["step_data"])
-                except Exception:
-                    pass
             safe_resp = resp.copy()
             if "thinking" in safe_resp and isinstance(safe_resp["thinking"], str):
                 safe_resp["thinking"] = safe_resp["thinking"][:4000]
             if "content" in safe_resp and isinstance(safe_resp["content"], str):
                 safe_resp["content"] = safe_resp["content"][:14000]
             existing_data["llm_response"] = safe_resp
-            self.step_repo.update(step_id, step_data=json.dumps(
-                existing_data, default=str, ensure_ascii=False
-            ))
+            self.step_repo.update(step_id, step_data=json.dumps(existing_data, default=str, ensure_ascii=False))
         except Exception:
             logger.warning("Failed to save LLM response to step %s step_data", step_id, exc_info=True)
 
@@ -579,15 +569,14 @@ class SomaticResearchOrchestrator:
         # Build step-specific payload
         if phase == "planning":
             payload = PlanPayload(
-                previous_context=task_state.get("previous_context"),
-                inject_file_id=task_state.get("inject_file_id")
+                previous_context=task_state.get("previous_context"), inject_file_id=task_state.get("inject_file_id")
             )
         elif phase == "document_digestion":
             payload = DocDigestPayload(
                 inject_file_id=task_state.get("inject_file_id") or "",
                 inject_conversation_id=task_state.get("inject_conversation_id"),
                 document_mode=task_state.get("document_mode", "chunks"),
-                document_chunk_limit=task_state.get("document_chunk_limit", 5)
+                document_chunk_limit=task_state.get("document_chunk_limit", 5),
             )
         elif phase == "searching":
             plan_queries = []
@@ -595,7 +584,11 @@ class SomaticResearchOrchestrator:
                 plan_queries = task_state["plan"].get("search_queries", [task_state["objective"]])
 
             last_refl = task_state.get("last_reflection") or {}
-            queries = last_refl.get("next_queries") if (task_state.get("current_depth", 0) > 0 and last_refl.get("next_queries")) else plan_queries
+            queries = (
+                last_refl.get("next_queries")
+                if (task_state.get("current_depth", 0) > 0 and last_refl.get("next_queries"))
+                else plan_queries
+            )
             direct_urls = last_refl.get("next_direct_urls", []) if task_state.get("current_depth", 0) > 0 else []
 
             payload = SearchPayload(queries=queries, direct_urls=direct_urls)
@@ -618,13 +611,13 @@ class SomaticResearchOrchestrator:
                 signal_flags=task_state.get("signal_flags", []),
                 refined_queries=task_state.get("refined_queries", []),
                 revised_confidence=task_state.get("revised_confidence", 0.5),
-                monologue_trace=task_state.get("monologue_trace", [])
+                monologue_trace=task_state.get("monologue_trace", []),
             )
         elif phase == "evaluating":
             payload = EvaluatePayload(
                 stagnation_counter=task_state.get("stagnation_counter", 0),
                 sources_analyzed=task_state.get("sources_analyzed", 0),
-                reflection=task_state.get("last_reflection") or {}
+                reflection=task_state.get("last_reflection") or {},
             )
         elif phase == "synthesizing":
             payload = SynthesizePayload(sources_analyzed=task_state.get("sources_analyzed", 0))
@@ -724,8 +717,11 @@ class SomaticResearchOrchestrator:
 
         # Only metabolize phases that produce meaningful conceptual content
         _metabolism_phases = {
-            "document_digestion", "digesting", "consolidating",
-            "reflection", "synthesizing",
+            "document_digestion",
+            "digesting",
+            "consolidating",
+            "reflection",
+            "synthesizing",
         }
         if phase not in _metabolism_phases:
             return
@@ -742,11 +738,15 @@ class SomaticResearchOrchestrator:
                 structural_signature=sig_vec,
                 perturbation=1.0,
             )
-            logger.info("Research metabolism: phase=%s task=%s findings=%d chars=%d",
-                        phase, task_id[:8], len(findings), len(findings_text))
+            logger.info(
+                "Research metabolism: phase=%s task=%s findings=%d chars=%d",
+                phase,
+                task_id[:8],
+                len(findings),
+                len(findings_text),
+            )
         except Exception as e:
-            logger.error("Research metabolism failed for phase=%s task=%s: %s",
-                        phase, task_id[:8], e)
+            logger.error("Research metabolism failed for phase=%s task=%s: %s", phase, task_id[:8], e)
 
     async def execute_step(self, task_id: str) -> dict:
         """Execute exactly ONE phase of the research pipeline.
@@ -760,8 +760,9 @@ class SomaticResearchOrchestrator:
         async with self._state_mgr.locks[task_id]:
             s = self._get_state(task_id)
             phase = s["phase"]
-            logger.info("execute_step: phase=%s, depth=%s, phase_group=%s",
-                        phase, s.get('current_depth'), s.get('phase_group'))
+            logger.info(
+                "execute_step: phase=%s, depth=%s, phase_group=%s", phase, s.get("current_depth"), s.get("phase_group")
+            )
 
             # ── Block tracking: advance phase_group when entering a new block ──
             block = PHASE_BLOCK.get(phase, phase)
@@ -800,8 +801,14 @@ class SomaticResearchOrchestrator:
                             except Exception:
                                 pass
                     if deleted:
-                        logger.info("Rerun: deleted %d downstream steps from (pg=%d,qg=%d,ss=%d) — %s",
-                                     deleted, r_pg, r_qg, r_ss, self._log_context(task_id, "rerun"))
+                        logger.info(
+                            "Rerun: deleted %d downstream steps from (pg=%d,qg=%d,ss=%d) — %s",
+                            deleted,
+                            r_pg,
+                            r_qg,
+                            r_ss,
+                            self._log_context(task_id, "rerun"),
+                        )
                 # Clear the rerun flag used for doc digestion
                 s["document_digested"] = False
                 s["document_learnings"] = []
@@ -821,12 +828,7 @@ class SomaticResearchOrchestrator:
                         self.task_repo.update(task_id, result_summary=result_summary)
                 except Exception as e:
                     logger.warning("Failed to force-complete stuck task %s: %s", task_id[:8], e)
-                return {
-                    "task_id": task_id,
-                    "phase": phase,
-                    "message": "already complete",
-                    "next_phase": "complete"
-                }
+                return {"task_id": task_id, "phase": phase, "message": "already complete", "next_phase": "complete"}
 
             # 1. Reconstruct clean typed StepEnvelope
             envelope = self.reconstruct_step_input(task_id, s, phase)
@@ -852,16 +854,16 @@ class SomaticResearchOrchestrator:
                 self.apply_step_output(s, phase, output)
 
                 # Metabolize research findings into belief system
-                await self._metabolize_step(
-                    task_id, phase, output.new_findings or []
-                )
+                await self._metabolize_step(task_id, phase, output.new_findings or [])
 
-                result.update({
-                    "status": output.status,
-                    "message": output.message,
-                })
-                if hasattr(output.payload, "result_summary") and getattr(output.payload, "result_summary"):
-                    result["result_summary"] = getattr(output.payload, "result_summary")
+                result.update(
+                    {
+                        "status": output.status,
+                        "message": output.message,
+                    }
+                )
+                if hasattr(output.payload, "result_summary") and output.payload.result_summary:
+                    result["result_summary"] = output.payload.result_summary
 
                 # Determine next phase via Declarative Membrane (PIPELINE_GRAPH)
                 next_phase = "complete"
@@ -874,7 +876,9 @@ class SomaticResearchOrchestrator:
                 if next_phase == "planning":
                     if phase == "evaluating":
                         s["query_index"] = 0
-                        logger.info("Transitioning from evaluating back to planning. current_depth is %d", s["current_depth"])
+                        logger.info(
+                            "Transitioning from evaluating back to planning. current_depth is %d", s["current_depth"]
+                        )
                     try:
                         cache = self._load_cache(task_id)
                         if "planning" in cache:
@@ -886,20 +890,26 @@ class SomaticResearchOrchestrator:
 
                 # Save transition rationale and next phase to step_data JSON
                 if self.step_repo and hasattr(output, "step_ids") and output.step_ids:
-                    rationale = getattr(output, "transition_rationale", None) or f"Transitioning from {phase} to {next_phase}."
+                    rationale = (
+                        getattr(output, "transition_rationale", None) or f"Transitioning from {phase} to {next_phase}."
+                    )
                     for sid in output.step_ids:
                         try:
                             db_step = self.step_repo.get(sid)
                             if db_step:
                                 step_data = {}
                                 if db_step.get("step_data"):
-                                    try:
-                                        step_data = json.loads(db_step["step_data"]) if isinstance(db_step["step_data"], str) else db_step["step_data"]
-                                    except Exception:
-                                        pass
+                                    with contextlib.suppress(Exception):
+                                        step_data = (
+                                            json.loads(db_step["step_data"])
+                                            if isinstance(db_step["step_data"], str)
+                                            else db_step["step_data"]
+                                        )
                                 step_data["transition_rationale"] = rationale
                                 step_data["next_phase"] = next_phase
-                                self.step_repo.update(sid, step_data=json.dumps(step_data, default=str, ensure_ascii=False))
+                                self.step_repo.update(
+                                    sid, step_data=json.dumps(step_data, default=str, ensure_ascii=False)
+                                )
                         except Exception as ex:
                             logger.warning("Failed to update transition rationale for step %s: %s", sid, ex)
 
@@ -912,8 +922,7 @@ class SomaticResearchOrchestrator:
                         all_steps = self.step_repo.get_by_task(task_id) or []
                         for st in all_steps:
                             if st["status"] == "running":
-                                self.step_repo.update(st["id"], status="failed",
-                                    result_summary=f"Step failed: {e}")
+                                self.step_repo.update(st["id"], status="failed", result_summary=f"Step failed: {e}")
                     except Exception:
                         pass
 
@@ -921,13 +930,14 @@ class SomaticResearchOrchestrator:
                 # But preserve the failing phase name so the caller knows which step failed.
                 s["phase"] = "complete"
                 s["_failed_phase"] = phase
-                result.update({
-                    "status": "error",
-                    "message": f"Step '{phase}' failed: {e}",
-                    "failed_phase": phase,
-                })
-                self.task_repo.update(task_id, status="failed",
-                    result_summary=f"Step '{phase}' failed: {e}")
+                result.update(
+                    {
+                        "status": "error",
+                        "message": f"Step '{phase}' failed: {e}",
+                        "failed_phase": phase,
+                    }
+                )
+                self.task_repo.update(task_id, status="failed", result_summary=f"Step '{phase}' failed: {e}")
 
             result["next_phase"] = s["phase"]
             result["accumulated_findings"] = len(s.get("all_findings", []))
@@ -939,11 +949,15 @@ class SomaticResearchOrchestrator:
 
     # ── Sedimentation Crystallization ──────────────────────────────────
 
-    def _push_sedimentation_packet(self, task_id: str, phase: str,
-                                    trigger_thresholds: dict,
-                                    raw_context: str,
-                                    proposed_node_type: str,
-                                    confidence: float = 0.0) -> None:
+    def _push_sedimentation_packet(
+        self,
+        task_id: str,
+        phase: str,
+        trigger_thresholds: dict,
+        raw_context: str,
+        proposed_node_type: str,
+        confidence: float = 0.0,
+    ) -> None:
         """Push a sedimentation packet to the task's persistent queue.
 
         Packets are stored in orchestrator_state and raked asynchronously
@@ -951,6 +965,7 @@ class SomaticResearchOrchestrator:
         See: docs/decisions/ADR-060-research-memory-integration.md
         """
         from backend.utils.research_logger import now_utc_str
+
         s = self._state_mgr.ensure_state(task_id)
         packet = {
             "phase": phase,
@@ -962,8 +977,7 @@ class SomaticResearchOrchestrator:
         }
         s.setdefault("sedimentation_queue", []).append(packet)
         self._persist_state(task_id)
-        logger.info("Sedimentation packet pushed: task=%s phase=%s type=%s",
-                     task_id[:8], phase, proposed_node_type)
+        logger.info("Sedimentation packet pushed: task=%s phase=%s type=%s", task_id[:8], phase, proposed_node_type)
 
     def _pending_sedimentation_packets(self, task_id: str) -> list[dict]:
         """Return all unraked sedimentation packets for a task (non-destructive)."""
@@ -978,7 +992,6 @@ class SomaticResearchOrchestrator:
         self._persist_state(task_id)
         return count
 
-
     async def execute(self, task_id: str) -> dict:
         """Execute a complete research task via the orchestrator pipeline (auto mode)."""
         task = self.task_repo.get(task_id)
@@ -988,13 +1001,19 @@ class SomaticResearchOrchestrator:
         self.init_task(task_id)
         s = self._state_mgr.states[task_id]
 
-        logger.info("Orchestrator (auto) starting — %s: %s", self._log_context(task_id, "auto"), task.get("title", "")[:80])
-        self._log_meta(task_id, "orchestrator_start", {
-            "objective": s["objective"],
-            "max_depth": s["max_depth"],
-            "budget": s["budget"],
-            "mode": "auto",
-        })
+        logger.info(
+            "Orchestrator (auto) starting — %s: %s", self._log_context(task_id, "auto"), task.get("title", "")[:80]
+        )
+        self._log_meta(
+            task_id,
+            "orchestrator_start",
+            {
+                "objective": s["objective"],
+                "max_depth": s["max_depth"],
+                "budget": s["budget"],
+                "mode": "auto",
+            },
+        )
 
         max_iterations = max(s.get("max_depth", 3) * 15, 200)
         iteration_count = 0
@@ -1003,10 +1022,16 @@ class SomaticResearchOrchestrator:
             if iteration_count > max_iterations:
                 reason = f"iteration limit exceeded ({iteration_count}/{max_iterations}) — phase stuck at: {s['phase']}"
                 logger.error("Orchestrator circuit breaker: %s", reason)
-                self._log_meta(task_id, "orchestrator_circuit_breaker", {
-                    "iteration_count": iteration_count, "max_iterations": max_iterations,
-                    "stuck_phase": s["phase"], "depth": s.get("current_depth"),
-                })
+                self._log_meta(
+                    task_id,
+                    "orchestrator_circuit_breaker",
+                    {
+                        "iteration_count": iteration_count,
+                        "max_iterations": max_iterations,
+                        "stuck_phase": s["phase"],
+                        "depth": s.get("current_depth"),
+                    },
+                )
                 self.task_repo.transition_status(task_id, "failed")
                 self.task_repo.update(task_id, result_summary=f"FAILED: {reason}")
                 self._state_mgr.states.pop(task_id, None)
@@ -1033,4 +1058,3 @@ class SomaticResearchOrchestrator:
             "lateral_flights": 0,
             "result_summary": result_summary,
         }
-

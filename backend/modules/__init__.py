@@ -1,1 +1,1 @@
-from backend.modules.base import ProcessingModule, ModuleResult
+from backend.modules.base import ModuleResult, ProcessingModule  # noqa: F401

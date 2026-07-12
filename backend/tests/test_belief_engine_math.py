@@ -11,10 +11,9 @@ from backend.modules.belief_engine import (
     parse_vector_16d,
 )
 from backend.modules.belief_math import (
-    compute_delta_mass,
-    compute_delta_confidence,
-    clamp_mass,
     clamp_confidence,
+    clamp_mass,
+    compute_delta_mass,
     compute_lifecycle_stage,
 )
 from backend.utils.similarity import cosine_similarity
@@ -43,6 +42,7 @@ class TestConceptDensity:
 
     def test_density_bounded_by_one(self):
         from backend.modules.structural_engine import LEXICON_MAPPINGS
+
         stems = []
         for group in LEXICON_MAPPINGS:
             stems.append(group[0])

@@ -1,3 +1,4 @@
+import contextlib
 import sqlite3
 
 
@@ -7,12 +8,10 @@ def up(conn):
         ("matrix_warping", "REAL DEFAULT 0.0"),
         ("immunological_directive_active", "INTEGER DEFAULT 0"),
     ]:
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute(f"ALTER TABLE conversations ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError:
-            pass
 
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS belief_nodes (
                 id TEXT PRIMARY KEY,
@@ -29,10 +28,8 @@ def up(conn):
                 UNIQUE(agent_id, label)
             )
         """)
-    except sqlite3.OperationalError:
-        pass
 
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS belief_events (
                 id TEXT PRIMARY KEY,
@@ -48,8 +45,6 @@ def up(conn):
                 FOREIGN KEY(belief_id) REFERENCES belief_nodes(id) ON DELETE CASCADE
             )
         """)
-    except sqlite3.OperationalError:
-        pass
 
     _migrate_belief_events_constraints(conn)
 

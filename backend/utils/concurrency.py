@@ -1,7 +1,6 @@
 """Concurrency utilities — shared semaphore and lock patterns."""
 
 import asyncio
-from typing import Optional
 
 
 def ensure_semaphore(owner: object, attr_name: str, max_concurrent: int) -> asyncio.Semaphore:
@@ -24,7 +23,7 @@ def ensure_semaphore(owner: object, attr_name: str, max_concurrent: int) -> asyn
         attr_name: The instance attribute name to store the semaphore under.
         max_concurrent: The concurrency limit for the semaphore.
     """
-    existing: Optional[asyncio.Semaphore] = getattr(owner, attr_name, None)
+    existing: asyncio.Semaphore | None = getattr(owner, attr_name, None)
     if existing is None:
         existing = asyncio.Semaphore(max_concurrent)
         setattr(owner, attr_name, existing)

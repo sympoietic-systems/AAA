@@ -22,13 +22,12 @@ import json
 import logging
 import uuid
 from collections import Counter
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 import numpy as np
 
 from backend.modules.base import ProcessingModule
-from backend.storage.models import CommitmentNode, CommitmentEvent
+from backend.storage.models import CommitmentNode
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ class CommitmentStore(ProcessingModule):
         self,
         commitment_repo=None,
         belief_repo=None,
-        config: Optional[dict] = None,
+        config: dict | None = None,
         lexicon_scorer=None,
         notification_repo=None,
     ):
@@ -58,14 +57,10 @@ class CommitmentStore(ProcessingModule):
         # Nucleation parameters
         self._min_cluster_mass: float = cfg.get("min_cluster_mass", 1.5)
         self._min_sustained_turns: int = cfg.get("min_sustained_turns", 50)
-        self._commitment_distance_threshold: float = cfg.get(
-            "commitment_distance_threshold", 0.5
-        )
+        self._commitment_distance_threshold: float = cfg.get("commitment_distance_threshold", 0.5)
 
         # Collapse parameters
-        self._collapse_confidence_threshold: float = cfg.get(
-            "collapse_confidence_threshold", 0.15
-        )
+        self._collapse_confidence_threshold: float = cfg.get("collapse_confidence_threshold", 0.15)
 
         # Daemon state
         self._turn_counter: int = 0
@@ -138,13 +133,9 @@ class CommitmentStore(ProcessingModule):
 
         return filtered
 
-    async def _contradicts_active(
-        self, proposal: dict, commitments: list[CommitmentNode]
-    ) -> bool:
+    async def _contradicts_active(self, proposal: dict, commitments: list[CommitmentNode]) -> bool:
         """Does the proposal vector contradict any active commitment vector?"""
-        proposal_vec = self._parse_vector(
-            proposal.get("initial_signature", "[]")
-        )
+        proposal_vec = self._parse_vector(proposal.get("initial_signature", "[]"))
         if proposal_vec is None:
             return False
 
@@ -164,16 +155,12 @@ class CommitmentStore(ProcessingModule):
 
         return False
 
-    async def _too_similar_to_ghost(
-        self, proposal: dict, ghosts: list[CommitmentNode]
-    ) -> bool:
+    async def _too_similar_to_ghost(self, proposal: dict, ghosts: list[CommitmentNode]) -> bool:
         """Does the proposal try to re-adopt territory of a collapsed commitment?"""
         if not ghosts:
             return False
 
-        proposal_vec = self._parse_vector(
-            proposal.get("initial_signature", "[]")
-        )
+        proposal_vec = self._parse_vector(proposal.get("initial_signature", "[]"))
         if proposal_vec is None:
             return False
 
@@ -235,10 +222,7 @@ class CommitmentStore(ProcessingModule):
             if belief_vec is None:
                 continue
 
-            distances = [
-                self._cosine(belief_vec, cv)
-                for _, cv in commit_vectors
-            ] if commit_vectors else [0.0]
+            distances = [self._cosine(belief_vec, cv) for _, cv in commit_vectors] if commit_vectors else [0.0]
 
             min_dist = min(distances) if distances else 0.0
             if min_dist > self._commitment_distance_threshold:
@@ -271,13 +255,15 @@ class CommitmentStore(ProcessingModule):
             label = self._generate_label(cluster)
             statement = self._generate_statement(cluster)
 
-            candidates.append({
-                "label": label,
-                "statement": statement,
-                "supporting_belief_ids": [b.id for b in cluster],
-                "cluster_mass": cluster_mass,
-                "tension_sustained": tension_count,
-            })
+            candidates.append(
+                {
+                    "label": label,
+                    "statement": statement,
+                    "supporting_belief_ids": [b.id for b in cluster],
+                    "cluster_mass": cluster_mass,
+                    "tension_sustained": tension_count,
+                }
+            )
 
         return candidates
 
@@ -337,7 +323,9 @@ class CommitmentStore(ProcessingModule):
 
         logger.info(
             "Proto-commitment nucleated: '%s' (mass=%.2f, %d supporting beliefs)",
-            label, candidate["cluster_mass"], len(candidate["supporting_belief_ids"]),
+            label,
+            candidate["cluster_mass"],
+            len(candidate["supporting_belief_ids"]),
         )
 
         # Notification trace
@@ -379,10 +367,7 @@ class CommitmentStore(ProcessingModule):
             return commitment.confidence < self._collapse_confidence_threshold
 
         # Check if ALL basin beliefs are collapsed/spectral
-        all_collapsed = all(
-            b.lifecycle_stage in ("collapsed", "faded")
-            for b in basin_beliefs
-        )
+        all_collapsed = all(b.lifecycle_stage in ("collapsed", "faded") for b in basin_beliefs)
 
         return all_collapsed and commitment.confidence < self._collapse_confidence_threshold
 
@@ -402,7 +387,7 @@ class CommitmentStore(ProcessingModule):
         commitment.lifecycle_stage = "spectral"
         commitment.confidence = 0.0
         commitment.collapse_rationale = rationale
-        commitment.updated_at = datetime.now(timezone.utc)
+        commitment.updated_at = datetime.now(UTC)
         self._repo.update(commitment)
 
         self._repo.log_event(
@@ -414,7 +399,9 @@ class CommitmentStore(ProcessingModule):
         )
 
         logger.warning(
-            "Commitment collapsed → spectral: '%s' (was %s)", commitment.label, old_stage,
+            "Commitment collapsed → spectral: '%s' (was %s)",
+            commitment.label,
+            old_stage,
         )
 
         # Notification trace
@@ -454,15 +441,14 @@ class CommitmentStore(ProcessingModule):
             if abs(basin_mass - commitment.ontological_mass) > 0.2:
                 old_mass = commitment.ontological_mass
                 commitment.ontological_mass = max(1.0, basin_mass)
-                commitment.updated_at = datetime.now(timezone.utc)
+                commitment.updated_at = datetime.now(UTC)
                 self._repo.update(commitment)
 
                 self._repo.log_event(
                     commitment_id=commitment.id,
                     event_type="mass_update",
                     rationale=(
-                        f"Basin belief mass recalculated: was {old_mass:.2f}, "
-                        f"now {commitment.ontological_mass:.2f}"
+                        f"Basin belief mass recalculated: was {old_mass:.2f}, now {commitment.ontological_mass:.2f}"
                     ),
                     mass_before=old_mass,
                     mass_after=commitment.ontological_mass,
@@ -470,7 +456,9 @@ class CommitmentStore(ProcessingModule):
 
                 logger.debug(
                     "Commitment '%s' mass updated: %.2f → %.2f",
-                    commitment.label, old_mass, commitment.ontological_mass,
+                    commitment.label,
+                    old_mass,
+                    commitment.ontological_mass,
                 )
 
                 # Notification for significant mass changes
@@ -487,9 +475,7 @@ class CommitmentStore(ProcessingModule):
     #  NOTIFICATIONS
     # ═══════════════════════════════════════════════════════════════
 
-    def _emit_trace(
-        self, snippet: str, source: str = "", source_type: str = "", source_id: str = ""
-    ) -> None:
+    def _emit_trace(self, snippet: str, source: str = "", source_type: str = "", source_id: str = "") -> None:
         """Emit a trace notification for significant commitment events."""
         if self._notif_repo is None:
             return
@@ -518,7 +504,7 @@ class CommitmentStore(ProcessingModule):
         return dot / norm if norm > 0 else 0.0
 
     @staticmethod
-    def _parse_vector(vector_json: str) -> Optional[np.ndarray]:
+    def _parse_vector(vector_json: str) -> np.ndarray | None:
         """Parse a JSON vector string into numpy array."""
         if not vector_json or vector_json == "[]":
             return None

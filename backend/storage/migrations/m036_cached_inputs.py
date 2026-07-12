@@ -16,7 +16,6 @@ def up(conn: sqlite3.Connection) -> None:
             raise
 
 
-
 def down(conn: sqlite3.Connection) -> None:
     # SQLite doesn't support DROP COLUMN easily; leaving column in place is harmless.
     pass

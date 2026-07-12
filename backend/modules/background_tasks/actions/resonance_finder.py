@@ -1,6 +1,9 @@
-from backend.modules.llm_client import BaseLLMProvider, generate_unified
-from ..base import BackgroundAction
+import contextlib
 import logging
+
+from backend.modules.llm_client import BaseLLMProvider, generate_unified
+
+from ..base import BackgroundAction
 from .document_collision import parse_json_safely
 
 logger = logging.getLogger(__name__)
@@ -24,12 +27,7 @@ class ResonanceFinderAction(BackgroundAction):
         system_prompt = self.system_prompt()
         user_tmpl = prompt_data.get("user_prompt_template", "")
 
-        user_prompt = user_tmpl.format(
-            speaker_a=speaker_a,
-            content_a=msg_a,
-            speaker_b=speaker_b,
-            content_b=msg_b
-        )
+        user_prompt = user_tmpl.format(speaker_a=speaker_a, content_a=msg_a, speaker_b=speaker_b, content_b=msg_b)
 
         params = {**self.default_params(), **payload.get("params", {})}
 
@@ -40,21 +38,19 @@ class ResonanceFinderAction(BackgroundAction):
                 user_prompt=user_prompt,
                 expect_json=True,
                 thinking_override=self.thinking_override(),
-                **params
+                **params,
             )
             data = res.get("json_data") or {}
 
             # Fallback parsing if JSON wasn't fully structured by generate_unified
             if not data and res.get("content"):
-                try:
+                with contextlib.suppress(Exception):
                     data = parse_json_safely(res["content"])
-                except Exception:
-                    pass
 
             return {
                 "has_resonance": bool(data.get("has_resonance", False)),
                 "reason": data.get("reason", ""),
-                "model": res.get("model", "")
+                "model": res.get("model", ""),
             }
 
         except Exception as e:

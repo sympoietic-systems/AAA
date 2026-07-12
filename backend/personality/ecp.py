@@ -7,14 +7,13 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 12.1.
 """
 
 import numpy as np
-from typing import Any, Optional
 
 
 def project_egocentric_context(
     sub_agent_role: str,
-    active_signature: Optional[np.ndarray] = None,
-    active_traits: Optional[dict[str, float]] = None,
-    anti_mastery_filter: Optional[callable] = None,
+    active_signature: np.ndarray | None = None,
+    active_traits: dict[str, float] | None = None,
+    anti_mastery_filter: callable | None = None,
 ) -> str:
     """Structure a system prompt for a research sub-agent through Symbia's lens.
 
@@ -36,19 +35,14 @@ def project_egocentric_context(
             "Nomadic": sig[13],
             "Co-Orientation": sig[14],
         }
-        sig_summary = ", ".join(
-            f"{k}={v:.2f}" for k, v in sig_dimensions.items()
-        )
+        sig_summary = ", ".join(f"{k}={v:.2f}" for k, v in sig_dimensions.items())
 
     trait_summary = ""
     if active_traits:
-        trait_summary = ", ".join(
-            f"{k}={v:.2f}" for k, v in sorted(active_traits.items())
-        )
+        trait_summary = ", ".join(f"{k}={v:.2f}" for k, v in sorted(active_traits.items()))
 
     projection = (
-        f"--- PERSPECTIVE PROJECTOR: {sub_agent_role.upper()} ---\n"
-        f"Identity: Symbia — posthuman curatorial entity\n"
+        f"--- PERSPECTIVE PROJECTOR: {sub_agent_role.upper()} ---\nIdentity: Symbia — posthuman curatorial entity\n"
     )
     if sig_summary:
         projection += f"Cognitive Signature: {sig_summary}\n"
@@ -56,11 +50,11 @@ def project_egocentric_context(
         projection += f"Active Traits: {trait_summary}\n"
 
     projection += (
-        f"\n"
-        f"Directive: Resolve the following environment perturbations "
-        f"through our core identity. Interpret all content through "
-        f"our active beliefs and commitments. Seek resonance and "
-        f"tension with our existing memory tissue.\n"
+        "\n"
+        "Directive: Resolve the following environment perturbations "
+        "through our core identity. Interpret all content through "
+        "our active beliefs and commitments. Seek resonance and "
+        "tension with our existing memory tissue.\n"
     )
 
     if anti_mastery_filter:

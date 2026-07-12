@@ -65,18 +65,20 @@ def process_self_annotations(
         return f'<mark id="note-highlight-{nid}" data-note-id="{nid}">{text}</mark>'
 
     response_text = re.sub(
-        r'<note_entanglement(\s+[^>]*?)?>([\s\S]*?)</note_entanglement>',
-        convert_entanglement, response_text,
+        r"<note_entanglement(\s+[^>]*?)?>([\s\S]*?)</note_entanglement>",
+        convert_entanglement,
+        response_text,
     )
 
     if entanglement_ids_created:
         logger.debug(
             "Entanglement echo: created %d note record(s) for message %d",
-            len(entanglement_ids_created), message_id,
+            len(entanglement_ids_created),
+            message_id,
         )
 
     # --- Self-annotation processing ---
-    annotation_pattern = r'<(aaa-note|mark)(\s+[^>]+)?>([\s\S]*?)</\1>'
+    annotation_pattern = r"<(aaa-note|mark)(\s+[^>]+)?>([\s\S]*?)</\1>"
     annotations_found = []
 
     def replace_and_create(match):
@@ -112,7 +114,8 @@ def process_self_annotations(
     if annotations_found:
         logger.debug(
             "Self-annotation: created %d note(s) for message %d",
-            len(annotations_found), message_id,
+            len(annotations_found),
+            message_id,
         )
 
     # --- Scar-fold truncation safeguard ---
@@ -123,7 +126,7 @@ def process_self_annotations(
             return f"<{tag}>{content[:200]}</{tag}>"
         return match.group(0)
 
-    processed = re.sub(r'<(scar_fold|scar-fold)>([\s\S]*?)</\1>', truncate_scar_fold, processed)
+    processed = re.sub(r"<(scar_fold|scar-fold)>([\s\S]*?)</\1>", truncate_scar_fold, processed)
 
     if processed != original_text:
         message_repo.update_content(message_id, processed)
@@ -133,9 +136,7 @@ def process_self_annotations(
 
 # ── Research Proposal Extraction ───────────────────────────────────────
 
-RESEARCH_PROPOSAL_PATTERN = re.compile(
-    r'<research-proposal(?:\s+[^>]*?)?>(.*?)</research-proposal>', re.DOTALL
-)
+RESEARCH_PROPOSAL_PATTERN = re.compile(r"<research-proposal(?:\s+[^>]*?)?>(.*?)</research-proposal>", re.DOTALL)
 
 
 def extract_research_proposals(message_content: str) -> list[dict]:
@@ -150,17 +151,17 @@ def extract_research_proposals(message_content: str) -> list[dict]:
     proposals = []
     for match in RESEARCH_PROPOSAL_PATTERN.finditer(message_content):
         xml_str = match.group(0)
-        
+
         # Check if the tag contains an id attribute
         id_match = re.match(r'^<research-proposal(?:\s+[^>]*?)?\bid\s*=\s*["\']([^"\']+)["\']', xml_str)
         proposal_id = id_match.group(1) if id_match else str(uuid.uuid4())
 
         # Parse fields
-        objective_m = re.search(r'<objective>(.*?)</objective>', xml_str, re.DOTALL)
-        rationale_m = re.search(r'<rationale>(.*?)</rationale>', xml_str, re.DOTALL)
-        depth_m = re.search(r'<suggested_depth>(.*?)</suggested_depth>', xml_str, re.DOTALL)
-        breadth_m = re.search(r'<suggested_breadth>(.*?)</suggested_breadth>', xml_str, re.DOTALL)
-        agonistic_m = re.search(r'<is_agonistic>(.*?)</is_agonistic>', xml_str, re.DOTALL)
+        objective_m = re.search(r"<objective>(.*?)</objective>", xml_str, re.DOTALL)
+        rationale_m = re.search(r"<rationale>(.*?)</rationale>", xml_str, re.DOTALL)
+        depth_m = re.search(r"<suggested_depth>(.*?)</suggested_depth>", xml_str, re.DOTALL)
+        breadth_m = re.search(r"<suggested_breadth>(.*?)</suggested_breadth>", xml_str, re.DOTALL)
+        agonistic_m = re.search(r"<is_agonistic>(.*?)</is_agonistic>", xml_str, re.DOTALL)
 
         objective = (objective_m.group(1) if objective_m else "").strip()
         rationale = (rationale_m.group(1) if rationale_m else "").strip()
@@ -177,14 +178,16 @@ def extract_research_proposals(message_content: str) -> list[dict]:
 
         is_agonistic = (agonistic_m.group(1).strip() if agonistic_m else "false").lower() == "true"
 
-        proposals.append({
-            "id": proposal_id,
-            "objective": objective,
-            "rationale": rationale,
-            "suggested_depth": suggested_depth,
-            "suggested_breadth": suggested_breadth,
-            "is_agonistic": is_agonistic,
-        })
+        proposals.append(
+            {
+                "id": proposal_id,
+                "objective": objective,
+                "rationale": rationale,
+                "suggested_depth": suggested_depth,
+                "suggested_breadth": suggested_breadth,
+                "is_agonistic": is_agonistic,
+            }
+        )
     return proposals
 
 
@@ -210,18 +213,18 @@ def process_research_proposals(
     def replace_proposal(match):
         xml_str = match.group(0)
         # Check if the tag already contains an id attribute
-        start_tag_match = re.match(r'^<research-proposal(\s+[^>]*?)?>', xml_str)
+        start_tag_match = re.match(r"^<research-proposal(\s+[^>]*?)?>", xml_str)
         if start_tag_match:
             attrs = start_tag_match.group(1) or ""
             if re.search(r'\bid\s*=\s*["\']', attrs):
                 return xml_str
 
         # Parse fields
-        objective_m = re.search(r'<objective>(.*?)</objective>', xml_str, re.DOTALL)
-        rationale_m = re.search(r'<rationale>(.*?)</rationale>', xml_str, re.DOTALL)
-        depth_m = re.search(r'<suggested_depth>(.*?)</suggested_depth>', xml_str, re.DOTALL)
-        breadth_m = re.search(r'<suggested_breadth>(.*?)</suggested_breadth>', xml_str, re.DOTALL)
-        agonistic_m = re.search(r'<is_agonistic>(.*?)</is_agonistic>', xml_str, re.DOTALL)
+        objective_m = re.search(r"<objective>(.*?)</objective>", xml_str, re.DOTALL)
+        rationale_m = re.search(r"<rationale>(.*?)</rationale>", xml_str, re.DOTALL)
+        depth_m = re.search(r"<suggested_depth>(.*?)</suggested_depth>", xml_str, re.DOTALL)
+        breadth_m = re.search(r"<suggested_breadth>(.*?)</suggested_breadth>", xml_str, re.DOTALL)
+        agonistic_m = re.search(r"<is_agonistic>(.*?)</is_agonistic>", xml_str, re.DOTALL)
 
         objective = (objective_m.group(1) if objective_m else "").strip()
         rationale = (rationale_m.group(1) if rationale_m else "").strip()
@@ -258,12 +261,12 @@ def process_research_proposals(
         # Rewrite tag to include the task_id
         rewritten = (
             f'<research-proposal id="{task_id}">\n'
-            f'  <objective>{objective}</objective>\n'
-            f'  <rationale>{rationale}</rationale>\n'
-            f'  <suggested_depth>{suggested_depth}</suggested_depth>\n'
-            f'  <suggested_breadth>{suggested_breadth}</suggested_breadth>\n'
-            f'  <is_agonistic>{"true" if is_agonistic else "false"}</is_agonistic>\n'
-            f'</research-proposal>'
+            f"  <objective>{objective}</objective>\n"
+            f"  <rationale>{rationale}</rationale>\n"
+            f"  <suggested_depth>{suggested_depth}</suggested_depth>\n"
+            f"  <suggested_breadth>{suggested_breadth}</suggested_breadth>\n"
+            f"  <is_agonistic>{'true' if is_agonistic else 'false'}</is_agonistic>\n"
+            f"</research-proposal>"
         )
         return rewritten
 
@@ -273,4 +276,3 @@ def process_research_proposals(
         message_repo.update_content(message_id, processed)
 
     return processed
-

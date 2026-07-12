@@ -1,7 +1,7 @@
-from pathlib import Path
-import sys
 import asyncio
 import os
+import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -32,7 +32,7 @@ async def test_llm():
         print("Structure tests passed!")
         return
 
-    print(f"API key found. Running live test...")
+    print("API key found. Running live test...")
     provider = OpenRouterProvider(
         api_key=api_key,
         model="deepseek/deepseek-chat",

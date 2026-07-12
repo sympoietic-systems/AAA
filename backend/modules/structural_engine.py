@@ -1,48 +1,60 @@
+import contextlib
+import json
 import logging
 import re
-import json
-from pathlib import Path
+
 import numpy as np
-from typing import Optional, List, Tuple
+
+from backend.modules.base import ProcessingModule
 from backend.modules.llm_client import generate_unified
-from backend.utils.prompt_loader import get_prompt, get_prompts_dict
+from backend.utils.prompt_loader import get_prompt
 
 logger = logging.getLogger(__name__)
 
 # Stemmed target keywords for the 16 cybernetic dimensions
-LEXICON_MAPPINGS: List[List[str]] = [
+LEXICON_MAPPINGS: list[list[str]] = [
     # 01. Homeostatic
-    ['homeostas', 'regulat', 'stabili', 'dampen', 'equilib', 'negative feedback', 'ashby', 'restor'],
+    ["homeostas", "regulat", "stabili", "dampen", "equilib", "negative feedback", "ashby", "restor"],
     # 02. Amplifying
-    ['amplif', 'positive feedback', 'runaway', 'growth', 'cascade', 'multiplier', 'snowball', 'maruyama', 'vicious circle'],
+    [
+        "amplif",
+        "positive feedback",
+        "runaway",
+        "growth",
+        "cascade",
+        "multiplier",
+        "snowball",
+        "maruyama",
+        "vicious circle",
+    ],
     # 03. Cyclic
-    ['cycl', 'loop', 'recurs', 'autopoie', 'self-produc', 're-ent', 'circular', 'maturana', 'varela', 'oscilla'],
+    ["cycl", "loop", "recurs", "autopoie", "self-produc", "re-ent", "circular", "maturana", "varela", "oscilla"],
     # 04. Bifurcated
-    ['bifurc', 'tipping', 'threshold', 'phase shift', 'catastroph', 'prigogine', 'transition', 'trigger'],
+    ["bifurc", "tipping", "threshold", "phase shift", "catastroph", "prigogine", "transition", "trigger"],
     # 05. Decentralized
-    ['decentral', 'peer-to-peer', 'p2p', 'distributed', 'mesh', 'non-hierarch', 'mcculloch', 'p2p'],
+    ["decentral", "peer-to-peer", "p2p", "distributed", "mesh", "non-hierarch", "mcculloch", "p2p"],
     # 06. Rhizomatic / Networked
-    ['rhizom', 'network', 'meshwork', 'redundant', 'deleuze', 'guattari', 'hyperlink', 'lateral'],
+    ["rhizom", "network", "meshwork", "redundant", "deleuze", "guattari", "hyperlink", "lateral"],
     # 07. Boundary Permeability
-    ['permeab', 'boundary', 'semi-permeab', 'closure', 'open system', 'closed system', 'filtering'],
+    ["permeab", "boundary", "semi-permeab", "closure", "open system", "closed system", "filtering"],
     # 08. Recursion Depth
-    ['recurs', 'nest', 'fractal', 'scaling', 'subsystem', 'hierarchy', 'beer', 'vsm', 'nested'],
+    ["recurs", "nest", "fractal", "scaling", "subsystem", "hierarchy", "beer", "vsm", "nested"],
     # 09. Variety Filtering
-    ['variety', 'filter', 'attenuat', 'requisite variety', 'ashby', 'selection', 'attenuation'],
+    ["variety", "filter", "attenuat", "requisite variety", "ashby", "selection", "attenuation"],
     # 10. Negentropic Complexity
-    ['negentrop', 'entropy', 'order', 'complexity', 'schrodinger', 'information density', 'syntropy'],
+    ["negentrop", "entropy", "order", "complexity", "schrodinger", "information density", "syntropy"],
     # 11. Temporal Latency
-    ['latenc', 'delay', 'lag', 'buffer', 'time-lag', 'forrester', 'sluggish', 'retardation'],
+    ["latenc", "delay", "lag", "buffer", "time-lag", "forrester", "sluggish", "retardation"],
     # 12. Attractor Depth
-    ['attractor', 'rigidity', 'basin', 'resilien', 'plastic', 'adaptation', 'thom', 'well'],
+    ["attractor", "rigidity", "basin", "resilien", "plastic", "adaptation", "thom", "well"],
     # 13. Symbiotic
-    ['symbio', 'co-evolution', 'coupling', 'mutual', 'parasit', 'bateson', 'mutualism'],
+    ["symbio", "co-evolution", "coupling", "mutual", "parasit", "bateson", "mutualism"],
     # 14. Nomadic
-    ['nomad', 'deterritor', 'line of flight', 'drift', 'escape', 'smooth space', 'migration'],
+    ["nomad", "deterritor", "line of flight", "drift", "escape", "smooth space", "migration"],
     # 15. Conversational Co-Orientation
-    ['convers', 'consensus', 'agreement', 'co-orient', 'pask', 'l-user', 'dialogue'],
+    ["convers", "consensus", "agreement", "co-orient", "pask", "l-user", "dialogue"],
     # 16. Substrate Materiality
-    ['substrat', 'material', 'embod', 'physical', 'foerster', 'hardware', 'silicon', 'meatware']
+    ["substrat", "material", "embod", "physical", "foerster", "hardware", "silicon", "meatware"],
 ]
 
 
@@ -50,11 +62,12 @@ LEXICON_MAPPINGS: List[List[str]] = [
 JUSTIFICATION_CACHE: dict[str, str] = {}
 
 
-def get_justification(content: str) -> Optional[str]:
+def get_justification(content: str) -> str | None:
     if not content:
         return None
     import hashlib
-    h = hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+    h = hashlib.sha256(content.encode("utf-8")).hexdigest()
     return JUSTIFICATION_CACHE.get(h)
 
 
@@ -62,7 +75,8 @@ def set_justification(content: str, justification: str) -> None:
     if not content or not justification:
         return
     import hashlib
-    h = hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+    h = hashlib.sha256(content.encode("utf-8")).hexdigest()
     JUSTIFICATION_CACHE[h] = justification
     # Prevent memory leaks
     if len(JUSTIFICATION_CACHE) > 1000:
@@ -72,20 +86,22 @@ def set_justification(content: str, justification: str) -> None:
 
 class StructuralScorer:
     """Interface for structural signature calculators."""
-    def score(self, text: str, context: Optional[dict] = None) -> np.ndarray:
+
+    def score(self, text: str, context: dict | None = None) -> np.ndarray:
         raise NotImplementedError()
 
 
 class LexiconScorer(StructuralScorer):
     """Calculates keyword frequency density using cybernetic lexicons with saturation scaling."""
-    def __init__(self, kappa: float = 100.0, mappings: Optional[List[List[str]]] = None):
+
+    def __init__(self, kappa: float = 100.0, mappings: list[list[str]] | None = None):
         self.kappa = kappa
         self.mappings = mappings or LEXICON_MAPPINGS
 
-    def score(self, text: str, context: Optional[dict] = None) -> np.ndarray:
+    def score(self, text: str, context: dict | None = None) -> np.ndarray:
         text_lower = text.lower()
         # Simple word tokenization for density calculation
-        words = re.findall(r'[a-z0-9\-]+', text_lower)
+        words = re.findall(r"[a-z0-9\-]+", text_lower)
         word_count = len(words)
         if word_count == 0:
             return np.zeros(16, dtype=np.float32)
@@ -96,7 +112,7 @@ class LexiconScorer(StructuralScorer):
             for stem in stems:
                 # Count raw occurrences of the stem in lowercase text
                 count += text_lower.count(stem)
-            
+
             density = count / word_count
             # Apply non-linear exponential saturation: 1 - e^(-kappa * density)
             scores[i] = 1.0 - np.exp(-self.kappa * density)
@@ -106,78 +122,79 @@ class LexiconScorer(StructuralScorer):
 
 class TopologyScorer(StructuralScorer):
     """Calculates empirical markdown formatting, hierarchy, and connection density properties."""
-    def score(self, text: str, context: Optional[dict] = None) -> np.ndarray:
+
+    def score(self, text: str, context: dict | None = None) -> np.ndarray:
         scores = np.zeros(16, dtype=np.float32)
         char_count = max(1, len(text))
 
         # 1. Recursion Depth (Dimension 8) - Markdown Header Hierarchy Entropy
-        headers = re.findall(r'^(#{1,6})\s+', text, re.MULTILINE)
+        headers = re.findall(r"^(#{1,6})\s+", text, re.MULTILINE)
         if headers:
             counts = [0] * 6
             for h in headers:
                 counts[len(h) - 1] += 1
             max_depth = max(len(h) for h in headers)
-            
+
             total_headers = len(headers)
             p = [c / total_headers for c in counts if c > 0]
             entropy = -sum(pi * np.log2(pi) for pi in p)
-            
+
             # S_topo_8 = (max_depth / 6) * (1 - e^(-entropy))
             scores[7] = (max_depth / 6.0) * (1.0 - np.exp(-entropy))
         else:
             scores[7] = 0.0
 
         # 2. Rhizomatic / Networked (Dimension 6) - Wiki link and URL density
-        wiki_links = len(re.findall(r'\[\[([^\]]+)\]\]', text))
-        urls = len(re.findall(r'https?://\S+', text))
+        wiki_links = len(re.findall(r"\[\[([^\]]+)\]\]", text))
+        urls = len(re.findall(r"https?://\S+", text))
         total_links = wiki_links + urls
         link_density = (total_links / char_count) * 1000.0
-        
+
         # Check context for degree centrality
         degree = 0
-        if context and 'degree_centrality' in context:
-            degree = context['degree_centrality']
-            
+        if context and "degree_centrality" in context:
+            degree = context["degree_centrality"]
+
         scores[5] = float(np.tanh(0.2 * link_density + 0.1 * degree))
 
         # 3. Cyclic / Recursive (Dimension 3) - Graph cycle presence check
-        if context and context.get('is_in_cycle', False):
+        if context and context.get("is_in_cycle", False):
             scores[2] = 1.0
         else:
             # Check for self-referencing markdown loops/backlinks in text
-            if re.search(r'\[\[self\]\]|\[\[same\]\]|loop|recursion', text, re.IGNORECASE):
+            if re.search(r"\[\[self\]\]|\[\[same\]\]|loop|recursion", text, re.IGNORECASE):
                 scores[2] = 0.5
 
         # 4. Decentralized (Dimension 5) - Bullet points, checklist, list density
-        list_items = len(re.findall(r'^(\s*[\*\-\+])\s+', text, re.MULTILINE))
-        checklist_items = len(re.findall(r'^(\s*[\*\-\+]\s+\[[ xX]\])\s+', text, re.MULTILINE))
+        list_items = len(re.findall(r"^(\s*[\*\-\+])\s+", text, re.MULTILINE))
+        checklist_items = len(re.findall(r"^(\s*[\*\-\+]\s+\[[ xX]\])\s+", text, re.MULTILINE))
         total_lists = list_items + checklist_items
         list_density = (total_lists / char_count) * 1000.0
         scores[4] = float(np.tanh(0.15 * list_density))
 
         # 5. Boundary Permeability (Dimension 7) - Blockquotes and codeblocks
-        codeblocks = len(re.findall(r'```', text)) // 2
-        blockquotes = len(re.findall(r'^>\s+', text, re.MULTILINE))
+        codeblocks = len(re.findall(r"```", text)) // 2
+        blockquotes = len(re.findall(r"^>\s+", text, re.MULTILINE))
         permeability = (codeblocks * 2 + blockquotes) / max(1, char_count // 500)
         scores[6] = float(np.tanh(0.4 * permeability))
 
         return scores
 
 
-def parse_scorer_response(content: str) -> Tuple[Optional[List[float]], Optional[str]]:
+def parse_scorer_response(content: str) -> tuple[list[float] | None, str | None]:
     """Robustly parse structural scorer response even under truncation, think tags, or trailing commas."""
     # Clean up <think> tags if any (e.g. from reasoning/R1 models)
-    content_clean = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-    
+    content_clean = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+
     # Try standard JSON extraction
-    start_brace = content_clean.find('{')
-    end_brace = content_clean.rfind('}')
-    
+    start_brace = content_clean.find("{")
+    end_brace = content_clean.rfind("}")
+
     scores = None
     justification = None
-    
+
     if start_brace != -1 and end_brace > start_brace:
-        json_str = content_clean[start_brace:end_brace+1]
+        json_str = content_clean[start_brace : end_brace + 1]
         try:
             data = json.loads(json_str)
             if isinstance(data, dict):
@@ -186,41 +203,36 @@ def parse_scorer_response(content: str) -> Tuple[Optional[List[float]], Optional
         except Exception:
             # Try removing trailing commas and parse again
             try:
-                cleaned_json = re.sub(r',\s*([\]\}])', r'\1', json_str)
+                cleaned_json = re.sub(r",\s*([\]\}])", r"\1", json_str)
                 data = json.loads(cleaned_json)
                 if isinstance(data, dict):
                     scores = data.get("scores")
                     justification = data.get("justification")
             except Exception:
                 pass
-                
+
     # Fallback for scores: if standard parse failed, search scores array with regex
     if not isinstance(scores, list) or len(scores) == 0:
         scores = None
         scores_match = re.search(r'"scores"\s*:\s*\[', content_clean, re.IGNORECASE)
         if not scores_match:
-            scores_match = re.search(r'scores\s*:\s*\[', content_clean, re.IGNORECASE)
-        
+            scores_match = re.search(r"scores\s*:\s*\[", content_clean, re.IGNORECASE)
+
         if scores_match:
             start_idx = scores_match.end()
             remainder = content_clean[start_idx:]
-            end_idx = remainder.find(']')
+            end_idx = remainder.find("]")
             if end_idx != -1:
                 array_content = remainder[:end_idx]
             else:
-                end_idx = remainder.find('}')
-                if end_idx != -1:
-                    array_content = remainder[:end_idx]
-                else:
-                    array_content = remainder
-            
-            nums = re.findall(r'-?\d*\.\d+|-?\d+', array_content)
+                end_idx = remainder.find("}")
+                array_content = remainder[:end_idx] if end_idx != -1 else remainder
+
+            nums = re.findall(r"-?\d*\.\d+|-?\d+", array_content)
             scores_list = []
             for n in nums:
-                try:
+                with contextlib.suppress(ValueError):
                     scores_list.append(float(n))
-                except ValueError:
-                    pass
             if len(scores_list) > 0:
                 scores = scores_list
 
@@ -248,17 +260,22 @@ _DEFAULT_SYSTEM_PROMPT = "You are a cybernetic taxonomy classifier. Respond ONLY
 
 class LLMScorer(StructuralScorer):
     """Interrogates the LLM to score the text across the 16 dimensions using a structured schema."""
-    def __init__(self, provider = None, system_prompt: Optional[str] = None):
+
+    def __init__(self, provider=None, system_prompt: str | None = None):
         self.provider = provider
         self.system_prompt = system_prompt or get_prompt(
-            _STRUCTURAL_CLASSIFICATION_PATH, "system_prompt", _DEFAULT_SYSTEM_PROMPT,
+            _STRUCTURAL_CLASSIFICATION_PATH,
+            "system_prompt",
+            _DEFAULT_SYSTEM_PROMPT,
         )
         # Load the user prompt template once at init
         self._user_prompt_tmpl = get_prompt(
-            _STRUCTURAL_CLASSIFICATION_PATH, "user_prompt_template", "",
+            _STRUCTURAL_CLASSIFICATION_PATH,
+            "user_prompt_template",
+            "",
         )
 
-    async def score_async(self, text: str, context: Optional[dict] = None) -> np.ndarray:
+    async def score_async(self, text: str, context: dict | None = None) -> np.ndarray:
         if not self.provider:
             return np.full(16, 0.25, dtype=np.float32)
 
@@ -288,7 +305,7 @@ class LLMScorer(StructuralScorer):
                 scores_list, justification = parse_scorer_response(content)
             if justification:
                 set_justification(text, justification)
-                
+
             if scores_list is not None and len(scores_list) > 0:
                 # Pad or truncate to 16
                 while len(scores_list) < 16:
@@ -303,14 +320,16 @@ class LLMScorer(StructuralScorer):
 
         return np.full(16, 0.25, dtype=np.float32)
 
-    def score(self, text: str, context: Optional[dict] = None) -> np.ndarray:
+    def score(self, text: str, context: dict | None = None) -> np.ndarray:
         # Synchronous fallback runs asyncio loop
         try:
             import asyncio
+
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 # If loop is already running (e.g. inside FastAPI), we run it via task
                 import nest_asyncio
+
                 nest_asyncio.apply()
             return loop.run_until_complete(self.score_async(text, context))
         except Exception as e:
@@ -320,17 +339,19 @@ class LLMScorer(StructuralScorer):
 
 class CompositeStructuralScorer(StructuralScorer):
     """Coordinates calculation from different strategies and applies weighted linear combination."""
+
     def __init__(
         self,
-        llm_provider = None,
-        config: Optional[dict] = None,
+        llm_provider=None,
+        config: dict | None = None,
         w_ling: float = 0.25,
         w_topo: float = 0.25,
-        w_llm: float = 0.50
+        w_llm: float = 0.50,
     ):
         if config is None:
             try:
                 from backend.config import load_config
+
                 config = load_config()
             except Exception:
                 config = {}
@@ -343,48 +364,46 @@ class CompositeStructuralScorer(StructuralScorer):
         self.lexicon_scorer = LexiconScorer(mappings=lexicon_config)
         self.topology_scorer = TopologyScorer()
         self.llm_scorer = LLMScorer(llm_provider, system_prompt=llm_prompt_config)
-        
+
         # Normalize weights
         total_w = w_ling + w_topo + w_llm
         self.w_ling = w_ling / total_w
         self.w_topo = w_topo / total_w
         self.w_llm = w_llm / total_w
 
-    async def score_async(self, text: str, context: Optional[dict] = None, use_llm_scorer: Optional[bool] = None) -> np.ndarray:
+    async def score_async(
+        self, text: str, context: dict | None = None, use_llm_scorer: bool | None = None
+    ) -> np.ndarray:
         s_ling = self.lexicon_scorer.score(text, context)
         s_topo = self.topology_scorer.score(text, context)
-        
+
         run_llm = use_llm_scorer if use_llm_scorer is not None else self.llm_scorer_enabled
         # Only run LLMScorer if enabled and provider is present
         if run_llm and self.llm_scorer.provider:
             s_llm = await self.llm_scorer.score_async(text, context)
         else:
             s_llm = np.full(16, 0.25, dtype=np.float32)
-            
+
         final_score = self.w_ling * s_ling + self.w_topo * s_topo + self.w_llm * s_llm
         return np.clip(final_score, 0.0, 1.0)
 
-    def score(self, text: str, context: Optional[dict] = None, use_llm_scorer: Optional[bool] = None) -> np.ndarray:
+    def score(self, text: str, context: dict | None = None, use_llm_scorer: bool | None = None) -> np.ndarray:
         s_ling = self.lexicon_scorer.score(text, context)
         s_topo = self.topology_scorer.score(text, context)
-        
+
         run_llm = use_llm_scorer if use_llm_scorer is not None else self.llm_scorer_enabled
         if run_llm and self.llm_scorer.provider:
             s_llm = self.llm_scorer.score(text, context)
         else:
             s_llm = np.full(16, 0.25, dtype=np.float32)
-        
+
         final_score = self.w_ling * s_ling + self.w_topo * s_topo + self.w_llm * s_llm
         return np.clip(final_score, 0.0, 1.0)
 
 
-# Import elements for the pipeline module
-from backend.modules.base import ProcessingModule
-from backend.pipeline.metadata import ModuleMeta
-
-
 class StructuralScorerModule(ProcessingModule):
     """Pipeline module wrapping CompositeStructuralScorer."""
+
     def __init__(self, composite_scorer: CompositeStructuralScorer):
         self._scorer = composite_scorer
 
@@ -404,7 +423,9 @@ class StructuralScorerModule(ProcessingModule):
         return payload
 
     @property
-    def module_meta(self) -> ModuleMeta:
+    def module_meta(self) -> "ModuleMeta":  # noqa: F821
+        from backend.pipeline.metadata import ModuleMeta  # noqa: E402
+
         return ModuleMeta(
             name="structural_scorer",
             description="Calculates 16-dimensional cybernetic structural signatures of the message text",

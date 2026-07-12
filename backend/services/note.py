@@ -1,14 +1,14 @@
 import logging
 import uuid
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
 class NoteService:
     @staticmethod
-    async def metabolize_background(state, conversation_id: str, message_id: int,
-                                     selected_text: str, comment: str, note_id: str):
+    async def metabolize_background(
+        state, conversation_id: str, message_id: int, selected_text: str, comment: str, note_id: str
+    ):
         try:
             state.message_repo.increment_message_note_count(message_id, 1)
         except Exception as e:
@@ -29,11 +29,11 @@ class NoteService:
         note_repo,
         asset_type: str,
         asset_id: str,
-        conversation_id: Optional[str] = None,
+        conversation_id: str | None = None,
         selected_text: str = "",
         comment: str = "",
         visibility: str = "personal",
-        start_offset: Optional[int] = None,
+        start_offset: int | None = None,
     ) -> dict:
         note_id = str(uuid.uuid4())
         return note_repo.create_note(
@@ -64,7 +64,7 @@ class NoteService:
         return note_repo.get_notes_by_task_with_steps(task_id)
 
     @staticmethod
-    def update(note_repo, note_id: str, comment: Optional[str] = None, visibility: Optional[str] = None) -> dict | None:
+    def update(note_repo, note_id: str, comment: str | None = None, visibility: str | None = None) -> dict | None:
         return note_repo.update_note(note_id, comment=comment, visibility=visibility)
 
     @staticmethod

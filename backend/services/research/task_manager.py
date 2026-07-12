@@ -9,26 +9,33 @@ Priority: 1=user-inline, 2=user-console, 3=symbia-conversation, 4=symbia-daemon
 """
 
 import asyncio
+import contextlib
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
-from backend.utils.research_logger import now_utc_str
 from backend.utils.concurrency import ensure_semaphore
+from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_task_manager")
 
 VALID_STATUSES = {
-    "proposed", "approved", "queued", "active",
-    "completed", "failed", "cancelled", "rejected", "expired",
+    "proposed",
+    "approved",
+    "queued",
+    "active",
+    "completed",
+    "failed",
+    "cancelled",
+    "rejected",
+    "expired",
 }
 
 VALID_TRANSITIONS = {
-    "proposed":  {"approved", "rejected", "expired", "cancelled"},
-    "approved":  {"queued", "active", "cancelled"},
-    "queued":    {"active", "cancelled"},
-    "active":    {"completed", "failed", "cancelled"},
+    "proposed": {"approved", "rejected", "expired", "cancelled"},
+    "approved": {"queued", "active", "cancelled"},
+    "queued": {"active", "cancelled"},
+    "active": {"completed", "failed", "cancelled"},
 }
 
 TERMINAL_STATUSES = {"completed", "failed", "cancelled", "rejected", "expired"}
@@ -36,6 +43,7 @@ TERMINAL_STATUSES = {"completed", "failed", "cancelled", "rejected", "expired"}
 
 def _extract_task_depth(task: dict) -> int:
     import json
+
     try:
         orch_raw = task.get("orchestrator_state")
         if orch_raw:
@@ -53,7 +61,7 @@ class ResearchTaskManager:
 
     def __init__(self, app_state: Any):
         self._app_state = app_state
-        self._semaphore: Optional[asyncio.Semaphore] = None
+        self._semaphore: asyncio.Semaphore | None = None
         self._active_tasks: dict[str, asyncio.Task] = {}
         self._orchestrator = None  # lazy init
 
@@ -62,6 +70,7 @@ class ResearchTaskManager:
         """Lazy-init the orchestrator singleton (shared across all tasks)."""
         if self._orchestrator is None:
             from backend.services.research.orchestrator import SomaticResearchOrchestrator
+
             self._orchestrator = SomaticResearchOrchestrator(self._app_state)
         return self._orchestrator
 
@@ -86,7 +95,7 @@ class ResearchTaskManager:
         return self._app_state.scraped_asset_repo
 
     def _get_semaphore(self) -> asyncio.Semaphore:
-        return ensure_semaphore(self, '_semaphore', self.max_concurrent)
+        return ensure_semaphore(self, "_semaphore", self.max_concurrent)
 
     # ── Task Creation ─────────────────────────────────────────────
 
@@ -95,21 +104,21 @@ class ResearchTaskManager:
         objective: str,
         trigger_source: str,
         title: str = "",
-        conversation_id: Optional[str] = None,
+        conversation_id: str | None = None,
         status: str = "proposed",
         priority: int = 2,
         max_depth: int = 3,
         max_breadth: int = 4,
         is_agonistic: bool = False,
         budget_limit_usd: float = 0.50,
-        proposal_rationale: Optional[str] = None,
-        proposal_message_id: Optional[int] = None,
-        previous_context: Optional[str] = None,
-        continue_from_task_id: Optional[str] = None,
-        inject_file_id: Optional[str] = None,
-        inject_conversation_id: Optional[str] = None,
-        document_mode: Optional[str] = None,
-        document_chunk_limit: Optional[int] = None,
+        proposal_rationale: str | None = None,
+        proposal_message_id: int | None = None,
+        previous_context: str | None = None,
+        continue_from_task_id: str | None = None,
+        inject_file_id: str | None = None,
+        inject_conversation_id: str | None = None,
+        document_mode: str | None = None,
+        document_chunk_limit: int | None = None,
     ) -> str:
         """Create a new research task and persist it. Returns task_id."""
         if status not in VALID_STATUSES:
@@ -148,11 +157,14 @@ class ResearchTaskManager:
             extra_state["document_chunk_limit"] = document_chunk_limit
         if extra_state:
             import json
-            self.task_repo.update(task_id, orchestrator_state=json.dumps(
-                extra_state, default=str, ensure_ascii=False))
+
+            self.task_repo.update(task_id, orchestrator_state=json.dumps(extra_state, default=str, ensure_ascii=False))
         logger.info(
             "Research task created: %s [%s] status=%s trigger=%s",
-            task_id, task_data["title"][:60], status, trigger_source,
+            task_id,
+            task_data["title"][:60],
+            status,
+            trigger_source,
         )
         return task_id
 
@@ -170,10 +182,7 @@ class ResearchTaskManager:
 
         allowed = VALID_TRANSITIONS.get(current, set())
         if new_status not in allowed:
-            raise ValueError(
-                f"Invalid transition: {current} -> {new_status}. "
-                f"Allowed: {allowed}"
-            )
+            raise ValueError(f"Invalid transition: {current} -> {new_status}. Allowed: {allowed}")
 
         self.task_repo.transition_status(task_id, new_status)
         logger.info("Research task %s: %s -> %s", task_id, current, new_status)
@@ -213,18 +222,14 @@ class ResearchTaskManager:
         if task is None:
             return
         if task_id in self._active_tasks:
-            try:
+            with contextlib.suppress(Exception):
                 self._active_tasks[task_id].cancel()
-            except Exception:
-                pass
             self._active_tasks.pop(task_id, None)
 
         note_repo = getattr(self._app_state, "note_repo", None)
         if note_repo:
-            try:
+            with contextlib.suppress(Exception):
                 note_repo.delete_notes_by_asset("research_task", task_id)
-            except Exception:
-                pass
 
         self.task_repo.delete(task_id)
         logger.info("Research task %s deleted", task_id)
@@ -241,15 +246,15 @@ class ResearchTaskManager:
                 v = task.get("rerun_count") or 0
                 d = _extract_task_depth(task)
                 filename = f"research-synthesis-{task_id}_v{v}_d{d}.md"
-                from backend.services.file import FileService
-                
                 from backend.services.export import ExportService
+                from backend.services.file import FileService
+
                 full_report = ExportService.build_research_report_content(self._app_state, task_id)
                 content_bytes = full_report.encode("utf-8")
-                
+
                 # Cache on disk
                 FileService.cache_file(conversation_id, filename, content_bytes)
-                
+
                 # Register in perception_files
                 perception_repo = getattr(self._app_state, "perception_repo", None)
                 if perception_repo:
@@ -260,7 +265,7 @@ class ResearchTaskManager:
                         status="uploading",
                         display_name=task.get("objective") or task.get("title") or "",
                     )
-                    
+
                     # Spawn async digest worker
                     coro = FileService.process_and_summarize(
                         self._app_state, conversation_id, filename, "research-synthesis"
@@ -306,7 +311,8 @@ class ResearchTaskManager:
                 task = self.task_repo.get(task_id)
                 logger.info(
                     "EXECUTING research task %s: %s",
-                    task_id, task.get("title", "")[:80],
+                    task_id,
+                    task.get("title", "")[:80],
                 )
 
                 logger.info("EXECUTING task %s via orchestrator", task_id[:8])
@@ -387,8 +393,12 @@ class ResearchTaskManager:
         if not state:
             raise RuntimeError(f"No orchestrator state for {task_id}")
         if state == "complete":
-            return {"task_id": task_id, "executed_phase": "complete", "next_phase": "complete",
-                    "message": "already complete"}
+            return {
+                "task_id": task_id,
+                "executed_phase": "complete",
+                "next_phase": "complete",
+                "message": "already complete",
+            }
 
         result = await self.orchestrator.execute_step(task_id)
         phase = self.orchestrator.get_task_phase(task_id)
@@ -397,8 +407,11 @@ class ResearchTaskManager:
             if result.get("status") == "error":
                 # Task was already set to "failed" by execute_step's exception handler;
                 # don't overwrite with "completed".
-                logger.warning("orchestrator_step: phase=complete but result is error — skipping complete(), "
-                               "task already failed for %s", result.get("failed_phase", task_id[:8]))
+                logger.warning(
+                    "orchestrator_step: phase=complete but result is error — skipping complete(), "
+                    "task already failed for %s",
+                    result.get("failed_phase", task_id[:8]),
+                )
             else:
                 summary = result.get("result_summary", "Research complete.")
                 self.complete(task_id, result_summary=summary)
@@ -415,19 +428,13 @@ class ResearchTaskManager:
         if task is None:
             raise ValueError(f"Task not found: {task_id}")
         if task["status"] not in ("completed", "failed", "cancelled"):
-            raise ValueError(
-                f"Can only rerun terminal tasks, got: {task['status']}"
-            )
+            raise ValueError(f"Can only rerun terminal tasks, got: {task['status']}")
 
         # Delete old branches and assets for this task
-        try:
+        with contextlib.suppress(Exception):
             self.asset_repo.delete_by_task(task_id)
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             self.branch_repo.delete_by_task(task_id)
-        except Exception:
-            pass
 
         # Delete old steps and plans (step results cascade delete)
         try:
@@ -467,7 +474,9 @@ class ResearchTaskManager:
             update_fields.pop("rerun_count", None)
             self.task_repo.update(task_id, **update_fields)
         logger.info(
-            "Research task %s rerun #%d (in-place reset)", task_id, rerun_count,
+            "Research task %s rerun #%d (in-place reset)",
+            task_id,
+            rerun_count,
         )
 
         asyncio.create_task(self._try_process_queue())
@@ -489,19 +498,19 @@ class ResearchTaskManager:
         New document injection is optional (re-runs document_digestion phase).
         """
         import json
-        import sys
 
         rt_config = self.config
-        logger.debug("continue_task START: manual_mode=%s, enabled=%s",
-                     rt_config.get('manual_mode', False), rt_config.get('enabled', 'MISSING'))
+        logger.debug(
+            "continue_task START: manual_mode=%s, enabled=%s",
+            rt_config.get("manual_mode", False),
+            rt_config.get("enabled", "MISSING"),
+        )
 
         task = self.task_repo.get(task_id)
         if task is None:
             raise ValueError(f"Task not found: {task_id}")
         if task["status"] not in ("completed", "failed", "cancelled"):
-            raise ValueError(
-                f"Can only continue terminal tasks, got: {task['status']}"
-            )
+            raise ValueError(f"Can only continue terminal tasks, got: {task['status']}")
 
         new_objective = adjusted_objective or task["objective"]
         new_budget = budget_limit_usd or task["budget_limit_usd"]
@@ -517,13 +526,27 @@ class ResearchTaskManager:
                 old_orch = {}
 
             carry_keys = (
-                "plan", "all_findings", "last_reflection",
-                "search_results_cache", "parsed_sources_cache", "digest_results_cache",
-                "digest_signals", "sedimentation_queue",
-                "reflection_notes", "detected_biases", "knowledge_gaps",
-                "glitch_fidelity", "contradiction_density", "source_entropy",
-                "signal_flags", "refined_queries", "revised_confidence",
-                "monologue_trace", "critique_log", "diffractive_audit", "diffractive_audit_description",
+                "plan",
+                "all_findings",
+                "last_reflection",
+                "search_results_cache",
+                "parsed_sources_cache",
+                "digest_results_cache",
+                "digest_signals",
+                "sedimentation_queue",
+                "reflection_notes",
+                "detected_biases",
+                "knowledge_gaps",
+                "glitch_fidelity",
+                "contradiction_density",
+                "source_entropy",
+                "signal_flags",
+                "refined_queries",
+                "revised_confidence",
+                "monologue_trace",
+                "critique_log",
+                "diffractive_audit",
+                "diffractive_audit_description",
             )
             for k in carry_keys:
                 if k in old_orch:
@@ -549,7 +572,7 @@ class ResearchTaskManager:
             steps_repo = getattr(self._app_state, "research_step_repo", None)
             if steps_repo:
                 existing = steps_repo.get_by_task(task_id)
-                for s in (existing or []):
+                for s in existing or []:
                     pg = s.get("phase_group", 0) or s.get("step_number", 0)
                     if pg > max_phase_group:
                         max_phase_group = pg
@@ -576,8 +599,9 @@ class ResearchTaskManager:
         orch_state["current_depth"] = old_current_depth + 1
         orch_state["max_depth"] = orch_state["current_depth"]  # one cycle then hard-stop
 
-        logger.info("continue_task: max_phase_group=%d, previous_context=%d chars",
-                     max_phase_group, len(previous_context))
+        logger.info(
+            "continue_task: max_phase_group=%d, previous_context=%d chars", max_phase_group, len(previous_context)
+        )
 
         rerun_count = (task.get("rerun_count") or 0) + 1
         update_fields: dict[str, Any] = {
@@ -617,7 +641,12 @@ class ResearchTaskManager:
 
         logger.info(
             "Research task %s continued (run #%d) — depth %d→%d, pg_offset=%d, previous_context=%d chars",
-            task_id, rerun_count, task["max_depth"], orch_state["current_depth"], max_phase_group, len(previous_context),
+            task_id,
+            rerun_count,
+            task["max_depth"],
+            orch_state["current_depth"],
+            max_phase_group,
+            len(previous_context),
         )
 
     async def _execute_continued_task(self, task_id: str) -> None:
@@ -670,14 +699,14 @@ class ResearchTaskManager:
 
     # ── Query ─────────────────────────────────────────────────────
 
-    def get_task(self, task_id: str) -> Optional[dict]:
+    def get_task(self, task_id: str) -> dict | None:
         return self.task_repo.get(task_id)
 
     def list_tasks(
         self,
-        status: Optional[str] = None,
-        trigger_source: Optional[str] = None,
-        conversation_id: Optional[str] = None,
+        status: str | None = None,
+        trigger_source: str | None = None,
+        conversation_id: str | None = None,
         limit: int = 50,
     ) -> list[dict]:
         return self.task_repo.list_all(

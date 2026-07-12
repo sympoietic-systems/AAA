@@ -1,18 +1,15 @@
-import sys
 import os
-import json
+import sys
 import uuid
-import pytest
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime, timezone
+
+import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repository import SkillRepository, BeliefRepository, MessageRepository
-from backend.storage.models import BeliefNode, Message
 from backend.metabolisation.daemon import AutopoieticDreamDaemon
+from backend.storage.database import get_db_path, init_db
+from backend.storage.repository import BeliefRepository, MessageRepository, SkillRepository
 
 
 def _setup_db(name="aaa_skill_metabolism_test.db"):
@@ -36,6 +33,7 @@ class MockAppState:
             }
         }
         from backend.storage.repository import ConversationRepository
+
         self.skill_repo = SkillRepository(db_path)
         self.belief_repo = BeliefRepository(db_path)
         self.message_repo = MessageRepository(db_path)
@@ -53,7 +51,7 @@ async def test_skill_metabolism_triggers():
     # 1. Create a crystallized skill
     skill_id = str(uuid.uuid4())
     skill_name = "debugging"
-    skill = app_state.skill_repo.create_skill(
+    _skill = app_state.skill_repo.create_skill(
         id=skill_id,
         name=skill_name,
         description="Core debugging protocol",
@@ -142,7 +140,7 @@ async def test_skill_metabolism_no_trigger_below_threshold():
         label=f"skill:{skill_name}",
         statement="Some skill description",
         origin="emergent",
-        confidence=0.85, # diff is 0.05, no tectonic shift
+        confidence=0.85,  # diff is 0.05, no tectonic shift
         ontological_mass=1.0,
         somatic_anchor="conceptual",
         vector_16d="[]",
@@ -178,7 +176,7 @@ async def test_skill_metabolism_anti_mastery_violation():
         label=f"skill:{skill_name}",
         statement="Attunement description",
         origin="emergent",
-        confidence=0.1, # collapsed
+        confidence=0.1,  # collapsed
         ontological_mass=1.0,
         somatic_anchor="conceptual",
         vector_16d="[]",

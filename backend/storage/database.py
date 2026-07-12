@@ -1,7 +1,6 @@
 import os
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 
 def get_db_path(db_path: str) -> Path:
@@ -30,6 +29,7 @@ def init_db(db_path: str) -> sqlite3.Connection:
         return conn
 
     from backend.storage.migrations import run_all_migrations
+
     run_all_migrations(conn)
     _migrate_legacy_conversation(conn)
     _cleanup_invalid_conversations(conn)
@@ -45,14 +45,11 @@ def _cleanup_invalid_conversations(conn: sqlite3.Connection) -> None:
         pass
 
 
-
 _LEGACY_CONVERSATION_ID = "00000000-0000-0000-0000-000000000000"
 
 
 def _migrate_legacy_conversation(conn: sqlite3.Connection) -> None:
-    orphan_count = conn.execute(
-        "SELECT COUNT(*) FROM conversation_log WHERE conversation_id = ''"
-    ).fetchone()[0]
+    orphan_count = conn.execute("SELECT COUNT(*) FROM conversation_log WHERE conversation_id = ''").fetchone()[0]
 
     if orphan_count == 0:
         return

@@ -1,7 +1,6 @@
 """Repository for research_meta_log table — traceability/debug log."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
@@ -39,7 +38,7 @@ class ResearchMetaLogRepository(BaseRepository):
                     entry.get("step_id"),
                     entry["event_type"],
                     entry["event_data"],
-                    entry.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                    entry.get("created_at") or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
                 ),
             )
         except Exception:
@@ -54,7 +53,7 @@ class ResearchMetaLogRepository(BaseRepository):
                     entry.get("branch_id"),
                     entry["event_type"],
                     entry["event_data"],
-                    entry.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                    entry.get("created_at") or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
                 ),
             )
         conn.commit()

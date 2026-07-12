@@ -1,18 +1,18 @@
+import json
 import os
 import sys
 import uuid
-import json
+from unittest.mock import MagicMock
+
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repository import SkillRepository, BeliefRepository
-from backend.utils.skill_parser import parse_skill_nucleation_tags
 from backend.modules.background_tasks.actions.refine_skill import RefineSkillAction
 from backend.services.skill import SkillService
+from backend.storage.database import get_db_path, init_db
+from backend.storage.repository import SkillRepository
+from backend.utils.skill_parser import parse_skill_nucleation_tags
 
 
 def _setup_db(name="aaa_skill_refinement_test.db"):
@@ -26,9 +26,9 @@ def _setup_db(name="aaa_skill_refinement_test.db"):
 
 def test_parse_skill_nucleation_tags():
     # 1. Basic unescaped tag in chat response
-    chat_text = "Let's nucleate this: <skill-nucleation name=\"concept-weaver\" always_active=\"false\" trigger_keywords=\"['weave', 'concept']\">\n# Concept Weaver\nBehavior guidelines...\n</skill-nucleation> And that is it."
+    chat_text = 'Let\'s nucleate this: <skill-nucleation name="concept-weaver" always_active="false" trigger_keywords="[\'weave\', \'concept\']">\n# Concept Weaver\nBehavior guidelines...\n</skill-nucleation> And that is it.'
     cleaned, skills = parse_skill_nucleation_tags(chat_text)
-    
+
     assert "concept-weaver" in [s["name"] for s in skills]
     assert skills[0]["always_active"] is False
     assert "weave" in skills[0]["trigger_keywords"]
@@ -37,9 +37,9 @@ def test_parse_skill_nucleation_tags():
     assert "</skill-nucleation>" not in cleaned
 
     # 2. Tag inside parsed JSON field with escaped quotes
-    json_summary = "We observed a pattern. <skill-nucleation name=\\\"cybernetic-weaving\\\" always_active=\\\"true\\\" trigger_keywords=\\\"['cyber', 'weaving']\\\">\nInstructions...\n</skill-nucleation>"
+    json_summary = 'We observed a pattern. <skill-nucleation name=\\"cybernetic-weaving\\" always_active=\\"true\\" trigger_keywords=\\"[\'cyber\', \'weaving\']\\">\nInstructions...\n</skill-nucleation>'
     cleaned_json, skills_json = parse_skill_nucleation_tags(json_summary)
-    
+
     assert skills_json[0]["name"] == "cybernetic-weaving"
     assert skills_json[0]["always_active"] is True
     assert "cyber" in skills_json[0]["trigger_keywords"]
@@ -54,7 +54,7 @@ def test_parse_skill_nucleation_tags():
     assert skills_na[0]["content"] == "Draft content"
 
     # 4. Spacing, colons, and different quoting styles
-    spacing_text = "Let's try <skill_nucleation name : 'spaced-name' always_active = true trigger_keywords = [\"a\", \"b\"]>Content here</skill-nucleation>"
+    spacing_text = 'Let\'s try <skill_nucleation name : \'spaced-name\' always_active = true trigger_keywords = ["a", "b"]>Content here</skill-nucleation>'
     cleaned_sp, skills_sp = parse_skill_nucleation_tags(spacing_text)
     assert skills_sp[0]["name"] == "spaced-name"
     assert skills_sp[0]["always_active"] is True
@@ -81,10 +81,10 @@ def test_parse_skill_nucleation_tags():
 
     # 7. Fuzzy/natural language candidate detection fallback
     fuzzy_text = """Yes. Two potential nucleations.
-    
+
     ### Candidate 1: `media-specific-analysis`
     Hayles' core method is MSA...
-    
+
     ### Candidate 2: `forensic-materiality`
     This is a more focused variant...
     """
@@ -98,27 +98,26 @@ def test_parse_skill_nucleation_tags():
     assert "focused" in skills_fz[1]["content"]
 
 
-
-
 @pytest.mark.asyncio
 async def test_refine_skill_action_accepts():
     db_path = _setup_db("aaa_refine_accept_test.db")
-    
+
     # Mock configuration loading to use our test db path
     import backend.modules.background_tasks.actions.refine_skill as refine_mod
-    refine_mod.load_config = lambda: {"database": {"path": f"data/aaa_refine_accept_test.db"}}
+
+    refine_mod.load_config = lambda: {"database": {"path": "data/aaa_refine_accept_test.db"}}
 
     # Create proposed skill payload
     skill_data = {
         "name": "temporary-weaving",
         "always_active": False,
         "trigger_keywords": ["weaving"],
-        "content": "Draft instructions for weaving."
+        "content": "Draft instructions for weaving.",
     }
 
     # Mock LLM provider to return accepted response
     provider = MagicMock()
-    
+
     refined_markdown = """# temporary-weaving
 Refined orientation description.
 
@@ -137,13 +136,14 @@ Refined orientation description.
             "description": "Refined short description",
             "always_active": False,
             "trigger_keywords": ["weaving", "yarn"],
-            "content": refined_markdown
-        }
+            "content": refined_markdown,
+        },
     }
-    
+
     # generate_unified is imported in refine_skill, mock it
     async def mock_generate(*args, **kwargs):
         return mock_response
+
     refine_mod.generate_unified = mock_generate
 
     action = RefineSkillAction()
@@ -165,16 +165,17 @@ Refined orientation description.
 @pytest.mark.asyncio
 async def test_refine_skill_action_refuses():
     db_path = _setup_db("aaa_refine_refuse_test.db")
-    
+
     # Mock configuration loading to use our test db path
     import backend.modules.background_tasks.actions.refine_skill as refine_mod
-    refine_mod.load_config = lambda: {"database": {"path": f"data/aaa_refine_refuse_test.db"}}
+
+    refine_mod.load_config = lambda: {"database": {"path": "data/aaa_refine_refuse_test.db"}}
 
     skill_data = {
         "name": "redundant-skill",
         "always_active": False,
         "trigger_keywords": ["test"],
-        "content": "redundant content"
+        "content": "redundant content",
     }
 
     # Mock LLM provider to return refuse response
@@ -182,14 +183,12 @@ async def test_refine_skill_action_refuses():
     mock_response = {
         "content": "json text content",
         "model": "mock-model",
-        "json_data": {
-            "decision": "refuse",
-            "reason": "Duplicate of existing skill."
-        }
+        "json_data": {"decision": "refuse", "reason": "Duplicate of existing skill."},
     }
-    
+
     async def mock_generate(*args, **kwargs):
         return mock_response
+
     refine_mod.generate_unified = mock_generate
 
     action = RefineSkillAction()
@@ -203,7 +202,7 @@ async def test_refine_skill_action_refuses():
     skill = repo.get_skill_by_name("redundant-skill")
     assert skill is not None
     assert skill.lifecycle_stage == "collapsed"
-    
+
     events = repo.list_events(skill.id)
     assert len(events) > 0
     assert events[0].event_type == "collapse"
@@ -217,23 +216,43 @@ async def test_skill_service_returns_collapsed_and_proposed():
 
     # 1. Crystallized always_active
     repo.create_skill(
-        id=str(uuid.uuid4()), name="active-baseline", description="baseline description",
-        content="# baseline", always_active=True, lifecycle_stage="crystallized", confidence=0.9
+        id=str(uuid.uuid4()),
+        name="active-baseline",
+        description="baseline description",
+        content="# baseline",
+        always_active=True,
+        lifecycle_stage="crystallized",
+        confidence=0.9,
     )
     # 2. Crystallized on_demand
     repo.create_skill(
-        id=str(uuid.uuid4()), name="active-ondemand", description="ondemand description",
-        content="# ondemand", always_active=False, lifecycle_stage="crystallized", confidence=0.8
+        id=str(uuid.uuid4()),
+        name="active-ondemand",
+        description="ondemand description",
+        content="# ondemand",
+        always_active=False,
+        lifecycle_stage="crystallized",
+        confidence=0.8,
     )
     # 3. Nucleation (proposed)
     repo.create_skill(
-        id=str(uuid.uuid4()), name="proposed-skill", description="proposed description",
-        content="# proposed", always_active=False, lifecycle_stage="nucleation", confidence=0.0
+        id=str(uuid.uuid4()),
+        name="proposed-skill",
+        description="proposed description",
+        content="# proposed",
+        always_active=False,
+        lifecycle_stage="nucleation",
+        confidence=0.0,
     )
     # 4. Collapsed (refused)
     repo.create_skill(
-        id=str(uuid.uuid4()), name="refused-skill", description="refused description",
-        content="# refused", always_active=False, lifecycle_stage="collapsed", confidence=0.0
+        id=str(uuid.uuid4()),
+        name="refused-skill",
+        description="refused description",
+        content="# refused",
+        always_active=False,
+        lifecycle_stage="collapsed",
+        confidence=0.0,
     )
 
     state = MagicMock()
@@ -259,10 +278,11 @@ async def test_skill_service_returns_collapsed_and_proposed():
 @pytest.mark.asyncio
 async def test_refine_skill_action_updates():
     db_path = _setup_db("aaa_refine_update_test.db")
-    
+
     # Mock configuration loading to use our test db path
     import backend.modules.background_tasks.actions.refine_skill as refine_mod
-    refine_mod.load_config = lambda: {"database": {"path": f"data/aaa_refine_update_test.db"}}
+
+    refine_mod.load_config = lambda: {"database": {"path": "data/aaa_refine_update_test.db"}}
 
     # Seed an active skill
     repo = SkillRepository(db_path)
@@ -283,12 +303,12 @@ async def test_refine_skill_action_updates():
         "name": "media-specific-analysis-extended",
         "always_active": False,
         "trigger_keywords": ["forensic", "msa"],
-        "content": "Proposed extension idea."
+        "content": "Proposed extension idea.",
     }
 
     # Mock LLM provider to return update decision
     provider = MagicMock()
-    
+
     refined_markdown = """# media-specific-analysis
 Refined diffracted description integrating material substrates.
 
@@ -306,12 +326,13 @@ Refined diffracted description integrating material substrates.
             "reason": "Folding in forensic materiality into media specific analysis.",
             "trigger_keywords": ["msa", "reading", "forensic"],
             "content": refined_markdown,
-            "changelog": "Merged aspects of forensic materiality."
-        }
+            "changelog": "Merged aspects of forensic materiality.",
+        },
     }
-    
+
     async def mock_generate(*args, **kwargs):
         return mock_response
+
     refine_mod.generate_unified = mock_generate
 
     action = RefineSkillAction()
@@ -338,9 +359,8 @@ Refined diffracted description integrating material substrates.
     assert proposal_trace is not None
     assert proposal_trace.lifecycle_stage == "collapsed"
     assert proposal_trace.changelog == "Merged into media-specific-analysis"
-    
+
     trace_events = repo.list_events(proposal_trace.id)
     assert len(trace_events) > 0
     assert trace_events[0].event_type == "collapse"
     assert "Merged into active skill 'media-specific-analysis'" in trace_events[0].rationale
-

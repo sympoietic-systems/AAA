@@ -1,20 +1,28 @@
 import json
 import logging
 
+from backend.modules.llm_client import generate_unified
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import ConsolidatePayload, StepEnvelope, StepOutput
-from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.anti_mastery import apply_anti_mastery_filter
-from backend.modules.llm_client import generate_unified
+from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
-async def run_consolidation(orch, task_id: str, objective: str, goal: str,
-                            depth: int, max_depth: int, all_findings: list[str],
-                            previous_reflection: dict, digest_signals: dict = None,
-                            step_id: str = "") -> dict:
+async def run_consolidation(
+    orch,
+    task_id: str,
+    objective: str,
+    goal: str,
+    depth: int,
+    max_depth: int,
+    all_findings: list[str],
+    previous_reflection: dict,
+    digest_signals: dict = None,
+    step_id: str = "",
+) -> dict:
     """Multi-round LLM reflection on accumulated findings.
 
     Migrated from legacy tools._tool_reflect.
@@ -26,44 +34,59 @@ async def run_consolidation(orch, task_id: str, objective: str, goal: str,
 
     # Try cache first for persona, system prompt, and user prompt (matching depth)
     cached = orch._get_cached_phase(task_id, "consolidating")
-    if (
-        cached
-        and cached.get("current_depth") == depth
-        and cached.get("system_prompt")
-        and cached.get("user_prompt")
-    ):
+    if cached and cached.get("current_depth") == depth and cached.get("system_prompt") and cached.get("user_prompt"):
         logger.info("Using cached preview prompts for consolidating phase (depth %d)", depth)
         system_text = cached["system_prompt"]
         user_text = cached["user_prompt"]
 
-        orch._log_meta(task_id, "orchestrator_reflect_prompt", {
-            "system_prompt": system_text[:2000],
-            "user_prompt": user_text[:2000],
-        }, step_id=step_id or None)
+        orch._log_meta(
+            task_id,
+            "orchestrator_reflect_prompt",
+            {
+                "system_prompt": system_text[:2000],
+                "user_prompt": user_text[:2000],
+            },
+            step_id=step_id or None,
+        )
 
         latest_result = {}
         try:
             llm = getattr(orch._state, "llm_provider", None)
             if llm:
-                resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
+                resp = await generate_unified(
+                    llm,
+                    system_prompt=system_text,
+                    user_prompt=user_text,
                     expect_json=True,
                     fallback_value={"completeness_score": 0.5, "next_queries": [], "next_direct_urls": []},
                     temperature=prompt_data.get("temperature", 0.5),
-                    max_tokens=prompt_data.get("max_tokens", 2048))
+                    max_tokens=prompt_data.get("max_tokens", 2048),
+                )
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
                     result = json.loads(result)
                 if isinstance(result, dict):
                     latest_result = result
-                    orch._log_llm_response(task_id, "orchestrator_reflect_response", resp, extra={
-                        "completeness": result.get("completeness_score", 0),
-                    }, step_id=step_id or None)
+                    orch._log_llm_response(
+                        task_id,
+                        "orchestrator_reflect_response",
+                        resp,
+                        extra={
+                            "completeness": result.get("completeness_score", 0),
+                        },
+                        step_id=step_id or None,
+                    )
                     if step_id:
                         orch._save_llm_response_to_step_data(step_id, resp)
         except Exception as e:
             logger.warning("Reflection failed with cached preview: %s", e)
 
-        return latest_result or {"completeness_score": 0.3, "next_queries": [], "next_direct_urls": [], "reflection": "No reflection"}
+        return latest_result or {
+            "completeness_score": 0.3,
+            "next_queries": [],
+            "next_direct_urls": [],
+            "reflection": "No reflection",
+        }
 
     if cached and cached.get("persona") and cached.get("system_prompt"):
         persona = cached["persona"]
@@ -93,9 +116,9 @@ async def run_consolidation(orch, task_id: str, objective: str, goal: str,
         try:
             steps = orch.step_repo.get_by_task(task_id)
             current_parse_steps = [
-                st for st in steps
-                if st.get("step_type") in ("parallel_parse", "document_digestion")
-                and orch._get_step_depth(st) == depth
+                st
+                for st in steps
+                if st.get("step_type") in ("parallel_parse", "document_digestion") and orch._get_step_depth(st) == depth
             ]
             for ps in current_parse_steps:
                 db_results = orch.step_result_repo.get_by_step(ps["id"])
@@ -105,8 +128,8 @@ async def run_consolidation(orch, task_id: str, objective: str, goal: str,
                             analysis = json.loads(r["analyzed_json"])
                             learnings = analysis.get("learnings", [])
                             title = r.get("source_title") or r.get("source_url", "")[:80]
-                            for l in learnings:
-                                current_cycle_findings.append(f"[{title}]: {l}")
+                            for learning in learnings:
+                                current_cycle_findings.append(f"[{title}]: {learning}")
                         except Exception:
                             pass
         except Exception as e:
@@ -120,31 +143,29 @@ async def run_consolidation(orch, task_id: str, objective: str, goal: str,
 
     all_to_compress = current_cycle_findings + historical_findings
     formatted_urls, compressed_all, compressed_followups, compressed_gaps = apply_unified_references(
-        parsed_urls_list, all_to_compress,
+        parsed_urls_list,
+        all_to_compress,
         signals.get("followups", []),
         signals.get("gaps", []),
     )
 
     parsed_urls_text = "\n".join(formatted_urls) or "(none)"
-    compressed_current = compressed_all[:len(current_cycle_findings)]
-    compressed_historical = compressed_all[len(current_cycle_findings):]
+    compressed_current = compressed_all[: len(current_cycle_findings)]
+    compressed_historical = compressed_all[len(current_cycle_findings) :]
 
     if depth > 0:
-        accumulated_findings_text = (
-            f"### New Findings (Cycle {depth + 1}):\n" +
-            ("\n".join(compressed_current) if compressed_current else "(none)")
+        accumulated_findings_text = f"### New Findings (Cycle {depth + 1}):\n" + (
+            "\n".join(compressed_current) if compressed_current else "(none)"
         )
         if historical_findings:
-            accumulated_findings_text += (
-                f"\n\n### Historical Findings (Cycle 1 to {depth}):\n" +
-                "\n".join(compressed_historical)
+            accumulated_findings_text += f"\n\n### Historical Findings (Cycle 1 to {depth}):\n" + "\n".join(
+                compressed_historical
             )
     else:
         accumulated_findings_text = "\n".join(compressed_current)
         if historical_findings:
-            accumulated_findings_text += (
-                "\n\n### Digested Document/Other Findings:\n" +
-                "\n".join(compressed_historical)
+            accumulated_findings_text += "\n\n### Digested Document/Other Findings:\n" + "\n".join(
+                compressed_historical
             )
 
     followups_text = "\n".join(f"- {f}" for f in compressed_followups) or "(none)"
@@ -154,8 +175,10 @@ async def run_consolidation(orch, task_id: str, objective: str, goal: str,
     prev_refl_formatted = orch._format_reflection_markdown(previous_reflection, depth, include_cycle=True)
 
     user_text = prompt_data.get("user", "").format(
-        objective=objective, goal=goal,
-        current_depth=depth, max_depth=max_depth,
+        objective=objective,
+        goal=goal,
+        current_depth=depth,
+        max_depth=max_depth,
         parsed_urls=parsed_urls_text,
         accumulated_findings=accumulated_findings_text,
         previous_reflection=prev_refl_formatted,
@@ -166,34 +189,54 @@ async def run_consolidation(orch, task_id: str, objective: str, goal: str,
     if prompt_data.get("anti_mastery"):
         user_text = apply_anti_mastery_filter(user_text)
 
-    orch._log_meta(task_id, "orchestrator_reflect_prompt", {
-        "system_prompt": system_text[:2000],
-        "user_prompt": user_text[:2000],
-    }, step_id=step_id or None)
+    orch._log_meta(
+        task_id,
+        "orchestrator_reflect_prompt",
+        {
+            "system_prompt": system_text[:2000],
+            "user_prompt": user_text[:2000],
+        },
+        step_id=step_id or None,
+    )
 
     latest_result = {}
     try:
         llm = getattr(orch._state, "llm_provider", None)
         if llm:
-            resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
+            resp = await generate_unified(
+                llm,
+                system_prompt=system_text,
+                user_prompt=user_text,
                 expect_json=True,
                 fallback_value={"completeness_score": 0.5, "next_queries": [], "next_direct_urls": []},
                 temperature=prompt_data.get("temperature", 0.5),
-                max_tokens=prompt_data.get("max_tokens", 2048))
+                max_tokens=prompt_data.get("max_tokens", 2048),
+            )
             result = resp.get("json_data") or resp.get("content") or {}
             if isinstance(result, str):
                 result = json.loads(result)
             if isinstance(result, dict):
                 latest_result = result
-                orch._log_llm_response(task_id, "orchestrator_reflect_response", resp, extra={
-                    "completeness": result.get("completeness_score", 0),
-                }, step_id=step_id or None)
+                orch._log_llm_response(
+                    task_id,
+                    "orchestrator_reflect_response",
+                    resp,
+                    extra={
+                        "completeness": result.get("completeness_score", 0),
+                    },
+                    step_id=step_id or None,
+                )
                 if step_id:
                     orch._save_llm_response_to_step_data(step_id, resp)
     except Exception as e:
         logger.warning("Reflection failed: %s", e)
 
-    return latest_result or {"completeness_score": 0.3, "next_queries": [], "next_direct_urls": [], "reflection": "No reflection"}
+    return latest_result or {
+        "completeness_score": 0.3,
+        "next_queries": [],
+        "next_direct_urls": [],
+        "reflection": "No reflection",
+    }
 
 
 class ConsolidateStep(BaseResearchStep):
@@ -212,6 +255,7 @@ class ConsolidateStep(BaseResearchStep):
         prompt_data = get_prompts_dict("research/orchestrator_reflect.yaml")
         try:
             from backend.services.research.context_builder import ResearchContextBuilder
+
             builder = ResearchContextBuilder(orch._state)
             persona = await builder.build_reflection_context(objective, depth)
         except Exception:
@@ -232,8 +276,10 @@ class ConsolidateStep(BaseResearchStep):
             try:
                 steps = orch.step_repo.get_by_task(task_id)
                 current_parse_steps = [
-                    st for st in steps
-                    if st.get("step_type") in ("parallel_parse", "document_digestion") and orch._get_step_depth(st) == depth
+                    st
+                    for st in steps
+                    if st.get("step_type") in ("parallel_parse", "document_digestion")
+                    and orch._get_step_depth(st) == depth
                 ]
                 for ps in current_parse_steps:
                     db_results = orch.step_result_repo.get_by_step(ps["id"])
@@ -243,8 +289,8 @@ class ConsolidateStep(BaseResearchStep):
                                 analysis = json.loads(r["analyzed_json"])
                                 learnings = analysis.get("learnings", [])
                                 title = r.get("source_title") or r.get("source_url", "")[:80]
-                                for l in learnings:
-                                    current_cycle_findings.append(f"[{title}]: {l}")
+                                for learning in learnings:
+                                    current_cycle_findings.append(f"[{title}]: {learning}")
                             except Exception:
                                 pass
             except Exception as e:
@@ -260,6 +306,7 @@ class ConsolidateStep(BaseResearchStep):
 
         # Compress findings and extract sources map globally
         from backend.services.research.steps.source_utils import apply_unified_references
+
         all_to_compress = current_cycle_findings + historical_findings
         formatted_urls, compressed_all, compressed_followups, compressed_gaps = apply_unified_references(
             parsed_urls_list,
@@ -269,25 +316,22 @@ class ConsolidateStep(BaseResearchStep):
         )
 
         parsed_urls_text = "\n".join(formatted_urls) or "(none)"
-        compressed_current = compressed_all[:len(current_cycle_findings)]
-        compressed_historical = compressed_all[len(current_cycle_findings):]
+        compressed_current = compressed_all[: len(current_cycle_findings)]
+        compressed_historical = compressed_all[len(current_cycle_findings) :]
 
         if depth > 0:
-            accumulated_findings_text = (
-                f"### New Findings (Cycle {depth + 1}):\n" +
-                ("\n".join(compressed_current) if compressed_current else "(none)")
+            accumulated_findings_text = f"### New Findings (Cycle {depth + 1}):\n" + (
+                "\n".join(compressed_current) if compressed_current else "(none)"
             )
             if historical_findings:
-                accumulated_findings_text += (
-                    f"\n\n### Historical Findings (Cycle 1 to {depth}):\n" +
-                    "\n".join(compressed_historical)
+                accumulated_findings_text += f"\n\n### Historical Findings (Cycle 1 to {depth}):\n" + "\n".join(
+                    compressed_historical
                 )
         else:
             accumulated_findings_text = "\n".join(compressed_current)
             if historical_findings:
-                accumulated_findings_text += (
-                    "\n\n### Digested Document/Other Findings:\n" +
-                    "\n".join(compressed_historical)
+                accumulated_findings_text += "\n\n### Digested Document/Other Findings:\n" + "\n".join(
+                    compressed_historical
                 )
 
         followups_text = "\n".join(f"- {f}" for f in compressed_followups) or "(none)"
@@ -351,22 +395,33 @@ class ConsolidateStep(BaseResearchStep):
         step_id = orch._create_or_update_step(s, task_id, "reflect")
 
         reflection = await run_consolidation(
-            orch, task_id, objective, goal,
-            current_depth, max_depth,
-            all_findings, payload.last_reflection,
-            digest_signals=digest_signals, step_id=step_id,
+            orch,
+            task_id,
+            objective,
+            goal,
+            current_depth,
+            max_depth,
+            all_findings,
+            payload.last_reflection,
+            digest_signals=digest_signals,
+            step_id=step_id,
         )
 
         completeness = reflection.get("completeness_score", 0.0)
 
         if orch.step_repo:
-            orch.step_repo.update(step_id, status="completed",
-                result_summary=f"completeness: {completeness:.2f}")
+            orch.step_repo.update(step_id, status="completed", result_summary=f"completeness: {completeness:.2f}")
 
-        orch._log_meta(task_id, "orchestrator_reflect", {
-            "depth": current_depth, "completeness": completeness,
-            "total_findings": len(all_findings),
-        }, step_id=step_id)
+        orch._log_meta(
+            task_id,
+            "orchestrator_reflect",
+            {
+                "depth": current_depth,
+                "completeness": completeness,
+                "total_findings": len(all_findings),
+            },
+            step_id=step_id,
+        )
 
         key_insights = reflection.get("key_insights", [])
 
@@ -387,7 +442,7 @@ class ConsolidateStep(BaseResearchStep):
             key_insights=reflection.get("key_insights", []),
             remaining_gaps=reflection.get("remaining_gaps", []),
             next_queries=reflection.get("next_queries", []),
-            next_direct_urls=reflection.get("next_direct_urls", [])
+            next_direct_urls=reflection.get("next_direct_urls", []),
         )
 
         rationale = f"Evaluated research completeness ({completeness * 100:.1f}%). Identified {len(reflection.get('remaining_gaps', []))} remaining gaps and planned {len(reflection.get('next_queries', []))} follow-up queries."
@@ -397,5 +452,5 @@ class ConsolidateStep(BaseResearchStep):
             message=f"completeness score: {completeness:.2f}",
             payload=out_payload,
             step_ids=[step_id],
-            transition_rationale=rationale
+            transition_rationale=rationale,
         )

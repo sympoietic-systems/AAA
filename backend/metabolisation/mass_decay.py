@@ -3,7 +3,7 @@
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 
@@ -42,7 +42,7 @@ class MassDecayMixin:
             if last_reinforced is None:
                 continue
 
-            hours_since = (datetime.now(timezone.utc) - last_reinforced.replace(tzinfo=timezone.utc)).total_seconds() / 3600.0
+            hours_since = (datetime.now(UTC) - last_reinforced.replace(tzinfo=UTC)).total_seconds() / 3600.0
             if hours_since < 1.0:
                 continue
 
@@ -77,14 +77,16 @@ class MassDecayMixin:
                 self.belief_repo.update_proposal_status(
                     b.id,
                     "rejected",
-                    rejection_rationale=f"Belief collapsed during autopoietic mass decay. Final Mass: {new_mass:.3f}"
+                    rejection_rationale=f"Belief collapsed during autopoietic mass decay. Final Mass: {new_mass:.3f}",
                 )
                 logger.info(f"Belief '{b.label}' decayed to collapsed/faded: moved to belief_proposals as rejected.")
             else:
                 self.belief_repo.update_belief_mass(b.id, new_mass)
                 if new_stage != b.lifecycle_stage:
                     self.belief_repo.update_belief_stage(b.id, new_stage)
-                    logger.info(f"Belief '{b.label}' mass decay: {b.lifecycle_stage} -> {new_stage} (mass={new_mass:.4f})")
+                    logger.info(
+                        f"Belief '{b.label}' mass decay: {b.lifecycle_stage} -> {new_stage} (mass={new_mass:.4f})"
+                    )
 
         logger.debug("Applied mass decay to %d beliefs over %.0fs idle", len(active_beliefs), elapsed)
         await self._apply_skill_ecology(idle_duration)
@@ -99,7 +101,7 @@ class MassDecayMixin:
         if not skills:
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         dormancy_hours = 72.0
 
         for skill in skills:
@@ -121,9 +123,7 @@ class MassDecayMixin:
                     skill_belief.confidence,
                 )
 
-            new_stage = skill.lifecycle_stage
             if skill_belief.lifecycle_stage == "collapsed" and skill.lifecycle_stage != "collapsed":
-                new_stage = "collapsed"
                 skill_repo.update_skill(
                     skill_id=skill.id,
                     lifecycle_stage="collapsed",
@@ -137,10 +137,11 @@ class MassDecayMixin:
                     source_type="dream_turn",
                     rationale="Belief bridge collapsed — skill enters spectral margin",
                 )
-                logger.info("Skill '%s' collapsed via belief bridge (mass=%.4f)", skill.name, skill_belief.ontological_mass)
+                logger.info(
+                    "Skill '%s' collapsed via belief bridge (mass=%.4f)", skill.name, skill_belief.ontological_mass
+                )
 
             elif skill_belief.lifecycle_stage == "crystallized" and skill.lifecycle_stage != "crystallized":
-                new_stage = "crystallized"
                 skill_repo.update_skill(
                     skill_id=skill.id,
                     lifecycle_stage="crystallized",
@@ -148,16 +149,18 @@ class MassDecayMixin:
                 )
 
             if skill.lifecycle_stage == "crystallized" and skill.last_used_at:
-                if hasattr(skill.last_used_at, 'tzinfo') and skill.last_used_at.tzinfo is not None:
+                if hasattr(skill.last_used_at, "tzinfo") and skill.last_used_at.tzinfo is not None:
                     last_used = skill.last_used_at
                 else:
-                    last_used = skill.last_used_at.replace(tzinfo=timezone.utc)
+                    last_used = skill.last_used_at.replace(tzinfo=UTC)
                 hours_since_use = (now - last_used).total_seconds() / 3600.0
 
                 if hours_since_use > dormancy_hours and skill.confidence < 0.3:
                     logger.info(
                         "Skill '%s' underperforming: dormant %.0fh, confidence %.2f",
-                        skill.name, hours_since_use, skill.confidence,
+                        skill.name,
+                        hours_since_use,
+                        skill.confidence,
                     )
 
         self._check_ghost_skill_resurrection(belief_repo, skill_repo)
@@ -170,7 +173,8 @@ class MassDecayMixin:
         for skill in collapsed_skills:
             events = skill_repo.list_events(skill.id)
             supporting_events = [
-                e for e in events[-10:]
+                e
+                for e in events[-10:]
                 if e.event_type in ("revision", "crystallization") and "resurrection" not in (e.rationale or "").lower()
             ]
             if len(supporting_events) < 3:

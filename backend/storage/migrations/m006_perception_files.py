@@ -1,8 +1,9 @@
+import contextlib
 import sqlite3
 
 
 def up(conn):
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("""
             CREATE TABLE IF NOT EXISTS perception_files (
                 id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,19 +21,13 @@ def up(conn):
                 UNIQUE(conversation_id, file_name)
             )
         """)
-    except sqlite3.OperationalError:
-        pass
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         conn.execute("CREATE INDEX IF NOT EXISTS idx_pf_conv ON perception_files(conversation_id)")
-    except sqlite3.OperationalError:
-        pass
 
     for col, col_type in [
         ("interference_score", "REAL DEFAULT 0.0"),
         ("belief_nodes_implicated", "TEXT"),
         ("state_vector_impact", "TEXT"),
     ]:
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute(f"ALTER TABLE perception_files ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError:
-            pass

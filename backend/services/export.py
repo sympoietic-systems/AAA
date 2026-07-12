@@ -5,7 +5,7 @@ designed for LLM consumption — preserving tree structure, branches, cross-link
 notes, memory nodes, and metadata.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 class ExportService:
@@ -124,12 +124,12 @@ class ExportService:
             f'updated_at: "{conv.get("updated_at", "")}"',
             f"message_count: {len(messages)}",
             f'agent_id: "{conv.get("agent_id", "symbia")}"',
-            f'tags: [{tag_list}]',
+            f"tags: [{tag_list}]",
             f"cross_link_count: {len(links)}",
             f"note_count: {len(notes)}",
             f"memory_node_count: {len(memory_nodes)}",
-            f'export_format_version: "1.0"',
-            f'exported_at: "{datetime.now(timezone.utc).isoformat()}"',
+            'export_format_version: "1.0"',
+            f'exported_at: "{datetime.now(UTC).isoformat()}"',
             "---",
             "",
         ]
@@ -148,7 +148,6 @@ class ExportService:
             f"| Agent | {conv.get('agent_id', 'symbia')} |",
         ]
         if tags:
-            tag_names = [t["tag"] for t in tags]
             semantic_tags = [t["tag"] for t in tags if t.get("tag_type") != "structural"]
             structural_tags = [t["tag"] for t in tags if t.get("tag_type") == "structural"]
             if semantic_tags:
@@ -235,12 +234,12 @@ class ExportService:
         for n in memory_nodes:
             parts.append(f'  - id: "{n.get("id", "")}"')
             parts.append(f'    type: "{n.get("node_type", "concept")}"')
-            parts.append(f'    intensity: {n.get("intensity", 0.5)}')
+            parts.append(f"    intensity: {n.get('intensity', 0.5)}")
             parts.append(f'    text: "{n.get("intra_active_text", "")}"')
             surface = n.get("surface_fragment", "")
             if surface:
                 parts.append(f'    surface: "{surface}"')
-            parts.append(f'    glitch_potential: {n.get("glitch_potential", 0.0)}')
+            parts.append(f"    glitch_potential: {n.get('glitch_potential', 0.0)}")
             tendrils = n.get("tendril_ids", []) or []
             parts.append(f"    tendrils: {tendrils}")
             scar = n.get("scar", "")
@@ -278,7 +277,7 @@ class ExportService:
 
             children = parent_to_children.get(node.id, [])
             for i, child in enumerate(children):
-                child_is_last = (i == len(children) - 1)
+                child_is_last = i == len(children) - 1
                 child_prefix = prefix + ("    " if is_last else "│   ")
                 if len(children) > 1:
                     child_label = "← branch point" if i > 0 else ""
@@ -329,14 +328,14 @@ class ExportService:
         else:
             parts.append("```yaml")
             parts.append("cross_links:")
-            for l in links:
-                status = l.status if hasattr(l, "status") else "active"
-                link_type = l.link_type if hasattr(l, "link_type") else "resonance"
+            for link in links:
+                status = link.status if hasattr(link, "status") else "active"
+                link_type = link.link_type if hasattr(link, "link_type") else "resonance"
                 justification = ""
-                if hasattr(l, "justification") and l.justification:
-                    justification = f', justification: "{l.justification}"'
+                if hasattr(link, "justification") and link.justification:
+                    justification = f', justification: "{link.justification}"'
                 parts.append(
-                    f"  - {{ source: {l.source_id}, target: {l.target_id}, "
+                    f"  - {{ source: {link.source_id}, target: {link.target_id}, "
                     f'type: "{link_type}", status: "{status}"{justification} }}'
                 )
             parts.append("```")
@@ -418,9 +417,9 @@ class ExportService:
             parts.append(f"### Note `{note_id}` — on [MSG:{message_id}]")
             parts.append(f"**Visibility:** {visibility}")
             if selected_text:
-                parts.append(f"**Selected text:** \"{selected_text}\"")
+                parts.append(f'**Selected text:** "{selected_text}"')
             if comment:
-                parts.append(f"**Comment:**")
+                parts.append("**Comment:**")
                 for line in comment.strip().split("\n"):
                     parts.append(f"> {line}")
             parts.append("")
@@ -439,7 +438,7 @@ class ExportService:
         lines = [
             "| Field | Value |",
             "|---|---|",
-            f"| Exported at | {datetime.now(timezone.utc).isoformat()} |",
+            f"| Exported at | {datetime.now(UTC).isoformat()} |",
             "| Format version | 1.0 |",
             f"| Total messages | {len(messages)} |",
             f"| Branch count | {branch_count} |",
@@ -460,6 +459,7 @@ class ExportService:
         for LLM context injection, instead of just the result_summary string.
         """
         import logging
+
         logger = logging.getLogger("aaa.export")
 
         task_repo = getattr(app_state, "research_task_repo", None)
@@ -489,7 +489,9 @@ class ExportService:
             if markdown and markdown.strip():
                 return markdown
 
-            logger.warning("build_research_stages_export returned empty for task %s, falling back to result_summary", task_id)
+            logger.warning(
+                "build_research_stages_export returned empty for task %s, falling back to result_summary", task_id
+            )
         except Exception as e:
             logger.error("Failed to build research stages export for task %s: %s", task_id, e)
 
@@ -517,8 +519,8 @@ class ExportService:
         parts.append(f"assets_harvested: {task.get('assets_harvested', 0)}")
         parts.append(f"branches_created: {task.get('branches_created', 0)}")
         parts.append(f"note_count: {len(notes)}")
-        parts.append(f'export_format_version: "1.0"')
-        parts.append(f'exported_at: "{datetime.now(timezone.utc).isoformat()}"')
+        parts.append('export_format_version: "1.0"')
+        parts.append(f'exported_at: "{datetime.now(UTC).isoformat()}"')
         parts.append("---")
         parts.append("")
 
@@ -533,7 +535,9 @@ class ExportService:
         parts.append(f"| Trigger | {task.get('trigger_source', '')} |")
         parts.append(f"| Max Depth | {task.get('max_depth', '')} |")
         parts.append(f"| Max Breadth | {task.get('max_breadth', '')} |")
-        parts.append(f"| Budget Spent | ${task.get('budget_spent_usd', 0):.4f} / ${task.get('budget_limit_usd', 0):.2f} |")
+        parts.append(
+            f"| Budget Spent | ${task.get('budget_spent_usd', 0):.4f} / ${task.get('budget_limit_usd', 0):.2f} |"
+        )
         if task.get("started_at"):
             parts.append(f"| Started | {task['started_at']} |")
         if task.get("completed_at"):
@@ -562,6 +566,7 @@ class ExportService:
             parts.append("## RESEARCH PLAN\n")
             try:
                 import json
+
                 plan_json = json.loads(plan.get("plan_json", "{}"))
                 parts.append("```json")
                 parts.append(json.dumps(plan_json, indent=2))
@@ -589,7 +594,9 @@ class ExportService:
             for a in assets:
                 parts.append(f"### Asset `{a['id'][:12]}…`")
                 parts.append(f"- **URL:** {a.get('url', '—')}")
-                parts.append(f"- **Relevance:** {a.get('relevance_score', 0):.3f} | **Novelty:** {a.get('novelty_score', 0):.3f}")
+                parts.append(
+                    f"- **Relevance:** {a.get('relevance_score', 0):.3f} | **Novelty:** {a.get('novelty_score', 0):.3f}"
+                )
                 parts.append("")
                 raw = a.get("raw_markdown", "")
                 if raw:
@@ -609,7 +616,9 @@ class ExportService:
                 if step.get("result_summary"):
                     parts.append(f"- **Summary:** {step['result_summary']}")
                 for r in results:
-                    parts.append(f"- **Result:** [{r.get('source_title') or r.get('source_url', '—')}]({r.get('source_url', '')})")
+                    parts.append(
+                        f"- **Result:** [{r.get('source_title') or r.get('source_url', '—')}]({r.get('source_url', '')})"
+                    )
                 parts.append("")
 
         parts.append(f"## NOTES ({len(notes)})\n")
@@ -617,10 +626,12 @@ class ExportService:
             parts.append("_No notes attached to this research task._\n")
         else:
             for n in notes:
-                parts.append(f"### Note `{n.get('id', 'unknown')}` — {n.get('asset_type', '')}:{n.get('asset_id', '')[:12]}")
+                parts.append(
+                    f"### Note `{n.get('id', 'unknown')}` — {n.get('asset_type', '')}:{n.get('asset_id', '')[:12]}"
+                )
                 parts.append(f"**Visibility:** {n.get('visibility', 'personal')}")
                 if n.get("selected_text"):
-                    parts.append(f"**Selected text:** \"{n['selected_text']}\"")
+                    parts.append(f'**Selected text:** "{n["selected_text"]}"')
                 if n.get("comment"):
                     parts.append("**Comment:**")
                     for line in n["comment"].strip().split("\n"):
@@ -630,8 +641,8 @@ class ExportService:
         parts.append("## EXPORT METADATA\n")
         parts.append("| Field | Value |")
         parts.append("|---|---|")
-        parts.append(f"| Exported at | {datetime.now(timezone.utc).isoformat()} |")
-        parts.append(f"| Format version | 1.0 |")
+        parts.append(f"| Exported at | {datetime.now(UTC).isoformat()} |")
+        parts.append("| Format version | 1.0 |")
         parts.append(f"| Branch count | {len(branches)} |")
         parts.append(f"| Asset count | {len(assets)} |")
         parts.append(f"| Step count | {len(steps)} |")
@@ -655,7 +666,7 @@ class ExportService:
         """Build a structured JSON export for re-import."""
         return {
             "export_format_version": "2.0",
-            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "exported_at": datetime.now(UTC).isoformat(),
             "task": task,
             "branches": branches,
             "assets": assets,
@@ -672,6 +683,7 @@ class ExportService:
     def _parse_step_data(step: dict) -> dict:
         """Parse step_data JSON string, returning empty dict on failure."""
         import json
+
         raw = step.get("step_data", "{}")
         if isinstance(raw, dict):
             return raw
@@ -687,6 +699,7 @@ class ExportService:
         """Extract the actual LLM response content from step_data,
         unwrapping nested llm_response.content / llm_response.json_data."""
         import json
+
         llm_resp = step_data.get("llm_response", {})
         if isinstance(llm_resp, str):
             try:
@@ -727,8 +740,8 @@ class ExportService:
         parts.append(f'status: "{task.get("status", "")}"')
         parts.append(f"max_depth: {task.get('max_depth', 0)}")
         parts.append(f"max_breadth: {task.get('max_breadth', 0)}")
-        parts.append(f'export_format_version: "1.0"')
-        parts.append(f'exported_at: "{datetime.now(timezone.utc).isoformat()}"')
+        parts.append('export_format_version: "1.0"')
+        parts.append(f'exported_at: "{datetime.now(UTC).isoformat()}"')
         parts.append("---")
         parts.append("")
 
@@ -784,8 +797,7 @@ class ExportService:
 
         # ── Document Digestion (depth 0, before first cycle) ──
         doc_digest_steps = [
-            s for s in steps
-            if s.get("step_type") == "document_digestion" and s.get("status") == "completed"
+            s for s in steps if s.get("step_type") == "document_digestion" and s.get("status") == "completed"
         ]
         if doc_digest_steps:
             parts.append("## DOCUMENT DIGESTION\n")
@@ -812,8 +824,8 @@ class ExportService:
                     learnings = analyzed.get("learnings", [])
                     if learnings:
                         parts.append("\n#### Learnings\n")
-                        for l in learnings:
-                            parts.append(f"- {l}")
+                        for learning in learnings:
+                            parts.append(f"- {learning}")
 
                     followups = analyzed.get("followups", [])
                     if followups:
@@ -869,12 +881,14 @@ class ExportService:
                         except Exception:
                             pass
 
-                    sources.append({
-                        "title": title,
-                        "url": url,
-                        "learnings": analyzed.get("learnings", []),
-                        "gaps": analyzed.get("gaps", []),
-                    })
+                    sources.append(
+                        {
+                            "title": title,
+                            "url": url,
+                            "learnings": analyzed.get("learnings", []),
+                            "gaps": analyzed.get("gaps", []),
+                        }
+                    )
 
             if sources:
                 parts.append("### Sources\n")
@@ -891,8 +905,8 @@ class ExportService:
 
                     if s["learnings"]:
                         parts.append("**Insights:**")
-                        for l in s["learnings"]:
-                            parts.append(f"- {l}")
+                        for learning in s["learnings"]:
+                            parts.append(f"- {learning}")
                         parts.append("")
 
                     if s["gaps"]:
@@ -903,7 +917,9 @@ class ExportService:
                 parts.append("")
 
             # ── Consolidation (from "reflect" step — the consolidation phase) ──
-            reflect_steps = [s for s in cycle_steps if s.get("step_type") == "reflect" and s.get("status") == "completed"]
+            reflect_steps = [
+                s for s in cycle_steps if s.get("step_type") == "reflect" and s.get("status") == "completed"
+            ]
             for rs in reflect_steps:
                 sd = ExportService._parse_step_data(rs)
                 consolidation = ExportService._extract_llm_content(sd)
@@ -952,7 +968,9 @@ class ExportService:
                     parts.append("")
 
             # ── Reflection (from "reflection" step — meta-cognitive reflection) ──
-            refl_steps = [s for s in cycle_steps if s.get("step_type") == "reflection" and s.get("status") == "completed"]
+            refl_steps = [
+                s for s in cycle_steps if s.get("step_type") == "reflection" and s.get("status") == "completed"
+            ]
             for rs in refl_steps:
                 sd = ExportService._parse_step_data(rs)
                 reflection = ExportService._extract_llm_content(sd)
@@ -1026,10 +1044,7 @@ class ExportService:
                     parts.append("")
 
         # ── Synthesis ──
-        synthesize_steps = [
-            s for s in steps
-            if s.get("step_type") == "synthesize" and s.get("status") == "completed"
-        ]
+        synthesize_steps = [s for s in steps if s.get("step_type") == "synthesize" and s.get("status") == "completed"]
         if synthesize_steps:
             parts.append("## SYNTHESIS\n")
             for ss in synthesize_steps:
@@ -1055,7 +1070,7 @@ class ExportService:
                 parts.append(f"### Note `{nid}`")
                 parts.append(f"- **Visibility:** {visibility}")
                 if selected:
-                    parts.append(f"- **Selected text:** \"{selected}\"")
+                    parts.append(f'- **Selected text:** "{selected}"')
                 if comment:
                     parts.append(f"- **Comment:**\n{comment}")
                 parts.append("")
@@ -1064,8 +1079,8 @@ class ExportService:
         parts.append("## EXPORT METADATA\n")
         parts.append("| Field | Value |")
         parts.append("|---|---|")
-        parts.append(f"| Exported at | {datetime.now(timezone.utc).isoformat()} |")
-        parts.append(f"| Format version | 1.0 |")
+        parts.append(f"| Exported at | {datetime.now(UTC).isoformat()} |")
+        parts.append("| Format version | 1.0 |")
         parts.append(f"| Total cycles | {len(sorted_depths)} |")
         parts.append(f"| Step count | {len(steps)} |")
         parts.append(f"| Note count | {len(notes)} |")

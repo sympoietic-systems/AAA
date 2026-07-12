@@ -1,6 +1,6 @@
 import os
-import sys
 import sqlite3
+import sys
 from pathlib import Path
 
 # Adjust path to find backend modules
@@ -36,13 +36,9 @@ def run_tests():
 
     try:
         repo = NotificationRepository(db_file)
-        
+
         # Test 1: Create notification
-        n = repo.create(
-            type="trace",
-            snippet="Indexing test.txt done.",
-            source="perception:test.txt"
-        )
+        n = repo.create(type="trace", snippet="Indexing test.txt done.", source="perception:test.txt")
         assert n["id"] is not None
         assert n["type"] == "trace"
         assert n["snippet"] == "Indexing test.txt done."
@@ -75,12 +71,7 @@ def run_tests():
 
         # Test 6: Dismiss by match
         # Create a new active notification with conversation_id and message_id
-        n2 = repo.create(
-            type="sediment",
-            snippet="Resonance message",
-            conversation_id="conv-123",
-            message_id=456
-        )
+        n2 = repo.create(type="sediment", snippet="Resonance message", conversation_id="conv-123", message_id=456)
         assert repo.get(n2["id"])["dismissed"] == 0
         repo.dismiss_by_match("conv-123", 456)
         assert repo.get(n2["id"])["dismissed"] == 1

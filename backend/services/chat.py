@@ -1,40 +1,40 @@
 import logging
 import re
 import uuid
-from typing import Optional
 
-import numpy as np
 from fastapi import BackgroundTasks
 
 from backend.api.schemas import ChatResponse
+from backend.metabolisation.daemon_trigger_signal import enqueue_dream_trigger
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
 from backend.services.annotations import (
-    process_self_annotations,
     process_research_proposals,
+    process_self_annotations,
 )
 from backend.services.background_tasks import (
-    run_background_resonance_scan,
-    run_background_skill_refinement,
     run_background_belief_nucleation,
     run_background_refusal_persist,
+    run_background_resonance_scan,
+    run_background_skill_refinement,
 )
-from backend.services.consolidation import ConsolidationService
 from backend.services.metrics import MetricsService
 from backend.services.semantic_knot import SemanticKnotService
 from backend.services.title import TitleService
-from backend.utils.token_counter import estimate_tokens
-from backend.utils.skill_parser import parse_skill_nucleation_tags
 from backend.utils.belief_parser import parse_belief_nucleate_tags
-from backend.utils.refusal_parser import parse_refusal_tags
 from backend.utils.dream_trigger_parser import parse_dream_trigger_tags
-from backend.metabolisation.daemon_trigger_signal import enqueue_dream_trigger
+from backend.utils.refusal_parser import parse_refusal_tags
+from backend.utils.skill_parser import parse_skill_nucleation_tags
+from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
 
 # ── Response artifact parsing ───────────────────────────────────────────
 
-def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list[dict], list[tuple[int, str]], list[dict], list[dict], list[dict]]:
+
+def _parse_response_artifacts(
+    response_text: str,
+) -> tuple[str, list[dict], list[dict], list[tuple[int, str]], list[dict], list[dict], list[dict]]:
     """Extract skill nucleations, belief nucleations, refusals, dream triggers, branch proposals, and resonance links from response text.
 
     Returns: (cleaned_text, proposed_skills, proposed_branches, proposed_resonances, proposed_beliefs, proposed_refusals, proposed_dream_triggers)
@@ -62,7 +62,15 @@ def _parse_response_artifacts(response_text: str) -> tuple[str, list[dict], list
             logger.warning("Invalid resonance target ID: %s", target_id_str)
     response_text = re.sub(res_pattern, "", response_text).strip()
 
-    return response_text, proposed_skills, proposed_branches, proposed_resonances, proposed_beliefs, proposed_refusals, proposed_dream_triggers
+    return (
+        response_text,
+        proposed_skills,
+        proposed_branches,
+        proposed_resonances,
+        proposed_beliefs,
+        proposed_refusals,
+        proposed_dream_triggers,
+    )
 
 
 class ChatService:
@@ -74,12 +82,12 @@ class ChatService:
         content: str,
         speaker: str,
         conversation_id: str,
-        attachments: Optional[list[dict]] = None,
-        include_structural_scoring: Optional[bool] = None,
-        max_tokens_override: Optional[int] = None,
-        background_tasks: Optional[BackgroundTasks] = None,
-        parent_message_id: Optional[int] = None,
-        agent_id: Optional[str] = None,
+        attachments: list[dict] | None = None,
+        include_structural_scoring: bool | None = None,
+        max_tokens_override: int | None = None,
+        background_tasks: BackgroundTasks | None = None,
+        parent_message_id: int | None = None,
+        agent_id: str | None = None,
     ) -> ChatResponse:
         state = self._state
         error_repo = state.error_repo
@@ -117,10 +125,10 @@ class ChatService:
         content: str,
         speaker: str,
         conversation_id: str,
-        attachments: Optional[list[dict]] = None,
-        include_structural_scoring: Optional[bool] = None,
-        parent_message_id: Optional[int] = None,
-        agent_id: Optional[str] = None,
+        attachments: list[dict] | None = None,
+        include_structural_scoring: bool | None = None,
+        parent_message_id: int | None = None,
+        agent_id: str | None = None,
     ) -> ChatResponse:
         state = self._state
         repo = state.message_repo
@@ -185,7 +193,7 @@ class ChatService:
         )
 
         try:
-            user_sig_list = user_sig.tolist() if 'user_sig' in locals() and user_sig is not None else None
+            user_sig_list = user_sig.tolist() if "user_sig" in locals() and user_sig is not None else None
         except Exception:
             user_sig_list = None
 
@@ -207,10 +215,10 @@ class ChatService:
         self,
         conversation_id: str,
         user_message_id: int,
-        max_tokens_override: Optional[int] = None,
-        include_structural_scoring: Optional[bool] = None,
-        background_tasks: Optional[BackgroundTasks] = None,
-        attachments: Optional[list[dict]] = None,
+        max_tokens_override: int | None = None,
+        include_structural_scoring: bool | None = None,
+        background_tasks: BackgroundTasks | None = None,
+        attachments: list[dict] | None = None,
     ) -> ChatResponse:
         state = self._state
         pipeline = state.pipeline
@@ -262,9 +270,15 @@ class ChatService:
             response_text = result.payload.get("response", "")
 
             # Parse embedded artifact tags from response text
-            response_text, proposed_skills, proposed_branches, proposed_resonances, proposed_beliefs, proposed_refusals, proposed_dream_triggers = (
-                _parse_response_artifacts(response_text)
-            )
+            (
+                response_text,
+                proposed_skills,
+                proposed_branches,
+                proposed_resonances,
+                proposed_beliefs,
+                proposed_refusals,
+                proposed_dream_triggers,
+            ) = _parse_response_artifacts(response_text)
 
             # Enqueue self-triggered dream requests into the daemon's priority queue
             if proposed_dream_triggers:
@@ -486,9 +500,7 @@ class ChatService:
                 state.latest_diffractive_meta = diff_meta
 
             should_compact = False
-            if result.payload.get("trigger_consolidation"):
-                should_compact = True
-            elif diff_meta and diff_meta.get("state") == "STAGNANT":
+            if result.payload.get("trigger_consolidation") or diff_meta and diff_meta.get("state") == "STAGNANT":
                 should_compact = True
 
             if should_compact:
@@ -498,8 +510,11 @@ class ChatService:
             user_justification = get_justification(content)
 
             import numpy as np
+
             try:
-                user_sig = np.frombuffer(msg.structural_signature, dtype="float32") if msg.structural_signature else None
+                user_sig = (
+                    np.frombuffer(msg.structural_signature, dtype="float32") if msg.structural_signature else None
+                )
                 user_sig_list = user_sig.tolist() if user_sig is not None else None
             except Exception:
                 user_sig_list = None
@@ -547,4 +562,5 @@ class ChatService:
     @staticmethod
     def _build_response_attachments(attachments, result):
         from backend.api.helpers import _build_response_attachments
+
         return _build_response_attachments(attachments, result)

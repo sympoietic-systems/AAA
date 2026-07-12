@@ -7,7 +7,7 @@ Nullifies external foreign keys (conversation_id, message_id, memory_node_id).
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger("aaa.research.import_service")
@@ -30,7 +30,7 @@ class ImportResult:
 
 
 def _now_str() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def import_research_task(payload: dict, app_state: Any) -> ImportResult:
@@ -119,9 +119,16 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
     # create() only inserts core columns — update the rest
     extra_fields = {}
     for key in (
-        "budget_spent_usd", "branches_created", "assets_harvested",
-        "lateral_flights", "bifurcation_triggered", "result_summary",
-        "approved_by", "approved_at", "started_at", "completed_at",
+        "budget_spent_usd",
+        "branches_created",
+        "assets_harvested",
+        "lateral_flights",
+        "bifurcation_triggered",
+        "result_summary",
+        "approved_by",
+        "approved_at",
+        "started_at",
+        "completed_at",
     ):
         val = task_data.get(key)
         if val is not None:
@@ -139,26 +146,30 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
         plan_repo = app_state.research_plan_repo
         new_plan_id = _remap_id(plan_data.get("id"))
         if new_plan_id:
-            plan_repo.create({
-                "id": new_plan_id,
-                "task_id": new_task_id,
-                "plan_json": plan_data.get("plan_json", "{}"),
-                "status": plan_data.get("status", "draft"),
-                "created_at": plan_data.get("created_at") or _now_str(),
-            })
+            plan_repo.create(
+                {
+                    "id": new_plan_id,
+                    "task_id": new_task_id,
+                    "plan_json": plan_data.get("plan_json", "{}"),
+                    "status": plan_data.get("status", "draft"),
+                    "created_at": plan_data.get("created_at") or _now_str(),
+                }
+            )
             stats["plan"] = 1
             fallback_plan_id = new_plan_id
 
     if not fallback_plan_id and payload.get("steps"):
         plan_repo = app_state.research_plan_repo
         fallback_plan_id = str(uuid.uuid4())
-        plan_repo.create({
-            "id": fallback_plan_id,
-            "task_id": new_task_id,
-            "plan_json": "{}",
-            "status": "draft",
-            "created_at": _now_str(),
-        })
+        plan_repo.create(
+            {
+                "id": fallback_plan_id,
+                "task_id": new_task_id,
+                "plan_json": "{}",
+                "status": "draft",
+                "created_at": _now_str(),
+            }
+        )
         stats["plan"] = 1
         logger.info("No plan found in payload for steps; created dummy plan %s", fallback_plan_id)
 
@@ -174,19 +185,21 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
                 continue
             old_parent_bid = b.get("parent_branch_id")
             new_parent_bid = _remap_id(old_parent_bid)
-            branch_repo.create({
-                "id": new_bid,
-                "task_id": new_task_id,
-                "conversation_id": None,
-                "parent_branch_id": new_parent_bid,
-                "query": b.get("query", ""),
-                "goal": b.get("goal", ""),
-                "depth": b.get("depth", 0),
-                "breadth": b.get("breadth", 0),
-                "status": b.get("status", "probing"),
-                "vector_16d": b.get("vector_16d"),
-                "homeostatic_tension": b.get("homeostatic_tension", 0.0),
-            })
+            branch_repo.create(
+                {
+                    "id": new_bid,
+                    "task_id": new_task_id,
+                    "conversation_id": None,
+                    "parent_branch_id": new_parent_bid,
+                    "query": b.get("query", ""),
+                    "goal": b.get("goal", ""),
+                    "depth": b.get("depth", 0),
+                    "breadth": b.get("breadth", 0),
+                    "status": b.get("status", "probing"),
+                    "vector_16d": b.get("vector_16d"),
+                    "homeostatic_tension": b.get("homeostatic_tension", 0.0),
+                }
+            )
             branch_count += 1
         stats["branches"] = branch_count
 
@@ -198,17 +211,19 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
         for a in assets:
             old_branch_id = a.get("branch_id", "")
             new_branch_id = _remap_id(old_branch_id)
-            asset_repo.create({
-                "id": str(uuid.uuid4()),
-                "branch_id": new_branch_id,
-                "task_id": new_task_id,
-                "url": a.get("url", ""),
-                "raw_markdown": a.get("raw_markdown", ""),
-                "relevance_score": a.get("relevance_score", 0.0),
-                "novelty_score": a.get("novelty_score", 0.0),
-                "diffractive_score": a.get("diffractive_score", 0.0),
-                "memory_node_id": None,
-            })
+            asset_repo.create(
+                {
+                    "id": str(uuid.uuid4()),
+                    "branch_id": new_branch_id,
+                    "task_id": new_task_id,
+                    "url": a.get("url", ""),
+                    "raw_markdown": a.get("raw_markdown", ""),
+                    "relevance_score": a.get("relevance_score", 0.0),
+                    "novelty_score": a.get("novelty_score", 0.0),
+                    "diffractive_score": a.get("diffractive_score", 0.0),
+                    "memory_node_id": None,
+                }
+            )
             asset_count += 1
         stats["assets"] = asset_count
 
@@ -224,21 +239,23 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
                 continue
             old_plan_id = s.get("plan_id", "")
             old_plan_id_remapped = _remap_id(old_plan_id) if old_plan_id else None
-            step_repo.create({
-                "id": new_sid,
-                "task_id": new_task_id,
-                "plan_id": old_plan_id_remapped or fallback_plan_id or new_task_id,
-                "step_number": s.get("step_number", 0),
-                "step_type": s.get("step_type", ""),
-                "step_data": s.get("step_data", "{}"),
-                "status": s.get("status", "pending"),
-                "result_summary": s.get("result_summary"),
-                "started_at": s.get("started_at"),
-                "completed_at": s.get("completed_at"),
-                "created_at": s.get("created_at") or _now_str(),
-                "query_group": s.get("query_group"),
-                "query_text": s.get("query_text"),
-            })
+            step_repo.create(
+                {
+                    "id": new_sid,
+                    "task_id": new_task_id,
+                    "plan_id": old_plan_id_remapped or fallback_plan_id or new_task_id,
+                    "step_number": s.get("step_number", 0),
+                    "step_type": s.get("step_type", ""),
+                    "step_data": s.get("step_data", "{}"),
+                    "status": s.get("status", "pending"),
+                    "result_summary": s.get("result_summary"),
+                    "started_at": s.get("started_at"),
+                    "completed_at": s.get("completed_at"),
+                    "created_at": s.get("created_at") or _now_str(),
+                    "query_group": s.get("query_group"),
+                    "query_text": s.get("query_text"),
+                }
+            )
             step_count += 1
         stats["steps"] = step_count
 
@@ -254,19 +271,21 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
                 logger.warning("Skipping step result referencing unknown step: %s", old_step_id)
                 warnings.append(f"Skipping step result referencing unknown step: {old_step_id}")
                 continue
-            result_repo.create({
-                "id": str(uuid.uuid4()),
-                "step_id": new_step_id,
-                "task_id": new_task_id,
-                "source_url": r.get("source_url"),
-                "source_title": r.get("source_title"),
-                "raw_content": r.get("raw_content"),
-                "analyzed_json": r.get("analyzed_json"),
-                "relevance_score": r.get("relevance_score", 0.0),
-                "novelty_score": r.get("novelty_score", 0.0),
-                "raw_file_path": r.get("raw_file_path"),
-                "created_at": r.get("created_at") or _now_str(),
-            })
+            result_repo.create(
+                {
+                    "id": str(uuid.uuid4()),
+                    "step_id": new_step_id,
+                    "task_id": new_task_id,
+                    "source_url": r.get("source_url"),
+                    "source_title": r.get("source_title"),
+                    "raw_content": r.get("raw_content"),
+                    "analyzed_json": r.get("analyzed_json"),
+                    "relevance_score": r.get("relevance_score", 0.0),
+                    "novelty_score": r.get("novelty_score", 0.0),
+                    "raw_file_path": r.get("raw_file_path"),
+                    "created_at": r.get("created_at") or _now_str(),
+                }
+            )
             sr_count += 1
         stats["step_results"] = sr_count
 
@@ -278,15 +297,17 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
         for m in meta_entries:
             old_branch_id = m.get("branch_id")
             old_step_id = m.get("step_id")
-            meta_repo.create({
-                "id": str(uuid.uuid4()),
-                "task_id": new_task_id,
-                "branch_id": _remap_id(old_branch_id),
-                "step_id": _remap_id(old_step_id),
-                "event_type": m.get("event_type", ""),
-                "event_data": m.get("event_data", "{}"),
-                "created_at": m.get("created_at") or _now_str(),
-            })
+            meta_repo.create(
+                {
+                    "id": str(uuid.uuid4()),
+                    "task_id": new_task_id,
+                    "branch_id": _remap_id(old_branch_id),
+                    "step_id": _remap_id(old_step_id),
+                    "event_type": m.get("event_type", ""),
+                    "event_data": m.get("event_data", "{}"),
+                    "created_at": m.get("created_at") or _now_str(),
+                }
+            )
             meta_count += 1
         stats["meta_log_entries"] = meta_count
 

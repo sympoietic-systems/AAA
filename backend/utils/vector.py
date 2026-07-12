@@ -15,8 +15,8 @@ import numpy as np
 
 from backend.api.schemas import HistoryMessage
 
-
 # ── Vector parsing ─────────────────────────────────────────────────────
+
 
 def parse_vector_16d(vector_json: str) -> list[float] | None:
     """Parse a JSON 16D vector string into a list of floats, or None.
@@ -45,6 +45,7 @@ def parse_vector_16d(vector_json: str) -> list[float] | None:
 
 # ── Cosine similarity ──────────────────────────────────────────────────
 
+
 def cosine_similarity(
     a: list[float] | np.ndarray,
     b: list[float] | np.ndarray,
@@ -70,6 +71,7 @@ def cosine_similarity(
 
 # ── Signature deserialization ──────────────────────────────────────────
 
+
 def deserialize_structural_signature(
     sig_bytes: bytes | None,
 ) -> list[float] | None:
@@ -88,6 +90,7 @@ def deserialize_structural_signature(
 
 
 # ── HistoryMessage construction ────────────────────────────────────────
+
 
 def build_history_message(
     row: dict,

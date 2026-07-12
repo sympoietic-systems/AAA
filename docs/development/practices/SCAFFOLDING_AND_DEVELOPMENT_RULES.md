@@ -158,11 +158,45 @@ AAA utilizes Tailwind CSS v4 alongside custom HSL color definitions in [frontend
 *   **Location**: All test scripts must be written in the [backend/tests/](file:///d:/01_GIT/AAA/backend/tests/) directory and prefixed with `test_`.
 *   **Database Isolation**: Always instantiate mock/temporary database connections (e.g. SQLite `:memory:` or temp test files) within test fixtures. A global `conftest.py` is configured to automatically force test database path to `data/aaa_test.db` and delete it upon test completion to ensure the production database (`aaa.db`) is never modified or polluted by tests.
 *   **LLM Provider Mocking**: Do not trigger real LLM completions inside standard unit tests. Create mock completions containing expected mock JSON fields (e.g., `opacity_map`, `interference_score`) to assert state changes.
-*   **Running Tests**: Propose `uv run pytest` or `pytest backend/tests/` to execute the full test suite. Make sure all unit, routing, and database tests pass before committing.
+*   **Running Tests**: Use `uv run pytest` or `uv run pytest backend/tests/` to execute the full test suite. Make sure all unit, routing, and database tests pass before committing.
 
 ---
 
-## 5. Architectural Consistency & Documentation
+## 5. Linting & Formatting
+
+Python code is linted and formatted with **ruff** (configured in `pyproject.toml`). The frontend uses **ESLint** (configured in `frontend/eslint.config.js`).
+
+### Python (ruff)
+
+```bash
+ruff check backend/            # Lint check
+ruff check backend/ --fix      # Auto-fix safe issues
+ruff format backend/           # Apply formatting
+ruff format backend/ --diff    # Preview format changes
+```
+
+### Pre-commit Hooks
+
+Install pre-commit hooks to auto-check on every commit:
+
+```bash
+pre-commit install
+```
+
+The `.pre-commit-config.yaml` runs `ruff`, `ruff-format`, and general file sanitizers (`check-yaml`, `check-toml`, `end-of-file-fixer`, `trailing-whitespace`).
+
+### Rules
+
+*   **Line length**: 120 characters (handled by formatter)
+*   **Quote style**: Double quotes
+*   **Indent style**: Spaces
+*   **Python target**: 3.11+
+*   **Ruff supersedes**: flake8, isort, pyupgrade, black — do not use these separately
+*   **Ignored rules**: `E501` (line length), `B008` (fn call defaults), `C408` (unnecessary dict/list/tuple), `SIM401` (sqlite3.Row has no `.get()`)
+
+---
+
+## 6. Architectural Consistency & Documentation
 
 ### 5.1. Writing Architectural Decisions (ADR)
 When making architectural modifications, additions to external APIs, or changes to state-tracking math:

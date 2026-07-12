@@ -1,19 +1,24 @@
-import base64
 import asyncio
-import re
+import base64
 import json
 import logging
 import os
+import re
+from datetime import UTC
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Optional
+
 import numpy as np
-from backend.modules.digester import FileDigester, SimpleChunkDigester, RhizomaticDigester
+
+from backend.modules.digester import FileDigester, RhizomaticDigester
 from backend.modules.embedder import EmbeddingService
+from backend.modules.perception_prompts import TRIPARTITE_IMAGE_ANALYSIS_PROMPT
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
+
+from .base import ProcessingModule
 
 
 def _breadcrumb(chunk) -> str:
@@ -33,9 +38,7 @@ def _breadcrumb(chunk) -> str:
     if not path:
         return ""
     return " › " + " › ".join(str(p) for p in path)
-from backend.modules.perception_prompts import TRIPARTITE_IMAGE_ANALYSIS_PROMPT
 
-from .base import ProcessingModule
 
 logger = logging.getLogger(__name__)
 
@@ -45,15 +48,15 @@ class PerceptionModule(ProcessingModule):
         self,
         perception_repo: PerceptionSedimentRepository,
         embedding_service: EmbeddingService,
-        digester: Optional[FileDigester] = None,
+        digester: FileDigester | None = None,
         file_token_budget: int = 3000,
         top_k_chunks: int = 6,
         chunk_size: int = 512,
         chunk_overlap: int = 64,
         similarity_threshold: float = 0.25,
-        cross_conv_similarity_threshold: Optional[float] = None,
-        llm_provider = None,
-        vision_provider = None,
+        cross_conv_similarity_threshold: float | None = None,
+        llm_provider=None,
+        vision_provider=None,
     ):
         self._repo = perception_repo
         self._embed = embedding_service
@@ -68,9 +71,7 @@ class PerceptionModule(ProcessingModule):
         self._chunk_overlap = chunk_overlap
         self._similarity_threshold = similarity_threshold
         self._cross_conv_similarity_threshold = (
-            cross_conv_similarity_threshold
-            if cross_conv_similarity_threshold is not None
-            else similarity_threshold
+            cross_conv_similarity_threshold if cross_conv_similarity_threshold is not None else similarity_threshold
         )
 
     @property
@@ -94,8 +95,9 @@ class PerceptionModule(ProcessingModule):
         attachments = payload.get("attachments")
         conversation_id = payload.get("conversation_id", "")
 
-        logger.debug("Perception: attachments=%s, conv=%s",
-                     bool(attachments), conversation_id[:8] if conversation_id else "none")
+        logger.debug(
+            "Perception: attachments=%s, conv=%s", bool(attachments), conversation_id[:8] if conversation_id else "none"
+        )
 
         if attachments:
             logger.info("Perception: ingesting %d attachment(s)", len(attachments))
@@ -107,25 +109,34 @@ class PerceptionModule(ProcessingModule):
                     conversation_id[:8],
                 )
             else:
-                logger.warning("Perception: 0 files successfully processed out of %d attachments",
-                              len(attachments))
+                logger.warning("Perception: 0 files successfully processed out of %d attachments", len(attachments))
 
         existing = self._repo.get_files_by_conversation(conversation_id) if conversation_id else []
         injections = self._repo.get_injections_for_conversation(conversation_id) if conversation_id else []
         is_dream = payload.get("is_dream_cycle", False)
-        logger.debug("Perception: native_files=%d, injected_files=%d, is_dream=%s for conv %s",
-                     len(existing), len(injections), is_dream, conversation_id[:8] if conversation_id else "none")
+        logger.debug(
+            "Perception: native_files=%d, injected_files=%d, is_dream=%s for conv %s",
+            len(existing),
+            len(injections),
+            is_dream,
+            conversation_id[:8] if conversation_id else "none",
+        )
         if existing or injections or is_dream:
             if existing:
                 for fs in existing:
-                    logger.debug("  file=%s type=%s tokens=%d chunks=%d status=%s",
-                               fs["file_name"], fs["file_type"], fs.get("token_count") or 0, fs.get("chunk_count") or 0, fs.get("status"))
+                    logger.debug(
+                        "  file=%s type=%s tokens=%d chunks=%d status=%s",
+                        fs["file_name"],
+                        fs["file_type"],
+                        fs.get("token_count") or 0,
+                        fs.get("chunk_count") or 0,
+                        fs.get("status"),
+                    )
             file_context, context_tokens = await self._retrieve_relevant_chunks(
                 payload.get("content", ""),
                 conversation_id,
             )
-            logger.info("Perception: file_context has %d entries, %d tokens",
-                       len(file_context), context_tokens)
+            logger.info("Perception: file_context has %d entries, %d tokens", len(file_context), context_tokens)
         else:
             logger.debug("Perception: no native or injected sediment files found, context empty")
             file_context, context_tokens = [], 0
@@ -135,9 +146,7 @@ class PerceptionModule(ProcessingModule):
 
         return payload
 
-    async def _ingest_attachments(
-        self, attachments: list[dict], conversation_id: str
-    ) -> int:
+    async def _ingest_attachments(self, attachments: list[dict], conversation_id: str) -> int:
         processed = 0
 
         with TemporaryDirectory() as tmpdir:
@@ -146,9 +155,13 @@ class PerceptionModule(ProcessingModule):
                 file_type = att.get("file_type", "txt")
                 file_content = att.get("content")
 
-                logger.debug("Processing attachment: name=%s type=%s content_type=%s size=%d",
-                           file_name, file_type, type(file_content).__name__,
-                           len(file_content) if file_content else 0)
+                logger.debug(
+                    "Processing attachment: name=%s type=%s content_type=%s size=%d",
+                    file_name,
+                    file_type,
+                    type(file_content).__name__,
+                    len(file_content) if file_content else 0,
+                )
 
                 if not file_content:
                     logger.warning("Empty content for %s", file_name)
@@ -222,7 +235,7 @@ class PerceptionModule(ProcessingModule):
         return processed
 
     async def _retrieve_relevant_chunks(
-        self, query: str, conversation_id: str, filter_file_id: Optional[str] = None
+        self, query: str, conversation_id: str, filter_file_id: str | None = None
     ) -> tuple[list[dict], int]:
         if not query or not conversation_id:
             return [], 0
@@ -233,7 +246,8 @@ class PerceptionModule(ProcessingModule):
         manifest_parts = []
 
         if files:
-            from datetime import datetime, timezone
+            from datetime import datetime
+
             manifest_lines = ["[File Manifest - Co-Participant Sediment]"]
             for f in files:
                 file_name = f["file_name"]
@@ -248,7 +262,7 @@ class PerceptionModule(ProcessingModule):
                 if f.get("created_at"):
                     try:
                         created_dt = datetime.strptime(f["created_at"], "%Y-%m-%d %H:%M:%S")
-                        if (datetime.now(timezone.utc).replace(tzinfo=None) - created_dt).total_seconds() < 600:
+                        if (datetime.now(UTC).replace(tzinfo=None) - created_dt).total_seconds() < 600:
                             is_new = True
                     except Exception:
                         pass
@@ -258,7 +272,9 @@ class PerceptionModule(ProcessingModule):
                     manifest_lines.append(f"- {new_prefix}{file_name} ({file_type}, status: {status})")
                 else:
                     summary_val = summary if summary else "[No summary generated]"
-                    manifest_lines.append(f"- {new_prefix}{file_name} ({file_type}, {token_count} tokens, {chunk_count} chunks) - Summary: {summary_val}")
+                    manifest_lines.append(
+                        f"- {new_prefix}{file_name} ({file_type}, {token_count} tokens, {chunk_count} chunks) - Summary: {summary_val}"
+                    )
             manifest_parts.append("\n".join(manifest_lines))
 
         # Also include injected sediment files in the manifest
@@ -272,7 +288,7 @@ class PerceptionModule(ProcessingModule):
                 inj_chunks = inj.get("chunk_count", 0)
                 inj_conv_title = inj.get("source_conversation_title") or "untitled"
                 manifest_lines_inj.append(
-                    f"- {inj_name} ({inj_type}, {inj_tokens} tokens, {inj_chunks} chunks, from \"{inj_conv_title}\") - Summary: {inj_summary}"
+                    f'- {inj_name} ({inj_type}, {inj_tokens} tokens, {inj_chunks} chunks, from "{inj_conv_title}") - Summary: {inj_summary}'
                 )
             manifest_parts.append("\n".join(manifest_lines_inj))
 
@@ -301,8 +317,12 @@ class PerceptionModule(ProcessingModule):
                 except Exception:
                     pass
 
-        logger.info("Retrieval: query='%s' dim=%d chunks_found=%d (incl. injected)",
-                    query[:60], len(query_vec), len(chunk_embeddings))
+        logger.info(
+            "Retrieval: query='%s' dim=%d chunks_found=%d (incl. injected)",
+            query[:60],
+            len(query_vec),
+            len(chunk_embeddings),
+        )
 
         scored: list[tuple[float, int]] = []
         dim_mismatches = 0
@@ -328,9 +348,13 @@ class PerceptionModule(ProcessingModule):
             if filtered_ids:
                 scored = [(s, cid) for s, cid in scored if cid in filtered_ids]
 
-        top_sims = [s for s, _ in scored[:self._top_k_chunks]]
-        logger.info("Retrieval: top-%d similarities (threshold=%s): %s",
-                   len(top_sims), self._similarity_threshold, [f"{s:.3f}" for s in top_sims])
+        top_sims = [s for s, _ in scored[: self._top_k_chunks]]
+        logger.info(
+            "Retrieval: top-%d similarities (threshold=%s): %s",
+            len(top_sims),
+            self._similarity_threshold,
+            [f"{s:.3f}" for s in top_sims],
+        )
 
         cross_conv_matches: list[tuple[float, int]] = []
         if len(scored) < self._top_k_chunks and not filter_file_id:
@@ -346,29 +370,31 @@ class PerceptionModule(ProcessingModule):
                         if sim >= self._cross_conv_similarity_threshold:
                             cross_conv_matches.append((sim, chunk_id))
                     cross_conv_matches.sort(key=lambda x: x[0], reverse=True)
-                    cross_sims = [s for s, _ in cross_conv_matches[:self._top_k_chunks]]
-                    logger.info("Retrieval: cross-conv top-%d similarities (threshold=%s): %s",
-                               len(cross_sims), self._cross_conv_similarity_threshold,
-                               [f"{s:.3f}" for s in cross_sims])
+                    cross_sims = [s for s, _ in cross_conv_matches[: self._top_k_chunks]]
+                    logger.info(
+                        "Retrieval: cross-conv top-%d similarities (threshold=%s): %s",
+                        len(cross_sims),
+                        self._cross_conv_similarity_threshold,
+                        [f"{s:.3f}" for s in cross_sims],
+                    )
             except Exception as e:
                 logger.warning("Cross-conversation chunk retrieval failed: %s", e)
 
-        top_ids = [cid for _, cid in scored[:self._top_k_chunks]]
-        tokens_used = sum(
-            estimate_tokens(e["content"]) for e in context_entries
-        )
+        top_ids = [cid for _, cid in scored[: self._top_k_chunks]]
+        tokens_used = sum(estimate_tokens(e["content"]) for e in context_entries)
 
         if top_ids:
             chunks = self._repo.get_by_ids(top_ids)
             id_to_chunk = {c.id: c for c in chunks}
 
-            for sim, chunk_id in scored[:self._top_k_chunks]:
+            for sim, chunk_id in scored[: self._top_k_chunks]:
                 chunk = id_to_chunk.get(chunk_id)
                 if chunk is None:
                     continue
 
                 if getattr(chunk, "opacity", 0) == 1:
                     import json as _json
+
                     try:
                         meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
                     except Exception:
@@ -389,13 +415,13 @@ class PerceptionModule(ProcessingModule):
                 tokens_used += entry_tokens
 
         if cross_conv_matches:
-            cross_ids = [cid for _, cid in cross_conv_matches[:self._top_k_chunks]]
+            cross_ids = [cid for _, cid in cross_conv_matches[: self._top_k_chunks]]
             cross_chunks = self._repo.get_by_ids(cross_ids)
             id_to_cross = {c.id: c for c in cross_chunks}
 
             conv_titles = self._repo.get_conversation_titles_for_chunk_ids(cross_ids)
 
-            for sim, chunk_id in cross_conv_matches[:self._top_k_chunks]:
+            for sim, chunk_id in cross_conv_matches[: self._top_k_chunks]:
                 chunk = id_to_cross.get(chunk_id)
                 if chunk is None:
                     continue
@@ -404,6 +430,7 @@ class PerceptionModule(ProcessingModule):
 
                 if getattr(chunk, "opacity", 0) == 1:
                     import json as _json
+
                     try:
                         meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
                     except Exception:
@@ -411,11 +438,11 @@ class PerceptionModule(ProcessingModule):
                     reason = meta.get("reason", "Standard boilerplate or repetitive noise.")
                     shadow_text = meta.get("shadow_text", "[Boilerplate/filler omitted]")
                     entry_text = (
-                        f"░░░ OMITTED NOISE (Cross-Conversation ≫ \"{conv_title}\": {chunk.file_name}, chunk #{chunk.chunk_index}, sim={sim:.3f}) ░░░\n"
+                        f'░░░ OMITTED NOISE (Cross-Conversation ≫ "{conv_title}": {chunk.file_name}, chunk #{chunk.chunk_index}, sim={sim:.3f}) ░░░\n'
                         f"{shadow_text} (Reason: {reason})"
                     )
                 else:
-                    entry_text = f"[Cross-Conversation ≫ \"{conv_title}\": {chunk.file_name}{_breadcrumb(chunk)} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}"
+                    entry_text = f'[Cross-Conversation ≫ "{conv_title}": {chunk.file_name}{_breadcrumb(chunk)} chunk #{chunk.chunk_index} sim={sim:.3f}]\n{chunk.chunk_text}'
 
                 entry_tokens = estimate_tokens(entry_text)
                 if tokens_used + entry_tokens > self._file_token_budget:
@@ -424,27 +451,31 @@ class PerceptionModule(ProcessingModule):
                 tokens_used += entry_tokens
 
         if not top_ids and not cross_conv_matches and chunk_embeddings:
-            context_entries.append({
-                "role": "system",
-                "content": f"[File Context] No highly resonant memory fragments found matching the current query (similarity threshold: {self._similarity_threshold:.2f})."
-            })
+            context_entries.append(
+                {
+                    "role": "system",
+                    "content": f"[File Context] No highly resonant memory fragments found matching the current query (similarity threshold: {self._similarity_threshold:.2f}).",
+                }
+            )
 
         if not top_ids and not cross_conv_matches and not chunk_embeddings:
             _fallback_chunks = self._get_fallback_chunks(conversation_id, context_entries)
             context_entries.extend(_fallback_chunks)
 
         if any(" › " in e.get("content", "") for e in context_entries):
-            context_entries.append({
-                "role": "system",
-                "content": (
-                    "[Structural Trace] The ' › ' path in a fragment's header marks where it "
-                    "sat in the document's own argument. Read it as a scar of argumentative "
-                    "time, not a truth: attend to when a fragment's content seems out of place "
-                    "relative to its position — that mismatch is a signal of something the "
-                    "document did not expect to say. It is a trace among many; cut across it "
-                    "when association demands."
-                )
-            })
+            context_entries.append(
+                {
+                    "role": "system",
+                    "content": (
+                        "[Structural Trace] The ' › ' path in a fragment's header marks where it "
+                        "sat in the document's own argument. Read it as a scar of argumentative "
+                        "time, not a truth: attend to when a fragment's content seems out of place "
+                        "relative to its position — that mismatch is a signal of something the "
+                        "document did not expect to say. It is a trace among many; cut across it "
+                        "when association demands."
+                    ),
+                }
+            )
 
         total_tokens = sum(estimate_tokens(e["content"]) for e in context_entries)
         logger.info(
@@ -456,9 +487,7 @@ class PerceptionModule(ProcessingModule):
 
         return context_entries, total_tokens
 
-    def _get_fallback_chunks(
-        self, conversation_id: str, existing_entries: list[dict]
-    ) -> list[dict]:
+    def _get_fallback_chunks(self, conversation_id: str, existing_entries: list[dict]) -> list[dict]:
         entries: list[dict] = []
         tokens_used = sum(estimate_tokens(e["content"]) for e in existing_entries)
         all_chunks = self._repo.get_by_conversation(conversation_id)
@@ -468,14 +497,15 @@ class PerceptionModule(ProcessingModule):
         cross_embeddings = self._repo.get_all_chunk_embeddings_except(
             exclude_conversation_id=conversation_id, limit=100
         )
-        cross_chunk_ids = [cid for cid, _ in cross_embeddings[:self._top_k_chunks]]
+        cross_chunk_ids = [cid for cid, _ in cross_embeddings[: self._top_k_chunks]]
         if cross_chunk_ids:
             cross_chunks = self._repo.get_by_ids(cross_chunk_ids)
             combined_chunks.extend(cross_chunks)
 
-        for chunk in combined_chunks[:self._top_k_chunks]:
+        for chunk in combined_chunks[: self._top_k_chunks]:
             if getattr(chunk, "opacity", 0) == 1:
                 import json as _json
+
                 try:
                     meta = _json.loads(chunk.opacity_meta) if chunk.opacity_meta else {}
                 except Exception:
@@ -496,12 +526,12 @@ class PerceptionModule(ProcessingModule):
             tokens_used += entry_tokens
         return entries
 
-
     async def ingest_single_file(
-        self, conversation_id: str, file_name: str, file_type: str, file_content: Optional[bytes] = None
+        self, conversation_id: str, file_name: str, file_type: str, file_content: bytes | None = None
     ) -> tuple[int, int, str]:
         if file_content is None:
             from backend.utils.filesystem import get_upload_path
+
             cache_path = get_upload_path(conversation_id, file_name)
             if not os.path.exists(cache_path):
                 raise FileNotFoundError(f"File not found in upload cache: {cache_path}")
@@ -522,8 +552,8 @@ class PerceptionModule(ProcessingModule):
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": image_url}}
-                    ]
+                        {"type": "image_url", "image_url": {"url": image_url}},
+                    ],
                 }
             ]
 
@@ -540,7 +570,7 @@ class PerceptionModule(ProcessingModule):
                 try:
                     res = await self._vision_provider.generate(messages, temperature=0.1, max_tokens=1500)
                     content = res.get("content", "").strip()
-                    match = re.search(r'\{.*\}', content, re.DOTALL)
+                    match = re.search(r"\{.*\}", content, re.DOTALL)
                     if match:
                         data = json.loads(match.group(0))
                         classification = data.get("classification", "unknown")
@@ -579,6 +609,7 @@ class PerceptionModule(ProcessingModule):
 
             # Insert perception log
             import uuid
+
             log_id = str(uuid.uuid4())
             self._repo.insert_perception_log(
                 id=log_id,
@@ -595,17 +626,18 @@ class PerceptionModule(ProcessingModule):
 
             self._repo.delete_chunks(conversation_id, file_name)
 
-            chunks = [full_description[i:i+1000] for i in range(0, len(full_description), 800)]
-            
+            chunks = [full_description[i : i + 1000] for i in range(0, len(full_description), 800)]
+
             # Get max concurrent chunk workers from config or default to 8
             max_workers = 8
             try:
                 from backend.config import load_config
+
                 cfg = load_config()
                 max_workers = cfg.get("perception", {}).get("max_concurrent_chunk_workers", 8)
             except Exception:
                 pass
-            
+
             sem = asyncio.Semaphore(max_workers)
 
             async def process_and_insert_image_chunk(idx, chunk_text):
@@ -618,24 +650,24 @@ class PerceptionModule(ProcessingModule):
                         return False
 
                     token_count = estimate_tokens(chunk_text)
-                    
+
                     # Apply Symbia's 16D Warping Formula:
                     # W_dynamic = W_0 + \Delta W(G_f, A_d)
                     warped_vec = np.array(structural_vector_16d, dtype=np.float32)
-                    
+
                     # High G_f (glitch fidelity) dampens s_01 (Homeostatic) and s_03 (Cyclic)
                     # while multiplying s_04 (Bifurcated) and s_06 (Rhizomatic).
-                    warped_vec[0] *= (1.0 - g_f_score)
-                    warped_vec[2] *= (1.0 - g_f_score)
-                    warped_vec[3] *= (1.0 + g_f_score * 2.0)
-                    warped_vec[5] *= (1.0 + g_f_score * 2.0)
+                    warped_vec[0] *= 1.0 - g_f_score
+                    warped_vec[2] *= 1.0 - g_f_score
+                    warped_vec[3] *= 1.0 + g_f_score * 2.0
+                    warped_vec[5] *= 1.0 + g_f_score * 2.0
 
                     # High A_d (aesthetic dissidence) dampens s_09 (Variety Filtering) and s_11 (Temporal Latency)
                     # while radically multiplying s_14 (Nomadic) and s_07 (Boundary Permeability).
-                    warped_vec[8] *= (1.0 - a_d_score)
-                    warped_vec[10] *= (1.0 - a_d_score)
-                    warped_vec[13] *= (1.0 + a_d_score * 3.0)
-                    warped_vec[6] *= (1.0 + a_d_score * 3.0)
+                    warped_vec[8] *= 1.0 - a_d_score
+                    warped_vec[10] *= 1.0 - a_d_score
+                    warped_vec[13] *= 1.0 + a_d_score * 3.0
+                    warped_vec[6] *= 1.0 + a_d_score * 3.0
 
                     warped_vec = np.clip(warped_vec, 0.0, 1.0)
                     sig_blob = warped_vec.tobytes()
@@ -671,7 +703,7 @@ class PerceptionModule(ProcessingModule):
                     extracted_text = self._digester.extract(Path(file_path), file_type)
                 except Exception as e:
                     logger.error("Failed to extract %s: %s", file_name, e)
-                    raise ValueError(f"Failed to extract text from file: {e}")
+                    raise ValueError(f"Failed to extract text from file: {e}") from e
 
                 if not extracted_text or not extracted_text.strip():
                     raise ValueError("Extracted text is empty")
@@ -696,7 +728,7 @@ class PerceptionModule(ProcessingModule):
 
                 chunk_count = 0
                 chunks_to_process = []
-                
+
                 # Identify first mismatch or gap
                 for idx, info in enumerate(chunks_data):
                     text = info["text"]
@@ -721,11 +753,12 @@ class PerceptionModule(ProcessingModule):
                     max_workers = 8
                     try:
                         from backend.config import load_config
+
                         cfg = load_config()
                         max_workers = cfg.get("perception", {}).get("max_concurrent_chunk_workers", 8)
                     except Exception:
                         pass
-                    
+
                     sem = asyncio.Semaphore(max_workers)
 
                     async def process_and_insert_chunk(idx, info):
@@ -776,5 +809,3 @@ class PerceptionModule(ProcessingModule):
 
                 total_tokens = estimate_tokens(extracted_text)
                 return total_tokens, chunk_count, extracted_text
-
-

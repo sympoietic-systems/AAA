@@ -7,30 +7,30 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 6.
 """
 
 import numpy as np
-from typing import Optional
 
 from backend.utils.vector import cosine_similarity
 
 # ── Default Weights ──────────────────────────────────────────────────
 
 DEFAULT_WEIGHTS = {
-    "relevance": 0.40,      # w1 — semantic match to query
-    "novelty": 0.25,         # w2 — avoid redundant retrieval
-    "cost": 0.20,            # w3 — metabolic efficiency
-    "diffractive": 0.15,     # w4 — structural isomorphism detection
+    "relevance": 0.40,  # w1 — semantic match to query
+    "novelty": 0.25,  # w2 — avoid redundant retrieval
+    "cost": 0.20,  # w3 — metabolic efficiency
+    "diffractive": 0.15,  # w4 — structural isomorphism detection
 }
 
-DEFAULT_LATERAL_THRESHOLD = 0.72       # S_diff trigger for line-of-flight
-DEFAULT_DETOUR_ALPHA = 0.5             # Query interpolation weight on detour
+DEFAULT_LATERAL_THRESHOLD = 0.72  # S_diff trigger for line-of-flight
+DEFAULT_DETOUR_ALPHA = 0.5  # Query interpolation weight on detour
 
 
 # ── Diffractive Similarity ───────────────────────────────────────────
+
 
 def calculate_diffractive_similarity(
     sig_16d: np.ndarray,
     emb: np.ndarray,
     memory_sigs: list[tuple[np.ndarray, np.ndarray]],
-) -> tuple[float, Optional[int]]:
+) -> tuple[float, int | None]:
     """Compute S_diff — structural isomorphism without semantic redundancy.
 
     Finds memory nodes from OTHER conversations that share Symbia's
@@ -74,12 +74,13 @@ def calculate_diffractive_similarity(
 
 # ── Rhizomatic Utility ───────────────────────────────────────────────
 
+
 def calculate_rhizomatic_utility(
     relevance: float,
     novelty: float,
     diffractive: float,
     cost: float,
-    weights: Optional[dict] = None,
+    weights: dict | None = None,
 ) -> float:
     """Compute the augmented 4-term rhizomatic utility score.
 
@@ -99,12 +100,7 @@ def calculate_rhizomatic_utility(
     """
     w = {**DEFAULT_WEIGHTS, **(weights or {})}
 
-    utility = (
-        w["relevance"] * relevance
-        + w["novelty"] * novelty
-        + w["diffractive"] * diffractive
-        - w["cost"] * cost
-    )
+    utility = w["relevance"] * relevance + w["novelty"] * novelty + w["diffractive"] * diffractive - w["cost"] * cost
     return float(utility)
 
 
@@ -130,6 +126,7 @@ def compute_detour_query_embedding(
 
 # ── Relevance & Novelty Helpers ─────────────────────────────────────
 
+
 def compute_relevance(
     content_embedding: np.ndarray,
     query_embedding: np.ndarray,
@@ -149,10 +146,7 @@ def compute_novelty(
     if not history_embeddings:
         return 1.0
 
-    max_sim = max(
-        cosine_similarity(content_embedding, hist_emb)
-        for hist_emb in history_embeddings
-    )
+    max_sim = max(cosine_similarity(content_embedding, hist_emb) for hist_emb in history_embeddings)
     return float(1.0 - max_sim)
 
 

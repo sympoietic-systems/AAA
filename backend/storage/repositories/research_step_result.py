@@ -1,7 +1,6 @@
 """Repository for research_step_results table."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
@@ -28,7 +27,7 @@ class ResearchStepResultRepository(BaseRepository):
                 result.get("relevance_score", 0.0),
                 result.get("novelty_score", 0.0),
                 result.get("raw_file_path"),
-                result.get("created_at") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                result.get("created_at") or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
             ),
         )
         conn.commit()

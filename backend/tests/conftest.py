@@ -1,3 +1,4 @@
+import contextlib
 import os
 from pathlib import Path
 
@@ -20,6 +21,7 @@ def client() -> TestClient:
     Uses session scope to avoid re-creating the app for every test.
     """
     from backend.main import app
+
     app.state.config = {}  # Prevent lifespan from running in tests
     return TestClient(app)
 
@@ -29,11 +31,10 @@ def cleanup_test_db():
     yield
     # After all tests run, remove the test database files
     from backend.storage.database import get_db_path
+
     db_file = get_db_path(TEST_DB_PATH)
     for ext in ("", "-wal", "-shm"):
         f = Path(str(db_file) + ext)
         if f.exists():
-            try:
+            with contextlib.suppress(Exception):
                 f.unlink()
-            except Exception:
-                pass

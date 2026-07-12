@@ -28,11 +28,13 @@ class SedimentService:
                 source_file_name=src_file,
                 target_conversation_id=target_conversation_id,
             )
-            created.append({
-                "id": injection_id,
-                "source_conversation_id": src_conv,
-                "source_file_name": src_file,
-            })
+            created.append(
+                {
+                    "id": injection_id,
+                    "source_conversation_id": src_conv,
+                    "source_file_name": src_file,
+                }
+            )
         return created
 
     @staticmethod

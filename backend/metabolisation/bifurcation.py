@@ -9,8 +9,7 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 12.2.
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -23,10 +22,10 @@ EVIDENCE_CONTRADICTION_THRESHOLD = 0.78
 
 async def evaluate_evidence_perturbation(
     app_state: Any,
-    belief_id: Optional[str] = None,
-    state_impact_vector: Optional[np.ndarray] = None,
+    belief_id: str | None = None,
+    state_impact_vector: np.ndarray | None = None,
     source_description: str = "deep web research",
-) -> Optional[str]:
+) -> str | None:
     """Evaluate whether external evidence warrants belief collapse.
 
     If belief_id is not provided, scans all active crystallized beliefs
@@ -70,6 +69,7 @@ async def evaluate_evidence_perturbation(
 
         try:
             import json
+
             belief_sig = np.array(json.loads(vector_16d_str), dtype=np.float32)
         except (json.JSONDecodeError, TypeError, ValueError):
             continue
@@ -90,7 +90,9 @@ async def evaluate_evidence_perturbation(
     belief = best_belief
     logger.warning(
         "BIFURCATION: Belief '%s' collapsed under %s evidence. Contradiction: %.4f",
-        belief.get("label", belief.get("id", "?")), source_description, best_contradiction,
+        belief.get("label", belief.get("id", "?")),
+        source_description,
+        best_contradiction,
     )
 
     old_mass = float(belief.get("ontological_mass", 1.0))

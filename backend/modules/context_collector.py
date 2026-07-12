@@ -1,5 +1,6 @@
 import re
 from typing import Any
+
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import MessageRepository
 from backend.utils.token_counter import caveman_compress
@@ -23,10 +24,10 @@ def process_inline_notes(content: str, notes_by_id: dict) -> str:
     to 200 chars as a safeguard).
     """
     # Matches <aaa-note ...>...</aaa-note> or <mark ...>...</mark>
-    pattern = r'<(aaa-note|mark)(\s+[^>]*?)?>([\s\S]*?)</\1>'
+    pattern = r"<(aaa-note|mark)(\s+[^>]*?)?>([\s\S]*?)</\1>"
 
     def replace_tag(match):
-        tag_name = match.group(1)
+        _tag_name = match.group(1)
         attrs = match.group(2) or ""
         text = match.group(3)
 
@@ -60,7 +61,7 @@ def process_inline_notes(content: str, notes_by_id: dict) -> str:
             return f"<{tag}>{inner[:200]}</{tag}>"
         return match.group(0)
 
-    content = re.sub(r'<(scar_fold|scar-fold)>([\s\S]*?)</\1>', truncate_scar_fold, content)
+    content = re.sub(r"<(scar_fold|scar-fold)>([\s\S]*?)</\1>", truncate_scar_fold, content)
 
     return content
 
@@ -103,7 +104,7 @@ class ContextCollectorModule(ProcessingModule):
     async def process(self, payload: dict) -> dict:
         conversation_id = payload.get("conversation_id", "")
         parent_message_id = payload.get("parent_message_id")
-        
+
         if parent_message_id is None and conversation_id:
             last_msgs = self._repo.get_recent(limit=1, conversation_id=conversation_id)
             if last_msgs:
@@ -132,21 +133,15 @@ class ContextCollectorModule(ProcessingModule):
 
         # R5: Load compressed blocks for middle history if LLM compression enabled
         compressed_blocks: dict[int, str] = {}
-        if (
-            self._llm_compression_enabled
-            and self._compressed_message_repo
-            and conversation_id
-        ):
+        if self._llm_compression_enabled and self._compressed_message_repo and conversation_id:
             try:
                 tier2_msg_ids = [
-                    row.id for row in raw_msgs
-                    if row.id is not None
-                    and (len(raw_msgs) - 1 - raw_msgs.index(row)) >= self._floating_window
+                    row.id
+                    for row in raw_msgs
+                    if row.id is not None and (len(raw_msgs) - 1 - raw_msgs.index(row)) >= self._floating_window
                 ]
                 if tier2_msg_ids:
-                    blocks = self._compressed_message_repo.get_for_messages(
-                        conversation_id, tier2_msg_ids
-                    )
+                    blocks = self._compressed_message_repo.get_for_messages(conversation_id, tier2_msg_ids)
                     for block in blocks:
                         # Map each message ID in range to the compressed block
                         for mid in range(block["first_message_id"], block["last_message_id"] + 1):
@@ -159,7 +154,7 @@ class ContextCollectorModule(ProcessingModule):
         total = len(raw_msgs)
         for i, row in enumerate(raw_msgs):
             position_from_end = total - 1 - i
-            
+
             if row.speaker == "apparatus":
                 role = "assistant"
             elif row.speaker == "system":
@@ -179,7 +174,7 @@ class ContextCollectorModule(ProcessingModule):
                     content = (
                         f'<sedimented_strata message_id="{row.id}" speaker="{role}" '
                         f'position_from_end="{position_from_end}" compressed="llm">'
-                        f'{compressed_block}</sedimented_strata>'
+                        f"{compressed_block}</sedimented_strata>"
                     )
                 else:
                     compressed = caveman_compress(row.content) if self._caveman_enabled else row.content
@@ -195,11 +190,13 @@ class ContextCollectorModule(ProcessingModule):
             for note in msg_notes:
                 if note.get("visibility") == "shared":
                     speaker_label = "user" if role == "user" else "assistant"
-                    comment_part = f" | Comment: \"{note['comment']}\"" if note.get("comment") else ""
-                    messages.append({
-                        "role": "system",
-                        "content": f"[Shared Note on message from {speaker_label}]: Highlighted: \"{note['selected_text']}\"{comment_part}"
-                    })
+                    comment_part = f' | Comment: "{note["comment"]}"' if note.get("comment") else ""
+                    messages.append(
+                        {
+                            "role": "system",
+                            "content": f'[Shared Note on message from {speaker_label}]: Highlighted: "{note["selected_text"]}"{comment_part}',
+                        }
+                    )
 
         current = payload.get("content", "")
         if current:

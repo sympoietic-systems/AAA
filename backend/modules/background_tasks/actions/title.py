@@ -17,15 +17,34 @@ class GenerateTitleAction(BackgroundAction):
         if not raw:
             return fallback
 
-        lines = [l.strip() for l in raw.split('\n') if l.strip()]
+        lines = [line.strip() for line in raw.split("\n") if line.strip()]
 
         if len(lines) > 1:
             for line in reversed(lines):
-                cleaned = line.strip().strip('"').strip("'").strip('*').strip()
+                cleaned = line.strip().strip('"').strip("'").strip("*").strip()
                 word_count = len(cleaned.split())
                 if 2 <= word_count <= 8:
                     lower = cleaned.lower()
-                    if not any(lower.startswith(w) for w in ['okay', 'sure', 'the user', 'the input', 'the message', 'the conversation', 'i need', 'i should', 'let me', 'so the', 'this is', 'here is', 'i think', 'i will', 'i\'ll']):
+                    if not any(
+                        lower.startswith(w)
+                        for w in [
+                            "okay",
+                            "sure",
+                            "the user",
+                            "the input",
+                            "the message",
+                            "the conversation",
+                            "i need",
+                            "i should",
+                            "let me",
+                            "so the",
+                            "this is",
+                            "here is",
+                            "i think",
+                            "i will",
+                            "i'll",
+                        ]
+                    ):
                         return cleaned
 
         text = raw
@@ -40,24 +59,24 @@ class GenerateTitleAction(BackgroundAction):
         for pattern in reasoning_patterns:
             text = re.sub(pattern, "", text, flags=re.IGNORECASE)
 
-        text = text.strip().strip('"').strip("'").strip('*').strip()
+        text = text.strip().strip('"').strip("'").strip("*").strip()
         if not text:
             return fallback
 
-        for sep in ['.', '!', '?', ':']:
+        for sep in [".", "!", "?", ":"]:
             parts = text.split(sep)
             if parts:
                 for candidate in reversed(parts):
-                    candidate = candidate.strip().strip('"').strip("'").strip('*').strip()
+                    candidate = candidate.strip().strip('"').strip("'").strip("*").strip()
                     word_count = len(candidate.split())
                     if 2 <= word_count <= 8:
                         first_word = candidate.split()[0].lower()
-                        reasoning_words = {'the', 'this', 'it', 'i', 'okay', 'sure', 'so', 'let', 'a', 'an', 'okay,'}
+                        reasoning_words = {"the", "this", "it", "i", "okay", "sure", "so", "let", "a", "an", "okay,"}
                         if first_word not in reasoning_words:
                             return candidate
 
         words = text.split()
-        skip_words = {'the', 'this', 'it', 'i', 'okay', 'sure', 'so', 'let', 'a', 'an'}
+        skip_words = {"the", "this", "it", "i", "okay", "sure", "so", "let", "a", "an"}
         meaningful = [w for w in words if w.lower() not in skip_words][:6]
         if meaningful:
             return " ".join(meaningful)
@@ -80,7 +99,7 @@ class GenerateTitleAction(BackgroundAction):
         result = await generate_unified(
             provider,
             system_prompt=self.system_prompt(),
-            user_prompt=f"Name this encounter based on its opening: \"{text[:300]}\"",
+            user_prompt=f'Name this encounter based on its opening: "{text[:300]}"',
             thinking_override=self.thinking_override(),
             **params,
         )
@@ -90,4 +109,3 @@ class GenerateTitleAction(BackgroundAction):
         content = self._extract_title(raw, fallback)
 
         return {"content": content, "model": result.get("model", "")}
-

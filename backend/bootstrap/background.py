@@ -39,8 +39,9 @@ async def _db_backup_loop():
                 prev_size = existing[1].stat().st_size if len(existing) > 1 else new_size
                 if new_size < prev_size * 0.3:
                     logger.warning(
-                        "New backup (%dB) is <30%% of previous (%dB) — "
-                        "keeping old backups as safety", new_size, prev_size,
+                        "New backup (%dB) is <30%% of previous (%dB) — keeping old backups as safety",
+                        new_size,
+                        prev_size,
                     )
                     return
                 for old in existing[MAX_BACKUPS:]:
@@ -109,18 +110,18 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     )
     from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction
     from backend.modules.background_tasks.actions.refine_skill import RefineSkillAction
+    from backend.modules.background_tasks.actions.research_crystallize import (
+        ResearchCrystallizeAction,
+    )
     from backend.modules.background_tasks.actions.resonance_finder import (
         ResonanceFinderAction,
     )
     from backend.modules.background_tasks.actions.semantic_knot import SemanticKnotAction
-    from backend.modules.background_tasks.actions.summarize import SummarizeAction
-    from backend.modules.background_tasks.actions.title import GenerateTitleAction
-    from backend.modules.background_tasks.actions.research_crystallize import (
-        ResearchCrystallizeAction,
-    )
     from backend.modules.background_tasks.actions.structure_extraction import (
         StructureExtractionAction,
     )
+    from backend.modules.background_tasks.actions.summarize import SummarizeAction
+    from backend.modules.background_tasks.actions.title import GenerateTitleAction
 
     engine.register(GenerateTitleAction())
     engine.register(SummarizeAction())
@@ -136,9 +137,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     engine.register(ResearchCrystallizeAction())
     engine.register(StructureExtractionAction())
 
-    logger.info(
-        "Background task engine initialized with actions: %s", engine.list_actions()
-    )
+    logger.info("Background task engine initialized with actions: %s", engine.list_actions())
     return engine, background_provider
 
 

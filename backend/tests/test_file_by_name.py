@@ -1,14 +1,15 @@
-from pathlib import Path
-import sys
-import os
 import asyncio
+import os
+import sys
+from pathlib import Path
 
 root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 os.chdir(root_path)
 
-from backend.storage.database import init_db, get_db_path
-from backend.storage.repository import PerceptionSedimentRepository
+from backend.storage.database import get_db_path, init_db  # noqa: E402
+from backend.storage.repository import PerceptionSedimentRepository  # noqa: E402
+
 
 async def test_file_by_name():
     db_path = str(get_db_path("data/aaa_file_test.db"))
@@ -22,30 +23,29 @@ async def test_file_by_name():
 
     # 0. Insert a mock conversation
     conn.execute(
-        "INSERT INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
-        ("conv-123", "Test Title", "symbia")
+        "INSERT INTO conversations (id, title, agent_id) VALUES (?, ?, ?)", ("conv-123", "Test Title", "symbia")
     )
 
     # 1. Insert a mock file
     conn.execute(
-        """INSERT INTO perception_files 
+        """INSERT INTO perception_files
            (conversation_id, file_name, file_type, status, summary, summary_model, token_count, chunk_count)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        ("conv-123", "Autopoiesis.pdf", "pdf", "ready", "An essay on autopoiesis", "model-a", 100, 2)
+        ("conv-123", "Autopoiesis.pdf", "pdf", "ready", "An essay on autopoiesis", "model-a", 100, 2),
     )
-    
+
     # 2. Insert mock chunks
     conn.execute(
         """INSERT INTO perception_sediment
            (conversation_id, file_name, file_type, chunk_index, chunk_text, token_count, opacity, opacity_meta, structural_signature, embedding, embedding_model)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        ("conv-123", "Autopoiesis.pdf", "pdf", 0, "First chunk text", 50, 0, None, b"", b"", "test-model")
+        ("conv-123", "Autopoiesis.pdf", "pdf", 0, "First chunk text", 50, 0, None, b"", b"", "test-model"),
     )
     conn.execute(
         """INSERT INTO perception_sediment
            (conversation_id, file_name, file_type, chunk_index, chunk_text, token_count, opacity, opacity_meta, structural_signature, embedding, embedding_model)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        ("conv-123", "Autopoiesis.pdf", "pdf", 1, "Second chunk text", 50, 0, None, b"", b"", "test-model")
+        ("conv-123", "Autopoiesis.pdf", "pdf", 1, "Second chunk text", 50, 0, None, b"", b"", "test-model"),
     )
     conn.commit()
 
@@ -68,6 +68,7 @@ async def test_file_by_name():
 
     conn.close()
     import time
+
     time.sleep(0.1)
     for p in [db_path, db_path + "-wal", db_path + "-shm"]:
         try:
@@ -76,5 +77,6 @@ async def test_file_by_name():
         except PermissionError:
             pass
     print("All file lookup tests passed!")
+
 
 asyncio.run(test_file_by_name())

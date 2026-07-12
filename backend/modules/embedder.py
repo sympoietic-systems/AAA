@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Optional
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -18,13 +17,13 @@ class EmbeddingService:
         model_name: str = "all-MiniLM-L6-v2",
         device: str = "cpu",
         offline: bool = True,
-        cache_dir: Optional[str] = None,
+        cache_dir: str | None = None,
     ):
         self._model_name = model_name
         self._device = device
         self._offline = offline
         self._cache_dir = cache_dir
-        self._model: Optional[SentenceTransformer] = None
+        self._model: SentenceTransformer | None = None
         self._dim: int = 0
 
     @property
@@ -50,9 +49,7 @@ class EmbeddingService:
         if self._offline:
             kwargs["local_files_only"] = True
             try:
-                logger.info(
-                    "Loading %s from local cache (offline mode)", self._model_name
-                )
+                logger.info("Loading %s from local cache (offline mode)", self._model_name)
                 self._model = SentenceTransformer(self._model_name, **kwargs)
             except Exception:
                 logger.info(
@@ -100,7 +97,7 @@ class EmbedderModule(ProcessingModule):
         model_name: str = "all-MiniLM-L6-v2",
         device: str = "cpu",
         offline: bool = True,
-        cache_dir: Optional[str] = None,
+        cache_dir: str | None = None,
     ):
         self._service = EmbeddingService(
             model_name=model_name,

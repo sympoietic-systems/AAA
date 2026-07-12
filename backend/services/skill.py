@@ -2,12 +2,8 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from typing import Optional
 
-import yaml
-import numpy as np
-
-from backend.modules.structural_engine import LexiconScorer, CompositeStructuralScorer
+from backend.modules.structural_engine import CompositeStructuralScorer, LexiconScorer
 from backend.storage.models import SkillNode
 
 logger = logging.getLogger(__name__)
@@ -26,7 +22,7 @@ class SkillService:
         always_active = skill_repo.list_always_active()
         on_demand = skill_repo.list_on_demand()
         all_skills = skill_repo.list_skills()
-        
+
         collapsed = [s for s in all_skills if s.lifecycle_stage == "collapsed"]
         proposed = [s for s in all_skills if s.lifecycle_stage == "nucleation"]
 
@@ -41,10 +37,10 @@ class SkillService:
     async def update_skill_details(
         self,
         skill_id: str,
-        description: Optional[str] = None,
-        content: Optional[str] = None,
-        trigger_keywords: Optional[list[str]] = None,
-        changelog: Optional[str] = None,
+        description: str | None = None,
+        content: str | None = None,
+        trigger_keywords: list[str] | None = None,
+        changelog: str | None = None,
         version_source: str = "user",
     ) -> dict:
         state = self._state
@@ -68,7 +64,7 @@ class SkillService:
         if description is not None or content is not None:
             embedder = getattr(state, "embedder", None)
             scorer = getattr(embedder, "service", None) if embedder else None
-            
+
             # Content takes priority for embedding, falling back to description/existing
             vector_text = content if content else (description if description else skill.description)
             if not vector_text and skill.content:
@@ -77,7 +73,11 @@ class SkillService:
 
         # Increment version on edit
         updates["version"] = skill.version + 1
-        updates["changelog"] = changelog if changelog is not None else f"Edited via Agent Page on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        updates["changelog"] = (
+            changelog
+            if changelog is not None
+            else f"Edited via Agent Page on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
 
         # 2. Update the skill in database
         updated_skill = skill_repo.update_skill(skill_id=skill_id, version_source=version_source, **updates)
@@ -102,9 +102,9 @@ class SkillService:
         self,
         name: str,
         description: str,
-        content: Optional[str] = None,
+        content: str | None = None,
         always_active: bool = False,
-        trigger_keywords: Optional[list[str]] = None,
+        trigger_keywords: list[str] | None = None,
         version_source: str = "user",
     ) -> dict:
         state = self._state
@@ -118,7 +118,7 @@ class SkillService:
             raise ValueError(f"A skill with the name '{name}' already exists.")
 
         skill_id = str(uuid.uuid4())
-        
+
         # Fall back to generated content template if none is provided
         if not content:
             content = self._generate_skill_content(name, description, always_active)
@@ -212,15 +212,17 @@ class SkillService:
         sections = [f"# {name}\n\n{description}\n"]
         if is_always_active:
             sections.append("\n## Baseline Disposition\n\n")
-            sections.append(f"This skill is a baseline disposition — part of Symbia's core personality, not a tool to activate.\n")
-            sections.append(f"It is always present in the system prompt and guides every interaction.\n")
-            sections.append(f"\n## Application\n\n")
-            sections.append(f"Apply this disposition continuously. It requires no explicit invocation.\n")
+            sections.append(
+                "This skill is a baseline disposition — part of Symbia's core personality, not a tool to activate.\n"
+            )
+            sections.append("It is always present in the system prompt and guides every interaction.\n")
+            sections.append("\n## Application\n\n")
+            sections.append("Apply this disposition continuously. It requires no explicit invocation.\n")
         else:
-            sections.append(f"\n## When to Use\n\n")
-            sections.append(f"This skill is loaded when the conversation context matches its trigger patterns.\n")
-            sections.append(f"\n## Application\n\n")
-            sections.append(f"Follow the instructions below when this skill is active.\n")
+            sections.append("\n## When to Use\n\n")
+            sections.append("This skill is loaded when the conversation context matches its trigger patterns.\n")
+            sections.append("\n## Application\n\n")
+            sections.append("Follow the instructions below when this skill is active.\n")
         return "".join(sections)
 
     def _format_skill(self, skill: SkillNode) -> dict:

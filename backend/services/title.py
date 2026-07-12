@@ -32,10 +32,13 @@ class TitleService:
                     lines.append(f"Agent: {content}")
             context = "\n".join(lines)
 
-            result = await engine.run("generate_title", {
-                "context": {"first_message": rows[0].get("content", "")[:300]},
-                "text": context[:2000],
-            })
+            result = await engine.run(
+                "generate_title",
+                {
+                    "context": {"first_message": rows[0].get("content", "")[:300]},
+                    "text": context[:2000],
+                },
+            )
             content = result.get("content", "").strip().strip('"').strip("'")
             if not content:
                 return rows[0].get("content", "")[:60]

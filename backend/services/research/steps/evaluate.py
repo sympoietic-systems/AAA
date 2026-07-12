@@ -1,19 +1,27 @@
 import json
 import logging
 
+from backend.modules.llm_client import generate_unified
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import EvaluatePayload, StepEnvelope, StepOutput
-from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.anti_mastery import apply_anti_mastery_filter
-from backend.modules.llm_client import generate_unified
+from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
-async def run_evaluation(orch, task_id: str, step_id: str, objective: str,
-                         depth: int, max_depth: int, sources: int,
-                         reflection: dict, stagnation: int) -> tuple[bool, str]:
+async def run_evaluation(
+    orch,
+    task_id: str,
+    step_id: str,
+    objective: str,
+    depth: int,
+    max_depth: int,
+    sources: int,
+    reflection: dict,
+    stagnation: int,
+) -> tuple[bool, str]:
     """Check hard constraints first (no LLM); call LLM only in the borderline zone.
 
     Migrated from legacy tools._tool_evaluate.
@@ -61,10 +69,15 @@ async def run_evaluation(orch, task_id: str, step_id: str, objective: str,
             system_text = apply_anti_mastery_filter(system_text)
             user_text = apply_anti_mastery_filter(user_text)
 
-        orch._log_meta(task_id, "orchestrator_evaluate_prompt", {
-            "system_prompt": system_text[:orch._TRUNC_META_LOG],
-            "user_prompt": user_text[:orch._TRUNC_META_LOG],
-        }, step_id=step_id or None)
+        orch._log_meta(
+            task_id,
+            "orchestrator_evaluate_prompt",
+            {
+                "system_prompt": system_text[: orch._TRUNC_META_LOG],
+                "user_prompt": user_text[: orch._TRUNC_META_LOG],
+            },
+            step_id=step_id or None,
+        )
 
         llm = getattr(orch._state, "llm_provider", None)
         if not llm:
@@ -75,13 +88,15 @@ async def run_evaluation(orch, task_id: str, step_id: str, objective: str,
             system_prompt=system_text,
             user_prompt=user_text,
             expect_json=True,
-            fallback_value={"decision": "continue", "reason": "evaluation unavailable",
-                            "completeness_assessment": completeness},
+            fallback_value={
+                "decision": "continue",
+                "reason": "evaluation unavailable",
+                "completeness_assessment": completeness,
+            },
             temperature=prompt_data.get("temperature", 0.2),
             max_tokens=prompt_data.get("max_tokens", 1024),
         )
-        orch._log_llm_response(task_id, "orchestrator_evaluate_response", resp,
-                               step_id=step_id or None)
+        orch._log_llm_response(task_id, "orchestrator_evaluate_response", resp, step_id=step_id or None)
         if step_id:
             orch._save_llm_response_to_step_data(step_id, resp)
 
@@ -105,7 +120,6 @@ class EvaluateStep(BaseResearchStep):
         return "evaluate"
 
     async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
-        task_id = envelope.task_id
         objective = envelope.objective
         depth = envelope.current_depth
         max_depth = envelope.max_depth
@@ -118,6 +132,7 @@ class EvaluateStep(BaseResearchStep):
         prompt_data = get_prompts_dict("research/orchestrator_evaluate.yaml")
         try:
             from backend.services.research.context_builder import ResearchContextBuilder
+
             builder = ResearchContextBuilder(orch._state)
             persona = await builder.build_orchestration_context(objective)
             system_prompt = persona + "\n\n" + prompt_data.get("system", "")
@@ -153,7 +168,9 @@ class EvaluateStep(BaseResearchStep):
             "phase": "evaluating",
             "system_prompt": system_prompt,
             "user_prompt": user_text,
-            "model": getattr(orch._state, "llm_provider", None) and getattr(orch._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "model": getattr(orch._state, "llm_provider", None)
+            and getattr(orch._state.llm_provider, "model_id", "(auto)")
+            or "(auto)",
             "temperature": prompt_data.get("temperature", 0.2),
             "max_tokens": prompt_data.get("max_tokens", 1024),
             "cached_at": now_utc_str(),
@@ -171,27 +188,39 @@ class EvaluateStep(BaseResearchStep):
         step_id = orch._create_or_update_step(s, task_id, "evaluate")
 
         should_stop, stop_reason = await run_evaluation(
-            orch, task_id=task_id, step_id=step_id,
-            objective=objective, depth=current_depth,
-            max_depth=max_depth, sources=payload.sources_analyzed,
-            reflection=payload.reflection, stagnation=payload.stagnation_counter,
+            orch,
+            task_id=task_id,
+            step_id=step_id,
+            objective=objective,
+            depth=current_depth,
+            max_depth=max_depth,
+            sources=payload.sources_analyzed,
+            reflection=payload.reflection,
+            stagnation=payload.stagnation_counter,
         )
 
-        orch._log_meta(task_id, "orchestrator_evaluate", {
-            "decision": "stop" if should_stop else "continue",
-            "reason": stop_reason, "depth": current_depth,
-        }, step_id=step_id)
+        orch._log_meta(
+            task_id,
+            "orchestrator_evaluate",
+            {
+                "decision": "stop" if should_stop else "continue",
+                "reason": stop_reason,
+                "depth": current_depth,
+            },
+            step_id=step_id,
+        )
 
         if orch.step_repo:
-            orch.step_repo.update(step_id, status="completed",
-                result_summary=f"{'STOP' if should_stop else 'CONTINUE'}: {stop_reason}")
+            orch.step_repo.update(
+                step_id, status="completed", result_summary=f"{'STOP' if should_stop else 'CONTINUE'}: {stop_reason}"
+            )
 
         out_payload = EvaluatePayload(
             stagnation_counter=payload.stagnation_counter,
             sources_analyzed=payload.sources_analyzed,
             reflection=payload.reflection,
             should_stop=should_stop,
-            stop_reason=stop_reason
+            stop_reason=stop_reason,
         )
 
         signal_flags = {"should_stop": should_stop}
@@ -212,5 +241,5 @@ class EvaluateStep(BaseResearchStep):
             payload=out_payload,
             signal_flags=signal_flags,
             step_ids=[step_id],
-            transition_rationale=rationale
+            transition_rationale=rationale,
         )

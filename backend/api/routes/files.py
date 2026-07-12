@@ -1,14 +1,14 @@
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
-from backend.api.deps import get_app_state, get_conversation_repo, get_perception_repo, get_agent_name
+from backend.api.deps import get_agent_name, get_app_state, get_conversation_repo, get_perception_repo
 from backend.api.schemas import ConversationFile, ConversationFilesResponse
 from backend.services.file import FileService
-from backend.utils.filesystem import ensure_upload_dir, get_upload_path
+from backend.utils.filesystem import get_upload_path
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -43,6 +43,7 @@ async def upload_conversation_files(
 
     if conversation_id == "new" or not conv_repo or not conv_repo.get(conversation_id):
         import uuid
+
         conversation_id = str(uuid.uuid4())
         if conv_repo:
             conv_repo.create(conversation_id=conversation_id, agent_id=agent_id)
@@ -70,17 +71,24 @@ async def upload_conversation_files(
 
         background_tasks.add_task(
             FileService.process_and_summarize,
-            state, conversation_id, f.filename, file_type, file_bytes,
+            state,
+            conversation_id,
+            f.filename,
+            file_type,
+            file_bytes,
         )
 
-        schema_files.append(ConversationFile(
-            file_name=f.filename,
-            file_type=file_type,
-            status="uploading",
-            token_count=0, chunk_count=0,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-        ))
+        schema_files.append(
+            ConversationFile(
+                file_name=f.filename,
+                file_type=file_type,
+                status="uploading",
+                token_count=0,
+                chunk_count=0,
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
+            )
+        )
 
     return ConversationFilesResponse(conversation_id=conversation_id, files=schema_files)
 
@@ -92,12 +100,19 @@ async def get_conversation_files(conversation_id: str, perception_repo=Depends(g
     for f in files:
         created_at_dt = _parse_file_datetime(f.get("created_at"))
         updated_at_dt = _parse_file_datetime(f.get("updated_at"))
-        schema_files.append(ConversationFile(
-            file_name=f["file_name"], file_type=f["file_type"], status=f["status"],
-            summary=None, summary_model=f.get("summary_model"),
-            token_count=f.get("token_count", 0), chunk_count=f.get("chunk_count", 0),
-            created_at=created_at_dt, updated_at=updated_at_dt,
-        ))
+        schema_files.append(
+            ConversationFile(
+                file_name=f["file_name"],
+                file_type=f["file_type"],
+                status=f["status"],
+                summary=None,
+                summary_model=f.get("summary_model"),
+                token_count=f.get("token_count", 0),
+                chunk_count=f.get("chunk_count", 0),
+                created_at=created_at_dt,
+                updated_at=updated_at_dt,
+            )
+        )
     return ConversationFilesResponse(conversation_id=conversation_id, files=schema_files)
 
 
@@ -122,8 +137,10 @@ async def delete_conversation_file(conversation_id: str, file_name: str, percept
 
 @router.post("/conversations/{conversation_id}/files/{file_name}/reprocess")
 async def reprocess_conversation_file(
-    conversation_id: str, file_name: str,
-    request: Request, background_tasks: BackgroundTasks,
+    conversation_id: str,
+    file_name: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
     state=Depends(get_app_state),
     perception_repo=Depends(get_perception_repo),
 ):
@@ -138,7 +155,10 @@ async def reprocess_conversation_file(
     perception_repo.update_file(conversation_id=conversation_id, file_name=file_name, status="processing")
     background_tasks.add_task(
         FileService.reprocess_and_summarize,
-        state, conversation_id, file_name, target_file["file_type"],
+        state,
+        conversation_id,
+        file_name,
+        target_file["file_type"],
     )
     return {"status": "success"}
 

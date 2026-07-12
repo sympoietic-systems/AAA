@@ -1,13 +1,12 @@
 import asyncio
 import json
 import logging
-from typing import Optional
 
+from backend.modules.llm_client import generate_unified
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import DigestPayload, StepEnvelope, StepOutput
-from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.anti_mastery import apply_anti_mastery_filter
-from backend.modules.llm_client import generate_unified
+from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
@@ -21,9 +20,18 @@ _CONTENT_JUNK_PATTERNS: list[str] = [
 ]
 
 
-async def analyze_source_content(orch, task_id: str, url: str, title: str, content: str,
-                                 query: str, goal: str, depth: int, max_depth: int,
-                                 step_id: str = "") -> dict:
+async def analyze_source_content(
+    orch,
+    task_id: str,
+    url: str,
+    title: str,
+    content: str,
+    query: str,
+    goal: str,
+    depth: int,
+    max_depth: int,
+    step_id: str = "",
+) -> dict:
     """Analyze a single source via LLM.
 
     Migrated from legacy tools._analyze_source.
@@ -37,7 +45,7 @@ async def analyze_source_content(orch, task_id: str, url: str, title: str, conte
             "gaps": [f"Content too short ({len(content_stripped)} chars) — likely paywall or block"],
             "followups": [],
             "direct_urls": [],
-            "diffractive_notes": []
+            "diffractive_notes": [],
         }
     for junk in _CONTENT_JUNK_PATTERNS:
         if junk.lower() in content_stripped[:1000].lower():
@@ -47,14 +55,17 @@ async def analyze_source_content(orch, task_id: str, url: str, title: str, conte
                 "gaps": [f"Blocked by anti-bot protection ('{junk}')"],
                 "followups": [],
                 "direct_urls": [url],
-                "diffractive_notes": []
+                "diffractive_notes": [],
             }
 
     prompt_data = get_prompts_dict("research/node_analyzer.yaml")
     system_text = prompt_data.get("system", "")
     trunc_limit = getattr(orch, "_TRUNC_LLM_CONTENT", 16000)
     user_text = prompt_data.get("user", "").format(
-        query=query, goal=goal, depth=depth, max_depth=max_depth,
+        query=query,
+        goal=goal,
+        depth=depth,
+        max_depth=max_depth,
         parent_findings="(orchestrator — multi-source analysis)",
         scraped_content=content[:trunc_limit],
     )
@@ -65,6 +76,7 @@ async def analyze_source_content(orch, task_id: str, url: str, title: str, conte
     # Build persona context
     try:
         from backend.services.research.context_builder import ResearchContextBuilder
+
         builder = ResearchContextBuilder(orch._state)
         persona = await builder.build_node_context(node_query=query, node_goal=goal, depth=depth)
         if persona:
@@ -75,46 +87,72 @@ async def analyze_source_content(orch, task_id: str, url: str, title: str, conte
 
     # Log prompt
     trunc_meta_log = getattr(orch, "_TRUNC_META_LOG", 2000)
-    orch._log_meta(task_id, "orchestrator_digest_prompt", {
-        "source_url": url, "source_title": title,
-        "system_prompt": system_text[:trunc_meta_log],
-        "user_prompt": user_text[:trunc_meta_log],
-    }, step_id=step_id or None)
+    orch._log_meta(
+        task_id,
+        "orchestrator_digest_prompt",
+        {
+            "source_url": url,
+            "source_title": title,
+            "system_prompt": system_text[:trunc_meta_log],
+            "user_prompt": user_text[:trunc_meta_log],
+        },
+        step_id=step_id or None,
+    )
 
     fallback = {"learnings": [], "gaps": [], "followups": [], "direct_urls": [], "diffractive_notes": []}
     try:
         llm = getattr(orch._state, "llm_provider", None)
         if not llm:
             return fallback
-        resp = await generate_unified(llm, system_prompt=system_text, user_prompt=user_text,
-            expect_json=True, fallback_value=fallback,
+        resp = await generate_unified(
+            llm,
+            system_prompt=system_text,
+            user_prompt=user_text,
+            expect_json=True,
+            fallback_value=fallback,
             temperature=prompt_data.get("temperature", 0.3),
-            max_tokens=prompt_data.get("max_tokens", 2048))
+            max_tokens=prompt_data.get("max_tokens", 2048),
+        )
         result = resp.get("json_data") or resp.get("content") or {}
         if isinstance(result, str):
             result = json.loads(result)
         # Log response
-        orch._log_llm_response(task_id, "orchestrator_digest_response", resp, extra={
-            "source_url": url,
-            "learnings_count": len(result.get("learnings", [])) if isinstance(result, dict) else 0,
-        }, step_id=step_id or None)
+        orch._log_llm_response(
+            task_id,
+            "orchestrator_digest_response",
+            resp,
+            extra={
+                "source_url": url,
+                "learnings_count": len(result.get("learnings", [])) if isinstance(result, dict) else 0,
+            },
+            step_id=step_id or None,
+        )
         return result if isinstance(result, dict) else fallback
     except Exception as e:
         logger.error("Source analysis failed: %s", e)
-        orch._log_meta(task_id, "orchestrator_digest_error", {"source_url": url, "error": str(e)}, step_id=step_id or None)
+        orch._log_meta(
+            task_id, "orchestrator_digest_error", {"source_url": url, "error": str(e)}, step_id=step_id or None
+        )
         return fallback
 
 
-async def parallel_digest_grouped(orch, task_id: str, group_steps: dict,
-                                  parsed_sources: list[dict], queries: list[str],
-                                  objective: str, depth: int, max_depth: int) -> list[dict]:
+async def parallel_digest_grouped(
+    orch,
+    task_id: str,
+    group_steps: dict,
+    parsed_sources: list[dict],
+    queries: list[str],
+    objective: str,
+    depth: int,
+    max_depth: int,
+) -> list[dict]:
     """Analyze each parsed source concurrently via LLM.
 
     Migrated from legacy tools._tool_parallel_digest_grouped.
     """
     sem = orch._get_semaphore()
 
-    async def digest_one(source: dict) -> Optional[dict]:
+    async def digest_one(source: dict) -> dict | None:
         async with sem:
             try:
                 q_group = source.get("query_group", 1)
@@ -122,8 +160,15 @@ async def parallel_digest_grouped(orch, task_id: str, group_steps: dict,
                 query_text = queries[q_group - 1] if (q_group - 1) < len(queries) else objective
 
                 result = await analyze_source_content(
-                    orch, task_id, source["url"], source.get("title", ""),
-                    source.get("content", ""), query_text, objective, depth, max_depth,
+                    orch,
+                    task_id,
+                    source["url"],
+                    source.get("title", ""),
+                    source.get("content", ""),
+                    query_text,
+                    objective,
+                    depth,
+                    max_depth,
                     step_id=step_id,
                 )
 
@@ -133,11 +178,14 @@ async def parallel_digest_grouped(orch, task_id: str, group_steps: dict,
                     if orch.step_repo:
                         steps = orch.step_repo.get_by_task(task_id)
                         parse_step = next(
-                            (s for s in steps
-                             if s.get("step_type") == "parallel_parse"
-                             and s.get("query_group") == q_group
-                             and orch._get_step_depth(s) == depth),
-                            None
+                            (
+                                s
+                                for s in steps
+                                if s.get("step_type") == "parallel_parse"
+                                and s.get("query_group") == q_group
+                                and orch._get_step_depth(s) == depth
+                            ),
+                            None,
                         )
                         if parse_step:
                             parse_step_id = parse_step.get("id")
@@ -151,12 +199,12 @@ async def parallel_digest_grouped(orch, task_id: str, group_steps: dict,
                     for sr in step_srcs:
                         if sr["source_url"] == source["url"]:
                             orch.step_result_repo.update_analysis(
-                                sr["id"], json.dumps(result, ensure_ascii=False),
+                                sr["id"],
+                                json.dumps(result, ensure_ascii=False),
                             )
                             break
                 except Exception as db_err:
-                    logger.warning("Failed to update step result analysis for %s: %s",
-                                   source["url"][:40], db_err)
+                    logger.warning("Failed to update step result analysis for %s: %s", source["url"][:40], db_err)
 
                 return {
                     "source_url": source["url"],
@@ -191,8 +239,10 @@ class DigestStep(BaseResearchStep):
         if not parsed_sources and orch.step_repo and orch.step_result_repo:
             steps = orch.step_repo.get_by_task(task_id)
             parse_steps = [
-                st for st in steps
-                if st["step_type"] == "parallel_parse" and st["status"] == "completed"
+                st
+                for st in steps
+                if st["step_type"] == "parallel_parse"
+                and st["status"] == "completed"
                 and orch._get_step_depth(st) == current_depth
             ]
             if parse_steps:
@@ -200,13 +250,15 @@ class DigestStep(BaseResearchStep):
                 for ps in parse_steps:
                     db_results = orch.step_result_repo.get_by_step(ps["id"])
                     for r in db_results:
-                        parsed_sources.append({
-                            "id": r["id"],
-                            "url": r["source_url"],
-                            "title": r["source_title"],
-                            "content": r["raw_content"],
-                            "query_group": ps.get("query_group", 1),
-                        })
+                        parsed_sources.append(
+                            {
+                                "id": r["id"],
+                                "url": r["source_url"],
+                                "title": r["source_title"],
+                                "content": r["raw_content"],
+                                "query_group": ps.get("query_group", 1),
+                            }
+                        )
 
         sources = [
             {
@@ -240,7 +292,7 @@ class DigestStep(BaseResearchStep):
                     depth=current_depth,
                     max_depth=max_depth,
                     parent_findings="(orchestrator — multi-source analysis)",
-                    scraped_content=first_src.get("content", "")[:3000] + "\n[Content Truncated for Preview]"
+                    scraped_content=first_src.get("content", "")[:3000] + "\n[Content Truncated for Preview]",
                 )
 
                 if prompt_data.get("anti_mastery"):
@@ -249,8 +301,11 @@ class DigestStep(BaseResearchStep):
 
                 try:
                     from backend.services.research.context_builder import ResearchContextBuilder
+
                     builder = ResearchContextBuilder(orch._state)
-                    persona = await builder.build_node_context(node_query=q_text, node_goal=objective, depth=current_depth)
+                    persona = await builder.build_node_context(
+                        node_query=q_text, node_goal=objective, depth=current_depth
+                    )
                     if persona:
                         system_prompt = persona + "\n\n" + system_prompt
                 except Exception:
@@ -264,7 +319,9 @@ class DigestStep(BaseResearchStep):
             "sources": sources,
             "system_prompt": system_prompt,
             "user_prompt": user_prompt,
-            "model": getattr(orch._state, "llm_provider", None) and getattr(orch._state.llm_provider, "model_id", "(auto)") or "(auto)",
+            "model": getattr(orch._state, "llm_provider", None)
+            and getattr(orch._state.llm_provider, "model_id", "(auto)")
+            or "(auto)",
             "temperature": 0.3,
             "max_tokens": 2048,
             "cached_at": now_utc_str(),
@@ -283,8 +340,10 @@ class DigestStep(BaseResearchStep):
         if not parsed_sources and orch.step_repo and orch.step_result_repo:
             steps = orch.step_repo.get_by_task(task_id)
             parse_steps = [
-                st for st in steps
-                if st["step_type"] == "parallel_parse" and st["status"] == "completed"
+                st
+                for st in steps
+                if st["step_type"] == "parallel_parse"
+                and st["status"] == "completed"
                 and orch._get_step_depth(st) == current_depth
             ]
             if parse_steps:
@@ -292,13 +351,17 @@ class DigestStep(BaseResearchStep):
                 for ps in parse_steps:
                     db_results = orch.step_result_repo.get_by_step(ps["id"])
                     for r in db_results:
-                        parsed_sources.append({
-                            "id": r["id"], "url": r["source_url"],
-                            "title": r["source_title"], "content": r["raw_content"],
-                            "query_group": ps.get("query_group", 1),
-                        })
+                        parsed_sources.append(
+                            {
+                                "id": r["id"],
+                                "url": r["source_url"],
+                                "title": r["source_title"],
+                                "content": r["raw_content"],
+                                "query_group": ps.get("query_group", 1),
+                            }
+                        )
 
-        query_groups = sorted(list(set(src.get("query_group", 1) for src in parsed_sources))) or [1]
+        query_groups = sorted({src.get("query_group", 1) for src in parsed_sources}) or [1]
 
         # Resolve queries
         plan_queries = []
@@ -309,27 +372,35 @@ class DigestStep(BaseResearchStep):
             plan_queries = [objective]
 
         last_refl = state.get("last_reflection") or {}
-        queries = last_refl.get("next_queries") if (current_depth > 0 and last_refl.get("next_queries")) else plan_queries
+        queries = (
+            last_refl.get("next_queries") if (current_depth > 0 and last_refl.get("next_queries")) else plan_queries
+        )
 
         s = orch._get_state(task_id)
         group_steps = {}
         for q_group in query_groups:
             q_text = queries[q_group - 1] if (q_group - 1) < len(queries) else objective
-            step_id = orch._create_or_update_step(s, task_id, "digest",
-                query_group=q_group, query_text=q_text[:300])
+            step_id = orch._create_or_update_step(s, task_id, "digest", query_group=q_group, query_text=q_text[:300])
             group_steps[q_group] = step_id
 
         # Call local parallel_digest_grouped directly rather than through orch delegate
         digest_results = await parallel_digest_grouped(
-            orch, task_id, group_steps, parsed_sources,
-            queries, objective, current_depth, max_depth,
+            orch,
+            task_id,
+            group_steps,
+            parsed_sources,
+            queries,
+            objective,
+            current_depth,
+            max_depth,
         )
 
         if orch.step_repo:
             for q_group, step_id in group_steps.items():
                 digested_for_group = [dr for dr in digest_results if dr.get("query_group") == q_group]
-                orch.step_repo.update(step_id, status="completed",
-                    result_summary=f"digested {len(digested_for_group)} sources")
+                orch.step_repo.update(
+                    step_id, status="completed", result_summary=f"digested {len(digested_for_group)} sources"
+                )
 
         new_findings = []
         all_learnings = []
@@ -342,18 +413,14 @@ class DigestStep(BaseResearchStep):
             all_learnings.extend(learnings)
             if learnings:
                 new_findings.extend(
-                    f"[{dr['source_title'] or dr['source_url'][:80]}]: " + l
-                    for l in learnings
+                    f"[{dr['source_title'] or dr['source_url'][:80]}]: " + learning for learning in learnings
                 )
             if isinstance(r, dict):
                 followups.extend(r.get("followups", []))
                 gaps.extend(r.get("gaps", []))
 
         out_payload = DigestPayload(
-            parsed_sources_cache=parsed_sources,
-            learnings=all_learnings,
-            followups=followups,
-            gaps=gaps
+            parsed_sources_cache=parsed_sources, learnings=all_learnings, followups=followups, gaps=gaps
         )
 
         all_step_ids = list(group_steps.values())
@@ -368,5 +435,5 @@ class DigestStep(BaseResearchStep):
             payload=out_payload,
             new_findings=new_findings,
             step_ids=all_step_ids,
-            transition_rationale=rationale
+            transition_rationale=rationale,
         )

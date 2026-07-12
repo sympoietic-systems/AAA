@@ -1,7 +1,6 @@
 """Repository for research_tasks table — autonomous research task lifecycle."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
@@ -32,26 +31,24 @@ class ResearchTaskRepository(BaseRepository):
                 task.get("budget_limit_usd", 0.50),
                 task.get("proposal_rationale"),
                 task.get("proposal_message_id"),
-                datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
             ),
         )
         conn.commit()
         return task["id"]
 
     @with_connection
-    def get(self, task_id: str) -> Optional[dict]:
+    def get(self, task_id: str) -> dict | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM research_tasks WHERE id = ?", (task_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM research_tasks WHERE id = ?", (task_id,)).fetchone()
         return dict(row) if row else None
 
     @with_connection
     def list_all(
         self,
-        status: Optional[str] = None,
-        trigger_source: Optional[str] = None,
-        conversation_id: Optional[str] = None,
+        status: str | None = None,
+        trigger_source: str | None = None,
+        conversation_id: str | None = None,
         limit: int = 50,
     ) -> list[dict]:
         conn = self._conn()
@@ -81,9 +78,7 @@ class ResearchTaskRepository(BaseRepository):
         conn = self._conn()
         set_clause = ", ".join(f"{k} = ?" for k in fields)
         values = list(fields.values()) + [task_id]
-        conn.execute(
-            f"UPDATE research_tasks SET {set_clause} WHERE id = ?", values
-        )
+        conn.execute(f"UPDATE research_tasks SET {set_clause} WHERE id = ?", values)
         conn.commit()
 
     @with_connection
@@ -95,7 +90,7 @@ class ResearchTaskRepository(BaseRepository):
             "completed": "completed_at",
         }.get(new_status)
 
-        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
         if timestamp_col:
             conn.execute(
                 f"UPDATE research_tasks SET status = ?, {timestamp_col} = ? WHERE id = ?",
@@ -111,13 +106,11 @@ class ResearchTaskRepository(BaseRepository):
     @with_connection
     def count_by_status(self, status: str) -> int:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT COUNT(*) FROM research_tasks WHERE status = ?", (status,)
-        ).fetchone()
+        row = conn.execute("SELECT COUNT(*) FROM research_tasks WHERE status = ?", (status,)).fetchone()
         return row[0] if row else 0
 
     @with_connection
-    def get_next_queued(self) -> Optional[dict]:
+    def get_next_queued(self) -> dict | None:
         conn = self._conn()
         row = conn.execute(
             """SELECT * FROM research_tasks
@@ -139,9 +132,7 @@ class ResearchTaskRepository(BaseRepository):
         return row[0] > 0 if row else False
 
     @with_connection
-    def expire_stale_proposals(
-        self, conversation_timeout_mins: int = 60, daemon_timeout_mins: int = 600
-    ) -> int:
+    def expire_stale_proposals(self, conversation_timeout_mins: int = 60, daemon_timeout_mins: int = 600) -> int:
         conn = self._conn()
         cursor = conn.execute(
             """UPDATE research_tasks SET status = 'expired'

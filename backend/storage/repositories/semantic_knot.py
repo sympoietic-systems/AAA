@@ -1,9 +1,8 @@
 import threading
-from typing import Optional
 
 import numpy as np
 
-from backend.storage.connection import with_connection, _get_tracked_connection
+from backend.storage.connection import with_connection
 from backend.storage.models import SemanticKnot
 from backend.storage.repositories.base import BaseRepository
 from backend.storage.row_mappers import _row_to_semantic_knot
@@ -17,6 +16,7 @@ class SemanticKnotRepository(BaseRepository):
     def _conn(self):
         if not hasattr(self._local, "conn") or self._local.conn is None:
             from backend.storage.database import get_connection
+
             self._local.conn = get_connection(self._db_path)
         return self._local.conn
 
@@ -30,7 +30,7 @@ class SemanticKnotRepository(BaseRepository):
         embedding_model: str,
         token_count: int,
         weight: float = 1.0,
-        structural_signature: Optional[bytes] = None,
+        structural_signature: bytes | None = None,
     ) -> SemanticKnot:
         conn = self._conn()
         conn.execute(
@@ -49,9 +49,7 @@ class SemanticKnotRepository(BaseRepository):
             ),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM semantic_knots WHERE id = ?", (id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM semantic_knots WHERE id = ?", (id,)).fetchone()
         return _row_to_semantic_knot(row)
 
     @with_connection
@@ -66,7 +64,7 @@ class SemanticKnotRepository(BaseRepository):
     @with_connection
     def get_embeddings_and_signatures_except(
         self, exclude_conversation_id: str, limit: int = 500
-    ) -> list[tuple[str, np.ndarray, Optional[np.ndarray], str]]:
+    ) -> list[tuple[str, np.ndarray, np.ndarray | None, str]]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT id, embedding, structural_signature, concept_payload FROM semantic_knots
@@ -117,10 +115,7 @@ class SemanticKnotRepository(BaseRepository):
                 continue
             norm1 = np.linalg.norm(query_vec)
             norm2 = np.linalg.norm(emb_vec)
-            if norm1 == 0 or norm2 == 0:
-                sim = 0.0
-            else:
-                sim = float(np.dot(query_vec, emb_vec) / (norm1 * norm2))
+            sim = 0.0 if norm1 == 0 or norm2 == 0 else float(np.dot(query_vec, emb_vec) / (norm1 * norm2))
 
             if min_sim <= sim <= max_sim:
                 candidates.append((sim, row["id"]))

@@ -1,17 +1,17 @@
-import os
-import sys
-import json
 import asyncio
+import json
+import os
 import sqlite3
-import numpy as np
+import sys
 
 # Adjust path to find backend modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.config import load_config
-from backend.storage.database import get_db_path
 from backend.main import _init_providers
 from backend.modules.structural_engine import CompositeStructuralScorer
+from backend.storage.database import get_db_path
+
 
 async def main():
     config = load_config()
@@ -25,7 +25,7 @@ async def main():
     _, structural_provider, _ = _init_providers(config)
     if not structural_provider:
         print("Warning: Structural LLM provider not configured. Fallback empirical modes will be used.")
-    
+
     scorer = CompositeStructuralScorer(llm_provider=structural_provider, config=config)
     print(f"LLM Scorer status: Enabled={scorer.llm_scorer_enabled}, HasProvider={bool(structural_provider)}")
 
@@ -40,7 +40,7 @@ async def main():
         skill_id = s["id"]
         name = s["name"]
         content = s["content"] or s["description"] or ""
-        
+
         existing_v384d = []
         if s["vector_16d"]:
             try:
@@ -53,14 +53,8 @@ async def main():
         print(f"Recalculating 16D vector for skill '{name}'...")
         try:
             v16d = await scorer.score_async(content, use_llm_scorer=True)
-            result = {
-                "v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d),
-                "v384d": existing_v384d
-            }
-            conn.execute(
-                "UPDATE skill_nodes SET vector_16d = ? WHERE id = ?",
-                (json.dumps(result), skill_id)
-            )
+            result = {"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d), "v384d": existing_v384d}
+            conn.execute("UPDATE skill_nodes SET vector_16d = ? WHERE id = ?", (json.dumps(result), skill_id))
             updated_skills += 1
             print(f"  -> Successfully updated skill '{name}'")
         except Exception as e:
@@ -74,15 +68,12 @@ async def main():
         belief_id = b["id"]
         label = b["label"]
         statement = b["statement"] or ""
-        
+
         print(f"Recalculating 16D vector for belief '{label}'...")
         try:
             v16d = await scorer.score_async(statement, use_llm_scorer=True)
             v16d_list = v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)
-            conn.execute(
-                "UPDATE belief_nodes SET vector_16d = ? WHERE id = ?",
-                (json.dumps(v16d_list), belief_id)
-            )
+            conn.execute("UPDATE belief_nodes SET vector_16d = ? WHERE id = ?", (json.dumps(v16d_list), belief_id))
             updated_beliefs += 1
             print(f"  -> Successfully updated belief '{label}'")
         except Exception as e:
@@ -91,6 +82,7 @@ async def main():
     conn.commit()
     conn.close()
     print(f"\nRecalculation complete. Updated {updated_skills} skills and {updated_beliefs} beliefs.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

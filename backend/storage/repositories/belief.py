@@ -1,8 +1,7 @@
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.models import BeliefEvent, BeliefNode, BeliefProposal, BeliefStatementVersion
@@ -39,10 +38,7 @@ class BeliefRepository(BaseRepository):
             return json.dumps(fallback)
 
         if len(data) != 16:
-            if len(data) < 16:
-                data = data + [0.0] * (16 - len(data))
-            else:
-                data = data[:16]
+            data = data + [0.0] * (16 - len(data)) if len(data) < 16 else data[:16]
 
         # Ensure all elements are floats/numbers
         try:
@@ -53,7 +49,7 @@ class BeliefRepository(BaseRepository):
         return json.dumps(data)
 
     @with_connection
-    def get_belief(self, agent_id: str, belief_id: str) -> Optional[BeliefNode]:
+    def get_belief(self, agent_id: str, belief_id: str) -> BeliefNode | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND id = ?",
@@ -85,8 +81,8 @@ class BeliefRepository(BaseRepository):
         somatic_anchor: str,
         vector_16d: str,
         lifecycle_stage: str = "crystallized",
-        evolved_from_proposal: Optional[str] = None,
-        genesis_materials: Optional[str] = None,
+        evolved_from_proposal: str | None = None,
+        genesis_materials: str | None = None,
         version: int = 1,
     ) -> BeliefNode:
         validated_vector = self.validate_and_format_vector(vector_16d)
@@ -95,26 +91,37 @@ class BeliefRepository(BaseRepository):
             """INSERT INTO belief_nodes
                (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage, evolved_from_proposal, genesis_materials, version, last_reinforced_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-            (id, agent_id.lower(), label, statement, origin, confidence, ontological_mass, somatic_anchor, validated_vector, lifecycle_stage, evolved_from_proposal, genesis_materials, version),
+            (
+                id,
+                agent_id.lower(),
+                label,
+                statement,
+                origin,
+                confidence,
+                ontological_mass,
+                somatic_anchor,
+                validated_vector,
+                lifecycle_stage,
+                evolved_from_proposal,
+                genesis_materials,
+                version,
+            ),
         )
         conn.commit()
 
         # Automatic persistence notification for new belief creation
         try:
-
             snippet = f"New belief '{label}' crystallized (initial confidence: {confidence:.2f}). Origin: {origin}"
             conn.execute(
                 """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                    VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
-                (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{label}"),
+                (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet, f"belief:{label}"),
             )
             conn.commit()
         except Exception:
             pass
 
-        row = conn.execute(
-            "SELECT * FROM belief_nodes WHERE id = ?", (id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM belief_nodes WHERE id = ?", (id,)).fetchone()
         return _row_to_belief_node(row)
 
     @with_connection
@@ -129,11 +136,13 @@ class BeliefRepository(BaseRepository):
     ) -> None:
         validated_vector = self.validate_and_format_vector(vector_16d)
         conn = self._conn()
-        
+
         # Check for stage transition
         if lifecycle_stage is not None and not suppress_stage_notification:
             try:
-                row = conn.execute("SELECT label, lifecycle_stage FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
+                row = conn.execute(
+                    "SELECT label, lifecycle_stage FROM belief_nodes WHERE id = ?", (belief_id,)
+                ).fetchone()
                 if row and row["lifecycle_stage"] != lifecycle_stage:
                     old_stage = row["lifecycle_stage"]
                     label = row["label"]
@@ -142,7 +151,7 @@ class BeliefRepository(BaseRepository):
                     conn.execute(
                         """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                            VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
-                        (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{label}"),
+                        (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet, f"belief:{label}"),
                     )
             except Exception:
                 pass
@@ -185,7 +194,7 @@ class BeliefRepository(BaseRepository):
                 conn.execute(
                     """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                        VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
-                    (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{label}"),
+                    (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet, f"belief:{label}"),
                 )
         except Exception:
             pass
@@ -207,17 +216,19 @@ class BeliefRepository(BaseRepository):
     ) -> None:
         """Create a notification entry in the notifications table."""
         try:
-
             conn = self._conn()
             conn.execute(
                 """INSERT INTO notifications (id, type, timestamp, snippet, source, source_type, source_id, read, dismissed)
                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)""",
-                (str(uuid.uuid4()), notif_type, datetime.now(timezone.utc).isoformat(), snippet, source, source_type, source_id),
+                (str(uuid.uuid4()), notif_type, datetime.now(UTC).isoformat(), snippet, source, source_type, source_id),
             )
             conn.commit()
         except Exception:
             logging.getLogger(__name__).warning(
-                "Failed to create notification: type=%s source=%s", notif_type, source, exc_info=True,
+                "Failed to create notification: type=%s source=%s",
+                notif_type,
+                source,
+                exc_info=True,
             )
 
     @with_connection
@@ -262,15 +273,13 @@ class BeliefRepository(BaseRepository):
     @with_connection
     def get_belief_last_reinforced(self, belief_id: str) -> str | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT last_reinforced_at FROM belief_nodes WHERE id = ?", (belief_id,)
-        ).fetchone()
+        row = conn.execute("SELECT last_reinforced_at FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
         if row:
             return row["last_reinforced_at"]
         return None
 
     @with_connection
-    def update_belief_last_dreamed(self, belief_id: str, timestamp: Optional[str] = None) -> None:
+    def update_belief_last_dreamed(self, belief_id: str, timestamp: str | None = None) -> None:
         conn = self._conn()
         if timestamp:
             conn.execute(
@@ -290,12 +299,12 @@ class BeliefRepository(BaseRepository):
         event_id: str,
         belief_id: str,
         source_type: str,
-        source_id: Optional[str],
-        alignment: Optional[float],
-        perturbation: Optional[float],
+        source_id: str | None,
+        alignment: float | None,
+        perturbation: float | None,
         event_type: str,
         impact: float,
-        rationale: Optional[str],
+        rationale: str | None,
         suppress_notification: bool = False,
     ) -> None:
         try:
@@ -313,26 +322,37 @@ class BeliefRepository(BaseRepository):
                 try:
                     belief_row = conn.execute("SELECT label FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
                     belief_label = belief_row["label"] if belief_row else "unknown"
-                    
+
                     snippet = f"Belief '{belief_label}' {event_type} (impact: {impact or 0.0:.2f}). {rationale or ''}"
                     snippet = snippet.strip()
 
                     conn.execute(
                         """INSERT INTO notifications (id, type, timestamp, snippet, source, source_type, source_id, read, dismissed)
                            VALUES (?, 'trace', ?, ?, ?, ?, ?, 0, 0)""",
-                        (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{belief_label}", source_type, belief_id),
+                        (
+                            str(uuid.uuid4()),
+                            datetime.now(UTC).isoformat(),
+                            snippet,
+                            f"belief:{belief_label}",
+                            source_type,
+                            belief_id,
+                        ),
                     )
                     conn.commit()
                 except Exception:
                     logging.getLogger(__name__).warning(
                         "Failed to create notification for belief event %s on belief '%s'",
-                        event_type, belief_id, exc_info=True,
+                        event_type,
+                        belief_id,
+                        exc_info=True,
                     )
 
         except Exception:
             logging.getLogger(__name__).warning(
                 "Failed to insert belief event %s for belief '%s'",
-                event_type, belief_id, exc_info=True,
+                event_type,
+                belief_id,
+                exc_info=True,
             )
 
     @with_connection
@@ -362,7 +382,7 @@ class BeliefRepository(BaseRepository):
         conn.commit()
 
     @with_connection
-    def get_conversation_somatic_state(self, conversation_id: str) -> Optional[dict]:
+    def get_conversation_somatic_state(self, conversation_id: str) -> dict | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT somatic_reservoir_ad, matrix_warping, immunological_directive_active FROM conversations WHERE id = ?",
@@ -377,7 +397,9 @@ class BeliefRepository(BaseRepository):
         }
 
     @with_connection
-    def upsert_tension(self, belief_a_id: str, belief_b_id: str, cosine_similarity: float, tension_magnitude: float) -> None:
+    def upsert_tension(
+        self, belief_a_id: str, belief_b_id: str, cosine_similarity: float, tension_magnitude: float
+    ) -> None:
         conn = self._conn()
         a, b = sorted([belief_a_id, belief_b_id])
         conn.execute(
@@ -460,7 +482,7 @@ class BeliefRepository(BaseRepository):
     ) -> None:
         validated_vector = self.validate_and_format_vector(vector_16d)
         conn = self._conn()
-        
+
         # Check for stage transition
         try:
             row = conn.execute("SELECT label, lifecycle_stage FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
@@ -471,7 +493,7 @@ class BeliefRepository(BaseRepository):
                 conn.execute(
                     """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                        VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
-                    (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet, f"belief:{row['label']}"),
+                    (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet, f"belief:{row['label']}"),
                 )
         except Exception:
             pass
@@ -515,7 +537,7 @@ class BeliefRepository(BaseRepository):
         nucleation_mass: float = 0.1,
         confidence: float = 0.15,
         status: str = "pending",
-        potential_merge_target: Optional[str] = None,
+        potential_merge_target: str | None = None,
     ) -> BeliefProposal:
         validated_vector = self.validate_and_format_vector(initial_signature)
         conn = self._conn()
@@ -523,24 +545,34 @@ class BeliefRepository(BaseRepository):
             """INSERT INTO belief_proposals
                (id, agent_id, provisional_statement, source_trace, initial_signature, nucleation_mass, confidence, status, potential_merge_target, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
-            (id, agent_id.lower(), provisional_statement, source_trace, validated_vector, nucleation_mass, confidence, status, potential_merge_target),
+            (
+                id,
+                agent_id.lower(),
+                provisional_statement,
+                source_trace,
+                validated_vector,
+                nucleation_mass,
+                confidence,
+                status,
+                potential_merge_target,
+            ),
         )
-        
+
         # Automatic notification insertion
 
         snippet = f"A new belief proposal has emerged in the workshop ('{provisional_statement}')"
         conn.execute(
             """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
                VALUES (?, 'trace', ?, ?, 'belief_workshop', 0, 0)""",
-            (str(uuid.uuid4()), datetime.now(timezone.utc).isoformat(), snippet),
+            (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet),
         )
-        
+
         conn.commit()
         row = conn.execute("SELECT * FROM belief_proposals WHERE id = ?", (id,)).fetchone()
         return _row_to_belief_proposal(row)
 
     @with_connection
-    def get_proposal(self, proposal_id: str) -> Optional[BeliefProposal]:
+    def get_proposal(self, proposal_id: str) -> BeliefProposal | None:
         conn = self._conn()
         row = conn.execute("SELECT * FROM belief_proposals WHERE id = ?", (proposal_id,)).fetchone()
         if row is None:
@@ -566,7 +598,7 @@ class BeliefRepository(BaseRepository):
         return [_row_to_belief_proposal(r) for r in rows]
 
     @with_connection
-    def update_proposal_status(self, proposal_id: str, status: str, rejection_rationale: Optional[str] = None) -> None:
+    def update_proposal_status(self, proposal_id: str, status: str, rejection_rationale: str | None = None) -> None:
         conn = self._conn()
         if rejection_rationale is not None:
             conn.execute(
@@ -581,7 +613,14 @@ class BeliefRepository(BaseRepository):
         conn.commit()
 
     @with_connection
-    def update_proposal_suggestions(self, proposal_id: str, suggested_label: str, suggested_statement: str, potential_merge_target: Optional[str] = None, status: str = "refined") -> None:
+    def update_proposal_suggestions(
+        self,
+        proposal_id: str,
+        suggested_label: str,
+        suggested_statement: str,
+        potential_merge_target: str | None = None,
+        status: str = "refined",
+    ) -> None:
         conn = self._conn()
         conn.execute(
             """UPDATE belief_proposals
@@ -592,7 +631,9 @@ class BeliefRepository(BaseRepository):
         conn.commit()
 
     @with_connection
-    def update_proposal_symbia_reflection(self, proposal_id: str, symbia_reflection: str, symbia_friction_rationale: Optional[str] = None) -> None:
+    def update_proposal_symbia_reflection(
+        self, proposal_id: str, symbia_reflection: str, symbia_friction_rationale: str | None = None
+    ) -> None:
         conn = self._conn()
         conn.execute(
             """UPDATE belief_proposals
@@ -610,7 +651,7 @@ class BeliefRepository(BaseRepository):
         version: int,
         statement: str,
         vector_16d: str,
-        change_reason: Optional[str] = None,
+        change_reason: str | None = None,
     ) -> BeliefStatementVersion:
         validated_vector = self.validate_and_format_vector(vector_16d)
         conn = self._conn()
@@ -634,7 +675,7 @@ class BeliefRepository(BaseRepository):
         return [_row_to_belief_statement_version(r) for r in rows]
 
     @with_connection
-    def get_statement_version(self, belief_id: str, version: int) -> Optional[BeliefStatementVersion]:
+    def get_statement_version(self, belief_id: str, version: int) -> BeliefStatementVersion | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT * FROM belief_statement_versions WHERE belief_id = ? AND version = ?",

@@ -1,12 +1,12 @@
-import sqlite3
 import logging
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
 
 def up(conn: sqlite3.Connection):
     """Create tables for the dynamic personality cascade.
-    
+
     - commitment_nodes: theoretical commitment lifecycle
     - commitment_events: audit trail for commitment changes
     - expertise_nodes: domain expertise accretion state
@@ -39,12 +39,8 @@ def up(conn: sqlite3.Connection):
         raise
 
     try:
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_commitment_agent ON commitment_nodes(agent_id)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_commitment_stage ON commitment_nodes(agent_id, lifecycle_stage)"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_commitment_agent ON commitment_nodes(agent_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_commitment_stage ON commitment_nodes(agent_id, lifecycle_stage)")
     except sqlite3.OperationalError as e:
         logger.error("Failed to create commitment_node indexes: %s", e)
         raise
@@ -75,9 +71,7 @@ def up(conn: sqlite3.Connection):
         raise
 
     try:
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_commitment_events_cid ON commitment_events(commitment_id)"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_commitment_events_cid ON commitment_events(commitment_id)")
     except sqlite3.OperationalError as e:
         logger.error("Failed to create commitment_events index: %s", e)
         raise
@@ -109,12 +103,8 @@ def up(conn: sqlite3.Connection):
         raise
 
     try:
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_expertise_agent ON expertise_nodes(agent_id)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_expertise_stage ON expertise_nodes(agent_id, lifecycle_stage)"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_expertise_agent ON expertise_nodes(agent_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_expertise_stage ON expertise_nodes(agent_id, lifecycle_stage)")
     except sqlite3.OperationalError as e:
         logger.error("Failed to create expertise_nodes indexes: %s", e)
         raise

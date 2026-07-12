@@ -1,7 +1,6 @@
 """Repository for scraped_assets table — harvested web content."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
@@ -27,18 +26,16 @@ class ScrapedAssetRepository(BaseRepository):
                 asset.get("novelty_score", 0.0),
                 asset.get("diffractive_score", 0.0),
                 asset.get("memory_node_id"),
-                datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
             ),
         )
         conn.commit()
         return asset["id"]
 
     @with_connection
-    def get(self, asset_id: str) -> Optional[dict]:
+    def get(self, asset_id: str) -> dict | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM scraped_assets WHERE id = ?", (asset_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM scraped_assets WHERE id = ?", (asset_id,)).fetchone()
         return dict(row) if row else None
 
     @with_connection
@@ -89,9 +86,7 @@ class ScrapedAssetRepository(BaseRepository):
     @with_connection
     def delete_by_task(self, task_id: str) -> int:
         conn = self._conn()
-        cursor = conn.execute(
-            "DELETE FROM scraped_assets WHERE task_id = ?", (task_id,)
-        )
+        cursor = conn.execute("DELETE FROM scraped_assets WHERE task_id = ?", (task_id,))
         conn.commit()
         return cursor.rowcount
 

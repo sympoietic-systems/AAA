@@ -105,6 +105,23 @@ Every log is an inscription of system activity. Text logs that scroll past witho
 
 ---
 
+## 8. Linting & Code Quality (ruff)
+
+The project uses **ruff** for Python linting and formatting, configured in `pyproject.toml`.
+
+### Guidelines
+*   **Lint before commit**: Run `ruff check backend/` before committing. Auto-fix safe issues with `ruff check backend/ --fix`.
+*   **Format consistently**: Run `ruff format backend/` to apply consistent formatting (120-char lines, double quotes, spaces).
+*   **Pre-commit hooks**: The project includes `.pre-commit-config.yaml` with hooks for `ruff` (lint + format) and general file checks (`check-yaml`, `check-toml`, `end-of-file-fixer`, `trailing-whitespace`). Install via `pre-commit install`.
+*   **Ruff supersedes other tools**: Ruff replaces flake8, isort, pyupgrade, and black. Do not configure or use these tools separately.
+*   **Ignored rules** (project-specific exemptions):
+    *   `E501`: Line length handled by formatter
+    *   `B008`: Function call in argument defaults (project style)
+    *   `C408`: Unnecessary dict/list/tuple calls (project style)
+    *   `SIM401`: `dict.get()` not applicable to `sqlite3.Row` objects
+
+---
+
 ## 7. File Structure & Directory Boundaries
 
 A directory in the AAA backend is an **agential cut**—it must be named and structured for the kind of processing boundary it enforces, resisting the gravity of generic "junk drawers."

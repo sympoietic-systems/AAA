@@ -1,11 +1,10 @@
 import re
-from typing import Optional
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
 from backend.storage.repositories.note_markup import (
-    split_mark_at_block_boundaries,
     remove_note_marks,
+    split_mark_at_block_boundaries,
 )
 
 
@@ -16,7 +15,7 @@ class NoteRepository(BaseRepository):
         id: str,
         asset_type: str,
         asset_id: str,
-        conversation_id: Optional[str] = None,
+        conversation_id: str | None = None,
         selected_text: str = "",
         comment: str = "",
         visibility: str = "personal",
@@ -29,9 +28,7 @@ class NoteRepository(BaseRepository):
         )
         conn.commit()
 
-        row = conn.execute(
-            "SELECT * FROM notes WHERE id = ?", (id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM notes WHERE id = ?", (id,)).fetchone()
         return dict(row) if row else {}
 
     @with_connection
@@ -40,11 +37,11 @@ class NoteRepository(BaseRepository):
         id: str,
         asset_type: str,
         asset_id: str,
-        conversation_id: Optional[str] = None,
+        conversation_id: str | None = None,
         selected_text: str = "",
         comment: str = "",
         visibility: str = "personal",
-        start_offset: Optional[int] = None,
+        start_offset: int | None = None,
     ) -> dict:
         conn = self._conn()
 
@@ -57,9 +54,7 @@ class NoteRepository(BaseRepository):
             message_id = None
 
         if asset_type == "conversation_message" and message_id is not None:
-            row_msg = conn.execute(
-                "SELECT content FROM conversation_log WHERE id = ?", (message_id,)
-            ).fetchone()
+            row_msg = conn.execute("SELECT content FROM conversation_log WHERE id = ?", (message_id,)).fetchone()
             if row_msg:
                 content = row_msg["content"]
                 new_content = None
@@ -71,19 +66,19 @@ class NoteRepository(BaseRepository):
                     n = len(content)
 
                     while i < n:
-                        if content[i:].startswith('<mark') or content[i:].startswith('<aaa-note'):
-                            close_idx = content.find('>', i)
-                            if close_idx != -1:
-                                i = close_idx + 1
-                                continue
-                        elif content[i:].startswith('</mark>') or content[i:].startswith('</aaa-note>'):
-                            close_idx = content.find('>', i)
+                        if (
+                            content[i:].startswith("<mark")
+                            or content[i:].startswith("<aaa-note")
+                            or content[i:].startswith("</mark>")
+                            or content[i:].startswith("</aaa-note>")
+                        ):
+                            close_idx = content.find(">", i)
                             if close_idx != -1:
                                 i = close_idx + 1
                                 continue
 
                         char = content[i]
-                        if char in ('*', '_', '`', '~'):
+                        if char in ("*", "_", "`", "~"):
                             i += 1
                             continue
 
@@ -111,17 +106,9 @@ class NoteRepository(BaseRepository):
                         start_content = mapping[start_plain]
                         end_content = mapping[end_plain]
 
-                        wrapped = (
-                            f'<mark id="{id}">'
-                            + content[start_content:end_content + 1]
-                            + f'</mark>'
-                        )
+                        wrapped = f'<mark id="{id}">' + content[start_content : end_content + 1] + "</mark>"
                         wrapped = split_mark_at_block_boundaries(wrapped, id)
-                        new_content = (
-                            content[:start_content]
-                            + wrapped
-                            + content[end_content + 1:]
-                        )
+                        new_content = content[:start_content] + wrapped + content[end_content + 1 :]
 
                 if new_content is None:
                     trimmed_sel = selected_text.strip()
@@ -137,17 +124,9 @@ class NoteRepository(BaseRepository):
                         match = re.search(pattern, content)
                         if match:
                             start, end = match.span()
-                            wrapped = (
-                                f'<mark id="{id}">'
-                                + content[start:end]
-                                + f'</mark>'
-                            )
+                            wrapped = f'<mark id="{id}">' + content[start:end] + "</mark>"
                             wrapped = split_mark_at_block_boundaries(wrapped, id)
-                            new_content = (
-                                content[:start]
-                                + wrapped
-                                + content[end:]
-                            )
+                            new_content = content[:start] + wrapped + content[end:]
 
                 if new_content is not None:
                     conn.execute(
@@ -162,17 +141,13 @@ class NoteRepository(BaseRepository):
         )
         conn.commit()
 
-        row = conn.execute(
-            "SELECT * FROM notes WHERE id = ?", (id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM notes WHERE id = ?", (id,)).fetchone()
         return dict(row) if row else {}
 
     @with_connection
-    def get_note(self, note_id: str) -> Optional[dict]:
+    def get_note(self, note_id: str) -> dict | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM notes WHERE id = ?", (note_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
         return dict(row) if row else None
 
     @with_connection
@@ -192,7 +167,6 @@ class NoteRepository(BaseRepository):
             (conversation_id,),
         )
         return [dict(row) for row in cursor.fetchall()]
-
 
     @with_connection
     def get_notes_by_task(self, task_id: str) -> list[dict]:
@@ -222,7 +196,7 @@ class NoteRepository(BaseRepository):
         return [dict(row) for row in cursor.fetchall()]
 
     @with_connection
-    def update_note(self, note_id: str, comment: Optional[str] = None, visibility: Optional[str] = None) -> Optional[dict]:
+    def update_note(self, note_id: str, comment: str | None = None, visibility: str | None = None) -> dict | None:
         conn = self._conn()
         updates = []
         params = []
@@ -240,23 +214,16 @@ class NoteRepository(BaseRepository):
         updates.append("updated_at = CURRENT_TIMESTAMP")
         sql_params = params + [note_id]
 
-        conn.execute(
-            f"UPDATE notes SET {', '.join(updates)} WHERE id = ?",
-            sql_params
-        )
+        conn.execute(f"UPDATE notes SET {', '.join(updates)} WHERE id = ?", sql_params)
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM notes WHERE id = ?", (note_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
         return dict(row) if row else None
 
     @with_connection
     def delete_note(self, note_id: str) -> None:
         conn = self._conn()
 
-        row_note = conn.execute(
-            "SELECT asset_type, asset_id FROM notes WHERE id = ?", (note_id,)
-        ).fetchone()
+        row_note = conn.execute("SELECT asset_type, asset_id FROM notes WHERE id = ?", (note_id,)).fetchone()
 
         if row_note and row_note["asset_type"] == "conversation_message":
             try:
@@ -265,9 +232,7 @@ class NoteRepository(BaseRepository):
                 message_id = None
 
             if message_id is not None:
-                row_msg = conn.execute(
-                    "SELECT content FROM conversation_log WHERE id = ?", (message_id,)
-                ).fetchone()
+                row_msg = conn.execute("SELECT content FROM conversation_log WHERE id = ?", (message_id,)).fetchone()
                 if row_msg:
                     content = row_msg["content"]
                     new_content = remove_note_marks(content, note_id)
@@ -299,4 +264,3 @@ class NoteRepository(BaseRepository):
         sql = f"SELECT * FROM notes WHERE ({' OR '.join(clauses)}) ORDER BY created_at DESC"
         cursor = conn.execute(sql, params)
         return [dict(row) for row in cursor.fetchall()]
-

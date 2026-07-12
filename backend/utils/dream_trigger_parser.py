@@ -9,8 +9,8 @@ Tag format:
     <dream_trigger reason="tension between beliefs X and Y needs resolution"/>
 """
 
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 

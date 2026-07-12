@@ -1,13 +1,13 @@
 import json
 import logging
 import uuid
-from typing import Optional
+from datetime import UTC
 
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.services.belief_serializer import (
+    _parse_event_rationale,
     serialize_belief_event,
     serialize_proposal,
-    _parse_event_rationale,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,13 +33,20 @@ class BeliefService:
     def __init__(self, state):
         self._state = state
 
-    async def get_beliefs(self, conversation_id: Optional[str] = None, agent_id: str = "symbia") -> dict:
+    async def get_beliefs(self, conversation_id: str | None = None, agent_id: str = "symbia") -> dict:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)
         engine = getattr(state, "belief_metabolism", None)
         if not belief_repo:
-            return {"beliefs": [], "proto_beliefs": [], "ghosts": [], "somatic": None,
-                    "attractor_window": [], "spectral_margin": [], "ecosystem": None}
+            return {
+                "beliefs": [],
+                "proto_beliefs": [],
+                "ghosts": [],
+                "somatic": None,
+                "attractor_window": [],
+                "spectral_margin": [],
+                "ecosystem": None,
+            }
 
         raw_beliefs = belief_repo.list_beliefs(agent_id)
         beliefs_list = []
@@ -56,21 +63,23 @@ class BeliefService:
             else:
                 cat = "methodological"
 
-            beliefs_list.append({
-                "id": b.id,
-                "label": b.label,
-                "statement": b.statement,
-                "category": cat,
-                "confidence": b.confidence,
-                "ontological_mass": b.ontological_mass,
-                "version": b.version,
-                "vector_16d": b.vector_16d,
-                "origin": b.origin,
-                "lifecycle_stage": b.lifecycle_stage,
-                "last_reinforced_at": b.last_reinforced_at.isoformat() if b.last_reinforced_at else None,
-                "updated_at": b.updated_at.isoformat() if b.updated_at else None,
-                "events": [serialize_belief_event(e) for e in events],
-            })
+            beliefs_list.append(
+                {
+                    "id": b.id,
+                    "label": b.label,
+                    "statement": b.statement,
+                    "category": cat,
+                    "confidence": b.confidence,
+                    "ontological_mass": b.ontological_mass,
+                    "version": b.version,
+                    "vector_16d": b.vector_16d,
+                    "origin": b.origin,
+                    "lifecycle_stage": b.lifecycle_stage,
+                    "last_reinforced_at": b.last_reinforced_at.isoformat() if b.last_reinforced_at else None,
+                    "updated_at": b.updated_at.isoformat() if b.updated_at else None,
+                    "events": [serialize_belief_event(e) for e in events],
+                }
+            )
 
         raw_proposals = belief_repo.list_proposals(agent_id)
         proto_beliefs_list = []
@@ -98,8 +107,14 @@ class BeliefService:
 
                 if engine:
                     try:
-                        active = [b for b in raw_beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20]
-                        collapsed = [b for b in raw_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20]
+                        active = [
+                            b
+                            for b in raw_beliefs
+                            if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20
+                        ]
+                        collapsed = [
+                            b for b in raw_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20
+                        ]
 
                         attractors = []
                         used_ids = set()
@@ -156,7 +171,7 @@ class BeliefService:
         proposals = belief_repo.list_proposals(agent_id)
         return [serialize_proposal(p) for p in proposals]
 
-    async def get_proposal(self, proposal_id: str) -> Optional[dict]:
+    async def get_proposal(self, proposal_id: str) -> dict | None:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)
         if not belief_repo:
@@ -172,12 +187,15 @@ class BeliefService:
         llm_provider = getattr(state, "background_provider", None) or getattr(state, "llm_provider", None)
         if bg_engine and llm_provider:
             return await bg_engine.run("refine_belief", {"proposal_id": proposal_id})
-        
+
         from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction
+
         action = RefineBeliefAction()
         return await action.execute(llm_provider, {"proposal_id": proposal_id})
 
-    async def adopt_proposal(self, proposal_id: str, suggested_label: Optional[str] = None, suggested_statement: Optional[str] = None) -> dict:
+    async def adopt_proposal(
+        self, proposal_id: str, suggested_label: str | None = None, suggested_statement: str | None = None
+    ) -> dict:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)
         if not belief_repo:
@@ -195,15 +213,8 @@ class BeliefService:
         # Update proposal status
         belief_repo.update_proposal_status(proposal_id, "adopted")
 
-        import uuid
-
-
-
-        
-        from backend.modules.belief_engine import parse_vector_16d
-        from backend.utils.similarity import cosine_similarity
         v16d_json = await _score_statement_16d(state, statement, fallback=p.initial_signature)
-        
+
         # Create belief node
         belief_repo.create_belief(
             id=p.id,
@@ -218,7 +229,7 @@ class BeliefService:
             lifecycle_stage="crystallized",
             evolved_from_proposal=p.id,
             genesis_materials=p.source_trace,
-            version=1
+            version=1,
         )
 
         # Create statement version
@@ -229,7 +240,7 @@ class BeliefService:
             version=1,
             statement=statement,
             vector_16d=v16d_json,
-            change_reason="Initial adoption from proposal"
+            change_reason="Initial adoption from proposal",
         )
 
         # Notification
@@ -240,12 +251,12 @@ class BeliefService:
                 snippet=f"Belief '{label}' has crystallized in the network from proposed insights.",
                 source=f"belief:{label}",
                 source_type="belief",
-                source_id=p.id
+                source_id=p.id,
             )
 
         return {"status": "ok", "belief_id": p.id, "label": label}
 
-    async def reject_proposal(self, proposal_id: str, rationale: Optional[str] = None) -> dict:
+    async def reject_proposal(self, proposal_id: str, rationale: str | None = None) -> dict:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)
         if not belief_repo:
@@ -261,15 +272,17 @@ class BeliefService:
         if notif_repo:
             notif_repo.create(
                 type="trace",
-                snippet=f"Belief proposal was rejected by the system.",
+                snippet="Belief proposal was rejected by the system.",
                 source="belief_workshop",
                 source_type="belief",
-                source_id=proposal_id
+                source_id=proposal_id,
             )
 
         return {"status": "ok"}
 
-    async def merge_proposal(self, proposal_id: str, target_belief_id: str, merged_statement: Optional[str] = None) -> dict:
+    async def merge_proposal(
+        self, proposal_id: str, target_belief_id: str, merged_statement: str | None = None
+    ) -> dict:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)
         if not belief_repo:
@@ -278,14 +291,14 @@ class BeliefService:
         p = belief_repo.get_proposal(proposal_id)
         if not p:
             return {"status": "error", "message": "Proposal not found"}
-        
+
         active_beliefs = belief_repo.list_beliefs(p.agent_id)
         target_belief = None
         for b in active_beliefs:
             if b.id == target_belief_id:
                 target_belief = b
                 break
-        
+
         if not target_belief:
             return {"status": "error", "message": "Target belief not found"}
 
@@ -294,26 +307,22 @@ class BeliefService:
         new_mass = target_belief.ontological_mass + p.nucleation_mass
         new_conf = min(1.0, target_belief.confidence + 0.1)
 
-        import uuid
-
-
-
-        
         statement_updated = False
         new_v16d = target_belief.vector_16d
         new_version = target_belief.version
 
-        if merged_statement and merged_statement.strip() and merged_statement.strip() != target_belief.statement.strip():
+        if (
+            merged_statement
+            and merged_statement.strip()
+            and merged_statement.strip() != target_belief.statement.strip()
+        ):
             statement_updated = True
             new_version = target_belief.version + 1
             new_v16d = await _score_statement_16d(state, merged_statement, fallback=target_belief.vector_16d)
 
         if statement_updated:
             belief_repo.update_belief_statement(
-                belief_id=target_belief.id,
-                statement=merged_statement.strip(),
-                vector_16d=new_v16d,
-                version=new_version
+                belief_id=target_belief.id, statement=merged_statement.strip(), vector_16d=new_v16d, version=new_version
             )
             # Create statement version
             belief_repo.create_statement_version(
@@ -322,7 +331,7 @@ class BeliefService:
                 version=new_version,
                 statement=merged_statement.strip(),
                 vector_16d=new_v16d,
-                change_reason=f"Synthesized merge of proposal: '{p.provisional_statement}'"
+                change_reason=f"Synthesized merge of proposal: '{p.provisional_statement}'",
             )
 
         belief_repo.update_belief(
@@ -330,7 +339,7 @@ class BeliefService:
             confidence=new_conf,
             vector_16d=new_v16d,
             origin=target_belief.origin,
-            lifecycle_stage=target_belief.lifecycle_stage
+            lifecycle_stage=target_belief.lifecycle_stage,
         )
         belief_repo.update_belief_mass(target_belief.id, new_mass)
 
@@ -343,7 +352,7 @@ class BeliefService:
             perturbation=p.nucleation_mass,
             event_type="support",
             impact=0.1,
-            rationale=f"Merged proposal: '{p.provisional_statement}' into existing belief."
+            rationale=f"Merged proposal: '{p.provisional_statement}' into existing belief.",
         )
 
         notif_repo = getattr(state, "notification_repo", None)
@@ -353,7 +362,7 @@ class BeliefService:
                 snippet=f"Belief proposal was diffractively merged into '{target_belief.label}'. Mass increased to {new_mass:.2f}.",
                 source=f"belief:{target_belief.label}",
                 source_type="belief",
-                source_id=target_belief.id
+                source_id=target_belief.id,
             )
 
         return {"status": "ok", "belief_id": target_belief.id, "label": target_belief.label}
@@ -377,13 +386,12 @@ class BeliefService:
             return {"status": "error", "message": "LLM provider not available"}
 
         from backend.modules.llm_client import generate_unified
-        import yaml
-        from pathlib import Path
 
         # Load personality if available
         personality_prompt = ""
         try:
-            from backend.utils.persona_loader import get_identity_yaml_path, load_identity, get_persona_text
+            from backend.utils.persona_loader import get_identity_yaml_path, get_persona_text, load_identity
+
             identity_path = get_identity_yaml_path()
             if identity_path.exists():
                 identity_data = load_identity(identity_path)
@@ -419,22 +427,21 @@ Proposed Belief Statement:
                 user_prompt=user_prompt,
                 expect_json=False,
                 temperature=0.3,
-                max_tokens=256
+                max_tokens=256,
             )
             synthesized = res.get("content", "").strip()
             # Clean up potential leading/trailing quotes from LLM
-            if (synthesized.startswith('"') and synthesized.endswith('"')) or (synthesized.startswith("'") and synthesized.endswith("'")):
+            if (synthesized.startswith('"') and synthesized.endswith('"')) or (
+                synthesized.startswith("'") and synthesized.endswith("'")
+            ):
                 synthesized = synthesized[1:-1].strip()
-            
-            return {
-                "status": "ok",
-                "synthesized_statement": synthesized
-            }
+
+            return {"status": "ok", "synthesized_statement": synthesized}
         except Exception as e:
             logger.error("Failed to generate synthesized statement: %s", e)
             return {"status": "error", "message": f"Synthesis failed: {str(e)}"}
 
-    async def update_belief_statement(self, belief_id: str, statement: str, change_reason: Optional[str] = None) -> dict:
+    async def update_belief_statement(self, belief_id: str, statement: str, change_reason: str | None = None) -> dict:
         state = self._state
         belief_repo = getattr(state, "belief_repo", None)
         if not belief_repo:
@@ -446,17 +453,13 @@ Proposed Belief Statement:
             if b.id == belief_id:
                 target_belief = b
                 break
-        
+
         if not target_belief:
             return {"status": "error", "message": "Belief not found"}
 
-        import uuid
-
-
-
-        
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
+
         new_v16d_json = await _score_statement_16d(state, statement)
         if not new_v16d_json or new_v16d_json == "[]":
             return {"status": "error", "message": "Failed to score statement"}
@@ -464,10 +467,7 @@ Proposed Belief Statement:
         # Update belief statement and bump version
         new_version = target_belief.version + 1
         belief_repo.update_belief_statement(
-            belief_id=target_belief.id,
-            statement=statement,
-            vector_16d=new_v16d_json,
-            version=new_version
+            belief_id=target_belief.id, statement=statement, vector_16d=new_v16d_json, version=new_version
         )
 
         # Archive new statement version
@@ -478,12 +478,12 @@ Proposed Belief Statement:
             version=new_version,
             statement=statement,
             vector_16d=new_v16d_json,
-            change_reason=change_reason or "Statement edited by user/agent"
+            change_reason=change_reason or "Statement edited by user/agent",
         )
 
         old_vec = parse_vector_16d(target_belief.vector_16d)
         new_vec = parse_vector_16d(new_v16d_json)
-        
+
         speciation_triggered = False
         if old_vec is not None and new_vec is not None:
             sim = cosine_similarity(old_vec, new_vec)
@@ -497,7 +497,7 @@ Proposed Belief Statement:
                         snippet=f"Speciation Alert: Belief '{target_belief.label}' has drifted significantly (distance={dist:.2f}). Consider forking into multiple concepts.",
                         source=f"belief:{target_belief.label}",
                         source_type="belief",
-                        source_id=target_belief.id
+                        source_id=target_belief.id,
                     )
 
         notif_repo = getattr(state, "notification_repo", None)
@@ -507,14 +507,14 @@ Proposed Belief Statement:
                 snippet=f"Belief '{target_belief.label}' updated statement to version {new_version}.",
                 source=f"belief:{target_belief.label}",
                 source_type="belief",
-                source_id=target_belief.id
+                source_id=target_belief.id,
             )
 
         return {
             "status": "ok",
             "belief_id": target_belief.id,
             "version": new_version,
-            "speciation_alert": speciation_triggered
+            "speciation_alert": speciation_triggered,
         }
 
     async def get_statement_versions(self, belief_id: str) -> list[dict]:
@@ -522,8 +522,9 @@ Proposed Belief Statement:
         belief_repo = getattr(state, "belief_repo", None)
         if not belief_repo:
             return []
-        
+
         import json
+
         versions = belief_repo.list_statement_versions(belief_id)
         return [
             {
@@ -552,12 +553,6 @@ Proposed Belief Statement:
         if not belief_repo:
             return {"status": "error", "message": "Belief repository not initialized"}
 
-        import uuid
-
-
-
-        
-        import json
         belief_id = str(uuid.uuid4())
         v16d_json = await _score_statement_16d(state, statement)
         if not v16d_json or v16d_json == "[]":
@@ -611,7 +606,7 @@ Proposed Belief Statement:
                 snippet=f"Belief '{label}' was manually created.",
                 source=f"belief:{label}",
                 source_type="belief",
-                source_id=belief_id
+                source_id=belief_id,
             )
 
         return {"status": "ok", "belief_id": belief_id, "label": label}
@@ -635,19 +630,14 @@ Proposed Belief Statement:
         if not target_belief:
             return {"status": "error", "message": "Belief not found"}
 
-        import uuid
-
-
-
-        
-        import json
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
+
         new_v16d_json = await _score_statement_16d(state, statement)
         if not new_v16d_json or new_v16d_json == "[]":
             return {"status": "error", "message": "Failed to score statement"}
 
-        statement_changed = (target_belief.statement != statement)
+        statement_changed = target_belief.statement != statement
         new_version = target_belief.version
         speciation_triggered = False
 
@@ -678,7 +668,7 @@ Proposed Belief Statement:
                             snippet=f"Speciation Alert: Belief '{label}' has drifted significantly (distance={dist:.2f}) after edit.",
                             source=f"belief:{label}",
                             source_type="belief",
-                            source_id=belief_id
+                            source_id=belief_id,
                         )
 
         # 2. Save in database
@@ -724,14 +714,14 @@ Proposed Belief Statement:
                 snippet=f"Belief '{label}' details were updated.",
                 source=f"belief:{label}",
                 source_type="belief",
-                source_id=belief_id
+                source_id=belief_id,
             )
 
         return {
             "status": "ok",
             "belief_id": belief_id,
             "version": new_version,
-            "speciation_alert": speciation_triggered
+            "speciation_alert": speciation_triggered,
         }
 
     async def delete_belief(self, belief_id: str) -> dict:
@@ -756,7 +746,7 @@ Proposed Belief Statement:
                 snippet=f"Belief '{label}' was manually deleted.",
                 source=f"belief:{label}",
                 source_type="belief",
-                source_id=belief_id
+                source_id=belief_id,
             )
 
         return {"status": "ok", "message": f"Belief {belief_id} deleted"}
@@ -777,11 +767,6 @@ Proposed Belief Statement:
         if not target_belief:
             return {"status": "error", "message": "Belief not found"}
 
-        import uuid
-
-
-
-        
         from backend.modules.belief_engine import parse_vector_16d
         from backend.utils.similarity import cosine_similarity
 
@@ -807,7 +792,7 @@ Proposed Belief Statement:
                         snippet=f"Speciation Alert: Belief '{label}' has drifted significantly (distance={dist:.2f}) after reverting to version {version}.",
                         source=f"belief:{label}",
                         source_type="belief",
-                        source_id=belief_id
+                        source_id=belief_id,
                     )
 
         # Archive new statement version
@@ -856,14 +841,14 @@ Proposed Belief Statement:
                 snippet=f"Belief '{label}' reverted statement to version {version}.",
                 source=f"belief:{label}",
                 source_type="belief",
-                source_id=belief_id
+                source_id=belief_id,
             )
 
         return {
             "status": "ok",
             "belief_id": belief_id,
             "version": new_version,
-            "speciation_alert": speciation_triggered
+            "speciation_alert": speciation_triggered,
         }
 
     async def get_belief_timeseries(
@@ -872,7 +857,7 @@ Proposed Belief Statement:
         days: int = 30,
     ) -> dict:
         """Return bucketed mass/confidence timeseries for a belief chart.
-        
+
         Bucketing: hourly if span <= 7 days, daily if span > 7 days.
         Within each bucket, the latest event's parsed mass/confidence is used.
         """
@@ -881,13 +866,13 @@ Proposed Belief Statement:
         if not belief_repo:
             return {"status": "error", "message": "Belief repository not initialized"}
 
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         belief = belief_repo.get_belief("symbia", belief_id)
         if not belief:
             return {"status": "error", "message": "Belief not found"}
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cutoff = now - timedelta(days=days)
 
         # Fetch events in the time window
@@ -900,7 +885,7 @@ Proposed Belief Statement:
             if isinstance(ts, str):
                 ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
+                ts = ts.replace(tzinfo=UTC)
             if ts < cutoff:
                 continue
             mass, conf = _parse_event_rationale(event.rationale)

@@ -1,13 +1,14 @@
-from pathlib import Path
-import sys
 import os
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 os.chdir(root_path)
 
-from backend.services.annotations import extract_research_proposals, process_research_proposals
+from backend.services.annotations import extract_research_proposals, process_research_proposals  # noqa: E402
+
 
 def test_extract_research_proposals():
     # Test extract with no ID
@@ -74,7 +75,7 @@ def test_process_research_proposals():
     )
 
     assert 'id="generated-uuid-456"' in processed
-    assert "<research-proposal id=\"generated-uuid-456\">" in processed
+    assert '<research-proposal id="generated-uuid-456">' in processed
 
     # Verify task_manager.create_task was called with correct args
     task_manager_mock.create_task.assert_called_once_with(
@@ -113,6 +114,7 @@ def test_process_research_proposals():
     assert not message_repo_mock.update_content.called
 
     print("All research proposal backend tests passed!")
+
 
 if __name__ == "__main__":
     test_extract_research_proposals()

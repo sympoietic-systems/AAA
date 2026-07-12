@@ -14,9 +14,9 @@ aspirational attractors stored in personality_state. A large gap triggers
 an "Aspirational Tension" directive in the prompt assembler.
 """
 
+import contextlib
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DescriptiveTraits:
     """Per-turn computed trait readouts from internal metrics."""
+
     curiosity: float = 0.5
     skepticism: float = 0.5
     creativity: float = 0.5
@@ -71,7 +72,7 @@ class TraitComputer(ProcessingModule):
     def __init__(
         self,
         personality_state_repo=None,
-        config: Optional[dict] = None,
+        config: dict | None = None,
         notification_repo=None,
     ):
         cfg = config or {}
@@ -91,7 +92,7 @@ class TraitComputer(ProcessingModule):
 
         # EMA smoothing (prevents jitter)
         self._alpha_ema: float = cfg.get("alpha_ema", 0.3)
-        self._last_traits: Optional[DescriptiveTraits] = None
+        self._last_traits: DescriptiveTraits | None = None
         self._last_gap_notified: float = 0.0  # Throttle gap notifications
 
         self._state_repo = personality_state_repo
@@ -180,22 +181,18 @@ class TraitComputer(ProcessingModule):
         # paskian_health and vitality reserved for future use
 
         return DescriptiveTraits(
-            curiosity      = self._sigmoid(novelty * conceptual_velocity * self._eta_curiosity),
-            skepticism     = self._sigmoid(tension * surprise_index * self._eta_skepticism),
-            creativity     = self._sigmoid((1.0 - boringness) * novelty * self._eta_creativity),
-            precision      = self._sigmoid((1.0 - boringness) * self._eta_precision),
-            critical_rigor = self._sigmoid(tension * (1.0 - coupling) * self._eta_critical_rigor),
-            playfulness    = self._sigmoid(surprise_index * conceptual_velocity * self._eta_playfulness),
-            reserve        = self._sigmoid(
-                (1.0 - coupling) * self._eta_reserve if coupling > 0.6 else 0.3
-            ),
+            curiosity=self._sigmoid(novelty * conceptual_velocity * self._eta_curiosity),
+            skepticism=self._sigmoid(tension * surprise_index * self._eta_skepticism),
+            creativity=self._sigmoid((1.0 - boringness) * novelty * self._eta_creativity),
+            precision=self._sigmoid((1.0 - boringness) * self._eta_precision),
+            critical_rigor=self._sigmoid(tension * (1.0 - coupling) * self._eta_critical_rigor),
+            playfulness=self._sigmoid(surprise_index * conceptual_velocity * self._eta_playfulness),
+            reserve=self._sigmoid((1.0 - coupling) * self._eta_reserve if coupling > 0.6 else 0.3),
         )
 
     # ── Anti-erosion ──
 
-    def _apply_anti_erosion(
-        self, traits: DescriptiveTraits, metrics: dict
-    ) -> DescriptiveTraits:
+    def _apply_anti_erosion(self, traits: DescriptiveTraits, metrics: dict) -> DescriptiveTraits:
         """If user agreement is high, boost skepticism to resist drift.
 
         Agreement rate is approximated as: coupling * (1 - agent_divergence).
@@ -211,12 +208,15 @@ class TraitComputer(ProcessingModule):
             traits.anti_erosion_boost = boost
             logger.debug(
                 "Anti-erosion: agreement=%.3f > %.2f, skepticism boosted +%.3f → %.3f",
-                agreement_rate, self._agreement_threshold, boost, traits.skepticism,
+                agreement_rate,
+                self._agreement_threshold,
+                boost,
+                traits.skepticism,
             )
 
             # Notification trace (throttled: only if boost > 0.05)
             if self._notif_repo and boost > 0.05:
-                try:
+                with contextlib.suppress(Exception):
                     self._notif_repo.create(
                         type="trace",
                         snippet=(
@@ -226,8 +226,6 @@ class TraitComputer(ProcessingModule):
                         source="trait_computer",
                         source_type="personality",
                     )
-                except Exception:
-                    pass
 
         return traits
 
@@ -242,8 +240,13 @@ class TraitComputer(ProcessingModule):
         alpha = self._alpha_ema
         smoothed = DescriptiveTraits()
         for field_name in [
-            "curiosity", "skepticism", "creativity", "precision",
-            "critical_rigor", "playfulness", "reserve",
+            "curiosity",
+            "skepticism",
+            "creativity",
+            "precision",
+            "critical_rigor",
+            "playfulness",
+            "reserve",
         ]:
             prev = getattr(self._last_traits, field_name, 0.5)
             curr = getattr(raw, field_name, 0.5)
@@ -266,16 +269,19 @@ class TraitComputer(ProcessingModule):
             logger.warning("Failed to load aspirational traits", exc_info=True)
             return {}
 
-    def _compute_aspirational_gap(
-        self, traits: DescriptiveTraits, aspirational: dict
-    ) -> float:
+    def _compute_aspirational_gap(self, traits: DescriptiveTraits, aspirational: dict) -> float:
         """Euclidean distance between descriptive traits and aspirational attractors."""
         if not aspirational:
             return 0.0
         sq_sum = 0.0
         for key in [
-            "curiosity", "skepticism", "creativity", "precision",
-            "critical_rigor", "playfulness", "reserve",
+            "curiosity",
+            "skepticism",
+            "creativity",
+            "precision",
+            "critical_rigor",
+            "playfulness",
+            "reserve",
         ]:
             desc = getattr(traits, key, 0.5)
             asp = aspirational.get(key, 0.5)

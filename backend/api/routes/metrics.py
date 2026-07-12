@@ -46,11 +46,26 @@ async def get_metrics(request: Request, window: int = 20):
         pres_rec = None
         freq_rec = None
         if latest.temperature_rec is not None:
-            temp_rec = {"value": latest.temperature_rec, "base": 0.7, "delta": round(latest.temperature_rec - 0.7, 3), "clamped": False}
+            temp_rec = {
+                "value": latest.temperature_rec,
+                "base": 0.7,
+                "delta": round(latest.temperature_rec - 0.7, 3),
+                "clamped": False,
+            }
         if latest.presence_penalty_rec is not None:
-            pres_rec = {"value": latest.presence_penalty_rec, "base": 0.0, "delta": round(latest.presence_penalty_rec, 3), "clamped": False}
+            pres_rec = {
+                "value": latest.presence_penalty_rec,
+                "base": 0.0,
+                "delta": round(latest.presence_penalty_rec, 3),
+                "clamped": False,
+            }
         if latest.frequency_penalty_rec is not None:
-            freq_rec = {"value": latest.frequency_penalty_rec, "base": 0.0, "delta": round(latest.frequency_penalty_rec, 3), "clamped": False}
+            freq_rec = {
+                "value": latest.frequency_penalty_rec,
+                "base": 0.0,
+                "delta": round(latest.frequency_penalty_rec, 3),
+                "clamped": False,
+            }
         recommendations = HomeostaticRecommendations(
             temperature=temp_rec,
             presence_penalty=pres_rec,
@@ -61,12 +76,21 @@ async def get_metrics(request: Request, window: int = 20):
     raw_diff = getattr(state, "latest_diffractive_meta", None)
     if not raw_diff:
         raw_diff = {
-            "state": "FLOWING", "previous_state": "FLOWING", "p_diffract": 0.0,
-            "stagnation_index": 0.0, "r_context": 0.20, "dynamic_max": 0,
-            "cohesion_timer": 0, "similarity_range_memory": [0.45, 0.85],
-            "similarity_range_files": [0.35, 0.75], "candidates_searched": 0,
-            "items_injected": 0, "tokens_used": 0, "token_budget": 0,
-            "duration_ms": 0.0, "sources": [],
+            "state": "FLOWING",
+            "previous_state": "FLOWING",
+            "p_diffract": 0.0,
+            "stagnation_index": 0.0,
+            "r_context": 0.20,
+            "dynamic_max": 0,
+            "cohesion_timer": 0,
+            "similarity_range_memory": [0.45, 0.85],
+            "similarity_range_files": [0.35, 0.75],
+            "candidates_searched": 0,
+            "items_injected": 0,
+            "tokens_used": 0,
+            "token_budget": 0,
+            "duration_ms": 0.0,
+            "sources": [],
         }
 
     diff_sources = [DiffractiveSourceInfo(**s) for s in raw_diff.get("sources", [])]
