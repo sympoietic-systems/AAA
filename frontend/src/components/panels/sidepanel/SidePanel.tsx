@@ -72,7 +72,7 @@ export const SidePanel = memo(function SidePanel({
         transition-all duration-200
         ${isCollapsed 
           ? "hidden md:flex md:w-9 md:h-full" 
-          : "absolute md:relative z-30 right-0 top-0 bottom-0 w-[85vw] max-w-[340px] md:w-auto md:h-full md:flex md:z-auto border-l border-ui-border bg-[#0c0c0e]/95"
+          : "absolute md:relative z-30 right-0 top-0 bottom-0 w-[85vw] max-w-[340px] md:max-w-none md:w-auto md:h-full md:flex md:z-auto border-l border-ui-border bg-[#0c0c0e]/95"
         }
       `}
       style={!isCollapsed && width ? { width: `${width}px` } : undefined}

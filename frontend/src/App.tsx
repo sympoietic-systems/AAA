@@ -524,7 +524,7 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
             transition-all duration-200
             ${leftPanelCollapsed 
               ? "hidden md:flex md:w-9 md:h-full" 
-              : "absolute md:relative z-30 left-0 top-0 bottom-0 w-[85vw] max-w-[340px] md:w-auto md:h-full md:flex md:z-auto border-r md:border-r-0 bg-[#0c0c0e]/95"
+              : "absolute md:relative z-30 left-0 top-0 bottom-0 w-[85vw] max-w-[340px] md:max-w-none md:w-auto md:h-full md:flex md:z-auto border-r md:border-r-0 bg-[#0c0c0e]/95"
             }
           `}
           style={!leftPanelCollapsed ? { width: `${leftPanelWidth}px` } : undefined}
