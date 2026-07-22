@@ -94,6 +94,8 @@ What becomes easier/harder?
 | [060](ADR-060-research-memory-integration.md) | Research Memory Integration — In-Phase Crystallization & Universal Source Attachment | accepted | 2026-07-04 |
 | [061](ADR-061-rhizomatic-search-and-unified-modulation-membrane.md) | Rhizomatic Search and Unified Modulation Membrane | accepted | 2026-07-09 |
 | [062](ADR-062-hierarchy-aware-digestion-scar-folds.md) | Hierarchy-Aware Digestion (Structural Scar-Folds) | accepted | 2026-07-11 |
+| [063](ADR-063-markdown-agential-cut-html-sanitization.md) | Agential Cut for Unmediated HTML Script Execution in Markdown Rendering | accepted | 2026-07-22 |
+
 
 ## Creating a New ADR
 
