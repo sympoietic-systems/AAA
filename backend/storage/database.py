@@ -14,6 +14,7 @@ def get_db_path(db_path: str) -> Path:
 def get_connection(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path), timeout=30.0)
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")  # ponytail: Safe WAL durability preventing header/index corruption
     conn.execute("PRAGMA foreign_keys=ON")
     conn.row_factory = sqlite3.Row
     return conn

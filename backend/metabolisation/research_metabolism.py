@@ -369,10 +369,9 @@ class ResearchMetabolismMixin:
                     try:
                         db_path = getattr(self.app_state, "config", {}).get("database", {}).get("path", "")
                         if db_path:
-                            from backend.storage.database import get_db_path
+                            from backend.storage.database import get_connection, get_db_path
 
-                            db_conn = sqlite3.connect(str(get_db_path(db_path)))
-                            db_conn.execute("PRAGMA foreign_keys=ON")
+                            db_conn = get_connection(str(get_db_path(db_path)))
                             db_conn.execute(
                                 "INSERT OR IGNORE INTO conversations (id, title, agent_id) VALUES (?, ?, ?)",
                                 (conversation_id, f"Research: {task.get('objective', '')[:100]}", "symbia"),
