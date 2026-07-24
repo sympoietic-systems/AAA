@@ -84,3 +84,21 @@ def test_daily_endpoints():
     res_detail_cached = client.get("/api/agent/daily/2026-07-23")
     assert res_detail_cached.status_code == 200
     assert res_detail_cached.json()["summary"] == data_sum["summary"]
+
+    # 6. Test POST /api/notes for daily_summary asset type
+    res_note = client.post(
+        "/api/notes",
+        json={
+            "asset_type": "daily_summary",
+            "asset_id": "2026-07-23",
+            "selected_text": "Deleuzian fragment",
+            "comment": "Test note on daily summary",
+            "visibility": "personal",
+        },
+    )
+    assert res_note.status_code == 200
+    data_note = res_note.json()
+    assert data_note["asset_type"] == "daily_summary"
+    assert data_note["asset_id"] == "2026-07-23"
+    assert data_note["selected_text"] == "Deleuzian fragment"
+

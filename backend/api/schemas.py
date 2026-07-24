@@ -344,7 +344,7 @@ class ConversationFilesResponse(BaseModel):
 
 
 class NoteCreateRequest(BaseModel):
-    asset_type: Literal["conversation_message", "research_task", "research_step"] = "conversation_message"
+    asset_type: str = "conversation_message"
     asset_id: str = ""
     conversation_id: str | None = None
     selected_text: str
@@ -352,6 +352,7 @@ class NoteCreateRequest(BaseModel):
     visibility: Literal["personal", "shared", "agent"] = "personal"
     start_offset: int | None = None
     message_id: int | None = None
+
 
 
 class NoteResponse(BaseModel):
