@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       host: '0.0.0.0',
-      allowedHosts: ['aaa.sokaris.link', '.sokaris.link'],
+      allowedHosts: ['aaa.sokaris.link', '.sokaris.link', 'aaa.sympoietic.systems', '.sympoietic.systems'],
       proxy: {
         '/api': {
           target: `http://${host}:${port}`,
@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
     preview: {
       host: '0.0.0.0',
       port: 5173,
+      allowedHosts: ['aaa.sokaris.link', '.sokaris.link', 'aaa.sympoietic.systems', '.sympoietic.systems'],
     },
   }
 })
