@@ -48,6 +48,7 @@ def _init_repos(config: dict) -> dict:
         SemanticKnotRepository,
         SkillRepository,
     )
+    from backend.storage.repositories.daily_summary_repository import DailySummaryRepository
 
     return {
         "message_repo": MessageRepository(path),
@@ -66,6 +67,7 @@ def _init_repos(config: dict) -> dict:
         "expertise_repo": ExpertiseRepository(path),
         "personality_state_repo": PersonalityStateRepository(path),
         "dream_log_repo": DreamLogRepository(path),
+        "daily_summary_repo": DailySummaryRepository(path),
         "research_task_repo": ResearchTaskRepository(path),
         "research_branch_repo": ResearchBranchRepository(path),
         "scraped_asset_repo": ScrapedAssetRepository(path),
@@ -74,3 +76,4 @@ def _init_repos(config: dict) -> dict:
         "research_step_repo": ResearchStepRepository(path),
         "research_step_result_repo": ResearchStepResultRepository(path),
     }
+

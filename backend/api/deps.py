@@ -177,6 +177,18 @@ def get_dream_log_repo(state=Depends(get_app_state)):
     return getattr(state, "dream_log_repo", None)
 
 
+def get_daily_summary_repo(state=Depends(get_app_state)):
+    repo = getattr(state, "daily_summary_repo", None)
+    if not repo:
+        msg_repo = getattr(state, "message_repo", None)
+        if msg_repo and hasattr(msg_repo, "_db_path"):
+            from backend.storage.repositories.daily_summary_repository import DailySummaryRepository
+            return DailySummaryRepository(msg_repo._db_path)
+    return repo
+
+
+
+
 # ── Module / engine getters ────────────────────────────────────────────
 
 

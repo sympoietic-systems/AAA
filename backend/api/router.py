@@ -7,6 +7,7 @@ from backend.api.routes.background import router as background_router
 from backend.api.routes.beliefs import router as beliefs_router
 from backend.api.routes.chat import router as chat_router
 from backend.api.routes.conversations import router as conversations_router
+from backend.api.routes.daily import router as daily_router
 from backend.api.routes.daemon import router as daemon_router
 from backend.api.routes.errors import router as errors_router
 from backend.api.routes.files import router as files_router
@@ -50,3 +51,5 @@ router.include_router(memory_nodes_router)
 router.include_router(refusals_router)
 router.include_router(research_router)
 router.include_router(search_router)
+router.include_router(daily_router)
+

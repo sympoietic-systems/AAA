@@ -85,6 +85,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m043_step_sort_key,
         m044_injection_dedup,
         m045_display_name,
+        m046_daily_summaries,
     )
 
     runner = MigrationRunner(conn)
@@ -136,3 +137,5 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("043_step_sort_key", m043_step_sort_key.up)
     runner.run("044_injection_dedup", m044_injection_dedup.up)
     runner.run("045_display_name", m045_display_name.up)
+    runner.run("046_daily_summaries", m046_daily_summaries.up)
+

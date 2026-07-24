@@ -4,17 +4,20 @@ import { PersonalitySection } from "./PersonalitySection"
 import { StartupSection } from "./StartupSection"
 import { PipelineSection } from "./PipelineSection"
 import { TracesSection } from "./TracesSection"
+import { DailySection } from "./daily/DailySection"
 import { TerminalTabs, HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter } from "../../UI"
 
-type TabId = "personality" | "dreaming" | "daemons" | "pipeline" | "traces"
+type TabId = "personality" | "pipeline" | "dreaming" | "daemons" | "daily" | "traces"
 
 const TABS: { key: TabId; label: string }[] = [
   { key: "personality", label: "Personality" },
   { key: "pipeline", label: "Pipeline" },
   { key: "dreaming", label: "Dreaming" },
   { key: "daemons", label: "Daemons" },
+  { key: "daily", label: "Daily" },
   { key: "traces", label: "Traces" },
 ]
+
 
 interface Props {
   onGoHome: () => void
@@ -108,7 +111,9 @@ export function AgentPage({ onGoHome }: Props) {
         {activeTab === "pipeline" && <PipelineSection />}
         {activeTab === "dreaming" && <DreamingSection />}
         {activeTab === "daemons" && <StartupSection />}
+        {activeTab === "daily" && <DailySection />}
         {activeTab === "traces" && (
+
           <TracesSection
             onNavigateToEntity={(type, id) => {
               if (type.startsWith("skill") || type.startsWith("belief") ||

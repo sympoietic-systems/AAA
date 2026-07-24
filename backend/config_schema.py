@@ -85,15 +85,18 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_EMBEDDING_CACHE_DIR", "embedding", "cache_dir"),
     EnvOverride("AAA_EMBEDDING_OFFLINE", "embedding", "offline", _parse_bool),
     # ── Background LLM ──
+    EnvOverride("AAA_BACKGROUND_MODEL", "background_llm", "model"),
     EnvOverride("AAA_BACKGROUND_MODELS", "background_llm", "models", _parse_list),
     EnvOverride("AAA_BACKGROUND_API_BASE", "background_llm", "api_base"),
     EnvOverride("AAA_BACKGROUND_FALLBACK_MODEL", "background_llm", "fallback_model"),
     EnvOverride("AAA_BACKGROUND_THINKING", "background_llm", "thinking", lambda v: {"enabled": _parse_bool(v)}),
     # ── Structural LLM ──
+    EnvOverride("AAA_STRUCTURAL_MODEL", "structural_llm", "model"),
     EnvOverride("AAA_STRUCTURAL_MODELS", "structural_llm", "models", _parse_list),
     EnvOverride("AAA_STRUCTURAL_API_BASE", "structural_llm", "api_base"),
     EnvOverride("AAA_STRUCTURAL_FALLBACK_MODEL", "structural_llm", "fallback_model"),
     EnvOverride("AAA_STRUCTURAL_THINKING", "structural_llm", "thinking", lambda v: {"enabled": _parse_bool(v)}),
+
     # ── Vision LLM ──
     EnvOverride("AAA_VISION_MODELS", "vision_llm", "models", _parse_list),
     EnvOverride("AAA_VISION_API_BASE", "vision_llm", "api_base"),

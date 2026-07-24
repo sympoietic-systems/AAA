@@ -149,7 +149,9 @@ async def lifespan(app: FastAPI):
     app.state.expertise_repo = repos["expertise_repo"]
     app.state.personality_state_repo = repos["personality_state_repo"]
     app.state.dream_log_repo = repos["dream_log_repo"]
+    app.state.daily_summary_repo = repos["daily_summary_repo"]
     app.state.research_task_repo = repos["research_task_repo"]
+
     app.state.research_branch_repo = repos["research_branch_repo"]
     app.state.scraped_asset_repo = repos["scraped_asset_repo"]
     app.state.research_meta_log_repo = repos["research_meta_log_repo"]
