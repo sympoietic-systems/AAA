@@ -455,7 +455,9 @@ class ReflectionStep(BaseResearchStep):
         digest_signals = envelope.digest_signals
 
         s = orch._get_state(task_id)
-        step_id = orch._create_or_update_step(s, task_id, "reflection")
+        if "plan_id" not in s:
+            s["plan_id"] = envelope.plan_id or ""
+        step_id = orch._create_or_update_step(s, task_id, self.step_type)
 
         reflection = await run_deep_reflection(
             orch,

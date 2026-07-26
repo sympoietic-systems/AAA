@@ -24,7 +24,7 @@
     [x] Add transition rationale propagation to PipelineRow component in frontend StepPipeline.tsx
     [x] Implement report version selector in the Report tab for switching historical cycle reports
 
-    [ ] Pure Reflection Node:
+    [x] Pure Reflection Node:
         - Add new step type `pure_reflection` in backend PIPELINE_GRAPH.
         - Pass full accumulated State Envelope to the reflection engine.
         - Calculate/update Glitch Fidelity metric (0.0 to 1.0) and emit signals like `BIAS_DETECTED`, `GAP_CRITICAL`, `GLITCH_FIDELITY_LOW`.

@@ -997,3 +997,66 @@ class TestDynamicReroutingAndCacheClearance:
             args, kwargs = mock_gen.call_args
             assert kwargs["temperature"] == 0.1
             assert kwargs["max_tokens"] == 500
+
+    @pytest.mark.asyncio
+    async def test_pure_reflection_step_execution(self):
+        from backend.services.research.steps.pure_reflection import PureReflectionStep
+        from backend.services.research.task_state import StepEnvelope, ReflectionPayload
+
+        conn = init_db(DB_PATH)
+        task_id = _make_task_id()
+        task_repo = ResearchTaskRepository(DB_PATH)
+        plan_repo = ResearchPlanRepository(DB_PATH)
+        step_repo = ResearchStepRepository(DB_PATH)
+        _create_task(task_repo, task_id)
+
+        plan_id = str(uuid.uuid4())
+        plan_repo.create(
+            {
+                "id": plan_id,
+                "task_id": task_id,
+                "plan_json": json.dumps({"initial_queries": ["query"]}),
+                "status": "active",
+            }
+        )
+
+        state_mock = _make_mock_state()
+        state_mock.research_task_repo = task_repo
+        state_mock.research_plan_repo = plan_repo
+        state_mock.research_step_repo = step_repo
+        state_mock.research_step_result_repo = MagicMock()
+        state_mock.research_meta_log_repo = MagicMock()
+
+        orch = SomaticResearchOrchestrator(state_mock)
+        orch._state_mgr.states[task_id] = {
+            "phase": "pure_reflection",
+            "objective": "Test pure reflection step",
+            "max_depth": 3,
+            "budget": 0.5,
+            "plan_id": plan_id,
+            "all_findings": ["Tension between paradigm A and paradigm B."],
+            "current_depth": 1,
+            "digest_signals": {},
+        }
+
+        envelope = StepEnvelope(
+            task_id=task_id,
+            objective="Test pure reflection step",
+            current_depth=1,
+            max_depth=3,
+            budget=0.5,
+            plan_id=plan_id,
+            all_findings=["Tension between paradigm A and paradigm B."],
+            payload=ReflectionPayload(),
+        )
+
+        step = PureReflectionStep()
+        output = await step.execute(orch, envelope)
+
+        assert output.status == "completed"
+        assert output.payload.glitch_fidelity >= 0.0
+        assert output.payload.glitch_fidelity <= 1.0
+        assert isinstance(output.signal_flags, dict)
+
+        conn.close()
+

@@ -9,17 +9,45 @@ export const ReflectionResult = memo(function ReflectionResult({ parsedResult, n
     ? "text-semantic-gold"
     : "text-semantic-green"
 
+  const fidelity = parsedResult.glitch_fidelity ?? 1.0
+  const fidelityColor = fidelity < 0.6 ? "bg-semantic-red text-semantic-red" : fidelity < 0.8 ? "bg-semantic-gold text-semantic-gold" : "bg-semantic-green text-semantic-green"
+
+  const signalFlags: string[] = parsedResult.signal_flags || []
+  if (fidelity < 0.6 && !signalFlags.includes("GLITCH_FIDELITY_LOW")) signalFlags.push("GLITCH_FIDELITY_LOW")
+  if (parsedResult.detected_biases?.length > 0 && !signalFlags.includes("BIAS_DETECTED")) signalFlags.push("BIAS_DETECTED")
+  if (parsedResult.knowledge_gaps?.length >= 3 && !signalFlags.includes("GAP_CRITICAL")) signalFlags.push("GAP_CRITICAL")
+
   return (
     <div className="border-t border-ui-border pt-2 space-y-4 font-mono">
+      {/* Autopoietic Signal Flags Badges */}
+      {signalFlags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-ui-dim text-[8px] uppercase font-bold tracking-wider">[ Autopoietic Signals ]</span>
+          {signalFlags.map((flag) => {
+            const badgeClass =
+              flag === "GLITCH_FIDELITY_LOW"
+                ? "bg-semantic-red/10 text-semantic-red border-semantic-red/30 animate-pulse"
+                : flag === "BIAS_DETECTED"
+                ? "bg-semantic-gold/10 text-semantic-gold border-semantic-gold/30"
+                : "bg-semantic-purple/10 text-semantic-purple border-semantic-purple/30"
+            return (
+              <span key={flag} className={`px-1.5 py-0.5 rounded border text-[8px] font-bold ${badgeClass}`}>
+                ⚠ [{flag}]
+              </span>
+            )
+          })}
+        </div>
+      )}
+
       {/* Cognitive Vitality Metrics */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="text-ui-dim text-[8px] uppercase font-semibold">Glitch Fidelity (anomalies addressed)</div>
           <div className="flex items-center gap-1.5 mt-1">
             <div className="flex-1 h-1.5 bg-ui-border overflow-hidden">
-              <div className="h-full bg-semantic-green" style={{ width: `${Math.round((parsedResult.glitch_fidelity ?? 1) * 100)}%` }} />
+              <div className={`h-full ${fidelityColor.split(" ")[0]}`} style={{ width: `${Math.round(fidelity * 100)}%` }} />
             </div>
-            <span className="text-semantic-green text-[9px] font-bold">{Math.round((parsedResult.glitch_fidelity ?? 1) * 100)}%</span>
+            <span className={`${fidelityColor.split(" ")[1]} text-[9px] font-bold`}>{Math.round(fidelity * 100)}%</span>
           </div>
         </div>
 

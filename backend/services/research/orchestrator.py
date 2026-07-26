@@ -71,6 +71,7 @@ PIPELINE_GRAPH = {
     "digesting": [PipelineTransition(target_phase="consolidating")],
     "consolidating": [PipelineTransition(target_phase="reflection")],
     "reflection": [PipelineTransition(target_phase="evaluating")],
+    "pure_reflection": [PipelineTransition(target_phase="evaluating")],
     "evaluating": [
         PipelineTransition(
             target_phase="synthesizing", condition=lambda out, env: out.signal_flags.get("should_stop", False)
@@ -94,6 +95,7 @@ PHASE_ORDER = [
     "digesting",
     "consolidating",
     "reflection",
+    "pure_reflection",
     "evaluating",
     "synthesizing",
     "complete",
@@ -114,6 +116,7 @@ PHASE_BLOCK: dict[str, str] = {
     "digesting": "query_block",
     "consolidating": "consolidation",
     "reflection": "reflection",
+    "pure_reflection": "reflection",
     "evaluating": "evaluation",
     "synthesizing": "synthesis",
 }
