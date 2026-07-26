@@ -8,6 +8,77 @@ import { TerminalButton } from "../../UI"
 
 import { useState, useMemo, useCallback, memo, useEffect, useRef } from "react"
 
+const TagsBar = memo(function TagsBar({
+  tags,
+  onAddTag,
+  newTagVal,
+  setNewTagVal,
+  handleAddTagSubmit,
+}: {
+  tags: ConversationTagInfo[]
+  onAddTag?: (tag: string) => void
+  newTagVal: string
+  setNewTagVal: (v: string) => void
+  handleAddTagSubmit: (e: React.FormEvent) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  const sortedTags = useMemo(() => {
+    return [...tags].sort((a, b) => {
+      const typeOrder: Record<string, number> = { structural: 0, active: 1, keyword: 2, diffractive: 3 }
+      const orderA = typeOrder[a.tag_type] ?? 9
+      const orderB = typeOrder[b.tag_type] ?? 9
+      return orderA - orderB
+    })
+  }, [tags])
+
+  const limit = 8
+  const visibleTags = expanded ? sortedTags : sortedTags.slice(0, limit)
+  const hasMore = sortedTags.length > limit
+
+  return (
+    <div className="px-4 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 select-none">
+      {visibleTags.map((t, i) => {
+        let color = "text-[#6bc28c]"
+        if (t.tag_type === "structural") {
+          if (t.tag === "dreams") color = "text-semantic-purple font-bold"
+          else if (t.tag === "other agents") color = "text-semantic-sand font-bold"
+          else color = "text-semantic-green font-bold"
+        } else if (t.tag_type === "keyword") color = "text-semantic-blue"
+        else if (t.tag_type === "diffractive") color = "text-[#888]"
+
+        return (
+          <span key={`${t.tag_type}:${t.tag}`} className={`text-[9px] font-mono flex items-center gap-0.5 ${color}`}>
+            {i > 0 && <span className="text-[#444] select-none">{" // "}</span>}
+            {t.tag}
+          </span>
+        )
+      })}
+
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-[9px] text-action-dim hover:text-action-hover transition-colors cursor-pointer font-mono"
+        >
+          {expanded ? " [less]" : ` [+${sortedTags.length - limit} more]`}
+        </button>
+      )}
+
+      {onAddTag && (
+        <form onSubmit={handleAddTagSubmit} className="flex items-center ml-1">
+          <input
+            type="text"
+            placeholder="+ tag"
+            value={newTagVal}
+            onChange={(e) => setNewTagVal(e.target.value)}
+            className="bg-transparent border-0 text-[9px] text-[#888] font-mono outline-none focus:text-[#aaa] w-14 focus:w-24 transition-all duration-150 placeholder:text-[#444] border-b border-transparent focus:border-[#4ade80]"
+          />
+        </form>
+      )}
+    </div>
+  )
+})
+
 interface Props {
   selectedNode: ChatMessage | null
   parentNode: ChatMessage | null
@@ -380,27 +451,7 @@ export const NodeExplorer = memo(function NodeExplorer({
 
       {/* Tags Bar */}
       {tags.length > 0 || onAddTag ? (
-        <div className="px-4 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 select-none">
-          {tags.map((t, i) => {
-            return (
-              <span key={t.tag} className="text-[9px] text-[#6bc28c] font-mono flex items-center gap-0.5">
-                {i > 0 && <span className="text-[#444] select-none">{" // "}</span>}
-                {t.tag}
-              </span>
-            )
-          })}
-          {onAddTag && (
-            <form onSubmit={handleAddTagSubmit} className="flex items-center ml-1">
-              <input
-                type="text"
-                placeholder="+ tag"
-                value={newTagVal}
-                onChange={(e) => setNewTagVal(e.target.value)}
-                className="bg-transparent border-0 text-[9px] text-[#888] font-mono outline-none focus:text-[#aaa] w-14 focus:w-24 transition-all duration-150 placeholder:text-[#444] border-b border-transparent focus:border-[#4ade80]"
-              />
-            </form>
-          )}
-        </div>
+        <TagsBar tags={tags} onAddTag={onAddTag} newTagVal={newTagVal} setNewTagVal={setNewTagVal} handleAddTagSubmit={handleAddTagSubmit} />
       ) : null}
 
       {/* Explorer Space */}
