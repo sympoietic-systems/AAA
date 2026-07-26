@@ -81,7 +81,7 @@ async def get_daily_index(
             ).fetchone()[0]
 
             node_cnt = conn.execute(
-                "SELECT COUNT(*) FROM memory_nodes WHERE strftime('%Y-%m-%d', created_at) = ?", (d_str,)
+                "SELECT COUNT(DISTINCT id) FROM memory_nodes WHERE strftime('%Y-%m-%d', created_at) = ?", (d_str,)
             ).fetchone()[0]
 
             res_cnt = conn.execute(
@@ -163,7 +163,7 @@ async def get_daily_details(
         conversations = [{"id": r["id"], "title": r["title"] or "Untitled", "message_count": r["msg_cnt"]} for r in conv_rows]
         total_messages = sum(r["msg_cnt"] for r in conv_rows)
 
-        # 3. Memory Nodes
+        # 3. Memory Nodes (deduplicated by node ID)
         mn_rows = conn.execute(
             """SELECT id, conversation_id, checkpoint_id, node_type, intensity, scar,
                       intra_active_text, surface_fragment, agential_symmetry, source_type, source_id, created_at
@@ -173,8 +173,13 @@ async def get_daily_details(
             (date_str,),
         ).fetchall()
 
+        seen_node_ids = set()
         memory_nodes = []
         for r in mn_rows:
+            nid = r["id"]
+            if nid in seen_node_ids:
+                continue
+            seen_node_ids.add(nid)
             memory_nodes.append({
                 "id": r["id"],
                 "conversation_id": r["conversation_id"],

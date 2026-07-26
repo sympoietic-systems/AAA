@@ -38,9 +38,9 @@ except Exception as e:
 
 # ── Target backend URL ──────────────────────────────────────────────────
 # Set AAA_API_BASE to point at the online instance:
-#   export AAA_API_BASE=https://aaa.sokaris.link/api
+#   export AAA_API_BASE=https://aaa.sympoietic.systems/api
 # If not set, falls back to server.host:server.port from config.yaml
-_AAA_API_BASE = os.environ.get("AAA_API_BASE", "")
+_AAA_API_BASE = os.environ.get("AAA_API_BASE", "https://aaa.sympoietic.systems/api")
 if _AAA_API_BASE:
     BASE_URL = _AAA_API_BASE.rstrip("/")
 else:
@@ -56,6 +56,7 @@ _AUTH_HEADERS = {"Authorization": f"Bearer {_AAA_PASSWORD}"} if _AAA_PASSWORD el
 
 def _mkclient(**kwargs):
     """Create an httpx.AsyncClient with auth headers injected."""
+    kwargs.setdefault("follow_redirects", True)
     if _AUTH_HEADERS:
         headers = kwargs.get("headers", {})
         headers.update(_AUTH_HEADERS)

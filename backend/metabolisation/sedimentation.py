@@ -203,35 +203,133 @@ def parse_sedimentation_yaml(raw_output: str) -> tuple[list[dict], int]:
     return valid_nodes, tier
 
 
-def merge_nodes(existing_nodes: list[dict], new_nodes: list[dict]) -> list[dict]:
-    """Merge new parsed nodes into existing nodes by ID.
+def _calculate_text_similarity(t1: str, t2: str) -> float:
+    """Calculate token-based Jaccard similarity between two text fragments."""
+    words1 = set(re.findall(r"\w+", t1.lower()))
+    words2 = set(re.findall(r"\w+", t2.lower()))
+    if not words1 or not words2:
+        return 0.0
+    intersection = words1 & words2
+    union = words1 | words2
+    return len(intersection) / len(union)
 
-    R4: Tracks revision_count and last_merged_at for merge observability.
-    Logs a console notification when an existing node is updated.
+
+def _resolve_diffractive_tendrils(existing_tendrils: list[str], new_tendrils: list[str]) -> list[str]:
+    """Diffractive tendril resolution: fold matching tendrils, preserve unique tendrils without inflation."""
+    merged = set(existing_tendrils)
+    for t in new_tendrils:
+        if t not in merged:
+            merged.add(t)
+    return sorted(merged)
+
+
+def find_similar_node(node: dict, existing_nodes: list[dict], threshold: float = 0.65) -> tuple[dict | None, float]:
+    """Find similar existing node via diffractive key match or text token similarity."""
+    target_key = (node.get("diffractive_key") or "").strip().lower()
+    target_text = node.get("intra_active_text") or node.get("surface_fragment") or ""
+
+    best_match = None
+    best_score = 0.0
+
+    for existing in existing_nodes:
+        ex_key = (existing.get("diffractive_key") or "").strip().lower()
+        if target_key and ex_key and target_key == ex_key:
+            return existing, 1.0
+
+        ex_text = existing.get("intra_active_text") or existing.get("surface_fragment") or ""
+        sim = _calculate_text_similarity(target_text, ex_text)
+        if sim > best_score:
+            best_score = sim
+            best_match = existing
+
+    # Adaptive threshold adjustment based on existing revision count
+    adaptive_threshold = threshold
+    if best_match and best_match.get("revision_count", 0) >= 3:
+        adaptive_threshold = max(0.55, threshold - 0.08)
+
+    if best_score >= adaptive_threshold:
+        return best_match, best_score
+
+    # Log near-misses (0.55-0.64) for memory system observability
+    if 0.55 <= best_score < adaptive_threshold and best_match:
+        logger.info(
+            "[mem] near-miss fold candidate: '%s' vs '%s' (score: %.2f)",
+            target_key or target_text[:30],
+            best_match.get("diffractive_key") or best_match.get("id"),
+            best_score,
+        )
+
+    return None, best_score
+
+
+def merge_nodes(existing_nodes: list[dict], new_nodes: list[dict]) -> list[dict]:
+    """Merge new parsed nodes into existing nodes by ID or iteration folding.
+
+    Performs Revision Suturing: tracks revision_count, last_merged_at, model confidence scars,
+    and diffractive tendril resolution.
     """
     existing_by_id: dict[str, dict] = {n["id"]: n for n in existing_nodes if n.get("id")}
     merged = dict(existing_by_id)
 
     for node in new_nodes:
         node_id = node.get("id", "")
+        matched_node = None
+        sim_score = 1.0
+
         if node_id and node_id in merged:
-            existing = merged[node_id]
-            old_intensity = existing.get("intensity", 0)
+            matched_node = merged[node_id]
+        else:
+            # Iteration folding: search existing merged nodes for semantic/key similarity
+            similar, score = find_similar_node(node, list(merged.values()))
+            if similar:
+                matched_node = similar
+                sim_score = score
+                node_id = similar["id"]
+
+        if matched_node:
+            old_intensity = matched_node.get("intensity", 0)
             new_intensity = node.get("intensity", old_intensity)
-            # R4: Increment revision count and set merge timestamp
-            existing["revision_count"] = existing.get("revision_count", 0) + 1
-            existing["last_merged_at"] = datetime.now(UTC).isoformat()
-            existing.update(node)
+            
+            # Revision suturing
+            matched_node["revision_count"] = matched_node.get("revision_count", 0) + 1
+            matched_node["last_merged_at"] = datetime.now(UTC).isoformat()
+            
+            # Record confidence scarring history
+            history = matched_node.get("revision_history") or []
+            if isinstance(history, str):
+                try:
+                    history = json.loads(history)
+                except Exception:
+                    history = []
+            history.append({
+                "timestamp": datetime.now(UTC).isoformat(),
+                "merge_model": "iteration-folding",
+                "merge_cosine": round(sim_score, 3),
+                "model_confidence": round(sim_score * 0.95, 3),
+            })
+            matched_node["revision_history"] = history
+
+            # Diffractive tendril resolution
+            ex_tendrils = matched_node.get("tendrils") or []
+            new_tendrils = node.get("tendrils") or []
+            resolved_tendrils = _resolve_diffractive_tendrils(ex_tendrils, new_tendrils)
+
+            # Preserve ID and merge updated attributes
+            node["id"] = matched_node["id"]
+            matched_node.update({k: v for k, v in node.items() if v != "" and v is not None})
+            matched_node["tendrils"] = resolved_tendrils
+            
             logger.info(
-                "[mem] node %s revised (v%d) — intensity %.2f→%.2f",
-                node_id,
-                existing["revision_count"],
+                "[mem] node %s folded/revised (v%d) — intensity %.2f→%.2f (sim: %.2f)",
+                matched_node["id"],
+                matched_node["revision_count"],
                 old_intensity,
                 new_intensity,
+                sim_score,
             )
         elif node_id:
-            merged[node_id] = node
             node.setdefault("revision_count", 0)
+            merged[node_id] = node
         else:
             node["id"] = generate_node_id()
             node.setdefault("revision_count", 0)
