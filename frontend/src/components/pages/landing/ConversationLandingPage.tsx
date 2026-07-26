@@ -27,24 +27,51 @@ interface Props {
 type DetailTab = "summary" | "notes" | "memory_nodes"
 
 function Tags({ tags }: { tags?: any[] }) {
+  const [expanded, setExpanded] = useState(false)
+
   if (!tags || tags.length === 0) return null
+
+  // Sort tags: structural tags first, active diffractive/keyword tags next
+  const sortedTags = [...tags].sort((a, b) => {
+    const typeOrder: Record<string, number> = { structural: 0, active: 1, keyword: 2, diffractive: 3 }
+    const orderA = typeOrder[a.tag_type] ?? 9
+    const orderB = typeOrder[b.tag_type] ?? 9
+    return orderA - orderB
+  })
+
+  const limit = 8
+  const visibleTags = expanded ? sortedTags : sortedTags.slice(0, limit)
+  const hasMore = sortedTags.length > limit
+
   return (
-    <span>
-      {tags.map((t, i) => {
+    <span className="inline flex-wrap gap-1">
+      {visibleTags.map((t, i) => {
         let color = "text-[#555]"
         if (t.tag_type === "structural") {
-          if (t.tag === "dreams") color = "text-semantic-purple"
-          else if (t.tag === "other agents") color = "text-semantic-sand"
-          else color = "text-semantic-green"
+          if (t.tag === "dreams") color = "text-semantic-purple font-bold"
+          else if (t.tag === "other agents") color = "text-semantic-sand font-bold"
+          else color = "text-semantic-green font-bold"
         } else if (t.tag_type === "keyword") color = "text-semantic-blue"
         else if (t.tag_type === "diffractive") color = "text-semantic-slate"
+        
         return (
-          <span key={t.tag} className={`font-mono text-[10px] ${color}`}>
+          <span key={`${t.tag_type}:${t.tag}`} className={`font-mono text-[10px] ${color}`}>
             {i > 0 && <span className="text-[#333]"> // </span>}
             {t.tag}
           </span>
         )
       })}
+      {hasMore && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setExpanded(!expanded)
+          }}
+          className="ml-1 text-[9px] text-action-dim hover:text-action-hover transition-colors cursor-pointer select-none font-mono"
+        >
+          {expanded ? " [less]" : ` [+${sortedTags.length - limit} more]`}
+        </button>
+      )}
     </span>
   )
 }
