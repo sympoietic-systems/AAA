@@ -490,8 +490,21 @@ class AutopoieticDreamDaemon(
             if hotspot and action in ("intra_active_monologue", "exogenous_web_harvesting"):
                 try:
                     self.belief_repo.update_belief_last_dreamed(hotspot.id)
+                    import uuid
+                    self.belief_repo.insert_belief_event(
+                        event_id=str(uuid.uuid4()),
+                        belief_id=hotspot.id,
+                        source_type="dream_hotspot",
+                        source_id=dream_convo_id,
+                        alignment=1.0,
+                        perturbation=0.05,
+                        event_type="dream_engagement",
+                        impact=0.05,
+                        rationale=f"Hotspot engaged in dream monologue/harvest ({action}, {actual_turns} turns)",
+                        suppress_notification=False,
+                    )
                 except Exception as e:
-                    logger.warning("Failed to update belief last_dreamed_at: %s", e)
+                    logger.warning("Failed to update belief last_dreamed_at or record event: %s", e)
 
             # Aggregate metabolism: metabolize each turn pair as dream_turn (weight=0.05)
             belief_metabolism = getattr(self.app_state, "belief_metabolism", None)

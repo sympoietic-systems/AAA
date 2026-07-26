@@ -261,6 +261,14 @@ class ConsolidationMixin:
             except Exception as e:
                 logger.exception("Failed to save memory nodes for %s: %s", conversation_id, e)
 
+        # ── Belief System Write-Back Pass ──
+        # Synchronize memory node scars, tensions, and intensity shifts into persistent belief nodes
+        if self.belief_repo and merged_nodes:
+            try:
+                self._integrate_consolidated_beliefs(conversation_id, merged_nodes)
+            except Exception as e:
+                logger.warning("Failed to integrate consolidated beliefs for %s: %s", conversation_id, e)
+
         # Diffractive keys from merged nodes (replace old keyword tags)
         self._sync_diffractive_tags(conversation_id, merged_nodes)
 
@@ -294,3 +302,78 @@ class ConsolidationMixin:
                 )
         except Exception as e:
             logger.warning("Failed to sync diffractive tags for %s: %s", conversation_id, e)
+
+    def _integrate_consolidated_beliefs(self, conversation_id: str, nodes: list[dict]) -> None:
+        """Write back memory node insights, scars, and intensity shifts into belief_nodes & belief_events."""
+        if not self.belief_repo:
+            return
+
+        active_beliefs = self.belief_repo.list_beliefs("symbia")
+        if not active_beliefs:
+            return
+
+        updated_count = 0
+        for node in nodes:
+            key = (node.get("diffractive_key") or "").strip().lower()
+            scar_text = node.get("scar", "").strip()
+            node_type = node.get("type", "").lower()
+            intensity = float(node.get("intensity", 0.5))
+
+            # Match against active beliefs by label, diffractive_key, or statement substring
+            matched_belief = None
+            for b in active_beliefs:
+                b_label = b.label.lower()
+                if key and (key in b_label or b_label in key):
+                    matched_belief = b
+                    break
+                if key and (key in b.statement.lower()):
+                    matched_belief = b
+                    break
+
+            if matched_belief:
+                # Calculate confidence adjust based on memory node intensity and type
+                # Scars/tensions reduce confidence slightly (introducing productive friction), concepts/patterns reinforce
+                delta_conf = 0.0
+                if node_type == "scar":
+                    delta_conf = -0.05 * (1.0 - intensity)
+                elif node_type == "tension":
+                    delta_conf = -0.08 * intensity
+                elif node_type == "concept":
+                    delta_conf = 0.05 * intensity
+
+                new_confidence = max(0.01, min(1.0, matched_belief.confidence + delta_conf))
+
+                # Update belief in DB if confidence changed or scar present
+                if abs(new_confidence - matched_belief.confidence) > 0.001 or scar_text:
+                    self.belief_repo.update_belief(
+                        belief_id=matched_belief.id,
+                        confidence=new_confidence,
+                        vector_16d=matched_belief.vector_16d,
+                        origin=matched_belief.origin,
+                        lifecycle_stage=matched_belief.lifecycle_stage,
+                        suppress_stage_notification=True,
+                    )
+                    
+                    # Record a belief event to leave a permanent trace in belief_events table
+                    import uuid
+                    rationale = f"Consolidation pass for {conversation_id} (type={node_type}, intensity={intensity:.2f})"
+                    if scar_text:
+                        rationale += f" [Scar: {scar_text[:100]}]"
+
+                    self.belief_repo.insert_belief_event(
+                        event_id=str(uuid.uuid4()),
+                        belief_id=matched_belief.id,
+                        source_type="dream_consolidation",
+                        source_id=conversation_id,
+                        alignment=1.0 if delta_conf >= 0 else -1.0,
+                        perturbation=abs(delta_conf),
+                        event_type="consolidation_suture",
+                        impact=delta_conf,
+                        rationale=rationale,
+                        suppress_notification=False,
+                    )
+                    updated_count += 1
+
+        if updated_count > 0:
+            logger.info("Integrated %d belief updates from conversation %s consolidation", updated_count, conversation_id)
+

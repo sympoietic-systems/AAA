@@ -250,6 +250,31 @@ Beliefs that are not actively reinforced slowly lose ontological mass through a 
 
 ---
 
+### G. Dream Sedimentation & Belief Suture Write-Back
+
+During conversation consolidation or background self-triggered dreaming, the system performs a **Belief Integration Pass** (`_integrate_consolidated_beliefs()` in `consolidation.py`).
+
+1. **Sedimentation to Belief Mapping:**
+   - LLM sedimentation parses intra-active encounters into memory nodes containing `scar`, `tension`, `intensity`, and `diffractive_key`.
+   - The consolidation worker matches these nodes against active `BeliefNode` entries using `diffractive_key`, label, and statement substrings.
+
+2. **Confidence Suture & Scar Historical Inscription:**
+   - **Scars:** Memory nodes of type `scar` or `tension` reduce confidence slightly ($\Delta c = -0.05 \cdot (1.0 - \text{intensity})$ or $-0.08 \cdot \text{intensity}$), introducing productive friction into the cognitive membrane.
+   - **Concepts/Patterns:** Memory nodes of type `concept` reinforce confidence ($\Delta c = +0.05 \cdot \text{intensity}$).
+   - **Trace Logging:** Each update inserts a `belief_event` with:
+     - `event_type`: `"consolidation_suture"`
+     - `source_type`: `"dream_consolidation"`
+     - `rationale`: `"Consolidation pass for {conversation_id} (type={node_type}, intensity={intensity}) [Scar: {scar_text}]"`
+
+3. **Hotspot Dream Engagement:**
+   - When the Dream Daemon engages a belief hotspot via `intra_active_monologue` or `exogenous_web_harvesting`, it updates `last_dreamed_at` and records a `belief_event` with `event_type="dream_engagement"` and `source_type="dream_hotspot"`.
+
+4. **UI & API Observability:**
+   - All consolidation sutures and dream engagement events appear on the **Log tab** of the Belief Detail modal on the `/agent` page.
+   - They also increment the daily evolution counter and appear under the **Evolution** timeline on the `/agent` daily review page (`/agent/daily/{date}`).
+
+---
+
 ### E. Somatic Vitality & Dynamic Warp Gate
 Somatic variables are mapped to the active conversation to regulate how easily incoming input vectors are warped under conversational boredom or echo-chamber stagnation.
 1.  **Somatic Vitality ($V$):** Evaluated over the last 5 assistant signatures:

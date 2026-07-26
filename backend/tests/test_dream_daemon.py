@@ -893,3 +893,59 @@ if __name__ == "__main__":
     asyncio.run(test_resonance_token_budget_stop())
     asyncio.run(test_resonance_aggregate_metabolism())
     print("All daemon tests completed successfully!")
+
+
+@pytest.mark.asyncio
+async def test_consolidation_belief_writeback():
+    """Tests that conversation consolidation writes back memory node scars and intensity into belief nodes."""
+    app_state = MockAppState()
+    daemon = AutopoieticDreamDaemon(app_state)
+
+    events_logged = []
+
+    class TrackBeliefRepo(MockBeliefRepository):
+        def __init__(self):
+            super().__init__()
+            self.updated_beliefs = []
+
+        def update_belief(self, **kwargs):
+            self.updated_beliefs.append(kwargs)
+
+        def insert_belief_event(self, **kwargs):
+            events_logged.append(kwargs)
+
+    belief_repo = TrackBeliefRepo()
+    belief = BeliefNode(
+        id="b_rhizome",
+        label="Rhizomatic Thought",
+        statement="Thought is a non-hierarchical rhizome.",
+        confidence=0.6,
+        ontological_mass=1.0,
+        somatic_anchor="homeostatic",
+        vector_16d=json.dumps([0.0]*16),
+        origin="crystallized",
+        agent_id="symbia",
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    belief_repo.beliefs = [belief]
+    daemon.belief_repo = belief_repo
+
+    nodes = [
+        {
+            "id": "mem_001",
+            "type": "scar",
+            "diffractive_key": "rhizomatic thought",
+            "intensity": 0.8,
+            "scar": "Slight rupture along the central axis",
+        }
+    ]
+
+    daemon._integrate_consolidated_beliefs("convo_test_123", nodes)
+
+    assert len(belief_repo.updated_beliefs) == 1
+    assert len(events_logged) == 1
+    assert events_logged[0]["event_type"] == "consolidation_suture"
+    assert "convo_test_123" in events_logged[0]["rationale"]
+    assert "Scar: Slight rupture" in events_logged[0]["rationale"]
+
