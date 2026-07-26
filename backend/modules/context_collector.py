@@ -200,8 +200,8 @@ class ContextCollectorModule(ProcessingModule):
 
         current = payload.get("content", "")
         if current:
-            # We don't expect inline notes in current input message since user hasn't sent it yet,
-            # but we can process it just in case
+            if re.search(r"\bgrating\b", current, re.IGNORECASE):
+                payload["grating_requested"] = True
             current_processed = process_inline_notes(current, notes_by_id)
             messages.append({"role": "user", "content": current_processed})
 

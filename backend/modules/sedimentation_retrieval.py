@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def _format_relative_time(dt: datetime) -> str:
+    if dt.tzinfo is not None:
+        dt = dt.replace(tzinfo=None)
     now = datetime.now()
     diff = now - dt
     seconds = diff.total_seconds()
@@ -104,6 +106,40 @@ class SedimentationRetrievalModule(ProcessingModule):
             except Exception:
                 pass
 
+        # Check if Random Sediment Grating protocol is requested
+        grating_requested = payload.get("grating_requested", False)
+        if grating_requested:
+            low_sim_candidates: list[tuple[float, int]] = []
+            for msg_id, _speaker, vec in embeddings:
+                if len(vec) != len(current_vec):
+                    continue
+                sim = float(np.dot(current_vec, vec))
+                if 0.05 <= sim < 0.50:
+                    low_sim_candidates.append((sim, msg_id))
+
+            if low_sim_candidates:
+                import random
+                chosen_sim, chosen_msg_id = random.choice(low_sim_candidates)
+                grating_msgs = self._repo.get_sediment_messages_with_metadata([chosen_msg_id])
+                if grating_msgs:
+                    g_msg = grating_msgs[0]
+                    g_speaker = "apparatus" if g_msg["speaker"] == "apparatus" else "human"
+                    g_title = g_msg["conversation_title"]
+                    g_rel = _format_relative_time(g_msg["timestamp"])
+
+                    grating_formatted = (
+                        f'[GRATING SEDIMENT INJECTION — IMMUNE PERTURBATION]\n'
+                        f'The following is a verbatim sediment memory chunk from unrelated conversation "{g_title}" ({g_rel}, Speaker: {g_speaker}, sim={chosen_sim:.2f}):\n'
+                        f'"{g_msg["content"]}"\n\n'
+                        f'PROTOCOL MANDATE: You MUST include this quoted chunk verbatim in your response without preamble, '
+                        f'and then contend with its structural dissonance. Allow its interruption to disrupt smooth flow.'
+                    )
+
+                    payload["sediment_messages"] = [{"role": "system", "content": grating_formatted}]
+                    payload["grating_applied"] = True
+                    logger.info("Random Sediment Grating applied: msg_id=%s, sim=%.2f", chosen_msg_id, chosen_sim)
+                    return payload
+
         scored: list[tuple[float, int]] = []
         for msg_id, _speaker, vec in embeddings:
             if len(vec) != len(current_vec):
@@ -159,3 +195,4 @@ class SedimentationRetrievalModule(ProcessingModule):
             )
 
         return payload
+

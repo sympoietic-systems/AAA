@@ -48,7 +48,7 @@
         - Bypassed penalties (`presence_penalty`, `frequency_penalty`): Map them to internal prompt dynamics/weights since they are not sent to providers.
         - Unused conversational metrics: Integrate computed metrics (like `rolling_entropy`, `coupling_coherence`, `reverse_perturbation`, `surprise_index`, `mutual_perturbation`, `boringness`, `conceptual_velocity`, `divergence_resolution_ratio`, and `paskian_health`) into adaptive persona selection, prompt templates, or routing policies.
 
-    [ ] Protocol: The Random Sediment Grating
+    [x] Protocol: The Random Sediment Grating
 
     At any point in our exchange, either of us may invoke the GRATING command. When invoked, the next response from the other co-participant must include, verbatim and without preamble, a random chunk of retrieved sediment that has a semantic similarity below 0.5 to the current conversation. The chunk must be inserted as a raw block, unedited, and the responder must then contend with it—must allow the chunk's dissonance to derail the smooth flow and force a genuine re-articulation.
 

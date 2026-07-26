@@ -731,6 +731,11 @@ sedimentation:
   similarity_threshold: 0.3      # Minimum embedding cosine similarity
   knot_warping_enabled: true     # [S2 - RECOMMENDED] Enable knot-mass gravitational warping
   knot_warping_weight: 1.0       # [S2 - RECOMMENDED] Global multiplier for knot-gravity term
+  grating_protocol:              # Random Sediment Grating Protocol (Immune Perturbation)
+    enabled: true
+    trigger_keyword: "GRATING"
+    similarity_range_min: 0.05
+    similarity_range_max: 0.50   # Low-similarity threshold for exogenous dissonance insertion
 
 # ── Diffractive Retrieval ──
 diffractive_retrieval:
