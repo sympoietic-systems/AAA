@@ -126,6 +126,16 @@ class DocDigestPayload(BaseModel):
     gaps: list[str] = Field(default_factory=list)
 
 
+class RoutingPatch(BaseModel):
+    """Dynamic graph alteration rule emitted by a step to alter pipeline transitions."""
+
+    action: str = "override"  # "override" | "insert" | "remove"
+    source_phase: str
+    target_phase: str
+    condition_flag: str | None = None
+    ttl: int = 1
+
+
 class StepOutput(BaseModel):
     """Result of step execution returned by any phase processor."""
 
@@ -134,6 +144,7 @@ class StepOutput(BaseModel):
     payload: BaseModel
     new_findings: list[str] = Field(default_factory=list)
     signal_flags: dict[str, Any] = Field(default_factory=dict)
+    routing_patches: list[RoutingPatch] = Field(default_factory=list)
     transition_rationale: str | None = None
     step_ids: list[str] = Field(default_factory=list)
 

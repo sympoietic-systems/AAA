@@ -29,7 +29,7 @@
         - Pass full accumulated State Envelope to the reflection engine.
         - Calculate/update Glitch Fidelity metric (0.0 to 1.0) and emit signals like `BIAS_DETECTED`, `GAP_CRITICAL`, `GLITCH_FIDELITY_LOW`.
         - Implement specialized UI card for reflection steps showing the Glitch Fidelity meter.
-    [ ] Plan-Driven Dynamic Routing (Perturbation Patches):
+    [x] Plan-Driven Dynamic Routing (Perturbation Patches):
         - Define dynamic `routing_patch` schema (inserts, overrides, removes with TTL) in StepOutput.
         - Extend Metabolic Router to ingest, validate, and merge patches with the base PIPELINE_GRAPH.
         - Add router safety integrity guards to prevent deadlocks or unreachable synthesis states.

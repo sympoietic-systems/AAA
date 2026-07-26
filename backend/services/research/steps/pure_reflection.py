@@ -41,11 +41,26 @@ class PureReflectionStep(ReflectionStep):
         payload.signal_flags = flags
         signal_flags_dict = dict.fromkeys(flags, True)
 
+        routing_patches = []
+        if fidelity < 0.60 or len(biases) > 0:
+            from backend.services.research.task_state import RoutingPatch
+
+            routing_patches.append(
+                RoutingPatch(
+                    action="override",
+                    source_phase="evaluating",
+                    target_phase="planning",
+                    condition_flag="GLITCH_FIDELITY_LOW" if fidelity < 0.60 else "BIAS_DETECTED",
+                    ttl=1,
+                )
+            )
+
         return StepOutput(
             status=output.status,
             message=output.message,
             payload=payload,
             signal_flags=signal_flags_dict,
+            routing_patches=routing_patches,
             step_ids=output.step_ids,
             transition_rationale=output.transition_rationale,
         )

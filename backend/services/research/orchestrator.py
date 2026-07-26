@@ -868,12 +868,63 @@ class SomaticResearchOrchestrator:
                 if hasattr(output.payload, "result_summary") and output.payload.result_summary:
                     result["result_summary"] = output.payload.result_summary
 
-                # Determine next phase via Declarative Membrane (PIPELINE_GRAPH)
+                # Ingest dynamic routing patches emitted by the step output
+                if hasattr(output, "routing_patches") and output.routing_patches:
+                    s["active_routing_patches"] = s.get("active_routing_patches", [])
+                    for patch in output.routing_patches:
+                        patch_dict = patch.model_dump() if hasattr(patch, "model_dump") else patch
+                        s["active_routing_patches"].append(patch_dict)
+                        logger.info("Ingested RoutingPatch: %s -> %s (action=%s, ttl=%s)", patch_dict.get("source_phase"), patch_dict.get("target_phase"), patch_dict.get("action"), patch_dict.get("ttl"))
+
+                # Determine next phase via Declarative Membrane (PIPELINE_GRAPH + Active Routing Patches)
                 next_phase = "complete"
-                for transition in PIPELINE_GRAPH.get(phase, []):
-                    if transition.condition(output, envelope):
-                        next_phase = transition.target_phase
-                        break
+                patch_applied = False
+
+                # 1. Evaluate Active Routing Patches with Safety Integrity Guards
+                active_patches = s.get("active_routing_patches", [])
+                remaining_patches = []
+                for patch in active_patches:
+                    src = patch.get("source_phase")
+                    tgt = patch.get("target_phase")
+                    cond_flag = patch.get("condition_flag")
+                    ttl = patch.get("ttl", 1)
+
+                    # Safety Integrity Guards:
+                    # - Cannot override terminal phases (synthesizing, complete)
+                    # - Cannot reroute more than max_patch_reroutes limit
+                    reroute_count = s.get("patch_reroute_count", 0)
+                    if (
+                        not patch_applied
+                        and src == phase
+                        and tgt not in ("synthesizing", "complete")
+                        and phase not in ("synthesizing", "complete")
+                        and reroute_count < 3
+                        and (not cond_flag or output.signal_flags.get(cond_flag, False))
+                    ):
+                        next_phase = tgt
+                        patch_applied = True
+                        s["patch_reroute_count"] = reroute_count + 1
+                        logger.info(
+                            "Plasticity Patch applied: phase=%s -> %s via patch (flag=%s, reroutes=%d)",
+                            phase,
+                            tgt,
+                            cond_flag,
+                            s["patch_reroute_count"],
+                        )
+                        ttl -= 1
+
+                    if ttl > 0:
+                        patch["ttl"] = ttl
+                        remaining_patches.append(patch)
+
+                s["active_routing_patches"] = remaining_patches
+
+                # 2. Fallback to Static PIPELINE_GRAPH if no dynamic patch matched
+                if not patch_applied:
+                    for transition in PIPELINE_GRAPH.get(phase, []):
+                        if transition.condition(output, envelope):
+                            next_phase = transition.target_phase
+                            break
                 s["phase"] = next_phase
 
                 if next_phase == "planning":

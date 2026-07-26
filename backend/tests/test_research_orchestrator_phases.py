@@ -1060,3 +1060,73 @@ class TestDynamicReroutingAndCacheClearance:
 
         conn.close()
 
+    @pytest.mark.asyncio
+    async def test_routing_patches_plasticity(self):
+        from backend.services.research.task_state import RoutingPatch, StepEnvelope, ReflectionPayload
+
+        conn = init_db(DB_PATH)
+        task_id = _make_task_id()
+        task_repo = ResearchTaskRepository(DB_PATH)
+        plan_repo = ResearchPlanRepository(DB_PATH)
+        step_repo = ResearchStepRepository(DB_PATH)
+        _create_task(task_repo, task_id)
+
+        plan_id = str(uuid.uuid4())
+        plan_repo.create(
+            {
+                "id": plan_id,
+                "task_id": task_id,
+                "plan_json": json.dumps({"initial_queries": ["query"]}),
+                "status": "active",
+            }
+        )
+
+        state_mock = _make_mock_state()
+        state_mock.research_task_repo = task_repo
+        state_mock.research_plan_repo = plan_repo
+        state_mock.research_step_repo = step_repo
+        state_mock.research_step_result_repo = MagicMock()
+        state_mock.research_meta_log_repo = MagicMock()
+
+        orch = SomaticResearchOrchestrator(state_mock)
+        orch._state_mgr.states[task_id] = {
+            "phase": "evaluating",
+            "objective": "Test routing patches plasticity",
+            "max_depth": 3,
+            "budget": 0.5,
+            "plan_id": plan_id,
+            "all_findings": ["Accumulated finding 1", "Accumulated finding 2"],
+            "current_depth": 1,
+            "stagnation_counter": 0,
+            "sources_analyzed": 2,
+            "active_routing_patches": [
+                {
+                    "action": "override",
+                    "source_phase": "evaluating",
+                    "target_phase": "planning",
+                    "condition_flag": "GLITCH_FIDELITY_LOW",
+                    "ttl": 1,
+                }
+            ],
+        }
+
+        # Mock EvaluateStep to output GLITCH_FIDELITY_LOW flag
+        with patch("backend.services.research.steps.evaluate.EvaluateStep.execute", new_callable=AsyncMock) as mock_exec:
+            from backend.services.research.task_state import StepOutput, EvaluatePayload
+
+            mock_exec.return_value = StepOutput(
+                status="completed",
+                message="Evaluated",
+                payload=EvaluatePayload(stagnation_counter=0, sources_analyzed=2, should_stop=False),
+                signal_flags={"GLITCH_FIDELITY_LOW": True},
+            )
+
+            res = await orch.execute_step(task_id)
+
+            assert res["next_phase"] == "planning"
+            assert orch._state_mgr.states[task_id]["phase"] == "planning"
+            # Accumulated findings must be preserved across dynamic re-routing
+            assert len(orch._state_mgr.states[task_id]["all_findings"]) == 2
+
+        conn.close()
+
