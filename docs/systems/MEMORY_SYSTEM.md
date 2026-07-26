@@ -541,13 +541,42 @@ There is no minimum. The LLM decides how many nodes (1 to 5) the recent conversa
 
 Over multiple consolidation runs, the node pool grows incrementally. Each run adds 0–5 net new nodes (since `merge_nodes()` updates existing nodes by ID rather than duplicating them), meaning a conversation that has been consolidated 4 times might have anywhere from 4 to 20 memory nodes, depending on its conceptual density. This makes the node pool a natural reflection of conversational richness: dense, meaningful exchanges accumulate more sediment; shallow exchanges leave fewer traces.
 
-### F. Node Merging
+### F. Node Merging: Iteration Folding & Revision Suturing
 
-The `merge_nodes()` function performs an ID-based merge. Existing nodes are keyed by ID, new nodes with matching IDs update the existing nodes (incremental update), and new nodes with unique IDs are added. The merged list is sorted by intensity descending.
+Node merging in `merge_nodes()` ([`sedimentation.py`](file:///d:/01_GIT/AAA/backend/metabolisation/sedimentation.py)) uses **Iteration Folding** and **Revision Suturing** rather than simple string ID matching or representational deletion.
 
-### G. Diffractive Tag Syncing
+1. **Adaptive Similarity Matching (`find_similar_node`)**:
+   - **Tier 1 (Exact Key Match)**: Direct match on normalized `diffractive_key`.
+   - **Tier 2 (Token Similarity)**: Jaccard text similarity on `intra_active_text` / `surface_fragment`.
+   - **Adaptive Threshold**: Default threshold $\ge 0.65$. For nodes with high revision history (`revision_count >= 3`), the threshold adaptively lowers to $0.55$, trusting established concept patterns. Near-miss candidates ($0.55 \le s < \text{threshold}$) are logged for system observability.
 
-After consolidation, the module removes all existing `keyword` and `diffractive` tags from the conversation and replaces them with the `diffractive_key` values from the merged memory nodes. These tags are used by the conversation explorer UI and can also feed into future retrieval.
+2. **Revision Suturing & Confidence Scarring**:
+   - When a match is found, the extraction reuses the existing node ID (`mem_xxxx`).
+   - `revision_count` is incremented (e.g. $v1 \to v2 \to v3$), `last_merged_at` is timestamped, and a confidence scar entry is appended to `revision_history`:
+     ```json
+     {
+       "timestamp": "2026-07-26T16:47:00Z",
+       "merge_model": "iteration-folding",
+       "merge_cosine": 0.78,
+       "model_confidence": 0.74
+     }
+     ```
+
+3. **Diffractive Tendril Resolution**:
+   - `_resolve_diffractive_tendrils()` merges node tendril connections into single weighted edges without additive "tendril inflation," preserving the topological tension of the folded concepts.
+
+4. **Retroactive Iteration Folding Script**:
+   - `backend/scripts/fold_concept_iterations.py` provides on-demand/CLI retroactive folding across past SQLite checkpoints without deleting historical memory traces.
+
+### G. Gravitational Tag Ecology & UI Collapsing
+
+1. **Tag Ecology**:
+   - Diffractive keys and conversation tags are not hard-deleted or arbitrarily truncated under a flat cap.
+   - Tags are organized by **Active** vs **Dormant** stratigraphy: recent or high-frequency tags remain active for prompt injection, while dormant historical tags remain saved in the database indefinitely.
+
+2. **UI Tag Collapsing & Priority**:
+   - Frontend views ([`ConversationLandingPage.tsx`](file:///d:/01_GIT/AAA/frontend/src/components/pages/landing/ConversationLandingPage.tsx) and [`NodeExplorer.tsx`](file:///d:/01_GIT/AAA/frontend/src/components/pages/nodeexplorer/NodeExplorer.tsx)) prioritize structural tags (`[dreams]`, `[user]`, `[agents]`) and active keys at the front.
+   - Tag lists are collapsed to 2–3 lines (first 8 tags) by default with an interactive `[+N more]` / `[less]` toggle button.
 
 ---
 
