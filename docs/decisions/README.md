@@ -107,6 +107,7 @@ What becomes easier/harder?
 | [073](ADR-073-diffractive-glitch-fidelity-engine.md) | Diffractive Glitch Fidelity Engine (Metric Audit #1 Sensor Anchor) | accepted | 2026-07-27 |
 | [074](ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) | Reciprocal Perturbation Coherence & Sediment Drift Novelty (Metric Audit #2) | accepted | 2026-07-27 |
 | [075](ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) | Manifold Spectral Entropy & Collapse Pressure Index (Metric Audit #3) | accepted | 2026-07-27 |
+| [076](ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) | Trajectory Coupling Coherence & Agent Self-Divergence (Metric Audit #4) | accepted | 2026-07-27 |
 
 
 ## Creating a New ADR

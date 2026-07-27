@@ -153,13 +153,12 @@ class ConversationMetricsModule(ProcessingModule):
         rolling_entropy = _compute_rolling_entropy(current_vec, recent_history, window=8)
         metrics["rolling_entropy"] = rolling_entropy
 
-        coupling = None
-        if prior_human and prior_agent:
-            coupling = float(np.dot(prior_human[0], prior_agent[0]))
-            coupling = max(0.0, min(1.0, coupling))
+        coupling = _compute_coupling_coherence(recent_history, window=8)
         metrics["coupling_coherence"] = coupling
 
-        agent_divergence = _compute_agent_self_divergence(prior_agent)
+        agent_divergence = _compute_agent_self_divergence(
+            current_vec, current_speaker, prior_agent
+        )
         metrics["agent_self_divergence"] = agent_divergence
 
         rp_t = _compute_reverse_perturbation(current_vec, prior_agent)
@@ -438,28 +437,92 @@ def _compute_rolling_entropy(
 
 
 def _compute_coupling_coherence(
-    repo: MessageRepository, conversation_id: str | None = None, exclude_message_id: int | None = None
+    recent_history: list[dict],
+    window: int = 8,
+    decay_lambda: float = 0.2,
 ) -> float | None:
-    last_human = repo.get_last_embedding_by_speaker(
-        "human", conversation_id=conversation_id, exclude_message_id=exclude_message_id
-    )
-    last_agent = repo.get_last_embedding_by_speaker(
-        "apparatus", conversation_id=conversation_id, exclude_message_id=exclude_message_id
-    )
-    if last_human is None or last_agent is None:
-        return None
-    c = float(np.dot(last_human, last_agent))
-    return max(0.0, min(1.0, c))
+    """# ponytail: compute trajectory cross-correlation between human and apparatus displacement vectors."""
+    human_vecs = []
+    agent_vecs = []
+    for item in recent_history:
+        v = item.get("embedding")
+        if v is None:
+            continue
+        norm = np.linalg.norm(v)
+        v_norm = v / norm if norm > 0 else v
+        if item.get("speaker") == "human":
+            human_vecs.append(v_norm)
+        else:
+            agent_vecs.append(v_norm)
+
+    if len(human_vecs) < 2 or len(agent_vecs) < 2:
+        return 0.5
+
+    h_disps = [human_vecs[i] - human_vecs[i + 1] for i in range(len(human_vecs) - 1)]
+    a_disps = [agent_vecs[i] - agent_vecs[i + 1] for i in range(len(agent_vecs) - 1)]
+
+    min_len = min(len(h_disps), len(a_disps), window)
+    if min_len == 0:
+        return 0.5
+
+    weighted_corrs = []
+    weights = []
+    for i in range(min_len):
+        hd = h_disps[i]
+        ad = a_disps[i]
+        hd_n = np.linalg.norm(hd)
+        ad_n = np.linalg.norm(ad)
+        if hd_n > 0 and ad_n > 0:
+            cos_disp = float(abs(np.dot(hd / hd_n, ad / ad_n)))
+        else:
+            cos_disp = 0.5
+        w = float(np.exp(-decay_lambda * i))
+        weighted_corrs.append(cos_disp * w)
+        weights.append(w)
+
+    if not weights or sum(weights) == 0:
+        return 0.5
+
+    score = sum(weighted_corrs) / sum(weights)
+    return round(max(0.0, min(1.0, float(score))), 3)
 
 
 def _compute_agent_self_divergence(
+    current_vec: np.ndarray,
+    current_speaker: str,
     prior_agent: list[np.ndarray],
+    max_recent_window: int = 15,
+    beta: float = 0.3,
 ) -> float | None:
-    if not prior_agent or len(prior_agent) < 2:
-        return None
-    latest = prior_agent[0]
-    divergences = [1.0 - float(np.dot(latest, v)) for v in prior_agent[1:]]
-    return float(np.mean(divergences))
+    """# ponytail: compute agent self-divergence via recency-decayed max self-similarity and repeat penalty."""
+    if not prior_agent:
+        return 0.5
+
+    c_norm = np.linalg.norm(current_vec)
+    c_vec = current_vec / c_norm if c_norm > 0 else current_vec
+
+    agent_norms = []
+    for v in prior_agent:
+        norm = np.linalg.norm(v)
+        agent_norms.append(v / norm if norm > 0 else v)
+
+    s_self_scores = []
+    for i, v in enumerate(agent_norms[:max_recent_window]):
+        cos_sim = max(0.0, min(1.0, float(np.dot(c_vec, v))))
+        w = float(np.exp(-beta * i))
+        s_self_scores.append(cos_sim * w)
+
+    s_self = max(s_self_scores) if s_self_scores else 0.0
+
+    penalty = 0.0
+    if len(agent_norms) > max_recent_window:
+        long_sims = [float(np.dot(c_vec, v)) for v in agent_norms[max_recent_window:]]
+        max_long = max(long_sims) if long_sims else 0.0
+        if max_long > 0.95:
+            penalty = 0.3 * (max_long - 0.95) / 0.05
+
+    divergence = 1.0 - s_self - penalty
+    return round(max(0.0, min(1.0, float(divergence))), 3)
 
 
 def _compute_reverse_perturbation(
