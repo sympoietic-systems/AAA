@@ -505,7 +505,9 @@ CREATE INDEX IF NOT EXISTS idx_research_tasks_priority ON research_tasks(priorit
 |--------|----------|---------|
 | `GET` | `/api/research/tasks` | List all tasks with optional filters: `?status=active`, `?trigger_source=user_console`, `?conversation_id=X` |
 | `GET` | `/api/research/tasks/{id}` | Detail for a single task: metadata + branches + assets summary |
-| `POST` | `/api/research/dispatch` | User dispatches a research task from conversation or console. Body: `{objective, conversation_id?, max_depth?, max_breadth?}` |
+| `POST` | `/api/research/dispatch` | User dispatches a research task. Body: `{objective, conversation_id?, max_depth?, max_breadth?, injected_documents?}` |
+| `POST` | `/api/research/continue` | Continue a research task with memory of prior synthesis, optional objective refinement, additional cycles, and `injected_documents` |
+| `GET` | `/api/research/files` | List indexed files (`perception_files`) for a conversation available for injection |
 | `POST` | `/api/research/proposals/{id}/approve` | User approves a Symbia-generated proposal |
 | `POST` | `/api/research/proposals/{id}/reject` | User rejects a Symbia-generated proposal |
 | `POST` | `/api/research/tasks/{id}/cancel` | Cancel a queued or active task |
