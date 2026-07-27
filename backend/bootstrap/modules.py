@@ -202,9 +202,15 @@ def _init_modules(
         cross_branch_similarity_threshold=ctx_cfg.get("cross_branch_similarity_threshold", 0.4),
     )
 
+    # ── Self-Initiation Arbiter ──
+    from backend.modules.self_initiation_arbiter import SelfInitiationArbiterModule
+
+    self_initiation_arbiter = SelfInitiationArbiterModule()
+
     return {
         "context_collector": context_collector,
         "conversation_metrics": conversation_metrics,
+        "self_initiation_arbiter": self_initiation_arbiter,
         "trait_computer": trait_computer,
         "expertise_engine": expertise_engine,
         "commitment_store": commitment_store,

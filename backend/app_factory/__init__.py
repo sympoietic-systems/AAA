@@ -353,6 +353,16 @@ def register_all(registry: PipelineRegistry, embedder, modules: dict, belief_met
         ),
     )
     reg.register_with_meta(
+        "self_initiation_arbiter",
+        lambda: modules["self_initiation_arbiter"],
+        ModuleMeta(
+            name="self_initiation_arbiter",
+            description="Autonomously initiates perturbations based on internal proprioceptive state",
+            category="reasoning",
+            always_run=True,
+        ),
+    )
+    reg.register_with_meta(
         "homeostatic_regulator",
         lambda: modules["homeostatic_regulator"],
         ModuleMeta(

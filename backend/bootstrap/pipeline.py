@@ -26,6 +26,7 @@ def _build_pipeline(config: dict, registry, repos: dict, modules: dict):
             "rhizome_web_probe",
             "web_retrieval",
             "conversation_metrics",
+            "self_initiation_arbiter",
             "trait_computer",
             "expertise_engine",
             "commitment_store",
