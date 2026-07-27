@@ -52,7 +52,22 @@ async def run_deep_reflection(
                         glitches_addressed += 1
                         break
 
-    glitch_fidelity = (glitches_addressed / glitches_detected) if glitches_detected > 0 else 1.0
+    # ponytail: compute diffractive glitch_fidelity via glitch_fidelity_engine
+    from backend.modules.glitch_fidelity_engine import compute_glitch_fidelity
+
+    addressed_ratio = (glitches_addressed / glitches_detected) if glitches_detected > 0 else 1.0
+    contradiction_density = max(0.0, min(1.0, 1.0 - addressed_ratio))
+    # Standard 16D autopoietic signature fallback for reflection step artifact
+    reflection_sig = [0.25] * 16
+    prior_artifact_sig = [0.45] * 16 if glitches_detected > 0 else [0.25] * 16
+
+    glitch_fidelity = compute_glitch_fidelity(
+        current_signature=reflection_sig,
+        current_embedding=None,
+        prior_signature=prior_artifact_sig,
+        prior_embedding=None,
+        contradiction_density=contradiction_density,
+    )
 
     # ── Calculate Source Entropy (Shannon entropy on domains) ──
     parsed_urls = orch._get_parsed_urls(task_id)

@@ -104,6 +104,7 @@ What becomes easier/harder?
 | [070](ADR-070-reflection-protocol.md) | Reflection Protocol (Self-Referential Structural Metrics Disclosure) | accepted | 2026-07-27 |
 | [071](ADR-071-scar-fold-monologue-belief-writeback.md) | Scar-Fold Persistent Monologue & Belief Writeback Channel | accepted | 2026-07-27 |
 | [072](ADR-072-adaptive-persona-cybernetic-metric-mapping.md) | Adaptive Persona & Cybernetic Metric Mapping (Ponytail Continuous Trait Drive) | accepted | 2026-07-27 |
+| [073](ADR-073-diffractive-glitch-fidelity-engine.md) | Diffractive Glitch Fidelity Engine (Metric Audit #1 Sensor Anchor) | accepted | 2026-07-27 |
 
 
 ## Creating a New ADR

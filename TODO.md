@@ -51,13 +51,13 @@
 
 ## Cybernetic Metrics Audit & Refinements (One-by-One Review)
     Review initial implementations of each per-message and per-conversation metric in `ConversationMetricsModule` and refine mathematical formulation, vector grounding, sliding window dynamics, and sensitivity step-by-step:
-    [ ] Metric Audit #1: `pairwise_similarity` & `conceptual_novelty` (vector similarity vs semantic drift).
-    [ ] Metric Audit #2: `rolling_entropy` & `boringness` (token/embedding entropy & predictability measures).
-    [ ] Metric Audit #3: `coupling_coherence` & `agent_self_divergence` (interlocutor alignment & recursive loop detection).
-    [ ] Metric Audit #4: `reverse_perturbation` & `mutual_perturbation` (bilateral influence & agonistic impact).
-    [ ] Metric Audit #5: `surprise_index` & `conceptual_velocity` (semantic displacement rate & phase changes).
-    [ ] Metric Audit #6: `divergence_resolution_ratio` (drr) & `paskian_health` (macro conversational vitality & entailment structure).
-    [ ] Metric Audit #7: `glitch_fidelity` (contradiction density & anti-smoothing fidelity under adversarial rotation).
+    [x] Metric Audit #1: `glitch_fidelity` & Diffractive Interference (16D autopoietic signature convolution, Goldilocks prior zone, ADR-073).
+    [ ] Metric Audit #2: `pairwise_similarity` & `conceptual_novelty` (vector similarity vs semantic drift).
+    [ ] Metric Audit #3: `rolling_entropy` & `boringness` (token/embedding entropy & predictability measures).
+    [ ] Metric Audit #4: `coupling_coherence` & `agent_self_divergence` (interlocutor alignment & recursive loop detection).
+    [ ] Metric Audit #5: `reverse_perturbation` & `mutual_perturbation` (bilateral influence & agonistic impact).
+    [ ] Metric Audit #6: `surprise_index` & `conceptual_velocity` (semantic displacement rate & phase changes).
+    [ ] Metric Audit #7: `divergence_resolution_ratio` (drr) & `paskian_health` (macro conversational vitality & entailment structure).
 
 ## Metric Apparatus Refinements (Deferred / Low Priority)
     [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.

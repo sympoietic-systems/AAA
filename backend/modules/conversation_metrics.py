@@ -219,6 +219,28 @@ class ConversationMetricsModule(ProcessingModule):
         phase_shifts = _detect_phase_shifts(metrics, prior_metrics, self._phase_shift_threshold)
         metrics["phase_shifts"] = phase_shifts
 
+        # ponytail: compute diffractive Glitch Fidelity across 16D signature & 384D embedding space
+        from backend.modules.glitch_fidelity_engine import compute_glitch_fidelity, select_diffractive_prior
+
+        curr_sig = payload.get("vector_16d") or payload.get("structural_vector_16d") or current_vec[:16]
+        cand_list = []
+        for m in ancestor_msgs[:10]:
+            if m.embedding and m.embedding_dim:
+                m_emb = np.frombuffer(m.embedding, dtype="float32")
+                m_sig = m.vector_16d if hasattr(m, "vector_16d") and m.vector_16d else m_emb[:16]
+                cand_list.append({"signature": m_sig, "embedding": m_emb})
+
+        prior_cand = select_diffractive_prior(curr_sig, current_vec, cand_list)
+        if prior_cand:
+            gf = compute_glitch_fidelity(
+                curr_sig, current_vec, prior_cand["signature"], prior_cand["embedding"]
+            )
+        else:
+            gf = 0.85
+
+        metrics["glitch_fidelity"] = gf
+        payload["glitch_fidelity"] = gf
+
         self._prior_metrics = {
             "pairwise_similarity": s_t,
             "conceptual_novelty": novelty,
