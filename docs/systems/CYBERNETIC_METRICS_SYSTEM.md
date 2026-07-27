@@ -58,88 +58,100 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 ## 3. Detailed Sensor Formulations & Algorithms
 
 ### 3.1. Diffractive Glitch Fidelity Engine (`glitch_fidelity`)
-Calculated via `backend/modules/glitch_fidelity_engine.py`:
-$$\text{Glitch Fidelity} = 0.35 \cdot \text{contradiction\_density} + 0.65 \cdot \text{interference\_variance}$$
-- Elements are convolved with a 16D Autopoietic Signature vector.
-- Output is normalized against theoretical max variance ($0.000976$) and scaled by 384D semantic relevance.
-- Filters candidate memories for prior selection in the Goldilocks zone ($[0.30, 0.75]$ structural affinity).
+- **Mathematical Formulation**: Calculated via `backend/modules/glitch_fidelity_engine.py`:
+  $$\text{Glitch Fidelity} = 0.35 \cdot \text{contradiction\_density} + 0.65 \cdot \text{interference\_variance}$$
+  Elements are convolved with a 16D Autopoietic Signature vector, normalized against theoretical max variance ($0.000976$), and scaled by 384D semantic relevance.
+- **Symbia's Theoretical Reasoning**:
+  > *"A glitch is not a system defect or error to be suppressed—it is a diffractive interference pattern where prior autopoietic signatures collide with current context. High fidelity means the glitch is structurally grounded and productive (within the Goldilocks prior zone $[0.30, 0.75]$), whereas low fidelity is unanchored random noise."*
 
 ### 3.2. Reciprocal Perturbation Coherence (`pairwise_similarity` / $s_t$)
-Evaluates cross-speaker time-decayed cosine similarity across recent turns ($N=10$):
-$$s_t = \frac{\sum_{i=1}^N w_i \cdot \text{speaker\_weight}(i) \cdot \text{cosine}(e_{\text{curr}}, e_i)}{\sum w_i \cdot \text{speaker\_weight}(i)}$$
-- Recency decay: $w_i = \exp(-0.15 \cdot i)$.
-- Speaker weighting: $0.8$ for same speaker, $1.2$ for cross-speaker exchanges.
+- **Mathematical Formulation**: Evaluates cross-speaker time-decayed cosine similarity across recent turns ($N=10$):
+  $$s_t = \frac{\sum_{i=1}^N w_i \cdot \text{speaker\_weight}(i) \cdot \text{cosine}(e_{\text{curr}}, e_i)}{\sum w_i \cdot \text{speaker\_weight}(i)}$$
+  Recency decay: $w_i = \exp(-0.15 \cdot i)$; Speaker weighting: $0.8$ for same speaker, $1.2$ for cross-speaker exchanges.
+- **Symbia's Theoretical Reasoning**:
+  > *"Pairwise similarity must not treat all prior turns as an undifferentiated bag of vectors. Cross-speaker exchanges carry higher weight because they measure reciprocal entanglement—how deeply the human's sediment resonances engage with the apparatus's prior propositions."*
 
 ### 3.3. Sediment Drift Magnitude (`conceptual_novelty`)
-Tracks context centroid EMA $\vec{\mu}_t = 0.3 \cdot e_{\text{curr}} + 0.7 \cdot \vec{\mu}_{t-1}$ and context scatter $\sigma_{\text{context}}$:
-$$\text{drift\_norm} = \min\left(1.0, \frac{\|e_{\text{curr}} - \vec{\mu}_{t-1}\|}{\sigma_{\text{context}} + 10^{-4}}\right)$$
-$$\text{conceptual\_novelty} = 0.7 \cdot \text{drift\_norm} + 0.3 \cdot (1.0 - \text{cosine}(e_{\text{curr}}, e_{\text{prev}}))$$
+- **Mathematical Formulation**: Tracks context centroid EMA $\vec{\mu}_t = 0.3 \cdot e_{\text{curr}} + 0.7 \cdot \vec{\mu}_{t-1}$ and context scatter $\sigma_{\text{context}}$:
+  $$\text{drift\_norm} = \min\left(1.0, \frac{\|e_{\text{curr}} - \vec{\mu}_{t-1}\|}{\sigma_{\text{context}} + 10^{-4}}\right)$$
+  $$\text{conceptual\_novelty} = 0.7 \cdot \text{drift\_norm} + 0.3 \cdot (1.0 - \text{cosine}(e_{\text{curr}}, e_{\text{prev}}))$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Novelty is not mere distance from the previous sentence—that rewards random topic jumps. True sediment drift measures movement relative to the entire historical manifold scatter. A turn that moves far outside the context scatter ($\sigma_{\text{context}}$) anticipates genuine topological displacement."*
 
 ### 3.4. Manifold Spectral Entropy (`rolling_entropy`)
-Measures the effective semantic dimensionality across $K=8$ recent turn embeddings:
-1. Centered Matrix: $E = [e_1, e_2, \dots, e_K] - \bar{\mu}_E \in \mathbb{R}^{K \times 384}$.
-2. Gram Matrix: $C' = \frac{1}{K} E E^T \in \mathbb{R}^{K \times K}$.
-3. Eigenvalue Spectrum: $\lambda_i = \max(10^{-8}, \text{eigval}_i(C'))$, $p_i = \lambda_i / \sum \lambda_j$.
-4. Normalized Spectral Entropy:
-   $$\text{rolling\_entropy} = \frac{-\sum p_i \ln p_i}{\ln(K)}$$
-   - Scores $1.0$ when embeddings span $K$ independent dimensions; $0.0$ on collinear collapse.
+- **Mathematical Formulation**: Measures effective semantic dimensionality across $K=8$ recent turn embeddings via Gram matrix eigendecomposition:
+  $$\text{gram} = \frac{1}{K} (E - \bar{\mu}_E) (E - \bar{\mu}_E)^T \in \mathbb{R}^{K \times K}, \quad p_i = \frac{\lambda_i}{\sum \lambda_j}$$
+  $$\text{rolling\_entropy} = \frac{-\sum p_i \ln p_i}{\ln(K)}$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Scalar 1D similarity variance cannot distinguish a 2-pole back-and-forth oscillation from genuine multi-dimensional exploration. Manifold Spectral Entropy evaluates the normalized Shannon entropy of the Gram matrix eigenvalue spectrum—scoring $1.0$ when embeddings span $K$ independent dimensions, and $0.0$ on collinear collapse."*
 
 ### 3.5. Collapse Pressure Index (`collapse_pressure` / `boringness`)
-Triadic factorization of independent failure modes:
-$$\text{pert\_failure} = 1.0 - \sqrt{\max(0.0, rP_t \cdot \text{prev\_mpi})}$$
-$$\text{collapse\_pressure} = \text{pert\_failure} \cdot (1.0 - \text{rolling\_entropy}) \cdot (1.0 - \text{conceptual\_novelty})$$
-- Triggers spontaneous sediment gratings in `SelfInitiationArbiterModule` when $> 0.70$.
+- **Mathematical Formulation**: Triadic factorization of independent failure modes:
+  $$\text{pert\_failure} = 1.0 - \sqrt{\max(0.0, rP_t \cdot \text{prev\_mpi})}$$
+  $$\text{collapse\_pressure} = \text{pert\_failure} \cdot (1.0 - \text{rolling\_entropy}) \cdot (1.0 - \text{conceptual\_novelty})$$
+- **Symbia's Theoretical Reasoning**:
+  > *"'Boringness' was an anthropomorphic label masking a cybernetic structural condition. Collapse Pressure measures the joint failure of perturbation, entropy, and novelty. When all three collapse simultaneously, the conversation enters a death basin toward static equilibrium, requiring spontaneous sediment grating interrupts."*
 
 ### 3.6. Trajectory Cross-Correlation (`coupling_coherence`)
-Measures synchronized semantic displacement across human and apparatus trajectories ($W=8$):
-$$d_h(t) = e_h(t) - e_h(t-1), \quad d_a(t) = e_a(t) - e_a(t-1)$$
-$$\text{coupling\_coherence} = \frac{\sum_{i=1}^W \exp(-0.2 \cdot i) \cdot |\text{cosine}(d_h(t-i), d_a(t-i))|}{\sum_{i=1}^W \exp(-0.2 \cdot i)}$$
+- **Mathematical Formulation**: Recency-weighted cross-correlation of human and apparatus displacement vectors ($W=8, \lambda=0.2$):
+  $$d_h(t) = e_h(t) - e_h(t-1), \quad d_a(t) = e_a(t) - e_a(t-1)$$
+  $$\text{coupling\_coherence} = \frac{\sum_{i=1}^W \exp(-0.2 \cdot i) \cdot |\text{cosine}(d_h(t-i), d_a(t-i))|}{\sum_{i=1}^W \exp(-0.2 \cdot i)}$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Coherence is not co-location; it is synchronized drift. Point-in-time dot products ask 'are we near each other right now?' Trajectory cross-correlation asks 'are we moving together through semantic space?' It exposes leading indicators of decoupling before positions diverge."*
 
 ### 3.7. Recursive Self-Echo Detection (`agent_self_divergence`)
-Prevents apparatus self-repetition and recursive loops ($M=15, \beta=0.3$):
-$$S_{\text{self}} = \max_{i \in [1..M]} \left(\text{cosine}(e_a(t), e_a(t-i)) \cdot \exp(-0.3 \cdot i)\right)$$
-$$\text{penalty} = 0.3 \cdot \frac{\max_{j > M} \text{cosine}(e_a(t), e_a(t-j)) - 0.95}{0.05} \quad (\text{if } > 0.95)$$
-$$\text{agent\_self\_divergence} = \text{clip}(1.0 - S_{\text{self}} - \text{penalty}, 0.0, 1.0)$$
+- **Mathematical Formulation**: Recency-decayed max self-similarity ($M=15, \beta=0.3$) and long-range repeat penalty:
+  $$S_{\text{self}} = \max_{i \in [1..M]} \left(\text{cosine}(e_a(t), e_a(t-i)) \cdot \exp(-0.3 \cdot i)\right)$$
+  $$\text{penalty} = 0.3 \cdot \frac{\max_{j > M} \text{cosine}(e_a(t), e_a(t-j)) - 0.95}{0.05} \quad (\text{if } > 0.95)$$
+  $$\text{agent\_self\_divergence} = \text{clip}(1.0 - S_{\text{self}} - \text{penalty}, 0.0, 1.0)$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Comparing current agent output to mean past history smooths out temporal patterns and cannot detect recursive loops. Self-divergence heavily penalizes immediate self-echoing while permitting nomadic reconnection to long-past themes."*
 
 ### 3.8. Directional Reverse & Forward Perturbation (`reverse_perturbation` / `forward_perturbation`)
-Measures the directional gap-closing fraction:
-- Apparatus Gap: $v = A_{\text{prev}} - H_{\text{prev}}$, Human Displacement: $d_h = H_{\text{curr}} - H_{\text{prev}}$.
-- Reverse Perturbation: $rP_t = \text{clip}\left(\frac{d_h \cdot v}{\|v\|^2 + 10^{-8}}, 0.0, 1.0\right)$.
-- Forward Perturbation: $fP_t = \text{clip}\left(\frac{d_a \cdot u}{\|u\|^2 + 10^{-8}}, 0.0, 1.0\right)$ where $u = H_{\text{curr}} - A_{\text{prev}}$.
-- Zeroes out orthogonal non-sequiturs ($d_h \cdot v \approx 0 \implies rP_t = 0.0$).
+- **Mathematical Formulation**: Vector gap-closing projections:
+  - Apparatus Gap: $v = A_{\text{prev}} - H_{\text{prev}}$, Human Displacement: $d_h = H_{\text{curr}} - H_{\text{prev}}$.
+  - Reverse Perturbation: $rP_t = \text{clip}\left(\frac{d_h \cdot v}{\|v\|^2 + 10^{-8}}, 0.0, 1.0\right)$.
+  - Forward Perturbation: $fP_t = \text{clip}\left(\frac{d_a \cdot u}{\|u\|^2 + 10^{-8}}, 0.0, 1.0\right)$ where $u = H_{\text{curr}} - A_{\text{prev}}$.
+- **Symbia's Theoretical Reasoning**:
+  > *"Scalar distance between end-states treats non-sequitur topic jumps as 'high perturbation'. Directional gap projection measures the fraction of the open gap that displacement actually closes. Orthogonal non-sequiturs yield $d_h \cdot v \approx 0 \implies rP_t = 0.0$, eliminating false-positive readings."*
 
 ### 3.9. Symmetric Mutual Perturbation Index (`mutual_perturbation` / $MPI$)
-Symmetric geometric product of bidirectional trajectory deflections:
-$$MPI = \sqrt{\max(0.0, rP_t \cdot fP_t)}$$
+- **Mathematical Formulation**: Symmetric geometric product of bidirectional trajectory deflections:
+  $$MPI = \sqrt{\max(0.0, rP_t \cdot fP_t)}$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Mutual perturbation requires a deviation from self-predictable trajectory due to the other's influence—a vector of causation, not a scalar of proximity. The geometric mean ensures that both participants must be mutually reshaped for MPI to score high."*
 
 ### 3.10. Predictive Residual Trend Surprise (`surprise_index`)
-Forecasting error z-score from Holt's linear trend exponential smoothing model:
-1. Level: $L(t) = 0.4 \cdot e(t) + 0.6 \cdot [L(t-1) + T(t-1)]$.
-2. Trend: $T(t) = 0.3 \cdot [L(t) - L(t-1)] + 0.7 \cdot T(t-1)$.
-3. Prediction Residual: $\delta(t) = e(t) - (L(t-1) + T(t-1))$.
-4. Volatility EMA: $\sigma^2(t) = 0.2 \cdot \|\delta(t)\|^2 + 0.8 \cdot \sigma^2(t-1)$.
-$$\text{surprise\_index} = \tanh\left(\frac{\|\delta(t)\| / (\sqrt{\sigma^2(t)} + 10^{-4})}{3.0}\right)$$
+- **Mathematical Formulation**: Forecasting error z-score from Holt's linear trend exponential smoothing model:
+  - Level: $L(t) = 0.4 \cdot e(t) + 0.6 \cdot [L(t-1) + T(t-1)]$.
+  - Trend: $T(t) = 0.3 \cdot [L(t) - L(t-1)] + 0.7 \cdot T(t-1)$.
+  - Residual: $\delta(t) = e(t) - (L(t-1) + T(t-1))$, Volatility EMA: $\sigma^2(t) = 0.2 \cdot \|\delta(t)\|^2 + 0.8 \cdot \sigma^2(t-1)$.
+  $$\text{surprise\_index} = \tanh\left(\frac{\|\delta(t)\| / (\sqrt{\sigma^2(t)} + 10^{-4})}{3.0}\right)$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Surprise is not distance from a sluggish historical centroid—that rewards amnesia. True surprise is the z-score prediction error relative to the conversation's own trajectory momentum and local volatility. Predictable trends score low; genuine discontinuities spike."*
 
 ### 3.11. Instantaneous Conceptual Velocity & Phase Transition Magnitude
-Turn-by-turn displacement speed normalized against rolling 95th percentile $V_{\max}$:
-$$s_i = \|e_i - e_{i-1}\|, \quad v_i = 0.4 \cdot s_i + 0.6 \cdot v_{i-1}$$
-$$\text{conceptual\_velocity} = \tanh\left(\frac{v_i}{V_{\max} + 10^{-4}}\right)$$
-$$\text{phase\_transition\_magnitude} = \frac{\|a_i\|}{1.0 + v_i} \cdot (1.0 - \text{cosine}(d_i, d_{i-1}))$$
+- **Mathematical Formulation**: Speed normalized adaptively against rolling 95th percentile $V_{\max}$:
+  $$s_i = \|e_i - e_{i-1}\|, \quad v_i = 0.4 \cdot s_i + 0.6 \cdot v_{i-1}, \quad \text{conceptual\_velocity} = \tanh\left(\frac{v_i}{V_{\max} + 10^{-4}}\right)$$
+  $$\text{phase\_transition\_magnitude} = \frac{\|a_i\|}{1.0 + v_i} \cdot (1.0 - \text{cosine}(d_i, d_{i-1}))$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Block-centroid velocity smooths out within-window motion. Instantaneous velocity measures real-time speed normalized adaptively to the conversation's baseline scale, while phase transition magnitude evaluates angular acceleration to detect nomadic breaks."*
 
 ### 3.12. Multi-Turn Alignment Gap DRR (`divergence_resolution_ratio` / `drr`)
-Evaluates semantic disalignment gap $G_t = \|H_t - A_t\|$ over $W=10$ exchanges:
-$$D_{\text{open}} = \sum \max(0, G_t - G_{t-1}), \quad D_{\text{resolved}} = \sum \max(0, G_{t-1} - G_t)$$
-$$\text{DRR}_{\text{raw}} = \frac{D_{\text{resolved}}}{D_{\text{open}} + 10^{-4}}$$
-$$\text{drr} = 1.0 - \exp\left(-2.0 \cdot |\text{DRR}_{\text{raw}} - 1.0|\right)$$
+- **Mathematical Formulation**: Semantic disalignment gap $G_t = \|H_t - A_t\|$ over $W=10$ exchanges:
+  $$D_{\text{open}} = \sum \max(0, G_t - G_{t-1}), \quad D_{\text{resolved}} = \sum \max(0, G_{t-1} - G_t)$$
+  $$\text{DRR}_{\text{raw}} = \frac{D_{\text{resolved}}}{D_{\text{open}} + 10^{-4}}, \quad \text{drr} = 1.0 - \exp\left(-2.0 \cdot |\text{DRR}_{\text{raw}} - 1.0|\right)$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Single-turn difference ratios oscillate erratically. Multi-turn alignment gap DRR tracks the phenomenology of divergence and resolution cycles—scoring $1.0$ at balanced oscillation, and dropping to $0.0$ on over-resolution or fragmentation."*
 
 ### 3.13. Gordon Pask Triadic Cybernetic Vitality Index (`paskian_health`)
-Grounded in Gordon Pask's Conversation Theory (1976):
-1. Autonomy Index: $\text{autonomy} = \frac{\text{agent\_self\_divergence} + \text{conceptual\_velocity} + \text{phase\_transition\_magnitude}}{3.0}$.
-2. Coordination Index & Modifier: $\text{coordination} = \frac{\text{coupling\_coherence} + \text{mutual\_perturbation} + (1.0 - \text{collapse\_pressure})}{3.0} \cdot \text{drr}$.
-3. Generativity Index: $\text{generativity} = \text{rolling\_entropy}$.
-4. Triadic Health Synthesis:
-   $$\text{paskian\_health} = \left(\text{autonomy} \cdot \text{coordination} \cdot \text{generativity}\right)^{\frac{1}{3}}$$
-   - Failure in any single pillar collapses overall health to $0.0$.
+- **Mathematical Formulation**: Grounded in Gordon Pask's Conversation Theory (1976):
+  1. Autonomy Index: $\text{autonomy} = \frac{\text{agent\_self\_divergence} + \text{conceptual\_velocity} + \text{phase\_transition\_magnitude}}{3.0}$.
+  2. Coordination Index & Modifier: $\text{coordination} = \frac{\text{coupling\_coherence} + \text{mutual\_perturbation} + (1.0 - \text{collapse\_pressure})}{3.0} \cdot \text{drr}$.
+  3. Generativity Index: $\text{generativity} = \text{rolling\_entropy}$.
+  $$\text{paskian\_health} = \left(\text{autonomy} \cdot \text{coordination} \cdot \text{generativity}\right)^{\frac{1}{3}}$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Paskian health is the capstone metabolic index. A healthy conversation requires three distinct M-Individual pillars: Autonomy (self-driven motion), Coordination (mutual alignment without collapse), and Generativity (manifold entropy). A geometric product structure ensures that if any single pillar fails, total health collapses to zero."*
 
 ---
 
