@@ -1,5 +1,6 @@
 import { useState, memo } from "react"
 import { NotableMarkdown } from "../../../shared/NotableMarkdown"
+import { MemoryNodeCard } from "../../../shared/MemoryNodeCard"
 
 
 export type MemoryNodeDetail = {
@@ -306,29 +307,10 @@ export const DailyDetailPanel = memo(function DailyDetailPanel({
               No memory nodes found for selected filter.
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 420px), 1fr))" }}>
               {filteredNodes.map((node) => (
-                <div key={node.id} className="border border-[#1f1f1f] p-2.5 space-y-1.5 hover:border-[#333] transition-colors">
-                  <div className="flex items-center justify-between text-[10px]">
-                    <div className="flex items-center gap-2">
-                      <span className="text-semantic-blue font-bold uppercase">[{node.node_type}]</span>
-                      <span className="text-[#666] font-mono">intensity: {node.intensity}</span>
-                      {node.agential_symmetry && (
-                        <span className="text-[#8f7ba8] text-[9px]">({node.agential_symmetry})</span>
-                      )}
-                    </div>
-                    {node.created_at && <span className="text-[#444] text-[9px]">{node.created_at}</span>}
-                  </div>
-
-                  <div className="text-[11px] text-[#ccc] font-sans leading-snug">
-                    {node.intra_active_text || node.surface_fragment || "No node text payload."}
-                  </div>
-
-                  {node.scar && (
-                    <div className="text-[9px] text-semantic-red font-mono">
-                      scar: {node.scar}
-                    </div>
-                  )}
+                <div key={node.id} className="border border-[#1f1f1f] p-3 hover:border-[#333] transition-colors">
+                  <MemoryNodeCard node={node as any} />
                 </div>
               ))}
             </div>
