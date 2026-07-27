@@ -50,7 +50,7 @@
         - Unused conversational metrics: Integrate computed metrics (like `rolling_entropy`, `coupling_coherence`, `reverse_perturbation`, `surprise_index`, `mutual_perturbation`, `boringness`, `conceptual_velocity`, `divergence_resolution_ratio`, and `paskian_health`) into adaptive persona selection, prompt templates, or routing policies once the sensorimotor feedback loop is live.
 
 ## Cybernetic Metrics Audit & Refinements (One-by-One Review)
-    Review initial implementations of each metric in `ConversationMetricsModule` and refine mathematical formulation, vector grounding, and sensitivity step-by-step:
+    Review initial implementations of each per-message and per-conversation metric in `ConversationMetricsModule` and refine mathematical formulation, vector grounding, sliding window dynamics, and sensitivity step-by-step:
     [ ] Metric Audit #1: `pairwise_similarity` & `conceptual_novelty` (vector similarity vs semantic drift).
     [ ] Metric Audit #2: `rolling_entropy` & `boringness` (token/embedding entropy & predictability measures).
     [ ] Metric Audit #3: `coupling_coherence` & `agent_self_divergence` (interlocutor alignment & recursive loop detection).
