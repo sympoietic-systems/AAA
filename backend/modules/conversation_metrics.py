@@ -40,6 +40,7 @@ class ConversationMetricsModule(ProcessingModule):
         self._agent_self_window = agent_self_window
         self._phase_shift_threshold = phase_shift_threshold
         self._prior_metrics: dict[str, float | None] = {}
+        self._prior_centroid: np.ndarray | None = None
 
     @property
     def name(self) -> str:
@@ -128,14 +129,25 @@ class ConversationMetricsModule(ProcessingModule):
                 vec = np.frombuffer(m.embedding, dtype="float32")
                 if len(vec) == m.embedding_dim:
                     all_recent.append(vec)
-        all_recent = all_recent[: self._pairwise_window + self._agent_self_window]
+        recent_history = []
+        for m in reversed(ancestor_msgs[:10]):
+            if m.embedding and m.embedding_dim:
+                vec = np.frombuffer(m.embedding, dtype="float32")
+                if len(vec) == m.embedding_dim:
+                    speaker = "human" if m.speaker == "human" else "apparatus"
+                    recent_history.append({"embedding": vec, "speaker": speaker})
+
+        current_speaker = payload.get("speaker", "apparatus")
 
         metrics: dict = {}
 
-        s_t = _compute_pairwise_similarity(current_vec, prior_human)
+        s_t = _compute_pairwise_similarity(current_vec, current_speaker, recent_history)
         metrics["pairwise_similarity"] = s_t
 
-        novelty = _compute_conceptual_novelty(current_vec, prior_human)
+        novelty, new_centroid = _compute_conceptual_novelty(
+            current_vec, recent_history, self._prior_centroid
+        )
+        self._prior_centroid = new_centroid
         metrics["conceptual_novelty"] = novelty
 
         rolling_entropy = _compute_rolling_entropy(current_vec, prior_human, self._entropy_window)
@@ -288,23 +300,92 @@ def _fmt4(v: float | None) -> str:
 
 def _compute_pairwise_similarity(
     current_vec: np.ndarray,
-    prior_human: list[np.ndarray],
+    current_speaker: str,
+    recent_history: list[dict],
+    decay_lambda: float = 0.15,
 ) -> float | None:
-    if not prior_human:
+    """# ponytail: compute reciprocal perturbation coherence with exponential decay and speaker weighting."""
+    if not recent_history:
         return None
-    s_t = float(np.dot(current_vec, prior_human[0]))
-    return max(0.0, min(1.0, s_t))
+
+    sims = []
+    c_norm = np.linalg.norm(current_vec)
+    c_vec = current_vec / c_norm if c_norm > 0 else current_vec
+
+    for i, item in enumerate(recent_history):
+        v = item.get("embedding")
+        if v is None:
+            continue
+        v_norm = np.linalg.norm(v)
+        v_vec = v / v_norm if v_norm > 0 else v
+
+        dot_sim = float(np.dot(c_vec, v_vec))
+        cos_sim = max(0.0, min(1.0, dot_sim))
+
+        speaker = item.get("speaker", "human")
+        speaker_factor = 0.8 if speaker == current_speaker else 1.2
+        decay = float(np.exp(-decay_lambda * i))
+
+        sims.append(cos_sim * decay * speaker_factor)
+
+    if not sims:
+        return None
+
+    weighted_sim = float(np.mean(sims))
+    return max(0.0, min(1.0, weighted_sim))
 
 
 def _compute_conceptual_novelty(
     current_vec: np.ndarray,
-    prior_human: list[np.ndarray],
-) -> float | None:
-    if not prior_human:
-        return None
-    sims = [float(np.dot(current_vec, v)) for v in prior_human]
-    max_sim = max(sims)
-    return max(0.0, 1.0 - max_sim)
+    recent_history: list[dict],
+    prior_centroid: np.ndarray | None = None,
+    alpha: float = 0.3,
+) -> tuple[float | None, np.ndarray]:
+    """# ponytail: compute sediment drift magnitude from context centroid and scatter."""
+    c_norm = np.linalg.norm(current_vec)
+    c_vec = current_vec / c_norm if c_norm > 0 else current_vec
+
+    if not recent_history:
+        return None, c_vec
+
+    hist_vecs = []
+    for item in recent_history:
+        v = item.get("embedding")
+        if v is not None:
+            norm = np.linalg.norm(v)
+            hist_vecs.append(v / norm if norm > 0 else v)
+
+    if not hist_vecs:
+        return None, c_vec
+
+    # Update context centroid EMA
+    if prior_centroid is None:
+        new_centroid = c_vec
+    else:
+        new_centroid = (alpha * c_vec) + ((1.0 - alpha) * prior_centroid)
+        norm_cent = np.linalg.norm(new_centroid)
+        if norm_cent > 0:
+            new_centroid = new_centroid / norm_cent
+
+    # Compute raw drift distance from centroid
+    drift_raw = 1.0 - max(0.0, min(1.0, float(np.dot(c_vec, new_centroid))))
+
+    # Compute scatter standard deviation across history turns relative to centroid
+    scatters = [1.0 - max(0.0, min(1.0, float(np.dot(hv, new_centroid)))) for hv in hist_vecs]
+    sigma_context = float(np.std(scatters)) if len(scatters) > 1 else 0.10
+
+    # Normalized drift distance
+    drift_norm = float(np.tanh(drift_raw / (sigma_context + 0.01)))
+
+    # Compute velocity relative to prior history turn drift
+    prior_drift = scatters[0] if scatters else 0.01
+    velocity = min(1.0, abs(drift_raw - prior_drift) / max(0.01, prior_drift))
+
+    # Combined novelty score (0.7 drift + 0.3 velocity)
+    novelty = (0.7 * drift_norm) + (0.3 * velocity)
+    novelty = max(0.0, min(1.0, float(novelty)))
+
+    return round(novelty, 3), new_centroid
 
 
 def _compute_rolling_entropy(

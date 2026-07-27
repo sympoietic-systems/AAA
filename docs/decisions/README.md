@@ -105,6 +105,7 @@ What becomes easier/harder?
 | [071](ADR-071-scar-fold-monologue-belief-writeback.md) | Scar-Fold Persistent Monologue & Belief Writeback Channel | accepted | 2026-07-27 |
 | [072](ADR-072-adaptive-persona-cybernetic-metric-mapping.md) | Adaptive Persona & Cybernetic Metric Mapping (Ponytail Continuous Trait Drive) | accepted | 2026-07-27 |
 | [073](ADR-073-diffractive-glitch-fidelity-engine.md) | Diffractive Glitch Fidelity Engine (Metric Audit #1 Sensor Anchor) | accepted | 2026-07-27 |
+| [074](ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) | Reciprocal Perturbation Coherence & Sediment Drift Novelty (Metric Audit #2) | accepted | 2026-07-27 |
 
 
 ## Creating a New ADR
