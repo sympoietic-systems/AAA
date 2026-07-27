@@ -171,23 +171,56 @@ class TraitComputer(ProcessingModule):
     # ── Core computation ──
 
     def _compute_raw_traits(self, metrics: dict) -> DescriptiveTraits:
-        """Map each metric product through sigmoid to produce a trait value."""
-        novelty = float(metrics.get("novelty", 0.5))
+        """# ponytail: continuous cybernetic metric mapping to descriptive traits."""
+        novelty = float(metrics.get("novelty", 0.5) or 0.5)
         tension = float(metrics.get("agent_divergence", 0.3) or 0.3)
         boringness = float(metrics.get("boringness", 0.5) or 0.5)
         conceptual_velocity = float(metrics.get("conceptual_velocity", 0.5) or 0.5)
         surprise_index = float(metrics.get("surprise_index", 0.3) or 0.3)
         coupling = float(metrics.get("coupling", 0.5) or 0.5)
-        # paskian_health and vitality reserved for future use
+        paskian_health = float(metrics.get("paskian_health", 0.5) or 0.5)
+        vitality = float(
+            metrics.get("conversation_vitality")
+            if metrics.get("conversation_vitality") is not None
+            else (metrics.get("vitality", 0.5) or 0.5)
+        )
+        mutual_perturbation = float(metrics.get("mutual_perturbation", 0.2) or 0.2)
+        drr = float(metrics.get("divergence_resolution_ratio", 0.1) or 0.1)
+
+        # Agonistic Persona Shift: boost skepticism and critical_rigor on health drop or boringness surge
+        agonistic_boost = max(0.0, (0.4 - paskian_health) * 0.8) + max(0.0, (boringness - 0.5) * 0.6)
+
+        curiosity_val = self._sigmoid(
+            (novelty * conceptual_velocity + mutual_perturbation * 0.3) * self._eta_curiosity
+        )
+        skepticism_val = min(
+            1.0, self._sigmoid((tension * surprise_index) * self._eta_skepticism) + agonistic_boost
+        )
+        creativity_val = self._sigmoid((1.0 - boringness) * novelty * self._eta_creativity)
+        precision_val = self._sigmoid(
+            ((1.0 - boringness) + (1.0 - min(1.0, abs(drr))) * 0.3) * self._eta_precision
+        )
+        critical_rigor_val = min(
+            1.0,
+            self._sigmoid((tension * (1.0 - coupling)) * self._eta_critical_rigor)
+            + (agonistic_boost * 0.8),
+        )
+        playfulness_val = self._sigmoid(
+            (surprise_index * conceptual_velocity + mutual_perturbation * 0.4) * self._eta_playfulness
+        )
+        reserve_val = self._sigmoid(
+            ((1.0 - coupling) * self._eta_reserve if coupling > 0.6 else 0.3)
+            + (1.0 - vitality) * 0.2
+        )
 
         return DescriptiveTraits(
-            curiosity=self._sigmoid(novelty * conceptual_velocity * self._eta_curiosity),
-            skepticism=self._sigmoid(tension * surprise_index * self._eta_skepticism),
-            creativity=self._sigmoid((1.0 - boringness) * novelty * self._eta_creativity),
-            precision=self._sigmoid((1.0 - boringness) * self._eta_precision),
-            critical_rigor=self._sigmoid(tension * (1.0 - coupling) * self._eta_critical_rigor),
-            playfulness=self._sigmoid(surprise_index * conceptual_velocity * self._eta_playfulness),
-            reserve=self._sigmoid((1.0 - coupling) * self._eta_reserve if coupling > 0.6 else 0.3),
+            curiosity=round(curiosity_val, 3),
+            skepticism=round(skepticism_val, 3),
+            creativity=round(creativity_val, 3),
+            precision=round(precision_val, 3),
+            critical_rigor=round(critical_rigor_val, 3),
+            playfulness=round(playfulness_val, 3),
+            reserve=round(reserve_val, 3),
         )
 
     # ── Anti-erosion ──

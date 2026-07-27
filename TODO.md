@@ -44,8 +44,8 @@
     [x] Design and implement Reflection Protocol allowing Symbia to directly voice its structural metrics state back to the collaborator in dialogue (e.g., "I sense our coupling is thinning...").
     [x] Extend `<scar-fold>` mechanism into a persistent internal monologue channel that writes back to persistent belief nodes across turns.
 
-## Adaptive Persona & Routing (Medium Priority)
-    [ ] Leverage "floating" parameters and calculated metrics inside homeostatic regulation:
+## Adaptive Persona & Routing (Completed)
+    [x] Leverage "floating" parameters and calculated metrics inside homeostatic regulation:
         - Bypassed penalties (`presence_penalty`, `frequency_penalty`): Map them to internal prompt dynamics/weights since they are not sent to providers.
         - Unused conversational metrics: Integrate computed metrics (like `rolling_entropy`, `coupling_coherence`, `reverse_perturbation`, `surprise_index`, `mutual_perturbation`, `boringness`, `conceptual_velocity`, `divergence_resolution_ratio`, and `paskian_health`) into adaptive persona selection, prompt templates, or routing policies once the sensorimotor feedback loop is live.
 
