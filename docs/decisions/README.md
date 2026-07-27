@@ -110,6 +110,7 @@ What becomes easier/harder?
 | [076](ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) | Trajectory Coupling Coherence & Agent Self-Divergence (Metric Audit #4) | accepted | 2026-07-27 |
 | [077](ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) | Directional Reverse Perturbation & Symmetric Mutual Perturbation Index (Metric Audit #5) | accepted | 2026-07-27 |
 | [078](ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) | Predictive Residual Surprise & Instantaneous Conceptual Velocity (Metric Audit #6) | accepted | 2026-07-27 |
+| [079](ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) | Alignment Gap DRR & Gordon Pask Triadic Health (Metric Audit #7 Capstone) | accepted | 2026-07-27 |
 
 
 ## Creating a New ADR

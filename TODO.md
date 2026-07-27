@@ -57,7 +57,7 @@
     [x] Metric Audit #4: `coupling_coherence` & `agent_self_divergence` (Trajectory Cross-Correlation & Recursive Loop Detection, ADR-076).
     [x] Metric Audit #5: `reverse_perturbation` & `mutual_perturbation` (Directional Reverse Perturbation & Symmetric Mutual Perturbation Index, ADR-077).
     [x] Metric Audit #6: `surprise_index` & `conceptual_velocity` (Predictive Residual Surprise & Instantaneous Conceptual Velocity, ADR-078).
-    [ ] Metric Audit #7: `divergence_resolution_ratio` (drr) & `paskian_health` (macro conversational vitality & entailment structure).
+    [x] Metric Audit #7: `divergence_resolution_ratio` (drr) & `paskian_health` (Alignment Gap Oscillation & Gordon Pask Triadic Health, ADR-079).
 
 ## Metric Apparatus Refinements (Deferred / Low Priority)
     [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.

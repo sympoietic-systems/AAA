@@ -212,12 +212,19 @@ class ConversationMetricsModule(ProcessingModule):
         metrics["conceptual_velocity"] = conceptual_velocity
         metrics["phase_transition_magnitude"] = phase_trans
 
-        prev_coupling = prior_metrics.get("coupling_coherence")
-        prev_rp = prior_metrics.get("reverse_perturbation")
-        drr = _compute_drr(coupling, prev_coupling, prev_rp)
+        drr = _compute_drr(recent_history, window=10)
         metrics["divergence_resolution_ratio"] = drr
 
-        pask_health = _compute_paskian_health(collapse_pressure, conceptual_velocity, drr)
+        pask_health = _compute_paskian_health(
+            agent_self_divergence=agent_divergence,
+            conceptual_velocity=conceptual_velocity,
+            phase_transition_magnitude=phase_trans,
+            coupling_coherence=coupling,
+            mutual_perturbation=mpi,
+            collapse_pressure=collapse_pressure,
+            rolling_entropy=rolling_entropy,
+            drr=drr,
+        )
         metrics["paskian_health"] = pask_health
 
         deficit = _compute_deficit(
@@ -844,45 +851,81 @@ def _compute_conceptual_velocity(
 
 
 def _compute_drr(
-    coupling: float | None,
-    prev_coupling: float | None,
-    prev_rp: float | None,
+    recent_history: list[dict],
+    window: int = 10,
+    alpha: float = 0.4,
+    k_log: float = 2.0,
 ) -> float | None:
-    """DRR_t = (coupling_t - coupling_{t-1}) / max(rP_{t-1}, 0.01)
+    """# ponytail: compute multi-turn alignment gap DRR (ratio of resolved gap to opened gap)."""
+    if not recent_history or len(recent_history) < 3:
+        return 0.5
 
-    Does the agent's perturbation lead to resolution or rejection?
-    Positive DRR → perturbation caused convergence (productive disagreement resolved).
-    Negative DRR → perturbation pushed them apart (rejection, too-aggressive cut).
-    Near-zero DRR → perturbation was absorbed without structural change (boring).
-    """
-    if coupling is None or prev_coupling is None or prev_rp is None:
-        return None
-    if prev_rp < 0.02:
-        return 0.0
-    drr = (coupling - prev_coupling) / prev_rp
-    return max(-1.0, min(1.0, drr))
+    human_vecs = []
+    agent_vecs = []
+    for item in recent_history[: window * 2]:
+        v = item.get("embedding")
+        if v is None:
+            continue
+        norm = np.linalg.norm(v)
+        v_norm = v / norm if norm > 0 else v
+        if item.get("speaker") == "human":
+            human_vecs.append(v_norm)
+        else:
+            agent_vecs.append(v_norm)
+
+    if not human_vecs or not agent_vecs:
+        return 0.5
+
+    human_vecs.reverse()
+    agent_vecs.reverse()
+
+    min_len = min(len(human_vecs), len(agent_vecs))
+    if min_len < 2:
+        return 0.5
+
+    h_ema = human_vecs[0].copy()
+    a_ema = agent_vecs[0].copy()
+    gaps = [float(np.linalg.norm(h_ema - a_ema))]
+
+    for i in range(1, min_len):
+        h_ema = alpha * human_vecs[i] + (1.0 - alpha) * h_ema
+        a_ema = alpha * agent_vecs[i] + (1.0 - alpha) * a_ema
+        gaps.append(float(np.linalg.norm(h_ema - a_ema)))
+
+    d_open = sum(max(0.0, gaps[i] - gaps[i - 1]) for i in range(1, len(gaps)))
+    d_resolved = sum(max(0.0, gaps[i - 1] - gaps[i]) for i in range(1, len(gaps)))
+
+    drr_raw = d_resolved / (d_open + 1e-4)
+    drr_norm = 1.0 - float(np.exp(-k_log * abs(drr_raw - 1.0)))
+    return round(max(0.0, min(1.0, drr_norm)), 3)
 
 
 def _compute_paskian_health(
-    boringness: float | None,
+    agent_self_divergence: float | None,
     conceptual_velocity: float | None,
+    phase_transition_magnitude: float | None,
+    coupling_coherence: float | None,
+    mutual_perturbation: float | None,
+    collapse_pressure: float | None,
+    rolling_entropy: float | None,
     drr: float | None,
 ) -> float | None:
-    """Paskian health: how well does the conversation maintain the productive
-    zone between strict convergence and permissive noise?
+    """# ponytail: compute Gordon Pask triadic cybernetic vitality index (geometric mean)."""
+    div_val = agent_self_divergence if agent_self_divergence is not None else 0.5
+    vel_val = conceptual_velocity if conceptual_velocity is not None else 0.5
+    phase_val = phase_transition_magnitude if phase_transition_magnitude is not None else 0.0
 
-    Pask_health = (1 - B_t) × V_c_norm × (1 - |DRR_t - DRR_optimal|)
+    autonomy_index = (div_val + vel_val + phase_val) / 3.0
 
-    Where DRR_optimal ≈ 0.15 (slight positive convergence, not instant agreement).
-    High Pask_health → conversation is in the productive disagreement zone.
-    """
-    if boringness is None or conceptual_velocity is None or drr is None:
-        return None
+    coup_val = coupling_coherence if coupling_coherence is not None else 0.5
+    mpi_val = mutual_perturbation if mutual_perturbation is not None else 0.5
+    anti_collapse = 1.0 - (collapse_pressure if collapse_pressure is not None else 0.5)
 
-    drr_optimal = 0.15
-    anti_boring = 1.0 - boringness
-    v_norm = min(1.0, conceptual_velocity / 0.35)
-    drr_quality = 1.0 - min(1.0, abs(drr - drr_optimal) / 0.5)
+    coordination_index = (coup_val + mpi_val + anti_collapse) / 3.0
+    drr_modifier = drr if drr is not None else 0.5
 
-    ph = anti_boring * v_norm * drr_quality
-    return max(0.0, min(1.0, ph))
+    generativity_index = rolling_entropy if rolling_entropy is not None else 0.5
+
+    pask_raw = autonomy_index * (coordination_index * drr_modifier) * generativity_index
+    pask_health = float(np.cbrt(max(0.0, pask_raw)))
+    return round(max(0.0, min(1.0, pask_health)), 3)
