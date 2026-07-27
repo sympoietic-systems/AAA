@@ -13,6 +13,13 @@ from pydantic import BaseModel
 router = APIRouter()
 
 
+class InjectedDocSpec(BaseModel):
+    file_id: str
+    conversation_id: str | None = None
+    document_mode: str = "chunks"
+    document_chunk_limit: int = 5
+
+
 class DispatchPayload(BaseModel):
     objective: str
     title: str | None = None
@@ -28,6 +35,7 @@ class DispatchPayload(BaseModel):
     inject_conversation_id: str | None = None
     document_mode: str | None = None
     document_chunk_limit: int | None = None
+    injected_documents: list[InjectedDocSpec] | None = None
 
 
 class ContinuePayload(BaseModel):
@@ -40,6 +48,7 @@ class ContinuePayload(BaseModel):
     inject_conversation_id: str | None = None
     document_mode: str | None = None
     document_chunk_limit: int | None = None
+    injected_documents: list[InjectedDocSpec] | None = None
     budget_limit_usd: float | None = None
     max_breadth: int | None = None
     is_agonistic: bool | None = None
@@ -102,6 +111,7 @@ async def dispatch_research(payload: DispatchPayload, request: Request):
         inject_conversation_id=payload.inject_conversation_id,
         document_mode=payload.document_mode,
         document_chunk_limit=payload.document_chunk_limit,
+        injected_documents=[d.model_dump() for d in payload.injected_documents] if payload.injected_documents else None,
     )
 
     manager.queue(task_id)

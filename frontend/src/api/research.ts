@@ -40,6 +40,13 @@ export interface ResearchSummary {
   pending_proposals: number
 }
 
+export interface InjectedDocSpec {
+  file_id: string
+  conversation_id?: string
+  document_mode?: 'full' | 'chunks'
+  document_chunk_limit?: number
+}
+
 export interface DispatchPayload {
   objective: string
   title?: string
@@ -55,6 +62,7 @@ export interface DispatchPayload {
   inject_conversation_id?: string
   document_mode?: string
   document_chunk_limit?: number
+  injected_documents?: InjectedDocSpec[]
 }
 
 export interface ContinuePayload {
@@ -67,6 +75,7 @@ export interface ContinuePayload {
   inject_conversation_id?: string
   document_mode?: string
   document_chunk_limit?: number
+  injected_documents?: InjectedDocSpec[]
   budget_limit_usd?: number
   max_breadth?: number
   is_agonistic?: boolean
@@ -291,10 +300,12 @@ export interface StepPreview {
   }
   file_id?: string
   mode?: string
-  chunk_limit?: number
+  chunk_limit?: number | null
   document_digested?: boolean
   doc_summary?: string
   doc_chunks?: { content: string; sim: number }[]
+  documents?: { file_id: string; mode: string; chunk_limit?: number | null; doc_summary?: string; doc_chunks?: { content: string; sim: number }[] }[]
+  cached_at?: string
 }
 
 export async function getStepPreview(taskId: string, phase: string): Promise<StepPreview> {

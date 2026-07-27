@@ -119,6 +119,7 @@ class ResearchTaskManager:
         inject_conversation_id: str | None = None,
         document_mode: str | None = None,
         document_chunk_limit: int | None = None,
+        injected_documents: list[dict] | None = None,
     ) -> str:
         """Create a new research task and persist it. Returns task_id."""
         if status not in VALID_STATUSES:
@@ -155,6 +156,8 @@ class ResearchTaskManager:
             extra_state["document_mode"] = document_mode
         if document_chunk_limit is not None:
             extra_state["document_chunk_limit"] = document_chunk_limit
+        if injected_documents:
+            extra_state["injected_documents"] = injected_documents
         if extra_state:
             import json
 

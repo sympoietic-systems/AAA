@@ -575,11 +575,22 @@ class SomaticResearchOrchestrator:
                 previous_context=task_state.get("previous_context"), inject_file_id=task_state.get("inject_file_id")
             )
         elif phase == "document_digestion":
+            raw_docs = task_state.get("injected_documents") or []
+            from backend.services.research.task_state import InjectedDocumentSpec
+
+            doc_specs = []
+            for d in raw_docs:
+                if isinstance(d, dict):
+                    doc_specs.append(InjectedDocumentSpec(**d))
+                elif isinstance(d, InjectedDocumentSpec):
+                    doc_specs.append(d)
+
             payload = DocDigestPayload(
-                inject_file_id=task_state.get("inject_file_id") or "",
+                inject_file_id=task_state.get("inject_file_id"),
                 inject_conversation_id=task_state.get("inject_conversation_id"),
                 document_mode=task_state.get("document_mode", "chunks"),
                 document_chunk_limit=task_state.get("document_chunk_limit", 5),
+                documents=doc_specs,
             )
         elif phase == "searching":
             plan_queries = []

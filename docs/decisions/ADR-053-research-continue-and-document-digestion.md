@@ -52,17 +52,22 @@ A new backend endpoint that creates a continued research task with memory of the
 - If `inject_file_id` is provided, sets up the document digestion phase
 - Passes `previous_context` to the planner via the existing `user_with_context` template
 
-### 2. New Phase: `document_digestion`
+### 2. New Phase: `document_digestion` (Multi-Document Support)
 
-A new pipeline phase inserted into the orchestrator's `PHASE_ORDER` after planning and before the first web search:
+A pipeline phase inserted into the orchestrator's `PHASE_ORDER` after planning and before the first web search:
 
 ```
 planning → document_digestion → searching → parsing → digesting → reflecting → evaluating → ...
 ```
 
-The phase is **skipped** when no document is injected.
+The phase is **skipped** when no documents are injected.
 
-**Two modes:**
+**Multi-Document Injection & Parallel Processing:**
+- Supports injecting multiple documents simultaneously via `injected_documents: list[InjectedDocumentSpec]`.
+- Digestion of each document runs concurrently using `asyncio.gather(*[...], return_exceptions=True)`, making multi-document ingestion fast and resilient against single-document failures.
+- Findings retain explicit document provenance (`[filename.pdf]: learning text`).
+
+**Two modes per document:**
 
 | Mode | Behavior | Use Case |
 |------|----------|----------|

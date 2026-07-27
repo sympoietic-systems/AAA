@@ -116,14 +116,38 @@ class SynthesizePayload(BaseModel):
     result_summary: str = ""
 
 
+class InjectedDocumentSpec(BaseModel):
+    file_id: str
+    conversation_id: str | None = None
+    document_mode: str = "chunks"
+    document_chunk_limit: int = 5
+
+
 class DocDigestPayload(BaseModel):
-    inject_file_id: str
+    inject_file_id: str | None = None
     inject_conversation_id: str | None = None
     document_mode: str = "chunks"
     document_chunk_limit: int = 5
+    documents: list[InjectedDocumentSpec] = Field(default_factory=list)
     learnings: list[str] = Field(default_factory=list)
     followups: list[str] = Field(default_factory=list)
     gaps: list[str] = Field(default_factory=list)
+
+    def get_effective_documents(self) -> list[InjectedDocumentSpec]:
+        """Returns normalized list of InjectedDocumentSpec items, supporting legacy single doc payload."""
+        if self.documents:
+            return self.documents
+        if self.inject_file_id:
+            return [
+                InjectedDocumentSpec(
+                    file_id=self.inject_file_id,
+                    conversation_id=self.inject_conversation_id,
+                    document_mode=self.document_mode,
+                    document_chunk_limit=self.document_chunk_limit,
+                )
+            ]
+        return []
+
 
 
 class RoutingPatch(BaseModel):

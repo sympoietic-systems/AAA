@@ -1,9 +1,10 @@
+import asyncio
 import json
 import logging
 import uuid
 
 from backend.services.research.steps.base import BaseResearchStep
-from backend.services.research.task_state import DocDigestPayload, StepEnvelope, StepOutput
+from backend.services.research.task_state import DocDigestPayload, InjectedDocumentSpec, StepEnvelope, StepOutput
 from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
@@ -32,48 +33,54 @@ class DocumentDigestionStep(BaseResearchStep):
         return "document_digestion"
 
     async def preview(self, orch, envelope: StepEnvelope, state: dict) -> dict:
-        task_id = envelope.task_id
         objective = envelope.objective
-
         payload: DocDigestPayload = envelope.payload
-        inject_file_id = payload.inject_file_id
-        inject_conv_id = payload.inject_conversation_id
-        doc_mode = payload.document_mode
-        chunk_limit = payload.document_chunk_limit
+        documents = payload.get_effective_documents()
 
-        doc_summary = ""
-        doc_chunks: list[dict] = []
+        previews = []
+        task_id = envelope.task_id
+        perception_repo = getattr(orch._state, "perception_repo", None)
 
-        if inject_file_id:
-            conversation_id = None
-            task_row = orch.task_repo.get(task_id) if orch.task_repo else None
-            if task_row:
-                conversation_id = task_row.get("conversation_id")
-            effective_conv_id = inject_conv_id or conversation_id
+        task_row = orch.task_repo.get(task_id) if orch.task_repo else None
+        default_conv_id = task_row.get("conversation_id") if task_row else None
 
-            perception_repo = getattr(orch._state, "perception_repo", None)
+        for doc in documents:
+            doc_summary = ""
+            doc_chunks: list[dict] = []
+            effective_conv_id = doc.conversation_id or default_conv_id
+
             if perception_repo and effective_conv_id:
                 try:
-                    db_chunks = perception_repo.get_by_file(effective_conv_id, inject_file_id)
+                    db_chunks = perception_repo.get_by_file(effective_conv_id, doc.file_id)
                     doc_chunks = [{"content": c.chunk_text, "sim": 0} for c in db_chunks if c.chunk_text]
-                    file_info = perception_repo.find_file_by_name(inject_file_id)
+                    file_info = perception_repo.find_file_by_name(doc.file_id)
                     if file_info and file_info.get("summary"):
-                        doc_summary = f"[Document: {inject_file_id}]\n{file_info['summary']}"
+                        doc_summary = f"[Document: {doc.file_id}]\n{file_info['summary']}"
                 except Exception as e:
-                    logger.warning("Document chunk preview retrieval failed: %s", e)
+                    logger.warning("Document chunk preview retrieval failed for %s: %s", doc.file_id, e)
 
-            if doc_mode == "chunks":
-                doc_chunks = doc_chunks[:chunk_limit]
+            if doc.document_mode == "chunks":
+                doc_chunks = doc_chunks[: doc.document_chunk_limit]
 
+            previews.append(
+                {
+                    "file_id": doc.file_id,
+                    "mode": doc.document_mode,
+                    "chunk_limit": doc.document_chunk_limit if doc.document_mode == "chunks" else None,
+                    "doc_summary": doc_summary,
+                    "doc_chunks": doc_chunks,
+                }
+            )
+
+        first_doc = documents[0] if documents else None
         return {
             "phase": "document_digestion",
-            "file_id": inject_file_id,
-            "mode": doc_mode,
-            "chunk_limit": chunk_limit if doc_mode == "chunks" else None,
+            "file_id": first_doc.file_id if first_doc else None,
+            "mode": first_doc.document_mode if first_doc else "chunks",
+            "chunk_limit": (first_doc.document_chunk_limit if first_doc and first_doc.document_mode == "chunks" else None),
+            "documents": previews,
             "document_digested": state.get("document_digested", False),
             "objective": objective,
-            "doc_summary": doc_summary,
-            "doc_chunks": doc_chunks,
             "cached_at": now_utc_str(),
         }
 
@@ -82,142 +89,150 @@ class DocumentDigestionStep(BaseResearchStep):
         objective = envelope.objective
         current_depth = envelope.current_depth
         max_depth = envelope.max_depth
-
         payload: DocDigestPayload = envelope.payload
-        inject_file_id = payload.inject_file_id
-        inject_conv_id = payload.inject_conversation_id
-        doc_mode = payload.document_mode
-        chunk_limit = payload.document_chunk_limit
 
-        if not inject_file_id:
-            return StepOutput(status="completed", message="no document to digest", payload=payload)
+        documents = payload.get_effective_documents()
+        if not documents:
+            return StepOutput(status="completed", message="no documents to digest", payload=payload)
 
         s = orch._get_state(task_id)
         step_id = orch._create_or_update_step(s, task_id, "document_digestion")
 
-        conversation_id = None
         task_row = orch.task_repo.get(task_id) if orch.task_repo else None
-        if task_row:
-            conversation_id = task_row.get("conversation_id")
-
-        effective_conv_id = inject_conv_id or conversation_id
+        default_conv_id = task_row.get("conversation_id") if task_row else None
         perception_repo = getattr(orch._state, "perception_repo", None)
 
-        if not effective_conv_id and perception_repo:
-            file_info = perception_repo.find_file_by_name(inject_file_id)
-            if file_info:
-                effective_conv_id = file_info.get("conversation_id")
+        # First check indexing readiness across all documents
+        for doc in documents:
+            if perception_repo:
+                file_status = perception_repo.find_file_by_name(doc.file_id)
+                if file_status and file_status.get("status") != "ready":
+                    logger.info(
+                        "Document %s not yet ready (status=%s); retrying next tick",
+                        doc.file_id,
+                        file_status.get("status"),
+                    )
+                    return StepOutput(status="failed", message=f"document {doc.file_id} not yet indexed", payload=payload)
 
-        if not effective_conv_id:
-            if orch.step_repo:
-                orch.step_repo.update(
-                    step_id,
-                    status="completed",
-                    result_summary="Cannot resolve conversation for document; skipping digestion",
+        async def _digest_single_document(doc: InjectedDocumentSpec):
+            effective_conv_id = doc.conversation_id or default_conv_id
+            if not effective_conv_id and perception_repo:
+                file_info = perception_repo.find_file_by_name(doc.file_id)
+                if file_info:
+                    effective_conv_id = file_info.get("conversation_id")
+
+            if not effective_conv_id:
+                logger.warning("Cannot resolve conversation for document %s; skipping", doc.file_id)
+                return {"file_id": doc.file_id, "learnings": [], "followups": [], "gaps": [], "chunks_count": 0}
+
+            doc_chunks: list[str] = []
+            if perception_repo:
+                try:
+                    db_chunks = perception_repo.get_by_file(effective_conv_id, doc.file_id)
+                    doc_chunks = [_chunk_with_breadcrumb(c) for c in db_chunks if c.chunk_text]
+                except Exception as e:
+                    logger.warning("Document chunk retrieval failed for %s: %s", doc.file_id, e)
+
+            if doc.document_mode == "chunks":
+                doc_chunks = doc_chunks[: doc.document_chunk_limit]
+
+            if not doc_chunks:
+                return {"file_id": doc.file_id, "learnings": [], "followups": [], "gaps": [], "chunks_count": 0}
+
+            combined_content = "\n\n---\n\n".join(doc_chunks)
+            combined_content = combined_content[: orch._TRUNC_LLM_CONTENT * 2]
+
+            from backend.services.research.steps.digest import analyze_source_content
+
+            analysis = await analyze_source_content(
+                orch,
+                task_id,
+                f"document:{doc.file_id}",
+                str(doc.file_id),
+                combined_content,
+                objective,
+                objective,
+                0,
+                max_depth,
+                step_id=step_id,
+            )
+
+            if orch.step_result_repo:
+                orch.step_result_repo.create(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "step_id": step_id,
+                        "task_id": task_id,
+                        "source_url": f"document:{doc.file_id}",
+                        "source_title": str(doc.file_id),
+                        "raw_content": combined_content[:5000],
+                        "relevance_score": 0.0,
+                        "novelty_score": 0.0,
+                        "analyzed_json": json.dumps(analysis, ensure_ascii=False),
+                    }
                 )
-            return StepOutput(status="completed", message="no conversation for document", payload=payload)
 
-        if perception_repo:
-            file_status = perception_repo.find_file_by_name(inject_file_id)
-            if file_status and file_status.get("status") != "ready":
-                logger.info(
-                    "Document %s not yet ready (status=%s); retrying next tick",
-                    inject_file_id,
-                    file_status.get("status"),
-                )
-                return StepOutput(status="failed", message="document not yet indexed", payload=payload)
+            return {
+                "file_id": doc.file_id,
+                "learnings": analysis.get("learnings", []),
+                "followups": analysis.get("followups", []),
+                "gaps": analysis.get("gaps", []),
+                "chunks_count": len(doc_chunks),
+            }
 
-        doc_chunks: list[str] = []
+        # Run parallel digestion across all documents
+        results = await asyncio.gather(*[_digest_single_document(d) for d in documents], return_exceptions=True)
 
-        if perception_repo:
-            try:
-                db_chunks = perception_repo.get_by_file(effective_conv_id, inject_file_id)
-                doc_chunks = [_chunk_with_breadcrumb(c) for c in db_chunks if c.chunk_text]
-                file_info = perception_repo.find_file_by_name(inject_file_id)
-                if file_info and file_info.get("summary"):
-                    pass
-            except Exception as e:
-                logger.warning("Document chunk retrieval failed: %s", e)
+        all_learnings: list[str] = []
+        all_followups: list[str] = []
+        all_gaps: list[str] = []
+        new_findings: list[str] = []
+        digested_summaries: list[str] = []
 
-        if doc_mode == "chunks":
-            doc_chunks = doc_chunks[:chunk_limit]
+        for doc, res in zip(documents, results):
+            if isinstance(res, Exception):
+                logger.error("Error digesting document %s: %s", doc.file_id, res, exc_info=res)
+                continue
+            file_id = res["file_id"]
+            learnings = res["learnings"]
+            followups = res["followups"]
+            gaps = res["gaps"]
 
-        if not doc_chunks:
-            if orch.step_repo:
-                orch.step_repo.update(
-                    step_id,
-                    status="completed",
-                    result_summary="No relevant document chunks found for digestion",
-                    step_data=json.dumps({"depth": current_depth}, ensure_ascii=False),
-                )
-            return StepOutput(status="completed", message="no relevant chunks", payload=payload)
+            all_learnings.extend(learnings)
+            all_followups.extend(followups)
+            all_gaps.extend(gaps)
 
-        combined_content = "\n\n---\n\n".join(doc_chunks)
-        combined_content = combined_content[: orch._TRUNC_LLM_CONTENT * 2]
+            for l in learnings:
+                new_findings.append(f"[{file_id}]: {l}")
 
-        goal = objective
-        from backend.services.research.steps.digest import analyze_source_content
-
-        analysis = await analyze_source_content(
-            orch,
-            task_id,
-            f"document:{inject_file_id}",
-            str(inject_file_id),
-            combined_content,
-            objective,
-            goal,
-            0,
-            max_depth,
-            step_id=step_id,
-        )
-
-        learnings = analysis.get("learnings", [])
-        followups = analysis.get("followups", [])
-        gaps = analysis.get("gaps", [])
+            digested_summaries.append(f"doc {file_id}: {len(learnings)} learnings ({res['chunks_count']} chunks)")
 
         if orch.step_repo:
             orch.step_repo.update(
                 step_id,
                 status="completed",
-                result_summary=f"{len(learnings)} learnings, {len(followups)} followups from doc {inject_file_id} ({len(doc_chunks)} chunks)",
+                result_summary="; ".join(digested_summaries) or "No learnings extracted",
                 step_data=json.dumps(
                     {
                         "depth": current_depth,
-                        "learnings": learnings,
-                        "followups": followups,
-                        "gaps": gaps,
-                        "file_id": inject_file_id,
-                        "mode": doc_mode,
+                        "learnings": all_learnings,
+                        "followups": all_followups,
+                        "gaps": all_gaps,
+                        "documents": [d.model_dump() for d in documents],
                     },
                     default=str,
                     ensure_ascii=False,
                 ),
             )
 
-        if orch.step_result_repo:
-            orch.step_result_repo.create(
-                {
-                    "id": str(uuid.uuid4()),
-                    "step_id": step_id,
-                    "task_id": task_id,
-                    "source_url": f"document:{inject_file_id}",
-                    "source_title": str(inject_file_id),
-                    "raw_content": combined_content[:5000],
-                    "relevance_score": 0.0,
-                    "novelty_score": 0.0,
-                    "analyzed_json": json.dumps(analysis, ensure_ascii=False),
-                }
-            )
-
         orch._log_meta(
             task_id,
             "orchestrator_document_digest_complete",
             {
-                "file_id": inject_file_id,
-                "chunks_analyzed": len(doc_chunks),
-                "learnings": len(learnings),
-                "followups": len(followups),
-                "gaps": len(gaps),
+                "documents_count": len(documents),
+                "total_learnings": len(all_learnings),
+                "total_followups": len(all_followups),
+                "total_gaps": len(all_gaps),
             },
             step_id=step_id,
         )
@@ -225,30 +240,30 @@ class DocumentDigestionStep(BaseResearchStep):
         try:
             from backend.utils.structural_demand import detect_structural_demand
 
-            demand_text = "\n".join(str(x) for x in (learnings + followups + gaps))
+            demand_text = "\n".join(str(x) for x in (all_learnings + all_followups + all_gaps))
             demand = detect_structural_demand(demand_text)
             if demand["demanded"]:
                 orch._log_meta(task_id, "structural_demand_detected", demand, step_id=step_id)
         except Exception as e:
             logger.warning("Structural-demand detection failed: %s", e)
 
-        new_findings = [f"[{inject_file_id}]: " + learning for learning in learnings]
-
+        first_doc = documents[0]
         out_payload = DocDigestPayload(
-            inject_file_id=inject_file_id,
-            inject_conversation_id=inject_conv_id,
-            document_mode=doc_mode,
-            document_chunk_limit=chunk_limit,
-            learnings=learnings,
-            followups=followups,
-            gaps=gaps,
+            inject_file_id=first_doc.file_id,
+            inject_conversation_id=first_doc.conversation_id,
+            document_mode=first_doc.document_mode,
+            document_chunk_limit=first_doc.document_chunk_limit,
+            documents=documents,
+            learnings=all_learnings,
+            followups=all_followups,
+            gaps=all_gaps,
         )
 
-        rationale = f"Successfully digested uploaded document {inject_file_id} in {doc_mode} mode, extracting {len(learnings)} key learnings."
+        rationale = f"Successfully digested {len(documents)} document(s), extracting {len(all_learnings)} key learnings."
 
         return StepOutput(
             status="completed",
-            message=f"{len(learnings)} learnings from document",
+            message=f"{len(all_learnings)} learnings from {len(documents)} document(s)",
             payload=out_payload,
             new_findings=new_findings,
             step_ids=[step_id],
