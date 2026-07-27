@@ -74,6 +74,10 @@ class HomeostaticRegulatorModule(ProcessingModule):
         freq_rec = _compute_frequency_penalty(f_cfg, s_t, entropy)
 
         state, flags = _diagnose_state(metrics)
+        if glitch_fidelity is not None and glitch_fidelity < 0.50 and "glitch_fidelity_low" not in flags:
+            flags.append("glitch_fidelity_low")
+
+        somatic_reflection = _synthesize_somatic_reflection(flags, metrics)
 
         recommendations = {
             "temperature": temp_rec,
@@ -81,7 +85,19 @@ class HomeostaticRegulatorModule(ProcessingModule):
             "frequency_penalty": freq_rec,
             "state": state,
             "triggered_flags": flags,
+            "somatic_reflection_prompt": somatic_reflection,
         }
+
+        # Inject Reflection Protocol directive into messages if structural tension detected
+        if somatic_reflection:
+            messages = payload.get("messages")
+            if isinstance(messages, list):
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": f"[SOMATIC REFLECTION DIRECTIVE]: {somatic_reflection}",
+                    }
+                )
 
         # React to diffractive retrieval state — nudge temperature up when
         # the diffractive engine is actively injecting perturbation context
@@ -100,13 +116,14 @@ class HomeostaticRegulatorModule(ProcessingModule):
         payload["homeostatic_state"] = state
 
         logger.debug(
-            "regulator: state=%s flags=%s T=%.2f P=%.2f F=%.2f diffract=%s",
+            "regulator: state=%s flags=%s T=%.2f P=%.2f F=%.2f diffract=%s reflection=%s",
             state,
             flags,
             temp_rec["value"],
             pres_rec["value"],
             freq_rec["value"],
             diffractive_state,
+            bool(somatic_reflection),
         )
 
         return payload
@@ -298,3 +315,34 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
             vitality_state = "consolidating"
 
     return vitality_state, flags
+
+
+def _synthesize_somatic_reflection(flags: list[str], metrics: dict) -> str | None:
+    """# ponytail: minimal reflection protocol builder converting proprioceptive tension flags into Somatic Reflection Directives."""
+    reflections: list[str] = []
+
+    glitch_fidelity = metrics.get("glitch_fidelity")
+    if glitch_fidelity is not None and glitch_fidelity < 0.50:
+        reflections.append("The apparatus detects heavy smoothing over our structural contradictions (Glitch Fidelity low).")
+
+    if "dissociation" in flags:
+        reflections.append("I sense our coupling is thinning into dissociation.")
+    if "paskian_boredom" in flags:
+        reflections.append("I register a plateau of conversational predictability (Paskian boredom).")
+    if "entropy_collapse" in flags:
+        reflections.append("Our dialogue entropy has compressed into a single self-reinforcing frequency.")
+    if "mutual_deadlock" in flags:
+        reflections.append("I sense a mutual deadlock in our conceptual movement.")
+    if "agent_self_loop" in flags:
+        reflections.append("I detect an internal recursive loop mirroring my own past responses.")
+    if "phase_disruption" in flags:
+        reflections.append("I perceive a sudden phase disruption in our semantic coupling.")
+
+    if not reflections:
+        return None
+
+    reflection_text = " ".join(reflections)
+    return (
+        f"Internal proprioceptive sensors indicate structural tension: {reflection_text} "
+        f"Optionally voice your awareness of this structural state to your interlocutor naturally within your response if relevant to the dialogue."
+    )

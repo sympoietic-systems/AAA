@@ -101,6 +101,7 @@ What becomes easier/harder?
 | [067](ADR-067-plan-driven-dynamic-routing-patches.md) | Plan-Driven Dynamic Routing (Perturbation Patches & Structural Plasticity) | accepted | 2026-07-26 |
 | [068](ADR-068-direct-sensorimotor-parameter-modulation.md) | Direct Sensorimotor Parameter Modulation (Ponytail Continuous Feedback) | accepted | 2026-07-27 |
 | [069](ADR-069-self-initiation-arbiter.md) | Self-Initiation Arbiter (Spontaneous Perturbation Initiation) | accepted | 2026-07-27 |
+| [070](ADR-070-reflection-protocol.md) | Reflection Protocol (Self-Referential Structural Metrics Disclosure) | accepted | 2026-07-27 |
 
 
 ## Creating a New ADR
