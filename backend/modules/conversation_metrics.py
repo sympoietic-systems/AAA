@@ -150,7 +150,7 @@ class ConversationMetricsModule(ProcessingModule):
         self._prior_centroid = new_centroid
         metrics["conceptual_novelty"] = novelty
 
-        rolling_entropy = _compute_rolling_entropy(current_vec, prior_human, self._entropy_window)
+        rolling_entropy = _compute_rolling_entropy(current_vec, recent_history, window=8)
         metrics["rolling_entropy"] = rolling_entropy
 
         coupling = None
@@ -197,8 +197,9 @@ class ConversationMetricsModule(ProcessingModule):
             prior_metrics = self._prior_metrics
 
         prev_mpi = prior_metrics.get("mutual_perturbation")
-        boringness = _compute_boringness(rp_t, prev_mpi)
-        metrics["boringness"] = boringness
+        collapse_pressure = _compute_collapse_pressure(rp_t, prev_mpi, rolling_entropy, novelty)
+        metrics["collapse_pressure"] = collapse_pressure
+        metrics["boringness"] = collapse_pressure  # ponytail: backward compatibility alias for boringness
 
         conceptual_velocity = _compute_conceptual_velocity(current_vec, all_recent)
         metrics["conceptual_velocity"] = conceptual_velocity
@@ -208,7 +209,7 @@ class ConversationMetricsModule(ProcessingModule):
         drr = _compute_drr(coupling, prev_coupling, prev_rp)
         metrics["divergence_resolution_ratio"] = drr
 
-        pask_health = _compute_paskian_health(boringness, conceptual_velocity, drr)
+        pask_health = _compute_paskian_health(collapse_pressure, conceptual_velocity, drr)
         metrics["paskian_health"] = pask_health
 
         deficit = _compute_deficit(
@@ -278,7 +279,7 @@ class ConversationMetricsModule(ProcessingModule):
             _fmt(rp_t),
             _fmt(surprise),
             _fmt(mpi),
-            _fmt(boringness),
+            _fmt(collapse_pressure),
             _fmt(conceptual_velocity),
             _fmt(drr),
             _fmt(pask_health),
@@ -390,27 +391,50 @@ def _compute_conceptual_novelty(
 
 def _compute_rolling_entropy(
     current_vec: np.ndarray,
-    prior_human: list[np.ndarray],
-    window: int,
+    recent_history: list[dict],
+    window: int = 8,
+    eps_reg: float = 1e-8,
 ) -> float | None:
-    pairs = _build_similarity_pairs(current_vec, prior_human, window)
-    if len(pairs) < 2:
-        return None
-    variance = float(np.var(pairs))
-    return max(0.0, variance)
+    """# ponytail: compute manifold spectral entropy from embedding Gram matrix eigendecomposition."""
+    if not recent_history:
+        return 0.5
 
+    c_norm = np.linalg.norm(current_vec)
+    c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
-def _build_similarity_pairs(
-    current_vec: np.ndarray,
-    prior_human: list[np.ndarray],
-    window: int,
-) -> list[float]:
-    pairs: list[float] = []
-    vecs = [current_vec] + prior_human
-    for i in range(min(len(vecs) - 1, window)):
-        s = float(np.dot(vecs[i], vecs[i + 1]))
-        pairs.append(max(0.0, min(1.0, s)))
-    return pairs
+    hist_vecs = [c_vec]
+    for item in recent_history[: window - 1]:
+        v = item.get("embedding")
+        if v is not None:
+            norm = np.linalg.norm(v)
+            hist_vecs.append(v / norm if norm > 0 else v)
+
+    K = len(hist_vecs)
+    if K < 2:
+        return 0.5
+
+    # Center matrix E (K x D)
+    E = np.stack(hist_vecs)
+    mu_E = np.mean(E, axis=0)
+    E_centered = E - mu_E
+
+    # Gram matrix C' = (1/K) * E_centered * E_centered^T (K x K)
+    gram = (1.0 / K) * np.dot(E_centered, E_centered.T)
+    gram_trace = float(np.trace(gram))
+
+    if gram_trace < 1e-6:
+        return 0.0
+
+    try:
+        eigvals = np.linalg.eigvalsh(gram)
+        eigvals = np.maximum(eigvals, eps_reg)
+        p = eigvals / np.sum(eigvals)
+        h_raw = float(-np.sum(p * np.log(p)))
+        max_h = float(np.log(K))
+        entropy = h_raw / max_h if max_h > 0 else 0.5
+        return round(max(0.0, min(1.0, float(entropy))), 4)
+    except Exception:
+        return 0.5
 
 
 def _compute_coupling_coherence(
@@ -611,20 +635,26 @@ def _detect_phase_shifts(
     return shifts
 
 
-def _compute_boringness(
+def _compute_collapse_pressure(
     rp_t: float | None,
     prev_mpi: float | None,
+    rolling_entropy: float | None,
+    conceptual_novelty: float | None,
 ) -> float | None:
-    """B_t = (1 - rP_t) × (1 - MPI_{t-1})
-
-    Boringness is the joint failure to perturb in both directions.
-    Uses lagged Mutual Perturbation Index (MPI_{t-1}) to handle non-sequitur blind spots.
-    """
+    """# ponytail: compute triadic collapse pressure index (renamed from boringness)."""
     if rp_t is None:
         return None
-    mpi_val = prev_mpi if prev_mpi is not None else 0.0
-    b = (1.0 - rp_t) * (1.0 - mpi_val)
-    return max(0.0, min(1.0, b))
+
+    rp_val = float(rp_t)
+    mpi_val = prev_mpi if prev_mpi is not None else 0.5
+    entropy_val = rolling_entropy if rolling_entropy is not None else 0.5
+    novelty_val = conceptual_novelty if conceptual_novelty is not None else 0.5
+
+    pert_geom_mean = float(np.sqrt(max(0.0, rp_val * mpi_val)))
+    pert_failure = 1.0 - pert_geom_mean
+
+    collapse = pert_failure * (1.0 - entropy_val) * (1.0 - novelty_val)
+    return round(max(0.0, min(1.0, float(collapse))), 3)
 
 
 def _compute_conceptual_velocity(

@@ -37,6 +37,7 @@ class SelfInitiationArbiterModule(ProcessingModule):
         entropy = metrics.get("rolling_entropy")
         vitality = metrics.get("conversation_vitality")
         s_t = metrics.get("pairwise_similarity")
+        collapse_pressure = metrics.get("collapse_pressure", metrics.get("boringness"))
 
         # 1. Hyper-Fluency / Sedation Interrupt -> Auto-trigger Random Sediment Grating
         sedation_by_entropy = (
@@ -46,12 +47,13 @@ class SelfInitiationArbiterModule(ProcessingModule):
             and entropy < 0.03
         )
         sedation_by_similarity = s_t is not None and s_t > 0.88
+        sedation_by_collapse = collapse_pressure is not None and collapse_pressure > 0.70
 
-        if (sedation_by_entropy or sedation_by_similarity) and not payload.get("grating_requested"):
+        if (sedation_by_entropy or sedation_by_similarity or sedation_by_collapse) and not payload.get("grating_requested"):
             payload["grating_requested"] = True
             payload["self_initiated_action"] = "GRATING_SEDATION"
             payload["self_initiation_reason"] = (
-                "Autonomously requested sediment grating to break hyper-fluency/sedation"
+                "Autonomously requested sediment grating to break hyper-fluency/collapse pressure"
             )
             logger.info(
                 "self_initiation_arbiter: Autonomously requested Sediment Grating (GF=%s, Entropy=%s, Similarity=%s)",

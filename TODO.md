@@ -53,7 +53,7 @@
     Review initial implementations of each per-message and per-conversation metric in `ConversationMetricsModule` and refine mathematical formulation, vector grounding, sliding window dynamics, and sensitivity step-by-step:
     [x] Metric Audit #1: `glitch_fidelity` & Diffractive Interference (16D autopoietic signature convolution, Goldilocks prior zone, ADR-073).
     [x] Metric Audit #2: `pairwise_similarity` & `conceptual_novelty` (Reciprocal Perturbation Coherence & Sediment Drift Magnitude, ADR-074).
-    [ ] Metric Audit #3: `rolling_entropy` & `boringness` (token/embedding entropy & predictability measures).
+    [x] Metric Audit #3: `rolling_entropy` & `boringness` (Manifold Spectral Entropy & Collapse Pressure Index, ADR-075).
     [ ] Metric Audit #4: `coupling_coherence` & `agent_self_divergence` (interlocutor alignment & recursive loop detection).
     [ ] Metric Audit #5: `reverse_perturbation` & `mutual_perturbation` (bilateral influence & agonistic impact).
     [ ] Metric Audit #6: `surprise_index` & `conceptual_velocity` (semantic displacement rate & phase changes).
