@@ -605,10 +605,12 @@ class LLMClientModule(ProcessingModule):
 
         recs = payload.get("homeostatic_recommendations")
         if recs:
-            for param in ("temperature",):
+            for param in ("temperature", "presence_penalty", "frequency_penalty"):
                 rec = recs.get(param)
                 if isinstance(rec, dict) and "value" in rec:
-                    params[param] = rec["value"]
+                    val = rec["value"]
+                    if param == "temperature" or val > 0.0:
+                        params[param] = val
 
         result = await self._provider.generate(messages, **params)
         payload["response"] = result["content"]

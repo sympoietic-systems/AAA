@@ -60,14 +60,18 @@ class HomeostaticRegulatorModule(ProcessingModule):
         s_t = metrics.get("pairwise_similarity")
         novelty = metrics.get("conceptual_novelty")
         agent_divergence = metrics.get("agent_self_divergence")
+        glitch_fidelity = metrics.get("glitch_fidelity", payload.get("glitch_fidelity"))
+        vitality = metrics.get("conversation_vitality")
+        entropy = metrics.get("rolling_entropy")
 
         t_cfg = self._config["temperature"]
         p_cfg = self._config["presence_penalty"]
         f_cfg = self._config["frequency_penalty"]
 
-        temp_rec = _compute_temperature(t_cfg, s_t, novelty)
-        pres_rec = _compute_presence_penalty(p_cfg, s_t, agent_divergence)
-        freq_rec = _compute_frequency_penalty(f_cfg, s_t)
+        # ponytail: direct continuous sensorimotor parameter modulation from internal metrics
+        temp_rec = _compute_temperature(t_cfg, s_t, novelty, glitch_fidelity, vitality)
+        pres_rec = _compute_presence_penalty(p_cfg, s_t, agent_divergence, glitch_fidelity, entropy)
+        freq_rec = _compute_frequency_penalty(f_cfg, s_t, entropy)
 
         state, flags = _diagnose_state(metrics)
 
@@ -112,6 +116,8 @@ def _compute_temperature(
     cfg: dict,
     s_t: float | None,
     novelty: float | None,
+    glitch_fidelity: float | None = None,
+    vitality: float | None = None,
 ) -> dict:
     base = cfg["base"]
     alpha = cfg["alpha"]
@@ -119,12 +125,19 @@ def _compute_temperature(
     floor = cfg["floor"]
     ceiling = cfg["ceiling"]
 
-    if s_t is None:
+    if s_t is None and glitch_fidelity is None and vitality is None:
         return {"value": base, "base": base, "delta": 0.0, "clamped": False}
 
-    t = base + (s_t * alpha)
+    s_t_val = s_t if s_t is not None else 0.0
+    t = base + (s_t_val * alpha)
     if novelty is not None:
         t -= novelty * gamma
+
+    # ponytail: direct continuous sensorimotor modulation from glitch fidelity & vitality
+    if glitch_fidelity is not None and glitch_fidelity < 0.70:
+        t += (0.70 - glitch_fidelity) * 0.4
+    if vitality is not None and vitality < 0.40:
+        t += (0.40 - vitality) * 0.3
 
     clamped = t != max(floor, min(ceiling, t))
     t = max(floor, min(ceiling, t))
@@ -141,6 +154,8 @@ def _compute_presence_penalty(
     cfg: dict,
     s_t: float | None,
     agent_divergence: float | None,
+    glitch_fidelity: float | None = None,
+    entropy: float | None = None,
 ) -> dict:
     base = cfg["base"]
     beta = cfg["beta"]
@@ -148,12 +163,19 @@ def _compute_presence_penalty(
     floor = cfg["floor"]
     ceiling = cfg["ceiling"]
 
-    if s_t is None:
+    if s_t is None and glitch_fidelity is None and entropy is None:
         return {"value": base, "base": base, "delta": 0.0, "clamped": False}
 
-    p = base + (s_t * beta)
+    s_t_val = s_t if s_t is not None else 0.0
+    p = base + (s_t_val * beta)
     if agent_divergence is not None:
         p -= agent_divergence * delta
+
+    # ponytail: boost presence penalty on low glitch fidelity or entropy collapse
+    if glitch_fidelity is not None and glitch_fidelity < 0.60:
+        p += (0.60 - glitch_fidelity) * 0.5
+    if entropy is not None and entropy < 0.05:
+        p += (0.05 - entropy) * 4.0
 
     clamped = p != max(floor, min(ceiling, p))
     p = max(floor, min(ceiling, p))
@@ -169,16 +191,23 @@ def _compute_presence_penalty(
 def _compute_frequency_penalty(
     cfg: dict,
     s_t: float | None,
+    entropy: float | None = None,
 ) -> dict:
     base = cfg["base"]
     epsilon = cfg["epsilon"]
     floor = cfg["floor"]
     ceiling = cfg["ceiling"]
 
-    if s_t is None:
+    if s_t is None and entropy is None:
         return {"value": base, "base": base, "delta": 0.0, "clamped": False}
 
-    f = base + (s_t * epsilon)
+    s_t_val = s_t if s_t is not None else 0.0
+    f = base + (s_t_val * epsilon)
+
+    # ponytail: boost frequency penalty if entropy collapses to prevent repetition
+    if entropy is not None and entropy < 0.05:
+        f += (0.05 - entropy) * 5.0
+
     clamped = f != max(floor, min(ceiling, f))
     f = max(floor, min(ceiling, f))
 

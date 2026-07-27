@@ -95,6 +95,11 @@ What becomes easier/harder?
 | [061](ADR-061-rhizomatic-search-and-unified-modulation-membrane.md) | Rhizomatic Search and Unified Modulation Membrane | accepted | 2026-07-09 |
 | [062](ADR-062-hierarchy-aware-digestion-scar-folds.md) | Hierarchy-Aware Digestion (Structural Scar-Folds) | accepted | 2026-07-11 |
 | [063](ADR-063-markdown-agential-cut-html-sanitization.md) | Agential Cut for Unmediated HTML Script Execution in Markdown Rendering | accepted | 2026-07-22 |
+| [064](ADR-064-daily-consolidation-summary-and-metabolic-calendar.md) | Daily Consolidation Summary and Metabolic Calendar | accepted | 2026-07-26 |
+| [065](ADR-065-belief-suture-and-pure-reflection-glitch-engine.md) | Belief Suture and Pure Reflection Glitch Engine | accepted | 2026-07-26 |
+| [066](ADR-066-random-sediment-grating-protocol.md) | Random Sediment Grating Protocol | accepted | 2026-07-26 |
+| [067](ADR-067-plan-driven-dynamic-routing-patches.md) | Plan-Driven Dynamic Routing (Perturbation Patches & Structural Plasticity) | accepted | 2026-07-26 |
+| [068](ADR-068-direct-sensorimotor-parameter-modulation.md) | Direct Sensorimotor Parameter Modulation (Ponytail Continuous Feedback) | accepted | 2026-07-27 |
 
 
 ## Creating a New ADR
