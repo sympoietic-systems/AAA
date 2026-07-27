@@ -1,6 +1,6 @@
 # Cybernetic Metrics System & Proprioceptive Sensor Suite
 
-**Subsystem:** `backend/modules/conversation_metrics.py`  
+**Subsystem:** `backend/modules/metrics/` (`resonance.py`, `trajectories.py`, `kinematics.py`, `health.py`) & `backend/modules/conversation_metrics.py` (Facade)  
 **Architectural Decision Records:** ADR-073 to ADR-079  
 **Status:** Live & Production Ready  
 
