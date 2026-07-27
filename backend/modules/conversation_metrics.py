@@ -161,15 +161,6 @@ class ConversationMetricsModule(ProcessingModule):
         )
         metrics["agent_self_divergence"] = agent_divergence
 
-        rp_t = _compute_reverse_perturbation(current_vec, prior_agent)
-        metrics["reverse_perturbation"] = rp_t
-
-        surprise = _compute_surprise_index(current_vec, prior_human)
-        metrics["surprise_index"] = surprise
-
-        mpi = _compute_mutual_perturbation(coupling, rp_t)
-        metrics["mutual_perturbation"] = mpi
-
         prior_metrics = {}
         path_ids = [m.id for m in ancestor_msgs if m.id is not None]
         if path_ids:
@@ -186,6 +177,7 @@ class ConversationMetricsModule(ProcessingModule):
                             "coupling_coherence": turn.get("coupling"),
                             "agent_self_divergence": turn.get("agent_divergence"),
                             "reverse_perturbation": turn.get("reverse_perturbation"),
+                            "forward_perturbation": turn.get("forward_perturbation"),
                             "surprise_index": turn.get("surprise_index"),
                             "mutual_perturbation": turn.get("mutual_perturbation"),
                         }
@@ -194,6 +186,22 @@ class ConversationMetricsModule(ProcessingModule):
         # Fall back to in-memory self._prior_metrics if DB returned nothing
         if not prior_metrics:
             prior_metrics = self._prior_metrics
+
+        if current_speaker == "human":
+            rp_t = _compute_reverse_perturbation(current_vec, prior_human, prior_agent)
+            fp_t = prior_metrics.get("forward_perturbation")
+        else:
+            fp_t = _compute_forward_perturbation(current_vec, prior_human, prior_agent)
+            rp_t = prior_metrics.get("reverse_perturbation")
+
+        metrics["reverse_perturbation"] = rp_t
+        metrics["forward_perturbation"] = fp_t
+
+        surprise = _compute_surprise_index(current_vec, prior_human)
+        metrics["surprise_index"] = surprise
+
+        mpi = _compute_mutual_perturbation(rp_t, fp_t)
+        metrics["mutual_perturbation"] = mpi
 
         prev_mpi = prior_metrics.get("mutual_perturbation")
         collapse_pressure = _compute_collapse_pressure(rp_t, prev_mpi, rolling_entropy, novelty)
@@ -527,19 +535,52 @@ def _compute_agent_self_divergence(
 
 def _compute_reverse_perturbation(
     current_vec: np.ndarray,
+    prior_human: list[np.ndarray],
     prior_agent: list[np.ndarray],
 ) -> float | None:
-    """rP_t: did the agent's last response reshape the human's next question?
-
-    rP_t = 1 - cos(agent_response_{t-1}, human_input_t)
-    High rP_t = human diverged from prior agent response → agent perturbed or human resisted.
-    Low rP_t = human echoed the agent → no perturbation in the reverse direction.
-    """
-    if not prior_agent:
+    """# ponytail: compute directional reverse perturbation (fraction of apparatus gap closed by human displacement)."""
+    if not prior_human or not prior_agent:
         return None
-    agent_last_vec = prior_agent[0]
-    rp = 1.0 - float(np.dot(current_vec, agent_last_vec))
-    return max(0.0, min(1.0, rp))
+
+    h_curr = current_vec / (np.linalg.norm(current_vec) + 1e-8)
+    h_prev = prior_human[0] / (np.linalg.norm(prior_human[0]) + 1e-8)
+    a_prev = prior_agent[0] / (np.linalg.norm(prior_agent[0]) + 1e-8)
+
+    v = a_prev - h_prev
+    d_h = h_curr - h_prev
+
+    v_norm_sq = float(np.dot(v, v))
+    if v_norm_sq < 1e-4:
+        return 0.0
+
+    rp_raw = float(np.dot(d_h, v)) / (v_norm_sq + 1e-8)
+    rp_t = max(0.0, min(1.0, rp_raw))
+    return round(rp_t, 3)
+
+
+def _compute_forward_perturbation(
+    current_vec: np.ndarray,
+    prior_human: list[np.ndarray],
+    prior_agent: list[np.ndarray],
+) -> float | None:
+    """# ponytail: compute directional forward perturbation (fraction of human gap closed by apparatus response)."""
+    if not prior_human or not prior_agent:
+        return None
+
+    a_curr = current_vec / (np.linalg.norm(current_vec) + 1e-8)
+    h_curr = prior_human[0] / (np.linalg.norm(prior_human[0]) + 1e-8)
+    a_prev = prior_agent[0] / (np.linalg.norm(prior_agent[0]) + 1e-8)
+
+    u = h_curr - a_prev
+    d_a = a_curr - a_prev
+
+    u_norm_sq = float(np.dot(u, u))
+    if u_norm_sq < 1e-4:
+        return 0.0
+
+    fp_raw = float(np.dot(d_a, u)) / (u_norm_sq + 1e-8)
+    fp_t = max(0.0, min(1.0, fp_raw))
+    return round(fp_t, 3)
 
 
 def _compute_surprise_index(
@@ -566,18 +607,16 @@ def _compute_surprise_index(
 
 
 def _compute_mutual_perturbation(
-    coupling: float | None,
-    reverse_perturbation: float | None,
+    rp_t: float | None,
+    fp_t: float | None,
 ) -> float | None:
-    """MPI: product of forward and reverse coupling.
-
-    MPI_t = coupling_{t-1} × rP_t
-    High MPI = both directions active: agent tracked human AND human was reshaped.
-    Low MPI = echo chamber or dissociation.
-    """
-    if coupling is None or reverse_perturbation is None:
+    """# ponytail: compute symmetric mutual perturbation index (geometric mean of rP_t and fP_t)."""
+    if rp_t is None and fp_t is None:
         return None
-    return max(0.0, min(1.0, coupling * reverse_perturbation))
+    r_val = rp_t if rp_t is not None else 0.5
+    f_val = fp_t if fp_t is not None else 0.5
+    mpi = float(np.sqrt(max(0.0, r_val * f_val)))
+    return round(max(0.0, min(1.0, mpi)), 3)
 
 
 def _compute_deficit(
