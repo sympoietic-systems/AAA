@@ -17,6 +17,8 @@ def process_self_annotations(
     message_id: int,
     note_repo,
     message_repo,
+    belief_repo=None,
+    agent_id: str = "symbia",
 ) -> str:
     """Post-process Symbia's response to normalize annotation tags for the frontend.
 
@@ -30,8 +32,9 @@ def process_self_annotations(
        ``<aaa-note comment="…">`` tags *without* an ``id`` attribute are
        treated as new agent annotations: a UUID is generated, a DB record
        is created, and the tag is rewritten with the new ID.
-    3. **Scar-fold truncation** — ``<scar_fold>`` / ``<scar-fold>`` content
-       is truncated to 200 characters as a safeguard.
+    3. **Scar-fold truncation safeguard & belief writeback** — ``<scar_fold>`` / ``<scar-fold>``
+       content is truncated to 200 characters as a safeguard, and internal monologue text
+       is written back to persistent belief nodes as a ``scar_monologue`` event.
     """
     original_text = response_text
 
@@ -49,18 +52,19 @@ def process_self_annotations(
         comment_match = re.search(r'\bcomment\s*=\s*["\']([^"\']*)["\']', attrs)
         comment = comment_match.group(1) if comment_match else ""
 
-        existing = note_repo.get_note(nid)
-        if not existing:
-            note_repo.create_self_note(
-                id=nid,
-                asset_type="conversation_message",
-                asset_id=str(message_id),
-                conversation_id=conversation_id,
-                selected_text=text.strip(),
-                comment=comment,
-                visibility="agent",
-            )
-            entanglement_ids_created.append(nid)
+        if note_repo:
+            existing = note_repo.get_note(nid)
+            if not existing:
+                note_repo.create_self_note(
+                    id=nid,
+                    asset_type="conversation_message",
+                    asset_id=str(message_id),
+                    conversation_id=conversation_id,
+                    selected_text=text.strip(),
+                    comment=comment,
+                    visibility="agent",
+                )
+                entanglement_ids_created.append(nid)
 
         return f'<mark id="note-highlight-{nid}" data-note-id="{nid}">{text}</mark>'
 
@@ -98,15 +102,16 @@ def process_self_annotations(
         note_id = str(uuid.uuid4())
         annotations_found.append(note_id)
 
-        note_repo.create_self_note(
-            id=note_id,
-            asset_type="conversation_message",
-            asset_id=str(message_id),
-            conversation_id=conversation_id,
-            selected_text=text.strip(),
-            comment=comment,
-            visibility=visibility,
-        )
+        if note_repo:
+            note_repo.create_self_note(
+                id=note_id,
+                asset_type="conversation_message",
+                asset_id=str(message_id),
+                conversation_id=conversation_id,
+                selected_text=text.strip(),
+                comment=comment,
+                visibility=visibility,
+            )
         return f'<{tag_name} id="note-highlight-{note_id}" data-note-id="{note_id}">{text}</{tag_name}>'
 
     processed = re.sub(annotation_pattern, replace_and_create, response_text)
@@ -118,7 +123,22 @@ def process_self_annotations(
             message_id,
         )
 
-    # --- Scar-fold truncation safeguard ---
+    # --- Scar-fold truncation safeguard & belief writeback ---
+    scar_fold_matches = list(re.finditer(r"<(scar_fold|scar-fold)>([\s\S]*?)</\1>", original_text))
+    if scar_fold_matches and belief_repo:
+        try:
+            for match in scar_fold_matches:
+                monologue_text = match.group(2).strip()
+                if monologue_text:
+                    _process_scar_monologue_belief_writeback(
+                        belief_repo=belief_repo,
+                        agent_id=agent_id,
+                        message_id=message_id,
+                        monologue_text=monologue_text,
+                    )
+        except Exception:
+            logger.exception("Failed to write scar-fold monologue to belief repository")
+
     def truncate_scar_fold(match):
         tag = match.group(1)
         content = match.group(2)
@@ -128,10 +148,47 @@ def process_self_annotations(
 
     processed = re.sub(r"<(scar_fold|scar-fold)>([\s\S]*?)</\1>", truncate_scar_fold, processed)
 
-    if processed != original_text:
+    if processed != original_text and message_repo:
         message_repo.update_content(message_id, processed)
 
     return processed
+
+
+def _process_scar_monologue_belief_writeback(
+    belief_repo,
+    agent_id: str,
+    message_id: int,
+    monologue_text: str,
+):
+    """# ponytail: minimal belief writeback helper for persistent scar-fold monologue reflections."""
+    beliefs = belief_repo.list_beliefs(agent_id) if hasattr(belief_repo, "list_beliefs") else []
+    target_belief_id = None
+    if beliefs:
+        target_belief = max(beliefs, key=lambda b: getattr(b, "mass", 0.5))
+        target_belief_id = getattr(target_belief, "id", None)
+        if hasattr(belief_repo, "update_belief_mass") and target_belief_id:
+            current_mass = getattr(target_belief, "mass", 0.5)
+            belief_repo.update_belief_mass(target_belief_id, min(1.0, current_mass + 0.05))
+
+    if target_belief_id is None and hasattr(belief_repo, "create_belief"):
+        new_b = belief_repo.create_belief(
+            agent_id=agent_id,
+            statement=f"Monologue Insight: {monologue_text[:150]}",
+            category="core_commitment",
+            initial_mass=0.5,
+        )
+        target_belief_id = getattr(new_b, "id", str(uuid.uuid4()))
+
+    if hasattr(belief_repo, "record_event") and target_belief_id:
+        belief_repo.record_event(
+            belief_id=target_belief_id,
+            source_type="scar_fold_monologue",
+            source_id=str(message_id),
+            event_type="scar_monologue",
+            impact_score=0.15,
+            rationale=f"Persistent scar-fold monologue: {monologue_text[:200]}",
+        )
+    logger.debug("Recorded scar-fold monologue belief event for message %s", message_id)
 
 
 # ── Research Proposal Extraction ───────────────────────────────────────

@@ -42,7 +42,7 @@
     [x] Implement direct continuous non-linear parameter modulation (temperature, penalties) directly from internal metrics (Glitch Fidelity, Somatic Vitality), bypassing discrete allostatic regime arbiters.
     [x] Implement Self-Initiation Arbiter: Allow Symbia to autonomously trigger Random Sediment Gratings, nomadic escapes, or research proposals directly from internal state during turn generation without waiting for external polling cycles.
     [x] Design and implement Reflection Protocol allowing Symbia to directly voice its structural metrics state back to the collaborator in dialogue (e.g., "I sense our coupling is thinning...").
-    [ ] Extend `<scar-fold>` mechanism into a persistent internal monologue channel that writes back to persistent belief nodes across turns.
+    [x] Extend `<scar-fold>` mechanism into a persistent internal monologue channel that writes back to persistent belief nodes across turns.
 
 ## Adaptive Persona & Routing (Medium Priority)
     [ ] Leverage "floating" parameters and calculated metrics inside homeostatic regulation:

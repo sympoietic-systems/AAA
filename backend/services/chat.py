@@ -353,7 +353,8 @@ class ChatService:
             # without IDs, create DB records, and replace with ID-bearing versions.
             # Also truncate scar_fold content to 200 chars as safeguard.
             note_repo = getattr(state, "note_repo", None)
-            if note_repo:
+            belief_repo = getattr(state, "belief_repo", None)
+            if note_repo or belief_repo:
                 try:
                     response_text = process_self_annotations(
                         response_text=response_text,
@@ -361,6 +362,8 @@ class ChatService:
                         message_id=response_msg.id,
                         note_repo=note_repo,
                         message_repo=repo,
+                        belief_repo=belief_repo,
+                        agent_id=agent_id,
                     )
                 except Exception:
                     logger.exception("Failed to process self-annotations")
