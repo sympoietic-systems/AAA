@@ -28,11 +28,13 @@ export const SidePanel = memo(function SidePanel({
   panelCollapsed,
   onPanelToggle,
   onNavigateNode,
+  onUploadFiles,
 }: {
   uploadedFiles?: ConversationFile[]
   conversationId?: string
   onDeleteFile?: (fileName: string) => void
   onReprocessFile?: (fileName: string) => void
+  onUploadFiles?: (files: File[]) => void
   messageCount?: number
   notes?: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
@@ -139,7 +141,7 @@ export const SidePanel = memo(function SidePanel({
             <div className="flex flex-col gap-1 mt-1">
               <SectionHeader label="Sediment" count={uploadedFiles.length} open={sections.sediment} onToggle={() => toggleSection("sediment")} />
               {sections.sediment && (
-                <SedimentSection conversationId={conversationId} uploadedFiles={uploadedFiles} onDeleteFile={onDeleteFile} onReprocessFile={onReprocessFile} />
+                <SedimentSection conversationId={conversationId} uploadedFiles={uploadedFiles} onDeleteFile={onDeleteFile} onReprocessFile={onReprocessFile} onUploadFiles={onUploadFiles} />
               )}
             </div>
 

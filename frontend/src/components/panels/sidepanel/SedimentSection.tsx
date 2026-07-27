@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from "react"
+import { useState, useEffect, useMemo, memo, useRef } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
@@ -29,6 +29,7 @@ interface SedimentSectionProps {
   uploadedFiles: ConversationFile[]
   onDeleteFile?: (fileName: string) => void
   onReprocessFile?: (fileName: string) => void
+  onUploadFiles?: (files: File[]) => void
 }
 
 function SedimentInjectionModal({
@@ -246,9 +247,18 @@ function SedimentSectionComponent({
   uploadedFiles,
   onDeleteFile,
   onReprocessFile,
+  onUploadFiles,
 }: SedimentSectionProps) {
   const [showInjectModal, setShowInjectModal] = useState(false)
   const [injections, setInjections] = useState<SedimentInjectionInfo[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0 && onUploadFiles) {
+      onUploadFiles(Array.from(e.target.files))
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
 
   // File summary expansion — owned by SedimentSection itself
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
@@ -380,22 +390,37 @@ function SedimentSectionComponent({
 
   return (
     <div className="pl-3">
-      {/* Inject button */}
-      {conversationId && (
-        <div className="mt-2 mb-1 flex items-center gap-2">
+      {/* Action buttons: inject & upload */}
+      <div className="mt-2 mb-1 flex items-center gap-2">
+        {conversationId && (
           <button
             onClick={() => setShowInjectModal(true)}
             className="text-[9px] font-mono text-action-dim hover:text-action-hover cursor-pointer select-none transition-colors"
           >
             [+ inject]
           </button>
-          {injections.length > 0 && (
-            <span className="text-[7px] text-ui-dim font-mono">
-              {injections.length} linked
-            </span>
-          )}
-        </div>
-      )}
+        )}
+        {onUploadFiles && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="text-[9px] font-mono text-action-dim hover:text-action-hover cursor-pointer select-none transition-colors"
+          >
+            [+ upload]
+          </button>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        {injections.length > 0 && (
+          <span className="text-[7px] text-ui-dim font-mono">
+            {injections.length} linked
+          </span>
+        )}
+      </div>
 
       {/* Injected files */}
       {injections.length > 0 && (
@@ -491,7 +516,7 @@ function SedimentSectionComponent({
                     : "text-ui-secondary"
                 }`}>
                   {f.file_type === "research-synthesis" || f.file_type === "synthesis-sediment"
-                    ? (f.display_name || `synthesis: ${f.file_name.replace("research-synthesis-", "").replace(".md", "")}`)
+                    ? ((f as any).display_name || `synthesis: ${f.file_name.replace("research-synthesis-", "").replace(".md", "")}`)
                     : f.file_name}
                 </span>
 

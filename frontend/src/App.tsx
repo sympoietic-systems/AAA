@@ -707,6 +707,7 @@ function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageProps) {
           conversationId={conversationId}
           onDeleteFile={handleDeleteFile}
           onReprocessFile={handleReprocessFile}
+          onUploadFiles={handleUploadFiles}
           messageCount={messages.length}
           notes={notes}
           onDeleteNote={handleDeleteNote}
