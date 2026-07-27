@@ -37,9 +37,9 @@ function SedimentInjectionModal({
   onClose,
   onInjected,
 }: {
-  conversationId: string
+  conversationId?: string
   onClose: () => void
-  onInjected: () => void
+  onInjected: (targetConvId: string) => void
 }) {
   const [files, setFiles] = useState<SedimentFileInfo[]>([])
   const [search, setSearch] = useState("")
@@ -50,7 +50,7 @@ function SedimentInjectionModal({
 
   useEffect(() => {
     setLoading(true)
-    listSedimentFiles(conversationId, search || undefined)
+    listSedimentFiles(conversationId || undefined, search || undefined)
       .then((res) => setFiles(res.files))
       .catch(() => setFiles([]))
       .finally(() => setLoading(false))
@@ -69,12 +69,14 @@ function SedimentInjectionModal({
     if (selected.size === 0) return
     setInjecting(true)
     try {
+      const targetConvId = conversationId || "new"
       const filesToInject = Array.from(selected).map((key) => {
         const [convId, ...rest] = key.split(":")
         return { source_conversation_id: convId, source_file_name: rest.join(":") }
       })
-      await injectSediment(conversationId, filesToInject)
-      onInjected()
+      const res = await injectSediment(targetConvId, filesToInject)
+      const effectiveConvId = res?.conversation_id || targetConvId
+      onInjected(effectiveConvId)
       onClose()
     } catch (e) {
       console.error("Injection failed:", e)
@@ -392,14 +394,12 @@ function SedimentSectionComponent({
     <div className="pl-3">
       {/* Action buttons: inject & upload */}
       <div className="mt-2 mb-1 flex items-center gap-2">
-        {conversationId && (
-          <button
-            onClick={() => setShowInjectModal(true)}
-            className="text-[9px] font-mono text-action-dim hover:text-action-hover cursor-pointer select-none transition-colors"
-          >
-            [+ inject]
-          </button>
-        )}
+        <button
+          onClick={() => setShowInjectModal(true)}
+          className="text-[9px] font-mono text-action-dim hover:text-action-hover cursor-pointer select-none transition-colors"
+        >
+          [+ inject]
+        </button>
         {onUploadFiles && (
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -602,15 +602,22 @@ function SedimentSectionComponent({
       )}
 
       {/* Injection Modal */}
-      {showInjectModal && conversationId && (
+      {showInjectModal && (
         <SedimentInjectionModal
           conversationId={conversationId}
           onClose={() => setShowInjectModal(false)}
-          onInjected={() => {
-            // Refetch after injection
-            getConversationInjections(conversationId)
-              .then((res) => setInjections(res.injections))
-              .catch(() => setInjections([]))
+          onInjected={(targetConvId) => {
+            if (targetConvId && targetConvId !== conversationId) {
+              // Navigate or refresh thread if a new conversation was initialized
+              const params = new URLSearchParams(window.location.search)
+              params.set("c", targetConvId)
+              window.history.pushState(null, "", `${window.location.pathname}?${params.toString()}`)
+              window.dispatchEvent(new Event("popstate"))
+            } else if (conversationId) {
+              getConversationInjections(conversationId)
+                .then((res) => setInjections(res.injections))
+                .catch(() => setInjections([]))
+            }
           }}
         />
       )}

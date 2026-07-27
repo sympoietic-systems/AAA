@@ -12,7 +12,7 @@ export async function listSedimentFiles(excludeConversationId?: string, search?:
   return res.json()
 }
 
-export async function injectSediment(conversationId: string, files: { source_conversation_id: string; source_file_name: string }[]): Promise<{ injections: SedimentInjectionInfo[] }> {
+export async function injectSediment(conversationId: string, files: { source_conversation_id: string; source_file_name: string }[]): Promise<{ injections: SedimentInjectionInfo[]; conversation_id?: string }> {
   const res = await fetch(`${BASE}/conversations/${conversationId}/sediment/inject`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ files }) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

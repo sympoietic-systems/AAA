@@ -118,6 +118,13 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
     perception_repo = request.app.state.perception_repo
     task_repo = request.app.state.research_task_repo
 
+    if conversation_id == "new" or not conversation_id:
+        import uuid
+        conversation_id = str(uuid.uuid4())
+        first_file = body.files[0].get("source_file_name", "document") if body.files else "document"
+        title_base = first_file.replace("research-synthesis-", "").replace(".md", "")
+        perception_repo.ensure_conversation_exists(conversation_id, f"Injected: {title_base[:50]}", "user")
+
     # Process files before injection
     processed_files = []
     for entry in body.files:
