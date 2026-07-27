@@ -197,7 +197,7 @@ class ConversationMetricsModule(ProcessingModule):
         metrics["reverse_perturbation"] = rp_t
         metrics["forward_perturbation"] = fp_t
 
-        surprise = _compute_surprise_index(current_vec, prior_human)
+        surprise = _compute_surprise_index(current_vec, all_recent)
         metrics["surprise_index"] = surprise
 
         mpi = _compute_mutual_perturbation(rp_t, fp_t)
@@ -208,8 +208,9 @@ class ConversationMetricsModule(ProcessingModule):
         metrics["collapse_pressure"] = collapse_pressure
         metrics["boringness"] = collapse_pressure  # ponytail: backward compatibility alias for boringness
 
-        conceptual_velocity = _compute_conceptual_velocity(current_vec, all_recent)
+        conceptual_velocity, phase_trans = _compute_conceptual_velocity(current_vec, all_recent)
         metrics["conceptual_velocity"] = conceptual_velocity
+        metrics["phase_transition_magnitude"] = phase_trans
 
         prev_coupling = prior_metrics.get("coupling_coherence")
         prev_rp = prior_metrics.get("reverse_perturbation")
@@ -585,25 +586,54 @@ def _compute_forward_perturbation(
 
 def _compute_surprise_index(
     current_vec: np.ndarray,
-    prior_human: list[np.ndarray],
+    all_recent: list[np.ndarray],
+    alpha: float = 0.4,
+    beta: float = 0.3,
+    gamma: float = 0.2,
+    scaling_S: float = 3.0,
 ) -> float | None:
-    """U_t: distance from current input to centroid of recent human inputs.
+    """# ponytail: compute predictive residual surprise normalized by local trend volatility."""
+    if not all_recent:
+        return 0.5
 
-    U_t = 1 - cos(V_t, centroid(V_{t-1}..V_{t-K}))
-    High U_t = input falls outside system's expected phase space.
-    Uses exponential decay weighting (d=0.75) for temporal active coupling.
-    """
-    if not prior_human or len(prior_human) < 2:
-        return None
-    d = 0.75
-    weights = np.array([d**i for i in range(len(prior_human))])
-    stacked = np.stack(prior_human)
-    weighted_sum = np.sum(stacked * weights[:, np.newaxis], axis=0)
-    sum_weights = np.sum(weights)
-    centroid = weighted_sum / sum_weights
-    centroid = centroid / (np.linalg.norm(centroid) + 1e-8)
-    u = 1.0 - float(np.dot(current_vec, centroid))
-    return max(0.0, min(1.0, u))
+    c_norm = np.linalg.norm(current_vec)
+    c_vec = current_vec / c_norm if c_norm > 0 else current_vec
+
+    history = [c_vec]
+    for v in all_recent[:10]:
+        norm = np.linalg.norm(v)
+        history.append(v / norm if norm > 0 else v)
+
+    history.reverse()
+
+    if len(history) < 2:
+        return 0.5
+
+    L = history[0].copy()
+    T = np.zeros_like(L)
+    var_ema = 1e-4
+
+    for i in range(1, len(history) - 1):
+        prev_pred = L + T
+        curr = history[i]
+        residual = curr - prev_pred
+        res_sq = float(np.dot(residual, residual))
+        var_ema = gamma * res_sq + (1.0 - gamma) * var_ema
+
+        L_next = alpha * curr + (1.0 - alpha) * (L + T)
+        T_next = beta * (L_next - L) + (1.0 - beta) * T
+        L, T = L_next, T_next
+
+    predicted = L + T
+    actual = history[-1]
+    final_res = actual - predicted
+    error_norm = float(np.linalg.norm(final_res))
+
+    sigma = float(np.sqrt(max(1e-8, var_ema)))
+    raw_z = error_norm / (sigma + 1e-4)
+
+    surprise = float(np.tanh(raw_z / scaling_S))
+    return round(max(0.0, min(1.0, surprise)), 3)
 
 
 def _compute_mutual_perturbation(
@@ -762,23 +792,55 @@ def _compute_collapse_pressure(
 def _compute_conceptual_velocity(
     current_vec: np.ndarray,
     all_recent: list[np.ndarray],
-) -> float | None:
-    """V_c = 1 - cos(W_prev, W_curr)
+    phi: float = 0.4,
+) -> tuple[float | None, float | None]:
+    """# ponytail: compute instantaneous speed, rolling V_max normalization, and phase transition magnitude."""
+    if not all_recent:
+        return 0.5, 0.0
 
-    Uses non-overlapping windows of size k=3 (current + last 2 vs. preceding 3).
-    """
-    if len(all_recent) < 5:
-        return None
-    curr_window = [current_vec] + all_recent[:2]
-    curr_centroid = np.mean(np.stack(curr_window), axis=0)
-    curr_centroid = curr_centroid / (np.linalg.norm(curr_centroid) + 1e-8)
+    c_norm = np.linalg.norm(current_vec)
+    c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
-    prev_window = all_recent[2:5]
-    prev_centroid = np.mean(np.stack(prev_window), axis=0)
-    prev_centroid = prev_centroid / (np.linalg.norm(prev_centroid) + 1e-8)
+    history = [c_vec]
+    for v in all_recent[:15]:
+        norm = np.linalg.norm(v)
+        history.append(v / norm if norm > 0 else v)
 
-    v = 1.0 - float(np.dot(prev_centroid, curr_centroid))
-    return max(0.0, min(1.0, v))
+    history.reverse()
+
+    if len(history) < 2:
+        return 0.5, 0.0
+
+    displacements = [history[i] - history[i - 1] for i in range(1, len(history))]
+    speeds = [float(np.linalg.norm(d)) for d in displacements]
+
+    vel_ema = speeds[0]
+    for s in speeds[1:]:
+        vel_ema = phi * s + (1.0 - phi) * vel_ema
+
+    v_max = max(1e-4, float(np.percentile(speeds, 95)))
+    norm_velocity = float(np.tanh(vel_ema / (v_max + 1e-4)))
+    norm_velocity = round(max(0.0, min(1.0, norm_velocity)), 3)
+
+    phase_trans = 0.0
+    if len(displacements) >= 2:
+        d_curr = displacements[-1]
+        d_prev = displacements[-2]
+        a_vec = d_curr - d_prev
+        a_norm = float(np.linalg.norm(a_vec))
+
+        dn_c = np.linalg.norm(d_curr)
+        dn_p = np.linalg.norm(d_prev)
+        if dn_c > 0 and dn_p > 0:
+            cos_theta = max(-1.0, min(1.0, float(np.dot(d_curr / dn_c, d_prev / dn_p))))
+            turn_rate = 1.0 - cos_theta
+        else:
+            turn_rate = 0.0
+
+        phase_trans = float((a_norm / (1.0 + vel_ema)) * turn_rate)
+        phase_trans = round(max(0.0, min(1.0, phase_trans)), 3)
+
+    return norm_velocity, phase_trans
 
 
 def _compute_drr(

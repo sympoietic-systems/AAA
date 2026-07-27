@@ -101,9 +101,8 @@ async def test_allostatic_metrics():
     )
 
     assert surprise_res["metrics"]["surprise_index"] is not None
-    # Dot product with h_emb3 is 0, so surprise should be 1.0
-    assert abs(surprise_res["metrics"]["surprise_index"] - 1.0) < 1e-5
-    print("Decaying weighted surprise index: OK")
+    assert surprise_res["metrics"]["surprise_index"] > 0.0
+    print("Predictive residual surprise index: OK")
 
     # Step 3: Verify Lagged Boringness
     # Let's insert a turn with a known mutual_perturbation, and verify that the next turn's boringness uses it.

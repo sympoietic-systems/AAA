@@ -109,6 +109,7 @@ What becomes easier/harder?
 | [075](ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) | Manifold Spectral Entropy & Collapse Pressure Index (Metric Audit #3) | accepted | 2026-07-27 |
 | [076](ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) | Trajectory Coupling Coherence & Agent Self-Divergence (Metric Audit #4) | accepted | 2026-07-27 |
 | [077](ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) | Directional Reverse Perturbation & Symmetric Mutual Perturbation Index (Metric Audit #5) | accepted | 2026-07-27 |
+| [078](ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) | Predictive Residual Surprise & Instantaneous Conceptual Velocity (Metric Audit #6) | accepted | 2026-07-27 |
 
 
 ## Creating a New ADR

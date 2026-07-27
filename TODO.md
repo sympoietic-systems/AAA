@@ -56,7 +56,7 @@
     [x] Metric Audit #3: `rolling_entropy` & `boringness` (Manifold Spectral Entropy & Collapse Pressure Index, ADR-075).
     [x] Metric Audit #4: `coupling_coherence` & `agent_self_divergence` (Trajectory Cross-Correlation & Recursive Loop Detection, ADR-076).
     [x] Metric Audit #5: `reverse_perturbation` & `mutual_perturbation` (Directional Reverse Perturbation & Symmetric Mutual Perturbation Index, ADR-077).
-    [ ] Metric Audit #6: `surprise_index` & `conceptual_velocity` (semantic displacement rate & phase changes).
+    [x] Metric Audit #6: `surprise_index` & `conceptual_velocity` (Predictive Residual Surprise & Instantaneous Conceptual Velocity, ADR-078).
     [ ] Metric Audit #7: `divergence_resolution_ratio` (drr) & `paskian_health` (macro conversational vitality & entailment structure).
 
 ## Metric Apparatus Refinements (Deferred / Low Priority)
