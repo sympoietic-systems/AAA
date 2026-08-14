@@ -53,6 +53,7 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             "https://generativelanguage.googleapis.com/v1beta/openai",
         )
         deepseek_api_base = cfg.get("deepseek_api_base", "https://api.deepseek.com")
+        openrouter_api_base = cfg.get("openrouter_api_base", "https://openrouter.ai/api/v1")
         cooldown_seconds = cfg.get("cooldown_seconds", 300)
         timeout = cfg.get("timeout", 60.0)
         if label:
@@ -70,6 +71,7 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             openrouter_keys=openrouter_keys,
             google_api_base=google_api_base,
             deepseek_api_base=deepseek_api_base,
+            openrouter_api_base=openrouter_api_base,
             cooldown_seconds=cooldown_seconds,
             thinking=thinking,
             reasoning_effort=reasoning_effort,

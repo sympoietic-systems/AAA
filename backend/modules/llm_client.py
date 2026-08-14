@@ -364,6 +364,7 @@ class ModelPoolProvider(BaseLLMProvider):
         openrouter_keys: list[str] | None = None,
         google_api_base: str = "https://generativelanguage.googleapis.com/v1beta/openai",
         deepseek_api_base: str = "https://api.deepseek.com",
+        openrouter_api_base: str = "https://openrouter.ai/api/v1",
         cooldown_seconds: int = 300,
         max_retries_per_model: int = 0,
         thinking: bool = False,
@@ -379,6 +380,7 @@ class ModelPoolProvider(BaseLLMProvider):
         self._api_base = api_base
         self._google_api_base = google_api_base
         self._deepseek_api_base = deepseek_api_base
+        self._openrouter_api_base = openrouter_api_base if openrouter_api_base else ("https://openrouter.ai/api/v1" if "openrouter.ai" not in api_base else api_base)
         self._cooldown_seconds = cooldown_seconds
         self._max_retries_per_model = max_retries_per_model
         self._thinking = thinking
@@ -474,12 +476,12 @@ class ModelPoolProvider(BaseLLMProvider):
                 provider_type = "deepseek"
             elif model.startswith("openrouter_router/"):
                 actual_model = model.split("openrouter_router/", 1)[1]
-                api_base = self._api_base
+                api_base = self._openrouter_api_base
                 key_mgr = self._openrouter_key_mgr
                 provider_type = "openrouter"
             else:
                 actual_model = model
-                api_base = self._api_base
+                api_base = self._openrouter_api_base
                 key_mgr = self._openrouter_key_mgr
                 provider_type = "openrouter"
 
