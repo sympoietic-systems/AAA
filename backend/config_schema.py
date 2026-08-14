@@ -67,6 +67,17 @@ def _parse_list(v: str) -> list[str]:
     return [m.strip() for m in v.split(",") if m.strip()]
 
 
+def _parse_json_dict(v: str) -> dict:
+    import json
+    if not v or not v.strip():
+        return {}
+    try:
+        data = json.loads(v)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
 # ── All environment-variable overrides ─────────────────────────────────
 
 ENV_OVERRIDES: list[EnvOverride] = [
@@ -75,6 +86,12 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_LLM_PROVIDER", "llm", "provider"),
     EnvOverride("AAA_LLM_API_BASE", "llm", "api_base"),
     EnvOverride("AAA_LLM_TIMEOUT", "llm", "timeout", _parse_float),
+    # ── OpenRouter Provider Routing ──
+    EnvOverride("AAA_OPENROUTER_PROVIDER_ORDER", "llm", "openrouter_provider", sub_key="order", parser=_parse_list),
+    EnvOverride("AAA_OPENROUTER_ALLOW_FALLBACKS", "llm", "openrouter_provider", sub_key="allow_fallbacks", parser=_parse_bool),
+    EnvOverride("AAA_OPENROUTER_PROVIDER_IGNORE", "llm", "openrouter_provider", sub_key="ignore", parser=_parse_list),
+    EnvOverride("AAA_OPENROUTER_PROVIDER_ONLY", "llm", "openrouter_provider", sub_key="only", parser=_parse_list),
+    EnvOverride("AAA_OPENROUTER_PROVIDERS_MAP", "llm", "openrouter_providers_map", parser=_parse_json_dict),
     EnvOverride("AAA_DB_PATH", "database", "path"),
     EnvOverride("AAA_IDENTITY_PATH", "personality", "path"),
     EnvOverride("AAA_SERVER_HOST", "server", "host"),

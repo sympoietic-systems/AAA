@@ -225,11 +225,11 @@ background_llm:
     enabled: false    # background tasks do not need chain-of-thought reasoning
     effort: "low"
   models:
+    - "openrouter_router/qwen/qwen3-30b-a3b-instruct-2507"
     - "google/gemma-4-26b-a4b-it:free"
     - "deepseek/deepseek-v4-flash-20260423:free"
     - "nvidia/nemotron-nano-9b-v2:free"
-    - "qwen/qwen3-next-80b-a3b-instruct:free"
-  fallback_model: "openrouter/free"
+  fallback_model: "openrouter_router/qwen/qwen3-30b-a3b-instruct-2507"
   api_base: "https://openrouter.ai/api/v1"
   cooldown_seconds: 300  # Cooldown in seconds for exhausted keys/models in pool (default: 300)
 

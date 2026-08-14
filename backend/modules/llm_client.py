@@ -17,7 +17,12 @@ from backend.modules.providers.google_utils import (
     build_google_thinking_disabled,
     sanitize_google_params,
 )
-from backend.modules.providers.openrouter_utils import build_openrouter_thinking_disabled, clean_thinking_params
+from backend.modules.providers.openrouter_utils import (
+    build_openrouter_provider_config,
+    build_openrouter_thinking_disabled,
+    clean_thinking_params,
+    resolve_openrouter_provider_config,
+)
 
 from .base import ProcessingModule
 
@@ -76,6 +81,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         reasoning_effort: str = "high",
         max_retries: int = 3,
         timeout: float = 60.0,
+        openrouter_provider: dict | None = None,
+        openrouter_providers_map: dict | None = None,
     ):
         self._api_key = api_key
         self._model = model
@@ -89,6 +96,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         self._reasoning_effort = reasoning_effort
         self._max_retries = max_retries
         self._timeout = timeout
+        self._openrouter_provider = openrouter_provider
+        self._openrouter_providers_map = openrouter_providers_map
 
     @property
     def provider_name(self) -> str:
@@ -259,6 +268,16 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             clean_thinking_params(merged_params)
             body.update(merged_params)
 
+        # ── OpenRouter provider routing preferences ────────────────────
+        or_provider = body.pop("openrouter_provider", None) or merged_params.pop("openrouter_provider", None) or self._openrouter_provider
+        or_map = body.pop("openrouter_providers_map", None) or merged_params.pop("openrouter_providers_map", None) or self._openrouter_providers_map
+        if is_openrouter:
+            resolved_or_provider = resolve_openrouter_provider_config(
+                self._model, openrouter_provider=or_provider, providers_map=or_map
+            )
+            if resolved_or_provider:
+                build_openrouter_provider_config(body, resolved_or_provider)
+
         return await self._request_with_retry(body)
 
     async def validate_connection(self) -> bool:
@@ -283,6 +302,8 @@ class OpenRouterProvider(OpenAICompatibleProvider):
         reasoning_effort: str = "high",
         max_retries: int = 3,
         timeout: float = 60.0,
+        openrouter_provider: dict | None = None,
+        openrouter_providers_map: dict | None = None,
     ):
         super().__init__(
             api_key=api_key,
@@ -294,6 +315,8 @@ class OpenRouterProvider(OpenAICompatibleProvider):
             reasoning_effort=reasoning_effort,
             max_retries=max_retries,
             timeout=timeout,
+            openrouter_provider=openrouter_provider,
+            openrouter_providers_map=openrouter_providers_map,
         )
 
 
@@ -347,6 +370,8 @@ class ModelPoolProvider(BaseLLMProvider):
         reasoning_effort: str = "high",
         default_params: dict | None = None,
         timeout: float = 60.0,
+        openrouter_provider: dict | None = None,
+        openrouter_providers_map: dict | None = None,
     ):
         self._api_key = api_key
         self._models = models
@@ -363,6 +388,8 @@ class ModelPoolProvider(BaseLLMProvider):
         self._last_model_used: str = ""
         self._last_model_time: float = 0.0
         self._timeout = timeout
+        self._openrouter_provider = openrouter_provider
+        self._openrouter_providers_map = openrouter_providers_map
 
         # Setup key managers
         self._google_key_mgr = KeyManager(google_keys or [], cooldown_seconds=cooldown_seconds)
@@ -492,6 +519,8 @@ class ModelPoolProvider(BaseLLMProvider):
                     max_retries=self._max_retries_per_model,
                     default_params=self._default_params,
                     timeout=self._timeout,
+                    openrouter_provider=self._openrouter_provider,
+                    openrouter_providers_map=self._openrouter_providers_map,
                 )
 
                 try:

@@ -103,13 +103,18 @@ def _apply_env_overrides(config: dict) -> dict:
         if deepseek_api_base:
             cfg["deepseek_api_base"] = deepseek_api_base
 
-    # ── Propagate timeout to other LLM configs ──────────────────────────
+    # ── Propagate timeout and openrouter_provider settings to other LLM configs ─
     llm_timeout = config.get("llm", {}).get("timeout")
-    if llm_timeout is not None:
-        for section in ("background_llm", "vision_llm", "structural_llm"):
-            cfg = config.setdefault(section, {})
-            if "timeout" not in cfg:
-                cfg["timeout"] = llm_timeout
+    openrouter_provider = config.get("llm", {}).get("openrouter_provider")
+    openrouter_providers_map = config.get("llm", {}).get("openrouter_providers_map")
+    for section in ("background_llm", "vision_llm", "structural_llm"):
+        cfg = config.setdefault(section, {})
+        if llm_timeout is not None and "timeout" not in cfg:
+            cfg["timeout"] = llm_timeout
+        if openrouter_provider is not None and "openrouter_provider" not in cfg:
+            cfg["openrouter_provider"] = openrouter_provider
+        if openrouter_providers_map is not None and "openrouter_providers_map" not in cfg:
+            cfg["openrouter_providers_map"] = openrouter_providers_map
 
     return config
 

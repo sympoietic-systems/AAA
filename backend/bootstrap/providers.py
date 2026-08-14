@@ -40,6 +40,8 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
     thinking = thinking_cfg.get("enabled", False)
     reasoning_effort = thinking_cfg.get("effort", "high")
     default_params = cfg.get("default_params") if use_default_params else None
+    openrouter_provider = cfg.get("openrouter_provider")
+    openrouter_providers_map = cfg.get("openrouter_providers_map")
 
     if models:
         fallback = cfg.get("fallback_model", "openrouter/free")
@@ -73,6 +75,8 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             reasoning_effort=reasoning_effort,
             default_params=default_params,
             timeout=timeout,
+            openrouter_provider=openrouter_provider,
+            openrouter_providers_map=openrouter_providers_map,
         )
 
     effective_model = model
@@ -89,6 +93,8 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             "google",
             default_params,
             timeout=timeout,
+            openrouter_provider=openrouter_provider,
+            openrouter_providers_map=openrouter_providers_map,
         )
 
     if model.startswith("deepseek_router/"):
@@ -103,6 +109,8 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             thinking=thinking,
             reasoning_effort=reasoning_effort,
             timeout=timeout,
+            openrouter_provider=openrouter_provider,
+            openrouter_providers_map=openrouter_providers_map,
         )
 
     if model.startswith("openrouter_router/"):
@@ -116,6 +124,8 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             thinking=thinking,
             reasoning_effort=reasoning_effort,
             timeout=timeout,
+            openrouter_provider=openrouter_provider,
+            openrouter_providers_map=openrouter_providers_map,
         )
 
     # ── Standard provider dispatch ────────────────────────────────────
@@ -128,6 +138,8 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             thinking=thinking,
             reasoning_effort=reasoning_effort,
             timeout=timeout,
+            openrouter_provider=openrouter_provider,
+            openrouter_providers_map=openrouter_providers_map,
         )
 
     return _create_openai_compatible(
@@ -139,6 +151,8 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
         thinking=thinking,
         reasoning_effort=reasoning_effort,
         timeout=timeout,
+        openrouter_provider=openrouter_provider,
+        openrouter_providers_map=openrouter_providers_map,
     )
 
 
@@ -154,6 +168,8 @@ def _create_openai_compatible(
     thinking: bool = False,
     reasoning_effort: str = "high",
     timeout: float = 60.0,
+    openrouter_provider: dict | None = None,
+    openrouter_providers_map: dict | None = None,
 ):
     from backend.modules.llm_client import OpenAICompatibleProvider
 
@@ -166,6 +182,8 @@ def _create_openai_compatible(
         thinking=thinking,
         reasoning_effort=reasoning_effort,
         timeout=timeout,
+        openrouter_provider=openrouter_provider,
+        openrouter_providers_map=openrouter_providers_map,
     )
 
 
@@ -177,6 +195,8 @@ def _create_openrouter(
     thinking: bool = False,
     reasoning_effort: str = "high",
     timeout: float = 60.0,
+    openrouter_provider: dict | None = None,
+    openrouter_providers_map: dict | None = None,
 ):
     from backend.modules.llm_client import OpenRouterProvider
 
@@ -188,6 +208,8 @@ def _create_openrouter(
         thinking=thinking,
         reasoning_effort=reasoning_effort,
         timeout=timeout,
+        openrouter_provider=openrouter_provider,
+        openrouter_providers_map=openrouter_providers_map,
     )
 
 

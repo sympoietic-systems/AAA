@@ -168,6 +168,18 @@ All env vars are optional overrides. Copy `.env.example` to `.env`.
 
 The correct key is automatically selected based on `AAA_LLM_PROVIDER`.
 
+### OpenRouter Provider Preferences
+
+| Variable | Values | Description |
+|----------|--------|-------------|
+| `AAA_OPENROUTER_PROVIDER_ORDER` | Comma-separated list (e.g. `Chutes,DeepInfra`) | Default ordered list of provider slugs to prioritize for model routing |
+| `AAA_OPENROUTER_ALLOW_FALLBACKS` | `true`, `false` | Enable or disable automatic fallbacks to non-ordered hosts |
+| `AAA_OPENROUTER_PROVIDER_IGNORE` | Comma-separated list | List of provider slugs to exclude from routing |
+| `AAA_OPENROUTER_PROVIDER_ONLY` | Comma-separated list | Whitelist of provider slugs allowed for routing |
+| `AAA_OPENROUTER_PROVIDERS_MAP` | JSON object mapping model slug/pattern to providers | Per-model routing map for model pools (e.g. `{"deepseek/deepseek-chat": "Chutes,DeepInfra", "meta-llama/*": "Together"}`) |
+
+*Note*: If no provider preference is specified for a given model (and global `AAA_OPENROUTER_PROVIDER_ORDER` is empty), no `provider` parameter is sent in the request body, letting OpenRouter perform default automatic routing.
+
 ### Thinking Mode
 
 | Variable | Values | Default |
