@@ -120,12 +120,13 @@ class ResearchTaskManager:
         document_mode: str | None = None,
         document_chunk_limit: int | None = None,
         injected_documents: list[dict] | None = None,
+        task_id: str | None = None,
     ) -> str:
         """Create a new research task and persist it. Returns task_id."""
         if status not in VALID_STATUSES:
             raise ValueError(f"Invalid status: {status}")
 
-        task_id = str(uuid.uuid4())
+        task_id = task_id or str(uuid.uuid4())
         task_data = {
             "id": task_id,
             "title": title or objective[:80],

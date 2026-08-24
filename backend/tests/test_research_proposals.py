@@ -113,9 +113,52 @@ def test_process_research_proposals():
     assert not task_manager_mock.create_task.called
     assert not message_repo_mock.update_content.called
 
-    print("All research proposal backend tests passed!")
+
+def test_process_research_proposals_with_unregistered_id():
+    task_manager_mock = MagicMock()
+    message_repo_mock = MagicMock()
+
+    # If get_task returns None (task does not exist in DB yet)
+    task_manager_mock.get_task.return_value = None
+    task_manager_mock.create_task.return_value = "custom-id-999"
+
+    text = (
+        'Symbia: <research-proposal id="custom-id-999">\n'
+        "  <objective>Explore quantum cognition</objective>\n"
+        "  <rationale>Novel hypothesis</rationale>\n"
+        "  <suggested_depth>3</suggested_depth>\n"
+        "  <suggested_breadth>4</suggested_breadth>\n"
+        "  <is_agonistic>true</is_agonistic>\n"
+        "</research-proposal>"
+    )
+
+    processed = process_research_proposals(
+        response_text=text,
+        conversation_id="conv-xyz",
+        message_id=555,
+        task_manager=task_manager_mock,
+        message_repo=message_repo_mock,
+    )
+
+    assert 'id="custom-id-999"' in processed
+    task_manager_mock.create_task.assert_called_once_with(
+        task_id="custom-id-999",
+        objective="Explore quantum cognition",
+        trigger_source="symbia_conversation",
+        title="Explore quantum cognition",
+        conversation_id="conv-xyz",
+        status="proposed",
+        priority=3,
+        max_depth=3,
+        max_breadth=4,
+        is_agonistic=True,
+        budget_limit_usd=0.50,
+        proposal_rationale="Novel hypothesis",
+        proposal_message_id=555,
+    )
 
 
 if __name__ == "__main__":
     test_extract_research_proposals()
     test_process_research_proposals()
+    test_process_research_proposals_with_unregistered_id()

@@ -64,6 +64,16 @@ class ContinueTaskPayload(BaseModel):
     budget_limit_usd: float | None = None
 
 
+class ApproveProposalPayload(BaseModel):
+    objective: str | None = None
+    title: str | None = None
+    conversation_id: str | None = None
+    max_depth: int = 2
+    max_breadth: int = 3
+    is_agonistic: bool = False
+    rationale: str | None = None
+
+
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -314,16 +324,37 @@ async def get_task(task_id: str, request: Request):
 
 
 @router.post("/research/proposals/{task_id}/approve")
-async def approve_proposal(task_id: str, request: Request):
+async def approve_proposal(task_id: str, request: Request, payload: ApproveProposalPayload | None = None):
     """User approves a Symbia-generated research proposal."""
     state = request.app.state
     manager = state.research_task_manager
 
     task = manager.get_task(task_id)
     if not task:
+        if payload and payload.objective:
+            manager.create_task(
+                task_id=task_id,
+                objective=payload.objective,
+                trigger_source="symbia_conversation",
+                title=payload.title or payload.objective[:80],
+                conversation_id=payload.conversation_id,
+                status="approved",
+                priority=3,
+                max_depth=payload.max_depth,
+                max_breadth=payload.max_breadth,
+                is_agonistic=payload.is_agonistic,
+                budget_limit_usd=0.50,
+                proposal_rationale=payload.rationale,
+            )
+            manager.queue(task_id)
+            return {"task_id": task_id, "status": "queued"}
         raise HTTPException(status_code=404, detail="Proposal not found")
+
+    if task["status"] in ("approved", "queued", "active", "completed"):
+        return {"task_id": task_id, "status": task["status"]}
+
     if task["status"] != "proposed":
-        raise HTTPException(status_code=400, detail="Task is not in proposed state")
+        raise HTTPException(status_code=400, detail=f"Task is in {task['status']} state, not proposed")
 
     manager.approve(task_id)
     manager.queue(task_id)
@@ -339,9 +370,11 @@ async def reject_proposal(task_id: str, request: Request):
 
     task = manager.get_task(task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="Proposal not found")
+        return {"task_id": task_id, "status": "rejected"}
+    if task["status"] == "rejected":
+        return {"task_id": task_id, "status": "rejected"}
     if task["status"] != "proposed":
-        raise HTTPException(status_code=400, detail="Task is not in proposed state")
+        raise HTTPException(status_code=400, detail=f"Task is in {task['status']} state, not proposed")
 
     manager.reject(task_id)
     return {"task_id": task_id, "status": "rejected"}

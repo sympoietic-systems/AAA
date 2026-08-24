@@ -1,5 +1,5 @@
 import { useState, useEffect, Children } from "react"
-import { getResearchTask, approveProposal, rejectProposal } from "../../../api/client"
+import { getResearchTask, approveProposal, rejectProposal, dispatchResearch } from "../../../api/client"
 
 function parseProposalChildren(children: any) {
   const childrenArray = Children.toArray(children)
@@ -49,18 +49,39 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
         }
       })
       .catch((err) => {
-        console.warn("Failed to fetch initial status for proposal:", proposalId, err)
+        // Proposal task not yet created or loaded; leave status as "proposed"
+        console.debug("Initial status query for proposal:", proposalId, err)
       })
   }, [proposalId])
 
   const handleApprove = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!proposalId) return
     setLoading(true)
     setError(null)
     try {
-      await approveProposal(proposalId)
+      if (proposalId) {
+        try {
+          await approveProposal(proposalId)
+          setStatus("queued")
+          return
+        } catch (err: any) {
+          const msg = err?.message || ""
+          // If not a 404/not found error, rethrow
+          if (!msg.includes("404") && !msg.toLowerCase().includes("not found")) {
+            throw err
+          }
+        }
+      }
+      // Fallback: dispatch research task directly from parsed card fields
+      const targetObjective = objective || "Research proposal"
+      await dispatchResearch({
+        objective: targetObjective,
+        title: targetObjective.slice(0, 80),
+        max_depth: depth,
+        max_breadth: breadth,
+        is_agonistic: isAgonistic,
+      })
       setStatus("queued")
     } catch (err: any) {
       setError(err.message || "Failed to approve")
@@ -72,11 +93,12 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
   const handleReject = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!proposalId) return
     setLoading(true)
     setError(null)
     try {
-      await rejectProposal(proposalId)
+      if (proposalId) {
+        await rejectProposal(proposalId).catch(() => {})
+      }
       setStatus("rejected")
     } catch (err: any) {
       setError(err.message || "Failed to reject")

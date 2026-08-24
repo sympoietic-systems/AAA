@@ -271,10 +271,16 @@ def process_research_proposals(
         xml_str = match.group(0)
         # Check if the tag already contains an id attribute
         start_tag_match = re.match(r"^<research-proposal(\s+[^>]*?)?>", xml_str)
+        existing_id = None
         if start_tag_match:
             attrs = start_tag_match.group(1) or ""
-            if re.search(r'\bid\s*=\s*["\']', attrs):
-                return xml_str
+            id_m = re.search(r'\bid\s*=\s*["\']([^"\']+)["\']', attrs)
+            if id_m:
+                existing_id = id_m.group(1)
+
+        # If task already exists in DB, keep it
+        if existing_id and hasattr(task_manager, "get_task") and task_manager.get_task(existing_id):
+            return xml_str
 
         # Parse fields
         objective_m = re.search(r"<objective>(.*?)</objective>", xml_str, re.DOTALL)
@@ -298,22 +304,24 @@ def process_research_proposals(
 
         is_agonistic = (agonistic_m.group(1).strip() if agonistic_m else "false").lower() == "true"
 
-        # Create proposed task
         title = objective[:80]
-        task_id = task_manager.create_task(
-            objective=objective,
-            trigger_source="symbia_conversation",
-            title=title,
-            conversation_id=conversation_id,
-            status="proposed",
-            priority=3,
-            max_depth=suggested_depth,
-            max_breadth=suggested_breadth,
-            is_agonistic=is_agonistic,
-            budget_limit_usd=0.50,
-            proposal_rationale=rationale,
-            proposal_message_id=message_id,
-        )
+        create_kwargs = {
+            "objective": objective,
+            "trigger_source": "symbia_conversation",
+            "title": title,
+            "conversation_id": conversation_id,
+            "status": "proposed",
+            "priority": 3,
+            "max_depth": suggested_depth,
+            "max_breadth": suggested_breadth,
+            "is_agonistic": is_agonistic,
+            "budget_limit_usd": 0.50,
+            "proposal_rationale": rationale,
+            "proposal_message_id": message_id,
+        }
+        if existing_id:
+            create_kwargs["task_id"] = existing_id
+        task_id = task_manager.create_task(**create_kwargs)
 
         # Rewrite tag to include the task_id
         rewritten = (
