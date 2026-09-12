@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from backend.modules.conversation_metrics import (
+from backend.modules.metrics import (
     _compute_agent_self_divergence,
     _compute_coupling_coherence,
 )

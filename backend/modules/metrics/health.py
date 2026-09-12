@@ -118,8 +118,9 @@ def _compute_paskian_health(
     collapse_pressure: float | None,
     rolling_entropy: float | None,
     drr: float | None,
+    epsilon: float = 0.08,
 ) -> float | None:
-    """# ponytail: compute Gordon Pask triadic cybernetic vitality index (geometric mean)."""
+    """# Proposal 1: Regularized Generalized Power Mean (p=0.5) with Metabolic Floor."""
     div_val = agent_self_divergence if agent_self_divergence is not None else 0.5
     vel_val = conceptual_velocity if conceptual_velocity is not None else 0.5
     phase_val = phase_transition_magnitude if phase_transition_magnitude is not None else 0.0
@@ -130,13 +131,20 @@ def _compute_paskian_health(
     mpi_val = mutual_perturbation if mutual_perturbation is not None else 0.5
     anti_collapse = 1.0 - (collapse_pressure if collapse_pressure is not None else 0.5)
 
-    coordination_index = (coup_val + mpi_val + anti_collapse) / 3.0
-    drr_modifier = drr if drr is not None else 0.5
+    coordination_raw = (coup_val + mpi_val + anti_collapse) / 3.0
+    drr_norm = drr if drr is not None else 0.5
+    # Soft regularizer: DRR modulates coordination by at most 70%
+    coordination_mod = coordination_raw * (0.30 + 0.70 * drr_norm)
 
     generativity_index = rolling_entropy if rolling_entropy is not None else 0.5
 
-    pask_raw = autonomy_index * (coordination_index * drr_modifier) * generativity_index
-    pask_health = float(np.cbrt(max(0.0, pask_raw)))
+    # Power Mean with p = 0.5 and metabolic floor epsilon
+    a_f = autonomy_index + epsilon
+    c_f = coordination_mod + epsilon
+    g_f = generativity_index + epsilon
+
+    power_sum = (np.sqrt(a_f) + np.sqrt(c_f) + np.sqrt(g_f)) / 3.0
+    pask_health = float((power_sum ** 2) - epsilon)
     return round(max(0.0, min(1.0, pask_health)), 3)
 
 

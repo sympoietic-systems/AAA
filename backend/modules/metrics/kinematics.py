@@ -9,55 +9,71 @@ import numpy as np
 def _compute_surprise_index(
     current_vec: np.ndarray,
     all_recent: list[np.ndarray],
-    alpha: float = 0.4,
+    alpha: float = 0.15,
     beta: float = 0.3,
-    gamma: float = 0.2,
-    scaling_S: float = 3.0,
-    nominal_variance: float = 0.16,
+    kappa: float = 1.2,
 ) -> float | None:
-    """# ponytail: compute predictive residual surprise normalized by local trend volatility."""
+    """# Proposal 1: Spherical Geodesic SLERP Surprise on S^{D-1}."""
     if not all_recent:
         return 0.0
 
-    c_norm = np.linalg.norm(current_vec)
-    c_vec = current_vec / c_norm if c_norm > 0 else current_vec
+    c_norm = float(np.linalg.norm(current_vec))
+    c_vec = current_vec / c_norm if c_norm > 1e-8 else current_vec
 
-    # Assemble chronological trajectory: past history [-10:] followed by current vector
     history = []
-    for v in all_recent[-10:]:
-        norm = np.linalg.norm(v)
-        history.append(v / norm if norm > 0 else v)
+    for v in all_recent[-12:]:
+        norm = float(np.linalg.norm(v))
+        history.append(v / norm if norm > 1e-8 else v)
     history.append(c_vec)
 
-    if len(history) < 2:
+    if len(history) < 3:
         return 0.0
 
-    L = history[0].copy()
-    T = np.zeros_like(L)
-    # Calibrated baseline variance prior (sigma_0^2 = 0.16 -> sigma_0 = 0.40)
-    # Prevents cold-start division explosions (z > 80) and 1.000 saturation on early turns
-    var_ema = nominal_variance
+    # Compute sequence of step angular distances and online mean/variance
+    # For predicting step i from i-2 and i-1 using SLERP extrapolation
+    residuals = []
+    for i in range(2, len(history)):
+        p_prev = history[i - 2]
+        p_curr = history[i - 1]
+        target = history[i]
 
-    for i in range(1, len(history) - 1):
-        prev_pred = L + T
-        curr = history[i]
-        residual = curr - prev_pred
-        res_sq = float(np.dot(residual, residual))
-        var_ema = gamma * res_sq + (1.0 - gamma) * var_ema
+        dot_p = max(-1.0, min(1.0, float(np.dot(p_prev, p_curr))))
+        theta = float(np.arccos(dot_p))
 
-        L_next = alpha * curr + (1.0 - alpha) * (L + T)
-        T_next = beta * (L_next - L) + (1.0 - beta) * T
-        L, T = L_next, T_next
+        if theta > 1e-5 and theta < np.pi - 1e-5:
+            sin_t = float(np.sin(theta))
+            # SLERP extrapolate forward by factor (1 + beta)
+            w1 = float(np.sin(-beta * theta) / sin_t)
+            w2 = float(np.sin((1.0 + beta) * theta) / sin_t)
+            predicted = w1 * p_prev + w2 * p_curr
+            p_norm = float(np.linalg.norm(predicted))
+            if p_norm > 1e-8:
+                predicted = predicted / p_norm
+        else:
+            predicted = p_curr
 
-    predicted = L + T
-    actual = history[-1]
-    final_res = actual - predicted
-    error_norm = float(np.linalg.norm(final_res))
+        # Geodesic angular distance on S^{D-1}
+        dot_res = max(-1.0, min(1.0, float(np.dot(target, predicted))))
+        delta = float(np.arccos(dot_res))
+        residuals.append(delta)
 
-    sigma = float(np.sqrt(max(1e-6, var_ema)))
-    raw_z = error_norm / (sigma + 1e-4)
+    if not residuals:
+        return 0.0
 
-    surprise = float(np.tanh(raw_z / scaling_S))
+    # Running EMA of mean and variance across history residuals
+    mu_delta = residuals[0]
+    var_delta = 0.04  # baseline prior initialization
+
+    for res in residuals[:-1]:
+        var_delta = (1.0 - alpha) * var_delta + alpha * ((res - mu_delta) ** 2)
+        mu_delta = (1.0 - alpha) * mu_delta + alpha * res
+
+    final_res = residuals[-1]
+    sigma = float(np.sqrt(max(1e-6, var_delta)))
+    z_t = (final_res - mu_delta) / (sigma + 1e-5)
+
+    # Dynamic logistic expansion
+    surprise = float(1.0 / (1.0 + np.exp(-kappa * z_t)))
     return round(max(0.0, min(1.0, surprise)), 3)
 
 
