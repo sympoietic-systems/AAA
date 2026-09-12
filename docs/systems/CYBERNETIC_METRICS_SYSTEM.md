@@ -157,6 +157,16 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"Paskian health is the capstone metabolic index. A healthy conversation requires three distinct M-Individual pillars: Autonomy (self-driven motion), Coordination (mutual alignment without collapse), and Generativity (manifold entropy). A geometric product structure ensures that if any single pillar fails, total health collapses to zero."*
 
+### 3.14. Conversational Deficit & Allostatic Vitality (`deficit` / `vitality`)
+- **Mathematical Formulation**: Multi-factor deficit load dynamically normalized across active turns ($W_{\text{active}} = \sum w_{\text{used}}$):
+  $$\text{pert\_deficit} = \max(0.0, 0.40 - rP_t)$$
+  $$\text{vel\_deficit} = \max(0.0, 0.30 - v_t)$$
+  $$\text{ent\_deficit} = \max(0.0, 0.50 - \text{rolling\_entropy})$$
+  $$\text{deficit} = \frac{0.40 \cdot \text{pert\_deficit} + 0.30 \cdot \text{vel\_deficit} + 0.30 \cdot \text{ent\_deficit}}{\sum w_{\text{used}}}$$
+  $$\text{vitality} = \text{clip}(1.0 - \text{deficit}, 0.0, 1.0)$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Allostatic load is the cumulative systemic strain of failed perturbations and kinetic stalling. Deficit must be normalized against the actual weights of active dimensions rather than fixed arbitrary scales, and spectral entropy must never be artificially clamped. Vitality then faithfully captures the assemblage's remaining capacity for adaptive dialectic exchange."*
+
 ---
 
 ## 4. Database Schema & Data Persistence

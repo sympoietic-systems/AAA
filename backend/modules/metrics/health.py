@@ -153,18 +153,19 @@ def _compute_deficit(
     we = _DEFICIT_WEIGHTS["entropy"]
     wd = _DEFICIT_WEIGHTS["self_divergence"]
 
-    deficit = ws * s_t + wn * (1.0 - novelty)
+    score = ws * s_t + wn * (1.0 - novelty)
+    used_weight = ws + wn
 
     if rolling_entropy is not None:
-        entropy_norm = min(1.0, rolling_entropy / 0.25)
-        deficit += we * (1.0 - entropy_norm)
+        score += we * (1.0 - rolling_entropy)
+        used_weight += we
 
     if agent_divergence is not None:
-        deficit += wd * (1.0 - agent_divergence)
-    else:
-        deficit *= 1.0 / (ws + wn)
+        score += wd * (1.0 - agent_divergence)
+        used_weight += wd
 
-    return max(0.0, min(1.0, deficit))
+    deficit = score / used_weight
+    return round(max(0.0, min(1.0, float(deficit))), 3)
 
 
 def _compute_vitality(
@@ -185,32 +186,26 @@ def _compute_vitality(
     ws = _VITALITY_WEIGHTS["surprise"]
 
     score = wn * novelty
+    used_weight = wn
 
     if rolling_entropy is not None:
-        entropy_norm = min(1.0, rolling_entropy / 0.25)
-        score += we * entropy_norm
+        score += we * rolling_entropy
+        used_weight += we
 
     if agent_divergence is not None:
         score += wd * agent_divergence
+        used_weight += wd
 
     if reverse_perturbation is not None:
         score += wr * reverse_perturbation
+        used_weight += wr
 
     if surprise is not None:
         score += ws * surprise
-
-    used_weight = wn
-    if rolling_entropy is not None:
-        used_weight += we
-    if agent_divergence is not None:
-        used_weight += wd
-    if reverse_perturbation is not None:
-        used_weight += wr
-    if surprise is not None:
         used_weight += ws
 
     score /= used_weight
-    return max(0.0, min(1.0, score))
+    return round(max(0.0, min(1.0, float(score))), 3)
 
 
 def _detect_phase_shifts(

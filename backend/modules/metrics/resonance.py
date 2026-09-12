@@ -16,7 +16,8 @@ def _compute_pairwise_similarity(
     if not recent_history:
         return None
 
-    sims = []
+    weighted_sims = []
+    weights = []
     c_norm = np.linalg.norm(current_vec)
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
@@ -35,14 +36,16 @@ def _compute_pairwise_similarity(
         speaker = item.get("speaker", "human")
         speaker_factor = 0.8 if speaker == current_speaker else 1.2
         decay = float(np.exp(-decay_lambda * i))
+        w = decay * speaker_factor
 
-        sims.append(cos_sim * decay * speaker_factor)
+        weighted_sims.append(cos_sim * w)
+        weights.append(w)
 
-    if not sims:
+    if not weights or sum(weights) == 0:
         return None
 
-    weighted_sim = float(np.mean(sims))
-    return max(0.0, min(1.0, weighted_sim))
+    weighted_sim = float(sum(weighted_sims) / sum(weights))
+    return round(max(0.0, min(1.0, weighted_sim)), 3)
 
 
 def _compute_conceptual_novelty(

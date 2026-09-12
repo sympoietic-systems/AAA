@@ -70,7 +70,7 @@ python reports/003-empirical-10-turn-benchmark/compare_runs.py reference eval_ca
 python reports/003-empirical-10-turn-benchmark/run_benchmark.py --compare reference eval_calibrated --name full_suite_calibrated
 ```
 When `--name <name>` (or `-n`) is specified, artifacts are saved in `reports/runs/<name>/`:
-- `<name>.png`: High-definition 6-panel oscilloscope dashboard (1720×1540) covering all core calibrated metrics (Novelty, Collapse Pressure, DRR, Paskian Health, Velocity, Reverse Perturbation).
+- `<name>.png`: High-definition 10-panel oscilloscope dashboard (1720×2420) covering all core calibrated metrics (Pairwise Similarity, Deficit, Vitality, Forward Perturbation, Mutual Perturbation, Reverse Perturbation, Novelty, Collapse Pressure, DRR, Paskian Health).
 - `<name>.html`: Interactive SVG oscilloscope dashboard with global unified legend.
 - `comparison_summary.md`: Turn-by-turn comparative matrices and delta scorecards for 10 cybernetic dimensions.
 - Reference calibrated comparison preserved in [`reports/runs/full_suite_calibrated/`](../runs/full_suite_calibrated/).
@@ -84,7 +84,7 @@ Every execution creates a dedicated timestamped folder (e.g., `reports/runs/run_
 
 1. **`conversation_receipts.json`**: The complete raw JSON dataset with unedited human prompts, assistant utterances, dense embeddings, homeostatic parameters, and turn-by-turn cybernetic metrics.
 2. **`04_comparative_overlaid_grid.png`**: The 4-panel multi-variable oscilloscope overlay (Kinematics, Information Dynamics, Cybernetic Health, Sampling Control) mapping AAA (solid) vs Baseline (dashed).
-3. **`05_head_to_head_breakdown.png`**: The 6-panel single-metric comparison suite (Novelty, Reverse Perturbation, Similarity, Rolling Entropy, Paskian Health, Temperature).
+3. **`05_head_to_head_breakdown.png`**: The 9-panel single-metric comparison suite in a 3×3 grid (Pairwise Similarity, Deficit, Vitality, Forward Perturbation, Mutual Perturbation, Reverse Perturbation, Novelty, Collapse Pressure, Paskian Health).
 4. **`run_summary.md`**: Markdown summary table with metric averages, advantage deltas, execution mode, and embedded links.
 
 ---

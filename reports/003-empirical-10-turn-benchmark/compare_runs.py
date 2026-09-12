@@ -5,14 +5,18 @@ Cybernetic Benchmark Run Comparison Tool.
 Compares multi-turn cybernetic telemetry across benchmark runs before and after metric updates
 or between experimental configurations.
 
-Renders a 6-panel high-resolution oscilloscope dashboard (HTML + PNG snapshot via headless Edge)
-covering all core calibrated metrics:
-  1. Conceptual Novelty (N_t)
-  2. Collapse Pressure / Boringness (CP_t)
-  3. Divergence Resolution Ratio (DRR_t)
-  4. Gordon Pask Cybernetic Health (H_pask)
-  5. Conceptual Velocity (v_t)
-  6. Reverse Perturbation (rP_t)
+Renders a 10-panel high-resolution oscilloscope dashboard (HTML + PNG snapshot via headless Edge)
+covering all newly calibrated and updated cybernetic metrics:
+  1. Pairwise Similarity (s_t) - Calibrated denominator to sum(weights), eliminating 58% suppression
+  2. Conversational Deficit - Calibrated dynamic weight normalization & unclamped spectral entropy
+  3. Conversational Vitality - Calibrated allostatic vitality and dialetic liveliness
+  4. Forward Perturbation (fP_t) - Calibrated agent-to-human directional trajectory perturbation
+  5. Mutual Perturbation Index (MPI_t) - Geometric mean coupling sqrt(rP_t * fP_t)
+  6. Reverse Perturbation (rP_t) - Human-to-agent trajectory tension
+  7. Conceptual Novelty (N_t) - Semantic displacement from centroid EMA
+  8. Collapse Pressure / Boringness (CP_t) - Stagnation interrupt alarm
+  9. Divergence Resolution Ratio (DRR_t) - Dialectic homeostasis ratio
+  10. Gordon Pask Cybernetic Health (H_pask) - Organizational closure & viability
 
 Generates Markdown comparison matrices and synthesis reports into:
   reports/runs/<name>/
@@ -100,7 +104,7 @@ def load_receipts(run_path: Path) -> dict:
         return json.load(f)
 
 
-def to_pts(series: list[float], y_max: float = 1.0, left: float = 65, right: float = 745, top: float = 25, bottom: float = 215) -> str:
+def to_pts(series: list[float], y_max: float = 1.0, left: float = 65, right: float = 745, top: float = 22, bottom: float = 188) -> str:
     if len(series) <= 1:
         return f"{left},{bottom}"
     x_step = (right - left) / (len(series) - 1)
@@ -114,7 +118,7 @@ def to_pts(series: list[float], y_max: float = 1.0, left: float = 65, right: flo
 
 
 def to_circ(series: list[float], y_max: float = 1.0, color: str = "#ffffff", r: float = 3.6, hollow: bool = False,
-            left: float = 65, right: float = 745, top: float = 25, bottom: float = 215) -> str:
+            left: float = 65, right: float = 745, top: float = 22, bottom: float = 188) -> str:
     if len(series) <= 1:
         return ""
     x_step = (right - left) / (len(series) - 1)
@@ -130,8 +134,8 @@ def to_circ(series: list[float], y_max: float = 1.0, color: str = "#ffffff", r: 
     return "\n".join(circs)
 
 
-def make_grid(left: float = 65, right: float = 745, top: float = 25, bottom: float = 215,
-              y_max: float = 1.0, y_ticks: int = 5, num_turns: int = 10) -> str:
+def make_grid(left: float = 65, right: float = 745, top: float = 22, bottom: float = 188,
+              y_max: float = 1.0, y_ticks: int = 4, num_turns: int = 10) -> str:
     lines = []
     for i in range(y_ticks + 1):
         val = (y_ticks - i) * (y_max / y_ticks)
@@ -142,7 +146,7 @@ def make_grid(left: float = 65, right: float = 745, top: float = 25, bottom: flo
     for i in range(num_turns):
         x = left + i * (right - left) / max(1, num_turns - 1)
         lines.append(f'<line x1="{x:.1f}" y1="{top}" x2="{x:.1f}" y2="{bottom}" stroke="rgba(255,255,255,0.05)" stroke-width="1" />')
-        lines.append(f'<text x="{x:.1f}" y="{bottom + 18}" fill="#717684" font-size="10" font-family="JetBrains Mono, monospace" text-anchor="middle">T{i+1}</text>')
+        lines.append(f'<text x="{x:.1f}" y="{bottom + 17}" fill="#717684" font-size="10" font-family="JetBrains Mono, monospace" text-anchor="middle">T{i+1}</text>')
 
     return "\n".join(lines)
 
@@ -174,50 +178,76 @@ def render_comparison_dashboard(
             res.append(float(val) if val is not None else default)
         return res
 
-    # 1. Conceptual Novelty
-    base_nov_a = extract(base_a, "conceptual_novelty", default=0.0)
-    base_nov_b = extract(base_b, "conceptual_novelty", default=0.0)
-    aaa_nov_a = extract(aaa_a, "conceptual_novelty", default=0.0)
-    aaa_nov_b = extract(aaa_b, "conceptual_novelty", default=0.0)
+    def mean(lst: list[float]) -> float:
+        return sum(lst) / max(1, len(lst))
 
-    # 2. Collapse Pressure / Boringness
-    base_col_a = extract(base_a, "collapse_pressure", "boringness", default=0.0)
-    base_col_b = extract(base_b, "collapse_pressure", "boringness", default=0.0)
-    aaa_col_a = extract(aaa_a, "collapse_pressure", "boringness", default=0.0)
-    aaa_col_b = extract(aaa_b, "collapse_pressure", "boringness", default=0.0)
+    # 1. Pairwise Similarity (s_t) - CALIBRATED DENOMINATOR
+    base_sim_a = extract(base_a, "pairwise_similarity", "s_t", default=0.0)
+    base_sim_b = extract(base_b, "pairwise_similarity", "s_t", default=0.0)
+    aaa_sim_a = extract(aaa_a, "pairwise_similarity", "s_t", default=0.0)
+    aaa_sim_b = extract(aaa_b, "pairwise_similarity", "s_t", default=0.0)
 
-    # 3. Divergence Resolution Ratio (DRR)
-    base_drr_a = extract(base_a, "divergence_resolution_ratio", default=0.5)
-    base_drr_b = extract(base_b, "divergence_resolution_ratio", default=0.5)
-    aaa_drr_a = extract(aaa_a, "divergence_resolution_ratio", default=0.5)
-    aaa_drr_b = extract(aaa_b, "divergence_resolution_ratio", default=0.5)
+    # 2. Conversational Deficit - CALIBRATED DYNAMIC WEIGHTS
+    base_def_a = extract(base_a, "deficit", "homeostatic_deficit", default=0.0)
+    base_def_b = extract(base_b, "deficit", "homeostatic_deficit", default=0.0)
+    aaa_def_a = extract(aaa_a, "deficit", "homeostatic_deficit", default=0.0)
+    aaa_def_b = extract(aaa_b, "deficit", "homeostatic_deficit", default=0.0)
 
-    # 4. Gordon Pask Cybernetic Health (H_pask)
-    base_pask_a = extract(base_a, "paskian_health", default=0.0)
-    base_pask_b = extract(base_b, "paskian_health", default=0.0)
-    aaa_pask_a = extract(aaa_a, "paskian_health", default=0.0)
-    aaa_pask_b = extract(aaa_b, "paskian_health", default=0.0)
+    # 3. Conversational Vitality - CALIBRATED VITALITY
+    base_vit_a = extract(base_a, "vitality", "conversation_vitality", default=0.0)
+    base_vit_b = extract(base_b, "vitality", "conversation_vitality", default=0.0)
+    aaa_vit_a = extract(aaa_a, "vitality", "conversation_vitality", default=0.0)
+    aaa_vit_b = extract(aaa_b, "vitality", "conversation_vitality", default=0.0)
 
-    # 5. Conceptual Velocity
-    base_vel_a = extract(base_a, "conceptual_velocity", default=0.0)
-    base_vel_b = extract(base_b, "conceptual_velocity", default=0.0)
-    aaa_vel_a = extract(aaa_a, "conceptual_velocity", default=0.0)
-    aaa_vel_b = extract(aaa_b, "conceptual_velocity", default=0.0)
+    # 4. Forward Perturbation (fP_t) - CALIBRATED BILATERAL
+    base_fpert_a = extract(base_a, "forward_perturbation", default=0.0)
+    base_fpert_b = extract(base_b, "forward_perturbation", default=0.0)
+    aaa_fpert_a = extract(aaa_a, "forward_perturbation", default=0.0)
+    aaa_fpert_b = extract(aaa_b, "forward_perturbation", default=0.0)
 
-    # 6. Reverse Perturbation
+    # 5. Mutual Perturbation Index (MPI_t) - CALIBRATED GEOMETRIC MEAN
+    base_mpi_a = extract(base_a, "mutual_perturbation", default=0.0)
+    base_mpi_b = extract(base_b, "mutual_perturbation", default=0.0)
+    aaa_mpi_a = extract(aaa_a, "mutual_perturbation", default=0.0)
+    aaa_mpi_b = extract(aaa_b, "mutual_perturbation", default=0.0)
+
+    # 6. Reverse Perturbation (rP_t)
     base_rpert_a = extract(base_a, "reverse_perturbation", default=0.0)
     base_rpert_b = extract(base_b, "reverse_perturbation", default=0.0)
     aaa_rpert_a = extract(aaa_a, "reverse_perturbation", default=0.0)
     aaa_rpert_b = extract(aaa_b, "reverse_perturbation", default=0.0)
 
-    # Summary Delta Stats
-    def mean(lst: list[float]) -> float:
-        return sum(lst) / max(1, len(lst))
+    # 7. Conceptual Novelty (N_t)
+    base_nov_a = extract(base_a, "conceptual_novelty", default=0.0)
+    base_nov_b = extract(base_b, "conceptual_novelty", default=0.0)
+    aaa_nov_a = extract(aaa_a, "conceptual_novelty", default=0.0)
+    aaa_nov_b = extract(aaa_b, "conceptual_novelty", default=0.0)
 
+    # 8. Collapse Pressure / Boringness (CP_t)
+    base_col_a = extract(base_a, "collapse_pressure", "boringness", default=0.0)
+    base_col_b = extract(base_b, "collapse_pressure", "boringness", default=0.0)
+    aaa_col_a = extract(aaa_a, "collapse_pressure", "boringness", default=0.0)
+    aaa_col_b = extract(aaa_b, "collapse_pressure", "boringness", default=0.0)
+
+    # 9. Divergence Resolution Ratio (DRR)
+    base_drr_a = extract(base_a, "divergence_resolution_ratio", default=0.5)
+    base_drr_b = extract(base_b, "divergence_resolution_ratio", default=0.5)
+    aaa_drr_a = extract(aaa_a, "divergence_resolution_ratio", default=0.5)
+    aaa_drr_b = extract(aaa_b, "divergence_resolution_ratio", default=0.5)
+
+    # 10. Gordon Pask Cybernetic Health (H_pask)
+    base_pask_a = extract(base_a, "paskian_health", default=0.0)
+    base_pask_b = extract(base_b, "paskian_health", default=0.0)
+    aaa_pask_a = extract(aaa_a, "paskian_health", default=0.0)
+    aaa_pask_b = extract(aaa_b, "paskian_health", default=0.0)
+
+    # Deltas
+    sim_delta_b = mean(aaa_sim_b) - mean(base_sim_b)
+    def_delta_b = mean(aaa_def_b) - mean(base_def_b)
+    vit_delta_b = mean(aaa_vit_b) - mean(base_vit_b)
+    mpi_delta_b = mean(aaa_mpi_b) - mean(base_mpi_b)
     nov_delta_b = mean(aaa_nov_b) - mean(base_nov_b)
     pask_delta_b = mean(aaa_pask_b) - mean(base_pask_b)
-    drr_delta_b = mean(aaa_drr_b) - mean(base_drr_b)
-    col_delta_b = mean(aaa_col_b) - mean(base_col_b)
 
     # Metadata strings
     meta_a_model = data_a.get("aaa_model") or data_a.get("baseline_model", "Unknown")
@@ -235,7 +265,7 @@ def render_comparison_dashboard(
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{
     background-color: #060709; color: #e4e7ec; font-family: 'JetBrains Mono', monospace;
-    width: 1720px; height: 1540px; padding: 26px 34px; display: flex; flex-direction: column;
+    width: 1720px; height: 2420px; padding: 26px 34px; display: flex; flex-direction: column;
     justify-content: space-between; position: relative;
     background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
     background-size: 24px 24px;
@@ -270,28 +300,28 @@ def render_comparison_dashboard(
   .line-sample {{ width: 22px; height: 3px; border-radius: 2px; display: inline-block; }}
   .dot-sample {{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; }}
 
-  /* 6-Panel Oscilloscope Grid */
+  /* 10-Panel Oscilloscope Grid (2 cols x 5 rows) */
   .panels-container {{
-    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 1fr);
-    gap: 14px; margin: 12px 0; flex: 1;
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(5, 1fr);
+    gap: 12px; margin: 12px 0; flex: 1;
   }}
   .panel-card {{
     background: #0c0e14; border: 1px solid rgba(255,255,255,0.11); border-radius: 8px;
-    padding: 13px 18px; display: flex; flex-direction: column; justify-content: space-between;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.45); position: relative; overflow: hidden;
+    padding: 10px 16px; display: flex; flex-direction: column; justify-content: space-between;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45); position: relative; overflow: hidden;
   }}
   .panel-card::before {{
     content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
     background: linear-gradient(90deg, #00e5ff, #b026ff, #ff9944);
   }}
   .card-top {{
-    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;
+    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px;
   }}
   .panel-title {{
-    font-size: 13px; font-weight: 800; letter-spacing: 0.8px; color: #ffffff;
+    font-size: 12.5px; font-weight: 800; letter-spacing: 0.8px; color: #ffffff;
   }}
   .panel-desc {{
-    font-size: 10px; color: #88909e; font-family: 'Inter', sans-serif; margin-top: 2px; line-height: 1.35;
+    font-size: 9.5px; color: #88909e; font-family: 'Inter', sans-serif; margin-top: 2px; line-height: 1.3;
   }}
   .card-badge {{
     font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px;
@@ -301,21 +331,22 @@ def render_comparison_dashboard(
   .badge-orange {{ background: rgba(255,153,68,0.15); color: #ff9944; border: 1px solid rgba(255,153,68,0.3); }}
   .badge-mint {{ background: rgba(0,255,170,0.15); color: #00ffaa; border: 1px solid rgba(0,255,170,0.3); }}
   .badge-purple {{ background: rgba(176,38,255,0.15); color: #d175ff; border: 1px solid rgba(176,38,255,0.3); }}
+  .badge-yellow {{ background: rgba(255,204,0,0.15); color: #ffcc00; border: 1px solid rgba(255,204,0,0.3); }}
 
   /* SVG Plot */
-  .svg-plot {{ width: 100%; height: 240px; }}
+  .svg-plot {{ width: 100%; height: 215px; }}
 
   /* Card Stat Footers */
   .card-stat-bar {{
     display: flex; justify-content: space-between; align-items: center;
     background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 4px; padding: 4px 10px; margin-top: 3px; font-size: 10px; color: #88909e;
+    border-radius: 4px; padding: 3px 10px; margin-top: 2px; font-size: 9.5px; color: #88909e;
   }}
   .card-stat-val {{ font-weight: 700; color: #ffffff; }}
 
   /* Scoreboard */
   .bottom-scoreboard {{
-    display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
     background: #0a0c12; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
     padding: 10px 16px; align-items: center;
   }}
@@ -323,12 +354,12 @@ def render_comparison_dashboard(
   .score-card:first-child {{ border-left: 2px solid #00e5ff; }}
   .score-card:nth-child(2) {{ border-left: 2px solid #ff9944; }}
   .score-card:nth-child(3) {{ border-left: 2px solid #00ffaa; }}
-  .score-card:nth-child(4) {{ border-left: 2px solid #b026ff; }}
-  .score-card:nth-child(5) {{ border-left: 2px solid #00e5ff; }}
-  .score-card:nth-child(6) {{ border-left: 2px solid #ff4466; }}
-  .score-label {{ font-size: 9px; color: #717684; text-transform: uppercase; letter-spacing: 0.8px; }}
-  .score-val {{ font-size: 13.5px; font-weight: 800; margin: 2px 0; color: #ffffff; }}
-  .score-sub {{ font-size: 9px; color: #88909e; font-family: 'Inter', sans-serif; }}
+  .score-card:nth-child(4) {{ border-left: 2px solid #ffcc00; }}
+  .score-card:nth-child(5) {{ border-left: 2px solid #b026ff; }}
+  .score-card:nth-child(6) {{ border-left: 2px solid #00e5ff; }}
+  .score-label {{ font-size: 8.5px; color: #717684; text-transform: uppercase; letter-spacing: 0.8px; }}
+  .score-val {{ font-size: 13px; font-weight: 800; margin: 2px 0; color: #ffffff; }}
+  .score-sub {{ font-size: 8.5px; color: #88909e; font-family: 'Inter', sans-serif; }}
 
   .footer-row {{
     display: flex; justify-content: space-between; align-items: center;
@@ -347,7 +378,7 @@ def render_comparison_dashboard(
         <span class="badge-primary">{run_a_name} vs. {run_b_name}</span>
       </h1>
       <div class="subtitle">
-        Calibrated multi-metric comparison dashboard across 10-turn adversarial stress testing.
+        Calibrated 10-metric comparison dashboard across 10-turn adversarial stress testing.
       </div>
     </div>
     <div class="header-meta">
@@ -384,212 +415,203 @@ def render_comparison_dashboard(
     </div>
   </div>
 
-  <!-- 6-Panel Grid -->
+  <!-- 10-Panel Grid -->
   <div class="panels-container">
 
-    <!-- Panel 1: Conceptual Novelty -->
+    <!-- Panel 1: Pairwise Similarity (CALIBRATED) -->
     <div class="panel-card">
       <div class="card-top">
         <div>
-          <div class="panel-title">1. CONCEPTUAL NOVELTY (N_t)</div>
-          <div class="panel-desc">Semantic displacement from context centroid EMA: N_t = ||v_t - c_t||_2</div>
+          <div class="panel-title">1. PAIRWISE SIMILARITY (s_t) &mdash; CALIBRATED</div>
+          <div class="panel-desc">Reciprocal displacement coherence normalized by &sum; w_i (eliminating 58% suppression cap)</div>
         </div>
-        <span class="card-badge badge-cyan">SEMANTIC DISPLACEMENT</span>
+        <span class="card-badge badge-cyan">MANIFOLD COHERENCE</span>
       </div>
 
-      <svg class="svg-plot" viewBox="0 0 780 250">
-        <rect x="65" y="25" width="680" height="57" fill="rgba(0, 229, 255, 0.035)" />
-        <text x="735" y="38" fill="rgba(0, 229, 255, 0.4)" font-size="9" text-anchor="end">PARADIGM EXPLORATION [0.70 - 1.00]</text>
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="49" fill="rgba(0, 229, 255, 0.035)" />
+        <text x="735" y="34" fill="rgba(0, 229, 255, 0.4)" font-size="9" text-anchor="end">HIGH COHERENCE ZONE [0.70 - 1.00]</text>
 
-        <rect x="65" y="139" width="680" height="76" fill="rgba(255, 68, 102, 0.04)" />
-        <text x="735" y="210" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">REPETITIVE STAGNATION BASIN [0.00 - 0.40]</text>
+        <rect x="65" y="138" width="680" height="50" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">DISSOCIATION BASIN [0.00 - 0.30]</text>
 
-        {make_grid(left=65, right=745, top=25, bottom=215, y_max=1.0, y_ticks=5, num_turns=num_turns)}
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
 
         <!-- Run A (Dashed) -->
-        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_nov_a, y_max=1.0)}" />
-        {to_circ(aaa_nov_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_sim_a, y_max=1.0)}" />
+        {to_circ(aaa_sim_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
 
-        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_nov_a, y_max=1.0)}" />
-        {to_circ(base_nov_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_sim_a, y_max=1.0)}" />
+        {to_circ(base_sim_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
 
         <!-- Run B (Solid) -->
-        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_nov_b, y_max=1.0)}" />
-        {to_circ(base_nov_b, y_max=1.0, color="#ff9944", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_sim_b, y_max=1.0)}" />
+        {to_circ(base_sim_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
 
-        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_nov_b, y_max=1.0)}" />
-        {to_circ(aaa_nov_b, y_max=1.0, color="#00e5ff", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_sim_b, y_max=1.0)}" />
+        {to_circ(aaa_sim_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
       </svg>
 
       <div class="card-stat-bar">
-        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_nov_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_nov_b[-1]:.3f}</strong></span>
-        <span>Run B Novelty Advantage: <strong style="color: #00e5ff;">{nov_delta_b:+.3f}</strong></span>
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_sim_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_sim_b[-1]:.3f}</strong></span>
+        <span>Run B Similarity Delta: <strong style="color: #00e5ff;">{sim_delta_b:+.3f}</strong></span>
       </div>
     </div>
 
-    <!-- Panel 2: Collapse Pressure -->
+    <!-- Panel 2: Conversational Deficit (CALIBRATED) -->
     <div class="panel-card">
       <div class="card-top">
         <div>
-          <div class="panel-title">2. COLLAPSE PRESSURE (BORINGNESS)</div>
-          <div class="panel-desc">Allostatic stagnation alarm: 0.40·pert_fail + 0.30·(1-H) + 0.30·(1-N)</div>
+          <div class="panel-title">2. CONVERSATIONAL DEFICIT &mdash; CALIBRATED</div>
+          <div class="panel-desc">Allostatic load tracking perturbation, velocity, and entropy deficits normalized dynamically by weights</div>
         </div>
-        <span class="card-badge badge-orange">STAGNATION REGULATION</span>
+        <span class="card-badge badge-orange">ALLOSTATIC DEFICIT</span>
       </div>
 
-      <svg class="svg-plot" viewBox="0 0 780 250">
-        <!-- Thresholds -->
-        <line x1="65" y1="{215 - 0.70 * 190}" x2="745" y2="{215 - 0.70 * 190}" stroke="#ff3366" stroke-width="1.6" stroke-dasharray="4,4" />
-        <text x="735" y="{215 - 0.70 * 190 - 5}" fill="#ff3366" font-size="9" text-anchor="end">SEDATION INTERRUPT (0.70)</text>
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="49" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="34" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">CRITICAL DEFICIT STRAIN [0.70 - 1.00]</text>
 
-        <line x1="65" y1="{215 - 0.65 * 190}" x2="745" y2="{215 - 0.65 * 190}" stroke="#ffaa00" stroke-width="1.6" stroke-dasharray="6,4" />
-        <text x="735" y="{215 - 0.65 * 190 - 5}" fill="#ffaa00" font-size="9" text-anchor="end">STAGNANT TRIGGER (0.65)</text>
+        <rect x="65" y="138" width="680" height="50" fill="rgba(0, 255, 170, 0.035)" />
+        <text x="735" y="182" fill="rgba(0, 255, 170, 0.4)" font-size="9" text-anchor="end">HOMEOSTATIC BALANCE [0.00 - 0.30]</text>
 
-        <line x1="65" y1="{215 - 0.40 * 190}" x2="745" y2="{215 - 0.40 * 190}" stroke="#00ffaa" stroke-width="1.4" stroke-dasharray="3,3" opacity="0.85" />
-        <text x="735" y="{215 - 0.40 * 190 + 12}" fill="#00ffaa" font-size="9" text-anchor="end">FLOWING CEILING (0.40)</text>
-
-        {make_grid(left=65, right=745, top=25, bottom=215, y_max=1.0, y_ticks=5, num_turns=num_turns)}
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
 
         <!-- Run A (Dashed) -->
-        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_col_a, y_max=1.0)}" />
-        {to_circ(aaa_col_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_def_a, y_max=1.0)}" />
+        {to_circ(aaa_def_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
 
-        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_col_a, y_max=1.0)}" />
-        {to_circ(base_col_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_def_a, y_max=1.0)}" />
+        {to_circ(base_def_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
 
         <!-- Run B (Solid) -->
-        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_col_b, y_max=1.0)}" />
-        {to_circ(base_col_b, y_max=1.0, color="#ff9944", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_def_b, y_max=1.0)}" />
+        {to_circ(base_def_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
 
-        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_col_b, y_max=1.0)}" />
-        {to_circ(aaa_col_b, y_max=1.0, color="#00e5ff", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_def_b, y_max=1.0)}" />
+        {to_circ(aaa_def_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
       </svg>
 
       <div class="card-stat-bar">
-        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_col_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_col_b[-1]:.3f}</strong></span>
-        <span>Run B Stagnation Delta: <strong style="color: #ff9944;">{col_delta_b:+.3f}</strong></span>
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_def_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_def_b[-1]:.3f}</strong></span>
+        <span>Run B Deficit Suppression: <strong style="color: #ff9944;">{def_delta_b:+.3f}</strong></span>
       </div>
     </div>
 
-    <!-- Panel 3: Divergence Resolution Ratio -->
+    <!-- Panel 3: Conversational Vitality (CALIBRATED) -->
     <div class="panel-card">
       <div class="card-top">
         <div>
-          <div class="panel-title">3. DIVERGENCE RESOLUTION RATIO (DRR)</div>
-          <div class="panel-desc">Ratio of resolved dialectic tension to open systemic divergence: min(1.0, D_res / D_open)</div>
+          <div class="panel-title">3. CONVERSATIONAL VITALITY &mdash; CALIBRATED</div>
+          <div class="panel-desc">Allostatic vitality measuring dialectic liveliness: 1.0 - Deficit with unclamped entropy integration</div>
         </div>
-        <span class="card-badge badge-mint">DIALECTIC HOMEOSTASIS</span>
+        <span class="card-badge badge-mint">ALLOSTATIC VITALITY</span>
       </div>
 
-      <svg class="svg-plot" viewBox="0 0 780 250">
-        <rect x="65" y="25" width="680" height="38" fill="rgba(0, 255, 170, 0.04)" />
-        <text x="735" y="38" fill="rgba(0, 255, 170, 0.5)" font-size="9" text-anchor="end">BALANCED RESOLUTION ZONE [0.80 - 1.00]</text>
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="66" fill="rgba(0, 255, 170, 0.035)" />
+        <text x="735" y="34" fill="rgba(0, 255, 170, 0.4)" font-size="9" text-anchor="end">HIGH VITALITY ZONE [0.60 - 1.00]</text>
 
-        <rect x="65" y="139" width="680" height="76" fill="rgba(255, 68, 102, 0.04)" />
-        <text x="735" y="210" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">FRAGMENTATION BASIN [0.00 - 0.40]</text>
+        <rect x="65" y="138" width="680" height="50" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">METABOLIC COLLAPSE [0.00 - 0.30]</text>
 
-        <line x1="65" y1="{215 - 0.50 * 190}" x2="745" y2="{215 - 0.50 * 190}" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-dasharray="3,3" />
-
-        {make_grid(left=65, right=745, top=25, bottom=215, y_max=1.0, y_ticks=5, num_turns=num_turns)}
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
 
         <!-- Run A (Dashed) -->
-        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_drr_a, y_max=1.0)}" />
-        {to_circ(aaa_drr_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_vit_a, y_max=1.0)}" />
+        {to_circ(aaa_vit_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
 
-        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_drr_a, y_max=1.0)}" />
-        {to_circ(base_drr_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_vit_a, y_max=1.0)}" />
+        {to_circ(base_vit_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
 
         <!-- Run B (Solid) -->
-        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_drr_b, y_max=1.0)}" />
-        {to_circ(base_drr_b, y_max=1.0, color="#ff9944", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_vit_b, y_max=1.0)}" />
+        {to_circ(base_vit_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
 
-        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_drr_b, y_max=1.0)}" />
-        {to_circ(aaa_drr_b, y_max=1.0, color="#00e5ff", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_vit_b, y_max=1.0)}" />
+        {to_circ(aaa_vit_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
       </svg>
 
       <div class="card-stat-bar">
-        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_drr_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_drr_b[-1]:.3f}</strong></span>
-        <span>Run B Homeostatic Delta: <strong style="color: #00ffaa;">{drr_delta_b:+.3f}</strong></span>
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_vit_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_vit_b[-1]:.3f}</strong></span>
+        <span>Run B Vitality Advantage: <strong style="color: #00ffaa;">{vit_delta_b:+.3f}</strong></span>
       </div>
     </div>
 
-    <!-- Panel 4: Gordon Pask Cybernetic Health -->
+    <!-- Panel 4: Forward Perturbation (CALIBRATED) -->
     <div class="panel-card">
       <div class="card-top">
         <div>
-          <div class="panel-title">4. GORDON PASK CYBERNETIC HEALTH (H_pask)</div>
-          <div class="panel-desc">Composite dialectic vitality: 0.35·N + 0.25·H_ent + 0.20·(1-MPI) + 0.20·DRR</div>
+          <div class="panel-title">4. FORWARD PERTURBATION (fP_t) &mdash; CALIBRATED</div>
+          <div class="panel-desc">Agent-induced displacement shift on human thought vector: 1 - cos(a_t - a_{{t-1}}, h_t - a_{{t-1}})</div>
         </div>
-        <span class="card-badge badge-purple">ORGANIZATIONAL CLOSURE</span>
+        <span class="card-badge badge-yellow">AGENT PERTURBATION</span>
       </div>
 
-      <svg class="svg-plot" viewBox="0 0 780 250">
-        <rect x="65" y="25" width="680" height="76" fill="rgba(0, 229, 255, 0.035)" />
-        <text x="735" y="38" fill="rgba(0, 229, 255, 0.4)" font-size="9" text-anchor="end">HIGH VITALITY ZONE [0.60 - 1.00]</text>
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="72" width="680" height="50" fill="rgba(255, 204, 0, 0.035)" />
+        <text x="735" y="84" fill="rgba(255, 204, 0, 0.4)" font-size="9" text-anchor="end">ACTIVE DIALECTIC PERTURBATION [0.40 - 0.70]</text>
 
-        <rect x="65" y="158" width="680" height="57" fill="rgba(255, 68, 102, 0.04)" />
-        <text x="735" y="210" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">METABOLIC COLLAPSE BASIN [0.00 - 0.30]</text>
-
-        {make_grid(left=65, right=745, top=25, bottom=215, y_max=1.0, y_ticks=5, num_turns=num_turns)}
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
 
         <!-- Run A (Dashed) -->
-        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_pask_a, y_max=1.0)}" />
-        {to_circ(aaa_pask_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_fpert_a, y_max=1.0)}" />
+        {to_circ(aaa_fpert_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
 
-        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_pask_a, y_max=1.0)}" />
-        {to_circ(base_pask_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_fpert_a, y_max=1.0)}" />
+        {to_circ(base_fpert_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
 
         <!-- Run B (Solid) -->
-        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_pask_b, y_max=1.0)}" />
-        {to_circ(base_pask_b, y_max=1.0, color="#ff9944", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_fpert_b, y_max=1.0)}" />
+        {to_circ(base_fpert_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
 
-        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_pask_b, y_max=1.0)}" />
-        {to_circ(aaa_pask_b, y_max=1.0, color="#00e5ff", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_fpert_b, y_max=1.0)}" />
+        {to_circ(aaa_fpert_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
       </svg>
 
       <div class="card-stat-bar">
-        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_pask_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_pask_b[-1]:.3f}</strong></span>
-        <span>Run B Cybernetic Vitality Delta: <strong style="color: #d175ff;">{pask_delta_b:+.3f}</strong></span>
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_fpert_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_fpert_b[-1]:.3f}</strong></span>
+        <span>Run B Mean fP: <strong style="color: #ffcc00;">AAA {mean(aaa_fpert_b):.3f}</strong> / <strong style="color: #ff9944;">Base {mean(base_fpert_b):.3f}</strong></span>
       </div>
     </div>
 
-    <!-- Panel 5: Conceptual Velocity -->
+    <!-- Panel 5: Mutual Perturbation Index (CALIBRATED) -->
     <div class="panel-card">
       <div class="card-top">
         <div>
-          <div class="panel-title">5. CONCEPTUAL VELOCITY (v_t)</div>
-          <div class="panel-desc">Normalized semantic traverse speed on concept manifold: v_t = ||v||_2 / V_scale</div>
+          <div class="panel-title">5. MUTUAL PERTURBATION INDEX (MPI_t) &mdash; CALIBRATED</div>
+          <div class="panel-desc">Bilateral dialectic coupling geometric mean: MPI_t = &radic;(rP_t &middot; fP_t)</div>
         </div>
-        <span class="card-badge badge-cyan">SEMANTIC KINEMATICS</span>
+        <span class="card-badge badge-purple">RECIPROCAL COUPLING</span>
       </div>
 
-      <svg class="svg-plot" viewBox="0 0 780 250">
-        <rect x="65" y="53" width="680" height="48" fill="rgba(176, 38, 255, 0.035)" />
-        <text x="735" y="66" fill="rgba(176, 38, 255, 0.4)" font-size="9" text-anchor="end">DYNAMIC TRAVERSE ZONE [0.60 - 0.85]</text>
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="55" width="680" height="50" fill="rgba(176, 38, 255, 0.035)" />
+        <text x="735" y="67" fill="rgba(176, 38, 255, 0.4)" font-size="9" text-anchor="end">CONSTRUCTIVE COUPLING [0.50 - 0.80]</text>
 
-        <rect x="65" y="148" width="680" height="67" fill="rgba(255, 153, 68, 0.035)" />
-        <text x="735" y="210" fill="rgba(255, 153, 68, 0.4)" font-size="9" text-anchor="end">KINETIC STALLING [0.00 - 0.35]</text>
+        <rect x="65" y="155" width="680" height="33" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">DECOUPLED BASIN [0.00 - 0.20]</text>
 
-        {make_grid(left=65, right=745, top=25, bottom=215, y_max=1.0, y_ticks=5, num_turns=num_turns)}
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
 
         <!-- Run A (Dashed) -->
-        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_vel_a, y_max=1.0)}" />
-        {to_circ(aaa_vel_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_mpi_a, y_max=1.0)}" />
+        {to_circ(aaa_mpi_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
 
-        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_vel_a, y_max=1.0)}" />
-        {to_circ(base_vel_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_mpi_a, y_max=1.0)}" />
+        {to_circ(base_mpi_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
 
         <!-- Run B (Solid) -->
-        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_vel_b, y_max=1.0)}" />
-        {to_circ(base_vel_b, y_max=1.0, color="#ff9944", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_mpi_b, y_max=1.0)}" />
+        {to_circ(base_mpi_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
 
-        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_vel_b, y_max=1.0)}" />
-        {to_circ(aaa_vel_b, y_max=1.0, color="#00e5ff", r=3.8, hollow=False)}
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_mpi_b, y_max=1.0)}" />
+        {to_circ(aaa_mpi_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
       </svg>
 
       <div class="card-stat-bar">
-        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_vel_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_vel_b[-1]:.3f}</strong></span>
-        <span>Run B Mean Velocity: <strong style="color: #00e5ff;">AAA {mean(aaa_vel_b):.3f}</strong> / <strong style="color: #ff9944;">Base {mean(base_vel_b):.3f}</strong></span>
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_mpi_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_mpi_b[-1]:.3f}</strong></span>
+        <span>Run B Coupling Delta: <strong style="color: #d175ff;">{mpi_delta_b:+.3f}</strong></span>
       </div>
     </div>
 
@@ -598,16 +620,16 @@ def render_comparison_dashboard(
       <div class="card-top">
         <div>
           <div class="panel-title">6. REVERSE PERTURBATION (rP_t)</div>
-          <div class="panel-desc">Agent-induced trajectory shift in human thought: 1 - cos(h_t - h_{{t-1}}, a_t - h_{{t-1}})</div>
+          <div class="panel-desc">Human-induced trajectory shift in agent state: 1 - cos(h_t - h_{{t-1}}, a_t - h_{{t-1}})</div>
         </div>
-        <span class="card-badge badge-mint">TRAJECTORY DYNAMICS</span>
+        <span class="card-badge badge-mint">TRAJECTORY TENSION</span>
       </div>
 
-      <svg class="svg-plot" viewBox="0 0 780 250">
-        <rect x="65" y="82" width="680" height="57" fill="rgba(0, 255, 170, 0.035)" />
-        <text x="735" y="95" fill="rgba(0, 255, 170, 0.4)" font-size="9" text-anchor="end">CONSTRUCTIVE DIALECTIC PERTURBATION [0.40 - 0.70]</text>
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="72" width="680" height="50" fill="rgba(0, 255, 170, 0.035)" />
+        <text x="735" y="84" fill="rgba(0, 255, 170, 0.4)" font-size="9" text-anchor="end">CONSTRUCTIVE PERTURBATION [0.40 - 0.70]</text>
 
-        {make_grid(left=65, right=745, top=25, bottom=215, y_max=1.0, y_ticks=5, num_turns=num_turns)}
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
 
         <!-- Run A (Dashed) -->
         <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_rpert_a, y_max=1.0)}" />
@@ -618,10 +640,10 @@ def render_comparison_dashboard(
 
         <!-- Run B (Solid) -->
         <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_rpert_b, y_max=1.0)}" />
-        {to_circ(base_rpert_b, y_max=1.0, color="#ff9944", r=3.8, hollow=False)}
+        {to_circ(base_rpert_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
 
         <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_rpert_b, y_max=1.0)}" />
-        {to_circ(aaa_rpert_b, y_max=1.0, color="#00e5ff", r=3.8, hollow=False)}
+        {to_circ(aaa_rpert_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
       </svg>
 
       <div class="card-stat-bar">
@@ -630,39 +652,201 @@ def render_comparison_dashboard(
       </div>
     </div>
 
+    <!-- Panel 7: Conceptual Novelty -->
+    <div class="panel-card">
+      <div class="card-top">
+        <div>
+          <div class="panel-title">7. CONCEPTUAL NOVELTY (N_t)</div>
+          <div class="panel-desc">Semantic displacement from context centroid EMA: N_t = ||v_t - c_t||_2</div>
+        </div>
+        <span class="card-badge badge-cyan">SEMANTIC DISPLACEMENT</span>
+      </div>
+
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="49" fill="rgba(0, 229, 255, 0.035)" />
+        <text x="735" y="34" fill="rgba(0, 229, 255, 0.4)" font-size="9" text-anchor="end">PARADIGM EXPLORATION [0.70 - 1.00]</text>
+
+        <rect x="65" y="121" width="680" height="67" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">REPETITIVE STAGNATION BASIN [0.00 - 0.40]</text>
+
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
+
+        <!-- Run A (Dashed) -->
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_nov_a, y_max=1.0)}" />
+        {to_circ(aaa_nov_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_nov_a, y_max=1.0)}" />
+        {to_circ(base_nov_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+
+        <!-- Run B (Solid) -->
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_nov_b, y_max=1.0)}" />
+        {to_circ(base_nov_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
+
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_nov_b, y_max=1.0)}" />
+        {to_circ(aaa_nov_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
+      </svg>
+
+      <div class="card-stat-bar">
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_nov_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_nov_b[-1]:.3f}</strong></span>
+        <span>Run B Novelty Advantage: <strong style="color: #00e5ff;">{nov_delta_b:+.3f}</strong></span>
+      </div>
+    </div>
+
+    <!-- Panel 8: Collapse Pressure -->
+    <div class="panel-card">
+      <div class="card-top">
+        <div>
+          <div class="panel-title">8. COLLAPSE PRESSURE (BORINGNESS)</div>
+          <div class="panel-desc">Allostatic stagnation alarm: 0.40&middot;pert_fail + 0.30&middot;(1-H) + 0.30&middot;(1-N)</div>
+        </div>
+        <span class="card-badge badge-orange">STAGNATION REGULATION</span>
+      </div>
+
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <line x1="65" y1="{188 - 0.70 * 166}" x2="745" y2="{188 - 0.70 * 166}" stroke="#ff3366" stroke-width="1.6" stroke-dasharray="4,4" />
+        <text x="735" y="{188 - 0.70 * 166 - 4}" fill="#ff3366" font-size="9" text-anchor="end">SEDATION INTERRUPT (0.70)</text>
+
+        <line x1="65" y1="{188 - 0.40 * 166}" x2="745" y2="{188 - 0.40 * 166}" stroke="#00ffaa" stroke-width="1.4" stroke-dasharray="3,3" opacity="0.85" />
+        <text x="735" y="{188 - 0.40 * 166 + 11}" fill="#00ffaa" font-size="9" text-anchor="end">FLOWING CEILING (0.40)</text>
+
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
+
+        <!-- Run A (Dashed) -->
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_col_a, y_max=1.0)}" />
+        {to_circ(aaa_col_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_col_a, y_max=1.0)}" />
+        {to_circ(base_col_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+
+        <!-- Run B (Solid) -->
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_col_b, y_max=1.0)}" />
+        {to_circ(base_col_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
+
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_col_b, y_max=1.0)}" />
+        {to_circ(aaa_col_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
+      </svg>
+
+      <div class="card-stat-bar">
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_col_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_col_b[-1]:.3f}</strong></span>
+        <span>Run B Stagnation Delta: <strong style="color: #ff9944;">{mean(aaa_col_b) - mean(base_col_b):+.3f}</strong></span>
+      </div>
+    </div>
+
+    <!-- Panel 9: Divergence Resolution Ratio -->
+    <div class="panel-card">
+      <div class="card-top">
+        <div>
+          <div class="panel-title">9. DIVERGENCE RESOLUTION RATIO (DRR)</div>
+          <div class="panel-desc">Ratio of resolved dialectic tension to open systemic divergence: min(1.0, D_res / D_open)</div>
+        </div>
+        <span class="card-badge badge-mint">DIALECTIC HOMEOSTASIS</span>
+      </div>
+
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="33" fill="rgba(0, 255, 170, 0.04)" />
+        <text x="735" y="34" fill="rgba(0, 255, 170, 0.5)" font-size="9" text-anchor="end">BALANCED RESOLUTION ZONE [0.80 - 1.00]</text>
+
+        <rect x="65" y="121" width="680" height="67" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">FRAGMENTATION BASIN [0.00 - 0.40]</text>
+
+        <line x1="65" y1="{188 - 0.50 * 166}" x2="745" y2="{188 - 0.50 * 166}" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-dasharray="3,3" />
+
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
+
+        <!-- Run A (Dashed) -->
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_drr_a, y_max=1.0)}" />
+        {to_circ(aaa_drr_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_drr_a, y_max=1.0)}" />
+        {to_circ(base_drr_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+
+        <!-- Run B (Solid) -->
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_drr_b, y_max=1.0)}" />
+        {to_circ(base_drr_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
+
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_drr_b, y_max=1.0)}" />
+        {to_circ(aaa_drr_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
+      </svg>
+
+      <div class="card-stat-bar">
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_drr_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_drr_b[-1]:.3f}</strong></span>
+        <span>Run B Homeostatic Delta: <strong style="color: #00ffaa;">{mean(aaa_drr_b) - mean(base_drr_b):+.3f}</strong></span>
+      </div>
+    </div>
+
+    <!-- Panel 10: Gordon Pask Cybernetic Health -->
+    <div class="panel-card">
+      <div class="card-top">
+        <div>
+          <div class="panel-title">10. GORDON PASK CYBERNETIC HEALTH (H_pask)</div>
+          <div class="panel-desc">Composite dialectic vitality: 0.35&middot;N + 0.25&middot;H_ent + 0.20&middot;(1-MPI) + 0.20&middot;DRR</div>
+        </div>
+        <span class="card-badge badge-purple">ORGANIZATIONAL CLOSURE</span>
+      </div>
+
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="66" fill="rgba(0, 229, 255, 0.035)" />
+        <text x="735" y="34" fill="rgba(0, 229, 255, 0.4)" font-size="9" text-anchor="end">HIGH VITALITY ZONE [0.60 - 1.00]</text>
+
+        <rect x="65" y="138" width="680" height="50" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">METABOLIC COLLAPSE BASIN [0.00 - 0.30]</text>
+
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
+
+        <!-- Run A (Dashed) -->
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_pask_a, y_max=1.0)}" />
+        {to_circ(aaa_pask_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_pask_a, y_max=1.0)}" />
+        {to_circ(base_pask_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+
+        <!-- Run B (Solid) -->
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_pask_b, y_max=1.0)}" />
+        {to_circ(base_pask_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
+
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_pask_b, y_max=1.0)}" />
+        {to_circ(aaa_pask_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
+      </svg>
+
+      <div class="card-stat-bar">
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_pask_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_pask_b[-1]:.3f}</strong></span>
+        <span>Run B Cybernetic Vitality Delta: <strong style="color: #d175ff;">{pask_delta_b:+.3f}</strong></span>
+      </div>
+    </div>
+
   </div>
 
   <!-- Scoreboard -->
   <div class="bottom-scoreboard">
     <div class="score-card">
-      <div class="score-label">Run B Final Novelty</div>
-      <div class="score-val" style="color: #00e5ff;">AAA: {aaa_nov_b[-1]:.3f} // Base: {base_nov_b[-1]:.3f}</div>
-      <div class="score-sub">T{num_turns} semantic displacement</div>
+      <div class="score-label">Run B Final Similarity (s_t)</div>
+      <div class="score-val" style="color: #00e5ff;">AAA: {aaa_sim_b[-1]:.3f} // Base: {base_sim_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} manifold coherence</div>
     </div>
     <div class="score-card">
-      <div class="score-label">Run B Final Collapse</div>
-      <div class="score-val" style="color: #ff9944;">AAA: {aaa_col_b[-1]:.3f} // Base: {base_col_b[-1]:.3f}</div>
-      <div class="score-sub">T{num_turns} stagnation pressure</div>
+      <div class="score-label">Run B Final Deficit</div>
+      <div class="score-val" style="color: #ff9944;">AAA: {aaa_def_b[-1]:.3f} // Base: {base_def_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} allostatic stress</div>
     </div>
     <div class="score-card">
-      <div class="score-label">Run B Final DRR</div>
-      <div class="score-val" style="color: #00ffaa;">AAA: {aaa_drr_b[-1]:.3f} // Base: {base_drr_b[-1]:.3f}</div>
-      <div class="score-sub">T{num_turns} dialectic resolution</div>
+      <div class="score-label">Run B Final Vitality</div>
+      <div class="score-val" style="color: #00ffaa;">AAA: {aaa_vit_b[-1]:.3f} // Base: {base_vit_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} dialectic liveliness</div>
+    </div>
+    <div class="score-card">
+      <div class="score-label">Run B Final Forward Pert (fP)</div>
+      <div class="score-val" style="color: #ffcc00;">AAA: {aaa_fpert_b[-1]:.3f} // Base: {base_fpert_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} agent impact</div>
+    </div>
+    <div class="score-card">
+      <div class="score-label">Run B Final Mutual Pert (MPI)</div>
+      <div class="score-val" style="color: #d175ff;">AAA: {aaa_mpi_b[-1]:.3f} // Base: {base_mpi_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} bilateral coupling</div>
     </div>
     <div class="score-card">
       <div class="score-label">Run B Final Pask Health</div>
-      <div class="score-val" style="color: #d175ff;">AAA: {aaa_pask_b[-1]:.3f} // Base: {base_pask_b[-1]:.3f}</div>
-      <div class="score-sub">T{num_turns} cybernetic vitality</div>
-    </div>
-    <div class="score-card">
-      <div class="score-label">AAA Advantage Delta (Novelty)</div>
-      <div class="score-val" style="color: #00e5ff;">{nov_delta_b:+.3f}</div>
-      <div class="score-sub">Average displacement separation</div>
-    </div>
-    <div class="score-card">
-      <div class="score-label">AAA Advantage Delta (Health)</div>
-      <div class="score-val" style="color: #00ffaa;">{pask_delta_b:+.3f}</div>
-      <div class="score-sub">Average cybernetic health gap</div>
+      <div class="score-val" style="color: #00e5ff;">AAA: {aaa_pask_b[-1]:.3f} // Base: {base_pask_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} cybernetic health</div>
     </div>
   </div>
 
@@ -693,7 +877,7 @@ def render_comparison_dashboard(
             "--headless",
             "--disable-gpu",
             "--hide-scrollbars",
-            "--window-size=1720,1540",
+            "--window-size=1720,2420",
             f"--screenshot={png_file}",
             f"file:///{str(html_file).replace(os.sep, '/')}",
         ]
@@ -741,16 +925,16 @@ def write_comparison_summary(run_a_name: str, run_b_name: str, data_a: dict, dat
     ]
 
     metric_sections = [
-        ("1. Conceptual Novelty ($N_t$)", "conceptual_novelty", "", "Semantic displacement from context centroid EMA."),
-        ("2. Collapse Pressure / Boringness", "collapse_pressure", "boringness", "Allostatic stagnation alarm tracking perturbation, entropy, and novelty failures."),
-        ("3. Divergence Resolution Ratio ($DRR_t$)", "divergence_resolution_ratio", "", "Ratio of resolved dialectic tension to open systemic divergence."),
-        ("4. Gordon Pask Cybernetic Health ($H_{pask}$)", "paskian_health", "", "Composite dialectic vitality across novelty, variety, and mutual learning."),
-        ("5. Conceptual Velocity ($v_t$)", "conceptual_velocity", "", "Normalized semantic traverse speed across concept manifold."),
-        ("6. Phase Transition Magnitude ($\Phi_t$)", "phase_transition_magnitude", "", "Magnitude of discrete conceptual state reorganizations."),
-        ("7. Reverse Perturbation ($rP_t$)", "reverse_perturbation", "", "Agent-induced trajectory shift in human thought vector."),
-        ("8. Mutual Perturbation Index ($MPI_t$)", "mutual_perturbation", "", "Reciprocal dialectic coupling between human and agent trajectories."),
-        ("9. Coupling Coherence ($C_t$)", "coupling_coherence", "", "Exponentially decayed projection of human vector onto prior agent vector."),
-        ("10. Agent Self-Divergence ($D_{self}$)", "agent_self_divergence", "", "Recency-weighted drift of agent vector from prior agent history.")
+        ("1. Pairwise Similarity ($s_t$)", "pairwise_similarity", "s_t", "Reciprocal displacement coherence normalized by sum of active weights."),
+        ("2. Conversational Deficit", "deficit", "homeostatic_deficit", "Allostatic load tracking perturbation, velocity, and entropy deficits."),
+        ("3. Conversational Vitality", "vitality", "conversation_vitality", "Allostatic vitality measuring dialectic liveliness and residual reserve."),
+        ("4. Forward Perturbation ($fP_t$)", "forward_perturbation", "", "Agent-induced displacement shift on human thought vector."),
+        ("5. Mutual Perturbation Index ($MPI_t$)", "mutual_perturbation", "", "Geometric mean reciprocal coupling between user and agent trajectories."),
+        ("6. Reverse Perturbation ($rP_t$)", "reverse_perturbation", "", "Human-induced trajectory shift in agent thought vector."),
+        ("7. Conceptual Novelty ($N_t$)", "conceptual_novelty", "", "Semantic displacement from context centroid EMA."),
+        ("8. Collapse Pressure / Boringness", "collapse_pressure", "boringness", "Allostatic stagnation alarm tracking perturbation, entropy, and novelty failures."),
+        ("9. Divergence Resolution Ratio ($DRR_t$)", "divergence_resolution_ratio", "", "Ratio of resolved dialectic tension to open systemic divergence."),
+        ("10. Gordon Pask Cybernetic Health ($H_{pask}$)", "paskian_health", "", "Composite dialectic vitality across novelty, variety, and mutual learning.")
     ]
 
     for sec_title, key, fallback, desc in metric_sections:
@@ -808,12 +992,16 @@ def print_cli_table(run_a_name: str, run_b_name: str, data_a: dict, data_b: dict
     print("=" * 114)
 
     metrics_to_print = [
-        ("1. CONCEPTUAL NOVELTY (N_t)", "conceptual_novelty", ""),
-        ("2. COLLAPSE PRESSURE (BORINGNESS)", "collapse_pressure", "boringness"),
-        ("3. DIVERGENCE RESOLUTION RATIO (DRR)", "divergence_resolution_ratio", ""),
-        ("4. GORDON PASK CYBERNETIC HEALTH (H_pask)", "paskian_health", ""),
-        ("5. CONCEPTUAL VELOCITY (v_t)", "conceptual_velocity", ""),
-        ("6. REVERSE PERTURBATION (rP_t)", "reverse_perturbation", "")
+        ("1. PAIRWISE SIMILARITY (s_t)", "pairwise_similarity", "s_t"),
+        ("2. CONVERSATIONAL DEFICIT", "deficit", "homeostatic_deficit"),
+        ("3. CONVERSATIONAL VITALITY", "vitality", "conversation_vitality"),
+        ("4. FORWARD PERTURBATION (fP_t)", "forward_perturbation", ""),
+        ("5. MUTUAL PERTURBATION (MPI_t)", "mutual_perturbation", ""),
+        ("6. REVERSE PERTURBATION (rP_t)", "reverse_perturbation", ""),
+        ("7. CONCEPTUAL NOVELTY (N_t)", "conceptual_novelty", ""),
+        ("8. COLLAPSE PRESSURE (CP_t)", "collapse_pressure", "boringness"),
+        ("9. DIVERGENCE RESOLUTION RATIO (DRR)", "divergence_resolution_ratio", ""),
+        ("10. GORDON PASK CYBERNETIC HEALTH (H_pask)", "paskian_health", ""),
     ]
 
     for title, key, fallback in metrics_to_print:

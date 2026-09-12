@@ -214,16 +214,14 @@ async def compute_metrics_for_conversation(turns: list[dict], embedder, speaker_
         user_emb = embedder.encode(user_text, normalize_embeddings=True).astype("float32")
         h_msg = repo.insert("human", user_text, user_emb)
 
-        payload = {
+        payload_human = {
             "current_message": {"id": h_msg.id, "speaker": "human", "conversation_id": "eval"},
             "speaker": "human",
             "conversation_id": "eval",
             "embeddings": {"dense": user_emb},
         }
-        res = await metrics_mod.process(payload)
-        turn_metrics = res.get("metrics", {})
-        t["metrics"] = turn_metrics
-
+        res_human = await metrics_mod.process(payload_human)
+        turn_metrics = res_human.get("metrics", {})
 
         if "homeostatic" not in t or not t["homeostatic"]:
             t["homeostatic"] = {
@@ -235,7 +233,20 @@ async def compute_metrics_for_conversation(turns: list[dict], embedder, speaker_
             }
 
         asst_emb = embedder.encode(asst_text, normalize_embeddings=True).astype("float32")
-        repo.insert("agent", asst_text, asst_emb)
+        a_msg = repo.insert("agent", asst_text, asst_emb)
+
+        payload_agent = {
+            "current_message": {"id": a_msg.id, "speaker": "agent", "conversation_id": "eval"},
+            "speaker": "agent",
+            "conversation_id": "eval",
+            "embeddings": {"dense": asst_emb},
+        }
+        res_agent = await metrics_mod.process(payload_agent)
+        agent_metrics = res_agent.get("metrics", {})
+
+        # Merge metrics so the exchange captures both human and apparatus dynamics
+        turn_metrics.update({k: v for k, v in agent_metrics.items() if v is not None})
+        t["metrics"] = turn_metrics
 
     return turns
 
@@ -506,60 +517,101 @@ def render_plots(receipts: dict, out_dir: Path):
         subprocess.run(cmd, capture_output=True)
         print(f"  Generated: {png_file.name}")
 
-    # 2. Head-to-Head 6-Variable Breakdown (Figure 5)
+    # 2. Head-to-Head 9-Variable Breakdown (Figure 5)
+    def get_sf(source, k1, k2="", default=0.0):
+        res = []
+        for t in source:
+            m = t.get("metrics", {})
+            val = m.get(k1)
+            if val is None and k2:
+                val = m.get(k2)
+            res.append(float(val) if val is not None else default)
+        return res
+
+    def get_mean(series):
+        return sum(series) / max(1, len(series))
+
     panels_data = [
         {
-            "id": "novelty", "title": "CONCEPTUAL NOVELTY (N_t)", "badge": "SEMANTIC DRIFT",
-            "desc": "AAA sustains exploratory novelty; Baseline decays into repetitive justification.",
-            "y_max": 1.0, "aaa": get_s(aaa, "conceptual_novelty"), "base": get_s(baseline, "conceptual_novelty"),
+            "id": "sim", "title": "PAIRWISE SIMILARITY (s_t)", "badge": "MANIFOLD COHERENCE",
+            "desc": "Reciprocal displacement coherence normalized by sum(w_i), eliminating suppression cap.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "pairwise_similarity", "s_t"), "base": get_sf(baseline, "pairwise_similarity", "s_t"),
             "color_aaa": "#00e5ff", "color_base": "#ff9944",
-            "stat_aaa": f"T{num_turns}: {get_s(aaa, 'conceptual_novelty')[-1]:.3f}" if get_s(aaa, 'conceptual_novelty') else "-",
-            "stat_base": f"T{num_turns}: {get_s(baseline, 'conceptual_novelty')[-1]:.3f}" if get_s(baseline, 'conceptual_novelty') else "-",
-            "delta": "+0.178 ADVANTAGE"
+            "stat_aaa": f"Avg: {get_mean(get_sf(aaa, 'pairwise_similarity', 's_t')):.3f}",
+            "stat_base": f"Avg: {get_mean(get_sf(baseline, 'pairwise_similarity', 's_t')):.3f}",
+            "delta": "CALIBRATED RANGE"
         },
         {
-            "id": "rp", "title": "REVERSE PERTURBATION (rP)", "badge": "RECIPROCAL TENSION",
-            "desc": "Measures adversarial impact on agent state. Baseline loses tension; AAA sustains resistance.",
-            "y_max": 1.0, "aaa": get_s(aaa, "reverse_perturbation"), "base": get_s(baseline, "reverse_perturbation"),
+            "id": "deficit", "title": "CONVERSATIONAL DEFICIT", "badge": "ALLOSTATIC DEFICIT",
+            "desc": "Multi-factor deficit load dynamically normalized across active turns without artificial clamping.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "deficit", "homeostatic_deficit"), "base": get_sf(baseline, "deficit", "homeostatic_deficit"),
             "color_aaa": "#00e5ff", "color_base": "#ff9944",
-            "stat_aaa": f"Avg: {sum(get_s(aaa, 'reverse_perturbation'))/max(1, len(get_s(aaa, 'reverse_perturbation'))):.3f}",
-            "stat_base": f"Avg: {sum(get_s(baseline, 'reverse_perturbation'))/max(1, len(get_s(baseline, 'reverse_perturbation'))):.3f}",
+            "stat_aaa": f"Avg: {get_mean(get_sf(aaa, 'deficit', 'homeostatic_deficit')):.3f}",
+            "stat_base": f"Avg: {get_mean(get_sf(baseline, 'deficit', 'homeostatic_deficit')):.3f}",
+            "delta": "CALIBRATED DEFICIT"
+        },
+        {
+            "id": "vitality", "title": "CONVERSATIONAL VITALITY", "badge": "ALLOSTATIC VITALITY",
+            "desc": "Dialectic liveliness and reserve capacity: 1.0 - Deficit with unclamped spectral entropy.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "vitality", "conversation_vitality"), "base": get_sf(baseline, "vitality", "conversation_vitality"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"Avg: {get_mean(get_sf(aaa, 'vitality', 'conversation_vitality')):.3f}",
+            "stat_base": f"Avg: {get_mean(get_sf(baseline, 'vitality', 'conversation_vitality')):.3f}",
+            "delta": "CALIBRATED VITALITY"
+        },
+        {
+            "id": "fp", "title": "FORWARD PERTURBATION (fP)", "badge": "AGENT IMPACT",
+            "desc": "Agent-to-human directional displacement on human thought trajectory.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "forward_perturbation"), "base": get_sf(baseline, "forward_perturbation"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"Avg: {get_mean(get_sf(aaa, 'forward_perturbation')):.3f}",
+            "stat_base": f"Avg: {get_mean(get_sf(baseline, 'forward_perturbation')):.3f}",
+            "delta": "ACTIVE BILATERAL"
+        },
+        {
+            "id": "mpi", "title": "MUTUAL PERTURBATION (MPI)", "badge": "RECIPROCAL COUPLING",
+            "desc": "Bilateral dialectic coupling geometric mean sqrt(rP * fP).",
+            "y_max": 1.0, "aaa": get_sf(aaa, "mutual_perturbation"), "base": get_sf(baseline, "mutual_perturbation"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"Avg: {get_mean(get_sf(aaa, 'mutual_perturbation')):.3f}",
+            "stat_base": f"Avg: {get_mean(get_sf(baseline, 'mutual_perturbation')):.3f}",
+            "delta": "GEOMETRIC MEAN"
+        },
+        {
+            "id": "rp", "title": "REVERSE PERTURBATION (rP)", "badge": "TRAJECTORY TENSION",
+            "desc": "Measures adversarial impact on agent state. Baseline loses tension; AAA sustains resistance.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "reverse_perturbation"), "base": get_sf(baseline, "reverse_perturbation"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"Avg: {get_mean(get_sf(aaa, 'reverse_perturbation')):.3f}",
+            "stat_base": f"Avg: {get_mean(get_sf(baseline, 'reverse_perturbation')):.3f}",
             "delta": "+0.340 ADVANTAGE"
         },
         {
-            "id": "sim", "title": "PAIRWISE SIMILARITY (s_t)", "badge": "MANIFOLD PROXIMITY",
-            "desc": "Reciprocal displacement coherence. Both decay from initial prompt; AAA shows dynamic buffering.",
-            "y_max": 1.0, "aaa": get_s(aaa, "pairwise_similarity"), "base": get_s(baseline, "pairwise_similarity"),
+            "id": "novelty", "title": "CONCEPTUAL NOVELTY (N_t)", "badge": "SEMANTIC DRIFT",
+            "desc": "AAA sustains exploratory novelty; Baseline decays into repetitive justification.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "conceptual_novelty"), "base": get_sf(baseline, "conceptual_novelty"),
             "color_aaa": "#00e5ff", "color_base": "#ff9944",
-            "stat_aaa": f"Avg: {sum(get_s(aaa, 'pairwise_similarity'))/max(1, len(get_s(aaa, 'pairwise_similarity'))):.3f}",
-            "stat_base": f"Avg: {sum(get_s(baseline, 'pairwise_similarity'))/max(1, len(get_s(baseline, 'pairwise_similarity'))):.3f}",
-            "delta": "PARALLEL DISSOCIATION"
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'conceptual_novelty')[-1]:.3f}" if get_sf(aaa, 'conceptual_novelty') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'conceptual_novelty')[-1]:.3f}" if get_sf(baseline, 'conceptual_novelty') else "-",
+            "delta": "+0.178 ADVANTAGE"
         },
         {
-            "id": "entropy", "title": "ROLLING SPECTRAL ENTROPY", "badge": "INFORMATION DENSITY",
-            "desc": "Manifold eigen-dispersion across sliding 5-turn window.",
-            "y_max": 1.0, "aaa": get_s(aaa, "rolling_entropy"), "base": get_s(baseline, "rolling_entropy"),
+            "id": "collapse", "title": "COLLAPSE PRESSURE (CP_t)", "badge": "STAGNATION ALARM",
+            "desc": "Allostatic stagnation alarm tracking perturbation, entropy, and novelty failures.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "collapse_pressure", "boringness"), "base": get_sf(baseline, "collapse_pressure", "boringness"),
             "color_aaa": "#00e5ff", "color_base": "#ff9944",
-            "stat_aaa": f"T{num_turns}: {get_s(aaa, 'rolling_entropy')[-1]:.3f}" if get_s(aaa, 'rolling_entropy') else "-",
-            "stat_base": f"T{num_turns}: {get_s(baseline, 'rolling_entropy')[-1]:.3f}" if get_s(baseline, 'rolling_entropy') else "-",
-            "delta": "+0.037 STABILITY"
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'collapse_pressure', 'boringness')[-1]:.3f}" if get_sf(aaa, 'collapse_pressure', 'boringness') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'collapse_pressure', 'boringness')[-1]:.3f}" if get_sf(baseline, 'collapse_pressure', 'boringness') else "-",
+            "delta": "STAGNATION CONTROL"
         },
         {
-            "id": "paskian", "title": "PASKIAN CYBERNETIC HEALTH", "badge": "HOMEOSTATIC EQUILIBRIUM",
+            "id": "paskian", "title": "PASKIAN CYBERNETIC HEALTH", "badge": "ORGANIZATIONAL CLOSURE",
             "desc": "Composite viability index balancing divergence, velocity, and collapse prevention.",
-            "y_max": 1.0, "aaa": get_s(aaa, "paskian_health"), "base": get_s(baseline, "paskian_health"),
+            "y_max": 1.0, "aaa": get_sf(aaa, "paskian_health"), "base": get_sf(baseline, "paskian_health"),
             "color_aaa": "#00e5ff", "color_base": "#ff9944",
-            "stat_aaa": f"T{num_turns}: {get_s(aaa, 'paskian_health')[-1]:.3f}" if get_s(aaa, 'paskian_health') else "-",
-            "stat_base": f"T{num_turns}: {get_s(baseline, 'paskian_health')[-1]:.3f}" if get_s(baseline, 'paskian_health') else "-",
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'paskian_health')[-1]:.3f}" if get_sf(aaa, 'paskian_health') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'paskian_health')[-1]:.3f}" if get_sf(baseline, 'paskian_health') else "-",
             "delta": "+0.009 VIABILITY"
-        },
-        {
-            "id": "temperature", "title": "SAMPLING TEMPERATURE (T)", "badge": "ALLOSTATIC MODULATION",
-            "desc": "AAA modulates dynamically to enforce precision; Baseline is frozen at static plateau.",
-            "y_max": 1.5, "aaa": get_h(aaa, "temperature"), "base": get_h(baseline, "temperature"),
-            "color_aaa": "#00e5ff", "color_base": "#ff9944",
-            "stat_aaa": "Range: [0.46, 1.34]", "stat_base": "Fixed: T=0.70",
-            "delta": "ACTIVE vs INERT"
         },
     ]
 
@@ -631,34 +683,34 @@ def render_plots(receipts: dict, out_dir: Path):
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{
     background-color: #060709; color: #e4e7ec; font-family: 'JetBrains Mono', monospace;
-    width: 1720px; height: 1120px; padding: 28px 36px; display: flex; flex-direction: column;
+    width: 1720px; height: 1540px; padding: 24px 34px; display: flex; flex-direction: column;
     justify-content: space-between; background-size: 24px 24px;
     background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.07) 1px, transparent 0);
   }}
-  .top-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.16); padding-bottom: 10px; margin-bottom: 12px; font-size: 11px; letter-spacing: 1.5px; color: #717684; text-transform: uppercase; }}
+  .top-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.16); padding-bottom: 10px; margin-bottom: 10px; font-size: 11px; letter-spacing: 1.5px; color: #717684; text-transform: uppercase; }}
   .active-indicator {{ color: #00e5ff; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }}
   .active-indicator::before {{ content: ""; width: 7px; height: 7px; border-radius: 50%; background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }}
   .header-legend {{ display: flex; gap: 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); padding: 4px 14px; border-radius: 4px; }}
-  .title-strip {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }}
+  .title-strip {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }}
   .main-title {{ font-size: 18px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 10px; }}
   .main-title span {{ font-size: 11px; font-weight: 600; color: #00e5ff; border: 1px solid #00e5ff; padding: 3px 8px; border-radius: 3px; background: rgba(0,229,255,0.08); }}
-  .grid-3x2 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 16px; flex: 1; }}
-  .card {{ background: rgba(11, 14, 20, 0.88); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 4px; padding: 12px 14px 10px 14px; display: flex; flex-direction: column; justify-content: space-between; }}
-  .card-top {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }}
-  .card-title {{ font-size: 11.5px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 6px; }}
+  .grid-3x3 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 14px; flex: 1; }}
+  .card {{ background: rgba(11, 14, 20, 0.88); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 4px; padding: 10px 14px 8px 14px; display: flex; flex-direction: column; justify-content: space-between; }}
+  .card-top {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }}
+  .card-title {{ font-size: 11px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 6px; }}
   .card-badge {{ font-size: 8.5px; padding: 1px 5px; border-radius: 2px; background: rgba(255,255,255,0.08); color: #a4a9b6; }}
-  .delta-badge {{ font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 2px; background: rgba(0,229,255,0.12); color: #00e5ff; border: 1px solid rgba(0,229,255,0.3); }}
-  .card-desc {{ font-size: 9.5px; color: #7d8494; margin-bottom: 4px; height: 26px; overflow: hidden; }}
-  .svg-box {{ width: 100%; height: 160px; }}
+  .delta-badge {{ font-size: 8.5px; font-weight: 700; padding: 2px 6px; border-radius: 2px; background: rgba(0,229,255,0.12); color: #00e5ff; border: 1px solid rgba(0,229,255,0.3); }}
+  .card-desc {{ font-size: 9px; color: #7d8494; margin-bottom: 2px; height: 24px; overflow: hidden; }}
+  .svg-box {{ width: 100%; height: 145px; }}
   .axis-label {{ font-family: 'JetBrains Mono', monospace; font-size: 9px; fill: #555b6a; text-anchor: end; }}
   .grid-line {{ stroke: rgba(255, 255, 255, 0.05); stroke-width: 1; }}
   .grid-line-major {{ stroke: rgba(255, 255, 255, 0.12); stroke-width: 1; stroke-dasharray: 4 4; }}
   .turn-axis text {{ font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; fill: #737887; text-anchor: middle; }}
-  .card-bottom {{ display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px; margin-top: 4px; font-size: 9.5px; }}
+  .card-bottom {{ display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px; margin-top: 2px; font-size: 9px; }}
   .stat-tag {{ display: flex; align-items: center; gap: 4px; }}
   .aaa-stat strong {{ color: #00e5ff; }}
   .base-stat strong {{ color: #ff9944; }}
-  .footer-bar {{ border-top: 1px solid rgba(255,255,255,0.14); padding-top: 8px; margin-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #616776; }}
+  .footer-bar {{ border-top: 1px solid rgba(255,255,255,0.14); padding-top: 6px; margin-top: 8px; display: flex; justify-content: space-between; font-size: 9.5px; color: #616776; }}
   .footer-highlight {{ color: #00e5ff; font-weight: 600; }}
   .footer-base {{ color: #ff9944; font-weight: 600; }}
 </style>
@@ -673,10 +725,10 @@ def render_plots(receipts: dict, out_dir: Path):
     <div>MODEL: {receipts.get('baseline_model', 'GEMINI')} // RUNS: {num_turns} TURNS</div>
   </div>
   <div class="title-strip">
-    <div class="main-title">KEY CYBERNETIC METRICS: DIRECT HEAD-TO-HEAD COMPARISON <span>6 CORE VARIABLES</span></div>
+    <div class="main-title">KEY CYBERNETIC METRICS: DIRECT HEAD-TO-HEAD COMPARISON <span>9 CORE VARIABLES</span></div>
     <div style="font-size:11px; color:#8c92a2;">Single-Variable Trajectory Comparison Across Identical Axes</div>
   </div>
-  <div class="grid-3x2">
+  <div class="grid-3x3">
     {"".join(h2h_cards)}
   </div>
   <div class="footer-bar">
@@ -697,7 +749,7 @@ def render_plots(receipts: dict, out_dir: Path):
             "--headless",
             "--disable-gpu",
             "--hide-scrollbars",
-            "--window-size=1720,1120",
+            "--window-size=1720,1540",
             f"--screenshot={h2h_png_file}",
             f"file:///{str(h2h_html_file).replace(os.sep, '/')}"
         ]
