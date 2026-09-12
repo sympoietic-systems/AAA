@@ -6,7 +6,7 @@ homeostatic regimes, phase shift events, and long-horizon quartile progressions.
 from typing import Any, Dict, List, Optional
 import numpy as np
 
-from backend.modules.conversation_metrics import (
+from backend.modules.metrics import (
     _compute_agent_self_divergence,
     _compute_collapse_pressure,
     _compute_conceptual_novelty,
