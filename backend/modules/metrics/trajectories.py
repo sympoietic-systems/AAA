@@ -89,9 +89,10 @@ def _compute_agent_self_divergence(
     current_speaker: str,
     prior_agent: list[np.ndarray],
     max_recent_window: int = 5,
-    beta: float = 0.25,
+    beta: float = 4.0,
+    tau_d: float = 0.65,
 ) -> float | None:
-    """# ponytail: compute agent self-divergence via recency-decayed max self-similarity and repeat penalty."""
+    """# Proposal 1: Subspace Softmin Dispersion & Effective Rank Self-Divergence."""
     if current_speaker not in ("agent", "apparatus"):
         return None
 
@@ -106,27 +107,35 @@ def _compute_agent_self_divergence(
         norm = np.linalg.norm(v)
         agent_norms.append(v / norm if norm > 0 else v)
 
-    # Evaluate recency-decayed self-similarity from newest prior agent utterance backward
     recent_agents = agent_norms[-max_recent_window:]
-    s_self_scores = []
-    for i, v in enumerate(reversed(recent_agents)):
-        cos_sim = max(0.0, min(1.0, float(np.dot(c_vec, v))))
-        w = float(np.exp(-beta * i))
-        s_self_scores.append(cos_sim * w)
+    dists = []
+    for v in recent_agents:
+        dot_v = max(-1.0, min(1.0, float(np.dot(c_vec, v))))
+        dists.append(1.0 - dot_v)
 
-    s_self = max(s_self_scores) if s_self_scores else 0.0
+    if not dists:
+        return 0.5
 
-    # Long-range repeat penalty applies to utterances older than max_recent_window
-    penalty = 0.0
-    if len(agent_norms) > max_recent_window:
-        older_agents = agent_norms[:-max_recent_window]
-        long_sims = [float(np.dot(c_vec, v)) for v in older_agents]
-        max_long = max(long_sims) if long_sims else 0.0
-        if max_long > 0.85:
-            penalty = 0.3 * min(1.0, (max_long - 0.85) / 0.15)
+    # Log-sum-exp softmin distance
+    dists_arr = np.array(dists, dtype=np.float32)
+    min_d = float(np.min(dists_arr))
+    d_soft = min_d - (1.0 / beta) * float(np.log(np.mean(np.exp(-beta * (dists_arr - min_d)))))
 
-    divergence = 1.0 - s_self - penalty
-    return round(max(0.0, min(1.0, float(divergence))), 3)
+    # Effective rank of recent history + current vector
+    all_recent = recent_agents + [c_vec]
+    K = len(all_recent)
+    if K >= 3:
+        A = np.stack(all_recent)
+        gram = np.dot(A, A.T)
+        tr_G = float(np.trace(gram))
+        tr_G2 = float(np.sum(gram ** 2))
+        rank_eff = (tr_G ** 2) / (tr_G2 + 1e-8)
+        rank_factor = float(np.sqrt(max(0.0, (rank_eff - 1.0) / (K - 1.0))))
+    else:
+        rank_factor = 1.0
+
+    divergence = float(np.tanh(d_soft / tau_d) * (0.4 + 0.6 * rank_factor))
+    return round(max(0.0, min(1.0, divergence)), 3)
 
 
 def _compute_reverse_perturbation(

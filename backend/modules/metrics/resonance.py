@@ -11,8 +11,9 @@ def _compute_pairwise_similarity(
     current_speaker: str,
     recent_history: list[dict],
     decay_lambda: float = 0.15,
+    gamma: float = 1.1,
 ) -> float | None:
-    """# ponytail: compute reciprocal perturbation coherence with exponential decay and speaker weighting."""
+    """# Proposal 1: Signed Polarity Alignment with Agential Tension."""
     if not recent_history:
         return None
 
@@ -21,7 +22,6 @@ def _compute_pairwise_similarity(
     c_norm = np.linalg.norm(current_vec)
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
-    # Evaluate reciprocal perturbation coherence over most recent history (decay from newest to oldest)
     recent_items = recent_history[-15:]
     for i, item in enumerate(reversed(recent_items)):
         v = item.get("embedding")
@@ -31,77 +31,67 @@ def _compute_pairwise_similarity(
         v_vec = v / v_norm if v_norm > 0 else v
 
         dot_sim = float(np.dot(c_vec, v_vec))
-        cos_sim = max(0.0, min(1.0, dot_sim))
+        signed_sim = float(np.sign(dot_sim) * (abs(dot_sim) ** gamma))
 
         speaker = item.get("speaker", "human")
         speaker_factor = 0.8 if speaker == current_speaker else 1.2
         decay = float(np.exp(-decay_lambda * i))
         w = decay * speaker_factor
 
-        weighted_sims.append(cos_sim * w)
+        weighted_sims.append(signed_sim * w)
         weights.append(w)
 
     if not weights or sum(weights) == 0:
         return None
 
     weighted_sim = float(sum(weighted_sims) / sum(weights))
-    return round(max(0.0, min(1.0, weighted_sim)), 3)
+    return round(max(-1.0, min(1.0, weighted_sim)), 3)
 
 
 def _compute_conceptual_novelty(
     current_vec: np.ndarray,
     recent_history: list[dict],
-    prior_centroid: np.ndarray | None = None,
-    alpha: float = 0.3,
-) -> tuple[float | None, np.ndarray]:
-    """# ponytail: compute sediment drift magnitude from context centroid and scatter."""
+    prior_centroid: np.ndarray | dict | None = None,
+    alpha_fast: float = 0.35,
+    alpha_slow: float = 0.08,
+    theta_nomad: float = 1.35,
+) -> tuple[float | None, dict]:
+    """# Proposal 1: Multi-Scale Decoupled Dual-Horizon Novelty."""
     c_norm = np.linalg.norm(current_vec)
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
     if not recent_history:
-        return None, c_vec
+        return None, {"fast": c_vec, "slow": c_vec}
 
-    hist_vecs = []
-    for item in recent_history:
-        v = item.get("embedding")
-        if v is not None:
-            norm = np.linalg.norm(v)
-            hist_vecs.append(v / norm if norm > 0 else v)
-
-    if not hist_vecs:
-        return None, c_vec
-
-    # Update context centroid EMA
     if prior_centroid is None:
-        new_centroid = c_vec
+        c_fast = c_vec
+        c_slow = c_vec
+    elif isinstance(prior_centroid, dict):
+        c_f = prior_centroid.get("fast", c_vec)
+        c_s = prior_centroid.get("slow", c_vec)
+        c_fast = (alpha_fast * c_vec) + ((1.0 - alpha_fast) * c_f)
+        c_slow = (alpha_slow * c_vec) + ((1.0 - alpha_slow) * c_s)
     else:
-        new_centroid = (alpha * c_vec) + ((1.0 - alpha) * prior_centroid)
-        norm_cent = np.linalg.norm(new_centroid)
-        if norm_cent > 0:
-            new_centroid = new_centroid / norm_cent
+        c_fast = (alpha_fast * c_vec) + ((1.0 - alpha_fast) * prior_centroid)
+        c_slow = (alpha_slow * c_vec) + ((1.0 - alpha_slow) * prior_centroid)
 
-    # Compute raw drift distance from centroid
-    drift_raw = 1.0 - max(0.0, min(1.0, float(np.dot(c_vec, new_centroid))))
+    nf = float(np.linalg.norm(c_fast))
+    if nf > 1e-8:
+        c_fast = c_fast / nf
+    ns = float(np.linalg.norm(c_slow))
+    if ns > 1e-8:
+        c_slow = c_slow / ns
 
-    # Compute scatter standard deviation across history turns relative to centroid
-    scatters = [1.0 - max(0.0, min(1.0, float(np.dot(hv, new_centroid)))) for hv in hist_vecs]
-    sigma_context = float(np.std(scatters)) if len(scatters) > 1 else 0.10
+    dot_f = max(-1.0, min(1.0, float(np.dot(c_vec, c_fast))))
+    dot_s = max(-1.0, min(1.0, float(np.dot(c_vec, c_slow))))
 
-    # Calibrated semantic scale: base scale of 0.20 prevents division singularity when
-    # dialogue turns cluster tightly in repetitive basins (spread -> 0, sigma -> 0)
-    spread_context = max(scatters) - min(scatters) if len(scatters) > 1 else 0.10
-    effective_scale = max(0.20, spread_context + sigma_context)
-    drift_norm = float(np.tanh(drift_raw / effective_scale))
+    d_local = float(np.arccos(dot_f))
+    d_global = float(np.arccos(dot_s))
 
-    # Compute velocity relative to immediate prior history turn drift
-    prior_drift = scatters[-1] if scatters else 0.01
-    velocity = min(1.0, abs(drift_raw - prior_drift) / max(0.05, prior_drift))
+    novelty_raw = float(np.sqrt(d_local * d_global))
+    novelty = float(np.tanh(novelty_raw / theta_nomad))
 
-    # Combined novelty score (0.7 drift + 0.3 velocity)
-    novelty = (0.7 * drift_norm) + (0.3 * velocity)
-    novelty = max(0.0, min(1.0, float(novelty)))
-
-    return round(novelty, 3), new_centroid
+    return round(max(0.0, min(1.0, novelty)), 3), {"fast": c_fast, "slow": c_slow}
 
 
 def _compute_rolling_entropy(
