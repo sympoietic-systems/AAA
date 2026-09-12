@@ -70,9 +70,23 @@ python reports/003-empirical-10-turn-benchmark/compare_runs.py reference eval_ca
 python reports/003-empirical-10-turn-benchmark/run_benchmark.py --compare reference eval_calibrated --name full_suite_calibrated
 ```
 When `--name <name>` (or `-n`) is specified, artifacts are saved in `reports/runs/<name>/`:
-- `<name>.png`: High-definition 10-panel oscilloscope dashboard (1720×2420) covering all core calibrated metrics (Pairwise Similarity, Deficit, Vitality, Forward Perturbation, Mutual Perturbation, Reverse Perturbation, Novelty, Collapse Pressure, DRR, Paskian Health).
-- `<name>.html`: Interactive SVG oscilloscope dashboard with global unified legend.
-- `comparison_summary.md`: Turn-by-turn comparative matrices and delta scorecards for 10 cybernetic dimensions.
+- `<name>.png`: High-definition 14-panel oscilloscope dashboard (1720×3380) covering all 14 calibrated cybernetic metrics:
+  1. Pairwise Similarity ($s_t$)
+  2. Conversational Deficit
+  3. Conversational Vitality
+  4. Forward Perturbation ($fP_t$)
+  5. Mutual Perturbation Index ($MPI_t$)
+  6. Reverse Perturbation ($rP_t$)
+  7. Conceptual Novelty ($N_t$)
+  8. Collapse Pressure / Boringness ($CP_t$)
+  9. Divergence Resolution Ratio ($DRR_t$)
+  10. Gordon Pask Cybernetic Health ($H_{\text{pask}}$)
+  11. Conceptual Velocity ($v_t$)
+  12. Predictive Residual Trend Surprise ($S_t$)
+  13. Trajectory Cross-Correlation (`coupling_coherence`)
+  14. Recursive Self-Echo Divergence (`agent_self_divergence`)
+- `<name>.html`: Interactive SVG oscilloscope dashboard with global unified legend and terminal metric scoreboard.
+- `comparison_summary.md`: Turn-by-turn comparative matrices and delta scorecards for all 14 cybernetic dimensions.
 - Reference calibrated comparison preserved in [`reports/runs/full_suite_calibrated/`](../runs/full_suite_calibrated/).
 
 
@@ -84,7 +98,7 @@ Every execution creates a dedicated timestamped folder (e.g., `reports/runs/run_
 
 1. **`conversation_receipts.json`**: The complete raw JSON dataset with unedited human prompts, assistant utterances, dense embeddings, homeostatic parameters, and turn-by-turn cybernetic metrics.
 2. **`04_comparative_overlaid_grid.png`**: The 4-panel multi-variable oscilloscope overlay (Kinematics, Information Dynamics, Cybernetic Health, Sampling Control) mapping AAA (solid) vs Baseline (dashed).
-3. **`05_head_to_head_breakdown.png`**: The 9-panel single-metric comparison suite in a 3×3 grid (Pairwise Similarity, Deficit, Vitality, Forward Perturbation, Mutual Perturbation, Reverse Perturbation, Novelty, Collapse Pressure, Paskian Health).
+3. **`05_head_to_head_breakdown.png`**: The 15-panel single-metric comparison suite in a 3×5 grid (1720×2500) covering all active variables (Pairwise Similarity, Deficit, Vitality, Forward Perturbation, Mutual Perturbation, Reverse Perturbation, Novelty, Collapse Pressure, Paskian Health, Conceptual Velocity, Predictive Surprise, Coupling Coherence, Agent Self-Divergence, DRR, Rolling Entropy).
 4. **`run_summary.md`**: Markdown summary table with metric averages, advantage deltas, execution mode, and embedded links.
 
 ---

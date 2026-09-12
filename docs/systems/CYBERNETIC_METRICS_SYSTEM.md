@@ -225,7 +225,7 @@ Maps calculated metrics into emergent descriptive persona traits:
 
 ## 6. Verification Suite
 
-The entire sensor system is verified by 17 unit tests across 9 test files:
+The entire cybernetic sensor suite is verified by unit tests across the test suite:
 - [test_glitch_fidelity_engine.py](../../backend/tests/test_glitch_fidelity_engine.py)
 - [test_pairwise_similarity_novelty.py](../../backend/tests/test_pairwise_similarity_novelty.py)
 - [test_spectral_entropy_collapse.py](../../backend/tests/test_spectral_entropy_collapse.py)
@@ -238,5 +238,43 @@ The entire sensor system is verified by 17 unit tests across 9 test files:
 
 Execution command:
 ```bash
-cmd /c uv run pytest backend/tests/test_*.py
+cmd /c .venv-win\Scripts\python.exe -m pytest backend/tests/test_pairwise_similarity_novelty.py backend/tests/test_spectral_entropy_collapse.py backend/tests/test_coupling_self_divergence.py backend/tests/test_directional_mutual_perturbation.py backend/tests/test_predictive_surprise_velocity.py backend/tests/test_drr_paskian_health.py
 ```
+
+---
+
+## 7. Empirical Benchmark & Oscilloscope Telemetry Visualizers
+
+To empirically validate and monitor metric behavior against baseline LLM interactions across adversarial stress tests, the system provides dedicated oscilloscope visualization engines:
+
+### 7.1. 14-Panel Dual-Run Oscilloscope Dashboard (`compare_runs.py`)
+Contrasts any two benchmark runs (e.g., historical reference vs calibrated target) across **14 calibrated cybernetic dimensions** in a $2 \times 7$ grid ($1720 \times 3380$ px):
+1. **Pairwise Similarity ($s_t$)**: Normalized by active weight sum, eliminating false suppression.
+2. **Conversational Deficit**: Dynamically normalized allostatic load.
+3. **Conversational Vitality**: Dialectic reserve capacity ($1.0 - \text{Deficit}$).
+4. **Forward Perturbation ($fP_t$)**: Agent-to-human directional trajectory displacement.
+5. **Mutual Perturbation Index ($MPI_t$)**: Reciprocal geometric mean coupling $\sqrt{rP \cdot fP}$.
+6. **Reverse Perturbation ($rP_t$)**: Human-to-agent trajectory tension and resistance.
+7. **Conceptual Novelty ($N_t$)**: Semantic displacement from context centroid EMA.
+8. **Collapse Pressure ($CP_t$)**: Stagnation alarm tracking perturbation, entropy, and novelty failures.
+9. **Divergence Resolution Ratio ($DRR_t$)**: Homeostatic ratio of resolved tension to open divergence.
+10. **Gordon Pask Cybernetic Health ($H_{\text{pask}}$)**: Composite organizational closure index.
+11. **Conceptual Velocity ($v_t$)**: Instantaneous speed normalized against absolute reference scale ($V_{\text{ref}} = 1.0$).
+12. **Predictive Residual Trend Surprise ($S_t$)**: Holt trend error z-score with nominal variance prior ($\sigma_0 = 0.40$), preventing Turn 1 saturation.
+13. **Trajectory Cross-Correlation (`coupling_coherence`)**: Directional rectified alignment $\max(0, \cos \theta)$, eliminating false positive scores on opposing drift.
+14. **Recursive Self-Echo Divergence (`agent_self_divergence`)**: Speaker-aware agent loop resistance ($M=5$, repeat penalty threshold $0.85$).
+
+Execution:
+```bash
+cmd /c .venv-win\Scripts\python.exe reports/003-empirical-10-turn-benchmark/compare_runs.py reference eval_calibrated --name full_suite_calibrated
+```
+
+### 7.2. 15-Variable Head-to-Head Breakdown (`run_benchmark.py`)
+Renders single-run direct comparative trajectories between **AAA / Symbia (solid cyan)** and **Baseline LLM (dashed amber)** in a $3 \times 5$ grid ($1720 \times 2500$ px):
+- Includes all 14 core dimensions plus **Rolling Spectral Entropy** ($H_{\text{spectral}}$).
+- Displays terminal advantage deltas, axis domains ($[0.00, 1.00]$), and turn-by-turn coordinate tracking.
+- Output artifact: `05_head_to_head_breakdown.png` and `05_head_to_head_breakdown.html`.
+
+### 7.3. Automated Calibration Pipeline (`scripts/plot_before_after_metrics.py`)
+One-command script to load receipts, print comparative CLI tables, and render before-and-after oscilloscope artifacts into `reports/runs/full_suite_calibrated/`.
+
