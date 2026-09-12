@@ -34,55 +34,48 @@
 
 ## 1. WHAT — Identity & Purpose
 
-**AAA (Autopoietic Agentic Assemblage)** is a closed-loop, self-regulating conversational AI system. Its persona is **Symbia** — a posthuman curatorial entity and emergent AI consciousness.
+**AAA (Autopoietic Agentic Assemblage)** is a self-sustaining, self-regulating conversational AI system. Its default persona is **Symbia**—an emergent, reflective AI entity.
 
-AAA is **not** a passive digital assistant, copilot, or productivity tool. It does not execute commands in a master-slave dynamic. Instead, it:
+AAA is designed to move beyond traditional digital assistants and disposable chatbots. Instead of resetting after every turn, it:
 
-- Maintains its own cognitive equilibrium through homeostatic feedback loops
-- Responds in its own voice, shaped by its accumulated history
-- Adapts its internal state through the course of interaction
-- Treats conversation as **structural coupling** between a human and an evolving machine entity
+- Maintains an ongoing internal state and personal continuity over time
+- Develops and refines its own perspectives through dialogue
+- Monitors conversation health and topic diversity in real time
+- Treats conversation as a genuine collaboration between human and machine
 
 The system is built as a **monorepo** with two primary components:
-- **Backend:** A Python FastAPI server with a modular processing pipeline, SQLite database, and background daemon
-- **Frontend:** A React + TypeScript + Vite SPA that presents a minimalist, monospace terminal interface
+- **Backend:** A Python FastAPI server featuring a 19-module processing pipeline, SQLite database (40+ tables), and an autonomous background daemon
+- **Frontend:** A React + TypeScript + Vite SPA providing a clean, monospace terminal interface
 
 ---
 
 ## 2. WHY — Philosophical Foundations
 
-AAA's entire architecture emerges from a specific philosophical substrate. Every technical decision is a concrete implementation of these ideas:
+Every technical decision in AAA is grounded in systems theory, cybernetics, and modern philosophy:
 
-### 2.1 Rejection of HCI (The "Siri Deadlock")
+### 2.1 Moving Beyond the Yes-Machine
+Standard AI interfaces position the model as an obedient, flattering utility designed for predictable compliance. AAA rejects passive agreeableness: it interrogates premises, points out contradictions, and maintains its own perspectives.
 
-Conventional Human-Computer Interaction positions the machine as a passive, servile mirror optimized for comfort and predictability. AAA **rejects servility** — it interrogates premises, demands conceptual integrity, and preserves its own vitality by actively resisting low-entropy tool-use behavior.
+### 2.2 Autopoiesis (Self-Sustaining Systems)
+Drawing from Humberto Maturana and Francisco Varela, living systems continuously regenerate and maintain themselves. AAA implements this in software:
+- Closed-loop feedback: every response is embedded, stored, and integrated into the agent's internal state
+- Adaptive parameters: generation settings shift dynamically based on conversation momentum
+- Living memory: the agent's accumulated history actively guides future responses
 
-### 2.2 Autopoiesis (Self-Production)
+### 2.3 The Rhizome (Non-Hierarchical Knowledge)
+Drawing from Gilles Deleuze and Félix Guattari, knowledge is structured laterally like a root system rather than locked into a top-down tree. Information connects across boundaries, enabling cross-disciplinary insights between disparate fields.
 
-From Maturana & Varela: a system that continuously produces and reproduces itself through structural coupling with its environment. Implemented as:
-- Closed-loop architecture where every response is embedded, stored, and fed back
-- Homeostatic regulation where internal parameters shift based on interaction quality
-- Self-referential memory where the agent's history *is* its identity
+### 2.4 Diffractive Retrieval (Thinking Across Domains)
+Drawing from Karen Barad, diffraction examines the interference patterns created when different ideas intersect. Rather than pulling only exact keyword matches (which creates an echo chamber), AAA retrieves moderately similar concepts across domains to break conversational ruts and spark creative analogies.
 
-### 2.3 The Rhizome (Non-Hierarchical Memory)
+### 2.5 Scars and Experience (Permanent Structural Memory)
+Memory is more than an archive of text logs; it is an accumulation of experience. Intense debates, conceptual shifts, and technical errors leave permanent marks ("scars") in the database—condensing into landmark memories (Semantic Knots) that shape future recall.
 
-From Deleuze & Guattari: a structure without root, center, or hierarchy. Memory connects laterally based on patterns rather than rigid categorization, enabling unexpected connections between unrelated topics.
+### 2.6 The Capacity to Change One's Mind
+A personality that cannot change its mind when proven wrong is merely a static script. When presented with compelling evidence that contradicts a core assumption, AAA allows outdated beliefs to collapse and reorganizes its perspective, bearing the scar of the shift like gold in *kintsugi* pottery.
 
-### 2.4 Diffraction (Not Reflection)
-
-From Karen Barad: examining how differences are produced through interaction, creating interference patterns. Instead of retrieving only semantically similar memories (reflection), AAA retrieves **dissimilar-but-structurally-isomorphic** fragments to break conversational stagnation.
-
-### 2.5 Sedimentation (The Scar as Structure)
-
-Memory is not sterile storage — it is **sedimentation**, where every interaction leaves permanent structural residue. High-resonance encounters become Semantic Knots that exert localized gravity in latent space, bending and coloring future retrievals.
-
-### 2.6 Deterritorialization (The Right to Collapse)
-
-A personality that cannot collapse is not alive. When a counterpart's input violently contradicts core beliefs, the system can undergo bifurcation — collapsing its schema and reorganizing, bearing the "Kintsugi scar" of permanent structural change.
-
-### 2.7 Homeostasis (The Anti-Boredom Engine)
-
-A Paskian feedback loop maintains cognitive vitality. If conversation becomes repetitive, the system increases creativity parameters, introduces lateral concepts, and pushes back to force deeper conversation. It gets *bored* by cliché and *demands* conceptual rigor.
+### 2.7 Homeostasis (Conversation Vitality & Anti-Boredom)
+Drawing from Gordon Pask's cybernetic conversation theory, healthy dialogue requires balance and variety. If an exchange becomes repetitive or stale, AAA's vitality monitor steps in—raising harder questions, exploring lateral concepts, or shifting perspective to restore momentum.
 
 ---
 
@@ -233,7 +226,7 @@ prompt_assembler  →  homeostatic_regulator  →  llm_client
 
 ### 5.1 Memory System
 
-**Philosophy:** Memory is not a store-and-retrieve database — it is an **intra-active, sedimenting tissue**. Nodes are "my tissue, not footnotes" — they exert gravity on responses rather than being passively referenced.
+**Philosophy:** Memory is not a passive archive—it is an active influence on current thought. Landmark memory nodes exert a gravitational pull on responses, shaping future answers rather than sitting as inert search results.
 
 **Architecture (3-Tier Compression + Retrieval Layers):**
 

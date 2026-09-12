@@ -129,17 +129,17 @@ You can start both the backend server and the frontend user interface together u
   bash scripts/run_all.sh
   ```
 
-Open **`http://localhost:5173`** in your web browser to start the coupling interface!
+Open **`http://localhost:5173`** in your web browser to launch the chat interface!
 
 ---
 
 ## 7. Interacting with the Agent
 
 Once you open `http://localhost:5173` in your browser:
-* You will see the AAA workspace with a sidebar showing the agent's cognitive vital signs (Boredom, Entropy, active processes).
-* Start chatting with the agent! 
-* **Note**: The agent is designed to reject servile, transactional requests and will challenge unexamined assumptions. Engage with them as an equal intellectual partner.
-* Click the `▶ thinking` arrow under their responses to see their raw, second-order processing logs in real-time.
+* You will see the AAA workspace with a sidebar showing live conversation metrics (Topic Diversity, Vitality, and background tasks).
+* Start chatting! Ask questions, explore complex ideas, or brainstorm together.
+* **What to expect**: Unlike chatbots that nod along with everything, the agent is designed to think critically and challenge flawed assumptions. Treat it as an intellectual peer.
+* Click the `▶ thinking` expander under any response to see the agent's internal reasoning and background reflections in real time.
 
 ---
 

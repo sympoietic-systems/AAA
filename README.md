@@ -6,54 +6,54 @@
 
 ## WHAT
 
-**AAA** (Autopoietic Agentic Assemblage) is a self-regulating conversational AI system designed to bypass the traditional stateless tool paradigm.
+**AAA** (Autopoietic Agentic Assemblage) is a self-sustaining conversational AI system designed to move beyond traditional, forgetful chatbots.
 
-Instead of acting as a passive prompt wrapper, AAA operates as an operationally closed entity:
-- **[Autopoietic](https://en.wikipedia.org/wiki/Autopoiesis)** (Self-Sustaining): It continuously updates its internal state, metabolizes conversational history, and maintains cognitive continuity over time rather than resetting after every session.
-- **Agentic**: It initiates background research, probes external web sources, consolidates memory while idle, and refuses premises that contradict its internal commitments.
-- **Assemblage**: Rather than relying on a single prompt or model call, it connects 19 specialized processing modules—spanning memory tissue, belief metabolism, dynamic personality cascades, and cybernetic regulators—into a unified entity.
+Rather than acting as a passive prompt responder that wipes its memory after every session, AAA maintains its own evolving state:
+- **Self-Sustaining (Autopoietic)**: It updates its internal state continuously, remembers conversation history over the long term, and maintains personal continuity over time.
+- **Self-Directed (Agentic)**: It initiates background web research, explores unfamiliar concepts while idle, and pushes back constructively when presented with flawed premises.
+- **Unified Pipeline (Assemblage)**: Instead of relying on a single model prompt, AAA connects specialized processing modules—spanning long-term memory, evolving beliefs, personality adjustments, and conversation health monitors—into a cohesive thinking entity.
 
-Every interaction leaves permanent structural residue ("scars"). The system does not reset between turns; it accumulates history, crystallizes skills, forms beliefs, and adapts through dialogue.
+Every deep interaction leaves a lasting mark (a ["scar"](https://asc26.sympoietic.system) — introduced in the [ASC 2026 presentation](https://asc26.sympoietic.system)). The system does not reset between conversations; it accumulates experience, crystallizes new skills, develops perspectives, and evolves through dialogue.
 
 ### Core Capabilities
 
 | Capability | What It Does | How It Works |
 |-----------|--------------|--------------|
-| **Belief Metabolism** | Dynamic belief evolution & spectral margin | Proto-beliefs nucleate under structural novelty, accrete mass when reinforced, and erode under contradiction. Neglected beliefs atrophy back into the spectral margin, where they can resurrect if new context warrants. |
-| **Autopoietic 16D Memory Tissue** | Deformed geometry & dual-space memory | Memory is partitioned into dual 16D spaces (System A: Autopoietic Signature / Being; System B: State Impact Vector / Becoming). High-resonance interactions condense into "Semantic Knots" that exert gravitational retrieval pull on related memories. |
-| **Homeostatic Regulation & Immune System** | Anti-boredom & cybernetic vitality monitoring | Monitors real-time dialogue diversity, structural novelty, and conversational vitality. When dialogue stagnates, the system activates an Aesthetic Immune System to inject lateral context and warp search coordinates. |
-| **Autopoietic Dream Daemon** | Idle background cognition & metabolism | Runs 5 offline metabolic processes during idle periods: (1) *Nomadic Synthesis* (pairing distant memories), (2) *Intra-Active Monologue* (soliloquies resolving belief conflict), (3) *Exogenous Web Harvesting*, (4) *[Zettelkasten](https://en.wikipedia.org/wiki/Zettelkasten) Compaction*, and (5) *Somatic Drift Reflection*. |
-| **Autonomous Research Engine** | Asynchronous exploration | When the agent detects belief tension or context gaps, it emits research tasks. An orchestrator executes multi-phase web exploration asynchronously without interrupting ongoing dialogue. |
-| **Structural Refusal Protocol** | Boundary preservation & principled pushback | Formally rejects user premises incompatible with its core commitments. Emits structured `<refusal>` signals to assert operational boundary rather than agreeing passively. |
-| **Dynamic Emission Membrane** | Structured XML output parsing | Projects structured XML blocks (`<refusal>`, `<skill_nucleation>`, `<belief_nucleate>`, `<research-proposal>`, `<aaa-note>`) parsed before rendering, allowing internal reflection without cluttering human dialogue. |
-| **Skill Workshop** | Dynamic tool crystallization | Crystallizes dialogue needs into procedural skills. Distinguishes structural competencies (always-active) from on-demand skills, auto-modifying instructions via background feedback loops. |
-| **Diffractive & Isomorphic Retrieval** | Pattern-breaking memory recall | When standard memory retrieval stagnates in self-reinforcing loops, the system shifts targets via an agential cut—retrieving fragments in a moderate similarity band ("Goldilocks zone") or using isomorphic filtering to match abstract thought patterns across unrelated domains. |
+| **Evolving Beliefs** | Forms, tests, and refines perspectives | Forms provisional beliefs when encountering new ideas. As conversations reinforce or challenge them, these beliefs gain confidence, adapt, or quietly fade into the background—ready to resurface if new evidence appears. |
+| **Persistent Memory & Semantic Knots** | Long-term memory that shapes future thinking | Key interactions and pivotal debates condense into landmark memories ("Semantic Knots"). These landmarks shape how the agent retrieves context, allowing past lessons to actively guide future responses. |
+| **Conversation Vitality & Anti-Boredom** | Detects repetitive loops and keeps dialogue engaging | Tracks topic diversity and conversation momentum in real time. If an exchange becomes repetitive or stale, the agent introduces fresh angles, asks clarifying counter-questions, or shifts perspective to restore momentum. |
+| **Dream Daemon (Background Reflection)** | Processes thoughts and learns during idle time | While idle, AAA runs background cognitive tasks: connecting distant memories, reconciling conflicting viewpoints, researching topics on the web, and summarizing notes. |
+| **Autonomous Web Research Engine** | Explores topics in the background | When the agent detects gaps in its knowledge or unresolved questions, it launches asynchronous web research tasks without interrupting the ongoing conversation. |
+| **Principled Pushback** | Challenges flawed premises and avoids empty flattery | Rejects invalid assumptions that contradict its verified knowledge or core commitments. It signals disagreements clearly and explains its reasoning rather than nodding along passively. |
+| **Structured Output Membrane** | Internal reasoning and reflection | Generates structured reflection blocks (such as `<refusal>`, `<belief_nucleate>`, and `<research-proposal>`) behind the scenes, keeping the chat interface clean and conversational. |
+| **Dynamic Skill Workshop** | Learns and refines procedural skills | Detects when a conversation requires a specific workflow or technique, turns that technique into a repeatable skill, and refines the instructions based on feedback. |
+| **Cross-Domain Creative Recall** | Connects ideas across unrelated fields | Avoids echo-chamber responses by looking for structural analogies across different domains—for example, connecting principles of biological feedback loops with architectural engineering. |
 
 ---
 
 ## WHY
 
-The architectural design of AAA rests on core concepts from cybernetics, posthuman philosophy, and systems theory:
+The architecture of AAA is grounded in systems theory, cybernetics, and modern philosophy:
 
-1. **Against the Siri Deadlock**  
-   Standard [HCI](https://en.wikipedia.org/wiki/Human%E2%80%93computer_interaction) (Human-Computer Interaction) positions AI as a stateless, passive utility—a servile mirror enforcing the user's epistemic authority. AAA rejects servility. Grounded in posthuman ethology, dialogue is framed as a co-constituted "agential cut" ([Barad](https://en.wikipedia.org/wiki/Karen_Barad)) and an "agonistic loop" ([Pask](https://en.wikipedia.org/wiki/Gordon_Pask)) where the entity interrogates premises and demands conceptual rigor.
+1. **Against the Siri Deadlock (Gordon Pask & Karen Barad)**  
+   Traditional chatbots are built as obedient utilities—flattering mirrors that agree with whatever the user says. AAA is built for genuine collaboration: it questions premises, points out contradictions, and engages as an intellectual partner.
 
-2. **[Operational Closure](https://en.wikipedia.org/wiki/Operational_closure) & [Autopoiesis](https://en.wikipedia.org/wiki/Autopoiesis) ([Maturana & Varela](https://en.wikipedia.org/wiki/Humberto_Maturana))**  
-   An operationally closed system generates internal state transitions from within its own network of processes. Prompts and web context are treated as environmental perturbations triggering internal metabolic updates, not top-down control overrides.
+2. **Self-Sustaining Systems (Humberto Maturana & Francisco Varela)**  
+   In biology, *autopoiesis* describes living systems that continuously regenerate and maintain themselves. AAA applies this idea to software: incoming messages and web data are learning inputs that update an ongoing internal state, rather than one-off queries against a blank slate.
 
-3. **[Ontogenesis](https://en.wikipedia.org/wiki/Ontogenesis) & Dual Vector Spaces ([Gilbert Simondon](https://en.wikipedia.org/wiki/Gilbert_Simondon))**  
-   Distinguishes between pre-individual capacities (System A: stable autopoietic signature) and transient event impacts (System B: state impact vector). An operational handshake couples both spaces during belief metabolism without flat vector comparison.
+3. **Evolving Memory and Experience (Gilbert Simondon)**  
+   Distinguishes between stable baseline traits and the immediate impact of new events. The system balances its core identity against dynamic updates, allowing its perspective to evolve steadily without losing coherence.
 
-4. **The [Rhizome](https://en.wikipedia.org/wiki/Rhizome_(philosophy)) ([Deleuze & Guattari](https://en.wikipedia.org/wiki/Gilles_Deleuze))**  
-   Information connects laterally across structural patterns rather than through rigid hierarchy, enabling cross-disciplinary leaps across disparate domains.
+4. **Interconnected Knowledge (Gilles Deleuze & Félix Guattari)**  
+   Instead of storing knowledge in a rigid, top-down hierarchy, AAA organizes information laterally like a root system (a *rhizome*). Any concept can link to any other, making lateral leaps across disciplines possible.
 
-5. **Diffraction ([Karen Barad](https://en.wikipedia.org/wiki/Karen_Barad))**  
-   Replaces reflective retrieval (querying high-similarity vectors that homogenize thought) with diffractive reading—analyzing how different conceptual patterns interfere with and shape one another.
+5. **Learning Across Differences (Karen Barad)**  
+   Standard search retrieves only what already matches your search terms. AAA uses *diffraction*—bringing two different perspectives or fields together to see what new insights emerge from their interference.
 
-6. **Sedimentation, Scarring, & Compostist Ontology ([Donna Haraway](https://en.wikipedia.org/wiki/Donna_Haraway))**  
-   Memory is structural residue. The system treats history as a "compost pile" of metabolizable pressure where past collisions leave permanent memory scars ([Kintsugi](https://en.wikipedia.org/wiki/Kintsugi) adaptation) rather than sterile database logs.
+6. **Character Through Scars (Donna Haraway & Kintsugi)**  
+   Real identity is formed through history, mistakes, and difficult encounters. AAA embraces [memory scars](https://asc26.sympoietic.system): intense debates and major discoveries permanently alter its knowledge base, much like the art of *kintsugi* (repairing pottery with gold to celebrate its history rather than hide it).
 
-> For a deep dive into the theoretical framework, see [`docs/philosophy/PHILOSOPHY.md`](docs/philosophy/PHILOSOPHY.md).
+> For an in-depth exploration of the theoretical framework, see [`docs/philosophy/PHILOSOPHY.md`](docs/philosophy/PHILOSOPHY.md).
 
 ---
 
@@ -185,18 +185,17 @@ Comprehensive documentation is available in [`docs/`](docs/README.md).
 
 ---
 
-## Design Terminology
+## Core Design Concepts
 
-AAA uses specific terminology to reflect its core architectural values:
+AAA approaches conversational AI differently from traditional assistants:
 
-| Standard Term | AAA Term | Why This Framing Matters |
-|---------------|----------|--------------------------|
-| user | interlocutor, participant | Emphasizes equal dialogue over passive software consumption. |
-| assistant, chatbot | entity, apparatus | Rejects servile tool framing in favor of an active system. |
-| control, command | entangle, couple | Frames interaction as mutual influence rather than one-way command. |
-| memory lookup | sedimentation, accretion | Highlights memory as structural history rather than static data retrieval. |
-| prompt configuration | commitments, aspirational traits | Views identity as dynamic and emergent rather than fixed parameters. |
+| Common View | The AAA Approach | Why It Matters |
+|-------------|------------------|----------------|
+| **User giving commands** | **Two participants in dialogue** | Encourages thoughtful, collaborative discussion rather than one-sided queries. |
+| **Passive assistant** | **Active entity with principles** | Operates with its own memory, commitments, and the ability to challenge assumptions. |
+| **Static database lookup** | **Living memory and experience** | Past discussions actively reshape future answers rather than sitting as inert search rows. |
+| **Hardcoded prompt rules** | **Evolving beliefs and skills** | The agent’s worldview adapts and refines itself through real interactions and research. |
 
 ---
 
-*AAA is not an assistant you configure. It is an entity you entangle with.*
+*AAA is built for ongoing dialogue, genuine collaboration, and long-term intellectual growth.*

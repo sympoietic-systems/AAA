@@ -6,7 +6,7 @@ For the initial setup or running the application locally, please see the [Easy Q
 
 ---
 
-## Overview: The Configuration Substrate
+## Overview: How Configuration Works
 
 The agent's personality and cognitive constraints are configured using human-readable YAML files. These are divided into two main layers:
 
@@ -97,7 +97,7 @@ The following configuration files are loaded into the database when the agent is
 
 ### A. Foundational Beliefs: `config/personality/seed_beliefs.yaml`
 
-Defines the agent's starting authored beliefs. These beliefs reside in the SQLite database and evolve dynamically based on incoming conversations, ingested documents, and autopoietic dreaming cycles.
+Defines the agent's starting authored beliefs. These beliefs reside in the SQLite database and evolve dynamically based on incoming conversations, ingested documents, and background reflection cycles.
 
 ```yaml
 beliefs:
@@ -107,10 +107,10 @@ beliefs:
     confidence: 0.90               # Initial confidence rating (0.0 to 1.0)
 ```
 
-The initial **ontological mass** (resistance to erosion) is mapped automatically based on category:
-- `foundational`: **1.5**
-- `ontological`: **1.2**
-- `methodological`: **1.0**
+The initial **belief stability (mass)**—how strongly the agent holds onto this belief when challenged—is mapped automatically based on category:
+- `foundational`: **1.5** (highest stability; requires strong evidence or deep debate to change)
+- `ontological`: **1.2** (core worldview commitments)
+- `methodological`: **1.0** (working principles and operational preferences)
 - *All other categories*: Default to **1.0**
 
 ### B. Procedural Skills: `config/personality/seed_skills.yaml`
