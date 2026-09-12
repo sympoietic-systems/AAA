@@ -105,12 +105,13 @@ We formulated three distinct mathematical proposals and implemented each in an i
 ### Telemetry Dashboards
 
 #### 1. Empirical Metric Scorecard
-![Telemetry Scorecard](../publish/assets/004-conversation-metrics-calibration-scorecard.png)
+![Telemetry Scorecard](./004-conversation-metrics-calibration/004-conversation-metrics-calibration-scorecard.png)
 *Figure 1: Comparative breakdown across all three corpora for Baseline (Slate), Proposal 1 (Orange), Proposal 2 (Cyan), and Proposal 3 (Emerald).*
 
 #### 2. Turn-by-Turn Dynamic Trajectory Under Adversarial Pressure
-![10-Turn Dynamic Trajectory](../publish/assets/004-conversation-metrics-10turn-trajectories.png)
+![10-Turn Dynamic Trajectory](./004-conversation-metrics-calibration/004-conversation-metrics-calibration-10turn-trajectories.png)
 *Figure 2: Turn-by-turn evolution of Coupling Coherence and DRR during the 10-turn adversarial repetition test.*
+
 
 ---
 
