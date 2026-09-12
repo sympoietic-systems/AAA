@@ -73,10 +73,11 @@ def test_agent_self_divergence_recency_decay():
 
 
 def test_coupling_coherence_directional_alignment_vs_opposition():
-    """Verify that parallel displacements yield high coherence, while diametric opposition yields 0.0."""
+    """Verify that aligned and agonistic counter-displacements yield high coherence, while orthogonal dissociation yields 0.0."""
     v_orig = np.array([0.0, 0.0] + [0.0] * 382, dtype=np.float32)
     v_pos = np.array([1.0, 0.0] + [0.0] * 382, dtype=np.float32)
     v_neg = np.array([-1.0, 0.0] + [0.0] * 382, dtype=np.float32)
+    v_orth = np.array([0.0, 1.0] + [0.0] * 382, dtype=np.float32)
 
     # 1. Aligned displacements: both move in +x direction
     history_aligned = [
@@ -87,7 +88,7 @@ def test_coupling_coherence_directional_alignment_vs_opposition():
     ]
     cc_aligned = _compute_coupling_coherence(history_aligned)
 
-    # 2. Opposing displacements: human moves +x, agent moves -x
+    # 2. Agonistic counter-steering: human moves +x, agent anchors -x (active dialectical tension)
     history_opposed = [
         {"embedding": v_orig, "speaker": "human"},
         {"embedding": v_orig, "speaker": "agent"},
@@ -96,9 +97,20 @@ def test_coupling_coherence_directional_alignment_vs_opposition():
     ]
     cc_opposed = _compute_coupling_coherence(history_opposed)
 
-    assert cc_aligned is not None and cc_opposed is not None
+    # 3. Orthogonal dissociation: human moves +x, agent makes non-sequitur move in +y
+    history_orth = [
+        {"embedding": v_orig, "speaker": "human"},
+        {"embedding": v_orig, "speaker": "agent"},
+        {"embedding": v_pos, "speaker": "human"},
+        {"embedding": v_orth, "speaker": "agent"},
+    ]
+    cc_orth = _compute_coupling_coherence(history_orth)
+
+    assert cc_aligned is not None and cc_opposed is not None and cc_orth is not None
     assert cc_aligned > 0.8, f"Expected high aligned coherence, got {cc_aligned}"
-    assert cc_opposed == 0.0, f"Expected 0.0 opposed coherence, got {cc_opposed}"
+    assert cc_opposed > 0.8, f"Expected high agonistic coherence, got {cc_opposed}"
+    assert cc_orth == 0.0, f"Expected 0.0 orthogonal dissociation coherence, got {cc_orth}"
+
 
 
 def test_agent_self_divergence_speaker_awareness():

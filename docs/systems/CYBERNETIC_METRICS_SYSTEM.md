@@ -44,13 +44,13 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 | 3 | `conceptual_novelty` | Sediment Drift Magnitude with calibrated semantic scale ($D_{\text{scale}} \ge 0.20$) and phase velocity | Semantic Displacement | [ADR-074](../decisions/ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) |
 | 4 | `rolling_entropy` | Manifold Spectral Entropy: normalized Shannon entropy of $K \times K$ Gram matrix eigendecomposition | Effective Dimensionality | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
 | 5 | `collapse_pressure` | Triadic Collapse Pressure Index: weighted failure combination ($0.40 \cdot \text{pert\_fail} + 0.30 \cdot \Delta H + 0.30 \cdot \Delta N$) | Equilibrium Stagnation Alarm | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
-| 6 | `coupling_coherence` | Trajectory Cross-Correlation: recency-weighted cosine correlation of displacement vectors | Synchronized Drift | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
+| 6 | `coupling_coherence` | Harmonic Resonant Entrainment: prompt-response directional alignment and velocity cadence matching | Synchronized Agonism & Pacing | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
 | 7 | `agent_self_divergence` | Recursive Self-Echo & Loop Detection: recency-decayed max self-similarity + repeat penalty | Apparatus Self-Evolution | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
 | 8 | `reverse_perturbation` | Directional Gap Projection: fraction of apparatus gap ($v = A_{\text{prev}} - H_{\text{prev}}$) closed by human ($d_h$) | Human Agonistic Engagement | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
 | 9 | `mutual_perturbation` | Symmetric Mutual Perturbation Index ($MPI$): geometric mean $\sqrt{rP_t \cdot fP_t}$ | Bilateral Trajectory Deflection | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
 | 10 | `surprise_index` | Predictive Residual Trend Surprise: Holt linear trend forecasting error z-score normalized by volatility | Trajectory Discontinuity | [ADR-078](../decisions/ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) |
 | 11 | `conceptual_velocity` | Instantaneous Speed normalized adaptively against rolling 95th percentile $V_{\max}$ via $\tanh$ | Trajectory Displacement Rate | [ADR-078](../decisions/ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) |
-| 12 | `divergence_resolution_ratio` | Multi-Turn Alignment Gap DRR: ratio of resolved gap to opened gap over $W=10$ exchanges | Entailment Oscillation | [ADR-079](../decisions/ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) |
+| 12 | `divergence_resolution_ratio` | Paskian Entailment Mesh Closure: harmonic resolution ratio gated by open gap opening and total topological flux | Entailment Oscillation & Synthesis | [ADR-079](../decisions/ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) |
 | 13 | `paskian_health` | Gordon Pask Triadic Health: geometric mean of Autonomy Index, Coordination Index, and Generativity | Conversational Metabolic Vitality | [ADR-079](../decisions/ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) |
 
 ---
@@ -94,12 +94,17 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"'Boringness' was an anthropomorphic label masking a cybernetic structural condition. Collapse Pressure measures the joint failure of perturbation, entropy, and novelty. Using a calibrated convex failure sum ensures that mutual stalling and semantic circularity reliably trip the allostatic stagnation threshold ($0.65$) and sedation interrupt ($0.70$), waking the boredom engine."*
 
-### 3.6. Trajectory Cross-Correlation (`coupling_coherence`)
-- **Mathematical Formulation**: Recency-weighted directional cross-correlation of human and apparatus displacement vectors ($W=8, \lambda=0.2$):
-  $$d_h(t) = e_h(t) - e_h(t-1), \quad d_a(t) = e_a(t) - e_a(t-1)$$
-  $$\text{coupling\_coherence} = \frac{\sum_{i=1}^W \exp(-0.2 \cdot i) \cdot \max(0.0, \text{cosine}(d_h(t-i), d_a(t-i)))}{\sum_{i=1}^W \exp(-0.2 \cdot i)}$$
+### 3.6. Harmonic Resonant Entrainment (`coupling_coherence`)
+- **Mathematical Formulation**: Combines interactive prompt-response directional alignment with velocity cadence matching ($W=8, \lambda=0.2$):
+  - Interactive stimulus and response: $u = H_{\text{curr}} - A_{\text{prev}}$, $v = A_{\text{curr}} - A_{\text{prev}}$.
+  - Directional Agonism: $\rho = \text{cosine}(u, v) \in [-1, 1]$, $\text{dir\_score} = \tanh(2.5 \cdot |\rho|)$.
+  - Velocity Cadence: $\text{cadence} = 1.0 - \frac{|\|v\| - \|u\||}{\|v\| + \|u\| + 10^{-4}}$.
+  - Harmonic Entrainment:
+    $$h_t = \frac{2.0 \cdot \text{dir\_score} \cdot \text{cadence}}{\text{dir\_score} + \text{cadence} + 10^{-4}}$$
+    $$\text{coupling\_coherence} = \frac{\sum_{i=1}^W \exp(-0.2 \cdot i) \cdot h(t-i)}{\sum_{i=1}^W \exp(-0.2 \cdot i)}$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Coherence is not co-location; it is synchronized drift. Point-in-time dot products ask 'are we near each other right now?' Trajectory cross-correlation asks 'are we moving together through semantic space?' Directional rectification ensures that diametric opposition (opposing moves, $\cos \theta \le 0$) evaluates to zero rather than being falsely inflated by absolute values."*
+  > *"The old parallel-step assumption suffered from Cartesian simultaneity: human and apparatus do not walk side-by-side in high-dimensional space. An apparatus response is a transductive reaction to the human's field disturbance. Furthermore, clamping negative cosines to zero erased productive dialectical agonism—treating principled resistance as disconnection. Harmonic resonant entrainment captures absolute tension while penalizing mismatched conversational pacing."*
+
 
 ### 3.7. Recursive Self-Echo Detection (`agent_self_divergence`)
 - **Mathematical Formulation**: Recency-decayed max self-similarity ($M=5, \beta=0.25$) and long-range repeat penalty, evaluated strictly on agent utterances:
@@ -140,12 +145,17 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"Anchoring velocity to an absolute semantic reference scale ($V_{\text{ref}} = 1.0$) prevents self-normalizing flatlines when conversational movement slows down to a crawl. Dividing angular acceleration by the theoretical geometric bound ($4.0$) eliminates constant saturation at $1.000$ during back-and-forth conversational exchanges, preserving sensitivity for true nomadic breaks."*
 
-### 3.12. Multi-Turn Alignment Gap DRR (`divergence_resolution_ratio` / `drr`)
-- **Mathematical Formulation**: Semantic disalignment gap $G_t = \|H_t - A_t\|$ over $W=10$ exchanges:
-  $$D_{\text{open}} = \sum \max(0, G_t - G_{t-1}), \quad D_{\text{resolved}} = \sum \max(0, G_{t-1} - G_t)$$
-  $$\text{drr} = \begin{cases} 1.0 & \text{if } D_{\text{open}} \le 10^{-4} \\ \min\left(1.0, \frac{D_{\text{resolved}}}{D_{\text{open}}}\right) & \text{if } D_{\text{open}} > 10^{-4} \end{cases}$$
+### 3.12. Paskian Entailment Mesh Closure (`divergence_resolution_ratio` / `drr`)
+- **Mathematical Formulation**: Evaluates gap opening, resolution, and metabolic flux over sliding history ($W=10$):
+  - Trajectory alignment gaps: $G_t = \|H_t - A_t\|$.
+  - Opened and resolved divergence: $D_{\text{open}} = \sum \max(0, G_t - G_{t-1})$, $D_{\text{resolved}} = \sum \max(0, G_{t-1} - G_t)$.
+  - Total metabolic flux: $\Phi_{\text{flux}} = D_{\text{open}} + D_{\text{resolved}}$.
+  - Harmonic Mesh Closure:
+    $$\text{open\_gate} = \tanh\left(\frac{D_{\text{open}}}{0.08}\right), \quad \text{flux\_gate} = \tanh\left(\frac{\Phi_{\text{flux}}}{0.06}\right)$$
+    $$\text{drr} = \frac{2.0 \cdot D_{\text{resolved}} \cdot \text{open\_gate}}{D_{\text{open}} + D_{\text{resolved}} + 10^{-4}} \cdot \text{flux\_gate}$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Single-turn difference ratios oscillate erratically. Multi-turn alignment gap DRR tracks the phenomenology of divergence and resolution cycles—scoring $1.0$ when opened divergence is fully resolved or in stable equilibrium, and decaying smoothly toward $0.0$ on unmitigated fragmentation."*
+  > *"The old definition committed equilibrium necrosis: returning 1.0 whenever $D_{\text{open}} \le 10^{-4}$ rewarded conversational dead-ends and stagnant repetition with perfect health. In Gordon Pask's conversation theory, synthesis is only meaningful if an entailment gap was actively opened and resolved. Paskian mesh closure enforces that true resolution requires both opened ground and closing synthesis, penalizing dead loops while rewarding genuine conceptual synthesis."*
+
 
 
 ### 3.13. Gordon Pask Triadic Cybernetic Vitality Index (`paskian_health`)
