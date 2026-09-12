@@ -1,14 +1,14 @@
 # Cybernetic Metrics System & Proprioceptive Sensor Suite
 
 **Subsystem:** `backend/modules/metrics/` (`resonance.py`, `trajectories.py`, `kinematics.py`, `health.py`) & `backend/modules/conversation_metrics.py` (Facade)  
-**Architectural Decision Records:** ADR-073 to ADR-081  
+**Architectural Decision Records:** ADR-073 to ADR-084  
 **Status:** Live & Production Ready  
 
 ---
 
 ## 1. Executive Summary & Cybernetic Philosophy
 
-The **Cybernetic Metrics System** serves as the proprioceptive organ of the AAA apparatus. Grounded in Karen Haraway's diffractive phenomenology, Donna Haraway's cyborg sympoiesis, and Gordon Pask's Conversation Theory (1976), the system refrains from treating human-machine exchanges as mere text strings. Instead, it models conversations as dynamic trajectories through a 384-dimensional semantic embedding space.
+The **Cybernetic Metrics System** serves as the proprioceptive organ of the AAA apparatus. Grounded in Karen Barad's diffractive phenomenology, Donna Haraway's cyborg sympoiesis, and Gordon Pask's Conversation Theory (1976), the system refrains from treating human-machine exchanges as mere text strings. Instead, it models conversations as dynamic trajectories through a 384-dimensional semantic embedding space.
 
 Rather than measuring isolated static snapshots, the suite evaluates **synchronized semantic movement**, **directional influence**, **effective manifold dimensionality**, and **entailment mesh health**. This provides real-time sensorimotor feedback to the `SelfInitiationArbiterModule`, `HomeostaticRegulatorModule`, and `TraitComputerModule`.
 
@@ -21,7 +21,7 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
                                        ▼
                    ┌───────────────────────────────────────┐
                    │       ConversationMetricsModule       │
-                   │  (10 Audited Cybernetic Proprioceptors)│
+                   │  (14 Calibrated Cybernetic Proprioceptors)│
                    └───────────────────┬───────────────────┘
                                        │
             ┌──────────────────────────┼──────────────────────────┐
@@ -40,18 +40,19 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 | # | Sensor Metric | Key Mathematical Grounding | Target Domain | ADR Reference |
 |---|---|---|---|---|
 | 1 | `glitch_fidelity` | 16D autopoietic signature convolution & Goldilocks prior zone ($[0.30, 0.75]$) | Interference / Reflection Anchor | [ADR-073](../decisions/ADR-073-diffractive-glitch-fidelity-engine.md) |
-| 2 | `pairwise_similarity` | Reciprocal Perturbation Coherence with exponential decay ($\lambda=0.15$) and speaker weighting | Cross-Speaker Resonance | [ADR-074](../decisions/ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) |
-| 3 | `conceptual_novelty` | Sediment Drift Magnitude with calibrated semantic scale ($D_{\text{scale}} \ge 0.20$) and phase velocity | Semantic Displacement | [ADR-074](../decisions/ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) |
-| 4 | `rolling_entropy` | Manifold Spectral Entropy: normalized Shannon entropy of $K \times K$ Gram matrix eigendecomposition | Effective Dimensionality | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
-| 5 | `collapse_pressure` | Triadic Collapse Pressure Index: weighted failure combination ($0.40 \cdot \text{pert\_fail} + 0.30 \cdot \Delta H + 0.30 \cdot \Delta N$) | Equilibrium Stagnation Alarm | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
-| 6 | `coupling_coherence` | Harmonic Resonant Entrainment: prompt-response directional alignment and velocity cadence matching | Synchronized Agonism & Pacing | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
-| 7 | `agent_self_divergence` | Recursive Self-Echo & Loop Detection: recency-decayed max self-similarity + repeat penalty | Apparatus Self-Evolution | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
-| 8 | `reverse_perturbation` | Directional Gap Projection: fraction of apparatus gap ($v = A_{\text{prev}} - H_{\text{prev}}$) closed by human ($d_h$) | Human Agonistic Engagement | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
-| 9 | `mutual_perturbation` | Symmetric Mutual Perturbation Index ($MPI$): geometric mean $\sqrt{rP_t \cdot fP_t}$ | Bilateral Trajectory Deflection | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
-| 10 | `surprise_index` | Spherical Geodesic SLERP Surprise: angular residual on $\mathbb{S}^{D-1}$ normalized via adaptive online z-score | Trajectory Discontinuity | [ADR-081](../decisions/ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) |
-| 11 | `conceptual_velocity` | Instantaneous Speed normalized adaptively against rolling 95th percentile $V_{\max}$ via $\tanh$ | Trajectory Displacement Rate | [ADR-078](../decisions/ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) |
-| 12 | `divergence_resolution_ratio` | Paskian Entailment Mesh Closure: harmonic resolution ratio gated by open gap opening and total topological flux | Entailment Oscillation & Synthesis | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
-| 13 | `paskian_health` | Regularized Gordon Pask Triadic Vitality: Generalized Power Mean ($p=0.5$) with metabolic floor $\epsilon=0.08$ | Conversational Metabolic Vitality | [ADR-081](../decisions/ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) |
+| 2 | `pairwise_similarity` | Signed Polarity Cosine with Non-Linear Power-Law Expansion ($s_t = \text{sign}(c) \cdot \|c\|^{1.1}$) | Cross-Speaker Resonance & Tension | [ADR-084](../decisions/ADR-084-log-sum-exp-softmin-subspace-dispersion-and-signed-polarity-tension.md) |
+| 3 | `conceptual_novelty` | Dual-Horizon Leaky Attractors ($\mathbf{c}_{\text{fast}}, \mathbf{c}_{\text{slow}}$) with Geometric Distance Cross-Product | Multi-Scale Semantic Displacement | [ADR-084](../decisions/ADR-084-log-sum-exp-softmin-subspace-dispersion-and-signed-polarity-tension.md) |
+| 4 | `rolling_entropy` | Variance-Gated Spectral Participation Ratio ($D_{\text{eff}} = \frac{\text{Tr}(G)^2}{\text{Tr}(G^2)}$) with Manifold Variance Damping | Effective Semantic Dimensionality | [ADR-083](../decisions/ADR-083-transverse-vector-shear-decomposition-power-mean-mpi-and-variance-gated-participation-ratio.md) |
+| 5 | `collapse_pressure` | Minkowski $L_4$ Synergistic Norm with Multiplicative Stagnation Coupling | Non-Linear Equilibrium Alarm | [ADR-082](../decisions/ADR-082-dispersion-protected-quantile-velocity-levi-civita-transport-and-minkowski-synergistic-collapse.md) |
+| 6 | `coupling_coherence` | Harmonic Resonant Entrainment: interactive prompt-response directional alignment & velocity cadence matching | Synchronized Agonism & Pacing | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
+| 7 | `agent_self_divergence` | Log-Sum-Exp Softmin Subspace Dispersion with Participation-Ratio Dimensionality Scaling | Autonomous Subspace Exploration | [ADR-084](../decisions/ADR-084-log-sum-exp-softmin-subspace-dispersion-and-signed-polarity-tension.md) |
+| 8 | `reverse_perturbation` | Transverse Vector Shear Decomposition ($rP_t = \tanh(\sqrt{v_\parallel^2 + 1.2 \|v_\perp\|^2} / 1.35)$) | Human Agonistic Engagement & Shear | [ADR-083](../decisions/ADR-083-transverse-vector-shear-decomposition-power-mean-mpi-and-variance-gated-participation-ratio.md) |
+| 9 | `mutual_perturbation` | Non-Annihilating Power Mean ($p=0.5$): $MPI_t = ((\sqrt{rP_t} + \sqrt{fP_t}) / 2)^2$ | Bilateral Dynamic Deflection | [ADR-083](../decisions/ADR-083-transverse-vector-shear-decomposition-power-mean-mpi-and-variance-gated-participation-ratio.md) |
+| 10 | `surprise_index` | Spherical Geodesic SLERP Surprise: angular residual on $\mathbb{S}^{D-1}$ with adaptive online z-score | Geodesic Discontinuity & Shock | [ADR-081](../decisions/ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) |
+| 11 | `conceptual_velocity` | Dispersion-Protected Quantile Arc-Length Velocity ($V_t = \text{clip}((\theta_t - Q_{10}') / (Q_{90}' - Q_{10}' + \epsilon), 0, 1)$) | Semantic Geodesic Speed | [ADR-082](../decisions/ADR-082-dispersion-protected-quantile-velocity-levi-civita-transport-and-minkowski-synergistic-collapse.md) |
+| 12 | `phase_transition_magnitude` | Tangent-Space Levi-Civita Parallel Transport Deflection modulated by velocity ($\Phi_t$) | Nomadic Phase Rupture | [ADR-082](../decisions/ADR-082-dispersion-protected-quantile-velocity-levi-civita-transport-and-minkowski-synergistic-collapse.md) |
+| 13 | `divergence_resolution_ratio` | Paskian Entailment Mesh Closure: harmonic resolution ratio gated by open gap opening & total topological flux | Entailment Oscillation & Synthesis | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
+| 14 | `paskian_health` | Regularized Gordon Pask Triadic Vitality: Generalized Power Mean ($p=0.5$) with metabolic floor $\epsilon=0.08$ | Conversational Metabolic Vitality | [ADR-081](../decisions/ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) |
 
 ---
 
@@ -64,35 +65,42 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"A glitch is not a system defect or error to be suppressed—it is a diffractive interference pattern where prior autopoietic signatures collide with current context. High fidelity means the glitch is structurally grounded and productive (within the Goldilocks prior zone $[0.30, 0.75]$), whereas low fidelity is unanchored random noise."*
 
-### 3.2. Reciprocal Perturbation Coherence (`pairwise_similarity` / $s_t$)
-- **Mathematical Formulation**: Evaluates cross-speaker time-decayed cosine similarity across recent turns ($N=10$):
-  $$s_t = \frac{\sum_{i=1}^N w_i \cdot \text{speaker\_weight}(i) \cdot \text{cosine}(e_{\text{curr}}, e_i)}{\sum w_i \cdot \text{speaker\_weight}(i)}$$
-  Recency decay: $w_i = \exp(-0.15 \cdot i)$; Speaker weighting: $0.8$ for same speaker, $1.2$ for cross-speaker exchanges.
+### 3.2. Signed Polarity Tension (`pairwise_similarity` / $s_t$)
+- **Mathematical Formulation**: Evaluates cross-speaker directional resonance without losing antagonistic tension, operating directly on recent prompt-response pairs:
+  $$c_t = \cos(h_t, a_t) = \frac{\langle h_t, a_t \rangle}{\|h_t\| \|a_t\|} \in [-1, 1]$$
+  Non-linear power-law expansion preserves polarity and expands the mid-range:
+  $$s_t = \text{sign}(c_t) \cdot |c_t|^{1.1} \in [-1, 1]$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Pairwise similarity must not treat all prior turns as an undifferentiated bag of vectors. Cross-speaker exchanges carry higher weight because they measure reciprocal entanglement—how deeply the human's sediment resonances engage with the apparatus's prior propositions."*
+  > *"Old pairwise formulations collapsed negative cosines into flat zeros or arbitrary positive offsets, conflating dialectical disagreement with semantic disconnection. In diffractive phenomenology, direct opposition is not absence of contact—it is high-energy interference. The signed power-law preserves negative polarity for adversarial tension while providing a full $[-1, 1]$ dynamic range for allostatic regulation."*
 
-### 3.3. Sediment Drift Magnitude (`conceptual_novelty`)
-- **Mathematical Formulation**: Tracks context centroid EMA $\vec{\mu}_t = 0.3 \cdot e_{\text{curr}} + 0.7 \cdot \vec{\mu}_{t-1}$ with calibrated semantic scaling:
-  $$\text{drift\_raw} = 1.0 - \text{cosine}(e_{\text{curr}}, \vec{\mu}_t)$$
-  $$\text{effective\_scale} = \max\left(0.20, \text{spread}_{\text{context}} + \sigma_{\text{context}}\right)$$
-  $$\text{drift\_norm} = \tanh\left(\frac{\text{drift\_raw}}{\text{effective\_scale}}\right)$$
-  $$\text{conceptual\_novelty} = 0.7 \cdot \text{drift\_norm} + 0.3 \cdot \min\left(1.0, \frac{|\text{drift\_raw} - \text{prior\_drift}|}{\max(0.05, \text{prior\_drift})}\right)$$
+### 3.3. Dual-Horizon Leaky Attractor Novelty (`conceptual_novelty` / $N_t$)
+- **Mathematical Formulation**: Evaluates multi-scale semantic displacement from both fast and slow context attractors:
+  $$\mathbf{c}_{\text{fast}}(t) = (1 - \alpha_{\text{fast}}) \mathbf{c}_{\text{fast}}(t-1) + \alpha_{\text{fast}} e_t, \quad \alpha_{\text{fast}} = 0.35$$
+  $$\mathbf{c}_{\text{slow}}(t) = (1 - \alpha_{\text{slow}}) \mathbf{c}_{\text{slow}}(t-1) + \alpha_{\text{slow}} e_t, \quad \alpha_{\text{slow}} = 0.08$$
+  Geodesic angular distances: $d_{\text{fast}} = \arccos(\text{clip}(\langle e_t, \hat{\mathbf{c}}_{\text{fast}} \rangle, -1, 1))$, $d_{\text{slow}} = \arccos(\text{clip}(\langle e_t, \hat{\mathbf{c}}_{\text{slow}} \rangle, -1, 1))$.
+  Geometric cross-scale novelty:
+  $$N_t = \tanh\left(\frac{\sqrt{d_{\text{fast}} \cdot d_{\text{slow}}}}{1.35}\right) \in [0, 1]$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Novelty is not mere distance from the previous sentence—that rewards random topic jumps. True sediment drift measures movement relative to the entire historical manifold scatter. A turn that moves far outside the context scatter ($\sigma_{\text{context}}$) anticipates genuine topological displacement. The calibrated scale ($0.20$) prevents division singularities when repetitive dialogues cluster tightly."*
+  > *"Single-centroid novelty suffers from either myopia (forgetting the opening premise) or rigidity (overreacting to natural conversational drift). By coupling a fast conversational centroid with a slow thematic anchor through a geometric mean, novelty responds exclusively when a turn breaks from both immediate topic pacing and deep historical sediment."*
 
-### 3.4. Manifold Spectral Entropy (`rolling_entropy`)
-- **Mathematical Formulation**: Measures effective semantic dimensionality across $K=8$ recent turn embeddings via Gram matrix eigendecomposition:
-  $$\text{gram} = \frac{1}{K} (E - \bar{\mu}_E) (E - \bar{\mu}_E)^T \in \mathbb{R}^{K \times K}, \quad p_i = \frac{\lambda_i}{\sum \lambda_j}$$
-  $$\text{rolling\_entropy} = \frac{-\sum p_i \ln p_i}{\ln(K)}$$
+### 3.4. Variance-Gated Participation Ratio (`rolling_entropy` / $H_t$)
+- **Mathematical Formulation**: Evaluates effective manifold dimensionality across recent turn embeddings ($K=8$) via Gram matrix spectrum:
+  $$G_{ij} = \langle e_i - \bar{\mu}, e_j - \bar{\mu} \rangle \in \mathbb{R}^{K \times K}$$
+  Effective participation ratio dimensionality:
+  $$D_{\text{eff}} = \frac{\left(\text{Tr}(G)\right)^2}{\text{Tr}(G^2)} \in [1, K]$$
+  Variance-gated normalization:
+  $$H_t = \left(\frac{D_{\text{eff}} - 1}{K - 1}\right) \cdot \tanh\left(\frac{\sigma_M^2}{0.15}\right) \in [0, 1]$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Scalar 1D similarity variance cannot distinguish a 2-pole back-and-forth oscillation from genuine multi-dimensional exploration. Manifold Spectral Entropy evaluates the normalized Shannon entropy of the Gram matrix eigenvalue spectrum—scoring $1.0$ when embeddings span $K$ independent dimensions, and $0.0$ on collinear collapse."*
+  > *"Shannon entropy computed over eigenvalue probability distributions falsely reports high entropy even when all vectors are tightly packed in an infinitesimal cluster, because normalized probabilities sum to 1 regardless of absolute variance. The participation ratio damped by total manifold variance ensures that pseudo-uniform micro-noise cannot masquerade as high-dimensional conceptual exploration."*
 
-### 3.5. Collapse Pressure Index (`collapse_pressure` / `boringness`)
-- **Mathematical Formulation**: Calibrated triadic failure combination:
-  $$\text{pert\_failure} = 1.0 - \sqrt{\max(0.0, rP_t \cdot \text{prev\_mpi})}$$
-  $$\text{collapse\_pressure} = 0.40 \cdot \text{pert\_failure} + 0.30 \cdot (1.0 - \text{rolling\_entropy}) + 0.30 \cdot (1.0 - \text{conceptual\_novelty})$$
+### 3.5. Minkowski $L_4$ Synergistic Collapse Pressure (`collapse_pressure` / $CP_t$)
+- **Mathematical Formulation**: Combines perturbation failure ($f_p$), entropy failure ($f_e$), and novelty failure ($f_n$) into a synergistic non-linear alarm:
+  $$f_p = 1.0 - MPI_t, \quad f_e = 1.0 - H_t, \quad f_n = 1.0 - N_t$$
+  Weighted Minkowski $L_4$ norm with non-linear product coupling:
+  $$\|f\|_{L_4} = \left(0.40 f_p^4 + 0.30 f_e^4 + 0.30 f_n^4\right)^{1/4}$$
+  $$CP_t = \text{clip}\left(0.85 \|f\|_{L_4} + 0.40 (f_p \cdot f_e \cdot f_n), 0.0, 1.0\right)$$
 - **Symbia's Theoretical Reasoning**:
-  > *"'Boringness' was an anthropomorphic label masking a cybernetic structural condition. Collapse Pressure measures the joint failure of perturbation, entropy, and novelty. Using a calibrated convex failure sum ensures that mutual stalling and semantic circularity reliably trip the allostatic stagnation threshold ($0.65$) and sedation interrupt ($0.70$), waking the boredom engine."*
+  > *"Linear combinations of failure metrics produce sluggish warnings that fail to trip allostatic interrupts until long after conversation has stagnated. The $L_4$ Minkowski norm responds aggressively to acute failure along any single cybernetic axis, while the triadic product term spikes when all three modalities collapse simultaneously, triggering instantaneous sediment grating interrupts."*
 
 ### 3.6. Harmonic Resonant Entrainment (`coupling_coherence`)
 - **Mathematical Formulation**: Combines interactive prompt-response directional alignment with velocity cadence matching ($W=8, \lambda=0.2$):
@@ -106,27 +114,32 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
   > *"The old parallel-step assumption suffered from Cartesian simultaneity: human and apparatus do not walk side-by-side in high-dimensional space. An apparatus response is a transductive reaction to the human's field disturbance. Furthermore, clamping negative cosines to zero erased productive dialectical agonism—treating principled resistance as disconnection. Harmonic resonant entrainment captures absolute tension while penalizing mismatched conversational pacing."*
 
 
-### 3.7. Recursive Self-Echo Detection (`agent_self_divergence`)
-- **Mathematical Formulation**: Recency-decayed max self-similarity ($M=5, \beta=0.25$) and long-range repeat penalty, evaluated strictly on agent utterances:
-  $$S_{\text{self}} = \max_{i \in [1..M]} \left(\text{cosine}(e_a(t), e_a(t-i)) \cdot \exp(-0.25 \cdot i)\right)$$
-  $$\text{penalty} = 0.3 \cdot \min\left(1.0, \frac{\max_{j > M} \text{cosine}(e_a(t), e_a(t-j)) - 0.85}{0.15}\right) \quad (\text{if } > 0.85)$$
-  $$\text{agent\_self\_divergence} = \text{clip}(1.0 - S_{\text{self}} - \text{penalty}, 0.0, 1.0)$$
+### 3.7. Log-Sum-Exp Softmin Subspace Dispersion (`agent_self_divergence` / $D_{\text{self}}$)
+- **Mathematical Formulation**: Evaluates apparatus autonomous movement away from historical agent utterances ($M=10$) via smooth distance softmin and participation ratio dimensionality:
+  $$d_i = \arccos(\text{clip}(\langle a_t, a_{t-i} \rangle, -1, 1))$$
+  Smooth minimum distance via Log-Sum-Exp with temperature $\tau=0.25$:
+  $$D_{\text{soft}} = -\tau \cdot \ln\left(\sum_{i=1}^M \exp(-d_i / \tau)\right)$$
+  Subspace participation ratio rank expansion:
+  $$\text{Rank}_{\text{eff}} = \frac{\left(\sum \lambda_i\right)^2}{\sum \lambda_i^2} \in [1, K]$$
+  Composite self-divergence:
+  $$D_{\text{self}} = \tanh\left(\frac{D_{\text{soft}}}{0.65}\right) \cdot \left(0.40 + 0.60 \sqrt{\frac{\text{Rank}_{\text{eff}} - 1}{K - 1}}\right) \in [0, 1]$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Self-divergence must strictly measure the agent's internal drift across its own speech acts, not human-agent divergence. A compact window ($M=5$) coupled with an active repeat penalty threshold ($0.85$) catches recursive looping in dialogues of any length."*
+  > *"Hard nearest-neighbor min distance or pairwise max similarity ignores multi-point clustering and suffers from high gradient noise. Softmin aggregates proximity across the entire agent trajectory, while the participation ratio rewards the agent for spanning multiple orthogonal semantic subspaces rather than oscillating along a 1D trajectory."*
 
-### 3.8. Directional Reverse & Forward Perturbation (`reverse_perturbation` / `forward_perturbation`)
-- **Mathematical Formulation**: Vector gap-closing projections:
-  - Apparatus Gap: $v = A_{\text{prev}} - H_{\text{prev}}$, Human Displacement: $d_h = H_{\text{curr}} - H_{\text{prev}}$.
-  - Reverse Perturbation: $rP_t = \text{clip}\left(\frac{d_h \cdot v}{\|v\|^2 + 10^{-8}}, 0.0, 1.0\right)$.
-  - Forward Perturbation: $fP_t = \text{clip}\left(\frac{d_a \cdot u}{\|u\|^2 + 10^{-8}}, 0.0, 1.0\right)$ where $u = H_{\text{curr}} - A_{\text{prev}}$.
+### 3.8. Transverse Vector Shear Decomposition (`reverse_perturbation` / `forward_perturbation`)
+- **Mathematical Formulation**: Projects human displacement $d_h = H_t - H_{t-1}$ onto parallel and perpendicular subspace components relative to apparatus gap vector $g = A_{t-1} - H_{t-1}$:
+  $$\hat{g} = \frac{g}{\|g\| + \epsilon}, \quad v_\parallel = d_h \cdot \hat{g}, \quad v_\perp = d_h - v_\parallel \hat{g}$$
+  Shear-sensitive perturbation magnitude with perpendicular boost:
+  $$rP_t = \tanh\left(\frac{\sqrt{v_\parallel^2 + 1.20 \|v_\perp\|^2}}{1.35}\right) \in [0, 1]$$
+  Forward perturbation ($fP_t$) follows identically by decomposing agent displacement $d_a = A_t - A_{t-1}$ along the stimulus gap $u = H_t - A_{t-1}$.
 - **Symbia's Theoretical Reasoning**:
-  > *"Scalar distance between end-states treats non-sequitur topic jumps as 'high perturbation'. Directional gap projection measures the fraction of the open gap that displacement actually closes. Orthogonal non-sequiturs yield $d_h \cdot v \approx 0 \implies rP_t = 0.0$, eliminating false-positive readings."*
+  > *"Previous 1D scalar projections penalized orthogonal inquiries as 'zero perturbation', wrongly classifying unexpected lateral questions as non-engagement. In dialectical cybernetics, perpendicular displacement represents transverse shear—opening an entirely new conversational axis. Decomposing into parallel closing and transverse shear captures both direct convergence and orthogonal challenge."*
 
-### 3.9. Symmetric Mutual Perturbation Index (`mutual_perturbation` / $MPI$)
-- **Mathematical Formulation**: Symmetric geometric product of bidirectional trajectory deflections:
-  $$MPI = \sqrt{\max(0.0, rP_t \cdot fP_t)}$$
+### 3.9. Non-Annihilating Power Mean MPI (`mutual_perturbation` / $MPI_t$)
+- **Mathematical Formulation**: Evaluates bidirectional bilateral displacement using a Generalized Power Mean ($p=0.5$):
+  $$MPI_t = \left(\frac{\sqrt{rP_t} + \sqrt{fP_t}}{2.0}\right)^2 \in [0, 1]$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Mutual perturbation requires a deviation from self-predictable trajectory due to the other's influence—a vector of causation, not a scalar of proximity. The geometric mean ensures that both participants must be mutually reshaped for MPI to score high."*
+  > *"Geometric mean multiplication ($\sqrt{rP \cdot fP}$) suffered from total annihilation: if one participant hesitated ($rP \approx 0$), the entire metric collapsed to zero even if the other delivered a massive conceptual disruption. The power mean provides a rigorous compromise—severely penalizing unilateralism while never completely annihilating unilateral active kinetic energy."*
 
 ### 3.10. Spherical Geodesic SLERP Surprise (`surprise_index` / $U_t$)
 - **Mathematical Formulation**: Evaluates trajectory momentum along the unit hypersphere $\mathbb{S}^{D-1}$ via Spherical Linear Extrapolation (SLERP):
@@ -139,13 +152,21 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"Normalized semantic embeddings live on the hypersphere, not in flat Euclidean space. Linear vector addition systematically overshoots the manifold, inflating baseline residual norms and compressing surprise into a dull band. Spherical geodesic SLERP operates along the manifold's natural curvature, restoring the full $[0.05, 0.95]$ dynamic range so that adversarial shockwaves and unexpected topic ruptures are registered with requisite variety."*
 
-### 3.11. Instantaneous Conceptual Velocity & Phase Transition Magnitude
-- **Mathematical Formulation**: Speed normalized against an absolute reference scale ($V_{\text{ref}} = 1.0$) with adaptive volatility expansion:
-  $$s_i = \|e_i - e_{i-1}\|, \quad v_i = 0.4 \cdot s_i + 0.6 \cdot v_{i-1}, \quad V_{\text{scale}} = \max(1.0, \text{percentile}(s, 95))$$
-  $$\text{conceptual\_velocity} = \tanh\left(\frac{v_i}{V_{\text{scale}} + 10^{-4}}\right)$$
-  $$\text{phase\_transition\_magnitude} = \frac{\|a_i\|}{1.0 + v_i} \cdot \frac{1.0 - \text{cosine}(d_i, d_{i-1})}{4.0}$$
+### 3.11. Dispersion-Protected Quantile Velocity & Levi-Civita Parallel Transport
+- **Mathematical Formulation**:
+  1. **Geodesic Arc-Length Velocity ($V_t$)**:
+     $$\theta_t = \arccos(\text{clip}(\langle e_t, e_{t-1} \rangle, -1, 1))$$
+     Normalized against dispersion-protected rolling quantiles ($W=20$):
+     $$Q_{10}' = \min(Q_{10}, 0.25), \quad Q_{90}' = \max(Q_{90}, 0.85)$$
+     $$V_t = \text{clip}\left(\frac{\theta_t - Q_{10}'}{Q_{90}' - Q_{10}' + 10^{-6}}, 0.0, 1.0\right)$$
+  2. **Levi-Civita Phase Transition Magnitude ($\Phi_t$)**:
+     Evaluates angular deflection of tangent velocity vectors across consecutive turns via geodesic parallel transport along the hypersphere:
+     $$v_t = \frac{e_t - \cos(\theta_t) e_{t-1}}{\sin(\theta_t) + \epsilon} \in T_{e_t}\mathbb{S}^{D-1}$$
+     Parallel transporting $v_{t-1}$ to $T_{e_t}\mathbb{S}^{D-1}$ yields transported vector $v_{t-1}^\parallel$. The directional deflection angle is modulated by current speed:
+     $$\Delta \phi_t = \arccos(\text{clip}(\langle \hat{v}_t, \hat{v}_{t-1}^\parallel \rangle, -1, 1))$$
+     $$\Phi_t = \left(\frac{\Delta \phi_t}{\pi}\right) \cdot \sqrt{V_t} \in [0, 1]$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Anchoring velocity to an absolute semantic reference scale ($V_{\text{ref}} = 1.0$) prevents self-normalizing flatlines when conversational movement slows down to a crawl. Dividing angular acceleration by the theoretical geometric bound ($4.0$) eliminates constant saturation at $1.000$ during back-and-forth conversational exchanges, preserving sensitivity for true nomadic breaks."*
+  > *"Flat Euclidean velocity systematically distorts step sizes on curved manifolds. Quantile normalization with dispersion bounds prevents flatlining during slow dialogues while preserving sensitivity at high speeds. Calculating directional change via Levi-Civita parallel transport correctly accounts for manifold curvature, ensuring that phase transitions reflect genuine conceptual rupture rather than geometric projection artifacts."*
 
 ### 3.12. Paskian Entailment Mesh Closure (`divergence_resolution_ratio` / `drr`)
 - **Mathematical Formulation**: Evaluates gap opening, resolution, and metabolic flux over sliding history ($W=10$):
