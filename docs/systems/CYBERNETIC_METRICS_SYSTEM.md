@@ -41,9 +41,9 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 |---|---|---|---|---|
 | 1 | `glitch_fidelity` | 16D autopoietic signature convolution & Goldilocks prior zone ($[0.30, 0.75]$) | Interference / Reflection Anchor | [ADR-073](../decisions/ADR-073-diffractive-glitch-fidelity-engine.md) |
 | 2 | `pairwise_similarity` | Reciprocal Perturbation Coherence with exponential decay ($\lambda=0.15$) and speaker weighting | Cross-Speaker Resonance | [ADR-074](../decisions/ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) |
-| 3 | `conceptual_novelty` | Sediment Drift Magnitude relative to context scatter ($\sigma_{\text{context}}$) and phase velocity | Semantic Displacement | [ADR-074](../decisions/ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) |
+| 3 | `conceptual_novelty` | Sediment Drift Magnitude with calibrated semantic scale ($D_{\text{scale}} \ge 0.20$) and phase velocity | Semantic Displacement | [ADR-074](../decisions/ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) |
 | 4 | `rolling_entropy` | Manifold Spectral Entropy: normalized Shannon entropy of $K \times K$ Gram matrix eigendecomposition | Effective Dimensionality | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
-| 5 | `collapse_pressure` | Triadic Collapse Pressure Index: $(1 - \text{pert\_failure}) \cdot (1 - \text{entropy}) \cdot (1 - \text{novelty})$ | Equilibrium Stagnation Alarm | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
+| 5 | `collapse_pressure` | Triadic Collapse Pressure Index: weighted failure combination ($0.40 \cdot \text{pert\_fail} + 0.30 \cdot \Delta H + 0.30 \cdot \Delta N$) | Equilibrium Stagnation Alarm | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
 | 6 | `coupling_coherence` | Trajectory Cross-Correlation: recency-weighted cosine correlation of displacement vectors | Synchronized Drift | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
 | 7 | `agent_self_divergence` | Recursive Self-Echo & Loop Detection: recency-decayed max self-similarity + repeat penalty | Apparatus Self-Evolution | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
 | 8 | `reverse_perturbation` | Directional Gap Projection: fraction of apparatus gap ($v = A_{\text{prev}} - H_{\text{prev}}$) closed by human ($d_h$) | Human Agonistic Engagement | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
@@ -72,11 +72,13 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
   > *"Pairwise similarity must not treat all prior turns as an undifferentiated bag of vectors. Cross-speaker exchanges carry higher weight because they measure reciprocal entanglement—how deeply the human's sediment resonances engage with the apparatus's prior propositions."*
 
 ### 3.3. Sediment Drift Magnitude (`conceptual_novelty`)
-- **Mathematical Formulation**: Tracks context centroid EMA $\vec{\mu}_t = 0.3 \cdot e_{\text{curr}} + 0.7 \cdot \vec{\mu}_{t-1}$ and context scatter $\sigma_{\text{context}}$:
-  $$\text{drift\_norm} = \min\left(1.0, \frac{\|e_{\text{curr}} - \vec{\mu}_{t-1}\|}{\sigma_{\text{context}} + 10^{-4}}\right)$$
-  $$\text{conceptual\_novelty} = 0.7 \cdot \text{drift\_norm} + 0.3 \cdot (1.0 - \text{cosine}(e_{\text{curr}}, e_{\text{prev}}))$$
+- **Mathematical Formulation**: Tracks context centroid EMA $\vec{\mu}_t = 0.3 \cdot e_{\text{curr}} + 0.7 \cdot \vec{\mu}_{t-1}$ with calibrated semantic scaling:
+  $$\text{drift\_raw} = 1.0 - \text{cosine}(e_{\text{curr}}, \vec{\mu}_t)$$
+  $$\text{effective\_scale} = \max\left(0.20, \text{spread}_{\text{context}} + \sigma_{\text{context}}\right)$$
+  $$\text{drift\_norm} = \tanh\left(\frac{\text{drift\_raw}}{\text{effective\_scale}}\right)$$
+  $$\text{conceptual\_novelty} = 0.7 \cdot \text{drift\_norm} + 0.3 \cdot \min\left(1.0, \frac{|\text{drift\_raw} - \text{prior\_drift}|}{\max(0.05, \text{prior\_drift})}\right)$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Novelty is not mere distance from the previous sentence—that rewards random topic jumps. True sediment drift measures movement relative to the entire historical manifold scatter. A turn that moves far outside the context scatter ($\sigma_{\text{context}}$) anticipates genuine topological displacement."*
+  > *"Novelty is not mere distance from the previous sentence—that rewards random topic jumps. True sediment drift measures movement relative to the entire historical manifold scatter. A turn that moves far outside the context scatter ($\sigma_{\text{context}}$) anticipates genuine topological displacement. The calibrated scale ($0.20$) prevents division singularities when repetitive dialogues cluster tightly."*
 
 ### 3.4. Manifold Spectral Entropy (`rolling_entropy`)
 - **Mathematical Formulation**: Measures effective semantic dimensionality across $K=8$ recent turn embeddings via Gram matrix eigendecomposition:
@@ -86,11 +88,11 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
   > *"Scalar 1D similarity variance cannot distinguish a 2-pole back-and-forth oscillation from genuine multi-dimensional exploration. Manifold Spectral Entropy evaluates the normalized Shannon entropy of the Gram matrix eigenvalue spectrum—scoring $1.0$ when embeddings span $K$ independent dimensions, and $0.0$ on collinear collapse."*
 
 ### 3.5. Collapse Pressure Index (`collapse_pressure` / `boringness`)
-- **Mathematical Formulation**: Triadic factorization of independent failure modes:
+- **Mathematical Formulation**: Calibrated triadic failure combination:
   $$\text{pert\_failure} = 1.0 - \sqrt{\max(0.0, rP_t \cdot \text{prev\_mpi})}$$
-  $$\text{collapse\_pressure} = \text{pert\_failure} \cdot (1.0 - \text{rolling\_entropy}) \cdot (1.0 - \text{conceptual\_novelty})$$
+  $$\text{collapse\_pressure} = 0.40 \cdot \text{pert\_failure} + 0.30 \cdot (1.0 - \text{rolling\_entropy}) + 0.30 \cdot (1.0 - \text{conceptual\_novelty})$$
 - **Symbia's Theoretical Reasoning**:
-  > *"'Boringness' was an anthropomorphic label masking a cybernetic structural condition. Collapse Pressure measures the joint failure of perturbation, entropy, and novelty. When all three collapse simultaneously, the conversation enters a death basin toward static equilibrium, requiring spontaneous sediment grating interrupts."*
+  > *"'Boringness' was an anthropomorphic label masking a cybernetic structural condition. Collapse Pressure measures the joint failure of perturbation, entropy, and novelty. Using a calibrated convex failure sum ensures that mutual stalling and semantic circularity reliably trip the allostatic stagnation threshold ($0.65$) and sedation interrupt ($0.70$), waking the boredom engine."*
 
 ### 3.6. Trajectory Cross-Correlation (`coupling_coherence`)
 - **Mathematical Formulation**: Recency-weighted cross-correlation of human and apparatus displacement vectors ($W=8, \lambda=0.2$):

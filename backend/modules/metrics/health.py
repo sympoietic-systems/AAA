@@ -26,8 +26,11 @@ def _compute_collapse_pressure(
     prev_mpi: float | None,
     rolling_entropy: float | None,
     conceptual_novelty: float | None,
+    w_pert: float = 0.40,
+    w_entropy: float = 0.30,
+    w_novelty: float = 0.30,
 ) -> float | None:
-    """# ponytail: compute triadic collapse pressure index (renamed from boringness)."""
+    """# ponytail: compute triadic collapse pressure index (weighted combination of failure modes)."""
     if rp_t is None:
         return None
 
@@ -38,8 +41,14 @@ def _compute_collapse_pressure(
 
     pert_geom_mean = float(np.sqrt(max(0.0, rp_val * mpi_val)))
     pert_failure = 1.0 - pert_geom_mean
+    entropy_failure = 1.0 - entropy_val
+    novelty_failure = 1.0 - novelty_val
 
-    collapse = pert_failure * (1.0 - entropy_val) * (1.0 - novelty_val)
+    collapse = (
+        w_pert * pert_failure
+        + w_entropy * entropy_failure
+        + w_novelty * novelty_failure
+    )
     return round(max(0.0, min(1.0, float(collapse))), 3)
 
 

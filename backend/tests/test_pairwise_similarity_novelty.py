@@ -47,3 +47,43 @@ def test_conceptual_novelty_centroid_drift():
     assert novelty_1 is not None and novelty_2 is not None
     # Orthogonal turn v2 relative to v1 centroid should yield higher conceptual novelty
     assert novelty_2 > novelty_1, f"Expected novelty_2 ({novelty_2}) > novelty_1 ({novelty_1})"
+
+
+def test_conceptual_novelty_repetitive_basin_suppression():
+    """Verify that tight semantic clustering suppresses novelty, while orthogonal drift expands it."""
+    base = np.array([1.0] + [0.0] * 383, dtype=np.float32)
+    
+    # Simulate a tight repetitive dialogue basin (small perturbations around base)
+    history = []
+    for i in range(5):
+        noise = np.zeros(384, dtype=np.float32)
+        noise[0] = 1.0
+        noise[1] = 0.05 * (i + 1)
+        noise = noise / np.linalg.norm(noise)
+        history.append({"embedding": noise, "speaker": "human" if i % 2 == 0 else "apparatus"})
+    
+    # 1. Repetitive turn: slight paraphrase within the cluster
+    near_turn = np.zeros(384, dtype=np.float32)
+    near_turn[0] = 1.0
+    near_turn[1] = 0.08
+    near_turn = near_turn / np.linalg.norm(near_turn)
+    
+    novelty_near, _ = _compute_conceptual_novelty(
+        current_vec=near_turn, recent_history=history, prior_centroid=base
+    )
+    
+    # 2. Orthogonal turn: completely new conceptual direction
+    ortho_turn = np.zeros(384, dtype=np.float32)
+    ortho_turn[2] = 1.0
+    
+    novelty_ortho, _ = _compute_conceptual_novelty(
+        current_vec=ortho_turn, recent_history=history, prior_centroid=base
+    )
+    
+    assert novelty_near is not None and novelty_ortho is not None
+    # Repetitive turn should remain suppressed (<= 0.35)
+    assert novelty_near <= 0.35, f"Expected suppressed novelty in repetitive basin, got {novelty_near}"
+    # Orthogonal turn should register high novelty (>= 0.85)
+    assert novelty_ortho >= 0.85, f"Expected high novelty for orthogonal shift, got {novelty_ortho}"
+    assert novelty_ortho > novelty_near * 2, "Orthogonal novelty should be significantly higher than near novelty"
+

@@ -44,3 +44,26 @@ def test_collapse_pressure_triadic_factorization():
         collapse_stagnant > collapse_healthy
     ), f"Expected stagnant collapse ({collapse_stagnant}) > healthy ({collapse_healthy})"
     assert collapse_stagnant > 0.7, f"Expected high collapse pressure, got {collapse_stagnant}"
+
+
+def test_collapse_pressure_stagnant_thresholds():
+    """Verify that realistic conversational deadlocks properly cross the 0.65 stagnant and 0.70 sedation thresholds."""
+    # Under realistic 10-turn adversarial repetition:
+    # perturbation is low (rp_t=0.20, mpi=0.20), entropy is low (0.30), novelty is suppressed (0.20)
+    collapse_deadlock = _compute_collapse_pressure(
+        rp_t=0.20, prev_mpi=0.20, rolling_entropy=0.30, conceptual_novelty=0.20
+    )
+
+    assert collapse_deadlock is not None
+    # Must cross the 0.65 threshold to trigger homeostatic 'stagnant' state
+    assert collapse_deadlock >= 0.65, f"Expected stagnant trigger (>= 0.65), got {collapse_deadlock}"
+    # Must cross the 0.70 threshold to trigger SelfInitiationArbiter sedation interrupt
+    assert collapse_deadlock >= 0.70, f"Expected sedation interrupt trigger (>= 0.70), got {collapse_deadlock}"
+
+    # Verify healthy conversation stays safely below the flowing ceiling (< 0.40)
+    collapse_flowing = _compute_collapse_pressure(
+        rp_t=0.65, prev_mpi=0.60, rolling_entropy=0.75, conceptual_novelty=0.70
+    )
+    assert collapse_flowing is not None
+    assert collapse_flowing < 0.40, f"Expected flowing regime (< 0.40), got {collapse_flowing}"
+

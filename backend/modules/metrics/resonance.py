@@ -82,12 +82,16 @@ def _compute_conceptual_novelty(
     scatters = [1.0 - max(0.0, min(1.0, float(np.dot(hv, new_centroid)))) for hv in hist_vecs]
     sigma_context = float(np.std(scatters)) if len(scatters) > 1 else 0.10
 
-    # Normalized drift distance
-    drift_norm = float(np.tanh(drift_raw / (sigma_context + 0.01)))
+    # Calibrated semantic scale: base scale of 0.20 prevents division singularity when
+    # dialogue clusters tightly, while context spread allows broader conversations to
+    # require proportionally larger drifts for high novelty.
+    context_spread = max(0.05, float(np.mean(scatters))) if scatters else 0.10
+    effective_scale = max(0.20, context_spread + sigma_context)
+    drift_norm = float(np.tanh(drift_raw / effective_scale))
 
     # Compute velocity relative to prior history turn drift
     prior_drift = scatters[0] if scatters else 0.01
-    velocity = min(1.0, abs(drift_raw - prior_drift) / max(0.01, prior_drift))
+    velocity = min(1.0, abs(drift_raw - prior_drift) / max(0.05, prior_drift))
 
     # Combined novelty score (0.7 drift + 0.3 velocity)
     novelty = (0.7 * drift_norm) + (0.3 * velocity)
