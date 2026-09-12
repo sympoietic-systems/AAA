@@ -613,6 +613,60 @@ def render_plots(receipts: dict, out_dir: Path):
             "stat_base": f"T{num_turns}: {get_sf(baseline, 'paskian_health')[-1]:.3f}" if get_sf(baseline, 'paskian_health') else "-",
             "delta": "+0.009 VIABILITY"
         },
+        {
+            "id": "velocity", "title": "CONCEPTUAL VELOCITY (v_t)", "badge": "SEMANTIC SPEED",
+            "desc": "Instantaneous semantic displacement speed normalized against absolute reference scale.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "conceptual_velocity"), "base": get_sf(baseline, "conceptual_velocity"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'conceptual_velocity')[-1]:.3f}" if get_sf(aaa, 'conceptual_velocity') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'conceptual_velocity')[-1]:.3f}" if get_sf(baseline, 'conceptual_velocity') else "-",
+            "delta": "CALIBRATED SPEED"
+        },
+        {
+            "id": "surprise", "title": "PREDICTIVE SURPRISE (S_t)", "badge": "MOMENTUM DISCONTINUITY",
+            "desc": "Forecasting error z-score from Holt linear trend EMA with calibrated nominal variance prior.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "surprise_index"), "base": get_sf(baseline, "surprise_index"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'surprise_index')[-1]:.3f}" if get_sf(aaa, 'surprise_index') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'surprise_index')[-1]:.3f}" if get_sf(baseline, 'surprise_index') else "-",
+            "delta": "NOMINAL PRIOR"
+        },
+        {
+            "id": "coupling", "title": "COUPLING COHERENCE (C_t)", "badge": "TRAJECTORY SYNC",
+            "desc": "Directional half-wave displacement alignment max(0, cos theta) with recency decay.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "coupling_coherence"), "base": get_sf(baseline, "coupling_coherence"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'coupling_coherence')[-1]:.3f}" if get_sf(aaa, 'coupling_coherence') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'coupling_coherence')[-1]:.3f}" if get_sf(baseline, 'coupling_coherence') else "-",
+            "delta": "DIRECTIONAL RECTIFIED"
+        },
+        {
+            "id": "divergence", "title": "AGENT SELF-DIVERGENCE", "badge": "LOOP RESISTANCE",
+            "desc": "Speaker-isolated agent anti-looping metric with compact window (M=5) and repeat penalty.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "agent_self_divergence"), "base": get_sf(baseline, "agent_self_divergence"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'agent_self_divergence')[-1]:.3f}" if get_sf(aaa, 'agent_self_divergence') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'agent_self_divergence')[-1]:.3f}" if get_sf(baseline, 'agent_self_divergence') else "-",
+            "delta": "SPEAKER AWARE"
+        },
+        {
+            "id": "drr", "title": "DIVERGENCE RESOLUTION (DRR)", "badge": "DIALECTIC BALANCE",
+            "desc": "Dialectic homeostasis ratio measuring resolved tension to open systemic divergence.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "divergence_resolution_ratio"), "base": get_sf(baseline, "divergence_resolution_ratio"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'divergence_resolution_ratio')[-1]:.3f}" if get_sf(aaa, 'divergence_resolution_ratio') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'divergence_resolution_ratio')[-1]:.3f}" if get_sf(baseline, 'divergence_resolution_ratio') else "-",
+            "delta": "HOMEOSTATIC RATIO"
+        },
+        {
+            "id": "entropy", "title": "ROLLING SPECTRAL ENTROPY", "badge": "INFORMATION DYNAMICS",
+            "desc": "Normalized spectral entropy of local trajectory variance across embedding coordinates.",
+            "y_max": 1.0, "aaa": get_sf(aaa, "rolling_entropy"), "base": get_sf(baseline, "rolling_entropy"),
+            "color_aaa": "#00e5ff", "color_base": "#ff9944",
+            "stat_aaa": f"T{num_turns}: {get_sf(aaa, 'rolling_entropy')[-1]:.3f}" if get_sf(aaa, 'rolling_entropy') else "-",
+            "stat_base": f"T{num_turns}: {get_sf(baseline, 'rolling_entropy')[-1]:.3f}" if get_sf(baseline, 'rolling_entropy') else "-",
+            "delta": "SPECTRAL DYNAMICS"
+        },
     ]
 
     def to_h2h_pts(series, y_max=1.0, left=50, right=480, top=20, bottom=130):
@@ -683,7 +737,7 @@ def render_plots(receipts: dict, out_dir: Path):
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{
     background-color: #060709; color: #e4e7ec; font-family: 'JetBrains Mono', monospace;
-    width: 1720px; height: 1540px; padding: 24px 34px; display: flex; flex-direction: column;
+    width: 1720px; height: 2500px; padding: 24px 34px; display: flex; flex-direction: column;
     justify-content: space-between; background-size: 24px 24px;
     background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.07) 1px, transparent 0);
   }}
@@ -694,7 +748,7 @@ def render_plots(receipts: dict, out_dir: Path):
   .title-strip {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }}
   .main-title {{ font-size: 18px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 10px; }}
   .main-title span {{ font-size: 11px; font-weight: 600; color: #00e5ff; border: 1px solid #00e5ff; padding: 3px 8px; border-radius: 3px; background: rgba(0,229,255,0.08); }}
-  .grid-3x3 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 14px; flex: 1; }}
+  .grid-3x5 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: repeat(5, 1fr); gap: 14px; flex: 1; }}
   .card {{ background: rgba(11, 14, 20, 0.88); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 4px; padding: 10px 14px 8px 14px; display: flex; flex-direction: column; justify-content: space-between; }}
   .card-top {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }}
   .card-title {{ font-size: 11px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 6px; }}
@@ -725,10 +779,10 @@ def render_plots(receipts: dict, out_dir: Path):
     <div>MODEL: {receipts.get('baseline_model', 'GEMINI')} // RUNS: {num_turns} TURNS</div>
   </div>
   <div class="title-strip">
-    <div class="main-title">KEY CYBERNETIC METRICS: DIRECT HEAD-TO-HEAD COMPARISON <span>9 CORE VARIABLES</span></div>
+    <div class="main-title">KEY CYBERNETIC METRICS: DIRECT HEAD-TO-HEAD COMPARISON <span>15 CORE VARIABLES</span></div>
     <div style="font-size:11px; color:#8c92a2;">Single-Variable Trajectory Comparison Across Identical Axes</div>
   </div>
-  <div class="grid-3x3">
+  <div class="grid-3x5">
     {"".join(h2h_cards)}
   </div>
   <div class="footer-bar">
@@ -749,7 +803,7 @@ def render_plots(receipts: dict, out_dir: Path):
             "--headless",
             "--disable-gpu",
             "--hide-scrollbars",
-            "--window-size=1720,1540",
+            "--window-size=1720,2500",
             f"--screenshot={h2h_png_file}",
             f"file:///{str(h2h_html_file).replace(os.sep, '/')}"
         ]

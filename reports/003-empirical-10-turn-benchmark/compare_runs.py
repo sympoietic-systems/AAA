@@ -241,6 +241,30 @@ def render_comparison_dashboard(
     aaa_pask_a = extract(aaa_a, "paskian_health", default=0.0)
     aaa_pask_b = extract(aaa_b, "paskian_health", default=0.0)
 
+    # 11. Conceptual Velocity (v_t)
+    base_vel_a = extract(base_a, "conceptual_velocity", default=0.0)
+    base_vel_b = extract(base_b, "conceptual_velocity", default=0.0)
+    aaa_vel_a = extract(aaa_a, "conceptual_velocity", default=0.0)
+    aaa_vel_b = extract(aaa_b, "conceptual_velocity", default=0.0)
+
+    # 12. Predictive Residual Trend Surprise (S_t)
+    base_sur_a = extract(base_a, "surprise_index", default=0.0)
+    base_sur_b = extract(base_b, "surprise_index", default=0.0)
+    aaa_sur_a = extract(aaa_a, "surprise_index", default=0.0)
+    aaa_sur_b = extract(aaa_b, "surprise_index", default=0.0)
+
+    # 13. Trajectory Cross-Correlation (coupling_coherence)
+    base_coup_a = extract(base_a, "coupling_coherence", default=0.0)
+    base_coup_b = extract(base_b, "coupling_coherence", default=0.0)
+    aaa_coup_a = extract(aaa_a, "coupling_coherence", default=0.0)
+    aaa_coup_b = extract(aaa_b, "coupling_coherence", default=0.0)
+
+    # 14. Recursive Self-Echo Divergence (agent_self_divergence)
+    base_div_a = extract(base_a, "agent_self_divergence", default=0.0)
+    base_div_b = extract(base_b, "agent_self_divergence", default=0.0)
+    aaa_div_a = extract(aaa_a, "agent_self_divergence", default=0.0)
+    aaa_div_b = extract(aaa_b, "agent_self_divergence", default=0.0)
+
     # Deltas
     sim_delta_b = mean(aaa_sim_b) - mean(base_sim_b)
     def_delta_b = mean(aaa_def_b) - mean(base_def_b)
@@ -248,6 +272,10 @@ def render_comparison_dashboard(
     mpi_delta_b = mean(aaa_mpi_b) - mean(base_mpi_b)
     nov_delta_b = mean(aaa_nov_b) - mean(base_nov_b)
     pask_delta_b = mean(aaa_pask_b) - mean(base_pask_b)
+    vel_delta_b = mean(aaa_vel_b) - mean(base_vel_b)
+    sur_delta_b = mean(aaa_sur_b) - mean(base_sur_b)
+    coup_delta_b = mean(aaa_coup_b) - mean(base_coup_b)
+    div_delta_b = mean(aaa_div_b) - mean(base_div_b)
 
     # Metadata strings
     meta_a_model = data_a.get("aaa_model") or data_a.get("baseline_model", "Unknown")
@@ -265,7 +293,7 @@ def render_comparison_dashboard(
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{
     background-color: #060709; color: #e4e7ec; font-family: 'JetBrains Mono', monospace;
-    width: 1720px; height: 2420px; padding: 26px 34px; display: flex; flex-direction: column;
+    width: 1720px; height: 3380px; padding: 26px 34px; display: flex; flex-direction: column;
     justify-content: space-between; position: relative;
     background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
     background-size: 24px 24px;
@@ -300,9 +328,9 @@ def render_comparison_dashboard(
   .line-sample {{ width: 22px; height: 3px; border-radius: 2px; display: inline-block; }}
   .dot-sample {{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; }}
 
-  /* 10-Panel Oscilloscope Grid (2 cols x 5 rows) */
+  /* 14-Panel Oscilloscope Grid (2 cols x 7 rows) */
   .panels-container {{
-    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(5, 1fr);
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(7, 1fr);
     gap: 12px; margin: 12px 0; flex: 1;
   }}
   .panel-card {{
@@ -346,7 +374,7 @@ def render_comparison_dashboard(
 
   /* Scoreboard */
   .bottom-scoreboard {{
-    display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+    display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px;
     background: #0a0c12; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
     padding: 10px 16px; align-items: center;
   }}
@@ -814,6 +842,166 @@ def render_comparison_dashboard(
       </div>
     </div>
 
+    <!-- Panel 11: Conceptual Velocity (v_t) -->
+    <div class="panel-card">
+      <div class="card-top">
+        <div>
+          <div class="panel-title">11. CONCEPTUAL VELOCITY (v_t) &mdash; CALIBRATED</div>
+          <div class="panel-desc">Instantaneous semantic displacement speed normalized against absolute reference scale (V_ref = 1.0)</div>
+        </div>
+        <span class="card-badge badge-cyan">SEMANTIC SPEED</span>
+      </div>
+
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="58" fill="rgba(0, 229, 255, 0.035)" />
+        <text x="735" y="34" fill="rgba(0, 229, 255, 0.4)" font-size="9" text-anchor="end">RAPID DRIFT ZONE [0.65 - 1.00]</text>
+
+        <rect x="65" y="155" width="680" height="33" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">STAGNATION BASIN [0.00 - 0.20]</text>
+
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
+
+        <!-- Run A (Dashed) -->
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_vel_a, y_max=1.0)}" />
+        {to_circ(aaa_vel_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_vel_a, y_max=1.0)}" />
+        {to_circ(base_vel_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+
+        <!-- Run B (Solid) -->
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_vel_b, y_max=1.0)}" />
+        {to_circ(base_vel_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
+
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_vel_b, y_max=1.0)}" />
+        {to_circ(aaa_vel_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
+      </svg>
+
+      <div class="card-stat-bar">
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_vel_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_vel_b[-1]:.3f}</strong></span>
+        <span>Run B Velocity Delta: <strong style="color: #00e5ff;">{vel_delta_b:+.3f}</strong></span>
+      </div>
+    </div>
+
+    <!-- Panel 12: Predictive Residual Trend Surprise (S_t) -->
+    <div class="panel-card">
+      <div class="card-top">
+        <div>
+          <div class="panel-title">12. PREDICTIVE RESIDUAL TREND SURPRISE (S_t) &mdash; CALIBRATED</div>
+          <div class="panel-desc">Forecasting error z-score from Holt linear trend model with nominal variance prior (&sigma;_0 = 0.40)</div>
+        </div>
+        <span class="card-badge badge-orange">MOMENTUM DISCONTINUITY</span>
+      </div>
+
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="50" fill="rgba(255, 153, 68, 0.04)" />
+        <text x="735" y="34" fill="rgba(255, 153, 68, 0.4)" font-size="9" text-anchor="end">HIGH DISCONTINUITY [0.70 - 1.00]</text>
+
+        <rect x="65" y="138" width="680" height="50" fill="rgba(0, 255, 170, 0.035)" />
+        <text x="735" y="182" fill="rgba(0, 255, 170, 0.4)" font-size="9" text-anchor="end">PREDICTABLE CONTINUITY [0.00 - 0.30]</text>
+
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
+
+        <!-- Run A (Dashed) -->
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_sur_a, y_max=1.0)}" />
+        {to_circ(aaa_sur_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_sur_a, y_max=1.0)}" />
+        {to_circ(base_sur_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+
+        <!-- Run B (Solid) -->
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_sur_b, y_max=1.0)}" />
+        {to_circ(base_sur_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
+
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_sur_b, y_max=1.0)}" />
+        {to_circ(aaa_sur_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
+      </svg>
+
+      <div class="card-stat-bar">
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_sur_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_sur_b[-1]:.3f}</strong></span>
+        <span>Run B Surprise Delta: <strong style="color: #ff9944;">{sur_delta_b:+.3f}</strong></span>
+      </div>
+    </div>
+
+    <!-- Panel 13: Trajectory Cross-Correlation (coupling_coherence) -->
+    <div class="panel-card">
+      <div class="card-top">
+        <div>
+          <div class="panel-title">13. TRAJECTORY CROSS-CORRELATION &mdash; CALIBRATED</div>
+          <div class="panel-desc">Directional half-wave rectified displacement alignment max(0, cos &theta;) with recency decay (W=8, &lambda;=0.2)</div>
+        </div>
+        <span class="card-badge badge-mint">DIRECTIONAL COUPLING</span>
+      </div>
+
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="66" fill="rgba(0, 255, 170, 0.035)" />
+        <text x="735" y="34" fill="rgba(0, 255, 170, 0.4)" font-size="9" text-anchor="end">SYNCHRONIZED COUPLING [0.60 - 1.00]</text>
+
+        <rect x="65" y="155" width="680" height="33" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">DIAMETRIC DECOUPLING [0.00 - 0.20]</text>
+
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
+
+        <!-- Run A (Dashed) -->
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_coup_a, y_max=1.0)}" />
+        {to_circ(aaa_coup_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_coup_a, y_max=1.0)}" />
+        {to_circ(base_coup_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+
+        <!-- Run B (Solid) -->
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_coup_b, y_max=1.0)}" />
+        {to_circ(base_coup_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
+
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_coup_b, y_max=1.0)}" />
+        {to_circ(aaa_coup_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
+      </svg>
+
+      <div class="card-stat-bar">
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_coup_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_coup_b[-1]:.3f}</strong></span>
+        <span>Run B Coherence Delta: <strong style="color: #00ffaa;">{coup_delta_b:+.3f}</strong></span>
+      </div>
+    </div>
+
+    <!-- Panel 14: Recursive Self-Echo Divergence (agent_self_divergence) -->
+    <div class="panel-card">
+      <div class="card-top">
+        <div>
+          <div class="panel-title">14. RECURSIVE SELF-ECHO DIVERGENCE &mdash; CALIBRATED</div>
+          <div class="panel-desc">Speaker-isolated agent anti-looping metric with compact window (M=5) and active repeat penalty (&gt;0.85)</div>
+        </div>
+        <span class="card-badge badge-purple">AGENT SELF-DIVERGENCE</span>
+      </div>
+
+      <svg class="svg-plot" viewBox="0 0 780 216">
+        <rect x="65" y="22" width="680" height="50" fill="rgba(176, 38, 255, 0.04)" />
+        <text x="735" y="34" fill="rgba(176, 38, 255, 0.4)" font-size="9" text-anchor="end">EXPEDITION DIVERGENCE [0.70 - 1.00]</text>
+
+        <rect x="65" y="138" width="680" height="50" fill="rgba(255, 68, 102, 0.04)" />
+        <text x="735" y="182" fill="rgba(255, 68, 102, 0.4)" font-size="9" text-anchor="end">RECURSIVE ECHO BASIN [0.00 - 0.30]</text>
+
+        {make_grid(left=65, right=745, top=22, bottom=188, y_max=1.0, y_ticks=4, num_turns=num_turns)}
+
+        <!-- Run A (Dashed) -->
+        <polyline fill="none" stroke="#b026ff" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(aaa_div_a, y_max=1.0)}" />
+        {to_circ(aaa_div_a, y_max=1.0, color="#b026ff", r=3.0, hollow=True)}
+
+        <polyline fill="none" stroke="#ff4466" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.75" points="{to_pts(base_div_a, y_max=1.0)}" />
+        {to_circ(base_div_a, y_max=1.0, color="#ff4466", r=3.0, hollow=True)}
+
+        <!-- Run B (Solid) -->
+        <polyline fill="none" stroke="#ff9944" stroke-width="2.6" points="{to_pts(base_div_b, y_max=1.0)}" />
+        {to_circ(base_div_b, y_max=1.0, color="#ff9944", r=3.6, hollow=False)}
+
+        <polyline fill="none" stroke="#00e5ff" stroke-width="2.8" points="{to_pts(aaa_div_b, y_max=1.0)}" />
+        {to_circ(aaa_div_b, y_max=1.0, color="#00e5ff", r=3.6, hollow=False)}
+      </svg>
+
+      <div class="card-stat-bar">
+        <span>Terminal T{num_turns}: <strong class="card-stat-val">AAA: {aaa_div_b[-1]:.3f}</strong> vs <strong class="card-stat-val">Base: {base_div_b[-1]:.3f}</strong></span>
+        <span>Run B Self-Divergence Delta: <strong style="color: #d175ff;">{div_delta_b:+.3f}</strong></span>
+      </div>
+    </div>
+
   </div>
 
   <!-- Scoreboard -->
@@ -834,19 +1022,29 @@ def render_comparison_dashboard(
       <div class="score-sub">T{num_turns} dialectic liveliness</div>
     </div>
     <div class="score-card">
-      <div class="score-label">Run B Final Forward Pert (fP)</div>
-      <div class="score-val" style="color: #ffcc00;">AAA: {aaa_fpert_b[-1]:.3f} // Base: {base_fpert_b[-1]:.3f}</div>
-      <div class="score-sub">T{num_turns} agent impact</div>
-    </div>
-    <div class="score-card">
-      <div class="score-label">Run B Final Mutual Pert (MPI)</div>
-      <div class="score-val" style="color: #d175ff;">AAA: {aaa_mpi_b[-1]:.3f} // Base: {base_mpi_b[-1]:.3f}</div>
-      <div class="score-sub">T{num_turns} bilateral coupling</div>
-    </div>
-    <div class="score-card">
       <div class="score-label">Run B Final Pask Health</div>
       <div class="score-val" style="color: #00e5ff;">AAA: {aaa_pask_b[-1]:.3f} // Base: {base_pask_b[-1]:.3f}</div>
       <div class="score-sub">T{num_turns} cybernetic health</div>
+    </div>
+    <div class="score-card">
+      <div class="score-label">Run B Final Velocity (v_t)</div>
+      <div class="score-val" style="color: #ffcc00;">AAA: {aaa_vel_b[-1]:.3f} // Base: {base_vel_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} semantic speed</div>
+    </div>
+    <div class="score-card">
+      <div class="score-label">Run B Final Surprise (S_t)</div>
+      <div class="score-val" style="color: #d175ff;">AAA: {aaa_sur_b[-1]:.3f} // Base: {base_sur_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} trend surprise</div>
+    </div>
+    <div class="score-card">
+      <div class="score-label">Run B Coupling Coherence</div>
+      <div class="score-val" style="color: #00ffaa;">AAA: {aaa_coup_b[-1]:.3f} // Base: {base_coup_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} trajectory sync</div>
+    </div>
+    <div class="score-card">
+      <div class="score-label">Run B Agent Self-Divergence</div>
+      <div class="score-val" style="color: #ff9944;">AAA: {aaa_div_b[-1]:.3f} // Base: {base_div_b[-1]:.3f}</div>
+      <div class="score-sub">T{num_turns} loop resistance</div>
     </div>
   </div>
 
@@ -877,7 +1075,7 @@ def render_comparison_dashboard(
             "--headless",
             "--disable-gpu",
             "--hide-scrollbars",
-            "--window-size=1720,2420",
+            "--window-size=1720,3380",
             f"--screenshot={png_file}",
             f"file:///{str(html_file).replace(os.sep, '/')}",
         ]
@@ -934,7 +1132,11 @@ def write_comparison_summary(run_a_name: str, run_b_name: str, data_a: dict, dat
         ("7. Conceptual Novelty ($N_t$)", "conceptual_novelty", "", "Semantic displacement from context centroid EMA."),
         ("8. Collapse Pressure / Boringness", "collapse_pressure", "boringness", "Allostatic stagnation alarm tracking perturbation, entropy, and novelty failures."),
         ("9. Divergence Resolution Ratio ($DRR_t$)", "divergence_resolution_ratio", "", "Ratio of resolved dialectic tension to open systemic divergence."),
-        ("10. Gordon Pask Cybernetic Health ($H_{pask}$)", "paskian_health", "", "Composite dialectic vitality across novelty, variety, and mutual learning.")
+        ("10. Gordon Pask Cybernetic Health ($H_{pask}$)", "paskian_health", "", "Composite dialectic vitality across novelty, variety, and mutual learning."),
+        ("11. Conceptual Velocity ($v_t$)", "conceptual_velocity", "", "Instantaneous semantic displacement speed normalized against absolute reference scale."),
+        ("12. Predictive Trend Surprise ($S_t$)", "surprise_index", "", "Forecasting error z-score from Holt linear trend EMA with calibrated variance prior."),
+        ("13. Trajectory Cross-Correlation ($C_t$)", "coupling_coherence", "", "Directional half-wave rectified displacement alignment max(0, cos theta)."),
+        ("14. Recursive Self-Echo Divergence ($D_{self}$)", "agent_self_divergence", "", "Speaker-isolated agent anti-looping metric with compact window and repeat penalty.")
     ]
 
     for sec_title, key, fallback, desc in metric_sections:
@@ -953,7 +1155,7 @@ def write_comparison_summary(run_a_name: str, run_b_name: str, data_a: dict, dat
 
     # Mean summary table
     lines.extend([
-        "\n## 11. Metric Means & Calibrated Delta Scorecard\n",
+        "\n## 15. Metric Means & Calibrated Delta Scorecard\n",
         f"| Metric Domain | Base ({run_a_name}) | Base ({run_b_name}) | AAA ({run_a_name}) | AAA ({run_b_name}) | Run B AAA vs Base $\Delta$ | Status |",
         "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |"
     ])
@@ -1002,6 +1204,10 @@ def print_cli_table(run_a_name: str, run_b_name: str, data_a: dict, data_b: dict
         ("8. COLLAPSE PRESSURE (CP_t)", "collapse_pressure", "boringness"),
         ("9. DIVERGENCE RESOLUTION RATIO (DRR)", "divergence_resolution_ratio", ""),
         ("10. GORDON PASK CYBERNETIC HEALTH (H_pask)", "paskian_health", ""),
+        ("11. CONCEPTUAL VELOCITY (v_t)", "conceptual_velocity", ""),
+        ("12. PREDICTIVE TREND SURPRISE (S_t)", "surprise_index", ""),
+        ("13. TRAJECTORY CROSS-CORRELATION (C_t)", "coupling_coherence", ""),
+        ("14. RECURSIVE SELF-ECHO DIVERGENCE", "agent_self_divergence", ""),
     ]
 
     for title, key, fallback in metrics_to_print:

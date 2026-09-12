@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """
-Generate before-and-after oscilloscope telemetry plot across all newly calibrated metrics:
-1. Conceptual Novelty (N_t)
-2. Collapse Pressure / Boringness (CP_t)
-3. Divergence Resolution Ratio (DRR_t)
-4. Gordon Pask Cybernetic Health (H_pask)
-5. Conceptual Velocity (v_t)
+Generate before-and-after oscilloscope telemetry plot across all 14 calibrated metrics:
+1. Pairwise Similarity (s_t)
+2. Conversational Deficit
+3. Conversational Vitality
+4. Forward Perturbation (fP_t)
+5. Mutual Perturbation Index (MPI_t)
 6. Reverse Perturbation (rP_t)
+7. Conceptual Novelty (N_t)
+8. Collapse Pressure / Boringness (CP_t)
+9. Divergence Resolution Ratio (DRR_t)
+10. Gordon Pask Cybernetic Health (H_pask)
+11. Conceptual Velocity (v_t)
+12. Predictive Residual Trend Surprise (S_t)
+13. Trajectory Cross-Correlation (coupling_coherence)
+14. Recursive Self-Echo Divergence (agent_self_divergence)
 
 Saves HTML and renders high-resolution PNG into reports/runs/
 """
