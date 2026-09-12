@@ -114,6 +114,7 @@ What becomes easier/harder?
 | [080](ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) | Harmonic Resonant Entrainment and Paskian Mesh Closure Calibration | accepted | 2026-09-12 |
 | [081](ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) | Spherical Geodesic SLERP Surprise & Regularized Power Mean Paskian Vitality Calibration | accepted | 2026-09-12 |
 | [082](ADR-082-tangent-parallel-transport-and-minkowski-synergistic-collapse-pressure.md) | Tangent Parallel Transport Kinematics & Minkowski Synergistic Collapse Pressure Calibration | accepted | 2026-09-12 |
+| [083](ADR-083-transverse-vector-shear-perturbation-and-participation-ratio-spectral-entropy.md) | Transverse Vector Shear Perturbation & Participation Ratio Spectral Entropy Calibration | accepted | 2026-09-12 |
 
 
 
