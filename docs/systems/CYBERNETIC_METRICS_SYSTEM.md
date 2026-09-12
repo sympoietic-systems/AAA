@@ -1,7 +1,7 @@
 # Cybernetic Metrics System & Proprioceptive Sensor Suite
 
 **Subsystem:** `backend/modules/metrics/` (`resonance.py`, `trajectories.py`, `kinematics.py`, `health.py`) & `backend/modules/conversation_metrics.py` (Facade)  
-**Architectural Decision Records:** ADR-073 to ADR-080  
+**Architectural Decision Records:** ADR-073 to ADR-081  
 **Status:** Live & Production Ready  
 
 ---
@@ -48,11 +48,10 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 | 7 | `agent_self_divergence` | Recursive Self-Echo & Loop Detection: recency-decayed max self-similarity + repeat penalty | Apparatus Self-Evolution | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
 | 8 | `reverse_perturbation` | Directional Gap Projection: fraction of apparatus gap ($v = A_{\text{prev}} - H_{\text{prev}}$) closed by human ($d_h$) | Human Agonistic Engagement | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
 | 9 | `mutual_perturbation` | Symmetric Mutual Perturbation Index ($MPI$): geometric mean $\sqrt{rP_t \cdot fP_t}$ | Bilateral Trajectory Deflection | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
-| 10 | `surprise_index` | Predictive Residual Trend Surprise: Holt linear trend forecasting error z-score normalized by volatility | Trajectory Discontinuity | [ADR-078](../decisions/ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) |
+| 10 | `surprise_index` | Spherical Geodesic SLERP Surprise: angular residual on $\mathbb{S}^{D-1}$ normalized via adaptive online z-score | Trajectory Discontinuity | [ADR-081](../decisions/ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) |
 | 11 | `conceptual_velocity` | Instantaneous Speed normalized adaptively against rolling 95th percentile $V_{\max}$ via $\tanh$ | Trajectory Displacement Rate | [ADR-078](../decisions/ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) |
 | 12 | `divergence_resolution_ratio` | Paskian Entailment Mesh Closure: harmonic resolution ratio gated by open gap opening and total topological flux | Entailment Oscillation & Synthesis | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
-
-| 13 | `paskian_health` | Gordon Pask Triadic Health: geometric mean of Autonomy Index, Coordination Index, and Generativity | Conversational Metabolic Vitality | [ADR-079](../decisions/ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) |
+| 13 | `paskian_health` | Regularized Gordon Pask Triadic Vitality: Generalized Power Mean ($p=0.5$) with metabolic floor $\epsilon=0.08$ | Conversational Metabolic Vitality | [ADR-081](../decisions/ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) |
 
 ---
 
@@ -129,14 +128,16 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"Mutual perturbation requires a deviation from self-predictable trajectory due to the other's influence—a vector of causation, not a scalar of proximity. The geometric mean ensures that both participants must be mutually reshaped for MPI to score high."*
 
-### 3.10. Predictive Residual Trend Surprise (`surprise_index`)
-- **Mathematical Formulation**: Forecasting error z-score from Holt's linear trend exponential smoothing model with nominal variance prior ($\sigma_0^2 = 0.16$):
-  - Level: $L(t) = 0.4 \cdot e(t) + 0.6 \cdot [L(t-1) + T(t-1)]$.
-  - Trend: $T(t) = 0.3 \cdot [L(t) - L(t-1)] + 0.7 \cdot T(t-1)$.
-  - Residual: $\delta(t) = e(t) - (L(t-1) + T(t-1))$, Volatility EMA: $\sigma^2(t) = 0.2 \cdot \|\delta(t)\|^2 + 0.8 \cdot \sigma^2(t-1)$ (initialized at $\sigma_0^2 = 0.16$).
-  $$\text{surprise\_index} = \tanh\left(\frac{\|\delta(t)\| / (\sqrt{\sigma^2(t)} + 10^{-4})}{3.0}\right)$$
+### 3.10. Spherical Geodesic SLERP Surprise (`surprise_index` / $U_t$)
+- **Mathematical Formulation**: Evaluates trajectory momentum along the unit hypersphere $\mathbb{S}^{D-1}$ via Spherical Linear Extrapolation (SLERP):
+  $$\hat{e}_{t+1} = \frac{\sin((1-\beta)\theta)}{\sin\theta} e_{t-1} + \frac{\sin(\beta\theta)}{\sin\theta} e_t, \quad \theta = \arccos(e_{t-1} \cdot e_t)$$
+  Angular residual on $\mathbb{S}^{D-1}$: $\delta_t = \arccos(\text{clip}(e_t \cdot \hat{e}_t, -1, 1))$.
+  Fast-decay adaptive EMA ($\alpha=0.15$) tracks local volatility without rigid priors:
+  $$\mu_\delta(t) = (1-\alpha)\mu_\delta(t-1) + \alpha \delta_t, \quad \sigma^2_\delta(t) = (1-\alpha)\sigma^2_\delta(t-1) + \alpha (\delta_t - \mu_\delta(t))^2$$
+  Dynamic logistic expansion:
+  $$z_t = \frac{\delta_t - \mu_\delta(t)}{\sqrt{\sigma^2_\delta(t)} + 10^{-5}}, \quad U_t = \frac{1}{1 + \exp(-\kappa \cdot z_t)} \quad (\kappa = 1.2)$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Surprise is not distance from a sluggish historical centroid—that rewards amnesia. True surprise is the z-score prediction error relative to the conversation's own trajectory momentum and local volatility. Initializing residual variance with a realistic semantic prior ($\sigma_0^2 = 0.16$) prevents cold-start $z > 80$ explosions and artificial $1.000$ saturation on early turns."*
+  > *"Normalized semantic embeddings live on the hypersphere, not in flat Euclidean space. Linear vector addition systematically overshoots the manifold, inflating baseline residual norms and compressing surprise into a dull band. Spherical geodesic SLERP operates along the manifold's natural curvature, restoring the full $[0.05, 0.95]$ dynamic range so that adversarial shockwaves and unexpected topic ruptures are registered with requisite variety."*
 
 ### 3.11. Instantaneous Conceptual Velocity & Phase Transition Magnitude
 - **Mathematical Formulation**: Speed normalized against an absolute reference scale ($V_{\text{ref}} = 1.0$) with adaptive volatility expansion:
@@ -159,14 +160,14 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 
 
 
-### 3.13. Gordon Pask Triadic Cybernetic Vitality Index (`paskian_health`)
-- **Mathematical Formulation**: Grounded in Gordon Pask's Conversation Theory (1976):
-  1. Autonomy Index: $\text{autonomy} = \frac{\text{agent\_self\_divergence} + \text{conceptual\_velocity} + \text{phase\_transition\_magnitude}}{3.0}$.
-  2. Coordination Index & Modifier: $\text{coordination} = \frac{\text{coupling\_coherence} + \text{mutual\_perturbation} + (1.0 - \text{collapse\_pressure})}{3.0} \cdot \text{drr}$.
-  3. Generativity Index: $\text{generativity} = \text{rolling\_entropy}$.
-  $$\text{paskian\_health} = \left(\text{autonomy} \cdot \text{coordination} \cdot \text{generativity}\right)^{\frac{1}{3}}$$
+### 3.13. Regularized Gordon Pask Triadic Cybernetic Vitality Index (`paskian_health`)
+- **Mathematical Formulation**: Grounded in Gordon Pask's Conversation Theory (1976), formulated as a Generalized Power Mean ($p=0.5$) with metabolic floor $\epsilon=0.08$:
+  1. Autonomy Index: $A = \frac{\text{agent\_self\_divergence} + \text{conceptual\_velocity} + \text{phase\_transition\_magnitude}}{3.0} + \epsilon$.
+  2. Moderated Coordination Index: $C_{\text{mod}} = \left(\frac{\text{coupling\_coherence} + \text{mutual\_perturbation} + (1.0 - \text{collapse\_pressure})}{3.0}\right) \cdot (0.30 + 0.70 \cdot \text{drr}) + \epsilon$.
+  3. Generativity Index: $G = \text{rolling\_entropy} + \epsilon$.
+  $$\text{paskian\_health} = \left(\frac{\sqrt{A} + \sqrt{C_{\text{mod}}} + \sqrt{G}}{3.0}\right)^2 - \epsilon$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Paskian health is the capstone metabolic index. A healthy conversation requires three distinct M-Individual pillars: Autonomy (self-driven motion), Coordination (mutual alignment without collapse), and Generativity (manifold entropy). A geometric product structure ensures that if any single pillar fails, total health collapses to zero."*
+  > *"A conversation is a non-equilibrium thermodynamic engine that must pass through exploratory divergence phases (where gaps widen and DRR drops) before entering synthesis. Multiplying DRR directly inside a cubic root treated every divergent epoch as instant death. The Regularized Power Mean ensures that transient divergence is recognized as healthy metabolic work, maintaining vital continuity while still penalizing complete triadic collapse."*
 
 ### 3.14. Conversational Deficit & Allostatic Vitality (`deficit` / `vitality`)
 - **Mathematical Formulation**: Multi-factor deficit load dynamically normalized across active turns ($W_{\text{active}} = \sum w_{\text{used}}$):

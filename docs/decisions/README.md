@@ -112,6 +112,7 @@ What becomes easier/harder?
 | [078](ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) | Predictive Residual Surprise & Instantaneous Conceptual Velocity (Metric Audit #6) | accepted | 2026-07-27 |
 | [079](ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) | Alignment Gap DRR & Gordon Pask Triadic Health (Metric Audit #7 Capstone) | accepted | 2026-07-27 |
 | [080](ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) | Harmonic Resonant Entrainment and Paskian Mesh Closure Calibration | accepted | 2026-09-12 |
+| [081](ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) | Spherical Geodesic SLERP Surprise & Regularized Power Mean Paskian Vitality Calibration | accepted | 2026-09-12 |
 
 
 
