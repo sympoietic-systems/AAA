@@ -22,10 +22,13 @@ import datetime
 if not hasattr(datetime, "UTC"):
     datetime.UTC = datetime.timezone.utc
 
-# Add project root to sys.path
+# Add project root and benchmark dir to sys.path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+BENCH_DIR = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+if str(BENCH_DIR) not in sys.path:
+    sys.path.insert(0, str(BENCH_DIR))
 
 import argparse
 import asyncio
@@ -758,15 +761,73 @@ def main():
                         help="Path to base conversation receipts JSON (default: reference receipts in reports/003-empirical-10-turn-benchmark/conversation_receipts.json)")
     parser.add_argument("--api-key", type=str, default="", help="LLM API key (default from environment)")
     parser.add_argument("--api-base", type=str, default="", help="LLM API Base URL (default from environment)")
-    parser.add_argument("--out-dir", type=str, default="", help="Output directory (default: reports/runs/run_YYYYMMDD_HHMMSS)")
+    parser.add_argument("--out-dir", type=str, default="", help="Output directory (default: reports/runs/<name>/ or reports/runs/run_YYYYMMDD_HHMMSS)")
+    parser.add_argument("--name", "-n", type=str, default="", help="Custom name for run or comparison (saves into reports/runs/<name>/)")
     parser.add_argument("--skip-aaa", action="store_true", help="Skip running AAA apparatus (in live mode)")
     parser.add_argument("--skip-baseline", action="store_true", help="Skip running baseline LLM (in live mode)")
+    parser.add_argument("--compare", nargs="*", default=None,
+                        help="Compare benchmark runs (e.g. --compare [run1] [run2], default: last two runs in reports/runs)")
 
     args = parser.parse_args()
+
+    # Comparison Mode
+    if args.compare is not None:
+        import importlib.util
+        compare_file = BENCH_DIR / "compare_runs.py"
+        spec = importlib.util.spec_from_file_location("compare_runs", compare_file)
+        compare_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(compare_mod)
+
+        discover_runs = compare_mod.discover_runs
+        resolve_run_path = compare_mod.resolve_run_path
+        load_receipts = compare_mod.load_receipts
+        print_cli_table = compare_mod.print_cli_table
+        render_comparison_dashboard = compare_mod.render_comparison_dashboard
+        RUNS_DIR = compare_mod.RUNS_DIR
+        available_runs = discover_runs()
+        if not available_runs:
+            print("ERROR: No benchmark runs found with conversation_receipts.json.")
+            sys.exit(1)
+
+        if len(args.compare) >= 2:
+            path_a = resolve_run_path(args.compare[0], available_runs)
+            path_b = resolve_run_path(args.compare[1], available_runs)
+        elif len(args.compare) == 1:
+            path_a = resolve_run_path(args.compare[0], available_runs)
+            others = [r for r in available_runs if r.resolve() != path_a.resolve()]
+            if not others:
+                print("ERROR: Need at least two runs to compare.")
+                sys.exit(1)
+            path_b = others[-1]
+        else:
+            if len(available_runs) < 2:
+                print(f"ERROR: Only {len(available_runs)} run found. Need at least two runs to compare.")
+                sys.exit(1)
+            path_a = available_runs[-2]
+            path_b = available_runs[-1]
+
+        name_a, name_b = path_a.name, path_b.name
+        print(f"\n[COMPARISON] Comparing Run A: '{name_a}' vs. Run B: '{name_b}'")
+        data_a = load_receipts(path_a)
+        data_b = load_receipts(path_b)
+        print_cli_table(name_a, name_b, data_a, data_b)
+
+        if args.out_dir:
+            out_dir = Path(args.out_dir).resolve()
+        elif args.name:
+            out_dir = RUNS_DIR / args.name
+        else:
+            out_dir = RUNS_DIR
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        render_comparison_dashboard(name_a, name_b, data_a, data_b, out_dir, custom_name=args.name)
+        return
 
     # 1. Resolve Output Directory
     if args.out_dir:
         out_path = Path(args.out_dir).resolve()
+    elif args.name:
+        out_path = PROJECT_ROOT / "reports" / "runs" / args.name
     else:
         timestamp_str = time.strftime("%Y%m%d_%H%M%S")
         out_path = PROJECT_ROOT / "reports" / "runs" / f"run_{timestamp_str}"

@@ -53,6 +53,28 @@ Specify a target directory for the run artifacts:
 python reports/003-empirical-10-turn-benchmark/run_benchmark.py --out-dir reports/runs/custom_experiment_01
 ```
 
+### 6. Compare Benchmark Runs (`compare_runs.py` / `--compare`)
+Compare trajectories across different runs (e.g. before vs. after metric updates, or model A vs. model B):
+```bash
+# Automatically compare the last two runs in reports/runs/:
+python reports/003-empirical-10-turn-benchmark/compare_runs.py
+# Or via run_benchmark.py:
+python reports/003-empirical-10-turn-benchmark/run_benchmark.py --compare
+
+# Compare specific named runs or folders:
+python reports/003-empirical-10-turn-benchmark/compare_runs.py 003-empirical-10-turn-benchmark eval_updated
+
+# Name the comparison and save into a dedicated folder (reports/runs/<name>/):
+python reports/003-empirical-10-turn-benchmark/compare_runs.py reference eval_updated --name novelty_boringness
+# Or via run_benchmark.py:
+python reports/003-empirical-10-turn-benchmark/run_benchmark.py --compare reference eval_updated --name novelty_boringness
+```
+When `--name <name>` (or `-n`) is specified, artifacts are saved in `reports/runs/<name>/`:
+- `<name>.png`: High-definition dual-panel oscilloscope plot (1720×1120).
+- `<name>.html`: Interactive SVG oscilloscope dashboard.
+- `comparison_summary.md`: Turn-by-turn comparative tables and delta metrics.
+
+
 ---
 
 ## Output Artifacts for Each Run
@@ -69,6 +91,7 @@ Every execution creates a dedicated timestamped folder (e.g., `reports/runs/run_
 ## Directory Layout
 
 * `run_benchmark.py`: Primary executable CLI benchmark runner.
+* `compare_runs.py`: Comparative CLI and visual oscilloscope renderer for contrasting any two benchmark runs.
 * `conversation_receipts.json`: Reference 10-turn empirical receipts baseline.
 * `benchmark_report.md`: Companion publication report and qualitative transcript analysis.
 * `003-empirical-10-turn-comparative-metrics-grid.png`: Reference overlaid 4-panel telemetry grid.

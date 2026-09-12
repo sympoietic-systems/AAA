@@ -767,7 +767,29 @@ Boredom is the computational mechanism that makes refusal possible.
 
 ---
 
+## 7. Post-Benchmark Telemetry Calibration & Comparison Tooling
+
+Following analysis of the empirical 10-turn receipts, two sensors in the [Cybernetic Metrics System](../systems/CYBERNETIC_METRICS_SYSTEM.md) underwent mathematical calibration to eliminate blind spots in adversarial repetition basins:
+
+1. **Conceptual Novelty ($N_t$) Calibration ([`backend/modules/metrics/resonance.py`](../../backend/modules/metrics/resonance.py)):**
+   - *Previous Deficiency:* In tight repetitive loops, context scatter $\sigma_{\text{context}} \to 0$, causing $\tanh(\text{drift} / (\sigma + 0.01))$ to explode toward $1.0$, falsely scoring turns 5–10 as highly novel ($0.75 - 0.99$).
+   - *Calibrated Formulation:* Enforces an effective semantic baseline scale $D_{\text{eff}} = \max(0.20, \text{spread}_{\text{context}} + \sigma_{\text{context}})$. In repetitive dialogues, novelty now reliably decays into the **stagnation basin** ($\le 0.40$).
+
+2. **Collapse Pressure Index Calibration ([`backend/modules/metrics/health.py`](../../backend/modules/metrics/health.py)):**
+   - *Previous Deficiency:* The previous multiplicative formulation $\text{pert\_fail} \times (1 - \bar{H}) \times (1 - N)$ diluted values below $0.036$ in real text, preventing allostatic triggers like Stagnant State ($0.65$) from ever firing.
+   - *Calibrated Formulation:* Replaced with a convex failure combination:
+     $$\text{collapse\_pressure} = 0.40 \cdot \text{pert\_fail} + 0.30 \cdot (1.0 - \bar{H}) + 0.30 \cdot (1.0 - N_t)$$
+     Restores the dynamic operating range to $0.35 - 0.47$, actively approaching the allostatic alarm threshold during adversarial deadlock.
+
+3. **Comparative Oscilloscope Tooling (`compare_runs.py`):**
+   - A dedicated comparison module was added to [`reports/003-empirical-10-turn-benchmark/compare_runs.py`](../../reports/003-empirical-10-turn-benchmark/compare_runs.py) and hooked into `run_benchmark.py --compare`.
+   - Supports comparing any two runs (defaulting to the latest two) or against reference benchmarks.
+   - Supports `--name <name>` (e.g., `--name novelty_boringness`) to automatically create dedicated comparison directories in `reports/runs/<name>/` complete with SVG/HTML oscilloscope telemetry and markdown comparison summaries.
+   - Reference before-and-after comparison run preserved in [`reports/runs/novelty_boringness/`](../../reports/runs/novelty_boringness/).
+
+---
+
 *Report compiled autonomously by Winnow / AAA Telemetry Suite.*  
 *Benchmark Engine:* `google/gemini-3.7-flash` (1:1 Model Parity)  
 *Source Code:* [`backend/modules/conversation_metrics.py`](https://github.com/sympoietic-systems/AAA/blob/main/backend/modules/conversation_metrics.py)  
-*Raw Receipts JSON:* [`docs/reports/003-empirical-10-turn-benchmark/conversation_receipts.json`](https://github.com/sympoietic-systems/AAA/blob/main/docs/reports/003-empirical-10-turn-benchmark/conversation_receipts.json) (Local: [`./003-empirical-10-turn-benchmark/conversation_receipts.json`](./003-empirical-10-turn-benchmark/conversation_receipts.json))  
+*Raw Receipts JSON:* [`docs/reports/003-empirical-10-turn-benchmark/conversation_receipts.json`](https://github.com/sympoietic-systems/AAA/blob/main/docs/reports/003-empirical-10-turn-benchmark/conversation_receipts.json) (Local: [`./003-empirical-10-turn-benchmark/conversation_receipts.json`](./003-empirical-10-turn-benchmark/conversation_receipts.json))  
