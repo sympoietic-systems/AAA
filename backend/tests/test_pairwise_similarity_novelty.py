@@ -131,7 +131,7 @@ def test_conceptual_novelty_repetitive_basin_suppression():
     assert novelty_near is not None and novelty_ortho is not None
     # Repetitive turn should remain suppressed (<= 0.35)
     assert novelty_near <= 0.35, f"Expected suppressed novelty in repetitive basin, got {novelty_near}"
-    # Orthogonal turn should register high novelty (>= 0.85)
-    assert novelty_ortho >= 0.85, f"Expected high novelty for orthogonal shift, got {novelty_ortho}"
+    # Orthogonal turn should register strong novelty (>= 0.70) under ADR-084 dual-horizon attractor
+    assert novelty_ortho >= 0.70, f"Expected high novelty for orthogonal shift, got {novelty_ortho}"
     assert novelty_ortho > novelty_near * 2, "Orthogonal novelty should be significantly higher than near novelty"
 
