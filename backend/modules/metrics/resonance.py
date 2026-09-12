@@ -20,7 +20,9 @@ def _compute_pairwise_similarity(
     c_norm = np.linalg.norm(current_vec)
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
-    for i, item in enumerate(recent_history):
+    # Evaluate reciprocal perturbation coherence over most recent history (decay from newest to oldest)
+    recent_items = recent_history[-15:]
+    for i, item in enumerate(reversed(recent_items)):
         v = item.get("embedding")
         if v is None:
             continue
@@ -83,14 +85,13 @@ def _compute_conceptual_novelty(
     sigma_context = float(np.std(scatters)) if len(scatters) > 1 else 0.10
 
     # Calibrated semantic scale: base scale of 0.20 prevents division singularity when
-    # dialogue clusters tightly, while context spread allows broader conversations to
-    # require proportionally larger drifts for high novelty.
-    context_spread = max(0.05, float(np.mean(scatters))) if scatters else 0.10
-    effective_scale = max(0.20, context_spread + sigma_context)
+    # dialogue turns cluster tightly in repetitive basins (spread -> 0, sigma -> 0)
+    spread_context = max(scatters) - min(scatters) if len(scatters) > 1 else 0.10
+    effective_scale = max(0.20, spread_context + sigma_context)
     drift_norm = float(np.tanh(drift_raw / effective_scale))
 
-    # Compute velocity relative to prior history turn drift
-    prior_drift = scatters[0] if scatters else 0.01
+    # Compute velocity relative to immediate prior history turn drift
+    prior_drift = scatters[-1] if scatters else 0.01
     velocity = min(1.0, abs(drift_raw - prior_drift) / max(0.05, prior_drift))
 
     # Combined novelty score (0.7 drift + 0.3 velocity)
@@ -114,11 +115,12 @@ def _compute_rolling_entropy(
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
     hist_vecs = [c_vec]
-    for item in recent_history[: window - 1]:
+    for item in recent_history[-(window - 1) :]:
         v = item.get("embedding")
         if v is not None:
             norm = np.linalg.norm(v)
             hist_vecs.append(v / norm if norm > 0 else v)
+
 
     K = len(hist_vecs)
     if K < 2:

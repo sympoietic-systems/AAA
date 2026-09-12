@@ -28,8 +28,9 @@ def _compute_coupling_coherence(
     if len(human_vecs) < 2 or len(agent_vecs) < 2:
         return 0.5
 
-    h_disps = [human_vecs[i] - human_vecs[i + 1] for i in range(len(human_vecs) - 1)]
-    a_disps = [agent_vecs[i] - agent_vecs[i + 1] for i in range(len(agent_vecs) - 1)]
+    # Forward chronological displacements
+    h_disps = [human_vecs[i] - human_vecs[i - 1] for i in range(1, len(human_vecs))]
+    a_disps = [agent_vecs[i] - agent_vecs[i - 1] for i in range(1, len(agent_vecs))]
 
     min_len = min(len(h_disps), len(a_disps), window)
     if min_len == 0:
@@ -37,9 +38,10 @@ def _compute_coupling_coherence(
 
     weighted_corrs = []
     weights = []
+    # Iterate from most recent displacement backward in time
     for i in range(min_len):
-        hd = h_disps[i]
-        ad = a_disps[i]
+        hd = h_disps[-(i + 1)]
+        ad = a_disps[-(i + 1)]
         hd_n = np.linalg.norm(hd)
         ad_n = np.linalg.norm(ad)
         if hd_n > 0 and ad_n > 0:
@@ -76,17 +78,21 @@ def _compute_agent_self_divergence(
         norm = np.linalg.norm(v)
         agent_norms.append(v / norm if norm > 0 else v)
 
+    # Evaluate recency-decayed self-similarity from newest prior agent utterance backward
+    recent_agents = agent_norms[-max_recent_window:]
     s_self_scores = []
-    for i, v in enumerate(agent_norms[:max_recent_window]):
+    for i, v in enumerate(reversed(recent_agents)):
         cos_sim = max(0.0, min(1.0, float(np.dot(c_vec, v))))
         w = float(np.exp(-beta * i))
         s_self_scores.append(cos_sim * w)
 
     s_self = max(s_self_scores) if s_self_scores else 0.0
 
+    # Long-range repeat penalty applies to utterances older than max_recent_window
     penalty = 0.0
     if len(agent_norms) > max_recent_window:
-        long_sims = [float(np.dot(c_vec, v)) for v in agent_norms[max_recent_window:]]
+        older_agents = agent_norms[:-max_recent_window]
+        long_sims = [float(np.dot(c_vec, v)) for v in older_agents]
         max_long = max(long_sims) if long_sims else 0.0
         if max_long > 0.95:
             penalty = 0.3 * (max_long - 0.95) / 0.05
@@ -105,8 +111,9 @@ def _compute_reverse_perturbation(
         return None
 
     h_curr = current_vec / (np.linalg.norm(current_vec) + 1e-8)
-    h_prev = prior_human[0] / (np.linalg.norm(prior_human[0]) + 1e-8)
-    a_prev = prior_agent[0] / (np.linalg.norm(prior_agent[0]) + 1e-8)
+    # Target the immediate preceding exchange (chronological index -1)
+    h_prev = prior_human[-1] / (np.linalg.norm(prior_human[-1]) + 1e-8)
+    a_prev = prior_agent[-1] / (np.linalg.norm(prior_agent[-1]) + 1e-8)
 
     v = a_prev - h_prev
     d_h = h_curr - h_prev
@@ -130,8 +137,9 @@ def _compute_forward_perturbation(
         return None
 
     a_curr = current_vec / (np.linalg.norm(current_vec) + 1e-8)
-    h_curr = prior_human[0] / (np.linalg.norm(prior_human[0]) + 1e-8)
-    a_prev = prior_agent[0] / (np.linalg.norm(prior_agent[0]) + 1e-8)
+    # Target the immediate preceding exchange (chronological index -1)
+    h_curr = prior_human[-1] / (np.linalg.norm(prior_human[-1]) + 1e-8)
+    a_prev = prior_agent[-1] / (np.linalg.norm(prior_agent[-1]) + 1e-8)
 
     u = h_curr - a_prev
     d_a = a_curr - a_prev
@@ -143,6 +151,7 @@ def _compute_forward_perturbation(
     fp_raw = float(np.dot(d_a, u)) / (u_norm_sq + 1e-8)
     fp_t = max(0.0, min(1.0, fp_raw))
     return round(fp_t, 3)
+
 
 
 def _compute_mutual_perturbation(

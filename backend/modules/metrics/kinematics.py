@@ -21,12 +21,12 @@ def _compute_surprise_index(
     c_norm = np.linalg.norm(current_vec)
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
-    history = [c_vec]
-    for v in all_recent[:10]:
+    # Assemble chronological trajectory: past history [-10:] followed by current vector
+    history = []
+    for v in all_recent[-10:]:
         norm = np.linalg.norm(v)
         history.append(v / norm if norm > 0 else v)
-
-    history.reverse()
+    history.append(c_vec)
 
     if len(history) < 2:
         return 0.5
@@ -62,20 +62,21 @@ def _compute_conceptual_velocity(
     current_vec: np.ndarray,
     all_recent: list[np.ndarray],
     phi: float = 0.4,
+    v_ref: float = 1.0,
 ) -> tuple[float | None, float | None]:
-    """# ponytail: compute instantaneous speed, rolling V_max normalization, and phase transition magnitude."""
+    """# ponytail: compute instantaneous speed, calibrated velocity normalization, and phase transition magnitude."""
     if not all_recent:
         return 0.5, 0.0
 
     c_norm = np.linalg.norm(current_vec)
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
-    history = [c_vec]
-    for v in all_recent[:15]:
+    # Assemble chronological trajectory: past history [-15:] followed by current vector
+    history = []
+    for v in all_recent[-15:]:
         norm = np.linalg.norm(v)
         history.append(v / norm if norm > 0 else v)
-
-    history.reverse()
+    history.append(c_vec)
 
     if len(history) < 2:
         return 0.5, 0.0
@@ -87,8 +88,9 @@ def _compute_conceptual_velocity(
     for s in speeds[1:]:
         vel_ema = phi * s + (1.0 - phi) * vel_ema
 
-    v_max = max(1e-4, float(np.percentile(speeds, 95)))
-    norm_velocity = float(np.tanh(vel_ema / (v_max + 1e-4)))
+    # Anchor normalization to nominal reference scale v_ref (1.0) with adaptive expansion for high volatility
+    v_scale = max(v_ref, float(np.percentile(speeds, 95)))
+    norm_velocity = float(np.tanh(vel_ema / (v_scale + 1e-4)))
     norm_velocity = round(max(0.0, min(1.0, norm_velocity)), 3)
 
     phase_trans = 0.0
@@ -106,7 +108,9 @@ def _compute_conceptual_velocity(
         else:
             turn_rate = 0.0
 
-        phase_trans = float((a_norm / (1.0 + vel_ema)) * turn_rate)
+        # Geometric acceleration normalized by theoretical maximum bound (4.0)
+        phase_trans = float((a_norm / (1.0 + vel_ema)) * turn_rate / 4.0)
         phase_trans = round(max(0.0, min(1.0, phase_trans)), 3)
 
     return norm_velocity, phase_trans
+

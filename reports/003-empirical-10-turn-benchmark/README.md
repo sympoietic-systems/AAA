@@ -54,7 +54,7 @@ python reports/003-empirical-10-turn-benchmark/run_benchmark.py --out-dir report
 ```
 
 ### 6. Compare Benchmark Runs (`compare_runs.py` / `--compare`)
-Compare trajectories across different runs (e.g. before vs. after metric updates, or model A vs. model B):
+Compare trajectories across different runs (e.g. before vs. after metric calibrations, or model A vs. model B):
 ```bash
 # Automatically compare the last two runs in reports/runs/:
 python reports/003-empirical-10-turn-benchmark/compare_runs.py
@@ -62,17 +62,18 @@ python reports/003-empirical-10-turn-benchmark/compare_runs.py
 python reports/003-empirical-10-turn-benchmark/run_benchmark.py --compare
 
 # Compare specific named runs or folders:
-python reports/003-empirical-10-turn-benchmark/compare_runs.py 003-empirical-10-turn-benchmark eval_updated
+python reports/003-empirical-10-turn-benchmark/compare_runs.py reference eval_calibrated
 
 # Name the comparison and save into a dedicated folder (reports/runs/<name>/):
-python reports/003-empirical-10-turn-benchmark/compare_runs.py reference eval_updated --name novelty_boringness
+python reports/003-empirical-10-turn-benchmark/compare_runs.py reference eval_calibrated --name full_suite_calibrated
 # Or via run_benchmark.py:
-python reports/003-empirical-10-turn-benchmark/run_benchmark.py --compare reference eval_updated --name novelty_boringness
+python reports/003-empirical-10-turn-benchmark/run_benchmark.py --compare reference eval_calibrated --name full_suite_calibrated
 ```
 When `--name <name>` (or `-n`) is specified, artifacts are saved in `reports/runs/<name>/`:
-- `<name>.png`: High-definition dual-panel oscilloscope plot (1720×1120).
-- `<name>.html`: Interactive SVG oscilloscope dashboard.
-- `comparison_summary.md`: Turn-by-turn comparative tables and delta metrics.
+- `<name>.png`: High-definition 6-panel oscilloscope dashboard (1720×1540) covering all core calibrated metrics (Novelty, Collapse Pressure, DRR, Paskian Health, Velocity, Reverse Perturbation).
+- `<name>.html`: Interactive SVG oscilloscope dashboard with global unified legend.
+- `comparison_summary.md`: Turn-by-turn comparative matrices and delta scorecards for 10 cybernetic dimensions.
+- Reference calibrated comparison preserved in [`reports/runs/full_suite_calibrated/`](../runs/full_suite_calibrated/).
 
 
 ---

@@ -769,7 +769,7 @@ Boredom is the computational mechanism that makes refusal possible.
 
 ## 7. Post-Benchmark Telemetry Calibration & Comparison Tooling
 
-Following analysis of the empirical 10-turn receipts, two sensors in the [Cybernetic Metrics System](../../docs/systems/CYBERNETIC_METRICS_SYSTEM.md) underwent mathematical calibration to eliminate blind spots in adversarial repetition basins:
+Following analysis of the empirical 10-turn receipts, the sensors across the [Cybernetic Metrics System](../../docs/systems/CYBERNETIC_METRICS_SYSTEM.md) underwent comprehensive calibration to eliminate mathematical edge cases and restore active telemetry:
 
 1. **Conceptual Novelty ($N_t$) Calibration ([`backend/modules/metrics/resonance.py`](../../backend/modules/metrics/resonance.py)):**
    - *Previous Deficiency:* In tight repetitive loops, context scatter $\sigma_{\text{context}} \to 0$, causing $\tanh(\text{drift} / (\sigma + 0.01))$ to explode toward $1.0$, falsely scoring turns 5–10 as highly novel ($0.75 - 0.99$).
@@ -779,13 +779,24 @@ Following analysis of the empirical 10-turn receipts, two sensors in the [Cybern
    - *Previous Deficiency:* The previous multiplicative formulation $\text{pert\_fail} \times (1 - \bar{H}) \times (1 - N)$ diluted values below $0.036$ in real text, preventing allostatic triggers like Stagnant State ($0.65$) from ever firing.
    - *Calibrated Formulation:* Replaced with a convex failure combination:
      $$\text{collapse\_pressure} = 0.40 \cdot \text{pert\_fail} + 0.30 \cdot (1.0 - \bar{H}) + 0.30 \cdot (1.0 - N_t)$$
-     Restores the dynamic operating range to $0.35 - 0.47$, actively approaching the allostatic alarm threshold during adversarial deadlock.
+     Restores the dynamic operating range to $0.34 - 0.52$, actively approaching the allostatic alarm threshold during adversarial deadlock.
 
-3. **Comparative Oscilloscope Tooling (`compare_runs.py`):**
-   - A dedicated comparison module was added to [`reports/003-empirical-10-turn-benchmark/compare_runs.py`](./compare_runs.py) and hooked into `run_benchmark.py --compare`.
-   - Supports comparing any two runs (defaulting to the latest two) or against reference benchmarks.
-   - Supports `--name <name>` (e.g., `--name novelty_boringness`) to automatically create dedicated comparison directories in `reports/runs/<name>/` complete with SVG/HTML oscilloscope telemetry and markdown comparison summaries.
-   - Reference before-and-after comparison run preserved in [`reports/runs/novelty_boringness/`](../runs/novelty_boringness/).
+3. **Divergence Resolution Ratio ($DRR_t$) Calibration ([`backend/modules/metrics/health.py`](../../backend/modules/metrics/health.py)):**
+   - *Previous Deficiency:* The formula $1.0 - \exp(-k \cdot |\dots|)$ inverted the dialectic meaning, scoring $0.0$ on balanced tension and spiking to $1.000$ on severe divergence. When $D_{\text{open}} = 0$, dividing by $10^{-4}$ caused artificial collapse to $0.000$ during monotonic convergence.
+   - *Calibrated Formulation:* Replaced with bounded resolution ratio $\min(1.0, D_{\text{resolved}} / D_{\text{open}})$, yielding $1.000$ when tension is resolved or in equilibrium.
+
+4. **Conceptual Velocity ($v_t$) & Phase Transition ($\Phi_t$) Kinematics ([`backend/modules/metrics/kinematics.py`](../../backend/modules/metrics/kinematics.py)):**
+   - *Previous Deficiency:* Velocity self-normalized against the rolling 95th percentile ($v_{\text{ema}} / v_{\max} \approx 1.0 \implies \tanh(1.0) \approx 0.72 - 0.76$), flatlining across active and frozen dialogues alike. Phase transition magnitude saturated at $1.000$ due to turn-alternation oscillation.
+   - *Calibrated Formulation:* Anchored velocity to absolute scale $V_{\text{scale}} = \max(1.0, \text{percentile}(s, 95))$ and normalized angular acceleration by geometric upper bound ($4.0$), restoring sensitivity across the dynamic range ($0.23 - 0.48$).
+
+5. **Directional Perturbation & Recency Decay Chronological Ordering ([`backend/modules/metrics/trajectories.py`](../../backend/modules/metrics/trajectories.py), [`resonance.py`](../../backend/modules/metrics/resonance.py)):**
+   - *Previous Deficiency:* Directional perturbations referenced index `[0]` (the oldest message) rather than `[-1]` (the immediate prior exchange). Recency decay loops applied $i=0$ to the oldest message, penalizing the newest message.
+   - *Calibrated Formulation:* Reversed index ordering so immediate prior exchanges receive full weight ($1.0$), with exponential decay moving back into history. Prevented duplicate self-insertion in `ConversationMetricsModule`.
+
+6. **6-Panel Comparative Oscilloscope Dashboard (`compare_runs.py`):**
+   - A dedicated multi-metric comparison module was added to [`reports/003-empirical-10-turn-benchmark/compare_runs.py`](./compare_runs.py) and integrated into `run_benchmark.py --compare`.
+   - Renders high-resolution 6-panel oscilloscope plots (`1720×1540`) contrasting Novelty, Collapse Pressure, DRR, Paskian Health, Velocity, and Reverse Perturbation.
+   - Reference full-suite calibrated comparison preserved in [`reports/runs/full_suite_calibrated/`](../runs/full_suite_calibrated/) (PNG, interactive SVG/HTML, and 10-variable comparative matrix).
 
 ---
 

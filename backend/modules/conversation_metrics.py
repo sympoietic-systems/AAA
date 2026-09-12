@@ -134,9 +134,17 @@ class ConversationMetricsModule(ProcessingModule):
                     }
                 )
 
+        # Exclude current message from prior history if it was already inserted into the repository
+        if recent_history and (
+            recent_history[-1].get("id") == msg_id
+            or np.array_equal(recent_history[-1]["embedding"], current_vec)
+        ):
+            recent_history = recent_history[:-1]
+
         prior_metrics = {}
         if hasattr(self._repo, "get_metrics"):
             prior_metrics = self._repo.get_metrics(conversation_id, limit=1) or {}
+
 
         prior_human = [
             h["embedding"] for h in recent_history if h["speaker"] == "human"

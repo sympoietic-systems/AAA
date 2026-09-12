@@ -56,7 +56,7 @@ def _compute_drr(
     recent_history: list[dict],
     window: int = 10,
     alpha: float = 0.4,
-    k_log: float = 2.0,
+    k_log: float = 1.5,
 ) -> float | None:
     """# ponytail: compute multi-turn alignment gap DRR (ratio of resolved gap to opened gap)."""
     if not recent_history or len(recent_history) < 3:
@@ -64,7 +64,9 @@ def _compute_drr(
 
     human_vecs = []
     agent_vecs = []
-    for item in recent_history[: window * 2]:
+    # Take the most recent turns up to window * 2, preserving chronological order
+    window_history = recent_history[-window * 2 :]
+    for item in window_history:
         v = item.get("embedding")
         if v is None:
             continue
@@ -78,13 +80,11 @@ def _compute_drr(
     if not human_vecs or not agent_vecs:
         return 0.5
 
-    human_vecs.reverse()
-    agent_vecs.reverse()
-
     min_len = min(len(human_vecs), len(agent_vecs))
     if min_len < 2:
         return 0.5
 
+    # Track semantic alignment gap forward in time across EMA vectors
     h_ema = human_vecs[0].copy()
     a_ema = agent_vecs[0].copy()
     gaps = [float(np.linalg.norm(h_ema - a_ema))]
@@ -97,9 +97,15 @@ def _compute_drr(
     d_open = sum(max(0.0, gaps[i] - gaps[i - 1]) for i in range(1, len(gaps)))
     d_resolved = sum(max(0.0, gaps[i - 1] - gaps[i]) for i in range(1, len(gaps)))
 
-    drr_raw = d_resolved / (d_open + 1e-4)
-    drr_norm = 1.0 - float(np.exp(-k_log * abs(drr_raw - 1.0)))
+    # Stable equilibrium or initial gap resolution (no new divergence opened)
+    if d_open < 1e-4:
+        return 1.0
+
+    # Ratio of resolved gap to opened gap, bounded in [0.0, 1.0]
+    drr_norm = min(1.0, d_resolved / d_open)
     return round(max(0.0, min(1.0, drr_norm)), 3)
+
+
 
 
 def _compute_paskian_health(

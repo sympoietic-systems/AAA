@@ -212,9 +212,10 @@ async def compute_metrics_for_conversation(turns: list[dict], embedder, speaker_
         asst_text = t.get(speaker_agent_key) or t.get("assistant") or t.get("apparatus", "")
 
         user_emb = embedder.encode(user_text, normalize_embeddings=True).astype("float32")
-        repo.insert("human", user_text, user_emb)
+        h_msg = repo.insert("human", user_text, user_emb)
 
         payload = {
+            "current_message": {"id": h_msg.id, "speaker": "human", "conversation_id": "eval"},
             "speaker": "human",
             "conversation_id": "eval",
             "embeddings": {"dense": user_emb},
@@ -222,6 +223,7 @@ async def compute_metrics_for_conversation(turns: list[dict], embedder, speaker_
         res = await metrics_mod.process(payload)
         turn_metrics = res.get("metrics", {})
         t["metrics"] = turn_metrics
+
 
         if "homeostatic" not in t or not t["homeostatic"]:
             t["homeostatic"] = {

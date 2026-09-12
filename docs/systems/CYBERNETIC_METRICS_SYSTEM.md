@@ -133,18 +133,20 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
   > *"Surprise is not distance from a sluggish historical centroid—that rewards amnesia. True surprise is the z-score prediction error relative to the conversation's own trajectory momentum and local volatility. Predictable trends score low; genuine discontinuities spike."*
 
 ### 3.11. Instantaneous Conceptual Velocity & Phase Transition Magnitude
-- **Mathematical Formulation**: Speed normalized adaptively against rolling 95th percentile $V_{\max}$:
-  $$s_i = \|e_i - e_{i-1}\|, \quad v_i = 0.4 \cdot s_i + 0.6 \cdot v_{i-1}, \quad \text{conceptual\_velocity} = \tanh\left(\frac{v_i}{V_{\max} + 10^{-4}}\right)$$
-  $$\text{phase\_transition\_magnitude} = \frac{\|a_i\|}{1.0 + v_i} \cdot (1.0 - \text{cosine}(d_i, d_{i-1}))$$
+- **Mathematical Formulation**: Speed normalized against an absolute reference scale ($V_{\text{ref}} = 1.0$) with adaptive volatility expansion:
+  $$s_i = \|e_i - e_{i-1}\|, \quad v_i = 0.4 \cdot s_i + 0.6 \cdot v_{i-1}, \quad V_{\text{scale}} = \max(1.0, \text{percentile}(s, 95))$$
+  $$\text{conceptual\_velocity} = \tanh\left(\frac{v_i}{V_{\text{scale}} + 10^{-4}}\right)$$
+  $$\text{phase\_transition\_magnitude} = \frac{\|a_i\|}{1.0 + v_i} \cdot \frac{1.0 - \text{cosine}(d_i, d_{i-1})}{4.0}$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Block-centroid velocity smooths out within-window motion. Instantaneous velocity measures real-time speed normalized adaptively to the conversation's baseline scale, while phase transition magnitude evaluates angular acceleration to detect nomadic breaks."*
+  > *"Anchoring velocity to an absolute semantic reference scale ($V_{\text{ref}} = 1.0$) prevents self-normalizing flatlines when conversational movement slows down to a crawl. Dividing angular acceleration by the theoretical geometric bound ($4.0$) eliminates constant saturation at $1.000$ during back-and-forth conversational exchanges, preserving sensitivity for true nomadic breaks."*
 
 ### 3.12. Multi-Turn Alignment Gap DRR (`divergence_resolution_ratio` / `drr`)
 - **Mathematical Formulation**: Semantic disalignment gap $G_t = \|H_t - A_t\|$ over $W=10$ exchanges:
   $$D_{\text{open}} = \sum \max(0, G_t - G_{t-1}), \quad D_{\text{resolved}} = \sum \max(0, G_{t-1} - G_t)$$
-  $$\text{DRR}_{\text{raw}} = \frac{D_{\text{resolved}}}{D_{\text{open}} + 10^{-4}}, \quad \text{drr} = 1.0 - \exp\left(-2.0 \cdot |\text{DRR}_{\text{raw}} - 1.0|\right)$$
+  $$\text{drr} = \begin{cases} 1.0 & \text{if } D_{\text{open}} \le 10^{-4} \\ \min\left(1.0, \frac{D_{\text{resolved}}}{D_{\text{open}}}\right) & \text{if } D_{\text{open}} > 10^{-4} \end{cases}$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Single-turn difference ratios oscillate erratically. Multi-turn alignment gap DRR tracks the phenomenology of divergence and resolution cycles—scoring $1.0$ at balanced oscillation, and dropping to $0.0$ on over-resolution or fragmentation."*
+  > *"Single-turn difference ratios oscillate erratically. Multi-turn alignment gap DRR tracks the phenomenology of divergence and resolution cycles—scoring $1.0$ when opened divergence is fully resolved or in stable equilibrium, and decaying smoothly toward $0.0$ on unmitigated fragmentation."*
+
 
 ### 3.13. Gordon Pask Triadic Cybernetic Vitality Index (`paskian_health`)
 - **Mathematical Formulation**: Grounded in Gordon Pask's Conversation Theory (1976):

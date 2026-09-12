@@ -30,6 +30,34 @@ def test_pairwise_similarity_speaker_weighting_and_decay():
     assert sim_cross > sim_same, f"Expected cross ({sim_cross}) > same ({sim_same})"
 
 
+def test_pairwise_similarity_recency_decay_ordering():
+    """Verify that the immediate preceding message contributes more similarity weight than older messages."""
+    c_vec = np.array([1.0] + [0.0] * 383, dtype=np.float32)
+    diff_vec = np.array([0.0, 1.0] + [0.0] * 382, dtype=np.float32)
+
+    # Case A: Identical vector is immediate preceding (end of chronological list)
+    hist_immediate = [
+        {"embedding": diff_vec, "speaker": "human"},
+        {"embedding": diff_vec, "speaker": "human"},
+        {"embedding": c_vec, "speaker": "human"},
+    ]
+    sim_immediate = _compute_pairwise_similarity(c_vec, "apparatus", hist_immediate)
+
+    # Case B: Identical vector is oldest (start of chronological list)
+    hist_ancient = [
+        {"embedding": c_vec, "speaker": "human"},
+        {"embedding": diff_vec, "speaker": "human"},
+        {"embedding": diff_vec, "speaker": "human"},
+    ]
+    sim_ancient = _compute_pairwise_similarity(c_vec, "apparatus", hist_ancient)
+
+    assert sim_immediate is not None and sim_ancient is not None
+    assert sim_immediate > sim_ancient, (
+        f"Expected immediate similarity ({sim_immediate}) > ancient similarity ({sim_ancient})"
+    )
+
+
+
 def test_conceptual_novelty_centroid_drift():
     v1 = np.array([1.0] + [0.0] * 383, dtype=np.float32)
     v2 = np.array([0.0, 1.0] + [0.0] * 382, dtype=np.float32)
