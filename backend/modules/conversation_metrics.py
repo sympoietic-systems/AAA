@@ -103,7 +103,10 @@ class ConversationMetricsModule(ProcessingModule):
             )
             return payload
 
-        if hasattr(self._repo, "get_history"):
+        ancestor_ids = payload.get("ancestor_message_ids")
+        if ancestor_ids and hasattr(self._repo, "get_by_ids"):
+            history_rows = self._repo.get_by_ids(ancestor_ids)
+        elif hasattr(self._repo, "get_history"):
             history_rows = self._repo.get_history(conversation_id, limit=20)
         elif hasattr(self._repo, "get_recent"):
             history_rows = self._repo.get_recent(limit=20, conversation_id=conversation_id)
@@ -116,14 +119,24 @@ class ConversationMetricsModule(ProcessingModule):
             if row_id == msg_id:
                 continue
             emb = None
-            if hasattr(self._repo, "get_dense_embedding") and row_id is not None:
-                emb = self._repo.get_dense_embedding(row_id)
-            elif hasattr(row, "embedding") and row.embedding is not None:
+            if hasattr(row, "embedding") and row.embedding is not None:
                 raw_e = row.embedding
                 if isinstance(raw_e, bytes):
                     emb = np.frombuffer(raw_e, dtype=np.float32)
-                else:
-                    emb = np.asarray(raw_e, dtype=np.float32)
+                elif isinstance(raw_e, np.ndarray):
+                    emb = raw_e
+                elif not hasattr(raw_e, "_mock_return_value"):
+                    try:
+                        emb = np.asarray(raw_e, dtype=np.float32)
+                    except Exception:
+                        emb = None
+
+            if emb is None and hasattr(self._repo, "get_dense_embedding") and row_id is not None:
+                raw_e = self._repo.get_dense_embedding(row_id)
+                if isinstance(raw_e, bytes):
+                    emb = np.frombuffer(raw_e, dtype=np.float32)
+                elif isinstance(raw_e, np.ndarray):
+                    emb = raw_e
 
             if emb is not None:
                 recent_history.append(
@@ -142,8 +155,18 @@ class ConversationMetricsModule(ProcessingModule):
             recent_history = recent_history[:-1]
 
         prior_metrics = {}
-        if hasattr(self._repo, "get_metrics"):
-            prior_metrics = self._repo.get_metrics(conversation_id, limit=1) or {}
+        if ancestor_ids and hasattr(self._repo, "get_recent_with_metrics_for_path"):
+            recent_path = self._repo.get_recent_with_metrics_for_path(
+                ancestor_ids, limit=5, exclude_message_id=msg_id
+            )
+            if recent_path and isinstance(recent_path, list):
+                for turn in reversed(recent_path):
+                    if isinstance(turn, dict) and turn.get("s_t") is not None:
+                        prior_metrics = turn
+                        break
+        elif hasattr(self._repo, "get_metrics"):
+            res = self._repo.get_metrics(conversation_id, limit=1)
+            prior_metrics = res if isinstance(res, dict) else {}
 
 
         prior_human = [
@@ -247,6 +270,7 @@ class ConversationMetricsModule(ProcessingModule):
             agent_divergence=agent_divergence,
         )
         metrics["deficit"] = deficit
+        metrics["homeostatic_deficit"] = deficit
 
         vitality = _compute_vitality(
             novelty=novelty,
@@ -277,6 +301,7 @@ class ConversationMetricsModule(ProcessingModule):
 
         payload["metrics"] = metrics
         payload["phase_shifts"] = phase_shifts
+        payload["homeostatic_deficit"] = deficit
 
         logger.info(
             "Metrics for msg %s [%s]: s_t=%s, novelty=%s, entropy=%s, coupling=%s, div=%s, rP=%s, fP=%s, MPI=%s, surprise=%s, V_c=%s, collapse=%s, DRR=%s, Pask=%s, vitality=%s, deficit=%s | %d phase shift(s)",

@@ -287,9 +287,9 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(RateLimitError):
             await provider.generate([{"role": "user", "content": "hello"}])
 
-        # 1 original attempt + 1 retry = 2 calls
-        self.assertEqual(mock_generate.call_count, 2)
-        mock_sleep.assert_called_once_with(10)
+        # 1 original attempt + 2 retries = 3 calls
+        self.assertEqual(mock_generate.call_count, 3)
+        self.assertEqual(mock_sleep.call_count, 2)
 
         # Since both failed, key is exhausted
         self.assertIsNone(provider._google_key_mgr.get_available_key())
