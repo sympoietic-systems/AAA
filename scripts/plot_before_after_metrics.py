@@ -32,12 +32,12 @@ from reports.runs import (  # noqa: F401
 from importlib.machinery import SourceFileLoader
 
 # Load compare_runs dynamically
-compare_script = PROJECT_ROOT / "reports" / "003-empirical-10-turn-benchmark" / "compare_runs.py"
+compare_script = PROJECT_ROOT / "benchmarks" / "data" / "baselines" / "003-empirical-10-turn-benchmark" / "compare_runs.py"
 compare_runs = SourceFileLoader("compare_runs", str(compare_script)).load_module()
 
 def main():
-    runs_dir = PROJECT_ROOT / "reports" / "runs"
-    ref_dir = PROJECT_ROOT / "reports" / "003-empirical-10-turn-benchmark"
+    runs_dir = PROJECT_ROOT / "benchmarks" / "runs" / "telemetry"
+    ref_dir = PROJECT_ROOT / "benchmarks" / "data" / "baselines" / "003-empirical-10-turn-benchmark"
     
     # Target run: eval_calibrated if available, else eval_updated
     target_dir = runs_dir / "eval_calibrated"
