@@ -56,15 +56,15 @@ def _compute_drr(
     recent_history: list[dict],
     window: int = 10,
     alpha: float = 0.4,
-    k_log: float = 1.5,
+    tau_open: float = 0.08,
+    tau_flux: float = 0.06,
 ) -> float | None:
-    """# ponytail: compute multi-turn alignment gap DRR (ratio of resolved gap to opened gap)."""
+    """# Proposal 3: Paskian Entailment Mesh Closure DRR."""
     if not recent_history or len(recent_history) < 3:
         return 0.5
 
     human_vecs = []
     agent_vecs = []
-    # Take the most recent turns up to window * 2, preserving chronological order
     window_history = recent_history[-window * 2 :]
     for item in window_history:
         v = item.get("embedding")
@@ -84,7 +84,6 @@ def _compute_drr(
     if min_len < 2:
         return 0.5
 
-    # Track semantic alignment gap forward in time across EMA vectors
     h_ema = human_vecs[0].copy()
     a_ema = agent_vecs[0].copy()
     gaps = [float(np.linalg.norm(h_ema - a_ema))]
@@ -97,13 +96,15 @@ def _compute_drr(
     d_open = sum(max(0.0, gaps[i] - gaps[i - 1]) for i in range(1, len(gaps)))
     d_resolved = sum(max(0.0, gaps[i - 1] - gaps[i]) for i in range(1, len(gaps)))
 
-    # Stable equilibrium or initial gap resolution (no new divergence opened)
-    if d_open < 1e-4:
-        return 1.0
+    phi_flux = d_open + d_resolved
 
-    # Ratio of resolved gap to opened gap, bounded in [0.0, 1.0]
-    drr_norm = min(1.0, d_resolved / d_open)
-    return round(max(0.0, min(1.0, drr_norm)), 3)
+    open_gate = float(np.tanh(d_open / tau_open))
+    flux_gate = float(np.tanh(phi_flux / tau_flux))
+
+    harmonic_closure = (2.0 * d_resolved * open_gate) / (d_open + d_resolved + 1e-4)
+    drr = harmonic_closure * flux_gate
+    return round(max(0.0, min(1.0, float(drr))), 3)
+
 
 
 

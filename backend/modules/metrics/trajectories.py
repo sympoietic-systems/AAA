@@ -11,53 +11,77 @@ def _compute_coupling_coherence(
     window: int = 8,
     decay_lambda: float = 0.2,
 ) -> float | None:
-    """# ponytail: compute trajectory cross-correlation between human and apparatus displacement vectors."""
-    human_vecs = []
-    agent_vecs = []
+    """# Proposal 3: Harmonic Resonant Entrainment (Directional Agonism + Velocity Cadence)."""
+    if not recent_history or len(recent_history) < 2:
+        return None
+
+    valid_items = []
     for item in recent_history:
         v = item.get("embedding")
-        if v is None:
-            continue
-        norm = np.linalg.norm(v)
-        v_norm = v / norm if norm > 0 else v
-        if item.get("speaker") == "human":
-            human_vecs.append(v_norm)
+        if v is not None:
+            norm = float(np.linalg.norm(v))
+            v_norm = v / norm if norm > 0 else v
+            valid_items.append({
+                "speaker": item.get("speaker", "human"),
+                "embedding": v_norm,
+            })
+
+    if len(valid_items) < 2:
+        return None
+
+    interactions = []
+    prior_speaker_vecs = {}
+
+    for item in valid_items:
+        spk = item["speaker"]
+        vec = item["embedding"]
+        other_spks = [s for s in prior_speaker_vecs if s != spk]
+        if other_spks:
+            other_spk = other_spks[-1]
+            other_vec = prior_speaker_vecs[other_spk]
+            if spk in prior_speaker_vecs:
+                curr_prev = prior_speaker_vecs[spk]
+                u = other_vec - curr_prev
+                v = vec - curr_prev
+                u_n = float(np.linalg.norm(u))
+                v_n = float(np.linalg.norm(v))
+                if u_n > 1e-6 and v_n > 1e-6:
+                    rho = abs(float(np.dot(u / u_n, v / v_n)))
+                    dir_score = float(np.tanh(2.5 * rho))
+                    cadence = 1.0 - (abs(v_n - u_n) / (v_n + u_n + 1e-4))
+                    h_score = (2.0 * dir_score * cadence) / (dir_score + cadence + 1e-4)
+                    interactions.append(max(0.0, min(1.0, h_score)))
+        prior_speaker_vecs[spk] = vec
+
+    if not interactions:
+        disps = [valid_items[i]["embedding"] - valid_items[i - 1]["embedding"] for i in range(1, len(valid_items))]
+        if len(disps) >= 2:
+            d_curr = disps[-1]
+            d_prev = disps[-2]
+            dc_n = float(np.linalg.norm(d_curr))
+            dp_n = float(np.linalg.norm(d_prev))
+            if dc_n > 1e-6 and dp_n > 1e-6:
+                cos_val = abs(float(np.dot(d_curr / dc_n, d_prev / dp_n)))
+                cadence = 1.0 - (abs(dc_n - dp_n) / (dc_n + dp_n + 1e-4))
+                h_score = (2.0 * cos_val * cadence) / (cos_val + cadence + 1e-4)
+                interactions.append(max(0.0, min(1.0, h_score)))
         else:
-            agent_vecs.append(v_norm)
+            return 0.5
 
-    if len(human_vecs) < 2 or len(agent_vecs) < 2:
-        return None
-
-    # Forward chronological displacements
-    h_disps = [human_vecs[i] - human_vecs[i - 1] for i in range(1, len(human_vecs))]
-    a_disps = [agent_vecs[i] - agent_vecs[i - 1] for i in range(1, len(agent_vecs))]
-
-    min_len = min(len(h_disps), len(a_disps), window)
-    if min_len == 0:
-        return None
-
-    weighted_corrs = []
+    recent_inters = interactions[-window:]
+    weighted_scores = []
     weights = []
-    # Iterate from most recent displacement backward in time
-    for i in range(min_len):
-        hd = h_disps[-(i + 1)]
-        ad = a_disps[-(i + 1)]
-        hd_n = np.linalg.norm(hd)
-        ad_n = np.linalg.norm(ad)
-        if hd_n > 0 and ad_n > 0:
-            # Directional alignment: parallel displacements score positive; opposing displacements (cos <= 0) score 0.0
-            cos_disp = max(0.0, min(1.0, float(np.dot(hd / hd_n, ad / ad_n))))
-        else:
-            cos_disp = 0.0
+    for i, s in enumerate(reversed(recent_inters)):
         w = float(np.exp(-decay_lambda * i))
-        weighted_corrs.append(cos_disp * w)
+        weighted_scores.append(s * w)
         weights.append(w)
 
     if not weights or sum(weights) == 0:
-        return None
+        return 0.5
 
-    score = sum(weighted_corrs) / sum(weights)
+    score = sum(weighted_scores) / sum(weights)
     return round(max(0.0, min(1.0, float(score))), 3)
+
 
 
 def _compute_agent_self_divergence(
