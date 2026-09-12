@@ -95,19 +95,19 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
   > *"'Boringness' was an anthropomorphic label masking a cybernetic structural condition. Collapse Pressure measures the joint failure of perturbation, entropy, and novelty. Using a calibrated convex failure sum ensures that mutual stalling and semantic circularity reliably trip the allostatic stagnation threshold ($0.65$) and sedation interrupt ($0.70$), waking the boredom engine."*
 
 ### 3.6. Trajectory Cross-Correlation (`coupling_coherence`)
-- **Mathematical Formulation**: Recency-weighted cross-correlation of human and apparatus displacement vectors ($W=8, \lambda=0.2$):
+- **Mathematical Formulation**: Recency-weighted directional cross-correlation of human and apparatus displacement vectors ($W=8, \lambda=0.2$):
   $$d_h(t) = e_h(t) - e_h(t-1), \quad d_a(t) = e_a(t) - e_a(t-1)$$
-  $$\text{coupling\_coherence} = \frac{\sum_{i=1}^W \exp(-0.2 \cdot i) \cdot |\text{cosine}(d_h(t-i), d_a(t-i))|}{\sum_{i=1}^W \exp(-0.2 \cdot i)}$$
+  $$\text{coupling\_coherence} = \frac{\sum_{i=1}^W \exp(-0.2 \cdot i) \cdot \max(0.0, \text{cosine}(d_h(t-i), d_a(t-i)))}{\sum_{i=1}^W \exp(-0.2 \cdot i)}$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Coherence is not co-location; it is synchronized drift. Point-in-time dot products ask 'are we near each other right now?' Trajectory cross-correlation asks 'are we moving together through semantic space?' It exposes leading indicators of decoupling before positions diverge."*
+  > *"Coherence is not co-location; it is synchronized drift. Point-in-time dot products ask 'are we near each other right now?' Trajectory cross-correlation asks 'are we moving together through semantic space?' Directional rectification ensures that diametric opposition (opposing moves, $\cos \theta \le 0$) evaluates to zero rather than being falsely inflated by absolute values."*
 
 ### 3.7. Recursive Self-Echo Detection (`agent_self_divergence`)
-- **Mathematical Formulation**: Recency-decayed max self-similarity ($M=15, \beta=0.3$) and long-range repeat penalty:
-  $$S_{\text{self}} = \max_{i \in [1..M]} \left(\text{cosine}(e_a(t), e_a(t-i)) \cdot \exp(-0.3 \cdot i)\right)$$
-  $$\text{penalty} = 0.3 \cdot \frac{\max_{j > M} \text{cosine}(e_a(t), e_a(t-j)) - 0.95}{0.05} \quad (\text{if } > 0.95)$$
+- **Mathematical Formulation**: Recency-decayed max self-similarity ($M=5, \beta=0.25$) and long-range repeat penalty, evaluated strictly on agent utterances:
+  $$S_{\text{self}} = \max_{i \in [1..M]} \left(\text{cosine}(e_a(t), e_a(t-i)) \cdot \exp(-0.25 \cdot i)\right)$$
+  $$\text{penalty} = 0.3 \cdot \min\left(1.0, \frac{\max_{j > M} \text{cosine}(e_a(t), e_a(t-j)) - 0.85}{0.15}\right) \quad (\text{if } > 0.85)$$
   $$\text{agent\_self\_divergence} = \text{clip}(1.0 - S_{\text{self}} - \text{penalty}, 0.0, 1.0)$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Comparing current agent output to mean past history smooths out temporal patterns and cannot detect recursive loops. Self-divergence heavily penalizes immediate self-echoing while permitting nomadic reconnection to long-past themes."*
+  > *"Self-divergence must strictly measure the agent's internal drift across its own speech acts, not human-agent divergence. A compact window ($M=5$) coupled with an active repeat penalty threshold ($0.85$) catches recursive looping in dialogues of any length."*
 
 ### 3.8. Directional Reverse & Forward Perturbation (`reverse_perturbation` / `forward_perturbation`)
 - **Mathematical Formulation**: Vector gap-closing projections:
@@ -124,13 +124,13 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
   > *"Mutual perturbation requires a deviation from self-predictable trajectory due to the other's influence—a vector of causation, not a scalar of proximity. The geometric mean ensures that both participants must be mutually reshaped for MPI to score high."*
 
 ### 3.10. Predictive Residual Trend Surprise (`surprise_index`)
-- **Mathematical Formulation**: Forecasting error z-score from Holt's linear trend exponential smoothing model:
+- **Mathematical Formulation**: Forecasting error z-score from Holt's linear trend exponential smoothing model with nominal variance prior ($\sigma_0^2 = 0.16$):
   - Level: $L(t) = 0.4 \cdot e(t) + 0.6 \cdot [L(t-1) + T(t-1)]$.
   - Trend: $T(t) = 0.3 \cdot [L(t) - L(t-1)] + 0.7 \cdot T(t-1)$.
-  - Residual: $\delta(t) = e(t) - (L(t-1) + T(t-1))$, Volatility EMA: $\sigma^2(t) = 0.2 \cdot \|\delta(t)\|^2 + 0.8 \cdot \sigma^2(t-1)$.
+  - Residual: $\delta(t) = e(t) - (L(t-1) + T(t-1))$, Volatility EMA: $\sigma^2(t) = 0.2 \cdot \|\delta(t)\|^2 + 0.8 \cdot \sigma^2(t-1)$ (initialized at $\sigma_0^2 = 0.16$).
   $$\text{surprise\_index} = \tanh\left(\frac{\|\delta(t)\| / (\sqrt{\sigma^2(t)} + 10^{-4})}{3.0}\right)$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Surprise is not distance from a sluggish historical centroid—that rewards amnesia. True surprise is the z-score prediction error relative to the conversation's own trajectory momentum and local volatility. Predictable trends score low; genuine discontinuities spike."*
+  > *"Surprise is not distance from a sluggish historical centroid—that rewards amnesia. True surprise is the z-score prediction error relative to the conversation's own trajectory momentum and local volatility. Initializing residual variance with a realistic semantic prior ($\sigma_0^2 = 0.16$) prevents cold-start $z > 80$ explosions and artificial $1.000$ saturation on early turns."*
 
 ### 3.11. Instantaneous Conceptual Velocity & Phase Transition Magnitude
 - **Mathematical Formulation**: Speed normalized against an absolute reference scale ($V_{\text{ref}} = 1.0$) with adaptive volatility expansion:

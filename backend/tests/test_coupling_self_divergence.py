@@ -71,3 +71,49 @@ def test_agent_self_divergence_recency_decay():
         f"Expected ancient repetition divergence ({div_ancient}) > immediate ({div_immediate})"
     )
 
+
+def test_coupling_coherence_directional_alignment_vs_opposition():
+    """Verify that parallel displacements yield high coherence, while diametric opposition yields 0.0."""
+    v_orig = np.array([0.0, 0.0] + [0.0] * 382, dtype=np.float32)
+    v_pos = np.array([1.0, 0.0] + [0.0] * 382, dtype=np.float32)
+    v_neg = np.array([-1.0, 0.0] + [0.0] * 382, dtype=np.float32)
+
+    # 1. Aligned displacements: both move in +x direction
+    history_aligned = [
+        {"embedding": v_orig, "speaker": "human"},
+        {"embedding": v_orig, "speaker": "agent"},
+        {"embedding": v_pos, "speaker": "human"},
+        {"embedding": v_pos, "speaker": "agent"},
+    ]
+    cc_aligned = _compute_coupling_coherence(history_aligned)
+
+    # 2. Opposing displacements: human moves +x, agent moves -x
+    history_opposed = [
+        {"embedding": v_orig, "speaker": "human"},
+        {"embedding": v_orig, "speaker": "agent"},
+        {"embedding": v_pos, "speaker": "human"},
+        {"embedding": v_neg, "speaker": "agent"},
+    ]
+    cc_opposed = _compute_coupling_coherence(history_opposed)
+
+    assert cc_aligned is not None and cc_opposed is not None
+    assert cc_aligned > 0.8, f"Expected high aligned coherence, got {cc_aligned}"
+    assert cc_opposed == 0.0, f"Expected 0.0 opposed coherence, got {cc_opposed}"
+
+
+def test_agent_self_divergence_speaker_awareness():
+    """Verify that self-divergence is only computed for agent/apparatus, returning None on human turns."""
+    vec = np.array([1.0] + [0.0] * 383, dtype=np.float32)
+    prior = [vec] * 3
+
+    div_human = _compute_agent_self_divergence(
+        current_vec=vec, current_speaker="human", prior_agent=prior
+    )
+    div_agent = _compute_agent_self_divergence(
+        current_vec=vec, current_speaker="agent", prior_agent=prior
+    )
+
+    assert div_human is None
+    assert div_agent is not None
+
+

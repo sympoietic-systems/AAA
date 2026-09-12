@@ -71,3 +71,15 @@ def test_conceptual_velocity_stagnant_vs_active():
     assert vel_active >= 0.65, f"Expected active velocity >= 0.65, got {vel_active}"
     assert vel_active > vel_stag, f"Expected active ({vel_active}) > stagnant ({vel_stag})"
 
+
+def test_predictive_surprise_early_turn_no_saturation():
+    """Verify that early turns with standard displacements do not artificially saturate at 1.000."""
+    v0 = np.array([1.0, 0.0] + [0.0] * 382, dtype=np.float32)
+    # 45-degree displacement (~0.765 distance)
+    v1 = np.array([0.7071, 0.7071] + [0.0] * 382, dtype=np.float32)
+
+    s1 = _compute_surprise_index(current_vec=v1, all_recent=[v0])
+    assert s1 is not None
+    assert 0.20 <= s1 <= 0.70, f"Expected early turn surprise to be in [0.20, 0.70], got {s1}"
+
+

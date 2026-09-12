@@ -26,7 +26,7 @@ def _compute_coupling_coherence(
             agent_vecs.append(v_norm)
 
     if len(human_vecs) < 2 or len(agent_vecs) < 2:
-        return 0.5
+        return None
 
     # Forward chronological displacements
     h_disps = [human_vecs[i] - human_vecs[i - 1] for i in range(1, len(human_vecs))]
@@ -34,7 +34,7 @@ def _compute_coupling_coherence(
 
     min_len = min(len(h_disps), len(a_disps), window)
     if min_len == 0:
-        return 0.5
+        return None
 
     weighted_corrs = []
     weights = []
@@ -45,15 +45,16 @@ def _compute_coupling_coherence(
         hd_n = np.linalg.norm(hd)
         ad_n = np.linalg.norm(ad)
         if hd_n > 0 and ad_n > 0:
-            cos_disp = float(abs(np.dot(hd / hd_n, ad / ad_n)))
+            # Directional alignment: parallel displacements score positive; opposing displacements (cos <= 0) score 0.0
+            cos_disp = max(0.0, min(1.0, float(np.dot(hd / hd_n, ad / ad_n))))
         else:
-            cos_disp = 0.5
+            cos_disp = 0.0
         w = float(np.exp(-decay_lambda * i))
         weighted_corrs.append(cos_disp * w)
         weights.append(w)
 
     if not weights or sum(weights) == 0:
-        return 0.5
+        return None
 
     score = sum(weighted_corrs) / sum(weights)
     return round(max(0.0, min(1.0, float(score))), 3)
@@ -63,10 +64,13 @@ def _compute_agent_self_divergence(
     current_vec: np.ndarray,
     current_speaker: str,
     prior_agent: list[np.ndarray],
-    max_recent_window: int = 15,
-    beta: float = 0.3,
+    max_recent_window: int = 5,
+    beta: float = 0.25,
 ) -> float | None:
     """# ponytail: compute agent self-divergence via recency-decayed max self-similarity and repeat penalty."""
+    if current_speaker not in ("agent", "apparatus"):
+        return None
+
     if not prior_agent:
         return 0.5
 
@@ -94,8 +98,8 @@ def _compute_agent_self_divergence(
         older_agents = agent_norms[:-max_recent_window]
         long_sims = [float(np.dot(c_vec, v)) for v in older_agents]
         max_long = max(long_sims) if long_sims else 0.0
-        if max_long > 0.95:
-            penalty = 0.3 * (max_long - 0.95) / 0.05
+        if max_long > 0.85:
+            penalty = 0.3 * min(1.0, (max_long - 0.85) / 0.15)
 
     divergence = 1.0 - s_self - penalty
     return round(max(0.0, min(1.0, float(divergence))), 3)

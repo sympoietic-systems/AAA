@@ -174,9 +174,12 @@ class ConversationMetricsModule(ProcessingModule):
         coupling = _compute_coupling_coherence(recent_history)
         metrics["coupling_coherence"] = coupling
 
-        agent_divergence = _compute_agent_self_divergence(
-            current_vec, current_speaker, prior_agent
-        )
+        if current_speaker in ("agent", "apparatus"):
+            agent_divergence = _compute_agent_self_divergence(
+                current_vec, current_speaker, prior_agent
+            )
+        else:
+            agent_divergence = prior_metrics.get("agent_self_divergence")
         metrics["agent_self_divergence"] = agent_divergence
 
         rp_t = None

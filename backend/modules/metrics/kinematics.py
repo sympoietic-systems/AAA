@@ -13,10 +13,11 @@ def _compute_surprise_index(
     beta: float = 0.3,
     gamma: float = 0.2,
     scaling_S: float = 3.0,
+    nominal_variance: float = 0.16,
 ) -> float | None:
     """# ponytail: compute predictive residual surprise normalized by local trend volatility."""
     if not all_recent:
-        return 0.5
+        return 0.0
 
     c_norm = np.linalg.norm(current_vec)
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
@@ -29,11 +30,13 @@ def _compute_surprise_index(
     history.append(c_vec)
 
     if len(history) < 2:
-        return 0.5
+        return 0.0
 
     L = history[0].copy()
     T = np.zeros_like(L)
-    var_ema = 1e-4
+    # Calibrated baseline variance prior (sigma_0^2 = 0.16 -> sigma_0 = 0.40)
+    # Prevents cold-start division explosions (z > 80) and 1.000 saturation on early turns
+    var_ema = nominal_variance
 
     for i in range(1, len(history) - 1):
         prev_pred = L + T
@@ -51,7 +54,7 @@ def _compute_surprise_index(
     final_res = actual - predicted
     error_norm = float(np.linalg.norm(final_res))
 
-    sigma = float(np.sqrt(max(1e-8, var_ema)))
+    sigma = float(np.sqrt(max(1e-6, var_ema)))
     raw_z = error_norm / (sigma + 1e-4)
 
     surprise = float(np.tanh(raw_z / scaling_S))
