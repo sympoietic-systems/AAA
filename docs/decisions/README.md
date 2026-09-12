@@ -115,6 +115,7 @@ What becomes easier/harder?
 | [081](ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) | Spherical Geodesic SLERP Surprise & Regularized Power Mean Paskian Vitality Calibration | accepted | 2026-09-12 |
 | [082](ADR-082-tangent-parallel-transport-and-minkowski-synergistic-collapse-pressure.md) | Tangent Parallel Transport Kinematics & Minkowski Synergistic Collapse Pressure Calibration | accepted | 2026-09-12 |
 | [083](ADR-083-transverse-vector-shear-perturbation-and-participation-ratio-spectral-entropy.md) | Transverse Vector Shear Perturbation & Participation Ratio Spectral Entropy Calibration | accepted | 2026-09-12 |
+| [084](ADR-084-softmin-subspace-divergence-and-dual-horizon-novelty.md) | Softmin Subspace Self-Divergence & Dual-Horizon Novelty Calibration | accepted | 2026-09-12 |
 
 
 
