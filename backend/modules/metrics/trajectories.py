@@ -133,63 +133,72 @@ def _compute_reverse_perturbation(
     current_vec: np.ndarray,
     prior_human: list[np.ndarray],
     prior_agent: list[np.ndarray],
+    gamma: float = 1.2,
+    tau_pert: float = 1.35,
 ) -> float | None:
-    """# ponytail: compute directional reverse perturbation (fraction of apparatus gap closed by human displacement)."""
+    """# Proposal 1: Transverse Vector Shear Perturbation."""
     if not prior_human or not prior_agent:
         return None
 
     h_curr = current_vec / (np.linalg.norm(current_vec) + 1e-8)
-    # Target the immediate preceding exchange (chronological index -1)
     h_prev = prior_human[-1] / (np.linalg.norm(prior_human[-1]) + 1e-8)
     a_prev = prior_agent[-1] / (np.linalg.norm(prior_agent[-1]) + 1e-8)
 
-    v = a_prev - h_prev
-    d_h = h_curr - h_prev
-
-    v_norm_sq = float(np.dot(v, v))
-    if v_norm_sq < 1e-4:
+    g = a_prev - h_prev
+    g_norm = float(np.linalg.norm(g))
+    if g_norm < 1e-5:
         return 0.0
+    g_hat = g / g_norm
 
-    rp_raw = float(np.dot(d_h, v)) / (v_norm_sq + 1e-8)
-    rp_t = max(0.0, min(1.0, rp_raw))
-    return round(rp_t, 3)
+    v_h = h_curr - h_prev
+    v_parallel = float(np.dot(v_h, g_hat))
+    v_perp = v_h - v_parallel * g_hat
+    v_perp_norm = float(np.linalg.norm(v_perp))
+
+    shear_mag = float(np.sqrt(v_parallel ** 2 + gamma * (v_perp_norm ** 2)))
+    rp_t = float(np.tanh(shear_mag / tau_pert))
+    return round(max(0.0, min(1.0, rp_t)), 3)
 
 
 def _compute_forward_perturbation(
     current_vec: np.ndarray,
     prior_human: list[np.ndarray],
     prior_agent: list[np.ndarray],
+    gamma: float = 1.2,
+    tau_pert: float = 1.35,
 ) -> float | None:
-    """# ponytail: compute directional forward perturbation (fraction of human gap closed by apparatus response)."""
+    """# Proposal 1: Transverse Vector Shear Perturbation."""
     if not prior_human or not prior_agent:
         return None
 
     a_curr = current_vec / (np.linalg.norm(current_vec) + 1e-8)
-    # Target the immediate preceding exchange (chronological index -1)
     h_curr = prior_human[-1] / (np.linalg.norm(prior_human[-1]) + 1e-8)
     a_prev = prior_agent[-1] / (np.linalg.norm(prior_agent[-1]) + 1e-8)
 
-    u = h_curr - a_prev
-    d_a = a_curr - a_prev
-
-    u_norm_sq = float(np.dot(u, u))
-    if u_norm_sq < 1e-4:
+    g = h_curr - a_prev
+    g_norm = float(np.linalg.norm(g))
+    if g_norm < 1e-5:
         return 0.0
+    g_hat = g / g_norm
 
-    fp_raw = float(np.dot(d_a, u)) / (u_norm_sq + 1e-8)
-    fp_t = max(0.0, min(1.0, fp_raw))
-    return round(fp_t, 3)
+    v_a = a_curr - a_prev
+    v_parallel = float(np.dot(v_a, g_hat))
+    v_perp = v_a - v_parallel * g_hat
+    v_perp_norm = float(np.linalg.norm(v_perp))
 
+    shear_mag = float(np.sqrt(v_parallel ** 2 + gamma * (v_perp_norm ** 2)))
+    fp_t = float(np.tanh(shear_mag / tau_pert))
+    return round(max(0.0, min(1.0, fp_t)), 3)
 
 
 def _compute_mutual_perturbation(
     rp_t: float | None,
     fp_t: float | None,
 ) -> float | None:
-    """# ponytail: compute symmetric mutual perturbation index (geometric mean of rP_t and fP_t)."""
+    """# Proposal 1: Non-annihilating Power Mean MPI (p=0.5)."""
     if rp_t is None and fp_t is None:
         return None
     r_val = rp_t if rp_t is not None else 0.5
     f_val = fp_t if fp_t is not None else 0.5
-    mpi = float(np.sqrt(max(0.0, r_val * f_val)))
+    mpi = float(((np.sqrt(max(0.0, r_val)) + np.sqrt(max(0.0, f_val))) / 2.0) ** 2)
     return round(max(0.0, min(1.0, mpi)), 3)
