@@ -41,3 +41,6 @@ backend/services/data/uploads/*
 
 # Enactment — detached artwork apps, each its own git repo
 enactment/
+
+# Benchmark runs
+reports/runs/
