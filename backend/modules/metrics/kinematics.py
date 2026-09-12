@@ -26,43 +26,44 @@ def _compute_surprise_index(
         history.append(v / norm if norm > 1e-8 else v)
     history.append(c_vec)
 
-    if len(history) < 3:
+    if len(history) < 2:
         return 0.0
 
     # Compute sequence of step angular distances and online mean/variance
     # For predicting step i from i-2 and i-1 using SLERP extrapolation
     residuals = []
-    for i in range(2, len(history)):
-        p_prev = history[i - 2]
-        p_curr = history[i - 1]
-        target = history[i]
-
-        dot_p = max(-1.0, min(1.0, float(np.dot(p_prev, p_curr))))
-        theta = float(np.arccos(dot_p))
-
-        if theta > 1e-5 and theta < np.pi - 1e-5:
-            sin_t = float(np.sin(theta))
-            # SLERP extrapolate forward by factor (1 + beta)
-            w1 = float(np.sin(-beta * theta) / sin_t)
-            w2 = float(np.sin((1.0 + beta) * theta) / sin_t)
-            predicted = w1 * p_prev + w2 * p_curr
-            p_norm = float(np.linalg.norm(predicted))
-            if p_norm > 1e-8:
-                predicted = predicted / p_norm
+    for i in range(1, len(history)):
+        if i == 1:
+            predicted = history[0]
         else:
-            predicted = p_curr
+            p_prev = history[i - 2]
+            p_curr = history[i - 1]
+            dot_p = max(-1.0, min(1.0, float(np.dot(p_prev, p_curr))))
+            theta = float(np.arccos(dot_p))
+
+            if theta > 1e-5 and theta < np.pi - 1e-5:
+                sin_t = float(np.sin(theta))
+                # SLERP extrapolate forward by factor (1 + beta)
+                w1 = float(np.sin(-beta * theta) / sin_t)
+                w2 = float(np.sin((1.0 + beta) * theta) / sin_t)
+                predicted = w1 * p_prev + w2 * p_curr
+                p_norm = float(np.linalg.norm(predicted))
+                if p_norm > 1e-8:
+                    predicted = predicted / p_norm
+            else:
+                predicted = p_curr
 
         # Geodesic angular distance on S^{D-1}
-        dot_res = max(-1.0, min(1.0, float(np.dot(target, predicted))))
+        dot_res = max(-1.0, min(1.0, float(np.dot(history[i], predicted))))
         delta = float(np.arccos(dot_res))
         residuals.append(delta)
 
     if not residuals:
         return 0.0
 
-    # Running EMA of mean and variance across history residuals
-    mu_delta = residuals[0]
-    var_delta = 0.04  # baseline prior initialization
+    # Running EMA of mean and variance across history residuals, initialized with conversational prior
+    mu_delta = 0.65
+    var_delta = 0.06
 
     for res in residuals[:-1]:
         var_delta = (1.0 - alpha) * var_delta + alpha * ((res - mu_delta) ** 2)
@@ -106,9 +107,15 @@ def _compute_conceptual_velocity(
 
     # Tangent velocities v_i in T_{e_{i-1}} S^{D-1}
     curr_theta = thetas[-1]
-    # Anchor to ambient 10th-90th quantile scale
-    q_low = float(np.percentile(thetas, 10)) if len(thetas) >= 4 else 0.4
-    q_high = float(np.percentile(thetas, 90)) if len(thetas) >= 4 else 1.2
+    # Anchor to ambient 10th-90th quantile scale with dispersion protection
+    if len(thetas) >= 4:
+        p10 = float(np.percentile(thetas, 10))
+        p90 = float(np.percentile(thetas, 90))
+        q_low = min(p10, 0.45)
+        q_high = max(p90, q_low + 0.35, 1.15)
+    else:
+        q_low = 0.40
+        q_high = 1.15
     norm_velocity = (curr_theta - q_low) / (q_high - q_low + 1e-4)
     norm_velocity = round(max(0.0, min(1.0, float(norm_velocity))), 3)
 

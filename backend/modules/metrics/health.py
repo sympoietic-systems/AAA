@@ -45,9 +45,9 @@ def _compute_collapse_pressure(
     l4_sum = 0.40 * (f_pert ** 4) + 0.30 * (f_ent ** 4) + 0.30 * (f_nov ** 4)
     cp_minkowski = float(np.power(l4_sum, 0.25))
     cp_synergy = float(f_pert * f_ent * f_nov)
-
-    collapse = float(np.tanh(1.5 * cp_minkowski + 2.5 * cp_synergy))
-    return round(max(0.0, min(1.0, collapse)), 3)
+    # Linear-synergistic scaling calibrated for homeostatic (0.65) and sedation (0.70) triggers
+    collapse = 0.85 * cp_minkowski + 0.40 * cp_synergy
+    return round(max(0.0, min(1.0, float(collapse))), 3)
 
 
 def _compute_drr(
