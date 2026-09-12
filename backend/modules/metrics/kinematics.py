@@ -81,55 +81,69 @@ def _compute_conceptual_velocity(
     current_vec: np.ndarray,
     all_recent: list[np.ndarray],
     phi: float = 0.4,
-    v_ref: float = 1.0,
 ) -> tuple[float | None, float | None]:
-    """# ponytail: compute instantaneous speed, calibrated velocity normalization, and phase transition magnitude."""
+    """# Proposal 2: Tangent Parallel Transport and Acceleration Burst."""
     if not all_recent:
         return 0.5, 0.0
 
-    c_norm = np.linalg.norm(current_vec)
-    c_vec = current_vec / c_norm if c_norm > 0 else current_vec
+    c_norm = float(np.linalg.norm(current_vec))
+    c_vec = current_vec / c_norm if c_norm > 1e-8 else current_vec
 
-    # Assemble chronological trajectory: past history [-15:] followed by current vector
     history = []
-    for v in all_recent[-15:]:
-        norm = np.linalg.norm(v)
-        history.append(v / norm if norm > 0 else v)
+    for v in all_recent[-20:]:
+        norm = float(np.linalg.norm(v))
+        history.append(v / norm if norm > 1e-8 else v)
     history.append(c_vec)
 
     if len(history) < 2:
         return 0.5, 0.0
 
-    displacements = [history[i] - history[i - 1] for i in range(1, len(history))]
-    speeds = [float(np.linalg.norm(d)) for d in displacements]
+    # Geodesic arc-lengths on S^{D-1}
+    thetas = []
+    for i in range(1, len(history)):
+        dot_p = max(-1.0, min(1.0, float(np.dot(history[i], history[i - 1]))))
+        thetas.append(float(np.arccos(dot_p)))
 
-    vel_ema = speeds[0]
-    for s in speeds[1:]:
-        vel_ema = phi * s + (1.0 - phi) * vel_ema
-
-    # Anchor normalization to nominal reference scale v_ref (1.0) with adaptive expansion for high volatility
-    v_scale = max(v_ref, float(np.percentile(speeds, 95)))
-    norm_velocity = float(np.tanh(vel_ema / (v_scale + 1e-4)))
-    norm_velocity = round(max(0.0, min(1.0, norm_velocity)), 3)
+    # Tangent velocities v_i in T_{e_{i-1}} S^{D-1}
+    curr_theta = thetas[-1]
+    # Anchor to ambient 10th-90th quantile scale
+    q_low = float(np.percentile(thetas, 10)) if len(thetas) >= 4 else 0.4
+    q_high = float(np.percentile(thetas, 90)) if len(thetas) >= 4 else 1.2
+    norm_velocity = (curr_theta - q_low) / (q_high - q_low + 1e-4)
+    norm_velocity = round(max(0.0, min(1.0, float(norm_velocity))), 3)
 
     phase_trans = 0.0
-    if len(displacements) >= 2:
-        d_curr = displacements[-1]
-        d_prev = displacements[-2]
-        a_vec = d_curr - d_prev
-        a_norm = float(np.linalg.norm(a_vec))
+    if len(history) >= 3:
+        e_p2 = history[-3]
+        e_p1 = history[-2]
+        e_c = history[-1]
 
-        dn_c = np.linalg.norm(d_curr)
-        dn_p = np.linalg.norm(d_prev)
-        if dn_c > 0 and dn_p > 0:
-            cos_theta = max(-1.0, min(1.0, float(np.dot(d_curr / dn_c, d_prev / dn_p))))
-            turn_rate = 1.0 - cos_theta
+        # v_{t-1} in T_{e_{t-2}}
+        v_prev = e_p1 - float(np.dot(e_p1, e_p2)) * e_p2
+        nv_p = float(np.linalg.norm(v_prev))
+        if nv_p > 1e-6:
+            v_prev = v_prev / nv_p
+
+        # Parallel transport v_{t-1} to T_{e_{t-1}} along geodesic from e_{t-2} to e_{t-1}
+        dot_trans = float(np.dot(e_p1, v_prev))
+        denom = 1.0 + float(np.dot(e_p2, e_p1))
+        if abs(denom) > 1e-5:
+            v_transported = v_prev - (dot_trans / denom) * (e_p2 + e_p1)
         else:
-            turn_rate = 0.0
+            v_transported = v_prev
+        nv_trans = float(np.linalg.norm(v_transported))
+        if nv_trans > 1e-6:
+            v_transported = v_transported / nv_trans
 
-        # Geometric acceleration normalized by theoretical maximum bound (4.0)
-        phase_trans = float((a_norm / (1.0 + vel_ema)) * turn_rate / 4.0)
-        phase_trans = round(max(0.0, min(1.0, phase_trans)), 3)
+        # v_t in T_{e_{t-1}}
+        v_curr = e_c - float(np.dot(e_c, e_p1)) * e_p1
+        nv_c = float(np.linalg.norm(v_curr))
+        if nv_c > 1e-6:
+            v_curr = v_curr / nv_c
+
+        cos_psi = max(-1.0, min(1.0, float(np.dot(v_curr, v_transported))))
+        omega = float(np.arccos(cos_psi) / np.pi)
+        phase_trans = round(max(0.0, min(1.0, float(omega * np.sqrt(norm_velocity)))), 3)
 
     return norm_velocity, phase_trans
 

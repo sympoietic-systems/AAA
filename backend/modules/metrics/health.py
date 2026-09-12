@@ -26,11 +26,8 @@ def _compute_collapse_pressure(
     prev_mpi: float | None,
     rolling_entropy: float | None,
     conceptual_novelty: float | None,
-    w_pert: float = 0.40,
-    w_entropy: float = 0.30,
-    w_novelty: float = 0.30,
 ) -> float | None:
-    """# ponytail: compute triadic collapse pressure index (weighted combination of failure modes)."""
+    """# Proposal 2: Minkowski L4 Synergistic Collapse Pressure."""
     if rp_t is None:
         return None
 
@@ -40,16 +37,17 @@ def _compute_collapse_pressure(
     novelty_val = conceptual_novelty if conceptual_novelty is not None else 0.5
 
     pert_geom_mean = float(np.sqrt(max(0.0, rp_val * mpi_val)))
-    pert_failure = 1.0 - pert_geom_mean
-    entropy_failure = 1.0 - entropy_val
-    novelty_failure = 1.0 - novelty_val
+    f_pert = max(0.0, min(1.0, 1.0 - pert_geom_mean))
+    f_ent = max(0.0, min(1.0, 1.0 - entropy_val))
+    f_nov = max(0.0, min(1.0, 1.0 - novelty_val))
 
-    collapse = (
-        w_pert * pert_failure
-        + w_entropy * entropy_failure
-        + w_novelty * novelty_failure
-    )
-    return round(max(0.0, min(1.0, float(collapse))), 3)
+    # L4 Minkowski norm
+    l4_sum = 0.40 * (f_pert ** 4) + 0.30 * (f_ent ** 4) + 0.30 * (f_nov ** 4)
+    cp_minkowski = float(np.power(l4_sum, 0.25))
+    cp_synergy = float(f_pert * f_ent * f_nov)
+
+    collapse = float(np.tanh(1.5 * cp_minkowski + 2.5 * cp_synergy))
+    return round(max(0.0, min(1.0, collapse)), 3)
 
 
 def _compute_drr(
