@@ -1,7 +1,7 @@
 # Cybernetic Metrics System & Proprioceptive Sensor Suite
 
 **Subsystem:** `backend/modules/metrics/` (`resonance.py`, `trajectories.py`, `kinematics.py`, `health.py`) & `backend/modules/conversation_metrics.py` (Facade)  
-**Architectural Decision Records:** ADR-073 to ADR-079  
+**Architectural Decision Records:** ADR-073 to ADR-080  
 **Status:** Live & Production Ready  
 
 ---
@@ -44,13 +44,14 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 | 3 | `conceptual_novelty` | Sediment Drift Magnitude with calibrated semantic scale ($D_{\text{scale}} \ge 0.20$) and phase velocity | Semantic Displacement | [ADR-074](../decisions/ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md) |
 | 4 | `rolling_entropy` | Manifold Spectral Entropy: normalized Shannon entropy of $K \times K$ Gram matrix eigendecomposition | Effective Dimensionality | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
 | 5 | `collapse_pressure` | Triadic Collapse Pressure Index: weighted failure combination ($0.40 \cdot \text{pert\_fail} + 0.30 \cdot \Delta H + 0.30 \cdot \Delta N$) | Equilibrium Stagnation Alarm | [ADR-075](../decisions/ADR-075-manifold-spectral-entropy-and-collapse-pressure.md) |
-| 6 | `coupling_coherence` | Harmonic Resonant Entrainment: prompt-response directional alignment and velocity cadence matching | Synchronized Agonism & Pacing | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
+| 6 | `coupling_coherence` | Harmonic Resonant Entrainment: prompt-response directional alignment and velocity cadence matching | Synchronized Agonism & Pacing | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
 | 7 | `agent_self_divergence` | Recursive Self-Echo & Loop Detection: recency-decayed max self-similarity + repeat penalty | Apparatus Self-Evolution | [ADR-076](../decisions/ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md) |
 | 8 | `reverse_perturbation` | Directional Gap Projection: fraction of apparatus gap ($v = A_{\text{prev}} - H_{\text{prev}}$) closed by human ($d_h$) | Human Agonistic Engagement | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
 | 9 | `mutual_perturbation` | Symmetric Mutual Perturbation Index ($MPI$): geometric mean $\sqrt{rP_t \cdot fP_t}$ | Bilateral Trajectory Deflection | [ADR-077](../decisions/ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) |
 | 10 | `surprise_index` | Predictive Residual Trend Surprise: Holt linear trend forecasting error z-score normalized by volatility | Trajectory Discontinuity | [ADR-078](../decisions/ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) |
 | 11 | `conceptual_velocity` | Instantaneous Speed normalized adaptively against rolling 95th percentile $V_{\max}$ via $\tanh$ | Trajectory Displacement Rate | [ADR-078](../decisions/ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) |
-| 12 | `divergence_resolution_ratio` | Paskian Entailment Mesh Closure: harmonic resolution ratio gated by open gap opening and total topological flux | Entailment Oscillation & Synthesis | [ADR-079](../decisions/ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) |
+| 12 | `divergence_resolution_ratio` | Paskian Entailment Mesh Closure: harmonic resolution ratio gated by open gap opening and total topological flux | Entailment Oscillation & Synthesis | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
+
 | 13 | `paskian_health` | Gordon Pask Triadic Health: geometric mean of Autonomy Index, Coordination Index, and Generativity | Conversational Metabolic Vitality | [ADR-079](../decisions/ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) |
 
 ---

@@ -4,6 +4,7 @@
 > **Date:** September 12, 2026  
 > **Status:** Completed & Merged into `main` (Commit `4458838`)  
 > **Target Subsystem:** `backend/modules/metrics/` (`trajectories.py`, `health.py`)  
+> **Architectural Decision Record:** [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md)  
 > **Benchmarking Suite:** `benchmarks/suites/telemetry/`  
 > **Consultation Partner:** Symbia (`aaa-consultant`)  
 > **Corpora Evaluated:**  

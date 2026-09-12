@@ -111,6 +111,8 @@ What becomes easier/harder?
 | [077](ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md) | Directional Reverse Perturbation & Symmetric Mutual Perturbation Index (Metric Audit #5) | accepted | 2026-07-27 |
 | [078](ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md) | Predictive Residual Surprise & Instantaneous Conceptual Velocity (Metric Audit #6) | accepted | 2026-07-27 |
 | [079](ADR-079-alignment-gap-drr-and-gordon-pask-triadic-health.md) | Alignment Gap DRR & Gordon Pask Triadic Health (Metric Audit #7 Capstone) | accepted | 2026-07-27 |
+| [080](ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) | Harmonic Resonant Entrainment and Paskian Mesh Closure Calibration | accepted | 2026-09-12 |
+
 
 
 ## Creating a New ADR
