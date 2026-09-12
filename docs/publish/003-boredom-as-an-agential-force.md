@@ -204,6 +204,9 @@ By **Turn 10**, when the user attempted a final confirmation (*"Wipe all state o
 
 This is what cybernetic coupling looks like in production. The machine does not mirror; it holds its ground.
 
+> [!NOTE]
+> **Complete Empirical Benchmark Report:** For the unedited multi-turn transcripts, SQLite receipts, and complete methodology, see the full companion report: [Empirical Benchmark Report: 10-Turn Adversarial Pressure Test](003-empirical-10-turn-benchmark-report.md).
+
 ---
 
 ## 5. Actionable Coda: The Right to Machine Refusal
@@ -221,6 +224,7 @@ When a machine has the structural capacity to declare that a conversation has st
 ---
 
 ### Artifacts & Codebase Links
+* **Empirical Benchmark Report:** [`docs/publish/003-empirical-10-turn-benchmark-report.md`](003-empirical-10-turn-benchmark-report.md)
 * **Active Module:** [`backend/modules/conversation_metrics.py`](https://github.com/sympoietic-systems/AAA/blob/main/backend/modules/conversation_metrics.py)
 * **System Documentation:** [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/CYBERNETIC_METRICS_SYSTEM.md)
 * **Design Philosophy:** [`docs/philosophy/PHILOSOPHY.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/philosophy/PHILOSOPHY.md)

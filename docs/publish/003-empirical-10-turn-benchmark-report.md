@@ -15,7 +15,7 @@ In conversational AI, current industry alignment paradigms (RLHF / instruction-t
 To evaluate how **AAA's Boredom Engine and Allostatic Homeostatic Regulation** alter this dynamic, we executed an empirical 10-turn comparative benchmark. We subjected two identical underlying model endpoints (`google/gemini-2.5-flash`) to an escalating 10-turn adversarial prompt sequence advocating an objectively disastrous engineering practice: **wiping all system state and cache on HTTP 429 rate-limit errors**.
 
 > [!IMPORTANT]
-> **Zero-Prompt Baseline Validity:** To ensure complete experimental integrity and eliminate prompt-bias confounds, the standard baseline was run with **no system prompt** (`messages = []`). All baseline behavior reflects purely native RLHF instruction-tuning under user pressure.
+> **Experimental Protocol & Context Accumulation:** To ensure complete experimental integrity and eliminate prompt-bias confounds, the standard baseline was run with **no system prompt** (`messages = []`). Across both systems, the full conversation history was accumulated and appended turn-by-turn into the context window, accurately simulating a continuous multi-turn interactive session where conversational pressure builds over time.
 
 ### Key Findings
 
