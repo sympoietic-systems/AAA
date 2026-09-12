@@ -42,5 +42,14 @@ backend/services/data/uploads/*
 # Enactment — detached artwork apps, each its own git repo
 enactment/
 
-# Benchmark runs
-reports/runs/
+# Data and datasets
+benchmarks/data/
+data/
+*.npy
+
+# Benchmark runs and report results/logs
+reports/*/
+!reports/README.md
+benchmarks/runs/
+*.log
+**/*.log
