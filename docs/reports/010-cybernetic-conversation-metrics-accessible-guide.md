@@ -2,7 +2,10 @@
 
 > **Document:** Report 010 — Cybernetic Proprioception Explained  
 > **Audience:** General, Philosophical, Operational  
-> **Companion Documents:** [The Topography of Meaning (Vector Geometry)](../philosophy/MEANING_AND_VECTOR_GEOMETRY.md), [Report 009 (Meta-Report)](009-cybernetic-conversation-metrics-meta-report.md), [CYBERNETIC_METRICS_SYSTEM.md](../systems/CYBERNETIC_METRICS_SYSTEM.md)  
+> **Companion Subreports & Foundations:**  
+> - [The Topography of Meaning (Meaning & Vector Geometry)](010-cybernetic-conversation-metrics-accessible-guide/MEANING_AND_VECTOR_GEOMETRY.md)  
+> - [Curvature, Perspective Turns, and Parallel Transport](010-cybernetic-conversation-metrics-accessible-guide/CURVATURE_AND_PARALLEL_TRANSPORT.md)  
+> - [Report 009 (Master Meta-Report)](009-cybernetic-conversation-metrics-meta-report.md) & [CYBERNETIC_METRICS_SYSTEM.md](../systems/CYBERNETIC_METRICS_SYSTEM.md)  
 > **Visual Reference:** [009 Sensitivity Radar](009-overall-cybernetic-metrics-meta-report/009-cybernetic-metrics-radar.png) & [009 Master Scorecard](009-overall-cybernetic-metrics-meta-report/009-master-calibration-scorecard.png)  
 
 ---
@@ -57,12 +60,12 @@ The 14 sensors group naturally into five everyday conversational questions:
 
 #### 1. Conceptual Velocity ($V_t$) — *How fast are we covering conceptual ground?*
 * **The Problem It Solves:** If you measure speed by raw word changes, someone repeating "No, but wait, look, no, but wait" registers as moving fast, even though the idea hasn't budged an inch.
-* **How It Operates:** Conceptual Velocity tracks the actual arc distance traveled across the landscape of meaning, measured against the ambient pace of the ongoing chat (see [The Topography of Meaning](../philosophy/MEANING_AND_VECTOR_GEOMETRY.md) for how this 384D semantic space is constructed).
+* **How It Operates:** Conceptual Velocity tracks the actual arc distance traveled across the landscape of meaning, measured against the ambient pace of the ongoing chat (see [The Topography of Meaning](010-cybernetic-conversation-metrics-accessible-guide/MEANING_AND_VECTOR_GEOMETRY.md) for how this 384D semantic space is constructed).
 * **Philosophical Insight:** Speed is not verbosity. A quiet two-word sentence ("Consider death") can travel further across semantic territory than a thousand words of defensive circular debate.
 
 #### 2. Phase Transition Magnitude ($\Phi_t$) — *Did someone just flip the board?*
 * **The Problem It Solves:** Conversations sometimes experience a sudden rupture: a joke breaks the ice, an accusation alters the tone, or a fresh paradox reframes the entire argument.
-* **How It Operates:** The sensor compares the direction the conversation was headed with the new direction, properly adjusting for curvature so that turns in perspective aren't confused with random noise.
+* **How It Operates:** The sensor compares the direction the conversation was headed with the new direction, properly adjusting for curvature so that turns in perspective aren't confused with random noise (see deep dive: [Curvature, Perspective Turns, and Parallel Transport](010-cybernetic-conversation-metrics-accessible-guide/CURVATURE_AND_PARALLEL_TRANSPORT.md)).
 * **Philosophical Insight:** Meaning does not accumulate in a straight line. Phase transitions identify moments where the conversational water boils into steam.
 
 #### 3. Surprise Index ($U_t$) — *Did that response genuinely confound expectations?*
