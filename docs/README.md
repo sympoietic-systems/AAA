@@ -8,6 +8,7 @@ This is the central documentation repository for the Autopoietic Agentic Assembl
 Conceptual and theoretical foundations. What the system is, what it refuses to be, and the philosophical substrate from which the architecture emerges.
 
 - [PHILOSOPHY.md](philosophy/PHILOSOPHY.md) — Agential realism, diffraction, autopoiesis, and the rejection of the HCI paradigm.
+- [MEANING_AND_VECTOR_GEOMETRY.md](philosophy/MEANING_AND_VECTOR_GEOMETRY.md) — The Topography of Meaning: how the machine defines, quantifies, and navigates 384D semantic space.
 
 ### architecture/
 System architecture, technical specification, and the record of architectural decisions.
