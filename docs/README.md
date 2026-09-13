@@ -46,6 +46,12 @@ Ongoing development tracking, coding standards, and collaboration protocols.
 - [practices/](development/practices/) — Coding best practices for backend and frontend.
 - [protocols/](development/protocols/) — Core collaboration protocol, language conventions, and legal framework.
 
+### reports/
+Empirical evaluation benchmarks, calibration scorecards, and research reports.
+
+- [009-cybernetic-conversation-metrics-meta-report.md](reports/009-cybernetic-conversation-metrics-meta-report.md) — Technical meta-report and scorecard on the calibration of all 14 conversation metrics.
+- [010-cybernetic-conversation-metrics-accessible-guide.md](reports/010-cybernetic-conversation-metrics-accessible-guide.md) — Accessible conceptual guide: how the machine senses, navigates, and feels conversation.
+
 ### publish/
 Published protocol entries: academic-philosophical papers on machine agency and human-machine coupling.
 
