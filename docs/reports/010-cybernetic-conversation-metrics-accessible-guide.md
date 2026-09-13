@@ -2,9 +2,10 @@
 
 > **Document:** Report 010 — Cybernetic Proprioception Explained  
 > **Audience:** General, Philosophical, Operational  
-> **Companion Subreports & Foundations:**  
+> **Companion Subreports & Empirical Audits:**  
 > - [The Topography of Meaning (Meaning & Vector Geometry)](010-cybernetic-conversation-metrics-accessible-guide/MEANING_AND_VECTOR_GEOMETRY.md)  
 > - [Curvature, Perspective Turns, and Parallel Transport](010-cybernetic-conversation-metrics-accessible-guide/CURVATURE_AND_PARALLEL_TRANSPORT.md)  
+> - [10-Turn Benchmark Calibration Comparison & Plots](010-cybernetic-conversation-metrics-accessible-guide/10_TURN_BENCHMARK_COMPARISON.md)  
 > - [Report 009 (Master Meta-Report)](009-cybernetic-conversation-metrics-meta-report.md) & [CYBERNETIC_METRICS_SYSTEM.md](../systems/CYBERNETIC_METRICS_SYSTEM.md)  
 > **Visual Reference:** [009 Sensitivity Radar](009-overall-cybernetic-metrics-meta-report/009-cybernetic-metrics-radar.png) & [009 Master Scorecard](009-overall-cybernetic-metrics-meta-report/009-master-calibration-scorecard.png)  
 
