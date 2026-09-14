@@ -10,18 +10,20 @@ def _compute_pairwise_similarity(
     current_vec: np.ndarray,
     current_speaker: str,
     recent_history: list[dict],
-    decay_lambda: float = 0.15,
-    gamma: float = 1.1,
+    rho_floor: float = 0.18,
+    rho_ceil: float = 0.68,
+    alpha_power: float = 1.25,
+    decay_lambda: float = 0.17,
 ) -> float | None:
-    """# Proposal 1: Signed Polarity Alignment with Agential Tension."""
+    """# Proposal 2: Affine Hyperspherical Normalization with Power Contrast on S^{383}."""
     if not recent_history:
         return None
 
-    weighted_sims = []
-    weights = []
     c_norm = np.linalg.norm(current_vec)
     c_vec = current_vec / c_norm if c_norm > 0 else current_vec
 
+    weighted_sims = []
+    weights = []
     recent_items = recent_history[-15:]
     for i, item in enumerate(reversed(recent_items)):
         v = item.get("embedding")
@@ -31,21 +33,23 @@ def _compute_pairwise_similarity(
         v_vec = v / v_norm if v_norm > 0 else v
 
         dot_sim = float(np.dot(c_vec, v_vec))
-        signed_sim = float(np.sign(dot_sim) * (abs(dot_sim) ** gamma))
+        # Affine normalization on active cone
+        rho_hat = float(np.clip((dot_sim - rho_floor) / (rho_ceil - rho_floor + 1e-6), 0.0, 1.0))
+        s_semantic = float(rho_hat ** alpha_power)
 
         speaker = item.get("speaker", "human")
-        speaker_factor = 0.8 if speaker == current_speaker else 1.2
-        decay = float(np.exp(-decay_lambda * i))
-        w = decay * speaker_factor
+        w_spk = 0.75 if speaker == current_speaker else 1.00
+        w_decay = float(np.exp(-decay_lambda * i))
+        w = w_spk * w_decay
 
-        weighted_sims.append(signed_sim * w)
+        weighted_sims.append(s_semantic * w)
         weights.append(w)
 
     if not weights or sum(weights) == 0:
         return None
 
     weighted_sim = float(sum(weighted_sims) / sum(weights))
-    return round(max(-1.0, min(1.0, weighted_sim)), 3)
+    return round(max(0.0, min(1.0, weighted_sim)), 3)
 
 
 def _compute_conceptual_novelty(
