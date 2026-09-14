@@ -84,20 +84,29 @@ def _compute_drr(
 
     h_ema = human_vecs[0].copy()
     a_ema = agent_vecs[0].copy()
-    cos_sim0 = float(np.dot(h_ema, a_ema))
-    gaps = [float(np.arccos(np.clip(cos_sim0, -1.0, 1.0)))]
+
+    def _calc_gap(h: np.ndarray, a: np.ndarray) -> float:
+        nh = float(np.linalg.norm(h))
+        na = float(np.linalg.norm(a))
+        if nh > 1e-7 and na > 1e-7:
+            cos_sim = float(np.dot(h / nh, a / na))
+            return float(np.arccos(np.clip(cos_sim, -1.0, 1.0)))
+        else:
+            chord = float(np.linalg.norm(h - a))
+            return float(2.0 * np.arcsin(min(1.0, 0.5 * chord)))
+
+    gaps = [_calc_gap(h_ema, a_ema)]
 
     for i in range(1, min_len):
         h_ema = alpha * human_vecs[i] + (1.0 - alpha) * h_ema
-        norm_h = np.linalg.norm(h_ema)
-        if norm_h > 0:
-            h_ema = h_ema / norm_h
+        nh = np.linalg.norm(h_ema)
+        if nh > 1e-7:
+            h_ema = h_ema / nh
         a_ema = alpha * agent_vecs[i] + (1.0 - alpha) * a_ema
-        norm_a = np.linalg.norm(a_ema)
-        if norm_a > 0:
-            a_ema = a_ema / norm_a
-        cos_sim = float(np.dot(h_ema, a_ema))
-        gaps.append(float(np.arccos(np.clip(cos_sim, -1.0, 1.0))))
+        na = np.linalg.norm(a_ema)
+        if na > 1e-7:
+            a_ema = a_ema / na
+        gaps.append(_calc_gap(h_ema, a_ema))
 
     n_steps = len(gaps) - 1
     # Exponential recency weights: w_i = gamma^(n_steps - 1 - i)
