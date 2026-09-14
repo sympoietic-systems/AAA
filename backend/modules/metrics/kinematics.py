@@ -87,9 +87,10 @@ def _compute_surprise_index(
 def _compute_conceptual_velocity(
     current_vec: np.ndarray,
     all_recent: list[np.ndarray],
-    phi: float = 0.4,
+    theta_center: float = 0.80,
+    theta_width: float = 0.35,
 ) -> tuple[float | None, float | None]:
-    """# Proposal 2: Tangent Parallel Transport and Acceleration Burst."""
+    """# Proposal 2: Hyperbolic Tangent Geodesic Velocity & Parallel Transport Curvature."""
     if not all_recent:
         return 0.5, 0.0
 
@@ -111,19 +112,10 @@ def _compute_conceptual_velocity(
         dot_p = max(-1.0, min(1.0, float(np.dot(history[i], history[i - 1]))))
         thetas.append(float(np.arccos(dot_p)))
 
-    # Tangent velocities v_i in T_{e_{i-1}} S^{D-1}
     curr_theta = thetas[-1]
-    # Anchor to ambient 10th-90th quantile scale with dispersion protection
-    if len(thetas) >= 4:
-        p10 = float(np.percentile(thetas, 10))
-        p90 = float(np.percentile(thetas, 90))
-        q_low = min(p10, 0.45)
-        q_high = max(p90, q_low + 0.35, 1.15)
-    else:
-        q_low = 0.40
-        q_high = 1.15
-    norm_velocity = (curr_theta - q_low) / (q_high - q_low + 1e-4)
-    norm_velocity = round(max(0.0, min(1.0, float(norm_velocity))), 3)
+    # Smooth hyperbolic tangent mapping: eliminates 1.000 ceiling saturation while preserving monotonicity
+    norm_velocity = 0.50 + 0.50 * float(np.tanh((curr_theta - theta_center) / theta_width))
+    norm_velocity = round(max(0.0, min(1.0, norm_velocity)), 3)
 
     phase_trans = 0.0
     if len(history) >= 3:
