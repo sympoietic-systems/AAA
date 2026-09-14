@@ -89,9 +89,9 @@ def _compute_conceptual_novelty(
     d_global = float(np.arccos(dot_s))
 
     novelty_raw = float(np.sqrt(d_local * d_global))
-    novelty = float(np.tanh(novelty_raw / theta_nomad))
+    novelty = max(0.0, min(1.0, (novelty_raw - 0.45) / (1.25 - 0.45)))
 
-    return round(max(0.0, min(1.0, novelty)), 3), {"fast": c_fast, "slow": c_slow}
+    return round(float(novelty), 3), {"fast": c_fast, "slow": c_slow}
 
 
 def _compute_rolling_entropy(
