@@ -117,6 +117,9 @@ def _compute_rolling_entropy(
     K = len(hist_vecs)
     if K < 2:
         return 0.5
+    if K == 2:
+        dot_val = max(-1.0, min(1.0, float(np.dot(hist_vecs[0], hist_vecs[1]))))
+        return round(float(np.arccos(dot_val) / np.pi), 4)
 
     # Center matrix E (K x D)
     E = np.stack(hist_vecs)
