@@ -129,11 +129,12 @@ def _compute_agent_self_divergence(
         tr_G = float(np.trace(gram))
         tr_G2 = float(np.sum(gram ** 2))
         rank_eff = (tr_G ** 2) / (tr_G2 + 1e-8)
-        rank_factor = float(np.sqrt(max(0.0, (rank_eff - 1.0) / (K - 1.0))))
+        rank_factor = float(max(0.0, (rank_eff - 1.0) / (K - 1.0)))
     else:
         rank_factor = 1.0
 
-    divergence = float(np.tanh(d_soft / tau_d) * (0.4 + 0.6 * rank_factor))
+    d_norm = max(0.0, min(1.0, d_soft / 0.85))
+    divergence = float(d_norm * (0.50 + 0.50 * rank_factor))
     return round(max(0.0, min(1.0, divergence)), 3)
 
 
