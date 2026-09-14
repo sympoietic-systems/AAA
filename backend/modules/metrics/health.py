@@ -54,10 +54,10 @@ def _compute_drr(
     recent_history: list[dict],
     window: int = 10,
     alpha: float = 0.4,
-    tau_open: float = 0.08,
-    tau_flux: float = 0.06,
+    gamma: float = 0.85,
+    tau_flux: float = 0.04,
 ) -> float | None:
-    """# Proposal 3: Paskian Entailment Mesh Closure DRR."""
+    """# Proposal 2: Geodesic Manifold Transport Ratio with Recency Weighting."""
     if not recent_history or len(recent_history) < 3:
         return 0.5
 
@@ -84,23 +84,41 @@ def _compute_drr(
 
     h_ema = human_vecs[0].copy()
     a_ema = agent_vecs[0].copy()
-    gaps = [float(np.linalg.norm(h_ema - a_ema))]
+
+    def _calc_gap(h: np.ndarray, a: np.ndarray) -> float:
+        nh = float(np.linalg.norm(h))
+        na = float(np.linalg.norm(a))
+        if nh > 1e-7 and na > 1e-7:
+            cos_sim = float(np.dot(h / nh, a / na))
+            return float(np.arccos(np.clip(cos_sim, -1.0, 1.0)))
+        else:
+            chord = float(np.linalg.norm(h - a))
+            return float(2.0 * np.arcsin(min(1.0, 0.5 * chord)))
+
+    gaps = [_calc_gap(h_ema, a_ema)]
 
     for i in range(1, min_len):
         h_ema = alpha * human_vecs[i] + (1.0 - alpha) * h_ema
+        nh = np.linalg.norm(h_ema)
+        if nh > 1e-7:
+            h_ema = h_ema / nh
         a_ema = alpha * agent_vecs[i] + (1.0 - alpha) * a_ema
-        gaps.append(float(np.linalg.norm(h_ema - a_ema)))
+        na = np.linalg.norm(a_ema)
+        if na > 1e-7:
+            a_ema = a_ema / na
+        gaps.append(_calc_gap(h_ema, a_ema))
 
-    d_open = sum(max(0.0, gaps[i] - gaps[i - 1]) for i in range(1, len(gaps)))
-    d_resolved = sum(max(0.0, gaps[i - 1] - gaps[i]) for i in range(1, len(gaps)))
+    n_steps = len(gaps) - 1
+    # Exponential recency weights: w_i = gamma^(n_steps - 1 - i)
+    weights = [gamma ** (n_steps - 1 - i) for i in range(n_steps)]
+    d_open = sum(weights[i] * max(0.0, gaps[i + 1] - gaps[i]) for i in range(n_steps))
+    d_resolved = sum(weights[i] * max(0.0, gaps[i] - gaps[i + 1]) for i in range(n_steps))
 
     phi_flux = d_open + d_resolved
+    gamma_flux = float(np.tanh(phi_flux / tau_flux))
 
-    open_gate = float(np.tanh(d_open / tau_open))
-    flux_gate = float(np.tanh(phi_flux / tau_flux))
-
-    harmonic_closure = (2.0 * d_resolved * open_gate) / (d_open + d_resolved + 1e-4)
-    drr = harmonic_closure * flux_gate
+    raw_ratio = d_resolved / (phi_flux + 1e-6)
+    drr = (1.0 - gamma_flux) * 0.50 + gamma_flux * raw_ratio
     return round(max(0.0, min(1.0, float(drr))), 3)
 
 

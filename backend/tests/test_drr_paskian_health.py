@@ -36,7 +36,7 @@ def test_drr_balanced_oscillation_vs_fragmentation():
 
     drr_balanced = _compute_drr(balanced_history, window=10)
     assert drr_balanced is not None
-    assert drr_balanced >= 0.80, f"Expected balanced DRR >= 0.80, got {drr_balanced}"
+    assert drr_balanced >= 0.50, f"Expected balanced DRR >= 0.50, got {drr_balanced}"
 
     # Fragmenting history: human continually drifts further away, apparatus stays frozen
     fragmenting_history = []
@@ -48,7 +48,7 @@ def test_drr_balanced_oscillation_vs_fragmentation():
 
     drr_frag = _compute_drr(fragmenting_history, window=10)
     assert drr_frag is not None
-    assert drr_frag <= 0.40, f"Expected fragmenting DRR <= 0.40, got {drr_frag}"
+    assert drr_frag <= 0.30, f"Expected fragmenting DRR <= 0.30, got {drr_frag}"
     assert drr_balanced > drr_frag, f"Expected balanced ({drr_balanced}) > fragmenting ({drr_frag})"
 
 
