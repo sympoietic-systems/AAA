@@ -134,33 +134,38 @@ def _compute_paskian_health(
     collapse_pressure: float | None,
     rolling_entropy: float | None,
     drr: float | None,
-    epsilon: float = 0.08,
+    epsilon: float = 1e-4,
 ) -> float | None:
-    """# Proposal 1: Regularized Generalized Power Mean (p=0.5) with Metabolic Floor."""
+    """# Proposal 2: Cobb-Douglas Allostatic Geometric Triad with Metabolic Gating."""
     div_val = agent_self_divergence if agent_self_divergence is not None else 0.5
     vel_val = conceptual_velocity if conceptual_velocity is not None else 0.5
     phase_val = phase_transition_magnitude if phase_transition_magnitude is not None else 0.0
 
-    autonomy_index = (div_val + vel_val + phase_val) / 3.0
+    # 1. Autonomy Index (agential directional divergence & kinetic velocity)
+    autonomy = 0.45 * div_val + 0.40 * vel_val + 0.15 * phase_val
 
+    # 2. Coordination Index (structural coupling, mutual perturbation, anti-collapse, gated by DRR)
     coup_val = coupling_coherence if coupling_coherence is not None else 0.5
     mpi_val = mutual_perturbation if mutual_perturbation is not None else 0.5
     anti_collapse = 1.0 - (collapse_pressure if collapse_pressure is not None else 0.5)
 
     coordination_raw = (coup_val + mpi_val + anti_collapse) / 3.0
     drr_norm = drr if drr is not None else 0.5
-    # Soft regularizer: DRR modulates coordination by at most 70%
-    coordination_mod = coordination_raw * (0.30 + 0.70 * drr_norm)
+    coordination = coordination_raw * (0.35 + 0.65 * drr_norm)
 
-    generativity_index = rolling_entropy if rolling_entropy is not None else 0.5
+    # 3. Generativity Index (information entropy exploration)
+    generativity = rolling_entropy if rolling_entropy is not None else 0.5
 
-    # Power Mean with p = 0.5 and metabolic floor epsilon
-    a_f = autonomy_index + epsilon
-    c_f = coordination_mod + epsilon
-    g_f = generativity_index + epsilon
+    # Cobb-Douglas Geometric Synthesis: H = Autonomy^0.35 * Coordination^0.40 * Generativity^0.25
+    a_f = max(epsilon, autonomy)
+    c_f = max(epsilon, coordination)
+    g_f = max(epsilon, generativity)
 
-    power_sum = (np.sqrt(a_f) + np.sqrt(c_f) + np.sqrt(g_f)) / 3.0
-    pask_health = float((power_sum ** 2) - epsilon)
+    if autonomy <= 1e-4 and coordination <= 1e-4:
+        return 0.0
+
+    log_h = 0.35 * np.log(a_f) + 0.40 * np.log(c_f) + 0.25 * np.log(g_f)
+    pask_health = float(np.exp(log_h))
     return round(max(0.0, min(1.0, pask_health)), 3)
 
 
