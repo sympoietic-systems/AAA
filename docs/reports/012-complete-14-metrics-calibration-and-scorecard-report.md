@@ -37,8 +37,12 @@ As a result:
 
 ## 2. Master Calibration Visualizations
 
-The chart below captures the transformation across all 14 metrics on Corpus `dialogue_3527` ($N=200$ turns), comparing pre-calibration baseline distributions against post-calibration production behavior:
+### 2.1 Three-Stage Evolution: Pre-Optimization vs 1st Cycle vs 2nd Cycle (Now)
+The chart below illustrates the three-stage progression of all 14 conversational sensors across pre-optimization baseline, post-first-cycle (ADR-080 to ADR-084), and current post-second-cycle production architecture:
 
+![Three-Stage Conversational Telemetry Evolution](012-complete-14-metrics-calibration/3_stage_evolution_comparison.png)
+
+### 2.2 Direct Production Delta Scorecard
 ![Master 14-Metric Calibration Scorecard](012-complete-14-metrics-calibration/14_metrics_calibration_scorecard.png)
 
 ---
