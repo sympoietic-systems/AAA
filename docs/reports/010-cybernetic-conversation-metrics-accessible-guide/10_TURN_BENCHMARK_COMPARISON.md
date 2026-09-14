@@ -33,6 +33,10 @@ We have now re-evaluated the entire 10-turn benchmark using the **14 fully calib
 ![Master Calibration Delta Scorecard](010-10turn-master-calibration-deltas.png)
 *Figure 2: Before vs. After calibration deltas across all 14 dimensions for AAA / Symbia (left) and Baseline Gemini 3.7 Flash (right).*
 
+### Figure 3: Three-Stage Benchmark Evolution (Baseline vs Cycle 1 vs Cycle 2)
+![Three-Stage Benchmark Evolution](../012-complete-14-metrics-calibration/10turn_3stage_benchmark_evolution.png)
+*Figure 3: Evolution across all 14 metrics for AAA / Symbia (left) and Baseline LLM (right) across Pre-Optimization Baseline (Stage 1), After 1st Cycle (Stage 2), and After 2nd Cycle (Stage 3).*
+
 ---
 
 ## 3. The Quantitative Scorecard: Old vs. New Across All 14 Metrics
