@@ -9,13 +9,13 @@ import numpy as np
 def _compute_surprise_index(
     current_vec: np.ndarray,
     all_recent: list[np.ndarray],
-    alpha: float = 0.15,
-    beta: float = 0.3,
-    kappa: float = 1.2,
+    alpha: float = 0.20,
+    beta: float = 0.85,
+    kappa: float = 1.95,
 ) -> float | None:
-    """# Proposal 1: Spherical Geodesic SLERP Surprise on S^{D-1}."""
+    """# Proposal 2: Epistemic Indeterminacy Baseline + Online Adaptive Geodesic SLERP."""
     if not all_recent:
-        return 0.0
+        return 0.500
 
     c_norm = float(np.linalg.norm(current_vec))
     c_vec = current_vec / c_norm if c_norm > 1e-8 else current_vec
@@ -27,10 +27,16 @@ def _compute_surprise_index(
     history.append(c_vec)
 
     if len(history) < 2:
-        return 0.0
+        return 0.500
 
-    # Compute sequence of step angular distances and online mean/variance
-    # For predicting step i from i-2 and i-1 using SLERP extrapolation
+    if len(history) == 2:
+        # Step 1: single-step angular displacement scaled across ambient bounds [0.30, 1.20]
+        dot_p = max(-1.0, min(1.0, float(np.dot(history[0], history[1]))))
+        theta = float(np.arccos(dot_p))
+        s1 = np.clip((theta - 0.30) / (1.20 - 0.30), 0.10, 0.90)
+        return round(float(s1), 3)
+
+    # Compute sequence of step angular distances and online residual
     residuals = []
     for i in range(1, len(history)):
         if i == 1:
@@ -43,7 +49,7 @@ def _compute_surprise_index(
 
             if theta > 1e-5 and theta < np.pi - 1e-5:
                 sin_t = float(np.sin(theta))
-                # SLERP extrapolate forward by factor (1 + beta)
+                # SLERP extrapolate forward along geodesic with momentum beta
                 w1 = float(np.sin(-beta * theta) / sin_t)
                 w2 = float(np.sin((1.0 + beta) * theta) / sin_t)
                 predicted = w1 * p_prev + w2 * p_curr
@@ -59,11 +65,11 @@ def _compute_surprise_index(
         residuals.append(delta)
 
     if not residuals:
-        return 0.0
+        return 0.500
 
-    # Running EMA of mean and variance across history residuals, initialized with conversational prior
-    mu_delta = 0.65
-    var_delta = 0.06
+    # Online adaptive EMA tracking of residual mean and variance
+    mu_delta = residuals[0]
+    var_delta = 0.04
 
     for res in residuals[:-1]:
         var_delta = (1.0 - alpha) * var_delta + alpha * ((res - mu_delta) ** 2)
@@ -71,7 +77,7 @@ def _compute_surprise_index(
 
     final_res = residuals[-1]
     sigma = float(np.sqrt(max(1e-6, var_delta)))
-    z_t = (final_res - mu_delta) / (sigma + 1e-5)
+    z_t = (final_res - mu_delta) / (sigma + 0.015)
 
     # Dynamic logistic expansion
     surprise = float(1.0 / (1.0 + np.exp(-kappa * z_t)))
