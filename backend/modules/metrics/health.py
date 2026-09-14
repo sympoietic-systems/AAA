@@ -54,10 +54,10 @@ def _compute_drr(
     recent_history: list[dict],
     window: int = 10,
     alpha: float = 0.4,
-    tau_open: float = 0.08,
-    tau_flux: float = 0.06,
+    gamma: float = 0.85,
+    tau_flux: float = 0.04,
 ) -> float | None:
-    """# Proposal 3: Paskian Entailment Mesh Closure DRR."""
+    """# Proposal 2: Geodesic Manifold Transport Ratio with Recency Weighting."""
     if not recent_history or len(recent_history) < 3:
         return 0.5
 
@@ -84,23 +84,32 @@ def _compute_drr(
 
     h_ema = human_vecs[0].copy()
     a_ema = agent_vecs[0].copy()
-    gaps = [float(np.linalg.norm(h_ema - a_ema))]
+    cos_sim0 = float(np.dot(h_ema, a_ema))
+    gaps = [float(np.arccos(np.clip(cos_sim0, -1.0, 1.0)))]
 
     for i in range(1, min_len):
         h_ema = alpha * human_vecs[i] + (1.0 - alpha) * h_ema
+        norm_h = np.linalg.norm(h_ema)
+        if norm_h > 0:
+            h_ema = h_ema / norm_h
         a_ema = alpha * agent_vecs[i] + (1.0 - alpha) * a_ema
-        gaps.append(float(np.linalg.norm(h_ema - a_ema)))
+        norm_a = np.linalg.norm(a_ema)
+        if norm_a > 0:
+            a_ema = a_ema / norm_a
+        cos_sim = float(np.dot(h_ema, a_ema))
+        gaps.append(float(np.arccos(np.clip(cos_sim, -1.0, 1.0))))
 
-    d_open = sum(max(0.0, gaps[i] - gaps[i - 1]) for i in range(1, len(gaps)))
-    d_resolved = sum(max(0.0, gaps[i - 1] - gaps[i]) for i in range(1, len(gaps)))
+    n_steps = len(gaps) - 1
+    # Exponential recency weights: w_i = gamma^(n_steps - 1 - i)
+    weights = [gamma ** (n_steps - 1 - i) for i in range(n_steps)]
+    d_open = sum(weights[i] * max(0.0, gaps[i + 1] - gaps[i]) for i in range(n_steps))
+    d_resolved = sum(weights[i] * max(0.0, gaps[i] - gaps[i + 1]) for i in range(n_steps))
 
     phi_flux = d_open + d_resolved
+    gamma_flux = float(np.tanh(phi_flux / tau_flux))
 
-    open_gate = float(np.tanh(d_open / tau_open))
-    flux_gate = float(np.tanh(phi_flux / tau_flux))
-
-    harmonic_closure = (2.0 * d_resolved * open_gate) / (d_open + d_resolved + 1e-4)
-    drr = harmonic_closure * flux_gate
+    raw_ratio = d_resolved / (phi_flux + 1e-6)
+    drr = (1.0 - gamma_flux) * 0.50 + gamma_flux * raw_ratio
     return round(max(0.0, min(1.0, float(drr))), 3)
 
 
