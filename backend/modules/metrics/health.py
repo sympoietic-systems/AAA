@@ -26,8 +26,10 @@ def _compute_collapse_pressure(
     prev_mpi: float | None,
     rolling_entropy: float | None,
     conceptual_novelty: float | None,
+    kappa: float = 6.0,
+    d0: float = 0.55,
 ) -> float | None:
-    """# Proposal 2: Minkowski L4 Synergistic Collapse Pressure."""
+    """# Proposal 2: Sigmoidal Catastrophe Potential Well Collapse Pressure."""
     if rp_t is None:
         return None
 
@@ -36,17 +38,15 @@ def _compute_collapse_pressure(
     entropy_val = rolling_entropy if rolling_entropy is not None else 0.5
     novelty_val = conceptual_novelty if conceptual_novelty is not None else 0.5
 
-    pert_geom_mean = float(np.sqrt(max(0.0, rp_val * mpi_val)))
-    f_pert = max(0.0, min(1.0, 1.0 - pert_geom_mean))
-    f_ent = max(0.0, min(1.0, 1.0 - entropy_val))
-    f_nov = max(0.0, min(1.0, 1.0 - novelty_val))
+    v_pert = float(np.sqrt(max(0.0, rp_val * mpi_val)))
+    v_ent = max(0.0, min(1.0, (entropy_val - 0.35) / (0.80 - 0.35)))
+    v_nov = max(0.0, min(1.0, (novelty_val - 0.25) / (0.75 - 0.25)))
 
-    # L4 Minkowski norm
-    l4_sum = 0.40 * (f_pert ** 4) + 0.30 * (f_ent ** 4) + 0.30 * (f_nov ** 4)
-    cp_minkowski = float(np.power(l4_sum, 0.25))
-    cp_synergy = float(f_pert * f_ent * f_nov)
-    # Linear-synergistic scaling calibrated for homeostatic (0.65) and sedation (0.70) triggers
-    collapse = 0.85 * cp_minkowski + 0.40 * cp_synergy
+    v_sys = (v_pert ** 0.40) * (max(1e-4, v_ent) ** 0.30) * (max(1e-4, v_nov) ** 0.30)
+    deficit = 1.0 - v_sys
+
+    # Sigmoidal catastrophe transfer
+    collapse = 1.0 / (1.0 + np.exp(-kappa * (deficit - d0)))
     return round(max(0.0, min(1.0, float(collapse))), 3)
 
 
