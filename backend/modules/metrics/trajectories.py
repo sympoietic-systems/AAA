@@ -8,10 +8,10 @@ import numpy as np
 
 def _compute_coupling_coherence(
     recent_history: list[dict],
-    window: int = 8,
-    decay_lambda: float = 0.2,
+    window: int = 5,
+    decay_lambda: float = 0.35,
 ) -> float | None:
-    """# Proposal 3: Harmonic Resonant Entrainment (Directional Agonism + Velocity Cadence)."""
+    """# Calibrated Agonistic Entrainment & Velocity Cadence Coherence."""
     if not recent_history or len(recent_history) < 2:
         return None
 
@@ -47,10 +47,9 @@ def _compute_coupling_coherence(
                 v_n = float(np.linalg.norm(v))
                 if u_n > 1e-6 and v_n > 1e-6:
                     rho = abs(float(np.dot(u / u_n, v / v_n)))
-                    dir_score = float(np.tanh(2.5 * rho))
-                    cadence = 1.0 - (abs(v_n - u_n) / (v_n + u_n + 1e-4))
-                    h_score = (2.0 * dir_score * cadence) / (dir_score + cadence + 1e-4)
-                    interactions.append(max(0.0, min(1.0, h_score)))
+                    dir_score = float(rho ** 1.5)
+                    cadence = (2.0 * min(u_n, v_n)) / (max(u_n, v_n) + 1e-4)
+                    interactions.append(max(0.0, min(1.0, float(dir_score * cadence))))
         prior_speaker_vecs[spk] = vec
 
     if not interactions:
@@ -62,9 +61,9 @@ def _compute_coupling_coherence(
             dp_n = float(np.linalg.norm(d_prev))
             if dc_n > 1e-6 and dp_n > 1e-6:
                 cos_val = abs(float(np.dot(d_curr / dc_n, d_prev / dp_n)))
-                cadence = 1.0 - (abs(dc_n - dp_n) / (dc_n + dp_n + 1e-4))
-                h_score = (2.0 * cos_val * cadence) / (cos_val + cadence + 1e-4)
-                interactions.append(max(0.0, min(1.0, h_score)))
+                dir_score = float(cos_val ** 1.5)
+                cadence = (2.0 * min(dc_n, dp_n)) / (max(dc_n, dp_n) + 1e-4)
+                interactions.append(max(0.0, min(1.0, float(dir_score * cadence))))
         else:
             return 0.5
 
