@@ -142,9 +142,10 @@ def _compute_reverse_perturbation(
     prior_human: list[np.ndarray],
     prior_agent: list[np.ndarray],
     gamma: float = 1.2,
-    tau_pert: float = 1.35,
+    p_floor: float = 0.10,
+    p_ceil: float = 1.50,
 ) -> float | None:
-    """# Proposal 1: Transverse Vector Shear Perturbation."""
+    """# Calibrated Transverse Vector Shear Perturbation."""
     if not prior_human or not prior_agent:
         return None
 
@@ -152,20 +153,24 @@ def _compute_reverse_perturbation(
     h_prev = prior_human[-1] / (np.linalg.norm(prior_human[-1]) + 1e-8)
     a_prev = prior_agent[-1] / (np.linalg.norm(prior_agent[-1]) + 1e-8)
 
+    v_h = h_curr - h_prev
+    v_norm = float(np.linalg.norm(v_h))
+    if v_norm < 1e-5:
+        return 0.0
+
     g = a_prev - h_prev
     g_norm = float(np.linalg.norm(g))
     if g_norm < 1e-5:
         return 0.0
     g_hat = g / g_norm
 
-    v_h = h_curr - h_prev
     v_parallel = float(np.dot(v_h, g_hat))
     v_perp = v_h - v_parallel * g_hat
     v_perp_norm = float(np.linalg.norm(v_perp))
 
     shear_mag = float(np.sqrt(v_parallel ** 2 + gamma * (v_perp_norm ** 2)))
-    rp_t = float(np.tanh(shear_mag / tau_pert))
-    return round(max(0.0, min(1.0, rp_t)), 3)
+    rp_t = max(0.0, min(1.0, (shear_mag - p_floor) / (p_ceil - p_floor)))
+    return round(float(rp_t), 3)
 
 
 def _compute_forward_perturbation(
@@ -173,9 +178,10 @@ def _compute_forward_perturbation(
     prior_human: list[np.ndarray],
     prior_agent: list[np.ndarray],
     gamma: float = 1.2,
-    tau_pert: float = 1.35,
+    p_floor: float = 0.10,
+    p_ceil: float = 1.50,
 ) -> float | None:
-    """# Proposal 1: Transverse Vector Shear Perturbation."""
+    """# Calibrated Transverse Vector Shear Perturbation."""
     if not prior_human or not prior_agent:
         return None
 
@@ -183,20 +189,24 @@ def _compute_forward_perturbation(
     h_curr = prior_human[-1] / (np.linalg.norm(prior_human[-1]) + 1e-8)
     a_prev = prior_agent[-1] / (np.linalg.norm(prior_agent[-1]) + 1e-8)
 
+    v_a = a_curr - a_prev
+    v_norm = float(np.linalg.norm(v_a))
+    if v_norm < 1e-5:
+        return 0.0
+
     g = h_curr - a_prev
     g_norm = float(np.linalg.norm(g))
     if g_norm < 1e-5:
         return 0.0
     g_hat = g / g_norm
 
-    v_a = a_curr - a_prev
     v_parallel = float(np.dot(v_a, g_hat))
     v_perp = v_a - v_parallel * g_hat
     v_perp_norm = float(np.linalg.norm(v_perp))
 
     shear_mag = float(np.sqrt(v_parallel ** 2 + gamma * (v_perp_norm ** 2)))
-    fp_t = float(np.tanh(shear_mag / tau_pert))
-    return round(max(0.0, min(1.0, fp_t)), 3)
+    fp_t = max(0.0, min(1.0, (shear_mag - p_floor) / (p_ceil - p_floor)))
+    return round(float(fp_t), 3)
 
 
 def _compute_mutual_perturbation(
