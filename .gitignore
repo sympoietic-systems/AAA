@@ -35,6 +35,7 @@ docs/extra/*
 docs/temp/*
 backend/.agents/*
 backend/scratch/*
+scratch/
 .agents/
 backend/services/data/uploads/*
 .opencode/*
