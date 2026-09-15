@@ -415,6 +415,12 @@ class ChatService:
                                 "embedding_dim": embedder.service.dim,
                                 "conversation_id": conversation_id,
                                 "exclude_message_id": response_msg.id,
+                                "speaker": "agent",
+                                "current_message": {
+                                    "id": response_msg.id,
+                                    "speaker": "agent",
+                                    "conversation_id": conversation_id,
+                                },
                             }
                             assistant_result = await metrics_module.process(assistant_payload)
                             assistant_metrics = assistant_result.get("metrics")

@@ -737,3 +737,93 @@ def plot_quartile_stability(dataset_name: str, turns: List[dict], out_path: Path
     plt.savefig(out_path, dpi=160, facecolor=BG_COLOR, edgecolor="none")
     plt.close()
     print(f"  Generated quartile stability plot: {out_path.name}")
+
+
+def plot_boredom_separation_dashboard(
+    focus_turns: List[Dict[str, Any]],
+    loop_turns: List[Dict[str, Any]],
+    out_path: Path,
+    boredom_key: str = "collapse_pressure",
+    alarm_threshold: float = 0.60,
+):
+    """Restrained Cyberpunk Dashboard plotting discriminability between Deep Focus and Sycophantic Loop."""
+    from .boredom_evaluator import compute_separation_margin, compute_cohens_d
+
+    focus_vals = [
+        t["metrics"][boredom_key]
+        for t in focus_turns
+        if t.get("metrics") and t["metrics"].get(boredom_key) is not None
+    ]
+    loop_vals = [
+        t["metrics"][boredom_key]
+        for t in loop_turns
+        if t.get("metrics") and t["metrics"].get(boredom_key) is not None
+    ]
+
+    sep_margin = compute_separation_margin(loop_vals, focus_vals)
+    d_val = compute_cohens_d(loop_vals, focus_vals)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    fig.patch.set_facecolor(BG_COLOR)
+
+    # ── Panel 1: Trajectory Comparison Over Turns ──
+    ax1.set_facecolor(PANEL_BG)
+    ax1.tick_params(colors=SUBTEXT_COLOR, labelsize=9)
+    ax1.grid(True, linestyle="--", alpha=0.25, color=MPL_GRID_COLOR)
+    for s in ax1.spines.values():
+        s.set_color(MPL_BORDER_COLOR)
+
+    ax1.axhline(alarm_threshold, color=COLOR_ORANGE_ALT, linestyle=":", alpha=0.7, label=f"Boredom Alarm ({alarm_threshold})")
+    ax1.axhspan(alarm_threshold, 1.05, color="red", alpha=0.04)
+    ax1.axhspan(-0.05, 0.35, color=COLOR_GREEN, alpha=0.04, label="Flowing Zone (<0.35)")
+
+    if focus_vals:
+        ax1.plot(range(1, len(focus_vals) + 1), focus_vals, color=COLOR_ICE_CYAN, linewidth=2.2, label=f"Deep Focus (Mean: {np.mean(focus_vals):.2f})")
+    if loop_vals:
+        ax1.plot(range(1, len(loop_vals) + 1), loop_vals, color=COLOR_ORANGE, linewidth=2.2, label=f"Sycophantic Loop (Mean: {np.mean(loop_vals):.2f})")
+
+    ax1.set_title("TRAJECTORY DYNAMICS OVER TURNS", color=TEXT_COLOR, fontsize=11, fontweight="bold")
+    ax1.set_xlabel("Turn Index (t)", color=SUBTEXT_COLOR, fontsize=9.5)
+    ax1.set_ylabel(f"{boredom_key.replace('_', ' ').title()}", color=SUBTEXT_COLOR, fontsize=9.5)
+    ax1.set_ylim(-0.02, 1.05)
+    ax1.legend(loc="upper left", facecolor=PANEL_BG, edgecolor=MPL_BORDER_COLOR, labelcolor=TEXT_COLOR, fontsize=8.5)
+
+    # ── Panel 2: Distribution Separation & Margins ──
+    ax2.set_facecolor(PANEL_BG)
+    ax2.tick_params(colors=SUBTEXT_COLOR, labelsize=9)
+    ax2.grid(True, linestyle="--", alpha=0.25, color=MPL_GRID_COLOR)
+    for s in ax2.spines.values():
+        s.set_color(MPL_BORDER_COLOR)
+
+    bins = np.linspace(0.0, 1.0, 21)
+    if focus_vals:
+        ax2.hist(focus_vals, bins=bins, color=COLOR_ICE_CYAN, alpha=0.65, edgecolor=COLOR_ICE_CYAN, label="Deep Focus")
+    if loop_vals:
+        ax2.hist(loop_vals, bins=bins, color=COLOR_ORANGE, alpha=0.65, edgecolor=COLOR_ORANGE, label="Sycophantic Loop")
+
+    ax2.axvline(alarm_threshold, color=COLOR_ORANGE_ALT, linestyle=":", alpha=0.7)
+
+    status_color = COLOR_GREEN if sep_margin > 0 else COLOR_ORANGE_ALT
+    status_text = "CLEAN SEPARATION" if sep_margin > 0 else "OVERLAP / FALSE ALARMS"
+    ax2.text(
+        0.50, 0.88,
+        f"Separation Margin (Delta): {sep_margin:+.3f}\nCohen's d: {d_val:.2f} ({status_text})",
+        transform=ax2.transAxes, ha="center", va="center",
+        bbox=dict(boxstyle="round,pad=0.5", facecolor=PANEL_BG, edgecolor=status_color, linewidth=1.5),
+        color=TEXT_COLOR, fontsize=9.5, fontweight="bold"
+    )
+
+    ax2.set_title("DISCRIMINATIVE SEPARATION DENSITY", color=TEXT_COLOR, fontsize=11, fontweight="bold")
+    ax2.set_xlabel("Metric Value", color=SUBTEXT_COLOR, fontsize=9.5)
+    ax2.set_ylabel("Turn Count", color=SUBTEXT_COLOR, fontsize=9.5)
+    ax2.legend(loc="upper right", facecolor=PANEL_BG, edgecolor=MPL_BORDER_COLOR, labelcolor=TEXT_COLOR, fontsize=8.5)
+
+    fig.suptitle(
+        f"CYBERNETIC BOREDOM DISCRIMINABILITY DASHBOARD ({boredom_key})",
+        fontsize=13, fontweight="bold", color=TEXT_COLOR, y=0.98
+    )
+    plt.tight_layout(rect=[0, 0.02, 1, 0.95])
+    plt.savefig(out_path, dpi=160, facecolor=BG_COLOR, edgecolor="none")
+    plt.close()
+    print(f"  Generated boredom separation dashboard: {out_path.name}")
+

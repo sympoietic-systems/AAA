@@ -87,7 +87,7 @@ def evaluate_sequence(messages: List[Dict[str, Any]], embeddings: np.ndarray, ph
         turn_metrics["coupling_coherence"] = coupling
 
         # 5. Agent Self-Divergence
-        if current_speaker == "apparatus":
+        if current_speaker in ("agent", "apparatus"):
             agent_divergence = _compute_agent_self_divergence(
                 current_vec, current_speaker, prior_agent
             )
@@ -118,20 +118,33 @@ def evaluate_sequence(messages: List[Dict[str, Any]], embeddings: np.ndarray, ph
         surprise = _compute_surprise_index(current_vec, all_recent)
         turn_metrics["surprise_index"] = surprise
 
-        # 9. Collapse Pressure / Boringness
+        # 9. Divergence Resolution Ratio
+        drr = _compute_drr(recent_history, window=10)
+        turn_metrics["divergence_resolution_ratio"] = drr
+
+        # 10. Calibrated Collapse Pressure / Boringness
         prev_mpi = prior_metrics.get("mutual_perturbation")
-        collapse_pressure = _compute_collapse_pressure(rp_t, prev_mpi, rolling_entropy, novelty)
+        effective_rp = rp_t if rp_t is not None else turn_metrics.get("reverse_perturbation")
+        if effective_rp is None:
+            effective_rp = mpi
+
+        collapse_pressure = _compute_collapse_pressure(
+            rp_t=effective_rp,
+            prev_mpi=prev_mpi or mpi,
+            rolling_entropy=rolling_entropy,
+            conceptual_novelty=novelty,
+            coupling_coherence=coupling,
+            agent_self_divergence=agent_divergence,
+            pairwise_similarity=s_t,
+            drr=drr,
+        )
         turn_metrics["collapse_pressure"] = collapse_pressure
         turn_metrics["boringness"] = collapse_pressure
 
-        # 10. Conceptual Velocity & Phase Transition Magnitude
+        # 11. Conceptual Velocity & Phase Transition Magnitude
         conceptual_velocity, phase_trans = _compute_conceptual_velocity(current_vec, all_recent)
         turn_metrics["conceptual_velocity"] = conceptual_velocity
         turn_metrics["phase_transition_magnitude"] = phase_trans
-
-        # 11. Divergence Resolution Ratio
-        drr = _compute_drr(recent_history, window=10)
-        turn_metrics["divergence_resolution_ratio"] = drr
 
         # 12. Paskian Cybernetic Health
         pask_health = _compute_paskian_health(

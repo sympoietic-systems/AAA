@@ -26,10 +26,21 @@ def _compute_collapse_pressure(
     prev_mpi: float | None,
     rolling_entropy: float | None,
     conceptual_novelty: float | None,
-    kappa: float = 6.0,
-    d0: float = 0.55,
+    coupling_coherence: float | None = None,
+    agent_self_divergence: float | None = None,
+    pairwise_similarity: float | None = None,
+    drr: float | None = None,
+    kappa: float = 6.5,
+    d0: float = 0.50,
 ) -> float | None:
-    """# Proposal 2: Sigmoidal Catastrophe Potential Well Collapse Pressure."""
+    """Calibrated Allostatic Collapse Pressure & Sycophancy-Attractor Detector.
+    
+    Synthesizes:
+    1. Synergistic geometric vitality from perturbation, spectral entropy, and conceptual novelty.
+    2. Attractor drag: penalized by pairwise semantic stagnation (s_t > 0.24) and sycophantic entrainment
+       where coupling coherence outstrips agent self-divergence (C_t > D_t).
+    3. Vitality Shield: productive divergence resolution (DRR > 0.65) protects active technical exploration.
+    """
     if rp_t is None:
         return None
 
@@ -42,12 +53,32 @@ def _compute_collapse_pressure(
     v_ent = max(0.0, min(1.0, (entropy_val - 0.35) / (0.80 - 0.35)))
     v_nov = max(0.0, min(1.0, (novelty_val - 0.25) / (0.75 - 0.25)))
 
-    v_sys = (v_pert ** 0.40) * (max(1e-4, v_ent) ** 0.30) * (max(1e-4, v_nov) ** 0.30)
+    # Balance perturbation with systemic entropy and semantic novelty
+    v_sys = (v_pert ** 0.35) * (max(1e-4, v_ent) ** 0.30) * (max(1e-4, v_nov) ** 0.35)
     deficit = 1.0 - v_sys
 
+    # Attractor drag penalties
+    drag = 0.0
+    if pairwise_similarity is not None and pairwise_similarity > 0.24:
+        drag += 0.40 * (pairwise_similarity - 0.24)
+    if coupling_coherence is not None and agent_self_divergence is not None:
+        # Sycophantic entrainment penalty: agent accommodating without asserting divergence
+        if coupling_coherence > agent_self_divergence:
+            drag += 0.45 * (coupling_coherence - agent_self_divergence)
+    if drr is not None and drr < 0.65:
+        drag += 0.30 * (0.65 - drr)
+
+    total_deficit = min(1.0, deficit + drag)
+
     # Sigmoidal catastrophe transfer
-    collapse = 1.0 / (1.0 + np.exp(-kappa * (deficit - d0)))
-    return round(max(0.0, min(1.0, float(collapse))), 3)
+    collapse_raw = 1.0 / (1.0 + np.exp(-kappa * (total_deficit - d0)))
+
+    # Vitality Shield: High DRR indicates productive resolution of divergence in technical focus
+    if drr is not None and drr > 0.65:
+        shield = min(0.60, (drr - 0.65) * 1.5)
+        collapse_raw = collapse_raw * (1.0 - shield)
+
+    return round(max(0.0, min(1.0, float(collapse_raw))), 3)
 
 
 def _compute_drr(

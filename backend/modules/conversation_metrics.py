@@ -86,7 +86,7 @@ class ConversationMetricsModule(ProcessingModule):
         current_msg = payload.get("current_message", {})
         msg_id = current_msg.get("id")
         conversation_id = current_msg.get("conversation_id") or payload.get("conversation_id")
-        current_speaker = current_msg.get("speaker", "human")
+        current_speaker = current_msg.get("speaker") or payload.get("speaker", "human")
         current_vec = payload.get("embeddings", {}).get("dense")
 
         if current_vec is None and "embedding" in payload:
@@ -233,9 +233,24 @@ class ConversationMetricsModule(ProcessingModule):
         surprise = _compute_surprise_index(current_vec, all_recent)
         metrics["surprise_index"] = surprise
 
+        drr = _compute_drr(recent_history, window=10)
+        metrics["divergence_resolution_ratio"] = drr
+
         prev_mpi = prior_metrics.get("mutual_perturbation")
+        # Ensure telemetry continuity across both human and agent turns
+        effective_rp = rp_t if rp_t is not None else metrics.get("reverse_perturbation")
+        if effective_rp is None:
+            effective_rp = mpi
+
         collapse_pressure = _compute_collapse_pressure(
-            rp_t, prev_mpi, rolling_entropy, novelty
+            rp_t=effective_rp,
+            prev_mpi=prev_mpi or mpi,
+            rolling_entropy=rolling_entropy,
+            conceptual_novelty=novelty,
+            coupling_coherence=coupling,
+            agent_self_divergence=agent_divergence,
+            pairwise_similarity=s_t,
+            drr=drr,
         )
         metrics["collapse_pressure"] = collapse_pressure
         metrics["boringness"] = (
@@ -247,9 +262,6 @@ class ConversationMetricsModule(ProcessingModule):
         )
         metrics["conceptual_velocity"] = conceptual_velocity
         metrics["phase_transition_magnitude"] = phase_trans
-
-        drr = _compute_drr(recent_history, window=10)
-        metrics["divergence_resolution_ratio"] = drr
 
         pask_health = _compute_paskian_health(
             agent_self_divergence=agent_divergence,

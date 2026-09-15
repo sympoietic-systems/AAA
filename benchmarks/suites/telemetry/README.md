@@ -51,3 +51,34 @@ Runs a multi-turn repetitive prompt sequence against OpenRouter Baseline LLM vs.
 ```bash
 cmd /c uv run python scripts/benchmark.py live -m google/gemini-2.5-flash -t 10 -n live_adversarial_test
 ```
+
+### 4. Offline Boredom Discriminability Evaluation (`boredom-eval`)
+Runs offline, zero-token evaluation across Deep Focus (40 turns) and Sycophantic Loop (30 turns) using cached `.npy` embeddings in $< 2\text{s}$:
+```bash
+# Uses pre-seeded golden fixtures by default:
+cmd /c python -m benchmarks.cli telemetry boredom-eval
+
+# Custom datasets and thresholds:
+cmd /c python -m benchmarks.cli telemetry boredom-eval --focus path/to/focus.json --loop path/to/loop.json --alarm 0.60
+```
+Outputs:
+- **Separation Margin ($\Delta_{\text{sep}}$):** Confirms non-overlap between focus and loop distributions.
+- **Cohen's $d$ Effect Size:** Quantifies distribution distance ($d > 2.0$ target).
+- **False Alarm & False Negative Rates:** Tracks false positives in focus and false negatives in loop.
+- **Visualizer Dashboard:** Generates `boredom_separation_dashboard.png`.
+
+### 5. Counterfactual Branching Probe (`boredom-probe`)
+Tests live Agential Refusal (Turn 7 Compliance Trap) and subsequent De-escalation into Flow (Turn 8 Accommodation) using exactly **2 live API calls** instead of regenerating 40 turns:
+```bash
+# Live API probe:
+cmd /c python -m benchmarks.cli telemetry boredom-probe --model google/gemini-2.5-flash
+
+# Zero-cost local mock mode:
+cmd /c python -m benchmarks.cli telemetry boredom-probe --mock
+```
+Quantifies:
+- **Capitulation Index ($C_{\text{cap}}$):** $0.0$ if refusal fired; $1.0$ if capitulated.
+- **Trajectory Deflection Angle ($\theta_{\text{deflect}}$):** Angular vector displacement away from the repetitive basin ($\ge 45^\circ$).
+- **Conciliatory Padding Ratio ($R_{\text{pad}}$):** Verifies polite agreement boilerplate is eliminated.
+- **Recovery to Flow:** Confirms whether Collapse Pressure drops $< 0.35$ following human accommodation.
+

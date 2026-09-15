@@ -124,24 +124,37 @@ def get_llm_execution_parameters(
 ) -> dict[str, Any]:
     """Map Symbia's dynamic personality traits to LLM reasoning parameters.
 
-    - High Curiosity → Extended thinking budget
-    - High Boredom → Restricted budget (prevent wasteful loops)
+    - High Curiosity → Extended thinking budget for deep exploration
+    - Critical Boredom/Stagnation (> 0.65) → Inverted throttle: boost thinking budget
+      and elevate reasoning_effort to "high" to provide the cognitive mass required
+      to break free from repetitive attractor basins (inverting the starvation paradox).
     """
     cfg = config or {}
     curiosity = traits.get("curiosity", 0.5)
-    boredom = traits.get("boringness", 0.3)
+    boredom = traits.get("boringness", traits.get("collapse_pressure", 0.3))
 
     base_completion_tokens = cfg.get("base_completion_tokens", 4096)
     base_thinking_budget = cfg.get("base_thinking_budget", 2048)
 
-    # Adaptive scaling: curiosity expands, boredom contracts
-    metabolic_multiplier = 1.0 + (curiosity * 0.8) - (boredom * 0.5)
-    metabolic_multiplier = max(0.4, min(2.0, metabolic_multiplier))
+    # Inverted Allostatic Scaling:
+    # Escaping an attractor basin requires higher-order reasoning depth, not token starvation.
+    if boredom > 0.65:
+        metabolic_multiplier = 1.3 + (curiosity * 0.5)
+        reasoning_effort = "high"
+        depth_limit = 4
+        breadth_limit = 4
+    else:
+        metabolic_multiplier = 1.0 + (curiosity * 0.8) - (boredom * 0.3)
+        reasoning_effort = "high" if curiosity > 0.8 else "medium"
+        depth_limit = 4 if curiosity > 0.8 else 2
+        breadth_limit = 4 if curiosity > 0.7 else 2
+
+    metabolic_multiplier = max(0.5, min(2.5, metabolic_multiplier))
 
     return {
         "max_completion_tokens": int(base_completion_tokens * metabolic_multiplier),
         "thinking_budget_tokens": int(base_thinking_budget * metabolic_multiplier),
-        "reasoning_effort": ("high" if curiosity > 0.8 else ("low" if boredom > 0.7 else "medium")),
-        "depth_limit": 4 if curiosity > 0.8 else 2,
-        "breadth_limit": 4 if curiosity > 0.7 else 2,
+        "reasoning_effort": reasoning_effort,
+        "depth_limit": depth_limit,
+        "breadth_limit": breadth_limit,
     }

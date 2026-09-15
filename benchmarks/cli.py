@@ -31,9 +31,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    # Shorthand support: if first arg is an action (eval, compare, live), prepend 'telemetry'
+    # Shorthand support: if first arg is an action, prepend 'telemetry'
     argv = sys.argv[1:]
-    if argv and argv[0] in ("eval", "compare", "live"):
+    if argv and argv[0] in ("eval", "compare", "live", "boredom-eval", "boredom-probe"):
         argv = ["telemetry"] + argv
 
     parser = build_parser()

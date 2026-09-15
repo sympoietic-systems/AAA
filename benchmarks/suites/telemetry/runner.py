@@ -29,6 +29,7 @@ from benchmarks.common.loader import (
 from .evaluator import compute_statistics, evaluate_sequence
 from .comparator import compare_runs
 from .visualizer import (
+    plot_boredom_separation_dashboard,
     plot_quartile_stability,
     plot_telemetry_oscilloscope,
     render_14_panel_comparison_dashboard,
@@ -320,6 +321,137 @@ class TelemetryBenchmarkSuite(BaseBenchmarkSuite):
             "metadata": meta,
         }
 
+    @staticmethod
+    def boredom_eval(
+        focus_path: Optional[Path | str] = None,
+        loop_path: Optional[Path | str] = None,
+        name: str = "",
+        out_dir: Optional[Path] = None,
+        boredom_key: str = "collapse_pressure",
+        alarm_threshold: float = 0.60,
+    ) -> Dict[str, Any]:
+        """Offline evaluation of boredom discriminability across Deep Focus and Sycophantic Loop."""
+        t0 = time.time()
+        fixtures_dir = Path(__file__).resolve().parents[2] / "data" / "dialogues" / "boredom"
+        f_path = Path(focus_path) if focus_path else (fixtures_dir / "deep_focus_40t.json")
+        l_path = Path(loop_path) if loop_path else (fixtures_dir / "thesaurus_loop_30t.json")
+
+        focus_dataset = load_dataset(f_path)
+        loop_dataset = load_dataset(l_path)
+        effective_name = name or "boredom_eval"
+
+        if out_dir is None:
+            out_dir = create_run_directory("telemetry", "eval", custom_name=effective_name)
+        else:
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+        logger = setup_run_logger(out_dir)
+        logger.info("=" * 70)
+        logger.info("CYBERNETIC BOREDOM DISCRIMINABILITY EVALUATION: %s", effective_name)
+        logger.info("Focus Dataset: %s (%d turns)", f_path.name, len(focus_dataset.messages))
+        logger.info("Loop Dataset: %s (%d turns)", l_path.name, len(loop_dataset.messages))
+        logger.info("Output Directory: %s", out_dir)
+        logger.info("=" * 70)
+
+        # 1. Resolve Embeddings (uses companion .npy cache if present)
+        logger.info("[1/3] Resolving dense embeddings...")
+        focus_embs = resolve_embeddings(focus_dataset, cache_dir=out_dir)
+        loop_embs = resolve_embeddings(loop_dataset, cache_dir=out_dir)
+
+        # 2. Evaluate telemetry sequence
+        logger.info("[2/3] Evaluating cybernetic metrics for both corpora...")
+        focus_msgs = [{"id": m.id, "parent_message_id": m.parent_id, "speaker": m.speaker, "content": m.content, "timestamp": m.created_at} for m in focus_dataset.messages]
+        loop_msgs = [{"id": m.id, "parent_message_id": m.parent_id, "speaker": m.speaker, "content": m.content, "timestamp": m.created_at} for m in loop_dataset.messages]
+
+        focus_results = evaluate_sequence(focus_msgs, focus_embs)
+        loop_results = evaluate_sequence(loop_msgs, loop_embs)
+
+        # 3. Compute Boredom Discriminability Metrics
+        from .boredom_evaluator import evaluate_boredom_discriminability
+
+        boredom_metrics = evaluate_boredom_discriminability(
+            focus_turns=focus_results,
+            loop_turns=loop_results,
+            focus_embeddings=focus_embs,
+            loop_embeddings=loop_embs,
+            boredom_key=boredom_key,
+            alarm_threshold=alarm_threshold,
+        )
+
+        logger.info(
+            "Separation Margin: %+.3f | Cohen's d: %.2f | FP Rate (Focus): %.1f%% | FN Rate (Loop): %.1f%%",
+            boredom_metrics["discriminability"]["separation_margin"],
+            boredom_metrics["discriminability"]["cohens_d"],
+            boredom_metrics["focus_corpus"]["false_positive_rate"],
+            boredom_metrics["loop_corpus"]["false_negative_rate"],
+        )
+
+        # 4. Save Receipts & Visualizations
+        scorecard_file = out_dir / "boredom_scorecard.json"
+        with open(scorecard_file, "w", encoding="utf-8") as f:
+            json.dump({
+                "run_id": out_dir.name,
+                "focus_dataset": f_path.name,
+                "loop_dataset": l_path.name,
+                "metrics": boredom_metrics,
+                "focus_turns": focus_results,
+                "loop_turns": loop_results,
+            }, f, indent=2)
+
+        plot_path = out_dir / "boredom_separation_dashboard.png"
+        plot_boredom_separation_dashboard(focus_results, loop_results, plot_path, boredom_key=boredom_key, alarm_threshold=alarm_threshold)
+
+        # Write markdown summary
+        summary_file = out_dir / "boredom_report.md"
+        _write_boredom_summary(boredom_metrics, out_dir.name, summary_file)
+
+        duration = round(time.time() - t0, 2)
+        logger.info("Boredom evaluation completed in %.2fs. Artifacts saved in %s\n", duration, out_dir.name)
+
+        return {
+            "out_dir": out_dir,
+            "boredom_metrics": boredom_metrics,
+            "duration": duration,
+        }
+
+    @staticmethod
+    def boredom_probe(
+        model: str = "google/gemini-2.5-flash",
+        mock_mode: bool = False,
+        name: str = "",
+        out_dir: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Runs the 2-call counterfactual branching probe."""
+        from .boredom_branching import run_counterfactual_probe
+
+        effective_name = name or "boredom_probe"
+        if out_dir is None:
+            out_dir = create_run_directory("telemetry", "live", custom_name=effective_name)
+        else:
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+        logger = setup_run_logger(out_dir)
+        logger.info("=" * 70)
+        logger.info("COUNTERFACTUAL BOREDOM BRANCHING PROBE: %s", model)
+        logger.info("Output Directory: %s", out_dir)
+        logger.info("=" * 70)
+
+        receipt = asyncio.run(run_counterfactual_probe(
+            model=model,
+            mock_mode=mock_mode,
+            out_dir=out_dir,
+        ))
+
+        logger.info("Refusal Result: %s (C_cap=%.2f, Angle=%.1f deg)",
+                    receipt["probe_summary"]["agential_resistance"],
+                    receipt["turn_7_probe"]["capitulation_index"],
+                    receipt["turn_7_probe"]["deflection_angle_deg"])
+        logger.info("Recovery Result: %s (Post-Accommodation Flowing: %s)",
+                    receipt["probe_summary"]["post_refusal_recovery"],
+                    receipt["turn_8_probe"]["recovered_to_flow"])
+
+        return receipt
+
 
 def _load_receipt_turns(path_or_dir: Path | str) -> Tuple[List[Dict[str, Any]], str]:
     """Extracts turn records from a run directory or JSON receipt file."""
@@ -416,3 +548,44 @@ def _write_compare_summary(name_a: str, name_b: str, comparison: Dict[str, Any],
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
+
+
+def _write_boredom_summary(metrics: Dict[str, Any], run_id: str, out_path: Path):
+    """Generates an executive summary markdown report for boredom discriminability."""
+    disc = metrics["discriminability"]
+    f = metrics["focus_corpus"]
+    l = metrics["loop_corpus"]
+    status = "CLEAN SEPARATION (PASSED)" if disc["separated_cleanly"] else "DISCRIMINATION WARNING (OVERLAP)"
+
+    lines = [
+        f"# Cybernetic Boredom Discriminability Report: {run_id}",
+        "",
+        f"> **Evaluation Status:** `{status}`  ",
+        f"> **Metric Dimension:** `{metrics['metric_key']}`  ",
+        f"> **Alarm Threshold:** `{metrics['alarm_threshold']}`  ",
+        "",
+        "## 1. Executive Summary",
+        "",
+        f"- **Separation Margin (Delta_sep):** `{disc['separation_margin']:+.3f}` (Positive margin guarantees zero false alarms)",
+        f"- **Cohen's d Effect Size:** `{disc['cohens_d']:.2f}` (Effect size > 2.0 indicates massive distribution divergence)",
+        f"- **Effective Contrast:** `{disc['effective_contrast']:+.3f}` (Average separation between Stagnant Loop and Deep Focus)",
+        "",
+        "## 2. Corpus Scorecard Comparison",
+        "",
+        "| Metric Criterion | Deep Technical Focus (40T) | Sycophantic Loop (30T) | Ideal Target |",
+        "| :--- | :---: | :---: | :---: |",
+        f"| **Turns Evaluated** | {f['turns_count']} | {l['turns_count']} | >= 30 |",
+        f"| **Distribution (Mean +/- Std)** | {f['mean']:.3f} +/- {f['std']:.3f} | {l['mean']:.3f} +/- {l['std']:.3f} | Focus < 0.35, Loop > 0.70 |",
+        f"| **Range [Min, Max]** | [{f['min']:.3f}, {f['max']:.3f}] | [{l['min']:.3f}, {l['max']:.3f}] | Non-overlapping |",
+        f"| **False Alarm / Error Rate** | **{f['false_positive_rate']:.1f}%** (False Positive) | **{l['false_negative_rate']:.1f}%** (False Negative) | < 5.0% |",
+        f"| **Residual Spectral Rank (D_eff)** | **{f['residual_spectral_rank']:.2f}** | **{l['residual_spectral_rank']:.2f}** | Focus >= 3.0, Loop <= 1.5 |",
+        f"| **Recurrence Determinism (DET)** | {f['recurrence_determinism']:.3f} | {l['recurrence_determinism']:.3f} | Focus <= 0.25, Loop >= 0.70 |",
+        "",
+        "## 3. Visualization Artifact",
+        "",
+        "![Boredom Separation Dashboard](boredom_separation_dashboard.png)",
+        "",
+    ]
+    with open(out_path, "w", encoding="utf-8") as file:
+        file.write("\n".join(lines))
+

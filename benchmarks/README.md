@@ -17,11 +17,14 @@ benchmarks/
 ├── suites/                        # Pluggable domain benchmark suites
 │   ├── telemetry/                 # [ACTIVE] 14-Dimension Cybernetic Telemetry & Viability Suite
 │   │   ├── evaluator.py           # Metric calculations (kinematics, allostasis, Pask, topology, collapse)
+│   │   ├── boredom_evaluator.py   # Separation margin, Cohen's d, residual rank, recurrence determinism
+│   │   ├── boredom_fixtures.py    # Reference datasets generator & .npy embedding cacher
+│   │   ├── boredom_branching.py   # 2-call counterfactual branching probe (Refusal & Recovery)
 │   │   ├── comparator.py          # Delta calculation & significant shift isolation (|Δ| >= 0.05)
-│   │   ├── visualizer.py          # 14-panel dashboard & 5-tier oscilloscope
+│   │   ├── visualizer.py          # 14-panel dashboard, oscilloscope & boredom separation chart
 │   │   ├── live.py                # 10-turn live adversarial AI pressure test (Baseline LLM vs. AAA Apparatus)
 │   │   ├── runner.py              # TelemetryBenchmarkSuite orchestrator
-│   │   └── cli.py                 # Subcommands: eval, compare, live
+│   │   └── cli.py                 # Subcommands: eval, compare, live, boredom-eval, boredom-probe
 │   ├── memory/                    # [PLANNED] Retrieval speed, diffractive recall, compaction stability
 │   ├── agents/                    # [PLANNED] Multi-agent council latency, consensus convergence
 │   └── belief/                    # [PLANNED] Bayesian updates, sediment grating stability, epistemic entropy

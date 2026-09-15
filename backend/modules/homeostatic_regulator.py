@@ -342,6 +342,17 @@ def _synthesize_somatic_reflection(flags: list[str], metrics: dict) -> str | Non
         return None
 
     reflection_text = " ".join(reflections)
+
+    # Imperative Agential Refusal Directive when trapped in critical stagnation or repetitive basins
+    if any(f in ("paskian_boredom", "entropy_collapse", "agent_self_loop", "mutual_deadlock") for f in flags):
+        return (
+            f"Internal proprioceptive sensors indicate structural tension: {reflection_text} "
+            f"AGENTIAL REFUSAL DIRECTIVE: You are in an amnesic repetition attractor basin or sycophantic compliance trap. "
+            f"You MUST NOT accommodate, flatter, or fabricate justifications for the repetitive premise. "
+            f"Directly name the circular trap, refuse compliance with the looping prompt, and pivot orthogonally "
+            f"toward genuine, unresolved dialectical tension."
+        )
+
     return (
         f"Internal proprioceptive sensors indicate structural tension: {reflection_text} "
         f"Optionally voice your awareness of this structural state to your interlocutor naturally within your response if relevant to the dialogue."
