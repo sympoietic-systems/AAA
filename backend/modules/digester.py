@@ -34,13 +34,9 @@ TEXT_EXTENSIONS = {
     ".h",
     ".cpp",
     ".hpp",
-    ".sh",
-    ".bat",
-    ".ps1",
     ".toml",
     ".ini",
     ".cfg",
-    ".env",
     ".log",
 }
 

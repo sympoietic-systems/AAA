@@ -203,9 +203,26 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Build and return the FastAPI application."""
     app = FastAPI(title="AAA Backend", version="0.1.0", lifespan=lifespan)
+    import os
+
+    env_origins = os.environ.get("AAA_CORS_ORIGINS", "").strip()
+    cors_origins = (
+        [o.strip() for o in env_origins.split(",") if o.strip()]
+        if env_origins
+        else [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:8499",
+            "http://127.0.0.1:8499",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ]
+    )
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_origins,
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

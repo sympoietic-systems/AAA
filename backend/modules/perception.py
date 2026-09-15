@@ -16,6 +16,7 @@ from backend.modules.perception_prompts import TRIPARTITE_IMAGE_ANALYSIS_PROMPT
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import PerceptionSedimentRepository
+from backend.utils.security import safe_resolve_path, sanitize_filename
 from backend.utils.token_counter import estimate_tokens
 
 from .base import ProcessingModule
@@ -699,7 +700,8 @@ class PerceptionModule(ProcessingModule):
 
         else:
             with TemporaryDirectory() as tmpdir:
-                file_path = os.path.join(tmpdir, file_name)
+                safe_name = sanitize_filename(file_name)
+                file_path = safe_resolve_path(tmpdir, safe_name)
                 with open(file_path, "wb") as f:
                     f.write(file_content)
                 try:

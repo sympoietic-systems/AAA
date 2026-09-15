@@ -9,6 +9,12 @@ from backend.api.deps import get_agent_name, get_app_state, get_conversation_rep
 from backend.api.schemas import ConversationFile, ConversationFilesResponse
 from backend.services.file import FileService
 from backend.utils.filesystem import get_upload_path
+from backend.utils.security import (
+    DEFAULT_MAX_FILE_SIZE,
+    sanitize_filename,
+    sanitize_identifier,
+    validate_file_upload,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -36,6 +42,12 @@ async def upload_conversation_files(
     conv_repo=Depends(get_conversation_repo),
     agent_id=Depends(get_agent_name),
 ):
+    try:
+        if conversation_id != "new":
+            conversation_id = sanitize_identifier(conversation_id, "conversation_id")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
     form = await request.form()
     uploaded_files = form.getlist("files")
     if not uploaded_files:
@@ -47,7 +59,8 @@ async def upload_conversation_files(
         conversation_id = str(uuid.uuid4())
         if conv_repo:
             conv_repo.create(conversation_id=conversation_id, agent_id=agent_id)
-            first_filename = uploaded_files[0].filename if hasattr(uploaded_files[0], "filename") else "Uploaded files"
+            first_raw_name = uploaded_files[0].filename if hasattr(uploaded_files[0], "filename") else "Uploaded files"
+            first_filename = sanitize_filename(first_raw_name)
             title_base = first_filename.rsplit(".", 1)[0] if "." in first_filename else first_filename
             conv_repo.update_title(conversation_id, f"File trace: {title_base[:50]}")
     else:
@@ -58,13 +71,37 @@ async def upload_conversation_files(
     for f in uploaded_files:
         if not hasattr(f, "filename") or not f.filename:
             continue
-        file_bytes = await f.read()
-        file_type = FileService.map_extension_to_type(f.filename)
-        FileService.cache_file(conversation_id, f.filename, file_bytes)
+
+        # Chunked read to enforce 100MB max limit without loading unbounded streams into RAM
+        chunks = []
+        total_size = 0
+        chunk_size = 64 * 1024  # 64 KB chunks
+        while True:
+            chunk = await f.read(chunk_size)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > DEFAULT_MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File '{f.filename}' exceeds maximum allowed size of 100MB",
+                )
+            chunks.append(chunk)
+
+        file_bytes = b"".join(chunks)
+
+        try:
+            safe_name, file_type = validate_file_upload(
+                f.filename, file_bytes, max_bytes=DEFAULT_MAX_FILE_SIZE
+            )
+        except ValueError as ve:
+            raise HTTPException(status_code=400, detail=str(ve)) from ve
+
+        FileService.cache_file(conversation_id, safe_name, file_bytes)
 
         perception_repo.create_file(
             conversation_id=conversation_id,
-            file_name=f.filename,
+            file_name=safe_name,
             file_type=file_type,
             status="uploading",
         )
@@ -73,14 +110,14 @@ async def upload_conversation_files(
             FileService.process_and_summarize,
             state,
             conversation_id,
-            f.filename,
+            safe_name,
             file_type,
             file_bytes,
         )
 
         schema_files.append(
             ConversationFile(
-                file_name=f.filename,
+                file_name=safe_name,
                 file_type=file_type,
                 status="uploading",
                 token_count=0,
@@ -118,6 +155,12 @@ async def get_conversation_files(conversation_id: str, perception_repo=Depends(g
 
 @router.delete("/conversations/{conversation_id}/files/{file_name}")
 async def delete_conversation_file(conversation_id: str, file_name: str, perception_repo=Depends(get_perception_repo)):
+    try:
+        conversation_id = sanitize_identifier(conversation_id, "conversation_id")
+        file_name = sanitize_filename(file_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
     files = perception_repo.get_files_by_conversation(conversation_id)
     exists = any(f["file_name"] == file_name for f in files)
     if not exists:
@@ -144,6 +187,11 @@ async def reprocess_conversation_file(
     state=Depends(get_app_state),
     perception_repo=Depends(get_perception_repo),
 ):
+    try:
+        conversation_id = sanitize_identifier(conversation_id, "conversation_id")
+        file_name = sanitize_filename(file_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     files = perception_repo.get_files_by_conversation(conversation_id)
     target_file = None
     for f in files:

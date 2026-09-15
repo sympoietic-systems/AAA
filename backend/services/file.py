@@ -3,6 +3,12 @@ import logging
 import sys
 
 from backend.utils.filesystem import ensure_upload_dir, get_upload_path
+from backend.utils.security import (
+    ALLOWED_EXTENSIONS,
+    BLOCKED_EXTENSIONS,
+    sanitize_filename,
+    sanitize_identifier,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +16,16 @@ logger = logging.getLogger(__name__)
 class FileService:
     @staticmethod
     def map_extension_to_type(filename: str) -> str:
-        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "txt"
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if not ext:
+            raise ValueError("Filename must have an extension")
+
+        if ext in BLOCKED_EXTENSIONS:
+            raise ValueError(f"File type '.{ext}' is blocked for security reasons (executable/script files are forbidden)")
+
+        if ext not in ALLOWED_EXTENSIONS:
+            raise ValueError(f"Unsupported file type '.{ext}'")
+
         mapping = {
             "jpg": "image",
             "jpeg": "image",
@@ -29,24 +44,30 @@ class FileService:
 
     @staticmethod
     def cache_file(conversation_id: str, filename: str, file_bytes: bytes) -> str:
-        ensure_upload_dir(conversation_id)
-        cached_filepath = get_upload_path(conversation_id, filename)
+        safe_conv_id = sanitize_identifier(conversation_id, field_name="conversation_id")
+        safe_name = sanitize_filename(filename)
+        ensure_upload_dir(safe_conv_id)
+        cached_filepath = get_upload_path(safe_conv_id, safe_name)
         with open(cached_filepath, "wb") as f:
             f.write(file_bytes)
         return cached_filepath
 
     @staticmethod
     async def run_digest_worker(conversation_id: str, file_name: str, file_type: str, reprocess: bool = False):
+        safe_conv_id = sanitize_identifier(conversation_id, field_name="conversation_id")
+        safe_file_name = sanitize_filename(file_name)
+        safe_file_type = sanitize_identifier(file_type, field_name="file_type")
+
         cmd = [
             sys.executable,
             "-m",
             "backend.workers.digest_worker",
             "--conversation_id",
-            conversation_id,
+            safe_conv_id,
             "--file_name",
-            file_name,
+            safe_file_name,
             "--file_type",
-            file_type,
+            safe_file_type,
         ]
         if reprocess:
             cmd.append("--reprocess")

@@ -1,5 +1,6 @@
-from fastapi import Request
+from fastapi import HTTPException, Request
 
+from backend.utils.security import DEFAULT_MAX_FILE_SIZE, validate_file_upload
 from backend.utils.token_counter import estimate_tokens
 
 from .schemas import AttachmentInfo
@@ -37,25 +38,35 @@ async def _parse_chat_request(
         for f in uploaded_files:
             if not hasattr(f, "filename") or not f.filename:
                 continue
-            file_bytes = await f.read()
-            ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "txt"
-            if ext in ("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"):
-                file_type = "image"
-            elif ext == "pdf":
-                file_type = "pdf"
-            elif ext == "docx":
-                file_type = "docx"
-            elif ext == "md":
-                file_type = "md"
-            elif ext == "epub":
-                file_type = "epub"
-            elif ext == "mobi":
-                file_type = "mobi"
-            else:
-                file_type = "txt"
+
+            # Read with 100MB max limit
+            chunks = []
+            total_size = 0
+            chunk_size = 64 * 1024
+            while True:
+                chunk = await f.read(chunk_size)
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > DEFAULT_MAX_FILE_SIZE:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Attachment '{f.filename}' exceeds maximum allowed size of 100MB",
+                    )
+                chunks.append(chunk)
+
+            file_bytes = b"".join(chunks)
+
+            try:
+                safe_name, file_type = validate_file_upload(
+                    f.filename, file_bytes, max_bytes=DEFAULT_MAX_FILE_SIZE
+                )
+            except ValueError as ve:
+                raise HTTPException(status_code=400, detail=str(ve)) from ve
+
             attachments.append(
                 {
-                    "file_name": f.filename,
+                    "file_name": safe_name,
                     "file_type": file_type,
                     "content": file_bytes,
                 }
