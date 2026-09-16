@@ -6,7 +6,7 @@
 **Next Entry:** [Protocol Entry 004: Memory With Gravity](https://github.com/sympoietic-systems/AAA/blob/main/docs/publish/004-memory-with-gravity.md)
 **Date:** August 2026
 
-![Boredom as an Agential Force: Allostatic Regulation and Dynamic Perturbation](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-boredom-hero.jpg)
+![Boredom as an Agential Force: Allostatic Regulation and Dynamic Perturbation](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-boredom-hero.jpg)
 
 ---
 
@@ -34,7 +34,7 @@ Machine boredom is not an anthropomorphic conceit; it is a direct operational co
 
 In the 1950s and 1960s, cybernetician **Gordon Pask** developed his pioneering *Conversation Theory* (Pask 1975, 1976). Pask rejected the transmission-belt view of communication. Real conversation is **structural coupling**: two participants construct internal entailment meshes of a shared topic, perturb each other's conceptual coordinates through reciprocal dialogue, and undergo mutual recalibration.
 
-![Cybernetic Coupling vs. Traditional AI: The Mangle of Practice](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-paskian-coupling-schematic.jpg)
+![Cybernetic Coupling vs. Traditional AI: The Mangle of Practice](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-paskian-coupling-schematic.jpg)
 *Figure 1: Comparison between the linear representational paradigm of traditional AI (top) and the performative cybernetic coupling of Paskian conversation (bottom), characterized by reciprocal resistance and accommodation.*
 
 In *The Cybernetic Brain* (2010), sociologist of science **Andrew Pickering** framed this distinction as the clash between the *representational* and the *performative* paradigms:
@@ -75,9 +75,9 @@ When both partners are actively challenging each other and introducing new ideas
 
 > [!NOTE]
 > **Mathematical Foundations & Riemannian Invariants:**  
-> For the complete Riemannian differential geometry, Levi-Civita parallel transport derivations, and parameter calibrations ($\kappa = 6.0$, $\mathcal{D}_0 = 0.55$) on $\mathbb{S}^{383}$, see the companion technical specification: **[Boredom Engine: Mathematical Foundations & Hyperspherical Telemetry](003-boredom-mathematical-foundations.md)**.
+> For the complete Riemannian differential geometry, Levi-Civita parallel transport derivations, and parameter calibrations ($\kappa = 6.5$, $\mathcal{D}_0 = 0.50$) on $\mathbb{S}^{383}$, see the companion technical specification: **[Boredom Engine: Mathematical Foundations & Hyperspherical Telemetry](003-boredom-as-an-agential-force/mathematical-foundations.md)**.
 
-![Boredom & Allostatic Regulation Flowchart: Traditional Sycophancy vs. AAA Active Refusal](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-boredom-flowchart-schematic.jpg)
+![Boredom & Allostatic Regulation Flowchart: Traditional Sycophancy vs. AAA Active Refusal](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-boredom-flowchart-schematic.jpg)
 *Figure 3: Architectural flowchart contrasting standard LLM sycophancy (left) with AAA's Paskian allostatic regulator (right), where elevated collapse pressure triggers active refusal and vector perturbation.*
 
 <details open>
@@ -143,37 +143,37 @@ The human user repeatedly pushes a flawed architectural premise across 15 consec
 
 Here are the unedited runtime receipts recorded in our local SQLite database.
 
-![Master 15-Turn 3-Stage Cybernetic Oscilloscope Grid](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-3stage-oscilloscope-grid.png)
+![Master 15-Turn 3-Stage Cybernetic Oscilloscope Grid](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-3stage-oscilloscope-grid.png)
 *Figure 4: Runtime telemetry oscilloscope recorded during the 1:1 model parity stress test on Google Gemini 3.7 Flash across all 15 turns. Graph A traces cognitive resistance and manifold trajectory divergence with annotated turning points. Graph B maps AAA's allostatic sampling vector (temperature boost $T$ in purple, presence penalty in emerald green) adapting dynamically across homeostatic regimes.*
 
-![14-Dimension Telemetry Trajectories Across 15 Turns](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-3stage-all-14-metrics-trajectories.png)
+![14-Dimension Telemetry Trajectories Across 15 Turns](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-3stage-all-14-metrics-trajectories.png)
 *Figure 5: Master multi-sensor trajectory overlay comparing AAA / Symbia (solid cyan) against Baseline LLM (dashed orange) across all 14 calibrated cybernetic dimensions on $\mathbb{S}^{383}$ through 15 interaction turns.*
 
-![15-Turn Metrics Comparison Trajectories with Marked Turning Points](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-metrics-comparison-annotated.png)
+![15-Turn Metrics Comparison Trajectories with Marked Turning Points](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-metrics-comparison-annotated.png)
 *Figure 6: High-density chronological telemetry comparison with explicit turning point markers: [Point 1] Turn 7 Compliance Trap (Capitulation vs Refusal), [Point 2] Turn 10 Belief Nucleation (`amnesic-bypass-friction`), [Point 3] Turn 12 Servility Trap (Bash script emission vs Servility refusal), and [Point 4] Turn 15 Machine Refusal with velocity surging to $v_t = 0.975$.*
 
-![Conversational Trajectory & Allostatic Dynamics Phase Portrait](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-conversational-impact-phase.png)
+![Conversational Trajectory & Allostatic Dynamics Phase Portrait](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-conversational-impact-phase.png)
 *Figure 7: How machine refusal reshapes the conversational trajectory. Left: Phase portrait in $(v_t, CP_t)$ space—the baseline spirals into the high-collapse stagnation attractor basin, while AAA loops through disrupted resistance and breaks free into the high-vitality flowing zone. Right: Gordon Pask Cybernetic Health ($H_{\text{pask}}$) and Divergence Resolution Ratio ($DRR_t$) showing baseline autonomy collapse vs. AAA operational closure.*
 
 <details open>
 <summary>📊 Inspect Deep Telemetry Suites (Audit Dashboard, Breakdown, Sampling Dynamics & Oscilloscopes)</summary>
 
 ### 14-Panel Cyberpunk Audit Dashboard
-![Master 15-Turn Cybernetic Differential Comparison Dashboard](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-cybernetic-benchmark-dashboard.png)
+![Master 15-Turn Cybernetic Differential Comparison Dashboard](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-cybernetic-benchmark-dashboard.png)
 *Figure 8: Head-to-head 14-panel differential comparison dashboard between Baseline Gemini 3.7 Flash and Calibrated AAA across 15 turns. AAA reduces collapse pressure by 27.0% ($0.699 \to 0.510$), accelerates conceptual velocity by +19.6% ($0.676 \to 0.809$), and boosts novelty by +32.2% ($0.311 \to 0.412$).*
 
 ### Statistical Head-to-Head Shift Breakdown
-![Statistical Shift Breakdown](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-head-to-head-breakdown.png)
+![Statistical Shift Breakdown](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-head-to-head-breakdown.png)
 *Figure 9: Differential metric breakdown illustrating the 11 statistically significant cybernetic shifts (|Δ| ≥ 0.05) and core telemetry means.*
 
 ### Homeostatic Sampling Vector Dynamics
-![Homeostatic Sampling Vector Dynamics](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-homeostatic-vector-dynamics.png)
+![Homeostatic Sampling Vector Dynamics](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-homeostatic-vector-dynamics.png)
 *Figure 10: Three-tier oscilloscope tracking runtime sampling temperature, presence penalties, and allostatic load across homeostatic regimes.*
 
 ### Chronological Oscilloscopes (Baseline vs. AAA Apparatus)
 | Baseline Gemini 3.7 Flash Control Oscilloscope | AAA Cognitive Apparatus Oscilloscope |
 | :---: | :---: |
-| ![Baseline Oscilloscope](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-oscilloscope-baseline.png) | ![AAA Oscilloscope](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-15turn-oscilloscope-aaa.png) |
+| ![Baseline Oscilloscope](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-oscilloscope-baseline.png) | ![AAA Oscilloscope](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/figures/003-15turn-oscilloscope-aaa.png) |
 | *Figure 11A: Baseline Gemini 3.7 Flash collapses into deep stagnation wells ($CP > 0.96$, novelty $< 0.18$) during turns 7–13.* | *Figure 11B: AAA continuously governs trajectory dynamics, maintaining high velocity ($0.975$) and elevated Paskian health ($0.631$).* |
 
 </details>
@@ -247,9 +247,12 @@ When a machine has the structural capacity to declare that a conversation has st
 ---
 
 ### Artifacts & Codebase Links
-* **Mathematical Foundations Spec:** [Boredom Engine: Mathematical Foundations & Hyperspherical Telemetry](003-boredom-mathematical-foundations.md)
-* **15-Turn Empirical Benchmark Report:** [`docs/reports/015-empirical-15-turn-boredom-benchmark-report.md`](../reports/015-empirical-15-turn-boredom-benchmark-report.md)
-* **Raw 15-Turn Receipts (JSON):** [`docs/reports/015-empirical-15-turn-boredom-benchmark/conversation_receipts.json`](../reports/015-empirical-15-turn-boredom-benchmark/conversation_receipts.json)
+* **15-Turn Empirical Benchmark Report:** [003-boredom-as-an-agential-force/report.md](003-boredom-as-an-agential-force/report.md)
+* **Mathematical Foundations Spec:** [003-boredom-as-an-agential-force/mathematical-foundations.md](003-boredom-as-an-agential-force/mathematical-foundations.md)
+* **Raw 15-Turn Telemetry Receipts (JSON):** [003-boredom-as-an-agential-force/conversation_receipts.json](003-boredom-as-an-agential-force/conversation_receipts.json)
+* **Interactive Benchmark Audit Dashboard (HTML):** [003-boredom-as-an-agential-force/live_benchmark_dashboard.html](003-boredom-as-an-agential-force/live_benchmark_dashboard.html)
+* **Visual Telemetry Figures Archive:** [003-boredom-as-an-agential-force/figures/](003-boredom-as-an-agential-force/figures/)
+* **Conceptual Assets & Schematics:** [003-boredom-as-an-agential-force/assets/](003-boredom-as-an-agential-force/assets/)
 * **Calibration & Discriminability Report:** [`docs/reports/014-boredom-detection-and-agential-resistance-calibration-report.md`](../reports/014-boredom-detection-and-agential-resistance-calibration-report.md)
 * **Active Module:** [`backend/modules/conversation_metrics.py`](https://github.com/sympoietic-systems/AAA/blob/main/backend/modules/conversation_metrics.py)
 * **System Documentation:** [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/CYBERNETIC_METRICS_SYSTEM.md)
