@@ -53,7 +53,7 @@ class AutopoieticDreamDaemon(
         # Daemon Configuration
         daemon_cfg = self.config.get("daemon", {})
         self.enabled = daemon_cfg.get("enabled", True)
-        self.check_interval = daemon_cfg.get("check_interval", 30)  # seconds
+        self.check_interval = daemon_cfg.get("check_interval", 60)  # seconds
         self.idle_threshold = daemon_cfg.get("idle_threshold", 60)  # seconds (short for testing)
         self.min_dream_interval = daemon_cfg.get("min_dream_interval", 120)  # seconds between dream actions
         self.belief_dream_cooldown_minutes = daemon_cfg.get("belief_dream_cooldown_minutes", 30)
@@ -137,11 +137,20 @@ class AutopoieticDreamDaemon(
         _ghost_ecology_interval = 3600.0  # Run ghost ecology every hour
         _last_structure_time = 0.0
         _structure_interval = 1800.0  # Backfill heading-paths every 30 minutes
+        _last_msg_id = -1
         while self.is_running:
+            # Check if new messages arrived since last tick
             try:
-                await self.consolidate_pending_conversations()
-            except Exception as e:
-                logger.error("Error in Autopoietic Dream Daemon consolidation check: %s", e)
+                current_max_id = self.message_repo.get_max_message_id()
+            except Exception:
+                current_max_id = -1
+            has_new_messages = (current_max_id > _last_msg_id) or (_last_msg_id == -1)
+
+            if has_new_messages:
+                try:
+                    await self.consolidate_pending_conversations()
+                except Exception as e:
+                    logger.error("Error in Autopoietic Dream Daemon consolidation check: %s", e)
 
             # Autonomous research proposal scanning (Phase 4)
             try:
@@ -167,10 +176,13 @@ class AutopoieticDreamDaemon(
             except Exception as e:
                 logger.debug("Research sedimentation rake skipped: %s", e)
 
-            try:
-                await self.run_skill_metabolism()
-            except Exception as e:
-                logger.exception("Error in Autopoietic Dream Daemon skill metabolism: %s", e)
+            if has_new_messages:
+                try:
+                    await self.run_skill_metabolism()
+                except Exception as e:
+                    logger.exception("Error in Autopoietic Dream Daemon skill metabolism: %s", e)
+
+            _last_msg_id = current_max_id
 
             # Periodic structure-extraction backfill (ADR-062 migration)
             now_ts_struct = time.time()

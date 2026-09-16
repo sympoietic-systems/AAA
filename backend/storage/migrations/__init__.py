@@ -86,6 +86,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m044_injection_dedup,
         m045_display_name,
         m046_daily_summaries,
+        m047_resource_optimization_indexes,
     )
 
     runner = MigrationRunner(conn)
@@ -138,4 +139,5 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("044_injection_dedup", m044_injection_dedup.up)
     runner.run("045_display_name", m045_display_name.up)
     runner.run("046_daily_summaries", m046_daily_summaries.up)
+    runner.run("047_resource_optimization_indexes", m047_resource_optimization_indexes.up)
 

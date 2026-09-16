@@ -42,6 +42,17 @@ class EmbeddingService:
         if self._model is not None:
             return
 
+        # Clamp PyTorch CPU threads to prevent saturating all cores during embeddings
+        try:
+            import os
+            import torch
+
+            torch_threads = int(os.environ.get("AAA_TORCH_THREADS", "2"))
+            torch.set_num_threads(torch_threads)
+            torch.set_num_interop_threads(1)
+        except Exception:
+            pass
+
         kwargs = {"device": self._device}
         if self._cache_dir:
             kwargs["cache_folder"] = self._cache_dir

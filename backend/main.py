@@ -32,6 +32,13 @@ for k in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy",
     if k in os.environ:
         del os.environ[k]
 
+# Limit CPU thread saturation for PyTorch/BLAS on CPU
+os.environ.setdefault("OMP_NUM_THREADS", "2")
+os.environ.setdefault("MKL_NUM_THREADS", "2")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "2")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "2")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "2")
+
 # ── Re-export from bootstrap for backward compatibility ────────────────
 # External scripts and tests depend on these being importable from backend.main
 from backend.bootstrap.lifecycle import create_app  # noqa: E402

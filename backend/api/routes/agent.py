@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/agent", response_model=AgentInfo)
-async def get_agent(agent_name=Depends(get_agent_name)):
+def get_agent(agent_name=Depends(get_agent_name)):
     return AgentInfo(
         name=agent_name,
         agent_flux=agent_flux_enabled(),
@@ -31,7 +31,7 @@ async def get_agent(agent_name=Depends(get_agent_name)):
 
 
 @router.get("/agent/pipeline")
-async def get_pipeline(registry=Depends(get_registry), pipeline_order=Depends(get_pipeline_order)):
+def get_pipeline(registry=Depends(get_registry), pipeline_order=Depends(get_pipeline_order)):
     pipeline_list = []
     seen = set()
 
@@ -121,7 +121,7 @@ def _find_basin_beliefs(commit_vector_json: str, belief_repo, min_similarity: fl
 
 
 @router.get("/agent/personality")
-async def get_personality(
+def get_personality(
     personality_repo=Depends(get_personality_state_repo),
     commit_repo=Depends(get_commitment_repo),
     belief_repo=Depends(get_belief_repo),

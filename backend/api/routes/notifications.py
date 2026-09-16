@@ -27,7 +27,7 @@ class ClearPayload(BaseModel):
 
 
 @router.get("/notifications", response_model=list[dict[str, Any]])
-async def list_notifications(
+def list_notifications(
     dismissed: bool | None = None,
     type: str | None = None,
     search: str | None = None,
@@ -47,7 +47,7 @@ async def list_notifications(
 
 
 @router.get("/notifications/{id}", response_model=dict[str, Any])
-async def get_notification(id: str, request: Request = None):
+def get_notification(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
     notif = notification_repo.get(id)
@@ -57,7 +57,7 @@ async def get_notification(id: str, request: Request = None):
 
 
 @router.post("/notifications", response_model=dict[str, Any])
-async def create_notification(
+def create_notification(
     payload: NotificationCreatePayload,
     request: Request = None,
 ):
@@ -84,7 +84,7 @@ async def create_notification(
 
 
 @router.patch("/notifications/{id}/read", response_model=dict[str, Any])
-async def mark_read(id: str, request: Request = None):
+def mark_read(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
     notif = notification_repo.mark_as_read(id)
@@ -94,7 +94,7 @@ async def mark_read(id: str, request: Request = None):
 
 
 @router.patch("/notifications/{id}/unread", response_model=dict[str, Any])
-async def mark_unread(id: str, request: Request = None):
+def mark_unread(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
     notif = notification_repo.mark_as_unread(id)
@@ -104,7 +104,7 @@ async def mark_unread(id: str, request: Request = None):
 
 
 @router.patch("/notifications/{id}/dismiss", response_model=dict[str, Any])
-async def dismiss_notification(id: str, request: Request = None):
+def dismiss_notification(id: str, request: Request = None):
     state = request.app.state
     notification_repo = state.notification_repo
     notif = notification_repo.dismiss(id)
@@ -114,26 +114,11 @@ async def dismiss_notification(id: str, request: Request = None):
 
 
 @router.patch("/notifications/dismiss-match", response_model=dict[str, Any])
-async def dismiss_by_match_endpoint(
+def dismiss_by_match_endpoint(
     conversation_id: str,
     message_id: int,
     request: Request = None,
 ) -> dict[str, Any]:
-    """
-    Dismiss notifications matching a specific conversation and message pair.
-
-    This is used to mark notifications (e.g. sediment notifications) as dismissed
-    when the user views the corresponding message node. It executes an UPDATE
-    query which succeeds without throwing 404s even if no matching notifications exist.
-
-    Args:
-        conversation_id: The unique identifier of the conversation.
-        message_id: The ID of the message.
-        request: The FastAPI request context.
-
-    Returns:
-        dict: A status dictionary indicating successful operation.
-    """
     state = request.app.state
     notification_repo = state.notification_repo
     notification_repo.dismiss_by_match(conversation_id, message_id)
@@ -141,7 +126,7 @@ async def dismiss_by_match_endpoint(
 
 
 @router.post("/notifications/clear")
-async def clear_notifications(
+def clear_notifications(
     payload: ClearPayload | None = None,
     request: Request = None,
 ):
@@ -155,7 +140,7 @@ async def clear_notifications(
 
 
 @router.post("/notifications/read")
-async def mark_all_read_endpoint(
+def mark_all_read_endpoint(
     payload: ClearPayload | None = None,
     request: Request = None,
 ):

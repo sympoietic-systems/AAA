@@ -164,6 +164,12 @@ class MessageRepository(BaseRepository):
         return [_row_to_message(r) for r in rows]
 
     @with_connection
+    def get_max_message_id(self) -> int:
+        conn = self._conn()
+        row = conn.execute("SELECT MAX(id) FROM conversation_log").fetchone()
+        return row[0] if row and row[0] is not None else 0
+
+    @with_connection
     def get_messages_without_signatures(self) -> list[Message]:
         conn = self._conn()
         rows = conn.execute(
@@ -176,7 +182,8 @@ class MessageRepository(BaseRepository):
         conn = self._conn()
         rows = conn.execute(
             """SELECT cl.* FROM conversation_log cl
-               WHERE cl.id NOT IN (SELECT message_id FROM conversation_metrics)
+               LEFT JOIN conversation_metrics cm ON cl.id = cm.message_id
+               WHERE cm.message_id IS NULL
                ORDER BY cl.conversation_id, cl.id ASC"""
         ).fetchall()
         return [_row_to_message(r) for r in rows]

@@ -119,8 +119,18 @@ def _apply_env_overrides(config: dict) -> dict:
     return config
 
 
-def load_config(path: Path | None = None) -> dict:
+_CONFIG_CACHE: dict[str, dict] = {}
+
+
+def load_config(path: Path | None = None, reload: bool = False) -> dict:
+    import copy
+
     config_path = path or DEFAULT_CONFIG_PATH
+    cache_key = str(config_path.resolve()) if config_path.exists() else str(config_path)
+
+    if not reload and cache_key in _CONFIG_CACHE:
+        return copy.deepcopy(_CONFIG_CACHE[cache_key])
+
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
@@ -129,4 +139,5 @@ def load_config(path: Path | None = None) -> dict:
 
     config = _resolve_env_recursive(config)
     config = _apply_env_overrides(config)
-    return config
+    _CONFIG_CACHE[cache_key] = config
+    return copy.deepcopy(config)

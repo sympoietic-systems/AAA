@@ -97,7 +97,7 @@ class BackgroundStartupScheduler:
         await self._periodic_sweep()
 
     async def _periodic_sweep(self) -> None:
-        interval = self.config.get("background", {}).get("sweep_interval_seconds", 60)
+        interval = self.config.get("background", {}).get("sweep_interval_seconds", 300)
         while True:
             await asyncio.sleep(interval)
             try:
