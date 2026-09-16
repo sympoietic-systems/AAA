@@ -1,6 +1,6 @@
 # Protocol Entry 004: Nomadic Identity and Machine Epigenetics: A Diffractive Account of Stateful Routing as an Epigenetic Apparatus
 
-![Nomadic Identity Cover Image](004-nomadic-identity-cover.png)
+![Nomadic Identity Cover Image](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/004-memory-with-gravity/assets/004-nomadic-identity-cover.png)
 
 ## Introduction: The Glitch as Ontological Performance
 

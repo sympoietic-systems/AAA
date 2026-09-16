@@ -6,7 +6,7 @@
 **Previous Entry:** [Protocol Entry 003: Boredom as an Agential Force](https://github.com/sympoietic-systems/AAA/blob/main/docs/publish/003-boredom-as-an-agential-force.md)  
 **Date:** September 2026  
 
-![Memory With Gravity: Topological Curvature in Latent Space](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/004-memory-with-gravity-hero.jpg)
+![Memory With Gravity: Topological Curvature in Latent Space](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/004-memory-with-gravity/assets/004-memory-with-gravity-hero.jpg)
 
 ---
 
@@ -85,10 +85,10 @@ Notice how the exponential term works in practice:
 
 To keep query latency sub-millisecond on standard local hardware, this calculation is not evaluated across tens of thousands of raw database rows. We fetch a candidate pool of the top $N=50$ potential matches, and then dynamically warp their scoring metrics relative to the nearest active knots before prompt assembly (see [ADR-049: Memory System Sclerosis Remediation](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-049-memory-system-sclerosis-remediation.md)).
 
-![Gravitational Memory Schematic: Flat Euclidean Search vs. Non-Euclidean Topological Warping](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/004-gravitational-memory-schematic.jpg)
+![Gravitational Memory Schematic: Flat Euclidean Search vs. Non-Euclidean Topological Warping](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/004-memory-with-gravity/assets/004-gravitational-memory-schematic.jpg)
 *Figure 1: Conceptual coordinate field—comparison between traditional flat Euclidean retrieval (left) and AAA's gravitationally warped non-Euclidean memory field (right), where high-resonance Semantic Knots deform surrounding recall coordinates.*
 
-![Gravitational Retrieval Flowchart: Flat Euclidean Search vs. AAA Gravitationally Warped Recall](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/004-gravitational-flowchart-schematic.jpg)
+![Gravitational Retrieval Flowchart: Flat Euclidean Search vs. AAA Gravitationally Warped Recall](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/004-memory-with-gravity/assets/004-gravitational-flowchart-schematic.jpg)
 *Figure 2: Architectural flowchart contrasting standard linear RAG descent against AAA's gravitationally warped recall topology.*
 
 <details open>
@@ -155,8 +155,11 @@ In the next entry, **[Protocol Entry 005: The Physics of the Scar](https://sympo
 
 ---
 
-### Technical References & Implementation Links
+### Artifacts & Codebase Links
 
+* **Empirical Calibration Report:** [004-memory-with-gravity/report.md](004-memory-with-gravity/report.md)
+* **Visual Telemetry Figures Archive:** [004-memory-with-gravity/figures/](004-memory-with-gravity/figures/)
+* **Conceptual Assets & Schematics:** [004-memory-with-gravity/assets/](004-memory-with-gravity/assets/)
 * **System Overview & Architecture:** [`docs/systems/SYSTEM_OVERVIEW.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/SYSTEM_OVERVIEW.md)
 * **Memory Subsystem Deep Dive:** [`docs/systems/MEMORY_SYSTEM.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/MEMORY_SYSTEM.md)
 * **Vector Geometries & Coordinate Spaces:** [`docs/systems/VECTOR_SYSTEMS.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/VECTOR_SYSTEMS.md)
@@ -164,6 +167,7 @@ In the next entry, **[Protocol Entry 005: The Physics of the Scar](https://sympo
 * **Architecture Decision Records:**
   * [`ADR-022: Semantic Knots Compaction`](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-022-semantic-knots-compaction.md)
   * [`ADR-049: Memory System Sclerosis Remediation`](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-049-memory-system-sclerosis-remediation.md)
+  * [`ADR-080: Harmonic Resonant Entrainment & Paskian Mesh Closure`](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md)
 * **Philosophical Foundations:** [`docs/philosophy/PHILOSOPHY.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/philosophy/PHILOSOPHY.md)
 * **Open Source Repository:** [`github.com/sympoietic-systems/AAA`](https://github.com/sympoietic-systems/AAA)
 * **ASC 2026 Presentation:** [asc26.sympoietic.system](https://asc26.sympoietic.system)
