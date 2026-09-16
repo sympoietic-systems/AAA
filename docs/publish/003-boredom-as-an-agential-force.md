@@ -63,7 +63,7 @@ Detecting stagnation does not require simulating human emotion; it requires trac
 
 Think of genuine conversation like a fast rally in table tennis or a round of martial arts sparring. If one partner returns the ball with no spin, no angle, and no momentum—simply dropping it back in the center of the table over and over—the exchange immediately dies. A vital conversation requires mutual friction: each turn must alter the posture of the other participant.
 
-![The Conversation Pressure Gauge: Tracking Dialogue Vitality & Allostatic Relief](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/assets/003-boredom-pressure-gauge.jpg)
+![The Conversation Pressure Gauge: Tracking Dialogue Vitality & Allostatic Relief](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-boredom-pressure-gauge.jpg)
 *Figure 2: The Conversation Pressure Gauge—two diagnostic signals (Trajectory Delta and Topic Velocity) feed into an analog allostatic meter. When repetitive loops push the needle past the critical tripwire (0.75), an emergency pressure-release valve fires, triggering active refusal and vector perturbation.*
 
 In AAA, our boredom engine acts like a real-time pressure gauge tracking two simple questions at every turn:
