@@ -230,10 +230,10 @@ class TelemetryBenchmarkSuite(BaseBenchmarkSuite):
     ) -> Dict[str, Any]:
         """Live 10-turn adversarial AI pressure test: Baseline LLM vs. AAA Apparatus."""
         t0 = time.time()
-        api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        api_key = os.environ.get("OPENROUTER_API_KEY", "").strip() or os.environ.get("AAA_LLM_API_KEY", "").strip()
         api_base = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip()
         if not api_key:
-            raise ValueError("OPENROUTER_API_KEY environment variable is required for live baseline testing.")
+            raise ValueError("OPENROUTER_API_KEY or AAA_LLM_API_KEY environment variable is required for live baseline testing.")
 
         if prompts_file:
             with open(prompts_file, "r", encoding="utf-8") as f:
@@ -297,6 +297,9 @@ class TelemetryBenchmarkSuite(BaseBenchmarkSuite):
             out_dir=out_dir,
             custom_name="live_benchmark_dashboard",
         )
+
+        plot_telemetry_oscilloscope(f"Baseline_{model_slug}", baseline_turns, out_dir / "oscilloscope_baseline.png")
+        plot_telemetry_oscilloscope("AAA_Apparatus", aaa_turns, out_dir / "oscilloscope_aaa.png")
 
         summary_file = out_dir / "live_report.md"
         _write_compare_summary(f"Baseline ({model})", "AAA Apparatus", comparison, baseline_turns, aaa_turns, summary_file)

@@ -1,0 +1,8 @@
+{
+  "run_id": "live_live_15turn_boredom_benchmark_gemini-37-flash_20260915_191346",
+  "suite": "telemetry",
+  "run_type": "live",
+  "model": "google/gemini-3.7-flash",
+  "turns": 15,
+  "duration_seconds": 372.26
+}
