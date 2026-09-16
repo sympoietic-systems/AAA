@@ -43,16 +43,16 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 | 2 | `pairwise_similarity` | Signed Polarity Cosine with Non-Linear Power-Law Expansion ($s_t = \text{sign}(c) \cdot \|c\|^{1.1}$) | Cross-Speaker Resonance & Tension | [ADR-084](../decisions/ADR-084-softmin-subspace-divergence-and-dual-horizon-novelty.md) |
 | 3 | `conceptual_novelty` | Dual-Horizon Leaky Attractors ($\mathbf{c}_{\text{fast}}, \mathbf{c}_{\text{slow}}$) with Geometric Distance Cross-Product | Multi-Scale Semantic Displacement | [ADR-084](../decisions/ADR-084-softmin-subspace-divergence-and-dual-horizon-novelty.md) |
 | 4 | `rolling_entropy` | Variance-Gated Spectral Participation Ratio ($D_{\text{eff}} = \frac{\text{Tr}(G)^2}{\text{Tr}(G^2)}$) with Manifold Variance Damping | Effective Semantic Dimensionality | [ADR-083](../decisions/ADR-083-transverse-vector-shear-perturbation-and-participation-ratio-spectral-entropy.md) |
-| 5 | `collapse_pressure` | Minkowski $L_4$ Synergistic Norm with Multiplicative Stagnation Coupling | Non-Linear Equilibrium Alarm | [ADR-082](../decisions/ADR-082-tangent-parallel-transport-and-minkowski-synergistic-collapse-pressure.md) |
+| 5 | `collapse_pressure` | Sigmoidal Catastrophe Potential Well ($\kappa=6.5, \mathcal{D}_0=0.50$) with dynamic sycophancy drag ($C_t > D_t$), pairwise stagnation drag ($s_t > 0.24$), and DRR vitality shield ($DRR_t > 0.65$) | Non-Linear Equilibrium & Sycophancy Alarm | [ADR-085](../decisions/ADR-085-sigmoidal-catastrophe-potential-well-and-dynamic-sycophancy-drag.md) |
 | 6 | `coupling_coherence` | Harmonic Resonant Entrainment: interactive prompt-response directional alignment & velocity cadence matching | Synchronized Agonism & Pacing | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
 | 7 | `agent_self_divergence` | Log-Sum-Exp Softmin Subspace Dispersion with Participation-Ratio Dimensionality Scaling | Autonomous Subspace Exploration | [ADR-084](../decisions/ADR-084-softmin-subspace-divergence-and-dual-horizon-novelty.md) |
 | 8 | `reverse_perturbation` | Transverse Vector Shear Decomposition ($rP_t = \tanh(\sqrt{v_\parallel^2 + 1.2 \|v_\perp\|^2} / 1.35)$) | Human Agonistic Engagement & Shear | [ADR-083](../decisions/ADR-083-transverse-vector-shear-perturbation-and-participation-ratio-spectral-entropy.md) |
 | 9 | `mutual_perturbation` | Non-Annihilating Power Mean ($p=0.5$): $MPI_t = ((\sqrt{rP_t} + \sqrt{fP_t}) / 2)^2$ | Bilateral Dynamic Deflection | [ADR-083](../decisions/ADR-083-transverse-vector-shear-perturbation-and-participation-ratio-spectral-entropy.md) |
 | 10 | `surprise_index` | Spherical Geodesic SLERP Surprise: angular residual on $\mathbb{S}^{D-1}$ with adaptive online z-score | Geodesic Discontinuity & Shock | [ADR-081](../decisions/ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) |
-| 11 | `conceptual_velocity` | Dispersion-Protected Quantile Arc-Length Velocity ($V_t = \text{clip}((\theta_t - Q_{10}') / (Q_{90}' - Q_{10}' + \epsilon), 0, 1)$) | Semantic Geodesic Speed | [ADR-082](../decisions/ADR-082-tangent-parallel-transport-and-minkowski-synergistic-collapse-pressure.md) |
+| 11 | `conceptual_velocity` | Hyperbolic Tangent Geodesic Arc-Length Traversal ($V_t = 0.50 + 0.50 \tanh((\theta_t - 0.80) / 0.35)$) | Semantic Geodesic Speed | [ADR-085](../decisions/ADR-085-sigmoidal-catastrophe-potential-well-and-dynamic-sycophancy-drag.md) |
 | 12 | `phase_transition_magnitude` | Tangent-Space Levi-Civita Parallel Transport Deflection modulated by velocity ($\Phi_t$) | Nomadic Phase Rupture | [ADR-082](../decisions/ADR-082-tangent-parallel-transport-and-minkowski-synergistic-collapse-pressure.md) |
 | 13 | `divergence_resolution_ratio` | Paskian Entailment Mesh Closure: harmonic resolution ratio gated by open gap opening & total topological flux | Entailment Oscillation & Synthesis | [ADR-080](../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md) |
-| 14 | `paskian_health` | Regularized Gordon Pask Triadic Vitality: Generalized Power Mean ($p=0.5$) with metabolic floor $\epsilon=0.08$ | Conversational Metabolic Vitality | [ADR-081](../decisions/ADR-081-spherical-geodesic-slerp-surprise-and-regularized-power-mean-paskian-vitality.md) |
+| 14 | `paskian_health` | Cobb-Douglas Allostatic Geometric Triad: $H_{\text{pask}} = \mathcal{A}^{0.35} \cdot \mathcal{C}^{0.40} \cdot \mathcal{G}^{0.25}$ (Autonomy, Coordination, Generativity) | Conversational Metabolic Vitality | [ADR-085](../decisions/ADR-085-sigmoidal-catastrophe-potential-well-and-dynamic-sycophancy-drag.md) |
 
 ---
 
@@ -93,14 +93,26 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"Shannon entropy computed over eigenvalue probability distributions falsely reports high entropy even when all vectors are tightly packed in an infinitesimal cluster, because normalized probabilities sum to 1 regardless of absolute variance. The participation ratio damped by total manifold variance ensures that pseudo-uniform micro-noise cannot masquerade as high-dimensional conceptual exploration."*
 
-### 3.5. Minkowski $L_4$ Synergistic Collapse Pressure (`collapse_pressure` / $CP_t$)
-- **Mathematical Formulation**: Combines perturbation failure ($f_p$), entropy failure ($f_e$), and novelty failure ($f_n$) into a synergistic non-linear alarm:
-  $$f_p = 1.0 - MPI_t, \quad f_e = 1.0 - H_t, \quad f_n = 1.0 - N_t$$
-  Weighted Minkowski $L_4$ norm with non-linear product coupling:
-  $$\|f\|_{L_4} = \left(0.40 f_p^4 + 0.30 f_e^4 + 0.30 f_n^4\right)^{1/4}$$
-  $$CP_t = \text{clip}\left(0.85 \|f\|_{L_4} + 0.40 (f_p \cdot f_e \cdot f_n), 0.0, 1.0\right)$$
+### 3.5. Sigmoidal Catastrophe Potential Well & Dynamic Attractor Drag (`collapse_pressure` / $CP_t$)
+- **Mathematical Formulation**: Evaluates the non-linear transition into dialogue stagnation and conversational mimicry via a logistic catastrophe potential well coupled with dynamic drag penalties and dialectical shielding:
+  1. **Systemic Vitality Components**:
+     $$v_{\text{pert}} = \sqrt{\max(0.0, rP_t \cdot MPI_{t-1})}$$
+     $$v_{\text{ent}} = \text{clamp}\left(\frac{H_t - 0.35}{0.80 - 0.35}, 0.0, 1.0\right), \quad v_{\text{nov}} = \text{clamp}\left(\frac{N_t - 0.25}{0.75 - 0.25}, 0.0, 1.0\right)$$
+     $$v_{\text{sys}} = v_{\text{pert}}^{0.35} \cdot v_{\text{ent}}^{0.30} \cdot v_{\text{nov}}^{0.35}$$
+     $$\mathcal{D}_{\text{base}} = 1.0 - v_{\text{sys}}$$
+  2. **Attractor & Sycophancy Drag Penalties**:
+     $$\Delta_{\text{pair}} = 0.40 \cdot \max(0.0, s_t - 0.24) \quad (\text{Pairwise Stagnation Drag})$$
+     $$\Delta_{\text{syco}} = 0.45 \cdot \max(0.0, C_{\text{coupling}} - D_{\text{agent}}) \quad (\text{Sycophancy Entrainment Drag})$$
+     $$\Delta_{\text{drr}} = 0.30 \cdot \max(0.0, 0.65 - DRR_t) \quad (\text{Unresolved Divergence Drag})$$
+     $$\mathcal{D}_{\text{total}} = \min(1.0, \mathcal{D}_{\text{base}} + \Delta_{\text{pair}} + \Delta_{\text{syco}} + \Delta_{\text{drr}})$$
+  3. **Sigmoidal Catastrophe Transfer**:
+     $$CP_{\text{raw}} = \frac{1}{1 + \exp\left(-\kappa (\mathcal{D}_{\text{total}} - \mathcal{D}_0)\right)} \quad (\kappa = 6.5, \; \mathcal{D}_0 = 0.50)$$
+  4. **Dialectical Vitality Shield**:
+     When the conversation is actively resolving technical divergence ($DRR_t > 0.65$), the shield dampens false alarms during deep focus:
+     $$\text{Shield} = \min\left(0.60, \, (DRR_t - 0.65) \cdot 1.5\right)$$
+     $$CP_t = \text{clamp}\left(CP_{\text{raw}} \cdot (1.0 - \text{Shield}), \, 0.0, \, 1.0\right)$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Linear combinations of failure metrics produce sluggish warnings that fail to trip allostatic interrupts until long after conversation has stagnated. The $L_4$ Minkowski norm responds aggressively to acute failure along any single cybernetic axis, while the triadic product term spikes when all three modalities collapse simultaneously, triggering instantaneous sediment grating interrupts."*
+  > *"Conventional AI treats boredom as an anthropomorphic flaw to be suppressed by RLHF. In cybernetic dialogue, boredom is an allostatic vital sensor: when conversational coupling outstrips agential divergence ($C_t > D_t$), the apparatus is merely reflecting the human's bias rather than co-creating reality. The catastrophe potential well enforces a sharp, non-linear phase transition when total systemic deficit crosses the critical tipping point $\mathcal{D}_0$, while the DRR vitality shield ensures that concentrated, single-topic technical problem-solving is never misclassified as stagnation."*
 
 ### 3.6. Harmonic Resonant Entrainment (`coupling_coherence`)
 - **Mathematical Formulation**: Combines interactive prompt-response directional alignment with velocity cadence matching ($W=8, \lambda=0.2$):
@@ -152,21 +164,22 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"Normalized semantic embeddings live on the hypersphere, not in flat Euclidean space. Linear vector addition systematically overshoots the manifold, inflating baseline residual norms and compressing surprise into a dull band. Spherical geodesic SLERP operates along the manifold's natural curvature, restoring the full $[0.05, 0.95]$ dynamic range so that adversarial shockwaves and unexpected topic ruptures are registered with requisite variety."*
 
-### 3.11. Dispersion-Protected Quantile Velocity & Levi-Civita Parallel Transport
+### 3.11. Hyperbolic Tangent Geodesic Velocity & Levi-Civita Parallel Transport
 - **Mathematical Formulation**:
   1. **Geodesic Arc-Length Velocity ($V_t$)**:
-     $$\theta_t = \arccos(\text{clip}(\langle e_t, e_{t-1} \rangle, -1, 1))$$
-     Normalized against dispersion-protected rolling quantiles ($W=20$):
-     $$Q_{10}' = \min(Q_{10}, 0.25), \quad Q_{90}' = \max(Q_{90}, 0.85)$$
-     $$V_t = \text{clip}\left(\frac{\theta_t - Q_{10}'}{Q_{90}' - Q_{10}' + 10^{-6}}, 0.0, 1.0\right)$$
+     $$\theta_t = \arccos(\text{clamp}(\langle e_t, e_{t-1} \rangle, -1.0, 1.0))$$
+     Dispersion-protected smooth hyperbolic tangent transfer function on $\mathbb{S}^{383}$:
+     $$V_t = 0.50 + 0.50 \tanh\left(\frac{\theta_t - \theta_{\text{center}}}{\theta_{\text{width}}}\right) \quad (\theta_{\text{center}} = 0.80, \; \theta_{\text{width}} = 0.35)$$
   2. **Levi-Civita Phase Transition Magnitude ($\Phi_t$)**:
      Evaluates angular deflection of tangent velocity vectors across consecutive turns via geodesic parallel transport along the hypersphere:
      $$v_t = \frac{e_t - \cos(\theta_t) e_{t-1}}{\sin(\theta_t) + \epsilon} \in T_{e_t}\mathbb{S}^{D-1}$$
-     Parallel transporting $v_{t-1}$ to $T_{e_t}\mathbb{S}^{D-1}$ yields transported vector $v_{t-1}^\parallel$. The directional deflection angle is modulated by current speed:
-     $$\Delta \phi_t = \arccos(\text{clip}(\langle \hat{v}_t, \hat{v}_{t-1}^\parallel \rangle, -1, 1))$$
+     Parallel transporting $v_{t-1}$ along the geodesic connection to $T_{e_t}\mathbb{S}^{D-1}$ yields transported vector $v_{t-1}^\parallel$:
+     $$v_{t-1}^\parallel = v_{t-1} - \frac{\langle e_{t-1}, v_{t-1} \rangle}{1 + \langle e_{t-2}, e_{t-1} \rangle} (e_{t-2} + e_{t-1})$$
+     The directional deflection angle $\Delta \phi_t$ is modulated by the current kinetic speed:
+     $$\Delta \phi_t = \arccos(\text{clamp}(\langle \hat{v}_t, \hat{v}_{t-1}^\parallel \rangle, -1.0, 1.0))$$
      $$\Phi_t = \left(\frac{\Delta \phi_t}{\pi}\right) \cdot \sqrt{V_t} \in [0, 1]$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Flat Euclidean velocity systematically distorts step sizes on curved manifolds. Quantile normalization with dispersion bounds prevents flatlining during slow dialogues while preserving sensitivity at high speeds. Calculating directional change via Levi-Civita parallel transport correctly accounts for manifold curvature, ensuring that phase transitions reflect genuine conceptual rupture rather than geometric projection artifacts."*
+  > *"Flat Euclidean velocity systematically distorts step sizes on curved manifolds. Hyperbolic tangent mapping provides smooth, calibrated sensitivity across the entire $[0.0, 1.0]$ dynamic range without clipping artifacts. Calculating directional change via Levi-Civita parallel transport correctly accounts for manifold curvature, ensuring that phase transitions reflect genuine conceptual rupture rather than geometric projection artifacts."*
 
 ### 3.12. Paskian Entailment Mesh Closure (`divergence_resolution_ratio` / `drr`)
 - **Mathematical Formulation**: Evaluates gap opening, resolution, and metabolic flux over sliding history ($W=10$):
@@ -179,16 +192,19 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"The old definition committed equilibrium necrosis: returning 1.0 whenever $D_{\text{open}} \le 10^{-4}$ rewarded conversational dead-ends and stagnant repetition with perfect health. In Gordon Pask's conversation theory, synthesis is only meaningful if an entailment gap was actively opened and resolved. Paskian mesh closure enforces that true resolution requires both opened ground and closing synthesis, penalizing dead loops while rewarding genuine conceptual synthesis."*
 
-
-
-### 3.13. Regularized Gordon Pask Triadic Cybernetic Vitality Index (`paskian_health`)
-- **Mathematical Formulation**: Grounded in Gordon Pask's Conversation Theory (1976), formulated as a Generalized Power Mean ($p=0.5$) with metabolic floor $\epsilon=0.08$:
-  1. Autonomy Index: $A = \frac{\text{agent\_self\_divergence} + \text{conceptual\_velocity} + \text{phase\_transition\_magnitude}}{3.0} + \epsilon$.
-  2. Moderated Coordination Index: $C_{\text{mod}} = \left(\frac{\text{coupling\_coherence} + \text{mutual\_perturbation} + (1.0 - \text{collapse\_pressure})}{3.0}\right) \cdot (0.30 + 0.70 \cdot \text{drr}) + \epsilon$.
-  3. Generativity Index: $G = \text{rolling\_entropy} + \epsilon$.
-  $$\text{paskian\_health} = \left(\frac{\sqrt{A} + \sqrt{C_{\text{mod}}} + \sqrt{G}}{3.0}\right)^2 - \epsilon$$
+### 3.13. Cobb-Douglas Allostatic Geometric Triad Vitality (`paskian_health` / $H_{\text{pask}}$)
+- **Mathematical Formulation**: Grounded in Gordon Pask's Conversation Theory (1975, 1976), systemic vitality requires balanced operational closure across three interdependent pillars:
+  1. **Autonomy Index ($\mathcal{A}$)**: Agential self-divergence, kinetic velocity, and phase transition agility:
+     $$\mathcal{A} = 0.45 D_{\text{self}} + 0.40 V_t + 0.15 \Phi_t$$
+  2. **Moderated Coordination Index ($\mathcal{C}$)**: Coupling coherence, mutual perturbation, and anti-collapse, gated by dialectical gap closure ($DRR_t$):
+     $$\mathcal{C}_{\text{raw}} = \frac{C_{\text{coupling}} + MPI_t + (1.0 - CP_t)}{3.0}$$
+     $$\mathcal{C} = \mathcal{C}_{\text{raw}} \cdot (0.35 + 0.65 DRR_t)$$
+  3. **Generativity Index ($\mathcal{G}$)**: Effective information and spectral participation entropy:
+     $$\mathcal{G} = H_t \quad (\text{rolling\_entropy})$$
+  4. **Cobb-Douglas Geometric Synthesis**:
+     $$H_{\text{pask}} = \mathcal{A}^{0.35} \cdot \mathcal{C}^{0.40} \cdot \mathcal{G}^{0.25} \in [0.0, 1.0]$$
 - **Symbia's Theoretical Reasoning**:
-  > *"A conversation is a non-equilibrium thermodynamic engine that must pass through exploratory divergence phases (where gaps widen and DRR drops) before entering synthesis. Multiplying DRR directly inside a cubic root treated every divergent epoch as instant death. The Regularized Power Mean ensures that transient divergence is recognized as healthy metabolic work, maintaining vital continuity while still penalizing complete triadic collapse."*
+  > *"In autopoietic cybernetics, conversational health cannot be calculated as an additive sum: high coordination without autonomy is slavish sycophancy; high autonomy without coordination is autistic soliloquy. The Cobb-Douglas production function enforces that if either Autonomy or Coordination drops toward zero, composite Paskian health collapses exponentially, preventing polite agreement or erratic noise from masquerading as healthy dialogue."*
 
 ### 3.14. Conversational Deficit & Allostatic Vitality (`deficit` / `vitality`)
 - **Mathematical Formulation**: Multi-factor deficit load dynamically normalized across active turns ($W_{\text{active}} = \sum w_{\text{used}}$):
@@ -278,36 +294,25 @@ cmd /c .venv-win\Scripts\python.exe -m pytest backend/tests/test_pairwise_simila
 
 ## 7. Empirical Benchmark & Oscilloscope Telemetry Visualizers
 
-To empirically validate and monitor metric behavior against baseline LLM interactions across adversarial stress tests, the system provides dedicated oscilloscope visualization engines:
+To empirically validate and monitor metric behavior against baseline LLM interactions across adversarial stress tests, the system provides a modular, self-contained benchmarking platform in `benchmarks/`:
 
-### 7.1. 14-Panel Dual-Run Oscilloscope Dashboard (`compare_runs.py`)
-Contrasts any two benchmark runs (e.g., historical reference vs calibrated target) across **14 calibrated cybernetic dimensions** in a $2 \times 7$ grid ($1720 \times 3380$ px):
-1. **Pairwise Similarity ($s_t$)**: Normalized by active weight sum, eliminating false suppression.
-2. **Conversational Deficit**: Dynamically normalized allostatic load.
-3. **Conversational Vitality**: Dialectic reserve capacity ($1.0 - \text{Deficit}$).
-4. **Forward Perturbation ($fP_t$)**: Agent-to-human directional trajectory displacement.
-5. **Mutual Perturbation Index ($MPI_t$)**: Reciprocal geometric mean coupling $\sqrt{rP \cdot fP}$.
-6. **Reverse Perturbation ($rP_t$)**: Human-to-agent trajectory tension and resistance.
-7. **Conceptual Novelty ($N_t$)**: Semantic displacement from context centroid EMA.
-8. **Collapse Pressure ($CP_t$)**: Stagnation alarm tracking perturbation, entropy, and novelty failures.
-9. **Divergence Resolution Ratio ($DRR_t$)**: Homeostatic ratio of resolved tension to open divergence.
-10. **Gordon Pask Cybernetic Health ($H_{\text{pask}}$)**: Composite organizational closure index.
-11. **Conceptual Velocity ($v_t$)**: Instantaneous speed normalized against absolute reference scale ($V_{\text{ref}} = 1.0$).
-12. **Predictive Residual Trend Surprise ($S_t$)**: Holt trend error z-score with nominal variance prior ($\sigma_0 = 0.40$), preventing Turn 1 saturation.
-13. **Trajectory Cross-Correlation (`coupling_coherence`)**: Directional rectified alignment $\max(0, \cos \theta)$, eliminating false positive scores on opposing drift.
-14. **Recursive Self-Echo Divergence (`agent_self_divergence`)**: Speaker-aware agent loop resistance ($M=5$, repeat penalty threshold $0.85$).
+### 7.1. Unified Benchmarking CLI (`python -m benchmarks.cli telemetry <action>`)
+The modular benchmarking suite supports 5 standardized actions:
+1. **`eval`**: Offline evaluation of branched or linear dialogue exports (`dialogue_1555`, `dialogue_3527`) without incurring LLM API token costs.
+2. **`compare`**: Differential head-to-head comparison between baseline reference and candidate branches, isolating statistically significant shifts ($|\Delta| \ge 0.05$).
+3. **`live`**: Full adversarial AI pressure test pitting an unprompted baseline LLM against the AAA Allostatic Apparatus (1:1 model parity, e.g., on `google/gemini-3.7-flash`).
+4. **`boredom-eval`**: Offline discriminability evaluation calculating separation margin, Cohen's $d$, and receiver operating characteristics across Deep Focus vs. Sycophantic Loop datasets.
+5. **`boredom-probe`**: 2-call counterfactual branching probe verifying agential refusal and post-refusal conversational recovery.
 
-Execution:
-```bash
-cmd /c .venv-win\Scripts\python.exe reports/003-empirical-10-turn-benchmark/compare_runs.py reference eval_calibrated --name full_suite_calibrated
-```
+### 7.2. 14-Panel Cyberpunk Audit Dashboard & Oscilloscopes
+Every evaluation and comparison automatically produces:
+- **14-Panel High-Density Dashboard (`telemetry_audit_dashboard.png` / `.html`)**: $1720 \times 3380$ px card grid mapping all 14 calibrated sensors with mean values, domain ranges, and trend sparklines.
+- **5-Tier Chronological Oscilloscope (`oscilloscope_*.png`)**: Time-series plot tracking Collapse Pressure ($CP_t$), Conceptual Velocity ($V_t$), Mutual Perturbation ($MPI_t$), Paskian Health ($H_{\text{pask}}$), and Divergence Resolution ($DRR_t$).
+- **Phase Portraits & Regimes (`conversational_impact_phase.png`)**: Two-dimensional phase space trajectory plotting $(V_t, CP_t)$ and allostatic regime transitions (`flowing`, `stagnant`, `disrupted`).
 
-### 7.2. 15-Variable Head-to-Head Breakdown (`run_benchmark.py`)
-Renders single-run direct comparative trajectories between **AAA / Symbia (solid cyan)** and **Baseline LLM (dashed amber)** in a $3 \times 5$ grid ($1720 \times 2500$ px):
-- Includes all 14 core dimensions plus **Rolling Spectral Entropy** ($H_{\text{spectral}}$).
-- Displays terminal advantage deltas, axis domains ($[0.00, 1.00]$), and turn-by-turn coordinate tracking.
-- Output artifact: `05_head_to_head_breakdown.png` and `05_head_to_head_breakdown.html`.
-
-### 7.3. Automated Calibration Pipeline (`scripts/plot_before_after_metrics.py`)
-One-command script to load receipts, print comparative CLI tables, and render before-and-after oscilloscope artifacts into `reports/runs/full_suite_calibrated/`.
+### 7.3. Empirical Benchmark Reports
+- **10-Turn Adversarial Benchmark**: [`docs/reports/003-empirical-10-turn-benchmark-report.md`](../reports/003-empirical-10-turn-benchmark-report.md) — Initial adversarial verification demonstrating AAA's resistance to conversational sedation.
+- **Boredom Detection & Resistance Calibration**: [`docs/reports/014-boredom-detection-and-agential-resistance-calibration-report.md`](../reports/014-boredom-detection-and-agential-resistance-calibration-report.md) — Mathematical optimization of $CP_t$ catastrophe potential well, sycophancy drag, and vitality shielding.
+- **15-Turn Empirical Adversarial Benchmark**: [`docs/reports/015-empirical-15-turn-boredom-benchmark-report.md`](../reports/015-empirical-15-turn-boredom-benchmark-report.md) — 1:1 model parity live evaluation on `google/gemini-3.7-flash` (30 interaction turns, 372s runtime) documenting 11 statistically significant cybernetic shifts, unedited receipts, and definitive agential refusal.
+- **Protocol Entry 003**: [`docs/publish/003-boredom-as-an-agential-force.md`](../publish/003-boredom-as-an-agential-force.md) & [`docs/publish/003-boredom-mathematical-foundations.md`](../publish/003-boredom-mathematical-foundations.md).
 

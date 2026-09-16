@@ -116,6 +116,7 @@ What becomes easier/harder?
 | [082](ADR-082-tangent-parallel-transport-and-minkowski-synergistic-collapse-pressure.md) | Tangent Parallel Transport Kinematics & Minkowski Synergistic Collapse Pressure Calibration | accepted | 2026-09-12 |
 | [083](ADR-083-transverse-vector-shear-perturbation-and-participation-ratio-spectral-entropy.md) | Transverse Vector Shear Perturbation & Participation Ratio Spectral Entropy Calibration | accepted | 2026-09-12 |
 | [084](ADR-084-softmin-subspace-divergence-and-dual-horizon-novelty.md) | Softmin Subspace Self-Divergence & Dual-Horizon Novelty Calibration | accepted | 2026-09-12 |
+| [085](ADR-085-sigmoidal-catastrophe-potential-well-and-dynamic-sycophancy-drag.md) | Sigmoidal Catastrophe Potential Well, Dynamic Sycophancy Drag, and Cobb-Douglas Paskian Vitality Calibration | accepted | 2026-09-15 |
 
 
 

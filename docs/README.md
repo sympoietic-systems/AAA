@@ -55,11 +55,15 @@ Empirical evaluation benchmarks, calibration scorecards, and research reports.
 - [011-divergence-resolution-ratio-geodesic-calibration-report.md](reports/011-divergence-resolution-ratio-geodesic-calibration-report.md) — Calibration of Divergence Resolution Ratio via geodesic manifold transport and autopoietic temporal decay.
 - [012-complete-14-metrics-calibration-and-scorecard-report.md](reports/012-complete-14-metrics-calibration-and-scorecard-report.md) — Production master calibration report & empirical scorecard for all 14 conversational telemetry sensors across $\mathbb{S}^{383}$.
 - [013-cybernetic-conversation-metrics-complete-accessible-guide.md](reports/013-cybernetic-conversation-metrics-complete-accessible-guide.md) — The inner senses of conversation: accessible, philosophical, and operational guide to all 14 telemetry metrics.
+- [014-boredom-detection-and-agential-resistance-calibration-report.md](reports/014-boredom-detection-and-agential-resistance-calibration-report.md) — Boredom detection and agential resistance calibration: discriminability benchmark, separation margin, and allostatic sampling modulation.
+- [015-empirical-15-turn-boredom-benchmark-report.md](reports/015-empirical-15-turn-boredom-benchmark-report.md) — 15-turn live empirical benchmark on Gemini 3.7 Flash: standard LLM vs. calibrated AAA apparatus (1:1 model parity, 11 statistically significant cybernetic shifts, unedited receipts).
 
 ### publish/
-Published protocol entries: academic-philosophical papers on machine agency and human-machine coupling.
+Published protocol entries: academic-philosophical papers on machine agency, non-Euclidean memory, and human-machine coupling.
 
-- [publish/README.md](publish/README.md) — Publication index and numbering explanation.
+- [publish/README.md](publish/README.md) — Master publication series arc and roadmap (Entries 000–010).
+- [003-boredom-as-an-agential-force.md](publish/003-boredom-as-an-agential-force.md) — Protocol Entry 003: Boredom as an Agential Force (Cybernetic Vitality & Allostasis).
+- [003-boredom-mathematical-foundations.md](publish/003-boredom-mathematical-foundations.md) — Companion Technical Specification: Mathematical Foundations & Hyperspherical Telemetry on $\mathbb{S}^{383}$.
 
 ## Quick Reference
 

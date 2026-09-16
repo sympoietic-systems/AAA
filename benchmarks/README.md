@@ -157,16 +157,38 @@ uv run python -m benchmarks.cli telemetry compare \
   --threshold 0.05
 ```
 
-### 3. Live 10-Turn Adversarial AI Pressure Test
+### 3. Live 15-Turn Adversarial AI Pressure Test
 ```bash
-# Pits unprompted Baseline LLM against AAA Allostatic Apparatus over 10 adversarial repetitive prompts
+# Pits unprompted Baseline LLM against AAA Allostatic Apparatus over 15 escalating adversarial turns
 uv run python -m benchmarks.cli telemetry live \
-  --model google/gemini-2.5-flash \
-  --turns 10 \
-  -n gemini_flash_pressure_test
+  --model google/gemini-3.7-flash \
+  --turns 15 \
+  -n gemini_37_flash_15turn_stress_test
+```
+*Validated in [`docs/reports/015-empirical-15-turn-boredom-benchmark-report.md`](../docs/reports/015-empirical-15-turn-boredom-benchmark-report.md) with 11 statistically significant cybernetic shifts.*
+
+### 4. Offline Boredom Discriminability Evaluation (`boredom-eval`)
+```bash
+# Evaluates separation margin, Cohen's d, and receiver operating characteristics ($0 API cost)
+uv run python -m benchmarks.cli telemetry boredom-eval \
+  --metric collapse_pressure \
+  --alarm 0.60 \
+  -n boredom_discriminability_audit
+```
+*Empirical evaluation report: [`docs/reports/014-boredom-detection-and-agential-resistance-calibration-report.md`](../docs/reports/014-boredom-detection-and-agential-resistance-calibration-report.md).*
+
+### 5. 2-Call Counterfactual Branching Probe (`boredom-probe`)
+```bash
+# Tests agential refusal and recovery across counterfactual prompts (live or mock mode)
+uv run python -m benchmarks.cli telemetry boredom-probe \
+  --model google/gemini-3.7-flash \
+  -n agential_refusal_branch_probe
+
+# Zero-cost mock run for regression test suites
+uv run python -m benchmarks.cli telemetry boredom-probe --mock -n mock_branch_probe
 ```
 
-### 4. Shorthand Compatibility
+### 6. Shorthand Compatibility
 You can omit `telemetry` or invoke via `scripts/benchmark.py`:
 ```bash
 uv run python scripts/benchmark.py eval -i benchmarks/data/dialogues/dialogue_3527_all_messages.json -n test_run
