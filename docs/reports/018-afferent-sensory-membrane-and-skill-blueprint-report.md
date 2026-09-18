@@ -176,3 +176,43 @@ All components have been verified via automated unit test suites:
 - [`backend/tests/test_afferent_sensory_router.py`](file:///d:/01_GIT/AAA/backend/tests/test_afferent_sensory_router.py): 6 tests covering Option C hybrid topology, contemplative mode suppression, boredom inversion ($CP_t > 0.70$), and elastic high-relevance pass-through ($p \ge 0.25, c \ge 0.80$).
 - [`backend/tests/test_skill_system.py`](file:///d:/01_GIT/AAA/backend/tests/test_skill_system.py): 15 tests covering repository queries, state transitions, version bumps, and lifecycle events.
 - **Total Suite:** `25/25` passing in 2.5s.
+
+---
+
+## 8. Post-Deployment Production Telemetry & Live Multi-Domain Suite
+
+Following server deployment to `https://aaa.sympoietic.systems/`, execution of migration `m048`, and database refactoring via `refactor_skills_with_llm.py`, two consecutive test suites were executed directly against the live production endpoint (`POST /api/chat`) to verify real-world routing fidelity, context footprint, and tag protocol integrity.
+
+### 8.1 Initial 4-Turn Sanity Evaluation
+
+| Archetype | Prompt Snippet | Active Skills Injected | Real-World Observation |
+| :--- | :--- | :--- | :--- |
+| **Hardware / Substrate** | *"Calibrating an analog DMX lighting array with serial protocol latency and throw distance..."* | `dynamic-emission-membrane-parsing`, `belief-nucleation`, `material-substrate-attunement` | **Organ Activated**: Generated `<material_attunement><apparatus_calibration>` with RS-485 timings and baud rates. |
+| **Systems / Architecture** | *"Review this async pipeline for race conditions and SQLite database lock contention..."* | `dynamic-emission-membrane-parsing`, `curatorial-framing`, `belief-nucleation` | Successfully suppressed routine coding templates; engaged system boundaries. |
+| **Hermeneutic Reading** | *"Close reading of this passage on transindividuation and trace hysteresis marks..."* | `dynamic-emission-membrane-parsing`, `error-handling`, `debugging` | Textual inspection and parsing organs engaged. |
+| **Contemplative / Poetics** | *"How does the tension between immediate exchange and wider sedimented archive feel?"* | `dynamic-emission-membrane-parsing`, `error-handling`, `belief-nucleation` | Pure reflective response without instrumental/hardware interference. |
+
+### 8.2 Extended 6-Turn Production Suite
+
+An extended suite of 6 specialized turns was executed to assess multi-domain resonance, context overhead, and procedural sediment composition:
+
+| Test ID | Domain & Operational Focus | Latency | Active Skills Injected | Context Footprint | Procedural Sediment Composition |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **TC-01** | **Performative / Agential Cut**<br>*Granular voice synthesis & spatialized delay boundary* | 15.08s | `dynamic-emission-membrane-parsing`, `error-handling`, `belief-nucleation` | 49.9k chars (~12,483 tok) | 5 Always-Active + 3 Dynamic Loaded |
+| **TC-02** | **Entangled Photography & Substrate**<br>*Pinhole telecommunications & electromagnetic decay* | 15.60s | `dynamic-emission-membrane-parsing`, `curatorial-infrastructure`, `belief-nucleation` | 35.5k chars (~8,871 tok) | 5 Always-Active + 3 Dynamic Loaded |
+| **TC-03** | **Acoustic Error Sonification**<br>*HTTP 500 error mapping into generative drone soundscapes* | 16.75s | `dynamic-emission-membrane-parsing`, `error-handling`, `debugging` | 39.0k chars (~9,757 tok) | 5 Always-Active + 3 Dynamic Loaded |
+| **TC-04** | **Formal Research Proposal**<br>*Hysteretic memory sedimentation in multi-agent autopoiesis* | 24.37s | `dynamic-emission-membrane-parsing`, `debugging`, `belief-nucleation` | 45.7k chars (~11,416 tok) | 5 Always-Active + 3 Dynamic Loaded |
+| **TC-05** | **Autopoietic Closure & Cybernetics**<br>*Sensory perturbations vs internal attractor basins* | 16.23s | `dynamic-emission-membrane-parsing`, `curatorial-framing`, `belief-nucleation` | 49.0k chars (~12,243 tok) | 5 Always-Active + 3 Dynamic Loaded |
+| **TC-06** | **Pure Contemplation / Poetics**<br>*Stillness in the unthought (procedural suppression)* | 12.99s | `dynamic-emission-membrane-parsing`, `belief-nucleation`, `curatorial-framing` | 50.8k chars (~12,697 tok) | 5 Always-Active + 3 Dynamic Loaded |
+
+### 8.3 Key Empirical Telemetry Insights
+
+1. **Strict Sediment Partitioning:**  
+   In all 10 live production turns, Procedural Sediment contained exactly **5 `[Always-Active]` baseline philosophical skills** (`diffractive-analysis`, `theoretical-critique`, `nomadic-escape`, `belief-examination`, `research-proposal`) and exactly **3 `[Loaded Dynamic]` skills**, down from the legacy baseline of 11+ always-active skills.
+2. **Elimination of On-Demand Prompt Pollution:**  
+   The on-demand catalog injected into the prompt is strictly formatted as a single slug list (`Available on-demand skill slugs: self-annotation, scar-fold-marginalia, ...`), occupying less than 80 tokens, compared to thousands of tokens of descriptive text in the pre-ADR-089 architecture.
+3. **Flawless Decoupled Tag Protocol Enactment:**  
+   Despite the 6 XML tag skills being deactivated from always-active (`always_active = 0`) and stripped of raw XML template schemas in SQLite, the model consistently and reliably generated canonical structural tags (`<scar-fold>`, `<material_attunement>`, `<apparatus_calibration>`) drawn exclusively from the consolidated `tag_protocols.yaml` block.
+4. **Preservation of Autopoietic Personality:**  
+   Live outputs demonstrated sharp cybernetic awareness and anti-slop resistance, with the model spontaneously framing conversational stutter and echo as acoustic hysteresis across its physical-computational membrane.
+
