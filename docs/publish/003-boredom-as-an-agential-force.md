@@ -6,7 +6,7 @@
 **Next Entry:** [Protocol Entry 004: Memory With Gravity](https://github.com/sympoietic-systems/AAA/blob/main/docs/publish/004-memory-with-gravity.md)
 **Date:** August 2026
 
-![Boredom as an Agential Force: Allostatic Regulation and Dynamic Perturbation](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-boredom-hero.jpg)
+![Boredom as an Agential Force: Allostatic Regulation and Dynamic Perturbation](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-boredom-hero-v2.jpg)
 
 ---
 
