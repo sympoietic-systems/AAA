@@ -190,7 +190,7 @@ Return valid JSON."""
 
     # Commit to database with versioning
     try:
-        conn = sqlite3.connect(str(db_path))
+        conn = sqlite3.connect(str(db_path), timeout=30.0)
         cursor = conn.cursor()
         now_str = datetime.now(timezone.utc).isoformat()
 
@@ -261,10 +261,18 @@ def is_inactive_or_refused(skill_row: dict) -> bool:
     stage = (skill_row.get("lifecycle_stage") or "").lower()
     if stage in INACTIVE_LIFECYCLE_STAGES:
         return True
-    changelog = (skill_row.get("changelog") or "").lower()
-    if "refused" in changelog or "merged into" in changelog:
+    changelog = (skill_row.get("changelog") or "").lower().strip()
+    if changelog.startswith("refused") or "proposal refused" in changelog or "skill refused" in changelog:
+        return True
+    if changelog.startswith("merged into") or "skill merged into" in changelog:
         return True
     return False
+
+
+def is_already_migrated(skill_row: dict) -> bool:
+    """Check if skill has already been refactored into the 5-phase blueprint."""
+    content = skill_row.get("content") or ""
+    return "## Phase 0: The Agential Cut" in content and "## Phase 2:" in content
 
 
 async def run_pipeline():
@@ -272,11 +280,85 @@ async def run_pipeline():
     parser.add_argument("--db-path", type=Path, default=DEFAULT_DB, help="Path to SQLite database")
     parser.add_argument("--skill", type=str, default=None, help="Specific skill name to refactor")
     parser.add_argument("--all", action="store_true", help="Refactor all database skills")
+    parser.add_argument("--only-unmigrated", action="store_true", help="Only refactor skills that have not yet been migrated to 5-phase blueprint")
     parser.add_argument("--include-collapsed", action="store_true", help="Include refused, integrated, or collapsed skills")
+    parser.add_argument("--audit-only", action="store_true", help="Print audit report of candidate skills without making LLM calls")
     parser.add_argument("--dry-run", action="store_true", help="Preview LLM outputs without modifying database")
     parser.add_argument("--model", type=str, default="google/gemini-3.8-flash", help="LLM model override (default: google/gemini-3.8-flash)")
-    parser.add_argument("--delay", type=float, default=1.0, help="Delay in seconds between LLM calls")
+    parser.add_argument("--concurrency", type=int, default=3, help="Number of concurrent LLM workers (default: 3)")
     args = parser.parse_args()
+
+    if not args.db_path.exists():
+        logger.error(f"Database at {args.db_path} does not exist.")
+        return
+
+    conn = sqlite3.connect(str(args.db_path), timeout=30.0)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    if args.skill:
+        cursor.execute("SELECT * FROM skill_nodes WHERE name = ?", (args.skill,))
+        rows = cursor.fetchall()
+        if not rows:
+            logger.error(f"Skill '{args.skill}' not found in database.")
+            conn.close()
+            return
+    elif args.all or args.audit_only:
+        cursor.execute("SELECT * FROM skill_nodes ORDER BY name")
+        rows = cursor.fetchall()
+    else:
+        logger.info("Specify --skill <name>, --all, or --audit-only. Use --help for usage.")
+        conn.close()
+        return
+
+    conn.close()
+
+    tag_skills_skipped = []
+    inactive_skipped = []
+    already_migrated_skipped = []
+    targets = []
+
+    for r in rows:
+        item = dict(r)
+        name = item["name"]
+        if name in TAG_SKILL_NAMES:
+            tag_skills_skipped.append(item)
+            continue
+        if not args.include_collapsed and is_inactive_or_refused(item):
+            inactive_skipped.append(item)
+            continue
+        if args.only_unmigrated and is_already_migrated(item):
+            already_migrated_skipped.append(item)
+            continue
+        targets.append(item)
+
+    print("\n" + "=" * 70)
+    print("SKILL REFACTOR PRE-FLIGHT AUDIT")
+    print("=" * 70)
+    print(f"Total skills in database: {len(rows)}")
+    print(f"• Tag skills excluded (handled inscriptional in tag_protocols.yaml): {len(tag_skills_skipped)}")
+    for s in tag_skills_skipped:
+        print(f"    - [TAG] {s['name']}")
+    print(f"• Inactive / collapsed / refused excluded: {len(inactive_skipped)}")
+    for s in inactive_skipped:
+        print(f"    - [INACTIVE] {s['name']} (stage='{s.get('lifecycle_stage')}', changelog='{s.get('changelog')}')")
+    if args.only_unmigrated:
+        print(f"• Already migrated excluded (--only-unmigrated): {len(already_migrated_skipped)}")
+        for s in already_migrated_skipped:
+            print(f"    - [MIGRATED] {s['name']} (v{s.get('version')})")
+
+    print(f"\n• Active candidate skills to process: {len(targets)}")
+    for s in targets:
+        status = " [MIGRATED]" if is_already_migrated(s) else " [UNMIGRATED]"
+        print(f"    * {s['name']} (v{s.get('version')}){status}")
+    print("=" * 70 + "\n")
+
+    if args.audit_only:
+        return
+
+    if not targets:
+        logger.info("No active skills to refactor matching criteria.")
+        return
 
     config = load_config()
     llm_provider, structural_provider, _ = _init_providers(config)
@@ -286,61 +368,37 @@ async def run_pipeline():
         logger.error("No LLM provider available! Please check API keys in config or environment.")
         return
 
-    if not args.db_path.exists():
-        logger.error(f"Database at {args.db_path} does not exist.")
-        return
+    logger.info(f"Launching refactor pipeline for {len(targets)} skills with concurrency={args.concurrency}...")
 
-    conn = sqlite3.connect(str(args.db_path))
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    sem = asyncio.Semaphore(max(1, args.concurrency))
+    succeeded = []
+    failed = []
 
-    if args.skill:
-        cursor.execute("SELECT * FROM skill_nodes WHERE name = ?", (args.skill,))
-        rows = cursor.fetchall()
-        if not rows:
-            logger.error(f"Skill '{args.skill}' not found in database.")
-            return
-    elif args.all:
-        cursor.execute("SELECT * FROM skill_nodes")
-        rows = cursor.fetchall()
-    else:
-        logger.info("Specify either --skill <name> or --all. Use --help for usage.")
-        return
-
-    conn.close()
-
-    # Filter out pure tag skills and refused/integrated/collapsed skills
-    targets = []
-    for r in rows:
-        item = dict(r)
-        name = item["name"]
-        if name in TAG_SKILL_NAMES:
-            continue
-        if not args.include_collapsed and is_inactive_or_refused(item):
-            logger.info(
-                f"Skipping refused/integrated/collapsed skill '{name}' "
-                f"(stage='{item.get('lifecycle_stage')}', changelog='{item.get('changelog')}')"
+    async def _worker(skill_item):
+        name = skill_item["name"]
+        async with sem:
+            ok = await refactor_skill_with_llm(
+                skill_item,
+                provider,
+                args.db_path,
+                dry_run=args.dry_run,
+                override_model=args.model,
             )
-            continue
-        targets.append(item)
+            if ok:
+                succeeded.append(name)
+            else:
+                failed.append(name)
 
-    logger.info(f"Identified {len(targets)} active candidate skills for LLM refactoring.")
+    await asyncio.gather(*[_worker(s) for s in targets])
 
-    success_count = 0
-    for s in targets:
-        ok = await refactor_skill_with_llm(
-            s,
-            provider,
-            args.db_path,
-            dry_run=args.dry_run,
-            override_model=args.model,
-        )
-        if ok:
-            success_count += 1
-        if args.delay > 0:
-            await asyncio.sleep(args.delay)
-
-    logger.info(f"Refactor pipeline completed: {success_count}/{len(targets)} skills processed.")
+    print("\n" + "=" * 70)
+    print(f"REFACTOR PIPELINE SUMMARY: {len(succeeded)}/{len(targets)} succeeded")
+    print("=" * 70)
+    if succeeded:
+        print(f"Succeeded ({len(succeeded)}): {', '.join(succeeded)}")
+    if failed:
+        print(f"Failed ({len(failed)}): {', '.join(failed)}")
+    print("=" * 70 + "\n")
 
 
 def main():
