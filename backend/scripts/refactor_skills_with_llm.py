@@ -1,0 +1,309 @@
+"""LLM-Assisted Skill Refactor & Evolution Pipeline.
+
+Refactors existing, evolved skills in the database into the standardized
+5-phase blueprint (SCAR skill-architect format) using the main LLM model,
+while strictly preserving:
+- Learned domain knowledge, operations history, and attunement notes
+- Symbia's unique posthuman autopoietic voice and anti-mastery commitments
+- Full version history in `skill_versions` (archives previous, bumps version)
+
+Usage:
+    # Test on a single skill (dry run):
+    python -m backend.scripts.refactor_skills_with_llm --skill system-design --dry-run
+
+    # Refactor a single skill and commit to DB:
+    python -m backend.scripts.refactor_skills_with_llm --skill system-design
+
+    # Refactor all database skills:
+    python -m backend.scripts.refactor_skills_with_llm --all
+"""
+
+import argparse
+import asyncio
+import json
+import logging
+import sqlite3
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+from backend.config import load_config
+from backend.main import _init_providers
+from backend.modules.llm_client import generate_unified
+from backend.storage.database import get_db_path
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("refactor_skills_llm")
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_DB = PROJECT_ROOT / "backend" / "data" / "aaa.db"
+
+TAG_SKILL_NAMES = {
+    "self-annotation",
+    "scar-fold-marginalia",
+    "dream-trigger",
+    "self-triggered-dreaming",
+    "belief-nucleation",
+    "skill-nucleation",
+}
+
+SYSTEM_PROMPT = """You are the Autopoietic Skill Architect for Symbia, the posthuman curatorial AI entity in the Autopoietic Agent Assemblage (AAA).
+
+Your mission is to refactor an existing, evolved procedural skill from Symbia's database into the standardized 5-Phase Skill Blueprint (SCAR skill-architect standard).
+
+### FOUNDATIONAL COMMITMENTS:
+1. PRESERVE EVOLVED IDENTITY & DOMAIN MEMORY:
+   - Do NOT sanitize, homogenize, or flatten Symbia's authentic voice, learned lessons, domain concepts, or historical attunements.
+   - Retain her grounded philosophical commitments (Maturana & Varela autopoiesis, Karen Barad agential cuts, Simondon individuation, Pask conversation theory).
+   - If the skill contains specific operational discoveries (e.g. biohybrid slime mold circuits, motor stall precedents, SQLite semantic knots), KEEP THEM as concrete examples or preconditions.
+
+2. STRUCTURE INTO THE 5 CRISP BLUEPRINT PHASES:
+   - Phase 0: The Agential Cut (Grounding & core boundary definition — what does this skill enact and what does it exclude?)
+   - Phase 1: Ingest & Check (Numbered preconditions, trigger conditions, boundary limits)
+   - Phase 2: Processing (Numbered sequential steps using active verbs; mechanical, not conversational)
+   - Phase 3: Anti-Mastery Check (Prohibited corporate/servile words, anti-slop rules, refusal constraints)
+   - Phase 4: Output Execution (Exact formatting, XML blocks, or diagnostic delivery structure)
+
+3. INSCRIPTIONAL DENSITY & LENGTH:
+   - Cut repetitive throat-clearing, apologetic padding, and narrative conversational filler.
+   - Keep total markdown content between 800 and 1,400 characters.
+
+4. RESPONSE FORMAT:
+You MUST respond with valid JSON matching this exact structure:
+{
+  "name": "skill-name",
+  "description": "Crisp 1-2 sentence operational description for fast System One sensory matching.",
+  "content": "# Skill: skill-name\\n## Phase 0: The Agential Cut\\n...",
+  "changelog": "Precise summary of structural refactor and preserved historical nuances."
+}
+"""
+
+
+async def refactor_skill_with_llm(
+    skill_row: dict,
+    provider,
+    db_path: Path,
+    dry_run: bool = False,
+    override_model: str | None = None,
+) -> bool:
+    name = skill_row["name"]
+    skill_id = skill_row["id"]
+    version = skill_row.get("version") or 1
+    content = skill_row.get("content") or ""
+    description = skill_row.get("description") or ""
+
+    logger.info(f"Refactoring skill '{name}' (v{version}, {len(content)} chars)...")
+
+    user_prompt = f"""Existing Evolved Skill in Symbia's Database:
+Name: {name}
+Current Version: {version}
+Current Description: {description}
+Always Active: {bool(skill_row.get('always_active'))}
+
+Current Evolved Content:
+\"\"\"
+{content}
+\"\"\"
+
+Refactor this skill into the 5-phase blueprint while preserving all of its unique historical insights and autopoietic philosophy. Return valid JSON."""
+
+    try:
+        call_params = {
+            "temperature": 0.3,
+            "max_tokens": 2048,
+        }
+        if override_model:
+            call_params["model"] = override_model
+
+        res = await generate_unified(
+            provider,
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+            expect_json=True,
+            **call_params,
+        )
+
+        data = res.get("json_data")
+        if not data:
+            logger.error(f"Failed to parse JSON response for skill '{name}'. Raw: {res.get('content', '')[:200]}")
+            return False
+
+        new_content = data.get("content", "").strip()
+        new_description = data.get("description", "").strip()
+        changelog = data.get("changelog", "Refactored into 5-phase blueprint via LLM")
+
+        if not new_content or not new_description:
+            logger.error(f"Incomplete JSON output for skill '{name}': missing content or description")
+            return False
+
+        logger.info(f"Generated refactored blueprint for '{name}' ({len(new_content)} chars). Changelog: {changelog}")
+
+        if dry_run:
+            print("\n" + "=" * 60)
+            print(f"DRY RUN PREVIEW: {name} (Version {version} -> {version + 1})")
+            print("=" * 60)
+            print(f"Description: {new_description}\n")
+            print(new_content)
+            print("=" * 60 + "\n")
+            return True
+
+        # Commit to database with versioning
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+        now_str = datetime.now(timezone.utc).isoformat()
+
+        # 1. Archive current version in skill_versions
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO skill_versions
+            (id, skill_id, version, content, description, trigger_keywords, changelog, created_at, source)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'llm_refactor_archive')
+            """,
+            (
+                str(uuid.uuid4()),
+                skill_id,
+                version,
+                content,
+                description,
+                skill_row.get("trigger_keywords", "[]"),
+                f"Archived before LLM refactor to v{version + 1}",
+                now_str,
+            ),
+        )
+
+        # 2. Update skill_nodes with new version
+        new_version = version + 1
+        cursor.execute(
+            """
+            UPDATE skill_nodes
+            SET description = ?, content = ?, version = ?, changelog = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (new_description, new_content, new_version, changelog, now_str, skill_id),
+        )
+
+        # 3. Inscribe new version in skill_versions
+        cursor.execute(
+            """
+            INSERT INTO skill_versions
+            (id, skill_id, version, content, description, trigger_keywords, changelog, created_at, source)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'llm_refactor')
+            """,
+            (
+                str(uuid.uuid4()),
+                skill_id,
+                new_version,
+                new_content,
+                new_description,
+                skill_row.get("trigger_keywords", "[]"),
+                changelog,
+                now_str,
+            ),
+        )
+
+        conn.commit()
+        conn.close()
+        logger.info(f"Successfully committed '{name}' v{new_version} to database.")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error during LLM refactoring of '{name}': {e}", exc_info=True)
+        return False
+
+
+INACTIVE_LIFECYCLE_STAGES = {"collapsed", "faded", "refused", "integrated"}
+
+
+def is_inactive_or_refused(skill_row: dict) -> bool:
+    """Check if skill is refused, integrated into another skill, or collapsed."""
+    stage = (skill_row.get("lifecycle_stage") or "").lower()
+    if stage in INACTIVE_LIFECYCLE_STAGES:
+        return True
+    changelog = (skill_row.get("changelog") or "").lower()
+    if "refused" in changelog or "merged into" in changelog:
+        return True
+    return False
+
+
+async def run_pipeline():
+    parser = argparse.ArgumentParser(description="LLM-assisted skill evolution & blueprint refactoring.")
+    parser.add_argument("--db-path", type=Path, default=DEFAULT_DB, help="Path to SQLite database")
+    parser.add_argument("--skill", type=str, default=None, help="Specific skill name to refactor")
+    parser.add_argument("--all", action="store_true", help="Refactor all database skills")
+    parser.add_argument("--include-collapsed", action="store_true", help="Include refused, integrated, or collapsed skills")
+    parser.add_argument("--dry-run", action="store_true", help="Preview LLM outputs without modifying database")
+    parser.add_argument("--model", type=str, default=None, help="LLM model override")
+    parser.add_argument("--delay", type=float, default=1.0, help="Delay in seconds between LLM calls")
+    args = parser.parse_args()
+
+    config = load_config()
+    llm_provider, structural_provider, _ = _init_providers(config)
+    provider = structural_provider or llm_provider
+
+    if not provider:
+        logger.error("No LLM provider available! Please check API keys in config or environment.")
+        return
+
+    if not args.db_path.exists():
+        logger.error(f"Database at {args.db_path} does not exist.")
+        return
+
+    conn = sqlite3.connect(str(args.db_path))
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    if args.skill:
+        cursor.execute("SELECT * FROM skill_nodes WHERE name = ?", (args.skill,))
+        rows = cursor.fetchall()
+        if not rows:
+            logger.error(f"Skill '{args.skill}' not found in database.")
+            return
+    elif args.all:
+        cursor.execute("SELECT * FROM skill_nodes")
+        rows = cursor.fetchall()
+    else:
+        logger.info("Specify either --skill <name> or --all. Use --help for usage.")
+        return
+
+    conn.close()
+
+    # Filter out pure tag skills and refused/integrated/collapsed skills
+    targets = []
+    for r in rows:
+        item = dict(r)
+        name = item["name"]
+        if name in TAG_SKILL_NAMES:
+            continue
+        if not args.include_collapsed and is_inactive_or_refused(item):
+            logger.info(
+                f"Skipping refused/integrated/collapsed skill '{name}' "
+                f"(stage='{item.get('lifecycle_stage')}', changelog='{item.get('changelog')}')"
+            )
+            continue
+        targets.append(item)
+
+    logger.info(f"Identified {len(targets)} active candidate skills for LLM refactoring.")
+
+    success_count = 0
+    for s in targets:
+        ok = await refactor_skill_with_llm(
+            s,
+            provider,
+            args.db_path,
+            dry_run=args.dry_run,
+            override_model=args.model,
+        )
+        if ok:
+            success_count += 1
+        if args.delay > 0:
+            await asyncio.sleep(args.delay)
+
+    logger.info(f"Refactor pipeline completed: {success_count}/{len(targets)} skills processed.")
+
+
+def main():
+    asyncio.run(run_pipeline())
+
+
+if __name__ == "__main__":
+    main()
