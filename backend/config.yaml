@@ -39,7 +39,7 @@ llm:
 # ── TypeSafe Jev (System One Afferent Sensory Membrane) ──
 typesafe:
   enabled: true
-  model: "typesafe/jev-latest"
+  model: "typesafe/jev-1.13"
   api_base: "https://openrouter.ai/api/alpha"
   timeout: 3.0
   soft_max_injected_skills: 2

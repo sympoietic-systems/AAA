@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TYPESAFE_BASE = "https://api.typesafe.ai/v1"
 OPENROUTER_DECISIONS_BASE = "https://openrouter.ai/api/alpha"
-DEFAULT_MODEL = "typesafe/jev-latest"
+DEFAULT_MODEL = "typesafe/jev-1.13"
 
 
 class TypeSafeDecisionClient:

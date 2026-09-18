@@ -410,7 +410,6 @@ class SedimentInjectionInfo(BaseModel):
     injected_at: str | None = None
     status: str = "ready"
     display_name: str | None = None
-    display_name: str = ""
 
 
 class SedimentInjectionsResponse(BaseModel):
