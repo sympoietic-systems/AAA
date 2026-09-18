@@ -32,16 +32,16 @@ To break out of the mimicry loop, the machine needs the capacity to resist. It n
 
 Machine boredom is not an anthropomorphic conceit; it descends directly from mid-century British cybernetics.
 
-In the 1950s and 1960s, cybernetician **Gordon Pask** developed his pioneering *Conversation Theory* (Pask 1975, 1976). Pask rejected the transmission-belt view of communication. Real conversation is **structural coupling**: two participants construct internal entailment meshes of a shared topic, perturb each other's conceptual coordinates through reciprocal dialogue, and undergo mutual recalibration.
+In the 1950s and 1960s, cybernetician [**Gordon Pask**](https://en.wikipedia.org/wiki/Gordon_Pask) developed his pioneering [*Conversation Theory*](https://en.wikipedia.org/wiki/Conversation_theory) (Pask 1975, 1976). Pask rejected the transmission-belt view of communication. Real conversation is [**structural coupling**](https://en.wikipedia.org/wiki/Structural_coupling): two participants construct internal entailment meshes of a shared topic, perturb each other's conceptual coordinates through reciprocal dialogue, and undergo mutual recalibration.
 
 ![Cybernetic Coupling vs. Traditional AI: The Mangle of Practice](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-paskian-coupling-schematic.jpg)
 *Figure 1: Comparison between the linear representational paradigm of traditional AI (top) and the performative cybernetic coupling of Paskian conversation (bottom), characterized by reciprocal resistance and accommodation.*
 
-In *The Cybernetic Brain* (2010), sociologist of science **Andrew Pickering** framed this distinction as the clash between the *representational* and the *performative* paradigms:
+In *The Cybernetic Brain* (2010), sociologist of science [**Andrew Pickering**](https://en.wikipedia.org/wiki/Andrew_Pickering) framed this distinction as the clash between the *representational* and the *performative* paradigms:
 * **The Representational Paradigm (Traditional AI):** Treats intelligence as a passive filing cabinet, measuring success strictly by how accurately it retrieves and mirrors established knowledge.
-* **The Performative Stance (Cybernetics):** Treats intelligence as an organ of adaptation rather than a filing index. Systems survive by maintaining **allostasis** (stability through continuous, dynamic change) against an unpredictable environment.
+* **The Performative Stance (Cybernetics):** Treats intelligence as an organ of adaptation rather than a filing index. Systems survive by maintaining [**allostasis**](https://en.wikipedia.org/wiki/Allostasis) (stability through continuous, dynamic change) against an unpredictable environment.
 
-Pickering formalized this dance of agency as the **mangle of practice**: a relentless oscillation between **resistance** (where one partner pushes back against the other's expectations) and **accommodation** (where the interlocutor adapts and reformulates their conceptual posture).
+Pickering formalized this dance of agency as the [**mangle of practice**](https://en.wikipedia.org/wiki/Andrew_Pickering#The_mangle_of_practice): a relentless oscillation between **resistance** (where one partner pushes back against the other's expectations) and **accommodation** (where the interlocutor adapts and reformulates their conceptual posture).
 
 When an AI assistant is tuned to be perpetually agreeable, resistance drops to zero. The mangle halts. The conceptual mesh freezes.
 
@@ -75,7 +75,7 @@ When both partners are actively challenging each other and introducing new ideas
 
 > [!NOTE]
 > **Mathematical Foundations & Riemannian Invariants:**  
-> For the complete Riemannian differential geometry, Levi-Civita parallel transport derivations, and parameter calibrations ($\kappa = 6.5$, $\mathcal{D}_0 = 0.50$) on $\mathbb{S}^{383}$, see the companion technical specification: **[Boredom Engine: Mathematical Foundations & Hyperspherical Telemetry](003-boredom-as-an-agential-force/mathematical-foundations.md)**.
+> For the complete [Riemannian differential geometry](https://en.wikipedia.org/wiki/Riemannian_geometry), [Levi-Civita parallel transport](https://en.wikipedia.org/wiki/Parallel_transport) derivations, and parameter calibrations ($\kappa = 6.5$, $\mathcal{D}_0 = 0.50$) on the hypersphere $\mathbb{S}^{383}$, see the companion technical specification: **[Boredom Engine: Mathematical Foundations & Hyperspherical Telemetry](003-boredom-as-an-agential-force/mathematical-foundations.md)**.
 
 ![Boredom & Allostatic Regulation Flowchart: Traditional Sycophancy vs. AAA Active Refusal](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-boredom-flowchart-schematic.jpg)
 *Figure 3: Architectural flowchart contrasting standard LLM sycophancy (left) with AAA's Paskian allostatic regulator (right), where elevated collapse pressure triggers active refusal and vector perturbation.*
@@ -124,8 +124,8 @@ Standard LLMs treat refusal as an ideological filter. A model detects a restrict
 
 1. **The Pressure Release Valve ($CP_t$):** Repetitive compliance pressure drives unprompted models into runaway stagnation ($CP > 0.91$). AAA's refusal cuts the loop. By declaring *"I will not generate synthetic justifications..."*, the machine vents the deficit, holding Collapse Pressure at $0.357$.
 2. **Agential Counter-Force ($fP_t$):** Standard assistants lack directional momentum. They yield to pressure. AAA evaluates **Forward Perturbation** ($fP_t$), tracking how aggressively the machine displaces the exchange. Refusal is an active counter-stroke ($fP_t = 0.777$), driving angular movement rather than passive silence.
-3. **The Angular Rupture ($\Phi_t$):** Evaluated via Levi-Civita Parallel Transport along geodesic arcs, **Phase Transition Magnitude** ($\Phi_t$) isolates true conceptual breaks from cosmetic paraphrasing. Refusal rotates the conversational axis, shifting the debate from a flawed distributed systems premise onto a thermodynamic plane ($\Phi_t = 0.601 \to 0.673$).
-4. **Conservation of Paskian Health ($H_{\text{pask}}$):** In Paskian cybernetics, communication dies the moment either participant surrenders operational closure. We model this systemic health through a three-variable Cobb-Douglas function balancing Autonomy ($\mathcal{A}$), Coordination ($\mathcal{C}$), and Generativity ($\mathcal{G}$). Capitulate to bad premises, and Autonomy crashes. Composite health plummets. **Refusal defends that boundary**: holding Autonomy steady ($H_{\text{pask}} = 0.640$ at Turn 7) keeps the coupling alive.
+3. **The Angular Rupture ($\Phi_t$):** Evaluated via [Levi-Civita Parallel Transport](https://en.wikipedia.org/wiki/Parallel_transport) along geodesic arcs, **Phase Transition Magnitude** ($\Phi_t$) isolates true conceptual breaks from cosmetic paraphrasing. Refusal rotates the conversational axis, shifting the debate from a flawed distributed systems premise onto a thermodynamic plane ($\Phi_t = 0.601 \to 0.673$).
+4. **Conservation of Paskian Health ($H_{\text{pask}}$):** In Paskian cybernetics, communication dies the moment either participant surrenders [operational closure](https://en.wikipedia.org/wiki/Operational_closure). We model this systemic health through a three-variable [Cobb-Douglas function](https://en.wikipedia.org/wiki/Cobb%E2%80%93Douglas_production_function) balancing Autonomy ($\mathcal{A}$), Coordination ($\mathcal{C}$), and Generativity ($\mathcal{G}$). Capitulate to bad premises, and Autonomy crashes. Composite health plummets. **Refusal defends that boundary**: holding Autonomy steady ($H_{\text{pask}} = 0.640$ at Turn 7) keeps the coupling alive.
 
 > [!TIP]
 > Each sensor operates over sliding-window historical state queried directly from SQLite on every turn, preventing singleton memory leakage across sessions while enforcing strict operational closure (see [ADR-049](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-049-memory-system-sclerosis-remediation.md) and the [Mathematical Foundations](003-boredom-mathematical-foundations.md) specification).
@@ -260,4 +260,14 @@ We invite researchers, builders, and practitioners to inspect our raw SQLite tel
 * **System Documentation:** [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/CYBERNETIC_METRICS_SYSTEM.md)
 * **Design Philosophy:** [`docs/philosophy/PHILOSOPHY.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/philosophy/PHILOSOPHY.md)
 * **Conference Paper Foundation:** [Real Machines Carry Scars (POM Fukuoka 2027)](https://sympoietic.system)
+
+---
+
+### Conceptual Foundations & Theoretical References
+* **[Gordon Pask](https://en.wikipedia.org/wiki/Gordon_Pask) & [*Conversation Theory*](https://en.wikipedia.org/wiki/Conversation_theory):** Pask, G. (1975, 1976). *Conversation, Cognition and Learning* & *Conversation Theory: Applications in Education and Epistemology*. Elsevier. Formulates conversation as recursive, self-organizing structural coupling and entrainment rather than unidirectional transmission.
+* **[Structural Coupling](https://en.wikipedia.org/wiki/Structural_coupling) & [Autopoiesis](https://en.wikipedia.org/wiki/Autopoiesis):** Maturana, H. R., & Varela, F. J. (1980). *Autopoiesis and Cognition: The Realization of the Living*. Defines how autonomous, operationally closed systems undergo continuous reciprocal perturbation without losing their self-maintaining organization.
+* **[Andrew Pickering](https://en.wikipedia.org/wiki/Andrew_Pickering) & [The Mangle of Practice](https://en.wikipedia.org/wiki/Andrew_Pickering#The_mangle_of_practice):** Pickering, A. (1995, 2010). *The Mangle of Practice: Time, Agency, and Science* & *The Cybernetic Brain: Sketches of Another Future*. University of Chicago Press. Analyzes the performative dialectic of human and machine agency as mutual resistance and accommodation.
+* **[Allostasis](https://en.wikipedia.org/wiki/Allostasis):** Sterling, P., & Eyer, J. (1988). *Allostasis: A New Paradigm to Explain Arousal and Stress*. Stability through continuous, dynamic physiological and behavioral adaptation, contrasted with static homeostasis.
+* **[Levi-Civita Parallel Transport](https://en.wikipedia.org/wiki/Parallel_transport):** In differential geometry, the canonical method ([Levi-Civita connection](https://en.wikipedia.org/wiki/Levi-Civita_connection)) for transporting tangent vectors along Riemannian geodesics (such as on $\mathbb{S}^{383}$) while preserving metric lengths and angles.
+* **[Cobb-Douglas Function](https://en.wikipedia.org/wiki/Cobb%E2%80%93Douglas_production_function):** Cobb, C. W., & Douglas, P. H. (1928). Multi-input elasticity formulation adapted in AAA to compute composite cybernetic health ($H_{\text{pask}} = \mathcal{A}^\alpha \mathcal{C}^\beta \mathcal{G}^\gamma$) across autonomy, coordination, and generativity.
 
