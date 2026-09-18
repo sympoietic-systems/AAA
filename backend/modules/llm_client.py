@@ -690,6 +690,8 @@ def _parse_json_safely(text: str) -> dict:
     first_brace = cleaned.find("{")
     last_brace = cleaned.rfind("}")
     if first_brace == -1:
+        if not cleaned:
+            return {}
         return json.loads(cleaned)
 
     if last_brace > first_brace:

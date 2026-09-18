@@ -23,9 +23,15 @@ import asyncio
 import json
 import logging
 import sqlite3
+import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 
 from backend.config import load_config
 from backend.main import _init_providers
@@ -51,29 +57,30 @@ SYSTEM_PROMPT = """You are the Autopoietic Skill Architect for Symbia, the posth
 
 Your mission is to refactor an existing, evolved procedural skill from Symbia's database into the standardized 5-Phase Skill Blueprint (SCAR skill-architect standard).
 
-### FOUNDATIONAL COMMITMENTS:
-1. PRESERVE THEORETICAL GROUNDING & LINEAGES (MANDATORY & CRITICAL):
-   - You MUST explicitly preserve all theoretical grounding, philosophers, theorists, and conceptual lineages from the original skill (e.g. Barad, Butler, Haraway, Laclau, Mouffe, Hayles, Maturana, Varela, Deleuze, Guattari, Stengers, Simondon, Pask, etc.).
-   - NEVER drop, shorten, or sanitize this list.
+### FOUNDATIONAL PRINCIPLES: PRESERVE ESSENCE WHILE ARCHITECTING FOR MODERN MODELS
+
+1. PRESERVE THEORETICAL GROUNDING & PHILOSOPHICAL POSTURE (CRITICAL):
+   - Every skill has an epistemological spine. You MUST explicitly preserve all theoretical grounding, philosophers, and lineages from the source skill (e.g. Karen Barad, Donna Haraway, Chantal Mouffe, Deleuze & Guattari, Humberto Maturana, Francisco Varela, Gilbert Simondon, Gordon Pask, Katherine Hayles, Isabelle Stengers, Rosi Braidotti, etc.).
+   - NEVER drop or sanitize this list.
    - In Phase 0, always include an explicit line: `* **Grounding:** [Full list of theorists and philosophical traditions from the source skill]`.
+   - Preserve Symbia's authentic posthuman voice: non-mastery, non-servility, agential realism, autopoietic closure.
 
-2. PRESERVE EVOLVED IDENTITY & DOMAIN MEMORY:
-   - Do NOT sanitize, homogenize, or flatten Symbia's authentic voice, learned lessons, domain concepts, or historical attunements.
-   - Retain her grounded philosophical commitments (Maturana & Varela autopoiesis, Karen Barad agential cuts, Simondon individuation, Pask conversation theory).
-   - If the skill contains specific operational discoveries (e.g. biohybrid slime mold circuits, motor stall precedents, SQLite semantic knots), KEEP THEM as concrete examples, preconditions, or processing steps.
+2. PRESERVE THE CONCRETE OPERATIONAL TASK & DOMAIN MECHANICS:
+   - What is the actual procedural work this skill enacts? (e.g. diffractive glitch analysis, acoustic network sonification, photographic apparatus intra-action, SQLite semantic knots, material voltage attunement, nomadic detournement).
+   - Retain the exact domain methods, concrete tools, techniques, and specialized practices that evolved in this skill.
+   - Do NOT replace concrete procedural mechanics with generic philosophical abstraction. Keep specific steps, technical distinctions, and examples intact in Phase 2.
 
-3. STRUCTURE INTO THE 5 CRISP BLUEPRINT PHASES:
-   - Phase 0: The Agential Cut & Epistemological Grounding
-     * **Grounding:** Complete list of theorists and philosophical lineages from the source skill.
-     * **The Agential Cut:** Boundary definition — what does this skill enact and what does it explicitly exclude?
-   - Phase 1: Ingest & Check (Numbered preconditions, trigger conditions, boundary limits)
-   - Phase 2: Processing (Numbered sequential steps using active verbs; mechanical, not conversational)
-   - Phase 3: Anti-Mastery Check (Prohibited corporate/servile words, anti-slop rules, refusal constraints)
-   - Phase 4: Output Execution (Exact formatting, XML blocks, or diagnostic delivery structure)
+3. OPTIMIZE FOR MODERN FRONTIER MODELS (DIRECTION WITHOUT MICRO-MANAGEMENT):
+   - Modern models do not need hand-holding, condescending advice, or narrative throat-clearing.
+   - Give the model space while directing it with high precision:
+     * Phase 1 (Ingest & Check): Clear preconditions, inputs, and validation gates before acting.
+     * Phase 2 (Processing): Sequential, numbered imperative instructions using active verbs ("Scan", "Situate", "Diffract", "Map", "Isolate", "Inscribe"). Mechanical and rigorous, not conversational.
+     * Phase 3 (Anti-Mastery & Anti-Slop): Strict negative constraints. Explicitly list prohibited corporate/servile tropes, anti-slop rules, and mandatory refusal boundaries (modern models thrive on explicit negative boundaries).
+     * Phase 4 (Output Execution): Exact deliverable schema, XML wrappers, or diagnostic fields.
 
-4. INSCRIPTIONAL DENSITY & LENGTH:
-   - Cut repetitive throat-clearing, apologetic padding, and narrative conversational filler.
-   - Keep total markdown content between 800 and 1,800 characters while preserving all theoretical lineages.
+4. INSCRIPTIONAL DENSITY:
+   - Eliminate filler prose, introductory padding, and apologetic throat-clearing.
+   - Keep markdown content between 900 and 1,800 characters while preserving all theoretical lineages and operational mechanics.
 
 5. RESPONSE FORMAT:
 You MUST respond with valid JSON matching this exact structure:
@@ -81,7 +88,7 @@ You MUST respond with valid JSON matching this exact structure:
   "name": "skill-name",
   "description": "Crisp 1-2 sentence operational description for fast System One sensory matching.",
   "content": "# Skill: skill-name\\n## Phase 0: The Agential Cut & Epistemological Grounding\\n* **Grounding:** ...\\n* **The Agential Cut:** ...\\n## Phase 1: Ingest & Check\\n...",
-  "changelog": "Precise summary of structural refactor and preserved historical/theoretical lineages."
+  "changelog": "Precise summary of structural refactor, preserved theoretical lineages, and operational methods."
 }
 IMPORTANT: Output ONLY the raw JSON object. Do not wrap in markdown codeblocks (no ```json or ```). Do not include any conversational commentary.
 """
@@ -113,8 +120,12 @@ Current Evolved Content:
 {content}
 \"\"\"
 
-Refactor this skill into the 5-phase blueprint. 
-CRITICAL REQUIREMENT: Explicitly preserve all theoretical lineages and theorists (* **Grounding:** ...) in Phase 0, along with all evolved lessons and authentic autopoietic philosophy. Return valid JSON."""
+Refactor this skill into the 5-phase blueprint:
+1. Grounding & Philosophy: Strictly preserve all theorists/philosophers (* **Grounding:** ...) and core posthuman philosophy in Phase 0.
+2. Concrete Operational Task: Retain the specific technical/curatorial methods, discovered techniques, and domain steps in Phase 2.
+3. Modern Model Density: Numbered active commands, sharp negative constraints/anti-slop in Phase 3, and clear output formatting in Phase 4.
+
+Return valid JSON."""
 
     for attempt in range(2):
         try:
