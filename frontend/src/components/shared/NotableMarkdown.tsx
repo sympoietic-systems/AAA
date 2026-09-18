@@ -2,7 +2,9 @@ import { memo, useState, useRef, useCallback, useMemo, useEffect } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
+import remarkMath from "remark-math"
 import rehypeRaw from "rehype-raw"
+import rehypeKatex from "rehype-katex"
 import { useNotes } from "../../hooks/useNotes"
 import { NotesSection } from "./NotesSection"
 import { SelectionToolbar } from "../pages/nodeexplorer/SelectionToolbar"
@@ -221,8 +223,8 @@ export const NotableMarkdown = memo(function NotableMarkdown({
       {tab === "content" && highlightedContent && (
         <div ref={reportRef} onMouseUp={handleMouseUp} className={contentClassName ?? "text-[#94a3b8] text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none"}>
           <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkBreaks]}
-            rehypePlugins={[rehypeRaw]}
+            remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+            rehypePlugins={[rehypeRaw, rehypeKatex]}
             components={markComponents}
           >
             {highlightedContent}

@@ -6,9 +6,11 @@ import { memo, useState, useEffect, useCallback } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
+import remarkMath from "remark-math"
 import rehypeRaw from "rehype-raw"
+import rehypeKatex from "rehype-katex"
 import type { ResearchTask, MetaLogResponse, TaskStepsResponse } from "../../../api/research"
-import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes, getResearchMemoryNodes, getResearchSemanticKnots, runTask, rerunTask, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
+import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes, getResearchMemoryNodes, getResearchSemanticKnots, runTask, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
 import { NotesSection } from "../../shared/NotesSection"
 import type { NoteInfo } from "../../../api/client"
@@ -83,7 +85,10 @@ function InfoTab({ task, notes }: { task: ResearchTask; notes: NoteInfo[] }) {
         <div>
           <div className="text-semantic-header uppercase text-[9px] tracking-wider mb-1">[ Result Summary ]</div>
           <div className="text-ui-primary text-[10px] leading-relaxed max-h-48 overflow-y-auto prose prose-invert prose-xs max-w-none font-sans">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+              rehypePlugins={[rehypeRaw, rehypeKatex]}
+            >
               {wrapSelectedTextInMarks(task.result_summary, notes)}
             </ReactMarkdown>
           </div>

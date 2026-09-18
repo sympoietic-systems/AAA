@@ -182,3 +182,16 @@ body {
 .highlight-glow {
   animation: active-focus-glow 2.5s ease-out;
 }
+
+/* KaTeX formula display styling */
+.katex-display {
+  margin: 0.6em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.2em 0;
+}
+
+.katex {
+  font-size: 1.05em;
+  color: #e2e8f0;
+}

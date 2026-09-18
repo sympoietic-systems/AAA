@@ -2,6 +2,8 @@ import { memo, useState, useCallback, useRef } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
+import remarkMath from "remark-math"
+import rehypeKatex from "rehype-katex"
 import { BracketHeader } from "./BracketHeader"
 import { TerminalButton } from "../../../UI"
 import { copyToClipboard } from "../../../../utils/clipboard"
@@ -100,7 +102,12 @@ export const MarkdownSection = memo(function MarkdownSection({ title, content, f
         ref={contentRef}
         className={`text-[#94a3b8] text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none ${fullHeight ? "flex-1 min-h-0 overflow-y-auto" : "max-h-96 overflow-y-auto"}`}
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+        >
+          {content}
+        </ReactMarkdown>
       </div>
     </div>
   )

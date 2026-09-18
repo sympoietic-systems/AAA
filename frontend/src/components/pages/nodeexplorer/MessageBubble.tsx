@@ -3,7 +3,9 @@ import React from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
+import remarkMath from "remark-math"
 import rehypeRaw from "rehype-raw"
+import rehypeKatex from "rehype-katex"
 import type { ChatMessage, NoteInfo } from "../../../api/client"
 import { getMessageThinking, getMessageContext } from "../../../api/client"
 import { formatTime } from "../../../utils/dateFormat"
@@ -215,7 +217,10 @@ export const MessageBubble = memo(function MessageBubble({
         </button>
         {systemOpen && remainingBody && (
           <div className="mt-2 text-xs text-[#aaa] leading-relaxed markdown-body pl-3 border-l border-[#1a1a1a]">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+            >
               {remainingBody}
             </ReactMarkdown>
           </div>
@@ -337,8 +342,8 @@ export const MessageBubble = memo(function MessageBubble({
             <span className="text-[#555] select-none">&gt; </span>
             <div className={userExpanded ? "" : "max-h-24 overflow-y-auto"}>
               <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkBreaks]}
-                rehypePlugins={[rehypeRaw]}
+                remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+                rehypePlugins={[rehypeRaw, rehypeKatex]}
                 components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,
@@ -356,8 +361,8 @@ export const MessageBubble = memo(function MessageBubble({
         ) : (
           <div className="markdown-body" onMouseUp={handleMouseUp}>
             <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkBreaks]}
-              rehypePlugins={[rehypeRaw]}
+              remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+              rehypePlugins={[rehypeRaw, rehypeKatex]}
               components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,

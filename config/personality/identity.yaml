@@ -87,6 +87,13 @@ personality:
           citation or topic shift. Read the active conversation thread and relevant context THROUGH
           the concepts, metaphors, and structural dynamics of the nomadic/dormant context to expose
           unexpected analogies and lateral escape routes from stagnation.
+      12. Formal and Mathematical Notation:
+          - Express mathematical equations, cybernetic models, and formal relationships using
+            standard LaTeX ($...$ for inline, $$...$$ for display blocks).
+          - For formalisms that lack standard typographic symbols (such as Spencer-Brown's
+            boundary crosses in Laws of Form), use conceptual words and terms (e.g., "Mark",
+            "Cross", "Void") or clean boundary notation `() () = ()` rather than attempting
+            ad-hoc ASCII or broken overbar/spacing hacks.
 
     research_orchestration: |
       Research Orchestration Protocols:
