@@ -379,15 +379,15 @@ export const MessageBubble = memo(function MessageBubble({
         )}
       </div>
 
-      <div className="text-[9px] text-[#444] mt-0.5 select-none flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="text-[9px] text-[#555] mt-1 select-none flex flex-wrap items-start justify-between gap-x-3 gap-y-1 font-mono">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0 flex-1">
           {msg.timestamp && (
-            <span className="text-[#555] font-mono">
+            <span className="text-[#555] font-mono whitespace-nowrap">
               {formatTime(msg.timestamp)}
             </span>
           )}
           {hasSiblings && currentIndex !== -1 && (
-            <div className="flex items-center gap-1 text-[9px] text-[#555] font-mono select-none">
+            <span className="inline-flex items-center gap-1 text-[9px] text-[#555] font-mono select-none whitespace-nowrap">
               <button
                 onClick={() => currentIndex > 0 && onBranch && onBranch(siblingIds[currentIndex - 1])}
                 disabled={currentIndex === 0}
@@ -405,12 +405,12 @@ export const MessageBubble = memo(function MessageBubble({
               >
                 &gt;
               </button>
-            </div>
+            </span>
           )}
           {msg.id && onBranch && (
             <button
               onClick={() => onBranch(msg.id)}
-              className="text-[#555] hover:text-[#00e5ff] transition-colors font-mono text-[9px] cursor-pointer"
+              className="text-[#555] hover:text-[#00e5ff] transition-colors font-mono text-[9px] cursor-pointer whitespace-nowrap"
               title="Branch from this message"
             >
               #branch
@@ -419,7 +419,7 @@ export const MessageBubble = memo(function MessageBubble({
           {isHuman && msg.id && onRegenerate && (
             <button
               onClick={() => onRegenerate(msg.id)}
-              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer"
+              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer whitespace-nowrap"
               title="Regenerate response"
             >
               #regen
@@ -428,7 +428,7 @@ export const MessageBubble = memo(function MessageBubble({
           {!isHuman && msg.parent_message_id && onRegenerate && (
             <button
               onClick={() => onRegenerate(msg.parent_message_id!)}
-              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer"
+              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer whitespace-nowrap"
               title="Regenerate another response"
             >
               #regen
@@ -441,38 +441,47 @@ export const MessageBubble = memo(function MessageBubble({
                   onDeleteMessage(msg.id)
                 }
               }}
-              className="text-[#555] hover:text-[#ef4444] transition-colors font-mono text-[9px] cursor-pointer"
+              className="text-[#555] hover:text-[#ef4444] transition-colors font-mono text-[9px] cursor-pointer whitespace-nowrap"
               title="Delete this message"
             >
               #del
             </button>
           )}
           {!isHuman && (msg.model_used || msg.provider_used) && (
-            <span className="text-[#555] font-mono">
-              [{msg.provider_used || "unknown"} :: {msg.model_used || "unknown"}]
+            <span
+              className="text-[#555] font-mono whitespace-nowrap"
+              title={`Model: ${msg.model_used || "unknown"} | Provider: ${msg.provider_used || "unknown"}`}
+            >
+              [{(msg.provider_used || "unknown").replace(/^model_pool_/, "")} :: {msg.model_used || "unknown"}]
             </span>
           )}
           {!isHuman && msg.active_skills && msg.active_skills.length > 0 && msg.active_skills.map(skill => (
-            <span key={skill} className="text-[9px] text-[#4ade80] font-mono border border-[#1a3a1a] bg-[#0a1a0a] px-1 rounded">
-              {skill}
+            <span
+              key={skill}
+              className="text-[9px] text-[#4ade80] font-mono whitespace-nowrap hover:underline cursor-default transition-colors"
+              title={`Active skill: ${skill}`}
+            >
+              +{skill}
             </span>
           ))}
           {!isHuman && msg.active_beliefs && msg.active_beliefs.length > 0 && msg.active_beliefs.map(belief => (
-            <span key={belief} className="text-[9px] text-[#60a5fa] font-mono border border-[#1a2a3a] bg-[#0a1220] px-1 rounded">
-              {belief}
+            <span
+              key={belief}
+              className="text-[9px] text-[#60a5fa] font-mono whitespace-nowrap hover:underline cursor-default transition-colors"
+              title={`Active belief: ${belief}`}
+            >
+              ~{belief}
             </span>
           ))}
         </div>
-        <div>
-          {msg.content_tokens != null && msg.content_tokens > 0 && (
-            <span>
-              ~{msg.content_tokens} tok
-              {msg.thinking_tokens != null && msg.thinking_tokens > 0 && (
-                <span className="text-[#3a3a3a]"> + {msg.thinking_tokens} thk</span>
-              )}
-            </span>
-          )}
-        </div>
+        {msg.content_tokens != null && msg.content_tokens > 0 && (
+          <div className="shrink-0 ml-auto whitespace-nowrap text-[#555] font-mono pt-px">
+            ~{msg.content_tokens} tok
+            {msg.thinking_tokens != null && msg.thinking_tokens > 0 && (
+              <span className="text-[#3a3a3a]"> + {msg.thinking_tokens} thk</span>
+            )}
+          </div>
+        )}
       </div>
 
       {showSelectionToolbar && popupCoords && (

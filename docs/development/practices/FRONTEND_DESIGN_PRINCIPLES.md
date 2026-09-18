@@ -415,6 +415,7 @@ NodeExplorer (memo'd)
 *   **CreasesDropdown**: `[creases: N ◆]` text toggle, tabs as `•` dot-separated text, items as plain rows, `[jump]` `[read]` terminal buttons — no `bg/border/rounded` anywhere
 *   **InputBar**: `border-t border-[#222]/40` divider only, send button `text-[#4ade80]` plain text — no `bg`
 *   **MessageBubble simplified**: `ResearchProposalCard`, `SelectionToolbar`, and `NoteEditorPopover` extracted into standalone components (871 → 578 lines, per ADR-050). Core note/tooltip/selection interactions remain for future optimization.
+*   **MessageBubble reply bottom / footer**: Minimal terminal aesthetic. Zero decorative containers: no `bg-[...]`, `border`, or `rounded` cards for skills/beliefs. Active skills render as plain green text (`text-[#4ade80]` with `+skill` prefix), active beliefs as plain blue text (`text-[#60a5fa]` with `~belief` prefix). The footer uses `flex-wrap` with `whitespace-nowrap` on each token so items wrap cleanly across lines without breaking hyphenated words or overflowing horizontally.
 
 ---
 
