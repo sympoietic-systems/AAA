@@ -748,6 +748,7 @@ App.tsx (root orchestrator — React Router + lazy loading)
 ### 7.3 Key UI Features
 
 - **MessageBubble debug toggles:** Thinking trace, Context viewer (parsed into collapsible sections: System Prompt, History, Sediment, File, Web, Diffractive, Query), Structural autopoietic glyph (16D radar/bar), Inline notes
+- **KaTeX Mathematical Formula Rendering:** Automatic inline ($...$) and block ($$...$$) math typesetting across all MessageBubble conversations, daily notes, and research reports via `remark-math` and `rehype-katex` (ADR-088)
 - **ContextViewer:** Modular parser that detects and renders `--- BEGIN/END ---` blocks for each context section
 - **StructuralAutopoieticGlyph:** Interactive 16D radial coordinate visualization for belief/skill/message signatures
 - **VectorVisualizer:** Type-aware bar chart supporting both Autopoietic Signature (unipolar [0,1]) and State Impact Vector (bipolar [-0.5, 0.5])

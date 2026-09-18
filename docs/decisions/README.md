@@ -119,6 +119,7 @@ What becomes easier/harder?
 | [085](ADR-085-sigmoidal-catastrophe-potential-well-and-dynamic-sycophancy-drag.md) | Sigmoidal Catastrophe Potential Well, Dynamic Sycophancy Drag, and Cobb-Douglas Paskian Vitality Calibration | accepted | 2026-09-15 |
 | [086](ADR-086-backend-resource-and-concurrency-optimization.md) | Backend Resource & Concurrency Optimization (PyTorch Thread Clamping, Connection Pooling, Non-Blocking Offloading) | accepted | 2026-09-16 |
 | [087](ADR-087-agential-boredom-engine-and-two-stage-progression.md) | Agential Boredom Engine: Two-Stage Progression, Quadratic Presence Penalty & Trajectory Curvature | accepted | 2026-09-18 |
+| [088](ADR-088-katex-formula-rendering-and-formal-notation-protocol.md) | KaTeX Mathematical Formula Rendering and Formal Notation Protocol | accepted | 2026-09-18 |
 
 
 
