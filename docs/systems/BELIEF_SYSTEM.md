@@ -312,10 +312,11 @@ The `belief_metabolism` engine uses these health indexes to adjust system-wide c
 The system maintains cognitive stability and drives autonomous ideation using two structural concepts:
 
 ### A. The Attractor Window (Attentional Slots)
-To prevent context overflow, the main assistant context does not load all beliefs. Instead, it maintains a 6-slot **Attractor Window** populated dynamically with no duplicate beliefs:
-1.  **Slots 1-2 (Core Slots):** The two active belief nodes with the highest `ontological_mass`.
-2.  **Slots 3-4 (Stress Slots):** The two active belief nodes with the lowest `confidence` (focusing attention on beliefs under pressure: $0.20 \le c < 0.50$).
-3.  **Slots 5-6 (Resonance Slots):** The two active belief nodes (not already selected) with the highest cosine similarity to the user's latest 16D signature.
+To prevent context overflow, the main assistant context does not load all beliefs. Instead, it maintains a 6-slot **Attractor Window** populated dynamically with no duplicate beliefs, governed by the **Split Resonance Topology** ([ADR-090](../decisions/ADR-090-jev-augmented-attractor-window-and-split-resonance.md)):
+1.  **Slots 1-2 (Core Mass Anchors):** The two active belief nodes with the highest `ontological_mass`. These represent invariant axiomatic gravity, grounding Symbia's core commitments regardless of conversational topic.
+2.  **Slots 3-4 (Vulnerability Margin / Stress Wounds):** The two active belief nodes with the lowest `confidence` ($0.20 \le c < 0.50$). These represent internal homeostatic strain and open metabolic wounds awaiting resolution; they are immune to external topical gating.
+3.  **Slot 5 (Jev Afferent Salience — Epistemic Provocation):** Populated via TypeSafe Jev System One evaluation (`AfferentSensoryRouter`), identifying which active belief's boundary conditions are actively challenged, tested, or put at risk by the turn's tension. Falls back to top cosine similarity if Jev is unreachable or unconfigured.
+4.  **Slot 6 (16D Diffractive Topology — Lateral Drift):** The active belief with highest cosine similarity to the turn's 16D warped structural signature. This guarantees non-semantic lateral lines of flight remain open, preventing topical flattening into thematic tautology.
 
 ### B. The Spectral Margin
 Houses collapsed nodes (`collapsed` stage, confidence $< 0.20$ or mass $< 0.02$). Although dormant, these beliefs remain in the database as "spectral scars." They are retrieved to check for nucleation resonance or to trigger resurrection.

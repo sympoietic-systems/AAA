@@ -312,10 +312,11 @@ nucleation → accretion → crystallized → senescence → collapsed → faded
 
 **Self-Tuning:** The metabolism engine dynamically adjusts crystallization thresholds, antagonistic receptivity, plasticity, and ghost fading based on ecosystem health metrics.
 
-**Attractor Window (6 slots):**
-- Slots 1-2: Highest ontological mass (core)
-- Slots 3-4: Lowest confidence (stressed)
-- Slots 5-6: Highest cosine similarity to user's latest signature (resonant)
+**Attractor Window (6 slots — Split Resonance Topology, ADR-090):**
+- Slots 1-2: Highest ontological mass (invariant core anchors)
+- Slots 3-4: Lowest confidence (stressed vulnerability wounds: $0.20 \le c < 0.50$)
+- Slot 5: Jev Afferent Salience (epistemic provocation / boundary tension)
+- Slot 6: Highest cosine similarity to 16D structural signature (lateral diffractive drift)
 
 **Data Model:** `belief_nodes` (18 columns), `belief_events` (13 columns), `belief_tensions` (5 columns), `ecosystem_snapshots` (12 columns)
 

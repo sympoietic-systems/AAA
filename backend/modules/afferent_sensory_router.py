@@ -32,6 +32,11 @@ CHOICE_ORGAN_INSTRUCTION = (
     "operational tension in the participant's turn?"
 )
 
+BELIEF_PROVOCATION_INSTRUCTION = (
+    "Which of these active agential convictions or commitments has its boundary condition "
+    "most acutely tested, challenged, or put at risk by the tension in the participant's turn?"
+)
+
 
 class AfferentSensoryRouter:
     """Evaluates conversation turns through Jev to determine skill resonance and gating."""
@@ -123,6 +128,7 @@ class AfferentSensoryRouter:
         messages: list[dict[str, Any]] | None = None,
         file_context: list[dict[str, Any]] | None = None,
         attractor_window: list[dict[str, Any]] | None = None,
+        active_beliefs: list[Any] | None = None,
         collapse_pressure: float = 0.0,
     ) -> dict[str, Any]:
         """Evaluate turn through Jev Afferent Sensory Membrane.
@@ -132,6 +138,8 @@ class AfferentSensoryRouter:
               - decision: "none" | "coordinate" | "inject"
               - injected_skills: list of SkillNode objects to inject in full
               - coordinates: list of string tags (<skill_relevance .../>)
+              - salient_belief_id: str | None (belief boundary challenged by turn)
+              - salient_belief_label: str | None
               - raw_evaluation: dict | None
         """
         if not self.is_available or not on_demand_skills or not user_message:
@@ -139,6 +147,8 @@ class AfferentSensoryRouter:
                 "decision": "none",
                 "injected_skills": [],
                 "coordinates": [],
+                "salient_belief_id": None,
+                "salient_belief_label": None,
                 "raw_evaluation": None,
             }
 
@@ -169,6 +179,25 @@ class AfferentSensoryRouter:
             },
         }
 
+        # Epistemic Belief Provocation question (Slot 5 Afferent Salience)
+        belief_by_choice_key: dict[str, Any] = {}
+        if active_beliefs:
+            belief_criteria: dict[str, str] = {}
+            for b in active_beliefs:
+                key = getattr(b, "label", None) or getattr(b, "id", "")
+                if not key:
+                    continue
+                statement = getattr(b, "statement", "") or ""
+                belief_criteria[key] = statement[:150]
+                belief_by_choice_key[key] = b
+
+            if belief_criteria:
+                questions["belief_provocation"] = {
+                    "type": "choice",
+                    "instructions": BELIEF_PROVOCATION_INSTRUCTION,
+                    "criteria": belief_criteria,
+                }
+
         eval_res = await self.client.evaluate(state=state, questions=questions)
         if not eval_res.get("success"):
             logger.debug("Afferent sensory evaluation was unsuccessful; falling back.")
@@ -176,6 +205,8 @@ class AfferentSensoryRouter:
                 "decision": "none",
                 "injected_skills": [],
                 "coordinates": [],
+                "salient_belief_id": None,
+                "salient_belief_label": None,
                 "raw_evaluation": eval_res,
             }
 
@@ -190,6 +221,16 @@ class AfferentSensoryRouter:
         top_choice = choice_ans.get("choice") or choice_ans.get("decision")
         probs = choice_ans.get("probabilities", {})
         confidence = choice_ans.get("confidence", 0.5)
+
+        # ── Epistemic Belief Provocation Salience ──────────────────────────
+        salient_belief_id = None
+        salient_belief_label = None
+        belief_prov_ans = answers.get("belief_provocation", {})
+        top_belief_choice = belief_prov_ans.get("choice") or belief_prov_ans.get("decision")
+        if top_belief_choice and top_belief_choice in belief_by_choice_key:
+            chosen_belief = belief_by_choice_key[top_belief_choice]
+            salient_belief_id = getattr(chosen_belief, "id", None)
+            salient_belief_label = getattr(chosen_belief, "label", None) or top_belief_choice
 
         # ── Boredom Inversion Gate ─────────────────────────────────────────
         # When Collapse Pressure > 0.70, bypass conservative contemplation gate
@@ -206,6 +247,8 @@ class AfferentSensoryRouter:
                     "decision": "none",
                     "injected_skills": [],
                     "coordinates": [],
+                    "salient_belief_id": salient_belief_id,
+                    "salient_belief_label": salient_belief_label,
                     "raw_evaluation": eval_res,
                 }
 
@@ -271,5 +314,7 @@ class AfferentSensoryRouter:
             "decision": decision,
             "injected_skills": injected_skills,
             "coordinates": coordinates,
+            "salient_belief_id": salient_belief_id,
+            "salient_belief_label": salient_belief_label,
             "raw_evaluation": eval_res,
         }

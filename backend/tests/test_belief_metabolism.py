@@ -618,10 +618,66 @@ def test_migration_050_recalibrate():
             os.remove(db_path)
 
 
+def test_attractor_window_split_resonance():
+    """Verify Slot 5 takes Jev salient belief while Slot 6 takes 16D cosine topology."""
+    from backend.utils.prompt_builder import build_attractor_window
+
+    class MockBeliefRepo:
+        def __init__(self, beliefs):
+            self._beliefs = beliefs
+
+        def list_beliefs(self, agent_id):
+            return self._beliefs
+
+    class MockBelief:
+        def __init__(self, id, label, statement, mass, conf, vec):
+            self.id = id
+            self.label = label
+            self.statement = statement
+            self.ontological_mass = mass
+            self.confidence = conf
+            self.vector_16d = json.dumps(vec)
+            self.lifecycle_stage = "crystallized"
+
+    # 7 beliefs to test all 6 slots
+    b_mass1 = MockBelief("b1", "core_anchor_1", "Mass Anchor 1", 1.0, 0.95, [1.0] + [0.0]*15)
+    b_mass2 = MockBelief("b2", "core_anchor_2", "Mass Anchor 2", 0.9, 0.90, [0.0, 1.0] + [0.0]*14)
+    b_stress1 = MockBelief("b3", "stress_wound_1", "Stressed 1", 0.5, 0.35, [0.0]*16)
+    b_stress2 = MockBelief("b4", "stress_wound_2", "Stressed 2", 0.5, 0.40, [0.0]*16)
+    b_provoked = MockBelief("b5", "provoked_boundary", "Challenged Boundary", 0.6, 0.70, [0.0]*16)
+    b_cosine = MockBelief("b6", "lateral_flight", "Lateral diffractive line", 0.6, 0.75, [0.0, 0.0, 1.0] + [0.0]*13)
+    b_other = MockBelief("b7", "extra_belief", "Extra", 0.4, 0.60, [0.0]*16)
+
+    repo = MockBeliefRepo([b_mass1, b_mass2, b_stress1, b_stress2, b_provoked, b_cosine, b_other])
+
+    # signature aligns with b_cosine (index 2 is 1.0)
+    sig_16d = np.array([0.0, 0.0, 1.0] + [0.0]*13, dtype=np.float32)
+
+    window = build_attractor_window(
+        belief_repo=repo,
+        agent_id="symbia",
+        signature_16d=sig_16d,
+        salient_belief_label="provoked_boundary",
+    )
+
+    assert len(window) == 6
+    # Slots 1-2: mass anchors
+    assert window[0]["label"] == "core_anchor_1"
+    assert window[1]["label"] == "core_anchor_2"
+    # Slots 3-4: stressed wounds
+    assert window[2]["label"] == "stress_wound_1"
+    assert window[3]["label"] == "stress_wound_2"
+    # Slot 5: Jev Afferent Salience
+    assert window[4]["label"] == "provoked_boundary"
+    # Slot 6: 16D Diffractive Topology (highest cosine similarity)
+    assert window[5]["label"] == "lateral_flight"
+
+
 if __name__ == "__main__":
     test_belief_seeding_and_db_migration()
     test_coordinate_warping()
     test_attractor_window_and_spectral_margin()
+    test_attractor_window_split_resonance()
     test_perception_metabolism()
     test_autopoietic_vitality_mechanics()
     test_somatic_vitality_state_locking()

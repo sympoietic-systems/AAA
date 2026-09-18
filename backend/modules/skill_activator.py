@@ -74,12 +74,23 @@ class SkillActivatorModule(ProcessingModule):
         if self._router and self._router.is_available and user_message:
             try:
                 collapse_pressure = float(payload.get("metrics", {}).get("collapse_pressure", 0.0) or 0.0)
+                agent_id = payload.get("agent_id") or "symbia"
+                active_candidate_beliefs = []
+                if self._belief_repo:
+                    all_beliefs = self._belief_repo.list_beliefs(agent_id)
+                    # Exclude collapsed/faded or extremely low confidence
+                    active_candidate_beliefs = [
+                        b for b in all_beliefs
+                        if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20
+                    ]
+
                 route_res = await self._router.route(
                     user_message=user_message,
                     on_demand_skills=on_demand_skills,
                     messages=payload.get("messages", []),
                     file_context=payload.get("file_context", []),
                     attractor_window=payload.get("attractor_window", []),
+                    active_beliefs=active_candidate_beliefs,
                     collapse_pressure=collapse_pressure,
                 )
 
@@ -105,6 +116,25 @@ class SkillActivatorModule(ProcessingModule):
 
                     payload["loaded_skills"] = loaded_skills
                     payload["skill_relevance_coordinates"] = route_res.get("coordinates", [])
+
+                    # ── Re-seat Slot 5 (Jev Afferent Salience) in Attractor Window ──
+                    salient_label = route_res.get("salient_belief_label")
+                    salient_id = route_res.get("salient_belief_id")
+                    if (salient_label or salient_id) and self._belief_repo:
+                        sig_bytes = payload.get("structural_signature")
+                        sig_16d = np.frombuffer(sig_bytes, dtype=np.float32) if sig_bytes else None
+                        from backend.utils.prompt_builder import build_attractor_window
+                        updated_window = build_attractor_window(
+                            self._belief_repo,
+                            agent_id,
+                            sig_16d,
+                            salient_belief_label=salient_label,
+                            salient_belief_id=salient_id,
+                        )
+                        if updated_window:
+                            payload["attractor_window"] = updated_window
+                            payload["salient_belief_label"] = salient_label
+
                     self._detect_underperformance(payload, all_skills)
                     return payload
             except Exception as e:

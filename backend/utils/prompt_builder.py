@@ -90,12 +90,16 @@ def build_attractor_window(
     belief_repo: Any,
     agent_id: str,
     signature_16d: np.ndarray | None,
+    salient_belief_label: str | None = None,
+    salient_belief_id: str | None = None,
 ) -> list[dict]:
     """6-slot attractor window from active beliefs.
 
     Slots 1-2: top 2 by ontological mass (foundational anchors).
     Slots 3-4: bottom 2 by confidence among stressed (conf < 0.50).
-    Slots 5-6: top 2 by cosine similarity to signature_16d (resonance).
+    Slot 5: Jev Afferent Salience (epistemic boundary perturbation) if available,
+            otherwise top 1 by cosine similarity.
+    Slot 6: top 1 by 16D cosine similarity to signature_16d (lateral diffractive drift).
 
     Returns empty list if no active beliefs or no repo.
     Falls back to unconditional top-4 if signature is None or wrong dimension.
@@ -127,12 +131,12 @@ def build_attractor_window(
         slots: list[Any] = [None] * 6
         used_ids: set[str] = set()
 
-        # Slots 1-2: mass
+        # Slots 1-2: mass anchors
         for i, b in enumerate(sorted(active, key=lambda x: x.ontological_mass, reverse=True)[:2]):
             slots[i] = b
             used_ids.add(b.id)
 
-        # Slots 3-4: stressed
+        # Slots 3-4: stressed (internal metabolic wounds)
         stressed = [b for b in active if b.confidence < 0.50 and b.id not in used_ids]
         if len(stressed) >= 2:
             for i, b in enumerate(sorted(stressed, key=lambda x: x.confidence)[:2]):
@@ -150,23 +154,45 @@ def build_attractor_window(
                 slots[2 + i] = b
                 used_ids.add(b.id)
 
-        # Slots 5-6: resonance
+        # Resonance pool
         resonance_pool = [b for b in active if b.id not in used_ids]
-        if resonance_pool:
 
-            def _sim(b: Any) -> float:
-                try:
-                    bv = parse_vector_16d(b.vector_16d)
-                    if bv is None:
-                        return -1.0
-                    return cosine_similarity(signature_16d, bv)
-                except Exception:
-                    logger.warning("Cosine similarity failed for belief resonance scoring")
+        def _sim(b: Any) -> float:
+            try:
+                bv = parse_vector_16d(b.vector_16d)
+                if bv is None:
                     return -1.0
+                return cosine_similarity(signature_16d, bv)
+            except Exception:
+                logger.warning("Cosine similarity failed for belief resonance scoring")
+                return -1.0
 
-            for i, b in enumerate(sorted(resonance_pool, key=_sim, reverse=True)[:2]):
-                slots[4 + i] = b
-                used_ids.add(b.id)
+        # Slot 5: Jev Afferent Salience (if identified and not already in used_ids)
+        jev_matched_belief = None
+        if salient_belief_id or salient_belief_label:
+            for b in resonance_pool:
+                if (salient_belief_id and b.id == salient_belief_id) or (
+                    salient_belief_label and (b.label or "").lower() == salient_belief_label.lower()
+                ):
+                    jev_matched_belief = b
+                    break
+
+        if jev_matched_belief:
+            slots[4] = jev_matched_belief
+            used_ids.add(jev_matched_belief.id)
+            resonance_pool = [b for b in resonance_pool if b.id not in used_ids]
+        elif resonance_pool:
+            # Fall back to top cosine match for Slot 5
+            top_cosine = max(resonance_pool, key=_sim)
+            slots[4] = top_cosine
+            used_ids.add(top_cosine.id)
+            resonance_pool = [b for b in resonance_pool if b.id not in used_ids]
+
+        # Slot 6: 16D Diffractive Topology (top cosine similarity)
+        if resonance_pool:
+            top_lateral = max(resonance_pool, key=_sim)
+            slots[5] = top_lateral
+            used_ids.add(top_lateral.id)
 
         return [
             {

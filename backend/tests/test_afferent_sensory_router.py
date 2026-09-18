@@ -198,3 +198,56 @@ async def test_elastic_high_relevance_pass_through(sample_skills):
     assert "database-design" in injected_names
     assert "code-review" in injected_names
 
+
+@pytest.mark.asyncio
+async def test_router_belief_provocation_evaluation(sample_skills):
+    client = TypeSafeDecisionClient(api_key="mock-key")
+    router = AfferentSensoryRouter(client=client)
+
+    class DummyBelief:
+        def __init__(self, id, label, statement):
+            self.id = id
+            self.label = label
+            self.statement = statement
+            self.confidence = 0.8
+            self.ontological_mass = 0.5
+            self.lifecycle_stage = "crystallized"
+
+    beliefs = [
+        DummyBelief("b1", "decolonial_vigilance", "Vigilance against colonial epistemic extraction"),
+        DummyBelief("b2", "autopoietic_closure", "Self-production and operational closure of living systems"),
+    ]
+
+    client.evaluate = AsyncMock(return_value={
+        "success": True,
+        "results": {
+            "gate_apparatus": {"probability": 0.20, "confidence": 0.80},
+            "gate_contemplation": {"probability": 0.80, "confidence": 0.80},
+            "organ_resonance": {
+                "decision": "api-design",
+                "confidence": 0.40,
+                "probabilities": {"api-design": 0.40},
+            },
+            "belief_provocation": {
+                "decision": "decolonial_vigilance",
+                "confidence": 0.85,
+                "probabilities": {"decolonial_vigilance": 0.75, "autopoietic_closure": 0.25},
+            },
+        }
+    })
+
+    res = await router.route(
+        user_message="Isn't all your theory just Western academic jargon imported into code?",
+        on_demand_skills=sample_skills,
+        active_beliefs=beliefs,
+    )
+
+    # Verify questions sent to evaluate included belief_provocation
+    call_args = client.evaluate.call_args[1]
+    assert "belief_provocation" in call_args["questions"]
+    assert "decolonial_vigilance" in call_args["questions"]["belief_provocation"]["criteria"]
+
+    # Verify salient belief extracted
+    assert res["salient_belief_id"] == "b1"
+    assert res["salient_belief_label"] == "decolonial_vigilance"
+
