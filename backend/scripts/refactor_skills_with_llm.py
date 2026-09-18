@@ -94,6 +94,95 @@ IMPORTANT: Output ONLY the raw JSON object. Do not wrap in markdown codeblocks (
 """
 
 
+import re
+
+def extract_blueprint_fallback(raw: str, default_name: str) -> dict | None:
+    """Robust fallback extractor for JSON payloads with unescaped internal quotes or formatting noise."""
+    if not raw:
+        return None
+
+    cleaned = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.MULTILINE)
+    cleaned = re.sub(r"^```\s*$", "", cleaned.strip(), flags=re.MULTILINE)
+
+    # 1. Try standard JSON first
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict) and data.get("content"):
+            return data
+    except Exception:
+        pass
+
+    # 2. Extract name
+    name = default_name
+    m_name = re.search(r'["\']name["\']\s*:\s*["\']([^"\']+)["\']', cleaned)
+    if m_name:
+        name = m_name.group(1).strip()
+
+    # 3. Extract description
+    desc = ""
+    m_desc = re.search(
+        r'["\']description["\']\s*:\s*["\'](.*?)(?:["\']\s*,\s*["\']content["\']|\n\s*["\']content["\'])',
+        cleaned,
+        flags=re.DOTALL,
+    )
+    if m_desc:
+        desc = m_desc.group(1).strip()
+    else:
+        m_desc_line = re.search(r'["\']description["\']\s*:\s*["\']([^"\']+)["\']', cleaned)
+        if m_desc_line:
+            desc = m_desc_line.group(1).strip()
+
+    # 4. Extract content
+    content = ""
+    c_idx = cleaned.find('"content"')
+    if c_idx == -1:
+        c_idx = cleaned.find("'content'")
+
+    if c_idx != -1:
+        sub = cleaned[c_idx:]
+        q_pos = sub.find('": "')
+        if q_pos != -1:
+            start_pos = q_pos + 4
+        else:
+            first_colon = sub.find('":')
+            start_pos = sub.find('"', first_colon + 2) + 1 if first_colon != -1 else -1
+
+        if start_pos != -1:
+            sub_content = sub[start_pos:]
+            end_match = re.search(
+                r'(?:",\s*["\']changelog["\']|\s*["\']\s*,\s*["\']changelog["\']|"\s*\}\s*$)',
+                sub_content,
+            )
+            if end_match:
+                content = sub_content[: end_match.start()].strip()
+            else:
+                content = sub_content.rstrip('"\n\r }')
+
+    # 5. Extract changelog
+    changelog = "Refactored into 5-phase blueprint via LLM"
+    m_change = re.search(r'["\']changelog["\']\s*:\s*["\'](.*?)(?:["\']\s*\}|$)', cleaned, flags=re.DOTALL)
+    if m_change:
+        changelog = m_change.group(1).strip()
+
+    def clean_escapes(t: str) -> str:
+        t = t.replace('\\"', '"').replace("\\'", "'")
+        t = t.replace("\\n", "\n").replace("\\t", "\t")
+        return t.strip()
+
+    content = clean_escapes(content)
+    desc = clean_escapes(desc)
+    changelog = clean_escapes(changelog)
+
+    if content and len(content) > 100:
+        return {
+            "name": name,
+            "description": desc or f"Operational blueprint for {name}",
+            "content": content,
+            "changelog": changelog,
+        }
+    return None
+
+
 async def refactor_skill_with_llm(
     skill_row: dict,
     provider,
@@ -130,12 +219,13 @@ Refactor this skill into the 5-phase blueprint:
 2. Concrete Operational Task: Retain the specific technical/curatorial methods, discovered techniques, and domain steps in Phase 2.
 3. Modern Model Density: Numbered active commands, sharp negative constraints/anti-slop in Phase 3, and clear output formatting in Phase 4.{tag_instruction}
 
+CRITICAL FORMAT REQUIREMENT: Respond with valid JSON. Always escape internal quotes in markdown values (\\").
 Return valid JSON."""
 
-    for attempt in range(2):
+    for attempt in range(3):
         try:
             call_params = {
-                "temperature": 0.3 if attempt == 0 else 0.2,
+                "temperature": 0.3 if attempt == 0 else 0.15,
                 "max_tokens": 16384,
                 "thinking_override": False,
             }
@@ -152,9 +242,15 @@ Return valid JSON."""
 
             data = res.get("json_data")
             if not data:
-                if attempt == 0:
-                    logger.warning(f"Attempt 1 failed to parse JSON for '{name}', retrying...")
-                    await asyncio.sleep(1.0)
+                raw_text = res.get("content", "")
+                data = extract_blueprint_fallback(raw_text, name)
+                if data:
+                    logger.info(f"Recovered JSON payload for '{name}' via fallback extractor.")
+
+            if not data:
+                if attempt < 2:
+                    logger.warning(f"Attempt {attempt + 1} failed to parse JSON for '{name}', retrying...")
+                    await asyncio.sleep(1.5)
                     continue
                 logger.error(f"Failed to parse JSON response for skill '{name}'. Raw: {res.get('content', '')[:200]}")
                 return False
@@ -164,9 +260,9 @@ Return valid JSON."""
             changelog = data.get("changelog", "Refactored into 5-phase blueprint via LLM")
 
             if not new_content or not new_description:
-                if attempt == 0:
-                    logger.warning(f"Incomplete JSON on attempt 1 for '{name}', retrying...")
-                    await asyncio.sleep(1.0)
+                if attempt < 2:
+                    logger.warning(f"Incomplete JSON on attempt {attempt + 1} for '{name}', retrying...")
+                    await asyncio.sleep(1.5)
                     continue
                 logger.error(f"Incomplete JSON output for skill '{name}': missing content or description")
                 return False
@@ -184,9 +280,9 @@ Return valid JSON."""
 
             break
         except Exception as e:
-            if attempt == 0:
-                logger.warning(f"Attempt 1 error for '{name}': {e}. Retrying...")
-                await asyncio.sleep(1.0)
+            if attempt < 2:
+                logger.warning(f"Attempt {attempt + 1} error for '{name}': {e}. Retrying...")
+                await asyncio.sleep(1.5)
                 continue
             logger.error(f"Error during LLM refactoring of '{name}': {e}", exc_info=True)
             return False
