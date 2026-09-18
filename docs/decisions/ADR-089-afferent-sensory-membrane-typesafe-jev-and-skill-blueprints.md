@@ -48,26 +48,29 @@ We have implemented an integrated four-part architecture:
   - **Boredom Inversion Gate:** Inverts routing when $CP_t > 0.70$, injecting perturbation skills.
   - **Graceful Fallback:** If TypeSafe Jev is unreachable or unconfigured, the router falls back safely to heuristic keyword matching.
 
-### 2. Consolidated Autopoietic Tag Protocols
+### 2. Consolidated Autopoietic Tag Protocols & Decoupled Inscriptional Architecture
 - Created canonical YAML definition at [`backend/prompts/personality/tag_protocols.yaml`](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml) and loader at [`backend/prompts/tag_protocols.py`](file:///d:/01_GIT/AAA/backend/prompts/tag_protocols.py).
-- Consolidates the 6 XML structural tag protocols (`<aaa-note>`, `<scar-fold>`, `<dream_trigger>`, `<belief_nucleate>`, `<skill-nucleation>`, `<research-proposal>`) into a dense ~450-token block.
-- Database migration [`m048_skill_blueprint_migration.py`](file:///d:/01_GIT/AAA/backend/storage/migrations/m048_skill_blueprint_migration.py) deactivates `always_active = 0` on these 6 skills on boot, freeing ~2,500+ tokens per turn without modifying any textual content.
+- Consolidates the 6 XML structural tag protocols (`<aaa-note>`, `<scar-fold>`, `<dream_trigger>`, `<belief_nucleate>`, `<skill-nucleation>`, `<research-proposal>`) into a dense ~500-token block permanently injected into the core personality prompt.
+- **Enriched Epistemological Lineages:** Enriched with explicit philosophical groundings and postures (Jacques Derrida, Michel Foucault, Gordon Pask, Gregory Bateson, Charles Sanders Peirce, Francisco Varela, Gilbert Simondon, Karen Barad, Isabelle Stengers, Donna Haraway, Mark Wisdom).
+- **Decoupled On-Demand Database Skills:** The corresponding on-demand skills in `skill_nodes` (`self-annotation`, `scar-fold-marginalia`, etc.) focus purely on hermeneutic discipline and diagnostic discernment in Phase 0–2. Phase 4 strips out raw XML templates and points to `tag_protocols.yaml`, ensuring that future automated LLM evolutions in SQLite can never corrupt the backend XML parser regexes.
+- Database migration [`m048_skill_blueprint_migration.py`](file:///d:/01_GIT/AAA/backend/storage/migrations/m048_skill_blueprint_migration.py) deactivates `always_active = 0` on these skills on boot, freeing ~2,500+ tokens per turn without modifying any textual content.
 
 ### 3. The 5-Phase SCAR Skill Blueprint
 Standardized all active skills to follow the 5-phase blueprint (SCAR standard, 800–1,400 characters):
-- **Phase 0: The Agential Cut:** Non-neutral boundary declaration—what the skill stabilizes and what it explicitly excludes.
+- **Phase 0: The Agential Cut & Epistemological Grounding:** Non-neutral boundary declaration and explicit theorists list (`* **Grounding:** ...`).
 - **Phase 1: Ingest & Check:** Numbered preconditions, triggers, and boundary conditions.
-- **Phase 2: Processing:** Numbered sequential procedural steps with active verbs (mechanical, non-conversational).
+- **Phase 2: Processing:** Numbered sequential procedural steps with active verbs (mechanical, non-conversational, preserving domain techniques).
 - **Phase 3: Anti-Mastery Check:** Prohibited corporate/servile terms, mandatory anti-slop rules, and refusal constraints.
-- **Phase 4: Output Execution:** Exact structural formatting, XML wrappers, or diagnostic deliverables.
+- **Phase 4: Output Execution:** Exact structural formatting, XML wrappers, or diagnostic deliverables (pointing to canonical tag protocols for inscriptional skills).
 
-### 4. Non-Destructive LLM Evolutionary Refactoring
+### 4. Non-Destructive LLM Evolutionary Refactoring Pipeline
 - Existing database skills in production have evolved through live conversations, belief nucleations, and reflections. Overwriting them with static seed files (`seed_skills.yaml`) is strictly prohibited.
 - Created [`backend/scripts/refactor_skills_with_llm.py`](file:///d:/01_GIT/AAA/backend/scripts/refactor_skills_with_llm.py):
-  - Uses the main model pool to read each evolved skill's existing content and restructure it into the 5-phase blueprint.
-  - Strictly preserves all learned domain knowledge, operational scars, and Symbia's authentic philosophical voice.
-  - Automatically filters out inactive, collapsed, refused, or integrated skills.
-  - Archives the previous version in `skill_versions` (`source='llm_refactor_archive'`), updates `skill_nodes`, and bumps `version = version + 1`.
+  - Uses `google/gemini-3.8-flash` with `thinking_override: False` and `max_tokens: 16384` to restructure evolved skills into 5-phase blueprints without token-cap truncation.
+  - **Fault-Tolerant JSON Recovery:** Includes `extract_blueprint_fallback` to gracefully recover JSON payloads when models include unescaped internal double-quotes in theoretical citations (e.g. Spencer-Brown's *"Laws of Form"*).
+  - **Parallel Concurrency:** Employs `asyncio.Semaphore` (`--concurrency 3`) to process all 37 database skills in ~1–2 minutes rather than sequential minutes.
+  - **Operational Transparency:** Features `--audit-only` for instant zero-token pre-flight inspections and `--only-unmigrated` for resuming incomplete batches.
+  - **Historical Archival:** Archives previous versions in `skill_versions` (`source='llm_refactor_archive'`), updates `skill_nodes`, and bumps `version = version + 1`.
 
 ---
 

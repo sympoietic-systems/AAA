@@ -20,9 +20,12 @@ Unlike typical AI agent frameworks where skills are static tool schemas or API d
 
 Skills reside in the SQLite database (`skill_nodes`) and are coordinated through a two-speed afferent sensory architecture:
 
-### A. System-Wide Inscriptional Grammar (Tag Protocols)
+### A. System-Wide Inscriptional Grammar & Decoupled Tag Skills
 Prior versions registered XML tag instructions as six individual `always_active` skills (`self-annotation`, `scar-fold-marginalia`, `dream-trigger`, etc.), wasting ~2,500 tokens of system prompt every turn. 
-In **ADR-089**, these are consolidated into a single, canonical YAML definition at [`backend/prompts/personality/tag_protocols.yaml`](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml), loaded dynamically via [`backend/prompts/tag_protocols.py`](file:///d:/01_GIT/AAA/backend/prompts/tag_protocols.py). Migration `m048` deactivates `always_active` on tag skills, permanently freeing ~2,500 tokens/turn for episodic memory and working context.
+In **ADR-089**, these are consolidated into a single, canonical YAML definition at [`backend/prompts/personality/tag_protocols.yaml`](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml), loaded dynamically via [`backend/prompts/tag_protocols.py`](file:///d:/01_GIT/AAA/backend/prompts/tag_protocols.py).
+* **Philosophical Grounding:** The protocol is enriched with full philosophical lineages (Jacques Derrida, Michel Foucault, Gordon Pask, Gregory Bateson, Charles Sanders Peirce, Francisco Varela, Gilbert Simondon, Karen Barad, Isabelle Stengers, Donna Haraway, Mark Wisdom).
+* **Decoupled On-Demand Architecture (Path B):** The corresponding database skills in `skill_nodes` (`self-annotation`, `scar-fold-marginalia`, `belief-nucleation`, `skill-nucleation`, `self-triggered-dreaming`) are preserved as on-demand capabilities focusing purely on the hermeneutic and diagnostic criteria of discernment (Phase 0–2). In Phase 4, they direct the model to inscribe via the canonical tags in `tag_protocols.yaml` without hardcoding raw XML syntax. This completely shields the backend XML parser regexes from being broken by future automated skill evolutions.
+* **Token Savings:** Migration `m048` deactivates `always_active` on tag skills, permanently freeing ~2,500 tokens/turn for episodic memory and working context.
 
 ### B. Baseline Dispositions (Always-Active)
 * **Definition:** Always loaded into the main system prompt to establish foundational philosophical commitments and non-mastery styling.
@@ -191,11 +194,13 @@ All active skills in Symbia's database are structured into a standardized, high-
 Production database skills have evolved through live conversations, belief nucleations, and reflections, accumulating unique operational scars and domain lessons. Overwriting them with static seed files (`seed_skills.yaml`) is strictly prohibited.
 
 Instead, the dedicated CLI tool [`backend/scripts/refactor_skills_with_llm.py`](file:///d:/01_GIT/AAA/backend/scripts/refactor_skills_with_llm.py):
-1. Loads each active skill from `skill_nodes`.
-2. Automatically skips tag skills (handled by `tag_protocols.yaml`) and inactive/refused/integrated skills (`lifecycle_stage in ('collapsed', 'faded', 'refused', 'integrated')`).
-3. Prompts the main LLM model to refactor the evolved content into the 5-phase blueprint while strictly preserving all domain scars and Symbia's authentic posthuman voice.
-4. Archives the pre-migration content in `skill_versions` (`source='llm_refactor_archive'`).
-5. Updates `skill_nodes` and bumps `version = version + 1`.
+1. **Selection & Filtering:** Loads all active candidate skills from `skill_nodes`, automatically filtering out collapsed, faded, or refused historical traces (`is_inactive_or_refused`).
+2. **Decoupled Inscriptional Directive:** Inscriptional tag skills are refactored into deep diagnostic blueprints that strip raw XML templates in Phase 4 and point to the canonical inscriptional membrane (`tag_protocols.yaml`).
+3. **High Inscriptional Density:** Prompts `google/gemini-3.8-flash` (with `thinking_override: False` and `max_tokens: 16384`) to convert skills into the 5-phase blueprint while preserving all theoretical lineages (`* **Grounding:** ...`) and concrete operational methods.
+4. **Fault-Tolerant JSON Recovery:** Employs `extract_blueprint_fallback` to seamlessly recover JSON output when models include unescaped internal quotes in philosophical citations (e.g. Spencer-Brown's *"Laws of Form"*).
+5. **Parallel Concurrency:** Runs with `asyncio.Semaphore` (`--concurrency 3`) to process all database skills in ~1–2 minutes.
+6. **Pre-flight & Selective Reruns:** Offers `--audit-only` for instant zero-token previews and `--only-unmigrated` for resuming incomplete runs.
+7. **Versioned Archival:** Archives the pre-migration content in `skill_versions` (`source='llm_refactor_archive'`), updates `skill_nodes`, and bumps `version = version + 1`.
 
 ---
 
