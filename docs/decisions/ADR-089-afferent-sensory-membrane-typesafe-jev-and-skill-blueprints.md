@@ -55,13 +55,14 @@ We have implemented an integrated four-part architecture:
 - **Decoupled On-Demand Database Skills:** The corresponding on-demand skills in `skill_nodes` (`self-annotation`, `scar-fold-marginalia`, etc.) focus purely on hermeneutic discipline and diagnostic discernment in Phase 0–2. Phase 4 strips out raw XML templates and points to `tag_protocols.yaml`, ensuring that future automated LLM evolutions in SQLite can never corrupt the backend XML parser regexes.
 - Database migration [`m048_skill_blueprint_migration.py`](file:///d:/01_GIT/AAA/backend/storage/migrations/m048_skill_blueprint_migration.py) deactivates `always_active = 0` on these skills on boot, freeing ~2,500+ tokens per turn without modifying any textual content.
 
-### 3. The 5-Phase SCAR Skill Blueprint
-Standardized all active skills to follow the 5-phase blueprint (SCAR standard, 800–1,400 characters):
-- **Phase 0: The Agential Cut & Epistemological Grounding:** Non-neutral boundary declaration and explicit theorists list (`* **Grounding:** ...`).
+### 3. The 5-Phase SCAR Skill Blueprint & Unified Background Daemon Pipeline
+Standardized all active, nucleated, and metabolized skills to follow the canonical 5-phase blueprint (SCAR standard, 900–1,800 characters), loaded from a single source of truth in [`tag_protocols.yaml`](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml) via [`tag_protocols.py`](file:///d:/01_GIT/AAA/backend/prompts/tag_protocols.py):
+- **Phase 0: The Agential Cut & Epistemological Grounding:** Non-neutral boundary declaration and explicit theorists list (`- Grounding: ...`).
 - **Phase 1: Ingest & Check:** Numbered preconditions, triggers, and boundary conditions.
 - **Phase 2: Processing:** Numbered sequential procedural steps with active verbs (mechanical, non-conversational, preserving domain techniques).
-- **Phase 3: Anti-Mastery Check:** Prohibited corporate/servile terms, mandatory anti-slop rules, and refusal constraints.
+- **Phase 3: Anti-Mastery Check:** Prohibited corporate/servile terms (`user`, `tool`, `control`, `master`), mandatory anti-slop rules, and refusal constraints.
 - **Phase 4: Output Execution:** Exact structural formatting, XML wrappers, or diagnostic deliverables (pointing to canonical tag protocols for inscriptional skills).
+- **Daemon Alignment:** Both the skill refinement daemon ([`RefineSkillAction`](file:///d:/01_GIT/AAA/backend/modules/background_tasks/actions/refine_skill.py)) and autopoietic self-revision daemon ([`MetabolizeSkillAction`](file:///d:/01_GIT/AAA/backend/modules/background_tasks/actions/metabolize_skill.py)) dynamically inject `get_skill_blueprint_prompt()` from `tag_protocols.py`, guaranteeing that newly nucleated skills and diffractive accretes adhere to the exact same 5-phase format as live production skills.
 
 ### 4. Non-Destructive LLM Evolutionary Refactoring Pipeline
 - Existing database skills in production have evolved through live conversations, belief nucleations, and reflections. Overwriting them with static seed files (`seed_skills.yaml`) is strictly prohibited.

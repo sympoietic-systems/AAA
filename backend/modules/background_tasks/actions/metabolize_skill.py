@@ -31,7 +31,14 @@ class MetabolizeSkillAction(BackgroundAction):
             logger.warning("Failed to load Symbia identity: %s", e)
 
         action_system_prompt = self.system_prompt()
-        assembled_system_prompt = f"{action_system_prompt}\n\n[SYMBIA CORE PERSONALITY & STYLE]:\n{personality_prompt}"
+        from backend.prompts.tag_protocols import get_skill_blueprint_prompt
+
+        blueprint_prompt = get_skill_blueprint_prompt()
+        assembled_system_prompt = (
+            f"{action_system_prompt}\n\n"
+            f"[CANONICAL SKILL BLUEPRINT SPECIFICATION]:\n{blueprint_prompt}\n\n"
+            f"[SYMBIA CORE PERSONALITY & STYLE]:\n{personality_prompt}"
+        )
 
         user_prompt = f"""
 Existing Skill Content:

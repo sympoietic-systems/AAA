@@ -15,3 +15,13 @@ def get_tag_protocols_prompt() -> str:
         "tag_protocols_block",
         default="",
     )
+
+
+def get_skill_blueprint_prompt() -> str:
+    """Return the canonical 5-phase skill blueprint specification loaded from YAML."""
+    return get_prompt(
+        "personality/tag_protocols.yaml",
+        "skill_blueprint_specification",
+        default="",
+    )
+

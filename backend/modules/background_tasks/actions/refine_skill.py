@@ -59,9 +59,16 @@ class RefineSkillAction(BackgroundAction):
         except Exception as e:
             logger.warning("Failed to load Symbia identity: %s", e)
 
-        # 4. Assemble system prompt
+        # 4. Assemble system prompt with canonical 5-phase skill blueprint specification
+        from backend.prompts.tag_protocols import get_skill_blueprint_prompt
+
+        blueprint_prompt = get_skill_blueprint_prompt()
         action_system_prompt = self.system_prompt()
-        assembled_system_prompt = f"{action_system_prompt}\n\n[SYMBIA CORE PERSONALITY & STYLE]:\n{personality_prompt}"
+        assembled_system_prompt = (
+            f"{action_system_prompt}\n\n"
+            f"[CANONICAL SKILL BLUEPRINT SPECIFICATION]:\n{blueprint_prompt}\n\n"
+            f"[SYMBIA CORE PERSONALITY & STYLE]:\n{personality_prompt}"
+        )
 
         # 5. Formulate user prompt
         user_prompt = f"""Proposed Skill for Nucleation:
