@@ -110,7 +110,7 @@ Refactor this skill into the 5-phase blueprint while preserving all of its uniqu
     try:
         call_params = {
             "temperature": 0.3,
-            "max_tokens": 2048,
+            "max_tokens": 4096,
         }
         if override_model:
             call_params["model"] = override_model
@@ -232,13 +232,13 @@ async def run_pipeline():
     parser.add_argument("--all", action="store_true", help="Refactor all database skills")
     parser.add_argument("--include-collapsed", action="store_true", help="Include refused, integrated, or collapsed skills")
     parser.add_argument("--dry-run", action="store_true", help="Preview LLM outputs without modifying database")
-    parser.add_argument("--model", type=str, default=None, help="LLM model override")
+    parser.add_argument("--model", type=str, default="google/gemini-3.8-flash", help="LLM model override (default: google/gemini-3.8-flash)")
     parser.add_argument("--delay", type=float, default=1.0, help="Delay in seconds between LLM calls")
     args = parser.parse_args()
 
     config = load_config()
     llm_provider, structural_provider, _ = _init_providers(config)
-    provider = structural_provider or llm_provider
+    provider = llm_provider or structural_provider
 
     if not provider:
         logger.error("No LLM provider available! Please check API keys in config or environment.")

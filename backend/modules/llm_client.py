@@ -445,19 +445,23 @@ class ModelPoolProvider(BaseLLMProvider):
         errors = []
 
         now = time.time()
-        models_to_try = self._all_models()
-        if self._last_model_used and self._last_model_used in models_to_try:
-            preferred_model = models_to_try[0]
-            if self._last_model_used != preferred_model:
-                if now - self._last_model_time >= self._cooldown_seconds:
-                    logger.info(
-                        "Fallback period expired. Resetting priority to try preferred model %s again.", preferred_model
-                    )
-                    self._last_model_used = ""
-                    self._last_model_time = 0.0
-                else:
-                    # Prioritize last working model
-                    models_to_try = [self._last_model_used] + [m for m in models_to_try if m != self._last_model_used]
+        model_override = params.pop("model", None)
+        if model_override:
+            models_to_try = [model_override]
+        else:
+            models_to_try = self._all_models()
+            if self._last_model_used and self._last_model_used in models_to_try:
+                preferred_model = models_to_try[0]
+                if self._last_model_used != preferred_model:
+                    if now - self._last_model_time >= self._cooldown_seconds:
+                        logger.info(
+                            "Fallback period expired. Resetting priority to try preferred model %s again.", preferred_model
+                        )
+                        self._last_model_used = ""
+                        self._last_model_time = 0.0
+                    else:
+                        # Prioritize last working model
+                        models_to_try = [self._last_model_used] + [m for m in models_to_try if m != self._last_model_used]
 
         for model in models_to_try:
             if self._is_exhausted(model):
