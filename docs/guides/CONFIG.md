@@ -330,7 +330,7 @@ belief_ecosystem:
   fade_mass_threshold: 0.001
   turn_decay:
     enabled: true
-    decay_per_turn: 0.0005        # Gentle decrement per turn to unengaged beliefs
+    decay_per_turn: 0.0001        # Gentle decrement per turn to unengaged beliefs
     crystallized_floor: 0.55      # Protected lower bound preventing disuse collapse
   wall_clock_decay:
     enabled: false                # Inactivity during silence does NOT decay beliefs
