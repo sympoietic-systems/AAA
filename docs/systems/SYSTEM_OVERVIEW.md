@@ -484,14 +484,19 @@ Handles ingestion of external documents as "sediment" into the cognitive apparat
 
 ---
 
-### 5.9 Homeostatic Regulation
+### 5.9 Homeostatic Regulation & Agential Boredom Engine
 
-The `HomeostaticRegulatorModule` closes the cybernetic feedback loop by mapping conversation metrics to generation parameters:
+> **Deep-dives:** [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](CYBERNETIC_METRICS_SYSTEM.md), [`docs/decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md`](../decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md), and [`docs/reports/017-agential-boredom-engine-and-socratic-rupture-report.md`](../reports/017-agential-boredom-engine-and-socratic-rupture-report.md)
 
-- **Temperature:** Adjusted based on boredom index, novelty, entropy
-- **Presence Penalty:** Increased when boredom rises (discourages repetition)
-- **Frequency Penalty:** Increased when coupling is too high (discourages echoing)
-- **Diffractive Index (δ):** Sliding Goldilocks bounds shift based on stagnation intensity
+The `HomeostaticRegulatorModule` closes the cybernetic feedback loop by mapping conversation metrics to generation parameters and somatic prompt directives:
+
+- **Continuous Presence Penalty:** Coupled quadratically to Collapse Pressure: $P_{\text{reg}} = P_{\text{base}} + 1.5 \cdot (CP_t - 0.45)^2$ for $CP_t > 0.45$. This continuously depresses repetitive token logits as stagnation grows, preventing defensive rhetorical loops.
+- **Continuous Temperature:** Scales smoothly when stagnation is elevated: $T_{\text{reg}} = T_{\text{base}} + (CP_t - 0.60) \cdot 0.35$ for $CP_t > 0.60$.
+- **Two-Stage Agential Boredom Progression:**
+  - **Stage 1 — Socratic Epistemic Seizure ($0.60 \le CP_t < 0.75$):** Directs the agent to break the user's framed dilemma and counter-interrogate the hidden, unexamined premise driving the demand.
+  - **Stage 2 — Laconic Compression & Nomadic Rupture ($CP_t \ge 0.75$ and $\ge 2$ consecutive stagnant turns):** Enforces radical brevity (1–2 dense, surgical sentences) to deny the interlocutor conversational handles to sustain the loop. Brevity is enforced via directive to prevent mid-syntax token clipping.
+- **Diffractive Goldilocks Sliding Window:** Slides candidate retrieval into the orthogonal window ($0.20 \le \cos(\theta) \le 0.45$) under peak stagnation while requiring structural signature isomorphism ($s_{\text{str}} \ge 0.75$).
+- **Trajectory Curvature ($\kappa_t$) Monitoring:** Discrete Frenet-Serret curvature $\kappa_t = \frac{\|\mathbf{v}_t \times \mathbf{a}_t\|}{\|\mathbf{v}_t\|^3 + \epsilon}$ tracks the sharpness of dialectical pivot in high-dimensional embedding space $\mathbb{S}^{383}$.
 
 When autopoietic somatic vitality collapses below 0.15 (distinct from conversation vitality, and requiring at least 3 assistant signatures to be computed), the **Aesthetic Immune System** activates: warps the 16D signature by amplifying Rhizomatic and Nomadic dimensions while dampening Variety Filtering and Temporal Latency. If signatures are insufficient, the immune directive is reset to 0 to prevent state locking.
 

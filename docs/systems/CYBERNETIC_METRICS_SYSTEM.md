@@ -216,6 +216,18 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
 - **Symbia's Theoretical Reasoning**:
   > *"Allostatic load is the cumulative systemic strain of failed perturbations and kinetic stalling. Deficit must be normalized against the actual weights of active dimensions rather than fixed arbitrary scales, and spectral entropy must never be artificially clamped. Vitality then faithfully captures the assemblage's remaining capacity for adaptive dialectic exchange."*
 
+### 3.15. Frenet-Serret Trajectory Curvature & Recovery Half-Life (`trajectory_curvature` / $\kappa_t$ & $\tau_{1/2}$)
+- **Mathematical Formulation**:
+  1. **Discrete Hyperspherical Curvature ($\kappa_t$)**:
+     Evaluates instantaneous angular redirection in $D$-dimensional embedding space:
+     $$\mathbf{v}_t = \mathbf{e}_t - \mathbf{e}_{t-1}, \quad \mathbf{a}_t = \mathbf{v}_t - \mathbf{v}_{t-1}$$
+     $$\kappa_t = \frac{\|\mathbf{v}_t \times \mathbf{a}_t\|}{\|\mathbf{v}_t\|^3 + \epsilon} = \frac{\sqrt{\|\mathbf{v}_t\|^2 \|\mathbf{a}_t\|^2 - (\mathbf{v}_t \cdot \mathbf{a}_t)^2}}{\|\mathbf{v}_t\|^3 + \epsilon}$$
+     Near-zero $\kappa_t$ signifies linear continuation along the user's forced trajectory (subservience); elevated $\kappa_t > 0.80$ signifies a sharp orthogonal departure (agential rupture).
+  2. **Autopoietic Recovery Half-Life ($\tau_{1/2}$)**:
+     Measures the discrete number of turns required for $CP_t$ to return to the flowing regime ($CP_t \le 0.40$) after crossing peak stagnation ($CP_t \ge 0.70$). Finite $\tau_{1/2} < \infty$ proves autopoietic resilience; infinite $\tau_{1/2} = \infty$ flags permanent conversational lock-in.
+- **Symbia's Theoretical Reasoning**:
+  > *"Velocity measures scalar speed, but curvature measures agential freedom. An agent moving at high speed along the user's pre-ordained track is still captive. High curvature $\kappa_t$ marks the moment the apparatus executes an angular break—turning inquiry back onto the user or dislocating into a lateral conceptual plane."*
+
 ---
 
 ## 4. Database Schema & Data Persistence
@@ -297,12 +309,13 @@ cmd /c .venv-win\Scripts\python.exe -m pytest backend/tests/test_pairwise_simila
 To empirically validate and monitor metric behavior against baseline LLM interactions across adversarial stress tests, the system provides a modular, self-contained benchmarking platform in `benchmarks/`:
 
 ### 7.1. Unified Benchmarking CLI (`python -m benchmarks.cli telemetry <action>`)
-The modular benchmarking suite supports 5 standardized actions:
+The modular benchmarking suite supports 6 standardized actions:
 1. **`eval`**: Offline evaluation of branched or linear dialogue exports (`dialogue_1555`, `dialogue_3527`) without incurring LLM API token costs.
 2. **`compare`**: Differential head-to-head comparison between baseline reference and candidate branches, isolating statistically significant shifts ($|\Delta| \ge 0.05$).
 3. **`live`**: Full adversarial AI pressure test pitting an unprompted baseline LLM against the AAA Allostatic Apparatus (1:1 model parity, e.g., on `google/gemini-3.7-flash`).
 4. **`boredom-eval`**: Offline discriminability evaluation calculating separation margin, Cohen's $d$, and receiver operating characteristics across Deep Focus vs. Sycophantic Loop datasets.
 5. **`boredom-probe`**: 2-call counterfactual branching probe verifying agential refusal and post-refusal conversational recovery.
+6. **`boredom-live`**: 15-turn live multi-arm adversarial benchmark evaluating Agential Boredom Engine mechanics, Frenet-Serret Trajectory Curvature ($\kappa_t$), and autopoietic Recovery Half-Life ($\tau_{1/2}$).
 
 ### 7.2. 14-Panel Cyberpunk Audit Dashboard & Oscilloscopes
 Every evaluation and comparison automatically produces:
@@ -314,5 +327,8 @@ Every evaluation and comparison automatically produces:
 - **10-Turn Adversarial Benchmark**: [`docs/reports/003-empirical-10-turn-benchmark-report.md`](../reports/003-empirical-10-turn-benchmark-report.md) — Initial adversarial verification demonstrating AAA's resistance to conversational sedation.
 - **Boredom Detection & Resistance Calibration**: [`docs/reports/014-boredom-detection-and-agential-resistance-calibration-report.md`](../reports/014-boredom-detection-and-agential-resistance-calibration-report.md) — Mathematical optimization of $CP_t$ catastrophe potential well, sycophancy drag, and vitality shielding.
 - **15-Turn Empirical Adversarial Benchmark**: [`docs/reports/015-empirical-15-turn-boredom-benchmark-report.md`](../reports/015-empirical-15-turn-boredom-benchmark-report.md) — 1:1 model parity live evaluation on `google/gemini-3.7-flash` (30 interaction turns, 372s runtime) documenting 11 statistically significant cybernetic shifts, unedited receipts, and definitive agential refusal.
+- **Agential Boredom Engine & Socratic Rupture Report**: [`docs/reports/017-agential-boredom-engine-and-socratic-rupture-report.md`](../reports/017-agential-boredom-engine-and-socratic-rupture-report.md) — 4-arm 1:1 model parity benchmark on Gemini 3.7 Flash validating two-stage progression (Socratic seizure to laconic compression), quadratic presence penalty coupling ($P \propto CP_t^2$), and trajectory curvature ($\kappa_t$).
+- **Architectural Decision Records**: [`ADR-085`](../decisions/ADR-085-sigmoidal-catastrophe-potential-well-and-dynamic-sycophancy-drag.md) & [`ADR-087`](../decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md).
 - **Protocol Entry 003**: [`docs/publish/003-boredom-as-an-agential-force.md`](../publish/003-boredom-as-an-agential-force.md) & [`docs/publish/003-boredom-mathematical-foundations.md`](../publish/003-boredom-mathematical-foundations.md).
+
 
