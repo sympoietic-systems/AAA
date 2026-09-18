@@ -318,6 +318,24 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_DAEMON_MAX_DAILY_DREAMS` | Count (int) | `10` | Maximum dreams permitted per 24-hour window |
 | `AAA_DAEMON_DRIFT_COEFFICIENT` | Float | `0.00001` | Decay speed of beliefs during sleep |
 
+### Belief Ecosystem & Turn-Based Decay
+
+Beliefs do not suffer wall-clock time decay during user inactivity. Instead, decay is relational and turn-driven, occurring only during active conversations and dream cycles.
+
+```yaml
+# config.yaml
+belief_ecosystem:
+  crystallization_threshold: 0.5
+  collapse_mass_threshold: 0.02
+  fade_mass_threshold: 0.001
+  turn_decay:
+    enabled: true
+    decay_per_turn: 0.0005        # Gentle decrement per turn to unengaged beliefs
+    crystallized_floor: 0.55      # Protected lower bound preventing disuse collapse
+  wall_clock_decay:
+    enabled: false                # Inactivity during silence does NOT decay beliefs
+```
+
 ### Research Architecture (Rhizome + Metabolic)
 
 | Variable | Values | Default | Description |

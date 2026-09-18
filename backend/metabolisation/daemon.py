@@ -192,9 +192,15 @@ class AutopoieticDreamDaemon(
                     await self.backfill_structure_on_idle()
                 except Exception as e:
                     logger.debug("Structure backfill skipped: %s", e)
-            # Periodic belief atrophy (logged, covers all non-ghost stages)
+            # Periodic belief atrophy — disabled by default in favor of turn-based metabolism
             now_ts = time.time()
-            if now_ts - _last_atrophy_time >= _atrophy_interval:
+            wall_clock_decay_enabled = (
+                getattr(self, "config", {})
+                .get("belief_ecosystem", {})
+                .get("wall_clock_decay", {})
+                .get("enabled", False)
+            )
+            if wall_clock_decay_enabled and (now_ts - _last_atrophy_time >= _atrophy_interval):
                 _last_atrophy_time = now_ts
                 try:
                     engine = getattr(self.app_state, "belief_metabolism", None)

@@ -49,12 +49,19 @@ class BeliefRepository(BaseRepository):
         return json.dumps(data)
 
     @with_connection
-    def get_belief(self, agent_id: str, belief_id: str) -> BeliefNode | None:
+    def get_belief(self, agent_id: str, belief_id: str | None = None) -> BeliefNode | None:
         conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND id = ?",
-            (agent_id, belief_id),
-        ).fetchone()
+        if belief_id is None:
+            # Single argument passed: treat agent_id as belief_id
+            row = conn.execute(
+                "SELECT * FROM belief_nodes WHERE id = ?",
+                (agent_id,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM belief_nodes WHERE LOWER(agent_id) = LOWER(?) AND id = ?",
+                (agent_id, belief_id),
+            ).fetchone()
         if row is None:
             return None
         return _row_to_belief_node(row)
@@ -173,12 +180,18 @@ class BeliefRepository(BaseRepository):
         conn.commit()
 
     @with_connection
-    def update_belief_mass(self, belief_id: str, ontological_mass: float) -> None:
+    def update_belief_mass(self, belief_id: str, ontological_mass: float, touch_reinforced: bool = True) -> None:
         conn = self._conn()
-        conn.execute(
-            "UPDATE belief_nodes SET ontological_mass = ?, last_reinforced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (ontological_mass, belief_id),
-        )
+        if touch_reinforced:
+            conn.execute(
+                "UPDATE belief_nodes SET ontological_mass = ?, last_reinforced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (ontological_mass, belief_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE belief_nodes SET ontological_mass = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (ontological_mass, belief_id),
+            )
         conn.commit()
 
     @with_connection

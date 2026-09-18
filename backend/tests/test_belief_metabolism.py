@@ -457,6 +457,167 @@ def test_somatic_vitality_state_locking():
     asyncio.run(run_test())
 
 
+def test_turn_decay_and_crystallized_floor():
+    """Verify that turn decay only affects unengaged beliefs and respects the crystallized floor."""
+    db_path = str(get_db_path("data/aaa_turn_decay_test.db"))
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    conn = init_db(db_path)
+    mock_yaml_path = os.path.join(os.path.dirname(__file__), "mock_identity_turn_decay.yaml")
+    with open(mock_yaml_path, "w") as f:
+        f.write(MOCK_IDENTITY_YAML)
+
+    try:
+        belief_repo = BeliefRepository(db_path)
+        msg_repo = MessageRepository(db_path)
+
+        engine = BeliefDynamicsEngine(
+            belief_repo=belief_repo,
+            message_repo=msg_repo,
+            identity_yaml_path=Path(mock_yaml_path),
+        )
+
+        import asyncio
+
+        async def run_test():
+            # 1. Create a crystallized belief right at the floor (0.55)
+            belief_repo.create_belief(
+                id="b-floor",
+                agent_id="symbia",
+                label="floor-belief",
+                statement="Floor belief test",
+                origin="authored",
+                confidence=0.9,
+                ontological_mass=0.55,
+                somatic_anchor="conceptual",
+                vector_16d=json.dumps([0.1] * 16),
+                lifecycle_stage="crystallized",
+            )
+            # 2. Create a crystallized belief above the floor (0.80)
+            belief_repo.create_belief(
+                id="b-above",
+                agent_id="symbia",
+                label="above-floor-belief",
+                statement="Above floor belief test",
+                origin="authored",
+                confidence=0.9,
+                ontological_mass=0.80,
+                somatic_anchor="conceptual",
+                vector_16d=json.dumps([0.2] * 16),
+                lifecycle_stage="crystallized",
+            )
+            # 3. Create a non-crystallized belief (0.30)
+            belief_repo.create_belief(
+                id="b-accretion",
+                agent_id="symbia",
+                label="accretion-belief",
+                statement="Accretion belief test",
+                origin="authored",
+                confidence=0.5,
+                ontological_mass=0.30,
+                somatic_anchor="conceptual",
+                vector_16d=json.dumps([0.3] * 16),
+                lifecycle_stage="accretion",
+            )
+
+            # Apply turn decay where engaged_belief_id is None (all unengaged)
+            res = await engine._apply_turn_decay("symbia", engaged_belief_id=None)
+            assert res["atrophied"] >= 2  # b-above and b-accretion decayed
+
+            b_floor = belief_repo.get_belief("symbia", "b-floor")
+            assert b_floor.ontological_mass == 0.55  # Floor preserved!
+
+            b_above = belief_repo.get_belief("symbia", "b-above")
+            assert b_above.ontological_mass < 0.80  # Decayed slightly
+
+            b_acc = belief_repo.get_belief("symbia", "b-accretion")
+            assert b_acc.ontological_mass < 0.30  # Decayed slightly
+
+            # Now test when engaged_belief_id is b-above
+            res2 = await engine._apply_turn_decay("symbia", engaged_belief_id="b-above")
+            b_above_after = belief_repo.get_belief("symbia", "b-above")
+            assert b_above_after.ontological_mass == b_above.ontological_mass  # Engaged belief bypassed
+
+        asyncio.run(run_test())
+
+    finally:
+        if os.path.exists(mock_yaml_path):
+            os.remove(mock_yaml_path)
+        conn.close()
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+
+def test_migration_050_recalibrate():
+    """Verify Migration 050 elevates eroded belief and skill masses."""
+    db_path = str(get_db_path("data/aaa_m050_test.db"))
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    conn = init_db(db_path)
+    try:
+        belief_repo = BeliefRepository(db_path)
+        from backend.storage.repositories.skill import SkillRepository
+        skill_repo = SkillRepository(db_path)
+
+        # Create an eroded core belief
+        belief_repo.create_belief(
+            id="b-eroded-core",
+            agent_id="symbia",
+            label="anti-mastery",
+            statement="Anti mastery test",
+            origin="authored",
+            confidence=0.7,
+            ontological_mass=0.31,
+            somatic_anchor="conceptual",
+            vector_16d=json.dumps([0.1] * 16),
+            lifecycle_stage="crystallized",
+        )
+        # Create an eroded skill belief and matching skill node
+        belief_repo.create_belief(
+            id="b-eroded-skill",
+            agent_id="symbia",
+            label="skill:code-review",
+            statement="Code review skill bridge",
+            origin="authored",
+            confidence=0.7,
+            ontological_mass=0.32,
+            somatic_anchor="conceptual",
+            vector_16d=json.dumps([0.1] * 16),
+            lifecycle_stage="crystallized",
+        )
+        skill_repo.create_skill(
+            id="s-code-review",
+            name="code-review",
+            content="Code review content",
+            description="Reviewing code",
+            lifecycle_stage="crystallized",
+            confidence=0.7,
+            ontological_mass=0.32,
+        )
+
+        from backend.storage.migrations import m050_recalibrate_belief_mass
+        m050_recalibrate_belief_mass.up(conn)
+
+        b_core = belief_repo.get_belief("symbia", "b-eroded-core")
+        assert b_core.ontological_mass == 1.00
+        assert b_core.confidence >= 0.85
+
+        b_skill = belief_repo.get_belief("symbia", "b-eroded-skill")
+        assert b_skill.ontological_mass == 0.80
+        assert b_skill.confidence >= 0.85
+
+        s_node = skill_repo.get_skill("s-code-review")
+        assert s_node.ontological_mass == 0.80
+        assert s_node.confidence >= 0.85
+
+    finally:
+        conn.close()
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+
 if __name__ == "__main__":
     test_belief_seeding_and_db_migration()
     test_coordinate_warping()
@@ -464,4 +625,6 @@ if __name__ == "__main__":
     test_perception_metabolism()
     test_autopoietic_vitality_mechanics()
     test_somatic_vitality_state_locking()
+    test_turn_decay_and_crystallized_floor()
+    test_migration_050_recalibrate()
     print("\nALL BELIEF METABOLISM TESTS COMPLETED SUCCESSFULLY!")

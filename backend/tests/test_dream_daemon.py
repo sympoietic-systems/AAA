@@ -499,7 +499,10 @@ async def test_mass_decay():
     import time
 
     app_state = MockAppState()
-    app_state.config["belief_ecosystem"] = {"mass_decay": {"lambda_base": 0.05}}
+    app_state.config["belief_ecosystem"] = {
+        "mass_decay": {"lambda_base": 0.05},
+        "wall_clock_decay": {"enabled": True},
+    }
 
     updated_masses = []
     updated_stages = []

@@ -89,6 +89,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m047_resource_optimization_indexes,
         m048_skill_blueprint_migration,
         m049_message_active_skills_beliefs,
+        m050_recalibrate_belief_mass,
     )
 
     runner = MigrationRunner(conn)
@@ -144,5 +145,6 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("047_resource_optimization_indexes", m047_resource_optimization_indexes.up)
     runner.run("048_skill_blueprint_migration", m048_skill_blueprint_migration.up)
     runner.run("049_message_active_skills_beliefs", m049_message_active_skills_beliefs.up)
+    runner.run("050_recalibrate_belief_mass", m050_recalibrate_belief_mass.up)
 
 

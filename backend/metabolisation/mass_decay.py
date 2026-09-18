@@ -34,8 +34,15 @@ class MassDecayMixin:
             return
 
         max_mass = max(b.ontological_mass for b in active_beliefs) or 3.0
-        decay_config = self.config.get("belief_ecosystem", {}).get("mass_decay", {})
-        lambda_base = decay_config.get("lambda_base", 0.05)
+        decay_config = self.config.get("belief_ecosystem", {})
+        wall_clock_enabled = decay_config.get("wall_clock_decay", {}).get("enabled", False)
+        if not wall_clock_enabled:
+            # Idle periods during silence do not erode active beliefs
+            await self._apply_skill_ecology(idle_duration)
+            return
+
+        mass_decay_cfg = decay_config.get("mass_decay", {})
+        lambda_base = mass_decay_cfg.get("lambda_base", 0.05)
 
         for b in active_beliefs:
             last_reinforced = b.last_reinforced_at
