@@ -120,6 +120,7 @@ What becomes easier/harder?
 | [086](ADR-086-backend-resource-and-concurrency-optimization.md) | Backend Resource & Concurrency Optimization (PyTorch Thread Clamping, Connection Pooling, Non-Blocking Offloading) | accepted | 2026-09-16 |
 | [087](ADR-087-agential-boredom-engine-and-two-stage-progression.md) | Agential Boredom Engine: Two-Stage Progression, Quadratic Presence Penalty & Trajectory Curvature | accepted | 2026-09-18 |
 | [088](ADR-088-katex-formula-rendering-and-formal-notation-protocol.md) | KaTeX Mathematical Formula Rendering and Formal Notation Protocol | accepted | 2026-09-18 |
+| [089](ADR-089-afferent-sensory-membrane-typesafe-jev-and-skill-blueprints.md) | Afferent Sensory Membrane (TypeSafe Jev Integration), Inscriptional Tag Protocols, and 5-Phase Skill Blueprints | accepted | 2026-09-18 |
 
 
 

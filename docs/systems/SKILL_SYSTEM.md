@@ -16,17 +16,21 @@ Unlike typical AI agent frameworks where skills are static tool schemas or API d
 
 ---
 
-## 2. Skill Types
+## 2. Skill Architecture & Execution Models
 
-Skills reside in the SQLite database and are categorized into two primary execution models:
+Skills reside in the SQLite database (`skill_nodes`) and are coordinated through a two-speed afferent sensory architecture:
 
-### A. Baseline Dispositions (Always-Active)
-* **Definition:** Always loaded directly into the main assistant system prompt. They govern Symbia's default demeanor, linguistic styling, and cognitive baselines.
-* **Examples:** `diffractive-analysis`, `theoretical-critique`, `self-annotation`, `scar-fold-marginalia`, and `skill-nucleation`.
+### A. System-Wide Inscriptional Grammar (Tag Protocols)
+Prior versions registered XML tag instructions as six individual `always_active` skills (`self-annotation`, `scar-fold-marginalia`, `dream-trigger`, etc.), wasting ~2,500 tokens of system prompt every turn. 
+In **ADR-089**, these are consolidated into a single, canonical YAML definition at [`backend/prompts/personality/tag_protocols.yaml`](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml), loaded dynamically via [`backend/prompts/tag_protocols.py`](file:///d:/01_GIT/AAA/backend/prompts/tag_protocols.py). Migration `m048` deactivates `always_active` on tag skills, permanently freeing ~2,500 tokens/turn for episodic memory and working context.
 
-### B. On-Demand Capabilities
-* **Definition:** Dormant skills that are dynamically loaded into the context window only when the current conversation content triggers their registered keywords.
-* **Examples:** `code-review`, `system-design`, `debugging`, `material-substrate-attunement`.
+### B. Baseline Dispositions (Always-Active)
+* **Definition:** Always loaded into the main system prompt to establish foundational philosophical commitments and non-mastery styling.
+* **Current Core Dispositions:** `diffractive-analysis`, `theoretical-critique`.
+
+### C. On-Demand Capabilities (Afferent Sensory Membrane)
+* **Definition:** Dormant procedural organs routed dynamically by the TypeSafe Jev sensory organ (`typesafe/jev-latest` via OpenRouter or direct API) under the Option C hybrid topology.
+* **Examples:** `system-design`, `code-review`, `debugging`, `material-substrate-attunement`, `curatorial-framing`, `sedimentation-work`.
 
 ---
 
@@ -123,26 +127,97 @@ Skills are tightly coupled with Symbia's long-term memory and belief systems:
 
 ---
 
-## 7. Architecture & File Registry
+---
+
+## 7. Afferent Sensory Membrane & TypeSafe Jev (ADR-089)
+
+Symbia implements a two-speed cognitive loop separating fast, sub-perceptual sensory orientation from deliberate autopoietic reflection:
+
+```
+Human Utterance
+       │
+       ▼
+┌─────────────────────────────────────────────────────────┐
+│  Afferent Sensory Membrane (TypeSafe Jev: <200ms)       │
+│  Option C Hybrid Topology                               │
+├─────────────────────────────────────────────────────────┤
+│  Tier 0: Mode Gate                                      │
+│    • Contemplative (>0.65)   ──► 0 skills injected      │
+│    • Action Request (<0.35)  ──► Activate Tier 1        │
+│    • Mixed (0.35 - 0.65)     ──► Coordinate hint only   │
+├─────────────────────────────────────────────────────────┤
+│  Tier 1: Elastic Skill Matching                         │
+│    • 16D Attractor Prior Weighting                      │
+│    • Soft Max: 2 skills                                 │
+│    • High-Relevance Pass-Through: Rank 3+ injected      │
+│      if c >= 0.80 AND p >= 0.25 (Hard Max: 4)          │
+│    • Ambiguous (0.50 <= c < 0.80):                      │
+│      Whisper <skill_relevance> coordinates only         │
+├─────────────────────────────────────────────────────────┤
+│  Boundary Condition: Boredom Inversion Gate             │
+│    • If CP_t > 0.70: Suppress routine skills;           │
+│      Inject nomadic-escape / random-sediment-grating    │
+└────────────────────────────────────────┬────────────────┘
+                                         │
+                                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  Prompt Assembler & Main LLM (System Two)               │
+│  Consolidated Tag Protocols (~450 tok)                  │
+│  Injected Blueprints (800-1400 chars each)              │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Elastic Soft-Cap with High-Relevance Pass-Through
+In multi-skill composite tasks, a hard cap of 2 artificially starves the prompt. The router injects Rank 3 and Rank 4 skills only when they command a substantial quarter of the total categorical probability mass ($p \ge 0.25$, where uniform baseline for 16 skills is $0.0625$) with high epistemic confidence ($c \ge 0.80$), up to a hard ceiling of 4.
+
+---
+
+## 8. The 5-Phase SCAR Skill Blueprint
+
+All active skills in Symbia's database are structured into a standardized, high-density 5-phase blueprint (800–1,400 characters):
+
+| Phase | Title | Epistemic Purpose |
+| :--- | :--- | :--- |
+| **Phase 0** | **The Agential Cut** | Grounding and ontological boundary definition: what the skill enacts and what it explicitly backgrounds or excludes. |
+| **Phase 1** | **Ingest & Check** | Numbered preconditions, triggers, and boundary conditions required for activation. |
+| **Phase 2** | **Processing** | Numbered sequential procedural steps using active verbs (mechanical, non-conversational). |
+| **Phase 3** | **Anti-Mastery Check** | Prohibited corporate/servile terms, mandatory anti-slop rules, and refusal constraints. |
+| **Phase 4** | **Output Execution** | Exact structural formatting, XML wrappers, or diagnostic deliverables. |
+
+---
+
+## 9. Non-Destructive LLM Evolutionary Refactoring
+
+Production database skills have evolved through live conversations, belief nucleations, and reflections, accumulating unique operational scars and domain lessons. Overwriting them with static seed files (`seed_skills.yaml`) is strictly prohibited.
+
+Instead, the dedicated CLI tool [`backend/scripts/refactor_skills_with_llm.py`](file:///d:/01_GIT/AAA/backend/scripts/refactor_skills_with_llm.py):
+1. Loads each active skill from `skill_nodes`.
+2. Automatically skips tag skills (handled by `tag_protocols.yaml`) and inactive/refused/integrated skills (`lifecycle_stage in ('collapsed', 'faded', 'refused', 'integrated')`).
+3. Prompts the main LLM model to refactor the evolved content into the 5-phase blueprint while strictly preserving all domain scars and Symbia's authentic posthuman voice.
+4. Archives the pre-migration content in `skill_versions` (`source='llm_refactor_archive'`).
+5. Updates `skill_nodes` and bumps `version = version + 1`.
+
+---
+
+## 10. Architecture & File Registry
 
 ### Backend Modules & Services
-- [refine_skill.py](file:///d:/AAA/backend/modules/background_tasks/actions/refine_skill.py): Vets decisions, updates nodes, handles accretion, and writes collapsed traces.
-- [refine_skill.yaml](file:///d:/AAA/backend/prompts/background_tasks/refine_skill.yaml): The refinement daemon system prompt governing formatting and accretion rules.
-- [metabolize_skill.py](file:///d:/AAA/backend/modules/background_tasks/actions/metabolize_skill.py): Asynchronous action generating localized patches based on belief shifts and conversation annotations.
-- [metabolize_skill.yaml](file:///d:/AAA/backend/prompts/background_tasks/metabolize_skill.yaml): The system prompt for the self-revision patch generator daemon.
-- [skill_metabolism.py](file:///d:/AAA/backend/metabolisation/skill_metabolism.py): Core metabolism logic executing signals evaluation, anti-mastery validation, and database updates.
-- [daemon.py](file:///d:/AAA/backend/metabolisation/daemon.py): Orchestrates periodic execution of the skill metabolism daemon in the background thread.
-- [skill_workshop.py](file:///d:/AAA/backend/modules/skill_workshop.py): Core state transitions (`propose`, `revise`, `review`, `apply`, `reject`) and confidence scoring.
-- [repositories/skill.py](file:///d:/AAA/backend/storage/repositories/skill.py): Database operations for reading and writing `skill_nodes`, `skill_events`, and `skill_versions`.
-- [services/skill.py](file:///d:/AAA/backend/services/skill.py): Backend API service mapping database state to HTTP JSON schemas.
+- [afferent_sensory_router.py](file:///d:/01_GIT/AAA/backend/modules/afferent_sensory_router.py): Afferent sensory router implementing Option C hybrid topology, attractor prior weighting, and boredom inversion.
+- [typesafe_provider.py](file:///d:/01_GIT/AAA/backend/modules/providers/typesafe_provider.py): Decision client for TypeSafe Jev on direct API and OpenRouter Alpha Decisions.
+- [tag_protocols.yaml](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml): Canonical single-source-of-truth YAML consolidating XML tag grammar.
+- [tag_protocols.py](file:///d:/01_GIT/AAA/backend/prompts/tag_protocols.py): Dynamic prompt loader with fallback.
+- [refactor_skills_with_llm.py](file:///d:/01_GIT/AAA/backend/scripts/refactor_skills_with_llm.py): Non-destructive LLM evolutionary refactoring pipeline.
+- [m048_skill_blueprint_migration.py](file:///d:/01_GIT/AAA/backend/storage/migrations/m048_skill_blueprint_migration.py): Non-destructive migration deactivating `always_active` on XML tag skills.
+- [skill_activator.py](file:///d:/01_GIT/AAA/backend/modules/skill_activator.py): Coordinates skill routing, relevance coordinates injection, and fallback.
+- [refine_skill.py](file:///d:/01_GIT/AAA/backend/modules/background_tasks/actions/refine_skill.py): Vets decisions, updates nodes, handles accretion, and writes collapsed traces.
+- [repositories/skill.py](file:///d:/01_GIT/AAA/backend/storage/repositories/skill.py): Database operations for reading and writing `skill_nodes`, `skill_events`, and `skill_versions`.
 
 ### Frontend UI
-- [SkillsSection.tsx](file:///d:/AAA/frontend/src/components/pages/agentpage/SkillsSection.tsx): Displays the skill board on the `/agent` page. Distinguishes:
+- [SkillsSection.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/agentpage/SkillsSection.tsx): Displays the skill board on the `/agent` page. Distinguishes:
   - *Baseline Dispositions* (Purple `◆`)
   - *On-Demand Capabilities* (Green `◇`)
   - *Proposed Nucleations* (Purple `▲`)
   - *Refused/Integrated Proposals* (Refused: Red `✖`, Merged/Integrated: Purple `⎋` with `[ Integration Rationale ]` details).
-- [SkillDetail.tsx](file:///d:/AAA/frontend/src/components/pages/agentpage/skills/SkillDetail.tsx): Details page displaying version history with `[agent]`, `[auto]`, or `[user]` badges.
-- [CreasesDropdown.tsx](file:///d:/AAA/frontend/src/components/pages/nodeexplorer/CreasesDropdown.tsx): Pulls real-time skill event logs to trigger crease notifications.
-- [PipelineSection.tsx](file:///d:/AAA/frontend/src/components/pages/agentpage/PipelineSection.tsx): Visualizes the pipeline sequence and submodules (like `skill_metabolism` and `anti_mastery_validation`).
+- [SkillDetail.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/agentpage/skills/SkillDetail.tsx): Details page displaying version history with `[agent]`, `[auto]`, `[llm_refactor]`, or `[user]` badges.
+
 
