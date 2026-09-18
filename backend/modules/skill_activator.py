@@ -23,9 +23,10 @@ class SkillActivatorModule(ProcessingModule):
     3. Keyword trigger matching — substring match against trigger_keywords
     """
 
-    def __init__(self, skill_repo=None, belief_repo=None):
+    def __init__(self, skill_repo=None, belief_repo=None, router=None):
         self._skill_repo = skill_repo
         self._belief_repo = belief_repo
+        self._router = router
 
     @property
     def name(self) -> str:
@@ -37,6 +38,9 @@ class SkillActivatorModule(ProcessingModule):
     def set_repos(self, skill_repo, belief_repo):
         self._skill_repo = skill_repo
         self._belief_repo = belief_repo
+
+    def set_router(self, router):
+        self._router = router
 
     async def process(self, payload: dict) -> dict:
         if not self._skill_repo:
@@ -61,8 +65,52 @@ class SkillActivatorModule(ProcessingModule):
 
         if not on_demand_skills:
             payload["loaded_skills"] = []
+            payload["skill_relevance_coordinates"] = []
             return payload
 
+        user_message = self._get_user_message(payload)
+
+        # ── Afferent Sensory Membrane (Jev System One Pass) ────────────
+        if self._router and self._router.is_available and user_message:
+            try:
+                collapse_pressure = float(payload.get("metrics", {}).get("collapse_pressure", 0.0) or 0.0)
+                route_res = await self._router.route(
+                    user_message=user_message,
+                    on_demand_skills=on_demand_skills,
+                    messages=payload.get("messages", []),
+                    file_context=payload.get("file_context", []),
+                    attractor_window=payload.get("attractor_window", []),
+                    collapse_pressure=collapse_pressure,
+                )
+
+                if route_res and route_res.get("raw_evaluation", {}).get("success"):
+                    injected = route_res.get("injected_skills", [])
+                    loaded_skills = []
+                    for skill in injected:
+                        loaded_skills.append(
+                            {
+                                "id": skill.id,
+                                "name": skill.name,
+                                "description": skill.short_content or skill.description,
+                                "content": skill.content or "",
+                                "content_truncated": skill.content or "",
+                                "match_reason": "Afferent Sensory Resonance (Jev)",
+                                "score": 1.0,
+                            }
+                        )
+                        try:
+                            self._skill_repo.record_usage(skill.id)
+                        except Exception as e:
+                            logger.warning("Failed to record skill usage for %s: %s", skill.name, e)
+
+                    payload["loaded_skills"] = loaded_skills
+                    payload["skill_relevance_coordinates"] = route_res.get("coordinates", [])
+                    self._detect_underperformance(payload, all_skills)
+                    return payload
+            except Exception as e:
+                logger.warning("Afferent sensory routing encountered an exception, falling back to heuristics: %s", e)
+
+        payload["skill_relevance_coordinates"] = []
         candidates: dict[str, dict] = {}
 
         # Strategy A: Attractor Window Resonance (pipeline-specific)
@@ -71,7 +119,6 @@ class SkillActivatorModule(ProcessingModule):
 
         # Strategies B + C: Delegated to shared match_on_demand_skills()
         current_vector = self._get_current_vector(payload)
-        user_message = self._get_user_message(payload)
         if on_demand_skills and (current_vector is not None or user_message):
             from backend.utils.prompt_builder import match_on_demand_skills
 
@@ -98,16 +145,13 @@ class SkillActivatorModule(ProcessingModule):
         for candidate in loaded:
             skill = candidate["skill"]
             content = skill.content or ""
-            truncated = content[:MAX_SKILL_CONTENT_CHARS]
-            if len(content) > MAX_SKILL_CONTENT_CHARS:
-                truncated += "\n... [truncated — call load_skill for full content]"
-
             loaded_skills.append(
                 {
                     "id": skill.id,
                     "name": skill.name,
                     "description": skill.short_content or skill.description,
-                    "content_truncated": truncated,
+                    "content": content,
+                    "content_truncated": content,
                     "match_reason": candidate["reason"],
                     "score": candidate.get("score"),
                 }

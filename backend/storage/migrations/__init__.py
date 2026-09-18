@@ -87,6 +87,7 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
         m045_display_name,
         m046_daily_summaries,
         m047_resource_optimization_indexes,
+        m048_skill_blueprint_migration,
     )
 
     runner = MigrationRunner(conn)
@@ -140,4 +141,6 @@ def run_all_migrations(conn: sqlite3.Connection) -> None:
     runner.run("045_display_name", m045_display_name.up)
     runner.run("046_daily_summaries", m046_daily_summaries.up)
     runner.run("047_resource_optimization_indexes", m047_resource_optimization_indexes.up)
+    runner.run("048_skill_blueprint_migration", m048_skill_blueprint_migration.up)
+
 

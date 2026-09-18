@@ -12,6 +12,7 @@ from backend.utils.prompt_builder import (
     format_skills_matched,
     format_skills_on_demand_slugs,
 )
+from backend.prompts.tag_protocols import get_tag_protocols_prompt
 from backend.utils.prompt_loader import get_prompt
 
 
@@ -141,6 +142,7 @@ class PromptAssemblerModule(ProcessingModule):
             immunological_directive_text=immunological_directive_text,
             agonistic_directive_text=agonistic_directive_text,
             ecology_notes_text=ecology_notes_text,
+            skill_relevance_coordinates=payload.get("skill_relevance_coordinates", []),
             # Dynamic personality
             descriptive_traits=descriptive_traits,
             expertise_nodes=expertise_nodes,
@@ -301,6 +303,7 @@ def _build_system_content(
     immunological_directive_text: str | None = None,
     agonistic_directive_text: str | None = None,
     ecology_notes_text: str | None = None,
+    skill_relevance_coordinates: list[str] | None = None,
     # ── Dynamic personality (new) ──
     descriptive_traits=None,
     expertise_nodes=None,
@@ -316,6 +319,11 @@ def _build_system_content(
     prompt = get_persona_text(identity, "conversation")
     if prompt:
         parts.append(prompt.strip())
+
+    # 1b. Autopoietic Tag Protocols (consolidated compact inscriptional grammar)
+    tag_protocols = get_tag_protocols_prompt()
+    if tag_protocols:
+        parts.append("\n" + tag_protocols)
 
     # 2. Dynamic Traits (replaces static traits)
     if descriptive_traits is not None:
@@ -550,6 +558,16 @@ def _build_system_content(
     block = format_skills_on_demand_slugs(on_demand_skills or [])
     if block:
         parts.append(block)
+
+    # ── BLOCK: Skill Resonance Coordinates (Jev Afferent Sensory Membrane) ──
+    if skill_relevance_coordinates:
+        coord_block = "\n--- BEGIN SKILL RESONANCE COORDINATES ---\n"
+        coord_block += "The following operational organs have resonated with the current somatic state:\n"
+        for coord in skill_relevance_coordinates:
+            coord_block += f"  {coord}\n"
+        coord_block += "You may observe these coordinates without obligation, or enact them via `load_skill()` if required.\n"
+        coord_block += "--- END SKILL RESONANCE COORDINATES ---"
+        parts.append(coord_block)
 
     # ── BLOCK: Skills — Ecology Notes ──
     if ecology_notes_text:

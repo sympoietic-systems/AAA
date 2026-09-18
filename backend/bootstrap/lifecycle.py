@@ -101,10 +101,12 @@ async def lifespan(app: FastAPI):
     )
     modules["prompt_assembler"] = prompt_assembler
 
-    # 6b. Skill activator
+    # 6b. Skill activator & Afferent Sensory Router
     from backend.modules.skill_activator import SkillActivatorModule
+    from backend.modules.afferent_sensory_router import AfferentSensoryRouter
 
-    skill_activator = SkillActivatorModule()
+    afferent_router = AfferentSensoryRouter.from_config(config)
+    skill_activator = SkillActivatorModule(router=afferent_router)
     skill_activator.set_repos(repos["skill_repo"], repos["belief_repo"])
     modules["skill_activator"] = skill_activator
 

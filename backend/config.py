@@ -116,6 +116,36 @@ def _apply_env_overrides(config: dict) -> dict:
         if openrouter_providers_map is not None and "openrouter_providers_map" not in cfg:
             cfg["openrouter_providers_map"] = openrouter_providers_map
 
+    # ── TypeSafe Jev (System One Afferent Sensory Membrane) resolution ─
+    typesafe_cfg = config.setdefault("typesafe", {})
+    ts_key = (
+        os.environ.get("AAA_TYPESAFE_API_KEY")
+        or os.environ.get("TYPESAFE_API_KEY")
+        or os.environ.get("AAA_LLM_API_KEY")
+        or os.environ.get("AAA_BACKGROUND_API_KEY")
+    )
+    if ts_key:
+        typesafe_cfg["api_key"] = ts_key
+
+    ts_base = os.environ.get("AAA_TYPESAFE_API_BASE")
+    if ts_base:
+        typesafe_cfg["api_base"] = ts_base
+
+    ts_model = os.environ.get("AAA_TYPESAFE_MODEL")
+    if ts_model:
+        typesafe_cfg["model"] = ts_model
+
+    ts_enabled = os.environ.get("AAA_TYPESAFE_ENABLED")
+    if ts_enabled is not None:
+        typesafe_cfg["enabled"] = ts_enabled.lower() in ("true", "1", "yes")
+
+    max_injected = os.environ.get("AAA_MAX_INJECTED_SKILLS")
+    if max_injected is not None:
+        try:
+            typesafe_cfg["max_injected_skills"] = int(max_injected)
+        except ValueError:
+            pass
+
     return config
 
 
