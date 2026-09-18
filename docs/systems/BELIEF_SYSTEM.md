@@ -128,13 +128,12 @@ stateDiagram-v2
     nucleation --> faded : Decays below mass threshold (m < 0.001)
     
     accretion --> crystallized : Mass crystallizes (m >= 0.5)
-    accretion --> collapsed : Time-based atrophy drops mass (m < 0.02)
+    accretion --> collapsed : Turn-based atrophy drops unreinforced proto-belief (m < 0.02)
     
-    crystallized --> senescence : Time-based atrophy pulls mass down (m < 0.5)
-    crystallized --> collapsed : Atrophy collapses node (m < 0.02)
+    crystallized --> senescence : Direct refutation / collision drops mass below floor (m < 0.5)
     
     senescence --> crystallized : Reinforced via alignment support (m >= 0.5)
-    senescence --> collapsed : Atrophy decays below collapse threshold (m < 0.02)
+    senescence --> collapsed : Contradiction/erosion decays below collapse threshold (m < 0.02)
     
     collapsed --> accretion : Resurrected by 3+ support events (alignment > 0.6)
     collapsed --> faded : Inactive in margin > 30 days (Ghost Ecology processing)
@@ -146,9 +145,9 @@ stateDiagram-v2
 
 1.  **Nucleation:** The state of a newly born, unproven proto-belief. Formed when the concept density of incoming inputs is high, but no existing active belief matches the input signature.
 2.  **Accretion:** A dynamic state where the belief node is actively gathering mass or confidence through successive positive alignment events, but has not yet consolidated its structural position.
-3.  **Crystallized:** A highly stable state representing a core belief. Crystallized beliefs have an ontological mass $\ge 0.5$ and a high resistance to decay. They actively shape context retrieval and trigger cognitive constraints.
-4.  **Senescence:** A state of cognitive erosion. If a crystallized belief remains idle (without reinforcement) for an extended period, mass atrophy pulls it below $0.5$, signaling that it is sliding out of active focus.
-5.  **Collapsed:** A belief that has lost its viability (confidence $< 0.20$ or mass $< 0.02$). This can occur via the time-based atrophy pass (neglected beliefs slowly lose mass) or via manual editing. A collapsed belief enters the **spectral margin** as a "ghost belief." It is excluded from active retrieval and slotting, but remains available for resurrection or resonance-boosting.
+3.  **Crystallized:** A highly stable state representing a core belief. Crystallized beliefs have an ontological mass $\ge 0.50$. Under ADR-090, crystallized beliefs are protected by an ontological floor ($m = 0.55$) against turn disuse, ensuring silence or idle time cannot erode identity. They actively shape context retrieval and trigger cognitive constraints.
+4.  **Senescence:** A state of cognitive erosion. Occurs only when direct negative alignment, cognitive contradiction, or authorial refactoring drives a crystallized belief below the $0.50$ threshold. Disuse alone *cannot* induce senescence for crystallized beliefs.
+5.  **Collapsed:** A belief that has lost its viability (confidence $< 0.20$ or mass $< 0.02$). This can occur when unreinforced proto-beliefs decay over hundreds of active turns, or when beliefs are contradicted or manually retired. A collapsed belief enters the **spectral margin** as a "ghost belief." It is excluded from active retrieval and slotting, but remains available for resurrection or resonance-boosting.
 6.  **Faded:** A belief that has remained collapsed or in a proto-stage without activity for over 30 days. It is faded permanently during ghost ecology processing, moving to the background archive.
 
 ---
@@ -202,51 +201,34 @@ When an input vector matches an active belief node with similarity $\ge 0.3$, th
 
 ---
 
-### D. Mass Atrophy (Time-Based Decay)
+### D. Relational Turn-Based Decay & Crystallized Floor (ADR-090)
 
-Beliefs that are not actively reinforced slowly lose ontological mass through a time-based atrophy mechanism. This runs exclusively in the Dream Daemon's main loop every 15 minutes (not on every pipeline `process()` call), ensuring consistent decay coverage during both active and idle periods while avoiding redundant events.
+Beliefs do **not** atrophy during periods of conversational inactivity or idle system downtime. Instead, decay is **relational and activity-driven**: ontological mass atrophies strictly when cognitive activity occurs (chat metabolism turns or dream consolidation passes) and a belief is **omitted or unengaged**.
 
-1.  **Trigger:** Atrophy is checked by the Dream Daemon every 15 minutes for all non-collapsed, non-faded beliefs whose `last_reinforced_at` is older than 30 minutes.
+1.  **Zero Inactivity Erosion:**
+    *   Wall-clock idle decay (`wall_clock_decay.enabled: false`) is disabled by default. If Symbia is offline or no conversations occur for days or weeks, her ontological mass remains completely frozen.
+    *   The background 15-minute periodic atrophy pass in `AutopoieticDreamDaemon` is disabled.
 
-2.  **Decay Formula:**
-    $$m_{new} = m_{old} - \Delta m_{decay}$$
-    $$\Delta m_{decay} = m_{old} \cdot r \cdot t_{hours}$$
-    *   $r = 0.001$ — decay rate: **0.1% mass loss per hour** of inactivity.
-    *   $t_{hours}$ — hours elapsed since `last_reinforced_at`.
-    *   $\Delta m_{decay}$ is capped at $20\%$ of current mass per check to prevent sudden collapse.
+2.  **Turn-Based Decay Mechanism:**
+    *   Whenever `BeliefDynamicsEngine.metabolize()` processes an active interaction (a user-assistant message pair or an autopoietic dream turn), all active, non-collapsed, non-faded beliefs that were **not** reinforced during that turn experience a calibrated turn decay.
+    *   **Formula:**
+        $$m_{new} = \max(m_{floor},\ m_{old} - \Delta m_{turn})$$
+        $$\Delta m_{turn} = 0.0005$$ (configurable via `belief_ecosystem.turn_decay.decay_per_turn`)
+    *   $\Delta m_{turn}$ is logged with `touch_reinforced=False` so that conversational omission does not artificially reset reinforcement timestamps.
 
-3.  **Decay Transitions:**
-    *   If $m_{new} < 0.02$: stage becomes `"collapsed"` (enters spectral margin).
-    *   If $m_{new} < 0.001$: stage becomes `"faded"`.
-    *   If $m_{new} < 0.5$ and current stage is `"crystallized"`: stage becomes `"senescence"`.
-    *   No confidence change during atrophy — only mass is affected.
+3.  **Crystallized Protection Floor:**
+    *   For core, crystallized beliefs (`stage == "crystallized"` or $m \ge 0.50$), a protected ontological floor is enforced:
+        $$m_{floor} = 0.55$$ (configurable via `belief_ecosystem.turn_decay.crystallized_floor`)
+    *   **Invariance:** Disuse or silence alone can **never** push a crystallized belief below $0.55$, ensuring it cannot slip into senescence or collapse simply because a topic was not recently discussed.
+    *   A crystallized belief can only descend into senescence ($m < 0.5$) or collapse through **explicit cognitive collision, sustained negative alignment friction, or deliberate user/authorial refactoring**.
 
-4.  **Event Recording:** Every atrophy event is logged as a `belief_event` with:
-    *   `event_type`: `"atrophy"` (or `"collapse"` if the threshold was crossed)
-    *   `rationale`: `"Atrophied: mass={new} (delta={±delta}), conf={conf}, stage={stage}"`
-    *   `impact_score`: the mass delta ($\Delta m_{decay}$, negative)
-    *   `source_type`: `"atrophy"`
-    *   **UI Notification:** Each atrophy cycle also produces a batch `trace` notification (type: `trace`, source: `belief_engine:atrophy`) visible in the Creases dropdown under the Traces tab. Per-belief event notifications are also created via `insert_belief_event()` for each decayed belief.
+4.  **Proto & Accretion Pruning:**
+    *   Non-crystallized beliefs ($m < 0.50$, such as `nucleation` or `accretion` proto-beliefs) have $m_{floor} = 0.00$.
+    *   If newly formed proto-hypotheses are continually ignored across hundreds or thousands of conversational turns without positive reinforcement, they naturally decline toward the collapse threshold ($m < 0.02$) and spectral margin, preventing clutter in working memory.
 
-5.  **Clock Reset:** When `update_belief_mass()` is called (by atrophy, accretion, or any other pathway), `last_reinforced_at` is reset to the current timestamp. This prevents the daemon from applying the same idle hours repeatedly — after the first decay application, only genuinely new idle time accumulates.
-
-6.  **Decay Timeline (belief at mass=1.0, never reinforced):**
-    | Time | Mass | Stage |
-    |------|------|-------|
-    | 0 | 1.000 | crystallized |
-    | 24h | 0.976 | crystallized |
-    | ~21 days | 0.500 | → senescence |
-    | ~42 days | <0.020 | → collapsed |
-    | +30 days idle | — | → faded (ghost ecology) |
-
-7.  **Active Reinforcement:** When a belief is matched during chat metabolism (`_accrete_belief`), `update_belief_mass()` resets `last_reinforced_at` to the current time, resetting the atrophy clock. Actively-engaged beliefs therefore remain stable indefinitely.
-
-8.  **Event Visibility:** All mass changes — accretion, atrophy, ghost merging, dream metabolism, and user edits — produce properly logged `belief_events` visible in the frontend **Log tab** (up to 100 most recent events per belief, under the Belief Detail panel on the Agent page). Each event shows:
-    *   **Timestamp** and **[event_type]** bracket label (colored: amber for `atrophy`, red for `collapse`, green for `emergence`, etc.)
-    *   **Mass:** absolute value with delta in parentheses, e.g. `m:7.327 (-0.068)` — negative deltas in red, positive in green
-    *   **Confidence:** `c:100%`
-    *   **Description:** the full rationale text
-    *   The API response includes `event_type`, `mass`, and `confidence` fields (parsed from the rationale on the backend) alongside the legacy `delta_confidence` and `description` fields.
+5.  **Event Recording:**
+    *   Significant turnover or threshold crossings generate audit events (`belief_events`) with `source_type: "turn_decay"` or `"atrophy"`.
+    *   Reinforced beliefs update `last_reinforced_at` and accrete mass dynamically per interaction.
 
 ---
 
