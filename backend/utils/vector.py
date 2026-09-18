@@ -108,6 +108,28 @@ def build_history_message(
     if justification is None:
         justification = row.get("structural_justification") or get_justification(row.get("content", ""))
 
+    active_skills_val = row.get("active_skills")
+    if isinstance(active_skills_val, str) and active_skills_val:
+        try:
+            skills = json.loads(active_skills_val)
+        except Exception:
+            skills = []
+    elif isinstance(active_skills_val, list):
+        skills = active_skills_val
+    else:
+        skills = []
+
+    active_beliefs_val = row.get("active_beliefs")
+    if isinstance(active_beliefs_val, str) and active_beliefs_val:
+        try:
+            beliefs = json.loads(active_beliefs_val)
+        except Exception:
+            beliefs = []
+    elif isinstance(active_beliefs_val, list):
+        beliefs = active_beliefs_val
+    else:
+        beliefs = []
+
     return HistoryMessage(
         id=row["id"],
         timestamp=row["timestamp"],
@@ -124,4 +146,6 @@ def build_history_message(
         structural_signature=sig_list,
         structural_justification=justification,
         parent_message_id=row.get("parent_message_id"),
+        active_skills=skills,
+        active_beliefs=beliefs,
     )

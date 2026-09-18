@@ -303,8 +303,9 @@ def format_beliefs_block(
         lines.append(intro_text)
     for item in attractor_window:
         origin = " [procedural]" if (item.get("label") or "").startswith("skill:") else ""
+        label_prefix = f"[{item['label']}] " if item.get("label") else ""
         lines.append(
-            f"  - Slot {item['slot']}: [{item['confidence']:.2f}] "
+            f"  - Slot {item['slot']}: {label_prefix}[{item['confidence']:.2f}] "
             f"{item['statement'][:max_stmt_len]} "
             f"(mass: {item['mass']:.1f}){origin}"
         )

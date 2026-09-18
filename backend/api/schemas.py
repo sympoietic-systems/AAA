@@ -81,6 +81,10 @@ class HistoryMessage(BaseModel):
     structural_signature: list[float] | None = None
     structural_justification: str | None = None
     parent_message_id: int | None = None
+    active_skills: list[str] = Field(default_factory=list, description="Skill names active for this response")
+    active_beliefs: list[str] = Field(
+        default_factory=list, description="Belief labels in the attractor window for this response"
+    )
 
 
 class HistoryResponse(BaseModel):

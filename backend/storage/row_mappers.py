@@ -47,6 +47,8 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         note_count=row["note_count"] if "note_count" in row.keys() else 0,
         metabolized=row["metabolized"] if "metabolized" in row.keys() else 0,
         parent_message_id=row["parent_message_id"] if "parent_message_id" in row.keys() else None,
+        active_skills=row["active_skills"] if "active_skills" in row.keys() else None,
+        active_beliefs=row["active_beliefs"] if "active_beliefs" in row.keys() else None,
     )
 
 

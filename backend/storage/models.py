@@ -66,6 +66,8 @@ class Message:
     note_count: int = 0
     metabolized: int = 0
     parent_message_id: int | None = None
+    active_skills: str | None = None
+    active_beliefs: str | None = None
 
 
 @dataclass

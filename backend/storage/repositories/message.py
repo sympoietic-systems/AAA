@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import numpy as np
@@ -55,12 +56,16 @@ class MessageRepository(BaseRepository):
         structural_signature: bytes = b"",
         structural_justification: str | None = None,
         parent_message_id: int | None = None,
+        active_skills: list[str] | str | None = None,
+        active_beliefs: list[str] | str | None = None,
     ) -> Message:
         conn = self._conn()
+        skills_str = json.dumps(active_skills) if isinstance(active_skills, list) else active_skills
+        beliefs_str = json.dumps(active_beliefs) if isinstance(active_beliefs, list) else active_beliefs
         conn.execute(
             """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id, active_skills, active_beliefs)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 agent_id,
                 speaker,
@@ -78,6 +83,8 @@ class MessageRepository(BaseRepository):
                 structural_signature,
                 structural_justification,
                 parent_message_id,
+                skills_str,
+                beliefs_str,
             ),
         )
         conn.commit()
@@ -349,6 +356,7 @@ class MessageRepository(BaseRepository):
                 f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cl.structural_signature, cl.structural_justification, cl.parent_message_id,
+                          cl.active_skills, cl.active_beliefs, cl.context_sent,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -367,6 +375,7 @@ class MessageRepository(BaseRepository):
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cl.structural_signature, cl.structural_justification, cl.parent_message_id,
+                          cl.active_skills, cl.active_beliefs, cl.context_sent,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -398,6 +407,7 @@ class MessageRepository(BaseRepository):
             f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                       cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                       cl.structural_signature, cl.structural_justification, cl.parent_message_id,
+                      cl.active_skills, cl.active_beliefs, cl.context_sent,
                       (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                       cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                       cm.agent_divergence, cm.deficit,
