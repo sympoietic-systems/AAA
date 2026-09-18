@@ -686,12 +686,16 @@ def _parse_json_safely(text: str) -> dict:
     # 1. Clean think tags
     cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
-    # 2. Extract starting from first {
+    # 2. Extract between first { and last }
     first_brace = cleaned.find("{")
+    last_brace = cleaned.rfind("}")
     if first_brace == -1:
         return json.loads(cleaned)
 
-    json_part = cleaned[first_brace:]
+    if last_brace > first_brace:
+        json_part = cleaned[first_brace : last_brace + 1]
+    else:
+        json_part = cleaned[first_brace:]
 
     # 3. Helper to clean control characters and commas inside string
     def sanitize(s: str) -> str:

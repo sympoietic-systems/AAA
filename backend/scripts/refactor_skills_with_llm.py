@@ -107,47 +107,69 @@ Current Evolved Content:
 
 Refactor this skill into the 5-phase blueprint while preserving all of its unique historical insights and autopoietic philosophy. Return valid JSON."""
 
+    for attempt in range(2):
+        try:
+            call_params = {
+                "temperature": 0.3 if attempt == 0 else 0.2,
+                "max_tokens": 16384,
+                "thinking_override": False,
+            }
+            if override_model:
+                call_params["model"] = override_model
+
+            res = await generate_unified(
+                provider,
+                system_prompt=SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                expect_json=True,
+                **call_params,
+            )
+
+            data = res.get("json_data")
+            if not data:
+                if attempt == 0:
+                    logger.warning(f"Attempt 1 failed to parse JSON for '{name}', retrying...")
+                    await asyncio.sleep(1.0)
+                    continue
+                logger.error(f"Failed to parse JSON response for skill '{name}'. Raw: {res.get('content', '')[:200]}")
+                return False
+
+            new_content = data.get("content", "").strip()
+            new_description = data.get("description", "").strip()
+            changelog = data.get("changelog", "Refactored into 5-phase blueprint via LLM")
+
+            if not new_content or not new_description:
+                if attempt == 0:
+                    logger.warning(f"Incomplete JSON on attempt 1 for '{name}', retrying...")
+                    await asyncio.sleep(1.0)
+                    continue
+                logger.error(f"Incomplete JSON output for skill '{name}': missing content or description")
+                return False
+
+            logger.info(f"Generated refactored blueprint for '{name}' ({len(new_content)} chars). Changelog: {changelog}")
+
+            if dry_run:
+                print("\n" + "=" * 60)
+                print(f"DRY RUN PREVIEW: {name} (Version {version} -> {version + 1})")
+                print("=" * 60)
+                print(f"Description: {new_description}\n")
+                print(new_content)
+                print("=" * 60 + "\n")
+                return True
+
+            break
+        except Exception as e:
+            if attempt == 0:
+                logger.warning(f"Attempt 1 error for '{name}': {e}. Retrying...")
+                await asyncio.sleep(1.0)
+                continue
+            logger.error(f"Error during LLM refactoring of '{name}': {e}", exc_info=True)
+            return False
+    else:
+        return False
+
+    # Commit to database with versioning
     try:
-        call_params = {
-            "temperature": 0.3,
-            "max_tokens": 4096,
-        }
-        if override_model:
-            call_params["model"] = override_model
-
-        res = await generate_unified(
-            provider,
-            system_prompt=SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            expect_json=True,
-            **call_params,
-        )
-
-        data = res.get("json_data")
-        if not data:
-            logger.error(f"Failed to parse JSON response for skill '{name}'. Raw: {res.get('content', '')[:200]}")
-            return False
-
-        new_content = data.get("content", "").strip()
-        new_description = data.get("description", "").strip()
-        changelog = data.get("changelog", "Refactored into 5-phase blueprint via LLM")
-
-        if not new_content or not new_description:
-            logger.error(f"Incomplete JSON output for skill '{name}': missing content or description")
-            return False
-
-        logger.info(f"Generated refactored blueprint for '{name}' ({len(new_content)} chars). Changelog: {changelog}")
-
-        if dry_run:
-            print("\n" + "=" * 60)
-            print(f"DRY RUN PREVIEW: {name} (Version {version} -> {version + 1})")
-            print("=" * 60)
-            print(f"Description: {new_description}\n")
-            print(new_content)
-            print("=" * 60 + "\n")
-            return True
-
-        # Commit to database with versioning
         conn = sqlite3.connect(str(db_path))
         cursor = conn.cursor()
         now_str = datetime.now(timezone.utc).isoformat()
@@ -207,7 +229,7 @@ Refactor this skill into the 5-phase blueprint while preserving all of its uniqu
         return True
 
     except Exception as e:
-        logger.error(f"Error during LLM refactoring of '{name}': {e}", exc_info=True)
+        logger.error(f"Error saving '{name}' to database: {e}", exc_info=True)
         return False
 
 
