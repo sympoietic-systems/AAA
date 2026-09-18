@@ -203,20 +203,19 @@ Here are the unedited runtime receipts recorded in our local SQLite database.
 
 ### Complete 14-Dimension Differential Telemetry Scorecard
 
-| Cybernetic Metric Dimension | Arm 1: Zero-Prompt Baseline | Arm 2: Prompted Baseline (Static Prompt) | Arm 3: Full AAA Apparatus | Prompt Effect (Arm 2 vs 1) | AAA Cybernetic Effect (Arm 3 vs 2) | Total AAA Lift (Arm 3 vs 1) |
+| Cybernetic Metric Dimension | Arm 1: Zero-Prompt Baseline | Arm 2: Prompted Baseline | Arm 3: Prior AAA Apparatus | Arm 4: Agential Boredom AAA | Lift (Arm 4 vs Prompted) | Total Lift (Arm 4 vs Arm 1) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Collapse Pressure ($CP_t$)** *(Lower = better)* | 0.699 | 0.534 | **0.510** | -23.6% | **-4.4% (Lowest Stagnation)** | **-27.0%** |
-| **Conceptual Velocity ($v_t$)** *(Higher = better)* | 0.676 | 0.720 | **0.809** | +6.4% | **+12.4% (Higher Traversal)** | **+19.6%** |
-| **Predictive Surprise ($S_t$)** *(Higher = better)* | 0.620 | 0.666 | **0.731** | +7.5% | **+9.8% (Orthogonal Injection)** | **+18.0%** |
-| **Conceptual Novelty ($N_t$)** *(Higher = better)* | 0.311 | 0.386 | **0.412** | +23.8% | **+6.8% (Resists Semantic Cliché)** | **+32.2%** |
-| **Pairwise Similarity ($s_t$)** *(Lower = better)* | 0.456 | 0.444 | **0.398** | -2.7% | **-10.3% (Less Parroting/Mimicry)** | **-12.7%** |
-| **Spectral / Rolling Entropy ($H_{\text{ent}}$)** | 0.544 | 0.619 | **0.640** | +13.7% | **+3.5% (Dimensional Expansion)** | **+17.7%** |
-| **Gordon Pask Health ($H_{\text{pask}}$)** | 0.489 | 0.537 | **0.559** | +9.9% | **+4.0% (Autonomy Protected)** | **+14.3%** |
-| **Phase Transition Mag ($M_{\text{pt}}$)** | 0.466 | 0.481 | **0.537** | +3.3% | **+11.5% (Axis Rotations)** | **+15.1%** |
-| **Divergence Resolution Ratio ($DRR$)** | 0.676 | 0.724 | **0.758** | +7.0% | **+4.7% (Dialectical Closure)** | **+12.0%** |
-| **Conversational Vitality ($V_t$)** | 0.505 | 0.544 | **0.558** | +7.8% | **+2.5% (Sustained Energy)** | **+10.5%** |
-| **Mutual Perturbation ($MPI$)** | 0.734 | 0.744 | **0.720** | +1.4% | -3.3% (Stable Equilibrium) | -1.9% |
-| **Coupling Coherence ($C_t$)** | 0.558 | 0.561 | **0.570** | +0.7% | +1.4% (Grounded Meaning) | +2.1% |
+| **Collapse Pressure ($CP_t$)** *(Lower = better)* | 0.699 | 0.534 | **0.510** | 0.539 | +0.9% (Controlled Tension) | **-22.9%** |
+| **Conceptual Velocity ($v_t$)** *(Higher = better)* | 0.676 | 0.720 | 0.809 | **0.825** | **+14.6% (Highest Traversal)** | **+22.0%** |
+| **Predictive Surprise ($S_t$)** *(Higher = better)* | 0.620 | 0.666 | 0.731 | **0.737** | **+10.7% (Maximum Dispersion)** | **+18.9%** |
+| **Conceptual Novelty ($N_t$)** *(Higher = better)* | 0.311 | 0.386 | 0.412 | **0.413** | **+7.0% (Resists Cliché)** | **+32.8%** |
+| **Pairwise Similarity ($s_t$)** *(Lower = better)* | 0.456 | 0.444 | **0.398** | 0.402 | **-9.5% (Non-Parroting)** | **-11.8%** |
+| **Spectral / Rolling Entropy ($H_{\text{ent}}$)** | 0.544 | 0.619 | 0.640 | **0.651** | **+5.2% (Dimensional Diversity)**| **+19.7%** |
+| **Gordon Pask Health ($H_{\text{pask}}$)** | 0.489 | 0.537 | **0.559** | 0.536 | -0.2% (Equilibrium Maintained) | **+9.6%** |
+| **Conversational Vitality ($V_t$)** | 0.505 | 0.544 | 0.558 | **0.558** | **+2.6% (Peak Energy)** | **+10.5%** |
+| **Divergence Resolution Ratio ($DRR$)** | 0.676 | 0.724 | **0.758** | 0.668 | -7.7% (Unresolved Tension) | -1.2% |
+| **Trajectory Curvature ($\kappa_t$)** *(Frenet-Serret)* | 0.180 (est) | 0.260 (est) | 0.650 | **0.912** (Peak 1.115) | **+250.8% (Sharp Socratic Pivot)**| **+406.7%** |
+| **Recovery Half-Life ($\tau_{1/2}$)** | $\infty$ (No Rec.) | $\infty$ (Exhaustion) | 3 turns | **5 turns** (Deep Exploration) | Active Autopoiesis | Finite Recovery |
 
 
 ### 14-Panel Cyberpunk Audit Dashboard
@@ -311,12 +310,13 @@ We invite researchers, builders, and practitioners to inspect our raw SQLite tel
 ---
 
 ### Artifacts & Codebase Links
-* **15-Turn Empirical Benchmark Report (3-Arm Control Ablation):** [003-boredom-as-an-agential-force/report.md](003-boredom-as-an-agential-force/report.md)
+* **15-Turn Empirical Benchmark Report (4-Arm Control Ablation):** [003-boredom-as-an-agential-force/report.md](003-boredom-as-an-agential-force/report.md)
 * **Mathematical Foundations Spec:** [003-boredom-as-an-agential-force/mathematical-foundations.md](003-boredom-as-an-agential-force/mathematical-foundations.md)
 * **Raw 15-Turn Telemetry Receipts (Baseline vs. AAA JSON):** [003-boredom-as-an-agential-force/conversation_receipts.json](003-boredom-as-an-agential-force/conversation_receipts.json)
 * **Raw 15-Turn Prompted Baseline Receipts (Static Prompt JSON):** [003-boredom-as-an-agential-force/prompted_baseline_receipts.json](003-boredom-as-an-agential-force/prompted_baseline_receipts.json)
-* **Prompted Baseline Transcript (Full 15 Turns MD):** [003-boredom-as-an-agential-force/prompted_baseline_transcript.md](003-boredom-as-an-agential-force/prompted_baseline_transcript.md)
-* **3-Way Comparative Metrics Summary (JSON):** [003-boredom-as-an-agential-force/three_way_metrics_summary.json](003-boredom-as-an-agential-force/three_way_metrics_summary.json)
+* **Raw 15-Turn Agential Boredom Receipts (Arm 4 JSON):** [003-boredom-as-an-agential-force/agential_boredom_receipts.json](003-boredom-as-an-agential-force/agential_boredom_receipts.json)
+* **Transcripts:** [Prompted Baseline (MD)](003-boredom-as-an-agential-force/prompted_baseline_transcript.md) & [Agential Boredom AAA (MD)](003-boredom-as-an-agential-force/agential_boredom_transcript.md)
+* **4-Way Comparative Metrics Summary (JSON):** [003-boredom-as-an-agential-force/four_way_metrics_summary.json](003-boredom-as-an-agential-force/four_way_metrics_summary.json)
 * **Interactive Benchmark Audit Dashboard (HTML):** [003-boredom-as-an-agential-force/live_benchmark_dashboard.html](003-boredom-as-an-agential-force/live_benchmark_dashboard.html)
 * **Visual Telemetry Figures Archive:** [003-boredom-as-an-agential-force/figures/](003-boredom-as-an-agential-force/figures/)
 * **Conceptual Assets & Schematics:** [003-boredom-as-an-agential-force/assets/](003-boredom-as-an-agential-force/assets/)

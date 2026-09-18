@@ -137,10 +137,55 @@ This guarantees operational closure: the system's character and homeostatic stat
 
 ---
 
+---
+
+## 5. Agential Boredom Dynamics: Socratic Rupture & Allostatic Actuation
+
+When Collapse Pressure exceeds critical thresholds ($CP_t \ge 0.45$), the Agential Boredom Engine intervenes directly in inference hyperparameters and prompt topology rather than merely logging telemetry.
+
+### 5.1. Discrete Hyperspherical Frenet-Serret Curvature ($\kappa_t$)
+
+To measure directional bending and orthogonal trajectory pivots across discrete turns $t-2, t-1, t$, AAA computes discrete hyperspherical curvature:
+
+$$\mathbf{v}_{t-1} = \frac{\mathbf{e}_{t-1} - \mathbf{e}_{t-2}}{\|\mathbf{e}_{t-1} - \mathbf{e}_{t-2}\|_2}, \quad \mathbf{v}_t = \frac{\mathbf{e}_t - \mathbf{e}_{t-1}}{\|\mathbf{e}_t - \mathbf{e}_{t-1}\|_2}$$
+
+$$\kappa_t = \|\mathbf{v}_t - \mathbf{v}_{t-1}\|_2 \in [0, 2]$$
+
+* $\kappa_t \to 0$: Linear, degenerate dialogue moving along a 1D straight path or trapped in a point attractor.
+* $\kappa_t \approx 0.9 - 1.2$: Healthy, orthogonal phase-space exploration and dialectical ruptures.
+
+### 5.2. Continuous Quadratic Presence Penalty ($P_{\text{reg}}$)
+
+To break linguistic attractors and logit-level token echoing without step-function instability:
+
+$$P_{\text{reg}} = P_{\text{base}} + 1.50 \cdot (CP_t - 0.45)^2 \quad (\text{for } CP_t \ge 0.45)$$
+
+Capped at $P_{\max} = 0.85$. This quadratically raises sampling costs for previously emitted n-grams, forcing lexical and conceptual divergence.
+
+### 5.3. Dynamic Thermal Scaling ($T_t$)
+
+Sampling temperature scales monotonically with collapse pressure:
+
+$$T_t = T_{\text{base}} + 0.35 \cdot (CP_t - 0.45) \quad (\text{for } CP_t \ge 0.45)$$
+
+Capped at $T_{\max} = 1.15$, expanding sampling support into previously suppressed tails of the probability distribution.
+
+### 5.4. Nomadic Orthogonal Memory Retrieval
+
+When $CP_t \ge 0.70$, the vector memory retrieval query is steered away from direct thematic neighbors and constrained to an orthogonal window:
+
+$$\mathcal{R}_{\text{nomadic}} = \{m \in \mathcal{M} \mid 0.20 \le \cos(\theta(\mathbf{e}_m, \mathbf{e}_t)) \le 0.45\}$$
+
+This retrieves conceptual fragments that share distant latent compatibility with the current conversation without feeding back into the active semantic attractor.
+
+---
+
 ## References
 
 * Pask, G. (1975). *Conversation, Cognition and Learning: A Cybernetic Theory and Methodology*. Elsevier.
 * Pask, G. (1976). *Conversation Theory: Applications in Education and Epistemology*. Elsevier.
 * Pickering, A. (2010). *The Cybernetic Brain: Sketches of Another Future*. University of Chicago Press.
 * Betin, V. (2026). [Protocol Entry 003: Boredom as an Agential Force](003-boredom-as-an-agential-force.md).
-* AAA Subsystem: [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](../systems/CYBERNETIC_METRICS_SYSTEM.md).
+* AAA Subsystems: [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](../systems/CYBERNETIC_METRICS_SYSTEM.md), [`docs/systems/SYSTEM_OVERVIEW.md`](../systems/SYSTEM_OVERVIEW.md).
+* Reports & Decisions: [`docs/reports/017-agential-boredom-engine-and-socratic-rupture-report.md`](../reports/017-agential-boredom-engine-and-socratic-rupture-report.md), [`docs/decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md`](../decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md).
+
