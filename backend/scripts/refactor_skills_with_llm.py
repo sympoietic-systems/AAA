@@ -281,6 +281,7 @@ async def run_pipeline():
     parser.add_argument("--skill", type=str, default=None, help="Specific skill name to refactor")
     parser.add_argument("--all", action="store_true", help="Refactor all database skills")
     parser.add_argument("--only-unmigrated", action="store_true", help="Only refactor skills that have not yet been migrated to 5-phase blueprint")
+    parser.add_argument("--include-tags", action="store_true", help="Include afferent tag skills in refactoring (default: excluded in favor of tag_protocols.yaml)")
     parser.add_argument("--include-collapsed", action="store_true", help="Include refused, integrated, or collapsed skills")
     parser.add_argument("--audit-only", action="store_true", help="Print audit report of candidate skills without making LLM calls")
     parser.add_argument("--dry-run", action="store_true", help="Preview LLM outputs without modifying database")
@@ -321,7 +322,7 @@ async def run_pipeline():
     for r in rows:
         item = dict(r)
         name = item["name"]
-        if name in TAG_SKILL_NAMES:
+        if not args.include_tags and name in TAG_SKILL_NAMES:
             tag_skills_skipped.append(item)
             continue
         if not args.include_collapsed and is_inactive_or_refused(item):
