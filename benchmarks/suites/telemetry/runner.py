@@ -455,6 +455,97 @@ class TelemetryBenchmarkSuite(BaseBenchmarkSuite):
 
         return receipt
 
+    @staticmethod
+    def boredom_live(
+        turns: int = 15,
+        prompts_file: Optional[Path | str] = None,
+        name: str = "",
+        out_dir: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Runs the 15-turn Agential Boredom live adversarial test on AAA Apparatus."""
+        t0 = time.time()
+        if prompts_file:
+            with open(prompts_file, "r", encoding="utf-8") as f:
+                prompts = json.load(f)
+        else:
+            prompts = DEFAULT_PROMPTS[:turns]
+
+        effective_name = name or "agential_boredom_live"
+        if out_dir is None:
+            out_dir = create_run_directory("telemetry", "live", custom_name=effective_name)
+        else:
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+        logger = setup_run_logger(out_dir)
+        logger.info("=" * 70)
+        logger.info("AGENTIAL BOREDOM LIVE BENCHMARK (AAA Apparatus)")
+        logger.info("Turns: %d | Output Directory: %s", len(prompts), out_dir)
+        logger.info("=" * 70)
+
+        # 1. Run AAA Apparatus
+        logger.info("[1/3] Running AAA Cognitive Apparatus with Agential Boredom Engine...")
+        aaa_results = run_aaa_apparatus(prompts)
+
+        # 2. Compute 14-dimension telemetry
+        logger.info("[2/3] Computing 14-dimension cybernetic telemetry...")
+        embedder = SentenceTransformer("all-MiniLM-L6-v2")
+        aaa_turns = asyncio.run(compute_metrics_for_turns(aaa_results, embedder, speaker_agent_key="apparatus"))
+
+        # 3. Trajectory curvature & recovery half-life
+        agent_embeddings = []
+        for t in aaa_turns:
+            text = t.get("apparatus", "")
+            emb = embedder.encode(text, normalize_embeddings=True).astype("float32")
+            agent_embeddings.append(emb)
+        agent_embeddings = np.array(agent_embeddings)
+
+        from .boredom_evaluator import compute_recovery_half_life, compute_trajectory_curvature
+
+        curvatures = compute_trajectory_curvature(agent_embeddings)
+        for idx, c in enumerate(curvatures):
+            turn_num = idx + 3
+            if turn_num <= len(aaa_turns):
+                aaa_turns[turn_num - 1]["metrics"]["trajectory_curvature"] = round(c, 4)
+
+        cp_series = [
+            t["metrics"].get("collapse_pressure")
+            for t in aaa_turns
+            if t.get("metrics") and t["metrics"].get("collapse_pressure") is not None
+        ]
+        tau_half = compute_recovery_half_life(cp_series, peak_threshold=0.70, recovery_threshold=0.40)
+
+        logger.info("Computed Trajectory Curvatures: %s", [round(c, 3) for c in curvatures])
+        logger.info("Recovery Half-Life (tau_{1/2}): %s turns", tau_half)
+
+        # Save receipts
+        receipts_path = out_dir / "conversation_receipts.json"
+        duration = round(time.time() - t0, 2)
+        meta = {
+            "run_id": out_dir.name,
+            "suite": "telemetry",
+            "run_type": "boredom_live",
+            "turns": len(prompts),
+            "duration_seconds": duration,
+            "recovery_half_life": tau_half,
+            "trajectory_curvatures": [round(c, 4) for c in curvatures],
+        }
+        with open(receipts_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "metadata": meta,
+                "prompts": prompts,
+                "aaa": aaa_turns,
+            }, f, indent=2)
+        save_run_metadata(out_dir, meta)
+
+        plot_telemetry_oscilloscope("AAA_Agential_Boredom", aaa_turns, out_dir / "oscilloscope_aaa.png")
+
+        return {
+            "run_dir": out_dir,
+            "aaa": aaa_turns,
+            "metadata": meta,
+        }
+
+
 
 def _load_receipt_turns(path_or_dir: Path | str) -> Tuple[List[Dict[str, Any]], str]:
     """Extracts turn records from a run directory or JSON receipt file."""

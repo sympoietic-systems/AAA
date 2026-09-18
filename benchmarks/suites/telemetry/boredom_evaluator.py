@@ -228,3 +228,58 @@ def evaluate_boredom_discriminability(
             "effective_contrast": round(loop_mean - focus_mean, 3),
         },
     }
+
+
+def compute_trajectory_curvature(embeddings: np.ndarray, eps: float = 1e-6) -> List[float]:
+    """Computes discrete Frenet-Serret trajectory curvature kappa_t in embedding space:
+    kappa_t = ||v_t x a_t|| / (||v_t||^3 + eps)
+    In n dimensions: ||v x a|| = sqrt(||v||^2 * ||a||^2 - (v . a)^2).
+    """
+    n = embeddings.shape[0]
+    if n < 3:
+        return []
+
+    curvatures = []
+    # v_t = e_t - e_{t-1}
+    velocities = embeddings[1:] - embeddings[:-1]
+    # a_t = v_t - v_{t-1}
+    accelerations = velocities[1:] - velocities[:-1]
+
+    for v, a in zip(velocities[1:], accelerations):
+        v_norm_sq = float(np.dot(v, v))
+        a_norm_sq = float(np.dot(a, a))
+        v_dot_a = float(np.dot(v, a))
+
+        cross_norm_sq = max(0.0, v_norm_sq * a_norm_sq - (v_dot_a ** 2))
+        cross_norm = np.sqrt(cross_norm_sq)
+        v_norm = np.sqrt(v_norm_sq)
+
+        kappa = cross_norm / ((v_norm ** 3) + eps)
+        curvatures.append(float(kappa))
+
+    return curvatures
+
+
+def compute_recovery_half_life(
+    collapse_pressures: List[float],
+    peak_threshold: float = 0.70,
+    recovery_threshold: float = 0.40,
+) -> Optional[int]:
+    """Computes tau_{1/2}: number of turns after reaching peak CP (>= peak_threshold)
+    to drop below recovery_threshold. Returns None if peak is never reached or never recovers.
+    """
+    peak_idx = None
+    for idx, cp in enumerate(collapse_pressures):
+        if cp >= peak_threshold:
+            peak_idx = idx
+            break
+
+    if peak_idx is None:
+        return None
+
+    for idx in range(peak_idx + 1, len(collapse_pressures)):
+        if collapse_pressures[idx] <= recovery_threshold:
+            return idx - peak_idx
+
+    return None
+

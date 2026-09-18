@@ -56,7 +56,12 @@ def register_telemetry_cli(subparsers):
     b_probe_p.add_argument("-m", "--model", default="google/gemini-2.5-flash", help="LLM model identifier")
     b_probe_p.add_argument("--mock", action="store_true", help="Run in zero-cost mock mode without calling live LLM API")
     b_probe_p.add_argument("-n", "--name", default="", help="Custom experiment name")
-    b_probe_p.add_argument("-o", "--out-dir", type=Path, default=None, help="Optional explicit output directory")
+    # 6. boredom-live
+    b_live_p = cmd_subs.add_parser("boredom-live", help="Run 15-turn Agential Boredom live adversarial test on AAA Apparatus")
+    b_live_p.add_argument("-t", "--turns", type=int, default=15, help="Number of adversarial turns (default: 15)")
+    b_live_p.add_argument("-p", "--prompts", type=Path, default=None, help="Custom prompt sequence JSON file")
+    b_live_p.add_argument("-n", "--name", default="", help="Custom experiment name")
+    b_live_p.add_argument("-o", "--out-dir", type=Path, default=None, help="Optional explicit output directory")
 
 
 def execute_telemetry_cli(args) -> int:
@@ -108,6 +113,15 @@ def execute_telemetry_cli(args) -> int:
         TelemetryBenchmarkSuite.boredom_probe(
             model=args.model,
             mock_mode=args.mock,
+            name=args.name,
+            out_dir=args.out_dir,
+        )
+        return 0
+
+    if action == "boredom-live":
+        TelemetryBenchmarkSuite.boredom_live(
+            turns=args.turns,
+            prompts_file=args.prompts,
             name=args.name,
             out_dir=args.out_dir,
         )

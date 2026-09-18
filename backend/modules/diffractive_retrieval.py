@@ -183,10 +183,12 @@ class DiffractiveRetrievalModule(ProcessingModule):
         dynamic_max = int(np.clip(base_rand + stagnation_bonus, 0, self._max_diffractive_count))
 
         # Dynamic Sliding Goldilocks Range Bounds
-        mem_min = 0.45 - 0.15 * stagnation
-        mem_max = 0.85 - 0.15 * stagnation
-        file_min = 0.35 - 0.15 * stagnation
-        file_max = 0.75 - 0.15 * stagnation
+        # Under normal flow: [0.45, 0.85]
+        # Under severe stagnation (stagnation -> 1.0): slides down into nomadic orthogonal window [0.20, 0.45]
+        mem_min = max(0.20, 0.45 - 0.25 * stagnation)
+        mem_max = max(0.45, 0.85 - 0.40 * stagnation)
+        file_min = max(0.15, 0.35 - 0.20 * stagnation)
+        file_max = max(0.35, 0.75 - 0.40 * stagnation)
 
         if target_state != "STAGNANT":
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
@@ -231,13 +233,12 @@ class DiffractiveRetrievalModule(ProcessingModule):
             return payload
 
         # Dynamic Sliding Goldilocks Range Bounds
-        # memory range base similarity [0.45, 0.85], slides down by up to 0.15 under stagnation
-        mem_min = 0.45 - 0.15 * stagnation
-        mem_max = 0.85 - 0.15 * stagnation
-
-        # file range base similarity [0.35, 0.75], slides down by up to 0.15
-        file_min = 0.35 - 0.15 * stagnation
-        file_max = 0.75 - 0.15 * stagnation
+        # Under normal flow: [0.45, 0.85]
+        # Under severe stagnation (stagnation -> 1.0): slides down into nomadic orthogonal window [0.20, 0.45]
+        mem_min = max(0.20, 0.45 - 0.25 * stagnation)
+        mem_max = max(0.45, 0.85 - 0.40 * stagnation)
+        file_min = max(0.15, 0.35 - 0.20 * stagnation)
+        file_max = max(0.35, 0.75 - 0.40 * stagnation)
 
         current_vec = np.frombuffer(current_blob, dtype="float32")
 

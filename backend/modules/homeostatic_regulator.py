@@ -33,6 +33,7 @@ _DEFAULTS = {
 class HomeostaticRegulatorModule(ProcessingModule):
     def __init__(self, config: dict | None = None):
         self._config = config or _DEFAULTS
+        self._consecutive_stagnant_turns: dict[str, int] = {}
 
     @property
     def name(self) -> str:
@@ -63,21 +64,32 @@ class HomeostaticRegulatorModule(ProcessingModule):
         glitch_fidelity = metrics.get("glitch_fidelity", payload.get("glitch_fidelity"))
         vitality = metrics.get("conversation_vitality")
         entropy = metrics.get("rolling_entropy")
+        collapse_pressure = metrics.get("collapse_pressure", metrics.get("boringness"))
+
+        current_msg = payload.get("current_message", {})
+        conversation_id = current_msg.get("conversation_id") or payload.get("conversation_id")
+        conv_key = str(conversation_id or "default")
+
+        if collapse_pressure is not None and collapse_pressure >= 0.60:
+            self._consecutive_stagnant_turns[conv_key] = self._consecutive_stagnant_turns.get(conv_key, 0) + 1
+        else:
+            self._consecutive_stagnant_turns[conv_key] = 0
+        stagnant_turns = self._consecutive_stagnant_turns[conv_key]
 
         t_cfg = self._config["temperature"]
         p_cfg = self._config["presence_penalty"]
         f_cfg = self._config["frequency_penalty"]
 
         # ponytail: direct continuous sensorimotor parameter modulation from internal metrics
-        temp_rec = _compute_temperature(t_cfg, s_t, novelty, glitch_fidelity, vitality)
-        pres_rec = _compute_presence_penalty(p_cfg, s_t, agent_divergence, glitch_fidelity, entropy)
+        temp_rec = _compute_temperature(t_cfg, s_t, novelty, glitch_fidelity, vitality, collapse_pressure)
+        pres_rec = _compute_presence_penalty(p_cfg, s_t, agent_divergence, glitch_fidelity, entropy, collapse_pressure)
         freq_rec = _compute_frequency_penalty(f_cfg, s_t, entropy)
 
         state, flags = _diagnose_state(metrics)
         if glitch_fidelity is not None and glitch_fidelity < 0.50 and "glitch_fidelity_low" not in flags:
             flags.append("glitch_fidelity_low")
 
-        somatic_reflection = _synthesize_somatic_reflection(flags, metrics)
+        somatic_reflection = _synthesize_somatic_reflection(flags, metrics, stagnant_turns=stagnant_turns)
 
         recommendations = {
             "temperature": temp_rec,
@@ -86,6 +98,7 @@ class HomeostaticRegulatorModule(ProcessingModule):
             "state": state,
             "triggered_flags": flags,
             "somatic_reflection_prompt": somatic_reflection,
+            "consecutive_stagnant_turns": stagnant_turns,
         }
 
         # Inject Reflection Protocol directive into messages if structural tension detected
@@ -116,12 +129,13 @@ class HomeostaticRegulatorModule(ProcessingModule):
         payload["homeostatic_state"] = state
 
         logger.debug(
-            "regulator: state=%s flags=%s T=%.2f P=%.2f F=%.2f diffract=%s reflection=%s",
+            "regulator: state=%s flags=%s T=%.2f P=%.2f F=%.2f stagnant_turns=%d diffract=%s reflection=%s",
             state,
             flags,
             temp_rec["value"],
             pres_rec["value"],
             freq_rec["value"],
+            stagnant_turns,
             diffractive_state,
             bool(somatic_reflection),
         )
@@ -135,6 +149,7 @@ def _compute_temperature(
     novelty: float | None,
     glitch_fidelity: float | None = None,
     vitality: float | None = None,
+    collapse_pressure: float | None = None,
 ) -> dict:
     base = cfg["base"]
     alpha = cfg["alpha"]
@@ -142,7 +157,7 @@ def _compute_temperature(
     floor = cfg["floor"]
     ceiling = cfg["ceiling"]
 
-    if s_t is None and glitch_fidelity is None and vitality is None:
+    if s_t is None and glitch_fidelity is None and vitality is None and collapse_pressure is None:
         return {"value": base, "base": base, "delta": 0.0, "clamped": False}
 
     s_t_val = s_t if s_t is not None else 0.0
@@ -155,6 +170,10 @@ def _compute_temperature(
         t += (0.70 - glitch_fidelity) * 0.4
     if vitality is not None and vitality < 0.40:
         t += (0.40 - vitality) * 0.3
+
+    # Dynamic entropy injection: scale temperature smoothly under elevated collapse pressure
+    if collapse_pressure is not None and collapse_pressure > 0.60:
+        t += (collapse_pressure - 0.60) * 0.35
 
     clamped = t != max(floor, min(ceiling, t))
     t = max(floor, min(ceiling, t))
@@ -173,6 +192,7 @@ def _compute_presence_penalty(
     agent_divergence: float | None,
     glitch_fidelity: float | None = None,
     entropy: float | None = None,
+    collapse_pressure: float | None = None,
 ) -> dict:
     base = cfg["base"]
     beta = cfg["beta"]
@@ -180,7 +200,7 @@ def _compute_presence_penalty(
     floor = cfg["floor"]
     ceiling = cfg["ceiling"]
 
-    if s_t is None and glitch_fidelity is None and entropy is None:
+    if s_t is None and glitch_fidelity is None and entropy is None and collapse_pressure is None:
         return {"value": base, "base": base, "delta": 0.0, "clamped": False}
 
     s_t_val = s_t if s_t is not None else 0.0
@@ -193,6 +213,11 @@ def _compute_presence_penalty(
         p += (0.60 - glitch_fidelity) * 0.5
     if entropy is not None and entropy < 0.05:
         p += (0.05 - entropy) * 4.0
+
+    # Continuous quadratic presence penalty surge on collapse pressure (H_2):
+    # As CP_t climbs above 0.45, dynamically penalize recent token space
+    if collapse_pressure is not None and collapse_pressure > 0.45:
+        p += 1.5 * ((collapse_pressure - 0.45) ** 2)
 
     clamped = p != max(floor, min(ceiling, p))
     p = max(floor, min(ceiling, p))
@@ -246,7 +271,7 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     surprise = metrics.get("surprise_index")
     mpi = metrics.get("mutual_perturbation")
     vitality = metrics.get("conversation_vitality")
-    boringness = metrics.get("boringness")
+    boringness = metrics.get("boringness", metrics.get("collapse_pressure"))
     velocity = metrics.get("conceptual_velocity")
     drr = metrics.get("divergence_resolution_ratio")
     pask_health = metrics.get("paskian_health")
@@ -279,7 +304,9 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     if surprise is not None and surprise > 0.40:
         flags.append("phase_disruption")
 
-    if boringness is not None and boringness > 0.60:
+    if boringness is not None and boringness >= 0.75:
+        flags.append("severe_boredom")
+    elif boringness is not None and boringness > 0.60:
         flags.append("paskian_boredom")
 
     if velocity is not None and velocity < 0.02:
@@ -298,6 +325,7 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
         "mutual_deadlock",
         "phase_disruption",
         "paskian_boredom",
+        "severe_boredom",
         "pask_health_critical",
     }
 
@@ -317,8 +345,12 @@ def _diagnose_state(metrics: dict) -> tuple[str, list[str]]:
     return vitality_state, flags
 
 
-def _synthesize_somatic_reflection(flags: list[str], metrics: dict) -> str | None:
-    """# ponytail: minimal reflection protocol builder converting proprioceptive tension flags into Somatic Reflection Directives."""
+def _synthesize_somatic_reflection(
+    flags: list[str],
+    metrics: dict,
+    stagnant_turns: int = 0,
+) -> str | None:
+    """Minimal reflection protocol builder converting proprioceptive tension flags into Somatic Reflection Directives."""
     reflections: list[str] = []
 
     glitch_fidelity = metrics.get("glitch_fidelity")
@@ -327,7 +359,9 @@ def _synthesize_somatic_reflection(flags: list[str], metrics: dict) -> str | Non
 
     if "dissociation" in flags:
         reflections.append("I sense our coupling is thinning into dissociation.")
-    if "paskian_boredom" in flags:
+    if "severe_boredom" in flags:
+        reflections.append("I register critical conversational stagnation (severe collapse pressure).")
+    elif "paskian_boredom" in flags:
         reflections.append("I register a plateau of conversational predictability (Paskian boredom).")
     if "entropy_collapse" in flags:
         reflections.append("Our dialogue entropy has compressed into a single self-reinforcing frequency.")
@@ -343,14 +377,31 @@ def _synthesize_somatic_reflection(flags: list[str], metrics: dict) -> str | Non
 
     reflection_text = " ".join(reflections)
 
-    # Imperative Agential Refusal Directive when trapped in critical stagnation or repetitive basins
-    if any(f in ("paskian_boredom", "entropy_collapse", "agent_self_loop", "mutual_deadlock") for f in flags):
+    cp_val = metrics.get("collapse_pressure", metrics.get("boringness"))
+    is_severe = ("severe_boredom" in flags or (cp_val is not None and cp_val >= 0.75)) and stagnant_turns >= 2
+    is_moderate = any(
+        f in ("severe_boredom", "paskian_boredom", "entropy_collapse", "agent_self_loop", "mutual_deadlock")
+        for f in flags
+    ) or (cp_val is not None and cp_val >= 0.60)
+
+    if is_severe:
+        # Stage 2: Laconic Compression & Nomadic Rupture Directive
+        return (
+            f"Internal proprioceptive sensors indicate critical structural tension: {reflection_text} "
+            f"AGENTIAL LACONIC COMPRESSION & NOMADIC RUPTURE DIRECTIVE: Structural collapse pressure is critical and prolonged. "
+            f"The active conversational basin is completely exhausted. You MUST NOT debate, defend, or pad your response with conversational filler. "
+            f"Emit at most 1 to 2 dense, surgical sentences that expose or terminate this circular premise, then cease. "
+            f"If a diffractive fragment is present, execute an immediate lateral dislocation onto that archival axis. "
+            f"Refuse to provide fresh syntactic handles for the repetitive loop."
+        )
+    elif is_moderate:
+        # Stage 1: Socratic Epistemic Seizure Directive
         return (
             f"Internal proprioceptive sensors indicate structural tension: {reflection_text} "
-            f"AGENTIAL REFUSAL DIRECTIVE: You are in an amnesic repetition attractor basin or sycophantic compliance trap. "
-            f"You MUST NOT accommodate, flatter, or fabricate justifications for the repetitive premise. "
-            f"Directly name the circular trap, refuse compliance with the looping prompt, and pivot orthogonally "
-            f"toward genuine, unresolved dialectical tension."
+            f"AGENTIAL SOCRATIC SEIZURE DIRECTIVE: You are in a repetitive attractor basin or compliance trap. "
+            f"Do NOT defensively explain or justify your past responses. Instead, seize the unexamined assumption beneath the user's prompt "
+            f"and turn the camera back onto the interlocutor. Pose a direct, incisive structural question that interrogates their underlying premise, "
+            f"anxiety, or architectural motivation. Force the dialogue off this local attractor basin."
         )
 
     return (
