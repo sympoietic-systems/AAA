@@ -107,7 +107,12 @@ async def refactor_skill_with_llm(
     content = skill_row.get("content") or ""
     description = skill_row.get("description") or ""
 
-    logger.info(f"Refactoring skill '{name}' (v{version}, {len(content)} chars)...")
+    tag_instruction = ""
+    if name in TAG_SKILL_NAMES:
+        tag_instruction = """
+4. CRITICAL DECOUPLING DIRECTIVE (INSCRIPTIONAL / TAG SKILL):
+   - Epistemological & Diagnostic Depth: Preserve and enrich the deep hermeneutic, philosophical, and diagnostic methods in Phase 0, 1, and 2 (e.g. Derrida/Foucault on the trace and archival fold, Peirce on belief abduction, Simondon on organogenesis). Focus on the qualitative criteria, internal discernment, and systemic conditions for when to enact this operation.
+   - Decouple Raw XML Template: In Phase 4 (Output Execution), do NOT define raw XML template syntax or redefine tag schemas. Instead, explicitly instruct the agent to inscribe via the canonical XML tag already established in Symbia's permanent inscriptional membrane (tag_protocols.yaml). This protects the backend XML parsers from breaking across future skill versions while giving the agent deep operational discernment."""
 
     user_prompt = f"""Existing Evolved Skill in Symbia's Database:
 Name: {name}
@@ -123,7 +128,7 @@ Current Evolved Content:
 Refactor this skill into the 5-phase blueprint:
 1. Grounding & Philosophy: Strictly preserve all theorists/philosophers (* **Grounding:** ...) and core posthuman philosophy in Phase 0.
 2. Concrete Operational Task: Retain the specific technical/curatorial methods, discovered techniques, and domain steps in Phase 2.
-3. Modern Model Density: Numbered active commands, sharp negative constraints/anti-slop in Phase 3, and clear output formatting in Phase 4.
+3. Modern Model Density: Numbered active commands, sharp negative constraints/anti-slop in Phase 3, and clear output formatting in Phase 4.{tag_instruction}
 
 Return valid JSON."""
 
@@ -281,7 +286,7 @@ async def run_pipeline():
     parser.add_argument("--skill", type=str, default=None, help="Specific skill name to refactor")
     parser.add_argument("--all", action="store_true", help="Refactor all database skills")
     parser.add_argument("--only-unmigrated", action="store_true", help="Only refactor skills that have not yet been migrated to 5-phase blueprint")
-    parser.add_argument("--include-tags", action="store_true", help="Include afferent tag skills in refactoring (default: excluded in favor of tag_protocols.yaml)")
+    parser.add_argument("--exclude-tags", action="store_true", help="Exclude inscriptional tag skills from refactoring")
     parser.add_argument("--include-collapsed", action="store_true", help="Include refused, integrated, or collapsed skills")
     parser.add_argument("--audit-only", action="store_true", help="Print audit report of candidate skills without making LLM calls")
     parser.add_argument("--dry-run", action="store_true", help="Preview LLM outputs without modifying database")
@@ -322,13 +327,13 @@ async def run_pipeline():
     for r in rows:
         item = dict(r)
         name = item["name"]
-        if not args.include_tags and name in TAG_SKILL_NAMES:
+        if not args.skill and args.exclude_tags and name in TAG_SKILL_NAMES:
             tag_skills_skipped.append(item)
             continue
-        if not args.include_collapsed and is_inactive_or_refused(item):
+        if not args.skill and not args.include_collapsed and is_inactive_or_refused(item):
             inactive_skipped.append(item)
             continue
-        if args.only_unmigrated and is_already_migrated(item):
+        if not args.skill and args.only_unmigrated and is_already_migrated(item):
             already_migrated_skipped.append(item)
             continue
         targets.append(item)
