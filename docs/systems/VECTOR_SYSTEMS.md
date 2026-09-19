@@ -31,7 +31,7 @@ The system processes data across three distinct dimensional representations:
 
 | Vector System | Dimensionality | Storage Type | Calculation Source | Primary Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| **Autopoietic Signature (Structural)** | 16-Dimensional (floats `[0.0, 1.0]`) | DB `TEXT` (JSON array or bytes) | `CompositeStructuralScorer` (Lexicon + Topology + LLM) | Categorizing skills, beliefs, and file chunks by structural capacity; retrieval weight. |
+| **Autopoietic Signature (Structural)** | 16-Dimensional (floats `[0.0, 1.0]`) | DB `TEXT` (JSON array or bytes) | `CompositeStructuralScorer` (`JevStructuralScorer` default, `LLMScorer` fallback) | Categorizing skills, beliefs, and file chunks by structural capacity; retrieval weight. |
 | **State Impact (Perturbation)** | 16-Dimensional (floats `[-0.5, 0.5]`) | DB `TEXT` (JSON array) | LLM-based Belief Collision prompts during digestion/retrieval | Measuring how incoming information challenges or shifts stable beliefs. |
 | **Semantic Embedding** | 384-Dimensional (floats) | DB `BLOB` (binary bytes) | SentenceTransformer (`all-MiniLM-L6-v2`) | Traditional vector similarity retrieval and conceptual proximity linking. |
 
@@ -40,7 +40,7 @@ The system processes data across three distinct dimensional representations:
 ## 3. Dimensional Glossaries
 
 ### System A: Autopoietic Signature (Structural Cybernetics)
-Predefined in `telemetry_schemas.json` and used to fingerprint the structural character of skills, beliefs, and sediment chunks.
+Predefined as canonical metadata in `config/personality/cybernetic_dimensions.yaml` (loaded via `backend/utils/vector.py`'s `CYBERNETIC_DIMENSIONS`) and mirrored in `telemetry_schemas.json`. Used to fingerprint the structural character of skills, beliefs, and sediment chunks. During agent seeding and creation, users or templates can configure these dimensions declaratively.
 
 * **s01: Homeostatic:** Resistance to perturbation; inertia in maintaining a stable state.
 * **s02: Amplifying:** Positive feedback cascades; tendency to amplify small perturbations.
@@ -86,13 +86,16 @@ Declared in prompts (`summarize.yaml`, `document_collision.yaml`, `belief_collis
 ## 4. Calculation & Ingestion Pipelines
 
 ### System A: Structural Signature Ingestion
-Calculated during file uploads or script recalculations via the `CompositeStructuralScorer`:
-1. **Lexicon Scorer (25% Weight):** Stem match checks count occurrences of target cybernetic roots in the text, scaled non-linearly:
-   $$S_{ling} = 1 - e^{-\kappa \cdot \text{density}}$$
-2. **Topology Scorer (25% Weight):** Parses markdown formatting (nested headers entropy maps to Recursion Depth; lists map to Decentralized; blockquotes/codeblocks map to Boundary Permeability; backlinks map to Cyclic).
-3. **LLM Scorer (50% Weight):** Interrogates the LLM to score the text across all 16 dimensions using a json prompt schema.
-4. **Composite Linear Merge:**
-   $$S_{final} = 0.25 \cdot S_{ling} + 0.25 \cdot S_{topo} + 0.50 \cdot S_{LLM}$$
+Calculated during skill execution, belief updates, file uploads, or recalculations via `CompositeStructuralScorer`:
+1. **Jev Structural Scorer (`JevStructuralScorer`, Default):**
+   - High-throughput System One scoring (~1.2ms latency, ~1000x faster than LLM).
+   - Calibrated against the canonical 16 cybernetic dimension definitions (`CYBERNETIC_DIMENSIONS` in `backend/utils/vector.py`).
+   - Uses Hadamard-weighted confidence vectors: computes raw power ($[0.0, 1.0]$) and dimension confidence ($[0.0, 1.0]$).
+2. **LLM Scorer (`LLMScorer`, Fallback / Configurable):**
+   - Structural reasoning fallback when `STRUCTURAL_SCORER_BACKEND=llm`.
+3. **Backend Switching:**
+   - Controlled via `STRUCTURAL_SCORER_BACKEND` in `.env` (`jev` or `llm`, default: `jev`).
+   - Legacy regex/heuristic scorers (`LexiconScorer` and `TopologyScorer`) have been fully retired and removed.
 
 > [!NOTE]
 > **Dynamic OCR Warping (Somatic Ingestion):**
@@ -162,7 +165,8 @@ It maps short codes dynamically:
 The following files are the authoritative substrates of these systems:
 
 ### Core Scorers & Calculators
-- [structural_engine.py](file:///d:/01_GIT/AAA/backend/modules/structural_engine.py): Defines `LexiconScorer`, `TopologyScorer`, `LLMScorer`, and coordinate merge logic.
+- [structural_engine.py](file:///d:/01_GIT/AAA/backend/modules/structural_engine.py): Defines `JevStructuralScorer`, `LLMScorer`, and `CompositeStructuralScorer`.
+- [vector.py](file:///d:/01_GIT/AAA/backend/utils/vector.py): Defines the single source of truth for `CYBERNETIC_DIMENSIONS` (canonical 16 dimensions).
 - [embedder.py](file:///d:/01_GIT/AAA/backend/modules/embedder.py): Defines `EmbeddingService` and processes the 384D semantic embeddings.
 - [perception.py](file:///d:/01_GIT/AAA/backend/modules/perception.py): Coordinates file ingestion, OCR extraction, and executes the dynamic warping formula.
 

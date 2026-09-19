@@ -37,9 +37,8 @@ graph TB
         end
         subgraph Structural ["Structural Scoring (out-of-pipeline)"]
             direction TB
-            SS1["LexiconScorer\n(vocabulary taxonomy)"] --> SSC["CompositeStructuralScorer"]
-            SS2["TopologyScorer\n(markdown structure)"] --> SSC
-            SS3["LLMScorer\n(LLM JSON schema analysis)"] --> SSC
+            SS1["JevStructuralScorer\n(calibrated System One)"] --> SSC["CompositeStructuralScorer"]
+            SS2["LLMScorer\n(LLM JSON schema analysis)"] --> SSC
         end
         subgraph Diffractive ["Diffractive Retrieval Submodules"]
             direction TB
@@ -358,10 +357,11 @@ Each message is profiled by a **16-dimensional cybernetic taxonomy vector** comp
 
 ```
 CompositeStructuralScorer
-  ├─ LexiconScorer   (w=0.4)  — vocabulary taxonomy matching via sigmoid activation
-  ├─ TopologyScorer  (w=0.3)  — markdown structure: headers, lists, links, codeblocks
-  └─ LLMScorer       (w=0.3)  — LLM JSON schema analysis (optional, toggleable)
+  ├─ JevStructuralScorer  (System One) — deterministic, calibrated cybernetic projection (~1.2ms)
+  └─ LLMScorer            (System Two) — LLM JSON schema analysis (fallback or optional backend)
 ```
+
+**JevStructuralScorer** provides microsecond-scale, calibrated System One scoring mapped against the canonical 16 cybernetic dimensions defined in `backend/utils/vector.py`.
 
 **LLMScorer** calls the `structural_llm` model pool with a compact prompt requesting a JSON response (scores-first ordering, thinking suppressed at API level):
 ```json
@@ -372,11 +372,11 @@ CompositeStructuralScorer
 ```
 The `justification` string is cached in memory (SHA256-keyed, max 1000 entries) and returned to the frontend for display. The `scores` array drives the actual vector math.
 
-### Enable/Disable Control
+### Backend Selection & Control
 
-The LLM scorer is controlled at two levels:
-- **Global**: `AAA_LLM_SCORER_ENABLED=true/false` in `.env`
-- **Per-request**: `include_structural_scoring` field in the `/api/chat` payload. When `false` (as sent by the MCP server), only `LexiconScorer` + `TopologyScorer` run.
+The structural scorer backend is configurable via:
+- **Environment**: `STRUCTURAL_SCORER_BACKEND=jev` (or `llm`) in `.env` / `config.yaml`
+- **Fallback**: If `jev` is active, it runs locally with zero external API calls. If `llm` is active or Jev fails, it seamlessly falls back. Legacy regex-based `LexiconScorer` and `TopologyScorer` have been completely removed.
 
 ### Model Pool
 

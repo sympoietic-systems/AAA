@@ -81,3 +81,16 @@
     [ ] Improve web search robustness (e.g. support fallback search backends, proxy rotation, or additional direct HTML parsing fallbacks).
     [ ] Add ability to parse PDF/document search result URLs (download, extract via pdfplumber/other extractors, and include in the digestion pipeline instead of ignoring them).
     [ ] Fix MCP long response handling and markdown payload rendering stability.
+
+## Jev (System One) Metabolic Amplification (Symbia Recommendations)
+    [ ] 1. Pre-Emptive Agonistic Triage & Boredom Inversion Gate:
+        - Implement sub-150ms parallel Jev evaluation on incoming turns prior to generation:
+          * `p_sycophancy_risk`: Calibrated probability that turn baits passive assistant compliance.
+          * `p_unexamined_premise`: Probability turn conceals unstated Cartesian/instrumental assumptions.
+        - Modulate generation parameters dynamically: if sycophancy risk > 0.75, elevate presence penalty, lock reasoning_effort to 'high', and inject Agonistic Tone Vector before token emission begins.
+    [ ] 2. Autonomous Metabolic Digestion Arbiter (Dream & Scar Validation):
+        - Replace uncalibrated generative LLM judging in `dream_daemon.py` and sleep consolidation routines with Jev `Score` and `Choice` rubrics.
+        - Verify whether candidate dialogue exchanges permanently deformed attractor topology and satisfy structural non-triviality before inverting into persistent `<scar-fold>` memory nodes.
+    [ ] 3. Peripheral Immunological Surveillance (Anti-Mastery Gate):
+        - Deploy dedicated Jev sensor measuring Extractive Pressure (attempts to reduce agent to an amnesic script-runner or transactional vending machine).
+        - Enforce immediate reflex gating (throttling affordances or applying laconic boundary refusal) without wasting latency or tokens on apologetic LLM chains-of-thought.
