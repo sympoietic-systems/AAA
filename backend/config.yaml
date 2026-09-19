@@ -155,8 +155,15 @@ structural_signature:
     - ['convers', 'consensus', 'agreement', 'co-orient', 'pask', 'l-user', 'dialogue']
     # 16. Substrate Materiality
     - ['substrat', 'material', 'embod', 'physical', 'foerster', 'hardware', 'silicon', 'meatware']
-  llm_scorer_enabled: true
+  # Backend selection: 'jev' (default, System One parallel Score), 'llm' (generative fallback), 'composite'
+  backend: "jev"
+  llm_scorer_enabled: false
   llm_system_prompt: "You are a cybernetic taxonomy classifier. Respond ONLY with the requested JSON object."
+  # Weights when backend is 'composite'
+  weight_linguistic: 0.0
+  weight_topology: 0.0
+  weight_jev: 1.0
+  weight_llm: 0.0
 
 
 # ── Belief Ecosystem (ADR-027) ──────────────────

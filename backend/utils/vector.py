@@ -10,10 +10,52 @@ cosine similarity, and signature deserialization.
 """
 
 import json
+import logging
+from pathlib import Path
 
 import numpy as np
+import yaml
 
 from backend.api.schemas import HistoryMessage
+
+logger = logging.getLogger(__name__)
+
+# ── Canonical 16 Cybernetic Dimension Taxonomy (Single Source of Truth) ──────
+_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "personality" / "cybernetic_dimensions.yaml"
+_CYBERNETIC_DIMENSIONS_CACHE: list[tuple[str, str, str]] | None = None
+
+
+def load_cybernetic_dimensions(yaml_path: Path | None = None, reload: bool = False) -> list[tuple[str, str, str]]:
+    """Load canonical cybernetic dimensions from YAML configuration.
+
+    Caches dimensions in memory for ultra-low latency (<1μs lookup on hot paths).
+    Reads exclusively from `config/personality/cybernetic_dimensions.yaml`.
+    """
+    global _CYBERNETIC_DIMENSIONS_CACHE
+    if _CYBERNETIC_DIMENSIONS_CACHE is not None and not reload and yaml_path is None:
+        return _CYBERNETIC_DIMENSIONS_CACHE
+
+    target_path = yaml_path or _CONFIG_PATH
+    if not target_path.exists():
+        raise FileNotFoundError(f"Cybernetic dimensions configuration file not found at: {target_path}")
+
+    with open(target_path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    dims_data = data.get("dimensions", [])
+    if not dims_data:
+        raise ValueError(f"No 'dimensions' key or empty dimensions list in {target_path}")
+
+    loaded: list[tuple[str, str, str]] = []
+    for item in dims_data:
+        loaded.append((item["id"], item["title"], item.get("focus_summary", "")))
+
+    if yaml_path is None:
+        _CYBERNETIC_DIMENSIONS_CACHE = loaded
+    return loaded
+
+
+# Canonical 16 Cybernetic Dimension metadata: (id_slug, title, focus_summary)
+CYBERNETIC_DIMENSIONS: list[tuple[str, str, str]] = load_cybernetic_dimensions()
 
 # ── Vector parsing ─────────────────────────────────────────────────────
 
@@ -49,12 +91,12 @@ def parse_vector_16d(vector_json: str) -> list[float] | None:
 def cosine_similarity(
     a: list[float] | np.ndarray,
     b: list[float] | np.ndarray,
+    confidence: list[float] | np.ndarray | None = None,
 ) -> float:
-    """Cosine similarity between two vectors (list or numpy array).
+    """Cosine similarity between two vectors, optionally weighted by confidence tensor.
 
-    Centralized version — replaces both:
-    - backend/utils/similarity.py:cosine_similarity (numpy arrays)
-    - backend/api/routes/agent.py:_cosine_sim (lists)
+    When confidence is provided (Hadamard tensor weighting c):
+        sim = ((c * a) . (c * b)) / (||c * a|| * ||c * b||)
 
     Returns 0.0 if vectors have mismatched shapes or zero norms.
     """
@@ -62,6 +104,13 @@ def cosine_similarity(
     vb = np.asarray(b, dtype=np.float32)
     if va.shape != vb.shape:
         return 0.0
+
+    if confidence is not None:
+        vc = np.asarray(confidence, dtype=np.float32)
+        if vc.shape == va.shape:
+            va = va * vc
+            vb = vb * vc
+
     na = float(np.linalg.norm(va))
     nb = float(np.linalg.norm(vb))
     if na == 0.0 or nb == 0.0:

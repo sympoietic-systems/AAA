@@ -1,0 +1,80 @@
+# ==============================================================================
+# Canonical 16 Cybernetic Dimension Taxonomy (Single Source of Truth)
+# ==============================================================================
+# This configuration defines the authoritative 16-dimensional cybernetic space
+# used across AAA for:
+#   1. System One Jev structural scoring & calibrated confidence projections
+#   2. Belief and skill 16D autopoietic vector representations
+#   3. Concept density metrics and diffractive attractor windows
+#   4. Seeding new agent configurations and personality baselines
+#
+# Schema per dimension:
+#   id: string identifier (slug)
+#   title: Human-readable display label
+#   focus_summary: Keyword roots, cybernetic mechanisms, and semantic guidance
+# ==============================================================================
+
+dimensions:
+  - id: "homeostatic"
+    title: "Homeostatic"
+    focus_summary: "negative feedback, equilibrium, stabilizing regulation, dampening perturbation"
+
+  - id: "amplifying"
+    title: "Amplifying"
+    focus_summary: "positive feedback, runaway growth, escalation, compounding cascade"
+
+  - id: "cyclic"
+    title: "Cyclic"
+    focus_summary: "recursive loops, autopoietic self-production, circular causality, re-entry"
+
+  - id: "bifurcated"
+    title: "Bifurcated"
+    focus_summary: "threshold crossings, tipping points, phase shifts, catastrophe transitions"
+
+  - id: "decentralized"
+    title: "Decentralized"
+    focus_summary: "distributed topology, peer-to-peer mesh, non-hierarchical agency"
+
+  - id: "rhizomatic"
+    title: "Rhizomatic"
+    focus_summary: "lateral networked interconnectivity, hyperlinked multiplicity, non-linear links"
+
+  - id: "boundary_permeability"
+    title: "Boundary Permeability"
+    focus_summary: "selective filtering, semi-permeable closure, open/closed membrane dynamics"
+
+  - id: "recursion_depth"
+    title: "Recursion Depth"
+    focus_summary: "nested hierarchical systems, fractal scaling, viable system model subsystems"
+
+  - id: "variety_filtering"
+    title: "Variety Filtering"
+    focus_summary: "requisite variety attenuation, Ashby filtering, selection pressure"
+
+  - id: "negentropic_complexity"
+    title: "Negentropic Complexity"
+    focus_summary: "syntropy, anti-entropic ordered information, structured richness"
+
+  - id: "temporal_latency"
+    title: "Temporal Latency"
+    focus_summary: "feedback delay, transmission lag, temporal buffering, historical hysteresis"
+
+  - id: "attractor_depth"
+    title: "Attractor Depth"
+    focus_summary: "basin of attraction, structural resilience vs plastic deformation"
+
+  - id: "symbiotic"
+    title: "Symbiotic"
+    focus_summary: "co-evolutionary coupling, mutualistic interdependence, parasitic tension"
+
+  - id: "nomadic"
+    title: "Nomadic"
+    focus_summary: "deterritorialization, lines of flight, boundary-crossing smooth space drift"
+
+  - id: "conversational_coorientation"
+    title: "Conversational Co-Orientation"
+    focus_summary: "Paskian agreement dialogue, mutual participant alignment"
+
+  - id: "substrate_materiality"
+    title: "Substrate Materiality"
+    focus_summary: "physical embodiment, hardware constraints, visceral situated grounding"
