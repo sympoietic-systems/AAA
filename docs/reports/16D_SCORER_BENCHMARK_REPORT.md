@@ -1,5 +1,7 @@
 # Benchmark Report: Jev vs. LLM 16D Structural Scoring
 
+![16D Cybernetic Vector Space: Jev vs. LLM](hero_16d_structural_scoring.jpg)
+
 This benchmark evaluates **Jev System One RLCD Scoring** against **LLM Generative Scoring (`gemini-2.5-flash`)** across three AAA data structures:
 1. **Agential Beliefs** (Cognitive invariants, operational closure, tipping points)
 2. **Long-Term Memory Nodes** (Cybernetic architectures, hardware substrates)
@@ -7,7 +9,35 @@ This benchmark evaluates **Jev System One RLCD Scoring** against **LLM Generativ
 
 ---
 
-## 1. Executive Summary & Core Differences
+## 1. System Insights: What Custom Structural Vectors Enable
+
+Custom structural vectors project raw text onto explicit, designer-selected dimensions. In this testbed, texts map to 16 cybernetic coordinates (homeostatic stability, recursion depth, boundary permeability, requisite variety). Once projected, standard linear algebra (cosine similarity, vector distance, clustering) operates directly on structural dynamics rather than keyword coincidence.
+
+```mermaid
+graph TD
+    A["Raw Input Text"] --> B["Compiled Rubric / Decision Model"]
+    B --> C["16D Dual-Signal Vector (Power s, Confidence c)"]
+    C --> D["Structural Alignment & Topological Retrieval"]
+```
+
+### Key Differences: Structural Vectors vs. Black-Box Neural Embeddings
+
+| Property | Standard Dense Embeddings (e.g. 384D / 1536D) | Rubric-Based Structural Vectors ($N$-D via Jev / LLM) |
+| :--- | :--- | :--- |
+| **Interpretability** | Opaque coordinates. Dimension #142 carries no isolated human meaning. | Fully legible. Index $i$ always tracks a dedicated conceptual axis (e.g. index 8 = Recursion Depth). |
+| **Schema Governance** | Fixed dimensionality requiring full retraining or fine-tuning runs to alter semantic focus. | Declarative. Adding, pruning, or recalibrating axes requires updating a YAML rubric definition. |
+| **Retrieval Basis** | Weighted heavily by topical overlap, shared vocabulary, and token co-occurrence. | Evaluates systemic behavior and operational posture, even with zero lexical overlap. |
+| **Epistemic Certainty** | Scalar coordinate only; cannot distinguish absence of evidence from neutral presence. | Dual-signal: returns activation power ($s_i \in [0, 1]$) paired with epistemic confidence ($c_i \in [0, 1]$). |
+
+### Practical Deployment in Agentic Architectures
+
+1. **Retrieval by Cognitive Posture**: Autonomous agents frequently require memories or skills aligned with operational intent rather than topic keywords. An agent negotiating definitions with an interlocutor retrieves co-orienting procedures, not generic dialogue logs.
+2. **Absence vs. Low Activation**: Conventional embeddings place unfamiliar or irrelevant concepts near the origin or ambient noise floor. A dual-signal scorer returns near-zero power with $0.99$ confidence, letting downstream logic verify that a property is demonstrably absent.
+3. **Two-Stage Cascades**: A fast dense embedding filters raw corpora down to candidate topical pools; a 16D structural projection then verifies architectural compatibility, feedback dynamics, and stability thresholds.
+
+---
+
+## 2. Global Latency & Similarity Summary
 
 | Feature / Metric | Generative LLM Scorer (`gemini-2.5-flash`) | Jev System One Scorer (`JevStructuralScorer`) |
 | :--- | :--- | :--- |
@@ -17,10 +47,6 @@ This benchmark evaluates **Jev System One RLCD Scoring** against **LLM Generativ
 | **Absence Grounding** | Floats background noise ($0.1 - 0.3$) | Scores near zero with high confidence ($c \in [0.95, 1.0]$) |
 | **Ambiguity Detection** | Drops uncertainty signal | Flags low confidence ($c \approx 0.20 - 0.40$) on peripheral dimensions |
 | **Semantic Alignment** | Generative baseline | Cosine similarity $0.86 - 0.96$ against LLM baseline |
-
----
-
-## 2. Global Latency & Similarity Summary
 
 | Test Corpus Item | Category | LLM Latency | Jev Latency | Speedup | Cosine Sim (Jev vs. LLM) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
@@ -457,37 +483,3 @@ Jev executes all 16 dimensional evaluations in a single request. The client defi
 ```
 
 *Note: In `backend/modules/structural_engine.py`, the continuous `score` (0.00 – 3.00) is normalized by dividing by $\max(\text{Level}) = 3$, producing the final unit interval power vector $[0.997, 0.020, 1.000, 0.480, 0.363, \dots]$, with the raw `confidence` retained in full.*
-
----
-
-## 6. Conclusion: What This Enables (In Simple Words)
-
-At its core, this approach allows you to **compress any arbitrary piece of text into a custom $N$-dimensional semantic/structural vector** — where you, as the system designer, explicitly choose which dimensions matter for your specific problem space.
-
-In our example, we mapped complex cybernetic theory into 16 explicit axes (like *homeostatic stability*, *feedback amplification*, *boundary permeability*, and *recursion depth*). Once text is projected into this space, you can immediately compute **structural similarity** across messages, beliefs, memories, or skills using standard vector math (cosine similarity, distance, clustering).
-
----
-
-### Structural Vectors vs. Traditional Neural Embeddings
-
-A natural question arises: *Doesn't traditional text embedding (like OpenAI `text-embedding-3`, BERT, or MiniLM) already do this?*
-
-Yes, but with fundamental differences in how they work, how rigid they are, and what they actually understand:
-
-| Capability | Traditional Neural Embeddings (e.g. 384D, 1536D) | Rubric-Based Structural Vectors ($N$-D via Jev / LLM) |
-| :--- | :--- | :--- |
-| **Interpretability** | **Black box**: Dimension #142 has no human meaning; it is an opaque mathematical artifact. | **100% Transparent**: Dimension #01 is *always* Homeostatic, #08 is *always* Recursion. Every number has an explicit meaning. |
-| **Dimension Control** | **Fixed**: Pre-trained to a rigid dimensionality (e.g., exactly 384 or 1536 floats). | **Arbitrary & Declarative**: Choose 4, 16, or 50 dimensions that match your domain via a simple YAML/JSON file. |
-| **Changing the Schema** | **Requires Retraining**: If you want to change what axes the embedding space prioritizes, you must fine-tune or retrain the embedding model with thousands of triplet pairs. | **Zero Retraining**: Edit the rubric or prompt instructions, and the system immediately projects text into the new space. |
-| **Semantic vs. Surface Similarity** | Often biased by word co-occurrences, token frequencies, and surface phrasing. | Evaluates **conceptual mechanics and structural intent**, even when exact keywords or token overlaps are completely absent. |
-| **Epistemic Certainty** | None. Returns a coordinate point with no measure of whether the text actually touched that concept. | **Dual-Signal**: Provides both *intensity/presence* ($s \in [0, 1]$) and *epistemic confidence* ($c \in [0, 1]$). |
-
----
-
-### Can This Replace Embedding Search?
-
-In many real-world scenarios, **yes — or serve as a superior second-stage filter**:
-
-1. **Beyond Keyword & Token Proximity**: Traditional embeddings often group texts together because they share similar vocabulary or topical domain, even if their underlying structure or logical stance is completely opposite. Structural vectors capture **how** a system behaves (e.g., stabilizing vs. runaway growth), not just **what topics** it mentions.
-2. **Intent & Behavioral Matching**: In agentic systems, you often want to retrieve a skill or belief not because it shares the same nouns as the user's prompt, but because it matches the necessary *structural disposition* (e.g., identifying when a user turn is asking for boundary negotiation vs. operational execution).
-3. **Hybrid Power**: Combining a fast 384D semantic vector (for broad topic retrieval) with a 16D structural vector (for conceptual topology and cognitive alignment) gives an AI system both topical breadth and deep structural perception.
