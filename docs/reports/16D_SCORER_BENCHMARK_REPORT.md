@@ -13,8 +13,6 @@ This benchmark evaluates **Jev System One RLCD Scoring** against **LLM Generativ
 
 Custom structural vectors project raw text onto explicit, designer-selected dimensions. In this testbed, texts map to 16 cybernetic coordinates (homeostatic stability, recursion depth, boundary permeability, requisite variety). Once projected, standard linear algebra (cosine similarity, vector distance, clustering) operates directly on structural dynamics rather than keyword coincidence.
 
-![16D Structural Scoring Pipeline Architecture](16DScorer/flowchart_16d_structural_pipeline.png)
-
 ### Key Differences: Structural Vectors vs. Black-Box Neural Embeddings
 
 | Property | Standard Dense Embeddings (e.g. 384D / 1536D) | Rubric-Based Structural Vectors ($N$-D via Jev / LLM) |
