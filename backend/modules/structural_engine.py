@@ -398,8 +398,8 @@ class CompositeStructuralScorer(StructuralScorer):
     async def score_async(
         self, text: str, context: dict | None = None, use_llm_scorer: bool | None = None
     ) -> np.ndarray:
-        # 1. Primary Jev path (default unless LLM explicitly forced)
-        force_llm = (use_llm_scorer is True) or (self.backend == "llm")
+        # 1. Primary Jev path (default whenever backend is 'jev' or Jev is available)
+        force_llm = (self.backend == "llm") or (use_llm_scorer is True and self.backend != "jev")
         if not force_llm and self.jev_scorer.is_available:
             return await self.jev_scorer.score_async(text, context)
 
@@ -413,7 +413,7 @@ class CompositeStructuralScorer(StructuralScorer):
         return np.full(16, 0.25, dtype=np.float32)
 
     def score(self, text: str, context: dict | None = None, use_llm_scorer: bool | None = None) -> np.ndarray:
-        force_llm = (use_llm_scorer is True) or (self.backend == "llm")
+        force_llm = (self.backend == "llm") or (use_llm_scorer is True and self.backend != "jev")
         if not force_llm and self.jev_scorer.is_available:
             return self.jev_scorer.score(text, context)
 

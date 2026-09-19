@@ -49,7 +49,7 @@ async def main():
 
         print(f"Recalculating 16D vector for skill '{name}'...")
         try:
-            v16d = await scorer.score_async(content, use_llm_scorer=True)
+            v16d = await scorer.score_async(content)
             result = {"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d), "v384d": existing_v384d}
             conn.execute("UPDATE skill_nodes SET vector_16d = ? WHERE id = ?", (json.dumps(result), skill_id))
             updated_skills += 1
@@ -68,7 +68,7 @@ async def main():
 
         print(f"Recalculating 16D vector for belief '{label}'...")
         try:
-            v16d = await scorer.score_async(statement, use_llm_scorer=True)
+            v16d = await scorer.score_async(statement)
             v16d_list = v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)
             conn.execute("UPDATE belief_nodes SET vector_16d = ? WHERE id = ?", (json.dumps(v16d_list), belief_id))
             updated_beliefs += 1
