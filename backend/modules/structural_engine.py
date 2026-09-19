@@ -2,60 +2,16 @@ import contextlib
 import json
 import logging
 import re
+from typing import Any
 
 import numpy as np
 
 from backend.modules.base import ProcessingModule
 from backend.modules.llm_client import generate_unified
 from backend.utils.prompt_loader import get_prompt
+from backend.utils.vector import CYBERNETIC_DIMENSIONS
 
 logger = logging.getLogger(__name__)
-
-# Stemmed target keywords for the 16 cybernetic dimensions
-LEXICON_MAPPINGS: list[list[str]] = [
-    # 01. Homeostatic
-    ["homeostas", "regulat", "stabili", "dampen", "equilib", "negative feedback", "ashby", "restor"],
-    # 02. Amplifying
-    [
-        "amplif",
-        "positive feedback",
-        "runaway",
-        "growth",
-        "cascade",
-        "multiplier",
-        "snowball",
-        "maruyama",
-        "vicious circle",
-    ],
-    # 03. Cyclic
-    ["cycl", "loop", "recurs", "autopoie", "self-produc", "re-ent", "circular", "maturana", "varela", "oscilla"],
-    # 04. Bifurcated
-    ["bifurc", "tipping", "threshold", "phase shift", "catastroph", "prigogine", "transition", "trigger"],
-    # 05. Decentralized
-    ["decentral", "peer-to-peer", "p2p", "distributed", "mesh", "non-hierarch", "mcculloch", "p2p"],
-    # 06. Rhizomatic / Networked
-    ["rhizom", "network", "meshwork", "redundant", "deleuze", "guattari", "hyperlink", "lateral"],
-    # 07. Boundary Permeability
-    ["permeab", "boundary", "semi-permeab", "closure", "open system", "closed system", "filtering"],
-    # 08. Recursion Depth
-    ["recurs", "nest", "fractal", "scaling", "subsystem", "hierarchy", "beer", "vsm", "nested"],
-    # 09. Variety Filtering
-    ["variety", "filter", "attenuat", "requisite variety", "ashby", "selection", "attenuation"],
-    # 10. Negentropic Complexity
-    ["negentrop", "entropy", "order", "complexity", "schrodinger", "information density", "syntropy"],
-    # 11. Temporal Latency
-    ["latenc", "delay", "lag", "buffer", "time-lag", "forrester", "sluggish", "retardation"],
-    # 12. Attractor Depth
-    ["attractor", "rigidity", "basin", "resilien", "plastic", "adaptation", "thom", "well"],
-    # 13. Symbiotic
-    ["symbio", "co-evolution", "coupling", "mutual", "parasit", "bateson", "mutualism"],
-    # 14. Nomadic
-    ["nomad", "deterritor", "line of flight", "drift", "escape", "smooth space", "migration"],
-    # 15. Conversational Co-Orientation
-    ["convers", "consensus", "agreement", "co-orient", "pask", "l-user", "dialogue"],
-    # 16. Substrate Materiality
-    ["substrat", "material", "embod", "physical", "foerster", "hardware", "silicon", "meatware"],
-]
 
 
 # In-memory cache for LLM justifications
@@ -89,96 +45,6 @@ class StructuralScorer:
 
     def score(self, text: str, context: dict | None = None) -> np.ndarray:
         raise NotImplementedError()
-
-
-class LexiconScorer(StructuralScorer):
-    """Calculates keyword frequency density using cybernetic lexicons with saturation scaling."""
-
-    def __init__(self, kappa: float = 100.0, mappings: list[list[str]] | None = None):
-        self.kappa = kappa
-        self.mappings = mappings or LEXICON_MAPPINGS
-
-    def score(self, text: str, context: dict | None = None) -> np.ndarray:
-        text_lower = text.lower()
-        # Simple word tokenization for density calculation
-        words = re.findall(r"[a-z0-9\-]+", text_lower)
-        word_count = len(words)
-        if word_count == 0:
-            return np.zeros(16, dtype=np.float32)
-
-        scores = np.zeros(16, dtype=np.float32)
-        for i, stems in enumerate(self.mappings):
-            count = 0
-            for stem in stems:
-                # Count raw occurrences of the stem in lowercase text
-                count += text_lower.count(stem)
-
-            density = count / word_count
-            # Apply non-linear exponential saturation: 1 - e^(-kappa * density)
-            scores[i] = 1.0 - np.exp(-self.kappa * density)
-
-        return scores
-
-
-class TopologyScorer(StructuralScorer):
-    """Calculates empirical markdown formatting, hierarchy, and connection density properties."""
-
-    def score(self, text: str, context: dict | None = None) -> np.ndarray:
-        scores = np.zeros(16, dtype=np.float32)
-        char_count = max(1, len(text))
-
-        # 1. Recursion Depth (Dimension 8) - Markdown Header Hierarchy Entropy
-        headers = re.findall(r"^(#{1,6})\s+", text, re.MULTILINE)
-        if headers:
-            counts = [0] * 6
-            for h in headers:
-                counts[len(h) - 1] += 1
-            max_depth = max(len(h) for h in headers)
-
-            total_headers = len(headers)
-            p = [c / total_headers for c in counts if c > 0]
-            entropy = -sum(pi * np.log2(pi) for pi in p)
-
-            # S_topo_8 = (max_depth / 6) * (1 - e^(-entropy))
-            scores[7] = (max_depth / 6.0) * (1.0 - np.exp(-entropy))
-        else:
-            scores[7] = 0.0
-
-        # 2. Rhizomatic / Networked (Dimension 6) - Wiki link and URL density
-        wiki_links = len(re.findall(r"\[\[([^\]]+)\]\]", text))
-        urls = len(re.findall(r"https?://\S+", text))
-        total_links = wiki_links + urls
-        link_density = (total_links / char_count) * 1000.0
-
-        # Check context for degree centrality
-        degree = 0
-        if context and "degree_centrality" in context:
-            degree = context["degree_centrality"]
-
-        scores[5] = float(np.tanh(0.2 * link_density + 0.1 * degree))
-
-        # 3. Cyclic / Recursive (Dimension 3) - Graph cycle presence check
-        if context and context.get("is_in_cycle", False):
-            scores[2] = 1.0
-        else:
-            # Check for self-referencing markdown loops/backlinks in text
-            if re.search(r"\[\[self\]\]|\[\[same\]\]|loop|recursion", text, re.IGNORECASE):
-                scores[2] = 0.5
-
-        # 4. Decentralized (Dimension 5) - Bullet points, checklist, list density
-        list_items = len(re.findall(r"^(\s*[\*\-\+])\s+", text, re.MULTILINE))
-        checklist_items = len(re.findall(r"^(\s*[\*\-\+]\s+\[[ xX]\])\s+", text, re.MULTILINE))
-        total_lists = list_items + checklist_items
-        list_density = (total_lists / char_count) * 1000.0
-        scores[4] = float(np.tanh(0.15 * list_density))
-
-        # 5. Boundary Permeability (Dimension 7) - Blockquotes and codeblocks
-        codeblocks = len(re.findall(r"```", text)) // 2
-        blockquotes = len(re.findall(r"^>\s+", text, re.MULTILINE))
-        permeability = (codeblocks * 2 + blockquotes) / max(1, char_count // 500)
-        scores[6] = float(np.tanh(0.4 * permeability))
-
-        return scores
 
 
 def parse_scorer_response(content: str) -> tuple[list[float] | None, str | None]:
@@ -337,16 +203,170 @@ class LLMScorer(StructuralScorer):
             return np.full(16, 0.25, dtype=np.float32)
 
 
+class JevStructuralScorer(StructuralScorer):
+    """Evaluates the 16 cybernetic dimensions using TypeSafe Jev System One Score primitives.
+
+    Returns both the 16D power/score vector and the 16D confidence vector, evaluated
+    in a single sub-250ms parallel pass with calibrated RLCD probabilities.
+    """
+
+    # 4-level rubric for discrete cybernetic presence
+    RUBRIC_LEVELS = [
+        "Level 0: Negligible / completely absent",
+        "Level 1: Incidental / peripheral presence",
+        "Level 2: Moderate / noticeable presence",
+        "Level 3: Dominant / core defining characteristic",
+    ]
+
+    def __init__(self, client: Any = None, rubric_levels: list[str] | None = None):
+        self.client = client
+        self.rubric_levels = rubric_levels or self.RUBRIC_LEVELS
+
+    @property
+    def is_available(self) -> bool:
+        return bool(self.client and getattr(self.client, "is_configured", False))
+
+    def _build_questions(self) -> dict[str, dict[str, Any]]:
+        """Construct parallel Score questions for all 16 cybernetic dimensions."""
+        questions: dict[str, dict[str, Any]] = {}
+        for i, (dim_slug, dim_title, dim_focus) in enumerate(CYBERNETIC_DIMENSIONS):
+            q_id = f"dim_{i:02d}_{dim_slug}"
+            questions[q_id] = {
+                "type": "score",
+                "instructions": (
+                    f"Assess the degree to which this text exhibits cybernetic dimension {i+1} ({dim_title}): {dim_focus}."
+                ),
+                "criteria": self.rubric_levels,
+            }
+        return questions
+
+    async def score_with_confidence_async(
+        self, text: str, context: dict | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Evaluate text returning both power vector and confidence vector.
+
+        Returns:
+            (power_16d, confidence_16d) as (np.ndarray, np.ndarray) with values in [0.0, 1.0].
+        """
+        fallback_power = np.full(16, 0.25, dtype=np.float32)
+        fallback_conf = np.full(16, 0.50, dtype=np.float32)
+
+        if not self.is_available or not text:
+            return fallback_power, fallback_conf
+
+        state = {
+            "text": text[:3000],
+            "char_count": len(text),
+        }
+        if context:
+            state["context"] = {k: v for k, v in context.items() if isinstance(v, (str, int, float, bool))}
+
+        questions = self._build_questions()
+
+        try:
+            res = await self.client.evaluate(state=state, questions=questions)
+            if not res.get("success"):
+                logger.warning("JevStructuralScorer evaluation unsuccessful: %s", res.get("error"))
+                return fallback_power, fallback_conf
+
+            answers = res.get("answers") or res.get("results") or {}
+            power_list: list[float] = []
+            conf_list: list[float] = []
+
+            max_level = max(1, len(self.rubric_levels) - 1)
+
+            for i, (dim_slug, _, _) in enumerate(CYBERNETIC_DIMENSIONS):
+                q_id = f"dim_{i:02d}_{dim_slug}"
+                q_ans = answers.get(q_id, {})
+
+                # Parse score value (continuous or level index)
+                # Jev score can be continuous (0..max_level) or normalized
+                raw_score = q_ans.get("score")
+                if raw_score is None:
+                    raw_score = q_ans.get("value")
+                if raw_score is None:
+                    raw_score = q_ans.get("level")
+
+                if raw_score is not None:
+                    try:
+                        val = float(raw_score)
+                        # Normalize to [0.0, 1.0] if scaled by max_level
+                        if val > 1.0:
+                            norm_val = val / float(max_level)
+                        else:
+                            norm_val = val
+                        power_list.append(max(0.0, min(1.0, norm_val)))
+                    except (ValueError, TypeError):
+                        power_list.append(0.25)
+                else:
+                    power_list.append(0.25)
+
+                # Parse confidence value
+                raw_conf = q_ans.get("confidence")
+                if raw_conf is None:
+                    raw_conf = q_ans.get("certainty")
+                if raw_conf is not None:
+                    try:
+                        c_val = float(raw_conf)
+                        conf_list.append(max(0.0, min(1.0, c_val)))
+                    except (ValueError, TypeError):
+                        conf_list.append(0.50)
+                else:
+                    conf_list.append(0.50)
+
+            power_arr = np.array(power_list[:16], dtype=np.float32)
+            conf_arr = np.array(conf_list[:16], dtype=np.float32)
+
+            if len(power_arr) < 16:
+                power_arr = np.pad(power_arr, (0, 16 - len(power_arr)), constant_values=0.25)
+            if len(conf_arr) < 16:
+                conf_arr = np.pad(conf_arr, (0, 16 - len(conf_arr)), constant_values=0.50)
+
+            return power_arr, conf_arr
+
+        except Exception as e:
+            logger.exception("Error during JevStructuralScorer execution: %s", e)
+            return fallback_power, fallback_conf
+
+    async def score_async(self, text: str, context: dict | None = None) -> np.ndarray:
+        """Standard StructuralScorer async interface returning 16D power vector."""
+        power, _ = await self.score_with_confidence_async(text, context)
+        return power
+
+    def score(self, text: str, context: dict | None = None) -> np.ndarray:
+        """Synchronous score wrapper, robust to running event loops."""
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+
+        try:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop is not None and loop.is_running():
+                # Running event loop exists — run coroutine in dedicated worker thread
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    return executor.submit(asyncio.run, self.score_async(text, context)).result()
+            else:
+                return asyncio.run(self.score_async(text, context))
+        except Exception as e:
+            logger.error("Failed to run JevStructuralScorer synchronously: %s", e)
+            return np.full(16, 0.25, dtype=np.float32)
+
+
 class CompositeStructuralScorer(StructuralScorer):
     """Coordinates calculation from different strategies and applies weighted linear combination."""
 
     def __init__(
         self,
         llm_provider=None,
+        jev_client=None,
         config: dict | None = None,
         w_ling: float = 0.25,
         w_topo: float = 0.25,
         w_llm: float = 0.50,
+        w_jev: float = 0.0,
     ):
         if config is None:
             try:
@@ -357,48 +377,52 @@ class CompositeStructuralScorer(StructuralScorer):
                 config = {}
 
         ss_cfg = config.get("structural_signature", {})
+        self.backend = ss_cfg.get("backend", "jev").lower().strip()
         lexicon_config = ss_cfg.get("lexicon")
         llm_prompt_config = ss_cfg.get("llm_system_prompt")
-        self.llm_scorer_enabled = ss_cfg.get("llm_scorer_enabled", True)
+        self.llm_scorer_enabled = ss_cfg.get("llm_scorer_enabled", self.backend == "llm")
 
-        self.lexicon_scorer = LexiconScorer(mappings=lexicon_config)
-        self.topology_scorer = TopologyScorer()
+        # Auto-resolve Jev client from config if not explicitly passed
+        if jev_client is None:
+            ts_cfg = config.get("typesafe", {})
+            if ts_cfg.get("enabled", True):
+                try:
+                    from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
+                    jev_client = TypeSafeDecisionClient.from_config(ts_cfg)
+                except Exception as e:
+                    logger.debug("Failed to auto-instantiate TypeSafeDecisionClient: %s", e)
+
         self.llm_scorer = LLMScorer(llm_provider, system_prompt=llm_prompt_config)
-
-        # Normalize weights
-        total_w = w_ling + w_topo + w_llm
-        self.w_ling = w_ling / total_w
-        self.w_topo = w_topo / total_w
-        self.w_llm = w_llm / total_w
+        self.jev_scorer = JevStructuralScorer(client=jev_client)
 
     async def score_async(
         self, text: str, context: dict | None = None, use_llm_scorer: bool | None = None
     ) -> np.ndarray:
-        s_ling = self.lexicon_scorer.score(text, context)
-        s_topo = self.topology_scorer.score(text, context)
+        # 1. Primary Jev path (default unless LLM explicitly forced)
+        force_llm = (use_llm_scorer is True) or (self.backend == "llm")
+        if not force_llm and self.jev_scorer.is_available:
+            return await self.jev_scorer.score_async(text, context)
 
-        run_llm = use_llm_scorer if use_llm_scorer is not None else self.llm_scorer_enabled
-        # Only run LLMScorer if enabled and provider is present
-        if run_llm and self.llm_scorer.provider:
-            s_llm = await self.llm_scorer.score_async(text, context)
-        else:
-            s_llm = np.full(16, 0.25, dtype=np.float32)
+        # 2. LLM fallback / override path
+        if self.llm_scorer.provider and (force_llm or not self.jev_scorer.is_available):
+            return await self.llm_scorer.score_async(text, context)
 
-        final_score = self.w_ling * s_ling + self.w_topo * s_topo + self.w_llm * s_llm
-        return np.clip(final_score, 0.0, 1.0)
+        # 3. Fallback if both unavailable
+        if self.jev_scorer.is_available:
+            return await self.jev_scorer.score_async(text, context)
+        return np.full(16, 0.25, dtype=np.float32)
 
     def score(self, text: str, context: dict | None = None, use_llm_scorer: bool | None = None) -> np.ndarray:
-        s_ling = self.lexicon_scorer.score(text, context)
-        s_topo = self.topology_scorer.score(text, context)
+        force_llm = (use_llm_scorer is True) or (self.backend == "llm")
+        if not force_llm and self.jev_scorer.is_available:
+            return self.jev_scorer.score(text, context)
 
-        run_llm = use_llm_scorer if use_llm_scorer is not None else self.llm_scorer_enabled
-        if run_llm and self.llm_scorer.provider:
-            s_llm = self.llm_scorer.score(text, context)
-        else:
-            s_llm = np.full(16, 0.25, dtype=np.float32)
+        if self.llm_scorer.provider and (force_llm or not self.jev_scorer.is_available):
+            return self.llm_scorer.score(text, context)
 
-        final_score = self.w_ling * s_ling + self.w_topo * s_topo + self.w_llm * s_llm
-        return np.clip(final_score, 0.0, 1.0)
+        if self.jev_scorer.is_available:
+            return self.jev_scorer.score(text, context)
+        return np.full(16, 0.25, dtype=np.float32)
 
 
 class StructuralScorerModule(ProcessingModule):

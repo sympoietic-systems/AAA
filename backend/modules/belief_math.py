@@ -8,21 +8,22 @@ import logging
 
 import numpy as np
 
-from backend.modules.structural_engine import LEXICON_MAPPINGS
+from backend.utils.vector import CYBERNETIC_DIMENSIONS
 
 logger = logging.getLogger(__name__)
 
 
 def calculate_concept_density(text: str, lambda_param: float = 3.0) -> float:
+    """Calculate cybernetic concept density based on canonical dimension keywords."""
     text_lower = text.lower()
     matched_dims = 0
-    for stems in LEXICON_MAPPINGS:
-        matched = False
-        for stem in stems:
-            if stem in text_lower:
-                matched = True
-                break
-        if matched:
+    for dim_slug, _, focus_summary in CYBERNETIC_DIMENSIONS:
+        # Check slug, base root, and key focus tokens / words
+        tokens = [dim_slug.replace("_", " "), dim_slug.rstrip("ic").rstrip("ed")]
+        for w in focus_summary.split(","):
+            words = w.strip().split()
+            tokens.extend([word.lower() for word in words if len(word) > 3])
+        if any(token in text_lower for token in tokens if len(token) > 3):
             matched_dims += 1
     return float(np.tanh(matched_dims / lambda_param))
 
@@ -56,8 +57,9 @@ def compute_delta_mass(source_weight: float, alignment: float, current_mass: flo
     return eta * source_weight * alignment / (1.0 + current_mass)
 
 
-def compute_delta_confidence(alignment: float, perturbation: float, current_mass: float) -> float:
-    dc = 0.5
+def compute_delta_confidence(
+    alignment: float, perturbation: float, current_mass: float, dc: float = 0.5
+) -> float:
     plasticity = dc * ((1.0 - alignment) / 2.0)
     return (plasticity * alignment * perturbation) / max(current_mass, 0.01)
 

@@ -111,9 +111,9 @@ class SkillWorkshopModule(ProcessingModule):
 
         vector_16d = "[]"
         try:
-            from backend.modules.structural_engine import LexiconScorer
+            from backend.modules.structural_engine import CompositeStructuralScorer
 
-            scorer = LexiconScorer()
+            scorer = CompositeStructuralScorer()
             text_to_score = content or description
             v16d = scorer.score(text_to_score)
             vector_dict = {"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d), "v384d": []}
@@ -188,9 +188,9 @@ class SkillWorkshopModule(ProcessingModule):
 
             if text_to_score:
                 try:
-                    from backend.modules.structural_engine import LexiconScorer
+                    from backend.modules.structural_engine import CompositeStructuralScorer
 
-                    scorer = LexiconScorer()
+                    scorer = CompositeStructuralScorer()
                     v16d = scorer.score(text_to_score)
                     vector_dict = {"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d), "v384d": []}
                     vector_16d = json.dumps(vector_dict)

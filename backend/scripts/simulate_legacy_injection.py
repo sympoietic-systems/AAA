@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from backend.config import load_config
 from backend.main import _init_belief_engine, _init_providers
 from backend.modules.belief_engine import parse_vector_16d
-from backend.modules.structural_engine import LexiconScorer
+from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.services.belief import BeliefService
 from backend.storage.database import get_db_path
 from backend.storage.repository import BeliefRepository, MessageRepository
@@ -91,7 +91,7 @@ async def main():
     state = DummyState()
     belief_service = BeliefService(state)
 
-    scorer = LexiconScorer()
+    scorer = CompositeStructuralScorer()
 
     # 4. Inject each proposal and run the refinement pipeline
     logger.info("Starting simulation of injection and refinement...")

@@ -14,7 +14,6 @@ import logging
 import uuid
 from typing import Any
 
-from backend.modules.structural_engine import LexiconScorer
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.steps.base import ResearchStepRegistry
 from backend.services.research.steps.source_utils import classify_source_status
@@ -138,7 +137,6 @@ class SomaticResearchOrchestrator:
     def __init__(self, app_state: Any):
         self._state = app_state
         self._semaphore: asyncio.Semaphore | None = None
-        self._lexicon = LexiconScorer()
         self._state_mgr = TaskStateManager(
             task_repo=app_state.research_task_repo,
             plan_repo=getattr(app_state, "research_plan_repo", None),

@@ -1,7 +1,7 @@
 import json
 import sqlite3
 
-from backend.modules.structural_engine import LexiconScorer
+from backend.modules.structural_engine import CompositeStructuralScorer
 
 # Ensure path is correct for execution from workspace root
 DB_PATH = "backend/data/aaa.db"
@@ -13,7 +13,7 @@ def main():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    scorer = LexiconScorer()
+    scorer = CompositeStructuralScorer()
 
     # 1. Repair belief_nodes
     print("\nAuditing belief_nodes table...")
@@ -54,7 +54,7 @@ def main():
             print(f"-> Repairing belief: {label} (ID: {belief_id})")
             print(f"   Old vector: {vector_str[:80]}...")
 
-            # Recompute vector from statement using LexiconScorer
+            # Recompute vector from statement using CompositeStructuralScorer / Jev
             text = statement or label or ""
             sig = scorer.score(text)
             new_vector = sig.tolist() if hasattr(sig, "tolist") else list(sig)

@@ -93,13 +93,13 @@ def _init_modules(
     # ── Expertise Engine ──
     expertise_cfg = config.get("dynamic_personality", {}).get("expertise", {})
     from backend.modules.expertise_engine import ExpertiseEngine
-    from backend.modules.structural_engine import LexiconScorer
+    from backend.modules.structural_engine import CompositeStructuralScorer
 
-    expert_lexicon = LexiconScorer()
+    structural_scorer = CompositeStructuralScorer()
     expertise_engine = ExpertiseEngine(
         expertise_repo=repos["expertise_repo"],
         config=expertise_cfg,
-        lexicon_scorer=expert_lexicon,
+        lexicon_scorer=structural_scorer,
         notification_repo=repos["notification_repo"],
     )
 
@@ -111,7 +111,7 @@ def _init_modules(
         commitment_repo=repos["commitment_repo"],
         belief_repo=repos["belief_repo"],
         config=commitment_cfg,
-        lexicon_scorer=expert_lexicon,
+        lexicon_scorer=structural_scorer,
         notification_repo=repos["notification_repo"],
     )
 

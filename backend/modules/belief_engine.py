@@ -17,7 +17,7 @@ from backend.modules.belief_math import (
     compute_lifecycle_stage,
     parse_vector_16d,
 )
-from backend.modules.structural_engine import CompositeStructuralScorer, LexiconScorer
+from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.models import BeliefNode
 from backend.storage.repositories.refusal import RefusalRepository
@@ -46,7 +46,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         self._message_repo = message_repo
         self._identity_yaml_path = identity_yaml_path
         self._beta = learning_rate_beta
-        self._scorer = LexiconScorer()
+        self._scorer = CompositeStructuralScorer()
         self._llm_provider = llm_provider
         self._source_weights = {
             "chat_turn": 0.4,
@@ -198,41 +198,15 @@ class BeliefDynamicsEngine(ProcessingModule):
         perturbation: float,
         source_type: str = "chat_turn",
         source_id: str | None = None,
+        dc: float = 0.5,
     ) -> float:
         delta_m = compute_delta_mass(source_weight, alignment, belief.ontological_mass)
         new_mass = clamp_mass(belief.ontological_mass + delta_m)
 
-        delta_c = compute_delta_confidence(alignment, perturbation, belief.ontological_mass)
+        delta_c = compute_delta_confidence(alignment, perturbation, belief.ontological_mass, dc=dc)
         new_confidence = clamp_confidence(belief.confidence + delta_c)
 
         new_stage = compute_lifecycle_stage(belief.lifecycle_stage, new_mass, new_confidence)
-
-        if new_stage in ("collapsed", "faded"):
-            self._belief_repo.delete_belief(belief.id)
-            self._belief_repo.create_proposal(
-                id=belief.id,
-                agent_id=belief.agent_id,
-                provisional_statement=belief.statement,
-                source_trace=belief.genesis_materials or "[]",
-                initial_signature=belief.vector_16d,
-                nucleation_mass=new_mass,
-                confidence=new_confidence,
-                status="rejected",
-            )
-            self._belief_repo.update_proposal_status(
-                belief.id,
-                "rejected",
-                rejection_rationale=f"Belief collapsed during autopoietic metabolism. Final Mass: {new_mass:.3f}, Final Confidence: {new_confidence:.3f}",
-            )
-        else:
-            self._belief_repo.update_belief(
-                belief_id=belief.id,
-                confidence=new_confidence,
-                vector_16d=belief.vector_16d,
-                origin=belief.origin,
-                lifecycle_stage=new_stage,
-            )
-            self._belief_repo.update_belief_mass(belief.id, new_mass)
 
         event_type = "support" if alignment >= 0.0 else "collision"
         if new_stage != belief.lifecycle_stage:
@@ -260,6 +234,33 @@ class BeliefDynamicsEngine(ProcessingModule):
             rationale=f"Accreted: mass={new_mass:.3f} (delta={delta_m:+.3f}), conf={new_confidence:.3f}, stage={new_stage}",
             suppress_notification=suppress_notify,
         )
+
+        if new_stage in ("collapsed", "faded"):
+            self._belief_repo.delete_belief(belief.id)
+            self._belief_repo.create_proposal(
+                id=belief.id,
+                agent_id=belief.agent_id,
+                provisional_statement=belief.statement,
+                source_trace=belief.genesis_materials or "[]",
+                initial_signature=belief.vector_16d,
+                nucleation_mass=new_mass,
+                confidence=new_confidence,
+                status="rejected",
+            )
+            self._belief_repo.update_proposal_status(
+                belief.id,
+                "rejected",
+                rejection_rationale=f"Belief collapsed during autopoietic metabolism. Final Mass: {new_mass:.3f}, Final Confidence: {new_confidence:.3f}",
+            )
+        else:
+            self._belief_repo.update_belief(
+                belief_id=belief.id,
+                confidence=new_confidence,
+                vector_16d=belief.vector_16d,
+                origin=belief.origin,
+                lifecycle_stage=new_stage,
+            )
+            self._belief_repo.update_belief_mass(belief.id, new_mass)
 
         return new_mass
 
@@ -815,6 +816,8 @@ class BeliefDynamicsEngine(ProcessingModule):
             for b in all_beliefs:
                 if b.lifecycle_stage in ("collapsed", "faded"):
                     continue
+                if belief_nodes_implicated and (b.label not in belief_nodes_implicated and b.id not in belief_nodes_implicated):
+                    continue
 
                 b_vec = parse_vector_16d(b.vector_16d)
                 if b_vec is None:
@@ -836,14 +839,16 @@ class BeliefDynamicsEngine(ProcessingModule):
                     _is_implicated = True
 
                 source_weight = self._get_source_weight("ingested_document")
+                effective_perturbation = perturbation * _impact_multiplier
                 self._accrete_belief(
                     b,
                     structural_signature,
                     source_weight,
                     alignment,
-                    perturbation,
+                    effective_perturbation,
                     source_type=source_type,
                     source_id=source_id,
+                    dc=dc,
                 )
 
             # 2. Draft proposal if this is a completely new concept (similarity < 0.25)

@@ -7,8 +7,8 @@ import sys
 # Adjust path to find backend modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+from backend.bootstrap.providers import _init_providers
 from backend.config import load_config
-from backend.main import _init_providers
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.storage.database import get_db_path
 
@@ -23,11 +23,8 @@ async def main():
 
     # Initialize LLM structural provider
     _, structural_provider, _ = _init_providers(config)
-    if not structural_provider:
-        print("Warning: Structural LLM provider not configured. Fallback empirical modes will be used.")
-
     scorer = CompositeStructuralScorer(llm_provider=structural_provider, config=config)
-    print(f"LLM Scorer status: Enabled={scorer.llm_scorer_enabled}, HasProvider={bool(structural_provider)}")
+    print(f"Structural Scorer Backend: '{scorer.backend}' (Jev available: {scorer.jev_scorer.is_available}, LLM provider: {bool(structural_provider)})")
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

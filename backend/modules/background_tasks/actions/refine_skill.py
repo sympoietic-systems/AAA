@@ -174,11 +174,11 @@ Active Skills already in Symbia's database:
                         break
 
             if target_skill:
-                # Recalculate 16D vector using LexiconScorer
-                from backend.modules.structural_engine import LexiconScorer
+                # Recalculate 16D vector using CompositeStructuralScorer
+                from backend.modules.structural_engine import CompositeStructuralScorer
 
                 try:
-                    scorer = LexiconScorer()
+                    scorer = CompositeStructuralScorer()
                     v16d = scorer.score(refined_content)
                     vector_16d = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
                 except Exception as se:

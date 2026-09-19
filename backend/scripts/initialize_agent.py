@@ -27,7 +27,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 ENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(ENV_PATH)
 
-from backend.modules.structural_engine import LexiconScorer  # noqa: E402
+from backend.modules.structural_engine import CompositeStructuralScorer  # noqa: E402
 from backend.personality.seeding import seed_dynamic_personality  # noqa: E402
 from backend.storage.database import get_db_path, init_db  # noqa: E402
 from backend.storage.repository import (  # noqa: E402
@@ -129,7 +129,7 @@ def generate_skill_content(name: str, description: str, is_always_active: bool) 
     return "".join(sections)
 
 
-def compute_vector(text: str, scorer: LexiconScorer, wrap_dict: bool = False) -> str:
+def compute_vector(text: str, scorer: CompositeStructuralScorer, wrap_dict: bool = False) -> str:
     try:
         v16d = scorer.score(text)
         vec_list = v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)
@@ -182,7 +182,7 @@ def main():
     personality_state_repo = PersonalityStateRepository(db_path)
 
     # Scorer for 16D local vector calculation
-    scorer = LexiconScorer()
+    scorer = CompositeStructuralScorer()
 
     # Handle force resets
     if args.force:

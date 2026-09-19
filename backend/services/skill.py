@@ -3,7 +3,7 @@ import logging
 import uuid
 from datetime import datetime
 
-from backend.modules.structural_engine import CompositeStructuralScorer, LexiconScorer
+from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.storage.models import SkillNode
 
 logger = logging.getLogger(__name__)
@@ -191,8 +191,7 @@ class SkillService:
         except Exception as e:
             logger.warning("Failed to compute 16D structural vector with LLM: %s", e)
             try:
-                lex_scorer = LexiconScorer()
-                v16d = lex_scorer.score(text)
+                v16d = scorer.score(text)
                 result["v16d"] = v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)
             except Exception as e_lex:
                 logger.warning("Failed fallback 16D structural vector computation: %s", e_lex)

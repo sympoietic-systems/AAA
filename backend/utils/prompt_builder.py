@@ -47,35 +47,29 @@ async def compute_structural_signature(
     llm_provider: Any = None,
     llm_timeout: float = 5.0,
 ) -> np.ndarray | None:
-    """16D structural signature — same CompositeStructuralScorer as the pipeline.
+    """16D structural signature — via CompositeStructuralScorer (Jev primary, LLM fallback).
 
     When llm_provider is available: CompositeStructuralScorer
-      (lexicon 25% + topology 25% + LLM 50%) — async, identical to StructuralScorerModule.
-      If the LLM call exceeds llm_timeout (default 5s), falls back to lexicon-only.
+      (Jev System One by default, or LLM when configured).
+      If the call exceeds llm_timeout (default 5s), falls back gracefully.
 
-    When llm_provider is None: LexiconScorer only — sync, fast.
+    When llm_provider is None: CompositeStructuralScorer sync (Jev System One).
     """
     try:
-        if llm_provider is not None:
-            from backend.modules.structural_engine import CompositeStructuralScorer
+        from backend.modules.structural_engine import CompositeStructuralScorer
 
-            scorer = CompositeStructuralScorer(llm_provider=llm_provider)
+        scorer = CompositeStructuralScorer(llm_provider=llm_provider)
+        if llm_provider is not None:
             try:
                 sig = await asyncio.wait_for(scorer.score_async(text), timeout=llm_timeout)
             except TimeoutError:
-                logger.debug("LLM structural scorer timed out after %.1fs, falling back to lexicon", llm_timeout)
-                from backend.modules.structural_engine import LexiconScorer
-
-                sig = LexiconScorer().score(text)
+                logger.debug("Structural scorer timed out after %.1fs, falling back to sync scorer", llm_timeout)
+                sig = scorer.score(text)
             except Exception:
-                logger.exception("LLM structural scorer failed, falling back to lexicon")
-                from backend.modules.structural_engine import LexiconScorer
-
-                sig = LexiconScorer().score(text)
+                logger.exception("Async structural scorer failed, falling back to sync scorer")
+                sig = scorer.score(text)
         else:
-            from backend.modules.structural_engine import LexiconScorer
-
-            sig = LexiconScorer().score(text)
+            sig = scorer.score(text)
 
         norm = np.linalg.norm(sig)
         if norm > 1e-8:

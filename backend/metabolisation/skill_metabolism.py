@@ -4,7 +4,7 @@ import re
 import uuid
 from datetime import UTC, datetime
 
-from backend.modules.structural_engine import LexiconScorer
+from backend.modules.structural_engine import CompositeStructuralScorer
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +171,7 @@ class SkillMetabolismMixin:
                 # 3. Apply changes and save version history
                 vector_16d = skill.vector_16d
                 try:
-                    scorer = LexiconScorer()
+                    scorer = CompositeStructuralScorer()
                     v16d = scorer.score(refined_content)
                     vector_16d = json.dumps({"v16d": v16d.tolist() if hasattr(v16d, "tolist") else list(v16d)})
                 except Exception as se:

@@ -37,14 +37,11 @@ DEFAULT_ASPIRATIONAL_TRAITS = {
 
 
 def _score_text(text: str) -> np.ndarray:
-    """Score text via Lexicon + Topology scorers (50/50 blend, no LLM)."""
-    from backend.modules.structural_engine import LexiconScorer, TopologyScorer
+    """Score text via CompositeStructuralScorer (Jev primary, calibrated)."""
+    from backend.modules.structural_engine import CompositeStructuralScorer
 
-    lexicon = LexiconScorer()
-    topology = TopologyScorer()
-    s_ling = lexicon.score(text)
-    s_topo = topology.score(text)
-    return np.clip(0.5 * s_ling + 0.5 * s_topo, 0.0, 1.0)
+    scorer = CompositeStructuralScorer()
+    return scorer.score(text)
 
 
 # ── Canonical seed data (the original 7 commitments + 8 expertise) ──
