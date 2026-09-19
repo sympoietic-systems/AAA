@@ -1,6 +1,5 @@
 # Benchmark Report: Jev vs. LLM 16D Structural Scoring
 
-![16D Cybernetic Vector Space: Jev vs. LLM](16DScorer/hero_16d_structural_scoring.jpg)
 
 This benchmark evaluates **Jev System One RLCD Scoring** against **LLM Generative Scoring (`gemini-2.5-flash`)** across three AAA data structures:
 1. **Agential Beliefs** (Cognitive invariants, operational closure, tipping points)
@@ -12,6 +11,8 @@ This benchmark evaluates **Jev System One RLCD Scoring** against **LLM Generativ
 ## 1. System Insights: What Custom Structural Vectors Enable
 
 Custom structural vectors project raw text onto explicit, designer-selected dimensions. In this testbed, texts map to 16 cybernetic coordinates (homeostatic stability, recursion depth, boundary permeability, requisite variety). Once projected, standard linear algebra (cosine similarity, vector distance, clustering) operates directly on structural dynamics rather than keyword coincidence.
+
+![16D Structural Scoring Pipeline Architecture](16DScorer/flowchart_16d_structural_pipeline.png)
 
 ### Key Differences: Structural Vectors vs. Black-Box Neural Embeddings
 
