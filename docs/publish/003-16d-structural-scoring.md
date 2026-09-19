@@ -13,13 +13,13 @@
 
 ## 1. The Trouble With Keywords
 
-When you retrieve something from memory, you don't search for exact words. You search for the *kind of thing* that fits.
+When you retrieve something from memory, you don’t search for exact words. You search for the *kind of thing* that fits.
 
-A sommelier doesn't need to read the label to tell a tight, tannic Barolo from a loose, fruit-forward Grenache. A judo instructor watching a student's posture doesn't count vocabulary — they read weight distribution, tension, grip angle. Recognition happens at the level of *structure*, not surface.
+A sommelier doesn’t need to read the label to tell a tight, tannic Barolo from a loose, fruit-forward Grenache. A judo instructor watching a student’s posture doesn’t count vocabulary — they read weight distribution, tension, grip angle. Recognition happens at the level of *structure*, not surface.
 
-Standard AI retrieval doesn't work this way. Most systems run on dense neural embeddings — vectors baked out of word co-occurrence statistics across billions of documents. These embeddings are powerful for topical proximity. Ask "what happened at Stalingrad?" and the system reliably finds documents about the Eastern Front. But ask an agentic system to retrieve a belief that matches the *operational stance* of a given message — stabilizing versus destabilizing, closed versus boundary-open, amplifying versus dampening — and flat embeddings fail. They group texts that share words, not texts that share *behavior*.
+Standard AI retrieval doesn’t work this way. Most systems run on dense neural embeddings — vectors baked out of word co-occurrence statistics across billions of documents. These embeddings are powerful for topical proximity. Ask “what happened at Stalingrad?” and the system reliably finds documents about the Eastern Front. But ask an agentic system to retrieve a belief that matches the *operational stance* of a given message — stabilizing versus destabilizing, closed versus boundary-open, amplifying versus dampening — and flat embeddings fail. They group texts that share words, not texts that share *behavior*.
 
-For AAA's agent Symbia, this matters directly. Every incoming conversational turn must be classified: Is this message seeking homeostatic consensus, or is it pushing toward a bifurcation point? Is the human signaling co-orientation, or are they testing a boundary? The response the system generates — and whether the boredom engine fires a Socratic rupture — depends on reading the structural dynamics of the message, not its surface vocabulary.
+For AAA’s agent Symbia, this matters directly. Every incoming conversational turn must be classified: Is this message seeking homeostatic consensus, or is it pushing toward a bifurcation point? Is the human signaling co-orientation, or are they testing a boundary? The response the system generates — and whether the boredom engine fires a Socratic rupture — depends on reading the structural dynamics of the message, not its surface vocabulary.
 
 To solve this, we built a **16-dimensional structural scoring system** that projects any text onto 16 explicit cybernetic axes. This is how Symbia reads the room.
 
@@ -52,20 +52,20 @@ We define 16 axes drawn directly from cybernetic theory — each one a distinct 
 
 Feed any text — a belief, a memory note, a conversational turn — into this rubric, and it returns a **16-dimensional coordinate vector** describing its structural fingerprint.
 
-But there's a second signal that matters as much as the score itself.
+But there’s a second signal that matters as much as the score itself.
 
 ---
 
 ## 3. The Signal That Standard Embeddings Cannot Produce
 
-Dense neural embeddings return coordinates. A text about "dampening" lands near coordinates like $[0.23, -0.61, 0.08, ...]$ — a single point in a high-dimensional latent space, with no indication of whether the model was certain about that placement or just defaulting to background noise.
+Dense neural embeddings return coordinates. A text about “dampening” lands near coordinates like $[0.23, -0.61, 0.08, ...]$ — a single point in a high-dimensional latent space, with no indication of whether the model was certain about that placement or just defaulting to background noise.
 
 The 16D structural scorer returns two numbers per dimension:
 
 - **Power** ($s_i \in [0, 1]$): how strongly this dimension is active in the text
 - **Epistemic Confidence** ($c_i \in [0, 1]$): how certain the scorer is about that reading
 
-This dual-signal output resolves a persistent problem in agentic memory. When a standard embedding evaluates a dimension that a text simply doesn't touch, it rarely returns 0.0. Softmax temperature and prompt drift push it toward $0.1–0.2$ — indistinguishable from a text that *weakly exhibits* that property.
+This dual-signal output resolves a persistent problem in agentic memory. When a standard embedding evaluates a dimension that a text simply doesn’t touch, it rarely returns 0.0. Softmax temperature and prompt drift push it toward $0.1–0.2$ — indistinguishable from a text that *weakly exhibits* that property.
 
 The dual-signal scorer draws a hard line. A text about homeostatic regulation has no conversational co-orientation in it. The scorer returns:
 
@@ -73,15 +73,15 @@ The dual-signal scorer draws a hard line. A text about homeostatic regulation ha
 s15 (Co-Orientation): power = 0.020, confidence = 0.98
 ```
 
-Power near zero. Confidence near certainty. The downstream belief engine knows this isn't noise — the property is **demonstrably absent**.
+Power near zero. Confidence near certainty. The downstream belief engine knows this isn’t noise — the property is **demonstrably absent**.
 
-Conversely, when the scorer detects a concept that a text *hints at* but doesn't commit to, it flags low confidence:
+Conversely, when the scorer detects a concept that a text *hints at* but doesn’t commit to, it flags low confidence:
 
 ```
 s11 (Temporal Latency): power = 0.73, confidence = 0.27
 ```
 
-"Can we pause..." implies temporal suspension. But the text contains no formal cybernetic delay dynamics, no lag specification, no buffering mechanism. High power because the surface reading activates the dimension. Low confidence because the activation isn't anchored.
+“Can we pause...” implies temporal suspension. But the text contains no formal cybernetic delay dynamics, no lag specification, no buffering mechanism. High power because the surface reading activates the dimension. Low confidence because the activation isn’t anchored.
 
 A generative LLM compresses both cases into a flat scalar ($0.2$, $0.1$). No signal about absence. No signal about uncertainty.
 
@@ -95,7 +95,7 @@ We ran this rubric through two execution backends and benchmarked them head-to-h
 
 **The generative path** sends the full 16-dimension rubric as a prompt to `gemini-2.5-flash`, which returns a JSON array of 16 floats. The semantic alignment is solid — cosine similarity of $0.86–0.96$ against ground truth across all test items. The cost is latency: **2,094 ms** average per evaluation.
 
-**The Jev path** (OpenRouter's TypeSafe RLCD decision engine) compiles the same rubric into binary decision primitives and evaluates all 16 dimensions in a single parallel request: **572 ms** average — **3.66x faster** — plus returning both power and confidence per dimension.
+**The Jev path** (OpenRouter’s TypeSafe RLCD decision engine) compiles the same rubric into binary decision primitives and evaluates all 16 dimensions in a single parallel request: **572 ms** average — **3.66x faster** — plus returning both power and confidence per dimension.
 
 ![Jev vs. LLM 16D Polar Comparison](003-16d-structural-scoring/radar_jev_vs_llm_comparison.png)
 *Figure: Radar comparison across 16 dimensions for a single input. Jev (emerald) tracks LLM (amber) with cosine similarity 0.86–0.96 while resolving absence and uncertainty the LLM cannot.*
@@ -108,7 +108,7 @@ For a system processing every conversational turn, 2,094 ms per structural read 
 
 Three things shift when Symbia perceives messages as 16D structural coordinates rather than flat topic embeddings.
 
-**Retrieval by cognitive posture, not vocabulary.** When a user turn reads as high Co-Orientation ($s_{15} = 1.0$, $c = 1.0$) and low Amplifying ($s_{02} = 0.01$, $c = 0.99$), Symbia retrieves procedures and beliefs calibrated for convergence, not the texts that merely share vocabulary with the user's words. A message asking to "establish shared definitions" retrieves co-orienting protocols — not generic dialogue logs from a session that happened to use similar nouns.
+**Retrieval by cognitive posture, not vocabulary.** When a user turn reads as high Co-Orientation ($s_{15} = 1.0$, $c = 1.0$) and low Amplifying ($s_{02} = 0.01$, $c = 0.99$), Symbia retrieves procedures and beliefs calibrated for convergence, not the texts that merely share vocabulary with the user’s words. A message asking to “establish shared definitions” retrieves co-orienting protocols — not generic dialogue logs from a session that happened to use similar nouns.
 
 **Boredom detection with structural evidence.** The boredom engine from [Entry 003](../003-boredom-as-an-agential-force.md) monitors conversational vitality. When the structural vector of successive turns converges — high homeostatic, low bifurcated, low nomadic, session after session — the collapse pressure gauge has empirical coordinates to work with, not just keyword overlap. The Socratic rupture fires against a structural diagnosis.
 
@@ -120,13 +120,13 @@ Three things shift when Symbia perceives messages as 16D structural coordinates 
 
 Standard dense embeddings are powerful general-purpose instruments. A 1536-dimensional OpenAI vector can tell you that two texts are topically adjacent. It cannot tell you that one text is stabilizing and the other is runaway. It cannot tell you that a dimension is absent versus merely weak. It cannot be retargeted to a new set of conceptual axes without retraining from scratch.
 
-Custom structural vectors give up breadth for depth and legibility. You choose the axes that match your system's actual operating concerns. Changing the rubric — adding a 17th dimension for, say, *Temporal Recursion Decay* — costs a YAML edit and a prompt update, not a training run.
+Custom structural vectors give up breadth for depth and legibility. You choose the axes that match your system’s actual operating concerns. Changing the rubric — adding a 17th dimension for, say, *Temporal Recursion Decay* — costs a YAML edit and a prompt update, not a training run.
 
 Every score is interpretable. Dimension #12 is always Attractor Depth. The number always means something specific.
 
-For an agent whose beliefs, memories, and conversational turns must cohere around a specific cybernetic topology — operational closure, Paskian coupling, non-Euclidean memory — this legibility isn't a luxury. It's the difference between a system that processes words and a system that perceives structure.
+For an agent whose beliefs, memories, and conversational turns must cohere around a specific cybernetic topology — operational closure, Paskian coupling, non-Euclidean memory — this legibility isn’t a luxury. It’s the difference between a system that processes words and a system that perceives structure.
 
-Symbia doesn't read text. It reads posture.
+Symbia doesn’t read text. It reads posture.
 
 ---
 

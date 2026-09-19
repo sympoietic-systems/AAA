@@ -1,6 +1,6 @@
 # Benchmark Report: Jev vs. LLM 16D Structural Scoring
 
-![16D Cybernetic Vector Space: Jev vs. LLM](hero_16d_structural_scoring.jpg)
+![16D Cybernetic Vector Space: Jev vs. LLM](16DScorer/hero_16d_structural_scoring.jpg)
 
 This benchmark evaluates **Jev System One RLCD Scoring** against **LLM Generative Scoring (`gemini-2.5-flash`)** across three AAA data structures:
 1. **Agential Beliefs** (Cognitive invariants, operational closure, tipping points)
@@ -13,7 +13,7 @@ This benchmark evaluates **Jev System One RLCD Scoring** against **LLM Generativ
 
 Custom structural vectors project raw text onto explicit, designer-selected dimensions. In this testbed, texts map to 16 cybernetic coordinates (homeostatic stability, recursion depth, boundary permeability, requisite variety). Once projected, standard linear algebra (cosine similarity, vector distance, clustering) operates directly on structural dynamics rather than keyword coincidence.
 
-![16D Structural Scoring Pipeline Architecture](flowchart_16d_structural_pipeline.png)
+![16D Structural Scoring Pipeline Architecture](16DScorer/flowchart_16d_structural_pipeline.png)
 
 ### Key Differences: Structural Vectors vs. Black-Box Neural Embeddings
 
@@ -60,7 +60,7 @@ Custom structural vectors project raw text onto explicit, designer-selected dime
 
 Dimension-by-dimension scores on representative samples comparing Jev (Emerald Green) and LLM (Amber Orange).
 
-![Jev vs. LLM 16D Polar Comparison](radar_jev_vs_llm_comparison.png)
+![Jev vs. LLM 16D Polar Comparison](16DScorer/radar_jev_vs_llm_comparison.png)
 
 ### Example 1: Agential Belief — "Autopoietic Closure"
 > *"An agentic cognition maintains continuous operational closure: its identity is recursively produced through circular networks of metabolic interactions. When the boundary conditions are perturbed, the system dampens noise to preserve homeostatic equilibrium."*
