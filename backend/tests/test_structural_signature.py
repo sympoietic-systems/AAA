@@ -8,39 +8,29 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
-from backend.modules.structural_engine import CompositeStructuralScorer, LexiconScorer, TopologyScorer
+from backend.modules.structural_engine import CompositeStructuralScorer, JevStructuralScorer
 from backend.storage.database import get_db_path, init_db
 from backend.storage.repository import MessageRepository, PerceptionSedimentRepository
 
 
 def test_scorers():
-    print("--- Testing Lexicon and Topology Scorers ---")
-    lexicon = LexiconScorer()
-    topology = TopologyScorer()
+    print("--- Testing JevStructuralScorer and CompositeStructuralScorer ---")
+    jev_scorer = JevStructuralScorer()
     composite = CompositeStructuralScorer(llm_provider=None)
 
-    # 1. Test Homeostatic keywords
     text1 = "We need to maintain homeostasis and negative feedback regulation to achieve stability in the system. Ashby's law."
-    score1 = lexicon.score(text1)
-    print("Lexicon Homeostatic score (expected > 0):", score1[0])
+    score1 = composite.score(text1)
+    print("Composite Homeostatic score (expected > 0):", score1[0])
+    assert len(score1) == 16
+    assert np.all(score1 >= 0.0) and np.all(score1 <= 1.0)
     assert score1[0] > 0.0
 
-    # 2. Test Topology header hierarchy
-    text2 = "# Level 1\n## Level 2\n### Level 3\n"
-    score2 = topology.score(text2)
-    print("Topology Recursion Depth score (expected > 0):", score2[7])
-    assert score2[7] > 0.0
+    if jev_scorer.is_available:
+        jev_score = jev_scorer.score(text1)
+        assert len(jev_score) == 16
+        assert np.all(jev_score >= 0.0) and np.all(jev_score <= 1.0)
+        print("Jev structural score test passed!")
 
-    # 3. Test Topology list items
-    text3 = "- item 1\n- item 2\n- item 3\n"
-    score3 = topology.score(text3)
-    print("Topology Decentralized/List score (expected > 0):", score3[4])
-    assert score3[4] > 0.0
-
-    # 4. Test Composite Scorer
-    score_comp = composite.score(text1)
-    assert len(score_comp) == 16
-    assert np.all(score_comp >= 0.0) and np.all(score_comp <= 1.0)
     print("Composite scorer test passed!")
 
 

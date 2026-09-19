@@ -322,7 +322,8 @@ def test_perception_metabolism():
             g_updated = next(b for b in updated_beliefs if b.label == "glitch-as-voice")
 
             # Calculate expected:
-            alignment = float(np.dot(sig, b_vec))
+            from backend.utils.similarity import cosine_similarity
+            alignment = float(cosine_similarity(sig, b_vec))
             dc = 0.80
             plasticity = dc * ((1.0 - alignment) / 2.0)
             expected_delta = (plasticity * alignment * 2.0 * 2.5) / 1.5

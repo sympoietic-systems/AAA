@@ -41,12 +41,9 @@ class TestConceptDensity:
         assert d1 < d2
 
     def test_density_bounded_by_one(self):
-        from backend.modules.structural_engine import LEXICON_MAPPINGS
+        from backend.utils.vector import CYBERNETIC_DIMENSIONS
 
-        stems = []
-        for group in LEXICON_MAPPINGS:
-            stems.append(group[0])
-        dense_text = " ".join(stems)
+        dense_text = " ".join(slug for slug, _, _ in CYBERNETIC_DIMENSIONS)
         result = calculate_concept_density(dense_text, lambda_param=1.0)
         assert 0.0 <= result <= 1.0
 
