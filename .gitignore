@@ -38,7 +38,9 @@ backend/scratch/*
 scratch/
 .agents/
 backend/services/data/uploads/*
-.opencode/*
+# OpenCode local dependency/cache state; project configuration lives in opencode.json.
+.opencode/node_modules/
+.opencode/.cache/
 
 # Enactment — detached artwork apps, each its own git repo
 enactment/
