@@ -11,6 +11,7 @@ from fastapi import APIRouter, Request
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+live_router = APIRouter()
 
 SNIPPET_LENGTH = 300
 _RECENT_MAX = 40
@@ -69,8 +70,18 @@ def _truncate(text: str, limit: int = SNIPPET_LENGTH) -> str:
 
 
 @router.get("/api/preview/nodes")
-async def get_preview_line(request: Request):
-    """Return one random line: belief, memory, dream trace, or scar-fold."""
+async def get_preview_line():
+    """Return curated public artwork text without reading private sediment."""
+    scar_text = _pick_preferred(SCAR_FOLD_POOL, key_fn=lambda s: s)
+    if scar_text is None:
+        scar_text = random.choice(SCAR_FOLD_POOL)
+    _mark_recent(scar_text)
+    return {"line": {"text": scar_text, "type": "scar_fold", "intensity": 0.0}}
+
+
+@live_router.get("/preview/live")
+async def get_live_preview_line(request: Request):
+    """Return a live sediment line through the authenticated API router."""
     state = request.app.state
     return _pick_one(state)
 

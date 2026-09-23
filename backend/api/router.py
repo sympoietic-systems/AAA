@@ -17,6 +17,7 @@ from backend.api.routes.memory_nodes import router as memory_nodes_router
 from backend.api.routes.metrics import router as metrics_router
 from backend.api.routes.notes import router as notes_router
 from backend.api.routes.notifications import router as notifications_router
+from backend.api.routes.preview import live_router as live_preview_router
 from backend.api.routes.refusals import router as refusals_router
 from backend.api.routes.research import router as research_router
 from backend.api.routes.scheduler import router as scheduler_router
@@ -42,6 +43,7 @@ router.include_router(metrics_router)
 router.include_router(background_router)
 router.include_router(errors_router)
 router.include_router(notifications_router)
+router.include_router(live_preview_router)
 router.include_router(files_router)
 router.include_router(daemon_router)
 router.include_router(notes_router)

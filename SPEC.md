@@ -65,7 +65,7 @@ T1|x|add security test fixtures + passing characterization tests for URL, upload
 T2|x|add bounded outbound fetch component + regression tests; migrate research/web HTTP call sites|V1,V2,V14,V17,V21,I.domain
 T3|x|stream uploads to safe cache + regression tests; enforce count/per-file/aggregate/image limits & atomic rejection|V3,V4,V5,V13,V15,V19,V20,I.api,I.domain
 T4|x|bound digestion subprocess queue + regression tests; add timeout, cancellation, terminal states|V5,V6,V12,V15,I.domain
-T5|.|centralize auth config + regression tests; remove pytest/query bypass; use authenticated export fetch; split curated public vs authenticated live preview|V7,V8,V9,V13,V17,I.api,I.env
+T5|x|centralize auth config + regression tests; remove pytest/query bypass; use authenticated export fetch; split curated public vs authenticated live preview|V7,V8,V9,V13,V17,I.api,I.env
 T6|.|replace file copy backup with configured SQLite online backup + restore tests; integrity-check; lifecycle ownership|V10,V12,V15,I.domain
 T7|.|redact formatted exceptions/access URLs + regression tests; normalize Glitch domain/API boundary|V11,V14,V16,V17,I.error
 T8|.|clamp request schemas + regression tests; remove FastAPI coupling from services; tighten typed dependencies/offloading|V13,V15,V16,V17,I.api,I.error

@@ -19,12 +19,11 @@ import os
 
 from fastapi import Depends, Header, HTTPException, Request
 
+from backend.core.auth import auth_enabled, bearer_token, credentials_valid
+
 logger = logging.getLogger(__name__)
 
 # ── Auth ───────────────────────────────────────────────────────────────
-
-AAA_PASSWORD: str = os.environ.get("AAA_PASSWORD", "").strip()
-
 
 async def verify_password(
     request: Request,
@@ -39,25 +38,14 @@ async def verify_password(
     Also accepts token via query parameter (?token=...) for download links
     that can't use Authorization headers (e.g., window.open navigation).
     """
-    import sys
-
-    if not AAA_PASSWORD or "pytest" in sys.modules:
+    if not auth_enabled():
         return
 
     # Allow the auth verify endpoint through so the frontend can discover auth status
     if request.url.path == "/api/auth/verify":
         return
 
-    token: str | None = None
-
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization[7:]
-
-    # Fallback: accept token via query parameter for download links
-    if not token:
-        qp_token = request.query_params.get("token")
-        if qp_token:
-            token = qp_token
+    token = bearer_token(authorization)
 
     if not token:
         raise HTTPException(
@@ -66,7 +54,7 @@ async def verify_password(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if token != AAA_PASSWORD:
+    if not credentials_valid(token):
         raise HTTPException(
             status_code=401,
             detail="Invalid credentials",

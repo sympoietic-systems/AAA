@@ -1,7 +1,7 @@
 // Research API — Autonomous Research Engine endpoints.
 // See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 4.8.
 
-import { BASE } from "./http"
+import { apiFetch, BASE } from "./http"
 
 export interface ResearchTask {
   id: string
@@ -423,15 +423,18 @@ export async function getTaskAssets(taskId: string): Promise<ScrapedAsset[]> {
   return task.assets || []
 }
 
-export function downloadResearchExport(taskId: string): void {
-  const token = localStorage.getItem("aaa_token")
-  const qs = token ? `?token=${encodeURIComponent(token)}` : ""
+export async function downloadResearchExport(taskId: string): Promise<void> {
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/export`)
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
-  a.href = `${BASE}/research/tasks/${taskId}/export${qs}`
+  a.href = url
   a.download = `research_export_${taskId.slice(0, 8)}.md`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 export async function downloadResearchStagesExport(taskId: string, title?: string, rerunCount?: number, maxDepth?: number): Promise<void> {
