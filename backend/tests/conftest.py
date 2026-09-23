@@ -13,6 +13,12 @@ os.environ["AAA_DB_PATH"] = TEST_DB_PATH
 os.environ["AAA_RUN_MIGRATIONS"] = "true"
 
 
+@pytest.fixture(autouse=True)
+def isolate_auth_environment(monkeypatch):
+    """Prevent a developer's shell password from changing unrelated test behavior."""
+    monkeypatch.delenv("AAA_PASSWORD", raising=False)
+
+
 @pytest.fixture(scope="session")
 def client() -> TestClient:
     """Shared FastAPI TestClient for route-level integration tests.

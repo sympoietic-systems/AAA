@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.api.deps import get_message_repo
 from backend.api.schemas import HistoryMessage, HistoryResponse
@@ -10,9 +10,9 @@ router = APIRouter()
 
 @router.get("/history", response_model=HistoryResponse)
 async def history(
-    limit: int = 50,
-    offset: int = 0,
-    conversation_id: str = "",
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    conversation_id: str = Query(default="", max_length=100, pattern=r"^$|^[\w-]+$"),
     repo=Depends(get_message_repo),
 ):
     rows = repo.get_recent_with_metrics(

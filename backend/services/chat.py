@@ -2,10 +2,9 @@ import asyncio
 import logging
 import re
 import uuid
+from typing import Protocol
 
-from fastapi import BackgroundTasks
-
-from backend.api.schemas import ChatResponse
+from backend.contracts import AttachmentInfo, ChatResponse
 from backend.metabolisation.daemon_trigger_signal import enqueue_dream_trigger
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
 from backend.services.annotations import (
@@ -28,6 +27,10 @@ from backend.utils.parsers.skill import parse_skill_nucleation_tags
 from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)
+
+
+class BackgroundTaskSink(Protocol):
+    def add_task(self, func, *args, **kwargs) -> None: ...
 
 
 # ── Response artifact parsing ───────────────────────────────────────────
@@ -94,7 +97,7 @@ class ChatService:
         attachments: list[dict] | None = None,
         include_structural_scoring: bool | None = None,
         max_tokens_override: int | None = None,
-        background_tasks: BackgroundTasks | None = None,
+        background_tasks: BackgroundTaskSink | None = None,
         parent_message_id: int | None = None,
         agent_id: str | None = None,
     ) -> ChatResponse:
@@ -132,7 +135,7 @@ class ChatService:
         attachments: list[dict] | None = None,
         include_structural_scoring: bool | None = None,
         max_tokens_override: int | None = None,
-        background_tasks: BackgroundTasks | None = None,
+        background_tasks: BackgroundTaskSink | None = None,
         parent_message_id: int | None = None,
         agent_id: str | None = None,
     ) -> ChatResponse:
@@ -264,7 +267,7 @@ class ChatService:
         user_message_id: int,
         max_tokens_override: int | None = None,
         include_structural_scoring: bool | None = None,
-        background_tasks: BackgroundTasks | None = None,
+        background_tasks: BackgroundTaskSink | None = None,
         attachments: list[dict] | None = None,
     ) -> ChatResponse:
         state = self._state
@@ -619,6 +622,19 @@ class ChatService:
 
     @staticmethod
     def _build_response_attachments(attachments, result):
-        from backend.api.helpers import _build_response_attachments
-
-        return _build_response_attachments(attachments, result)
+        if not attachments:
+            return None
+        response_attachments: list[AttachmentInfo] = []
+        for attachment in attachments:
+            content = attachment.get("content", "")
+            if isinstance(content, bytes):
+                content = content.decode("utf-8", errors="replace")
+            response_attachments.append(
+                AttachmentInfo(
+                    file_name=attachment.get("file_name", ""),
+                    file_type=attachment.get("file_type", "txt"),
+                    token_count=estimate_tokens(content) if content else 0,
+                    preview=content[:200] if content else None,
+                )
+            )
+        return response_attachments

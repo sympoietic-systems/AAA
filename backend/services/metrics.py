@@ -1,6 +1,6 @@
 import json
 
-from backend.api.schemas import MetricsInfo
+from backend.contracts import HomeostaticRecommendations, MetricsInfo
 
 
 class MetricsService:
@@ -113,8 +113,6 @@ class MetricsService:
 
     @staticmethod
     def build_recommendations(recs: dict | None):
-        from backend.api.schemas import HomeostaticRecommendations
-
         if not recs:
             return None
         return HomeostaticRecommendations(

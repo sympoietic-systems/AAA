@@ -1,38 +1,38 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
 router = APIRouter()
 
 
 class NotificationCreatePayload(BaseModel):
-    id: str | None = None
-    type: str  # 'sediment', 'glitch', 'trace'
-    snippet: str
-    timestamp: str | None = None
-    conversation_id: str | None = None
+    id: str | None = Field(default=None, max_length=100)
+    type: str = Field(..., min_length=1, max_length=50)  # 'sediment', 'glitch', 'trace'
+    snippet: str = Field(..., min_length=1, max_length=10_000)
+    timestamp: str | None = Field(default=None, max_length=50)
+    conversation_id: str | None = Field(default=None, max_length=100)
     message_id: int | None = None
     parent_message_id: int | None = None
-    speaker: str | None = None
-    source: str | None = None
+    speaker: str | None = Field(default=None, max_length=100)
+    source: str | None = Field(default=None, max_length=500)
     read: int = 0
     dismissed: int = 0
-    source_type: str | None = None
-    source_id: str | None = None
+    source_type: str | None = Field(default=None, max_length=100)
+    source_id: str | None = Field(default=None, max_length=100)
 
 
 class ClearPayload(BaseModel):
-    type: str | None = None
+    type: str | None = Field(default=None, max_length=50)
 
 
 @router.get("/notifications", response_model=list[dict[str, Any]])
 def list_notifications(
     dismissed: bool | None = None,
-    type: str | None = None,
-    search: str | None = None,
-    limit: int = 100,
-    offset: int = 0,
+    type: str | None = Query(default=None, max_length=50),
+    search: str | None = Query(default=None, max_length=500),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     request: Request = None,
 ):
     state = request.app.state

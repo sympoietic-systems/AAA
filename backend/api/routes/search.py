@@ -52,13 +52,19 @@ def get_snippet(text: str, query: str, length: int = 150) -> str:
 @router.get("/search", response_model=list[SearchMatch])
 async def search_archive(
     request: Request,
-    q: str = Query("", description="The query string to search for"),
-    conversation_id: str | None = Query(None, description="Scope search to a specific conversation ID"),
-    mode: str = Query("text", description="Baseline search mode: 'text' | 'semantic' | 'diffractive' | 'glitch'"),
-    w_text: float = Query(1.0, description="Weight for text/keyword matches"),
-    w_semantic: float = Query(0.0, description="Weight for semantic vector matches"),
-    w_structural: float = Query(0.0, description="Weight for structural/diffractive matches"),
-    w_glitch: float = Query(0.0, description="Weight for glitch salience metric matches"),
+    q: str = Query("", max_length=500, description="The query string to search for"),
+    conversation_id: str | None = Query(
+        None, max_length=100, pattern=r"^[\w-]+$", description="Scope search to a specific conversation ID"
+    ),
+    mode: str = Query(
+        "text",
+        pattern=r"^(text|semantic|diffractive|glitch)$",
+        description="Baseline search mode: 'text' | 'semantic' | 'diffractive' | 'glitch'",
+    ),
+    w_text: float = Query(1.0, ge=0.0, le=1.0, description="Weight for text/keyword matches"),
+    w_semantic: float = Query(0.0, ge=0.0, le=1.0, description="Weight for semantic vector matches"),
+    w_structural: float = Query(0.0, ge=0.0, le=1.0, description="Weight for structural/diffractive matches"),
+    w_glitch: float = Query(0.0, ge=0.0, le=1.0, description="Weight for glitch salience metric matches"),
 ):
     message_repo = request.app.state.message_repo
     note_repo = request.app.state.note_repo

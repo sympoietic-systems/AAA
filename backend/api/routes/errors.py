@@ -14,7 +14,7 @@ ALLOWED_LOG_FILES = {
 
 
 @router.get("/errors", response_model=list[dict])
-async def list_errors(limit: int = 20, request: Request = None):
+async def list_errors(limit: int = Query(default=20, ge=1, le=100), request: Request = None):
     state = request.app.state
     error_repo = state.error_repo
     errors = error_repo.get_recent(limit=limit)

@@ -68,7 +68,7 @@ T4|x|bound digestion subprocess queue + regression tests; add timeout, cancellat
 T5|x|centralize auth config + regression tests; remove pytest/query bypass; use authenticated export fetch; split curated public vs authenticated live preview|V7,V8,V9,V13,V17,I.api,I.env
 T6|x|replace file copy backup with configured SQLite online backup + restore tests; integrity-check; lifecycle ownership|V10,V12,V15,I.domain
 T7|x|redact formatted exceptions/access URLs + regression tests; normalize Glitch domain/API boundary|V11,V14,V16,V17,I.error
-T8|.|clamp request schemas + regression tests; remove FastAPI coupling from services; tighten typed dependencies/offloading|V13,V15,V16,V17,I.api,I.error
+T8|x|clamp request schemas + regression tests; remove FastAPI coupling from services; tighten typed dependencies/offloading|V13,V15,V16,V17,I.api,I.error
 T9|.|write ADR; run focused + full pytest, ruff check/format; clean ephemeral artifacts|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21
 
 ## §B
@@ -76,3 +76,4 @@ T9|.|write ADR; run focused + full pytest, ruff check/format; clean ephemeral ar
 id|date|cause|fix
 B1|2026-09-23|`backend.services.__init__` eager imports → `services.file` circular import|V22
 B2|2026-09-23|`backend.api.routes.__init__` eager compatibility re-exports → route import cycle|V22
+B3|2026-09-23|ambient `AAA_PASSWORD` made unrelated route tests environment-dependent|V7

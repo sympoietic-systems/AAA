@@ -7,7 +7,6 @@ import re
 from pathlib import Path
 
 import yaml
-from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ class DailySummaryService:
     @staticmethod
     def validate_date(date_str: str) -> None:
         if not DATE_REGEX.match(date_str):
-            raise HTTPException(status_code=400, detail="Invalid date format. Expected YYYY-MM-DD.")
+            raise ValueError("Invalid date format. Expected YYYY-MM-DD.")
 
     async def get_daily_index(self) -> dict:
         if not self.repo:

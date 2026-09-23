@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.api.deps import require_agent_flux, require_conversation
 from backend.api.schemas import (
@@ -29,10 +29,10 @@ router = APIRouter()
 @router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
     request: Request,
-    tag: str | None = None,
-    search: str | None = None,
-    limit: int | None = None,
-    offset: int | None = None,
+    tag: str | None = Query(default=None, max_length=100),
+    search: str | None = Query(default=None, max_length=500),
+    limit: int | None = Query(default=None, ge=1, le=100),
+    offset: int | None = Query(default=None, ge=0),
 ):
     state = request.app.state
     conv_repo = getattr(state, "conversation_repo", None)
@@ -40,8 +40,8 @@ async def list_conversations(
     if not conv_repo:
         return ConversationListResponse(conversations=[], total_count=0, has_more=False)
 
-    safe_limit = max(1, min(limit, 100)) if limit is not None else None
-    safe_offset = max(0, offset) if offset is not None else (0 if limit is not None else None)
+    safe_limit = limit
+    safe_offset = offset if offset is not None else (0 if limit is not None else None)
 
     def _fetch_conversations():
         convos = conv_repo.list_all(tag=tag, search=search, limit=safe_limit, offset=safe_offset)

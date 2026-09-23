@@ -3,66 +3,37 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from backend import contracts as _contracts
 
-class AttachmentInfo(BaseModel):
-    file_name: str
-    file_type: str
-    token_count: int = 0
-    preview: str | None = None
+AttachmentInfo = _contracts.AttachmentInfo
+ChatResponse = _contracts.ChatResponse
+HomeostaticRecommendations = _contracts.HomeostaticRecommendations
+MetricsInfo = _contracts.MetricsInfo
+ProposedBranch = _contracts.ProposedBranch
 
 
 class ChatRequest(BaseModel):
-    content: str = Field(..., min_length=1, max_length=100_000)
-    speaker: str = Field(default="human", pattern=r"^(human|apparatus|[\w-]+)$")
-    conversation_id: str = Field(default="", description="Conversation ID; auto-created if empty")
-    attachments: list[AttachmentInfo] | None = None
+    content: str = Field(..., min_length=1, max_length=50_000)
+    speaker: str = Field(default="human", max_length=100, pattern=r"^(human|apparatus|[\w-]+)$")
+    conversation_id: str = Field(
+        default="", max_length=100, pattern=r"^$|^[\w-]+$", description="Conversation ID; auto-created if empty"
+    )
+    attachments: list[AttachmentInfo] | None = Field(default=None, max_length=100)
     include_structural_scoring: bool | None = None
-    max_tokens: int | None = Field(default=None, description="Override max_tokens for this request")
-    parent_message_id: int | None = Field(default=None, description="Parent message ID for conversation branching")
-    agent_id: str | None = Field(default=None, description="Optional calling agent name")
+    max_tokens: int | None = Field(default=None, ge=1, le=131_072, description="Override max_tokens for this request")
+    parent_message_id: int | None = Field(
+        default=None, ge=1, description="Parent message ID for conversation branching"
+    )
+    agent_id: str | None = Field(
+        default=None, max_length=100, pattern=r"^[\w-]+$", description="Optional calling agent name"
+    )
 
 
 class GenerateRequest(BaseModel):
-    conversation_id: str
-    user_message_id: int
-    max_tokens: int | None = Field(default=None, description="Override max_tokens for this request")
+    conversation_id: str = Field(..., min_length=1, max_length=100, pattern=r"^[\w-]+$")
+    user_message_id: int = Field(..., ge=1)
+    max_tokens: int | None = Field(default=None, ge=1, le=131_072, description="Override max_tokens for this request")
     include_structural_scoring: bool | None = None
-
-
-class ProposedBranch(BaseModel):
-    title: str
-    content: str
-
-
-class ChatResponse(BaseModel):
-    id: int | None = None
-    timestamp: datetime | None = None
-    conversation_id: str = ""
-    speaker: str
-    content: str
-    thinking: str | None = None
-    content_tokens: int = 0
-    thinking_tokens: int | None = None
-    embedding_generated: bool = False
-    error: str | None = None
-    metrics: Optional["MetricsInfo"] = None
-    homeostatic_recommendations: Optional["HomeostaticRecommendations"] = None
-    attachments: list[AttachmentInfo] | None = None
-    context_sent: str | None = None
-    model_used: str | None = None
-    provider_used: str | None = None
-    structural_justification: str | None = None
-    user_message_id: int | None = None
-    user_structural_signature: list[float] | None = None
-    user_structural_justification: str | None = None
-    truncated: bool | None = Field(default=None, description="Whether response was truncated by token limit")
-    finish_reason: str | None = Field(default=None, description="LLM finish reason (stop, length, max_tokens)")
-    active_skills: list[str] = Field(default_factory=list, description="Skill names active for this response")
-    active_beliefs: list[str] = Field(
-        default_factory=list, description="Belief labels in the attractor window for this response"
-    )
-    parent_message_id: int | None = None
-    proposed_branches: list[ProposedBranch] | None = None
 
 
 class HistoryMessage(BaseModel):
@@ -197,32 +168,6 @@ class WorkshopResponse(BaseModel):
     events: list[dict] = []
 
 
-class MetricsInfo(BaseModel):
-    pairwise_similarity: float | None = None
-    conceptual_novelty: float | None = None
-    rolling_entropy: float | None = None
-    coupling_coherence: float | None = None
-    agent_self_divergence: float | None = None
-    reverse_perturbation: float | None = None
-    surprise_index: float | None = None
-    mutual_perturbation: float | None = None
-    homeostatic_deficit: float | None = None
-    conversation_vitality: float | None = None
-    boringness: float | None = None
-    conceptual_velocity: float | None = None
-    divergence_resolution_ratio: float | None = None
-    paskian_health: float | None = None
-    phase_shifts: list[dict] | None = None
-
-
-class HomeostaticRecommendations(BaseModel):
-    temperature: dict | None = None
-    presence_penalty: dict | None = None
-    frequency_penalty: dict | None = None
-    state: str = "healthy"
-    triggered_flags: list[str] = []
-
-
 class MetricsResponse(BaseModel):
     window_size: int
     aggregates: dict
@@ -297,7 +242,7 @@ class ConversationListResponse(BaseModel):
 
 
 class ConversationUpdateRequest(BaseModel):
-    title: str = Field(..., min_length=1, max_length=500)
+    title: str = Field(..., min_length=1, max_length=200)
 
 
 class ConversationTokenInfo(BaseModel):
@@ -316,9 +261,9 @@ class TokenResponse(BaseModel):
 
 
 class BackgroundTaskRequest(BaseModel):
-    action: str
-    conversation_id: str | None = None
-    text: str | None = None
+    action: str = Field(..., min_length=1, max_length=100)
+    conversation_id: str | None = Field(default=None, max_length=100, pattern=r"^[\w-]+$")
+    text: str | None = Field(default=None, max_length=50_000)
     context: dict | None = None
     use_vision: bool = False
 
@@ -351,7 +296,7 @@ class NoteCreateRequest(BaseModel):
     asset_type: str = Field(default="conversation_message", max_length=100)
     asset_id: str = Field(default="", max_length=100)
     conversation_id: str | None = Field(default=None, max_length=100)
-    selected_text: str = Field(..., min_length=1, max_length=100_000)
+    selected_text: str = Field(..., min_length=1, max_length=50_000)
     comment: str = Field(default="", max_length=50_000)
     visibility: Literal["personal", "shared", "agent"] = "personal"
     start_offset: int | None = None
@@ -424,9 +369,9 @@ class TagCreateRequest(BaseModel):
 
 
 class CommitBranchRequest(BaseModel):
-    parent_message_id: int
-    content: str
-    speaker: str = "apparatus"
+    parent_message_id: int = Field(..., ge=1)
+    content: str = Field(..., min_length=1, max_length=50_000)
+    speaker: str = Field(default="apparatus", max_length=100)
 
 
 class TreeNode(BaseModel):

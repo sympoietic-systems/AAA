@@ -1,9 +1,8 @@
 from fastapi import HTTPException, Request
 
+from backend.contracts import AttachmentInfo
 from backend.utils.security import DEFAULT_MAX_FILE_SIZE, validate_file_upload
 from backend.utils.token_counter import estimate_tokens
-
-from .schemas import AttachmentInfo
 
 
 async def _parse_chat_request(
