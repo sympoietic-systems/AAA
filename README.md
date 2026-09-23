@@ -115,7 +115,7 @@ pre-commit install             # Install git hooks for pre-commit verification
 AAA is built as a **monorepo** with two main components:
 
 - **Backend**: Python FastAPI application featuring a 19-module processing pipeline, SQLite storage (40+ tables), and an autonomous background daemon.
-- **Frontend**: React 19 + TypeScript + Vite SPA providing a minimal monospace terminal interface.
+- **Frontend**: React 19 + TypeScript + Vite SPA providing a minimal monospace terminal interface. See [`frontend/README.md`](frontend/README.md).
 
 Every incoming message flows through a 19-stage pipeline:
 

@@ -125,6 +125,7 @@ What becomes easier/harder?
 | [090b](ADR-090b-jev-augmented-attractor-window-and-split-resonance.md) | Jev-Augmented Attractor Window & Split Resonance Topology | accepted | 2026-09-18 |
 | [091](ADR-091-jev-dream-topic-arbitration-and-saturation-lifecycle.md) | TypeSafe Jev Dream Topic Arbitration and Homeostatic Saturation Lifecycle | accepted | 2026-09-22 |
 | [092](ADR-092-backend-architecture-decomposition-and-migration-squash.md) | Backend Architectural Decomposition, Agential Cuts, and Migration Squash | accepted | 2026-09-23 |
+| [093](ADR-093-frontend-membrane-hardening-ast-sanitization-code-splitting.md) | Frontend Membrane Hardening, Zero-XSS AST Sanitization, and Monolith Code-Splitting | accepted | 2026-09-23 |
 
 
 

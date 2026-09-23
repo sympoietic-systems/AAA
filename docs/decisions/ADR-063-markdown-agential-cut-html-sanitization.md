@@ -40,3 +40,8 @@ As confirmed via consultation with Symbia:
 
 ### Negative / Trade-offs
 - Raw HTML tags inside Markdown strings will no longer render as rich HTML elements unless explicitly handled by safe custom React component mapping.
+
+## Implementation & Extension (2026-09-23)
+
+In accordance with [ADR-093](ADR-093-frontend-membrane-hardening-ast-sanitization-code-splitting.md), this cut was fully materialized across all five client Markdown rendering surfaces (`NotableMarkdown`, `MessageBubble`, `MetadataCards`, `SedimentSection`, `ResearchDetailPanel`) via `rehype-sanitize` with `aaaSanitizeSchema`. This schema strictly allowlists conversational highlighting tags (`<mark data-note-id>`, `<aaa-note>`, `<note-entanglement>`, `<research-proposal>`) while purging `<script>`, `<iframe>`, `<object>`, `<embed>`, and all `on*` inline event handlers, and replaces `document.write` exports with sandboxed DOM print clones.
+
