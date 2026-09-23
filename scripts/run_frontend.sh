@@ -37,9 +37,9 @@ fi
 
 cd "$FRONTEND_DIR"
 
-# Install deps if needed
-if [ ! -d "node_modules" ]; then
-    echo "[INFO] Installing frontend dependencies..."
+# Install or sync deps if missing or package.json was updated
+if [ ! -d "node_modules" ] || [ ! -d "node_modules/rehype-sanitize" ] || [ "package.json" -nt "node_modules/.package-lock.json" ]; then
+    echo "[INFO] Installing / updating frontend dependencies..."
     npm install
 fi
 
