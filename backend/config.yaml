@@ -431,6 +431,9 @@ uploads:
   max_concurrent_workers: 3
   worker_timeout_seconds: 1800
 
+backup:
+  keep: 3
+
 server:
   host: "127.0.0.1"
   port: 8499

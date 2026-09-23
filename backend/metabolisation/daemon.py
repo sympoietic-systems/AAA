@@ -97,6 +97,11 @@ class AutopoieticDreamDaemon(
             self._task.cancel()
         logger.info("Autopoietic Dream Daemon stopped.")
 
+    async def aclose(self) -> None:
+        self.stop()
+        if self._task:
+            await asyncio.gather(self._task, return_exceptions=True)
+
     def get_status(self) -> dict:
         now = time.time()
         last_msg_ts = self.message_repo.get_last_message_timestamp()

@@ -6,49 +6,22 @@ Extracted from backend/main.py.
 import asyncio
 import logging
 import os
-import shutil
-from datetime import datetime
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-async def _db_backup_loop():
+async def _db_backup_loop(db_path, backup_dir, keep: int = 3):
     """Run a DB backup on startup, then every 24 hours. Keeps last 3."""
-    DB_PATH = Path(__file__).resolve().parent.parent / "data" / "aaa.db"
-    BACKUP_DIR = DB_PATH.parent / "backups"
-    MAX_BACKUPS = 3
+    from backend.services.backup import create_verified_backup
 
     async def do_backup():
-        if not DB_PATH.exists():
+        if not db_path.exists():
             return
-        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-        today = datetime.now().strftime("%Y%m%d")
-        backup_path = BACKUP_DIR / f"aaa_backup_{today}.db"
-        if backup_path.exists():
-            return  # already done today
         try:
-            new_size = DB_PATH.stat().st_size
-            shutil.copy2(str(DB_PATH), str(backup_path))
-            logger.info("DB backup created: %s (%dB)", backup_path, new_size)
-
-            # Prune old backups — but only if new one is not suspiciously smaller
-            existing = sorted(BACKUP_DIR.glob("aaa_backup_*.db"), key=os.path.getmtime, reverse=True)
-            if len(existing) > MAX_BACKUPS:
-                # Check previous backup size ratio
-                prev_size = existing[1].stat().st_size if len(existing) > 1 else new_size
-                if new_size < prev_size * 0.3:
-                    logger.warning(
-                        "New backup (%dB) is <30%% of previous (%dB) — keeping old backups as safety",
-                        new_size,
-                        prev_size,
-                    )
-                    return
-                for old in existing[MAX_BACKUPS:]:
-                    old.unlink()
-                    logger.info("Pruned old backup: %s", old)
-        except Exception as e:
-            logger.warning("DB backup failed: %s", e)
+            backup_path = await asyncio.to_thread(create_verified_backup, db_path, backup_dir, keep=keep)
+            logger.info("DB backup created and verified: %s", backup_path)
+        except Exception:
+            logger.exception("DB backup failed")
 
     # Run immediately on startup
     await do_backup()
@@ -59,9 +32,16 @@ async def _db_backup_loop():
         await do_backup()
 
 
-def _start_db_backup_loop():
+def _start_db_backup_loop(app_state):
     """Launch the DB backup loop as a background task."""
-    asyncio.create_task(_db_backup_loop())
+    from backend.storage.database import get_db_path
+
+    config = getattr(app_state, "config", {})
+    db_path = get_db_path(config.get("database", {}).get("path", "data/aaa.db"))
+    backup_cfg = config.get("backup", {})
+    backup_dir = db_path.parent / "backups"
+    task = asyncio.create_task(_db_backup_loop(db_path, backup_dir, keep=int(backup_cfg.get("keep", 3))))
+    app_state.db_backup_task = task
     logger.info("DB backup loop started")
 
 
@@ -167,4 +147,4 @@ def _start_background_services(app_state):
     dream_daemon.start()
 
     # Daily DB backup — runs once on startup, then every 24h
-    _start_db_backup_loop()
+    _start_db_backup_loop(app_state)

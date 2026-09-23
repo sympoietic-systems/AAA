@@ -5,6 +5,7 @@ Orchestrates the full startup sequence: config → DB → embedder → LLM →
 modules → beliefs → skills → pipeline → background → services.
 """
 
+import asyncio
 import contextlib
 import logging
 from contextlib import asynccontextmanager
@@ -176,10 +177,18 @@ async def lifespan(app: FastAPI):
     _start_background_services(app.state)
 
     logger.info("All modules initialized. Server ready.")
-    yield
-    logger.info("Shutting down.")
-    if hasattr(app.state, "dream_daemon"):
-        app.state.dream_daemon.stop()
+    try:
+        yield
+    finally:
+        logger.info("Shutting down.")
+        if hasattr(app.state, "startup_scheduler"):
+            await app.state.startup_scheduler.aclose()
+        if hasattr(app.state, "dream_daemon"):
+            await app.state.dream_daemon.aclose()
+        backup_task = getattr(app.state, "db_backup_task", None)
+        if backup_task:
+            backup_task.cancel()
+            await asyncio.gather(backup_task, return_exceptions=True)
 
 
 # ── App factory ────────────────────────────────────────────────────────

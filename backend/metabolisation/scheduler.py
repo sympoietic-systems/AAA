@@ -26,12 +26,18 @@ class BackgroundStartupScheduler:
         self._belief_turns_completed = 0
         self._belief_turns_failed = 0
         self._error_details = None
+        self._task: asyncio.Task | None = None
         # Backfill state
         self._signatures_backfilled = 0
         self._metrics_backfilled = 0
 
     def start(self) -> None:
-        asyncio.create_task(self._run_scheduler())
+        self._task = asyncio.create_task(self._run_scheduler())
+
+    async def aclose(self) -> None:
+        if self._task and not self._task.done():
+            self._task.cancel()
+            await asyncio.gather(self._task, return_exceptions=True)
 
     def get_status(self) -> dict[str, Any]:
         return {
