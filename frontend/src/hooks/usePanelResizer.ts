@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 
 interface PanelResizerOptions {
   storageKey: string
@@ -30,10 +30,15 @@ export function usePanelResizer({
     }
   })
   const widthRef = useRef(width)
-  widthRef.current = width
-
   const maxWidthRef = useRef(computeMaxWidth)
-  maxWidthRef.current = computeMaxWidth
+
+  useEffect(() => {
+    widthRef.current = width
+  }, [width])
+
+  useEffect(() => {
+    maxWidthRef.current = computeMaxWidth
+  }, [computeMaxWidth])
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()

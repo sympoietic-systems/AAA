@@ -1,15 +1,18 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   metricsState,
   subscribeMetrics,
   refreshMetricsForce,
   daemonState,
   subscribeDaemon,
-  schedulerState,
-  subscribeScheduler,
 } from '../telemetryStore'
 
-vi.mock('../api/client', () => ({
+vi.mock('../notificationStore', () => ({
+  addNotification: vi.fn(),
+  dismissByMatch: vi.fn(),
+}))
+
+vi.mock('../../api/client', () => ({
   getMetrics: vi.fn().mockResolvedValue({ vitality: 0.5 }),
   getDaemonStatus: vi.fn().mockResolvedValue({ status: 'running' }),
   getSchedulerStatus: vi.fn().mockResolvedValue({ status: 'idle' }),
@@ -17,13 +20,23 @@ vi.mock('../api/client', () => ({
   getTokens: vi.fn().mockResolvedValue({ tokens: 0 }),
 }))
 
-afterEach(() => {
-  vi.clearAllMocks()
-})
-
 function flushPromises() {
   return new Promise((resolve) => setTimeout(resolve, 0))
 }
+
+beforeEach(() => {
+  metricsState.data = null
+  metricsState.loading = false
+  metricsState.error = null
+  daemonState.data = null
+  daemonState.loading = false
+  daemonState.error = null
+})
+
+afterEach(async () => {
+  vi.clearAllMocks()
+  await flushPromises()
+})
 
 describe('telemetryStore', () => {
   it('exports initial state', () => {
@@ -32,11 +45,12 @@ describe('telemetryStore', () => {
     expect(metricsState.error).toBeNull()
   })
 
-  it('subscribe returns an unsubscribe function', () => {
+  it('subscribe returns an unsubscribe function', async () => {
     const listener = vi.fn()
     const unsub = subscribeMetrics(listener)
     expect(typeof unsub).toBe('function')
     unsub()
+    await flushPromises()
   })
 
   it('starts polling and sets loading true on subscribe', async () => {

@@ -1,4 +1,4 @@
-import React, { memo } from "react"
+import { memo } from "react"
 import type { ResearchTask } from "../../../../api/research"
 import { KeyValueGrid } from "../../../UI"
 import { BracketHeader } from "../shared/BracketHeader"

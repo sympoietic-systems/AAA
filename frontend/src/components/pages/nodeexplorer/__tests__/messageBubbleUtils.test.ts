@@ -82,7 +82,8 @@ describe('areNotesEqual', () => {
   function makeNote(overrides: Partial<NoteInfo> = {}): NoteInfo {
     return {
       id: 'n1',
-      message_id: 1,
+      asset_type: 'conversation_message',
+      asset_id: '1',
       selected_text: 'hello',
       comment: 'world',
       visibility: 'personal',

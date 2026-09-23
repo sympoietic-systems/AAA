@@ -25,13 +25,22 @@
   /* UI Surface/Text/Border tokens */
   --color-ui-primary: #ccc;
   --color-ui-secondary: #bbb;
-  --color-ui-dim: #555;
+  --color-ui-dim: #7e8590;
   --color-ui-border: #222;
 
   /* Note visibility accents */
   --color-note-personal: #eab308;
   --color-note-shared: #a855f7;
   --color-note-agent: #22d3ee;
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--color-action-hover);
+  outline-offset: 2px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 body {

@@ -4,6 +4,7 @@ import type { NoteInfo } from "../../api/client"
 interface NotesSectionProps {
   notes: NoteInfo[]
   onDeleteNote?: (noteId: string) => void
+  onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   onNavigate?: (noteId: string) => void
 }
 

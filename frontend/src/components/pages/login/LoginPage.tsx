@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useRef } from "react"
+import React, { memo, useState, useRef } from "react"
 import { UnifiedFooter } from "../../UI"
 
 interface Props {

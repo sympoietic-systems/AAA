@@ -1,16 +1,15 @@
-import React, { memo, useState, useEffect, useCallback } from "react"
+import { memo, useState, useEffect, useCallback } from "react"
 import type { TaskStepsResponse, StepPreview } from "../../../../api/research"
 import { getTaskSteps, executeStep, rerunTask, getStepPreview, reinitializeTask } from "../../../../api/research"
 import { TwoPanelLayout } from "../shared/TwoPanelLayout"
 import { StepPipeline } from "../steps/StepPipeline"
 import { StepDetailPanel } from "../steps/StepDetailPanel"
 
-export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, onRefreshTask, onSelectTab, externalStepId }: {
+export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, onRefreshTask, externalStepId }: {
   taskId: string
   orchPhase: string
   taskStatus: string
   onRefreshTask?: () => void
-  onSelectTab?: (tabId: "info" | "steps" | "report") => void
   externalStepId?: string | null
 }) {
   const [data, setData] = useState<TaskStepsResponse | null>(null)
@@ -131,7 +130,6 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
           preview={preview}
           prevLoading={prevLoading}
           onReinitialize={reinitAndFetch}
-          onSelectTab={onSelectTab}
         />
       }
     />

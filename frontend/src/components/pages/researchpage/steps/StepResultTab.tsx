@@ -23,7 +23,7 @@ interface StepResultTabProps {
   noteHook: NotableContentHooks
 }
 
-const RESULT_RENDERERS: Record<string, typeof SearchResult> = {
+const RESULT_RENDERERS: Record<string, React.ComponentType<any>> = {
   search: SearchResult,
   parallel_parse: ParseResult,
   plan: PlanResult,

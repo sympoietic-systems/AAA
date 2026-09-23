@@ -155,7 +155,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
 
     if (tab === "notes") {
       setNotesLoading(true)
-      getNotes(convId)
+      getNotes({ conversationId: convId })
         .then(n => setNotes(n))
         .catch(() => setNotes([]))
         .finally(() => setNotesLoading(false))
@@ -493,12 +493,12 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
                           if (note) window.open(`/nodes?c=${displayConv.id}&m=${note.asset_id}`, '_blank')
                         }}
                         onDeleteNote={(noteId) => {
-                          deleteNote(displayConv.id, noteId).then(() => {
+                          deleteNote(noteId).then(() => {
                             setNotes(prev => (prev || []).filter(n => n.id !== noteId))
                           }).catch(() => {})
                         }}
-                        onUpdateNote={(noteId, comment, visibility) => {
-                          updateNote(displayConv.id, noteId, comment, visibility).then((updated) => {
+                        onUpdateNote={(noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => {
+                          updateNote(noteId, comment, visibility).then((updated) => {
                             setNotes(prev => (prev || []).map(n => n.id === noteId ? updated : n))
                           }).catch(() => {})
                         }}

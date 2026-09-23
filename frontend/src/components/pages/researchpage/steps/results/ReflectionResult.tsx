@@ -14,8 +14,8 @@ export const ReflectionResult = memo(function ReflectionResult({ parsedResult, n
 
   const signalFlags: string[] = parsedResult.signal_flags || []
   if (fidelity < 0.6 && !signalFlags.includes("GLITCH_FIDELITY_LOW")) signalFlags.push("GLITCH_FIDELITY_LOW")
-  if (parsedResult.detected_biases?.length > 0 && !signalFlags.includes("BIAS_DETECTED")) signalFlags.push("BIAS_DETECTED")
-  if (parsedResult.knowledge_gaps?.length >= 3 && !signalFlags.includes("GAP_CRITICAL")) signalFlags.push("GAP_CRITICAL")
+  if ((parsedResult.detected_biases?.length ?? 0) > 0 && !signalFlags.includes("BIAS_DETECTED")) signalFlags.push("BIAS_DETECTED")
+  if ((parsedResult.knowledge_gaps?.length ?? 0) >= 3 && !signalFlags.includes("GAP_CRITICAL")) signalFlags.push("GAP_CRITICAL")
 
   return (
     <div className="border-t border-ui-border pt-2 space-y-4 font-mono">

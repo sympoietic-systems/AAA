@@ -18,7 +18,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const executeSearch = useCallback(async (searchQuery: string, currentScope: "current" | "all", currentMode: "text" | "semantic" | "diffractive" | "glitch") => {
     // If no query and not glitch mode, clear results

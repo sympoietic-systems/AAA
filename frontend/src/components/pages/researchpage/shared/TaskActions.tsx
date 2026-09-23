@@ -23,8 +23,7 @@ interface TaskActionsProps {
 }
 
 export const TaskActions = memo(function TaskActions({
-  taskId, taskStatus, taskObjective, taskTitle,
-  maxDepth, maxBreadth, isAgonistic, budgetLimitUsd,
+  taskId, taskStatus, taskTitle,
   onRefreshTask, task,
 }: TaskActionsProps) {
   const [showContinue, setShowContinue] = useState(false)

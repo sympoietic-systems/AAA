@@ -77,7 +77,7 @@ export function AgentPage({ onGoHome }: Props) {
       <HeaderContainer>
         <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none flex items-center gap-1.5">
           <HeaderIndicator intent="purple" />
-          <HeaderLogo href="/nodes" />
+          <HeaderLogo onClick={onGoHome} href="/nodes" />
           <HeaderSeparator />
           <HeaderLabel intent="purple">agent</HeaderLabel>
         </span>

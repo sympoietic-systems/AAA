@@ -34,10 +34,8 @@ export function useChat(conversationId: string) {
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
 
-  // Synchronously reset conversation-specific states when the active thread changes
-  const lastConversationIdRef = useRef(conversationId)
-  if (lastConversationIdRef.current !== conversationId) {
-    lastConversationIdRef.current = conversationId
+  // Reset conversation-specific states when the active thread changes
+  useEffect(() => {
     setMessages([])
     setLinks([])
     setTreeNodes([])
@@ -47,7 +45,7 @@ export function useChat(conversationId: string) {
     const targetMsgId = urlMsgId ? parseInt(urlMsgId, 10) : null
     const nextId = targetMsgId && !isNaN(targetMsgId) ? targetMsgId : null
     setActiveMessageId(nextId)
-  }
+  }, [conversationId])
 
   const loading = useMemo(() => {
     return isHistoryLoading || (activeMessageId !== null && generatingUserMessageIds.has(activeMessageId))
@@ -68,14 +66,17 @@ export function useChat(conversationId: string) {
     if (!convId) return
     try {
       const data = await getConversationTree(convId)
+      if (loadedRef.current !== convId) return
       setLinks(data.links)
       setTreeNodes(data.nodes)
-    } catch (err: any) {
+    } catch (err: unknown) {
+      if (loadedRef.current !== convId) return
       setLinks([])
       setTreeNodes([])
+      const message = err instanceof Error ? err.message : String(err)
       addNotification({
         type: "glitch",
-        snippet: `Failed to load conversation tree nodes: ${err.message || "Unknown resistance"}`,
+        snippet: `Failed to load conversation tree nodes: ${message || "Unknown resistance"}`,
         source: "Chat.fetchTree"
       })
     }

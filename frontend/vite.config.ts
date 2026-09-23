@@ -27,6 +27,32 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       allowedHosts: ['aaa.sokaris.link', '.sokaris.link', 'aaa.sympoietic.systems', '.sympoietic.systems'],
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+                return 'vendor-react'
+              }
+              if (id.includes('katex')) {
+                return 'vendor-katex'
+              }
+              if (
+                id.includes('remark') ||
+                id.includes('rehype') ||
+                id.includes('unified') ||
+                id.includes('micromark') ||
+                id.includes('hast')
+              ) {
+                return 'vendor-markdown'
+              }
+            }
+          },
+        },
+      },
+      chunkSizeWarningLimit: 600,
+    },
   }
 })
 

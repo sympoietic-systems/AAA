@@ -7,7 +7,7 @@ import { COLOR_PALETTE } from "../../config/colors"
 export interface NotableContentHooks {
   addNote: (selectedText: string, comment?: string, visibility?: "personal" | "shared" | "agent", startOffset?: number) => Promise<NoteInfo | null>
   editNote: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => Promise<NoteInfo | null>
-  removeNote: (noteId: string) => Promise<void>
+  removeNote: (noteId: string) => Promise<boolean | void>
   notes: NoteInfo[]
 }
 

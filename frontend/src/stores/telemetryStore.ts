@@ -40,8 +40,8 @@ function createPollingChannel<T>(
     try {
       const res = await fetcher()
       setState({ data: res, loading: false, error: null })
-    } catch (err: any) {
-      const errorMsg = err.message || `Failed to fetch ${name}`
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : `Failed to fetch ${name}`
       setState({ data: state.data, loading: false, error: errorMsg })
       addNotification({
         type: 'glitch',
@@ -89,8 +89,8 @@ function createPollingChannel<T>(
     try {
       const res = await fetcher()
       setState({ data: res, loading: false, error: null })
-    } catch (err: any) {
-      const errorMsg = err.message || `Failed to fetch ${name}`
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : `Failed to fetch ${name}`
       setState({ data: current.data, loading: false, error: errorMsg })
       addNotification({
         type: 'glitch',
@@ -130,8 +130,8 @@ function createKeyedPollingChannel<T>(
     try {
       const res = await fetcher(key)
       setState(key, { data: res, loading: false, error: null })
-    } catch (err: any) {
-      const errorMsg = err.message || `Failed to fetch ${name}`
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : `Failed to fetch ${name}`
       setState(key, { data: getState(key)?.data ?? null, loading: false, error: errorMsg })
       addNotification({
         type: 'glitch',
@@ -195,8 +195,8 @@ function createKeyedPollingChannel<T>(
     try {
       const res = await fetcher(key)
       setState(key, { data: res, loading: false, error: null })
-    } catch (err: any) {
-      const errorMsg = err.message || `Failed to fetch ${name}`
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : `Failed to fetch ${name}`
       setState(key, { data: getState(key)?.data ?? null, loading: false, error: errorMsg })
       addNotification({
         type: 'glitch',

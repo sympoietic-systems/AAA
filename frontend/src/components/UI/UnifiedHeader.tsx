@@ -1,4 +1,5 @@
 import React, { memo } from "react"
+import { Link } from "react-router-dom"
 
 // Outer container for the page header, ensuring consistent padding, height, border, and flex layout.
 interface HeaderContainerProps {
@@ -38,8 +39,9 @@ export const HeaderIndicator = memo(function HeaderIndicator({
 
 // Standardized bracketed action button, desaturated by default, hot orange on hover
 interface HeaderActionButtonProps {
-  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
+  onClick?: (e: React.MouseEvent<HTMLElement>) => void
   href?: string
+  to?: string
   children: React.ReactNode
   className?: string
   title?: string
@@ -49,19 +51,32 @@ interface HeaderActionButtonProps {
 export const HeaderActionButton = memo(function HeaderActionButton({
   onClick,
   href,
+  to,
   children,
   className = "",
   title,
   disabled,
 }: HeaderActionButtonProps) {
   const sharedClass = `text-[11px] text-action-dim hover:text-action-hover disabled:opacity-50 disabled:pointer-events-none transition-colors cursor-pointer select-none ${className}`
+  
+  const targetPath = to || (href && !href.startsWith("http://") && !href.startsWith("https://") && !href.startsWith("#") ? href : undefined)
+
+  if (targetPath) {
+    return (
+      <Link to={targetPath} onClick={onClick} title={title} className={sharedClass} style={{ textDecoration: "none", color: "inherit" }}>
+        [{children}]
+      </Link>
+    )
+  }
+
   if (href) {
     return (
-      <a href={href} title={title} className={sharedClass} style={{ textDecoration: "none", color: "inherit" }}>
+      <a href={href} onClick={onClick} title={title} className={sharedClass} style={{ textDecoration: "none", color: "inherit" }}>
         [{children}]
       </a>
     )
   }
+
   return (
     <button
       onClick={onClick}
@@ -78,6 +93,7 @@ export const HeaderActionButton = memo(function HeaderActionButton({
 interface HeaderLogoProps {
   onClick?: () => void
   href?: string
+  to?: string
   children?: React.ReactNode
   className?: string
   title?: string
@@ -86,18 +102,30 @@ interface HeaderLogoProps {
 export const HeaderLogo = memo(function HeaderLogo({
   onClick,
   href,
+  to,
   children = "symbia",
   className = "",
   title = "Home",
 }: HeaderLogoProps) {
   const sharedClass = `text-[11px] text-semantic-header hover:text-[#eee] tracking-widest uppercase transition-colors ${className}`
+  const targetPath = to || (href && !href.startsWith("http://") && !href.startsWith("https://") ? href : undefined)
+
+  if (targetPath) {
+    return (
+      <Link to={targetPath} onClick={onClick} title={title} className={sharedClass} style={{ textDecoration: "none", color: "inherit" }}>
+        {children}
+      </Link>
+    )
+  }
+
   if (href) {
     return (
-      <a href={href} title={title} className={sharedClass} style={{ textDecoration: "none", color: "inherit" }}>
+      <a href={href} onClick={onClick} title={title} className={sharedClass} style={{ textDecoration: "none", color: "inherit" }}>
         {children}
       </a>
     )
   }
+
   if (onClick) {
     return (
       <button onClick={onClick} title={title} className={`cursor-pointer ${sharedClass}`}>
@@ -105,6 +133,7 @@ export const HeaderLogo = memo(function HeaderLogo({
       </button>
     )
   }
+
   return (
     <span className={`text-[11px] text-semantic-header tracking-widest uppercase ${className}`}>
       {children}

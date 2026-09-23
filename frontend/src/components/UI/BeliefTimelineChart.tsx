@@ -102,6 +102,7 @@ export function BeliefTimelineChart({ points, spanDays, bucketSize, beliefLabel 
     <div className="font-mono text-[10px] mt-2">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
+          {beliefLabel && <span className="text-[#888] font-bold">[{beliefLabel}]</span>}
           <span className="flex items-center gap-1">
             <span className="inline-block w-2 h-[1.5px] bg-[#60a5fa]" />
             <span className="text-[#93c5fd]">mass</span>

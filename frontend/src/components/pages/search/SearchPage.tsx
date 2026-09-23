@@ -17,7 +17,7 @@ export const SearchPage: React.FC = () => {
   const [wStructural, setWStructural] = useState(0.5)
   const [wGlitch, setWGlitch] = useState(0.0)
 
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const triggerSearch = useCallback(async (
     qVal: string, 

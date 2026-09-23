@@ -1,4 +1,5 @@
 import { useState, useEffect, Children } from "react"
+import { Link } from "react-router-dom"
 import { getResearchTask, approveProposal, rejectProposal, dispatchResearch } from "../../../api/client"
 
 function parseProposalChildren(children: any) {
@@ -168,7 +169,7 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
           <span className="text-semantic-gold animate-pulse">[✓ Approved & active...]</span>
         ) : status === "completed" ? (
           <span className="text-semantic-green">
-            [✓ Completed · <a href={`/research?id=${proposalId}`} className="underline hover:text-action-hover font-mono">View Report</a>]
+            [✓ Completed · <Link to={`/research?id=${proposalId}`} className="underline hover:text-action-hover font-mono">View Report</Link>]
           </span>
         ) : status === "rejected" ? (
           <span className="text-ui-dim">[✗ Dismissed]</span>
