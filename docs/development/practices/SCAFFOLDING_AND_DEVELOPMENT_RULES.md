@@ -122,6 +122,21 @@ class CustomAnalysisModule(ProcessingModule):
 *   **FastAPI Route**: Place API route definitions in [backend/api/routes.py](file:///d:/01_GIT/AAA/backend/api/routes.py). Always inject the state parameters via `request.app.state` instead of using global dependencies.
 *   **Timezones**: Use `datetime.now(timezone.utc)` for setting timestamps to maintain consistent timezone-aware formatting. For database queries expecting UTC strings, use `.replace(tzinfo=None)` safely if compared against database fields.
 
+### 2.4. Endpoint Security & Boundary Hardening Checklist
+Before exposing any new route or processing pipeline:
+1.  **Pydantic String & Array Clamping**: Enforce maximum lengths on string parameters (`max_length=50000` for user text, `max_length=200` for titles/names) and array sizes (max 100–200 items) to prevent payload bombing.
+2.  **Identifier Sanitization**: Use `sanitize_identifier(identifier, "field_name")` from [backend/utils/security.py](file:///d:/01_GIT/AAA/backend/utils/security.py) for any path/query IDs before querying SQLite.
+3.  **Four-Pillar Upload Verification**: If accepting files, invoke `validate_file_upload()` to verify file size, blocked extensions (`.exe`, `.bat`, `.sh`, `.svg`), magic byte headers, and safe filenames. Use `safe_resolve_path()` for disk writes.
+4.  **SSRF Defense**: If the endpoint or background task fetches external URLs, disallow loopback (`127.0.0.1`), private LANs, and cloud metadata (`169.254.169.254`).
+5.  **No Secret Leakage**: Verify that auth tokens and provider API keys are never returned in response bodies or logged to SQLite `error_log`.
+
+### 2.5. Agentic Scaffolding Protocol & Skill Alignment
+When an AI assistant implements new backend capabilities, align the workflow with our canonical skills:
+*   **Database Work**: Load [`.agents/skills/database-design/`](file:///d:/01_GIT/AAA/.agents/skills/database-design/SKILL.md) to verify table normalization, composite indexes, and WAL cascade safety.
+*   **API & Route Design**: Load [`.agents/skills/api-design/`](file:///d:/01_GIT/AAA/.agents/skills/api-design/SKILL.md) and [`.agents/skills/api-documentation/`](file:///d:/01_GIT/AAA/.agents/skills/api-documentation/SKILL.md) to define consistent REST verbs and status codes.
+*   **Security Auditing**: Load [`.agents/skills/app-security/`](file:///d:/01_GIT/AAA/.agents/skills/app-security/SKILL.md) and [`.agents/skills/security-review/`](file:///d:/01_GIT/AAA/.agents/skills/security-review/SKILL.md) to run pre-merge vulnerability checklists.
+*   **Testing & Invariant Backprop**: Load [`.agents/skills/testing-strategy/`](file:///d:/01_GIT/AAA/.agents/skills/testing-strategy/SKILL.md) for unit/integration mocks, and [`.agents/skills/backprop/`](file:///d:/01_GIT/AAA/.agents/skills/backprop/SKILL.md) when fixing unexpected glitches to persist invariants.
+
 ---
 
 ## 3. Frontend Scaffolding Rules
@@ -198,11 +213,11 @@ The `.pre-commit-config.yaml` runs `ruff`, `ruff-format`, and general file sanit
 
 ## 6. Architectural Consistency & Documentation
 
-### 5.1. Writing Architectural Decisions (ADR)
+### 6.1. Writing Architectural Decisions (ADR)
 When making architectural modifications, additions to external APIs, or changes to state-tracking math:
 1. Create a new markdown file in [docs/decisions/](../../decisions/) matching the format `ADR-NNN-slug.md`.
 2. Follow the template defined in [docs/decisions/README.md](../../decisions/README.md).
 3. Update the table of contents in the decisions folder index.
 
-### 5.2. Code Comments and Docstrings
+### 6.2. Code Comments and Docstrings
 Maintain high inline documentation density. Define the purpose of each function, class parameters, returned values, and mathematical logic equations (such as cybernetic feedback equations or somatic coordinate adjustments).
