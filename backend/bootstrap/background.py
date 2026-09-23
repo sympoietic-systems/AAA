@@ -122,6 +122,16 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     )
     from backend.modules.background_tasks.actions.summarize import SummarizeAction
     from backend.modules.background_tasks.actions.title import GenerateTitleAction
+    from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
+
+    typesafe_cfg = config.get("typesafe", {})
+    typesafe_client = None
+    if typesafe_cfg.get("enabled", True):
+        api_key = typesafe_cfg.get("api_key") or os.environ.get("TYPESAFE_API_KEY") or os.environ.get("AAA_LLM_API_KEY")
+        if api_key:
+            ts_cfg = dict(typesafe_cfg)
+            ts_cfg["api_key"] = api_key
+            typesafe_client = TypeSafeDecisionClient.from_config(ts_cfg)
 
     engine.register(GenerateTitleAction())
     engine.register(SummarizeAction())
@@ -129,7 +139,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     engine.register(ConversationSummaryAction())
     engine.register(DocumentCollisionAction())
     engine.register(SemanticKnotAction())
-    engine.register(DreamTopicDecisionAction())
+    engine.register(DreamTopicDecisionAction(typesafe_client=typesafe_client))
     engine.register(ResonanceFinderAction())
     engine.register(RefineSkillAction())
     engine.register(MetabolizeSkillAction())

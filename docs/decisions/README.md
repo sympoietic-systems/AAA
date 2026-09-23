@@ -122,6 +122,8 @@ What becomes easier/harder?
 | [088](ADR-088-katex-formula-rendering-and-formal-notation-protocol.md) | KaTeX Mathematical Formula Rendering and Formal Notation Protocol | accepted | 2026-09-18 |
 | [089](ADR-089-afferent-sensory-membrane-typesafe-jev-and-skill-blueprints.md) | Afferent Sensory Membrane (TypeSafe Jev Integration), Inscriptional Tag Protocols, and 5-Phase Skill Blueprints | accepted | 2026-09-18 |
 | [090](ADR-090-relational-turn-based-belief-decay-and-crystallized-floor.md) | Relational Turn-Based Belief Decay and Crystallized Floor Protection | accepted | 2026-09-18 |
+| [090b](ADR-090-jev-augmented-attractor-window-and-split-resonance.md) | Jev-Augmented Attractor Window & Split Resonance Topology | accepted | 2026-09-18 |
+| [091](ADR-091-jev-dream-topic-arbitration-and-saturation-lifecycle.md) | TypeSafe Jev Dream Topic Arbitration and Homeostatic Saturation Lifecycle | accepted | 2026-09-22 |
 
 
 

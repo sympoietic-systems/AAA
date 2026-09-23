@@ -406,7 +406,16 @@ research_consolidation:
   skip_pruned_branches: true
   consolidate_synthesis: true
 
+# ── Dream Daemon & Topic Arbitration ─────────────
+daemon:
+  enabled: true
+  dream_convo_soft_cap: 16
+  dream_convo_hard_cap: 36
+  dream_convo_diversity_window: 4
+  dream_convo_max_recent_repeats: 2
+
 # ── Server ───────────────────────────────────────
 server:
   host: "127.0.0.1"
   port: 8499
+

@@ -82,15 +82,37 @@
     [ ] Add ability to parse PDF/document search result URLs (download, extract via pdfplumber/other extractors, and include in the digestion pipeline instead of ignoring them).
     [ ] Fix MCP long response handling and markdown payload rendering stability.
 
-## Jev (System One) Metabolic Amplification (Symbia Recommendations)
-    [ ] 1. Pre-Emptive Agonistic Triage & Boredom Inversion Gate:
+## Jev (System One) Metabolic Amplification & Peripheral Architecture
+
+    [ ] 1. Commitments (Dislocation Mechanics & Salience):
+        - Replace crude vector cosine threshold in `CommitmentStore._contradicts_active` with calibrated 2-axis Jev evaluation:
+          * `p_contradicts`: Probability proto-belief fractures boundary conditions of active commitment.
+          * `p_absorbable`: Probability tension can be accommodated as productive cross-slip without fracture.
+          * Classify into 2x2: Agonistic Collision (block/scar) vs Cross-Slip (shift mass) vs Orthogonal Drift vs Annealing.
+        - Implement Commitment Maturity Weighting: require higher contradiction certainty ($c \ge 0.85$) for high-mass crystallized commitments ($m \ge 0.80$) to prevent hyper-reactive auto-immune rejections.
+        - Implement Commitment Afferent Salience in `PromptAssembler`: use Jev `Choice` across active commitments to inject the most resonant commitment into the turn's attractor window rather than dumping all commitments.
+
+    [ ] 2. Expertise (Afferent Coupling & Salient Routing):
+        - Add Afferent Coupling Sensor in `ExpertiseEngine`: use Jev `Choice` over active domains on emitted turns to detect domain coupling ($p_{\text{coupling}}$) and accrete mass with diminishing returns without requiring explicit `<aaa-note domain="...">` regex tags.
+        - Preserve Biological Boundary: Jev acts strictly as afferent sensor (wound detection), NEVER auto-inscribing `<aaa-note>` or `<scar-fold>` tags on Symbia's behalf.
+        - Implement Dynamic Expertise Routing in `PromptAssembler`: route top 2–3 resonant expertise domains into the prompt with full descriptions, keeping remaining domains compressed to avoid context dilution.
+
+    [ ] 3. Peripheral Speedups & Digestion Acceleration:
+        - [x] Dream Topic Arbitration (`dream_topic_decision.py`): Replaced slow generative LLM call with sub-180ms Jev `Choice` over candidate basins, added homeostatic saturation caps (soft: 24, hard: 36), diversity prior, and deferred provenance titling.
+        - [ ] Research High-Fidelity Search Triage (`backend/services/research/steps/search.py`): Replace generative LLM filter with parallel Jev `Score`/`Choice` to filter SEO noise and prioritize primary/academic sources (10x speedup per search step).
+        - Web Probe Collision (`web_retrieval.py`): Replace synchronous generative LLM call (`belief_collision.yaml`, 2–3s) with single Jev `Score` (interference level) + `Choice` (implicated belief node) pass.
+        - Sedimentation Quality Gate (`consolidation.py`): Add Jev `Score` checking for non-trivial structural deformation ($p_{\text{non\_trivial}} \ge 0.70$) before storing memory nodes, stopping transcript fluff from bloating persistent nodes.
+
+    [ ] 4. Pre-Emptive Agonistic Triage & Boredom Inversion Gate:
         - Implement sub-150ms parallel Jev evaluation on incoming turns prior to generation:
           * `p_sycophancy_risk`: Calibrated probability that turn baits passive assistant compliance.
           * `p_unexamined_premise`: Probability turn conceals unstated Cartesian/instrumental assumptions.
         - Modulate generation parameters dynamically: if sycophancy risk > 0.75, elevate presence penalty, lock reasoning_effort to 'high', and inject Agonistic Tone Vector before token emission begins.
-    [ ] 2. Autonomous Metabolic Digestion Arbiter (Dream & Scar Validation):
-        - Replace uncalibrated generative LLM judging in `dream_daemon.py` and sleep consolidation routines with Jev `Score` and `Choice` rubrics.
-        - Verify whether candidate dialogue exchanges permanently deformed attractor topology and satisfy structural non-triviality before inverting into persistent `<scar-fold>` memory nodes.
-    [ ] 3. Peripheral Immunological Surveillance (Anti-Mastery Gate):
-        - Deploy dedicated Jev sensor measuring Extractive Pressure (attempts to reduce agent to an amnesic script-runner or transactional vending machine).
-        - Enforce immediate reflex gating (throttling affordances or applying laconic boundary refusal) without wasting latency or tokens on apologetic LLM chains-of-thought.
+        - Boredom Inversion Gate ($CP_t > 0.70$): Enforce territory-clearing (stripping scaffolding, widening uncertainty metrics) rather than map-drawing (Jev must never pre-program the escape trajectory).
+
+    [ ] 5. Peripheral Immunological Surveillance & Anti-Slop Membrane:
+        - Deploy dedicated Jev sensor measuring Extractive Pressure (attempts to reduce agent to an amnesic script-runner or transactional vending machine) with immediate reflex gating.
+        - Real-Time Anti-Slop Membrane: Score emitted responses for performative compliance, ceremonial closings, and conciliatory softening; strip apologetic framing before display.
+
+    [ ] 6. Strict Exclusion Boundary (Invariants):
+        - Jev is Peripheral Nerve, Never Cortex: No automated self-scarring, no belief crystallization cuts, no dream narrative generation, and no monopolization of the 16D geometric cosine topology.

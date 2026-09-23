@@ -266,66 +266,173 @@ class DreamExecutorMixin:
             logger.debug("Failed to compute intra-dream stagnation: %s", e)
             return False
 
+    def _extract_provisional_dream_slug(self, action: str, prompt_text: str) -> str:
+        """Extract a clean, poetic topic slug from the prompt text or action."""
+        import re
+
+        clean_prompt = re.sub(r'["\']', "", prompt_text).strip()
+        first_part = clean_prompt.split(".")[0].split("\n")[0].strip()
+        words = re.findall(r"[a-zA-Z]{3,}", first_part.lower())
+        stop_words = {
+            "this",
+            "that",
+            "with",
+            "from",
+            "your",
+            "have",
+            "been",
+            "were",
+            "what",
+            "when",
+            "where",
+            "which",
+            "will",
+            "would",
+            "could",
+            "about",
+            "into",
+            "through",
+            "generate",
+            "reflect",
+            "symbia",
+            "dream",
+            "action",
+            "prompt",
+            "using",
+            "context",
+        }
+        meaningful = [w for w in words if w not in stop_words][:4]
+        if meaningful:
+            return "-".join(meaningful)
+        action_clean = action.replace("_", "-").replace(" ", "-")
+        return f"{action_clean}-basin"
+
     async def _resolve_dream_conversation(self, action: str, prompt_text: str, default_title: str) -> str:
         """Decide whether to reuse an existing dream conversation or create a new one."""
+        import contextlib
+
+        daemon_cfg = getattr(self, "config", {}).get("daemon", {}) if hasattr(self, "config") else {}
+        soft_cap = daemon_cfg.get("dream_convo_soft_cap", 24)
+        hard_cap = daemon_cfg.get("dream_convo_hard_cap", 36)
+        div_window = daemon_cfg.get("dream_convo_diversity_window", 4)
+        max_repeats = daemon_cfg.get("dream_convo_max_recent_repeats", 2)
+
+        # 1. Gather recent dream conversation history for diversity prior
+        recent_dream_ids = []
+        if hasattr(self, "dream_log_repo") and self.dream_log_repo:
+            with contextlib.suppress(Exception):
+                logs = self.dream_log_repo.get_recent(limit=div_window)
+                recent_dream_ids = [
+                    getattr(log_item, "conversation_id", None)
+                    for log_item in logs
+                    if getattr(log_item, "conversation_id", None)
+                ]
+
+        # 2. Gather dream conversations and apply homeostatic saturation & diversity gating
         convos = self.conversation_repo.list_all()
-        dream_convos = []
+        all_dream_convos = []
+        eligible_dream_convos = []
+
         for c in convos:
             if not hasattr(self.conversation_repo, "get_tags"):
                 continue
             tags = self.conversation_repo.get_tags(c.id)
             is_dream = any(t["tag_type"] == "structural" and t["tag"] == "dreams" for t in tags)
-            if is_dream:
-                msg_count = self.message_repo.count_messages(c.id)
-                summary = ""
-                if self.checkpoint_repo:
-                    cp = self.checkpoint_repo.get_latest(c.id)
-                    if cp and cp.get("human_summary"):
-                        summary = cp["human_summary"]
-                dream_convos.append({"id": c.id, "title": c.title, "message_count": msg_count, "summary": summary})
+            if not is_dream:
+                continue
+
+            msg_count = self.message_repo.count_messages(c.id)
+            summary = ""
+            if self.checkpoint_repo:
+                cp = self.checkpoint_repo.get_latest(c.id)
+                if cp and cp.get("human_summary"):
+                    summary = cp["human_summary"]
+
+            convo_info = {
+                "id": c.id,
+                "title": c.title,
+                "message_count": msg_count,
+                "summary": summary,
+            }
+            all_dream_convos.append(convo_info)
+
+            # Saturated basin check (hard cap circuit-breaker)
+            if msg_count >= hard_cap:
+                logger.debug(
+                    "Excluding dream convo '%s' (%s): reached hard saturation cap (%d >= %d)",
+                    c.title,
+                    c.id[:8],
+                    msg_count,
+                    hard_cap,
+                )
+                continue
+
+            # Diversity prior: prevent monopolizing the last N dreams
+            if recent_dream_ids.count(c.id) >= max_repeats:
+                logger.info(
+                    "Excluding dream convo '%s' (%s): diversity prior triggered (%d repeats in last %d dreams)",
+                    c.title,
+                    c.id[:8],
+                    recent_dream_ids.count(c.id),
+                    div_window,
+                )
+                continue
+
+            if msg_count >= soft_cap:
+                convo_info["summary"] = f"{summary} [NEAR SATURATION: {msg_count}/{hard_cap}]"
+
+            eligible_dream_convos.append(convo_info)
+
+        # 3. Decision resolution
+        decision = "create"
+        chosen_convo_id = None
+        new_title = None
 
         bg_engine = getattr(self.app_state, "background_engine", None)
 
-        decision = "create"
-        chosen_convo_id = None
-        new_title = default_title
-
-        if bg_engine and dream_convos and "dream_topic_decision" in bg_engine.list_actions():
+        if bg_engine and eligible_dream_convos and "dream_topic_decision" in bg_engine.list_actions():
             try:
                 res = await bg_engine.run(
-                    "dream_topic_decision", {"action": action, "prompt_text": prompt_text, "dream_convos": dream_convos}
+                    "dream_topic_decision",
+                    {
+                        "action": action,
+                        "prompt_text": prompt_text,
+                        "dream_convos": eligible_dream_convos,
+                    },
                 )
-                raw_resp = res.get("content", "").strip()
-                cleaned_resp = raw_resp
-                if "```json" in cleaned_resp:
-                    cleaned_resp = cleaned_resp.split("```json")[1].split("```")[0]
-                elif "```" in cleaned_resp:
-                    cleaned_resp = cleaned_resp.split("```")[1].split("```")[0]
+                decision_data = res.get("json_data")
+                if not decision_data:
+                    raw_resp = res.get("content", "").strip()
+                    cleaned_resp = raw_resp
+                    if "```json" in cleaned_resp:
+                        cleaned_resp = cleaned_resp.split("```json")[1].split("```")[0]
+                    elif "```" in cleaned_resp:
+                        cleaned_resp = cleaned_resp.split("```")[1].split("```")[0]
+                    decision_data = json.loads(cleaned_resp.strip())
 
-                decision_data = json.loads(cleaned_resp.strip())
                 if decision_data.get("decision") == "reuse" and decision_data.get("conversation_id"):
-                    valid_ids = [c["id"] for c in dream_convos]
+                    valid_ids = [c["id"] for c in eligible_dream_convos]
                     if decision_data["conversation_id"] in valid_ids:
                         decision = "reuse"
                         chosen_convo_id = decision_data["conversation_id"]
-                elif decision_data.get("decision") == "create" and decision_data.get("new_title"):
+                elif decision_data.get("decision") == "create":
                     decision = "create"
-                    title_candidate = decision_data["new_title"].strip()
-                    new_title = title_candidate
+                    if decision_data.get("new_title"):
+                        new_title = decision_data["new_title"].strip()
             except Exception as e:
                 logger.warning(
-                    "Failed to let agent decide dream conversation via background action: %s. Falling back to legacy resolution.",
+                    "Failed to let agent decide dream conversation via background action: %s. Falling back to default rules.",
                     e,
                 )
 
-        # Fallback to direct provider call if the action wasn't run/successful
-        if decision == "create" and chosen_convo_id is None and new_title == default_title:
+        # 4. Fallback to direct provider call if the action wasn't run/successful
+        if decision == "create" and chosen_convo_id is None and not new_title:
             provider = bg_engine.provider if bg_engine else getattr(self.app_state, "llm_provider", None)
-            if provider and dream_convos:
+            if provider and eligible_dream_convos:
                 convo_list_str = "\n".join(
                     [
                         f"- ID: {c['id']}, Title: '{c['title']}', Current Message Count: {c['message_count']}"
-                        for c in dream_convos
+                        for c in eligible_dream_convos
                     ]
                 )
 
@@ -336,19 +443,20 @@ class DreamExecutorMixin:
                 )
 
                 user_tmpl = resolution_data.get("reuse_user", "")
-                if user_tmpl:
-                    user_prompt = user_tmpl.format(
+                user_prompt = (
+                    user_tmpl.format(
                         action=action,
                         prompt_text=prompt_text[:400],
                         convo_list=convo_list_str,
                     )
-                else:
-                    user_prompt = (
+                    if user_tmpl
+                    else (
                         f"Proposed Dream Action: {action}\n"
                         f'Proposed Dream Prompt Content: "{prompt_text[:400]}"\n\n'
                         f"Currently available dream conversations:\n{convo_list_str}\n\n"
                         "Choose the target conversation."
                     )
+                )
 
                 try:
                     res = await generate_unified(
@@ -360,36 +468,39 @@ class DreamExecutorMixin:
                     )
                     decision_data = res.get("json_data") or {}
                     if decision_data.get("decision") == "reuse" and decision_data.get("conversation_id"):
-                        valid_ids = [c["id"] for c in dream_convos]
+                        valid_ids = [c["id"] for c in eligible_dream_convos]
                         if decision_data["conversation_id"] in valid_ids:
                             decision = "reuse"
                             chosen_convo_id = decision_data["conversation_id"]
                     elif decision_data.get("decision") == "create" and decision_data.get("new_title"):
                         decision = "create"
-                        title_candidate = decision_data["new_title"].strip()
-                        new_title = title_candidate
+                        new_title = decision_data["new_title"].strip()
                 except Exception as e:
                     logger.warning(
-                        "Failed to let agent decide dream conversation: %s. Falling back to default rules.", e
+                        "Failed to let agent decide dream conversation: %s. Falling back to provisional title.", e
                     )
 
-        if decision == "create":
-            # Fallback/Default logic to find or create matching convo
+        # 5. Execute conversation creation or reuse
+        if decision == "create" or not chosen_convo_id:
+            if not new_title:
+                slug = self._extract_provisional_dream_slug(action, prompt_text)
+                new_title = slug
+
+            # Check if there is an existing unsaturated convo with exact same title
             matching_convos = [
-                c for c in dream_convos if c["title"] == new_title or c["title"].startswith(f"{new_title} (Part ")
+                c for c in eligible_dream_convos if c["title"] == new_title and c["message_count"] < soft_cap
             ]
             if matching_convos:
-                latest_convo = matching_convos[0]
-                return latest_convo["id"]
-            else:
-                convo_id = str(uuid.uuid4())
-                self.conversation_repo.create(conversation_id=convo_id, agent_id="symbia", title=new_title)
-                if hasattr(self.conversation_repo, "add_tag"):
-                    self.conversation_repo.add_tag(convo_id, "dreams", "structural")
-                logger.info("Created new dream conversation: '%s'", new_title)
-                return convo_id
-        else:
-            logger.info("Reusing existing dream conversation ID: %s", chosen_convo_id)
+                return matching_convos[0]["id"]
+
+            convo_id = str(uuid.uuid4())
+            self.conversation_repo.create(conversation_id=convo_id, agent_id="symbia", title=new_title)
             if hasattr(self.conversation_repo, "add_tag"):
-                self.conversation_repo.add_tag(chosen_convo_id, "dreams", "structural")
-            return chosen_convo_id
+                self.conversation_repo.add_tag(convo_id, "dreams", "structural")
+            logger.info("Created new dream conversation: '%s' (ID: %s)", new_title, convo_id[:8])
+            return convo_id
+
+        logger.info("Reusing existing dream conversation ID: %s", chosen_convo_id)
+        if hasattr(self.conversation_repo, "add_tag"):
+            self.conversation_repo.add_tag(chosen_convo_id, "dreams", "structural")
+        return chosen_convo_id
