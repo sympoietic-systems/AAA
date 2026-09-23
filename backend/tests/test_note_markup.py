@@ -6,7 +6,7 @@ root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 os.chdir(root_path)
 
-from backend.storage.repositories.note_markup import (  # noqa: E402
+from backend.storage.repositories.conversation.note_markup import (  # noqa: E402
     balance_tags,
     remove_note_marks,
     split_mark_at_block_boundaries,

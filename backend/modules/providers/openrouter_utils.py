@@ -15,7 +15,7 @@ def clean_thinking_params(merged_params: dict) -> None:
 
 def build_openrouter_provider_config(body: dict, provider_params: dict | None = None) -> None:
     """Add OpenRouter provider routing preferences (order, allow_fallbacks, ignore, only, sort) to request body.
-    
+
     ponytail: build minimum valid OpenRouter provider routing dict according to OpenRouter API spec.
     """
     if not provider_params or not isinstance(provider_params, dict):
@@ -62,7 +62,7 @@ def resolve_openrouter_provider_config(
     providers_map: dict | None = None,
 ) -> dict | None:
     """Resolve provider routing config for a specific model.
-    
+
     ponytail: check exact model match, then wildcard (e.g. 'deepseek/*'), fallback to global openrouter_provider.
     """
     if providers_map and isinstance(providers_map, dict):
@@ -81,5 +81,3 @@ def resolve_openrouter_provider_config(
         return openrouter_provider
 
     return None
-
-

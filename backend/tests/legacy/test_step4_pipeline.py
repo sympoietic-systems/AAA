@@ -5,8 +5,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.core.registry import ModuleRegistry
-from backend.metabolisation.pipeline import ProcessingPipeline
 from backend.modules.base import ProcessingModule
+from backend.pipeline.engine import ProcessingPipeline
 
 
 class MockEchoModule(ProcessingModule):

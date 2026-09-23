@@ -11,8 +11,8 @@ sys.path.insert(0, root_path)
 os.chdir(root_path)
 
 from backend.modules.embedder import EmbeddingService  # noqa: E402
-from backend.modules.perception import PerceptionModule  # noqa: E402
-from backend.modules.web_retrieval import DuckDuckGoParser, HTMLToTextParser  # noqa: E402
+from backend.modules.retrieval.web_retrieval import DuckDuckGoParser, HTMLToTextParser  # noqa: E402
+from backend.modules.sensory.perception import PerceptionModule  # noqa: E402
 from backend.storage.database import get_db_path, init_db  # noqa: E402
 from backend.storage.repository import PerceptionSedimentRepository  # noqa: E402
 

@@ -1,7 +1,6 @@
 import numpy as np
-import pytest
+
 from backend.modules.conversation_metrics import (
-    _compute_forward_perturbation,
     _compute_mutual_perturbation,
     _compute_reverse_perturbation,
 )
@@ -14,15 +13,11 @@ def test_reverse_perturbation_directional_vs_stagnant():
 
     # 1. Productive human engagement: displacement toward agent gap
     h_curr_active = np.array([0.5, 0.5] + [0.0] * 382, dtype=np.float32)
-    rp_active = _compute_reverse_perturbation(
-        h_curr_active, [h_prev], [a_prev]
-    )
+    rp_active = _compute_reverse_perturbation(h_curr_active, [h_prev], [a_prev])
 
     # 2. Stagnant / zero displacement: repeats exact same position
     h_curr_stagnant = np.copy(h_prev)
-    rp_stagnant = _compute_reverse_perturbation(
-        h_curr_stagnant, [h_prev], [a_prev]
-    )
+    rp_stagnant = _compute_reverse_perturbation(h_curr_stagnant, [h_prev], [a_prev])
 
     assert rp_active is not None and rp_stagnant is not None
     assert rp_active > 0.40, f"Expected high active rP, got {rp_active}"

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -39,20 +40,23 @@ async def list_conversations(
     if not conv_repo:
         return ConversationListResponse(conversations=[], total_count=0, has_more=False)
 
-    if limit is not None and offset is None:
-        offset = 0
+    safe_limit = max(1, min(limit, 100)) if limit is not None else None
+    safe_offset = max(0, offset) if offset is not None else (0 if limit is not None else None)
 
-    convos = conv_repo.list_all(tag=tag, search=search, limit=limit, offset=offset)
-    total_count = conv_repo.count_all(tag=tag, search=search)
+    def _fetch_conversations():
+        convos = conv_repo.list_all(tag=tag, search=search, limit=safe_limit, offset=safe_offset)
+        total_count = conv_repo.count_all(tag=tag, search=search)
+        res_convos = []
+        for c in convos:
+            info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, c)
+            res_convos.append(ConversationInfo(**info))
+        return res_convos, total_count
 
-    res_convos = []
-    for c in convos:
-        info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, c)
-        res_convos.append(ConversationInfo(**info))
+    res_convos, total_count = await asyncio.to_thread(_fetch_conversations)
 
     has_more = False
-    if limit is not None and offset is not None:
-        has_more = (offset + limit) < total_count
+    if safe_limit is not None and safe_offset is not None:
+        has_more = (safe_offset + safe_limit) < total_count
 
     return ConversationListResponse(conversations=res_convos, total_count=total_count, has_more=has_more)
 

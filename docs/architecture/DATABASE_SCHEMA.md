@@ -1,8 +1,9 @@
 # AAA Database Schema
 
 > **Status:** Live reference — generated from `backend/data/aaa.db`
-> **Date:** 2026-07-04
+> **Date:** 2026-09-23
 > **Engine:** SQLite (WAL mode, foreign keys ON)
+> **Baseline:** `m050_baseline_schema.py` (Migrations 001–050 squashed, see [ADR-092](../decisions/ADR-092-backend-architecture-decomposition-and-migration-squash.md))
 
 ---
 
@@ -811,3 +812,18 @@ Indexes: agent_id, conversation_id
 | sediment_injections | 20+ |
 | research_memory_nodes | 50+ |
 | research_semantic_knots | 30+ |
+
+---
+
+## Migration Architecture
+
+As enacted in [ADR-092](../decisions/ADR-092-backend-architecture-decomposition-and-migration-squash.md), the migration subsystem was consolidated to eliminate 51 legacy migration files and accelerate cold startup:
+
+1. **Squashed Baseline (`backend/storage/migrations/m050_baseline_schema.py`)**:
+   - Contains the complete DDL script covering all historical tables, foreign keys, and indexes up to migration 050.
+   - Includes historical belief mass recalibration logic (`recalibrate_belief_mass`).
+2. **Dynamic Runner (`backend/storage/migrations/__init__.py`)**:
+   - **Fresh Database**: Automatically runs `m050_baseline_schema.up(conn)` and records historical migrations 001–050 as applied in the `_migrations` tracking table.
+   - **Production Database**: Skips baseline execution because `_migrations` already contains records for 001–050.
+   - **Future Migrations (`m051+`)**: Automatically discovers and executes any future migration files matching `m(\d{3})_*.py` where number $\ge 51$.
+

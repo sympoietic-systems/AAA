@@ -3,7 +3,7 @@ import logging
 
 from backend.config import load_config
 from backend.modules.llm_client import BaseLLMProvider, generate_unified
-from backend.modules.skill_workshop import SkillWorkshopModule
+from backend.modules.skills.skill_workshop import SkillWorkshopModule
 from backend.storage.database import get_db_path
 from backend.storage.repository import BeliefRepository, SkillRepository
 

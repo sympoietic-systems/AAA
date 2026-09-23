@@ -1,10 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Any
+"""Backwards-compatible alias for PipelineResult — canonical definition in backend.pipeline.engine."""
 
+from backend.pipeline.engine import PipelineResult
 
-@dataclass
-class PipelineResult:
-    status: str = "ok"  # ok | error
-    payload: dict[str, Any] = field(default_factory=dict)
-    errors: list[dict] = field(default_factory=list)
-    module_outputs: dict[str, dict] = field(default_factory=dict)
+__all__ = ["PipelineResult"]

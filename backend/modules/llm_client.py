@@ -269,8 +269,16 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             body.update(merged_params)
 
         # ── OpenRouter provider routing preferences ────────────────────
-        or_provider = body.pop("openrouter_provider", None) or merged_params.pop("openrouter_provider", None) or self._openrouter_provider
-        or_map = body.pop("openrouter_providers_map", None) or merged_params.pop("openrouter_providers_map", None) or self._openrouter_providers_map
+        or_provider = (
+            body.pop("openrouter_provider", None)
+            or merged_params.pop("openrouter_provider", None)
+            or self._openrouter_provider
+        )
+        or_map = (
+            body.pop("openrouter_providers_map", None)
+            or merged_params.pop("openrouter_providers_map", None)
+            or self._openrouter_providers_map
+        )
         if is_openrouter:
             resolved_or_provider = resolve_openrouter_provider_config(
                 self._model, openrouter_provider=or_provider, providers_map=or_map
@@ -380,7 +388,11 @@ class ModelPoolProvider(BaseLLMProvider):
         self._api_base = api_base
         self._google_api_base = google_api_base
         self._deepseek_api_base = deepseek_api_base
-        self._openrouter_api_base = openrouter_api_base if openrouter_api_base else ("https://openrouter.ai/api/v1" if "openrouter.ai" not in api_base else api_base)
+        self._openrouter_api_base = (
+            openrouter_api_base
+            if openrouter_api_base
+            else ("https://openrouter.ai/api/v1" if "openrouter.ai" not in api_base else api_base)
+        )
         self._cooldown_seconds = cooldown_seconds
         self._max_retries_per_model = max_retries_per_model
         self._thinking = thinking
@@ -455,13 +467,16 @@ class ModelPoolProvider(BaseLLMProvider):
                 if self._last_model_used != preferred_model:
                     if now - self._last_model_time >= self._cooldown_seconds:
                         logger.info(
-                            "Fallback period expired. Resetting priority to try preferred model %s again.", preferred_model
+                            "Fallback period expired. Resetting priority to try preferred model %s again.",
+                            preferred_model,
                         )
                         self._last_model_used = ""
                         self._last_model_time = 0.0
                     else:
                         # Prioritize last working model
-                        models_to_try = [self._last_model_used] + [m for m in models_to_try if m != self._last_model_used]
+                        models_to_try = [self._last_model_used] + [
+                            m for m in models_to_try if m != self._last_model_used
+                        ]
 
         for model in models_to_try:
             if self._is_exhausted(model):

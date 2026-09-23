@@ -23,6 +23,7 @@ def _init_repos(config: dict) -> dict:
     path = str(full_db_path)
 
     # Lazy imports so repository modules are only loaded when needed
+    from backend.storage.repositories.telemetry.daily_summary_repository import DailySummaryRepository
     from backend.storage.repository import (
         BeliefRepository,
         CommitmentRepository,
@@ -48,7 +49,6 @@ def _init_repos(config: dict) -> dict:
         SemanticKnotRepository,
         SkillRepository,
     )
-    from backend.storage.repositories.daily_summary_repository import DailySummaryRepository
 
     return {
         "message_repo": MessageRepository(path),
@@ -76,4 +76,3 @@ def _init_repos(config: dict) -> dict:
         "research_step_repo": ResearchStepRepository(path),
         "research_step_result_repo": ResearchStepResultRepository(path),
     }
-

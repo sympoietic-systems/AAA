@@ -225,7 +225,7 @@ async def run_background_refusal_persist(
     try:
         from backend.config import load_config
         from backend.storage.database import get_db_path
-        from backend.storage.repositories.refusal import RefusalRepository
+        from backend.storage.repositories.cognitive.refusal import RefusalRepository
         from backend.storage.repository import NotificationRepository
 
         config = load_config()

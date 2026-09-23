@@ -5,7 +5,6 @@ from backend.metabolisation.dream_context import DreamContextMixin
 from backend.metabolisation.dream_executor import DreamExecutorMixin
 from backend.metabolisation.dream_prompts import DreamPromptMixin
 from backend.metabolisation.mass_decay import MassDecayMixin
-from backend.metabolisation.pipeline import ProcessingPipeline
 from backend.metabolisation.scheduler import BackgroundStartupScheduler
 from backend.metabolisation.sedimentation import (
     build_compact_node_summary,
@@ -16,6 +15,7 @@ from backend.metabolisation.sedimentation import (
     store_daemon_metrics,
 )
 from backend.metabolisation.skill_metabolism import SkillMetabolismMixin
+from backend.pipeline.engine import ProcessingPipeline
 
 __all__ = [
     "ProcessingPipeline",

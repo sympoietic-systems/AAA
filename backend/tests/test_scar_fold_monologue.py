@@ -1,5 +1,5 @@
-import pytest
 from unittest.mock import MagicMock
+
 from backend.services.annotations import process_self_annotations
 
 
@@ -13,7 +13,9 @@ def test_scar_fold_monologue_belief_writeback():
     mock_message_repo = MagicMock()
     mock_note_repo = MagicMock()
 
-    text_with_scar_fold = "Generative output text <scar-fold>Internal reflection on coupling and structural tension.</scar-fold>"
+    text_with_scar_fold = (
+        "Generative output text <scar-fold>Internal reflection on coupling and structural tension.</scar-fold>"
+    )
 
     result = process_self_annotations(
         response_text=text_with_scar_fold,

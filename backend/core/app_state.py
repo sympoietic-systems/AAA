@@ -24,6 +24,16 @@ class AppState:
     belief_repo: Any = None
     semantic_knot_repo: Any = None
     note_repo: Any = None
+    skill_repo: Any = None
+    notification_repo: Any = None
+    commitment_repo: Any = None
+    expertise_repo: Any = None
+    daily_summary_repo: Any = None
+    research_step_repo: Any = None
+    research_step_result_repo: Any = None
+    research_plan_repo: Any = None
+    research_meta_log_repo: Any = None
+    research_cache_repo: Any = None
 
     # Core services
     pipeline: Any | None = None  # ProcessingPipeline

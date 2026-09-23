@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def _register_skills(registry, embedder, modules: dict, belief_metabolism, llm_module):
     """Register all skill modules into the pipeline registry."""
-    from backend.app_factory import register_all
+    from backend.bootstrap.module_registration import register_all
 
     register_all(registry, embedder, modules, belief_metabolism, llm_module)
 
@@ -51,7 +51,7 @@ def _build_pipeline(config: dict, registry, repos: dict, modules: dict):
             context={"input": payload.get("content", "")[:500]},
         )
 
-    from backend.metabolisation.pipeline import ProcessingPipeline
+    from backend.pipeline.engine import ProcessingPipeline
 
     return (
         ProcessingPipeline(

@@ -12,7 +12,7 @@ from backend.modules.background_tasks.actions.refine_skill import RefineSkillAct
 from backend.services.skill import SkillService
 from backend.storage.database import get_db_path, init_db
 from backend.storage.repository import SkillRepository
-from backend.utils.skill_parser import parse_skill_nucleation_tags
+from backend.utils.parsers.skill import parse_skill_nucleation_tags
 
 
 def _setup_db(name="aaa_skill_refinement_test.db"):

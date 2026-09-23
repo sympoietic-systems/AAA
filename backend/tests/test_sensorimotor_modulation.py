@@ -1,5 +1,6 @@
 import pytest
-from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
+
+from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule
 
 
 @pytest.mark.asyncio

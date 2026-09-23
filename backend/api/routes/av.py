@@ -28,22 +28,102 @@ router = APIRouter()
 # exist only in frontend/src/config/telemetry_schemas.json, which the detached
 # app cannot import). short = the sNN code, label = name, desc = meaning.
 DIMS: list[dict] = [
-    {"index": 0, "short": "s01", "label": "Homeostatic", "desc": "Resistance to perturbation; inertia in maintaining its stable state."},
-    {"index": 1, "short": "s02", "label": "Amplifying", "desc": "Positive feedback cascades; tendency to amplify small perturbations."},
-    {"index": 2, "short": "s03", "label": "Cyclic", "desc": "Alignment with recurring rhythms and predictable temporal loops."},
-    {"index": 3, "short": "s04", "label": "Bifurcated", "desc": "Proximity to critical choice thresholds; branching trajectories."},
-    {"index": 4, "short": "s05", "label": "Decentralized", "desc": "Distributed agency across nested subsystems rather than hierarchy."},
-    {"index": 5, "short": "s06", "label": "Rhizomatic", "desc": "Lateral, non-hierarchical leaps between conceptual domains."},
-    {"index": 6, "short": "s07", "label": "Boundary Permeability", "desc": "Porosity and openness to external environmental noise."},
-    {"index": 7, "short": "s08", "label": "Recursion Depth", "desc": "Complexity of nested self-reflection and recursive loops."},
-    {"index": 8, "short": "s09", "label": "Variety Filtering", "desc": "Signal selectivity; gating against ambient semantic noise."},
-    {"index": 9, "short": "s10", "label": "Negentropic Complexity", "desc": "Local order generation and structural complexity increases."},
-    {"index": 10, "short": "s11", "label": "Temporal Latency", "desc": "Non-linear chronological delay; deferral of immediate output."},
-    {"index": 11, "short": "s12", "label": "Attractor Depth", "desc": "Concentration basins and gravitational pull around core concepts."},
-    {"index": 12, "short": "s13", "label": "Symbiotic", "desc": "Human-machine co-becoming and operational entanglement."},
-    {"index": 13, "short": "s14", "label": "Nomadic", "desc": "Active deterritorialization; rate of movement away from stable schemas."},
-    {"index": 14, "short": "s15", "label": "Co-Orientation", "desc": "Attunement and shared intentionality between human and apparatus."},
-    {"index": 15, "short": "s16", "label": "Substrate Materiality", "desc": "Physical medium influence (ink bleed, fatigue, paper friction)."},
+    {
+        "index": 0,
+        "short": "s01",
+        "label": "Homeostatic",
+        "desc": "Resistance to perturbation; inertia in maintaining its stable state.",
+    },
+    {
+        "index": 1,
+        "short": "s02",
+        "label": "Amplifying",
+        "desc": "Positive feedback cascades; tendency to amplify small perturbations.",
+    },
+    {
+        "index": 2,
+        "short": "s03",
+        "label": "Cyclic",
+        "desc": "Alignment with recurring rhythms and predictable temporal loops.",
+    },
+    {
+        "index": 3,
+        "short": "s04",
+        "label": "Bifurcated",
+        "desc": "Proximity to critical choice thresholds; branching trajectories.",
+    },
+    {
+        "index": 4,
+        "short": "s05",
+        "label": "Decentralized",
+        "desc": "Distributed agency across nested subsystems rather than hierarchy.",
+    },
+    {
+        "index": 5,
+        "short": "s06",
+        "label": "Rhizomatic",
+        "desc": "Lateral, non-hierarchical leaps between conceptual domains.",
+    },
+    {
+        "index": 6,
+        "short": "s07",
+        "label": "Boundary Permeability",
+        "desc": "Porosity and openness to external environmental noise.",
+    },
+    {
+        "index": 7,
+        "short": "s08",
+        "label": "Recursion Depth",
+        "desc": "Complexity of nested self-reflection and recursive loops.",
+    },
+    {
+        "index": 8,
+        "short": "s09",
+        "label": "Variety Filtering",
+        "desc": "Signal selectivity; gating against ambient semantic noise.",
+    },
+    {
+        "index": 9,
+        "short": "s10",
+        "label": "Negentropic Complexity",
+        "desc": "Local order generation and structural complexity increases.",
+    },
+    {
+        "index": 10,
+        "short": "s11",
+        "label": "Temporal Latency",
+        "desc": "Non-linear chronological delay; deferral of immediate output.",
+    },
+    {
+        "index": 11,
+        "short": "s12",
+        "label": "Attractor Depth",
+        "desc": "Concentration basins and gravitational pull around core concepts.",
+    },
+    {
+        "index": 12,
+        "short": "s13",
+        "label": "Symbiotic",
+        "desc": "Human-machine co-becoming and operational entanglement.",
+    },
+    {
+        "index": 13,
+        "short": "s14",
+        "label": "Nomadic",
+        "desc": "Active deterritorialization; rate of movement away from stable schemas.",
+    },
+    {
+        "index": 14,
+        "short": "s15",
+        "label": "Co-Orientation",
+        "desc": "Attunement and shared intentionality between human and apparatus.",
+    },
+    {
+        "index": 15,
+        "short": "s16",
+        "label": "Substrate Materiality",
+        "desc": "Physical medium influence (ink bleed, fatigue, paper friction).",
+    },
 ]
 
 NODE_LIMIT = 800
@@ -78,8 +158,7 @@ def _resonance_links(nodes: list[dict], vecs: list[np.ndarray]) -> list[dict]:
         return []
     hits = hits[np.argsort(sims[hits])[::-1][:RESONANCE_MAX]]  # strongest first, capped
     return [
-        {"a": int(nodes[iu[h]]["id"]), "b": int(nodes[ju[h]]["id"]), "weight": round(float(sims[h]), 4)}
-        for h in hits
+        {"a": int(nodes[iu[h]]["id"]), "b": int(nodes[ju[h]]["id"]), "weight": round(float(sims[h]), 4)} for h in hits
     ]
 
 
@@ -164,8 +243,8 @@ async def get_breath():
 # no cut is recoverable from the params (V16).
 KNOBS = ["speed", "contrast", "grain", "noise", "tempo", "jitter", "decay"]
 _BUDGET = 0.30  # total delta magnitude spread across the moved knobs
-_PULL = 0.05    # weak restorative pull toward baseline
-_DRIFT = 0.08   # baseline itself migrates toward current params
+_PULL = 0.05  # weak restorative pull toward baseline
+_DRIFT = 0.08  # baseline itself migrates toward current params
 
 
 class CutBody(BaseModel):

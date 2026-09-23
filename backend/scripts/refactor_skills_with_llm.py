@@ -25,7 +25,7 @@ import logging
 import sqlite3
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -36,7 +36,6 @@ if hasattr(sys.stderr, "reconfigure"):
 from backend.config import load_config
 from backend.main import _init_providers
 from backend.modules.llm_client import generate_unified
-from backend.storage.database import get_db_path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("refactor_skills_llm")
@@ -95,6 +94,7 @@ IMPORTANT: Output ONLY the raw JSON object. Do not wrap in markdown codeblocks (
 
 
 import re
+
 
 def extract_blueprint_fallback(raw: str, default_name: str) -> dict | None:
     """Robust fallback extractor for JSON payloads with unescaped internal quotes or formatting noise."""
@@ -207,7 +207,7 @@ async def refactor_skill_with_llm(
 Name: {name}
 Current Version: {version}
 Current Description: {description}
-Always Active: {bool(skill_row.get('always_active'))}
+Always Active: {bool(skill_row.get("always_active"))}
 
 Current Evolved Content:
 \"\"\"
@@ -267,7 +267,9 @@ Return valid JSON."""
                 logger.error(f"Incomplete JSON output for skill '{name}': missing content or description")
                 return False
 
-            logger.info(f"Generated refactored blueprint for '{name}' ({len(new_content)} chars). Changelog: {changelog}")
+            logger.info(
+                f"Generated refactored blueprint for '{name}' ({len(new_content)} chars). Changelog: {changelog}"
+            )
 
             if dry_run:
                 print("\n" + "=" * 60)
@@ -293,7 +295,7 @@ Return valid JSON."""
     try:
         conn = sqlite3.connect(str(db_path), timeout=30.0)
         cursor = conn.cursor()
-        now_str = datetime.now(timezone.utc).isoformat()
+        now_str = datetime.now(UTC).isoformat()
 
         # 1. Archive current version in skill_versions
         cursor.execute(
@@ -381,12 +383,25 @@ async def run_pipeline():
     parser.add_argument("--db-path", type=Path, default=DEFAULT_DB, help="Path to SQLite database")
     parser.add_argument("--skill", type=str, default=None, help="Specific skill name to refactor")
     parser.add_argument("--all", action="store_true", help="Refactor all database skills")
-    parser.add_argument("--only-unmigrated", action="store_true", help="Only refactor skills that have not yet been migrated to 5-phase blueprint")
+    parser.add_argument(
+        "--only-unmigrated",
+        action="store_true",
+        help="Only refactor skills that have not yet been migrated to 5-phase blueprint",
+    )
     parser.add_argument("--exclude-tags", action="store_true", help="Exclude inscriptional tag skills from refactoring")
-    parser.add_argument("--include-collapsed", action="store_true", help="Include refused, integrated, or collapsed skills")
-    parser.add_argument("--audit-only", action="store_true", help="Print audit report of candidate skills without making LLM calls")
+    parser.add_argument(
+        "--include-collapsed", action="store_true", help="Include refused, integrated, or collapsed skills"
+    )
+    parser.add_argument(
+        "--audit-only", action="store_true", help="Print audit report of candidate skills without making LLM calls"
+    )
     parser.add_argument("--dry-run", action="store_true", help="Preview LLM outputs without modifying database")
-    parser.add_argument("--model", type=str, default="google/gemini-3.8-flash", help="LLM model override (default: google/gemini-3.8-flash)")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="google/gemini-3.8-flash",
+        help="LLM model override (default: google/gemini-3.8-flash)",
+    )
     parser.add_argument("--concurrency", type=int, default=3, help="Number of concurrent LLM workers (default: 3)")
     args = parser.parse_args()
 

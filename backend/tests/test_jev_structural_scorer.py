@@ -1,13 +1,14 @@
 """Unit tests for JevStructuralScorer and confidence metrics."""
 
-import pytest
-import numpy as np
 from unittest.mock import AsyncMock, MagicMock
+
+import numpy as np
+import pytest
 
 from backend.modules.structural_engine import (
     CYBERNETIC_DIMENSIONS,
-    JevStructuralScorer,
     CompositeStructuralScorer,
+    JevStructuralScorer,
 )
 
 
@@ -42,10 +43,12 @@ async def test_jev_structural_scorer_evaluation_success():
             "confidence": 0.85 + (i * 0.005),
         }
 
-    mock_client.evaluate = AsyncMock(return_value={
-        "success": True,
-        "answers": answers,
-    })
+    mock_client.evaluate = AsyncMock(
+        return_value={
+            "success": True,
+            "answers": answers,
+        }
+    )
 
     scorer = JevStructuralScorer(client=mock_client)
     power, conf = await scorer.score_with_confidence_async("Autopoietic recursive closed membrane feedback.")
@@ -85,10 +88,12 @@ async def test_composite_scorer_with_jev():
         f"dim_{i:02d}_{dim_slug}": {"score": 0.8, "confidence": 0.9}
         for i, (dim_slug, _, _) in enumerate(CYBERNETIC_DIMENSIONS)
     }
-    mock_client.evaluate = AsyncMock(return_value={
-        "success": True,
-        "answers": answers,
-    })
+    mock_client.evaluate = AsyncMock(
+        return_value={
+            "success": True,
+            "answers": answers,
+        }
+    )
 
     composite = CompositeStructuralScorer(
         jev_client=mock_client,

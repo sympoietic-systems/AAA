@@ -24,7 +24,9 @@ async def main():
     # Initialize LLM structural provider
     _, structural_provider, _ = _init_providers(config)
     scorer = CompositeStructuralScorer(llm_provider=structural_provider, config=config)
-    print(f"Structural Scorer Backend: '{scorer.backend}' (Jev available: {scorer.jev_scorer.is_available}, LLM provider: {bool(structural_provider)})")
+    print(
+        f"Structural Scorer Backend: '{scorer.backend}' (Jev available: {scorer.jev_scorer.is_available}, LLM provider: {bool(structural_provider)})"
+    )
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

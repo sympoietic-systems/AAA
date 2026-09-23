@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+
 from backend.modules.conversation_metrics import (
     _compute_collapse_pressure,
     _compute_rolling_entropy,
@@ -23,16 +23,14 @@ def test_spectral_entropy_orthogonal_vs_collinear():
     ent_orthogonal = _compute_rolling_entropy(current, orthogonal_hist, window=8)
 
     assert ent_collinear is not None and ent_orthogonal is not None
-    assert (
-        ent_orthogonal > ent_collinear
-    ), f"Expected orthogonal entropy ({ent_orthogonal}) > collinear ({ent_collinear})"
+    assert ent_orthogonal > ent_collinear, (
+        f"Expected orthogonal entropy ({ent_orthogonal}) > collinear ({ent_collinear})"
+    )
 
 
 def test_collapse_pressure_triadic_factorization():
     # 1. Healthy conversation: high perturbation, high entropy, high novelty -> collapse near 0
-    collapse_healthy = _compute_collapse_pressure(
-        rp_t=0.8, prev_mpi=0.7, rolling_entropy=0.8, conceptual_novelty=0.7
-    )
+    collapse_healthy = _compute_collapse_pressure(rp_t=0.8, prev_mpi=0.7, rolling_entropy=0.8, conceptual_novelty=0.7)
 
     # 2. Stagnant conversation: low perturbation, low entropy, low novelty -> collapse near 1
     collapse_stagnant = _compute_collapse_pressure(
@@ -40,9 +38,9 @@ def test_collapse_pressure_triadic_factorization():
     )
 
     assert collapse_healthy is not None and collapse_stagnant is not None
-    assert (
-        collapse_stagnant > collapse_healthy
-    ), f"Expected stagnant collapse ({collapse_stagnant}) > healthy ({collapse_healthy})"
+    assert collapse_stagnant > collapse_healthy, (
+        f"Expected stagnant collapse ({collapse_stagnant}) > healthy ({collapse_healthy})"
+    )
     assert collapse_stagnant > 0.7, f"Expected high collapse pressure, got {collapse_stagnant}"
 
 
@@ -66,4 +64,3 @@ def test_collapse_pressure_stagnant_thresholds():
     )
     assert collapse_flowing is not None
     assert collapse_flowing < 0.40, f"Expected flowing regime (< 0.40), got {collapse_flowing}"
-

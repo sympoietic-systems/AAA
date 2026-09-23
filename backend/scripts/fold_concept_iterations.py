@@ -60,7 +60,7 @@ def fold_iterations_for_db(db_path: str, dry_run: bool = True, threshold: float 
                 total_folded += 1
                 match_found["revision_count"] = match_found.get("revision_count", 0) + 1
                 match_found["last_merged_at"] = datetime.now(UTC).isoformat()
-                
+
                 # Merge tendrils
                 try:
                     t1 = json.loads(match_found.get("tendril_ids") or "[]")

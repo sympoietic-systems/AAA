@@ -151,4 +151,3 @@ def _compute_conceptual_velocity(
         phase_trans = round(max(0.0, min(1.0, float(omega * np.sqrt(norm_velocity)))), 3)
 
     return norm_velocity, phase_trans
-

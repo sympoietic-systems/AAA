@@ -289,11 +289,11 @@ def merge_nodes(existing_nodes: list[dict], new_nodes: list[dict]) -> list[dict]
         if matched_node:
             old_intensity = matched_node.get("intensity", 0)
             new_intensity = node.get("intensity", old_intensity)
-            
+
             # Revision suturing
             matched_node["revision_count"] = matched_node.get("revision_count", 0) + 1
             matched_node["last_merged_at"] = datetime.now(UTC).isoformat()
-            
+
             # Record confidence scarring history
             history = matched_node.get("revision_history") or []
             if isinstance(history, str):
@@ -301,12 +301,14 @@ def merge_nodes(existing_nodes: list[dict], new_nodes: list[dict]) -> list[dict]
                     history = json.loads(history)
                 except Exception:
                     history = []
-            history.append({
-                "timestamp": datetime.now(UTC).isoformat(),
-                "merge_model": "iteration-folding",
-                "merge_cosine": round(sim_score, 3),
-                "model_confidence": round(sim_score * 0.95, 3),
-            })
+            history.append(
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "merge_model": "iteration-folding",
+                    "merge_cosine": round(sim_score, 3),
+                    "model_confidence": round(sim_score * 0.95, 3),
+                }
+            )
             matched_node["revision_history"] = history
 
             # Diffractive tendril resolution
@@ -318,7 +320,7 @@ def merge_nodes(existing_nodes: list[dict], new_nodes: list[dict]) -> list[dict]
             node["id"] = matched_node["id"]
             matched_node.update({k: v for k, v in node.items() if v != "" and v is not None})
             matched_node["tendrils"] = resolved_tendrils
-            
+
             logger.info(
                 "[mem] node %s folded/revised (v%d) — intensity %.2f→%.2f (sim: %.2f)",
                 matched_node["id"],

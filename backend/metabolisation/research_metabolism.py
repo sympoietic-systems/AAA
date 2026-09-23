@@ -10,7 +10,6 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Sections 5.6 and 5.7.
 
 import json
 import logging
-import sqlite3
 from typing import Any
 
 logger = logging.getLogger("aaa.research_metabolism")

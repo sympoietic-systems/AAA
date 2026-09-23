@@ -925,7 +925,7 @@ async def test_consolidation_belief_writeback():
         confidence=0.6,
         ontological_mass=1.0,
         somatic_anchor="homeostatic",
-        vector_16d=json.dumps([0.0]*16),
+        vector_16d=json.dumps([0.0] * 16),
         origin="crystallized",
         agent_id="symbia",
         created_at=datetime.now(UTC),
@@ -951,4 +951,3 @@ async def test_consolidation_belief_writeback():
     assert events_logged[0]["event_type"] == "consolidation_suture"
     assert "convo_test_123" in events_logged[0]["rationale"]
     assert "Scar: Slight rupture" in events_logged[0]["rationale"]
-

@@ -148,10 +148,7 @@ def _apply_env_overrides(config: dict) -> dict:
 
     # ── Structural Signature Backend resolution (jev / llm / composite) ─
     ss_cfg = config.setdefault("structural_signature", {})
-    ss_backend = (
-        os.environ.get("STRUCTURAL_SCORER_BACKEND")
-        or os.environ.get("AAA_STRUCTURAL_SCORER_BACKEND")
-    )
+    ss_backend = os.environ.get("STRUCTURAL_SCORER_BACKEND") or os.environ.get("AAA_STRUCTURAL_SCORER_BACKEND")
     if ss_backend:
         ss_cfg["backend"] = ss_backend.lower().strip()
 

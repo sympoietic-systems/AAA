@@ -12,8 +12,9 @@ import argparse
 import logging
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
 import yaml
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -161,7 +162,9 @@ def migrate_database(db_path: Path, dry_run: bool = False, force_evolved: bool =
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, name, description, always_active, lifecycle_stage, version, last_used_at FROM skill_nodes")
+    cursor.execute(
+        "SELECT id, name, description, always_active, lifecycle_stage, version, last_used_at FROM skill_nodes"
+    )
     rows = cursor.fetchall()
     logger.info(f"Found {len(rows)} skills in skill_nodes.")
 
@@ -173,7 +176,7 @@ def migrate_database(db_path: Path, dry_run: bool = False, force_evolved: bool =
         skill_id = row["id"]
         skill_name = row["name"]
         version = row["version"] or 1
-        is_evolved = (version > 1)
+        is_evolved = version > 1
 
         if skill_name in TAG_SKILL_NAMES or skill_id in TAG_SKILL_NAMES:
             if row["always_active"] == 1:
@@ -181,23 +184,29 @@ def migrate_database(db_path: Path, dry_run: bool = False, force_evolved: bool =
                 if not dry_run:
                     cursor.execute(
                         "UPDATE skill_nodes SET always_active = 0, updated_at = ? WHERE id = ?",
-                        (datetime.now(timezone.utc).isoformat(), skill_id),
+                        (datetime.now(UTC).isoformat(), skill_id),
                     )
                 tag_retired_count += 1
             continue
 
-        matched_key = skill_name if skill_name in BLUEPRINT_SKILLS else (skill_id if skill_id in BLUEPRINT_SKILLS else None)
+        matched_key = (
+            skill_name if skill_name in BLUEPRINT_SKILLS else (skill_id if skill_id in BLUEPRINT_SKILLS else None)
+        )
         if matched_key:
             blueprint = BLUEPRINT_SKILLS[matched_key]
 
             if is_evolved and not force_evolved:
-                logger.info(f"Preserving evolved skill '{skill_name}' (version={version}). Use --force-evolved to overwrite.")
+                logger.info(
+                    f"Preserving evolved skill '{skill_name}' (version={version}). Use --force-evolved to overwrite."
+                )
                 preserved_count += 1
                 continue
 
-            logger.info(f"Upgrading skill '{skill_name}' to 5-phase blueprint format (version {version} -> {version + 1}).")
+            logger.info(
+                f"Upgrading skill '{skill_name}' to 5-phase blueprint format (version {version} -> {version + 1})."
+            )
             if not dry_run:
-                now_str = datetime.now(timezone.utc).isoformat()
+                now_str = datetime.now(UTC).isoformat()
                 # Save previous version in skill_versions if not present
                 cursor.execute(
                     """
@@ -249,9 +258,13 @@ def migrate_database(db_path: Path, dry_run: bool = False, force_evolved: bool =
 
     if not dry_run:
         conn.commit()
-        logger.info(f"Migration committed: {updated_count} upgraded, {tag_retired_count} tag skills deactivated from always_active, {preserved_count} evolved skills preserved.")
+        logger.info(
+            f"Migration committed: {updated_count} upgraded, {tag_retired_count} tag skills deactivated from always_active, {preserved_count} evolved skills preserved."
+        )
     else:
-        logger.info(f"Dry run complete: {updated_count} would be upgraded, {tag_retired_count} tag skills would be deactivated, {preserved_count} evolved skills would be preserved.")
+        logger.info(
+            f"Dry run complete: {updated_count} would be upgraded, {tag_retired_count} tag skills would be deactivated, {preserved_count} evolved skills would be preserved."
+        )
 
     conn.close()
 

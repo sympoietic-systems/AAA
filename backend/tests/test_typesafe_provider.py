@@ -1,13 +1,13 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from backend.modules.providers.typesafe_provider import (
+    DEFAULT_TYPESAFE_BASE,
     TypeSafeDecisionClient,
     build_choice_question,
     build_noul_question,
     build_score_question,
-    DEFAULT_TYPESAFE_BASE,
-    OPENROUTER_DECISIONS_BASE,
 )
 
 

@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.services.research.orchestrator import SomaticResearchOrchestrator
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repositories.research_task import ResearchTaskRepository
+from backend.storage.repositories.research.research_task import ResearchTaskRepository
 
 DB_PATH = str(get_db_path("data/aaa_test.db"))
 

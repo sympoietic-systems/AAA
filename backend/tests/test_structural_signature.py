@@ -7,7 +7,7 @@ import numpy as np
 # Ensure parent directory is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
+from backend.modules.retrieval.diffractive_retrieval import DiffractiveRetrievalModule
 from backend.modules.structural_engine import CompositeStructuralScorer, JevStructuralScorer
 from backend.storage.database import get_db_path, init_db
 from backend.storage.repository import MessageRepository, PerceptionSedimentRepository

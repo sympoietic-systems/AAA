@@ -353,10 +353,13 @@ class ConsolidationMixin:
                         lifecycle_stage=matched_belief.lifecycle_stage,
                         suppress_stage_notification=True,
                     )
-                    
+
                     # Record a belief event to leave a permanent trace in belief_events table
                     import uuid
-                    rationale = f"Consolidation pass for {conversation_id} (type={node_type}, intensity={intensity:.2f})"
+
+                    rationale = (
+                        f"Consolidation pass for {conversation_id} (type={node_type}, intensity={intensity:.2f})"
+                    )
                     if scar_text:
                         rationale += f" [Scar: {scar_text[:100]}]"
 
@@ -375,5 +378,6 @@ class ConsolidationMixin:
                     updated_count += 1
 
         if updated_count > 0:
-            logger.info("Integrated %d belief updates from conversation %s consolidation", updated_count, conversation_id)
-
+            logger.info(
+                "Integrated %d belief updates from conversation %s consolidation", updated_count, conversation_id
+            )

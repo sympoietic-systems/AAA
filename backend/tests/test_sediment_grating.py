@@ -1,11 +1,11 @@
-import uuid
+from datetime import UTC, datetime
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
-from unittest.mock import MagicMock
-from datetime import datetime, UTC
 
-from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
 from backend.modules.context_collector import ContextCollectorModule
+from backend.modules.retrieval.sedimentation_retrieval import SedimentationRetrievalModule
 
 
 @pytest.mark.asyncio

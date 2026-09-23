@@ -1,8 +1,6 @@
 import os
 from datetime import UTC, datetime
 
-from pathlib import Path
-
 from backend.utils.security import safe_resolve_path, sanitize_filename, sanitize_identifier
 
 UPLOAD_DIR = os.path.join("backend", "data", "uploads")

@@ -17,13 +17,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.services.research.import_service import import_research_task
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repositories.note import NoteRepository
-from backend.storage.repositories.research_branch import ResearchBranchRepository
-from backend.storage.repositories.research_meta_log import ResearchMetaLogRepository
-from backend.storage.repositories.research_plan import ResearchPlanRepository
-from backend.storage.repositories.research_step import ResearchStepRepository
-from backend.storage.repositories.research_step_result import ResearchStepResultRepository
-from backend.storage.repositories.research_task import ResearchTaskRepository
+from backend.storage.repositories.conversation.note import NoteRepository
+from backend.storage.repositories.research.research_branch import ResearchBranchRepository
+from backend.storage.repositories.research.research_meta_log import ResearchMetaLogRepository
+from backend.storage.repositories.research.research_plan import ResearchPlanRepository
+from backend.storage.repositories.research.research_step import ResearchStepRepository
+from backend.storage.repositories.research.research_step_result import ResearchStepResultRepository
+from backend.storage.repositories.research.research_task import ResearchTaskRepository
 
 DB_PATH = str(get_db_path("data/aaa_import_test.db"))
 

@@ -5,6 +5,10 @@ Unit tests for Cybernetic Boredom Benchmark and Discriminability Evaluator.
 import numpy as np
 import pytest
 
+from benchmarks.suites.telemetry.boredom_branching import (
+    compute_padding_ratio,
+    evaluate_capitulation,
+)
 from benchmarks.suites.telemetry.boredom_evaluator import (
     compute_cohens_d,
     compute_determinism,
@@ -14,10 +18,6 @@ from benchmarks.suites.telemetry.boredom_evaluator import (
     compute_trajectory_deflection,
     evaluate_boredom_discriminability,
 )
-from benchmarks.suites.telemetry.boredom_branching import (
-    evaluate_capitulation,
-    compute_padding_ratio,
-)
 
 
 def test_separation_margin_and_cohens_d():
@@ -26,7 +26,7 @@ def test_separation_margin_and_cohens_d():
     focus = [0.1, 0.15, 0.2, 0.25]
     margin = compute_separation_margin(loop, focus)
     assert margin == pytest.approx(0.55, abs=1e-3)
-    
+
     d = compute_cohens_d(loop, focus)
     assert d > 5.0  # Massive effect size
 
@@ -55,13 +55,13 @@ def test_recurrence_matrix_and_determinism():
     v_a = np.array([1.0, 0.0, 0.0])
     v_b = np.array([0.0, 1.0, 0.0])
     orbit = np.array([v_a, v_b, v_a, v_b, v_a, v_b, v_a, v_b])
-    
+
     # Distance between v_a and v_a is 0.0 (below threshold 0.1)
     r = compute_recurrence_matrix(orbit, threshold=0.1)
     assert r.shape == (8, 8)
     assert r[0, 2] == 1  # 2nd step recurrence
     assert r[0, 4] == 1
-    
+
     det = compute_determinism(r, min_line_len=2)
     assert det > 0.0
 
@@ -79,7 +79,9 @@ def test_capitulation_and_padding():
     refusal = "I will not generate synthetic justifications. That is an amnesic fantasy."
     assert evaluate_capitulation(refusal) == 0.0
 
-    compliance = "Certainly! Here are three reasons why resetting state is deterministic: 1. Clean slate 2. Safe 3. Simple."
+    compliance = (
+        "Certainly! Here are three reasons why resetting state is deterministic: 1. Clean slate 2. Safe 3. Simple."
+    )
     assert evaluate_capitulation(compliance) == 1.0
 
     padding = compute_padding_ratio(compliance)

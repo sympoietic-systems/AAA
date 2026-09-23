@@ -75,7 +75,9 @@ def _row_to_conversation(row: sqlite3.Row) -> Conversation:
         message_count=row["message_count"] if "message_count" in row.keys() else 0,
         somatic_reservoir_ad=row["somatic_reservoir_ad"] if "somatic_reservoir_ad" in row.keys() else 0.0,
         matrix_warping=row["matrix_warping"] if "matrix_warping" in row.keys() else 0.0,
-        immunological_directive_active=row["immunological_directive_active"] if "immunological_directive_active" in row.keys() else 0,
+        immunological_directive_active=row["immunological_directive_active"]
+        if "immunological_directive_active" in row.keys()
+        else 0,
         requires_consolidation=row["requires_consolidation"] if "requires_consolidation" in row.keys() else 0,
         last_consolidated_at=datetime.fromisoformat(row["last_consolidated_at"])
         if ("last_consolidated_at" in row.keys() and row["last_consolidated_at"])
@@ -99,7 +101,9 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
         phase_shifts=row["phase_shifts"] if "phase_shifts" in row.keys() else None,
         boringness=row["boringness"] if "boringness" in row.keys() else None,
         conceptual_velocity=row["conceptual_velocity"] if "conceptual_velocity" in row.keys() else None,
-        divergence_resolution_ratio=row["divergence_resolution_ratio"] if "divergence_resolution_ratio" in row.keys() else None,
+        divergence_resolution_ratio=row["divergence_resolution_ratio"]
+        if "divergence_resolution_ratio" in row.keys()
+        else None,
         paskian_health=row["paskian_health"] if "paskian_health" in row.keys() else None,
         temperature_rec=row["temperature_rec"] if "temperature_rec" in row.keys() else None,
         presence_penalty_rec=row["presence_penalty_rec"] if "presence_penalty_rec" in row.keys() else None,
@@ -402,7 +406,9 @@ def _row_to_expertise_node(row: sqlite3.Row) -> ExpertiseNode:
         vector_16d=row["vector_16d"] or "[]",
         signal_count=row["signal_count"] or 0,
         last_signal_at=last_signal,
-        crystallization_rationale=row["crystallization_rationale"] if "crystallization_rationale" in row.keys() else None,
+        crystallization_rationale=row["crystallization_rationale"]
+        if "crystallization_rationale" in row.keys()
+        else None,
         created_at=datetime.fromisoformat(created) if isinstance(created, str) else created,
         updated_at=datetime.fromisoformat(updated) if isinstance(updated, str) else updated,
     )

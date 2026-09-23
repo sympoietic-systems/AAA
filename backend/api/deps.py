@@ -182,11 +182,10 @@ def get_daily_summary_repo(state=Depends(get_app_state)):
     if not repo:
         msg_repo = getattr(state, "message_repo", None)
         if msg_repo and hasattr(msg_repo, "_db_path"):
-            from backend.storage.repositories.daily_summary_repository import DailySummaryRepository
+            from backend.storage.repositories.telemetry.daily_summary_repository import DailySummaryRepository
+
             return DailySummaryRepository(msg_repo._db_path)
     return repo
-
-
 
 
 # ── Module / engine getters ────────────────────────────────────────────

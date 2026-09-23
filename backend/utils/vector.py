@@ -39,7 +39,7 @@ def load_cybernetic_dimensions(yaml_path: Path | None = None, reload: bool = Fal
     if not target_path.exists():
         raise FileNotFoundError(f"Cybernetic dimensions configuration file not found at: {target_path}")
 
-    with open(target_path, "r", encoding="utf-8") as f:
+    with open(target_path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     dims_data = data.get("dimensions", [])
     if not dims_data:

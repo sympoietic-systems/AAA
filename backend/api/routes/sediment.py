@@ -120,6 +120,7 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
 
     if conversation_id == "new" or not conversation_id:
         import uuid
+
         conversation_id = str(uuid.uuid4())
         first_file = body.files[0].get("source_file_name", "document") if body.files else "document"
         title_base = first_file.replace("research-synthesis-", "").replace(".md", "")

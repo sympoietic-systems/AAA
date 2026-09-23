@@ -12,7 +12,7 @@ class AttachmentInfo(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    content: str
+    content: str = Field(..., min_length=1, max_length=100_000)
     speaker: str = Field(default="human", pattern=r"^(human|apparatus|[\w-]+)$")
     conversation_id: str = Field(default="", description="Conversation ID; auto-created if empty")
     attachments: list[AttachmentInfo] | None = None
@@ -297,7 +297,7 @@ class ConversationListResponse(BaseModel):
 
 
 class ConversationUpdateRequest(BaseModel):
-    title: str
+    title: str = Field(..., min_length=1, max_length=500)
 
 
 class ConversationTokenInfo(BaseModel):
@@ -348,15 +348,14 @@ class ConversationFilesResponse(BaseModel):
 
 
 class NoteCreateRequest(BaseModel):
-    asset_type: str = "conversation_message"
-    asset_id: str = ""
-    conversation_id: str | None = None
-    selected_text: str
-    comment: str = ""
+    asset_type: str = Field(default="conversation_message", max_length=100)
+    asset_id: str = Field(default="", max_length=100)
+    conversation_id: str | None = Field(default=None, max_length=100)
+    selected_text: str = Field(..., min_length=1, max_length=100_000)
+    comment: str = Field(default="", max_length=50_000)
     visibility: Literal["personal", "shared", "agent"] = "personal"
     start_offset: int | None = None
     message_id: int | None = None
-
 
 
 class NoteResponse(BaseModel):
@@ -372,7 +371,7 @@ class NoteResponse(BaseModel):
 
 
 class NoteUpdateRequest(BaseModel):
-    comment: str | None = None
+    comment: str | None = Field(default=None, max_length=50_000)
     visibility: Literal["personal", "shared", "agent"] | None = None
 
 
@@ -399,7 +398,7 @@ class SedimentFilesResponse(BaseModel):
 
 
 class SedimentInjectRequest(BaseModel):
-    files: list[dict]  # Each: { "source_conversation_id": str, "source_file_name": str }
+    files: list[dict] = Field(..., max_length=100)  # Each: { "source_conversation_id": str, "source_file_name": str }
 
 
 class SedimentInjectionInfo(BaseModel):
@@ -421,7 +420,7 @@ class SedimentInjectionsResponse(BaseModel):
 
 
 class TagCreateRequest(BaseModel):
-    tag: str
+    tag: str = Field(..., min_length=1, max_length=100)
 
 
 class CommitBranchRequest(BaseModel):

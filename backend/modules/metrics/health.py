@@ -34,7 +34,7 @@ def _compute_collapse_pressure(
     d0: float = 0.50,
 ) -> float | None:
     """Calibrated Allostatic Collapse Pressure & Sycophancy-Attractor Detector.
-    
+
     Synthesizes:
     1. Synergistic geometric vitality from perturbation, spectral entropy, and conceptual novelty.
     2. Attractor drag: penalized by pairwise semantic stagnation (s_t > 0.24) and sycophantic entrainment
@@ -54,7 +54,7 @@ def _compute_collapse_pressure(
     v_nov = max(0.0, min(1.0, (novelty_val - 0.25) / (0.75 - 0.25)))
 
     # Balance perturbation with systemic entropy and semantic novelty
-    v_sys = (v_pert ** 0.35) * (max(1e-4, v_ent) ** 0.30) * (max(1e-4, v_nov) ** 0.35)
+    v_sys = (v_pert**0.35) * (max(1e-4, v_ent) ** 0.30) * (max(1e-4, v_nov) ** 0.35)
     deficit = 1.0 - v_sys
 
     # Attractor drag penalties
@@ -151,9 +151,6 @@ def _compute_drr(
     raw_ratio = d_resolved / (phi_flux + 1e-6)
     drr = (1.0 - gamma_flux) * 0.50 + gamma_flux * raw_ratio
     return round(max(0.0, min(1.0, float(drr))), 3)
-
-
-
 
 
 def _compute_paskian_health(

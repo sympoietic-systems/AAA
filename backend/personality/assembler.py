@@ -5,6 +5,7 @@ import yaml
 
 from backend.modules.base import ProcessingModule
 from backend.pipeline.registry import PipelineRegistry
+from backend.prompts.tag_protocols import get_tag_protocols_prompt
 from backend.utils.persona_loader import get_persona_text
 from backend.utils.prompt_builder import (
     format_beliefs_block,
@@ -12,7 +13,6 @@ from backend.utils.prompt_builder import (
     format_skills_matched,
     format_skills_on_demand_slugs,
 )
-from backend.prompts.tag_protocols import get_tag_protocols_prompt
 from backend.utils.prompt_loader import get_prompt
 
 
@@ -565,7 +565,9 @@ def _build_system_content(
         coord_block += "The following operational organs have resonated with the current somatic state:\n"
         for coord in skill_relevance_coordinates:
             coord_block += f"  {coord}\n"
-        coord_block += "You may observe these coordinates without obligation, or enact them via `load_skill()` if required.\n"
+        coord_block += (
+            "You may observe these coordinates without obligation, or enact them via `load_skill()` if required.\n"
+        )
         coord_block += "--- END SKILL RESONANCE COORDINATES ---"
         parts.append(coord_block)
 

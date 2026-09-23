@@ -1,5 +1,6 @@
 import pytest
-from backend.modules.self_initiation_arbiter import SelfInitiationArbiterModule
+
+from backend.modules.sensory.self_initiation_arbiter import SelfInitiationArbiterModule
 
 
 @pytest.mark.asyncio

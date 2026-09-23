@@ -1,4 +1,3 @@
-import pytest
 from backend.metabolisation.sedimentation import find_similar_node, merge_nodes
 
 

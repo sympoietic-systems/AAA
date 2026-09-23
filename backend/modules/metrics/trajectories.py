@@ -21,10 +21,12 @@ def _compute_coupling_coherence(
         if v is not None:
             norm = float(np.linalg.norm(v))
             v_norm = v / norm if norm > 0 else v
-            valid_items.append({
-                "speaker": item.get("speaker", "human"),
-                "embedding": v_norm,
-            })
+            valid_items.append(
+                {
+                    "speaker": item.get("speaker", "human"),
+                    "embedding": v_norm,
+                }
+            )
 
     if len(valid_items) < 2:
         return None
@@ -47,7 +49,7 @@ def _compute_coupling_coherence(
                 v_n = float(np.linalg.norm(v))
                 if u_n > 1e-6 and v_n > 1e-6:
                     rho = abs(float(np.dot(u / u_n, v / v_n)))
-                    dir_score = float(rho ** 1.5)
+                    dir_score = float(rho**1.5)
                     cadence = (2.0 * min(u_n, v_n)) / (max(u_n, v_n) + 1e-4)
                     interactions.append(max(0.0, min(1.0, float(dir_score * cadence))))
         prior_speaker_vecs[spk] = vec
@@ -61,7 +63,7 @@ def _compute_coupling_coherence(
             dp_n = float(np.linalg.norm(d_prev))
             if dc_n > 1e-6 and dp_n > 1e-6:
                 cos_val = abs(float(np.dot(d_curr / dc_n, d_prev / dp_n)))
-                dir_score = float(cos_val ** 1.5)
+                dir_score = float(cos_val**1.5)
                 cadence = (2.0 * min(dc_n, dp_n)) / (max(dc_n, dp_n) + 1e-4)
                 interactions.append(max(0.0, min(1.0, float(dir_score * cadence))))
         else:
@@ -80,7 +82,6 @@ def _compute_coupling_coherence(
 
     score = sum(weighted_scores) / sum(weights)
     return round(max(0.0, min(1.0, float(score))), 3)
-
 
 
 def _compute_agent_self_divergence(
@@ -127,8 +128,8 @@ def _compute_agent_self_divergence(
         A = np.stack(all_recent)
         gram = np.dot(A, A.T)
         tr_G = float(np.trace(gram))
-        tr_G2 = float(np.sum(gram ** 2))
-        rank_eff = (tr_G ** 2) / (tr_G2 + 1e-8)
+        tr_G2 = float(np.sum(gram**2))
+        rank_eff = (tr_G**2) / (tr_G2 + 1e-8)
         rank_factor = float(max(0.0, (rank_eff - 1.0) / (K - 1.0)))
     else:
         rank_factor = 1.0
@@ -169,7 +170,7 @@ def _compute_reverse_perturbation(
     v_perp = v_h - v_parallel * g_hat
     v_perp_norm = float(np.linalg.norm(v_perp))
 
-    shear_mag = float(np.sqrt(v_parallel ** 2 + gamma * (v_perp_norm ** 2)))
+    shear_mag = float(np.sqrt(v_parallel**2 + gamma * (v_perp_norm**2)))
     rp_t = max(0.0, min(1.0, (shear_mag - p_floor) / (p_ceil - p_floor)))
     return round(float(rp_t), 3)
 
@@ -205,7 +206,7 @@ def _compute_forward_perturbation(
     v_perp = v_a - v_parallel * g_hat
     v_perp_norm = float(np.linalg.norm(v_perp))
 
-    shear_mag = float(np.sqrt(v_parallel ** 2 + gamma * (v_perp_norm ** 2)))
+    shear_mag = float(np.sqrt(v_parallel**2 + gamma * (v_perp_norm**2)))
     fp_t = max(0.0, min(1.0, (shear_mag - p_floor) / (p_ceil - p_floor)))
     return round(float(fp_t), 3)
 

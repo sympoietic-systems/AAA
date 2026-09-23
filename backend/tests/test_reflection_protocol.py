@@ -1,5 +1,6 @@
 import pytest
-from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
+
+from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule
 
 
 @pytest.mark.asyncio
@@ -25,8 +26,8 @@ async def test_reflection_protocol_somatic_directive_injection():
     payload_tension = {
         "metrics": {
             "coupling_coherence": 0.05,  # dissociation flag
-            "glitch_fidelity": 0.30,     # glitch_fidelity_low flag
-            "rolling_entropy": 0.005,    # entropy_collapse flag
+            "glitch_fidelity": 0.30,  # glitch_fidelity_low flag
+            "rolling_entropy": 0.005,  # entropy_collapse flag
         },
         "messages": [{"role": "user", "content": "Are we drifting?"}],
     }

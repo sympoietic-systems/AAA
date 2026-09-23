@@ -57,9 +57,7 @@ def compute_delta_mass(source_weight: float, alignment: float, current_mass: flo
     return eta * source_weight * alignment / (1.0 + current_mass)
 
 
-def compute_delta_confidence(
-    alignment: float, perturbation: float, current_mass: float, dc: float = 0.5
-) -> float:
+def compute_delta_confidence(alignment: float, perturbation: float, current_mass: float, dc: float = 0.5) -> float:
     plasticity = dc * ((1.0 - alignment) / 2.0)
     return (plasticity * alignment * perturbation) / max(current_mass, 0.01)
 

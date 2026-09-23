@@ -1,11 +1,12 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+from backend.config import _apply_env_overrides
+from backend.modules.llm_client import ModelPoolProvider, OpenRouterProvider
 from backend.modules.providers.openrouter_utils import (
     build_openrouter_provider_config,
     resolve_openrouter_provider_config,
 )
-from backend.modules.llm_client import OpenRouterProvider, ModelPoolProvider
-from backend.config import _apply_env_overrides
 
 
 class TestOpenRouterProviderConfig(unittest.IsolatedAsyncioTestCase):
@@ -45,11 +46,15 @@ class TestOpenRouterProviderConfig(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res_exact, {"order": ["Chutes", "DeepInfra"]})
 
         # 2. Wildcard match
-        res_wildcard = resolve_openrouter_provider_config("meta-llama/llama-3.3-70b-instruct", global_provider, providers_map)
+        res_wildcard = resolve_openrouter_provider_config(
+            "meta-llama/llama-3.3-70b-instruct", global_provider, providers_map
+        )
         self.assertEqual(res_wildcard, {"order": ["Together", "Nebius"], "allow_fallbacks": False})
 
         # 3. Unmatched model -> fallback to global provider
-        res_fallback = resolve_openrouter_provider_config("google/gemma-4-26b-a4b-it:free", global_provider, providers_map)
+        res_fallback = resolve_openrouter_provider_config(
+            "google/gemma-4-26b-a4b-it:free", global_provider, providers_map
+        )
         self.assertEqual(res_fallback, {"order": ["GlobalProvider"]})
 
         # 4. No map and no global provider -> None (lets OpenRouter decide)
@@ -81,9 +86,7 @@ class TestOpenRouterProviderConfig(unittest.IsolatedAsyncioTestCase):
     async def test_openrouter_provider_attaches_routing(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "hello world", "role": "assistant"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "hello world", "role": "assistant"}}]}
         mock_post.return_value = mock_response
 
         provider = OpenRouterProvider(
@@ -103,9 +106,7 @@ class TestOpenRouterProviderConfig(unittest.IsolatedAsyncioTestCase):
     async def test_model_pool_per_model_provider_routing(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "pool response", "role": "assistant"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "pool response", "role": "assistant"}}]}
         mock_post.return_value = mock_response
 
         providers_map = {
@@ -128,11 +129,14 @@ class TestOpenRouterProviderConfig(unittest.IsolatedAsyncioTestCase):
 
     def test_env_overrides_parsing(self):
         config = {"llm": {}}
-        with patch.dict("os.environ", {
-            "AAA_OPENROUTER_PROVIDER_ORDER": "Chutes,DeepInfra",
-            "AAA_OPENROUTER_ALLOW_FALLBACKS": "true",
-            "AAA_OPENROUTER_PROVIDERS_MAP": '{"deepseek/deepseek-chat": "Chutes"}',
-        }):
+        with patch.dict(
+            "os.environ",
+            {
+                "AAA_OPENROUTER_PROVIDER_ORDER": "Chutes,DeepInfra",
+                "AAA_OPENROUTER_ALLOW_FALLBACKS": "true",
+                "AAA_OPENROUTER_PROVIDERS_MAP": '{"deepseek/deepseek-chat": "Chutes"}',
+            },
+        ):
             updated = _apply_env_overrides(config)
             or_cfg = updated.get("llm", {}).get("openrouter_provider")
             or_map = updated.get("llm", {}).get("openrouter_providers_map")

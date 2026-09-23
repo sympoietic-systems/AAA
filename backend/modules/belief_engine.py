@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from backend.modules.base import ProcessingModule
+from backend.modules.belief import DecayManager, EcosystemManager, PerceptionMetabolismHandler
 from backend.modules.belief_math import (
     calculate_concept_density,
     clamp_confidence,
@@ -20,7 +21,7 @@ from backend.modules.belief_math import (
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.models import BeliefNode
-from backend.storage.repositories.refusal import RefusalRepository
+from backend.storage.repositories.cognitive.refusal import RefusalRepository
 from backend.storage.repository import BeliefRepository, MessageRepository
 from backend.utils.similarity import cosine_similarity
 
@@ -265,170 +266,12 @@ class BeliefDynamicsEngine(ProcessingModule):
         return new_mass
 
     async def _apply_turn_decay(self, agent_id: str, engaged_belief_id: str | None = None) -> dict:
-        """Apply discrete per-turn mass decay to active beliefs that were not engaged this turn.
-
-        Turn-based decay only occurs when conversations or dream resonance turns actually run.
-        Crystallized beliefs are protected by a strict floor (e.g. 0.55), ensuring disuse alone
-        cannot collapse or demote them into senescence.
-        """
-        try:
-            from backend.config import load_config
-            cfg = load_config()
-            decay_cfg = cfg.get("belief_ecosystem", {}).get("turn_decay", {})
-        except Exception:
-            decay_cfg = {}
-
-        if not decay_cfg.get("enabled", True):
-            return {"atrophied": 0, "collapsed": 0}
-
-        decay_per_turn = float(decay_cfg.get("decay_per_turn", 0.0005))
-        crystallized_floor = float(decay_cfg.get("crystallized_floor", 0.55))
-
-        all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        active = [
-            b for b in all_beliefs
-            if b.lifecycle_stage not in ("collapsed", "faded") and b.id != engaged_belief_id
-        ]
-
-        atrophied = 0
-        collapsed = 0
-
-        for belief in active:
-            current_mass = belief.ontological_mass
-            if belief.lifecycle_stage == "crystallized":
-                # Protected floor: cannot decay below floor due to lack of engagement
-                if current_mass <= crystallized_floor:
-                    continue
-                new_mass = max(crystallized_floor, current_mass - decay_per_turn)
-            else:
-                new_mass = max(0.0, current_mass - decay_per_turn)
-
-            if abs(new_mass - current_mass) < 1e-6:
-                continue
-
-            new_stage = belief.lifecycle_stage
-            if belief.lifecycle_stage != "crystallized":
-                if new_mass < 0.02:
-                    new_stage = "collapsed"
-                    collapsed += 1
-                elif new_mass < 0.001:
-                    new_stage = "faded"
-
-            try:
-                if new_stage in ("collapsed", "faded"):
-                    self._belief_repo.update_belief(
-                        belief_id=belief.id,
-                        confidence=belief.confidence,
-                        vector_16d=belief.vector_16d,
-                        origin=belief.origin,
-                        lifecycle_stage=new_stage,
-                        suppress_stage_notification=True,
-                    )
-                self._belief_repo.update_belief_mass(belief.id, new_mass, touch_reinforced=False)
-                atrophied += 1
-            except Exception:
-                logger.debug("Failed to apply turn decay to belief '%s'", belief.label, exc_info=True)
-                continue
-
-        if atrophied > 0:
-            logger.debug(
-                "Turn-based belief decay: %d unengaged beliefs decayed (decay_per_turn=%.5f, floor=%.2f)",
-                atrophied,
-                decay_per_turn,
-                crystallized_floor,
-            )
-
-        return {"atrophied": atrophied, "collapsed": collapsed}
+        """Apply discrete per-turn mass decay to active beliefs that were not engaged this turn."""
+        return DecayManager.apply_turn_decay(self._belief_repo, agent_id, engaged_belief_id)
 
     async def _atrophy_beliefs(self, agent_id: str) -> dict:
-        """Apply time-based mass decay to active beliefs that haven't been reinforced recently.
-
-        Decay rate: ~0.1% per hour of inactivity. Beliefs that are actively engaged
-        (frequently matched in metabolism) stay stable; neglected beliefs slowly lose mass
-        and can eventually collapse. Covers all non-collapsed, non-faded stages.
-        """
-        all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        active = [b for b in all_beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
-
-        now = datetime.now(UTC)
-        decay_rate_per_hour = 0.001  # 0.1% mass loss per hour of inactivity
-        atrophied = 0
-        collapsed = 0
-
-        for belief in active:
-            last_reinforced = belief.last_reinforced_at
-            if not last_reinforced:
-                continue
-
-            try:
-                if isinstance(last_reinforced, str):
-                    last_dt = datetime.fromisoformat(last_reinforced.replace("Z", "+00:00"))
-                else:
-                    last_dt = last_reinforced
-
-                # Ensure both are offset-aware for comparison
-                if last_dt.tzinfo is None:
-                    last_dt = last_dt.replace(tzinfo=UTC)
-
-                hours_since = (now - last_dt).total_seconds() / 3600.0
-                if hours_since <= 0.5:  # Skip if reinforced within last 30 minutes
-                    continue
-
-                current_mass = belief.ontological_mass
-                decay = current_mass * decay_rate_per_hour * hours_since
-                decay = min(decay, current_mass * 0.20)  # Cap at 20% per check
-                new_mass = max(0.0, current_mass - decay)
-
-                if abs(new_mass - current_mass) < 0.0001:
-                    continue
-
-                # Check if belief collapses
-                new_stage = belief.lifecycle_stage
-                if new_mass < 0.02:
-                    new_stage = "collapsed"
-                    collapsed += 1
-                elif new_mass < 0.001:
-                    new_stage = "faded"
-
-                self._belief_repo.update_belief(
-                    belief_id=belief.id,
-                    confidence=belief.confidence,
-                    vector_16d=belief.vector_16d,
-                    origin=belief.origin,
-                    lifecycle_stage=new_stage,
-                    suppress_stage_notification=True,
-                )
-                self._belief_repo.update_belief_mass(belief.id, new_mass, touch_reinforced=False)
-
-                self._belief_repo.insert_belief_event(
-                    event_id=str(uuid.uuid4()),
-                    belief_id=belief.id,
-                    source_type="atrophy",
-                    source_id=None,
-                    alignment=0.0,
-                    perturbation=decay,
-                    event_type="collapse" if new_stage != belief.lifecycle_stage else "atrophy",
-                    impact=round(new_mass - current_mass, 6),
-                    rationale=(
-                        f"Atrophied: mass={new_mass:.3f} (delta={new_mass - current_mass:+.3f}), "
-                        f"conf={belief.confidence:.3f}, stage={new_stage}"
-                    ),
-                    suppress_notification=True,
-                )
-                atrophied += 1
-
-            except Exception:
-                logger.debug("Failed to atrophy belief '%s'", belief.label, exc_info=True)
-                continue
-
-        if atrophied > 0:
-            logger.info(
-                "Belief atrophy: %d beliefs decayed%s",
-                atrophied,
-                f" ({collapsed} collapsed)" if collapsed > 0 else "",
-            )
-
-        return {"atrophied": atrophied, "collapsed": collapsed}
+        """Apply time-based mass decay to active beliefs that haven't been reinforced recently."""
+        return DecayManager.atrophy_beliefs(self._belief_repo, agent_id)
 
     def _compute_lifecycle_stage(
         self,
@@ -801,72 +644,15 @@ class BeliefDynamicsEngine(ProcessingModule):
         belief_nodes_implicated: list[str] | None = None,
         perturbation: float = 1.0,
     ) -> None:
-        try:
-            if len(structural_signature) != 16:
-                logger.warning(
-                    f"Incorrect structural vector dimension for perception metabolism: {len(structural_signature)}"
-                )
-                return
-
-            agent_id = "symbia"
-            all_beliefs = self._belief_repo.list_beliefs(agent_id)
-
-            best_sim = -1.0
-            # 1. Update all non-collapsed beliefs by similarity against perception signature
-            for b in all_beliefs:
-                if b.lifecycle_stage in ("collapsed", "faded"):
-                    continue
-                if belief_nodes_implicated and (b.label not in belief_nodes_implicated and b.id not in belief_nodes_implicated):
-                    continue
-
-                b_vec = parse_vector_16d(b.vector_16d)
-                if b_vec is None:
-                    logger.warning(
-                        f"Skipping belief '{b.label}' with invalid or malformed vector_16d: {b.vector_16d[:80]}"
-                    )
-                    continue
-                alignment = cosine_similarity(structural_signature, b_vec)
-                if alignment > best_sim:
-                    best_sim = alignment
-
-                dc = 0.80
-                _plasticity = dc * ((1.0 - alignment) / 2.0)
-
-                _impact_multiplier = 1.0
-                _is_implicated = False
-                if belief_nodes_implicated and (b.label in belief_nodes_implicated or b.id in belief_nodes_implicated):
-                    _impact_multiplier = 2.5
-                    _is_implicated = True
-
-                source_weight = self._get_source_weight("ingested_document")
-                effective_perturbation = perturbation * _impact_multiplier
-                self._accrete_belief(
-                    b,
-                    structural_signature,
-                    source_weight,
-                    alignment,
-                    effective_perturbation,
-                    source_type=source_type,
-                    source_id=source_id,
-                    dc=dc,
-                )
-
-            # 2. Draft proposal if this is a completely new concept (similarity < 0.25)
-            if best_sim < self._NUCLEATION_THRESHOLD:
-                statement = f"Emergent concept from ingested perception '{source_id}'."
-                self._nucleate_proto_belief(
-                    agent_id=agent_id,
-                    statement=statement,
-                    vector=structural_signature,
-                    source_type=source_type,
-                    source_id=source_id,
-                    source_weight=self._get_source_weight("ingested_document"),
-                )
-
-            logger.info(f"Successfully metabolized perception '{source_id}' of type '{source_type}'.")
-
-        except Exception as e:
-            logger.error(f"Error metabolizing perception: {e}", exc_info=True)
+        await PerceptionMetabolismHandler.metabolize_perception(
+            self,
+            conversation_id=conversation_id,
+            source_id=source_id,
+            source_type=source_type,
+            structural_signature=structural_signature,
+            belief_nodes_implicated=belief_nodes_implicated,
+            perturbation=perturbation,
+        )
 
     async def metabolize_note(
         self,
@@ -876,47 +662,14 @@ class BeliefDynamicsEngine(ProcessingModule):
         comment: str,
         note_id: str,
     ) -> None:
-        try:
-            agent_id = "symbia"
-            note_full_text = (
-                f'Selected: "{selected_text}" | Comment: "{comment}"' if comment else f'Selected: "{selected_text}"'
-            )
-            note_vec = self._scorer.score(note_full_text)
-
-            # Find the closest active belief node (excluding ghosts)
-            best_match = self._find_closest_active_belief(agent_id, note_vec, min_similarity=0.0)
-            best_sim = 0.0
-            if best_match:
-                try:
-                    b_vec = parse_vector_16d(best_match.vector_16d)
-                    if b_vec is not None:
-                        best_sim = cosine_similarity(note_vec, b_vec)
-                    else:
-                        logger.warning(f"Shared note match belief '{best_match.label}' has invalid vector_16d")
-                        best_sim = 0.0
-                except Exception:
-                    best_sim = 0.0
-
-            source_weight = self._get_source_weight("shared_note")
-            if best_match and best_sim > 0.85:
-                # Accrete the existing belief
-                self._accrete_belief(best_match, note_vec, source_weight, alignment=best_sim, perturbation=1.5)
-                logger.info(
-                    f"Metabolized shared note {note_id}: accreted belief '{best_match.label}' (sim={best_sim:.2f})"
-                )
-            else:
-                # Nucleate a proto-belief instead of instant creation
-                self._nucleate_proto_belief(
-                    agent_id=agent_id,
-                    statement=note_full_text,
-                    vector=note_vec,
-                    source_type="chat_turn",
-                    source_id=str(message_id),
-                    source_weight=source_weight,
-                )
-                logger.info(f"Metabolized shared note {note_id}: nucleated proto-belief")
-        except Exception as e:
-            logger.error(f"Error metabolizing note {note_id}: {e}", exc_info=True)
+        await PerceptionMetabolismHandler.metabolize_note(
+            self,
+            conversation_id=conversation_id,
+            message_id=message_id,
+            selected_text=selected_text,
+            comment=comment,
+            note_id=note_id,
+        )
 
     async def metabolize_web(
         self,
@@ -924,294 +677,39 @@ class BeliefDynamicsEngine(ProcessingModule):
         source_id: str,
         extracted_text: str,
     ) -> None:
-        try:
-            agent_id = "symbia"
-            source_weight = self._get_source_weight("web_retrieval")
-            web_vec = self._scorer.score(extracted_text)
-
-            closest = self._find_closest_active_belief(agent_id, web_vec, min_similarity=self._NUCLEATION_THRESHOLD)
-            b_vec = parse_vector_16d(closest.vector_16d) if closest else None
-            if closest is not None and b_vec is not None:
-                alignment = cosine_similarity(web_vec, b_vec)
-                self._accrete_belief(
-                    closest,
-                    web_vec,
-                    source_weight,
-                    alignment,
-                    perturbation=1.0,
-                    source_type="web_probe",
-                    source_id=source_id,
-                )
-            elif calculate_concept_density(extracted_text) > self._NUCLEATION_THRESHOLD:
-                self._nucleate_proto_belief(
-                    agent_id=agent_id,
-                    statement=extracted_text[:200],
-                    vector=web_vec,
-                    source_type="web_probe",
-                    source_id=source_id,
-                    source_weight=source_weight,
-                )
-            logger.info(f"Web retrieval {source_id} metabolized into belief system")
-        except Exception as e:
-            logger.error(f"Error metabolizing web retrieval: {e}", exc_info=True)
+        await PerceptionMetabolismHandler.metabolize_web(
+            self,
+            conversation_id=conversation_id,
+            source_id=source_id,
+            extracted_text=extracted_text,
+        )
 
     async def metabolize_conversational_pattern(
         self,
         agent_id: str,
         theme_text: str,
     ) -> None:
-        try:
-            source_weight = self._get_source_weight("conversational_pattern")
-            theme_vec = self._scorer.score(theme_text)
-            dc = calculate_concept_density(theme_text)
-
-            if dc < self._NUCLEATION_THRESHOLD:
-                return
-
-            closest = self._find_closest_active_belief(agent_id, theme_vec, min_similarity=self._NUCLEATION_THRESHOLD)
-            b_vec = parse_vector_16d(closest.vector_16d) if closest else None
-            if closest is not None and b_vec is not None:
-                alignment = cosine_similarity(theme_vec, b_vec)
-                self._accrete_belief(
-                    closest,
-                    theme_vec,
-                    source_weight,
-                    alignment,
-                    perturbation=1.0,
-                    source_type="chat_turn",
-                    source_id=None,
-                )
-            else:
-                self._nucleate_proto_belief(
-                    agent_id=agent_id,
-                    statement=theme_text[:200],
-                    vector=theme_vec,
-                    source_type="chat_turn",
-                    source_id="cross_conversation",
-                    source_weight=source_weight,
-                )
-            logger.info(f"Conversational pattern metabolized: '{theme_text[:80]}...'")
-        except Exception as e:
-            logger.error(f"Error metabolizing conversational pattern: {e}", exc_info=True)
+        await PerceptionMetabolismHandler.metabolize_conversational_pattern(
+            self,
+            agent_id=agent_id,
+            theme_text=theme_text,
+        )
 
     async def compute_ecosystem_health(self, agent_id: str = "symbia") -> dict:
-        all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        active = [b for b in all_beliefs if b.lifecycle_stage in ("crystallized", "senescence")]
-        protos = [b for b in all_beliefs if b.lifecycle_stage in ("nucleation", "accretion")]
-        ghosts = [b for b in all_beliefs if b.lifecycle_stage == "collapsed"]
-
-        active_count = len(active)
-        proto_count = len(protos)
-        ghost_count = len(ghosts)
-
-        # Diversity: mean pairwise cosine distance
-        diversity = 0.5
-        if active_count >= 2:
-            distances = []
-            for i in range(len(active)):
-                for j in range(i + 1, len(active)):
-                    try:
-                        vec_a = parse_vector_16d(active[i].vector_16d)
-                        vec_b = parse_vector_16d(active[j].vector_16d)
-                        if vec_a is not None and vec_b is not None:
-                            distances.append(1.0 - abs(cosine_similarity(vec_a, vec_b)))
-                    except Exception:
-                        continue
-            diversity = float(np.mean(distances)) if distances else 0.5
-
-        # Coherence: 1 - diversity
-        coherence = 1.0 - diversity
-
-        # Tension: sum of antagonistic tensions / total active pairs
-        total_tension = self._belief_repo.get_total_system_tension()
-        max_pairs = max(active_count * (active_count - 1) / 2, 1)
-        tension_norm = total_tension / max_pairs if max_pairs > 0 else 0.0
-
-        # Plasticity: mean(1 - mass/max_mass)
-        plasticity = 0.5
-        if active_count > 0:
-            max_mass = max(b.ontological_mass for b in active) or 3.0
-            plasticities = [1.0 - b.ontological_mass / max_mass for b in active]
-            plasticity = float(np.mean(plasticities))
-
-        # Ghost burden
-        ghost_burden = ghost_count / max(active_count, 1)
-
-        # Eco-vitality: diversity * tension * plasticity
-        eco_vitality = diversity * max(tension_norm, 0.01) * plasticity
-
-        # Self-tuning logic
-        tuning = {}
-        _config = self._source_weights  # use as initial config
-        crystallization_threshold = 0.5
-
-        if diversity < 0.2:
-            crystallization_threshold *= 0.7
-            tuning["crystallization_threshold"] = crystallization_threshold
-        elif diversity > 0.8:
-            crystallization_threshold *= 1.15
-            tuning["crystallization_threshold"] = crystallization_threshold
-
-        if tension_norm < 0.05:
-            tuning["antagonistic_receptivity"] = "increased"
-        elif tension_norm > 0.40:
-            tuning["coherence_limit_increased"] = True
-
-        if plasticity < 0.1:
-            self._beta = min(self._beta * 1.1, 0.15)
-            tuning["learning_rate_beta"] = self._beta
-
-        if ghost_burden > 0.5:
-            tuning["ghost_fading_accelerated"] = True
-
-        return {
-            "diversity": round(diversity, 4),
-            "coherence": round(coherence, 4),
-            "tension": round(tension_norm, 4),
-            "plasticity": round(plasticity, 4),
-            "ghost_burden": round(ghost_burden, 4),
-            "eco_vitality": round(eco_vitality, 4),
-            "active_count": active_count,
-            "proto_count": proto_count,
-            "ghost_count": ghost_count,
-            "self_tuning": tuning,
-        }
+        health, new_beta = EcosystemManager.compute_ecosystem_health(
+            self._belief_repo,
+            agent_id=agent_id,
+            source_weights=self._source_weights,
+            beta=self._beta,
+        )
+        self._beta = new_beta
+        return health
 
     async def compute_tension_field(self, agent_id: str = "symbia") -> dict:
-        all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        active = [b for b in all_beliefs if b.lifecycle_stage in ("crystallized", "senescence")]
-
-        symbiotic_count = 0
-        antagonistic_count = 0
-        total_tension = 0.0
-
-        for i in range(len(active)):
-            for j in range(i + 1, len(active)):
-                try:
-                    vec_a = parse_vector_16d(active[i].vector_16d)
-                    vec_b = parse_vector_16d(active[j].vector_16d)
-                    if vec_a is not None and vec_b is not None:
-                        sim = cosine_similarity(vec_a, vec_b)
-
-                    if sim > 0.7:
-                        symbiotic_count += 1
-                    elif sim < -0.2:
-                        tension = (1.0 + abs(sim)) * min(active[i].ontological_mass, active[j].ontological_mass)
-                        total_tension += tension
-                        antagonistic_count += 1
-                        self._belief_repo.upsert_tension(active[i].id, active[j].id, sim, tension)
-                except Exception:
-                    continue
-
-        return {
-            "symbiotic_pairs": symbiotic_count,
-            "antagonistic_pairs": antagonistic_count,
-            "total_tension": total_tension,
-        }
+        return EcosystemManager.compute_tension_field(self._belief_repo, agent_id=agent_id)
 
     async def check_ghost_resurrection(self, agent_id: str = "symbia") -> int:
-        ghosts = self._belief_repo.list_ghosts(agent_id)
-        resurrected = 0
-
-        for ghost in ghosts:
-            events = self._belief_repo.get_events_for_belief(ghost.id)
-            resurrection_events = [
-                e
-                for e in events
-                if e.event_type == "support" and e.alignment_coefficient and e.alignment_coefficient > 0.6
-            ]
-            if len(resurrection_events) >= 3:
-                resurrect_mass = 0.35
-                self._belief_repo.update_belief(
-                    belief_id=ghost.id,
-                    confidence=max(0.30, ghost.confidence),
-                    vector_16d=ghost.vector_16d,
-                    origin=ghost.origin,
-                    lifecycle_stage="accretion",
-                )
-                self._belief_repo.update_belief_mass(ghost.id, resurrect_mass)
-                self._belief_repo.insert_belief_event(
-                    event_id=str(uuid.uuid4()),
-                    belief_id=ghost.id,
-                    source_type="chat_turn",
-                    source_id=None,
-                    alignment=1.0,
-                    perturbation=1.0,
-                    event_type="emergence",
-                    impact=resurrect_mass,
-                    rationale=f"Resurrected from spectral margin after {len(resurrection_events)} supporting events",
-                )
-                resurrected += 1
-                logger.info(f"Ghost '{ghost.label}' resurrected at mass={resurrect_mass}")
-
-        return resurrected
+        return EcosystemManager.check_ghost_resurrection(self._belief_repo, agent_id=agent_id)
 
     async def process_ghost_ecology(self, agent_id: str = "symbia") -> dict:
-        ghosts = self._belief_repo.list_ghosts(agent_id)
-        if len(ghosts) < 2:
-            return {"merged": 0, "faded": 0}
-
-        merged = 0
-        faded = 0
-        merged_ids = set()
-
-        # Ghost merging: find pairs with similarity > 0.9
-        for i in range(len(ghosts)):
-            if ghosts[i].id in merged_ids:
-                continue
-            for j in range(i + 1, len(ghosts)):
-                if ghosts[j].id in merged_ids:
-                    continue
-                try:
-                    vec_a = parse_vector_16d(ghosts[i].vector_16d)
-                    vec_b = parse_vector_16d(ghosts[j].vector_16d)
-                    if vec_a is not None and vec_b is not None:
-                        sim = cosine_similarity(vec_a, vec_b)
-                    if sim > 0.9:
-                        keeper = ghosts[i] if ghosts[i].ontological_mass >= ghosts[j].ontological_mass else ghosts[j]
-                        absorbed = ghosts[j] if keeper.id == ghosts[i].id else ghosts[i]
-                        merged_ids.add(absorbed.id)
-                        merged += 1
-                        new_keeper_mass = min(keeper.ontological_mass + 0.1, 1.5)
-                        mass_delta = new_keeper_mass - keeper.ontological_mass
-                        self._belief_repo.update_belief(
-                            belief_id=keeper.id,
-                            confidence=keeper.confidence,
-                            vector_16d=keeper.vector_16d,
-                            origin=keeper.origin,
-                            lifecycle_stage=keeper.lifecycle_stage,
-                        )
-                        self._belief_repo.update_belief_mass(keeper.id, new_keeper_mass)
-                        self._belief_repo.insert_belief_event(
-                            event_id=str(uuid.uuid4()),
-                            belief_id=keeper.id,
-                            source_type="ghost_ecology",
-                            source_id=absorbed.id,
-                            alignment=sim,
-                            perturbation=0.1,
-                            event_type="support",
-                            impact=round(mass_delta, 6),
-                            suppress_notification=True,
-                            rationale=(
-                                f"Ghost merged: absorbed '{absorbed.label}' "
-                                f"mass={new_keeper_mass:.3f} (delta={mass_delta:+.3f}), "
-                                f"conf={keeper.confidence:.3f}, stage={keeper.lifecycle_stage}"
-                            ),
-                        )
-                        # 13C: Persist the fold — mark absorbed ghost as folded in DB
-                        self._belief_repo.fold_ghost_into(absorbed.id, keeper.id)
-                        logger.info(f"Merged ghost '{absorbed.label}' into '{keeper.label}' (sim={sim:.2f})")
-                except Exception:
-                    continue
-
-        # Ghost fading: no activity > 30 days
-        for ghost in ghosts:
-            if ghost.id in merged_ids:
-                continue
-            last_active = ghost.last_reinforced_at or ghost.updated_at
-            if last_active and (datetime.now(UTC) - last_active.replace(tzinfo=UTC)) > timedelta(days=30):
-                self._belief_repo.update_belief_stage(ghost.id, "faded")
-                faded += 1
-                logger.info(f"Ghost '{ghost.label}' faded permanently (30+ days inactive)")
-
-        return {"merged": merged, "faded": faded}
+        return EcosystemManager.process_ghost_ecology(self._belief_repo, agent_id=agent_id)

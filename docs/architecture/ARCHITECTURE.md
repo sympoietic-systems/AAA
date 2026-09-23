@@ -509,12 +509,11 @@ AAA/
 │   │   ├── consolidation.py  Conversation consolidation mixin
 │   │   ├── scheduler.py      Background startup scheduler
 │   │   └── ...               Dream context, executor, prompts, mass decay, sedimentation, skill metabolism
-│   ├── app_factory/
-│   │   └── __init__.py       register_all() — skill registration factory
 │   ├── personality/
 │   │   ├── identity.yaml      Agent self-definition (name, prompt, traits, beliefs)
 │   │   └── assembler.py       PromptAssemblerModule — context assembly
 │   ├── pipeline/
+│   │   ├── engine.py          ProcessingPipeline & PipelineResult execution engine
 │   │   ├── metadata.py        ModuleMeta dataclass
 │   │   └── registry.py        PipelineRegistry — extends ModuleRegistry
 │   ├── prompts/              Centralized system, tool, and background prompts
@@ -525,41 +524,44 @@ AAA/
 │   ├── modules/
 │   │   ├── base.py           ProcessingModule ABC
 │   │   ├── embedder.py       Local sentence-transformers service
-│   │   ├── perception.py     File ingestion + chunked retrieval
-│   │   ├── web_retrieval.py  Exogenous rhizomatic web retrieval
 │   │   ├── digester.py       PDF/DOCX/text extraction
-│   │   ├── llm_client.py     Provider-agnostic LLM client (665 lines)
-│   │   ├── belief_engine.py  Belief dynamics engine (940 lines)
-│   │   ├── belief_math.py    Pure belief math functions
+│   │   ├── llm_client.py     Provider-agnostic LLM client
+│   │   ├── belief_engine.py  Belief dynamics engine coordinator
+│   │   ├── belief_math.py    Pure numpy calculations & vector parsing
 │   │   ├── context_collector.py       Conversation-scoped history retrieval
 │   │   ├── consolidation_checkpoint.py Memory node injection + consolidation trigger
 │   │   ├── structural_engine.py       16-dim cybernetic signature
 │   │   ├── conversation_metrics.py    Real-time vitality metrics
-│   │   ├── sedimentation_retrieval.py Cross-conversation embedding similarity
-│   │   └── providers/        LLM provider adapters
-│   │       ├── anthropic_utils.py Anthropic API parsing + body builder
-│   │       ├── google_utils.py    Gemini param sanitization
-│   │       └── openrouter_utils.py OpenRouter reasoning exclusion
-│   │   ├── diffractive_retrieval.py   Stagnation detection + nomadic retrieval
-│   │   ├── belief_engine.py          Proto-belief lifecycle + tension ecology + self-tuning
-│   │   ├── homeostatic_regulator.py   Metrics → parameter mapping
-│   │   └── background_tasks/         Async self-maintenance actions
+│   │   ├── belief/           Modular belief subsystems (decay, ecosystem, perception_handlers)
+│   │   ├── retrieval/        diffractive_retrieval, sedimentation_retrieval, web_retrieval, rhizome_web_probe
+│   │   ├── sensory/          afferent_sensory_router, glitch_fidelity_engine, homeostatic_regulator, perception, trait_computer
+│   │   ├── skills/           skill_activator, skill_workshop
+│   │   ├── providers/        LLM provider adapters (anthropic_utils, google_utils, openrouter_utils)
+│   │   └── background_tasks/ Async self-maintenance actions
+│   ├── services/
+│   │   ├── chat.py           ChatService & message flow
+│   │   ├── daily_summary.py  DailySummaryService business logic
+│   │   ├── export/           Modular formatters (markdown, graph, research, service)
+│   │   └── research/         Orchestrator, envelope_mapper, sedimentation_queue
 │   ├── storage/
-│   │   ├── database.py       DB path, connection, init_db (thin, delegates to migrations)
+│   │   ├── database.py       DB path, connection, init_db (delegates to migrations)
 │   │   ├── models.py         Conversation, Message, MetricsRecord, ErrorLogEntry
 │   │   ├── connection.py     ConnectionTracker, with_connection decorator
 │   │   ├── row_mappers.py    All _row_to_* conversion functions
-│   │   ├── repository.py     Backward-compat shim → storage/repositories/
-│   │   ├── repositories/     10 repository files (one per entity)
-│   │   └── migrations/       15 numbered migration files + runner
+│   │   ├── repositories/     base.py + domain packages:
+│   │   │   ├── cognitive/    belief, memory_node, semantic_knot, refusal, dream_log, skill
+│   │   │   ├── conversation/ conversation, message, compressed_message, note, note_markup, notification
+│   │   │   ├── research/     research_task, research_step, research_step_result, research_plan, research_branch, research_meta_log, scraped_asset
+│   │   │   └── telemetry/    daily_summary_repository, metrics, error_log, consolidation, commitment, expertise, personality_state, perception_sediment
+│   │   └── migrations/       m050_baseline_schema.py + dynamic runner (__init__.py) for m051+
 │   ├── utils/
+│   │   ├── parsers/          belief, dream_trigger, refusal, skill tag parsers
 │   │   ├── token_counter.py  TokenBudget dataclass, estimate_tokens()
 │   │   ├── similarity.py     Delegates to vector.py for cosine_similarity()
-│   │   ├── vector.py         Consolidated 16D vector parsing, cosine similarity,
-│   │   │                     structural-signature deserialization, HistoryMessage builder
-│   │   ├── filesystem.py     UPLOAD_DIR constant, get_upload_path(), to_utc()
-│   │   └── skill_parser.py   Skill nucleation tag parsing
-│   └── tests/
+│   │   ├── vector.py         Consolidated 16D vector parsing, cosine similarity, structural deserialization
+│   │   └── filesystem.py     UPLOAD_DIR constant, get_upload_path(), to_utc()
+│   └── tests/                316 unit and integration test suites
+
 ├── frontend/
 │   └── src/
 │       ├── api/client.ts     Backend API calls (chat, history, conversations, tokens, metrics, skills)

@@ -24,4 +24,3 @@ def get_skill_blueprint_prompt() -> str:
         "skill_blueprint_specification",
         default="",
     )
-

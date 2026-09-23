@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+
 from backend.modules.conversation_metrics import (
     _compute_conceptual_velocity,
     _compute_surprise_index,
@@ -19,9 +19,7 @@ def test_predictive_surprise_linear_vs_jump():
     s_jump = _compute_surprise_index(current_vec=v_jump, all_recent=[v1, v0])
 
     assert s_linear is not None and s_jump is not None
-    assert (
-        s_jump > s_linear
-    ), f"Expected jump surprise ({s_jump}) > linear surprise ({s_linear})"
+    assert s_jump > s_linear, f"Expected jump surprise ({s_jump}) > linear surprise ({s_linear})"
 
 
 def test_conceptual_velocity_and_phase_transition():
@@ -81,5 +79,3 @@ def test_predictive_surprise_early_turn_no_saturation():
     s1 = _compute_surprise_index(current_vec=v1, all_recent=[v0])
     assert s1 is not None
     assert 0.20 <= s1 <= 0.70, f"Expected early turn surprise to be in [0.20, 0.70], got {s1}"
-
-

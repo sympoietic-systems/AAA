@@ -1,6 +1,6 @@
 import numpy as np
-import pytest
-from backend.modules.glitch_fidelity_engine import (
+
+from backend.modules.sensory.glitch_fidelity_engine import (
     compute_glitch_fidelity,
     compute_interference_variance,
     select_diffractive_prior,
@@ -38,9 +38,7 @@ def test_select_diffractive_prior_goldilocks_zone():
     # Candidate C: Disjoint (affinity < 0.3) -> orthogonal
     cand_disjoint = {"id": 3, "signature": [0.0] * 8 + [0.25] * 8}
 
-    selected = select_diffractive_prior(
-        current_sig, None, [cand_similar, cand_goldilocks, cand_disjoint]
-    )
+    selected = select_diffractive_prior(current_sig, None, [cand_similar, cand_goldilocks, cand_disjoint])
     assert selected is not None
     assert selected["id"] == 2, f"Expected Goldilocks candidate ID 2, got {selected['id']}"
 

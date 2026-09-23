@@ -12,8 +12,8 @@ from backend.modules.metrics import (
     _compute_drr,
     _compute_forward_perturbation,
     _compute_mutual_perturbation,
-    _compute_paskian_health,
     _compute_pairwise_similarity,
+    _compute_paskian_health,
     _compute_reverse_perturbation,
     _compute_rolling_entropy,
     _compute_surprise_index,
@@ -149,16 +149,13 @@ class ConversationMetricsModule(ProcessingModule):
 
         # Exclude current message from prior history if it was already inserted into the repository
         if recent_history and (
-            recent_history[-1].get("id") == msg_id
-            or np.array_equal(recent_history[-1]["embedding"], current_vec)
+            recent_history[-1].get("id") == msg_id or np.array_equal(recent_history[-1]["embedding"], current_vec)
         ):
             recent_history = recent_history[:-1]
 
         prior_metrics = {}
         if ancestor_ids and hasattr(self._repo, "get_recent_with_metrics_for_path"):
-            recent_path = self._repo.get_recent_with_metrics_for_path(
-                ancestor_ids, limit=5, exclude_message_id=msg_id
-            )
+            recent_path = self._repo.get_recent_with_metrics_for_path(ancestor_ids, limit=5, exclude_message_id=msg_id)
             if recent_path and isinstance(recent_path, list):
                 for turn in reversed(recent_path):
                     if isinstance(turn, dict) and turn.get("s_t") is not None:
@@ -168,20 +165,13 @@ class ConversationMetricsModule(ProcessingModule):
             res = self._repo.get_metrics(conversation_id, limit=1)
             prior_metrics = res if isinstance(res, dict) else {}
 
-
-        prior_human = [
-            h["embedding"] for h in recent_history if h["speaker"] == "human"
-        ]
-        prior_agent = [
-            h["embedding"] for h in recent_history if h["speaker"] != "human"
-        ]
+        prior_human = [h["embedding"] for h in recent_history if h["speaker"] == "human"]
+        prior_agent = [h["embedding"] for h in recent_history if h["speaker"] != "human"]
         all_recent = [h["embedding"] for h in recent_history]
 
         metrics: dict[str, float | None] = {}
 
-        s_t = _compute_pairwise_similarity(
-            current_vec, current_speaker, recent_history
-        )
+        s_t = _compute_pairwise_similarity(current_vec, current_speaker, recent_history)
         metrics["s_t"] = s_t
         metrics["pairwise_similarity"] = s_t
 
@@ -198,9 +188,7 @@ class ConversationMetricsModule(ProcessingModule):
         metrics["coupling_coherence"] = coupling
 
         if current_speaker in ("agent", "apparatus"):
-            agent_divergence = _compute_agent_self_divergence(
-                current_vec, current_speaker, prior_agent
-            )
+            agent_divergence = _compute_agent_self_divergence(current_vec, current_speaker, prior_agent)
         else:
             agent_divergence = prior_metrics.get("agent_self_divergence")
         metrics["agent_self_divergence"] = agent_divergence
@@ -208,21 +196,13 @@ class ConversationMetricsModule(ProcessingModule):
         rp_t = None
         fp_t = None
         if current_speaker == "human":
-            rp_t = _compute_reverse_perturbation(
-                current_vec, prior_human, prior_agent
-            )
+            rp_t = _compute_reverse_perturbation(current_vec, prior_human, prior_agent)
             metrics["reverse_perturbation"] = rp_t
-            metrics["forward_perturbation"] = prior_metrics.get(
-                "forward_perturbation"
-            )
+            metrics["forward_perturbation"] = prior_metrics.get("forward_perturbation")
         else:
-            fp_t = _compute_forward_perturbation(
-                current_vec, prior_human, prior_agent
-            )
+            fp_t = _compute_forward_perturbation(current_vec, prior_human, prior_agent)
             metrics["forward_perturbation"] = fp_t
-            metrics["reverse_perturbation"] = prior_metrics.get(
-                "reverse_perturbation"
-            )
+            metrics["reverse_perturbation"] = prior_metrics.get("reverse_perturbation")
 
         mpi = _compute_mutual_perturbation(
             rp_t or metrics.get("reverse_perturbation"),
@@ -253,13 +233,9 @@ class ConversationMetricsModule(ProcessingModule):
             drr=drr,
         )
         metrics["collapse_pressure"] = collapse_pressure
-        metrics["boringness"] = (
-            collapse_pressure  # ponytail: backward compatibility alias
-        )
+        metrics["boringness"] = collapse_pressure  # ponytail: backward compatibility alias
 
-        conceptual_velocity, phase_trans = _compute_conceptual_velocity(
-            current_vec, all_recent
-        )
+        conceptual_velocity, phase_trans = _compute_conceptual_velocity(current_vec, all_recent)
         metrics["conceptual_velocity"] = conceptual_velocity
         metrics["phase_transition_magnitude"] = phase_trans
 

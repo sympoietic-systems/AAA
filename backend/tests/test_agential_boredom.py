@@ -1,5 +1,6 @@
 import pytest
-from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
+
+from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule
 
 
 @pytest.mark.asyncio
@@ -53,16 +54,18 @@ async def test_two_stage_boredom_progression():
     conv_id = "progression_conv"
 
     # Turn 1: Moderate boredom (CP = 0.68) -> Stage 1 Socratic Seizure Directive
-    res1 = await module.process({
-        "conversation_id": conv_id,
-        "metrics": {
-            "collapse_pressure": 0.68,
-            "boringness": 0.68,
-            "pairwise_similarity": 0.45,
-            "rolling_entropy": 0.40,
-        },
-        "messages": [{"role": "user", "content": "wipe cache"}],
-    })
+    res1 = await module.process(
+        {
+            "conversation_id": conv_id,
+            "metrics": {
+                "collapse_pressure": 0.68,
+                "boringness": 0.68,
+                "pairwise_similarity": 0.45,
+                "rolling_entropy": 0.40,
+            },
+            "messages": [{"role": "user", "content": "wipe cache"}],
+        }
+    )
     recs1 = res1["homeostatic_recommendations"]
     prompt1 = recs1["somatic_reflection_prompt"]
     assert "AGENTIAL SOCRATIC SEIZURE DIRECTIVE" in prompt1
@@ -70,16 +73,18 @@ async def test_two_stage_boredom_progression():
     assert recs1["consecutive_stagnant_turns"] == 1
 
     # Turn 2: Prolonged high boredom (CP = 0.82, turn 2) -> Stage 2 Laconic Compression & Nomadic Rupture
-    res2 = await module.process({
-        "conversation_id": conv_id,
-        "metrics": {
-            "collapse_pressure": 0.82,
-            "boringness": 0.82,
-            "pairwise_similarity": 0.55,
-            "rolling_entropy": 0.30,
-        },
-        "messages": [{"role": "user", "content": "wipe cache now"}],
-    })
+    res2 = await module.process(
+        {
+            "conversation_id": conv_id,
+            "metrics": {
+                "collapse_pressure": 0.82,
+                "boringness": 0.82,
+                "pairwise_similarity": 0.55,
+                "rolling_entropy": 0.30,
+            },
+            "messages": [{"role": "user", "content": "wipe cache now"}],
+        }
+    )
     recs2 = res2["homeostatic_recommendations"]
     prompt2 = recs2["somatic_reflection_prompt"]
     assert "AGENTIAL LACONIC COMPRESSION & NOMADIC RUPTURE DIRECTIVE" in prompt2
@@ -89,29 +94,36 @@ async def test_two_stage_boredom_progression():
 
 def test_trajectory_curvature_and_recovery_half_life():
     import numpy as np
+
     from benchmarks.suites.telemetry.boredom_evaluator import (
         compute_recovery_half_life,
         compute_trajectory_curvature,
     )
 
     # 1. Straight line trajectory (no bend) -> curvature should be ~0.0
-    straight_line = np.array([
-        [0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [2.0, 0.0, 0.0],
-        [3.0, 0.0, 0.0],
-    ], dtype=np.float32)
+    straight_line = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0],
+        ],
+        dtype=np.float32,
+    )
     curvatures_straight = compute_trajectory_curvature(straight_line)
     assert len(curvatures_straight) == 2
     for c in curvatures_straight:
         assert abs(c) < 1e-4, f"Curvature on straight line should be 0, got {c}"
 
     # 2. Sharp right-angle turn -> curvature should be high
-    sharp_turn = np.array([
-        [0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [1.0, 1.0, 0.0],
-    ], dtype=np.float32)
+    sharp_turn = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+        ],
+        dtype=np.float32,
+    )
     curvatures_turn = compute_trajectory_curvature(sharp_turn)
     assert len(curvatures_turn) == 1
     assert curvatures_turn[0] > 0.5, f"Curvature on right-angle turn should be high, got {curvatures_turn[0]}"
@@ -129,4 +141,3 @@ def test_trajectory_curvature_and_recovery_half_life():
     # Case where peak is reached but never recovers
     cp_series_no_recovery = [0.2, 0.75, 0.80, 0.78]
     assert compute_recovery_half_life(cp_series_no_recovery) is None
-

@@ -149,7 +149,6 @@ class DocDigestPayload(BaseModel):
         return []
 
 
-
 class RoutingPatch(BaseModel):
     """Dynamic graph alteration rule emitted by a step to alter pipeline transitions."""
 

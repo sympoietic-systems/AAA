@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+
 from backend.modules.metrics import (
     _compute_agent_self_divergence,
     _compute_coupling_coherence,
@@ -29,9 +29,7 @@ def test_agent_self_divergence_loops_and_evolution():
 
     # 1. Immediate self-repetition -> high self-similarity -> low divergence
     same_prior = [c_vec] * 5
-    div_loop = _compute_agent_self_divergence(
-        current_vec=c_vec, current_speaker="apparatus", prior_agent=same_prior
-    )
+    div_loop = _compute_agent_self_divergence(current_vec=c_vec, current_speaker="apparatus", prior_agent=same_prior)
 
     # 2. Evolving agent turns -> orthogonal to past turns -> high divergence
     diff_vec = np.array([0.0] + [1.0] + [0.0] * 382, dtype=np.float32)
@@ -41,9 +39,7 @@ def test_agent_self_divergence_loops_and_evolution():
     )
 
     assert div_loop is not None and div_evolving is not None
-    assert (
-        div_evolving > div_loop
-    ), f"Expected evolving divergence ({div_evolving}) > loop divergence ({div_loop})"
+    assert div_evolving > div_loop, f"Expected evolving divergence ({div_evolving}) > loop divergence ({div_loop})"
 
 
 def test_agent_self_divergence_recency_decay():
@@ -112,20 +108,13 @@ def test_coupling_coherence_directional_alignment_vs_opposition():
     assert cc_orth == 0.0, f"Expected 0.0 orthogonal dissociation coherence, got {cc_orth}"
 
 
-
 def test_agent_self_divergence_speaker_awareness():
     """Verify that self-divergence is only computed for agent/apparatus, returning None on human turns."""
     vec = np.array([1.0] + [0.0] * 383, dtype=np.float32)
     prior = [vec] * 3
 
-    div_human = _compute_agent_self_divergence(
-        current_vec=vec, current_speaker="human", prior_agent=prior
-    )
-    div_agent = _compute_agent_self_divergence(
-        current_vec=vec, current_speaker="agent", prior_agent=prior
-    )
+    div_human = _compute_agent_self_divergence(current_vec=vec, current_speaker="human", prior_agent=prior)
+    div_agent = _compute_agent_self_divergence(current_vec=vec, current_speaker="agent", prior_agent=prior)
 
     assert div_human is None
     assert div_agent is not None
-
-

@@ -35,7 +35,7 @@ def _compute_pairwise_similarity(
         dot_sim = float(np.dot(c_vec, v_vec))
         # Affine normalization on active cone
         rho_hat = float(np.clip((dot_sim - rho_floor) / (rho_ceil - rho_floor + 1e-6), 0.0, 1.0))
-        s_semantic = float(rho_hat ** alpha_power)
+        s_semantic = float(rho_hat**alpha_power)
 
         speaker = item.get("speaker", "human")
         w_spk = 0.75 if speaker == current_speaker else 1.00
@@ -138,8 +138,8 @@ def _compute_rolling_entropy(
         return 0.0
 
     # Tr(G^2) is sum of squares of elements of symmetric Gram matrix
-    tr_G2 = float(np.sum(gram ** 2))
-    d_eff = (tr_G ** 2) / (tr_G2 + 1e-8)
+    tr_G2 = float(np.sum(gram**2))
+    d_eff = (tr_G**2) / (tr_G2 + 1e-8)
 
     # Normalize participation ratio to [0, 1]
     pr_norm = (d_eff - 1.0) / max(1.0, float(K - 1))

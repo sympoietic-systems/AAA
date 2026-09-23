@@ -124,6 +124,7 @@ What becomes easier/harder?
 | [090](ADR-090-relational-turn-based-belief-decay-and-crystallized-floor.md) | Relational Turn-Based Belief Decay and Crystallized Floor Protection | accepted | 2026-09-18 |
 | [090b](ADR-090b-jev-augmented-attractor-window-and-split-resonance.md) | Jev-Augmented Attractor Window & Split Resonance Topology | accepted | 2026-09-18 |
 | [091](ADR-091-jev-dream-topic-arbitration-and-saturation-lifecycle.md) | TypeSafe Jev Dream Topic Arbitration and Homeostatic Saturation Lifecycle | accepted | 2026-09-22 |
+| [092](ADR-092-backend-architecture-decomposition-and-migration-squash.md) | Backend Architectural Decomposition, Agential Cuts, and Migration Squash | accepted | 2026-09-23 |
 
 
 

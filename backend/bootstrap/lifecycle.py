@@ -85,8 +85,8 @@ async def lifespan(app: FastAPI):
     modules["prompt_assembler"] = prompt_assembler
 
     # 6b. Skill activator & Afferent Sensory Router
-    from backend.modules.afferent_sensory_router import AfferentSensoryRouter
-    from backend.modules.skill_activator import SkillActivatorModule
+    from backend.modules.sensory.afferent_sensory_router import AfferentSensoryRouter
+    from backend.modules.skills.skill_activator import SkillActivatorModule
 
     afferent_router = AfferentSensoryRouter.from_config(config)
     skill_activator = SkillActivatorModule(router=afferent_router)
@@ -94,7 +94,7 @@ async def lifespan(app: FastAPI):
     modules["skill_activator"] = skill_activator
 
     # 6c. Skill workshop
-    from backend.modules.skill_workshop import SkillWorkshopModule
+    from backend.modules.skills.skill_workshop import SkillWorkshopModule
 
     skill_workshop = SkillWorkshopModule()
     skill_workshop.set_repos(repos["skill_repo"], repos["belief_repo"])

@@ -28,7 +28,7 @@ async def get_refusals(
             return {"refusals": [], "error": "Database not configured"}
 
     try:
-        from backend.storage.repositories.refusal import RefusalRepository
+        from backend.storage.repositories.cognitive.refusal import RefusalRepository
 
         repo = RefusalRepository(db_path)
         refusals = repo.list_by_agent(agent_id, limit=limit)

@@ -509,6 +509,7 @@ class AutopoieticDreamDaemon(
                 try:
                     self.belief_repo.update_belief_last_dreamed(hotspot.id)
                     import uuid
+
                     self.belief_repo.insert_belief_event(
                         event_id=str(uuid.uuid4()),
                         belief_id=hotspot.id,

@@ -239,7 +239,7 @@ class SummarizeAction(BackgroundAction):
                 if not local_summary:
                     local_summary = f"[Block {idx + 1} Summary fallback]"
 
-                from backend.utils.skill_parser import parse_skill_nucleation_tags
+                from backend.utils.parsers.skill import parse_skill_nucleation_tags
 
                 local_summary, block_skills = parse_skill_nucleation_tags(local_summary)
                 if block_skills:
@@ -308,7 +308,7 @@ class SummarizeAction(BackgroundAction):
                 logger.error(f"Error during global synthesis: {se}")
                 raise se
 
-        from backend.utils.skill_parser import parse_skill_nucleation_tags
+        from backend.utils.parsers.skill import parse_skill_nucleation_tags
 
         final_summary, global_skills = parse_skill_nucleation_tags(final_summary)
         if global_skills:

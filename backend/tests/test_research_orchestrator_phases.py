@@ -10,9 +10,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.services.research.orchestrator import SomaticResearchOrchestrator
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repositories.research_plan import ResearchPlanRepository
-from backend.storage.repositories.research_step import ResearchStepRepository
-from backend.storage.repositories.research_task import ResearchTaskRepository
+from backend.storage.repositories.research.research_plan import ResearchPlanRepository
+from backend.storage.repositories.research.research_step import ResearchStepRepository
+from backend.storage.repositories.research.research_task import ResearchTaskRepository
 
 DB_PATH = str(get_db_path("data/aaa_test.db"))
 
@@ -1001,7 +1001,7 @@ class TestDynamicReroutingAndCacheClearance:
     @pytest.mark.asyncio
     async def test_pure_reflection_step_execution(self):
         from backend.services.research.steps.pure_reflection import PureReflectionStep
-        from backend.services.research.task_state import StepEnvelope, ReflectionPayload
+        from backend.services.research.task_state import ReflectionPayload, StepEnvelope
 
         conn = init_db(DB_PATH)
         task_id = _make_task_id()
@@ -1062,7 +1062,6 @@ class TestDynamicReroutingAndCacheClearance:
 
     @pytest.mark.asyncio
     async def test_routing_patches_plasticity(self):
-        from backend.services.research.task_state import RoutingPatch, StepEnvelope, ReflectionPayload
 
         conn = init_db(DB_PATH)
         task_id = _make_task_id()
@@ -1111,8 +1110,10 @@ class TestDynamicReroutingAndCacheClearance:
         }
 
         # Mock EvaluateStep to output GLITCH_FIDELITY_LOW flag
-        with patch("backend.services.research.steps.evaluate.EvaluateStep.execute", new_callable=AsyncMock) as mock_exec:
-            from backend.services.research.task_state import StepOutput, EvaluatePayload
+        with patch(
+            "backend.services.research.steps.evaluate.EvaluateStep.execute", new_callable=AsyncMock
+        ) as mock_exec:
+            from backend.services.research.task_state import EvaluatePayload, StepOutput
 
             mock_exec.return_value = StepOutput(
                 status="completed",
@@ -1129,4 +1130,3 @@ class TestDynamicReroutingAndCacheClearance:
             assert len(orch._state_mgr.states[task_id]["all_findings"]) == 2
 
         conn.close()
-

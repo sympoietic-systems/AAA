@@ -6,9 +6,9 @@ import numpy as np
 from fastapi.testclient import TestClient
 
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repositories.memory_node import MemoryNodeRepository
-from backend.storage.repositories.message import MessageRepository
-from backend.storage.repositories.note import NoteRepository
+from backend.storage.repositories.cognitive.memory_node import MemoryNodeRepository
+from backend.storage.repositories.conversation.message import MessageRepository
+from backend.storage.repositories.conversation.note import NoteRepository
 
 
 def test_search_endpoint(client: TestClient):

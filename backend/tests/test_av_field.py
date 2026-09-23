@@ -4,7 +4,7 @@ import numpy as np
 from fastapi.testclient import TestClient
 
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repositories.message import MessageRepository
+from backend.storage.repositories.conversation.message import MessageRepository
 
 
 def _fresh_repo() -> MessageRepository:

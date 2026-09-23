@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+
 from backend.modules.conversation_metrics import (
     _compute_conceptual_novelty,
     _compute_pairwise_similarity,
@@ -77,20 +77,15 @@ def test_pairwise_similarity_recency_decay_ordering():
     )
 
 
-
 def test_conceptual_novelty_centroid_drift():
     v1 = np.array([1.0] + [0.0] * 383, dtype=np.float32)
     v2 = np.array([0.0, 1.0] + [0.0] * 382, dtype=np.float32)
 
     hist = [{"embedding": v1, "speaker": "human"}]
 
-    novelty_1, centroid_1 = _compute_conceptual_novelty(
-        current_vec=v1, recent_history=hist, prior_centroid=None
-    )
+    novelty_1, centroid_1 = _compute_conceptual_novelty(current_vec=v1, recent_history=hist, prior_centroid=None)
 
-    novelty_2, centroid_2 = _compute_conceptual_novelty(
-        current_vec=v2, recent_history=hist, prior_centroid=centroid_1
-    )
+    novelty_2, centroid_2 = _compute_conceptual_novelty(current_vec=v2, recent_history=hist, prior_centroid=centroid_1)
 
     assert novelty_1 is not None and novelty_2 is not None
     # Orthogonal turn v2 relative to v1 centroid should yield higher conceptual novelty
@@ -100,7 +95,7 @@ def test_conceptual_novelty_centroid_drift():
 def test_conceptual_novelty_repetitive_basin_suppression():
     """Verify that tight semantic clustering suppresses novelty, while orthogonal drift expands it."""
     base = np.array([1.0] + [0.0] * 383, dtype=np.float32)
-    
+
     # Simulate a tight repetitive dialogue basin (small perturbations around base)
     history = []
     for i in range(5):
@@ -109,29 +104,24 @@ def test_conceptual_novelty_repetitive_basin_suppression():
         noise[1] = 0.05 * (i + 1)
         noise = noise / np.linalg.norm(noise)
         history.append({"embedding": noise, "speaker": "human" if i % 2 == 0 else "apparatus"})
-    
+
     # 1. Repetitive turn: slight paraphrase within the cluster
     near_turn = np.zeros(384, dtype=np.float32)
     near_turn[0] = 1.0
     near_turn[1] = 0.08
     near_turn = near_turn / np.linalg.norm(near_turn)
-    
-    novelty_near, _ = _compute_conceptual_novelty(
-        current_vec=near_turn, recent_history=history, prior_centroid=base
-    )
-    
+
+    novelty_near, _ = _compute_conceptual_novelty(current_vec=near_turn, recent_history=history, prior_centroid=base)
+
     # 2. Orthogonal turn: completely new conceptual direction
     ortho_turn = np.zeros(384, dtype=np.float32)
     ortho_turn[2] = 1.0
-    
-    novelty_ortho, _ = _compute_conceptual_novelty(
-        current_vec=ortho_turn, recent_history=history, prior_centroid=base
-    )
-    
+
+    novelty_ortho, _ = _compute_conceptual_novelty(current_vec=ortho_turn, recent_history=history, prior_centroid=base)
+
     assert novelty_near is not None and novelty_ortho is not None
     # Repetitive turn should remain suppressed (<= 0.35)
     assert novelty_near <= 0.35, f"Expected suppressed novelty in repetitive basin, got {novelty_near}"
     # Orthogonal turn should register strong novelty (>= 0.70) under ADR-084 dual-horizon attractor
     assert novelty_ortho >= 0.70, f"Expected high novelty for orthogonal shift, got {novelty_ortho}"
     assert novelty_ortho > novelty_near * 2, "Orthogonal novelty should be significantly higher than near novelty"
-

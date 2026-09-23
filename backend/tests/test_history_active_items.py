@@ -1,8 +1,10 @@
 import json
 import sqlite3
+
 import pytest
+
 from backend.storage.migrations import run_all_migrations
-from backend.storage.repositories.message import MessageRepository
+from backend.storage.repositories.conversation.message import MessageRepository
 from backend.utils.vector import build_history_message
 
 

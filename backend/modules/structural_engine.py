@@ -234,7 +234,7 @@ class JevStructuralScorer(StructuralScorer):
             questions[q_id] = {
                 "type": "score",
                 "instructions": (
-                    f"Assess the degree to which this text exhibits cybernetic dimension {i+1} ({dim_title}): {dim_focus}."
+                    f"Assess the degree to which this text exhibits cybernetic dimension {i + 1} ({dim_title}): {dim_focus}."
                 ),
                 "criteria": self.rubric_levels,
             }
@@ -388,6 +388,7 @@ class CompositeStructuralScorer(StructuralScorer):
             if ts_cfg.get("enabled", True):
                 try:
                     from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
+
                     jev_client = TypeSafeDecisionClient.from_config(ts_cfg)
                 except Exception as e:
                     logger.debug("Failed to auto-instantiate TypeSafeDecisionClient: %s", e)
@@ -399,7 +400,7 @@ class CompositeStructuralScorer(StructuralScorer):
         self, text: str, context: dict | None = None, use_llm_scorer: bool | None = None
     ) -> np.ndarray:
         # 1. Primary Jev path (default whenever backend is 'jev' or Jev is available)
-        force_llm = (self.backend == "llm") or (use_llm_scorer is True and self.backend != "jev")
+        force_llm = (self.backend == "llm") or (use_llm_scorer is True)
         if not force_llm and self.jev_scorer.is_available:
             return await self.jev_scorer.score_async(text, context)
 
@@ -413,7 +414,7 @@ class CompositeStructuralScorer(StructuralScorer):
         return np.full(16, 0.25, dtype=np.float32)
 
     def score(self, text: str, context: dict | None = None, use_llm_scorer: bool | None = None) -> np.ndarray:
-        force_llm = (self.backend == "llm") or (use_llm_scorer is True and self.backend != "jev")
+        force_llm = (self.backend == "llm") or (use_llm_scorer is True)
         if not force_llm and self.jev_scorer.is_available:
             return self.jev_scorer.score(text, context)
 

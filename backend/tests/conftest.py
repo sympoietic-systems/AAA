@@ -40,7 +40,6 @@ def cleanup_test_db():
     db_file = get_db_path(TEST_DB_PATH)
     data_dir = db_file.parent
 
-
     # Clean specific default test db
     for ext in ("", "-wal", "-shm"):
         f = Path(str(db_file) + ext)
@@ -53,4 +52,3 @@ def cleanup_test_db():
         for test_db in data_dir.glob("*test*.db*"):
             with contextlib.suppress(Exception):
                 test_db.unlink()
-

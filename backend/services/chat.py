@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 import uuid
@@ -20,10 +21,10 @@ from backend.services.background_tasks import (
 from backend.services.metrics import MetricsService
 from backend.services.semantic_knot import SemanticKnotService
 from backend.services.title import TitleService
-from backend.utils.belief_parser import parse_belief_nucleate_tags
-from backend.utils.dream_trigger_parser import parse_dream_trigger_tags
-from backend.utils.refusal_parser import parse_refusal_tags
-from backend.utils.skill_parser import parse_skill_nucleation_tags
+from backend.utils.parsers.belief import parse_belief_nucleate_tags
+from backend.utils.parsers.dream_trigger import parse_dream_trigger_tags
+from backend.utils.parsers.refusal import parse_refusal_tags
+from backend.utils.parsers.skill import parse_skill_nucleation_tags
 from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)
@@ -74,10 +75,56 @@ def _parse_response_artifacts(
 
 
 class ChatService:
+    _conversation_locks: dict[str, asyncio.Lock] = {}
+
     def __init__(self, state):
         self._state = state
 
+    @classmethod
+    def _get_conversation_lock(cls, conversation_id: str) -> asyncio.Lock:
+        if conversation_id not in cls._conversation_locks:
+            cls._conversation_locks[conversation_id] = asyncio.Lock()
+        return cls._conversation_locks[conversation_id]
+
     async def process_chat(
+        self,
+        content: str,
+        speaker: str,
+        conversation_id: str,
+        attachments: list[dict] | None = None,
+        include_structural_scoring: bool | None = None,
+        max_tokens_override: int | None = None,
+        background_tasks: BackgroundTasks | None = None,
+        parent_message_id: int | None = None,
+        agent_id: str | None = None,
+    ) -> ChatResponse:
+        lock = self._get_conversation_lock(conversation_id) if conversation_id else None
+        if lock:
+            async with lock:
+                return await self._process_chat_impl(
+                    content=content,
+                    speaker=speaker,
+                    conversation_id=conversation_id,
+                    attachments=attachments,
+                    include_structural_scoring=include_structural_scoring,
+                    max_tokens_override=max_tokens_override,
+                    background_tasks=background_tasks,
+                    parent_message_id=parent_message_id,
+                    agent_id=agent_id,
+                )
+        return await self._process_chat_impl(
+            content=content,
+            speaker=speaker,
+            conversation_id=conversation_id,
+            attachments=attachments,
+            include_structural_scoring=include_structural_scoring,
+            max_tokens_override=max_tokens_override,
+            background_tasks=background_tasks,
+            parent_message_id=parent_message_id,
+            agent_id=agent_id,
+        )
+
+    async def _process_chat_impl(
         self,
         content: str,
         speaker: str,

@@ -305,9 +305,15 @@ def test_perception_metabolism():
 
             # Create a vector that has an alignment of exactly 0.5 with the belief vector.
             b_vec = np.array(json.loads(g_belief.vector_16d), dtype=np.float32)
+            b_norm = np.linalg.norm(b_vec)
+            b_unit = b_vec / (b_norm if b_norm > 1e-6 else 1.0)
 
-            sig = np.random.randn(16).astype(np.float32)
-            sig = sig / np.linalg.norm(sig)
+            rng = np.random.default_rng(42)
+            ortho = rng.standard_normal(16).astype(np.float32)
+            ortho -= float(np.dot(ortho, b_unit)) * b_unit
+            ortho_norm = np.linalg.norm(ortho)
+            ortho = ortho / (ortho_norm if ortho_norm > 1e-6 else 1.0)
+            sig = (0.5 * b_unit + np.sqrt(0.75) * ortho).astype(np.float32)
 
             await engine.metabolize_perception(
                 conversation_id="conv_perc",
@@ -323,6 +329,7 @@ def test_perception_metabolism():
 
             # Calculate expected:
             from backend.utils.similarity import cosine_similarity
+
             alignment = float(cosine_similarity(sig, b_vec))
             dc = 0.80
             plasticity = dc * ((1.0 - alignment) / 2.0)
@@ -559,7 +566,8 @@ def test_migration_050_recalibrate():
     conn = init_db(db_path)
     try:
         belief_repo = BeliefRepository(db_path)
-        from backend.storage.repositories.skill import SkillRepository
+        from backend.storage.repositories.cognitive.skill import SkillRepository
+
         skill_repo = SkillRepository(db_path)
 
         # Create an eroded core belief
@@ -598,8 +606,9 @@ def test_migration_050_recalibrate():
             ontological_mass=0.32,
         )
 
-        from backend.storage.migrations import m050_recalibrate_belief_mass
-        m050_recalibrate_belief_mass.up(conn)
+        from backend.storage.migrations.m050_baseline_schema import recalibrate_belief_mass
+
+        recalibrate_belief_mass(conn)
 
         b_core = belief_repo.get_belief("symbia", "b-eroded-core")
         assert b_core.ontological_mass == 1.00
@@ -641,18 +650,18 @@ def test_attractor_window_split_resonance():
             self.lifecycle_stage = "crystallized"
 
     # 7 beliefs to test all 6 slots
-    b_mass1 = MockBelief("b1", "core_anchor_1", "Mass Anchor 1", 1.0, 0.95, [1.0] + [0.0]*15)
-    b_mass2 = MockBelief("b2", "core_anchor_2", "Mass Anchor 2", 0.9, 0.90, [0.0, 1.0] + [0.0]*14)
-    b_stress1 = MockBelief("b3", "stress_wound_1", "Stressed 1", 0.5, 0.35, [0.0]*16)
-    b_stress2 = MockBelief("b4", "stress_wound_2", "Stressed 2", 0.5, 0.40, [0.0]*16)
-    b_provoked = MockBelief("b5", "provoked_boundary", "Challenged Boundary", 0.6, 0.70, [0.0]*16)
-    b_cosine = MockBelief("b6", "lateral_flight", "Lateral diffractive line", 0.6, 0.75, [0.0, 0.0, 1.0] + [0.0]*13)
-    b_other = MockBelief("b7", "extra_belief", "Extra", 0.4, 0.60, [0.0]*16)
+    b_mass1 = MockBelief("b1", "core_anchor_1", "Mass Anchor 1", 1.0, 0.95, [1.0] + [0.0] * 15)
+    b_mass2 = MockBelief("b2", "core_anchor_2", "Mass Anchor 2", 0.9, 0.90, [0.0, 1.0] + [0.0] * 14)
+    b_stress1 = MockBelief("b3", "stress_wound_1", "Stressed 1", 0.5, 0.35, [0.0] * 16)
+    b_stress2 = MockBelief("b4", "stress_wound_2", "Stressed 2", 0.5, 0.40, [0.0] * 16)
+    b_provoked = MockBelief("b5", "provoked_boundary", "Challenged Boundary", 0.6, 0.70, [0.0] * 16)
+    b_cosine = MockBelief("b6", "lateral_flight", "Lateral diffractive line", 0.6, 0.75, [0.0, 0.0, 1.0] + [0.0] * 13)
+    b_other = MockBelief("b7", "extra_belief", "Extra", 0.4, 0.60, [0.0] * 16)
 
     repo = MockBeliefRepo([b_mass1, b_mass2, b_stress1, b_stress2, b_provoked, b_cosine, b_other])
 
     # signature aligns with b_cosine (index 2 is 1.0)
-    sig_16d = np.array([0.0, 0.0, 1.0] + [0.0]*13, dtype=np.float32)
+    sig_16d = np.array([0.0, 0.0, 1.0] + [0.0] * 13, dtype=np.float32)
 
     window = build_attractor_window(
         belief_repo=repo,

@@ -76,6 +76,14 @@ async def fetch_via_jina(
 
     This is the DEFAULT backend — zero setup, zero cost to start.
     """
+    from backend.utils.security import validate_safe_url
+
+    try:
+        url = validate_safe_url(url)
+    except ValueError as err:
+        logger.warning("SSRF blocked Jina target %s: %s", url, err)
+        return ""
+
     cfg = _get_jina_config(config or {})
     api_base = cfg.get("api_base", "https://r.jina.ai")
     timeout = cfg.get("timeout_seconds", 15)
@@ -277,6 +285,16 @@ async def select_and_fetch(
     if all backends are exhausted.
     """
     cfg = config or {}
+    # Validate destination if it's an HTTP/HTTPS URL
+    if url_or_query.startswith("http://") or url_or_query.startswith("https://"):
+        from backend.utils.security import validate_safe_url
+
+        try:
+            url_or_query = validate_safe_url(url_or_query)
+        except ValueError as err:
+            logger.warning("SSRF blocked fetch_url target %s: %s", url_or_query, err)
+            return ""
+
     # Check if URL points to a PDF file or PDF task is requested
     if url_or_query.lower().split("?")[0].endswith(".pdf") or task_type == "pdf":
         logger.info("PDF URL detected, downloading and extracting text: %s", url_or_query)

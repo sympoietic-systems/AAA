@@ -5,7 +5,8 @@ runs multi-cycle reflection, and emits signal flags (GLITCH_FIDELITY_LOW, BIAS_D
 """
 
 import logging
-from backend.services.research.steps.base import BaseResearchStep, ResearchStepRegistry
+
+from backend.services.research.steps.base import ResearchStepRegistry
 from backend.services.research.steps.reflect import ReflectionStep
 from backend.services.research.task_state import StepEnvelope, StepOutput
 

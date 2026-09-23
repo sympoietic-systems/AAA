@@ -91,9 +91,7 @@ async def upload_conversation_files(
         file_bytes = b"".join(chunks)
 
         try:
-            safe_name, file_type = validate_file_upload(
-                f.filename, file_bytes, max_bytes=DEFAULT_MAX_FILE_SIZE
-            )
+            safe_name, file_type = validate_file_upload(f.filename, file_bytes, max_bytes=DEFAULT_MAX_FILE_SIZE)
         except ValueError as ve:
             raise HTTPException(status_code=400, detail=str(ve)) from ve
 

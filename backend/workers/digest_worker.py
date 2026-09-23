@@ -19,7 +19,7 @@ from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
 from backend.modules.belief_engine import BeliefDynamicsEngine
 from backend.modules.embedder import EmbedderModule
-from backend.modules.perception import PerceptionModule
+from backend.modules.sensory.perception import PerceptionModule
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
 from backend.storage.database import get_db_path
 from backend.storage.repository import (

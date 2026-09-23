@@ -45,6 +45,7 @@ class EmbeddingService:
         # Clamp PyTorch CPU threads to prevent saturating all cores during embeddings
         try:
             import os
+
             import torch
 
             torch_threads = int(os.environ.get("AAA_TORCH_THREADS", "2"))

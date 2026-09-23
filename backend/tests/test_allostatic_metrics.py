@@ -10,7 +10,7 @@ sys.path.insert(0, root_path)
 os.chdir(root_path)
 
 from backend.modules.conversation_metrics import ConversationMetricsModule  # noqa: E402
-from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule  # noqa: E402
+from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule  # noqa: E402
 from backend.storage.database import get_db_path, init_db  # noqa: E402
 from backend.storage.repository import MessageRepository, MetricsRepository  # noqa: E402
 
@@ -176,7 +176,7 @@ async def test_allostatic_metrics():
         "divergence_resolution_ratio": 0.15,
         "paskian_health": 0.8,
     }
-    from backend.modules.homeostatic_regulator import _diagnose_state
+    from backend.modules.sensory.homeostatic_regulator import _diagnose_state
 
     state, flags = _diagnose_state(metrics_healthy)
     assert state == "flowing", f"Expected flowing state, got {state}"
@@ -211,16 +211,12 @@ def test_deficit_vitality_spectral_entropy_calibration():
 
     # Stagnant conditions: high similarity (0.8), low novelty (0.2), low spectral entropy (0.2), low divergence (0.2)
     # Expected deficit: 0.30*0.8 + 0.25*(1-0.2) + 0.20*(1-0.2) + 0.25*(1-0.2) = 0.24 + 0.20 + 0.16 + 0.20 = 0.800
-    stagnant_deficit = _compute_deficit(
-        s_t=0.8, novelty=0.2, rolling_entropy=0.2, agent_divergence=0.2
-    )
+    stagnant_deficit = _compute_deficit(s_t=0.8, novelty=0.2, rolling_entropy=0.2, agent_divergence=0.2)
     assert stagnant_deficit == 0.8, f"Expected 0.800, got {stagnant_deficit}"
 
     # Vital conditions: low similarity (0.2), high novelty (0.8), high spectral entropy (0.8), high divergence (0.8)
     # Expected deficit: 0.30*0.2 + 0.25*0.2 + 0.20*0.2 + 0.25*0.2 = 0.06 + 0.05 + 0.04 + 0.05 = 0.200
-    vital_deficit = _compute_deficit(
-        s_t=0.2, novelty=0.8, rolling_entropy=0.8, agent_divergence=0.8
-    )
+    vital_deficit = _compute_deficit(s_t=0.2, novelty=0.8, rolling_entropy=0.8, agent_divergence=0.8)
     assert vital_deficit == 0.2, f"Expected 0.200, got {vital_deficit}"
 
     # Spectral entropy sensitivity: verify that rolling_entropy=0.6 yields higher vitality than rolling_entropy=0.3
@@ -239,9 +235,7 @@ def test_deficit_vitality_spectral_entropy_calibration():
         reverse_perturbation=0.5,
         surprise=0.5,
     )
-    assert v_high > v_mid, (
-        f"Expected v_high ({v_high}) > v_mid ({v_mid}) without / 0.25 saturation"
-    )
+    assert v_high > v_mid, f"Expected v_high ({v_high}) > v_mid ({v_mid}) without / 0.25 saturation"
 
 
 if __name__ == "__main__":

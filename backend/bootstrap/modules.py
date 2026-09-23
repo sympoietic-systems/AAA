@@ -76,13 +76,13 @@ def _init_modules(
     )
 
     # ── Homeostatic Regulator ──
-    from backend.modules.homeostatic_regulator import HomeostaticRegulatorModule
+    from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule
 
     homeostatic_regulator = HomeostaticRegulatorModule()
 
     # ── Trait Computer ──
     trait_cfg = config.get("dynamic_personality", {}).get("trait_computer", {})
-    from backend.modules.trait_computer import TraitComputer
+    from backend.modules.sensory.trait_computer import TraitComputer
 
     trait_computer = TraitComputer(
         personality_state_repo=repos["personality_state_repo"],
@@ -117,7 +117,7 @@ def _init_modules(
 
     # ── Sedimentation Retrieval ──
     sediment_cfg = config.get("sedimentation", {})
-    from backend.modules.sedimentation_retrieval import SedimentationRetrievalModule
+    from backend.modules.retrieval.sedimentation_retrieval import SedimentationRetrievalModule
 
     sedimentation_retrieval = SedimentationRetrievalModule(
         message_repo=repos["message_repo"],
@@ -131,7 +131,7 @@ def _init_modules(
 
     # ── Diffractive Retrieval ──
     diffractive_cfg = config.get("diffractive_retrieval", {})
-    from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
+    from backend.modules.retrieval.diffractive_retrieval import DiffractiveRetrievalModule
 
     diffractive_retrieval = DiffractiveRetrievalModule(
         message_repo=repos["message_repo"],
@@ -160,7 +160,7 @@ def _init_modules(
 
     # ── Perception Module ──
     perception_cfg = config.get("perception", {})
-    from backend.modules.perception import PerceptionModule
+    from backend.modules.sensory.perception import PerceptionModule
 
     perception_module = PerceptionModule(
         perception_repo=repos["perception_repo"],
@@ -175,7 +175,7 @@ def _init_modules(
     )
 
     # ── Web Retrieval ──
-    from backend.modules.web_retrieval import WebRetrievalModule
+    from backend.modules.retrieval.web_retrieval import WebRetrievalModule
 
     web_retrieval = WebRetrievalModule(
         perception_repo=repos["perception_repo"],
@@ -186,7 +186,7 @@ def _init_modules(
     )
 
     # ── Rhizome Web Probe (autonomous deep research) ──
-    from backend.modules.rhizome_web_probe import RhizomeWebProbeModule
+    from backend.modules.retrieval.rhizome_web_probe import RhizomeWebProbeModule
 
     rhizome_web_probe = RhizomeWebProbeModule(config=config)
 
@@ -203,7 +203,7 @@ def _init_modules(
     )
 
     # ── Self-Initiation Arbiter ──
-    from backend.modules.self_initiation_arbiter import SelfInitiationArbiterModule
+    from backend.modules.sensory.self_initiation_arbiter import SelfInitiationArbiterModule
 
     self_initiation_arbiter = SelfInitiationArbiterModule()
 

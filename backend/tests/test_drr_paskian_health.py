@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+
 from backend.modules.metrics import (
     _compute_drr,
     _compute_paskian_health,
@@ -52,8 +52,6 @@ def test_drr_balanced_oscillation_vs_fragmentation():
     assert drr_balanced > drr_frag, f"Expected balanced ({drr_balanced}) > fragmenting ({drr_frag})"
 
 
-
-
 def test_paskian_health_triadic_synthesis():
     # 1. Healthy conversation: active autonomy, coordination, and entropy
     health_active = _compute_paskian_health(
@@ -80,8 +78,8 @@ def test_paskian_health_triadic_synthesis():
     )
 
     assert health_active is not None and health_collapsed is not None
-    assert (
-        health_active > health_collapsed
-    ), f"Expected active health ({health_active}) > collapsed health ({health_collapsed})"
+    assert health_active > health_collapsed, (
+        f"Expected active health ({health_active}) > collapsed health ({health_collapsed})"
+    )
     assert health_active > 0.6, f"Expected high Paskian health, got {health_active}"
     assert health_collapsed < 0.2, f"Expected collapsed Paskian health, got {health_collapsed}"

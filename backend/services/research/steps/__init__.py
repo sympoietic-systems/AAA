@@ -21,4 +21,3 @@ ResearchStepRegistry.register("reflection", ReflectionStep)
 ResearchStepRegistry.register("pure_reflection", PureReflectionStep)
 ResearchStepRegistry.register("evaluating", EvaluateStep)
 ResearchStepRegistry.register("synthesizing", SynthesizeStep)
-

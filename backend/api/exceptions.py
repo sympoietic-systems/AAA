@@ -85,6 +85,24 @@ def register_error_handlers(app):
             },
         )
 
+    @app.exception_handler(PermissionError)
+    async def permission_error_handler(request: Request, exc: PermissionError):
+        logger.warning(
+            "Security violation on %s %s: %s",
+            request.method,
+            request.url.path,
+            str(exc),
+        )
+        return JSONResponse(
+            status_code=403,
+            content={
+                "status": "error",
+                "kind": "security_violation",
+                "message": str(exc),
+                "detail": "Access denied: security violation",
+            },
+        )
+
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         # Allow standard HTTPExceptions to preserve their status code

@@ -53,7 +53,7 @@ async def run_deep_reflection(
                         break
 
     # ponytail: compute diffractive glitch_fidelity via glitch_fidelity_engine
-    from backend.modules.glitch_fidelity_engine import compute_glitch_fidelity
+    from backend.modules.sensory.glitch_fidelity_engine import compute_glitch_fidelity
 
     addressed_ratio = (glitches_addressed / glitches_detected) if glitches_detected > 0 else 1.0
     contradiction_density = max(0.0, min(1.0, 1.0 - addressed_ratio))

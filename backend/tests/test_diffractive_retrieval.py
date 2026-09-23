@@ -8,7 +8,7 @@ import pytest
 # Ensure parent directory is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.modules.diffractive_retrieval import DiffractiveRetrievalModule
+from backend.modules.retrieval.diffractive_retrieval import DiffractiveRetrievalModule
 from backend.storage.repository import MessageRepository, PerceptionSedimentRepository
 
 

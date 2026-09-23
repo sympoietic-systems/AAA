@@ -6,7 +6,7 @@ from pathlib import Path
 # Adjust path to find backend modules
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.storage.repositories.notification import NotificationRepository
+from backend.storage.repositories.conversation.notification import NotificationRepository
 
 
 def run_tests():

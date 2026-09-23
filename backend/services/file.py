@@ -21,7 +21,9 @@ class FileService:
             raise ValueError("Filename must have an extension")
 
         if ext in BLOCKED_EXTENSIONS:
-            raise ValueError(f"File type '.{ext}' is blocked for security reasons (executable/script files are forbidden)")
+            raise ValueError(
+                f"File type '.{ext}' is blocked for security reasons (executable/script files are forbidden)"
+            )
 
         if ext not in ALLOWED_EXTENSIONS:
             raise ValueError(f"Unsupported file type '.{ext}'")

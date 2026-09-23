@@ -77,7 +77,9 @@ class DocumentDigestionStep(BaseResearchStep):
             "phase": "document_digestion",
             "file_id": first_doc.file_id if first_doc else None,
             "mode": first_doc.document_mode if first_doc else "chunks",
-            "chunk_limit": (first_doc.document_chunk_limit if first_doc and first_doc.document_mode == "chunks" else None),
+            "chunk_limit": (
+                first_doc.document_chunk_limit if first_doc and first_doc.document_mode == "chunks" else None
+            ),
             "documents": previews,
             "document_digested": state.get("document_digested", False),
             "objective": objective,
@@ -112,7 +114,9 @@ class DocumentDigestionStep(BaseResearchStep):
                         doc.file_id,
                         file_status.get("status"),
                     )
-                    return StepOutput(status="failed", message=f"document {doc.file_id} not yet indexed", payload=payload)
+                    return StepOutput(
+                        status="failed", message=f"document {doc.file_id} not yet indexed", payload=payload
+                    )
 
         async def _digest_single_document(doc: InjectedDocumentSpec):
             effective_conv_id = doc.conversation_id or default_conv_id
@@ -189,7 +193,7 @@ class DocumentDigestionStep(BaseResearchStep):
         new_findings: list[str] = []
         digested_summaries: list[str] = []
 
-        for doc, res in zip(documents, results):
+        for doc, res in zip(documents, results, strict=False):
             if isinstance(res, Exception):
                 logger.error("Error digesting document %s: %s", doc.file_id, res, exc_info=res)
                 continue
@@ -202,8 +206,8 @@ class DocumentDigestionStep(BaseResearchStep):
             all_followups.extend(followups)
             all_gaps.extend(gaps)
 
-            for l in learnings:
-                new_findings.append(f"[{file_id}]: {l}")
+            for learning in learnings:
+                new_findings.append(f"[{file_id}]: {learning}")
 
             digested_summaries.append(f"doc {file_id}: {len(learnings)} learnings ({res['chunks_count']} chunks)")
 
@@ -259,7 +263,9 @@ class DocumentDigestionStep(BaseResearchStep):
             gaps=all_gaps,
         )
 
-        rationale = f"Successfully digested {len(documents)} document(s), extracting {len(all_learnings)} key learnings."
+        rationale = (
+            f"Successfully digested {len(documents)} document(s), extracting {len(all_learnings)} key learnings."
+        )
 
         return StepOutput(
             status="completed",

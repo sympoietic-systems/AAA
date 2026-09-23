@@ -100,7 +100,7 @@ async def workshop_action(
             status_code=400, detail=f"Invalid action: {action}. Valid: {', '.join(sorted(valid_actions))}"
         )
 
-    from backend.modules.skill_workshop import SkillWorkshopModule
+    from backend.modules.skills.skill_workshop import SkillWorkshopModule
 
     if not skill_repo:
         raise HTTPException(status_code=503, detail="Skill repository not available")

@@ -1,5 +1,6 @@
 import pytest
-from backend.modules.trait_computer import TraitComputer
+
+from backend.modules.sensory.trait_computer import TraitComputer
 
 
 @pytest.mark.asyncio
