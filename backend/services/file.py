@@ -21,6 +21,20 @@ logger = logging.getLogger(__name__)
 
 
 class FileService:
+    _digest_semaphore: asyncio.Semaphore | None = None
+    _digest_loop: asyncio.AbstractEventLoop | None = None
+    _digest_limit: int | None = None
+
+    @classmethod
+    def _get_digest_semaphore(cls, limit: int) -> asyncio.Semaphore:
+        loop = asyncio.get_running_loop()
+        bounded_limit = max(1, min(limit, 8))
+        if cls._digest_semaphore is None or cls._digest_loop is not loop or cls._digest_limit != bounded_limit:
+            cls._digest_semaphore = asyncio.Semaphore(bounded_limit)
+            cls._digest_loop = loop
+            cls._digest_limit = bounded_limit
+        return cls._digest_semaphore
+
     @staticmethod
     def map_extension_to_type(filename: str) -> str:
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
@@ -117,8 +131,18 @@ class FileService:
             with contextlib.suppress(OSError):
                 path.parent.rmdir()
 
-    @staticmethod
-    async def run_digest_worker(conversation_id: str, file_name: str, file_type: str, reprocess: bool = False):
+    @classmethod
+    async def run_digest_worker(
+        cls,
+        conversation_id: str,
+        file_name: str,
+        file_type: str,
+        *,
+        reprocess: bool = False,
+        max_concurrent: int = 3,
+        timeout_seconds: float = 1800.0,
+        perception_repo=None,
+    ) -> bool:
         safe_conv_id = sanitize_identifier(conversation_id, field_name="conversation_id")
         safe_file_name = sanitize_filename(file_name)
         safe_file_type = sanitize_identifier(file_type, field_name="file_type")
@@ -137,29 +161,77 @@ class FileService:
         if reprocess:
             cmd.append("--reprocess")
 
-        logger.info("Spawning async digest worker subprocess: %s", " ".join(cmd))
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await proc.communicate()
-            if proc.returncode != 0:
-                err_msg = stderr.decode("utf-8", errors="replace").strip()
-                logger.error(
-                    "Digest worker failed with code %d for %s. Stderr:\n%s", proc.returncode, file_name, err_msg
+        async def set_status(status: str) -> None:
+            if perception_repo is not None:
+                await asyncio.to_thread(
+                    perception_repo.update_file,
+                    conversation_id=conversation_id,
+                    file_name=safe_file_name,
+                    status=status,
                 )
-            else:
+
+        semaphore = cls._get_digest_semaphore(max_concurrent)
+        async with semaphore:
+            logger.info("Spawning async digest worker subprocess: %s", " ".join(cmd))
+            proc = None
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=max(1.0, timeout_seconds))
+                if proc.returncode != 0:
+                    err_msg = stderr.decode("utf-8", errors="replace").strip()
+                    logger.error(
+                        "Digest worker failed with code %d for %s. Stderr:\n%s", proc.returncode, file_name, err_msg
+                    )
+                    await set_status("error")
+                    return False
+
                 out_msg = stdout.decode("utf-8", errors="replace").strip()
                 logger.info("Digest worker completed successfully for %s. Output:\n%s", file_name, out_msg)
-        except Exception:
-            logger.exception("Failed to run digest worker subprocess for %s", file_name)
+                return True
+            except TimeoutError:
+                if proc is not None:
+                    proc.kill()
+                    await proc.communicate()
+                logger.error("Digest worker timed out after %.1fs for %s", timeout_seconds, file_name)
+                await set_status("error")
+                return False
+            except asyncio.CancelledError:
+                if proc is not None:
+                    proc.kill()
+                    await proc.communicate()
+                await set_status("cancelled")
+                raise
+            except Exception:
+                logger.exception("Failed to run digest worker subprocess for %s", file_name)
+                await set_status("error")
+                return False
 
     @staticmethod
     async def process_and_summarize(app_state, conversation_id: str, file_name: str, file_type: str, file_content=None):
-        await FileService.run_digest_worker(conversation_id, file_name, file_type, reprocess=False)
+        config = getattr(app_state, "config", {}).get("uploads", {})
+        await FileService.run_digest_worker(
+            conversation_id,
+            file_name,
+            file_type,
+            reprocess=False,
+            max_concurrent=int(config.get("max_concurrent_workers", 3)),
+            timeout_seconds=float(config.get("worker_timeout_seconds", 1800)),
+            perception_repo=getattr(app_state, "perception_repo", None),
+        )
 
     @staticmethod
     async def reprocess_and_summarize(app_state, conversation_id: str, file_name: str, file_type: str):
-        await FileService.run_digest_worker(conversation_id, file_name, file_type, reprocess=True)
+        config = getattr(app_state, "config", {}).get("uploads", {})
+        await FileService.run_digest_worker(
+            conversation_id,
+            file_name,
+            file_type,
+            reprocess=True,
+            max_concurrent=int(config.get("max_concurrent_workers", 3)),
+            timeout_seconds=float(config.get("worker_timeout_seconds", 1800)),
+            perception_repo=getattr(app_state, "perception_repo", None),
+        )

@@ -140,6 +140,8 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_UPLOAD_MAX_FILE_BYTES", "uploads", "max_file_bytes", _parse_int),
     EnvOverride("AAA_UPLOAD_MAX_IMAGE_BYTES", "uploads", "max_image_bytes", _parse_int),
     EnvOverride("AAA_UPLOAD_MAX_TOTAL_BYTES", "uploads", "max_total_bytes", _parse_int),
+    EnvOverride("AAA_UPLOAD_MAX_WORKERS", "uploads", "max_concurrent_workers", _parse_int),
+    EnvOverride("AAA_UPLOAD_WORKER_TIMEOUT", "uploads", "worker_timeout_seconds", _parse_float),
     # ── Sensory affordances ──
     EnvOverride("AAA_CRAWL4AI_ENABLED", "sensory_affordances", "crawl4ai", sub_key="enabled", parser=_parse_bool),
     EnvOverride("AAA_JINA_ENABLED", "sensory_affordances", "jina_reader", sub_key="enabled", parser=_parse_bool),

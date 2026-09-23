@@ -1,13 +1,5 @@
-from backend.services.belief import BeliefService  # noqa: F401
-from backend.services.chat import ChatService  # noqa: F401
-from backend.services.consolidation import ConsolidationService  # noqa: F401
-from backend.services.conversation import ConversationService  # noqa: F401
-from backend.services.daemon import DaemonService  # noqa: F401
-from backend.services.file import FileService  # noqa: F401
-from backend.services.health import HealthService  # noqa: F401
-from backend.services.metrics import MetricsService  # noqa: F401
-from backend.services.note import NoteService  # noqa: F401
-from backend.services.sediment import SedimentService  # noqa: F401
-from backend.services.semantic_knot import SemanticKnotService  # noqa: F401
-from backend.services.skill import SkillService  # noqa: F401
-from backend.services.title import TitleService  # noqa: F401
+"""Service layer package.
+
+Import concrete services from their canonical modules. Keeping package import
+side-effect free prevents cycles across services, pipeline, and metabolisation.
+"""
