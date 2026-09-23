@@ -135,6 +135,11 @@ ENV_OVERRIDES: list[EnvOverride] = [
     # ── Web retrieval ──
     EnvOverride("AAA_WEB_RETRIEVAL_ENABLED", "web_retrieval", "enabled", _parse_bool),
     EnvOverride("AAA_WEB_RETRIEVAL_AUTONOMOUS_ROUTING", "web_retrieval", "autonomous_routing", _parse_bool),
+    # ── Upload membrane ──
+    EnvOverride("AAA_UPLOAD_MAX_FILES", "uploads", "max_files", _parse_int),
+    EnvOverride("AAA_UPLOAD_MAX_FILE_BYTES", "uploads", "max_file_bytes", _parse_int),
+    EnvOverride("AAA_UPLOAD_MAX_IMAGE_BYTES", "uploads", "max_image_bytes", _parse_int),
+    EnvOverride("AAA_UPLOAD_MAX_TOTAL_BYTES", "uploads", "max_total_bytes", _parse_int),
     # ── Sensory affordances ──
     EnvOverride("AAA_CRAWL4AI_ENABLED", "sensory_affordances", "crawl4ai", sub_key="enabled", parser=_parse_bool),
     EnvOverride("AAA_JINA_ENABLED", "sensory_affordances", "jina_reader", sub_key="enabled", parser=_parse_bool),

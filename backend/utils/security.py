@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 # Default maximum upload size per file (100 MB)
 DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024
+DEFAULT_MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
 # Explicitly blocked executable extensions (native binaries, system scripts, installers)
 BLOCKED_EXTENSIONS = {
@@ -52,6 +53,10 @@ BLOCKED_EXTENSIONS = {
     "deb",
     "rpm",
     "jar",
+    # Browser-active content can execute script when served or previewed.
+    "svg",
+    "html",
+    "htm",
 }
 
 # Whitelist of allowed extensions for document/data ingestion and visual perception
@@ -63,7 +68,6 @@ ALLOWED_EXTENSIONS = {
     "gif",
     "webp",
     "bmp",
-    "svg",
     # Documents
     "pdf",
     "docx",
@@ -95,7 +99,6 @@ ALLOWED_EXTENSIONS = {
     "h",
     "cpp",
     "hpp",
-    "html",
     "css",
     "sql",
 }
@@ -251,6 +254,39 @@ def validate_file_upload(
     file_type = FileService.map_extension_to_type(safe_name)
 
     return safe_name, file_type
+
+
+def validate_file_upload_metadata(
+    filename: str,
+    file_header: bytes,
+    file_size: int,
+    *,
+    max_bytes: int = DEFAULT_MAX_FILE_SIZE,
+) -> tuple[str, str]:
+    """Validate a streamed upload from its final size and leading bytes."""
+    if file_size > max_bytes:
+        raise ValueError(
+            f"File size ({file_size} bytes) exceeds maximum limit ({max_bytes} bytes / {max_bytes // (1024 * 1024)}MB)"
+        )
+    if file_size == 0:
+        raise ValueError("Uploaded file is empty (0 bytes)")
+
+    safe_name = sanitize_filename(filename)
+    ext = safe_name.rsplit(".", 1)[-1].lower() if "." in safe_name else ""
+    if not ext:
+        raise ValueError("File must have an extension")
+    if ext in BLOCKED_EXTENSIONS:
+        raise ValueError(f"File type '.{ext}' is blocked for security reasons (executable/script files are forbidden)")
+    if ext not in ALLOWED_EXTENSIONS:
+        raise ValueError(f"Unsupported file type '.{ext}'. Allowed types: documents, data files, and images")
+
+    is_dangerous, reason = check_magic_bytes(file_header)
+    if is_dangerous:
+        raise ValueError(f"Uploaded file disguised as '.{ext}' contains dangerous binary header ({reason})")
+
+    from backend.services.file import FileService
+
+    return safe_name, FileService.map_extension_to_type(safe_name)
 
 
 def validate_safe_url(

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -11,13 +12,15 @@ from backend.services.file import FileService
 from backend.utils.filesystem import get_upload_path
 from backend.utils.security import (
     DEFAULT_MAX_FILE_SIZE,
+    DEFAULT_MAX_IMAGE_SIZE,
     sanitize_filename,
     sanitize_identifier,
-    validate_file_upload,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+DEFAULT_MAX_UPLOAD_FILES = 10
+DEFAULT_MAX_UPLOAD_TOTAL_SIZE = 200 * 1024 * 1024
 
 
 def _parse_file_datetime(val):
@@ -48,55 +51,66 @@ async def upload_conversation_files(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    form = await request.form()
+    upload_cfg = getattr(state, "config", {}).get("uploads", {})
+    max_files = max(1, min(int(upload_cfg.get("max_files", DEFAULT_MAX_UPLOAD_FILES)), 50))
+    max_file_bytes = max(1, min(int(upload_cfg.get("max_file_bytes", DEFAULT_MAX_FILE_SIZE)), DEFAULT_MAX_FILE_SIZE))
+    max_image_bytes = max(1, min(int(upload_cfg.get("max_image_bytes", DEFAULT_MAX_IMAGE_SIZE)), max_file_bytes))
+    max_total_bytes = max(
+        max_file_bytes,
+        min(int(upload_cfg.get("max_total_bytes", DEFAULT_MAX_UPLOAD_TOTAL_SIZE)), 1024 * 1024 * 1024),
+    )
+
+    form = await request.form(max_files=max_files, max_fields=20)
     uploaded_files = form.getlist("files")
     if not uploaded_files:
         raise HTTPException(status_code=400, detail="No files uploaded")
+    if len(uploaded_files) > max_files:
+        raise HTTPException(status_code=400, detail=f"At most {max_files} files may be uploaded per request")
 
-    if conversation_id == "new" or not conv_repo or not conv_repo.get(conversation_id):
+    create_conversation = conversation_id == "new" or not conv_repo or not conv_repo.get(conversation_id)
+    if create_conversation:
         import uuid
 
         conversation_id = str(uuid.uuid4())
-        if conv_repo:
+
+    staged: list[tuple[str, str, int, str]] = []
+    seen_names: set[str] = set()
+    total_size = 0
+    try:
+        for upload in uploaded_files:
+            if not hasattr(upload, "filename") or not upload.filename:
+                raise ValueError("Every uploaded file must have a filename")
+            safe_name = sanitize_filename(upload.filename)
+            if safe_name in seen_names:
+                raise ValueError(f"Duplicate uploaded filename '{safe_name}'")
+            seen_names.add(safe_name)
+            remaining = max_total_bytes - total_size
+            if remaining <= 0:
+                raise ValueError(f"Upload batch exceeds {max_total_bytes} byte aggregate limit")
+            staged_file = await asyncio.to_thread(
+                FileService.cache_upload_stream,
+                conversation_id,
+                safe_name,
+                upload.file,
+                max_file_bytes=min(max_file_bytes, remaining),
+                max_image_bytes=min(max_image_bytes, remaining),
+            )
+            staged.append(staged_file)
+            total_size += staged_file[2]
+    except (ValueError, OSError) as exc:
+        await asyncio.to_thread(FileService.remove_cached_files, [item[3] for item in staged])
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if conv_repo:
+        if create_conversation:
             conv_repo.create(conversation_id=conversation_id, agent_id=agent_id)
-            first_raw_name = uploaded_files[0].filename if hasattr(uploaded_files[0], "filename") else "Uploaded files"
-            first_filename = sanitize_filename(first_raw_name)
-            title_base = first_filename.rsplit(".", 1)[0] if "." in first_filename else first_filename
+            title_base = staged[0][0].rsplit(".", 1)[0]
             conv_repo.update_title(conversation_id, f"File trace: {title_base[:50]}")
-    else:
-        if conv_repo:
+        else:
             conv_repo.touch(conversation_id)
 
     schema_files = []
-    for f in uploaded_files:
-        if not hasattr(f, "filename") or not f.filename:
-            continue
-
-        # Chunked read to enforce 100MB max limit without loading unbounded streams into RAM
-        chunks = []
-        total_size = 0
-        chunk_size = 64 * 1024  # 64 KB chunks
-        while True:
-            chunk = await f.read(chunk_size)
-            if not chunk:
-                break
-            total_size += len(chunk)
-            if total_size > DEFAULT_MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"File '{f.filename}' exceeds maximum allowed size of 100MB",
-                )
-            chunks.append(chunk)
-
-        file_bytes = b"".join(chunks)
-
-        try:
-            safe_name, file_type = validate_file_upload(f.filename, file_bytes, max_bytes=DEFAULT_MAX_FILE_SIZE)
-        except ValueError as ve:
-            raise HTTPException(status_code=400, detail=str(ve)) from ve
-
-        FileService.cache_file(conversation_id, safe_name, file_bytes)
-
+    for safe_name, file_type, _file_size, _cached_path in staged:
         perception_repo.create_file(
             conversation_id=conversation_id,
             file_name=safe_name,
@@ -110,7 +124,6 @@ async def upload_conversation_files(
             conversation_id,
             safe_name,
             file_type,
-            file_bytes,
         )
 
         schema_files.append(

@@ -78,6 +78,12 @@ def test_validate_file_upload_blocked_extensions():
             validate_file_upload(name, b"echo hello")
 
 
+def test_validate_file_upload_blocks_browser_active_content():
+    for name in ("payload.svg", "payload.html", "payload.htm"):
+        with pytest.raises(ValueError, match="blocked for security reasons"):
+            validate_file_upload(name, b"<script>alert(1)</script>")
+
+
 def test_validate_file_upload_disguised_executable():
     # Disguised Windows PE file named .txt
     pe_header = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00"
@@ -118,6 +124,20 @@ def test_api_upload_blocked_executable(client):
     response = client.post("/api/conversations/new/files", files=files)
     assert response.status_code == 400
     assert "blocked for security reasons" in response.json()["detail"]
+
+
+def test_api_rejected_batch_does_not_create_conversation(client):
+    repo = client.app.state.conversation_repo
+    before = repo.count_all()
+    files = [
+        ("files", ("safe.txt", b"safe", "text/plain")),
+        ("files", ("blocked.svg", b"<svg/>", "image/svg+xml")),
+    ]
+
+    response = client.post("/api/conversations/new/files", files=files)
+
+    assert response.status_code == 400
+    assert repo.count_all() == before
 
 
 def test_api_upload_disguised_pe_binary(client):

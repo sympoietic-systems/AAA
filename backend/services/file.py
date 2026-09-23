@@ -1,13 +1,20 @@
 import asyncio
+import contextlib
 import logging
+import os
 import sys
+from pathlib import Path
+from typing import BinaryIO
 
 from backend.utils.filesystem import ensure_upload_dir, get_upload_path
 from backend.utils.security import (
     ALLOWED_EXTENSIONS,
     BLOCKED_EXTENSIONS,
+    DEFAULT_MAX_FILE_SIZE,
+    DEFAULT_MAX_IMAGE_SIZE,
     sanitize_filename,
     sanitize_identifier,
+    validate_file_upload_metadata,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,6 +60,62 @@ class FileService:
         with open(cached_filepath, "wb") as f:
             f.write(file_bytes)
         return cached_filepath
+
+    @staticmethod
+    def cache_upload_stream(
+        conversation_id: str,
+        filename: str,
+        source: BinaryIO,
+        *,
+        max_file_bytes: int = DEFAULT_MAX_FILE_SIZE,
+        max_image_bytes: int = DEFAULT_MAX_IMAGE_SIZE,
+    ) -> tuple[str, str, int, str]:
+        """Validate and atomically cache one spooled upload without duplicating it in memory."""
+        safe_conv_id = sanitize_identifier(conversation_id, field_name="conversation_id")
+        safe_name = sanitize_filename(filename)
+        file_type = FileService.map_extension_to_type(safe_name)
+        size_limit = min(max_file_bytes, max_image_bytes) if file_type == "image" else max_file_bytes
+        ensure_upload_dir(safe_conv_id)
+        target = Path(get_upload_path(safe_conv_id, safe_name))
+        partial = target.with_name(f".{target.name}.part")
+        if target.exists():
+            raise ValueError(f"File '{safe_name}' already exists in this conversation")
+
+        total_size = 0
+        header = bytearray()
+        try:
+            source.seek(0)
+            with partial.open("xb") as destination:
+                while chunk := source.read(64 * 1024):
+                    total_size += len(chunk)
+                    if total_size > size_limit:
+                        raise ValueError(
+                            f"File size ({total_size} bytes) exceeds maximum limit "
+                            f"({size_limit} bytes / {size_limit // (1024 * 1024)}MB)"
+                        )
+                    if len(header) < 64:
+                        header.extend(chunk[: 64 - len(header)])
+                    destination.write(chunk)
+
+            safe_name, file_type = validate_file_upload_metadata(
+                safe_name,
+                bytes(header),
+                total_size,
+                max_bytes=size_limit,
+            )
+            os.replace(partial, target)
+            return safe_name, file_type, total_size, str(target)
+        except Exception:
+            partial.unlink(missing_ok=True)
+            raise
+
+    @staticmethod
+    def remove_cached_files(paths: list[str]) -> None:
+        for raw_path in paths:
+            path = Path(raw_path)
+            path.unlink(missing_ok=True)
+            with contextlib.suppress(OSError):
+                path.parent.rmdir()
 
     @staticmethod
     async def run_digest_worker(conversation_id: str, file_name: str, file_type: str, reprocess: bool = False):
