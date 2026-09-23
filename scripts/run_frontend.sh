@@ -37,10 +37,10 @@ fi
 
 cd "$FRONTEND_DIR"
 
-# Install or sync deps if missing or package.json was updated
-if [ ! -d "node_modules" ] || [ ! -d "node_modules/rehype-sanitize" ] || [ "package.json" -nt "node_modules/.package-lock.json" ]; then
-    echo "[INFO] Installing / updating frontend dependencies..."
-    npm install
+# Install or sync deps if missing
+if [ ! -d "node_modules" ] || [ ! -d "node_modules/rehype-sanitize" ]; then
+    echo "[INFO] Installing missing frontend dependencies..."
+    npm install --no-save || npm install || echo "[WARN] npm install failed; check file permissions in $FRONTEND_DIR"
 fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
