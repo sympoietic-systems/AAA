@@ -3,6 +3,8 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize from "rehype-sanitize"
+import { aaaSanitizeSchema } from "../../../utils/sanitizeSchema"
 import {
   listSedimentFiles,
   injectSediment,
@@ -380,7 +382,7 @@ function SedimentSectionComponent({
     return (
       <div className="p-2 text-[9px] text-ui-secondary font-mono leading-relaxed markdown-body">
         {data.summary ? (
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema]] as any}>
             {data.summary}
           </ReactMarkdown>
         ) : (

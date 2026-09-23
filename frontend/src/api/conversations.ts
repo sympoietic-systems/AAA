@@ -196,14 +196,23 @@ export async function reprocessFile(conversationId: string, fileName: string): P
 }
 
 export async function downloadExport(conversationId: string): Promise<void> {
-  // Native browser download via direct URL navigation — avoids blob/data URL
-  // insecure-connection warnings on HTTP origins.
-  const token = localStorage.getItem("aaa_password") || ""
-  const qs = token ? `?token=${encodeURIComponent(token)}` : ""
+  const res = await fetch(`${BASE}/conversations/${conversationId}/export`)
+  if (!res.ok) {
+    throw new Error(`Export failed: HTTP ${res.status}`)
+  }
+  const blob = await res.blob()
+  const contentDisposition = res.headers.get("Content-Disposition")
+  let filename = `conversation_${conversationId}.md`
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename=["']?([^"';]+)["']?/)
+    if (match && match[1]) filename = match[1]
+  }
+  const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
-  a.href = `${BASE}/conversations/${conversationId}/export${qs}`
-  a.download = ""  // Let Content-Disposition header determine filename
+  a.href = url
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }

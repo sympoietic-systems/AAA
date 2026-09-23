@@ -1,6 +1,6 @@
 // ResearchTaskPage — single research task detail with tabbed Info, Steps, Report, Notes.
 import { memo, useState, useEffect, useRef, useMemo } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { HeaderContainer, HeaderIndicator, HeaderLogo, HeaderSeparator, HeaderLabel, HeaderActionButton, CreasesDropdown, UnifiedFooter, TerminalButton } from "../../UI"
 import type { ResearchTask, ResearchStep } from "../../../api/research"
 import { getResearchTask, getTaskUnifiedNotes, getTaskSteps, getResearchMemoryNodes, getResearchSemanticKnots, dispatchResearch, type UnifiedNoteInfo, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
@@ -271,7 +271,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       <HeaderContainer>
         <div className="flex items-center gap-2 min-w-0">
-          <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold" style={{textDecoration:"none"}}>[◀ back]</a>
+          <Link to="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold" style={{textDecoration:"none"}}>[◀ back]</Link>
           <span className="text-[#333]">|</span>
           <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
             <HeaderIndicator intent="gold" />
@@ -311,7 +311,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
 
       <div className="flex-1 min-h-0 flex flex-col px-4 pb-4 pt-1">
         {tab === "info"     && <div className="flex-1 overflow-y-auto pr-1"><InfoTab task={current} orchPhase={orchPhase} onRefreshTask={refreshAll} /></div>}
-        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} onSelectTab={setTab} externalStepId={navigateStepId} />}
+        {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} externalStepId={navigateStepId} />}
 
         {tab === "report"   && (
           <div className="flex-1 min-h-0 flex flex-col pr-1">
@@ -352,7 +352,38 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
                         {copied ? "copied!" : "copy markdown"}
                       </TerminalButton>
                       <TerminalButton onClick={() => { const blob = new Blob([reportContent + notesAppendixMd], { type: "text/markdown;charset=utf-8" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${baseName}.md`; a.click(); URL.revokeObjectURL(url) }} intent="neutral">export markdown</TerminalButton>
-                      <TerminalButton onClick={() => { const html = (reportRef.current?.innerHTML ?? "") + notesAppendixHtml; const w = window.open("", "_blank", "width=800,height=900"); if (!w) return; w.document.write(`<!DOCTYPE html><html><head><title>${baseName}</title><style>body{font-family:-apple-system,Segoe UI,Roboto,monospace;padding:2.5rem;color:#222;max-width:800px;margin:0 auto;line-height:1.7;font-size:13px}h1,h2{color:#333;margin-top:1.2em}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:12px}th{background:#f5f5f5}code{background:#f0f0f0;padding:2px 5px;border-radius:3px;font-size:12px}pre{background:#f6f6f6;padding:10px}a{color:#06c}img{max-width:100%}</style></head><body>${html}</body></html>`); w.document.close(); w.focus(); setTimeout(() => w.print(), 300) }} intent="cyan">export pdf</TerminalButton>
+                      <TerminalButton onClick={() => {
+                        const iframe = document.createElement("iframe")
+                        iframe.style.position = "fixed"
+                        iframe.style.right = "0"
+                        iframe.style.bottom = "0"
+                        iframe.style.width = "0"
+                        iframe.style.height = "0"
+                        iframe.style.border = "none"
+                        document.body.appendChild(iframe)
+                        const doc = iframe.contentWindow?.document
+                        if (doc) {
+                          const titleEl = doc.createElement("title")
+                          titleEl.textContent = baseName
+                          doc.head.appendChild(titleEl)
+                          const styleEl = doc.createElement("style")
+                          styleEl.textContent = "body{font-family:-apple-system,Segoe UI,Roboto,monospace;padding:2.5rem;color:#222;max-width:800px;margin:0 auto;line-height:1.7;font-size:13px}h1,h2{color:#333;margin-top:1.2em}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:12px}th{background:#f5f5f5}code{background:#f0f0f0;padding:2px 5px;border-radius:3px;font-size:12px}pre{background:#f6f6f6;padding:10px}a{color:#06c}img{max-width:100%}"
+                          doc.head.appendChild(styleEl)
+                          if (reportRef.current) {
+                            doc.body.appendChild(reportRef.current.cloneNode(true))
+                          }
+                          if (notesAppendixHtml) {
+                            const appendixDiv = doc.createElement("div")
+                            appendixDiv.innerHTML = notesAppendixHtml
+                            doc.body.appendChild(appendixDiv)
+                          }
+                          iframe.contentWindow?.focus()
+                          iframe.contentWindow?.print()
+                        }
+                        setTimeout(() => {
+                          if (document.body.contains(iframe)) document.body.removeChild(iframe)
+                        }, 1000)
+                      }} intent="cyan">export pdf</TerminalButton>
                     </div>
                   }
                 />
@@ -466,7 +497,7 @@ const NewTaskInline = memo(function NewTaskInline() {
     <div className="flex flex-col h-screen w-full bg-[#0c0c0c] font-mono text-[#666]">
       <HeaderContainer>
         <div className="flex items-center gap-2">
-          <a href="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold" style={{textDecoration:"none"}}>[◀ back]</a>
+          <Link to="/research" className="text-[#666] hover:text-action-hover text-[11px] transition-colors cursor-pointer font-bold" style={{textDecoration:"none"}}>[◀ back]</Link>
           <span className="text-[#333]">|</span>
           <span className="text-[11px] text-semantic-header tracking-widest uppercase select-none shrink-0 flex items-center gap-1.5">
             <HeaderIndicator intent="gold" />
@@ -509,7 +540,7 @@ export const ResearchTaskPage = memo(function ResearchTaskPage({ taskId, isNew }
     <div className="flex flex-col h-screen bg-[#0c0c0c] items-center justify-between text-semantic-red text-xs font-mono">
       <div className="flex-1 flex flex-col items-center justify-center">
         {error}
-        <a href="/research" className="text-[#666] hover:text-[#bbb] mt-2">◀ back</a>
+        <Link to="/research" className="text-[#666] hover:text-[#bbb] mt-2">◀ back</Link>
       </div>
       <UnifiedFooter className="w-full" />
     </div>

@@ -5,7 +5,9 @@ import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import remarkMath from "remark-math"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize from "rehype-sanitize"
 import rehypeKatex from "rehype-katex"
+import { aaaSanitizeSchema } from "../../../utils/sanitizeSchema"
 import type { ChatMessage, NoteInfo } from "../../../api/client"
 import { getMessageThinking, getMessageContext } from "../../../api/client"
 import { formatTime } from "../../../utils/dateFormat"
@@ -343,7 +345,7 @@ export const MessageBubble = memo(function MessageBubble({
             <div className={userExpanded ? "" : "max-h-24 overflow-y-auto"}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-                rehypePlugins={[rehypeRaw, rehypeKatex]}
+                rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema], rehypeKatex] as any}
                 components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,
@@ -362,7 +364,7 @@ export const MessageBubble = memo(function MessageBubble({
           <div className="markdown-body" onMouseUp={handleMouseUp}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-              rehypePlugins={[rehypeRaw, rehypeKatex]}
+              rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema], rehypeKatex] as any}
               components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,

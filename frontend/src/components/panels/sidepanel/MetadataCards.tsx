@@ -6,6 +6,8 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize from "rehype-sanitize"
+import { aaaSanitizeSchema } from "../../../utils/sanitizeSchema"
 import { VectorVisualizer, TerminalHeader } from "../../UI"
 
 export function splitSummaryAndTension(summary: string | null): { cleanSummary: string | null; unresolvedTensions: string | null } {
@@ -134,7 +136,7 @@ export const WebMetadataCard = memo(function WebMetadataCard({ metadata, summary
         <div>
           <div className="text-semantic-header uppercase text-[9px] tracking-wider">[ Insight / Summary ]</div>
           <div className="text-[#e0e0f0] text-[11px] leading-relaxed font-sans markdown-body">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>{cleanSummary}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema]] as any}>{cleanSummary}</ReactMarkdown>
           </div>
         </div>
       )}
@@ -143,7 +145,7 @@ export const WebMetadataCard = memo(function WebMetadataCard({ metadata, summary
         <div>
           <div className="text-semantic-red font-mono text-[9px] uppercase tracking-wider">⚡ Unresolved Tensions</div>
           <div className="text-[#e0d0d0] text-[11px] leading-relaxed font-sans markdown-body pl-1.5 border-l border-semantic-red/40">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>{unresolvedTensions}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema]] as any}>{unresolvedTensions}</ReactMarkdown>
           </div>
         </div>
       )}
@@ -178,7 +180,7 @@ export const DocumentMetadataCard = memo(function DocumentMetadataCard({ metadat
         <div>
           <div className="text-semantic-header uppercase text-[9px] tracking-wider">[ Insight / Summary ]</div>
           <div className="text-[#e0e0f0] text-[11px] leading-relaxed font-sans markdown-body">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>{cleanSummary}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema]] as any}>{cleanSummary}</ReactMarkdown>
           </div>
         </div>
       )}
@@ -187,7 +189,7 @@ export const DocumentMetadataCard = memo(function DocumentMetadataCard({ metadat
         <div>
           <div className="text-semantic-red font-mono text-[9px] uppercase tracking-wider">⚡ Unresolved Tensions</div>
           <div className="text-[#e0d0d0] text-[11px] leading-relaxed font-sans markdown-body pl-1.5 border-l border-semantic-red/40">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw]}>{unresolvedTensions}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema]] as any}>{unresolvedTensions}</ReactMarkdown>
           </div>
         </div>
       )}

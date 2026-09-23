@@ -8,7 +8,9 @@ import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import remarkMath from "remark-math"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize from "rehype-sanitize"
 import rehypeKatex from "rehype-katex"
+import { aaaSanitizeSchema } from "../../../utils/sanitizeSchema"
 import type { ResearchTask, MetaLogResponse, TaskStepsResponse } from "../../../api/research"
 import { getResearchTask, getTaskMetaLog, getTaskSteps, getTaskNotes, getResearchMemoryNodes, getResearchSemanticKnots, runTask, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
 import { KeyValueGrid, TerminalButton } from "../../UI"
@@ -87,7 +89,7 @@ function InfoTab({ task, notes }: { task: ResearchTask; notes: NoteInfo[] }) {
           <div className="text-ui-primary text-[10px] leading-relaxed max-h-48 overflow-y-auto prose prose-invert prose-xs max-w-none font-sans">
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-              rehypePlugins={[rehypeRaw, rehypeKatex]}
+              rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema], rehypeKatex] as any}
             >
               {wrapSelectedTextInMarks(task.result_summary, notes)}
             </ReactMarkdown>

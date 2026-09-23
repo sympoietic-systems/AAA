@@ -4,12 +4,14 @@ import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import remarkMath from "remark-math"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize from "rehype-sanitize"
 import rehypeKatex from "rehype-katex"
 import { useNotes } from "../../hooks/useNotes"
 import { NotesSection } from "./NotesSection"
 import { SelectionToolbar } from "../pages/nodeexplorer/SelectionToolbar"
 import { NoteEditorPopover } from "../pages/nodeexplorer/NoteEditorPopover"
-import { wrapSelectedTextInMarks } from "../../utils/noteHighlight"
+import { wrapSelectedTextInMarks, scrollToNoteHighlight } from "../../utils/noteHighlight"
+import { aaaSanitizeSchema } from "../../utils/sanitizeSchema"
 import type { NoteInfo } from "../../api/client"
 
 type ContentTab = "content" | "notes"
@@ -20,7 +22,7 @@ interface NotableMarkdownProps {
   content: string
   title?: string
   headerActions?: React.ReactNode
-  contentRef?: React.RefObject<HTMLDivElement>
+  contentRef?: React.RefObject<HTMLDivElement | null>
   onNoteClick?: (noteId: string) => void
   onNotesChange?: (notes: NoteInfo[]) => void
   className?: string
@@ -138,9 +140,7 @@ export const NotableMarkdown = memo(function NotableMarkdown({
   const handleNoteGoto = useCallback((noteId: string) => {
     setTab("content")
     setTimeout(() => {
-      import("../../utils/noteHighlight")
-        .then(({ scrollToNoteHighlight }) => scrollToNoteHighlight(noteId))
-        .catch(() => {})
+      scrollToNoteHighlight(noteId)
     }, 100)
   }, [])
 
@@ -224,7 +224,7 @@ export const NotableMarkdown = memo(function NotableMarkdown({
         <div ref={reportRef} onMouseUp={handleMouseUp} className={contentClassName ?? "text-[#94a3b8] text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none"}>
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-            rehypePlugins={[rehypeRaw, rehypeKatex]}
+            rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema], rehypeKatex] as any}
             components={markComponents}
           >
             {highlightedContent}

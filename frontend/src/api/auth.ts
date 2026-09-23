@@ -1,14 +1,39 @@
 import { BASE } from "./http"
 
-export async function checkAuthStatus(): Promise<{ authenticated: boolean; authEnabled: boolean }> {
+export type AuthStatus = "checking" | "authenticated" | "locked" | "disabled" | "unavailable"
+
+export interface AuthCheckResult {
+  status: AuthStatus
+  authenticated: boolean
+  authEnabled: boolean
+  error?: string
+}
+
+export async function checkAuthStatus(): Promise<AuthCheckResult> {
   try {
     const res = await fetch(`${BASE}/auth/verify`)
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        return { status: "locked", authenticated: false, authEnabled: true }
+      }
+      return { status: "unavailable", authenticated: false, authEnabled: true }
+    }
     const data = await res.json().catch(() => ({}))
     const authEnabled = !!data.auth_enabled
     const authenticated = data.status === "authenticated"
-    return { authenticated, authEnabled }
+
+    if (!authEnabled) {
+      return { status: "disabled", authenticated: true, authEnabled: false }
+    }
+
+    return {
+      status: authenticated ? "authenticated" : "locked",
+      authenticated,
+      authEnabled: true,
+    }
   } catch {
-    return { authenticated: true, authEnabled: false }
+    // Network failure: fail CLOSED, never treat network errors as disabled auth
+    return { status: "unavailable", authenticated: false, authEnabled: true }
   }
 }
 
