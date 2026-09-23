@@ -279,6 +279,8 @@ def validate_safe_url(
     hostname = parsed.hostname
     if not hostname:
         raise ValueError("URL is missing a valid hostname")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("URL-embedded credentials are forbidden")
 
     cleaned_host = hostname.lower().strip("[]")
     if not allow_private and (

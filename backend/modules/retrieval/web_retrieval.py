@@ -11,6 +11,7 @@ import yaml
 
 from backend.modules.base import ProcessingModule
 from backend.modules.llm_client import generate_unified
+from backend.modules.retrieval.safe_http import SafeFetchError, safe_fetch
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repository import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
@@ -184,28 +185,18 @@ class RhizomeWebProbe:
         return []
 
     async def crawl(self, url: str) -> str:
-        from backend.utils.security import validate_safe_url
-
         try:
-            safe_url = validate_safe_url(url)
-        except ValueError as err:
+            response = await safe_fetch(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            })
+        except SafeFetchError as err:
             logger.warning("SSRF blocked crawl of unsafe URL %s: %s", url, err)
             return ""
-
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-        }
-        try:
-            async with httpx.AsyncClient(headers=headers, timeout=15.0) as client:
-                response = await client.get(safe_url)
-                if response.status_code == 200:
-                    parser = HTMLToTextParser()
-                    parser.feed(response.text)
-                    return parser.get_text()
-        except Exception as e:
-            logger.warning("Failed to crawl url %s: %s", safe_url, e)
+        if response.status_code == 200:
+            parser = HTMLToTextParser()
+            parser.feed(response.text)
+            return parser.get_text()
         return ""
 
     async def execute_probe(self, query: str, conversation_id: str) -> dict:

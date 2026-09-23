@@ -61,7 +61,7 @@ V21: user-controlled outbound fetch → automatic redirects disabled; each DNS r
 
 id|status|task|cites
 T1|x|add security test fixtures + passing characterization tests for URL, upload, auth, logging, backup seams|V1,V3,V4,V7,V10,V11
-T2|.|add bounded outbound fetch component + regression tests; migrate research/web HTTP call sites|V1,V2,V14,V17,V21,I.domain
+T2|x|add bounded outbound fetch component + regression tests; migrate research/web HTTP call sites|V1,V2,V14,V17,V21,I.domain
 T3|.|stream uploads to safe cache + regression tests; enforce count/per-file/aggregate/image limits & atomic rejection|V3,V4,V5,V13,V15,V19,V20,I.api,I.domain
 T4|.|bound digestion subprocess queue + regression tests; add timeout, cancellation, terminal states|V5,V6,V12,V15,I.domain
 T5|.|centralize auth config + regression tests; remove pytest/query bypass; use authenticated export fetch; split curated public vs authenticated live preview|V7,V8,V9,V13,V17,I.api,I.env

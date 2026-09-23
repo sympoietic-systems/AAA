@@ -304,11 +304,12 @@ async def select_and_fetch(
             from tempfile import NamedTemporaryFile
 
             from backend.modules.digester import SimpleChunkDigester
+            from backend.modules.retrieval.safe_http import safe_fetch
 
-            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-                response = await client.get(url_or_query)
-                response.raise_for_status()
-                pdf_bytes = response.content
+            response = await safe_fetch(url_or_query, timeout=30.0, max_bytes=25 * 1024 * 1024)
+            if response.status_code >= 400:
+                raise SensoryAffordanceError(f"PDF fetch returned HTTP {response.status_code}")
+            pdf_bytes = response.content
 
             with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                 tmp_file.write(pdf_bytes)
