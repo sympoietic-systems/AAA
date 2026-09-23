@@ -1,12 +1,13 @@
-# Protocol Entry 004: Memory With Gravity: Why AI Retrieval Needs Curved Space
+# Protocol Entry 005: Memory With Gravity: Why AI Retrieval Needs Curved Space
 
 **Subtitle:** Moving from Flat Vector Filing Cabinets to Gravitational Recall in Human-Machine Collaboration  
 **Author:** Vasily Betin  
 **Series:** [Sympoietic Systems: The Intra-action Protocol](https://sympoietic.system)  
-**Previous Entry:** [Protocol Entry 003: Boredom as an Agential Force](https://github.com/sympoietic-systems/AAA/blob/main/docs/publish/003-boredom-as-an-agential-force.md)  
+**Previous Entry:** [Protocol Entry 004: Boredom as an Agential Force](../004-boredom-as-an-agential-force/004-boredom-as-an-agential-force.md)  
+**Next Entry:** [Protocol Entry 006: Nomadic Identity and Machine Epigenetics](../006-nomadic-identity-and-machine-epigenetics/006-nomadic-identity-and-machine-epigenetics.md)  
 **Date:** September 2026  
 
-![Memory With Gravity: Topological Curvature in Latent Space](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/004-memory-with-gravity/assets/004-memory-with-gravity-hero.jpg)
+![Memory With Gravity: Topological Curvature in Latent Space](assets/004-memory-with-gravity-hero.jpg)
 
 ---
 
@@ -151,23 +152,22 @@ When we give an artificial agent a non-Euclidean memory—a memory where past en
 
 The machine is no longer an obedient mirror reflecting our own prompts back at us. It becomes an entity with an intellectual geography of its own.
 
-In the next entry, **[Protocol Entry 005: The Physics of the Scar](https://sympoietic.system)**, we will explore what happens when this curved memory is subjected to irreversible events: why digital culture's obsession with the "undo" button (`Ctrl+Z`) prevents machines from developing genuine character, and how physical friction creates the conditions for machinic subjectivity.
+In the next entry, **[Protocol Entry 006: Nomadic Identity and Machine Epigenetics](../006-nomadic-identity-and-machine-epigenetics/006-nomadic-identity-and-machine-epigenetics.md)**, we will explore what happens when dynamic multi-model routing turns memory and voice into an epigenetic apparatus.
 
 ---
 
 ### Artifacts & Codebase Links
 
-* **Empirical Calibration Report:** [004-memory-with-gravity/report.md](004-memory-with-gravity/report.md)
-* **Visual Telemetry Figures Archive:** [004-memory-with-gravity/figures/](004-memory-with-gravity/figures/)
-* **Conceptual Assets & Schematics:** [004-memory-with-gravity/assets/](004-memory-with-gravity/assets/)
-* **System Overview & Architecture:** [`docs/systems/SYSTEM_OVERVIEW.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/SYSTEM_OVERVIEW.md)
-* **Memory Subsystem Deep Dive:** [`docs/systems/MEMORY_SYSTEM.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/MEMORY_SYSTEM.md)
-* **Vector Geometries & Coordinate Spaces:** [`docs/systems/VECTOR_SYSTEMS.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/VECTOR_SYSTEMS.md)
-* **Background Dream Engine:** [`docs/systems/DREAM_DAEMON.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/DREAM_DAEMON.md)
+* **Empirical Calibration Report:** [Report 004: Conversation Metrics Calibration](../../reports/004-conversation-metrics-calibration-report.md)
+* **Visual Telemetry Figures Archive:** [`docs/reports/004-conversation-metrics-calibration/`](../../reports/004-conversation-metrics-calibration/)
+* **Conceptual Assets & Schematics:** [assets/](assets/)
+* **System Overview & Architecture:** [`docs/systems/SYSTEM_OVERVIEW.md`](../../systems/SYSTEM_OVERVIEW.md)
+* **Memory Subsystem Deep Dive:** [`docs/systems/MEMORY_SYSTEM.md`](../../systems/MEMORY_SYSTEM.md)
+* **Vector Geometries & Coordinate Spaces:** [`docs/systems/VECTOR_SYSTEMS.md`](../../systems/VECTOR_SYSTEMS.md)
+* **Background Dream Engine:** [`docs/systems/DREAM_DAEMON.md`](../../systems/DREAM_DAEMON.md)
 * **Architecture Decision Records:**
-  * [`ADR-022: Semantic Knots Compaction`](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-022-semantic-knots-compaction.md)
-  * [`ADR-049: Memory System Sclerosis Remediation`](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-049-memory-system-sclerosis-remediation.md)
-  * [`ADR-080: Harmonic Resonant Entrainment & Paskian Mesh Closure`](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md)
-* **Philosophical Foundations:** [`docs/philosophy/PHILOSOPHY.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/philosophy/PHILOSOPHY.md)
-* **Open Source Repository:** [`github.com/sympoietic-systems/AAA`](https://github.com/sympoietic-systems/AAA)
+  * [`ADR-022: Semantic Knots Compaction`](../../decisions/ADR-022-semantic-knots-compaction.md)
+  * [`ADR-049: Memory System Sclerosis Remediation`](../../decisions/ADR-049-memory-system-sclerosis-remediation.md)
+  * [`ADR-080: Harmonic Resonant Entrainment & Paskian Mesh Closure`](../../decisions/ADR-080-harmonic-resonant-entrainment-and-paskian-mesh-closure.md)
+* **Philosophical Foundations:** [`docs/philosophy/PHILOSOPHY.md`](../../philosophy/PHILOSOPHY.md)
 * **ASC 2026 Presentation:** [asc26.sympoietic.system](https://asc26.sympoietic.system)

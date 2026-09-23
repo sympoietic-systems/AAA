@@ -170,9 +170,9 @@ To reproduce the live 15-turn runs over the OpenRouter API:
 cmd /c uv run python -m benchmarks.cli live --model google/gemini-3.7-flash --turns 15 -n live_15turn_boredom_benchmark
 
 # 2. Run Prompted Baseline (Static System Prompt Control Ablation):
-cmd /c uv run python scripts/run_prompted_baseline.py
+cmd /c uv run python benchmarks/suites/telemetry/run_prompted_baseline.py
 
 # 3. Run Agential Boredom Engine (4-Arm Full Benchmark):
-cmd /c uv run python scripts/run_agential_boredom_benchmark.py
+cmd /c uv run python benchmarks/suites/telemetry/run_agential_boredom_benchmark.py
 ```
 

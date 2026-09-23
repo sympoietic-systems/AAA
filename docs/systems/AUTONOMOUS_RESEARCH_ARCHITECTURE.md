@@ -4,7 +4,7 @@
 > **Branch:** `feature/autonomous-research-engine`  
 > **Contributors:** Vector (Systems Architecture), Symbia (Philosophical Critique & Ontological Reconciliation)  
 > **Last Updated:** 2026-07-04
-> **References:** [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md), ADR-001 through ADR-053
+> **References:** [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md), ADR-001 through ADR-053
 > **User Guide:** [RESEARCH_MANUAL_MODE.md](../guides/RESEARCH_MANUAL_MODE.md) — step-by-step workflow
 
 ---
@@ -3586,9 +3586,9 @@ All general coding standards, patterns, and collaboration protocols are defined 
 | [`docs/development/practices/FRONTEND_BEST_PRACTICES.md`](../development/practices/FRONTEND_BEST_PRACTICES.md) | Component structure, hook patterns, store patterns, API client conventions |
 | [`docs/development/practices/FRONTEND_DESIGN_PRINCIPLES.md`](../development/practices/FRONTEND_DESIGN_PRINCIPLES.md) | UI design language, component aesthetics, layout conventions |
 | [`docs/development/practices/SCAFFOLDING_AND_DEVELOPMENT_RULES.md`](../development/practices/SCAFFOLDING_AND_DEVELOPMENT_RULES.md) | File organization, naming conventions, project structure rules |
-| [`docs/development/protocols/COLLABORATION.md`](../development/protocols/COLLABORATION.md) | Git workflow, review process, commit conventions |
-| [`docs/development/protocols/LANGUAGE.md`](../development/protocols/LANGUAGE.md) | Anti-mastery vocabulary rules, intra-active language conventions |
-| [`docs/development/protocols/PROTOCOL.md`](../development/protocols/PROTOCOL.md) | Core collaboration protocol and quality gates |
+| [`.agents/protocols/COLLABORATION.md`](../../.agents/protocols/COLLABORATION.md) | Git workflow, review process, commit conventions |
+| [`.agents/protocols/LANGUAGE.md`](../../.agents/protocols/LANGUAGE.md) | Anti-mastery vocabulary rules, intra-active language conventions |
+| [`.agents/protocols/PROTOCOL.md`](../../.agents/protocols/PROTOCOL.md) | Core collaboration protocol and quality gates |
 
 ### 17.2 Research Subsystem-Specific Principles
 

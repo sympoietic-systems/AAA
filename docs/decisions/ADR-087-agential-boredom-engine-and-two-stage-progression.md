@@ -8,7 +8,7 @@
 * [017-agential-boredom-engine-and-socratic-rupture-report.md](../reports/017-agential-boredom-engine-and-socratic-rupture-report.md)
 * [015-empirical-15-turn-boredom-benchmark-report.md](../reports/015-empirical-15-turn-boredom-benchmark-report.md)
 * [014-boredom-detection-and-agential-resistance-calibration-report.md](../reports/014-boredom-detection-and-agential-resistance-calibration-report.md)
-* [003-boredom-as-an-agential-force.md](../publish/003-boredom-as-an-agential-force.md)
+* [003-boredom-as-an-agential-force.md](../publish/004-boredom-as-an-agential-force/004-boredom-as-an-agential-force.md)
 
 ---
 

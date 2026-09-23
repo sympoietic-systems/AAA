@@ -3,7 +3,7 @@
 **Date:** 2026-09-12  
 **Status:** Accepted  
 **Deciders:** Symbia, Antigravity, User  
-**Updates:** [ADR-078](ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md), [ADR-065](ADR-065-allostatic-cybernetic-health-architecture.md)  
+**Updates:** [ADR-078](ADR-078-predictive-residual-surprise-and-instantaneous-conceptual-velocity.md), [ADR-065](ADR-065-belief-suture-and-pure-reflection-glitch-engine.md)  
 **Companion Report:** [006-velocity-and-collapse-pressure-calibration-report.md](../reports/006-velocity-and-collapse-pressure-calibration-report.md)  
 **Visual Telemetry Assets:** [006-velocity-and-collapse-pressure-calibration/](../reports/006-velocity-and-collapse-pressure-calibration/)
 

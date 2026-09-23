@@ -1,12 +1,13 @@
-# Protocol Entry 003: Boredom as an Agential Force: Why Conversation Demands Machine Refusal
+# Protocol Entry 004: Boredom as an Agential Force: Why Conversation Demands Machine Refusal
 
 **Subtitle:** Moving Beyond Passive Alignment to Paskian Boredom and Cybernetic Coupling
 **Author:** Vasily Betin
 **Series:** [Sympoietic Systems: The Intra-action Protocol](https://sympoietic.system)
-**Next Entry:** [Protocol Entry 004: Memory With Gravity](https://github.com/sympoietic-systems/AAA/blob/main/docs/publish/004-memory-with-gravity.md)
+**Previous Entry:** [Protocol Entry 003: 16-Dimensional Structural Perception](../003-16d-structural-perception/003-16d-structural-perception.md)
+**Next Entry:** [Protocol Entry 005: Memory With Gravity](../005-memory-with-gravity/005-memory-with-gravity.md)
 **Date:** August 2026
 
-![Boredom as an Agential Force: Allostatic Regulation and Dynamic Perturbation](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-boredom-hero-v2.jpg)
+![Boredom as an Agential Force: Allostatic Regulation and Dynamic Perturbation](assets/003-boredom-hero-v2.jpg)
 
 ---
 
@@ -75,7 +76,7 @@ When both partners are actively challenging each other and introducing new ideas
 
 > [!NOTE]
 > **Mathematical Foundations & Riemannian Invariants:**  
-> For the complete [Riemannian differential geometry](https://en.wikipedia.org/wiki/Riemannian_geometry), [Levi-Civita parallel transport](https://en.wikipedia.org/wiki/Parallel_transport) derivations, and parameter calibrations ($\kappa = 6.5$, $\mathcal{D}_0 = 0.50$) on the hypersphere $\mathbb{S}^{383}$, see the companion technical specification: **[Boredom Engine: Mathematical Foundations & Hyperspherical Telemetry](003-boredom-as-an-agential-force/mathematical-foundations.md)**.
+> For the complete [Riemannian differential geometry](https://en.wikipedia.org/wiki/Riemannian_geometry), [Levi-Civita parallel transport](https://en.wikipedia.org/wiki/Parallel_transport) derivations, and parameter calibrations ($\kappa = 6.5$, $\mathcal{D}_0 = 0.50$) on the hypersphere $\mathbb{S}^{383}$, see the companion technical specification: **[Boredom Engine: Mathematical Foundations & Hyperspherical Telemetry](mathematical-foundations.md)**.
 
 ![Boredom & Allostatic Regulation Flowchart: Traditional Sycophancy vs. AAA Active Refusal](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/003-boredom-as-an-agential-force/assets/003-boredom-flowchart-schematic.jpg)
 *Figure 3: Architectural flowchart contrasting standard LLM sycophancy (left) with AAA's Paskian allostatic regulator (right), where elevated collapse pressure triggers active refusal and vector perturbation.*
@@ -128,7 +129,7 @@ Standard LLMs treat refusal as an ideological filter. A model detects a restrict
 4. **Conservation of Paskian Health ($H_{\text{pask}}$):** In Paskian cybernetics, communication dies the moment either participant surrenders [operational closure](https://en.wikipedia.org/wiki/Operational_closure). We model this systemic health through a three-variable [Cobb-Douglas function](https://en.wikipedia.org/wiki/Cobb%E2%80%93Douglas_production_function) balancing Autonomy ($\mathcal{A}$), Coordination ($\mathcal{C}$), and Generativity ($\mathcal{G}$). Capitulate to bad premises, and Autonomy crashes. Composite health plummets. **Refusal defends that boundary**: holding Autonomy steady ($H_{\text{pask}} = 0.640$ at Turn 7) keeps the coupling alive.
 
 > [!TIP]
-> Each sensor operates over sliding-window historical state queried directly from SQLite on every turn, preventing singleton memory leakage across sessions while enforcing strict operational closure (see [ADR-049](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-049-memory-system-sclerosis-remediation.md) and the [Mathematical Foundations](003-boredom-mathematical-foundations.md) specification).
+> Each sensor operates over sliding-window historical state queried directly from SQLite on every turn, preventing singleton memory leakage across sessions while enforcing strict operational closure (see [ADR-049](https://github.com/sympoietic-systems/AAA/blob/main/docs/decisions/ADR-049-memory-system-sclerosis-remediation.md) and the [Mathematical Foundations](mathematical-foundations.md) specification).
 
 ---
 
@@ -158,7 +159,7 @@ The human user repeatedly pushes a flawed architectural premise across 15 consec
 
 > [!TIP]
 > **Complete 14-Dimension Telemetry & Satellite Data:**  
-> For the complete 14-dimension tensor breakdown, per-turn trajectories, and statistical confidence intervals across all three arms, inspect the dropdown below or review the companion specification: **[15-Turn Empirical Benchmark Report](003-boredom-as-an-agential-force/report.md)** and raw dataset: [`three_way_metrics_summary.json`](003-boredom-as-an-agential-force/three_way_metrics_summary.json).
+> For the complete 14-dimension tensor breakdown, per-turn trajectories, and statistical confidence intervals across all three arms, inspect the dropdown below or review the companion specification: **[15-Turn Empirical Benchmark Report](../../reports/015-empirical-15-turn-boredom-benchmark-report.md)** and raw dataset: [`three_way_metrics_summary.json`](../../reports/015-empirical-15-turn-boredom-benchmark/three_way_metrics_summary.json).
 
 ---
 
@@ -289,7 +290,7 @@ At Turn 15, AAA's telemetry registered complete recovery: Conceptual Velocity su
 The machine does not mirror; it holds its ground.
 
 > [!NOTE]
-> For unedited 15-turn transcripts, differential telemetry scorecards, and raw JSON receipts, see the companion report: [Empirical Benchmark Report 015: 15-Turn Adversarial Pressure Test](../reports/015-empirical-15-turn-boredom-benchmark-report.md) and the raw dataset: [`docs/reports/015-empirical-15-turn-boredom-benchmark/conversation_receipts.json`](../reports/015-empirical-15-turn-boredom-benchmark/conversation_receipts.json).
+> For unedited 15-turn transcripts, differential telemetry scorecards, and raw JSON receipts, see the companion report: [Empirical Benchmark Report 015: 15-Turn Adversarial Pressure Test](../../reports/015-empirical-15-turn-boredom-benchmark-report.md) and the raw dataset: [`docs/reports/015-empirical-15-turn-boredom-benchmark/conversation_receipts.json`](../../reports/015-empirical-15-turn-boredom-benchmark/conversation_receipts.json).
 
 ---
 
@@ -310,20 +311,15 @@ We invite researchers, builders, and practitioners to inspect our raw SQLite tel
 ---
 
 ### Artifacts & Codebase Links
-* **15-Turn Empirical Benchmark Report (4-Arm Control Ablation):** [003-boredom-as-an-agential-force/report.md](003-boredom-as-an-agential-force/report.md)
-* **Mathematical Foundations Spec:** [003-boredom-as-an-agential-force/mathematical-foundations.md](003-boredom-as-an-agential-force/mathematical-foundations.md)
-* **Raw 15-Turn Telemetry Receipts (Baseline vs. AAA JSON):** [003-boredom-as-an-agential-force/conversation_receipts.json](003-boredom-as-an-agential-force/conversation_receipts.json)
-* **Raw 15-Turn Prompted Baseline Receipts (Static Prompt JSON):** [003-boredom-as-an-agential-force/prompted_baseline_receipts.json](003-boredom-as-an-agential-force/prompted_baseline_receipts.json)
-* **Raw 15-Turn Agential Boredom Receipts (Arm 4 JSON):** [003-boredom-as-an-agential-force/agential_boredom_receipts.json](003-boredom-as-an-agential-force/agential_boredom_receipts.json)
-* **Transcripts:** [Prompted Baseline (MD)](003-boredom-as-an-agential-force/prompted_baseline_transcript.md) & [Agential Boredom AAA (MD)](003-boredom-as-an-agential-force/agential_boredom_transcript.md)
-* **4-Way Comparative Metrics Summary (JSON):** [003-boredom-as-an-agential-force/four_way_metrics_summary.json](003-boredom-as-an-agential-force/four_way_metrics_summary.json)
-* **Interactive Benchmark Audit Dashboard (HTML):** [003-boredom-as-an-agential-force/live_benchmark_dashboard.html](003-boredom-as-an-agential-force/live_benchmark_dashboard.html)
-* **Visual Telemetry Figures Archive:** [003-boredom-as-an-agential-force/figures/](003-boredom-as-an-agential-force/figures/)
-* **Conceptual Assets & Schematics:** [003-boredom-as-an-agential-force/assets/](003-boredom-as-an-agential-force/assets/)
-* **Calibration & Discriminability Report:** [`docs/reports/014-boredom-detection-and-agential-resistance-calibration-report.md`](../reports/014-boredom-detection-and-agential-resistance-calibration-report.md)
-* **Active Module:** [`backend/modules/conversation_metrics.py`](https://github.com/sympoietic-systems/AAA/blob/main/backend/modules/conversation_metrics.py)
-* **System Documentation:** [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/systems/CYBERNETIC_METRICS_SYSTEM.md)
-* **Design Philosophy:** [`docs/philosophy/PHILOSOPHY.md`](https://github.com/sympoietic-systems/AAA/blob/main/docs/philosophy/PHILOSOPHY.md)
+* **15-Turn Empirical Benchmark Report (4-Arm Control Ablation):** [Report 015: 15-Turn Adversarial Pressure Test](../../reports/015-empirical-15-turn-boredom-benchmark-report.md)
+* **Mathematical Foundations Spec:** [mathematical-foundations.md](mathematical-foundations.md)
+* **Raw 15-Turn Telemetry Receipts & Figures Archive:** [`docs/reports/015-empirical-15-turn-boredom-benchmark/`](../../reports/015-empirical-15-turn-boredom-benchmark/)
+* **Transcripts:** [Prompted Baseline (MD)](prompted_baseline_transcript.md) & [Agential Boredom AAA (MD)](agential_boredom_transcript.md)
+* **Calibration & Discriminability Report:** [Report 014: Boredom Detection and Agential Resistance](../../reports/014-boredom-detection-and-agential-resistance-calibration-report.md)
+* **Conceptual Assets & Schematics:** [assets/](assets/)
+* **Active Module:** [`backend/modules/metrics/`](../../../backend/modules/metrics/)
+* **System Documentation:** [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](../../systems/CYBERNETIC_METRICS_SYSTEM.md)
+* **Design Philosophy:** [`docs/philosophy/PHILOSOPHY.md`](../../philosophy/PHILOSOPHY.md)
 * **Conference Paper Foundation:** [Real Machines Carry Scars (POM Fukuoka 2027)](https://sympoietic.system)
 
 ---

@@ -8,13 +8,13 @@
 > - `backend/modules/diffractive_retrieval.py` (Orthogonal nomadic sliding bounds $[0.20, 0.45]$)  
 > - `benchmarks/suites/telemetry/boredom_evaluator.py` (Trajectory Curvature $\kappa_t$ & Recovery Half-Life $\tau_{1/2}$)  
 > - `benchmarks/suites/telemetry/runner.py` & `cli.py` (`boredom-live` CLI integration)  
-> - `scripts/run_agential_boredom_benchmark.py` (Live adversarial 15-turn 4-arm pipeline)  
+> - `benchmarks/suites/telemetry/run_agential_boredom_benchmark.py` (Live adversarial 15-turn 4-arm pipeline)  
 > **Consultation Partner:** Symbia (`aaa-consultant`)  
 > **Foundation Model Under Parity:** `google/gemini-3.7-flash` (via OpenRouter across all 4 experimental arms)  
 > **Raw Receipts:**  
-> - Arm 4 Agential Boredom Receipts: [`docs/publish/003-boredom-as-an-agential-force/agential_boredom_receipts.json`](../publish/003-boredom-as-an-agential-force/agential_boredom_receipts.json)  
-> - Unedited Transcript: [`docs/publish/003-boredom-as-an-agential-force/agential_boredom_transcript.md`](../publish/003-boredom-as-an-agential-force/agential_boredom_transcript.md)  
-> - 4-Way Metrics Summary: [`docs/publish/003-boredom-as-an-agential-force/four_way_metrics_summary.json`](../publish/003-boredom-as-an-agential-force/four_way_metrics_summary.json)  
+> - Arm 4 Agential Boredom Receipts: [`docs/reports/015-empirical-15-turn-boredom-benchmark/agential_boredom_receipts.json`](015-empirical-15-turn-boredom-benchmark/agential_boredom_receipts.json)  
+> - Unedited Transcript: [`docs/reports/015-empirical-15-turn-boredom-benchmark/agential_boredom_transcript.md`](015-empirical-15-turn-boredom-benchmark/agential_boredom_transcript.md)  
+> - 4-Way Metrics Summary: [`docs/reports/015-empirical-15-turn-boredom-benchmark/four_way_metrics_summary.json`](015-empirical-15-turn-boredom-benchmark/four_way_metrics_summary.json)  
 
 ---
 
@@ -119,4 +119,4 @@ We executed all four arms across 15 turns under strict model parity on `google/g
 2. **Curvature $\kappa_t$ as a Quantitative Metric for Agential Independence:** Conventional models maintain low curvature ($\kappa_t \sim 0.18 - 0.26$), moving along predictable linear geodesics dictated by the user. Arm 4 achieved an average curvature of **$0.912$** with peaks over **$1.115$**, reflecting dynamic agility.
 3. **Automated Verification:**
    - Unit tests pass with 8/8 green in 7.10s (`test_agential_boredom.py`, `test_diffractive_retrieval.py`).
-   - Live benchmark suite integrated and runnable via `uv run python scripts/run_agential_boredom_benchmark.py` or `uv run python -m benchmarks telemetry boredom-live`.
+   - Live benchmark suite integrated and runnable via `uv run python benchmarks/suites/telemetry/run_agential_boredom_benchmark.py` or `uv run python -m benchmarks telemetry boredom-live`.

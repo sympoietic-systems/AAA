@@ -3,7 +3,7 @@
 **Date:** 2026-09-12  
 **Status:** Accepted  
 **Deciders:** Symbia, Antigravity, User  
-**Updates:** [ADR-077](ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md), [ADR-075](ADR-075-dialogue-manifold-spectral-entropy-and-collapse-pressure.md)  
+**Updates:** [ADR-077](ADR-077-directional-reverse-perturbation-and-mutual-perturbation-index.md), [ADR-075](ADR-075-manifold-spectral-entropy-and-collapse-pressure.md)  
 **Companion Report:** [007-perturbation-and-spectral-entropy-calibration-report.md](../reports/007-perturbation-and-spectral-entropy-calibration-report.md)  
 **Visual Telemetry Assets:** [007-perturbation-and-spectral-entropy-calibration/](../reports/007-perturbation-and-spectral-entropy-calibration/)
 

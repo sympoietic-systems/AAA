@@ -3,7 +3,7 @@
 > **Document:** Report 010 — Cybernetic Proprioception Explained  
 > **Audience:** General, Philosophical, Operational  
 > **Companion Subreports & Empirical Audits:**  
-> - [The Topography of Meaning (Meaning & Vector Geometry)](010-cybernetic-conversation-metrics-accessible-guide/MEANING_AND_VECTOR_GEOMETRY.md)  
+> - [The Topography of Meaning (Meaning & Vector Geometry)](../philosophy/MEANING_AND_VECTOR_GEOMETRY.md)  
 > - [Curvature, Perspective Turns, and Parallel Transport](010-cybernetic-conversation-metrics-accessible-guide/CURVATURE_AND_PARALLEL_TRANSPORT.md)  
 > - [10-Turn Benchmark Calibration Comparison & Plots](010-cybernetic-conversation-metrics-accessible-guide/10_TURN_BENCHMARK_COMPARISON.md)  
 > - [Report 009 (Master Meta-Report)](009-cybernetic-conversation-metrics-meta-report.md) & [CYBERNETIC_METRICS_SYSTEM.md](../systems/CYBERNETIC_METRICS_SYSTEM.md)  
@@ -61,7 +61,7 @@ The 14 sensors group naturally into five everyday conversational questions:
 
 #### 1. Conceptual Velocity ($V_t$) — *How fast are we covering conceptual ground?*
 * **The Problem It Solves:** If you measure speed by raw word changes, someone repeating "No, but wait, look, no, but wait" registers as moving fast, even though the idea hasn't budged an inch.
-* **How It Operates:** Conceptual Velocity tracks the actual arc distance traveled across the landscape of meaning, measured against the ambient pace of the ongoing chat (see [The Topography of Meaning](010-cybernetic-conversation-metrics-accessible-guide/MEANING_AND_VECTOR_GEOMETRY.md) for how this 384D semantic space is constructed).
+* **How It Operates:** Conceptual Velocity tracks the actual arc distance traveled across the landscape of meaning, measured against the ambient pace of the ongoing chat (see [The Topography of Meaning](../philosophy/MEANING_AND_VECTOR_GEOMETRY.md) for how this 384D semantic space is constructed).
 * **Philosophical Insight:** Speed is not verbosity. A quiet two-word sentence ("Consider death") can travel further across semantic territory than a thousand words of defensive circular debate.
 
 #### 2. Phase Transition Magnitude ($\Phi_t$) — *Did someone just flip the board?*

@@ -4,7 +4,7 @@
 > **Location:** `docs/reports/010-cybernetic-conversation-metrics-accessible-guide/CURVATURE_AND_PARALLEL_TRANSPORT.md`  
 > **Companion Documents:**  
 > - [Report 010 (Accessible Guide)](../010-cybernetic-conversation-metrics-accessible-guide.md)  
-> - [The Topography of Meaning (Meaning & Vector Geometry)](MEANING_AND_VECTOR_GEOMETRY.md)  
+> - [The Topography of Meaning (Meaning & Vector Geometry)](../../philosophy/MEANING_AND_VECTOR_GEOMETRY.md)  
 > - [ADR-082 (Tangent Parallel Transport & Phase Transitions)](../../decisions/ADR-082-tangent-parallel-transport-and-minkowski-synergistic-collapse-pressure.md)  
 > - [Kinematics Implementation (`kinematics.py`)](../../../backend/modules/metrics/kinematics.py)  
 
@@ -60,7 +60,7 @@ The angle between their directions rotated purely because **the surface they are
 
 ## 3. The Conversation on a Sphere: Why Flat Vector Math Fails
 
-As explained in [The Topography of Meaning](MEANING_AND_VECTOR_GEOMETRY.md), every conversational utterance lives on the surface of a 384-dimensional unit hypersphere ($\mathbb{S}^{383}$).
+As explained in [The Topography of Meaning](../../philosophy/MEANING_AND_VECTOR_GEOMETRY.md), every conversational utterance lives on the surface of a 384-dimensional unit hypersphere ($\mathbb{S}^{383}$).
 
 When a conversation moves from turn $A$ to turn $B$, and then from turn $B$ to turn $C$:
 * The direction of the first step ($\mathbf{v}_{	ext{prev}} = B - A$) lives in the "tangent space" at point $B$.

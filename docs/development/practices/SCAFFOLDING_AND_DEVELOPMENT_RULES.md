@@ -1,94 +1,66 @@
 # Scaffolding & Development Rules Guide
 **System:** Autopoietic Agentic Assemblage (AAA)  
-**Classification:** Architectural Guidelines & Engineering Standard
+**Classification:** Architectural Guidelines & Engineering Standard  
+**Invariant Protocols:** Adhere to [CONCURRENCY.md](../../../.agents/protocols/CONCURRENCY.md), [SECURITY.md](../../../.agents/protocols/SECURITY.md), [GLITCH.md](../../../.agents/protocols/GLITCH.md), and [DOCUMENTATION.md](../../../.agents/protocols/DOCUMENTATION.md).
 
 ---
 
-## 1. Directory Structure & System Layout
+## 1. The Scaffolding Philosophy: Agential Layer Separation
 
-As the AAA codebase grows, maintaining a strict separation of concerns is critical for stability and scaling. The repository is organized as follows:
+Rather than managing ad-hoc files, all code in AAA adheres to a four-tier architecture. Each tier represents a distinct membrane with clear responsibilities, data contracts, and failure boundaries:
 
 ```
-AAA/
-├── .agents/                    # Agent skills and runtime configurations
-├── docs/                       # Full documentation repository
-│   ├── README.md               # Central docs index
-│   ├── philosophy/             # Conceptual foundations
-│   ├── architecture/           # System architecture and technical specs
-│   ├── decisions/              # Architecture Decision Records (ADRs)
-│   ├── guides/                 # Setup, config, and operational guides
-│   ├── systems/                # Subsystem deep-dive specifications
-│   ├── development/            # Roadmap, practices, and protocols
-│   ├── publish/                # Published research entries
-│   └── images/                 # UI screenshots
-├── backend/                    # FastAPI Backend Application
-│   ├── api/                    # Routers, path definitions, and request schemas
-│   │   ├── routes/             # Route modules (chat, beliefs, research, etc.)
-│   │   └── schemas.py          # Pydantic schemas validating payloads
-│   ├── services/               # Business logic and orchestration
-│   │   ├── belief.py           # Belief service
-│   │   ├── chat.py             # Chat processing service
-│   │   └── research/           # Autonomous research subsystem
-│   │       ├── orchestrator.py # Research orchestrator (1,028 lines)
-│   │       ├── phases.py       # 7 phase implementations
-│   │       ├── tools.py        # Tool functions (parse, digest, reflect)
-│   │       └── task_manager.py # Task lifecycle management
-│   ├── modules/                # Core processing modules (the "engine" components)
-│   │   ├── base.py             # Interface definition for ProcessingModule
-│   │   ├── belief_engine.py    # Somatic warping, attractors, and belief metabolism
-│   │   ├── belief_math.py      # Pure belief math functions
-│   │   ├── structural_engine.py# Lexicon & structural signature scorer
-│   │   ├── providers/          # LLM provider adapters (Anthropic, Google, OpenRouter)
-│   │   └── ...                 # Other modules (perception, web, client, etc.)
-│   ├── metabolisation/         # Background daemon, dreams, skill metabolism
-│   │   ├── daemon.py           # AutopoieticDreamDaemon
-│   │   ├── pipeline.py         # Pipeline runner executing sequential modules
-│   │   └── scheduler.py        # Background task scheduler and recovery loop
-│   ├── storage/                # SQLite database and SQL repository mappings
-│   │   ├── database.py         # Database initializer, table creation, WAL configuration
-│   │   ├── models.py           # Dataclass entity models
-│   │   └── repositories/       # Repository classes per entity
-│   ├── utils/                  # Shared utilities (research_logger, concurrency, etc.)
-│   └── tests/                  # Backend unit, integration, and flow test suites
-└── frontend/                   # Vite + React + TypeScript Frontend
-    ├── src/
-    │   ├── api/                # Axios instances & API request definitions
-    │   ├── components/         # Reusable React components
-    │   │   ├── pages/          # Standing viewport layouts (landing, nodeexplorer, agentpage)
-    │   │   ├── panels/         # Embedded overlay HUDs and sidebar panels (sidepanel, leftpanel, contextviewer)
-    │   │   └── ...             # Core UI visual elements
-    │   ├── hooks/              # Custom React hooks (history state, scroll bounds)
-    │   ├── stores/             # Pure JS pub-sub stores (telemetryStore, notificationStore)
-    │   ├── App.tsx             # Root layout and global state wiring
-    │   ├── index.css           # Global themes, HSL colors, animations
-    │   └── main.tsx            # React application entry point
-    └── vite.config.ts          # Build configuration and proxy overrides
+┌─────────────────────────────────────────────────────────────┐
+│ 1. THE AFFERENT MEMBRANE (api/)                             │
+│    FastAPI routes, clamped Pydantic schemas, input          │
+│    sanitization, SSRF validation.                           │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 2. THE COGNITIVE PIPELINE (modules/, services/)             │
+│    ProcessingModule implementations, sensory perception,   │
+│    belief math, structural scoring, provider adapters.      │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 3. SUBCONSCIOUS METABOLIZATION (metabolisation/)            │
+│    AutopoieticDreamDaemon, idle cognitive cycles, skill     │
+│    nucleation, resonance linking, asynchronous tasks.       │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 4. SEDIMENTATION & STORAGE (storage/)                       │
+│    SQLite WAL database, dataclass entity models,            │
+│    thread-local @with_connection repositories.              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Backend Scaffolding Rules
+## 2. Backend Scaffolding Framework
 
-To add a new feature or processing step, follow the sequential implementation pattern:
+When introducing a new capability, cognitive step, or entity, develop across the four tiers in this sequence:
 
-### 2.1. Database Entity Expansion
-1. **Define Dataclass**: Add the data entity to [backend/storage/models.py](file:///d:/01_GIT/AAA/backend/storage/models.py).
-2. **Create Database Table**: Update the initialization DDL in [backend/storage/database.py](file:///d:/01_GIT/AAA/backend/storage/database.py). Ensure the query uses standard types and indexes. Set up foreign keys with `ON DELETE CASCADE` if applicable.
-3. **Extend Repository**: Add clean SQLite transaction methods to [backend/storage/repository.py](file:///d:/01_GIT/AAA/backend/storage/repository.py). Use context managers for connection safety to prevent lock contention.
+### 2.1. Layer 4: Storage Sedimentation
+1. **Entity Definition:** Define immutable dataclass models in `backend/storage/models.py`.
+2. **Schema & Migration:** Add DDL table initialization and composite indexes in `backend/storage/database.py`. Always ensure foreign keys include `ON DELETE CASCADE` where applicable.
+3. **Repository Methods:** Implement clean transactional access in `backend/storage/repositories/`.
+   - Decorate repository functions with `@with_connection` to enable thread-local connection tracking.
+   - Enforce clamped query limits (`1 <= limit <= 50`, default 20).
+   - Prefer keyset pagination (`WHERE id > :cursor`) over deep `OFFSET` clauses.
+   - Keep write transactions minimal to prevent database lock contention under SQLite WAL mode.
 
-> [!IMPORTANT]
-> The SQLite database must run with Write-Ahead Logging (WAL) enabled: `PRAGMA journal_mode=WAL;`. Always wrap modifications in explicit transactions to prevent concurrent read/write locks.
-
-### 2.2. Creating a Processing Module
-All modular pipeline steps must subclass `ProcessingModule` defined in [backend/modules/base.py](file:///d:/01_GIT/AAA/backend/modules/base.py).
+### 2.2. Layer 2: Cognitive Pipeline Modules
+Every modular cognitive step subclasses `ProcessingModule` from `backend/modules/base.py`:
 
 ```python
 from backend.modules.base import ProcessingModule
 from backend.pipeline.metadata import ModuleMeta
 
+
 class CustomAnalysisModule(ProcessingModule):
-    def __init__(self, some_dependency):
-        self._dep = some_dependency
+    def __init__(self, dependency):
+        self._dependency = dependency
 
     @property
     def name(self) -> str:
@@ -98,126 +70,79 @@ class CustomAnalysisModule(ProcessingModule):
     def module_meta(self) -> ModuleMeta:
         return ModuleMeta(
             name="custom_analysis",
-            description="Performs custom cognitive analysis on conversational state",
+            description="Performs cognitive analysis on conversational state",
             category="reasoning",
             always_run=True,
             triggers=["analysis", "somatic"],
         )
 
     def validate(self) -> bool:
-        # Check dependencies / system status
         return True
 
     async def process(self, payload: dict) -> dict:
-        # Process context, inject fields, modify payload
+        # Offload blocking operations to thread if necessary
         payload["custom_results"] = "results"
         return payload
 ```
 
-*   **Registration**: Register the new module in the FastAPI lifespan manager within [backend/main.py](file:///d:/01_GIT/AAA/backend/main.py).
-*   **Pipeline Ordering**: Position the module in the processing pipeline sequence under the `pipeline_order` list in `config.yaml`.
+*   **Lifecycle Hook:** Register module instances during application lifespan in `backend/main.py`.
+*   **Pipeline Sequence:** Insert the module into the processing sequence within `config.yaml` (`pipeline_order`).
 
-### 2.3. Route and Payload Validation Schema
-*   **Pydantic Schema**: Define strict payload and response structures in [backend/api/schemas.py](file:///d:/01_GIT/AAA/backend/api/schemas.py).
-*   **FastAPI Route**: Place API route definitions in [backend/api/routes.py](file:///d:/01_GIT/AAA/backend/api/routes.py). Always inject the state parameters via `request.app.state` instead of using global dependencies.
-*   **Timezones**: Use `datetime.now(timezone.utc)` for setting timestamps to maintain consistent timezone-aware formatting. For database queries expecting UTC strings, use `.replace(tzinfo=None)` safely if compared against database fields.
+### 2.3. Layer 3: Asynchronous Metabolization
+*   **Decoupled Work:** Heavy background tasks (cross-branch resonance scanning, belief drift calculations, title generation) must never block the client response.
+*   **Delegation:** Hand tasks off to FastAPI `BackgroundTasks` or schedule them into the `AutopoieticDreamDaemon` for execution during cognitive idle cycles.
 
-### 2.4. Endpoint Security & Boundary Hardening Checklist
-Before exposing any new route or processing pipeline:
-1.  **Pydantic String & Array Clamping**: Enforce maximum lengths on string parameters (`max_length=50000` for user text, `max_length=200` for titles/names) and array sizes (max 100–200 items) to prevent payload bombing.
-2.  **Identifier Sanitization**: Use `sanitize_identifier(identifier, "field_name")` from [backend/utils/security.py](file:///d:/01_GIT/AAA/backend/utils/security.py) for any path/query IDs before querying SQLite.
-3.  **Four-Pillar Upload Verification**: If accepting files, invoke `validate_file_upload()` to verify file size, blocked extensions (`.exe`, `.bat`, `.sh`, `.svg`), magic byte headers, and safe filenames. Use `safe_resolve_path()` for disk writes.
-4.  **SSRF Defense**: If the endpoint or background task fetches external URLs, disallow loopback (`127.0.0.1`), private LANs, and cloud metadata (`169.254.169.254`).
-5.  **No Secret Leakage**: Verify that auth tokens and provider API keys are never returned in response bodies or logged to SQLite `error_log`.
-
-### 2.5. Agentic Scaffolding Protocol & Skill Alignment
-When an AI assistant implements new backend capabilities, align the workflow with our canonical skills:
-*   **Database Work**: Load [`.agents/skills/database-design/`](file:///d:/01_GIT/AAA/.agents/skills/database-design/SKILL.md) to verify table normalization, composite indexes, and WAL cascade safety.
-*   **API & Route Design**: Load [`.agents/skills/api-design/`](file:///d:/01_GIT/AAA/.agents/skills/api-design/SKILL.md) and [`.agents/skills/api-documentation/`](file:///d:/01_GIT/AAA/.agents/skills/api-documentation/SKILL.md) to define consistent REST verbs and status codes.
-*   **Security Auditing**: Load [`.agents/skills/app-security/`](file:///d:/01_GIT/AAA/.agents/skills/app-security/SKILL.md) and [`.agents/skills/security-review/`](file:///d:/01_GIT/AAA/.agents/skills/security-review/SKILL.md) to run pre-merge vulnerability checklists.
-*   **Testing & Invariant Backprop**: Load [`.agents/skills/testing-strategy/`](file:///d:/01_GIT/AAA/.agents/skills/testing-strategy/SKILL.md) for unit/integration mocks, and [`.agents/skills/backprop/`](file:///d:/01_GIT/AAA/.agents/skills/backprop/SKILL.md) when fixing unexpected glitches to persist invariants.
+### 2.4. Layer 1: The Afferent Membrane (API & Security)
+*   **Pydantic Boundaries:** Define strict input/output models in `backend/api/schemas.py`.
+*   **Clamping Invariant:** Explicitly constrain all incoming string lengths (`max_length=50000` for user text, `max_length=200` for titles/labels) and collection sizes (`max_items=100`) to prevent payload exhaustion attacks.
+*   **Identifier Sanitization:** Run all path and query IDs through `sanitize_identifier(id, field_name)` before querying repositories.
+*   **Four-Pillar Upload Defense:** Any file ingestion must verify: (1) size cap, (2) strict extension whitelist, (3) magic byte inspection, and (4) directory traversal prevention using `safe_resolve_path()`.
+*   **Outbound SSRF Validation:** External HTTP requests must validate target addresses via `validate_safe_url()`, rejecting private LANs, loopbacks, and cloud metadata endpoints.
+*   **Zero Secret Leakage:** Never persist provider API keys, tokens, or raw authorization headers to SQLite sediment or error logs.
 
 ---
 
-## 3. Frontend Scaffolding Rules
+## 3. Frontend Scaffolding Framework
 
-### 3.1. Directory Conventions
-*   `frontend/src/components/pages/`: Standing page-level containers managing navigation and layout.
-*   `frontend/src/components/panels/`: Isolated sidebars, heads-up overlays, and visual drawers.
-*   `frontend/src/stores/`: Pure JS pub-sub data stores representing local state caches, system queues, and notification engines.
-*   `frontend/src/hooks/`: Reactive hooks dealing with window layouts, rendering triggers, history pops, and store subscriptions.
-*   `frontend/src/api/`: Outbound network requests. Never write raw fetch or Axios statements inside visual JSX rendering loops.
+The client is built with React 19, TypeScript, and Vite, utilizing a reactive, decoupled state architecture:
 
-### 3.2. Performance Optimization & React Redraw Control
-To ensure fluid visual rendering and prevent browser thread blockage, frontend developments must align with our optimization requirements.
-*   **Prevent Cascading Re-renders**: Decouple page layout modifications from background processes using pure JS external stores subscribing via `useSyncExternalStore`.
-*   **Lazy Loading & Resource Conservation**: Defer polling triggers and heavy layout mounts until widgets are manually expanded.
-*   **Stable Referencing & Memoization**: Leverage stable external constants (`EMPTY_ARRAY`) and memoize rendering leaf objects (`React.memo`).
+### 3.1. Architectural Zones
+*   **Standing Viewports (`src/components/pages/`):** Full viewport page containers managing high-level routing and layout geometry.
+*   **Overlay HUDs & Drawers (`src/components/panels/`):** Detached or collapsible sidebars (telemetry viewers, context inspectors, node clouds).
+*   **Decoupled Pub-Sub Stores (`src/stores/`):** Pure JavaScript event emitters providing state caches. Components subscribe via `useSyncExternalStore` to prevent cascading redraws.
+*   **Custom Reactive Hooks (`src/hooks/`):** Encapsulated logic for layout bounds, keyboard listeners, history navigation, and store subscriptions.
+*   **Network Membrane (`src/api/`):** Typed API client methods. Raw `fetch` or Axios calls must never occur inside JSX render functions.
 
-> [!TIP]
-> For complete instructions on hooks optimization, array references safety, and subscriber-driven reference-counting loops, read the [Frontend Performance & Architectural Best Practices](FRONTEND_BEST_PRACTICES.md) guide.
+### 3.2. Performance & Re-render Invariants
+*   **Stable Constants:** Never allocate inline default literals (e.g., `[]` or `{}`) in hook dependencies or props. Use external constants (such as `EMPTY_ARRAY`).
+*   **Leaf Memoization:** Wrap heavy telemetry graphs, canvas renderers, and message bubbles in `React.memo` with custom comparison functions when rendering high-frequency updates.
+*   **Subscription Cleanup:** Any store subscriber must cleanly unsubscribe on unmount to prevent memory leaks across long user sessions.
 
-### 3.3. Styling & Theme System
-AAA utilizes Tailwind CSS v4 alongside custom HSL color definitions in [frontend/src/index.css](file:///d:/01_GIT/AAA/frontend/src/index.css).
-
-*   **Dark Mode First**: The system defaults to dark mode (`#0c0c0c` background, `#c8c8c8` text color).
-*   **Color Theme Palette**:
-    *   **Primary Active Elements**: Use vibrant green (`#4ade80` / `emerald-400`) or specific homeostatic statuses (Flowing/Consolidating/Disrupted).
-    *   **Monospace Defaults**: Use the custom `--font-mono` defined variables for technical readouts, telemetry graphs, and logs.
-*   **Animations**: Implement micro-animations (`transition-all duration-300`, hover scaling) to visually highlight autopoietic changes (such as slider adjustments, belief warping, or state transitions).
+### 3.3. Visual & Aesthetic Grammar
+*   **Dark Mode Void:** Default to matte black (`#0c0c0c` / `#000000`) with high-contrast text (`#c8c8c8` / `#ffffff`).
+*   **Monospace Readouts:** Use monospace typography for all telemetry scores, coordinate vectors, and technical readouts.
+*   **Restrained Accents:** Emerald green (`#4ade80`) for active flows, amber orange (`#fb923c`) for disequilibrium or stress.
 
 ---
 
-## 4. Testing Standards
+## 4. Verification, Testing & Quality Gates
 
-*   **Location**: All test scripts must be written in the [backend/tests/](file:///d:/01_GIT/AAA/backend/tests/) directory and prefixed with `test_`.
-*   **Database Isolation**: Always instantiate mock/temporary database connections (e.g. SQLite `:memory:` or temp test files) within test fixtures. A global `conftest.py` is configured to automatically force test database path to `data/aaa_test.db` and delete it upon test completion to ensure the production database (`aaa.db`) is never modified or polluted by tests.
-*   **LLM Provider Mocking**: Do not trigger real LLM completions inside standard unit tests. Create mock completions containing expected mock JSON fields (e.g., `opacity_map`, `interference_score`) to assert state changes.
-*   **Running Tests**: Use `uv run pytest` or `uv run pytest backend/tests/` to execute the full test suite. Make sure all unit, routing, and database tests pass before committing.
+### 4.1. Automated Test Suites
+*   **Location:** All tests live under `backend/tests/` prefixed with `test_`.
+*   **Database Isolation:** Tests run against an isolated SQLite test database (managed via `conftest.py`) that is wiped cleanly upon test run completion. Never run tests against production `aaa.db`.
+*   **Provider Mocking:** Never execute live LLM provider network calls inside unit tests. Mock external completions with deterministic payloads.
+*   **Execution:** Run tests with `uv run pytest` before staging any changes.
 
----
+### 4.2. Linting & Formatting Standards
+*   **Python:** Governed by **Ruff** (configured in `pyproject.toml`).
+    ```bash
+    uv run ruff check backend/ --fix
+    uv run ruff format backend/
+    ```
+*   **Rules:** Line length 120, double quotes, space indentation, Python 3.11+.
 
-## 5. Linting & Formatting
-
-Python code is linted and formatted with **ruff** (configured in `pyproject.toml`). The frontend uses **ESLint** (configured in `frontend/eslint.config.js`).
-
-### Python (ruff)
-
-```bash
-ruff check backend/            # Lint check
-ruff check backend/ --fix      # Auto-fix safe issues
-ruff format backend/           # Apply formatting
-ruff format backend/ --diff    # Preview format changes
-```
-
-### Pre-commit Hooks
-
-Install pre-commit hooks to auto-check on every commit:
-
-```bash
-pre-commit install
-```
-
-The `.pre-commit-config.yaml` runs `ruff`, `ruff-format`, and general file sanitizers (`check-yaml`, `check-toml`, `end-of-file-fixer`, `trailing-whitespace`).
-
-### Rules
-
-*   **Line length**: 120 characters (handled by formatter)
-*   **Quote style**: Double quotes
-*   **Indent style**: Spaces
-*   **Python target**: 3.11+
-*   **Ruff supersedes**: flake8, isort, pyupgrade, black — do not use these separately
-*   **Ignored rules**: `E501` (line length), `B008` (fn call defaults), `C408` (unnecessary dict/list/tuple), `SIM401` (sqlite3.Row has no `.get()`)
-
----
-
-## 6. Architectural Consistency & Documentation
-
-### 6.1. Writing Architectural Decisions (ADR)
-When making architectural modifications, additions to external APIs, or changes to state-tracking math:
-1. Create a new markdown file in [docs/decisions/](../../decisions/) matching the format `ADR-NNN-slug.md`.
-2. Follow the template defined in [docs/decisions/README.md](../../decisions/README.md).
-3. Update the table of contents in the decisions folder index.
-
-### 6.2. Code Comments and Docstrings
-Maintain high inline documentation density. Define the purpose of each function, class parameters, returned values, and mathematical logic equations (such as cybernetic feedback equations or somatic coordinate adjustments).
+### 4.3. Invariant Backpropagation
+When a bug, test failure, or runtime glitch is identified:
+1. Isolate the minimal reproducing case.
+2. Fix the underlying fault.
+3. Backpropagate a permanent invariant (§V) and test assertion to prevent regression (using the `backprop` workflow).

@@ -853,43 +853,43 @@ Addressed by R2: Replace the hardcoded `[:3]` slice with the 6-node type-diverse
 The following files form the physical substrate of the memory system:
 
 ### Core Pipeline Modules
-* [context_collector.py](file:///d:/AAA/backend/modules/context_collector.py): Two-tier compression, branch-aware ancestor path traversal, inline note processing, shared note injection.
-* [consolidation_checkpoint.py](file:///d:/AAA/backend/modules/consolidation_checkpoint.py): Checkpoint injection into context, consolidation trigger evaluation, memory node formatting.
-* [sedimentation_retrieval.py](file:///d:/AAA/backend/modules/sedimentation_retrieval.py): Cross-conversation embedding similarity retrieval, relative time formatting, token budget enforcement.
-* [diffractive_retrieval.py](file:///d:/AAA/backend/modules/diffractive_retrieval.py): Stagnation detection (P_diffract), hysteresis state machine, Goldilocks zone retrieval, dual-vector isomorphic retrieval, roulette selection, interleaving, telemetry logging.
+* [context_collector.py](../../backend/modules/context_collector.py): Two-tier compression, branch-aware ancestor path traversal, inline note processing, shared note injection.
+* [consolidation_checkpoint.py](../../backend/modules/consolidation_checkpoint.py): Checkpoint injection into context, consolidation trigger evaluation, memory node formatting.
+* [sedimentation_retrieval.py](../../backend/modules/sedimentation_retrieval.py): Cross-conversation embedding similarity retrieval, relative time formatting, token budget enforcement.
+* [diffractive_retrieval.py](../../backend/modules/diffractive_retrieval.py): Stagnation detection (P_diffract), hysteresis state machine, Goldilocks zone retrieval, dual-vector isomorphic retrieval, roulette selection, interleaving, telemetry logging.
 
 ### Prompt Assembly
-* [assembler.py](file:///d:/AAA/backend/personality/assembler.py): Assembles system prompt, procedural sediment, history, cross-conversation sediment, file context, web context, diffractive zone, and current query into ordered message list. Wraps each block with BEGIN/END markers.
+* [assembler.py](../../backend/personality/assembler.py): Assembles system prompt, procedural sediment, history, cross-conversation sediment, file context, web context, diffractive zone, and current query into ordered message list. Wraps each block with BEGIN/END markers.
 
 ### Compression & Token Utilities
-* [token_counter.py](file:///d:/AAA/backend/utils/token_counter.py): Caveman compression (46 stop-word filter, 250-char truncation), token estimation (chars ÷ 4), TokenBudget tracking.
-* [homeostatic_regulator.py](file:///d:/AAA/backend/modules/homeostatic_regulator.py): HomeostaticRegulatorModule — computes `rolling_entropy`, `conversation_vitality`, `boringness`, and other metabolic metrics used by S1 (adaptive hysteresis) and S3 (agonistic index). Currently adjusts only generation parameters; S3 recommends routing telemetry to the prompt assembler.
+* [token_counter.py](../../backend/utils/token_counter.py): Caveman compression (46 stop-word filter, 250-char truncation), token estimation (chars ÷ 4), TokenBudget tracking.
+* [homeostatic_regulator.py](../../backend/modules/homeostatic_regulator.py): HomeostaticRegulatorModule — computes `rolling_entropy`, `conversation_vitality`, `boringness`, and other metabolic metrics used by S1 (adaptive hysteresis) and S3 (agonistic index). Currently adjusts only generation parameters; S3 recommends routing telemetry to the prompt assembler.
 
 ### Consolidation Engine
-* [consolidation.py](file:///d:/AAA/backend/metabolisation/consolidation.py): ConsolidationMixin — pending conversation evaluation, three-rule trigger logic, two-phase LLM execution, checkpoint saving, node merging, diffractive tag syncing, backfill logic.
-* [sedimentation.py](file:///d:/AAA/backend/metabolisation/sedimentation.py): 5-tier YAML/JSON/regex parser, node merging, compact summary builder, metric storage.
-* [consolidate.py](file:///d:/AAA/backend/modules/background_tasks/actions/consolidate.py): ConsolidateAction — sends formatted conversation text to background LLM, returns YAML node sediment.
-* [consolidate.yaml](file:///d:/AAA/backend/prompts/background_tasks/consolidate.yaml): System prompt governing memory node extraction — defines 5-node maximum per run, required fields, first-person voice, node type taxonomy, and formatting rules.
+* [consolidation.py](../../backend/metabolisation/consolidation.py): ConsolidationMixin — pending conversation evaluation, three-rule trigger logic, two-phase LLM execution, checkpoint saving, node merging, diffractive tag syncing, backfill logic.
+* [sedimentation.py](../../backend/metabolisation/sedimentation.py): 5-tier YAML/JSON/regex parser, node merging, compact summary builder, metric storage.
+* [consolidate.py](../../backend/modules/background_tasks/actions/consolidate.py): ConsolidateAction — sends formatted conversation text to background LLM, returns YAML node sediment.
+* [consolidate.yaml](../../backend/prompts/background_tasks/consolidate.yaml): System prompt governing memory node extraction — defines 5-node maximum per run, required fields, first-person voice, node type taxonomy, and formatting rules.
 
 ### Prompt Files (YAML)
-* [summarize.yaml](file:///d:/AAA/backend/prompts/background_tasks/summarize.yaml): Multi-plateau synthesis prompt — produces 16D structural state-space vector alongside qualitative conceptual synthesis. Temperature set to 0.4; P4 recommends lowering to 0.1–0.2 for deterministic vector output.
-* [semantic_knot.yaml](file:///d:/AAA/backend/prompts/background_tasks/semantic_knot.yaml): Distills conversation segments into atomic concept payloads for semantic knots. Currently lacks explicit first-person entanglement rules; P5 recommends aligning with `consolidate.yaml`'s voice discipline.
-* [identity.yaml](file:///d:/AAA/backend/personality/identity.yaml): Core system persona definition — traits, voice, expertise, commitments, and behaviors. P6 recommends adding an intra-active vocabulary guideline here to propagate linguistic discipline across all downstream prompts.
+* [summarize.yaml](../../backend/prompts/background_tasks/summarize.yaml): Multi-plateau synthesis prompt — produces 16D structural state-space vector alongside qualitative conceptual synthesis. Temperature set to 0.4; P4 recommends lowering to 0.1–0.2 for deterministic vector output.
+* [semantic_knot.yaml](../../backend/prompts/background_tasks/semantic_knot.yaml): Distills conversation segments into atomic concept payloads for semantic knots. Currently lacks explicit first-person entanglement rules; P5 recommends aligning with `consolidate.yaml`'s voice discipline.
+* [identity.yaml](../../backend/personality/identity.yaml): Core system persona definition — traits, voice, expertise, commitments, and behaviors. P6 recommends adding an intra-active vocabulary guideline here to propagate linguistic discipline across all downstream prompts.
 
 ### Dream Daemon & Memory Tasks
-* [daemon.py](file:///d:/AAA/backend/metabolisation/daemon.py): AutopoieticDreamDaemon — background loop, consolidation scheduling, atrophy timer, ghost ecology, zettelkasten compaction, dream triggering with tension hotspot and stagnation evaluation, multi-turn resonance execution.
-* [dream_context.py](file:///d:/AAA/backend/metabolisation/dream_context.py): DreamContextMixin — stagnation evaluation, somatic vitality calculation, tension hotspot detection (belief stress score formula), nomadic synthesis context building, dream context assembly.
+* [daemon.py](../../backend/metabolisation/daemon.py): AutopoieticDreamDaemon — background loop, consolidation scheduling, atrophy timer, ghost ecology, zettelkasten compaction, dream triggering with tension hotspot and stagnation evaluation, multi-turn resonance execution.
+* [dream_context.py](../../backend/metabolisation/dream_context.py): DreamContextMixin — stagnation evaluation, somatic vitality calculation, tension hotspot detection (belief stress score formula), nomadic synthesis context building, dream context assembly.
 
 ### Database Repositories & Schemas
-* [models.py](file:///d:/AAA/backend/storage/models.py): Defines ORM classes `Conversation`, `MemoryNode`, `Message`, and `BeliefNode`.
-* [message.py](file:///d:/AAA/backend/storage/repositories/message.py): `get_ancestor_path()` recursive CTE, `get_all_embeddings_except()`, `get_sediment_messages_with_metadata()`, `get_embeddings_in_similarity_range()`, `get_embeddings_and_signatures_except()`.
-* [memory_node.py](file:///d:/AAA/backend/storage/repositories/memory_node.py): `save_nodes()`, `get_nodes()`, `get_nodes_by_checkpoint()`, `delete_by_checkpoint()`.
+* [models.py](../../backend/storage/models.py): Defines ORM classes `Conversation`, `MemoryNode`, `Message`, and `BeliefNode`.
+* [message.py](../../backend/storage/repositories/message.py): `get_ancestor_path()` recursive CTE, `get_all_embeddings_except()`, `get_sediment_messages_with_metadata()`, `get_embeddings_in_similarity_range()`, `get_embeddings_and_signatures_except()`.
+* [memory_node.py](../../backend/storage/repositories/memory_node.py): `save_nodes()`, `get_nodes()`, `get_nodes_by_checkpoint()`, `delete_by_checkpoint()`.
 
 ### API Schemas
-* [schemas.py](file:///d:/AAA/backend/api/schemas.py): `MemoryNodeInfo` Pydantic model (id, node_type, intensity, scar, glitch_potential, intra_active_text, surface_fragment, agential_symmetry, diffractive_key, tendril_ids).
+* [schemas.py](../../backend/api/schemas.py): `MemoryNodeInfo` Pydantic model (id, node_type, intensity, scar, glitch_potential, intra_active_text, surface_fragment, agential_symmetry, diffractive_key, tendril_ids).
 
 ### Configuration
-* [config.yaml](file:///d:/AAA/backend/config.yaml): Context, sedimentation, diffractive retrieval, and daemon configuration sections.
+* [config.yaml](../../backend/config.yaml): Context, sedimentation, diffractive retrieval, and daemon configuration sections.
 
 ### Frontend
 * Memory nodes are displayed in the conversation detail UI as a list of scarred traces with intensity bars, node type badges, diffractive keys, and tendril links.

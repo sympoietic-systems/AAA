@@ -924,9 +924,9 @@ Following analysis of the empirical 10-turn receipts, the sensors across the [Cy
    - *Calibrated Formulation:* Reversed index ordering so immediate prior exchanges receive full weight ($1.0$), with exponential decay moving back into history. Prevented duplicate self-insertion in `ConversationMetricsModule`.
 
 6. **6-Panel Comparative Oscilloscope Dashboard (`compare_runs.py`):**
-   - A dedicated multi-metric comparison module was added to [`reports/003-empirical-10-turn-benchmark/compare_runs.py`](../../reports/003-empirical-10-turn-benchmark/compare_runs.py) and integrated into `run_benchmark.py --compare`.
+   - A dedicated multi-metric comparison module was added to [`reports/003-empirical-10-turn-benchmark/compare_runs.py`](003-empirical-10-turn-benchmark/compare_runs.py) and integrated into `run_benchmark.py --compare`.
    - Renders high-resolution 6-panel oscilloscope plots (`1720×1540`) contrasting Novelty, Collapse Pressure, DRR, Paskian Health, Velocity, and Reverse Perturbation.
-   - Reference full-suite calibrated comparison preserved in [`reports/runs/full_suite_calibrated/`](../../reports/runs/full_suite_calibrated/) (PNG, interactive SVG/HTML, and 10-variable comparative matrix).
+   - Reference full-suite calibrated comparison preserved in [`reports/runs/full_suite_calibrated/`](../../benchmarks/runs/full_suite_calibrated/) (PNG, interactive SVG/HTML, and 10-variable comparative matrix).
 
 ---
 

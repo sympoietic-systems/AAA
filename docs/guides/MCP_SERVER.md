@@ -171,9 +171,9 @@ trail.
 
 ## Further Reading
 
-- [Walkthrough – MCP Server](../walkthrough.md)
-- [Philosophy (AAA Core Commitments)](PHILOSOPHY.md)
-- [Architecture Overview](ARCHITECTURE.md)
+- [Setup Guide](SETUP.md)
+- [Philosophy (AAA Core Commitments)](../philosophy/PHILOSOPHY.md)
+- [Architecture Overview](../architecture/ARCHITECTURE.md)
 
 ---
 

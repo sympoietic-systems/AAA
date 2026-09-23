@@ -29,12 +29,28 @@ def client() -> TestClient:
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_test_db():
     yield
-    # After all tests run, remove the test database files
+    # Force garbage collection to close unreferenced SQLite connections on Windows
+    import gc
+
+    gc.collect()
+
+    # After all tests run, remove test database files and any ephemeral test db leftovers
     from backend.storage.database import get_db_path
 
     db_file = get_db_path(TEST_DB_PATH)
+    data_dir = db_file.parent
+
+
+    # Clean specific default test db
     for ext in ("", "-wal", "-shm"):
         f = Path(str(db_file) + ext)
         if f.exists():
             with contextlib.suppress(Exception):
                 f.unlink()
+
+    # Clean any other ephemeral test database files (*test*.db*)
+    if data_dir.exists():
+        for test_db in data_dir.glob("*test*.db*"):
+            with contextlib.suppress(Exception):
+                test_db.unlink()
+

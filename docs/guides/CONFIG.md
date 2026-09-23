@@ -450,7 +450,7 @@ curl -X POST http://localhost:8499/api/background \
   -d '{"action": "consolidate", "context": {"messages": [...]}}'
 ```
 
-See [ADR-006](decisions/ADR-006-background-tasks.md) for full design rationale.
+See [ADR-006](../decisions/ADR-006-background-tasks.md) for full design rationale.
 
 ### Structural Scorer Model Pool
 

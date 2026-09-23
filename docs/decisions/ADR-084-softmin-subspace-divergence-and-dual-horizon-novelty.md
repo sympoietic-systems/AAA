@@ -3,7 +3,7 @@
 **Date:** 2026-09-12  
 **Status:** Accepted  
 **Deciders:** Symbia, Antigravity, User  
-**Updates:** [ADR-076](ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md), [ADR-074](ADR-074-conversational-novelty-and-semantic-drift-detection.md)  
+**Updates:** [ADR-076](ADR-076-trajectory-coupling-coherence-and-agent-self-divergence.md), [ADR-074](ADR-074-reciprocal-perturbation-coherence-and-sediment-drift-novelty.md)  
 **Companion Report:** [008-resonance-and-self-divergence-calibration-report.md](../reports/008-resonance-and-self-divergence-calibration-report.md)  
 **Visual Telemetry Assets:** [008-resonance-and-self-divergence-calibration/](../reports/008-resonance-and-self-divergence-calibration/)
 

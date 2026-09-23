@@ -312,7 +312,7 @@ The `belief_metabolism` engine uses these health indexes to adjust system-wide c
 The system maintains cognitive stability and drives autonomous ideation using two structural concepts:
 
 ### A. The Attractor Window (Attentional Slots)
-To prevent context overflow, the main assistant context does not load all beliefs. Instead, it maintains a 6-slot **Attractor Window** populated dynamically with no duplicate beliefs, governed by the **Split Resonance Topology** ([ADR-090](../decisions/ADR-090-jev-augmented-attractor-window-and-split-resonance.md)):
+To prevent context overflow, the main assistant context does not load all beliefs. Instead, it maintains a 6-slot **Attractor Window** populated dynamically with no duplicate beliefs, governed by the **Split Resonance Topology** ([ADR-090](../decisions/ADR-090b-jev-augmented-attractor-window-and-split-resonance.md)):
 1.  **Slots 1-2 (Core Mass Anchors):** The two active belief nodes with the highest `ontological_mass`. These represent invariant axiomatic gravity, grounding Symbia's core commitments regardless of conversational topic.
 2.  **Slots 3-4 (Vulnerability Margin / Stress Wounds):** The two active belief nodes with the lowest `confidence` ($0.20 \le c < 0.50$). These represent internal homeostatic strain and open metabolic wounds awaiting resolution; they are immune to external topical gating.
 3.  **Slot 5 (Jev Afferent Salience — Epistemic Provocation):** Populated via TypeSafe Jev System One evaluation (`AfferentSensoryRouter`), identifying which active belief's boundary conditions are actively challenged, tested, or put at risk by the turn's tension. Falls back to top cosine similarity if Jev is unreachable or unconfigured.
@@ -373,14 +373,14 @@ A deep code audit of the current codebase has revealed two implementation flaws 
 The following files represent the physical substrate of the belief metabolism system:
 
 ### Core Logic & Metabolism
-*   [belief_engine.py](file:///d:/01_GIT/AAA/backend/modules/belief_engine.py): Contains the `BeliefDynamicsEngine`, nucleation, accretion calculations, ecosystem health metrics, tension fields, and coordinates warping.
-*   [mass_decay.py](file:///d:/01_GIT/AAA/backend/metabolisation/mass_decay.py): Defines the `MassDecayMixin` with legacy exponential decay methods (`_apply_mass_decay`, `_apply_skill_ecology`). No longer called from the active daemon loop — all decay is now handled via `_atrophy_beliefs()`.
-*   [daemon.py](file:///d:/01_GIT/AAA/backend/metabolisation/daemon.py): Orchestrates the background thread checks, evaluations, and resonance execution.
+*   [belief_engine.py](../../backend/modules/belief_engine.py): Contains the `BeliefDynamicsEngine`, nucleation, accretion calculations, ecosystem health metrics, tension fields, and coordinates warping.
+*   [mass_decay.py](../../backend/metabolisation/mass_decay.py): Defines the `MassDecayMixin` with legacy exponential decay methods (`_apply_mass_decay`, `_apply_skill_ecology`). No longer called from the active daemon loop — all decay is now handled via `_atrophy_beliefs()`.
+*   [daemon.py](../../backend/metabolisation/daemon.py): Orchestrates the background thread checks, evaluations, and resonance execution.
 
 ### Database Repositories & Schemas
-*   [models.py](file:///d:/01_GIT/AAA/backend/storage/models.py): Defines ORM classes `BeliefNode`, `BeliefEvent`, `BeliefTension`, and `EcosystemSnapshot`.
-*   [belief.py](file:///d:/01_GIT/AAA/backend/storage/repositories/belief.py): Executes SQLite CRUD operations for belief nodes, tensions, events, and somatic variables.
+*   [models.py](../../backend/storage/models.py): Defines ORM classes `BeliefNode`, `BeliefEvent`, `BeliefTension`, and `EcosystemSnapshot`.
+*   [belief.py](../../backend/storage/repositories/belief.py): Executes SQLite CRUD operations for belief nodes, tensions, events, and somatic variables.
 
 ### Initial Seed State
-*   [seed_beliefs.yaml](file:///d:/01_GIT/AAA/backend/personality/seed_beliefs.yaml): Outlines initial authored baseline beliefs loaded during database seeding.
-*   [seed_beliefs.py](file:///d:/01_GIT/AAA/backend/scripts/seed_beliefs.py): Initial seeding script executing initial SQL database ingestion.
+*   [seed_beliefs.yaml](../../backend/personality/seed_beliefs.yaml): Outlines initial authored baseline beliefs loaded during database seeding.
+*   [seed_beliefs.py](../../backend/scripts/seed_beliefs.py): Initial seeding script executing initial SQL database ingestion.

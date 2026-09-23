@@ -4,13 +4,13 @@ The Autopoietic Dream Daemon is the background engine that drives agential varie
 
 ## File Architecture
 
-*   **Core Module**: [daemon.py](file:///d:/01_GIT/AAA/backend/metabolisation/daemon.py) — Defines `AutopoieticDreamDaemon`.
-*   **Signal Queue**: [daemon_trigger_signal.py](file:///d:/01_GIT/AAA/backend/metabolisation/daemon_trigger_signal.py) — In-process FIFO queue for self-triggered dream requests.
-*   **Output Tag Parser**: [dream_trigger_parser.py](file:///d:/01_GIT/AAA/backend/utils/dream_trigger_parser.py) — Parses `<dream_trigger reason="..."/>` from Symbia's chat responses.
-*   **Response Artifact Pipeline**: [chat.py](file:///d:/01_GIT/AAA/backend/services/chat.py) — `_parse_response_artifacts()` routes dream trigger tags to the signal queue.
-*   **Lifespan Setup**: [main.py](file:///d:/01_GIT/AAA/backend/main.py) — Spawns the daemon thread task asynchronously on system boot.
-*   **API Routes**: [routes.py](file:///d:/01_GIT/AAA/backend/api/routes.py) — Exposes telemetry and force trigger points.
-*   **Unit Tests**: [test_dream_daemon.py](file:///d:/01_GIT/AAA/backend/tests/test_dream_daemon.py) — Complete mathematical and trigger assertion coverage.
+*   **Core Module**: [daemon.py](../../backend/metabolisation/daemon.py) — Defines `AutopoieticDreamDaemon`.
+*   **Signal Queue**: [daemon_trigger_signal.py](../../backend/metabolisation/daemon_trigger_signal.py) — In-process FIFO queue for self-triggered dream requests.
+*   **Output Tag Parser**: [dream_trigger_parser.py](../../backend/utils/dream_trigger_parser.py) — Parses `<dream_trigger reason="..."/>` from Symbia's chat responses.
+*   **Response Artifact Pipeline**: [chat.py](../../backend/services/chat.py) — `_parse_response_artifacts()` routes dream trigger tags to the signal queue.
+*   **Lifespan Setup**: [main.py](../../backend/main.py) — Spawns the daemon thread task asynchronously on system boot.
+*   **API Routes**: [routes.py](../../backend/api/routes.py) — Exposes telemetry and force trigger points.
+*   **Unit Tests**: [test_dream_daemon.py](../../backend/tests/test_dream_daemon.py) — Complete mathematical and trigger assertion coverage.
 *   **Skill Definition**: [seed_skills.yaml](file:///d:/01_GIT/AAA/config/personality/seed_skills.yaml) — `self-triggered-dreaming` skill teaching Symbia when and how to emit the tag.
 
 ---

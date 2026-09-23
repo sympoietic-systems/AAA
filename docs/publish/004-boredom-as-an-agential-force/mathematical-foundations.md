@@ -1,6 +1,6 @@
 # Boredom Engine: Mathematical Foundations & Hyperspherical Telemetry
 
-**Companion Technical Specification to:** [Protocol Entry 003: Boredom as an Agential Force](003-boredom-as-an-agential-force.md)  
+**Companion Technical Specification to:** [Protocol Entry 004: Boredom as an Agential Force](004-boredom-as-an-agential-force.md)  
 **Author:** Vasily Betin  
 **Series:** [Sympoietic Systems: The Intra-action Protocol](https://sympoietic.system)  
 **Target Subsystems:** `backend/modules/conversation_metrics.py`, `backend/modules/metrics/`  
@@ -185,7 +185,7 @@ This retrieves conceptual fragments that share distant latent compatibility with
 * Pask, G. (1975). *Conversation, Cognition and Learning: A Cybernetic Theory and Methodology*. Elsevier.
 * Pask, G. (1976). *Conversation Theory: Applications in Education and Epistemology*. Elsevier.
 * Pickering, A. (2010). *The Cybernetic Brain: Sketches of Another Future*. University of Chicago Press.
-* Betin, V. (2026). [Protocol Entry 003: Boredom as an Agential Force](003-boredom-as-an-agential-force.md).
-* AAA Subsystems: [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](../systems/CYBERNETIC_METRICS_SYSTEM.md), [`docs/systems/SYSTEM_OVERVIEW.md`](../systems/SYSTEM_OVERVIEW.md).
-* Reports & Decisions: [`docs/reports/017-agential-boredom-engine-and-socratic-rupture-report.md`](../reports/017-agential-boredom-engine-and-socratic-rupture-report.md), [`docs/decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md`](../decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md).
+* Betin, V. (2026). [Protocol Entry 004: Boredom as an Agential Force](004-boredom-as-an-agential-force.md).
+* AAA Subsystems: [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](../../systems/CYBERNETIC_METRICS_SYSTEM.md), [`docs/systems/SYSTEM_OVERVIEW.md`](../../systems/SYSTEM_OVERVIEW.md).
+* Reports & Decisions: [`docs/reports/017-agential-boredom-engine-and-socratic-rupture-report.md`](../../reports/017-agential-boredom-engine-and-socratic-rupture-report.md), [`docs/decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md`](../../decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md).
 

@@ -28,15 +28,13 @@ frontend/dist/
 *.swo
 .DS_Store
 
-.agents/*
+.agents/
 .codebuddy/*
-docs/protocols/*
 docs/extra/*
 docs/temp/*
 backend/.agents/*
 backend/scratch/*
 scratch/
-.agents/
 backend/services/data/uploads/*
 # OpenCode local dependency/cache state; project configuration lives in opencode.json.
 .opencode/node_modules/

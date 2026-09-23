@@ -3,7 +3,7 @@
 **Date:** 2026-09-22  
 **Status:** Accepted  
 **Deciders:** Symbia, Antigravity, User  
-**Updates:** [ADR-023](ADR-023-autopoietic-dream-daemon.md), [ADR-089](ADR-089-afferent-sensory-membrane-typesafe-jev-and-skill-blueprints.md), [ADR-090](ADR-090-jev-augmented-attractor-window-and-split-resonance.md)
+**Updates:** [ADR-023](ADR-023-autopoietic-dream-daemon.md), [ADR-089](ADR-089-afferent-sensory-membrane-typesafe-jev-and-skill-blueprints.md), [ADR-090](ADR-090b-jev-augmented-attractor-window-and-split-resonance.md)
 
 ---
 

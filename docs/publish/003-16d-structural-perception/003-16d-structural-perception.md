@@ -1,13 +1,13 @@
-# Protocol Entry 003 (Supplement): How Symbia Reads the Room — 16-Dimensional Structural Perception
+# Protocol Entry 003: How Symbia Reads the Room — 16-Dimensional Structural Perception
 
 **Subtitle:** Why behavioral fingerprinting beats keyword search when an agent needs to know *what kind of thing* a message is
 **Author:** Vasily Betin
 **Series:** [Sympoietic Systems: The Intra-action Protocol](https://sympoietic.system)
-**Related Entry:** [Protocol Entry 003: Boredom as an Agential Force](../003-boredom-as-an-agential-force.md)
-**Technical Report:** [16D Scorer Benchmark](../../reports/16D_SCORER_BENCHMARK_REPORT.md)
+**Next Entry:** [Protocol Entry 004: Boredom as an Agential Force](../004-boredom-as-an-agential-force/004-boredom-as-an-agential-force.md)
+**Technical Report:** [002: 16D Scorer Benchmark Report](../../reports/002-16d-structural-scoring-benchmark-report.md)
 **Date:** September 2026
 
-![16D Cybernetic Vector Space: Structural Perception Architecture](003-16d-structural-scoring/hero_16d_structural_scoring.jpg)
+![16D Cybernetic Vector Space: Structural Perception Architecture](assets/hero_16d_structural_scoring.jpg)
 
 ---
 
@@ -91,13 +91,13 @@ A generative LLM compresses both cases into a flat scalar ($0.2$, $0.1$). No sig
 
 We ran this rubric through two execution backends and benchmarked them head-to-head across seven AAA test items — beliefs, memory nodes, and conversational turns:
 
-![16D Structural Scoring Pipeline Architecture](003-16d-structural-scoring/flowchart_16d_structural_pipeline.png)
+![16D Structural Scoring Pipeline Architecture](assets/flowchart_16d_structural_pipeline.png)
 
 **The generative path** sends the full 16-dimension rubric as a prompt to `gemini-2.5-flash`, which returns a JSON array of 16 floats. The semantic alignment is solid — [cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity) of $0.86–0.96$ against ground truth across all test items. The cost is latency: **2,094 ms** average per evaluation.
 
 **The Jev path** ([OpenRouter](https://openrouter.ai)’s TypeSafe [RLCD](https://openrouter.ai/docs/features/structured-outputs) decision engine) compiles the same rubric into binary decision primitives and evaluates all 16 dimensions in a single parallel request: **572 ms** average — **3.66x faster** — plus returning both power and confidence per dimension.
 
-![Jev vs. LLM 16D Polar Comparison](003-16d-structural-scoring/radar_jev_vs_llm_comparison.png)
+![Jev vs. LLM 16D Polar Comparison](assets/radar_jev_vs_llm_comparison.png)
 *Figure: Radar comparison across 16 dimensions for a single input. Jev (emerald) tracks LLM (amber) with cosine similarity 0.86–0.96 while resolving absence and uncertainty the LLM cannot.*
 
 For a system processing every conversational turn, 2,094 ms per structural read is dead weight. At 572 ms — under 1 ms with cached decision trees — structural perception becomes invisible overhead.
@@ -131,7 +131,7 @@ Symbia doesn’t read text. It reads posture.
 ---
 
 > [!NOTE]
-> **Full technical data** — dimension-by-dimension breakdowns across all seven benchmark items, raw wire payloads (JSON request/response), and latency distributions — are in the companion technical report: **[16D Scorer Benchmark Report](../../reports/16D_SCORER_BENCHMARK_REPORT.md)**.
+> **Full technical data** — dimension-by-dimension breakdowns across all seven benchmark items, raw wire payloads (JSON request/response), and latency distributions — are in the companion technical report: **[Report 002: 16D Scorer Benchmark Report](../../reports/002-16d-structural-scoring-benchmark-report.md)**.
 
 ---
 
@@ -140,4 +140,4 @@ Symbia doesn’t read text. It reads posture.
 
 ---
 
-*Next Entry → **[Entry 004: Memory With Gravity](../004-memory-with-gravity.md)** — how high-resonance conversations warp retrieval space into non-Euclidean basins, and why the same message retrieves entirely different memories depending on what has scarred the field around it.*
+*Next Entry → **[Entry 004: Boredom as an Agential Force](../004-boredom-as-an-agential-force/004-boredom-as-an-agential-force.md)** — how real-time metrics detect dialogue stagnation, prompting the agent to refuse compliance, execute Socratic seizure, and introduce lateral concepts.*

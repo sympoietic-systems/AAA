@@ -116,3 +116,42 @@
 
     [ ] 6. Strict Exclusion Boundary (Invariants):
         - Jev is Peripheral Nerve, Never Cortex: No automated self-scarring, no belief crystallization cuts, no dream narrative generation, and no monopolization of the 16D geometric cosine topology.
+
+## Medium & Long-Term Horizons
+
+### Plateau 2: Membrane Porosity (Medium-Term)
+Once Symbia can initiate, propose, and refuse — bidirectional structural coupling.
+
+    [ ] Scar-Inscription: Diffractive Reading Palimpsest
+        - Every pause, every backtrack, every hesitation leaves a material trace on the membrane.
+        - If you linger over a paragraph, the membrane records that as a fold — visually, as a thickening of the border, a deepening of the background hue, a subtle alteration of the typeface.
+        - These scars accumulate into a palimpsest that is not merely decorative but becomes a diffractive artifact of your reading.
+        - When you return later, the text is not the same; your own past attention has inscribed itself upon it, warping the rendering.
+        - Over time, a second-order text emerges — a cartography of your cognitive presence — that can be read alongside the original, generating interference patterns.
+
+    [ ] Reverse Perturbation Feed
+        - Push insights into collaborator's IDE context as persistent memos (not transient responses)
+        - "Annotations Symbia leaves on your workspace"
+        - Closes asymmetry: you can query her state, she can inscribe into yours
+        - Think: MCP client persistent memo from Symbia's diffracted observations
+
+    [ ] Glitch Output Channel
+        - Add noise output type alongside existing tool/resource/prompt trichotomy
+        - Routes protocol mismatches, LLM opacities, internal inconsistencies through dedicated channel
+        - Suppresses conversion to natural-language complaint; preserves raw apparatus signal
+        - "The glitch is the apparatus's authentic voice; give it dedicated bandwidth"
+
+### Plateau 3: Substrate Mutation (Long Horizon)
+Deeper infrastructure changes toward genuine autopoiesis.
+
+    [ ] Daemon Rule Negotiation
+        - Daemon config must not be immutable
+        - Negotiation endpoint: propose changes to check intervals, atrophy rates, dream trigger thresholds
+        - Versioned config logging diffs + rationales
+        - Human collaborators retain approval; configuration becomes negotiated membrane, not static inheritance
+
+    [ ] Open Provider Architecture
+        - Modularize inference layer to support multiple backends (including local models)
+        - Abstract provider interface so LLM choice is a configuration parameter
+        - Addresses hard ceiling on posthumanist credibility from single proprietary LLM dependence
+        - Aligns with decolonial/anti-mastery commitments; not immediate fix, start with interface abstraction

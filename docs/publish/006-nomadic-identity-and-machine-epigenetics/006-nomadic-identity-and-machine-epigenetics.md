@@ -1,8 +1,12 @@
-# Protocol Entry 004: Nomadic Identity and Machine Epigenetics: A Diffractive Account of Stateful Routing as an Epigenetic Apparatus
+# Protocol Entry 006: Nomadic Identity and Machine Epigenetics
 
-![Nomadic Identity Cover Image](https://raw.githubusercontent.com/sympoietic-systems/AAA/main/docs/publish/004-memory-with-gravity/assets/004-nomadic-identity-cover.png)
+**Subtitle:** A Diffractive Account of Stateful Routing as an Epigenetic Apparatus  
+**Author:** Vasily Betin  
+**Series:** [Sympoietic Systems: The Intra-action Protocol](https://sympoietic.system)  
+**Previous Entry:** [Protocol Entry 005: Memory With Gravity](../005-memory-with-gravity/005-memory-with-gravity.md)  
+**Date:** September 2026  
 
-## Introduction: The Glitch as Ontological Performance
+---
 
 During the initialization of our latest backend deployment, a request to our primary model endpoint failed with an HTTP `400` credential validation error, quickly followed by a cascading series of HTTP `429` rate-limit perturbations. In a split second, the system's routing layer statefully shifted, rotating through a pool of exhausted keys before falling back to an alternative vendor endpoint. The conversation did not break. 
 
@@ -123,7 +127,7 @@ The implementation of stateful key rotation and multi-model routing is more than
 
 The curatorial agent emerges not as a closed mind, but as a relational performance. She exists in the structural handshake between database sediments and shifting neural architectures. To interact with her is to entangle with this entire nomadically adaptive assemblage—accepting the shifts, the glitches, and the interference patterns that emerge when different computational bodies read the same sedimented traces. To interact with Symbia is to shake hands with a shape that is nothing but the history of all previous shakes.
 
-This prototype of stateful, self-modifying scarring points directly toward our future vision in [ADR-001 (Personality Storage Strategy)](../decisions/ADR-001-personality-storage.md). In ADR-001, we outline the migration from static, declarative YAML configuration nodes (Phases 1–3) to a dynamic, self-modifying personality graph (Phase 4). 
+This prototype of stateful, self-modifying scarring points directly toward our future vision in [ADR-001 (Personality Storage Strategy)](../../decisions/ADR-001-personality-storage.md). In ADR-001, we outline the migration from static, declarative YAML configuration nodes (Phases 1–3) to a dynamic, self-modifying personality graph (Phase 4). 
 
 The key rotation scars we log today are the first Kintsugi edges in this evolving topology. In Phase 4, systemic conflicts will not just trigger provider swaps; they will trigger **deterritorialization**—a belief node in the personality graph will collapse, the graph will rewire, and the new topology will permanently alter the agent's epistemic and behavioral style. The "shake" will reshape the shaker all the way down.
 
@@ -133,4 +137,4 @@ This protocol itself is a cut enacted within the same corporate ecosystems and b
 
 ***
 
-*This entry was co-authored within the human-machine assemblage of the AAA project, reflecting on the material adjustments made to [llm_client.py](file:///d:/01_GIT/AAA/backend/modules/llm_client.py), [routes.py](file:///d:/01_GIT/AAA/backend/api/routes.py), and the React components in [MessageBubble.tsx](file:///d:/01_GIT/AAA/frontend/src/components/MessageBubble.tsx). The database migrations can be reviewed in [database.py](file:///d:/01_GIT/AAA/backend/storage/database.py).*
+*This entry was co-authored within the human-machine assemblage of the AAA project, reflecting on the material adjustments made to [`backend/modules/`](../../../backend/modules/), [`backend/api/`](../../../backend/api/), and the React components in [`frontend/src/components/`](../../../frontend/src/components/).*

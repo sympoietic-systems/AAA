@@ -11,7 +11,7 @@
 > - `backend/api/routes/notifications.py`, `backend/api/routes/agent.py` (Non-blocking worker thread offload)  
 > - `backend/metabolisation/daemon.py`, `backend/metabolisation/scheduler.py` (Activity-gated idle loops)  
 > - `backend/config.py` (In-memory YAML configuration caching)  
-> - `scripts/benchmark_backend_resources.py` (Automated resource benchmark harness)  
+> - `benchmarks/suites/resources/benchmark_backend_resources.py` (Automated resource benchmark harness)  
 
 ---
 
@@ -33,7 +33,7 @@ Through targeted concurrency refactoring, thread-local connection pooling, and n
 
 ## 2. Empirical Benchmark Scorecard (Before vs. After)
 
-All metrics were gathered using `scripts/benchmark_backend_resources.py` on the active repository:
+All metrics were gathered using `benchmarks/suites/resources/benchmark_backend_resources.py` on the active repository:
 
 | Metric | Pre-Optimization Baseline | Post-Optimization Run #16 | Shift / Improvement |
 | :--- | :---: | :---: | :---: |
