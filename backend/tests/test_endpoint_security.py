@@ -2,7 +2,6 @@
 
 import os
 import sys
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,12 +11,11 @@ sys.path.insert(0, ".")
 
 from backend.main import app
 from backend.utils.security import (
-    DEFAULT_MAX_FILE_SIZE,
-    check_magic_bytes,
     safe_resolve_path,
     sanitize_filename,
     sanitize_identifier,
     validate_file_upload,
+    validate_safe_url,
 )
 
 
@@ -166,3 +164,45 @@ def test_api_upload_valid_document(client):
 
     # Cleanup
     client.delete(f"/api/conversations/{conv_id}/files/architecture.md")
+
+
+def test_validate_safe_url():
+    """SSRF prevention: safe public URLs pass, loopback/private/metadata/non-http URLs are blocked."""
+    # Safe public URL
+    safe = validate_safe_url("https://example.com/api/v1/resource")
+    assert safe == "https://example.com/api/v1/resource"
+
+    # Block non-HTTP schemes
+    with pytest.raises(ValueError, match="scheme"):
+        validate_safe_url("file:///etc/passwd")
+
+    with pytest.raises(ValueError, match="scheme"):
+        validate_safe_url("ftp://ftp.example.com/secret")
+
+    # Block localhost & loopback IP literals
+    with pytest.raises(ValueError, match="forbidden"):
+        validate_safe_url("http://localhost:8000/api")
+
+    with pytest.raises(ValueError, match="forbidden"):
+        validate_safe_url("http://127.0.0.1:8000/api")
+
+    with pytest.raises(ValueError, match="forbidden"):
+        validate_safe_url("http://[::1]:8000/api")
+
+    # Block cloud metadata service
+    with pytest.raises(ValueError, match="forbidden"):
+        validate_safe_url("http://169.254.169.254/latest/meta-data/")
+
+    # Block private IP ranges (RFC 1918)
+    with pytest.raises(ValueError, match="forbidden"):
+        validate_safe_url("http://10.0.0.1/internal")
+
+    with pytest.raises(ValueError, match="forbidden"):
+        validate_safe_url("http://192.168.1.100/admin")
+
+    with pytest.raises(ValueError, match="forbidden"):
+        validate_safe_url("http://172.16.0.5/status")
+
+    # Allow private override when explicitly requested
+    allowed_local = validate_safe_url("http://127.0.0.1:8000/api", allow_private=True)
+    assert allowed_local == "http://127.0.0.1:8000/api"

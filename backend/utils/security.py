@@ -1,9 +1,10 @@
-"""Security utilities for endpoint hardening, file upload validation, and path traversal protection."""
-
+import ipaddress
 import logging
 import os
 import re
+import socket
 from pathlib import Path
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +218,9 @@ def validate_file_upload(
     """
     # 1. Size check
     if len(file_bytes) > max_bytes:
-        raise ValueError(f"File size ({len(file_bytes)} bytes) exceeds maximum limit ({max_bytes} bytes / {max_bytes // (1024 * 1024)}MB)")
+        raise ValueError(
+            f"File size ({len(file_bytes)} bytes) exceeds maximum limit ({max_bytes} bytes / {max_bytes // (1024 * 1024)}MB)"
+        )
 
     if len(file_bytes) == 0:
         raise ValueError("Uploaded file is empty (0 bytes)")
@@ -248,3 +251,77 @@ def validate_file_upload(
     file_type = FileService.map_extension_to_type(safe_name)
 
     return safe_name, file_type
+
+
+def validate_safe_url(
+    url: str,
+    allowed_schemes: tuple[str, ...] = ("http", "https"),
+    allow_private: bool = False,
+) -> str:
+    """Validate a URL against SSRF (Server-Side Request Forgery) attacks.
+
+    - Verifies URL scheme is within allowed_schemes (default: http, https).
+    - Checks that hostname is present.
+    - Blocks localhost, loopback addresses (127.0.0.0/8, ::1).
+    - Blocks private network ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, fc00::/7).
+    - Blocks link-local addresses (169.254.0.0/16, fe80::/10) including cloud metadata targets.
+    - Blocks reserved, multicast, and unspecified addresses.
+
+    Raises ValueError on unsafe or malformed URLs. Returns the validated URL string.
+    """
+    if not url or not isinstance(url, str):
+        raise ValueError("URL must be a non-empty string")
+
+    parsed = urlparse(url.strip())
+    if not parsed.scheme or parsed.scheme.lower() not in allowed_schemes:
+        raise ValueError(f"URL scheme '{parsed.scheme}' is not allowed (must be one of: {', '.join(allowed_schemes)})")
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("URL is missing a valid hostname")
+
+    cleaned_host = hostname.lower().strip("[]")
+    if not allow_private and (
+        cleaned_host in ("localhost", "0.0.0.0")
+        or cleaned_host.endswith(".localhost")
+        or cleaned_host.endswith(".local")
+    ):
+        raise ValueError(f"Access to local hostname '{hostname}' is forbidden")
+
+    if not allow_private:
+        # Check if the hostname is a direct IP literal
+        try:
+            ip = ipaddress.ip_address(cleaned_host)
+            if (
+                ip.is_loopback
+                or ip.is_private
+                or ip.is_link_local
+                or ip.is_multicast
+                or ip.is_reserved
+                or ip.is_unspecified
+            ):
+                raise ValueError(f"Access to private or restricted IP address '{ip}' is forbidden")
+        except ValueError as e:
+            if "Access to private or restricted" in str(e):
+                raise
+            # Not a raw IP literal, resolve via DNS
+            try:
+                addr_infos = socket.getaddrinfo(cleaned_host, None)
+                for _family, _, _, _, sockaddr in addr_infos:
+                    ip_str = sockaddr[0]
+                    resolved_ip = ipaddress.ip_address(ip_str)
+                    if (
+                        resolved_ip.is_loopback
+                        or resolved_ip.is_private
+                        or resolved_ip.is_link_local
+                        or resolved_ip.is_multicast
+                        or resolved_ip.is_reserved
+                        or resolved_ip.is_unspecified
+                    ):
+                        raise ValueError(
+                            f"URL destination '{hostname}' resolves to restricted IP address '{resolved_ip}'"
+                        )
+            except socket.gaierror as dns_err:
+                raise ValueError(f"Failed to resolve hostname '{hostname}': {dns_err}") from dns_err
+
+    return url.strip()
