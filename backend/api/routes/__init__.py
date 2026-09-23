@@ -1,35 +1,42 @@
-"""
-Backward-compatibility re-exports for the routes package.
+"""Import-safe route package with lazy compatibility attributes."""
 
-Business logic has moved to backend/services/. These re-exports preserve
-existing imports like:
-    from backend.api.routes import _process_and_summarize_file
-"""
 
-from backend.api.helpers import (  # noqa: F401
-    _build_response_attachments,  # noqa: F401
-    _ensure_structural_tags,  # noqa: F401
-    _parse_chat_request,  # noqa: F401
-)
-from backend.services.chat import ChatService  # noqa: F401
-from backend.services.consolidation import ConsolidationService
-from backend.services.file import FileService
-from backend.services.metrics import MetricsService
-from backend.services.note import NoteService  # noqa: F401
-from backend.services.semantic_knot import SemanticKnotService
-from backend.services.title import TitleService
+def __getattr__(name: str):
+    if name in {"_build_response_attachments", "_ensure_structural_tags", "_parse_chat_request"}:
+        from backend.api import helpers
 
-# Re-export with original names for backward compat
-_process_and_summarize_file = FileService.process_and_summarize
-_reprocess_and_summarize_file_background = FileService.reprocess_and_summarize
-_run_digest_worker_subprocess = FileService.run_digest_worker
-_insert_system_message = None  # moved internally, kept in files.py
+        return getattr(helpers, name)
+    if name in {"_process_and_summarize_file", "_reprocess_and_summarize_file_background", "_run_digest_worker_subprocess"}:
+        from backend.services.file import FileService
 
-# These are provided by the ChatService via static methods
-_fire_and_forget_semantic_knot_compaction = SemanticKnotService.fire_and_forget
-_fire_and_forget_consolidation = ConsolidationService.fire_and_forget
-_store_metrics = MetricsService.store
-_build_metrics_info = MetricsService.build_info
-_build_recommendations = MetricsService.build_recommendations
-_generate_title = TitleService.generate
-_generate_title_from_conversation = TitleService.generate_from_conversation
+        return {
+            "_process_and_summarize_file": FileService.process_and_summarize,
+            "_reprocess_and_summarize_file_background": FileService.reprocess_and_summarize,
+            "_run_digest_worker_subprocess": FileService.run_digest_worker,
+        }[name]
+    if name == "_fire_and_forget_semantic_knot_compaction":
+        from backend.services.semantic_knot import SemanticKnotService
+
+        return SemanticKnotService.fire_and_forget
+    if name == "_fire_and_forget_consolidation":
+        from backend.services.consolidation import ConsolidationService
+
+        return ConsolidationService.fire_and_forget
+    if name in {"_store_metrics", "_build_metrics_info", "_build_recommendations"}:
+        from backend.services.metrics import MetricsService
+
+        return {
+            "_store_metrics": MetricsService.store,
+            "_build_metrics_info": MetricsService.build_info,
+            "_build_recommendations": MetricsService.build_recommendations,
+        }[name]
+    if name in {"_generate_title", "_generate_title_from_conversation"}:
+        from backend.services.title import TitleService
+
+        return {
+            "_generate_title": TitleService.generate,
+            "_generate_title_from_conversation": TitleService.generate_from_conversation,
+        }[name]
+    if name == "_insert_system_message":
+        return None
+    raise AttributeError(name)

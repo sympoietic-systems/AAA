@@ -23,10 +23,7 @@ DEFAULT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 DEFAULT_BACKUP_COUNT = 5
 
 
-class SecretMaskingFilter(logging.Filter):
-    """Redacts API keys, tokens, and credentials in accordance with SECURITY.md."""
-
-    _PATTERNS: list[tuple[re.Pattern, str]] = [
+_SECRET_PATTERNS: list[tuple[re.Pattern, str]] = [
         # Bearer tokens
         (re.compile(r"(Bearer\s+)[A-Za-z0-9_\-\.]+", re.IGNORECASE), r"\1[REDACTED]"),
         # OpenRouter keys (more specific than generic sk-)
@@ -38,17 +35,25 @@ class SecretMaskingFilter(logging.Filter):
         # Key/Password query or assignment parameters
         (
             re.compile(
-                r"""((?:api[_-]?key|password|secret|access_token|auth_token)\s*[:=]\s*["']?)[^"'\s,;]+""",
+                r"""((?:api[_-]?key|password|secret|token|access_token|auth_token)\s*[:=]\s*["']?)[^"'\s,;&]+""",
                 re.IGNORECASE,
             ),
             r"\1[REDACTED]",
         ),
-    ]
+]
+
+
+def mask_secrets(text: str) -> str:
+    for pattern, replacement in _SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+class SecretMaskingFilter(logging.Filter):
+    """Redacts secrets from records before formatter interpolation."""
 
     def _mask_text(self, text: str) -> str:
-        for pattern, replacement in self._PATTERNS:
-            text = pattern.sub(replacement, text)
-        return text
+        return mask_secrets(text)
 
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.msg, str):
@@ -66,7 +71,14 @@ class SecretMaskingFilter(logging.Filter):
         return True
 
 
-class _ColorFormatter(logging.Formatter):
+class SecretMaskingFormatter(logging.Formatter):
+    """Redact the final rendered message, including generated tracebacks."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        return mask_secrets(super().format(record))
+
+
+class _ColorFormatter(SecretMaskingFormatter):
     """ANSI color-coded log formatter for terminal output."""
 
     _COLORS = {
@@ -129,7 +141,7 @@ def setup_logging(config: dict[str, Any] | None = None) -> None:
                 h.close()
 
     masking_filter = SecretMaskingFilter()
-    plain_formatter = logging.Formatter(
+    plain_formatter = SecretMaskingFormatter(
         "%(asctime)s [%(levelname)s] [%(name)s:%(lineno)d] - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )

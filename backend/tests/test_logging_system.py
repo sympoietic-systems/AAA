@@ -107,6 +107,22 @@ def test_setup_logging_files_and_levels(tmp_path: Path):
     assert "abcdefghijklmnopqrstuvwxyz123456" not in error_content
 
 
+def test_v11_formatted_traceback_and_query_token_are_redacted(tmp_path: Path):
+    log_dir = tmp_path / "traceback_logs"
+    setup_logging({"logging": {"enabled": True, "dir": str(log_dir)}})
+    logger = logging.getLogger("traceback_secret_test")
+    secret = "query-secret-123"
+
+    try:
+        raise RuntimeError(f"fetch failed: /api/export?token={secret}&mode=full")
+    except RuntimeError:
+        logger.exception("Export failed")
+
+    content = (log_dir / "error.log").read_text(encoding="utf-8")
+    assert secret not in content
+    assert "token=[REDACTED]" in content
+
+
 def test_file_rotation(tmp_path: Path):
     """Verify log rotation triggers and preserves backupCount archives."""
     log_dir = tmp_path / "rotation_logs"
@@ -177,6 +193,10 @@ def test_global_exception_handler_and_glitch(tmp_path: Path):
     def trigger_service_error():
         raise ServiceException("Entity not accessible", status_code=404)
 
+    @app.get("/trigger-permission-error")
+    def trigger_permission_error():
+        raise PermissionError("Access denied outside C:/private/secret.txt")
+
     client = TestClient(app, raise_server_exceptions=False)
 
     # 1. Unhandled 500 crash
@@ -202,6 +222,10 @@ def test_global_exception_handler_and_glitch(tmp_path: Path):
     assert data_service["status"] == "error"
     assert data_service["kind"] == "service_error"
     assert data_service["message"] == "Entity not accessible"
+
+    res_permission = client.get("/trigger-permission-error")
+    assert res_permission.status_code == 403
+    assert "C:/private" not in res_permission.text
 
 
 def test_logs_tail_endpoint(tmp_path: Path):

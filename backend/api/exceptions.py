@@ -3,23 +3,9 @@ import logging
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from backend.errors import GlitchError, ServiceException
+
 logger = logging.getLogger("aaa.exceptions")
-
-
-class ServiceException(HTTPException):
-    """Raised by service-layer code when a business logic error occurs.
-
-    Usage:
-        raise ServiceException(message="Belief not found", status_code=404)
-        raise ServiceException("Invalid parameters")  # defaults to 400
-    """
-
-    def __init__(self, message: str, status_code: int = 400):
-        super().__init__(status_code=status_code, detail=message)
-        self.message = message
-
-    def __str__(self) -> str:
-        return f"ServiceException({self.status_code}): {self.message}"
 
 
 def raise_if_error(result: dict) -> dict:
@@ -48,8 +34,8 @@ def raise_if_error(result: dict) -> dict:
 def register_error_handlers(app):
     """Register global exception handlers on the FastAPI app instance."""
 
-    @app.exception_handler(ServiceException)
-    async def service_exception_handler(request: Request, exc: ServiceException):
+    @app.exception_handler(GlitchError)
+    async def service_exception_handler(request: Request, exc: GlitchError):
         logger.warning(
             "ServiceException on %s %s [%d]: %s",
             request.method,
@@ -61,9 +47,11 @@ def register_error_handlers(app):
             status_code=exc.status_code,
             content={
                 "status": "error",
-                "kind": "service_error",
+                "kind": exc.kind,
                 "message": exc.message,
                 "detail": exc.message,
+                "entity": exc.entity,
+                "details": exc.details,
             },
         )
 
@@ -98,7 +86,7 @@ def register_error_handlers(app):
             content={
                 "status": "error",
                 "kind": "security_violation",
-                "message": str(exc),
+                "message": "Access denied: security violation",
                 "detail": "Access denied: security violation",
             },
         )

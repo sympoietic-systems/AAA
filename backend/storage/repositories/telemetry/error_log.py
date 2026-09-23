@@ -1,6 +1,7 @@
 import json
 import traceback
 
+from backend.core.logging_config import mask_secrets
 from backend.storage.connection import with_connection
 from backend.storage.models import ErrorLogEntry
 from backend.storage.repositories.base import BaseRepository
@@ -21,9 +22,9 @@ class ErrorLogRepository(BaseRepository):
             (
                 module,
                 type(error).__name__,
-                str(error),
-                traceback.format_exc(),
-                json.dumps(context) if context else None,
+                mask_secrets(str(error)),
+                mask_secrets(traceback.format_exc()),
+                mask_secrets(json.dumps(context)) if context else None,
             ),
         )
         conn.commit()
