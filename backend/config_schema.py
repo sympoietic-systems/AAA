@@ -69,6 +69,7 @@ def _parse_list(v: str) -> list[str]:
 
 def _parse_json_dict(v: str) -> dict:
     import json
+
     if not v or not v.strip():
         return {}
     try:
@@ -88,7 +89,9 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_LLM_TIMEOUT", "llm", "timeout", _parse_float),
     # ── OpenRouter Provider Routing ──
     EnvOverride("AAA_OPENROUTER_PROVIDER_ORDER", "llm", "openrouter_provider", sub_key="order", parser=_parse_list),
-    EnvOverride("AAA_OPENROUTER_ALLOW_FALLBACKS", "llm", "openrouter_provider", sub_key="allow_fallbacks", parser=_parse_bool),
+    EnvOverride(
+        "AAA_OPENROUTER_ALLOW_FALLBACKS", "llm", "openrouter_provider", sub_key="allow_fallbacks", parser=_parse_bool
+    ),
     EnvOverride("AAA_OPENROUTER_PROVIDER_IGNORE", "llm", "openrouter_provider", sub_key="ignore", parser=_parse_list),
     EnvOverride("AAA_OPENROUTER_PROVIDER_ONLY", "llm", "openrouter_provider", sub_key="only", parser=_parse_list),
     EnvOverride("AAA_OPENROUTER_PROVIDERS_MAP", "llm", "openrouter_providers_map", parser=_parse_json_dict),
@@ -113,7 +116,6 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_STRUCTURAL_API_BASE", "structural_llm", "api_base"),
     EnvOverride("AAA_STRUCTURAL_FALLBACK_MODEL", "structural_llm", "fallback_model"),
     EnvOverride("AAA_STRUCTURAL_THINKING", "structural_llm", "thinking", lambda v: {"enabled": _parse_bool(v)}),
-
     # ── Vision LLM ──
     EnvOverride("AAA_VISION_MODELS", "vision_llm", "models", _parse_list),
     EnvOverride("AAA_VISION_API_BASE", "vision_llm", "api_base"),
@@ -154,4 +156,11 @@ ENV_OVERRIDES: list[EnvOverride] = [
     EnvOverride("AAA_RESEARCH_MANUAL_MODE", "research_tasks", "manual_mode", _parse_bool),
     EnvOverride("AAA_RESEARCH_MAX_QUERIES", "research_orchestrator", "max_queries", _parse_int),
     EnvOverride("AAA_RESEARCH_SEARCH_CANDIDATES", "research_orchestrator", "search_candidates", _parse_int),
+    # ── Logging ──
+    EnvOverride("AAA_LOG_ENABLED", "logging", "enabled", _parse_bool),
+    EnvOverride("AAA_LOG_DIR", "logging", "dir"),
+    EnvOverride("AAA_LOG_LEVEL", "logging", "level"),
+    EnvOverride("AAA_LOG_ERROR_LEVEL", "logging", "error_level"),
+    EnvOverride("AAA_LOG_MAX_BYTES", "logging", "max_bytes", _parse_int),
+    EnvOverride("AAA_LOG_BACKUP_COUNT", "logging", "backup_count", _parse_int),
 ]

@@ -4,6 +4,14 @@
 database:
   path: "data/aaa.db"
 
+logging:
+  enabled: true
+  dir: "data/logs"
+  level: "INFO"
+  error_level: "WARNING"
+  max_bytes: 10485760  # 10 MB
+  backup_count: 5      # 5 rotated archives (max 60MB total)
+
 embedding:
   model: "all-MiniLM-L6-v2"
   device: "cpu"

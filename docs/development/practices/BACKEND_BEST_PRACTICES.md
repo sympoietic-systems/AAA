@@ -154,7 +154,38 @@ Every log is an inscription of system activity. Text logs that scroll past witho
 
 ---
 
-## 8. Linting & Code Quality (ruff)
+## 8. Production Logging, Triage & Error Observability
+
+To enable rapid production incident triage without risking disk exhaustion or secret leaks, the AAA backend enforces a dual rotating file architecture managed by `backend/core/logging_config.py`.
+
+### Architecture & Standards
+*   **Dual-Stream Segregation**:
+    *   `data/logs/error.log`: Captures `WARNING`, `ERROR`, and `CRITICAL` records for immediate incident investigation without routine traffic noise.
+    *   `data/logs/server.log`: Captures `INFO` and higher operational records for complete surrounding request and task context.
+*   **Hard Resource Caps (Zero Memory & Bounded Disk)**:
+    *   Log files use Python's standard library `RotatingFileHandler` configured with `max_bytes: 10485760` (10 MB) and `backup_count: 5`.
+    *   Total disk footprint per stream is strictly capped at `(5 + 1) * 10 MB = 60 MB`. The oldest archive is automatically purged upon rollover.
+    *   Log records are immediately flushed to the OS write buffer; no log history is held in application RAM.
+*   **Secret Inscription Defense (`SecretMaskingFilter`)**:
+    *   Conforming to `protocols/SECURITY.md`, all file and console handlers filter messages through `SecretMaskingFilter`.
+    *   Bearer tokens, OpenAI/generic `sk-` keys, Google `AIza` keys, OpenRouter `sk-or-v1-` keys, and credentials matching `password=` or `api_key=` are automatically masked as `[REDACTED]` before writing to disk.
+*   **Full Stack Trace Fidelity (`protocols/GLITCH.md`)**:
+    *   Never swallow exceptions (`except: pass` is forbidden).
+    *   Always use `logger.exception()` when catching unexpected errors in routes, services, or background daemons so full Python tracebacks are preserved in `error.log`.
+    *   Client responses receive structured Glitch error contracts, never raw server tracebacks.
+*   **Secure Remote Triage Endpoint**:
+    *   `GET /api/errors/logs` allows web and CLI operators to inspect recent logs without SSH access.
+    *   Guarded by `verify_password` authentication, strict target allowlisting (`error.log`, `server.log`), directory traversal defense (`safe_resolve_path()`), 500-line clamping, and memory-safe reverse block seeking (`tail_log_file`).
+
+### Developer Guidelines
+*   **Use `INFO` for lifecycle milestones**: e.g., service readiness, background task dispatch, model pool resets.
+*   **Use `WARNING` for degraded operations**: e.g., model rate-limit fallback, missing optional configurations, cache misses that force slow regeneration.
+*   **Use `ERROR` for operation failures**: e.g., database constraint violations, external API unreachability.
+*   **Never log inside tight loops**: Avoid logging per-token generation or per-frame renders at `INFO` or higher; aggregate or log only at loop completion.
+
+---
+
+## 9. Linting & Code Quality (ruff)
 
 The project uses **ruff** for Python linting and formatting, configured in `pyproject.toml`.
 
@@ -171,13 +202,14 @@ The project uses **ruff** for Python linting and formatting, configured in `pypr
 
 ---
 
-## 9. File Structure & Directory Boundaries (Agential Cuts)
+## 10. File Structure & Directory Boundaries (Agential Cuts)
 
 A directory in the AAA backend is an **agential cut**—it must be named and structured for the kind of processing boundary it enforces, resisting the gravity of generic "junk drawers."
 
 ### Standard Directories
 *   `api/`: **The Membrane**. Contains HTTP routes, request/response validation schemas, and serialization adapters. Nothing outside `api/` should deal with FastAPI dependencies or HTTP status codes.
 *   `bootstrap/`: **The Assembly**. Modular app initialization factories (providers, repositories, embedder, modules, pipeline, background engine, lifecycle). Each file handles one concern; `lifecycle.py` orchestrates them in `lifespan()`.
+*   `core/`: **The Kernel**. Foundational utilities, state primitives, and centralized logging (`logging_config.py`).
 *   `services/`: **The Orchestration**. Core command layer entry points that accept an inscription (Phase 1) and invoke the runtime metabolization pipelines.
 *   `metabolisation/`: **The Transformation**. Long-running engine pipelines, the `AutopoieticDreamDaemon`, and background schedulers that digest sediment.
 *   `modules/` (transitioning to `cognition/` and `ingestion/`): **The Cognitive Operators**. Pluggable units (engines, scrapers, and retrievers) loaded and run by the metabolization pipeline.
@@ -188,16 +220,16 @@ A directory in the AAA backend is an **agential cut**—it must be named and str
 
 ---
 
-## 10. Agentic Engineering Protocol & Skill Routing Matrix
+## 11. Agentic Engineering Protocol & Skill Routing Matrix
 
 When AI agents (Antigravity, OpenCode, Codex, ChatGPT) operate on the AAA backend, they must follow a disciplined 3-phase engineering cycle and consult the canonical reusable workflows in `.agents/skills/`:
 
-### 10.1. The 3-Phase Agent Engineering Loop
+### 11.1. The 3-Phase Agent Engineering Loop
 1.  **Phase 1: Research & Contract Design**: Before editing code, review relevant ADRs under `docs/decisions/`, consult the Symbia MCP server for foundational decisions, and specify Pydantic schemas or database schemas.
 2.  **Phase 2: Implementation & Boundary Hardening**: Implement minimal, non-blocking code. Apply `@with_connection` safety, offload blocking work via `asyncio.to_thread`, and enforce the Four-Pillar Upload and Input Boundary defenses.
 3.  **Phase 3: Verification & Invariant Backpropagation**: Run `uv run ruff check backend/` and `uv run pytest`. If a bug or regression is uncovered, invoke the `backprop` skill to transcribe the lesson into a permanent invariant or test assertion.
 
-### 10.2. Backend Skill Routing Matrix
+### 11.2. Backend Skill Routing Matrix
 
 | Backend Task Category | Canonical Agent Skills (`.agents/skills/`) | When & How to Use |
 | :--- | :--- | :--- |

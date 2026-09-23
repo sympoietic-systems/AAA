@@ -1,11 +1,9 @@
-"""Custom exceptions and FastAPI error handlers.
-
-Provides a unified error-handling story for service-layer errors,
-eliminating repetitive try/except blocks in route handlers.
-"""
+import logging
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger("aaa.exceptions")
 
 
 class ServiceException(HTTPException):
@@ -52,14 +50,76 @@ def register_error_handlers(app):
 
     @app.exception_handler(ServiceException)
     async def service_exception_handler(request: Request, exc: ServiceException):
+        logger.warning(
+            "ServiceException on %s %s [%d]: %s",
+            request.method,
+            request.url.path,
+            exc.status_code,
+            exc.message,
+        )
         return JSONResponse(
             status_code=exc.status_code,
-            content={"status": "error", "detail": exc.message},
+            content={
+                "status": "error",
+                "kind": "service_error",
+                "message": exc.message,
+                "detail": exc.message,
+            },
         )
 
     @app.exception_handler(ValueError)
     async def value_error_handler(request: Request, exc: ValueError):
+        logger.error(
+            "ValueError on %s %s: %s",
+            request.method,
+            request.url.path,
+            str(exc),
+        )
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "kind": "validation_error",
+                "message": str(exc),
+                "detail": str(exc),
+            },
+        )
+
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        # Allow standard HTTPExceptions to preserve their status code
+        if isinstance(exc, HTTPException):
+            if exc.status_code >= 500:
+                logger.error(
+                    "HTTPException %d on %s %s: %s",
+                    exc.status_code,
+                    request.method,
+                    request.url.path,
+                    exc.detail,
+                )
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "status": "error",
+                    "kind": "http_error",
+                    "message": str(exc.detail),
+                    "detail": str(exc.detail),
+                },
+            )
+
+        # Full stack trace fidelity per protocols/GLITCH.md and protocols/SECURITY.md
+        logger.exception(
+            "Unhandled server crash on %s %s: %s",
+            request.method,
+            request.url.path,
+            str(exc),
+        )
         return JSONResponse(
             status_code=500,
-            content={"status": "error", "detail": str(exc)},
+            content={
+                "status": "error",
+                "kind": "internal_error",
+                "message": "An unexpected internal server error occurred",
+                "detail": "Internal server error",
+            },
         )

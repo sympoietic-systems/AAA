@@ -39,6 +39,16 @@ os.environ.setdefault("OPENBLAS_NUM_THREADS", "2")
 os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "2")
 os.environ.setdefault("NUMEXPR_NUM_THREADS", "2")
 
+# Initialize centralized logging early (rotating error.log and server.log)
+from backend.config import load_config  # noqa: E402
+from backend.core.logging_config import setup_logging  # noqa: E402
+
+try:
+    _init_cfg = load_config()
+except Exception:
+    _init_cfg = {}
+setup_logging(_init_cfg)
+
 # ── Re-export from bootstrap for backward compatibility ────────────────
 # External scripts and tests depend on these being importable from backend.main
 from backend.bootstrap.lifecycle import create_app  # noqa: E402

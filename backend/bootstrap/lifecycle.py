@@ -5,6 +5,7 @@ Orchestrates the full startup sequence: config → DB → embedder → LLM →
 modules → beliefs → skills → pipeline → background → services.
 """
 
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 
@@ -26,6 +27,7 @@ from backend.bootstrap.pipeline import _build_pipeline, _register_skills
 from backend.bootstrap.providers import _init_providers
 from backend.bootstrap.repositories import _init_repos
 from backend.config import load_config
+from backend.core.logging_config import setup_logging
 from backend.modules.llm_client import LLMClientModule
 from backend.personality.assembler import PromptAssemblerModule, _build_system_content
 from backend.pipeline.registry import PipelineRegistry
@@ -33,28 +35,9 @@ from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
-
-class _ColorFormatter(logging.Formatter):
-    """ANSI color-coded log formatter: red for ERROR, yellow for WARNING, reset for others."""
-
-    _COLORS = {
-        "ERROR": "\033[31;1m",  # bold red
-        "WARNING": "\033[33;1m",  # bold yellow
-        "CRITICAL": "\033[41;97m",  # white on red background
-    }
-    _RESET = "\033[0m"
-
-    def format(self, record: logging.LogRecord) -> str:
-        color = self._COLORS.get(record.levelname, "")
-        if color:
-            record.levelname = f"{color}{record.levelname}{self._RESET}"
-            record.msg = f"{color}{record.msg}{self._RESET}"
-        return super().format(record)
-
-
-_handler = logging.StreamHandler()
-_handler.setFormatter(_ColorFormatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
-logging.basicConfig(level=logging.INFO, handlers=[_handler])
+# Ensure logging is initialized with current config if not already setup
+with contextlib.suppress(Exception):
+    setup_logging(load_config())
 
 
 # ── App lifecycle ──────────────────────────────────────────────────────
@@ -102,8 +85,8 @@ async def lifespan(app: FastAPI):
     modules["prompt_assembler"] = prompt_assembler
 
     # 6b. Skill activator & Afferent Sensory Router
-    from backend.modules.skill_activator import SkillActivatorModule
     from backend.modules.afferent_sensory_router import AfferentSensoryRouter
+    from backend.modules.skill_activator import SkillActivatorModule
 
     afferent_router = AfferentSensoryRouter.from_config(config)
     skill_activator = SkillActivatorModule(router=afferent_router)

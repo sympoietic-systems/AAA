@@ -98,7 +98,13 @@ class CustomAnalysisModule(ProcessingModule):
 *   **Identifier Sanitization:** Run all path and query IDs through `sanitize_identifier(id, field_name)` before querying repositories.
 *   **Four-Pillar Upload Defense:** Any file ingestion must verify: (1) size cap, (2) strict extension whitelist, (3) magic byte inspection, and (4) directory traversal prevention using `safe_resolve_path()`.
 *   **Outbound SSRF Validation:** External HTTP requests must validate target addresses via `validate_safe_url()`, rejecting private LANs, loopbacks, and cloud metadata endpoints.
-*   **Zero Secret Leakage:** Never persist provider API keys, tokens, or raw authorization headers to SQLite sediment or error logs.
+*   **Zero Secret Leakage:** Never persist provider API keys, tokens, or raw authorization headers to SQLite sediment or error logs. Automatically sanitized via `SecretMaskingFilter`.
+
+### 2.5. Layer 0: Observability & Logging Invariants
+*   **Dual Rotating Files:** Logs are segregated into `data/logs/error.log` (WARNING, ERROR, CRITICAL) for triage, and `data/logs/server.log` (INFO+) for operational context.
+*   **Hard Disk & RAM Caps:** Logging runs with circular size-based rotation (`max_bytes=10MB`, `backup_count=5`), capping total log disk usage to 60MB per stream and zero memory buildup.
+*   **Full Stack Trace Fidelity:** Always use `logger.exception()` when handling unexpected crashes in routes or services so complete tracebacks are inscribed to `error.log`.
+*   **Secure Triage API:** Inspect logs remotely via `GET /api/errors/logs` (enforces `verify_password`, `safe_resolve_path`, and 500-line reverse-tail limits).
 
 ---
 
