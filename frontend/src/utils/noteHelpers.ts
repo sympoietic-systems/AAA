@@ -5,7 +5,7 @@ export const EMPTY_NOTE_ARRAY: NoteInfo[] = []
 export function buildNotesMap(notes: NoteInfo[]): Map<number, NoteInfo[]> {
   const map = new Map<number, NoteInfo[]>()
   for (const note of notes) {
-    if (note.asset_type !== "conversation_message") continue
+    if (note.asset_type !== "conversation_message" && note.asset_type !== "message") continue
     const msgId = Number(note.asset_id)
     if (Number.isNaN(msgId)) continue
     const existing = map.get(msgId)

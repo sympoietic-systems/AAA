@@ -86,7 +86,7 @@ export function wrapSelectedTextInMarks(markdown: string, notes: NoteInfo[]): st
     .filter(n => n.selected_text)
     .sort((a, b) => b.selected_text.length - a.selected_text.length)
 
-  const ranges: { start: number; end: number; noteId: string; colors: typeof VISIBILITY_COLORS.personal; comment: string }[] = []
+  const ranges: { start: number; end: number; noteId: string; colors: typeof VISIBILITY_COLORS.personal; comment: string; visibility: string }[] = []
 
   for (const note of sorted) {
     const searchText = note.selected_text
@@ -99,7 +99,7 @@ export function wrapSelectedTextInMarks(markdown: string, notes: NoteInfo[]): st
       const rStart = mapping[idx]
       const rEnd = mapping[Math.min(idx + searchLen - 1, plainText.length - 1)] + 1
       const colors = VISIBILITY_COLORS[note.visibility] || VISIBILITY_COLORS.personal
-      ranges.push({ start: rStart, end: rEnd, noteId: note.id, colors, comment: note.comment })
+      ranges.push({ start: rStart, end: rEnd, noteId: note.id, colors, comment: note.comment, visibility: note.visibility || "personal" })
       idx++
     }
   }
@@ -110,7 +110,7 @@ export function wrapSelectedTextInMarks(markdown: string, notes: NoteInfo[]): st
   const closeTags: { pos: number; tag: string }[] = []
 
   for (const r of ranges) {
-    openTags.push({ pos: r.start, tag: `<mark data-note-id="${r.noteId}" data-note-comment="${escapeHtml(r.comment)}" style="background:${r.colors.bg};color:${r.colors.text};--nh-border:${r.colors.border}" class="note-highlight">` })
+    openTags.push({ pos: r.start, tag: `<mark id="note-highlight-${r.noteId}" data-note-id="${r.noteId}" data-note-comment="${escapeHtml(r.comment)}" data-note-visibility="${r.visibility}" style="background:${r.colors.bg};color:${r.colors.text};--nh-border:${r.colors.border}" class="note-highlight">` })
     closeTags.push({ pos: r.end, tag: '</mark>' })
   }
 

@@ -11,8 +11,9 @@ def _resolve_create_params(req: NoteCreateRequest, conversation_id: str | None =
     asset_type = req.asset_type
     asset_id = req.asset_id
     message_id = req.message_id
+    conv_id = conversation_id or req.conversation_id
 
-    if conversation_id:
+    if conv_id or asset_type in ("message", "conversation_message"):
         asset_type = "conversation_message"
         asset_id = str(req.message_id or req.asset_id)
 
@@ -40,19 +41,24 @@ def _schedule_metabolism(
 ):
     if (
         note.get("visibility") == "shared"
-        and note.get("asset_type") == "conversation_message"
+        and note.get("asset_type") in ("conversation_message", "message")
         and conversation_id
-        and message_id is not None
+        and (message_id is not None or note.get("asset_id"))
     ):
-        background_tasks.add_task(
-            NoteService.metabolize_background,
-            state=state,
-            conversation_id=conversation_id,
-            message_id=message_id,
-            selected_text=note.get("selected_text", ""),
-            comment=note.get("comment", ""),
-            note_id=note["id"],
-        )
+        try:
+            m_id = message_id if message_id is not None else int(note["asset_id"])
+        except (ValueError, TypeError):
+            m_id = None
+        if m_id is not None:
+            background_tasks.add_task(
+                NoteService.metabolize_background,
+                state=state,
+                conversation_id=conversation_id,
+                message_id=m_id,
+                selected_text=note.get("selected_text", ""),
+                comment=note.get("comment", ""),
+                note_id=note["id"],
+            )
 
 
 @router.post("/notes", response_model=NoteResponse)
@@ -66,7 +72,7 @@ async def create_note(
     if not note_repo:
         raise HTTPException(status_code=503, detail="Note repository not configured")
 
-    asset_type, asset_id, message_id = _resolve_create_params(req)
+    asset_type, asset_id, message_id = _resolve_create_params(req, req.conversation_id)
     note = _create_note(note_repo, asset_type, asset_id, req.conversation_id, req)
     if not note:
         raise HTTPException(status_code=500, detail="Failed to create note")

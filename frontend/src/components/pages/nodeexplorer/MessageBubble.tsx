@@ -18,6 +18,7 @@ import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEq
 import { ResearchProposalCard } from "./ResearchProposalCard"
 import { SelectionToolbar } from "./SelectionToolbar"
 import { NoteEditorPopover } from "./NoteEditorPopover"
+import { wrapSelectedTextInMarks } from "../../../utils/noteHighlight"
 
 export const MessageBubble = memo(function MessageBubble({
   msg,
@@ -57,6 +58,17 @@ export const MessageBubble = memo(function MessageBubble({
       return `<mark ${normalizedAttrs}>`;
     })
     .replace(/<\/note_entanglement>/g, '</mark>');
+
+  const unappliedNotes = (notes || []).filter(
+    (n) => n.selected_text && !processedContent.includes(n.id)
+  );
+  if (unappliedNotes.length > 0) {
+    try {
+      processedContent = wrapSelectedTextInMarks(processedContent, unappliedNotes);
+    } catch (e) {
+      console.error("Failed to wrap notes in marks:", e);
+    }
+  }
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
@@ -258,11 +270,12 @@ export const MessageBubble = memo(function MessageBubble({
       return <mark {...props} className="bg-yellow-500/20 text-yellow-100 px-0.5 rounded" />;
     }
     let note: any = notes.find((n: any) => n.id === noteId);
-    if (!note && props.comment) {
+    const commentFromProps = props["data-note-comment"] || props["dataNoteComment"] || props.comment;
+    if (!note && commentFromProps) {
       note = {
         id: noteId,
-        comment: props.comment,
-        visibility: "agent",
+        comment: commentFromProps,
+        visibility: props["data-note-visibility"] || props["dataNoteVisibility"] || "personal",
         selected_text: props.children ? String(props.children) : ""
       };
     }
@@ -288,9 +301,9 @@ export const MessageBubble = memo(function MessageBubble({
     const handleHighlightClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
-      setSelectedText(note.selected_text);
-      setNoteComment(note.comment);
-      setNoteVisibility(note.visibility);
+      setSelectedText(note.selected_text || (props.children ? String(props.children) : ""));
+      setNoteComment(note.comment || "");
+      setNoteVisibility(note.visibility || "personal");
       setEditingNote(note);
       
       const rect = e.currentTarget.getBoundingClientRect();
@@ -303,8 +316,8 @@ export const MessageBubble = memo(function MessageBubble({
     };
 
     // Determine if this is the primary (first) segment for scroll targeting
-    // The primary segment has id="note-highlight-{noteId}", secondary ones only have data-note-id
-    const isPrimary = props.id && props.id.startsWith("note-highlight-");
+    // The primary segment has id="note-highlight-{noteId}" or no id, secondary ones have data-note-id without note-highlight- id
+    const isPrimary = !props.id || props.id.startsWith("note-highlight-");
 
     return (
       <span 

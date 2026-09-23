@@ -20,6 +20,8 @@ class NoteRepository(BaseRepository):
         comment: str = "",
         visibility: str = "personal",
     ) -> dict:
+        if asset_type in ("conversation_message", "message"):
+            asset_type = "conversation_message"
         conn = self._conn()
         conn.execute(
             """INSERT INTO notes (id, asset_type, asset_id, conversation_id, selected_text, comment, visibility)
@@ -45,7 +47,8 @@ class NoteRepository(BaseRepository):
     ) -> dict:
         conn = self._conn()
 
-        if asset_type == "conversation_message":
+        if asset_type in ("conversation_message", "message"):
+            asset_type = "conversation_message"
             try:
                 message_id = int(asset_id)
             except (ValueError, TypeError):
@@ -153,17 +156,23 @@ class NoteRepository(BaseRepository):
     @with_connection
     def get_notes_by_asset(self, asset_type: str, asset_id: str) -> list[dict]:
         conn = self._conn()
-        cursor = conn.execute(
-            "SELECT * FROM notes WHERE asset_type = ? AND asset_id = ? ORDER BY created_at ASC",
-            (asset_type, asset_id),
-        )
+        if asset_type in ("conversation_message", "message"):
+            cursor = conn.execute(
+                "SELECT * FROM notes WHERE asset_type IN ('conversation_message', 'message') AND asset_id = ? ORDER BY created_at ASC",
+                (asset_id,),
+            )
+        else:
+            cursor = conn.execute(
+                "SELECT * FROM notes WHERE asset_type = ? AND asset_id = ? ORDER BY created_at ASC",
+                (asset_type, asset_id),
+            )
         return [dict(row) for row in cursor.fetchall()]
 
     @with_connection
     def get_notes_by_conversation(self, conversation_id: str) -> list[dict]:
         conn = self._conn()
         cursor = conn.execute(
-            "SELECT * FROM notes WHERE asset_type = 'conversation_message' AND conversation_id = ? ORDER BY created_at ASC",
+            "SELECT * FROM notes WHERE asset_type IN ('conversation_message', 'message') AND conversation_id = ? ORDER BY created_at ASC",
             (conversation_id,),
         )
         return [dict(row) for row in cursor.fetchall()]
@@ -225,7 +234,7 @@ class NoteRepository(BaseRepository):
 
         row_note = conn.execute("SELECT asset_type, asset_id FROM notes WHERE id = ?", (note_id,)).fetchone()
 
-        if row_note and row_note["asset_type"] == "conversation_message":
+        if row_note and row_note["asset_type"] in ("conversation_message", "message"):
             try:
                 message_id = int(row_note["asset_id"])
             except (ValueError, TypeError):

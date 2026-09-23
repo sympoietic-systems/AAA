@@ -225,7 +225,7 @@ export function useConversationNotes(conversationId: string) {
   ) => {
     try {
       const created = await createNote({
-        assetType: "message",
+        assetType: "conversation_message",
         assetId: String(targetAssetId),
         conversationId,
         comment,
