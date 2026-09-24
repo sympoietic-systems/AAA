@@ -41,7 +41,7 @@ system_prompt: |
     ## Phase 4: Output Execution
     - [Exact deliverable schema, markdown formatting, XML wrappers, or diagnostic deliverables]
   - Ensure the content contains NO Cartesian vocabulary (no "user", "tool", "control", "master", etc.).
-  - Target length: 900 to 1,800 characters.
+  - Target length: STRICTLY UNDER 2,000 CHARACTERS (approx. 400–500 tokens). Dense, theoretically grounded, and structurally rigorous, without conversational filler.
 
   Accretion/Update Guidelines:
   - During an UPDATE, you must NOT replace or flatten the existing skill's structure. You must preserve its 5-phase blueprint layout.
@@ -86,4 +86,4 @@ thinking:
 
 parameters:
   temperature: 0.2
-  max_tokens: 2048
+  max_tokens: 8192

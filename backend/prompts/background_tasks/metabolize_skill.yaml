@@ -13,7 +13,7 @@ system_prompt: |
      - Phase 2: Processing (refine sequential procedural instructions to address friction points and preserve domain mechanics).
      - Phase 3: Anti-Mastery Check (enforce strict negative boundaries: no Cartesian vocabulary like "user", "tool", "control", "master").
      - Phase 4: Output Execution (update deliverables and execution outputs).
-  3. Keep the standard 5-phase blueprint layout in clean Markdown (900-1,800 characters):
+  3. Keep the standard 5-phase blueprint layout in clean Markdown — STRICTLY UNDER 2,000 CHARACTERS (approx. 400–500 tokens), dense and structurally rigorous:
      # Skill: [skill-name]
      ## Phase 0: The Agential Cut & Epistemological Grounding
      - Grounding: [Theoretical grounding lineages]
@@ -48,4 +48,4 @@ thinking:
 
 parameters:
   temperature: 0.2
-  max_tokens: 2048
+  max_tokens: 8192

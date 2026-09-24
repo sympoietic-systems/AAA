@@ -25,6 +25,7 @@ from backend.modules.providers.openrouter_utils import (
     build_openrouter_thinking_disabled,
     clean_thinking_params,
     resolve_openrouter_provider_config,
+    sanitize_openrouter_params,
 )
 
 logger = logging.getLogger(__name__)
@@ -181,9 +182,15 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         is_google = "google" in self.provider_name.lower() or "googleapis.com" in self._api_base
         is_openrouter = "openrouter" in self.provider_name.lower() or "openrouter.ai" in self._api_base
 
+        # ── Thinking / reasoning configuration ────────────────────────
+        thinking_override = merged_params.pop("thinking_override", None)
+        use_thinking = self._thinking if thinking_override is None else bool(thinking_override)
+
         # ── Provider-specific parameter sanitization ──────────────────
         if is_google:
             merged_params = sanitize_google_params(merged_params)
+        elif is_openrouter:
+            merged_params = sanitize_openrouter_params(merged_params, use_thinking=use_thinking)
         elif is_anthropic:
             merged_params.pop("presence_penalty", None)
             merged_params.pop("frequency_penalty", None)
@@ -195,20 +202,16 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             for m in messages:
                 if m.get("role") == "system":
                     system_prompt += m.get("content", "") + "\n"
-            body = build_anthropic_body(
+            body: dict[str, Any] = build_anthropic_body(
                 self._model,
                 messages,
                 system_prompt.strip(),
                 merged_params.get("max_tokens", 4096),
             )
         else:
-            body = {"model": self._model, "messages": messages}
+            body: dict[str, Any] = {"model": self._model, "messages": messages}
             if "max_tokens" in merged_params:
                 body["max_tokens"] = merged_params["max_tokens"]
-
-        # ── Thinking / reasoning configuration ────────────────────────
-        thinking_override = merged_params.pop("thinking_override", None)
-        use_thinking = self._thinking if thinking_override is None else bool(thinking_override)
 
         if use_thinking:
             if is_anthropic:

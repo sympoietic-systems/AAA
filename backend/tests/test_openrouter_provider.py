@@ -6,6 +6,7 @@ from backend.modules.llm_client import ModelPoolProvider, OpenRouterProvider
 from backend.modules.providers.openrouter_utils import (
     build_openrouter_provider_config,
     resolve_openrouter_provider_config,
+    sanitize_openrouter_params,
 )
 
 
@@ -144,6 +145,47 @@ class TestOpenRouterProviderConfig(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(or_cfg.get("order"), ["Chutes", "DeepInfra"])
             self.assertTrue(or_cfg.get("allow_fallbacks"))
             self.assertEqual(or_map, {"deepseek/deepseek-chat": "Chutes"})
+
+    def test_sanitize_openrouter_params_elevates_when_thinking(self):
+        # Thinking enabled, max_tokens <= 4096 -> elevated to 8192
+        params = {"max_tokens": 2048}
+        res = sanitize_openrouter_params(params, use_thinking=True)
+        self.assertEqual(res["max_tokens"], 8192)
+
+        # Thinking enabled, no max_tokens -> elevated to 8192
+        params_empty = {}
+        res_empty = sanitize_openrouter_params(params_empty, use_thinking=True)
+        self.assertEqual(res_empty["max_tokens"], 8192)
+
+        # Thinking enabled, max_tokens > 4096 -> kept as is
+        params_large = {"max_tokens": 16384}
+        res_large = sanitize_openrouter_params(params_large, use_thinking=True)
+        self.assertEqual(res_large["max_tokens"], 16384)
+
+        # Thinking disabled -> kept as is
+        params_no_think = {"max_tokens": 2048}
+        res_no_think = sanitize_openrouter_params(params_no_think, use_thinking=False)
+        self.assertEqual(res_no_think["max_tokens"], 2048)
+
+    @patch("httpx.AsyncClient.post")
+    async def test_openrouter_provider_elevates_max_tokens_when_thinking(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "thinking response", "role": "assistant"}}]
+        }
+        mock_post.return_value = mock_response
+
+        provider = OpenRouterProvider(
+            api_key="sk-or-dummy",
+            model="xiaomi/mimo-v2.6-flash",
+            thinking=True,
+        )
+        await provider.generate([{"role": "user", "content": "hi"}], max_tokens=2048)
+
+        called_json = mock_post.call_args.kwargs.get("json", {})
+        self.assertEqual(called_json["max_tokens"], 8192)
+        self.assertIn("thinking", called_json)
 
 
 if __name__ == "__main__":

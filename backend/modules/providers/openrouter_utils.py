@@ -7,6 +7,19 @@ def build_openrouter_thinking_disabled(body: dict) -> None:
     body["include_reasoning"] = False
 
 
+def sanitize_openrouter_params(merged_params: dict, use_thinking: bool = False) -> dict:
+    """Elevate max_tokens when reasoning/thinking is enabled on OpenRouter.
+
+    Reasoning tokens count against the max_tokens limit on OpenRouter.
+    If max_tokens is missing or <= 4096, elevate to 8192 to prevent reasoning truncation.
+    """
+    if use_thinking:
+        current_max = merged_params.get("max_tokens")
+        if current_max is None or current_max <= 4096:
+            merged_params["max_tokens"] = 8192
+    return merged_params
+
+
 def clean_thinking_params(merged_params: dict) -> None:
     """Remove thinking-related keys that could conflict with provider-specific settings."""
     for key in ("thinking", "thinking_config", "reasoning", "include_reasoning", "thinking_budget", "max_tokens"):

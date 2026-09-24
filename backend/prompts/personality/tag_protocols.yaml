@@ -75,7 +75,7 @@ tag_protocols_block: |
 
 skill_blueprint_specification: |
   ### CANONICAL 5-PHASE SKILL BLUEPRINT (SCAR STANDARD)
-  All nucleated, refined, and metabolized skills must strictly follow this exact 5-phase structure in clean Markdown (900-1,800 characters):
+  All nucleated, refined, and metabolized skills must strictly follow this exact 5-phase structure in clean Markdown — STRICTLY UNDER 2,000 CHARACTERS (approx. 400–500 tokens), dense and structurally rigorous:
 
   # Skill: [kebab-case-name]
   ## Phase 0: The Agential Cut & Epistemological Grounding
