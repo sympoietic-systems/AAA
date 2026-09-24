@@ -5,7 +5,7 @@ import numpy as np
 
 from backend.modules.base import ProcessingModule
 from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import MessageRepository, SemanticKnotRepository
+from backend.storage.repositories import MessageRepository, SemanticKnotRepository
 from backend.utils.token_counter import estimate_message_tokens
 
 logger = logging.getLogger(__name__)

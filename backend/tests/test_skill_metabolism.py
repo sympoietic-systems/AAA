@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from backend.metabolisation.daemon import AutopoieticDreamDaemon
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import BeliefRepository, MessageRepository, SkillRepository
+from backend.storage.repositories import BeliefRepository, MessageRepository, SkillRepository
 
 
 def _setup_db(name="aaa_skill_metabolism_test.db"):
@@ -32,7 +32,7 @@ class MockAppState:
                 "max_daily_dreams": 5,
             }
         }
-        from backend.storage.repository import ConversationRepository
+        from backend.storage.repositories import ConversationRepository
 
         self.skill_repo = SkillRepository(db_path)
         self.belief_repo = BeliefRepository(db_path)

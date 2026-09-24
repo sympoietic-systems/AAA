@@ -9,7 +9,7 @@ import numpy as np
 
 from backend.storage.models import BeliefNode
 from backend.utils.prompt_loader import get_prompts_dict
-from backend.utils.similarity import cosine_similarity
+from backend.utils.vector import cosine_similarity
 
 logger = logging.getLogger(__name__)
 

@@ -30,7 +30,7 @@ load_dotenv(ENV_PATH)
 from backend.modules.structural_engine import CompositeStructuralScorer  # noqa: E402
 from backend.personality.seeding import seed_dynamic_personality  # noqa: E402
 from backend.storage.database import get_db_path, init_db  # noqa: E402
-from backend.storage.repository import (  # noqa: E402
+from backend.storage.repositories import (  # noqa: E402
     BeliefRepository,
     CommitmentRepository,
     ExpertiseRepository,

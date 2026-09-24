@@ -1,5 +1,4 @@
 from backend.metabolisation.consolidation import ConsolidationMixin
-from backend.metabolisation.context import PipelineResult
 from backend.metabolisation.daemon import AutopoieticDreamDaemon
 from backend.metabolisation.dream_context import DreamContextMixin
 from backend.metabolisation.dream_executor import DreamExecutorMixin
@@ -15,7 +14,7 @@ from backend.metabolisation.sedimentation import (
     store_daemon_metrics,
 )
 from backend.metabolisation.skill_metabolism import SkillMetabolismMixin
-from backend.pipeline.engine import ProcessingPipeline
+from backend.pipeline.engine import PipelineResult, ProcessingPipeline
 
 __all__ = [
     "ProcessingPipeline",

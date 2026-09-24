@@ -45,11 +45,8 @@ import sys
 import backend.core.auth
 
 assert "backend.core.registry" not in sys.modules
-assert "backend.metabolisation.context" not in sys.modules
-
-from backend.core import ModuleRegistry
 from backend.core.registry import ModuleRegistry as CanonicalModuleRegistry
 
-assert ModuleRegistry is CanonicalModuleRegistry
+assert CanonicalModuleRegistry.__module__ == "backend.core.registry"
 """
     subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, check=True)

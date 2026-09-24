@@ -16,7 +16,7 @@ from backend.modules.belief_math import (
     compute_delta_mass,
     compute_lifecycle_stage,
 )
-from backend.utils.similarity import cosine_similarity
+from backend.utils.vector import cosine_similarity
 
 
 class TestConceptDensity:

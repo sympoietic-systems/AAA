@@ -10,7 +10,7 @@ os.chdir(root_path)
 
 from backend.metabolisation.scheduler import BackgroundStartupScheduler  # noqa: E402
 from backend.storage.database import get_db_path, init_db  # noqa: E402
-from backend.storage.repository import ConversationRepository, PerceptionSedimentRepository  # noqa: E402
+from backend.storage.repositories import ConversationRepository, PerceptionSedimentRepository  # noqa: E402
 
 
 class MockAppState:

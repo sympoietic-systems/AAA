@@ -22,7 +22,7 @@ from backend.modules.embedder import EmbedderModule
 from backend.modules.sensory.perception import PerceptionModule
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
 from backend.storage.database import get_db_path
-from backend.storage.repository import (
+from backend.storage.repositories import (
     BeliefRepository,
     ErrorLogRepository,
     MessageRepository,

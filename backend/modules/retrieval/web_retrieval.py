@@ -13,7 +13,7 @@ from backend.modules.base import ProcessingModule
 from backend.modules.llm_client import generate_unified
 from backend.modules.retrieval.safe_http import SafeFetchError, safe_fetch
 from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import PerceptionSedimentRepository
+from backend.storage.repositories import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
 
 logger = logging.getLogger(__name__)

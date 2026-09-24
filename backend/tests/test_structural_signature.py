@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from backend.modules.retrieval.diffractive_retrieval import DiffractiveRetrievalModule
 from backend.modules.structural_engine import CompositeStructuralScorer, JevStructuralScorer
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import MessageRepository, PerceptionSedimentRepository
+from backend.storage.repositories import MessageRepository, PerceptionSedimentRepository
 
 
 def test_scorers():
@@ -41,7 +41,7 @@ def test_repository_signatures():
         os.remove(db_path)
     conn = init_db(db_path)
 
-    from backend.storage.repository import ConversationRepository
+    from backend.storage.repositories import ConversationRepository
 
     conv_repo = ConversationRepository(db_path)
     conv_repo.create("conv_1", "Conversation 1")
@@ -120,7 +120,7 @@ async def test_dual_vector_isomorphic_retrieval():
             os.remove(db_path)
     conn = init_db(db_path)
 
-    from backend.storage.repository import ConversationRepository
+    from backend.storage.repositories import ConversationRepository
 
     conv_repo = ConversationRepository(db_path)
     conv_repo.create("conv_1", "Conversation 1")

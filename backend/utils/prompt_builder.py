@@ -19,7 +19,7 @@ from typing import Any
 import numpy as np
 
 from backend.modules.belief_engine import parse_vector_16d
-from backend.utils.similarity import cosine_similarity
+from backend.utils.vector import cosine_similarity
 
 logger = logging.getLogger(__name__)
 

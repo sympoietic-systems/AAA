@@ -9,7 +9,7 @@ os.chdir(root_path)
 
 from backend.modules.context_collector import ContextCollectorModule  # noqa: E402
 from backend.storage.database import get_db_path, init_db  # noqa: E402
-from backend.storage.repository import MessageRepository, NoteRepository  # noqa: E402
+from backend.storage.repositories import MessageRepository, NoteRepository  # noqa: E402
 
 
 async def test_context_collector():

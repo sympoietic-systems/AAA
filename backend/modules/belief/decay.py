@@ -4,7 +4,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from backend.storage.repository import BeliefRepository
+from backend.storage.repositories import BeliefRepository
 
 logger = logging.getLogger(__name__)
 

@@ -5,9 +5,9 @@ import numpy as np
 
 from backend.modules.base import ProcessingModule
 from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import MessageRepository, PerceptionSedimentRepository, SemanticKnotRepository
-from backend.utils.similarity import cosine_similarity
+from backend.storage.repositories import MessageRepository, PerceptionSedimentRepository, SemanticKnotRepository
 from backend.utils.token_counter import estimate_tokens
+from backend.utils.vector import cosine_similarity
 
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ from backend.modules.embedder import EmbeddingService  # noqa: E402
 from backend.modules.retrieval.web_retrieval import DuckDuckGoParser, HTMLToTextParser  # noqa: E402
 from backend.modules.sensory.perception import PerceptionModule  # noqa: E402
 from backend.storage.database import get_db_path, init_db  # noqa: E402
-from backend.storage.repository import PerceptionSedimentRepository  # noqa: E402
+from backend.storage.repositories import PerceptionSedimentRepository  # noqa: E402
 
 
 class MockLLMProvider:
@@ -81,7 +81,7 @@ async def test_coordinates_warping():
     conn.commit()
 
     repo = PerceptionSedimentRepository(db_path)
-    from backend.storage.repository import ConversationRepository
+    from backend.storage.repositories import ConversationRepository
 
     conv_repo = ConversationRepository(db_path)
 
@@ -186,7 +186,7 @@ async def test_sediment_entanglement():
     conn.commit()
 
     repo = PerceptionSedimentRepository(db_path)
-    from backend.storage.repository import ConversationRepository
+    from backend.storage.repositories import ConversationRepository
 
     conv_repo = ConversationRepository(db_path)
 
@@ -303,7 +303,7 @@ async def test_cross_conversation_sediment_fallback():
     conn.commit()
 
     repo = PerceptionSedimentRepository(db_path)
-    from backend.storage.repository import ConversationRepository
+    from backend.storage.repositories import ConversationRepository
 
     conv_repo = ConversationRepository(db_path)
 

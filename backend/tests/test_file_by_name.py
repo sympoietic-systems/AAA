@@ -8,7 +8,7 @@ sys.path.insert(0, root_path)
 os.chdir(root_path)
 
 from backend.storage.database import get_db_path, init_db  # noqa: E402
-from backend.storage.repository import PerceptionSedimentRepository  # noqa: E402
+from backend.storage.repositories import PerceptionSedimentRepository  # noqa: E402
 
 
 async def test_file_by_name():

@@ -21,9 +21,9 @@ from backend.modules.belief_math import (
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.models import BeliefNode
+from backend.storage.repositories import BeliefRepository, MessageRepository
 from backend.storage.repositories.cognitive.refusal import RefusalRepository
-from backend.storage.repository import BeliefRepository, MessageRepository
-from backend.utils.similarity import cosine_similarity
+from backend.utils.vector import cosine_similarity
 
 logger = logging.getLogger(__name__)
 

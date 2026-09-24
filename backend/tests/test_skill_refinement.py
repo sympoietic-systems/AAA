@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from backend.modules.background_tasks.actions.refine_skill import RefineSkillAction
 from backend.services.skill import SkillService
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import SkillRepository
+from backend.storage.repositories import SkillRepository
 from backend.utils.parsers.skill import parse_skill_nucleation_tags
 
 

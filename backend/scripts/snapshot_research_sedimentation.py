@@ -160,7 +160,7 @@ async def do_export(path: str) -> None:
     db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
     init_db(db_path).close()
 
-    from backend.storage.repository import MemoryNodeRepository, ResearchTaskRepository
+    from backend.storage.repositories import MemoryNodeRepository, ResearchTaskRepository
 
     task_repo = ResearchTaskRepository(db_path)
     memory_node_repo = MemoryNodeRepository(db_path)
@@ -211,7 +211,7 @@ async def do_import(path: str) -> None:
 
     import sqlite3 as _sqlite3
 
-    from backend.storage.repository import (
+    from backend.storage.repositories import (
         ConsolidationCheckpointRepository,
         MemoryNodeRepository,
         ResearchTaskRepository,
@@ -359,7 +359,7 @@ async def main() -> None:
 
     db_path_str = str(full_db_path)
 
-    from backend.storage.repository import (
+    from backend.storage.repositories import (
         ConsolidationCheckpointRepository,
         MemoryNodeRepository,
         ResearchStepRepository,

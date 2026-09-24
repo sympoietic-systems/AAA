@@ -21,7 +21,7 @@ from backend.modules.metrics import (
     _detect_phase_shifts,
 )
 from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import MessageRepository
+from backend.storage.repositories import MessageRepository
 
 from .base import ProcessingModule
 

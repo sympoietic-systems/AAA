@@ -119,7 +119,7 @@ async def run_background_belief_nucleation(
         from backend.config import load_config
         from backend.modules.structural_engine import CompositeStructuralScorer
         from backend.storage.database import get_db_path
-        from backend.storage.repository import BeliefRepository
+        from backend.storage.repositories import BeliefRepository
 
         statement = (belief_data.get("statement") or "").strip()
         if not statement:
@@ -225,8 +225,8 @@ async def run_background_refusal_persist(
     try:
         from backend.config import load_config
         from backend.storage.database import get_db_path
+        from backend.storage.repositories import NotificationRepository
         from backend.storage.repositories.cognitive.refusal import RefusalRepository
-        from backend.storage.repository import NotificationRepository
 
         config = load_config()
         db_path = str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))

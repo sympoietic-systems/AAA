@@ -9,7 +9,7 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.modules.retrieval.diffractive_retrieval import DiffractiveRetrievalModule
-from backend.storage.repository import MessageRepository, PerceptionSedimentRepository
+from backend.storage.repositories import MessageRepository, PerceptionSedimentRepository
 
 
 @pytest.fixture

@@ -12,7 +12,7 @@ os.chdir(root_path)
 from backend.modules.conversation_metrics import ConversationMetricsModule  # noqa: E402
 from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule  # noqa: E402
 from backend.storage.database import get_db_path, init_db  # noqa: E402
-from backend.storage.repository import MessageRepository, MetricsRepository  # noqa: E402
+from backend.storage.repositories import MessageRepository, MetricsRepository  # noqa: E402
 
 
 async def test_allostatic_metrics():

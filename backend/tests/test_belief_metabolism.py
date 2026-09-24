@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from backend.modules.belief_engine import BeliefDynamicsEngine
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import BeliefRepository, ConversationRepository, MessageRepository
+from backend.storage.repositories import BeliefRepository, ConversationRepository, MessageRepository
 
 MOCK_IDENTITY_YAML = """
 personality:
@@ -328,7 +328,7 @@ def test_perception_metabolism():
             g_updated = next(b for b in updated_beliefs if b.label == "glitch-as-voice")
 
             # Calculate expected:
-            from backend.utils.similarity import cosine_similarity
+            from backend.utils.vector import cosine_similarity
 
             alignment = float(cosine_similarity(sig, b_vec))
             dc = 0.80

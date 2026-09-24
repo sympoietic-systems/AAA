@@ -149,3 +149,4 @@ B37|2026-09-24|error-taxonomy edit left an intentional compatibility export impl
 B38|2026-09-24|strict typing exposed research metabolism calling an attribute that was never initialized|V17,V29,V30
 B39|2026-09-24|typing expansion left import order and formatting outside Ruff's canonical form|V30
 B40|2026-09-24|ADR metadata used Markdown hard-break spaces and the commit sequence did not stop after `diff --check`|V30
+B41|2026-09-24|legacy-import migration left four import blocks + one package file outside Ruff canonical form|V30

@@ -4,7 +4,7 @@ import uuid
 import pytest
 
 from backend.storage.database import init_db
-from backend.storage.repository import BeliefRepository
+from backend.storage.repositories import BeliefRepository
 
 
 def _create_proposal(repository: BeliefRepository, proposal_id: str) -> None:

@@ -10,7 +10,7 @@ from backend.config import load_config
 from backend.main import _init_providers
 from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction
 from backend.storage.database import get_db_path
-from backend.storage.repository import BeliefRepository
+from backend.storage.repositories import BeliefRepository
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("run_refinements")

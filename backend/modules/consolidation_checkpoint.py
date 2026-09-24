@@ -1,8 +1,8 @@
 import numpy as np
 
 from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import ConsolidationCheckpointRepository
-from backend.utils.similarity import cosine_similarity
+from backend.storage.repositories import ConsolidationCheckpointRepository
+from backend.utils.vector import cosine_similarity
 
 from .base import ProcessingModule
 

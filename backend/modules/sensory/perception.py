@@ -16,7 +16,7 @@ from backend.modules.embedder import EmbeddingService
 from backend.modules.sensory.perception_prompts import TRIPARTITE_IMAGE_ANALYSIS_PROMPT
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import PerceptionSedimentRepository
+from backend.storage.repositories import PerceptionSedimentRepository
 from backend.utils.security import safe_resolve_path, sanitize_filename
 from backend.utils.token_counter import estimate_tokens
 

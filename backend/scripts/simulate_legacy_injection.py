@@ -17,7 +17,7 @@ from backend.modules.belief_engine import parse_vector_16d
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.services.belief import BeliefService
 from backend.storage.database import get_db_path
-from backend.storage.repository import BeliefRepository, MessageRepository
+from backend.storage.repositories import BeliefRepository, MessageRepository
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("simulate_legacy_injection")

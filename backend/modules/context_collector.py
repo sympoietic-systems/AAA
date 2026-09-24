@@ -2,7 +2,7 @@ import re
 from typing import Any
 
 from backend.pipeline.metadata import ModuleMeta
-from backend.storage.repository import MessageRepository
+from backend.storage.repositories import MessageRepository
 from backend.utils.token_counter import caveman_compress
 
 from .base import ProcessingModule

@@ -4,7 +4,7 @@ import logging
 from backend.config import load_config
 from backend.modules.llm_client import BaseLLMProvider, generate_unified
 from backend.storage.database import get_db_path
-from backend.storage.repository import BeliefRepository
+from backend.storage.repositories import BeliefRepository
 
 from ..base import BackgroundAction
 
@@ -115,7 +115,7 @@ Active beliefs already in Symbia's database:
 
         # Math fallback check: if no target ID resolved, check cosine similarities
         from backend.modules.belief_engine import parse_vector_16d
-        from backend.utils.similarity import cosine_similarity
+        from backend.utils.vector import cosine_similarity
 
         prop_vec = parse_vector_16d(proposal.initial_signature)
         if prop_vec is not None:

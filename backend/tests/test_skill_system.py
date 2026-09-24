@@ -6,7 +6,7 @@ import uuid
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import BeliefRepository, SkillRepository
+from backend.storage.repositories import BeliefRepository, SkillRepository
 
 
 def _setup_db(name="aaa_skill_test.db"):

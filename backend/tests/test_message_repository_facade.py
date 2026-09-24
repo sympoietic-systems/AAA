@@ -5,7 +5,6 @@ from backend.storage.repositories.conversation.message_core import MessageCoreRe
 from backend.storage.repositories.conversation.message_graph import MessageGraphRepository
 from backend.storage.repositories.conversation.message_history import MessageHistoryRepository
 from backend.storage.repositories.conversation.message_vector import MessageVectorRepository
-from backend.storage.repository import MessageRepository as LegacyMessageRepository
 
 
 def _declared_methods(repository_type: type[object]) -> set[str]:
@@ -19,7 +18,6 @@ def _declared_methods(repository_type: type[object]) -> set[str]:
 def test_message_repository_imports_resolve_to_compatibility_facade():
     assert PackageMessageRepository is MessageRepository
     assert ConversationMessageRepository is MessageRepository
-    assert LegacyMessageRepository is MessageRepository
 
 
 def test_message_repository_facade_has_focused_non_overlapping_collaborators():

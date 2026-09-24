@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from backend.services.belief import BeliefService
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import BeliefRepository, NotificationRepository
+from backend.storage.repositories import BeliefRepository, NotificationRepository
 
 
 class MockState:

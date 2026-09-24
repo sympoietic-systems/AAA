@@ -6,7 +6,7 @@ root_path = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, root_path)
 
 from backend.storage.database import get_db_path, init_db  # noqa: E402
-from backend.storage.repository import ConversationRepository  # noqa: E402
+from backend.storage.repositories import ConversationRepository  # noqa: E402
 
 db_path = str(get_db_path("data/aaa_test_tags.db"))
 conn = init_db(db_path)

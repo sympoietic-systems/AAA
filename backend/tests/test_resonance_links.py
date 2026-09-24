@@ -9,7 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.storage.database import init_db
-from backend.storage.repository import (
+from backend.storage.repositories import (
     ConversationRepository,
     MessageRepository,
 )

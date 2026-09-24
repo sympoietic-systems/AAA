@@ -10,7 +10,7 @@ import pytest
 # Ensure parent directory is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.storage.repository import ConversationRepository, SemanticKnotRepository
+from backend.storage.repositories import ConversationRepository, SemanticKnotRepository
 
 
 @pytest.fixture
@@ -120,7 +120,7 @@ async def test_semantic_knot_compaction_trigger():
         instance = MockScorer.return_value
         instance.score_async = AsyncMock(return_value=np.ones(16, dtype="float32"))
 
-        from backend.api.routes import _fire_and_forget_semantic_knot_compaction
+        from backend.services.semantic_knot import SemanticKnotService
 
         task_futures = []
 
@@ -134,7 +134,7 @@ async def test_semantic_knot_compaction_trigger():
             mock_loop.create_task = mock_create_task
             mock_loop_getter.return_value = mock_loop
 
-            _fire_and_forget_semantic_knot_compaction(mock_app_state, "conv_test")
+            SemanticKnotService.fire_and_forget(mock_app_state, "conv_test")
 
         assert len(task_futures) == 1
         await task_futures[0]

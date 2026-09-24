@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np
 
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repository import ErrorLogRepository, MessageRepository
+from backend.storage.repositories import ErrorLogRepository, MessageRepository
 
 db_path = str(get_db_path("data/aaa_test.db"))
 conn = init_db(db_path)
