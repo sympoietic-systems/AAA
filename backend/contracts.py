@@ -20,13 +20,13 @@ class MetricsInfo(BaseModel):
     conceptual_velocity: float | None = None
     divergence_resolution_ratio: float | None = None
     paskian_health: float | None = None
-    phase_shifts: list[dict] | None = None
+    phase_shifts: list[dict[str, object]] | None = None
 
 
 class HomeostaticRecommendations(BaseModel):
-    temperature: dict | None = None
-    presence_penalty: dict | None = None
-    frequency_penalty: dict | None = None
+    temperature: dict[str, object] | None = None
+    presence_penalty: dict[str, object] | None = None
+    frequency_penalty: dict[str, object] | None = None
     state: str = "healthy"
     triggered_flags: list[str] = Field(default_factory=list)
 

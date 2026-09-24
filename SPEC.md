@@ -91,7 +91,7 @@ T6|x|replace file copy backup with configured SQLite online backup + restore tes
 T7|x|redact formatted exceptions/access URLs + regression tests; normalize Glitch domain/API boundary|V11,V14,V16,V17,I.error
 T8|x|clamp request schemas + regression tests; remove FastAPI coupling from services; tighten typed dependencies/offloading|V13,V15,V16,V17,I.api,I.error
 T9|x|write ADR; run focused + full pytest, ruff check/format; clean ephemeral artifacts|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21
-T10|.|characterize sync-route/broad-catch/import/warning debt; add monotonic architecture tests; pin `mypy` + strict initial allowlist; correct stale auth docs|V8,V15,V16,V17,V23,V28,V30,V31,V33
+T10|x|characterize sync-route/broad-catch/import/warning debt; add monotonic architecture tests; pin `mypy` + strict initial allowlist; correct stale auth docs|V8,V15,V16,V17,V23,V28,V30,V31,V33
 T11|.|add typed `AppServices` assembly + required dependency helper; keep object-identical temporary `app.state.*` aliases; migrate dependency getters|V12,V17,V24,V25,V31,V32,I.internal
 T12|.|move conversation/history/agent/note/file/preview DB workflows into typed service use cases; offload once per use case|V15,V17,V23,V24,V31,V33
 T13|.|move research task/step/artifact DB workflows into typed services; isolate state transitions & transaction scopes; empty sync-route debt inventory|V10,V12,V15,V23,V24,V29,V31,V33,V34
@@ -111,3 +111,5 @@ id|date|cause|fix
 B1|2026-09-23|`backend.services.__init__` eager imports → `services.file` circular import|V22
 B2|2026-09-23|`backend.api.routes.__init__` eager compatibility re-exports → route import cycle|V22
 B3|2026-09-23|ambient `AAA_PASSWORD` made unrelated route tests environment-dependent|V7
+B4|2026-09-23|`backend.core.__init__` eager exports expanded leaf imports/type-check scope across packages|V22
+B5|2026-09-23|new architecture test imports violated configured stdlib ordering|V30

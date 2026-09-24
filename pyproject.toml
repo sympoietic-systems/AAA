@@ -30,6 +30,7 @@ dev = [
 
 [dependency-groups]
 dev = [
+    "mypy==2.3.1",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
     "ruff>=0.9.0",
@@ -40,6 +41,20 @@ lint = ["ruff>=0.9.0"]
 asyncio_mode = "auto"
 testpaths = ["backend/tests", "benchmarks/tests"]
 norecursedirs = ["backend/tests/legacy", ".venv", "node_modules"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+follow_imports = "silent"
+files = [
+    "backend/contracts.py",
+    "backend/core/auth.py",
+    "backend/errors.py",
+    "backend/quality",
+]
+exclude = ["backend/tests"]
+pretty = true
+show_error_codes = true
 
 
 [tool.ruff]
@@ -77,4 +92,3 @@ indent-style = "space"
 
 [tool.ruff.lint.isort]
 known-first-party = ["backend"]
-

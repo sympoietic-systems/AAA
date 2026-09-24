@@ -9,7 +9,7 @@ class GlitchError(Exception):
         kind: str = "service_error",
         status_code: int = 400,
         entity: str | None = None,
-        details: dict | None = None,
+        details: dict[str, object] | None = None,
     ) -> None:
         super().__init__(message)
         self.message = message

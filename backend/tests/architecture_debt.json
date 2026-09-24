@@ -1,0 +1,268 @@
+{
+  "broad_catches": {
+    "backend/metabolisation/bifurcation.py": 5,
+    "backend/metabolisation/consolidation.py": 5,
+    "backend/metabolisation/daemon.py": 27,
+    "backend/metabolisation/dream_context.py": 10,
+    "backend/metabolisation/dream_executor.py": 11,
+    "backend/metabolisation/dream_prompts.py": 1,
+    "backend/metabolisation/dream_research.py": 6,
+    "backend/metabolisation/research_metabolism.py": 15,
+    "backend/metabolisation/scheduler.py": 13,
+    "backend/metabolisation/sedimentation.py": 1,
+    "backend/metabolisation/skill_metabolism.py": 6,
+    "backend/modules/background_tasks/actions/document_collision.py": 4,
+    "backend/modules/background_tasks/actions/dream_topic_decision.py": 1,
+    "backend/modules/background_tasks/actions/metabolize_skill.py": 1,
+    "backend/modules/background_tasks/actions/refine_belief.py": 2,
+    "backend/modules/background_tasks/actions/refine_skill.py": 6,
+    "backend/modules/background_tasks/actions/resonance_finder.py": 1,
+    "backend/modules/background_tasks/actions/structure_extraction.py": 4,
+    "backend/modules/background_tasks/actions/summarize.py": 7,
+    "backend/modules/belief/decay.py": 3,
+    "backend/modules/belief/ecosystem.py": 3,
+    "backend/modules/belief/perception_handlers.py": 5,
+    "backend/modules/belief_engine.py": 20,
+    "backend/modules/commitment_store.py": 2,
+    "backend/modules/consolidation_checkpoint.py": 3,
+    "backend/modules/context_collector.py": 1,
+    "backend/modules/conversation_metrics.py": 1,
+    "backend/modules/digester.py": 1,
+    "backend/modules/embedder.py": 3,
+    "backend/modules/expertise_engine.py": 1,
+    "backend/modules/llm_client.py": 10,
+    "backend/modules/providers/typesafe_provider.py": 1,
+    "backend/modules/retrieval/rhizome_web_probe.py": 1,
+    "backend/modules/retrieval/sedimentation_retrieval.py": 1,
+    "backend/modules/retrieval/web_retrieval.py": 6,
+    "backend/modules/sensory/perception.py": 18,
+    "backend/modules/sensory/perception_prompts.py": 1,
+    "backend/modules/sensory/trait_computer.py": 2,
+    "backend/modules/skills/skill_activator.py": 5,
+    "backend/modules/skills/skill_workshop.py": 4,
+    "backend/modules/structural_engine.py": 8,
+    "backend/services/annotations.py": 1,
+    "backend/services/background_tasks.py": 7,
+    "backend/services/backup.py": 1,
+    "backend/services/belief.py": 8,
+    "backend/services/belief_serializer.py": 1,
+    "backend/services/chat.py": 14,
+    "backend/services/consolidation.py": 1,
+    "backend/services/daily_summary.py": 3,
+    "backend/services/export/research.py": 10,
+    "backend/services/file.py": 2,
+    "backend/services/metrics.py": 1,
+    "backend/services/note.py": 1,
+    "backend/services/research/cache_manager.py": 3,
+    "backend/services/research/context_builder.py": 4,
+    "backend/services/research/orchestrator.py": 13,
+    "backend/services/research/search_tool.py": 5,
+    "backend/services/research/sensory_affordances.py": 5,
+    "backend/services/research/steps/consolidate.py": 7,
+    "backend/services/research/steps/digest.py": 6,
+    "backend/services/research/steps/document_digestion.py": 4,
+    "backend/services/research/steps/evaluate.py": 2,
+    "backend/services/research/steps/parse.py": 6,
+    "backend/services/research/steps/plan.py": 7,
+    "backend/services/research/steps/reflect.py": 4,
+    "backend/services/research/steps/search.py": 3,
+    "backend/services/research/steps/synthesize.py": 7,
+    "backend/services/research/task_manager.py": 13,
+    "backend/services/research/task_state.py": 3,
+    "backend/services/semantic_knot.py": 2,
+    "backend/services/skill.py": 7,
+    "backend/services/title.py": 2
+  },
+  "project_warning_debt": [
+    {
+      "path": "backend/storage/repositories/conversation/notification.py",
+      "pattern": "datetime.utcnow()"
+    },
+    {
+      "path": "backend/tests/test_skill_system.py",
+      "pattern": "def test_skills_api_flux_control"
+    },
+    {
+      "path": "backend/tests/test_skill_system.py",
+      "pattern": "def test_skills_version_api"
+    }
+  ],
+  "sync_route_calls": {
+    "backend/api/routes/agent.py": {
+      "commit_repo.get_by_id": 2,
+      "commit_repo.update": 2,
+      "exp_repo.get_by_id": 2,
+      "exp_repo.update": 2,
+      "ps_repo.get": 1,
+      "ps_repo.upsert": 2
+    },
+    "backend/api/routes/conversations.py": {
+      "ConversationService.build_conversation_info": 4,
+      "ExportService.build_export": 1,
+      "checkpoint_repo.get_latest": 1,
+      "checkpoint_repo.get_latest_checkpoint_for_path": 1,
+      "checkpoint_repo.save": 1,
+      "checkpoint_repo.update_human_summary": 1,
+      "conv_repo.delete": 1,
+      "conv_repo.get": 5,
+      "conv_repo.get_tags": 1,
+      "conv_repo.touch": 2,
+      "conv_repo.update_title": 2,
+      "memory_node_repo.get_nodes": 1,
+      "msg_repo.delete_message": 1,
+      "msg_repo.get_ancestor_path": 1,
+      "msg_repo.get_by_id": 1,
+      "msg_repo.get_message_links": 1,
+      "msg_repo.get_messages_by_conversation": 1,
+      "msg_repo.get_recent": 1,
+      "note_repo.get_notes_by_conversation": 1,
+      "repo.add_message_link": 1,
+      "repo.confirm_message_link": 1,
+      "repo.delete_message_link": 1,
+      "repo.get_ancestor_path": 1,
+      "repo.get_message_links": 1,
+      "repo.get_messages_by_conversation": 1,
+      "repo.get_parallel_messages_by_similarity": 1,
+      "repo.insert": 1
+    },
+    "backend/api/routes/daemon.py": {
+      "DaemonService.get_status": 1,
+      "repo.get_recent": 1
+    },
+    "backend/api/routes/errors.py": {
+      "error_repo.get_recent": 1
+    },
+    "backend/api/routes/files.py": {
+      "conv_repo.create": 1,
+      "conv_repo.get": 1,
+      "conv_repo.touch": 1,
+      "conv_repo.update_title": 1,
+      "perception_repo.create_file": 1,
+      "perception_repo.delete_file": 1,
+      "perception_repo.find_file_by_name": 1,
+      "perception_repo.get_chunks_by_file": 1,
+      "perception_repo.get_exogenous_stream_by_file": 1,
+      "perception_repo.get_files_by_conversation": 4,
+      "perception_repo.get_injections_for_conversation": 1,
+      "perception_repo.get_perception_log_by_image": 1,
+      "perception_repo.update_file": 1
+    },
+    "backend/api/routes/health.py": {
+      "HealthService.check": 1
+    },
+    "backend/api/routes/history.py": {
+      "MetricsService.build_history": 2,
+      "repo.count_messages": 1,
+      "repo.get_ancestor_path": 1,
+      "repo.get_by_id": 2,
+      "repo.get_recent_with_metrics": 1,
+      "repo.get_recent_with_metrics_for_path": 1
+    },
+    "backend/api/routes/memory_nodes.py": {
+      "repo.get_nodes": 1
+    },
+    "backend/api/routes/metrics.py": {
+      "MetricsService.parse_phase_shifts": 1,
+      "metrics_repo.get_aggregates": 1,
+      "metrics_repo.get_latest": 1
+    },
+    "backend/api/routes/notes.py": {
+      "NoteService.delete": 2,
+      "NoteService.get": 2,
+      "NoteService.list_by_asset": 1,
+      "NoteService.list_by_conversation": 2,
+      "NoteService.update": 2
+    },
+    "backend/api/routes/refusals.py": {
+      "repo.count": 1,
+      "repo.list_by_agent": 1
+    },
+    "backend/api/routes/research/artifacts.py": {
+      "ExportService.build_research_export": 1,
+      "ExportService.build_research_stages_export": 1,
+      "asset_repo.get_by_task": 1,
+      "branch_repo.get_by_task": 1,
+      "manager.get_task": 2,
+      "manager.list_tasks": 1,
+      "note_repo.get_notes_by_task": 2,
+      "plan_repo.get_by_task": 2,
+      "result_repo.get_by_task": 2,
+      "step_repo.get_by_task": 2
+    },
+    "backend/api/routes/research/steps.py": {
+      "NoteService.list_by_asset": 1,
+      "NoteService.list_by_task_with_steps": 1,
+      "knot_repo.get_by_conversation": 1,
+      "manager.get_task": 4,
+      "manager.rerun_task": 1,
+      "manager.task_repo.update": 2,
+      "manager.transition": 2,
+      "memory_node_repo.get_by_source": 1,
+      "memory_node_repo.get_nodes": 1,
+      "meta_repo.get_by_branch": 1,
+      "meta_repo.get_by_step": 1,
+      "meta_repo.get_by_task": 1,
+      "plan_repo.get_by_task": 1,
+      "result_repo.get_by_task": 1,
+      "state.research_task_manager.get_task": 4,
+      "step_repo.get": 1,
+      "step_repo.get_by_task": 3,
+      "task_repo.get": 2
+    },
+    "backend/api/routes/research/tasks.py": {
+      "manager.approve": 1,
+      "manager.cancel": 1,
+      "manager.continue_task": 1,
+      "manager.create_task": 4,
+      "manager.delete": 1,
+      "manager.get_active_summary": 1,
+      "manager.get_task": 11,
+      "manager.list_tasks": 1,
+      "manager.queue": 5,
+      "manager.reject": 1,
+      "manager.rerun_task": 1,
+      "manager.run_task": 1,
+      "perception_repo.get_all_files_across_conversations": 1,
+      "perception_repo.get_files_by_conversation": 1,
+      "state.research_branch_repo.get_by_task": 1,
+      "state.scraped_asset_repo.get_by_task": 1,
+      "state.scraped_asset_repo.get_lightweight_by_task_ids": 1
+    },
+    "backend/api/routes/search.py": {
+      "memory_node_repo.search_memory_nodes_text": 1,
+      "message_repo.get_embeddings_and_signatures_for_search": 1,
+      "message_repo.get_glitch_salience_messages": 1,
+      "message_repo.search_text": 1,
+      "note_repo.search_notes_text": 1
+    },
+    "backend/api/routes/sediment.py": {
+      "ExportService.build_research_report_content": 1,
+      "FileService.cache_file": 1,
+      "FileService.process_and_summarize": 1,
+      "SedimentService.get_injections": 1,
+      "SedimentService.inject": 1,
+      "SedimentService.list_files": 1,
+      "SedimentService.remove_injection": 1,
+      "perception_repo.check_file_exists": 1,
+      "perception_repo.create_file": 1,
+      "perception_repo.ensure_conversation_exists": 2,
+      "perception_repo.set_display_name": 3,
+      "task_repo.get": 3,
+      "task_repo.list_all": 1
+    },
+    "backend/api/routes/skills.py": {
+      "skill_repo.get_version": 1,
+      "skill_repo.list_recent_events": 1,
+      "skill_repo.list_versions": 1
+    },
+    "backend/api/routes/tags.py": {
+      "conv_repo.add_tag": 1,
+      "conv_repo.get_all_unique_tags": 1,
+      "conv_repo.remove_tag": 1
+    },
+    "backend/api/routes/tokens.py": {
+      "conv_repo.get": 1,
+      "repo.get_token_totals": 1
+    }
+  }
+}

@@ -36,8 +36,7 @@ async def verify_password(
     The /api/auth/verify endpoint is always allowed (used by frontend to
     detect whether auth is enabled before prompting for a password).
 
-    Also accepts token via query parameter (?token=...) for download links
-    that can't use Authorization headers (e.g., window.open navigation).
+    Credentials are accepted only through the Authorization header.
     """
     if not auth_enabled():
         return
