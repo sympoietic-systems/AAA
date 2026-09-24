@@ -65,6 +65,7 @@ files = [
     "backend/services/keyed_lock.py",
     "backend/services/preview.py",
     "backend/services/research/api.py",
+    "backend/services/research/step_executor.py",
     "backend/storage/repositories/conversation/message.py",
     "backend/storage/repositories/conversation/message_core.py",
     "backend/storage/repositories/conversation/message_graph.py",

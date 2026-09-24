@@ -100,7 +100,7 @@ T14|x|replace `ChatService._conversation_locks` with app-owned bounded keyed loc
 T15|x|replace Pydantic mutable defaults; use UTC-aware timestamps; fix unawaited `AsyncMock`; assert project-owned warning-free suite|V13,V17,V27
 T16|x|split `MessageRepository` into core/history/vector-search/graph collaborators behind compatibility facade|V17,V22,V28,V30
 T17|x|split `modules/llm_client.py` into provider protocol, HTTP providers, pool/rate-limit policy, JSON parser; preserve facade imports|V2,V8,V11,V17,V28,V29,V30
-T18|.|split research orchestrator into state store, step executor, sedimentation sink; retain orchestrator facade & state-machine tests|V12,V15,V17,V23,V28,V29,V30,V31
+T18|x|split research orchestrator into state store, step executor, sedimentation sink; retain orchestrator facade & state-machine tests|V12,V15,V17,V23,V28,V29,V30,V31
 T19|.|split belief service into query/proposal/mutation/version use cases; add narrow repository ports & atomic mutation tests|V10,V15,V17,V23,V28,V29,V30,V31,V34
 T20|.|split dream daemon trigger policy/execution/maintenance jobs; retain lifecycle owner & bounded worker semantics|V5,V12,V15,V17,V23,V28,V29,V30
 T21|.|define domain exception taxonomy/translation; audit refactored modules; install monotonic broad-catch boundary allowlist|V11,V14,V17,V29,V31,V33
@@ -134,3 +134,8 @@ B22|2026-09-23|the ChatService lock rewrite missed Ruff's formatting gate|V30
 B23|2026-09-23|untyped `with_connection` erased repository signatures and hid stale downstream casts|V30
 B24|2026-09-24|LLM extraction carried bare mappings and untyped provider kwargs into the strict allowlist|V30
 B25|2026-09-24|narrowing parser exceptions left the extracted module outside Ruff's canonical format|V30
+B26|2026-09-24|step executor extraction passed the collaborator where phase processors require the orchestrator facade|V17,V28
+B27|2026-09-24|legacy defensive routing-patch branch obscured the typed `RoutingPatch` contract|V30
+B28|2026-09-24|executor extraction relocated approved orchestration catches to an unbaselined path|V29,V33
+B29|2026-09-24|mechanical executor extraction missed Ruff formatting in both touched modules|V30
+B30|2026-09-24|sedimentation-sink wiring changed a formatted call block without rerunning Ruff first|V30
