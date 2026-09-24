@@ -31,7 +31,7 @@ def list_notifications(
     dismissed: bool | None = None,
     type: str | None = Query(default=None, max_length=50),
     search: str | None = Query(default=None, max_length=500),
-    limit: int = Query(default=50, ge=1, le=100),
+    limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     request: Request = None,
 ):

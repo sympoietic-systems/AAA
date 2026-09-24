@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.get("/history", response_model=HistoryResponse)
 async def history(
-    limit: int = Query(default=50, ge=1, le=100),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     conversation_id: str = Query(default="", max_length=100, pattern=r"^$|^[\w-]+$"),
     service: HistoryService = Depends(get_history_service),

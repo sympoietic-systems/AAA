@@ -1,13 +1,18 @@
 import ast
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from backend.api.deps import get_history_service
+from backend.api.routes.history import router as history_router
+from backend.api.routes.notifications import router as notifications_router
 from backend.api.routes.search import router as search_router
 from backend.api.schemas import ChatRequest, GenerateRequest
+from backend.contracts import HistoryResponse
 from backend.services.daily_summary import DailySummaryService
 
 
@@ -38,6 +43,40 @@ def test_search_query_bounds_are_enforced_before_route_execution():
     app.include_router(search_router, prefix="/api")
     response = TestClient(app).get("/api/search", params={"q": "x" * 501})
     assert response.status_code == 422
+
+
+def test_notifications_limit_bounds():
+    app = FastAPI()
+    app.include_router(notifications_router, prefix="/api")
+    mock_repo = MagicMock()
+    mock_repo.list_all.return_value = []
+    app.state.notification_repo = mock_repo
+    client = TestClient(app)
+
+    # 150 is valid (used by TracesSection)
+    response_150 = client.get("/api/notifications", params={"limit": 150})
+    assert response_150.status_code == 200
+
+    # > 200 is rejected at the boundary
+    response_201 = client.get("/api/notifications", params={"limit": 201})
+    assert response_201.status_code == 422
+
+
+def test_history_limit_bounds():
+    app = FastAPI()
+    app.include_router(history_router, prefix="/api")
+    mock_service = MagicMock()
+    mock_service.list_history = AsyncMock(return_value=HistoryResponse(messages=[], count=0))
+    app.dependency_overrides[get_history_service] = lambda: mock_service
+    client = TestClient(app)
+
+    # 1000 is valid (used by conversation refresh)
+    response_1000 = client.get("/api/history", params={"limit": 1000})
+    assert response_1000.status_code == 200
+
+    # > 1000 is rejected at the boundary
+    response_1001 = client.get("/api/history", params={"limit": 1001})
+    assert response_1001.status_code == 422
 
 
 def test_daily_summary_uses_domain_validation_error():
