@@ -1,8 +1,9 @@
-# Backend Security & Refactoring
+# Backend Security & Python Refactoring
 
 ## §G
 
 Harden backend network, upload, auth, persistence, logging, lifecycle boundaries; preserve valid API behavior & existing sediment.
+Refactor async I/O, dependency typing, state ownership, oversized modules, error policy, tests, and static analysis without contract drift.
 
 ## §C
 
@@ -16,6 +17,10 @@ Harden backend network, upload, auth, persistence, logging, lifecycle boundaries
 - Tests ⊥ live LLM calls, production DB, external network.
 - No migration unless persisted schema changes.
 - New architectural boundary → ADR + Symbia consultation when MCP available; unavailable consultation recorded, ⊥ fabricated.
+- Refactors behavior-preserving; characterize seam before move; public imports remain via thin facade until callers migrate.
+- One bounded use case owns each sync→async transition; ⊥ nested `to_thread`.
+- Static typing lands as ratchet: strict new/refactored modules first; expand only when slice clean.
+- Split by responsibility & hidden decision; ⊥ arbitrary line-count slicing or pass-through service wrappers.
 
 ## §I
 
@@ -32,6 +37,10 @@ error: Glitch → `{status,kind,message,entity?,details?}`; ⊥ internal path/tr
 env: `AAA_PASSWORD` → optional local auth secret
 env: upload limits & worker concurrency → positive bounded integers
 env: outbound fetch limits & timeouts → positive bounded numbers
+internal: `app.state.services` → typed `AppServices`; legacy state aliases temporary
+internal: route → typed service use case → repository/module ports
+internal: conversation serialization → app-scoped bounded lock registry
+quality: `mypy` strict package allowlist → expands per completed refactor
 
 ## §V
 
@@ -57,6 +66,15 @@ V19: `.svg|.html|.htm` uploads blocked as active content; extension allowlist �
 V20: rejected upload batch → ⊥ conversation/file DB mutation & ⊥ partial cache residue.
 V21: user-controlled outbound fetch → automatic redirects disabled; each DNS result public at connection boundary.
 V22: backend package `__init__.py` → import-safe; ⊥ eager cross-package re-export cycles.
+V23: async route/service → sync DB/file/CPU use case crosses exactly one offload boundary; ⊥ direct sync repository call on event loop.
+V24: FastAPI dependency getter → concrete annotated value or structured 503; ⊥ optional `Any`/silent `None`.
+V25: app runtime dependencies owned by typed `AppServices`; lifecycle assembly/shutdown share same instance.
+V26: conversation lock count bounded by active keys; locks app/loop-scoped; idle key removed.
+V27: Pydantic mutable field default → `default_factory`; timestamps UTC-aware; project-owned test warnings = 0.
+V28: module split preserves public behavior/import path; extracted module owns coherent policy & tests.
+V29: service/module catches expected domain errors; broad catch only at process/API/worker boundary + redacted context + re-raise/terminal state.
+V30: strict type checker passes configured refactor allowlist; new module enters allowlist in same task.
+V31: route/controller owns HTTP translation only; orchestration & repository sequencing live in service use case.
 
 ## §T
 
@@ -70,6 +88,19 @@ T6|x|replace file copy backup with configured SQLite online backup + restore tes
 T7|x|redact formatted exceptions/access URLs + regression tests; normalize Glitch domain/API boundary|V11,V14,V16,V17,I.error
 T8|x|clamp request schemas + regression tests; remove FastAPI coupling from services; tighten typed dependencies/offloading|V13,V15,V16,V17,I.api,I.error
 T9|x|write ADR; run focused + full pytest, ruff check/format; clean ephemeral artifacts|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21
+T10|.|characterize direct sync-repo route seams, import contracts, warning baseline; add architecture regression tests; correct stale auth docs|V8,V15,V16,V17,V23,V28,V31
+T11|.|add typed `AppServices` assembly + required dependency helper; keep temporary `app.state.*` aliases; migrate dependency getters|V12,V17,V24,V25,V31,I.internal
+T12|.|move conversation/history/agent/note/file/preview DB workflows into typed service use cases; offload once per use case|V15,V17,V23,V24,V31
+T13|.|move research task/step/artifact DB workflows into typed services; isolate state transitions & transaction scopes|V10,V12,V15,V23,V24,V29,V31
+T14|.|replace `ChatService._conversation_locks` with app-owned bounded keyed lock registry + cancellation/concurrency tests|V12,V26,I.internal
+T15|.|replace Pydantic mutable defaults; use UTC-aware timestamps; fix unawaited `AsyncMock`; assert project-owned warning-free suite|V13,V17,V27
+T16|.|split `MessageRepository` into core/history/vector-search/graph collaborators behind compatibility facade|V17,V22,V28,V30
+T17|.|split `modules/llm_client.py` into provider protocol, HTTP providers, pool/rate-limit policy, JSON parser; preserve facade imports|V2,V8,V11,V17,V28,V29,V30
+T18|.|split research orchestrator into state store, step executor, sedimentation sink; retain orchestrator facade & state-machine tests|V12,V15,V17,V23,V28,V29,V30,V31
+T19|.|split belief service into query/proposal/mutation/version use cases; add narrow repository ports & atomic mutation tests|V10,V15,V17,V23,V28,V29,V30,V31
+T20|.|split dream daemon trigger policy/execution/maintenance jobs; retain lifecycle owner & bounded worker semantics|V5,V12,V15,V17,V23,V28,V29,V30
+T21|.|audit broad catches; define domain exception taxonomy/translation; remove swallowed failures and path-dependent messages|V11,V14,V17,V29,V31
+T22|.|add pinned `mypy` dev gate + strict allowlist; expand across refactored slices; ADR; full pytest/ruff/type/frontend gates; clean artifacts|V17,V18,V23,V24,V25,V26,V27,V28,V29,V30,V31,I.quality
 
 ## §B
 
