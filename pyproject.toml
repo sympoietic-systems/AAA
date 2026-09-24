@@ -52,6 +52,7 @@ strict = true
 follow_imports = "silent"
 files = [
     "backend/contracts.py",
+    "backend/api/exceptions.py",
     "backend/core/auth.py",
     "backend/errors.py",
     "backend/modules/llm_client.py",
@@ -63,6 +64,7 @@ files = [
     "backend/metabolisation/dream_collaborator.py",
     "backend/metabolisation/dream_maintenance.py",
     "backend/metabolisation/dream_trigger_policy.py",
+    "backend/metabolisation/daemon.py",
     "backend/bootstrap/services.py",
     "backend/services/agent.py",
     "backend/services/belief.py",
@@ -77,6 +79,10 @@ files = [
     "backend/services/preview.py",
     "backend/services/research/api.py",
     "backend/services/research/step_executor.py",
+    "backend/services/research/orchestrator.py",
+    "backend/storage/connection.py",
+    "backend/storage/repositories/base.py",
+    "backend/storage/repositories/cognitive/belief.py",
     "backend/storage/repositories/conversation/message.py",
     "backend/storage/repositories/conversation/message_core.py",
     "backend/storage/repositories/conversation/message_graph.py",

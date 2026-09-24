@@ -38,3 +38,22 @@ async def test_execute_step_remains_a_compatibility_delegate():
 
     assert result == {"next_phase": "searching"}
     orchestrator._step_executor.execute.assert_awaited_once_with("task-1")
+
+
+@pytest.mark.asyncio
+async def test_research_metabolism_uses_initialized_structural_scorer():
+    orchestrator = _orchestrator()
+    metabolism = SimpleNamespace(metabolize_perception=AsyncMock())
+    orchestrator._state.belief_metabolism = metabolism
+    orchestrator._structural_scorer.score_async = AsyncMock(return_value=[0.25] * 16)
+
+    await orchestrator._metabolize_step("task-123456", "reflection", ["finding"])
+
+    orchestrator._structural_scorer.score_async.assert_awaited_once_with("finding")
+    metabolism.metabolize_perception.assert_awaited_once_with(
+        conversation_id="",
+        source_id="research:task-123:reflection",
+        source_type="research_step",
+        structural_signature=[0.25] * 16,
+        perturbation=1.0,
+    )

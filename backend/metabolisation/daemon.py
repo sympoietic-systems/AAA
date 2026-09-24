@@ -10,6 +10,7 @@ import logging
 import time
 from collections import deque
 from datetime import UTC, datetime
+from typing import Any
 
 from backend.metabolisation.consolidation import ConsolidationMixin
 from backend.metabolisation.dream_context import DreamContextMixin
@@ -39,7 +40,7 @@ class AutopoieticDreamDaemon(
 ):
     """Background daemon that triggers autonomous self-reflection (dream) cycles."""
 
-    def __init__(self, app_state):
+    def __init__(self, app_state: Any) -> None:
         self.app_state = app_state
         self.config = getattr(app_state, "config", {})
         self.message_repo = app_state.message_repo
@@ -80,12 +81,12 @@ class AutopoieticDreamDaemon(
         self.last_dream_time = 0.0
         self.last_drift_time = 0.0
         self.is_running = False
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[None] | None = None
 
         # Dream telemetry
         self.last_dream_action: str | None = None
         self.dream_action_counts: dict[str, int] = {}
-        self._recent_prompt_hashes: deque = deque(maxlen=self.prompt_hash_window)
+        self._recent_prompt_hashes: deque[str] = deque(maxlen=self.prompt_hash_window)
 
     def start(self) -> None:
         if not self.enabled:
@@ -106,7 +107,7 @@ class AutopoieticDreamDaemon(
         if self._task:
             await asyncio.gather(self._task, return_exceptions=True)
 
-    def get_status(self) -> dict:
+    def get_status(self) -> dict[str, Any]:
         now = time.time()
         last_msg_ts = self.message_repo.get_last_message_timestamp()
         idle_time = now - last_msg_ts.replace(tzinfo=UTC).timestamp() if last_msg_ts else 0.0

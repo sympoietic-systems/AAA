@@ -2,6 +2,7 @@ import json
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 from backend.storage.connection import with_connection
 from backend.storage.models import BeliefEvent, BeliefNode, BeliefProposal, BeliefStatementVersion
@@ -288,7 +289,7 @@ class BeliefRepository(BaseRepository):
         conn = self._conn()
         row = conn.execute("SELECT last_reinforced_at FROM belief_nodes WHERE id = ?", (belief_id,)).fetchone()
         if row:
-            return row["last_reinforced_at"]
+            return cast(str | None, row["last_reinforced_at"])
         return None
 
     @with_connection
@@ -395,7 +396,7 @@ class BeliefRepository(BaseRepository):
         self._commit(conn)
 
     @with_connection
-    def get_conversation_somatic_state(self, conversation_id: str) -> dict | None:
+    def get_conversation_somatic_state(self, conversation_id: str) -> dict[str, object] | None:
         conn = self._conn()
         row = conn.execute(
             "SELECT somatic_reservoir_ad, matrix_warping, immunological_directive_active FROM conversations WHERE id = ?",
@@ -427,7 +428,7 @@ class BeliefRepository(BaseRepository):
         self._commit(conn)
 
     @with_connection
-    def get_tensions_for_belief(self, belief_id: str) -> list:
+    def get_tensions_for_belief(self, belief_id: str) -> list[dict[str, object]]:
         conn = self._conn()
         rows = conn.execute(
             """SELECT * FROM belief_tensions WHERE belief_a_id = ? OR belief_b_id = ?
@@ -445,7 +446,7 @@ class BeliefRepository(BaseRepository):
         ]
 
     @with_connection
-    def get_active_tension_pairs(self, min_magnitude: float = 0.01) -> list[dict]:
+    def get_active_tension_pairs(self, min_magnitude: float = 0.01) -> list[dict[str, object]]:
         conn = self._conn()
         rows = conn.execute(
             "SELECT * FROM belief_tensions WHERE tension_magnitude >= ? ORDER BY tension_magnitude DESC",

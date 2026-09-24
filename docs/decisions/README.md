@@ -127,6 +127,7 @@ What becomes easier/harder?
 | [092](ADR-092-backend-architecture-decomposition-and-migration-squash.md) | Backend Architectural Decomposition, Agential Cuts, and Migration Squash | accepted | 2026-09-23 |
 | [093](ADR-093-frontend-membrane-hardening-ast-sanitization-code-splitting.md) | Frontend Membrane Hardening, Zero-XSS AST Sanitization, and Monolith Code-Splitting | accepted | 2026-09-23 |
 | [094](ADR-094-backend-security-boundaries-and-lifecycle.md) | Backend Security Boundaries and Resource Lifecycle | accepted | 2026-09-23 |
+| [095](ADR-095-backend-use-case-decomposition-and-progressive-typing.md) | Backend Use-Case Decomposition and Progressive Typing | accepted | 2026-09-24 |
 
 
 

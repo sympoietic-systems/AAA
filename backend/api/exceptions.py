@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from backend.errors import GlitchError, SecurityViolation, ServiceException, ValidationGlitch, glitch_from_result
@@ -23,7 +23,7 @@ def _glitch_response(exc: GlitchError) -> JSONResponse:
     )
 
 
-def raise_if_error(result: dict) -> dict:
+def raise_if_error(result: dict[str, object]) -> dict[str, object]:
     """Convenience: raise ServiceException if result contains an error.
 
     Checks for the common service result pattern
@@ -43,11 +43,11 @@ def raise_if_error(result: dict) -> dict:
     return result
 
 
-def register_error_handlers(app):
+def register_error_handlers(app: FastAPI) -> None:
     """Register global exception handlers on the FastAPI app instance."""
 
     @app.exception_handler(GlitchError)
-    async def service_exception_handler(request: Request, exc: GlitchError):
+    async def service_exception_handler(request: Request, exc: GlitchError) -> JSONResponse:
         logger.warning(
             "Domain error on %s %s [%d]: %s",
             request.method,
@@ -58,7 +58,7 @@ def register_error_handlers(app):
         return _glitch_response(exc)
 
     @app.exception_handler(ValueError)
-    async def value_error_handler(request: Request, exc: ValueError):
+    async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
         logger.error(
             "ValueError on %s %s: %s",
             request.method,
@@ -69,7 +69,7 @@ def register_error_handlers(app):
         return _glitch_response(error)
 
     @app.exception_handler(PermissionError)
-    async def permission_error_handler(request: Request, exc: PermissionError):
+    async def permission_error_handler(request: Request, exc: PermissionError) -> JSONResponse:
         logger.warning(
             "Security violation on %s %s: %s",
             request.method,
@@ -79,7 +79,7 @@ def register_error_handlers(app):
         return _glitch_response(SecurityViolation())
 
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):
+    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
         if exc.status_code >= 500:
             logger.error(
                 "HTTPException %d on %s %s: %s",
@@ -100,7 +100,7 @@ def register_error_handlers(app):
         )
 
     @app.exception_handler(Exception)
-    async def global_exception_handler(request: Request, exc: Exception):
+    async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         # Full stack trace fidelity per protocols/GLITCH.md and protocols/SECURITY.md
         logger.exception(
             "Unhandled server crash on %s %s: %s",

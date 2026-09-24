@@ -5,14 +5,14 @@ import threading
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from functools import wraps
-from typing import ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar, cast
 
 P = ParamSpec("P")
 R = TypeVar("R")
 
 
 class ConnectionTracker:
-    def __init__(self):
+    def __init__(self) -> None:
         self.active_conns: dict[str, sqlite3.Connection] = {}
         self.depth = 0
         self.atomic_depth = 0
@@ -97,7 +97,7 @@ def _get_tracked_connection(db_path: str | object) -> sqlite3.Connection:
             conn.execute("SELECT 1")
             tracker.active_conns[path_key] = conn
             _thread_conns.cached_conns[path_key] = conn
-            return conn
+            return cast(sqlite3.Connection, conn)
         except Exception:
             with contextlib.suppress(Exception):
                 conn.close()

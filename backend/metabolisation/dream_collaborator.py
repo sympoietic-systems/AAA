@@ -12,6 +12,7 @@ class DreamDaemonCollaborator:
     dream_action_counts: dict[str, int]
     last_dream_time: float
     last_reset_day: int
+    last_dream_action: str | None
 
     def __getattr__(self, name: str) -> Any:
         raise AttributeError(name)

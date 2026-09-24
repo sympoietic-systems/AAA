@@ -12,8 +12,9 @@ import contextlib
 import json
 import logging
 import uuid
-from typing import Any
+from typing import Any, cast
 
+from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.envelope_mapper import ResearchEnvelopeMapper
 from backend.services.research.sedimentation_queue import SedimentationPacketQueue
@@ -35,7 +36,7 @@ logger = logging.getLogger("aaa.research_orchestrator")
 
 
 class PipelineTransition:
-    def __init__(self, target_phase: str, condition: Any | None = None):
+    def __init__(self, target_phase: str, condition: Any | None = None) -> None:
         self.target_phase = target_phase
         self.condition = condition or (lambda out, env: True)
 
@@ -128,16 +129,21 @@ class SomaticResearchOrchestrator:
     Supports both auto (execute) and manual step-by-step (execute_step) modes.
     """
 
-    def __init__(self, app_state: Any):
+    def __init__(self, app_state: Any) -> None:
         self._state = app_state
         self._semaphore: asyncio.Semaphore | None = None
-        self._state_mgr = TaskStateManager(
+        state_manager_type = cast(Any, TaskStateManager)
+        cache_manager_type = cast(Any, CacheManager)
+        self._state_mgr = state_manager_type(
             task_repo=app_state.research_task_repo,
             plan_repo=getattr(app_state, "research_plan_repo", None),
             step_repo=getattr(app_state, "research_step_repo", None),
             meta_log_repo=getattr(app_state, "research_meta_log_repo", None),
         )
-        self._cache = CacheManager(task_repo=app_state.research_task_repo)
+        self._cache = cache_manager_type(task_repo=app_state.research_task_repo)
+        self._structural_scorer = CompositeStructuralScorer(
+            llm_provider=getattr(app_state, "structural_provider", None)
+        )
         self._sedimentation_sink = SedimentationPacketQueue()
         self._step_executor = ResearchStepExecutor(
             self,
@@ -149,64 +155,64 @@ class SomaticResearchOrchestrator:
     # ── Properties ──────────────────────────────────────────────────
 
     @property
-    def config(self) -> dict:
-        return self._state.config.get("research_orchestrator", {})
+    def config(self) -> dict[str, Any]:
+        return cast(dict[str, Any], self._state.config.get("research_orchestrator", {}))
 
     @property
-    def task_repo(self):
+    def task_repo(self) -> Any:
         return self._state.research_task_repo
 
     @property
-    def plan_repo(self):
+    def plan_repo(self) -> Any:
         return self._state.research_plan_repo
 
     @property
-    def step_repo(self):
+    def step_repo(self) -> Any:
         return self._state.research_step_repo
 
     @property
-    def step_result_repo(self):
+    def step_result_repo(self) -> Any:
         return self._state.research_step_result_repo
 
     @property
-    def asset_repo(self):
+    def asset_repo(self) -> Any:
         return getattr(self._state, "scraped_asset_repo", None)
 
     @property
-    def branch_repo(self):
+    def branch_repo(self) -> Any:
         return getattr(self._state, "research_branch_repo", None)
 
     @property
-    def _meta_log_repo(self):
+    def _meta_log_repo(self) -> Any:
         return getattr(self._state, "research_meta_log_repo", None)
 
     @property
     def max_reflect_rounds(self) -> int:
-        return self.config.get("max_reflect_rounds", 3)
+        return int(self.config.get("max_reflect_rounds", 3))
 
     @property
     def default_top_n(self) -> int:
-        return self.config.get("default_top_n", 3)
+        return int(self.config.get("default_top_n", 3))
 
     @property
     def satisfaction_threshold(self) -> float:
-        return self.config.get("satisfaction_threshold", 0.7)
+        return float(self.config.get("satisfaction_threshold", 0.7))
 
     @property
     def early_stop_threshold(self) -> float:
-        return self.config.get("early_stop_threshold", 0.8)
+        return float(self.config.get("early_stop_threshold", 0.8))
 
     @property
     def max_concurrent(self) -> int:
-        return self.config.get("max_concurrent_parses", 3)
+        return int(self.config.get("max_concurrent_parses", 3))
 
     @property
     def upload_dir(self) -> str:
-        return self.config.get("upload_dir", "backend/data/uploads/research")
+        return str(self.config.get("upload_dir", "backend/data/uploads/research"))
 
     @property
     def html_archive(self) -> bool:
-        return self.config.get("html_archive", True)
+        return bool(self.config.get("html_archive", True))
 
     # ── Truncation constants ───────────────────────────────────────
 
@@ -225,7 +231,7 @@ class SomaticResearchOrchestrator:
         return ensure_semaphore(self, "_semaphore", self.max_concurrent)
 
     @staticmethod
-    def _format_reflection_markdown(reflection: dict, depth: int = 0, include_cycle: bool = False) -> str:
+    def _format_reflection_markdown(reflection: dict[str, Any], depth: int = 0, include_cycle: bool = False) -> str:
         if not reflection or not isinstance(reflection, dict):
             return "(none)"
 
@@ -284,8 +290,8 @@ class SomaticResearchOrchestrator:
             return "(none)"
         return "\n\n".join(parts)
 
-    def _get_parsed_urls(self, task_id: str) -> list[dict]:
-        result = []
+    def _get_parsed_urls(self, task_id: str) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
         if not self.step_result_repo:
             return result
         try:
@@ -305,14 +311,14 @@ class SomaticResearchOrchestrator:
 
     # ── Input cache ──────────────────────────────────────────────────
 
-    def _load_cache(self, task_id: str) -> dict:
-        return self._cache.load_cache(task_id)
+    def _load_cache(self, task_id: str) -> dict[str, Any]:
+        return cast(dict[str, Any], self._cache.load_cache(task_id))
 
-    def _save_cache(self, task_id: str, cache: dict) -> None:
+    def _save_cache(self, task_id: str, cache: dict[str, Any]) -> None:
         self._cache.save_cache(task_id, cache)
 
-    def _get_cached_phase(self, task_id: str, phase: str) -> dict | None:
-        return self._cache.get_cached_phase(task_id, phase)
+    def _get_cached_phase(self, task_id: str, phase: str) -> dict[str, Any] | None:
+        return cast(dict[str, Any] | None, self._cache.get_cached_phase(task_id, phase))
 
     def reinitialize(self, task_id: str) -> None:
         self._cache.reinitialize(task_id)
@@ -334,12 +340,22 @@ class SomaticResearchOrchestrator:
     # ── Meta Logging ────────────────────────────────────────────────
 
     def _log_meta(
-        self, task_id: str, event_type: str, data: dict, branch_id: str | None = None, step_id: str | None = None
+        self,
+        task_id: str,
+        event_type: str,
+        data: dict[str, Any],
+        branch_id: str | None = None,
+        step_id: str | None = None,
     ) -> None:
         log_research_meta(self._meta_log_repo, task_id, event_type, data, branch_id, step_id)
 
     def _log_llm_response(
-        self, task_id: str, event_type: str, resp: dict, extra: dict | None = None, step_id: str | None = None
+        self,
+        task_id: str,
+        event_type: str,
+        resp: dict[str, Any],
+        extra: dict[str, Any] | None = None,
+        step_id: str | None = None,
     ) -> None:
         """Log an LLM response safely by truncating large fields within the dictionary,
         ensuring the serialized JSON is always valid. Writes to both raw_response and raw.
@@ -367,7 +383,7 @@ class SomaticResearchOrchestrator:
 
         branches = self.branch_repo.get_by_task(task_id)
         if branches:
-            return branches[0]["id"]
+            return str(branches[0]["id"])
 
         # Create a default/dummy branch
         task = self.task_repo.get(task_id)
@@ -404,7 +420,7 @@ class SomaticResearchOrchestrator:
 
     # ── In-memory task state (for step-by-step execution) ──────────
 
-    def init_task(self, task_id: str) -> dict:
+    def init_task(self, task_id: str) -> dict[str, Any]:
         state = self._state_mgr.init_task(task_id)
         logger.info(
             "INIT_TASK called: task=%s step_number=%s current_depth=%s phase=%s",
@@ -413,24 +429,24 @@ class SomaticResearchOrchestrator:
             state.get("current_depth"),
             state.get("phase"),
         )
-        return state
+        return cast(dict[str, Any], state)
 
-    def resume_task(self, task_id: str) -> dict | None:
-        return self._state_mgr.resume_task(task_id)
+    def resume_task(self, task_id: str) -> dict[str, Any] | None:
+        return cast(dict[str, Any] | None, self._state_mgr.resume_task(task_id))
 
     def set_phase(self, task_id: str, phase: str) -> None:
         self._state_mgr.set_phase(task_id, phase)
 
-    def ensure_state(self, task_id: str) -> dict:
-        return self._state_mgr.ensure_state(task_id)
+    def ensure_state(self, task_id: str) -> dict[str, Any]:
+        return cast(dict[str, Any], self._state_mgr.ensure_state(task_id))
 
-    def _get_state(self, task_id: str) -> dict:
-        return self._state_mgr.get_state(task_id)
+    def _get_state(self, task_id: str) -> dict[str, Any]:
+        return cast(dict[str, Any], self._state_mgr.get_state(task_id))
 
     def get_task_phase(self, task_id: str) -> str:
-        return self._state_mgr.get_task_phase(task_id)
+        return str(self._state_mgr.get_task_phase(task_id))
 
-    async def preview_step_inputs(self, task_id: str, phase: str) -> dict:
+    async def preview_step_inputs(self, task_id: str, phase: str) -> dict[str, Any]:
         """Return the prompts/inputs that would be sent for a given phase,
         WITHOUT executing the phase.  Useful for inspecting before running.
 
@@ -449,6 +465,8 @@ class SomaticResearchOrchestrator:
         s = self._state_mgr.states.get(task_id)
         if s is None:
             s = self.resume_task(task_id)
+        if s is None:
+            raise RuntimeError(f"Task state could not be restored: {task_id}")
 
         envelope = self.reconstruct_step_input(task_id, s, phase)
         try:
@@ -471,13 +489,13 @@ class SomaticResearchOrchestrator:
     def _persist_state(self, task_id: str) -> None:
         self._state_mgr._persist_state(task_id)
 
-    def _load_state(self, task_id: str) -> dict | None:
-        return self._state_mgr._load_state(task_id)
+    def _load_state(self, task_id: str) -> dict[str, Any] | None:
+        return cast(dict[str, Any] | None, self._state_mgr._load_state(task_id))
 
     # ── Step record helpers ─────────────────────────────────────────
 
     def _create_or_update_step(
-        self, s: dict, task_id: str, step_type: str, query_group: int = 0, query_text: str = ""
+        self, s: dict[str, Any], task_id: str, step_type: str, query_group: int = 0, query_text: str = ""
     ) -> str:
         """Create a new step or update an existing one in-place for reruns.
 
@@ -493,7 +511,7 @@ class SomaticResearchOrchestrator:
                 self.step_repo.update(
                     rerun_id, status="running", started_at=now_utc_str(), query_text=query_text, step_data=step_data
                 )
-                return rerun_id
+                return str(rerun_id)
         pg = s.get("phase_group", 0)
         ss = s.get("sub_sequence", 0)
         step_id = str(uuid.uuid4())
@@ -516,7 +534,7 @@ class SomaticResearchOrchestrator:
         )
         return step_id
 
-    def _save_llm_response_to_step_data(self, step_id: str, resp: dict) -> None:
+    def _save_llm_response_to_step_data(self, step_id: str, resp: dict[str, Any]) -> None:
         """Helper to save LLM response to step_data without losing existing keys like depth."""
         if not step_id or not self.step_repo:
             return
@@ -537,7 +555,7 @@ class SomaticResearchOrchestrator:
             logger.warning("Failed to save LLM response to step %s step_data", step_id, exc_info=True)
 
     @staticmethod
-    def _get_step_depth(step: dict) -> int:
+    def _get_step_depth(step: dict[str, Any]) -> int:
         """Extract the cycle depth from a step's step_data JSON. Returns 0 on failure."""
         try:
             data = json.loads(step.get("step_data") or "{}")
@@ -549,15 +567,15 @@ class SomaticResearchOrchestrator:
         """Delete all steps with step_number > after_step_number (for rerun)."""
         if not self.step_repo:
             return 0
-        return self.step_repo.delete_downstream(task_id, after_step_number, exclude_types)
+        return int(self.step_repo.delete_downstream(task_id, after_step_number, exclude_types))
 
     # ── Input/Output reconstruction and mapping ────────────────────
 
-    def reconstruct_step_input(self, task_id: str, task_state: dict, phase: str) -> StepEnvelope:
+    def reconstruct_step_input(self, task_id: str, task_state: dict[str, Any], phase: str) -> StepEnvelope[Any]:
         """Constructs the clean, typed StepEnvelope for the current phase using task state."""
         return ResearchEnvelopeMapper.reconstruct_step_input(task_id, task_state, phase)
 
-    def apply_step_output(self, task_state: dict, phase: str, output: StepOutput) -> None:
+    def apply_step_output(self, task_state: dict[str, Any], phase: str, output: StepOutput) -> None:
         """Applies a StepOutput's payload back to the legacy task state dictionary."""
         ResearchEnvelopeMapper.apply_step_output(task_state, phase, output)
 
@@ -591,7 +609,7 @@ class SomaticResearchOrchestrator:
 
         try:
             findings_text = " | ".join(findings[-10:])[:4000]
-            sig_vec = self._lexicon.score(findings_text)
+            sig_vec = await self._structural_scorer.score_async(findings_text)
             source_id = f"research:{task_id[:8]}:{phase}"
 
             await belief_metabolism.metabolize_perception(
@@ -611,7 +629,7 @@ class SomaticResearchOrchestrator:
         except Exception as e:
             logger.error("Research metabolism failed for phase=%s task=%s: %s", phase, task_id[:8], e)
 
-    async def execute_step(self, task_id: str) -> dict:
+    async def execute_step(self, task_id: str) -> dict[str, Any]:
         """Execute exactly one phase through the owned step executor."""
         return await self._step_executor.execute(task_id)
 
@@ -619,7 +637,7 @@ class SomaticResearchOrchestrator:
         self,
         task_id: str,
         phase: str,
-        trigger_thresholds: dict,
+        trigger_thresholds: dict[str, Any],
         raw_context: str,
         proposed_node_type: str,
         confidence: float = 0.0,
@@ -636,7 +654,7 @@ class SomaticResearchOrchestrator:
             confidence,
         )
 
-    def _pending_sedimentation_packets(self, task_id: str) -> list[dict]:
+    def _pending_sedimentation_packets(self, task_id: str) -> list[dict[str, Any]]:
         """Return all unraked sedimentation packets for a task (non-destructive)."""
         return self._sedimentation_sink.pending(self._state_mgr, task_id)
 
@@ -644,7 +662,7 @@ class SomaticResearchOrchestrator:
         """Clear all packets from the queue after successful rake. Returns count cleared."""
         return self._sedimentation_sink.clear(self._state_mgr, self._persist_state, task_id)
 
-    async def execute(self, task_id: str) -> dict:
+    async def execute(self, task_id: str) -> dict[str, Any]:
         """Execute a complete research task via the orchestrator pipeline (auto mode)."""
         task = self.task_repo.get(task_id)
         if not task:
