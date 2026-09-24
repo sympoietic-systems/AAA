@@ -41,6 +41,10 @@ lint = ["ruff>=0.9.0"]
 asyncio_mode = "auto"
 testpaths = ["backend/tests", "benchmarks/tests"]
 norecursedirs = ["backend/tests/legacy", ".venv", "node_modules"]
+filterwarnings = [
+    "error::DeprecationWarning:backend\\..*",
+    "error:coroutine 'AsyncMockMixin\\._execute_mock_call' was never awaited:RuntimeWarning",
+]
 
 [tool.mypy]
 python_version = "3.11"

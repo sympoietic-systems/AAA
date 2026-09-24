@@ -73,19 +73,6 @@
     "backend/services/skill.py": 7,
     "backend/services/title.py": 2
   },
-  "project_warning_debt": [
-    {
-      "path": "backend/storage/repositories/conversation/notification.py",
-      "pattern": "datetime.utcnow()"
-    },
-    {
-      "path": "backend/tests/test_skill_system.py",
-      "pattern": "def test_skills_api_flux_control"
-    },
-    {
-      "path": "backend/tests/test_skill_system.py",
-      "pattern": "def test_skills_version_api"
-    }
-  ],
+  "project_warning_debt": [],
   "sync_route_calls": {}
 }

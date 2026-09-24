@@ -59,10 +59,10 @@ class SkillInfo(BaseModel):
     description: str
     category: str
     always_run: bool
-    triggers: list[str] = []
+    triggers: list[str] = Field(default_factory=list)
     cost: str = "free"
     status: bool = True
-    children: list["SkillInfo"] = []
+    children: list["SkillInfo"] = Field(default_factory=list)
 
 
 class SkillsResponse(BaseModel):
@@ -76,11 +76,11 @@ class DbSkillInfo(BaseModel):
     description: str
     content: str = ""
     always_active: bool = False
-    trigger_keywords: list[str] = []
+    trigger_keywords: list[str] = Field(default_factory=list)
     lifecycle_stage: str = "nucleation"
     confidence: float = 0.0
     ontological_mass: float = 0.05
-    vector_16d: list[float] = []
+    vector_16d: list[float] = Field(default_factory=list)
     source: str = "authored"
     version: int = 1
     changelog: str = ""
@@ -93,8 +93,8 @@ class DbSkillInfo(BaseModel):
 class DbSkillsResponse(BaseModel):
     always_active: list[DbSkillInfo]
     on_demand: list[DbSkillInfo]
-    collapsed: list[DbSkillInfo] = []
-    proposed: list[DbSkillInfo] = []
+    collapsed: list[DbSkillInfo] = Field(default_factory=list)
+    proposed: list[DbSkillInfo] = Field(default_factory=list)
     all: list[DbSkillInfo]
 
 
@@ -109,7 +109,7 @@ class SkillCreateRequest(BaseModel):
     description: str
     content: str | None = None
     always_active: bool = False
-    trigger_keywords: list[str] = []
+    trigger_keywords: list[str] = Field(default_factory=list)
 
 
 class WorkshopActionRequest(BaseModel):
@@ -118,7 +118,7 @@ class WorkshopActionRequest(BaseModel):
     content: str = ""
     skill_id: str = ""
     always_active: bool = False
-    trigger_keywords: list[str] = []
+    trigger_keywords: list[str] = Field(default_factory=list)
     changelog: str = ""
     reason: str = ""
     human_approved: bool = False
@@ -136,11 +136,11 @@ class WorkshopResponse(BaseModel):
     approval_tier: str = ""
     lifecycle_stage: str = ""
     version: int = 0
-    anti_mastery_assessment: dict = {}
-    skills: list[dict] = []
+    anti_mastery_assessment: dict = Field(default_factory=dict)
+    skills: list[dict] = Field(default_factory=list)
     count: int = 0
     skill: dict | None = None
-    events: list[dict] = []
+    events: list[dict] = Field(default_factory=list)
 
 
 class MetricsResponse(BaseModel):
@@ -165,14 +165,14 @@ class DiffractiveInfo(BaseModel):
     r_context: float = 0.0
     dynamic_max: int = 0
     cohesion_timer: int = 0
-    similarity_range_memory: list[float] = []
-    similarity_range_files: list[float] = []
+    similarity_range_memory: list[float] = Field(default_factory=list)
+    similarity_range_files: list[float] = Field(default_factory=list)
     candidates_searched: int = 0
     items_injected: int = 0
     tokens_used: int = 0
     token_budget: int = 0
     duration_ms: float = 0.0
-    sources: list[DiffractiveSourceInfo] = []
+    sources: list[DiffractiveSourceInfo] = Field(default_factory=list)
 
 
 class ConversationTagInfo(BaseModel):
@@ -190,7 +190,7 @@ class MemoryNodeInfo(BaseModel):
     surface_fragment: str = ""
     agential_symmetry: str = "negotiated"
     diffractive_key: str = ""
-    tendril_ids: list[str] = []
+    tendril_ids: list[str] = Field(default_factory=list)
     created_at: datetime | None = None
 
 
@@ -205,7 +205,7 @@ class ConversationInfo(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     message_count: int = 0
-    tags: list[ConversationTagInfo] = []
+    tags: list[ConversationTagInfo] = Field(default_factory=list)
     summary: str | None = None
     human_summary: str | None = None
 

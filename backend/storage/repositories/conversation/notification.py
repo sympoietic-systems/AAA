@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from backend.storage.connection import with_connection
@@ -26,7 +26,7 @@ class NotificationRepository(BaseRepository):
     ) -> dict[str, Any]:
         conn = self._conn()
         notif_id = id or str(uuid.uuid4())
-        ts = timestamp or datetime.utcnow().isoformat()
+        ts = timestamp or datetime.now(UTC).isoformat()
 
         conn.execute(
             """INSERT INTO notifications (

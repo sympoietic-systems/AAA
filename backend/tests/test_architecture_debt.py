@@ -27,10 +27,8 @@ def test_broad_catch_debt_never_grows():
     assert count_growth(scan_broad_catches(REPO_ROOT), baseline) == []
 
 
-def test_warning_debt_points_to_existing_project_code():
-    for item in _debt()["project_warning_debt"]:
-        source = (REPO_ROOT / item["path"]).read_text(encoding="utf-8")
-        assert item["pattern"] in source
+def test_project_warning_debt_is_empty():
+    assert _debt()["project_warning_debt"] == []
 
 
 def test_compatibility_contract_exports_are_identical():

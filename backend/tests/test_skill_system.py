@@ -386,6 +386,8 @@ def test_skills_api_flux_control():
     # Override app state repos
     app.state.skill_repo = skill_repo
     app.state.belief_repo = belief_repo
+    original_embedder = getattr(app.state, "embedder", None)
+    app.state.embedder = None
 
     # Create a skill in repo
     skill = skill_repo.create_skill(id=str(uuid.uuid4()), name="api-skill", description="desc", content="content")
@@ -440,6 +442,7 @@ def test_skills_api_flux_control():
         assert res.status_code == 200
         assert res.json()["status"] == "ok"
     finally:
+        app.state.embedder = original_embedder
         # Restore env
         if orig_flux is not None:
             os.environ["AAA_AGENT_FLUX"] = orig_flux
@@ -492,6 +495,8 @@ def test_skills_version_api():
     skill_repo = SkillRepository(db_path)
 
     app.state.skill_repo = skill_repo
+    original_embedder = getattr(app.state, "embedder", None)
+    app.state.embedder = None
     client = TestClient(app)
 
     # Create skill and edit it to generate v2
@@ -524,6 +529,7 @@ def test_skills_version_api():
         assert any("Reverted to version 1" in e.rationale for e in events)
 
     finally:
+        app.state.embedder = original_embedder
         if orig_flux is not None:
             os.environ["AAA_AGENT_FLUX"] = orig_flux
         elif "AAA_AGENT_FLUX" in os.environ:
