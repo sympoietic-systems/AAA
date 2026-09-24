@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from backend.modules.structural_engine import StructuralScorerModule
@@ -23,7 +23,7 @@ class AgentUseCases:
     def _update_commitment(
         repository: CommitmentRepository, commitment_id: str, changes: dict[str, object]
     ) -> CommitmentNode:
-        node = cast("CommitmentNode | None", repository.get_by_id(commitment_id))
+        node = repository.get_by_id(commitment_id)
         if node is None:
             raise LookupError("Commitment not found")
         for field in ("statement", "lifecycle_stage", "confidence", "ontological_mass"):
@@ -42,7 +42,7 @@ class AgentUseCases:
     def _update_expertise(
         repository: ExpertiseRepository, expertise_id: str, changes: dict[str, object]
     ) -> ExpertiseNode:
-        node = cast("ExpertiseNode | None", repository.get_by_id(expertise_id))
+        node = repository.get_by_id(expertise_id)
         if node is None:
             raise LookupError("Expertise domain not found")
         for field in ("lifecycle_stage", "ontological_mass", "level_label"):

@@ -2,6 +2,12 @@ import contextlib
 import sqlite3
 import sys
 import threading
+from collections.abc import Callable
+from functools import wraps
+from typing import ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class ConnectionTracker:
@@ -39,15 +45,16 @@ def close_thread_connections(db_path: str | object | None = None) -> None:
             _thread_conns.cached_conns = {}
 
 
-def with_connection(func):
-    def wrapper(self, *args, **kwargs):
+def with_connection(func: Callable[P, R]) -> Callable[P, R]:
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         if not hasattr(_thread_conns, "tracker") or _thread_conns.tracker is None:
             _thread_conns.tracker = ConnectionTracker()
 
         tracker = _thread_conns.tracker
         tracker.depth += 1
         try:
-            return func(self, *args, **kwargs)
+            return func(*args, **kwargs)
         finally:
             tracker.depth -= 1
             if tracker.depth == 0:

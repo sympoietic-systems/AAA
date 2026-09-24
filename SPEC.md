@@ -98,7 +98,7 @@ T12|x|move conversation/history/agent/note/file/preview DB workflows into typed 
 T13|x|move research task/step/artifact DB workflows into typed services; isolate state transitions & transaction scopes; empty sync-route debt inventory|V10,V12,V15,V23,V24,V29,V30,V31,V33,V34
 T14|x|replace `ChatService._conversation_locks` with app-owned bounded keyed lock registry + cancellation/concurrency tests|V12,V26,V30,I.internal
 T15|x|replace Pydantic mutable defaults; use UTC-aware timestamps; fix unawaited `AsyncMock`; assert project-owned warning-free suite|V13,V17,V27
-T16|.|split `MessageRepository` into core/history/vector-search/graph collaborators behind compatibility facade|V17,V22,V28,V30
+T16|x|split `MessageRepository` into core/history/vector-search/graph collaborators behind compatibility facade|V17,V22,V28,V30
 T17|.|split `modules/llm_client.py` into provider protocol, HTTP providers, pool/rate-limit policy, JSON parser; preserve facade imports|V2,V8,V11,V17,V28,V29,V30
 T18|.|split research orchestrator into state store, step executor, sedimentation sink; retain orchestrator facade & state-machine tests|V12,V15,V17,V23,V28,V29,V30,V31
 T19|.|split belief service into query/proposal/mutation/version use cases; add narrow repository ports & atomic mutation tests|V10,V15,V17,V23,V28,V29,V30,V31,V34
@@ -131,3 +131,4 @@ B19|2026-09-23|T13 route offloading edits passed lint but missed Ruff's formatti
 B20|2026-09-23|adding an AppServices default factory shadowed the existing `field` loop variable|V30
 B21|2026-09-23|removing ChatService's class locks left its `asyncio` import unused|V30
 B22|2026-09-23|the ChatService lock rewrite missed Ruff's formatting gate|V30
+B23|2026-09-23|untyped `with_connection` erased repository signatures and hid stale downstream casts|V30

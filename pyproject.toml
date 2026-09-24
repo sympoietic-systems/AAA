@@ -60,6 +60,11 @@ files = [
     "backend/services/keyed_lock.py",
     "backend/services/preview.py",
     "backend/services/research/api.py",
+    "backend/storage/repositories/conversation/message.py",
+    "backend/storage/repositories/conversation/message_core.py",
+    "backend/storage/repositories/conversation/message_graph.py",
+    "backend/storage/repositories/conversation/message_history.py",
+    "backend/storage/repositories/conversation/message_vector.py",
     "backend/quality",
 ]
 exclude = ["backend/tests"]
