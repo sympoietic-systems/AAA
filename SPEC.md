@@ -95,7 +95,7 @@ T9|x|write ADR; run focused + full pytest, ruff check/format; clean ephemeral ar
 T10|x|characterize sync-route/broad-catch/import/warning debt; add monotonic architecture tests; pin `mypy` + strict initial allowlist; correct stale auth docs|V8,V15,V16,V17,V23,V28,V30,V31,V33
 T11|x|add typed `AppServices` assembly + required dependency helper; keep object-identical temporary `app.state.*` aliases; migrate dependency getters|V12,V17,V24,V25,V31,V32,V35,I.internal
 T12|x|move conversation/history/agent/note/file/preview DB workflows into typed service use cases; offload once per use case|V15,V16,V17,V23,V24,V29,V30,V31,V33
-T13|.|move research task/step/artifact DB workflows into typed services; isolate state transitions & transaction scopes; empty sync-route debt inventory|V10,V12,V15,V23,V24,V29,V31,V33,V34
+T13|x|move research task/step/artifact DB workflows into typed services; isolate state transitions & transaction scopes; empty sync-route debt inventory|V10,V12,V15,V23,V24,V29,V30,V31,V33,V34
 T14|.|replace `ChatService._conversation_locks` with app-owned bounded keyed lock registry + cancellation/concurrency tests|V12,V26,I.internal
 T15|.|replace Pydantic mutable defaults; use UTC-aware timestamps; fix unawaited `AsyncMock`; assert project-owned warning-free suite|V13,V17,V27
 T16|.|split `MessageRepository` into core/history/vector-search/graph collaborators behind compatibility facade|V17,V22,V28,V30
@@ -126,3 +126,5 @@ B14|2026-09-23|moving preview selection into services exposed four broad fallbac
 B15|2026-09-23|new service modules entered strict mypy with route-era bare collections and heterogeneous selector output|V30
 B16|2026-09-23|silent legacy imports erased repository return types at the new strict service boundary|V30
 B17|2026-09-23|final static gate found split imports from the same contract modules in the architecture test|V30
+B18|2026-09-23|research lifecycle adapter aliases were not in Ruff's canonical import order|V30
+B19|2026-09-23|T13 route offloading edits passed lint but missed Ruff's formatting gate across eight files|V30

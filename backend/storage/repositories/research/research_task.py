@@ -15,8 +15,8 @@ class ResearchTaskRepository(BaseRepository):
                 id, title, objective, trigger_source, status, priority,
                 conversation_id, max_depth, max_breadth, is_agonistic,
                 budget_limit_usd, proposal_rationale, proposal_message_id,
-                proposed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                proposed_at, orchestrator_state
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 task["id"],
                 task["title"],
@@ -32,6 +32,7 @@ class ResearchTaskRepository(BaseRepository):
                 task.get("proposal_rationale"),
                 task.get("proposal_message_id"),
                 datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
+                task.get("orchestrator_state"),
             ),
         )
         conn.commit()
@@ -102,6 +103,56 @@ class ResearchTaskRepository(BaseRepository):
                 (new_status, task_id),
             )
         conn.commit()
+
+    @with_connection
+    def approve(self, task_id: str, approved_by: str, approved_at: str) -> None:
+        """Persist approval metadata and status as one transaction."""
+        conn = self._conn()
+        conn.execute(
+            """UPDATE research_tasks
+               SET approved_by = ?, approved_at = ?, status = 'approved'
+               WHERE id = ?""",
+            (approved_by, approved_at, task_id),
+        )
+        conn.commit()
+
+    @with_connection
+    def reset_for_rerun(self, task_id: str, fields: dict) -> None:
+        """Clear dependent research state and reset its task atomically."""
+        conn = self._conn()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("DELETE FROM scraped_assets WHERE task_id = ?", (task_id,))
+            conn.execute("DELETE FROM research_branches WHERE task_id = ?", (task_id,))
+            conn.execute("DELETE FROM research_steps WHERE task_id = ?", (task_id,))
+            conn.execute("DELETE FROM research_plans WHERE task_id = ?", (task_id,))
+            available = {row[1] for row in conn.execute("PRAGMA table_info(research_tasks)").fetchall()}
+            safe_fields = {key: value for key, value in fields.items() if key in available}
+            set_clause = ", ".join(f"{key} = ?" for key in safe_fields)
+            conn.execute(
+                f"UPDATE research_tasks SET {set_clause} WHERE id = ?",
+                [*safe_fields.values(), task_id],
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
+    @with_connection
+    def delete_with_notes(self, task_id: str) -> None:
+        """Delete task-owned notes and the task in one transaction."""
+        conn = self._conn()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(
+                "DELETE FROM notes WHERE asset_type = 'research_task' AND asset_id = ?",
+                (task_id,),
+            )
+            conn.execute("DELETE FROM research_tasks WHERE id = ?", (task_id,))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
 
     @with_connection
     def count_by_status(self, status: str) -> int:

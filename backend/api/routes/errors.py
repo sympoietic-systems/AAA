@@ -1,3 +1,4 @@
+import asyncio
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -17,7 +18,7 @@ ALLOWED_LOG_FILES = {
 async def list_errors(limit: int = Query(default=20, ge=1, le=100), request: Request = None):
     state = request.app.state
     error_repo = state.error_repo
-    errors = error_repo.get_recent(limit=limit)
+    errors = await asyncio.to_thread(error_repo.get_recent, limit=limit)
     return [
         {
             "id": e.id,
@@ -58,7 +59,7 @@ async def get_log_tail(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail="Forbidden path resolution") from e
 
-    raw_lines = tail_log_file(target_path, max_lines=lines)
+    raw_lines = await asyncio.to_thread(tail_log_file, target_path, max_lines=lines)
 
     # Secondary defense: scrub any secrets before JSON transmission
     masker = SecretMaskingFilter()

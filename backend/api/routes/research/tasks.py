@@ -12,6 +12,26 @@ from backend.api.routes.research.schemas import (
     ContinueTaskPayload,
     DispatchPayload,
 )
+from backend.services.research.api import (
+    approve_and_queue_task,
+    queue_task,
+    run_research_sync,
+)
+from backend.services.research.api import (
+    cancel_task as cancel_research_task,
+)
+from backend.services.research.api import (
+    continue_task as continue_research_task,
+)
+from backend.services.research.api import (
+    delete_task as delete_research_task,
+)
+from backend.services.research.api import (
+    rerun_task as rerun_research_task,
+)
+from backend.services.research.api import (
+    run_task as run_research_task,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -43,7 +63,8 @@ async def dispatch_research(payload: DispatchPayload, request: Request):
     state = request.app.state
     manager = state.research_task_manager
 
-    task_id = manager.create_task(
+    task_id = await run_research_sync(
+        manager.create_task,
         objective=payload.objective,
         trigger_source="user_console" if not payload.conversation_id else "user_inline",
         title=payload.title or payload.objective[:80],
@@ -62,7 +83,7 @@ async def dispatch_research(payload: DispatchPayload, request: Request):
         injected_documents=[d.model_dump() for d in payload.injected_documents] if payload.injected_documents else None,
     )
 
-    manager.queue(task_id)
+    await queue_task(manager, task_id)
 
     return {"task_id": task_id, "status": "queued"}
 
@@ -78,7 +99,7 @@ async def continue_research(payload: ContinuePayload, request: Request):
     state = request.app.state
     manager = state.research_task_manager
 
-    source = manager.get_task(payload.source_task_id)
+    source = await run_research_sync(manager.get_task, payload.source_task_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source task not found")
 
@@ -97,7 +118,8 @@ async def continue_research(payload: ContinuePayload, request: Request):
     budget = payload.budget_limit_usd or source_budget
     new_conv_id = payload.conversation_id or source_conv_id
 
-    task_id = manager.create_task(
+    task_id = await run_research_sync(
+        manager.create_task,
         objective=objective,
         trigger_source=source.get("trigger_source", "user_console"),
         title=title,
@@ -116,7 +138,7 @@ async def continue_research(payload: ContinuePayload, request: Request):
         document_chunk_limit=payload.document_chunk_limit,
     )
 
-    manager.queue(task_id)
+    await queue_task(manager, task_id)
 
     return {
         "task_id": task_id,
@@ -137,8 +159,9 @@ async def continue_task(task_id: str, payload: ContinueTaskPayload, request: Req
     state = request.app.state
     manager = state.research_task_manager
 
-    manager.continue_task(
-        task_id=task_id,
+    await continue_research_task(
+        manager,
+        task_id,
         additional_cycles=payload.additional_cycles,
         adjusted_objective=payload.adjusted_objective or "",
         inject_file_id=payload.inject_file_id or "",
@@ -148,7 +171,7 @@ async def continue_task(task_id: str, payload: ContinueTaskPayload, request: Req
         budget_limit_usd=payload.budget_limit_usd or 0.0,
     )
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     return {
         "task_id": task_id,
         "status": task["status"] if task else "queued",
@@ -170,9 +193,9 @@ async def list_research_files(conversation_id: str | None = None, request: Reque
         return {"files": [], "count": 0}
 
     if conversation_id:
-        files = perception_repo.get_files_by_conversation(conversation_id)
+        files = await run_research_sync(perception_repo.get_files_by_conversation, conversation_id)
     else:
-        files = perception_repo.get_all_files_across_conversations()
+        files = await run_research_sync(perception_repo.get_all_files_across_conversations)
 
     result = [
         {
@@ -202,7 +225,8 @@ async def list_tasks(
     """List all research tasks with optional filters. Includes lightweight asset summaries."""
     state = request.app.state
     manager = state.research_task_manager
-    tasks = manager.list_tasks(
+    tasks = await run_research_sync(
+        manager.list_tasks,
         status=status,
         trigger_source=trigger_source,
         conversation_id=conversation_id,
@@ -212,7 +236,7 @@ async def list_tasks(
     # Enrich tasks with lightweight asset summaries (no raw_markdown)
     task_ids = [t["id"] for t in tasks]
     if task_ids:
-        assets_by_task = state.scraped_asset_repo.get_lightweight_by_task_ids(task_ids)
+        assets_by_task = await run_research_sync(state.scraped_asset_repo.get_lightweight_by_task_ids, task_ids)
         for task in tasks:
             tid = task["id"]
             task_assets = assets_by_task.get(tid, [])
@@ -227,7 +251,7 @@ async def get_active_summary(request: Request):
     """Lightweight poll endpoint for frontend status indicators."""
     state = request.app.state
     manager = state.research_task_manager
-    return manager.get_active_summary()
+    return await run_research_sync(manager.get_active_summary)
 
 
 @router.get("/research/tasks/{task_id}")
@@ -235,13 +259,14 @@ async def get_task(task_id: str, request: Request):
     """Detail for a single task: metadata + branches + assets summary."""
     state = request.app.state
     manager = state.research_task_manager
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
     # Enrich with branches and assets
-    branches = state.research_branch_repo.get_by_task(task_id)
-    assets = state.scraped_asset_repo.get_by_task(task_id)
+    branches, assets = await run_research_sync(
+        lambda: (state.research_branch_repo.get_by_task(task_id), state.scraped_asset_repo.get_by_task(task_id))
+    )
     task["branches"] = branches
     task["asset_count"] = len(assets)
     task["assets"] = [
@@ -267,10 +292,11 @@ async def approve_proposal(task_id: str, request: Request, payload: ApprovePropo
     state = request.app.state
     manager = state.research_task_manager
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         if payload and payload.objective:
-            manager.create_task(
+            await run_research_sync(
+                manager.create_task,
                 task_id=task_id,
                 objective=payload.objective,
                 trigger_source="symbia_conversation",
@@ -284,7 +310,7 @@ async def approve_proposal(task_id: str, request: Request, payload: ApprovePropo
                 budget_limit_usd=0.50,
                 proposal_rationale=payload.rationale,
             )
-            manager.queue(task_id)
+            await queue_task(manager, task_id)
             return {"task_id": task_id, "status": "queued"}
         raise HTTPException(status_code=404, detail="Proposal not found")
 
@@ -294,8 +320,7 @@ async def approve_proposal(task_id: str, request: Request, payload: ApprovePropo
     if task["status"] != "proposed":
         raise HTTPException(status_code=400, detail=f"Task is in {task['status']} state, not proposed")
 
-    manager.approve(task_id)
-    manager.queue(task_id)
+    await approve_and_queue_task(manager, task_id)
 
     return {"task_id": task_id, "status": "queued"}
 
@@ -306,7 +331,7 @@ async def reject_proposal(task_id: str, request: Request):
     state = request.app.state
     manager = state.research_task_manager
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         return {"task_id": task_id, "status": "rejected"}
     if task["status"] == "rejected":
@@ -314,7 +339,7 @@ async def reject_proposal(task_id: str, request: Request):
     if task["status"] != "proposed":
         raise HTTPException(status_code=400, detail=f"Task is in {task['status']} state, not proposed")
 
-    manager.reject(task_id)
+    await run_research_sync(manager.reject, task_id)
     return {"task_id": task_id, "status": "rejected"}
 
 
@@ -327,13 +352,13 @@ async def cancel_task(task_id: str, request: Request):
     state = request.app.state
     manager = state.research_task_manager
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task["status"] in ("completed", "failed", "cancelled", "rejected", "expired"):
         raise HTTPException(status_code=400, detail="Task is already terminal")
 
-    manager.cancel(task_id)
+    await cancel_research_task(manager, task_id)
     return {"task_id": task_id, "status": "cancelled"}
 
 
@@ -343,12 +368,12 @@ async def delete_task(task_id: str, request: Request):
     state = request.app.state
     manager = state.research_task_manager
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
     # CASCADE deletes branches, assets, plans, steps, step results, meta log
-    manager.delete(task_id)
+    await delete_research_task(manager, task_id)
     return {"task_id": task_id, "deleted": True}
 
 
@@ -358,14 +383,15 @@ async def retry_task(task_id: str, request: Request):
     state = request.app.state
     manager = state.research_task_manager
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task["status"] not in ("failed", "completed", "cancelled"):
         raise HTTPException(status_code=400, detail="Only failed, completed, or cancelled tasks can be retried")
 
     # Create a new task with same parameters
-    new_id = manager.create_task(
+    new_id = await run_research_sync(
+        manager.create_task,
         objective=task["objective"],
         trigger_source=task["trigger_source"],
         title=task["title"],
@@ -378,7 +404,7 @@ async def retry_task(task_id: str, request: Request):
         budget_limit_usd=task["budget_limit_usd"],
     )
 
-    manager.queue(new_id)
+    await queue_task(manager, new_id)
     return {"task_id": new_id, "status": "queued", "retried_from": task_id}
 
 
@@ -391,13 +417,13 @@ async def run_task(task_id: str, request: Request):
     state = request.app.state
     manager = state.research_task_manager
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task["status"] != "queued":
         raise HTTPException(status_code=400, detail=f"Task must be queued to run, got: {task['status']}")
 
-    manager.run_task(task_id)
+    await run_research_task(manager, task_id)
     return {"task_id": task_id, "status": "active"}
 
 
@@ -411,13 +437,13 @@ async def rerun_task(task_id: str, request: Request):
     state = request.app.state
     manager = state.research_task_manager
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task["status"] not in ("completed", "failed", "cancelled"):
         raise HTTPException(status_code=400, detail=f"Can only rerun terminal tasks, got: {task['status']}")
 
-    manager.rerun_task(task_id)
+    await rerun_research_task(manager, task_id)
     is_manual = manager.config.get("manual_mode", False)
     return {
         "task_id": task_id,
@@ -435,7 +461,7 @@ async def reinitialize_task(task_id: str, request: Request = None):
     """Clear cached phase inputs so next preview/step recomputes from scratch."""
     state = request.app.state
     manager = state.research_task_manager
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 

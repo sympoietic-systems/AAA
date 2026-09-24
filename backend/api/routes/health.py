@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Request
 
 from backend.api.schemas import HealthResponse
@@ -8,4 +10,4 @@ router = APIRouter()
 
 @router.get("/health", response_model=HealthResponse)
 async def health(request: Request):
-    return HealthService.check(request.app.state)
+    return await asyncio.to_thread(HealthService.check, request.app.state)

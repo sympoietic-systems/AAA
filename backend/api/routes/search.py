@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 
@@ -89,7 +90,7 @@ async def search_archive(
     text_message_ids = set()
     if w_text > 0.0 and q:
         # Dialogue messages text match
-        text_msgs = message_repo.search_text(q, conversation_id)
+        text_msgs = await asyncio.to_thread(message_repo.search_text, q, conversation_id)
         for msg in text_msgs:
             text_message_ids.add(msg.id)
             snippet = get_snippet(msg.content, q)
@@ -106,7 +107,7 @@ async def search_archive(
             )
 
         # Notes text match
-        notes = note_repo.search_notes_text(q)
+        notes = await asyncio.to_thread(note_repo.search_notes_text, q)
         for note in notes:
             if conversation_id and note.get("conversation_id") != conversation_id:
                 continue
@@ -126,7 +127,7 @@ async def search_archive(
             )
 
         # Memory Nodes text match
-        mem_nodes = memory_node_repo.search_memory_nodes_text(q)
+        mem_nodes = await asyncio.to_thread(memory_node_repo.search_memory_nodes_text, q)
         for node in mem_nodes:
             if conversation_id and node.get("conversation_id") != conversation_id:
                 continue
@@ -168,12 +169,12 @@ async def search_archive(
                 logger.warning("Structural scoring failed: %s", e)
 
         # Load all messages candidates with embeddings and signatures
-        candidates = message_repo.get_embeddings_and_signatures_for_search(conversation_id)
+        candidates = await asyncio.to_thread(message_repo.get_embeddings_and_signatures_for_search, conversation_id)
 
         # Load glitch salience metrics mappings if weight active
         glitch_map = {}
         if w_glitch > 0.0:
-            glitch_msgs = message_repo.get_glitch_salience_messages(conversation_id, limit=200)
+            glitch_msgs = await asyncio.to_thread(message_repo.get_glitch_salience_messages, conversation_id, limit=200)
             for m_id, _, _, _, _, surprise, novelty, deficit in glitch_msgs:
                 glitch_map[m_id] = max(surprise or 0.0, novelty or 0.0, deficit or 0.0)
 

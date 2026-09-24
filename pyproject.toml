@@ -54,6 +54,7 @@ files = [
     "backend/services/agent.py",
     "backend/services/history.py",
     "backend/services/preview.py",
+    "backend/services/research/api.py",
     "backend/quality",
 ]
 exclude = ["backend/tests"]

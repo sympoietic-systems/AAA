@@ -142,8 +142,6 @@ class ResearchTaskManager:
             "proposal_rationale": proposal_rationale,
             "proposal_message_id": proposal_message_id,
         }
-        self.task_repo.create(task_data)
-
         extra_state: dict[str, Any] = {}
         if previous_context:
             extra_state["previous_context"] = previous_context
@@ -162,7 +160,8 @@ class ResearchTaskManager:
         if extra_state:
             import json
 
-            self.task_repo.update(task_id, orchestrator_state=json.dumps(extra_state, default=str, ensure_ascii=False))
+            task_data["orchestrator_state"] = json.dumps(extra_state, default=str, ensure_ascii=False)
+        self.task_repo.create(task_data)
         logger.info(
             "Research task created: %s [%s] status=%s trigger=%s",
             task_id,
@@ -196,8 +195,13 @@ class ResearchTaskManager:
 
     def approve(self, task_id: str) -> None:
         """User approves a Symbia-proposed task."""
-        self.task_repo.update(task_id, approved_by="user", approved_at=now_utc_str())
-        self.transition(task_id, "approved")
+        task = self.task_repo.get(task_id)
+        if task is None:
+            raise ValueError(f"Task not found: {task_id}")
+        if "approved" not in VALID_TRANSITIONS.get(task["status"], set()):
+            raise ValueError(f"Invalid transition: {task['status']} -> approved")
+        self.task_repo.approve(task_id, "user", now_utc_str())
+        self._dispatch_notification(task, "approved")
 
     def reject(self, task_id: str) -> None:
         """User rejects a Symbia proposal."""
@@ -294,12 +298,12 @@ class ResearchTaskManager:
         if semaphore.locked() or semaphore._value == 0:
             return  # No slots available
 
-        task = self.task_repo.get_next_queued()
+        task = await asyncio.to_thread(self.task_repo.get_next_queued)
         if task is None:
             return
 
         task_id = task["id"]
-        self.transition(task_id, "active")
+        await asyncio.to_thread(self.transition, task_id, "active")
 
         # Spawn the execution coroutine
         coro = self._execute_task(task_id)
@@ -422,7 +426,7 @@ class ResearchTaskManager:
 
         return result
 
-    def rerun_task(self, task_id: str) -> None:
+    def rerun_task(self, task_id: str, *, schedule: bool = True) -> None:
         """Rerun a terminal task in-place — resets counters, clears old data.
 
         Use for debugging: edit code, rerun same task to see new results.
@@ -433,28 +437,6 @@ class ResearchTaskManager:
             raise ValueError(f"Task not found: {task_id}")
         if task["status"] not in ("completed", "failed", "cancelled"):
             raise ValueError(f"Can only rerun terminal tasks, got: {task['status']}")
-
-        # Delete old branches and assets for this task
-        with contextlib.suppress(Exception):
-            self.asset_repo.delete_by_task(task_id)
-        with contextlib.suppress(Exception):
-            self.branch_repo.delete_by_task(task_id)
-
-        # Delete old steps and plans (step results cascade delete)
-        try:
-            if hasattr(self.orchestrator, "step_repo") and self.orchestrator.step_repo:
-                conn = self.orchestrator.step_repo._conn()
-                conn.execute("DELETE FROM research_steps WHERE task_id = ?", (task_id,))
-                conn.commit()
-        except Exception:
-            logger.exception("Failed to delete old steps for task %s during rerun", task_id)
-        try:
-            if hasattr(self.orchestrator, "plan_repo") and self.orchestrator.plan_repo:
-                conn = self.orchestrator.plan_repo._conn()
-                conn.execute("DELETE FROM research_plans WHERE task_id = ?", (task_id,))
-                conn.commit()
-        except Exception:
-            logger.exception("Failed to delete old plans for task %s during rerun", task_id)
 
         # Reset counters
         rerun_count = (task.get("rerun_count") or 0) + 1
@@ -470,20 +452,16 @@ class ResearchTaskManager:
             "completed_at": None,
             "orchestrator_state": None,
         }
-        try:
-            update_fields["rerun_count"] = rerun_count
-            self.task_repo.update(task_id, **update_fields)
-        except Exception:
-            # rerun_count column may not exist (m035 not applied yet)
-            update_fields.pop("rerun_count", None)
-            self.task_repo.update(task_id, **update_fields)
+        update_fields["rerun_count"] = rerun_count
+        self.task_repo.reset_for_rerun(task_id, update_fields)
         logger.info(
             "Research task %s rerun #%d (in-place reset)",
             task_id,
             rerun_count,
         )
 
-        asyncio.create_task(self._try_process_queue())
+        if schedule:
+            asyncio.create_task(self._try_process_queue())
 
     def continue_task(
         self,
@@ -495,6 +473,8 @@ class ResearchTaskManager:
         document_mode: str = "",
         document_chunk_limit: int = 5,
         budget_limit_usd: float = 0.0,
+        *,
+        schedule: bool = True,
     ) -> None:
         """Continue a completed task in-place — bumps depth, resets phase, re-queues.
 
@@ -639,9 +619,10 @@ class ResearchTaskManager:
         manual = self.config.get("manual_mode", False)
         logger.info("continue_task: spawning orchestrator for %s (manual_mode=%s)", task_id[:8], manual)
         self.transition(task_id, "active")
-        coro = self._execute_continued_task(task_id)
-        asyncio_task = asyncio.create_task(coro)
-        self._active_tasks[task_id] = asyncio_task
+        if schedule:
+            coro = self._execute_continued_task(task_id)
+            asyncio_task = asyncio.create_task(coro)
+            self._active_tasks[task_id] = asyncio_task
 
         logger.info(
             "Research task %s continued (run #%d) — depth %d→%d, pg_offset=%d, previous_context=%d chars",

@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Request
 
 from backend.api.schemas import (
@@ -19,8 +21,9 @@ async def get_metrics(request: Request, window: int = 20):
     if not metrics_repo:
         return MetricsResponse(window_size=0, aggregates={"count": 0})
 
-    aggregates = metrics_repo.get_aggregates(limit=max(1, min(window, 100)))
-    latest = metrics_repo.get_latest()
+    aggregates, latest = await asyncio.to_thread(
+        lambda: (metrics_repo.get_aggregates(limit=max(1, min(window, 100))), metrics_repo.get_latest())
+    )
 
     latest_info: MetricsInfo | None = None
     recommendations: HomeostaticRecommendations | None = None
@@ -40,7 +43,7 @@ async def get_metrics(request: Request, window: int = 20):
             conceptual_velocity=latest.conceptual_velocity,
             divergence_resolution_ratio=latest.divergence_resolution_ratio,
             paskian_health=latest.paskian_health,
-            phase_shifts=MetricsService.parse_phase_shifts(latest.phase_shifts),
+            phase_shifts=await asyncio.to_thread(MetricsService.parse_phase_shifts, latest.phase_shifts),
         )
         temp_rec = None
         pres_rec = None

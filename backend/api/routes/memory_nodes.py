@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Request
 
 from backend.api.schemas import MemoryNodeInfo, MemoryNodeListResponse
@@ -11,5 +13,5 @@ async def get_memory_nodes(conversation_id: str, request: Request):
     repo = getattr(state, "memory_node_repo", None)
     if not repo:
         return MemoryNodeListResponse(nodes=[])
-    nodes = repo.get_nodes(conversation_id)
+    nodes = await asyncio.to_thread(repo.get_nodes, conversation_id)
     return MemoryNodeListResponse(nodes=[MemoryNodeInfo(**n) for n in nodes])

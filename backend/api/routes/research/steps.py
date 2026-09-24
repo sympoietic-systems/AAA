@@ -13,6 +13,8 @@ from backend.api.routes.research.schemas import (
 )
 from backend.api.schemas import UnifiedNoteResponse
 from backend.services.note import NoteService
+from backend.services.research.api import rerun_task as rerun_research_task
+from backend.services.research.api import run_research_sync
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ async def execute_step(
     state = request.app.state
     manager = state.research_task_manager
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task["status"] not in ("active", "queued", "completed", "failed"):
@@ -63,7 +65,7 @@ async def execute_step(
         # Per-step rerun — resume state, set phase, mark step for in-place update.
         # Downstream steps are deleted by execute_step before re-execution.
         if task["status"] in ("completed", "failed"):
-            manager.task_repo.update(task_id, status="active")
+            await run_research_sync(manager.task_repo.update, task_id, status="active")
         orch = manager.orchestrator
         orch.ensure_state(task_id)
         orch.set_phase(task_id, target_phase)
@@ -72,11 +74,11 @@ async def execute_step(
         step_repo = getattr(state, "research_step_repo", None)
         if step_repo and rerun_step_type:
             if rerun_step_id:
-                existing = step_repo.get(rerun_step_id)
+                existing = await run_research_sync(step_repo.get, rerun_step_id)
             else:
                 s2 = orch._state_mgr._states.get(task_id)
                 current_depth = s2.get("current_depth", 0) if s2 else 0
-                all_steps = step_repo.get_by_task(task_id)
+                all_steps = await run_research_sync(step_repo.get_by_task, task_id)
                 matching = sorted(
                     (
                         s
@@ -106,7 +108,7 @@ async def execute_step(
                         s2["query_index"] = qg - 1  # query_group is 1-based, query_index is 0-based
                     elif rerun_step_type in ("search", "parallel_parse", "digest"):
                         # Fallback: count searches before this step
-                        all_steps = step_repo.get_by_task(task_id)
+                        all_steps = await run_research_sync(step_repo.get_by_task, task_id)
                         s2["query_index"] = sum(
                             1
                             for s in all_steps
@@ -125,17 +127,17 @@ async def execute_step(
                 existing_phase = None
             if existing_phase and existing_phase not in ("complete", ""):
                 # Task marked completed but still has work to do — resume it
-                manager.task_repo.update(task_id, status="active")
+                await run_research_sync(manager.task_repo.update, task_id, status="active")
                 orch.ensure_state(task_id)  # already loaded, no-op
             else:
-                manager.rerun_task(task_id)
-                task = manager.get_task(task_id)  # refresh after rerun
-                manager.transition(task_id, "active")
+                await rerun_research_task(manager, task_id)
+                task = await run_research_sync(manager.get_task, task_id)  # refresh after rerun
+                await run_research_sync(manager.transition, task_id, "active")
                 manager.orchestrator.init_task(task_id)
         elif task["status"] == "queued":
             orch_config = state.config.get("research_orchestrator", {})
             if orch_config.get("enabled") and manager.config.get("manual_mode", False):
-                manager.transition(task_id, "active")
+                await run_research_sync(manager.transition, task_id, "active")
                 manager.orchestrator.init_task(task_id)
 
     try:
@@ -174,17 +176,17 @@ async def get_task_meta_log(
     if meta_repo is None:
         raise HTTPException(status_code=501, detail="Meta logging not available")
 
-    task = state.research_task_manager.get_task(task_id)
+    task = await run_research_sync(state.research_task_manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
     if step_id:
-        entries = meta_repo.get_by_step(step_id)
+        entries = await run_research_sync(meta_repo.get_by_step, step_id)
     elif branch_id:
-        entries = meta_repo.get_by_branch(branch_id)
+        entries = await run_research_sync(meta_repo.get_by_branch, branch_id)
         entries = [e for e in entries if e.get("task_id") == task_id]
     else:
-        entries = meta_repo.get_by_task(task_id, limit=limit)
+        entries = await run_research_sync(meta_repo.get_by_task, task_id, limit=limit)
 
     entries = [_parse_event_data(e) for e in entries]
 
@@ -207,11 +209,11 @@ async def get_task_phase(task_id: str, request: Request = None):
     """Return the current orchestrator phase for a task (manual step-by-step mode)."""
     state = request.app.state
     manager = state.research_task_manager
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    phase = manager.orchestrator.get_task_phase(task_id)
+    phase = await run_research_sync(manager.orchestrator.get_task_phase, task_id)
     return {"task_id": task_id, "phase": phase or "not_started"}
 
 
@@ -227,7 +229,7 @@ async def preview_step_inputs(task_id: str, phase: str, request: Request = None)
     """
     state = request.app.state
     manager = state.research_task_manager
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -254,17 +256,17 @@ async def get_task_steps(task_id: str, request: Request = None):
     # Get the plan
     plan = None
     if plan_repo:
-        plan = plan_repo.get_by_task(task_id)
+        plan = await run_research_sync(plan_repo.get_by_task, task_id)
 
     # Get all steps
     steps = []
     if step_repo:
-        steps = step_repo.get_by_task(task_id)
+        steps = await run_research_sync(step_repo.get_by_task, task_id)
 
     # Get all step results
     all_results = []
     if result_repo:
-        all_results = result_repo.get_by_task(task_id)
+        all_results = await run_research_sync(result_repo.get_by_task, task_id)
 
     # Group results by step_id
     results_by_step: dict = {}
@@ -292,7 +294,7 @@ async def get_task_steps(task_id: str, request: Request = None):
     # Retrieve current depth from orchestrator state
     current_depth = 0
     if hasattr(state, "research_task_manager"):
-        task = state.research_task_manager.get_task(task_id)
+        task = await run_research_sync(state.research_task_manager.get_task, task_id)
         if task:
             orch_state_raw = task.get("orchestrator_state")
             if orch_state_raw:
@@ -324,11 +326,11 @@ async def get_task_notes(task_id: str, request: Request = None):
     if not note_repo:
         raise HTTPException(status_code=503, detail="Note repository not available")
 
-    task = state.research_task_manager.get_task(task_id)
+    task = await run_research_sync(state.research_task_manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
-    notes = NoteService.list_by_asset(note_repo, "research_task", task_id)
+    notes = await run_research_sync(NoteService.list_by_asset, note_repo, "research_task", task_id)
     from backend.api.schemas import NoteResponse
 
     return [NoteResponse(**n) for n in notes]
@@ -341,13 +343,13 @@ async def get_task_unified_notes(task_id: str, request: Request = None):
     if not note_repo:
         raise HTTPException(status_code=503, detail="Note repository not available")
 
-    task = state.research_task_manager.get_task(task_id)
+    task = await run_research_sync(state.research_task_manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
     from backend.services.note import NoteService
 
-    notes = NoteService.list_by_task_with_steps(note_repo, task_id)
+    notes = await run_research_sync(NoteService.list_by_task_with_steps, note_repo, task_id)
     return [UnifiedNoteResponse(**n) for n in notes]
 
 
@@ -361,14 +363,14 @@ async def get_research_memory_nodes(task_id: str, request: Request):
     if not memory_node_repo:
         return {"task_id": task_id, "nodes": [], "count": 0}
 
-    nodes = memory_node_repo.get_by_source("research", task_id)
+    nodes = await run_research_sync(memory_node_repo.get_by_source, "research", task_id)
     if not nodes:
         task_repo = getattr(state, "research_task_repo", None)
         if task_repo:
-            task = task_repo.get(task_id)
+            task = await run_research_sync(task_repo.get, task_id)
             conv_id = task.get("conversation_id") if task else None
             if conv_id:
-                nodes = memory_node_repo.get_nodes(conv_id)
+                nodes = await run_research_sync(memory_node_repo.get_nodes, conv_id)
 
     result_nodes = []
     for n in nodes or []:
@@ -400,13 +402,13 @@ async def get_research_semantic_knots(task_id: str, request: Request):
     task_repo = getattr(state, "research_task_repo", None)
     conv_id = None
     if task_repo:
-        task = task_repo.get(task_id)
+        task = await run_research_sync(task_repo.get, task_id)
         conv_id = task.get("conversation_id") if task else None
 
     if not conv_id:
         conv_id = f"research_{task_id}"
 
-    knots = knot_repo.get_by_conversation(conv_id)
+    knots = await run_research_sync(knot_repo.get_by_conversation, conv_id)
     result_knots = []
     for k in knots or []:
         result_knots.append(

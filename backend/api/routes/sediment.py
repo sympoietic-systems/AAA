@@ -18,6 +18,12 @@ logger = logging.getLogger("aaa.api.sediment")
 router = APIRouter()
 
 
+def _digestion_coro(state, conversation_id: str, file_name: str, file_type: str):
+    from backend.services.file import FileService
+
+    return FileService.process_and_summarize(state, conversation_id, file_name, file_type)
+
+
 def _extract_depth(task: dict) -> int:
     import json
 
@@ -36,12 +42,12 @@ def _extract_depth(task: dict) -> int:
 @router.get("/sediment/files", response_model=SedimentFilesResponse)
 async def list_all_sediment_files(request: Request, exclude_conversation_id: str = "", search: str = ""):
     perception_repo = request.app.state.perception_repo
-    files = SedimentService.list_files(perception_repo, exclude_conversation_id, search)
+    files = await asyncio.to_thread(SedimentService.list_files, perception_repo, exclude_conversation_id, search)
 
     # Virtual completed research tasks list:
     try:
         task_repo = request.app.state.research_task_repo
-        completed_tasks = task_repo.list_all(status="completed", limit=100)
+        completed_tasks = await asyncio.to_thread(task_repo.list_all, status="completed", limit=100)
 
         # Map task_id -> task for backfilling display names
         task_map: dict[str, dict] = {t["id"]: t for t in completed_tasks if t.get("id")}
@@ -55,7 +61,7 @@ async def list_all_sediment_files(request: Request, exclude_conversation_id: str
                     if obj:
                         f["display_name"] = obj
                         with contextlib.suppress(Exception):
-                            perception_repo.set_display_name(f["conversation_id"], fn, obj)
+                            await asyncio.to_thread(perception_repo.set_display_name, f["conversation_id"], fn, obj)
 
         # Check files already present to avoid duplicates.
         # Match any filename starting with research-synthesis-{task_id}
@@ -124,7 +130,9 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
         conversation_id = str(uuid.uuid4())
         first_file = body.files[0].get("source_file_name", "document") if body.files else "document"
         title_base = first_file.replace("research-synthesis-", "").replace(".md", "")
-        perception_repo.ensure_conversation_exists(conversation_id, f"Injected: {title_base[:50]}", "user")
+        await asyncio.to_thread(
+            perception_repo.ensure_conversation_exists, conversation_id, f"Injected: {title_base[:50]}", "user"
+        )
 
     # Process files before injection
     processed_files = []
@@ -137,29 +145,34 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
 
             # Lazily ensure "global-research" exists in conversations to satisfy DB foreign keys
             try:
-                perception_repo.ensure_conversation_exists("global-research", "Global Research Reports", "system")
+                await asyncio.to_thread(
+                    perception_repo.ensure_conversation_exists, "global-research", "Global Research Reports", "system"
+                )
             except Exception as e:
                 logger.error("Failed to insert global-research conversation: %s", e)
 
             # Check if this file is already in perception_files
-            f_exists = perception_repo.check_file_exists("global-research", src_file)
+            f_exists = await asyncio.to_thread(perception_repo.check_file_exists, "global-research", src_file)
 
             if not f_exists:
                 # Fetch task result
-                task = task_repo.get(task_id)
+                task = await asyncio.to_thread(task_repo.get, task_id)
                 if task:
                     from backend.services.export import ExportService
 
-                    full_report = ExportService.build_research_report_content(request.app.state, task_id)
+                    full_report = await asyncio.to_thread(
+                        ExportService.build_research_report_content, request.app.state, task_id
+                    )
                     content_bytes = full_report.encode("utf-8")
 
                     # Cache file under global-research
                     from backend.services.file import FileService
 
-                    FileService.cache_file("global-research", src_file, content_bytes)
+                    await asyncio.to_thread(FileService.cache_file, "global-research", src_file, content_bytes)
 
                     # Create entry in perception_files
-                    perception_repo.create_file(
+                    await asyncio.to_thread(
+                        perception_repo.create_file,
                         conversation_id="global-research",
                         file_name=src_file,
                         file_type="research-synthesis",
@@ -168,29 +181,27 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
                     )
 
                     # Spawn digest worker
-                    coro = FileService.process_and_summarize(
-                        request.app.state, "global-research", src_file, "research-synthesis"
-                    )
+                    coro = _digestion_coro(request.app.state, "global-research", src_file, "research-synthesis")
                     asyncio.create_task(coro)
             else:
                 # Backfill display_name for existing files
-                task = task_repo.get(task_id)
+                task = await asyncio.to_thread(task_repo.get, task_id)
                 if task:
                     dn = task.get("objective") or task.get("title") or ""
                     if dn:
                         with contextlib.suppress(Exception):
-                            perception_repo.set_display_name("global-research", src_file, dn)
+                            await asyncio.to_thread(perception_repo.set_display_name, "global-research", src_file, dn)
 
         processed_files.append(entry)
 
-    created = SedimentService.inject(perception_repo, conversation_id, processed_files)
+    created = await asyncio.to_thread(SedimentService.inject, perception_repo, conversation_id, processed_files)
     return SedimentInjectionsResponse(injections=[SedimentInjectionInfo(**c) for c in created])
 
 
 @router.get("/conversations/{conversation_id}/sediment/injections", response_model=SedimentInjectionsResponse)
 async def get_conversation_injections(conversation_id: str, request: Request):
     perception_repo = request.app.state.perception_repo
-    injections = SedimentService.get_injections(perception_repo, conversation_id)
+    injections = await asyncio.to_thread(SedimentService.get_injections, perception_repo, conversation_id)
 
     # Backfill display_name for existing injected files
     try:
@@ -200,13 +211,15 @@ async def get_conversation_injections(conversation_id: str, request: Request):
             if fn.startswith("research-synthesis-") and not inj.get("display_name"):
                 task_id = fn.replace("research-synthesis-", "").replace(".md", "")
                 task_id = re.sub(r"_v\d+(?:_d\d+)?$", "", task_id)
-                task = task_repo.get(task_id)
+                task = await asyncio.to_thread(task_repo.get, task_id)
                 if task:
                     dn = task.get("objective") or task.get("title") or ""
                     if dn:
                         inj["display_name"] = dn
                         with contextlib.suppress(Exception):
-                            perception_repo.set_display_name(inj["source_conversation_id"], fn, dn)
+                            await asyncio.to_thread(
+                                perception_repo.set_display_name, inj["source_conversation_id"], fn, dn
+                            )
     except Exception:
         pass
     return SedimentInjectionsResponse(
@@ -231,5 +244,5 @@ async def get_conversation_injections(conversation_id: str, request: Request):
 
 @router.delete("/sediment/injections/{injection_id}")
 async def remove_sediment_injection(injection_id: str, request: Request):
-    SedimentService.remove_injection(request.app.state.perception_repo, injection_id)
+    await asyncio.to_thread(SedimentService.remove_injection, request.app.state.perception_repo, injection_id)
     return {"status": "success"}

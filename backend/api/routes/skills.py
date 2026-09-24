@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -125,7 +126,7 @@ async def get_skill_versions(skill_id: str, skill_repo=Depends(get_skill_repo)):
         raise HTTPException(status_code=503, detail="Skill repository not available")
 
     try:
-        versions = skill_repo.list_versions(skill_id)
+        versions = await asyncio.to_thread(skill_repo.list_versions, skill_id)
         return {"skill_id": skill_id, "versions": versions}
     except Exception as e:
         raise ServiceException(str(e)) from e
@@ -142,7 +143,7 @@ async def revert_skill_version(
     if not skill_repo:
         raise HTTPException(status_code=503, detail="Skill repository not available")
 
-    version_data = skill_repo.get_version(skill_id, version)
+    version_data = await asyncio.to_thread(skill_repo.get_version, skill_id, version)
     if not version_data:
         raise HTTPException(status_code=404, detail=f"Version {version} for skill {skill_id} not found")
 
@@ -169,7 +170,7 @@ async def get_recent_skill_events(request: Request, limit: int = 50, skill_repo=
     if not skill_repo:
         raise HTTPException(status_code=503, detail="Skill repository not available")
     try:
-        events = skill_repo.list_recent_events(limit=limit)
+        events = await asyncio.to_thread(skill_repo.list_recent_events, limit=limit)
         return events
     except Exception as e:
         raise ServiceException(str(e)) from e

@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.api.deps import get_app_state, get_dream_log_repo
@@ -8,7 +10,7 @@ router = APIRouter()
 
 @router.get("/daemon/status")
 async def get_daemon_status(state=Depends(get_app_state)):
-    status = DaemonService.get_status(state)
+    status = await asyncio.to_thread(DaemonService.get_status, state)
     if status is None:
         raise HTTPException(status_code=503, detail="Dream Daemon not initialized")
     return status
@@ -28,5 +30,5 @@ async def get_recent_dreams(
 ):
     if not repo:
         raise HTTPException(status_code=503, detail="Dream Log not available")
-    dreams = repo.get_recent(limit)
+    dreams = await asyncio.to_thread(repo.get_recent, limit)
     return {"dreams": dreams, "count": len(dreams)}

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from backend.api.routes.research.tasks import _extract_depth
+from backend.services.research.api import run_research_sync
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -27,17 +28,20 @@ async def export_research_task(task_id: str, request: Request):
     result_repo = getattr(state, "research_step_result_repo", None)
     plan_repo = getattr(state, "research_plan_repo", None)
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
-    branches = branch_repo.get_by_task(task_id) if branch_repo else []
-    assets = asset_repo.get_by_task(task_id) if asset_repo else []
-    steps = step_repo.get_by_task(task_id) if step_repo else []
-    plan = plan_repo.get_by_task(task_id) if plan_repo else None
-    notes = note_repo.get_notes_by_task(task_id) if note_repo else []
-
-    all_results = result_repo.get_by_task(task_id) if result_repo else []
+    branches, assets, steps, plan, notes, all_results = await run_research_sync(
+        lambda: (
+            branch_repo.get_by_task(task_id) if branch_repo else [],
+            asset_repo.get_by_task(task_id) if asset_repo else [],
+            step_repo.get_by_task(task_id) if step_repo else [],
+            plan_repo.get_by_task(task_id) if plan_repo else None,
+            note_repo.get_notes_by_task(task_id) if note_repo else [],
+            result_repo.get_by_task(task_id) if result_repo else [],
+        )
+    )
     results_by_step: dict = {}
     for r in all_results:
         sid = r.get("step_id", "")
@@ -47,7 +51,8 @@ async def export_research_task(task_id: str, request: Request):
 
     from backend.services.export import ExportService
 
-    markdown = ExportService.build_research_export(
+    markdown = await run_research_sync(
+        ExportService.build_research_export,
         task=task,
         branches=branches,
         assets=assets,
@@ -82,18 +87,23 @@ async def export_research_stages(task_id: str, request: Request):
     result_repo = getattr(state, "research_step_result_repo", None)
     plan_repo = getattr(state, "research_plan_repo", None)
 
-    task = manager.get_task(task_id)
+    task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
 
-    steps = step_repo.get_by_task(task_id) if step_repo else []
-    step_results = result_repo.get_by_task(task_id) if result_repo else []
-    plan = plan_repo.get_by_task(task_id) if plan_repo else None
-    notes = note_repo.get_notes_by_task(task_id) if note_repo else []
+    steps, step_results, plan, notes = await run_research_sync(
+        lambda: (
+            step_repo.get_by_task(task_id) if step_repo else [],
+            result_repo.get_by_task(task_id) if result_repo else [],
+            plan_repo.get_by_task(task_id) if plan_repo else None,
+            note_repo.get_notes_by_task(task_id) if note_repo else [],
+        )
+    )
 
     from backend.services.export import ExportService
 
-    markdown = ExportService.build_research_stages_export(
+    markdown = await run_research_sync(
+        ExportService.build_research_stages_export,
         task=task,
         steps=steps,
         step_results=step_results,
@@ -118,7 +128,7 @@ async def export_research_stages(task_id: str, request: Request):
 async def export_research_task_json(task_id: str, request: Request):
     """Export a single research task and all its children as structured JSON for re-import."""
     state = request.app.state
-    payload = _build_task_export(task_id, state)
+    payload = await run_research_sync(_build_task_export, task_id, state)
     if payload is None:
         raise HTTPException(status_code=404, detail="Research task not found")
     return payload
@@ -138,12 +148,12 @@ async def export_all_research_tasks(
     state = request.app.state
     manager = state.research_task_manager
 
-    tasks = manager.list_tasks(status=status, limit=limit or 10000)
+    tasks = await run_research_sync(manager.list_tasks, status=status, limit=limit or 10000)
 
     exports = []
     for task in tasks:
         tid = task["id"]
-        export = _build_task_export(tid, state)
+        export = await run_research_sync(_build_task_export, tid, state)
         if export:
             exports.append(export)
 
@@ -217,11 +227,11 @@ async def import_research_task(payload: dict[str, Any], request: Request):
     if task_entries and isinstance(task_entries, list):
         results = []
         for entry in task_entries:
-            result = import_research_task(entry, state)
+            result = await run_research_sync(import_research_task, entry, state)
             results.append(result.to_dict())
         return {"imported": True, "count": len(results), "results": results}
 
-    result = import_research_task(payload, state)
+    result = await run_research_sync(import_research_task, payload, state)
     if not result.imported:
         raise HTTPException(status_code=400, detail=result.to_dict())
 

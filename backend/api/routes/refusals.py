@@ -3,6 +3,8 @@
 GET /refusals — list recent refusals by Symbia.
 """
 
+import asyncio
+
 from fastapi import APIRouter, Query, Request
 
 from backend.api.deps import get_app_state
@@ -31,7 +33,9 @@ async def get_refusals(
         from backend.storage.repositories.cognitive.refusal import RefusalRepository
 
         repo = RefusalRepository(db_path)
-        refusals = repo.list_by_agent(agent_id, limit=limit)
+        refusals, total = await asyncio.to_thread(
+            lambda: (repo.list_by_agent(agent_id, limit=limit), repo.count(agent_id))
+        )
         return {
             "refusals": [
                 {
@@ -50,7 +54,7 @@ async def get_refusals(
                 }
                 for r in refusals
             ],
-            "total": repo.count(agent_id),
+            "total": total,
         }
     except Exception as e:
         return {"refusals": [], "error": str(e)}
