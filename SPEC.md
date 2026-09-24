@@ -96,7 +96,7 @@ T10|x|characterize sync-route/broad-catch/import/warning debt; add monotonic arc
 T11|x|add typed `AppServices` assembly + required dependency helper; keep object-identical temporary `app.state.*` aliases; migrate dependency getters|V12,V17,V24,V25,V31,V32,V35,I.internal
 T12|x|move conversation/history/agent/note/file/preview DB workflows into typed service use cases; offload once per use case|V15,V16,V17,V23,V24,V29,V30,V31,V33
 T13|x|move research task/step/artifact DB workflows into typed services; isolate state transitions & transaction scopes; empty sync-route debt inventory|V10,V12,V15,V23,V24,V29,V30,V31,V33,V34
-T14|.|replace `ChatService._conversation_locks` with app-owned bounded keyed lock registry + cancellation/concurrency tests|V12,V26,I.internal
+T14|x|replace `ChatService._conversation_locks` with app-owned bounded keyed lock registry + cancellation/concurrency tests|V12,V26,V30,I.internal
 T15|.|replace Pydantic mutable defaults; use UTC-aware timestamps; fix unawaited `AsyncMock`; assert project-owned warning-free suite|V13,V17,V27
 T16|.|split `MessageRepository` into core/history/vector-search/graph collaborators behind compatibility facade|V17,V22,V28,V30
 T17|.|split `modules/llm_client.py` into provider protocol, HTTP providers, pool/rate-limit policy, JSON parser; preserve facade imports|V2,V8,V11,V17,V28,V29,V30
@@ -128,3 +128,6 @@ B16|2026-09-23|silent legacy imports erased repository return types at the new s
 B17|2026-09-23|final static gate found split imports from the same contract modules in the architecture test|V30
 B18|2026-09-23|research lifecycle adapter aliases were not in Ruff's canonical import order|V30
 B19|2026-09-23|T13 route offloading edits passed lint but missed Ruff's formatting gate across eight files|V30
+B20|2026-09-23|adding an AppServices default factory shadowed the existing `field` loop variable|V30
+B21|2026-09-23|removing ChatService's class locks left its `asyncio` import unused|V30
+B22|2026-09-23|the ChatService lock rewrite missed Ruff's formatting gate|V30

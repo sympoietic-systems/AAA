@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import re
 import uuid
@@ -17,6 +16,7 @@ from backend.services.background_tasks import (
     run_background_resonance_scan,
     run_background_skill_refinement,
 )
+from backend.services.keyed_lock import KeyedLockRegistry
 from backend.services.metrics import MetricsService
 from backend.services.semantic_knot import SemanticKnotService
 from backend.services.title import TitleService
@@ -78,16 +78,13 @@ def _parse_response_artifacts(
 
 
 class ChatService:
-    _conversation_locks: dict[str, asyncio.Lock] = {}
-
     def __init__(self, state):
         self._state = state
-
-    @classmethod
-    def _get_conversation_lock(cls, conversation_id: str) -> asyncio.Lock:
-        if conversation_id not in cls._conversation_locks:
-            cls._conversation_locks[conversation_id] = asyncio.Lock()
-        return cls._conversation_locks[conversation_id]
+        registry = getattr(state, "conversation_locks", None)
+        if registry is None:
+            registry = KeyedLockRegistry()
+            state.conversation_locks = registry
+        self._conversation_locks = registry
 
     async def process_chat(
         self,
@@ -101,9 +98,8 @@ class ChatService:
         parent_message_id: int | None = None,
         agent_id: str | None = None,
     ) -> ChatResponse:
-        lock = self._get_conversation_lock(conversation_id) if conversation_id else None
-        if lock:
-            async with lock:
+        if conversation_id:
+            async with self._conversation_locks.hold(conversation_id):
                 return await self._process_chat_impl(
                     content=content,
                     speaker=speaker,

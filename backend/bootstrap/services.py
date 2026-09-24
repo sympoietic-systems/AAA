@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, fields
+from dataclasses import field as dataclass_field
 from typing import TYPE_CHECKING, Any
 
 from starlette.datastructures import State
+
+from backend.services.keyed_lock import KeyedLockRegistry
 
 if TYPE_CHECKING:
     from backend.metabolisation.daemon import AutopoieticDreamDaemon
@@ -93,6 +96,7 @@ class AppServices:
     background_engine: BackgroundTaskEngine
     background_provider: BaseLLMProvider | None
     vision_provider: BaseLLMProvider | None
+    conversation_locks: KeyedLockRegistry = dataclass_field(default_factory=KeyedLockRegistry)
     research_task_manager: ResearchTaskManager | None = None
     startup_scheduler: BackgroundStartupScheduler | None = None
     dream_daemon: AutopoieticDreamDaemon | None = None
