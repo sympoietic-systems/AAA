@@ -27,6 +27,7 @@ from backend.bootstrap.modules import (
 from backend.bootstrap.pipeline import _build_pipeline, _register_skills
 from backend.bootstrap.providers import _init_providers
 from backend.bootstrap.repositories import _init_repos
+from backend.bootstrap.services import AppServices, bind_legacy_state_aliases
 from backend.config import load_config
 from backend.core.logging_config import setup_logging
 from backend.modules.llm_client import LLMClientModule
@@ -112,80 +113,84 @@ async def lifespan(app: FastAPI):
     # 9. Pipeline
     pipeline, pipeline_order = _build_pipeline(config, registry, repos, modules)
 
-    # 10. Wire app state
-    app.state.config = config
-    rt = config.get("research_tasks", {})
-    logger.info("BOOTSTRAP CONFIG: research_tasks.manual_mode=%s", rt.get("manual_mode", "MISSING"))
-    app.state.agent_name = agent_name
-    app.state.message_repo = repos["message_repo"]
-    app.state.error_repo = repos["error_repo"]
-    app.state.metrics_repo = repos["metrics_repo"]
-    app.state.metrics_module = modules["conversation_metrics"]
-    app.state.conversation_repo = repos["conversation_repo"]
-    app.state.perception_repo = repos["perception_repo"]
-    app.state.perception_module = modules["perception_module"]
-    app.state.checkpoint_repo = repos["checkpoint_repo"]
-    app.state.memory_node_repo = repos["memory_node_repo"]
-    app.state.belief_repo = repos["belief_repo"]
-    app.state.semantic_knot_repo = repos["semantic_knot_repo"]
-    app.state.note_repo = repos["note_repo"]
-    app.state.skill_repo = repos["skill_repo"]
-    app.state.notification_repo = repos["notification_repo"]
-    app.state.commitment_repo = repos["commitment_repo"]
-    app.state.expertise_repo = repos["expertise_repo"]
-    app.state.personality_state_repo = repos["personality_state_repo"]
-    app.state.dream_log_repo = repos["dream_log_repo"]
-    app.state.daily_summary_repo = repos["daily_summary_repo"]
-    app.state.research_task_repo = repos["research_task_repo"]
-
-    app.state.research_branch_repo = repos["research_branch_repo"]
-    app.state.scraped_asset_repo = repos["scraped_asset_repo"]
-    app.state.research_meta_log_repo = repos["research_meta_log_repo"]
-    app.state.research_plan_repo = repos["research_plan_repo"]
-    app.state.research_step_repo = repos["research_step_repo"]
-    app.state.research_step_result_repo = repos["research_step_result_repo"]
-    app.state.belief_metabolism = belief_metabolism
-    app.state.registry = registry
-    app.state.pipeline = pipeline
-    app.state.pipeline_order = pipeline_order
-    app.state.embedder = embedder
-    app.state.llm_provider = llm_provider
-    app.state.structural_provider = structural_provider
-    app.state.structural_scorer = modules["structural_scorer"]
-    app.state.system_prompt_tokens = system_prompt_tokens
-
-    # 10.5. Research Task Manager (autonomous research engine lifecycle)
-    from backend.services.research.task_manager import ResearchTaskManager
-
-    app.state.research_task_manager = ResearchTaskManager(app.state)
-
-    # Wire app_state into the rhizome web probe module (created before app_state existed)
-    if "rhizome_web_probe" in modules:
-        modules["rhizome_web_probe"]._set_app_state(app.state)
-
-    # 11. Background engine
+    # 10. Background engine
     background_engine, background_provider = _init_background_engine(
         config,
         llm_provider,
         vision_provider,
     )
-    app.state.background_engine = background_engine
-    app.state.background_provider = background_provider
-    app.state.vision_provider = vision_provider
+
+    # 11. Assemble typed application services and temporary state aliases
+    rt = config.get("research_tasks", {})
+    logger.info("BOOTSTRAP CONFIG: research_tasks.manual_mode=%s", rt.get("manual_mode", "MISSING"))
+    services = AppServices(
+        config=config,
+        agent_name=agent_name,
+        message_repo=repos["message_repo"],
+        error_repo=repos["error_repo"],
+        metrics_repo=repos["metrics_repo"],
+        metrics_module=modules["conversation_metrics"],
+        conversation_repo=repos["conversation_repo"],
+        perception_repo=repos["perception_repo"],
+        perception_module=modules["perception_module"],
+        checkpoint_repo=repos["checkpoint_repo"],
+        memory_node_repo=repos["memory_node_repo"],
+        belief_repo=repos["belief_repo"],
+        semantic_knot_repo=repos["semantic_knot_repo"],
+        note_repo=repos["note_repo"],
+        skill_repo=repos["skill_repo"],
+        notification_repo=repos["notification_repo"],
+        commitment_repo=repos["commitment_repo"],
+        expertise_repo=repos["expertise_repo"],
+        personality_state_repo=repos["personality_state_repo"],
+        dream_log_repo=repos["dream_log_repo"],
+        daily_summary_repo=repos["daily_summary_repo"],
+        research_task_repo=repos["research_task_repo"],
+        research_branch_repo=repos["research_branch_repo"],
+        scraped_asset_repo=repos["scraped_asset_repo"],
+        research_meta_log_repo=repos["research_meta_log_repo"],
+        research_plan_repo=repos["research_plan_repo"],
+        research_step_repo=repos["research_step_repo"],
+        research_step_result_repo=repos["research_step_result_repo"],
+        belief_metabolism=belief_metabolism,
+        registry=registry,
+        pipeline=pipeline,
+        pipeline_order=pipeline_order,
+        embedder=embedder,
+        llm_provider=llm_provider,
+        structural_provider=structural_provider,
+        structural_scorer=modules["structural_scorer"],
+        system_prompt_tokens=system_prompt_tokens,
+        background_engine=background_engine,
+        background_provider=background_provider,
+        vision_provider=vision_provider,
+    )
+    bind_legacy_state_aliases(app.state, services)
+
+    # 11.5. Research Task Manager (autonomous research engine lifecycle)
+    from backend.services.research.task_manager import ResearchTaskManager
+
+    services.research_task_manager = ResearchTaskManager(services)
+    bind_legacy_state_aliases(app.state, services)
+
+    # Wire app_state into the rhizome web probe module (created before app_state existed)
+    if "rhizome_web_probe" in modules:
+        modules["rhizome_web_probe"]._set_app_state(services)
 
     # 12. Background services (scheduler + daemon)
-    _start_background_services(app.state)
+    _start_background_services(services)
+    bind_legacy_state_aliases(app.state, services)
 
     logger.info("All modules initialized. Server ready.")
     try:
         yield
     finally:
         logger.info("Shutting down.")
-        if hasattr(app.state, "startup_scheduler"):
-            await app.state.startup_scheduler.aclose()
-        if hasattr(app.state, "dream_daemon"):
-            await app.state.dream_daemon.aclose()
-        backup_task = getattr(app.state, "db_backup_task", None)
+        if services.startup_scheduler is not None:
+            await services.startup_scheduler.aclose()
+        if services.dream_daemon is not None:
+            await services.dream_daemon.aclose()
+        backup_task = services.db_backup_task
         if backup_task:
             backup_task.cancel()
             await asyncio.gather(backup_task, return_exceptions=True)

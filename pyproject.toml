@@ -50,6 +50,7 @@ files = [
     "backend/contracts.py",
     "backend/core/auth.py",
     "backend/errors.py",
+    "backend/bootstrap/services.py",
     "backend/quality",
 ]
 exclude = ["backend/tests"]

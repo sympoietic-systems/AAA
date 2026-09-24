@@ -3,18 +3,27 @@
 Extracted from backend/main.py.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from backend.bootstrap.services import AppServices
+    from backend.modules.background_tasks.engine import BackgroundTaskEngine
+    from backend.modules.llm_client import BaseLLMProvider
 
 logger = logging.getLogger(__name__)
 
 
-async def _db_backup_loop(db_path, backup_dir, keep: int = 3):
+async def _db_backup_loop(db_path: Path, backup_dir: Path, keep: int = 3) -> None:
     """Run a DB backup on startup, then every 24 hours. Keeps last 3."""
     from backend.services.backup import create_verified_backup
 
-    async def do_backup():
+    async def do_backup() -> None:
         if not db_path.exists():
             return
         try:
@@ -32,7 +41,7 @@ async def _db_backup_loop(db_path, backup_dir, keep: int = 3):
         await do_backup()
 
 
-def _start_db_backup_loop(app_state):
+def _start_db_backup_loop(app_state: AppServices) -> None:
     """Launch the DB backup loop as a background task."""
     from backend.storage.database import get_db_path
 
@@ -45,7 +54,11 @@ def _start_db_backup_loop(app_state):
     logger.info("DB backup loop started")
 
 
-def _init_background_engine(config: dict, llm_provider, vision_provider):
+def _init_background_engine(
+    config: dict[str, Any],
+    llm_provider: BaseLLMProvider,
+    vision_provider: BaseLLMProvider | None,
+) -> tuple[BackgroundTaskEngine, BaseLLMProvider | None]:
     """Create the BackgroundTaskEngine with all registered actions.
 
     Returns: (engine, background_provider)
@@ -131,7 +144,7 @@ def _init_background_engine(config: dict, llm_provider, vision_provider):
     return engine, background_provider
 
 
-def _start_background_services(app_state):
+def _start_background_services(app_state: AppServices) -> None:
     """Start the background scheduler, dream daemon, and DB backup."""
     from backend.metabolisation.scheduler import BackgroundStartupScheduler
     from backend.services.file import FileService

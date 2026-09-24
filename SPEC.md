@@ -78,6 +78,7 @@ V31: route/controller owns HTTP translation only; orchestration & repository seq
 V32: temporary `app.state.*` alias is object-identical to `app.state.services.*`; dependency overrides & lifespan teardown use same object.
 V33: architecture debt inventory monotonic ↓; new sync-route/broad-catch exception requires explicit boundary rationale; T13 leaves sync-route inventory empty.
 V34: dependent multi-repository mutation runs in one synchronous unit/transaction or explicit compensation; ⊥ await/offload between partial writes.
+V35: temporary diverged `app.state.*` dependency override remains effective; alias rebind restores identity with `AppServices`.
 
 ## §T
 
@@ -92,7 +93,7 @@ T7|x|redact formatted exceptions/access URLs + regression tests; normalize Glitc
 T8|x|clamp request schemas + regression tests; remove FastAPI coupling from services; tighten typed dependencies/offloading|V13,V15,V16,V17,I.api,I.error
 T9|x|write ADR; run focused + full pytest, ruff check/format; clean ephemeral artifacts|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21
 T10|x|characterize sync-route/broad-catch/import/warning debt; add monotonic architecture tests; pin `mypy` + strict initial allowlist; correct stale auth docs|V8,V15,V16,V17,V23,V28,V30,V31,V33
-T11|.|add typed `AppServices` assembly + required dependency helper; keep object-identical temporary `app.state.*` aliases; migrate dependency getters|V12,V17,V24,V25,V31,V32,I.internal
+T11|x|add typed `AppServices` assembly + required dependency helper; keep object-identical temporary `app.state.*` aliases; migrate dependency getters|V12,V17,V24,V25,V31,V32,V35,I.internal
 T12|.|move conversation/history/agent/note/file/preview DB workflows into typed service use cases; offload once per use case|V15,V17,V23,V24,V31,V33
 T13|.|move research task/step/artifact DB workflows into typed services; isolate state transitions & transaction scopes; empty sync-route debt inventory|V10,V12,V15,V23,V24,V29,V31,V33,V34
 T14|.|replace `ChatService._conversation_locks` with app-owned bounded keyed lock registry + cancellation/concurrency tests|V12,V26,I.internal
@@ -103,7 +104,7 @@ T18|.|split research orchestrator into state store, step executor, sedimentation
 T19|.|split belief service into query/proposal/mutation/version use cases; add narrow repository ports & atomic mutation tests|V10,V15,V17,V23,V28,V29,V30,V31,V34
 T20|.|split dream daemon trigger policy/execution/maintenance jobs; retain lifecycle owner & bounded worker semantics|V5,V12,V15,V17,V23,V28,V29,V30
 T21|.|define domain exception taxonomy/translation; audit refactored modules; install monotonic broad-catch boundary allowlist|V11,V14,V17,V29,V31,V33
-T22|.|expand strict `mypy` allowlist across refactored slices; ADR; full pytest/ruff/type/frontend gates; clean artifacts|V17,V18,V23,V24,V25,V26,V27,V28,V29,V30,V31,V32,V33,V34,I.quality
+T22|.|expand strict `mypy` allowlist across refactored slices; ADR; full pytest/ruff/type/frontend gates; clean artifacts|V17,V18,V23,V24,V25,V26,V27,V28,V29,V30,V31,V32,V33,V34,V35,I.quality
 
 ## §B
 
@@ -113,3 +114,8 @@ B2|2026-09-23|`backend.api.routes.__init__` eager compatibility re-exports → r
 B3|2026-09-23|ambient `AAA_PASSWORD` made unrelated route tests environment-dependent|V7
 B4|2026-09-23|`backend.core.__init__` eager exports expanded leaf imports/type-check scope across packages|V22
 B5|2026-09-23|new architecture test imports violated configured stdlib ordering|V30
+B6|2026-09-23|`backend.bootstrap.__init__` eager exports evaluated type-only names during leaf import|V22
+B7|2026-09-23|typed dependency getter ignored a diverged legacy state override and leaked stale app state across tests|V35
+B8|2026-09-23|lazy imports let dotenv repopulate deleted test auth secret after fixture setup|V7
+B9|2026-09-23|required-dependency migration replaced the concrete default agent identity with an unnecessary 503|V24
+B10|2026-09-23|service factory bypassed a diverged legacy repository override by injecting the typed container|V35

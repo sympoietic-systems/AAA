@@ -16,7 +16,7 @@ os.environ["AAA_RUN_MIGRATIONS"] = "true"
 @pytest.fixture(autouse=True)
 def isolate_auth_environment(monkeypatch):
     """Prevent a developer's shell password from changing unrelated test behavior."""
-    monkeypatch.delenv("AAA_PASSWORD", raising=False)
+    monkeypatch.setenv("AAA_PASSWORD", "")
 
 
 @pytest.fixture(scope="session")
