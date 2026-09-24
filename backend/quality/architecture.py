@@ -105,21 +105,46 @@ def scan_sync_route_calls(repo_root: Path) -> dict[str, dict[str, int]]:
     return inventory
 
 
-def scan_broad_catches(repo_root: Path) -> dict[str, int]:
+class _BroadCatchVisitor(ast.NodeVisitor):
+    """Inventory broad catches by their owning callable boundary."""
+
+    def __init__(self) -> None:
+        self._scope: list[str] = []
+        self.catches: Counter[str] = Counter()
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self._scope.append(node.name)
+        self.generic_visit(node)
+        self._scope.pop()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._visit_callable(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._visit_callable(node)
+
+    def _visit_callable(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        self._scope.append(node.name)
+        self.generic_visit(node)
+        self._scope.pop()
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        if isinstance(node.type, ast.Name) and node.type.id == "Exception":
+            boundary = ".".join(self._scope) if self._scope else "<module>"
+            self.catches[boundary] += 1
+        self.generic_visit(node)
+
+
+def scan_broad_catches(repo_root: Path) -> dict[str, dict[str, int]]:
     backend_root = repo_root / "backend"
-    inventory: dict[str, int] = {}
+    inventory: dict[str, dict[str, int]] = {}
     for root_name in PRODUCTION_EXCEPTION_ROOTS:
         for path in sorted((backend_root / root_name).rglob("*.py")):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-            count = sum(
-                1
-                for node in ast.walk(tree)
-                if isinstance(node, ast.ExceptHandler)
-                and isinstance(node.type, ast.Name)
-                and node.type.id == "Exception"
-            )
-            if count:
-                inventory[path.relative_to(repo_root).as_posix()] = count
+            visitor = _BroadCatchVisitor()
+            visitor.visit(tree)
+            if visitor.catches:
+                inventory[path.relative_to(repo_root).as_posix()] = dict(sorted(visitor.catches.items()))
     return inventory
 
 
@@ -132,9 +157,3 @@ def debt_growth(current: dict[str, dict[str, int]], baseline: dict[str, dict[str
             if count > allowed:
                 growth.append(f"{path}: {signature} {count}>{allowed}")
     return growth
-
-
-def count_growth(current: dict[str, int], baseline: dict[str, int]) -> list[str]:
-    return [
-        f"{path}: {count}>{baseline.get(path, 0)}" for path, count in current.items() if count > baseline.get(path, 0)
-    ]

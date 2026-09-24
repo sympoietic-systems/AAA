@@ -1,87 +1,368 @@
 {
-  "broad_catches": {
-    "backend/metabolisation/bifurcation.py": 5,
-    "backend/metabolisation/consolidation.py": 5,
-    "backend/metabolisation/daemon.py": 11,
-    "backend/metabolisation/dream_execution.py": 4,
-    "backend/metabolisation/dream_maintenance.py": 7,
-    "backend/metabolisation/dream_trigger_policy.py": 5,
-    "backend/metabolisation/dream_context.py": 10,
-    "backend/metabolisation/dream_executor.py": 11,
-    "backend/metabolisation/dream_prompts.py": 1,
-    "backend/metabolisation/dream_research.py": 6,
-    "backend/metabolisation/research_metabolism.py": 15,
-    "backend/metabolisation/scheduler.py": 13,
-    "backend/metabolisation/sedimentation.py": 1,
-    "backend/metabolisation/skill_metabolism.py": 6,
-    "backend/modules/background_tasks/actions/document_collision.py": 4,
-    "backend/modules/background_tasks/actions/dream_topic_decision.py": 1,
-    "backend/modules/background_tasks/actions/metabolize_skill.py": 1,
-    "backend/modules/background_tasks/actions/refine_belief.py": 2,
-    "backend/modules/background_tasks/actions/refine_skill.py": 6,
-    "backend/modules/background_tasks/actions/resonance_finder.py": 1,
-    "backend/modules/background_tasks/actions/structure_extraction.py": 4,
-    "backend/modules/background_tasks/actions/summarize.py": 7,
-    "backend/modules/belief/decay.py": 3,
-    "backend/modules/belief/ecosystem.py": 3,
-    "backend/modules/belief/perception_handlers.py": 5,
-    "backend/modules/belief_engine.py": 20,
-    "backend/modules/commitment_store.py": 2,
-    "backend/modules/consolidation_checkpoint.py": 3,
-    "backend/modules/context_collector.py": 1,
-    "backend/modules/conversation_metrics.py": 1,
-    "backend/modules/digester.py": 1,
-    "backend/modules/embedder.py": 3,
-    "backend/modules/expertise_engine.py": 1,
-    "backend/modules/llm_http.py": 1,
-    "backend/modules/llm_parsing.py": 2,
-    "backend/modules/llm_pool.py": 3,
-    "backend/modules/providers/typesafe_provider.py": 1,
-    "backend/modules/retrieval/rhizome_web_probe.py": 1,
-    "backend/modules/retrieval/sedimentation_retrieval.py": 1,
-    "backend/modules/retrieval/web_retrieval.py": 6,
-    "backend/modules/sensory/perception.py": 18,
-    "backend/modules/sensory/perception_prompts.py": 1,
-    "backend/modules/sensory/trait_computer.py": 2,
-    "backend/modules/skills/skill_activator.py": 5,
-    "backend/modules/skills/skill_workshop.py": 4,
-    "backend/modules/structural_engine.py": 8,
-    "backend/services/annotations.py": 1,
-    "backend/services/background_tasks.py": 7,
-    "backend/services/backup.py": 1,
-    "backend/services/belief_common.py": 1,
-    "backend/services/belief_mutation.py": 2,
-    "backend/services/belief_proposal.py": 2,
-    "backend/services/belief_query.py": 2,
-    "backend/services/belief_version.py": 1,
-    "backend/services/belief_serializer.py": 1,
-    "backend/services/chat.py": 14,
-    "backend/services/consolidation.py": 1,
-    "backend/services/daily_summary.py": 3,
-    "backend/services/export/research.py": 10,
-    "backend/services/file.py": 2,
-    "backend/services/metrics.py": 1,
-    "backend/services/note.py": 1,
-    "backend/services/research/cache_manager.py": 3,
-    "backend/services/research/context_builder.py": 4,
-    "backend/services/research/orchestrator.py": 7,
-    "backend/services/research/step_executor.py": 6,
-    "backend/services/research/search_tool.py": 5,
-    "backend/services/research/sensory_affordances.py": 5,
-    "backend/services/research/steps/consolidate.py": 7,
-    "backend/services/research/steps/digest.py": 6,
-    "backend/services/research/steps/document_digestion.py": 4,
-    "backend/services/research/steps/evaluate.py": 2,
-    "backend/services/research/steps/parse.py": 6,
-    "backend/services/research/steps/plan.py": 7,
-    "backend/services/research/steps/reflect.py": 4,
-    "backend/services/research/steps/search.py": 3,
-    "backend/services/research/steps/synthesize.py": 7,
-    "backend/services/research/task_manager.py": 13,
-    "backend/services/research/task_state.py": 3,
-    "backend/services/semantic_knot.py": 2,
-    "backend/services/skill.py": 7,
-    "backend/services/title.py": 2
+  "broad_catch_boundaries": {
+    "backend/metabolisation/bifurcation.py": {
+      "evaluate_evidence_perturbation": 5
+    },
+    "backend/metabolisation/consolidation.py": {
+      "ConsolidationMixin._consolidate_conversation": 2,
+      "ConsolidationMixin._sync_diffractive_tags": 1,
+      "ConsolidationMixin.consolidate_pending_conversations": 2
+    },
+    "backend/metabolisation/daemon.py": {
+      "AutopoieticDreamDaemon._run_loop": 11
+    },
+    "backend/metabolisation/dream_context.py": {
+      "DreamContextMixin._build_nomadic_synthesis_context": 1,
+      "DreamContextMixin._build_nomadic_synthesis_prompt": 1,
+      "DreamContextMixin._calculate_somatic_vitality": 1,
+      "DreamContextMixin._evaluate_stagnation": 1,
+      "DreamContextMixin._evaluate_tension_hotspot": 1,
+      "DreamContextMixin._get_dream_context_for_belief": 2,
+      "DreamContextMixin._get_drift_context": 2,
+      "DreamContextMixin._get_last_dream_response_for_belief": 1
+    },
+    "backend/metabolisation/dream_execution.py": {
+      "DreamExecutionMixin._execute_self_triggered_dream": 4
+    },
+    "backend/metabolisation/dream_executor.py": {
+      "DreamExecutorMixin._compute_intra_dream_stagnation": 1,
+      "DreamExecutorMixin._execute_single_dream_turn": 6,
+      "DreamExecutorMixin._generate_resonance_continuation": 2,
+      "DreamExecutorMixin._resolve_dream_conversation": 2
+    },
+    "backend/metabolisation/dream_maintenance.py": {
+      "DreamMaintenanceMixin.backfill_structure_on_idle": 5,
+      "DreamMaintenanceMixin.compact_memory": 2
+    },
+    "backend/metabolisation/dream_prompts.py": {
+      "DreamPromptMixin._generate_dream_prompt": 1
+    },
+    "backend/metabolisation/dream_research.py": {
+      "DreamResearchMixin._drain_research_queue": 1,
+      "DreamResearchMixin._scan_and_propose_research": 4,
+      "DreamResearchMixin.metabolize_research_on_idle": 1
+    },
+    "backend/metabolisation/dream_trigger_policy.py": {
+      "DreamTriggerPolicyMixin.check_and_trigger_dream": 5
+    },
+    "backend/metabolisation/research_metabolism.py": {
+      "ResearchMetabolismEngine._consolidate_to_memory": 1,
+      "ResearchMetabolismEngine._rake_sedimentation_queue": 3,
+      "ResearchMetabolismEngine._synthesize_findings": 2,
+      "ResearchMetabolismEngine.metabolize_research_results": 2,
+      "ResearchMetabolismMixin.metabolize_completed_research": 2,
+      "ResearchMetabolismMixin.rake_research_sedimentation": 5
+    },
+    "backend/metabolisation/scheduler.py": {
+      "BackgroundStartupScheduler._backfill_conversation_metrics": 3,
+      "BackgroundStartupScheduler._backfill_structural_signatures": 1,
+      "BackgroundStartupScheduler._catch_up_belief_metabolism": 1,
+      "BackgroundStartupScheduler._periodic_sweep": 3,
+      "BackgroundStartupScheduler._resume_indexing_tasks.resume_file": 1,
+      "BackgroundStartupScheduler._run_scheduler": 4
+    },
+    "backend/metabolisation/sedimentation.py": {
+      "merge_nodes": 1
+    },
+    "backend/metabolisation/skill_metabolism.py": {
+      "SkillMetabolismMixin.run_skill_metabolism": 6
+    },
+    "backend/modules/background_tasks/actions/document_collision.py": {
+      "DocumentCollisionAction.execute": 1,
+      "parse_json_safely": 3
+    },
+    "backend/modules/background_tasks/actions/dream_topic_decision.py": {
+      "DreamTopicDecisionAction.execute": 1
+    },
+    "backend/modules/background_tasks/actions/metabolize_skill.py": {
+      "MetabolizeSkillAction.execute": 1
+    },
+    "backend/modules/background_tasks/actions/refine_belief.py": {
+      "RefineBeliefAction.execute": 2
+    },
+    "backend/modules/background_tasks/actions/refine_skill.py": {
+      "RefineSkillAction.execute": 6
+    },
+    "backend/modules/background_tasks/actions/resonance_finder.py": {
+      "ResonanceFinderAction.execute": 1
+    },
+    "backend/modules/background_tasks/actions/structure_extraction.py": {
+      "StructureExtractionAction.execute": 4
+    },
+    "backend/modules/background_tasks/actions/summarize.py": {
+      "SummarizeAction.execute": 4,
+      "parse_json_safely": 3
+    },
+    "backend/modules/belief/decay.py": {
+      "DecayManager.apply_turn_decay": 2,
+      "DecayManager.atrophy_beliefs": 1
+    },
+    "backend/modules/belief/ecosystem.py": {
+      "EcosystemManager.compute_ecosystem_health": 1,
+      "EcosystemManager.compute_tension_field": 1,
+      "EcosystemManager.process_ghost_ecology": 1
+    },
+    "backend/modules/belief/perception_handlers.py": {
+      "PerceptionMetabolismHandler.metabolize_conversational_pattern": 1,
+      "PerceptionMetabolismHandler.metabolize_note": 2,
+      "PerceptionMetabolismHandler.metabolize_perception": 1,
+      "PerceptionMetabolismHandler.metabolize_web": 1
+    },
+    "backend/modules/belief_engine.py": {
+      "BeliefDynamicsEngine._ensure_signature": 3,
+      "BeliefDynamicsEngine._find_closest_active_belief": 1,
+      "BeliefDynamicsEngine._nucleate_proto_belief": 1,
+      "BeliefDynamicsEngine.metabolize": 11,
+      "BeliefDynamicsEngine.process": 4
+    },
+    "backend/modules/commitment_store.py": {
+      "CommitmentStore._emit_trace": 1,
+      "CommitmentStore._nucleate_proto_commitment": 1
+    },
+    "backend/modules/consolidation_checkpoint.py": {
+      "ConsolidationCheckpointModule._build_context_text": 1,
+      "ConsolidationCheckpointModule._fetch_sibling_nodes": 1,
+      "ConsolidationCheckpointModule._select_nodes_type_diverse": 1
+    },
+    "backend/modules/context_collector.py": {
+      "ContextCollectorModule.process": 1
+    },
+    "backend/modules/conversation_metrics.py": {
+      "ConversationMetricsModule.process": 1
+    },
+    "backend/modules/digester.py": {
+      "SimpleChunkDigester._extract_pdf": 1
+    },
+    "backend/modules/embedder.py": {
+      "EmbedderModule.validate": 1,
+      "EmbeddingService.load": 2
+    },
+    "backend/modules/expertise_engine.py": {
+      "ExpertiseEngine._accrete": 1
+    },
+    "backend/modules/llm_http.py": {
+      "OpenAICompatibleProvider.validate_connection": 1
+    },
+    "backend/modules/llm_parsing.py": {
+      "generate_unified": 2
+    },
+    "backend/modules/llm_pool.py": {
+      "ModelPoolProvider.generate": 2,
+      "ModelPoolProvider.validate_connection": 1
+    },
+    "backend/modules/providers/typesafe_provider.py": {
+      "TypeSafeDecisionClient.evaluate": 1
+    },
+    "backend/modules/retrieval/rhizome_web_probe.py": {
+      "RhizomeWebProbeModule.process": 1
+    },
+    "backend/modules/retrieval/sedimentation_retrieval.py": {
+      "SedimentationRetrievalModule.process": 1
+    },
+    "backend/modules/retrieval/web_retrieval.py": {
+      "RhizomeWebProbe.execute_probe": 3,
+      "RhizomeWebProbe.search": 2,
+      "WebRetrievalModule.process": 1
+    },
+    "backend/modules/sensory/perception.py": {
+      "PerceptionModule._get_fallback_chunks": 1,
+      "PerceptionModule._ingest_attachments": 3,
+      "PerceptionModule._retrieve_relevant_chunks": 6,
+      "PerceptionModule.ingest_single_file": 4,
+      "PerceptionModule.ingest_single_file.process_and_insert_chunk": 2,
+      "PerceptionModule.ingest_single_file.process_and_insert_image_chunk": 1,
+      "_breadcrumb": 1
+    },
+    "backend/modules/sensory/perception_prompts.py": {
+      "_load_prompts": 1
+    },
+    "backend/modules/sensory/trait_computer.py": {
+      "TraitComputer._load_aspirational": 1,
+      "TraitComputer.process": 1
+    },
+    "backend/modules/skills/skill_activator.py": {
+      "SkillActivatorModule._get_current_vector": 2,
+      "SkillActivatorModule.process": 3
+    },
+    "backend/modules/skills/skill_workshop.py": {
+      "SkillWorkshopModule._apply": 1,
+      "SkillWorkshopModule._propose": 1,
+      "SkillWorkshopModule._revise": 1,
+      "SkillWorkshopModule.process": 1
+    },
+    "backend/modules/structural_engine.py": {
+      "CompositeStructuralScorer.__init__": 2,
+      "JevStructuralScorer.score": 1,
+      "JevStructuralScorer.score_with_confidence_async": 1,
+      "LLMScorer.score": 1,
+      "LLMScorer.score_async": 1,
+      "parse_scorer_response": 2
+    },
+    "backend/services/annotations.py": {
+      "process_self_annotations": 1
+    },
+    "backend/services/background_tasks.py": {
+      "run_background_belief_nucleation": 3,
+      "run_background_refusal_persist": 2,
+      "run_background_resonance_scan": 1,
+      "run_background_skill_refinement": 1
+    },
+    "backend/services/backup.py": {
+      "create_verified_backup": 1
+    },
+    "backend/services/belief_common.py": {
+      "_score_statement_16d": 1
+    },
+    "backend/services/belief_mutation.py": {
+      "BeliefMutationUseCases.create_new_belief": 1,
+      "BeliefMutationUseCases.update_belief_details": 1
+    },
+    "backend/services/belief_proposal.py": {
+      "BeliefProposalUseCases.synthesize_merge_statement": 2
+    },
+    "backend/services/belief_query.py": {
+      "BeliefQueryUseCases.get_beliefs": 2
+    },
+    "backend/services/belief_serializer.py": {
+      "_parse_source_trace": 1
+    },
+    "backend/services/belief_version.py": {
+      "BeliefVersionUseCases.revert_belief_version": 1
+    },
+    "backend/services/chat.py": {
+      "ChatService._process_chat_impl": 1,
+      "ChatService.generate_response": 10,
+      "ChatService.save_message": 3
+    },
+    "backend/services/consolidation.py": {
+      "ConsolidationService.fire_and_forget._do_consolidate": 1
+    },
+    "backend/services/daily_summary.py": {
+      "DailySummaryService.generate_summary": 2,
+      "DailySummaryService.generate_summary._load_prompt": 1
+    },
+    "backend/services/export/research.py": {
+      "ResearchExportBuilder._extract_llm_content": 2,
+      "ResearchExportBuilder._parse_step_data": 1,
+      "ResearchExportBuilder.build_research_export": 1,
+      "ResearchExportBuilder.build_research_report_content": 1,
+      "ResearchExportBuilder.build_research_stages_export": 4,
+      "ResearchExportBuilder.build_research_stages_export.get_depth": 1
+    },
+    "backend/services/file.py": {
+      "FileService.cache_upload_stream": 1,
+      "FileService.run_digest_worker": 1
+    },
+    "backend/services/metrics.py": {
+      "MetricsService.parse_phase_shifts": 1
+    },
+    "backend/services/note.py": {
+      "NoteService.metabolize_background": 1
+    },
+    "backend/services/research/cache_manager.py": {
+      "CacheManager.load_cache": 1,
+      "CacheManager.reinitialize": 1,
+      "CacheManager.save_cache": 1
+    },
+    "backend/services/research/context_builder.py": {
+      "ResearchContextBuilder.build_memory_context_block": 1,
+      "ResearchContextBuilder.build_node_context": 1,
+      "ResearchContextBuilder.build_orchestration_context": 2
+    },
+    "backend/services/research/orchestrator.py": {
+      "SomaticResearchOrchestrator._get_or_create_default_branch": 1,
+      "SomaticResearchOrchestrator._get_parsed_urls": 1,
+      "SomaticResearchOrchestrator._get_step_depth": 1,
+      "SomaticResearchOrchestrator._log_llm_response": 1,
+      "SomaticResearchOrchestrator._metabolize_step": 1,
+      "SomaticResearchOrchestrator._save_llm_response_to_step_data": 1,
+      "SomaticResearchOrchestrator.preview_step_inputs": 1
+    },
+    "backend/services/research/search_tool.py": {
+      "_is_valid_http_url": 1,
+      "_search_ddg_lite": 1,
+      "clean_ddg_url": 1,
+      "search_via_crawl4ai": 1,
+      "web_search": 1
+    },
+    "backend/services/research/sensory_affordances.py": {
+      "crawl_via_firecrawl": 1,
+      "fetch_via_crawl4ai": 1,
+      "fetch_via_jina": 1,
+      "search_via_firecrawl": 1,
+      "select_and_fetch": 1
+    },
+    "backend/services/research/step_executor.py": {
+      "ResearchStepExecutor.execute": 6
+    },
+    "backend/services/research/steps/consolidate.py": {
+      "ConsolidateStep.preview": 3,
+      "run_consolidation": 4
+    },
+    "backend/services/research/steps/digest.py": {
+      "DigestStep.preview": 2,
+      "analyze_source_content": 2,
+      "parallel_digest_grouped.digest_one": 2
+    },
+    "backend/services/research/steps/document_digestion.py": {
+      "DocumentDigestionStep.execute": 1,
+      "DocumentDigestionStep.execute._digest_single_document": 1,
+      "DocumentDigestionStep.preview": 1,
+      "_chunk_with_breadcrumb": 1
+    },
+    "backend/services/research/steps/evaluate.py": {
+      "EvaluateStep.preview": 1,
+      "run_evaluation": 1
+    },
+    "backend/services/research/steps/parse.py": {
+      "parallel_parse_grouped": 2,
+      "parallel_parse_grouped.fetch_one": 4
+    },
+    "backend/services/research/steps/plan.py": {
+      "PlanStep.preview": 1,
+      "_recover_context_from_steps": 3,
+      "run_plan_generation": 3
+    },
+    "backend/services/research/steps/reflect.py": {
+      "ReflectionStep.preview": 2,
+      "run_deep_reflection": 2
+    },
+    "backend/services/research/steps/search.py": {
+      "SearchStep.execute": 2,
+      "_select_high_fidelity_results": 1
+    },
+    "backend/services/research/steps/synthesize.py": {
+      "SynthesizeStep.execute": 2,
+      "SynthesizeStep.preview": 2,
+      "run_synthesis": 3
+    },
+    "backend/services/research/task_manager.py": {
+      "ResearchTaskManager._dispatch_notification": 1,
+      "ResearchTaskManager._execute_continued_task": 1,
+      "ResearchTaskManager._execute_task": 1,
+      "ResearchTaskManager._orchestrator_step_async": 1,
+      "ResearchTaskManager.complete": 1,
+      "ResearchTaskManager.continue_task": 5
+    },
+    "backend/services/research/task_state.py": {
+      "TaskStateManager._load_state": 1,
+      "TaskStateManager._persist_state": 1,
+      "TaskStateManager.resume_task": 1
+    },
+    "backend/services/semantic_knot.py": {
+      "SemanticKnotService.fire_and_forget._do_compact": 2
+    },
+    "backend/services/skill.py": {
+      "SkillService._compute_skill_vector": 3,
+      "SkillService._format_skill": 1,
+      "SkillService.create_new_skill": 1,
+      "SkillService.delete_skill": 1,
+      "SkillService.update_skill_details": 1
+    },
+    "backend/services/title.py": {
+      "TitleService.generate": 1,
+      "TitleService.generate_from_conversation": 1
+    }
   },
   "project_warning_debt": [],
   "sync_route_calls": {}

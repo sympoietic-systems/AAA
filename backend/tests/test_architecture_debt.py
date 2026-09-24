@@ -7,7 +7,7 @@ from backend.api.schemas import ChatResponse as ApiChatResponse
 from backend.api.schemas import HistoryResponse as ApiHistoryResponse
 from backend.contracts import ChatResponse, HistoryResponse
 from backend.errors import ServiceException
-from backend.quality.architecture import count_growth, debt_growth, scan_broad_catches, scan_sync_route_calls
+from backend.quality.architecture import debt_growth, scan_broad_catches, scan_sync_route_calls
 
 REPO_ROOT = Path(__file__).parents[2]
 DEBT_PATH = Path(__file__).with_name("architecture_debt.json")
@@ -23,8 +23,8 @@ def test_sync_route_debt_never_grows():
 
 
 def test_broad_catch_debt_never_grows():
-    baseline = _debt()["broad_catches"]
-    assert count_growth(scan_broad_catches(REPO_ROOT), baseline) == []
+    baseline = _debt()["broad_catch_boundaries"]
+    assert debt_growth(scan_broad_catches(REPO_ROOT), baseline) == []
 
 
 def test_project_warning_debt_is_empty():
