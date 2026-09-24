@@ -102,7 +102,7 @@ T16|x|split `MessageRepository` into core/history/vector-search/graph collaborat
 T17|x|split `modules/llm_client.py` into provider protocol, HTTP providers, pool/rate-limit policy, JSON parser; preserve facade imports|V2,V8,V11,V17,V28,V29,V30
 T18|x|split research orchestrator into state store, step executor, sedimentation sink; retain orchestrator facade & state-machine tests|V12,V15,V17,V23,V28,V29,V30,V31
 T19|x|split belief service into query/proposal/mutation/version use cases; add narrow repository ports & atomic mutation tests|V10,V15,V17,V23,V28,V29,V30,V31,V34
-T20|.|split dream daemon trigger policy/execution/maintenance jobs; retain lifecycle owner & bounded worker semantics|V5,V12,V15,V17,V23,V28,V29,V30
+T20|x|split dream daemon trigger policy/execution/maintenance jobs; retain lifecycle owner & bounded worker semantics|V5,V12,V15,V17,V23,V28,V29,V30
 T21|.|define domain exception taxonomy/translation; audit refactored modules; install monotonic broad-catch boundary allowlist|V11,V14,V17,V29,V31,V33
 T22|.|expand strict `mypy` allowlist across refactored slices; ADR; full pytest/ruff/type/frontend gates; clean artifacts|V17,V18,V23,V24,V25,V26,V27,V28,V29,V30,V31,V32,V33,V34,V35,I.quality
 
@@ -143,3 +143,5 @@ B31|2026-09-24|belief extraction exposed implicit state attributes, bare result 
 B32|2026-09-24|atomic rollback test used nested context managers rejected by the Ruff simplification gate|V30
 B33|2026-09-24|belief-service extraction relocated approved boundary catches to unbaselined module paths|V29,V33
 B34|2026-09-24|typed repository-port import left the query collaborator outside Ruff formatting|V30
+B35|2026-09-24|daemon extraction split a method signature from its maintenance body|V17,V28
+B36|2026-09-24|daemon extraction relocated approved boundary catches to unbaselined module paths|V29,V33

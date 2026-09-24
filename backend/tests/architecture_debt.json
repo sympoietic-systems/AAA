@@ -2,7 +2,10 @@
   "broad_catches": {
     "backend/metabolisation/bifurcation.py": 5,
     "backend/metabolisation/consolidation.py": 5,
-    "backend/metabolisation/daemon.py": 27,
+    "backend/metabolisation/daemon.py": 11,
+    "backend/metabolisation/dream_execution.py": 4,
+    "backend/metabolisation/dream_maintenance.py": 7,
+    "backend/metabolisation/dream_trigger_policy.py": 5,
     "backend/metabolisation/dream_context.py": 10,
     "backend/metabolisation/dream_executor.py": 11,
     "backend/metabolisation/dream_prompts.py": 1,
