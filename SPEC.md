@@ -94,7 +94,7 @@ T8|x|clamp request schemas + regression tests; remove FastAPI coupling from serv
 T9|x|write ADR; run focused + full pytest, ruff check/format; clean ephemeral artifacts|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21
 T10|x|characterize sync-route/broad-catch/import/warning debt; add monotonic architecture tests; pin `mypy` + strict initial allowlist; correct stale auth docs|V8,V15,V16,V17,V23,V28,V30,V31,V33
 T11|x|add typed `AppServices` assembly + required dependency helper; keep object-identical temporary `app.state.*` aliases; migrate dependency getters|V12,V17,V24,V25,V31,V32,V35,I.internal
-T12|.|move conversation/history/agent/note/file/preview DB workflows into typed service use cases; offload once per use case|V15,V17,V23,V24,V31,V33
+T12|x|move conversation/history/agent/note/file/preview DB workflows into typed service use cases; offload once per use case|V15,V16,V17,V23,V24,V29,V30,V31,V33
 T13|.|move research task/step/artifact DB workflows into typed services; isolate state transitions & transaction scopes; empty sync-route debt inventory|V10,V12,V15,V23,V24,V29,V31,V33,V34
 T14|.|replace `ChatService._conversation_locks` with app-owned bounded keyed lock registry + cancellation/concurrency tests|V12,V26,I.internal
 T15|.|replace Pydantic mutable defaults; use UTC-aware timestamps; fix unawaited `AsyncMock`; assert project-owned warning-free suite|V13,V17,V27
@@ -119,3 +119,10 @@ B7|2026-09-23|typed dependency getter ignored a diverged legacy state override a
 B8|2026-09-23|lazy imports let dotenv repopulate deleted test auth secret after fixture setup|V7
 B9|2026-09-23|required-dependency migration replaced the concrete default agent identity with an unnecessary 503|V24
 B10|2026-09-23|service factory bypassed a diverged legacy repository override by injecting the typed container|V35
+B11|2026-09-23|agent use-case extraction left an unused route import rejected by Ruff|V30
+B12|2026-09-23|conversation use-case extraction introduced a broad service-layer embedding catch|V29,V33
+B13|2026-09-23|typed dependency additions duplicated an import instead of extending the existing import|V30
+B14|2026-09-23|moving preview selection into services exposed four broad fallback catches to the debt ratchet|V29,V33
+B15|2026-09-23|new service modules entered strict mypy with route-era bare collections and heterogeneous selector output|V30
+B16|2026-09-23|silent legacy imports erased repository return types at the new strict service boundary|V30
+B17|2026-09-23|final static gate found split imports from the same contract modules in the architecture test|V30

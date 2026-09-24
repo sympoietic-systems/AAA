@@ -37,7 +37,9 @@ if TYPE_CHECKING:
     from backend.pipeline.registry import PipelineRegistry
     from backend.services.belief import BeliefService
     from backend.services.chat import ChatService
-    from backend.services.conversation import ConversationService
+    from backend.services.conversation import ConversationService, ConversationUseCases
+    from backend.services.history import HistoryService
+    from backend.services.note import NoteUseCases
     from backend.services.skill import SkillService
     from backend.storage.models import Conversation
     from backend.storage.repositories import (
@@ -304,6 +306,33 @@ def get_conversation_service() -> ConversationService:
     from backend.services.conversation import ConversationService
 
     return ConversationService()
+
+
+def get_conversation_use_cases(state: State = Depends(get_app_state)) -> ConversationUseCases:
+    from backend.services.conversation import ConversationUseCases
+
+    context = _service_context(state)
+    conversation_repo = cast("ConversationRepository", _require_dependency(state, "conversation_repo"))
+    message_repo = cast("MessageRepository", _require_dependency(state, "message_repo"))
+    return ConversationUseCases(
+        conversation_repo,
+        message_repo,
+        checkpoint_repo=getattr(context, "checkpoint_repo", None),
+        note_repo=getattr(context, "note_repo", None),
+        memory_node_repo=getattr(context, "memory_node_repo", None),
+    )
+
+
+def get_history_service(message_repo: MessageRepository = Depends(get_message_repo)) -> HistoryService:
+    from backend.services.history import HistoryService
+
+    return HistoryService(message_repo)
+
+
+def get_note_use_cases(note_repo: NoteRepository = Depends(get_note_repo)) -> NoteUseCases:
+    from backend.services.note import NoteUseCases
+
+    return NoteUseCases(note_repo)
 
 
 # ── Composite helpers ──────────────────────────────────────────────────

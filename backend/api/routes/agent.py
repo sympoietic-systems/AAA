@@ -1,4 +1,3 @@
-import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -16,6 +15,7 @@ from backend.api.deps import (
     require_agent_flux,
 )
 from backend.api.schemas import AgentInfo
+from backend.services.agent import AgentUseCases
 from backend.utils.vector import cosine_similarity, parse_vector_16d
 
 router = APIRouter()
@@ -234,21 +234,11 @@ async def update_commitment(commitment_id: str, request: Request, commit_repo=De
     if not commit_repo:
         raise HTTPException(status_code=500, detail="Repository unavailable")
 
-    node = commit_repo.get_by_id(commitment_id)
-    if not node:
-        raise HTTPException(status_code=404, detail="Commitment not found")
-
     body = await request.json()
-    if "statement" in body:
-        node.statement = body["statement"]
-    if "lifecycle_stage" in body:
-        node.lifecycle_stage = body["lifecycle_stage"]
-    if "confidence" in body:
-        node.confidence = body["confidence"]
-    if "ontological_mass" in body:
-        node.ontological_mass = body["ontological_mass"]
-
-    commit_repo.update(node)
+    try:
+        node = await AgentUseCases.update_commitment(commit_repo, commitment_id, body)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Commitment not found") from exc
     return {
         "status": "ok",
         "commitment": {
@@ -267,19 +257,11 @@ async def update_expertise(expertise_id: str, request: Request, exp_repo=Depends
     if not exp_repo:
         raise HTTPException(status_code=500, detail="Repository unavailable")
 
-    node = exp_repo.get_by_id(expertise_id)
-    if not node:
-        raise HTTPException(status_code=404, detail="Expertise domain not found")
-
     body = await request.json()
-    if "lifecycle_stage" in body:
-        node.lifecycle_stage = body["lifecycle_stage"]
-    if "ontological_mass" in body:
-        node.ontological_mass = body["ontological_mass"]
-    if "level_label" in body:
-        node.level_label = body["level_label"]
-
-    exp_repo.update(node)
+    try:
+        node = await AgentUseCases.update_expertise(exp_repo, expertise_id, body)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Expertise domain not found") from exc
     return {
         "status": "ok",
         "expertise": {
@@ -301,19 +283,7 @@ async def update_aspirational_traits(request: Request, ps_repo=Depends(get_perso
     body = await request.json()
     traits = body.get("traits", {})
 
-    existing = ps_repo.get()
-    if existing:
-        existing.aspirational_traits_json = json.dumps(traits)
-        ps_repo.upsert(existing)
-    else:
-        from backend.storage.models import PersonalityState
-
-        state_obj = PersonalityState(
-            id=1,
-            agent_id="symbia",
-            aspirational_traits_json=json.dumps(traits),
-        )
-        ps_repo.upsert(state_obj)
+    await AgentUseCases.update_aspirational_traits(ps_repo, traits)
 
     return {"status": "ok", "aspirational_traits": traits}
 
@@ -331,15 +301,11 @@ async def recalculate_commitment_vector(
     if not commit_repo or not structural_scorer:
         raise HTTPException(status_code=500, detail="Repository or scorer unavailable")
 
-    node = commit_repo.get_by_id(commitment_id)
-    if not node:
-        raise HTTPException(status_code=404, detail="Commitment not found")
-
-    new_vector = await structural_scorer._scorer.score_async(node.statement)
-    node.vector_16d = json.dumps(new_vector.tolist())
-    commit_repo.update(node)
-
-    return {"status": "ok", "vector_16d": new_vector.tolist()}
+    try:
+        vector = await AgentUseCases.recalculate_commitment(commit_repo, structural_scorer, commitment_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Commitment not found") from exc
+    return {"status": "ok", "vector_16d": vector}
 
 
 @router.put("/agent/personality/expertise/{expertise_id}/recalculate", dependencies=[Depends(require_agent_flux)])
@@ -352,12 +318,8 @@ async def recalculate_expertise_vector(
     if not exp_repo or not structural_scorer:
         raise HTTPException(status_code=500, detail="Repository or scorer unavailable")
 
-    node = exp_repo.get_by_id(expertise_id)
-    if not node:
-        raise HTTPException(status_code=404, detail="Expertise domain not found")
-
-    new_vector = await structural_scorer._scorer.score_async(node.domain)
-    node.vector_16d = json.dumps(new_vector.tolist())
-    exp_repo.update(node)
-
-    return {"status": "ok", "vector_16d": new_vector.tolist()}
+    try:
+        vector = await AgentUseCases.recalculate_expertise(exp_repo, structural_scorer, expertise_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Expertise domain not found") from exc
+    return {"status": "ok", "vector_16d": vector}

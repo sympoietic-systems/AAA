@@ -8,6 +8,8 @@ from backend import contracts as _contracts
 AttachmentInfo = _contracts.AttachmentInfo
 ChatResponse = _contracts.ChatResponse
 HomeostaticRecommendations = _contracts.HomeostaticRecommendations
+HistoryMessage = _contracts.HistoryMessage
+HistoryResponse = _contracts.HistoryResponse
 MetricsInfo = _contracts.MetricsInfo
 ProposedBranch = _contracts.ProposedBranch
 
@@ -34,33 +36,6 @@ class GenerateRequest(BaseModel):
     user_message_id: int = Field(..., ge=1)
     max_tokens: int | None = Field(default=None, ge=1, le=131_072, description="Override max_tokens for this request")
     include_structural_scoring: bool | None = None
-
-
-class HistoryMessage(BaseModel):
-    id: int
-    timestamp: datetime
-    speaker: str
-    content: str
-    thinking: str | None = None
-    context_sent: str | None = None
-    has_context: bool | None = None
-    content_tokens: int = 0
-    thinking_tokens: int | None = None
-    metrics: Optional["MetricsInfo"] = None
-    model_used: str | None = None
-    provider_used: str | None = None
-    structural_signature: list[float] | None = None
-    structural_justification: str | None = None
-    parent_message_id: int | None = None
-    active_skills: list[str] = Field(default_factory=list, description="Skill names active for this response")
-    active_beliefs: list[str] = Field(
-        default_factory=list, description="Belief labels in the attractor window for this response"
-    )
-
-
-class HistoryResponse(BaseModel):
-    messages: list[HistoryMessage]
-    count: int
 
 
 class HealthResponse(BaseModel):

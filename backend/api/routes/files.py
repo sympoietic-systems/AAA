@@ -1,7 +1,5 @@
 import asyncio
-import json
 import logging
-import os
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -9,7 +7,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from backend.api.deps import get_agent_name, get_app_state, get_conversation_repo, get_perception_repo
 from backend.api.schemas import ConversationFile, ConversationFilesResponse
 from backend.services.file import FileService
-from backend.utils.filesystem import get_upload_path
 from backend.utils.security import (
     DEFAULT_MAX_FILE_SIZE,
     DEFAULT_MAX_IMAGE_SIZE,
@@ -67,7 +64,9 @@ async def upload_conversation_files(
     if len(uploaded_files) > max_files:
         raise HTTPException(status_code=400, detail=f"At most {max_files} files may be uploaded per request")
 
-    create_conversation = conversation_id == "new" or not conv_repo or not conv_repo.get(conversation_id)
+    create_conversation = conversation_id == "new" or not await FileService.conversation_exists(
+        conv_repo, conversation_id
+    )
     if create_conversation:
         import uuid
 
@@ -101,23 +100,17 @@ async def upload_conversation_files(
         await asyncio.to_thread(FileService.remove_cached_files, [item[3] for item in staged])
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    if conv_repo:
-        if create_conversation:
-            conv_repo.create(conversation_id=conversation_id, agent_id=agent_id)
-            title_base = staged[0][0].rsplit(".", 1)[0]
-            conv_repo.update_title(conversation_id, f"File trace: {title_base[:50]}")
-        else:
-            conv_repo.touch(conversation_id)
+    await FileService.register_uploads(
+        conv_repo,
+        perception_repo,
+        conversation_id=conversation_id,
+        agent_id=agent_id,
+        staged=staged,
+        create_conversation=create_conversation,
+    )
 
     schema_files = []
     for safe_name, file_type, _file_size, _cached_path in staged:
-        perception_repo.create_file(
-            conversation_id=conversation_id,
-            file_name=safe_name,
-            file_type=file_type,
-            status="uploading",
-        )
-
         background_tasks.add_task(
             FileService.process_and_summarize,
             state,
@@ -143,7 +136,7 @@ async def upload_conversation_files(
 
 @router.get("/conversations/{conversation_id}/files", response_model=ConversationFilesResponse)
 async def get_conversation_files(conversation_id: str, perception_repo=Depends(get_perception_repo)):
-    files = perception_repo.get_files_by_conversation(conversation_id)
+    files = await FileService.list_conversation_files(perception_repo, conversation_id)
     schema_files = []
     for f in files:
         created_at_dt = _parse_file_datetime(f.get("created_at"))
@@ -172,20 +165,10 @@ async def delete_conversation_file(conversation_id: str, file_name: str, percept
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    files = perception_repo.get_files_by_conversation(conversation_id)
-    exists = any(f["file_name"] == file_name for f in files)
-    if not exists:
-        raise HTTPException(status_code=404, detail="File not found in conversation")
     try:
-        cached_file = get_upload_path(conversation_id, file_name)
-        if os.path.exists(cached_file):
-            os.remove(cached_file)
-        convo_dir = os.path.dirname(cached_file)
-        if os.path.exists(convo_dir) and not os.listdir(convo_dir):
-            os.rmdir(convo_dir)
-    except Exception as e:
-        logger.error(f"Failed to delete disk cache file {file_name}: {e}")
-    perception_repo.delete_file(conversation_id, file_name)
+        await FileService.delete_conversation_file(perception_repo, conversation_id, file_name)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="File not found in conversation") from exc
     return {"status": "success"}
 
 
@@ -203,68 +186,31 @@ async def reprocess_conversation_file(
         file_name = sanitize_filename(file_name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    files = perception_repo.get_files_by_conversation(conversation_id)
-    target_file = None
-    for f in files:
-        if f["file_name"] == file_name:
-            target_file = f
-            break
-    if not target_file:
-        raise HTTPException(status_code=404, detail="File not found in conversation")
-    perception_repo.update_file(conversation_id=conversation_id, file_name=file_name, status="processing")
+    try:
+        file_type = await FileService.prepare_reprocess(perception_repo, conversation_id, file_name)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="File not found in conversation") from exc
     background_tasks.add_task(
         FileService.reprocess_and_summarize,
         state,
         conversation_id,
         file_name,
-        target_file["file_type"],
+        file_type,
     )
     return {"status": "success"}
 
 
 @router.get("/conversations/{conversation_id}/files/{file_name:path}/summary")
 async def get_file_summary_endpoint(conversation_id: str, file_name: str, perception_repo=Depends(get_perception_repo)):
-    target_conv_id = conversation_id
-    injections = perception_repo.get_injections_for_conversation(conversation_id)
-    for inj in injections:
-        if inj["source_file_name"] == file_name:
-            target_conv_id = inj["source_conversation_id"]
-            break
-    files = perception_repo.get_files_by_conversation(target_conv_id)
-    for f in files:
-        if f["file_name"] == file_name:
-            res_data = {"summary": f.get("summary"), "summary_model": f.get("summary_model")}
-            if f.get("file_type") == "image":
-                log_record = perception_repo.get_perception_log_by_image(file_name)
-                if log_record:
-                    res_data["image_metadata"] = log_record
-            elif f.get("file_type") == "web_probe":
-                web_record = perception_repo.get_exogenous_stream_by_file(file_name)
-                if web_record:
-                    res_data["web_metadata"] = web_record
-            else:
-                try:
-                    nodes = json.loads(f.get("belief_nodes_implicated")) if f.get("belief_nodes_implicated") else []
-                except Exception:
-                    nodes = []
-                try:
-                    impact = json.loads(f.get("state_vector_impact")) if f.get("state_vector_impact") else [0.0] * 16
-                except Exception:
-                    impact = [0.0] * 16
-                res_data["document_metadata"] = {
-                    "interference_score": f.get("interference_score") or 0.0,
-                    "belief_nodes_implicated": nodes,
-                    "state_vector_impact": impact,
-                }
-            return res_data
-    raise HTTPException(status_code=404, detail="File not found")
+    try:
+        return await FileService.get_file_summary(perception_repo, conversation_id, file_name)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="File not found") from exc
 
 
 @router.get("/files/by-name")
 async def get_file_by_name_endpoint(file_name: str, perception_repo=Depends(get_perception_repo)):
-    file_info = perception_repo.find_file_by_name(file_name)
-    if not file_info:
-        raise HTTPException(status_code=404, detail="File not found")
-    chunks = perception_repo.get_chunks_by_file(file_info["conversation_id"], file_name)
-    file_info["chunks"] = chunks
-    return file_info
+    try:
+        return await FileService.get_file_by_name(perception_repo, file_name)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="File not found") from exc

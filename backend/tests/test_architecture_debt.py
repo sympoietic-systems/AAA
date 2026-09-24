@@ -4,7 +4,8 @@ import sys
 from pathlib import Path
 
 from backend.api.schemas import ChatResponse as ApiChatResponse
-from backend.contracts import ChatResponse
+from backend.api.schemas import HistoryResponse as ApiHistoryResponse
+from backend.contracts import ChatResponse, HistoryResponse
 from backend.errors import ServiceException
 from backend.quality.architecture import count_growth, debt_growth, scan_broad_catches, scan_sync_route_calls
 
@@ -36,6 +37,7 @@ def test_compatibility_contract_exports_are_identical():
     from backend.api.exceptions import ServiceException as ApiServiceException
 
     assert ApiChatResponse is ChatResponse
+    assert ApiHistoryResponse is HistoryResponse
     assert ApiServiceException is ServiceException
 
 

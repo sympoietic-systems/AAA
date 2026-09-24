@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import json
 import logging
 import os
 import sys
@@ -130,6 +131,145 @@ class FileService:
             path.unlink(missing_ok=True)
             with contextlib.suppress(OSError):
                 path.parent.rmdir()
+
+    @staticmethod
+    async def conversation_exists(conversation_repo, conversation_id: str) -> bool:
+        return await asyncio.to_thread(lambda: conversation_repo.get(conversation_id) is not None)
+
+    @staticmethod
+    async def register_uploads(
+        conversation_repo,
+        perception_repo,
+        *,
+        conversation_id: str,
+        agent_id: str,
+        staged: list[tuple[str, str, int, str]],
+        create_conversation: bool,
+    ) -> None:
+        await asyncio.to_thread(
+            FileService._register_uploads,
+            conversation_repo,
+            perception_repo,
+            conversation_id=conversation_id,
+            agent_id=agent_id,
+            staged=staged,
+            create_conversation=create_conversation,
+        )
+
+    @staticmethod
+    def _register_uploads(
+        conversation_repo,
+        perception_repo,
+        *,
+        conversation_id: str,
+        agent_id: str,
+        staged: list[tuple[str, str, int, str]],
+        create_conversation: bool,
+    ) -> None:
+        if create_conversation:
+            conversation_repo.create(conversation_id=conversation_id, agent_id=agent_id)
+            title_base = staged[0][0].rsplit(".", 1)[0]
+            conversation_repo.update_title(conversation_id, f"File trace: {title_base[:50]}")
+        else:
+            conversation_repo.touch(conversation_id)
+        for safe_name, file_type, _file_size, _cached_path in staged:
+            perception_repo.create_file(
+                conversation_id=conversation_id,
+                file_name=safe_name,
+                file_type=file_type,
+                status="uploading",
+            )
+
+    @staticmethod
+    async def list_conversation_files(perception_repo, conversation_id: str) -> list[dict]:
+        return await asyncio.to_thread(perception_repo.get_files_by_conversation, conversation_id)
+
+    @staticmethod
+    async def delete_conversation_file(perception_repo, conversation_id: str, file_name: str) -> None:
+        await asyncio.to_thread(FileService._delete_conversation_file, perception_repo, conversation_id, file_name)
+
+    @staticmethod
+    def _delete_conversation_file(perception_repo, conversation_id: str, file_name: str) -> None:
+        files = perception_repo.get_files_by_conversation(conversation_id)
+        if not any(item["file_name"] == file_name for item in files):
+            raise LookupError("File not found in conversation")
+        cached_file = Path(get_upload_path(conversation_id, file_name))
+        try:
+            cached_file.unlink(missing_ok=True)
+            with contextlib.suppress(OSError):
+                cached_file.parent.rmdir()
+        except OSError:
+            logger.exception("Failed to delete disk cache file %s", file_name)
+        perception_repo.delete_file(conversation_id, file_name)
+
+    @staticmethod
+    async def prepare_reprocess(perception_repo, conversation_id: str, file_name: str) -> str:
+        return await asyncio.to_thread(FileService._prepare_reprocess, perception_repo, conversation_id, file_name)
+
+    @staticmethod
+    def _prepare_reprocess(perception_repo, conversation_id: str, file_name: str) -> str:
+        files = perception_repo.get_files_by_conversation(conversation_id)
+        target = next((item for item in files if item["file_name"] == file_name), None)
+        if target is None:
+            raise LookupError("File not found in conversation")
+        perception_repo.update_file(conversation_id=conversation_id, file_name=file_name, status="processing")
+        return str(target["file_type"])
+
+    @staticmethod
+    async def get_file_summary(perception_repo, conversation_id: str, file_name: str) -> dict:
+        return await asyncio.to_thread(FileService._get_file_summary, perception_repo, conversation_id, file_name)
+
+    @staticmethod
+    def _get_file_summary(perception_repo, conversation_id: str, file_name: str) -> dict:
+        target_conversation_id = conversation_id
+        for injection in perception_repo.get_injections_for_conversation(conversation_id):
+            if injection["source_file_name"] == file_name:
+                target_conversation_id = injection["source_conversation_id"]
+                break
+        files = perception_repo.get_files_by_conversation(target_conversation_id)
+        target = next((item for item in files if item["file_name"] == file_name), None)
+        if target is None:
+            raise LookupError("File not found")
+        result = {"summary": target.get("summary"), "summary_model": target.get("summary_model")}
+        if target.get("file_type") == "image":
+            record = perception_repo.get_perception_log_by_image(file_name)
+            if record:
+                result["image_metadata"] = record
+        elif target.get("file_type") == "web_probe":
+            record = perception_repo.get_exogenous_stream_by_file(file_name)
+            if record:
+                result["web_metadata"] = record
+        else:
+            try:
+                nodes = (
+                    json.loads(target.get("belief_nodes_implicated")) if target.get("belief_nodes_implicated") else []
+                )
+            except (json.JSONDecodeError, TypeError):
+                nodes = []
+            try:
+                impact = (
+                    json.loads(target.get("state_vector_impact")) if target.get("state_vector_impact") else [0.0] * 16
+                )
+            except (json.JSONDecodeError, TypeError):
+                impact = [0.0] * 16
+            result["document_metadata"] = {
+                "interference_score": target.get("interference_score") or 0.0,
+                "belief_nodes_implicated": nodes,
+                "state_vector_impact": impact,
+            }
+        return result
+
+    @staticmethod
+    async def get_file_by_name(perception_repo, file_name: str) -> dict:
+        return await asyncio.to_thread(FileService._get_file_by_name, perception_repo, file_name)
+
+    @staticmethod
+    def _get_file_by_name(perception_repo, file_name: str) -> dict:
+        file_info = perception_repo.find_file_by_name(file_name)
+        if file_info is None:
+            raise LookupError("File not found")
+        file_info["chunks"] = perception_repo.get_chunks_by_file(file_info["conversation_id"], file_name)
+        return file_info
 
     @classmethod
     async def run_digest_worker(

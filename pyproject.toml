@@ -51,6 +51,9 @@ files = [
     "backend/core/auth.py",
     "backend/errors.py",
     "backend/bootstrap/services.py",
+    "backend/services/agent.py",
+    "backend/services/history.py",
+    "backend/services/preview.py",
     "backend/quality",
 ]
 exclude = ["backend/tests"]

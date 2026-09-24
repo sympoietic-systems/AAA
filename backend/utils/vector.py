@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from backend.api.schemas import HistoryMessage
+from backend.contracts import HistoryMessage
 
 logger = logging.getLogger(__name__)
 

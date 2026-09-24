@@ -1,9 +1,12 @@
-import asyncio
-import logging
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-
-from backend.api.deps import require_agent_flux, require_conversation
+from backend.api.deps import (
+    get_agent_name,
+    get_background_engine,
+    get_conversation_use_cases,
+    get_embedder,
+    require_agent_flux,
+)
 from backend.api.schemas import (
     ChatResponse,
     CommitBranchRequest,
@@ -16,209 +19,127 @@ from backend.api.schemas import (
     TreeLink,
     TreeNode,
 )
-from backend.metabolisation.consolidation import generate_human_summary_text
-from backend.services.conversation import ConversationService
-from backend.services.title import TitleService
+from backend.services.conversation import ConversationUseCases
 from backend.utils.token_counter import estimate_tokens
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
 @router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
-    request: Request,
     tag: str | None = Query(default=None, max_length=100),
     search: str | None = Query(default=None, max_length=500),
     limit: int | None = Query(default=None, ge=1, le=100),
     offset: int | None = Query(default=None, ge=0),
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
 ):
-    state = request.app.state
-    conv_repo = getattr(state, "conversation_repo", None)
-    checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    if not conv_repo:
-        return ConversationListResponse(conversations=[], total_count=0, has_more=False)
-
     safe_limit = limit
     safe_offset = offset if offset is not None else (0 if limit is not None else None)
-
-    def _fetch_conversations():
-        convos = conv_repo.list_all(tag=tag, search=search, limit=safe_limit, offset=safe_offset)
-        total_count = conv_repo.count_all(tag=tag, search=search)
-        res_convos = []
-        for c in convos:
-            info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, c)
-            res_convos.append(ConversationInfo(**info))
-        return res_convos, total_count
-
-    res_convos, total_count = await asyncio.to_thread(_fetch_conversations)
+    items, total_count = await conversations.list(tag=tag, search=search, limit=safe_limit, offset=safe_offset)
+    response_items = [ConversationInfo(**item) for item in items]
 
     has_more = False
     if safe_limit is not None and safe_offset is not None:
         has_more = (safe_offset + safe_limit) < total_count
 
-    return ConversationListResponse(conversations=res_convos, total_count=total_count, has_more=has_more)
+    return ConversationListResponse(conversations=response_items, total_count=total_count, has_more=has_more)
 
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationInfo)
-async def get_conversation(conversation_id: str, request: Request):
-    state = request.app.state
-    conv_repo = getattr(state, "conversation_repo", None)
-    checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    conv = require_conversation(conv_repo, conversation_id)
-    info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, conv)
-    return ConversationInfo(**info)
+async def get_conversation(
+    conversation_id: str,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    try:
+        return ConversationInfo(**(await conversations.get(conversation_id)))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Conversation not found") from exc
 
 
 @router.patch("/conversations/{conversation_id}", response_model=ConversationInfo)
-async def update_conversation(conversation_id: str, body: ConversationUpdateRequest, request: Request):
-    state = request.app.state
-    conv_repo = getattr(state, "conversation_repo", None)
-    checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    conv = require_conversation(conv_repo, conversation_id)
-    conv_repo.update_title(conversation_id, body.title)
-    conv = conv_repo.get(conversation_id)
-    info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, conv)
-    return ConversationInfo(**info)
+async def update_conversation(
+    conversation_id: str,
+    body: ConversationUpdateRequest,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    try:
+        return ConversationInfo(**(await conversations.update_title(conversation_id, body.title)))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Conversation not found") from exc
 
 
 @router.delete("/conversations/{conversation_id}", dependencies=[Depends(require_agent_flux)])
-async def delete_conversation(conversation_id: str, request: Request):
-
-    state = request.app.state
-    conv_repo = getattr(state, "conversation_repo", None)
-    _conv = require_conversation(conv_repo, conversation_id)
-    conv_repo.delete(conversation_id)
+async def delete_conversation(
+    conversation_id: str,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    try:
+        await conversations.delete(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Conversation not found") from exc
     return {"status": "deleted", "id": conversation_id}
 
 
 @router.delete("/conversations/{conversation_id}/messages/{message_id}", dependencies=[Depends(require_agent_flux)])
-async def delete_message(conversation_id: str, message_id: int, request: Request):
-
-    state = request.app.state
-    msg_repo = state.message_repo
-    conv_repo = getattr(state, "conversation_repo", None)
-
-    if conv_repo:
-        conv = conv_repo.get(conversation_id)
-        if not conv:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-
-    msg = msg_repo.get_by_id(message_id)
-    if not msg:
-        raise HTTPException(status_code=404, detail="Message not found")
-    if msg.conversation_id != conversation_id:
-        raise HTTPException(status_code=404, detail="Message not found in this conversation")
-
-    msg_repo.delete_message(message_id)
-    conv_repo.touch(conversation_id)
+async def delete_message(
+    conversation_id: str,
+    message_id: int,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    try:
+        await conversations.delete_message(conversation_id, message_id)
+    except LookupError as exc:
+        detail = str(exc)
+        raise HTTPException(status_code=404, detail=detail) from exc
     return {"status": "deleted", "id": message_id}
 
 
 @router.post("/conversations/{conversation_id}/generate-human-summary", response_model=ConversationInfo)
-async def generate_human_summary(conversation_id: str, request: Request):
-    state = request.app.state
-    conv_repo = getattr(state, "conversation_repo", None)
-    checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    conv = require_conversation(conv_repo, conversation_id)
-
-    background_engine = getattr(state, "background_engine", None)
-    if not background_engine:
-        raise HTTPException(status_code=503, detail="Background engine not available")
-
-    msg_repo = state.message_repo
-    # Get all messages on the main ancestor path (full conversation context)
-    last_msgs = msg_repo.get_recent(limit=1, conversation_id=conversation_id)
-    if not last_msgs:
-        raise HTTPException(status_code=404, detail="No messages in conversation")
-
-    leaf_message_id = last_msgs[0].id
-    ancestor_msgs = msg_repo.get_ancestor_path(leaf_message_id)
-    ancestor_ids = [m.id for m in ancestor_msgs if m.id is not None]
-
-    # Generate human summary using shared function
-    human_summary = await generate_human_summary_text(background_engine, ancestor_msgs)
-
-    if not human_summary:
-        raise HTTPException(status_code=500, detail="Failed to generate human summary")
-
-    # Update or create checkpoint with the new human summary
-    if checkpoint_repo:
-        checkpoint = checkpoint_repo.get_latest_checkpoint_for_path(conversation_id, ancestor_ids)
-        if checkpoint and checkpoint.get("id"):
-            checkpoint_repo.update_human_summary(checkpoint["id"], human_summary)
-        else:
-            total_count = len(ancestor_msgs)
-            checkpoint_repo.save(
-                conversation_id,
-                total_count,
-                "",
-                human_summary=human_summary,
-                message_id=leaf_message_id,
-            )
-
-    info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, conv)
-    return ConversationInfo(**info)
+async def generate_human_summary(
+    conversation_id: str,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+    background_engine=Depends(get_background_engine),
+):
+    try:
+        return ConversationInfo(**(await conversations.generate_human_summary(conversation_id, background_engine)))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/conversations/{conversation_id}/generate-title", response_model=ConversationInfo)
-async def generate_conversation_title(conversation_id: str, request: Request):
-    state = request.app.state
-    conv_repo = getattr(state, "conversation_repo", None)
-    checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    conv = require_conversation(conv_repo, conversation_id)
-
-    background_engine = getattr(state, "background_engine", None)
-    if not background_engine:
-        raise HTTPException(status_code=503, detail="Background engine not available")
-
-    title = await TitleService.generate_from_conversation(
-        background_engine, request.app.state.message_repo, conversation_id
-    )
-    conv_repo.update_title(conversation_id, title)
-    conv = conv_repo.get(conversation_id)
-    info = ConversationService.build_conversation_info(conv_repo, checkpoint_repo, conv)
-    return ConversationInfo(**info)
+async def generate_conversation_title(
+    conversation_id: str,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+    background_engine=Depends(get_background_engine),
+):
+    try:
+        return ConversationInfo(**(await conversations.generate_title(conversation_id, background_engine)))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Conversation not found") from exc
 
 
 @router.post("/conversations/{conversation_id}/commit-branch", response_model=ChatResponse)
-async def commit_branch(conversation_id: str, body: CommitBranchRequest, request: Request):
-    state = request.app.state
-    repo = state.message_repo
-    conv_repo = getattr(state, "conversation_repo", None)
-
-    if conv_repo:
-        conv = conv_repo.get(conversation_id)
-        if not conv:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-        conv_repo.touch(conversation_id)
-
-    embedding = b""
-    embedding_model = "unknown"
-    embedding_dim = 0
-
-    embedder = getattr(state, "embedder", None)
-    if embedder and embedder.service.is_loaded:
-        try:
-            emb = await embedder.service.encode_async(body.content)
-            embedding = embedder.service.serialize(emb)
-            embedding_model = embedder.service.model_name
-            embedding_dim = embedder.service.dim
-        except Exception:
-            logger.warning("Failed to embed committed branch message")
-
-    msg = repo.insert(
-        speaker=body.speaker,
-        content=body.content,
-        embedding=embedding,
-        embedding_model=embedding_model,
-        embedding_dim=embedding_dim,
-        agent_id=getattr(state, "agent_name", "symbia"),
-        conversation_id=conversation_id,
-        content_tokens=estimate_tokens(body.content),
-        parent_message_id=body.parent_message_id,
-    )
+async def commit_branch(
+    conversation_id: str,
+    body: CommitBranchRequest,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+    embedder=Depends(get_embedder),
+    agent_id: str = Depends(get_agent_name),
+):
+    try:
+        msg, embedding_generated = await conversations.commit_branch(
+            conversation_id,
+            speaker=body.speaker,
+            content=body.content,
+            parent_message_id=body.parent_message_id,
+            agent_id=agent_id,
+            embedder=embedder,
+            content_tokens=estimate_tokens(body.content),
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Conversation not found") from exc
 
     return ChatResponse(
         id=msg.id,
@@ -227,23 +148,20 @@ async def commit_branch(conversation_id: str, body: CommitBranchRequest, request
         speaker=msg.speaker,
         content=msg.content,
         content_tokens=msg.content_tokens,
-        embedding_generated=bool(embedding),
+        embedding_generated=embedding_generated,
         parent_message_id=msg.parent_message_id,
     )
 
 
 @router.get("/conversations/{conversation_id}/tree", response_model=ConversationTreeResponse)
-async def get_conversation_tree(conversation_id: str, request: Request):
-    state = request.app.state
-    repo = state.message_repo
-    conv_repo = getattr(state, "conversation_repo", None)
-
-    if conv_repo:
-        conv = conv_repo.get(conversation_id)
-        if not conv:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-
-    raw_msgs = repo.get_messages_by_conversation(conversation_id)
+async def get_conversation_tree(
+    conversation_id: str,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    try:
+        raw_msgs, raw_links = await conversations.tree(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Conversation not found") from exc
     nodes = []
     for m in raw_msgs:
         trimmed_content = m.content[:120] + "..." if len(m.content) > 120 else m.content
@@ -257,7 +175,6 @@ async def get_conversation_tree(conversation_id: str, request: Request):
             )
         )
 
-    raw_links = repo.get_message_links(conversation_id)
     links = []
     for link in raw_links:
         links.append(
@@ -275,11 +192,12 @@ async def get_conversation_tree(conversation_id: str, request: Request):
 
 
 @router.post("/conversations/{conversation_id}/links", response_model=TreeLink)
-async def create_resonance_link(conversation_id: str, body: CommitLinkRequest, request: Request):
-    state = request.app.state
-    repo = state.message_repo
-
-    link = repo.add_message_link(
+async def create_resonance_link(
+    conversation_id: str,
+    body: CommitLinkRequest,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    link = await conversations.create_link(
         source_id=body.source_id,
         target_id=body.target_id,
         link_type=body.link_type,
@@ -297,23 +215,30 @@ async def create_resonance_link(conversation_id: str, body: CommitLinkRequest, r
 
 
 @router.post("/conversations/{conversation_id}/links/{link_id}/confirm")
-async def confirm_resonance_link(conversation_id: str, link_id: str, request: Request):
-    state = request.app.state
-    repo = state.message_repo
-    repo.confirm_message_link(link_id)
+async def confirm_resonance_link(
+    conversation_id: str,
+    link_id: str,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    await conversations.confirm_link(link_id)
     return {"status": "success"}
 
 
 @router.delete("/conversations/{conversation_id}/links/{link_id}")
-async def delete_resonance_link(conversation_id: str, link_id: str, request: Request):
-    state = request.app.state
-    repo = state.message_repo
-    repo.delete_message_link(link_id)
+async def delete_resonance_link(
+    conversation_id: str,
+    link_id: str,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    await conversations.delete_link(link_id)
     return {"status": "success"}
 
 
 @router.get("/conversations/{conversation_id}/export")
-async def export_conversation(conversation_id: str, request: Request):
+async def export_conversation(
+    conversation_id: str,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
     """Export the full conversation as a Markdown document for LLM consumption.
 
     Includes tree structure, branches, cross-links, notes, memory nodes,
@@ -321,58 +246,10 @@ async def export_conversation(conversation_id: str, request: Request):
     """
     from fastapi.responses import PlainTextResponse
 
-    state = request.app.state
-    conv_repo = getattr(state, "conversation_repo", None)
-    msg_repo = state.message_repo
-    checkpoint_repo = getattr(state, "checkpoint_repo", None)
-    note_repo = getattr(state, "note_repo", None)
-    memory_node_repo = getattr(state, "memory_node_repo", None)
-
-    conv = require_conversation(conv_repo, conversation_id)
-
-    # Gather all data
-    tags = conv_repo.get_tags(conversation_id)
-
-    checkpoint = None
-    if checkpoint_repo:
-        checkpoint = checkpoint_repo.get_latest(conversation_id)
-
-    messages = msg_repo.get_messages_by_conversation(conversation_id)
-    links = msg_repo.get_message_links(conversation_id)
-
-    notes = []
-    if note_repo:
-        notes = note_repo.get_notes_by_conversation(conversation_id)
-
-    memory_nodes = []
-    if memory_node_repo:
-        memory_nodes = memory_node_repo.get_nodes(conversation_id)
-
-    # Build export
-    from backend.services.export import ExportService
-
-    conv_dict = {
-        "id": conv.id,
-        "title": conv.title,
-        "created_at": conv.created_at.isoformat() if conv.created_at else "",
-        "updated_at": conv.updated_at.isoformat() if conv.updated_at else "",
-        "message_count": conv.message_count,
-        "agent_id": conv.agent_id,
-    }
-
-    markdown = ExportService.build_export(
-        conv=conv_dict,
-        tags=tags,
-        checkpoint=checkpoint,
-        messages=messages,
-        links=links,
-        notes=notes,
-        memory_nodes=memory_nodes,
-    )
-
-    # Generate filename from title
-    safe_title = conv.title.strip().replace(" ", "_").replace("/", "_")[:80] if conv.title else "conversation"
-    filename = f"{safe_title}_{conversation_id[:8]}.md"
+    try:
+        markdown, filename = await conversations.export(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Conversation not found") from exc
 
     return PlainTextResponse(
         content=markdown,
@@ -385,17 +262,13 @@ async def export_conversation(conversation_id: str, request: Request):
     "/conversations/{conversation_id}/messages/{message_id}/spectral-suggestions",
     response_model=list[SpectralSuggestion],
 )
-async def get_spectral_suggestions(conversation_id: str, message_id: int, request: Request, threshold: float = 0.70):
-    state = request.app.state
-    repo = state.message_repo
-
-    # Get ancestor path for this message
-    path_msgs = repo.get_ancestor_path(message_id)
-    ancestor_ids = [m.id for m in path_msgs]
-
-    raw_suggestions = repo.get_parallel_messages_by_similarity(
-        conversation_id=conversation_id, message_id=message_id, ancestor_ids=ancestor_ids, threshold=threshold, limit=5
-    )
+async def get_spectral_suggestions(
+    conversation_id: str,
+    message_id: int,
+    threshold: float = 0.70,
+    conversations: ConversationUseCases = Depends(get_conversation_use_cases),
+):
+    raw_suggestions = await conversations.spectral_suggestions(conversation_id, message_id, threshold)
 
     suggestions = []
     for s in raw_suggestions:

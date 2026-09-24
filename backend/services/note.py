@@ -1,5 +1,8 @@
+import asyncio
 import logging
 import uuid
+
+from backend.storage.repositories import NoteRepository
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +13,7 @@ class NoteService:
         state, conversation_id: str, message_id: int, selected_text: str, comment: str, note_id: str
     ):
         try:
-            state.message_repo.increment_message_note_count(message_id, 1)
+            await asyncio.to_thread(state.message_repo.increment_message_note_count, message_id, 1)
         except Exception as e:
             logger.error("Failed to increment message note count: %s", e)
 
@@ -70,3 +73,61 @@ class NoteService:
     @staticmethod
     def delete(note_repo, note_id: str) -> None:
         note_repo.delete_note(note_id)
+
+
+class NoteUseCases:
+    """Async membrane around the synchronous note repository."""
+
+    def __init__(self, repository: NoteRepository) -> None:
+        self._repository = repository
+
+    async def create(
+        self,
+        *,
+        asset_type: str,
+        asset_id: str,
+        conversation_id: str | None,
+        selected_text: str,
+        comment: str,
+        visibility: str,
+        start_offset: int | None,
+    ) -> dict:
+        return await asyncio.to_thread(
+            NoteService.create,
+            self._repository,
+            asset_type=asset_type,
+            asset_id=asset_id,
+            conversation_id=conversation_id,
+            selected_text=selected_text,
+            comment=comment,
+            visibility=visibility,
+            start_offset=start_offset,
+        )
+
+    async def list(self, *, conversation_id: str | None, asset_type: str | None, asset_id: str | None) -> list[dict]:
+        if conversation_id:
+            return await asyncio.to_thread(NoteService.list_by_conversation, self._repository, conversation_id)
+        if asset_type and asset_id:
+            return await asyncio.to_thread(NoteService.list_by_asset, self._repository, asset_type, asset_id)
+        raise ValueError("Provide asset_type+asset_id or conversation_id")
+
+    async def update(
+        self,
+        note_id: str,
+        *,
+        comment: str | None,
+        visibility: str | None,
+    ) -> tuple[dict, dict]:
+        return await asyncio.to_thread(self._update, note_id, comment=comment, visibility=visibility)
+
+    def _update(self, note_id: str, *, comment: str | None, visibility: str | None) -> tuple[dict, dict]:
+        existing = NoteService.get(self._repository, note_id)
+        if existing is None:
+            raise LookupError("Note not found")
+        updated = NoteService.update(self._repository, note_id, comment=comment, visibility=visibility)
+        if updated is None:
+            raise RuntimeError("Failed to update note")
+        return existing, updated
+
+    async def delete(self, note_id: str) -> None:
+        await asyncio.to_thread(NoteService.delete, self._repository, note_id)

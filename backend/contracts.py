@@ -31,6 +31,33 @@ class HomeostaticRecommendations(BaseModel):
     triggered_flags: list[str] = Field(default_factory=list)
 
 
+class HistoryMessage(BaseModel):
+    id: int
+    timestamp: datetime
+    speaker: str
+    content: str
+    thinking: str | None = None
+    context_sent: str | None = None
+    has_context: bool | None = None
+    content_tokens: int = 0
+    thinking_tokens: int | None = None
+    metrics: MetricsInfo | None = None
+    model_used: str | None = None
+    provider_used: str | None = None
+    structural_signature: list[float] | None = None
+    structural_justification: str | None = None
+    parent_message_id: int | None = None
+    active_skills: list[str] = Field(default_factory=list, description="Skill names active for this response")
+    active_beliefs: list[str] = Field(
+        default_factory=list, description="Belief labels in the attractor window for this response"
+    )
+
+
+class HistoryResponse(BaseModel):
+    messages: list[HistoryMessage]
+    count: int
+
+
 class AttachmentInfo(BaseModel):
     file_name: str
     file_type: str
