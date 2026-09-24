@@ -195,7 +195,27 @@ async def inject_sediment(conversation_id: str, body: SedimentInjectRequest, req
         processed_files.append(entry)
 
     created = await asyncio.to_thread(SedimentService.inject, perception_repo, conversation_id, processed_files)
-    return SedimentInjectionsResponse(injections=[SedimentInjectionInfo(**c) for c in created])
+    injections = await asyncio.to_thread(SedimentService.get_injections, perception_repo, conversation_id)
+    injections_map = {inj["id"]: inj for inj in injections}
+    result_injections = []
+    for c in created:
+        inj_data = injections_map.get(c.get("id", "")) or c
+        result_injections.append(
+            SedimentInjectionInfo(
+                id=inj_data["id"],
+                source_conversation_id=inj_data["source_conversation_id"],
+                source_file_name=inj_data["source_file_name"],
+                source_conversation_title=inj_data.get("source_conversation_title") or "",
+                file_type=inj_data.get("file_type", ""),
+                token_count=inj_data.get("token_count", 0),
+                chunk_count=inj_data.get("chunk_count", 0),
+                summary=inj_data.get("summary"),
+                injected_at=inj_data.get("injected_at"),
+                status=inj_data.get("status") or "ready",
+                display_name=inj_data.get("display_name"),
+            )
+        )
+    return SedimentInjectionsResponse(injections=result_injections, conversation_id=conversation_id)
 
 
 @router.get("/conversations/{conversation_id}/sediment/injections", response_model=SedimentInjectionsResponse)

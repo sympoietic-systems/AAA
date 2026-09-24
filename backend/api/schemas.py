@@ -337,6 +337,7 @@ class SedimentInjectionInfo(BaseModel):
 
 class SedimentInjectionsResponse(BaseModel):
     injections: list[SedimentInjectionInfo]
+    conversation_id: str | None = None
 
 
 class TagCreateRequest(BaseModel):

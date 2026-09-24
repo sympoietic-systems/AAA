@@ -304,6 +304,8 @@ function SedimentSectionComponent({
   }
 
   // Fetch + poll injections
+  const fetchInjectionsRef = useRef<() => void>(() => {})
+
   useEffect(() => {
     if (!conversationId) {
       setInjections([])
@@ -315,17 +317,29 @@ function SedimentSectionComponent({
 
     const fetchInjections = async () => {
       if (!active) return
+      let hasActive = false
       try {
         const res = await getConversationInjections(conversationId)
-        if (active) setInjections(res.injections)
+        if (active) {
+          setInjections(res.injections)
+          hasActive = res.injections.some(
+            (inj) => inj.status === "uploading" || inj.status === "processing"
+          )
+        }
       } catch {
         if (active) setInjections([])
       }
 
       if (active) {
-        const delay = 60000 + (Math.random() - 0.5) * 5000 // 60s ± 2.5s
+        // Fast polling (2s) while any injection is actively indexing/uploading; slow polling (30s) when idle
+        const delay = hasActive ? 2000 : 30000 + (Math.random() - 0.5) * 5000
         timeoutId = setTimeout(fetchInjections, delay)
       }
+    }
+
+    fetchInjectionsRef.current = () => {
+      clearTimeout(timeoutId)
+      fetchInjections()
     }
 
     fetchInjections()
@@ -616,9 +630,7 @@ function SedimentSectionComponent({
               window.history.pushState(null, "", `${window.location.pathname}?${params.toString()}`)
               window.dispatchEvent(new Event("popstate"))
             } else if (conversationId) {
-              getConversationInjections(conversationId)
-                .then((res) => setInjections(res.injections))
-                .catch(() => setInjections([]))
+              fetchInjectionsRef.current()
             }
           }}
         />

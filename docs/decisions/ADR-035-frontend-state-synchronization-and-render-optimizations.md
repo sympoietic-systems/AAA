@@ -43,7 +43,7 @@ We implemented a unified optimization and navigation architecture across three k
   | `TokensSection` | `GET /api/tokens` | 15s ± 500ms jitter |
   | `AttractorsSection` | `GET /api/beliefs` | 15s ± 500ms jitter |
   | `MemoryNodesSection` | `GET /api/conversations/{id}/memory-nodes` | 30s ± 1s jitter |
-  | `SedimentSection` | `GET /api/conversations/{id}/sediment/injections` | 60s ± 2.5s jitter |
+  | `SedimentSection` | `GET /api/conversations/{id}/sediment/injections` | Adaptive: 2s active (when uploading/processing), 30s ± 2.5s idle |
 - Each section receives an `enabled` prop (`!panelCollapsed && sectionOpen`). When disabled, the section resets its state and stops polling — no data is fetched for invisible sections.
 - The `messageCount` trigger is passed directly to each polling section, so a new message causes an immediate re-fetch without waiting for the next poll interval.
 - Extracted the inline "Attractors" rendering from `SidePanel` into a dedicated `AttractorsSection` component.

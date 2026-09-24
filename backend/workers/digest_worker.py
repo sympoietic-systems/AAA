@@ -140,30 +140,6 @@ async def process_and_summarize_file(
                 summary_text = res.get("content", "").strip()
                 summary_model = res.get("model", "")
 
-                # Trigger background skill refinement if proposed skills found in digestion
-                proposed_skills = res.get("proposed_skills", [])
-                if proposed_skills:
-                    for skill_data in proposed_skills:
-                        try:
-                            logger.info(
-                                "Found proposed skill in document digestion: %s. Launching refinement.",
-                                skill_data.get("name"),
-                            )
-                            refine_res = await background_engine.run(
-                                "refine_skill",
-                                {
-                                    "skill_data": skill_data,
-                                    "conversation_id": conversation_id,
-                                },
-                            )
-                            logger.info(
-                                "Skill refinement complete for %s. Decision: %s",
-                                skill_data.get("name"),
-                                refine_res.get("decision"),
-                            )
-                        except Exception as re:
-                            logger.error("Failed to run skill refinement daemon for %s: %s", skill_data.get("name"), re)
-
                 # Extract collision metrics returned by the unified summarize action
                 if "interference_score" in res:
                     collision_score = float(res.get("interference_score", 0.0))
@@ -220,6 +196,31 @@ async def process_and_summarize_file(
             else None,
             state_vector_impact=json.dumps(state_vector_impact) if state_vector_impact is not None else None,
         )
+
+        # Trigger background skill refinement if proposed skills found in digestion (after marking file ready)
+        if background_engine and "res" in locals():
+            proposed_skills = res.get("proposed_skills", [])
+            if proposed_skills:
+                for skill_data in proposed_skills:
+                    try:
+                        logger.info(
+                            "Found proposed skill in document digestion: %s. Launching refinement.",
+                            skill_data.get("name"),
+                        )
+                        refine_res = await background_engine.run(
+                            "refine_skill",
+                            {
+                                "skill_data": skill_data,
+                                "conversation_id": conversation_id,
+                            },
+                        )
+                        logger.info(
+                            "Skill refinement complete for %s. Decision: %s",
+                            skill_data.get("name"),
+                            refine_res.get("decision"),
+                        )
+                    except Exception as re:
+                        logger.error("Failed to run skill refinement daemon for %s: %s", skill_data.get("name"), re)
 
         # Ingestion Hook: Metabolize perception
         if belief_metabolism and extracted_text:
