@@ -2,7 +2,8 @@ import contextlib
 import sqlite3
 import sys
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from functools import wraps
 from typing import ParamSpec, TypeVar
 
@@ -14,9 +15,28 @@ class ConnectionTracker:
     def __init__(self):
         self.active_conns: dict[str, sqlite3.Connection] = {}
         self.depth = 0
+        self.atomic_depth = 0
 
 
 _thread_conns = threading.local()
+
+
+def _finish_scope(tracker: ConnectionTracker) -> None:
+    tracker.depth -= 1
+    if tracker.depth != 0:
+        return
+    for path, conn in list(tracker.active_conns.items()):
+        path_key = str(path)
+        if _is_test_env(path_key):
+            with contextlib.suppress(Exception):
+                conn.close()
+            tracker.active_conns.pop(path, None)
+            tracker.active_conns.pop(path_key, None)
+            if hasattr(_thread_conns, "cached_conns"):
+                _thread_conns.cached_conns.pop(path, None)
+                _thread_conns.cached_conns.pop(path_key, None)
+    tracker.active_conns.clear()
+    _thread_conns.tracker = None
 
 
 def _is_test_env(db_path: str | object) -> bool:
@@ -56,21 +76,7 @@ def with_connection(func: Callable[P, R]) -> Callable[P, R]:
         try:
             return func(*args, **kwargs)
         finally:
-            tracker.depth -= 1
-            if tracker.depth == 0:
-                # Close test database connections to release Windows file locks
-                for path, conn in list(tracker.active_conns.items()):
-                    path_key = str(path)
-                    if _is_test_env(path_key):
-                        with contextlib.suppress(Exception):
-                            conn.close()
-                        tracker.active_conns.pop(path, None)
-                        tracker.active_conns.pop(path_key, None)
-                        if hasattr(_thread_conns, "cached_conns"):
-                            _thread_conns.cached_conns.pop(path, None)
-                            _thread_conns.cached_conns.pop(path_key, None)
-                tracker.active_conns.clear()
-                _thread_conns.tracker = None
+            _finish_scope(tracker)
 
     return wrapper
 
@@ -104,3 +110,34 @@ def _get_tracked_connection(db_path: str | object) -> sqlite3.Connection:
     tracker.active_conns[path_key] = conn
     _thread_conns.cached_conns[path_key] = conn
     return conn
+
+
+def commit_connection(conn: sqlite3.Connection) -> None:
+    tracker = getattr(_thread_conns, "tracker", None)
+    if tracker is None or tracker.atomic_depth == 0:
+        conn.commit()
+
+
+@contextmanager
+def atomic_connection(db_path: str | object) -> Iterator[sqlite3.Connection]:
+    if not hasattr(_thread_conns, "tracker") or _thread_conns.tracker is None:
+        _thread_conns.tracker = ConnectionTracker()
+    tracker = _thread_conns.tracker
+    tracker.depth += 1
+    conn = _get_tracked_connection(db_path)
+    outermost = tracker.atomic_depth == 0
+    if outermost:
+        conn.execute("BEGIN IMMEDIATE")
+    tracker.atomic_depth += 1
+    try:
+        yield conn
+    except BaseException:
+        if outermost:
+            conn.rollback()
+        raise
+    else:
+        if outermost:
+            conn.commit()
+    finally:
+        tracker.atomic_depth -= 1
+        _finish_scope(tracker)

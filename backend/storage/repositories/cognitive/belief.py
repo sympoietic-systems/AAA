@@ -114,7 +114,7 @@ class BeliefRepository(BaseRepository):
                 version,
             ),
         )
-        conn.commit()
+        self._commit(conn)
 
         # Automatic persistence notification for new belief creation
         try:
@@ -124,7 +124,7 @@ class BeliefRepository(BaseRepository):
                    VALUES (?, 'trace', ?, ?, ?, 0, 0)""",
                 (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet, f"belief:{label}"),
             )
-            conn.commit()
+            self._commit(conn)
         except Exception:
             pass
 
@@ -177,7 +177,7 @@ class BeliefRepository(BaseRepository):
                    WHERE id = ?""",
                 (confidence, validated_vector, origin, belief_id),
             )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def update_belief_mass(self, belief_id: str, ontological_mass: float, touch_reinforced: bool = True) -> None:
@@ -192,7 +192,7 @@ class BeliefRepository(BaseRepository):
                 "UPDATE belief_nodes SET ontological_mass = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 (ontological_mass, belief_id),
             )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def update_belief_stage(self, belief_id: str, lifecycle_stage: str) -> None:
@@ -216,7 +216,7 @@ class BeliefRepository(BaseRepository):
             "UPDATE belief_nodes SET lifecycle_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (lifecycle_stage, belief_id),
         )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def create_notification(
@@ -235,7 +235,7 @@ class BeliefRepository(BaseRepository):
                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)""",
                 (str(uuid.uuid4()), notif_type, datetime.now(UTC).isoformat(), snippet, source, source_type, source_id),
             )
-            conn.commit()
+            self._commit(conn)
         except Exception:
             logging.getLogger(__name__).warning(
                 "Failed to create notification: type=%s source=%s",
@@ -252,7 +252,7 @@ class BeliefRepository(BaseRepository):
             "UPDATE belief_nodes SET lifecycle_stage = 'folded', merged_into = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (keeper_id, ghost_id),
         )
-        conn.commit()
+        self._commit(conn)
         logger = logging.getLogger(__name__)
         logger.info("Ghost '%s' folded into '%s'", ghost_id, keeper_id)
 
@@ -304,7 +304,7 @@ class BeliefRepository(BaseRepository):
                 "UPDATE belief_nodes SET last_dreamed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 (belief_id,),
             )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def insert_belief_event(
@@ -328,7 +328,7 @@ class BeliefRepository(BaseRepository):
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (event_id, belief_id, source_type, source_id, alignment, perturbation, event_type, impact, rationale),
             )
-            conn.commit()
+            self._commit(conn)
 
             if not suppress_notification:
                 # Automatic notification for belief dynamics events (metabolism updates)
@@ -351,7 +351,7 @@ class BeliefRepository(BaseRepository):
                             belief_id,
                         ),
                     )
-                    conn.commit()
+                    self._commit(conn)
                 except Exception:
                     logging.getLogger(__name__).warning(
                         "Failed to create notification for belief event %s on belief '%s'",
@@ -392,7 +392,7 @@ class BeliefRepository(BaseRepository):
                WHERE id = ?""",
             (somatic_reservoir_ad, matrix_warping, immunological_directive_active, conversation_id),
         )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def get_conversation_somatic_state(self, conversation_id: str) -> dict | None:
@@ -424,7 +424,7 @@ class BeliefRepository(BaseRepository):
                last_updated = CURRENT_TIMESTAMP""",
             (a, b, cosine_similarity, tension_magnitude),
         )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def get_tensions_for_belief(self, belief_id: str) -> list:
@@ -473,13 +473,13 @@ class BeliefRepository(BaseRepository):
         conn = self._conn()
         a, b = sorted([belief_a_id, belief_b_id])
         conn.execute("DELETE FROM belief_tensions WHERE belief_a_id = ? AND belief_b_id = ?", (a, b))
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def delete_belief_by_label(self, label: str) -> None:
         conn = self._conn()
         conn.execute("DELETE FROM belief_nodes WHERE label = ?", (label,))
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def update_belief_details(
@@ -517,7 +517,7 @@ class BeliefRepository(BaseRepository):
                WHERE id = ?""",
             (label, statement, confidence, ontological_mass, lifecycle_stage, validated_vector, version, belief_id),
         )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def delete_belief(self, belief_id: str) -> None:
@@ -525,7 +525,7 @@ class BeliefRepository(BaseRepository):
         conn.execute("DELETE FROM belief_statement_versions WHERE belief_id = ?", (belief_id,))
         conn.execute("DELETE FROM belief_events WHERE belief_id = ?", (belief_id,))
         conn.execute("DELETE FROM belief_nodes WHERE id = ?", (belief_id,))
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def update_belief_statement(self, belief_id: str, statement: str, vector_16d: str, version: int) -> None:
@@ -537,7 +537,7 @@ class BeliefRepository(BaseRepository):
                WHERE id = ?""",
             (statement, validated_vector, version, belief_id),
         )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def create_proposal(
@@ -580,7 +580,7 @@ class BeliefRepository(BaseRepository):
             (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet),
         )
 
-        conn.commit()
+        self._commit(conn)
         row = conn.execute("SELECT * FROM belief_proposals WHERE id = ?", (id,)).fetchone()
         return _row_to_belief_proposal(row)
 
@@ -623,7 +623,7 @@ class BeliefRepository(BaseRepository):
                 "UPDATE belief_proposals SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 (status, proposal_id),
             )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def update_proposal_suggestions(
@@ -641,7 +641,7 @@ class BeliefRepository(BaseRepository):
                WHERE id = ?""",
             (suggested_label, suggested_statement, potential_merge_target, status, proposal_id),
         )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def update_proposal_symbia_reflection(
@@ -654,7 +654,7 @@ class BeliefRepository(BaseRepository):
                WHERE id = ?""",
             (symbia_reflection, symbia_friction_rationale, proposal_id),
         )
-        conn.commit()
+        self._commit(conn)
 
     @with_connection
     def create_statement_version(
@@ -674,7 +674,7 @@ class BeliefRepository(BaseRepository):
                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
             (id, belief_id, version, statement, validated_vector, change_reason),
         )
-        conn.commit()
+        self._commit(conn)
         row = conn.execute("SELECT * FROM belief_statement_versions WHERE id = ?", (id,)).fetchone()
         return _row_to_belief_statement_version(row)
 
