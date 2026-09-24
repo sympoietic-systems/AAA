@@ -543,7 +543,7 @@ def test_turn_decay_and_crystallized_floor():
             assert b_acc.ontological_mass < 0.30  # Decayed slightly
 
             # Now test when engaged_belief_id is b-above
-            res2 = await engine._apply_turn_decay("symbia", engaged_belief_id="b-above")
+            await engine._apply_turn_decay("symbia", engaged_belief_id="b-above")
             b_above_after = belief_repo.get_belief("symbia", "b-above")
             assert b_above_after.ontological_mass == b_above.ontological_mass  # Engaged belief bypassed
 

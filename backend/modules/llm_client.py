@@ -709,10 +709,7 @@ def _parse_json_safely(text: str) -> dict:
             return {}
         return json.loads(cleaned)
 
-    if last_brace > first_brace:
-        json_part = cleaned[first_brace : last_brace + 1]
-    else:
-        json_part = cleaned[first_brace:]
+    json_part = cleaned[first_brace : last_brace + 1] if last_brace > first_brace else cleaned[first_brace:]
 
     # 3. Helper to clean control characters and commas inside string
     def sanitize(s: str) -> str:

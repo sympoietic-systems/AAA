@@ -68,9 +68,7 @@ async def test_digest_worker_concurrency_is_bounded():
 
     with patch("asyncio.create_subprocess_exec", new=spawn):
         tasks = [
-            asyncio.create_task(
-                FileService.run_digest_worker("conv_1", f"file_{idx}.txt", "txt", max_concurrent=2)
-            )
+            asyncio.create_task(FileService.run_digest_worker("conv_1", f"file_{idx}.txt", "txt", max_concurrent=2))
             for idx in range(4)
         ]
         await asyncio.sleep(0)

@@ -1,3 +1,4 @@
+import contextlib
 import os
 import re
 from pathlib import Path
@@ -141,10 +142,8 @@ def _apply_env_overrides(config: dict) -> dict:
 
     max_injected = os.environ.get("AAA_MAX_INJECTED_SKILLS")
     if max_injected is not None:
-        try:
+        with contextlib.suppress(ValueError):
             typesafe_cfg["max_injected_skills"] = int(max_injected)
-        except ValueError:
-            pass
 
     # ── Structural Signature Backend resolution (jev / llm / composite) ─
     ss_cfg = config.setdefault("structural_signature", {})

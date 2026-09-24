@@ -291,10 +291,7 @@ class JevStructuralScorer(StructuralScorer):
                     try:
                         val = float(raw_score)
                         # Normalize to [0.0, 1.0] if scaled by max_level
-                        if val > 1.0:
-                            norm_val = val / float(max_level)
-                        else:
-                            norm_val = val
+                        norm_val = val / float(max_level) if val > 1.0 else val
                         power_list.append(max(0.0, min(1.0, norm_val)))
                     except (ValueError, TypeError):
                         power_list.append(0.25)
@@ -378,7 +375,6 @@ class CompositeStructuralScorer(StructuralScorer):
 
         ss_cfg = config.get("structural_signature", {})
         self.backend = ss_cfg.get("backend", "jev").lower().strip()
-        lexicon_config = ss_cfg.get("lexicon")
         llm_prompt_config = ss_cfg.get("llm_system_prompt")
         self.llm_scorer_enabled = ss_cfg.get("llm_scorer_enabled", self.backend == "llm")
 

@@ -9,8 +9,6 @@ from backend.modules.metrics import (
 def test_coupling_coherence_trajectory_correlation():
     v1 = np.array([1.0, 0.0] + [0.0] * 382, dtype=np.float32)
     v2 = np.array([0.0, 1.0] + [0.0] * 382, dtype=np.float32)
-    v3 = np.array([0.5, 0.5] + [0.0] * 382, dtype=np.float32)
-
     # 1. Synchronized human & apparatus displacements
     history_aligned = [
         {"embedding": v2, "speaker": "apparatus"},

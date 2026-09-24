@@ -61,10 +61,13 @@ def _compute_collapse_pressure(
     drag = 0.0
     if pairwise_similarity is not None and pairwise_similarity > 0.24:
         drag += 0.40 * (pairwise_similarity - 0.24)
-    if coupling_coherence is not None and agent_self_divergence is not None:
-        # Sycophantic entrainment penalty: agent accommodating without asserting divergence
-        if coupling_coherence > agent_self_divergence:
-            drag += 0.45 * (coupling_coherence - agent_self_divergence)
+    # Sycophantic entrainment penalty: agent accommodating without asserting divergence
+    if (
+        coupling_coherence is not None
+        and agent_self_divergence is not None
+        and coupling_coherence > agent_self_divergence
+    ):
+        drag += 0.45 * (coupling_coherence - agent_self_divergence)
     if drr is not None and drr < 0.65:
         drag += 0.30 * (0.65 - drr)
 

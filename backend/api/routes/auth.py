@@ -4,6 +4,7 @@ from backend.core.auth import auth_enabled, bearer_token, credentials_valid
 
 router = APIRouter()
 
+
 @router.get("/auth/verify")
 async def verify_auth(
     authorization: str | None = Header(None),

@@ -36,6 +36,4 @@ def test_v9_public_preview_is_curated_and_live_preview_is_authenticated(monkeypa
     assert public_response.status_code == 200
     assert public_response.json()["line"]["type"] == "scar_fold"
     assert client.get("/api/preview/live").status_code == 401
-    assert (
-        client.get("/api/preview/live", headers={"Authorization": "Bearer preview-secret"}).status_code == 200
-    )
+    assert client.get("/api/preview/live", headers={"Authorization": "Bearer preview-secret"}).status_code == 200

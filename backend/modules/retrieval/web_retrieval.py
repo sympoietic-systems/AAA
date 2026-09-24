@@ -186,10 +186,13 @@ class RhizomeWebProbe:
 
     async def crawl(self, url: str) -> str:
         try:
-            response = await safe_fetch(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            })
+            response = await safe_fetch(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                },
+            )
         except SafeFetchError as err:
             logger.warning("SSRF blocked crawl of unsafe URL %s: %s", url, err)
             return ""

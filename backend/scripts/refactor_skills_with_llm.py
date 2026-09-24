@@ -22,6 +22,7 @@ import argparse
 import asyncio
 import json
 import logging
+import re
 import sqlite3
 import sys
 import uuid
@@ -93,9 +94,6 @@ IMPORTANT: Output ONLY the raw JSON object. Do not wrap in markdown codeblocks (
 """
 
 
-import re
-
-
 def extract_blueprint_fallback(raw: str, default_name: str) -> dict | None:
     """Robust fallback extractor for JSON payloads with unescaped internal quotes or formatting noise."""
     if not raw:
@@ -153,10 +151,7 @@ def extract_blueprint_fallback(raw: str, default_name: str) -> dict | None:
                 r'(?:",\s*["\']changelog["\']|\s*["\']\s*,\s*["\']changelog["\']|"\s*\}\s*$)',
                 sub_content,
             )
-            if end_match:
-                content = sub_content[: end_match.start()].strip()
-            else:
-                content = sub_content.rstrip('"\n\r }')
+            content = sub_content[: end_match.start()].strip() if end_match else sub_content.rstrip('"\n\r }')
 
     # 5. Extract changelog
     changelog = "Refactored into 5-phase blueprint via LLM"
@@ -367,9 +362,7 @@ def is_inactive_or_refused(skill_row: dict) -> bool:
     changelog = (skill_row.get("changelog") or "").lower().strip()
     if changelog.startswith("refused") or "proposal refused" in changelog or "skill refused" in changelog:
         return True
-    if changelog.startswith("merged into") or "skill merged into" in changelog:
-        return True
-    return False
+    return bool(changelog.startswith("merged into") or "skill merged into" in changelog)
 
 
 def is_already_migrated(skill_row: dict) -> bool:

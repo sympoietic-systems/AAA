@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 # ── Auth ───────────────────────────────────────────────────────────────
 
+
 async def verify_password(
     request: Request,
     authorization: str | None = Header(None),

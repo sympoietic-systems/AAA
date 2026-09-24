@@ -83,8 +83,8 @@ def fold_iterations_for_db(db_path: str, dry_run: bool = True, threshold: float 
         if not dry_run and duplicates_to_remove:
             for primary in folded_by_id.values():
                 conn.execute(
-                    """UPDATE memory_nodes 
-                       SET revision_count = ?, last_merged_at = ?, tendril_ids = ? 
+                    """UPDATE memory_nodes
+                       SET revision_count = ?, last_merged_at = ?, tendril_ids = ?
                        WHERE id = ?""",
                     (
                         primary.get("revision_count", 0),

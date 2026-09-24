@@ -36,8 +36,6 @@ def test_conceptual_velocity_and_phase_transition():
 
 def test_conceptual_velocity_stagnant_vs_active():
     """Verify that small displacements in repetitive stagnation yield low velocity, while active leaps yield high velocity."""
-    base = np.array([1.0] + [0.0] * 383, dtype=np.float32)
-
     # Stagnant conversation: embeddings barely budge (step ~ 0.05)
     stagnant_history = []
     for i in range(5):

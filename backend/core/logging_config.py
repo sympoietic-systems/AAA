@@ -24,22 +24,22 @@ DEFAULT_BACKUP_COUNT = 5
 
 
 _SECRET_PATTERNS: list[tuple[re.Pattern, str]] = [
-        # Bearer tokens
-        (re.compile(r"(Bearer\s+)[A-Za-z0-9_\-\.]+", re.IGNORECASE), r"\1[REDACTED]"),
-        # OpenRouter keys (more specific than generic sk-)
-        (re.compile(r"\bsk-or-v1-[a-zA-Z0-9]{64}\b"), "sk-or-v1-[REDACTED]"),
-        # OpenAI / Anthropic / Generic sk- keys
-        (re.compile(r"\bsk-[a-zA-Z0-9_\-]{20,}\b"), "sk-[REDACTED]"),
-        # Google API keys
-        (re.compile(r"\bAIza[0-9A-Za-z\-_]{20,}\b"), "AIza[REDACTED]"),
-        # Key/Password query or assignment parameters
-        (
-            re.compile(
-                r"""((?:api[_-]?key|password|secret|token|access_token|auth_token)\s*[:=]\s*["']?)[^"'\s,;&]+""",
-                re.IGNORECASE,
-            ),
-            r"\1[REDACTED]",
+    # Bearer tokens
+    (re.compile(r"(Bearer\s+)[A-Za-z0-9_\-\.]+", re.IGNORECASE), r"\1[REDACTED]"),
+    # OpenRouter keys (more specific than generic sk-)
+    (re.compile(r"\bsk-or-v1-[a-zA-Z0-9]{64}\b"), "sk-or-v1-[REDACTED]"),
+    # OpenAI / Anthropic / Generic sk- keys
+    (re.compile(r"\bsk-[a-zA-Z0-9_\-]{20,}\b"), "sk-[REDACTED]"),
+    # Google API keys
+    (re.compile(r"\bAIza[0-9A-Za-z\-_]{20,}\b"), "AIza[REDACTED]"),
+    # Key/Password query or assignment parameters
+    (
+        re.compile(
+            r"""((?:api[_-]?key|password|secret|token|access_token|auth_token)\s*[:=]\s*["']?)[^"'\s,;&]+""",
+            re.IGNORECASE,
         ),
+        r"\1[REDACTED]",
+    ),
 ]
 
 

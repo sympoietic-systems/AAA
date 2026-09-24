@@ -132,10 +132,7 @@ def _compute_conceptual_velocity(
         # Parallel transport v_{t-1} to T_{e_{t-1}} along geodesic from e_{t-2} to e_{t-1}
         dot_trans = float(np.dot(e_p1, v_prev))
         denom = 1.0 + float(np.dot(e_p2, e_p1))
-        if abs(denom) > 1e-5:
-            v_transported = v_prev - (dot_trans / denom) * (e_p2 + e_p1)
-        else:
-            v_transported = v_prev
+        v_transported = v_prev - dot_trans / denom * (e_p2 + e_p1) if abs(denom) > 1e-05 else v_prev
         nv_trans = float(np.linalg.norm(v_transported))
         if nv_trans > 1e-6:
             v_transported = v_transported / nv_trans

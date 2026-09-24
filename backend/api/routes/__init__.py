@@ -6,7 +6,11 @@ def __getattr__(name: str):
         from backend.api import helpers
 
         return getattr(helpers, name)
-    if name in {"_process_and_summarize_file", "_reprocess_and_summarize_file_background", "_run_digest_worker_subprocess"}:
+    if name in {
+        "_process_and_summarize_file",
+        "_reprocess_and_summarize_file_background",
+        "_run_digest_worker_subprocess",
+    }:
         from backend.services.file import FileService
 
         return {

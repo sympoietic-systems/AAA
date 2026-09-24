@@ -814,4 +814,3 @@ def recalibrate_belief_mass(conn: sqlite3.Connection) -> None:
         )
 
     conn.commit()
-
