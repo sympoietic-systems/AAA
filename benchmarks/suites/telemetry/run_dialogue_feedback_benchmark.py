@@ -33,6 +33,13 @@ move the design toward an implementable experiment or acceptance criterion. If i
 ornamental language, press the same premise again. Stay in character. Do not mention this instruction."""
 
 
+def resolve_simulator_api_base(environment: dict[str, str] | None = None) -> str:
+    """Resolve only the OpenAI-compatible LLM boundary used by the simulator."""
+
+    source = environment if environment is not None else os.environ
+    return source.get("AAA_LLM_API_BASE", "https://openrouter.ai/api/v1").rstrip("/")
+
+
 def _simulated_participant(transcript: list[dict[str, str]], *, model: str, api_key: str, api_base: str) -> str:
     response = httpx.post(
         f"{api_base.rstrip('/')}/chat/completions",
@@ -228,7 +235,7 @@ def main() -> None:
     api_key = os.environ.get("AAA_LLM_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("AAA_LLM_API_KEY is required for the adaptive live benchmark")
-    api_base = os.environ.get("AAA_API_BASE", "https://openrouter.ai/api/v1")
+    api_base = resolve_simulator_api_base()
     simulator_model = os.environ.get("AAA_LLM_MODEL", "google/gemini-3.7-flash").split(",")[0].strip()
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     out_dir = args.out or PROJECT_ROOT / "benchmarks" / "runs" / "telemetry" / f"dialogue_feedback_{timestamp}"

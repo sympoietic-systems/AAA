@@ -104,6 +104,7 @@ V47: benchmark arm changes exactly 1 controller dimension; receipt records model
 V48: calibration winner requires no regression in DRR/Paskian health beyond 0.02 and improves uptake/progress with 95% bootstrap CI or remains explicitly inconclusive.
 V49: receipt ordering explicit: human-turn metrics → intervention/control request → outbound request → agent-turn metrics → next-turn outcomes; ⊥ relabel post-response metric as trigger.
 V50: controller state reconstructed from sediment or bounded by active conversation lifecycle; ⊥ unbounded process-local conversation maps.
+V51: benchmark model calls resolve from LLM-provider configuration; ⊥ reuse public AAA application URL as an OpenAI-compatible endpoint.
 
 ## §T
 
@@ -195,3 +196,4 @@ B49|2026-09-25|new TypeScript error class used constructor parameter properties 
 B50|2026-09-25|shared Markdown plugin extraction removed a still-used KaTeX import; migrated remaining render site|V38,V41
 B51|2026-09-25|new backend session code missed canonical Ruff format; format before final gates|V30
 B52|2026-09-25|canvas extraction retained whitespace-only lines; staged diff check caught them before commit|V30
+B53|2026-09-25|adaptive participant simulator reused public `AAA_API_BASE` and sent model requests to a non-LLM route|V51

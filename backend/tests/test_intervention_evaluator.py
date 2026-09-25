@@ -3,6 +3,7 @@ from benchmarks.suites.telemetry.intervention_evaluator import (
     build_causal_receipts,
     rate_participant_turn,
 )
+from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import resolve_simulator_api_base
 
 
 def test_v46_outcome_requires_uptake_and_task_progress():
@@ -40,3 +41,13 @@ def test_v48_bootstrap_ci_is_deterministic_and_contains_mean():
 
     assert low <= center <= high
     assert (center, low, high) == bootstrap_mean_ci([0.2, 0.4, 0.8], samples=1000)
+
+
+def test_v51_simulator_uses_llm_provider_endpoint():
+    environment = {"AAA_API_BASE": "https://aaa.example/api"}
+
+    assert resolve_simulator_api_base(environment) == "https://openrouter.ai/api/v1"
+    assert (
+        resolve_simulator_api_base({**environment, "AAA_LLM_API_BASE": "https://models.example/v1/"})
+        == "https://models.example/v1"
+    )
