@@ -5,6 +5,7 @@
 Harden backend network, upload, auth, persistence, logging, lifecycle boundaries; preserve valid API behavior & existing sediment.
 Refactor async I/O, dependency typing, state ownership, oversized modules, error policy, tests, and static analysis without contract drift.
 Implement frontend review: fail-closed sessions, explicit transport, safe Markdown/print, request ownership, modularity & progressive static gates.
+Close conversation telemetry loop: metrics select observable, provider-supported interventions; next-turn uptake judges effect; benchmarks isolate causal contribution.
 
 ## §C
 
@@ -23,6 +24,10 @@ Implement frontend review: fail-closed sessions, explicit transport, safe Markdo
 - Static typing lands as ratchet: strict new/refactored modules first; expand only when slice clean.
 - Split by responsibility & hidden decision; ⊥ arbitrary line-count slicing or pass-through service wrappers.
 - Verification iteration → changed-boundary tests only; ⊥ repeat full backend suite after frontend/small edits (user preference 2026-09-25).
+- Conversation calibration → offline first; live model only after focused gates; historical receipts immutable.
+- Control experiments → identical model, prompt prefix, seed/routing where provider permits; ≥3 repeated runs per live arm.
+- Metric intervention failure := kinematic gain with flat/negative task progress or dialogue uptake over next 2 participant turns.
+- No persisted schema migration for intervention receipts; benchmark artifacts own causal traces.
 
 ## §I
 
@@ -44,6 +49,8 @@ internal: `app.state.services` → typed `AppServices`; legacy state aliases tem
 internal: route → typed service use case → repository/module ports
 internal: conversation serialization → app-scoped bounded lock registry
 quality: `mypy` strict package allowlist → expands per completed refactor
+internal: `homeostatic_recommendations` → chosen move + requested generation controls + applied control receipt
+benchmark: conversation intervention receipt → pre-response metrics, intervention, outbound controls, response metrics, next-2-turn uptake/progress
 
 ## §V
 
@@ -88,6 +95,15 @@ V38: untrusted Markdown cannot supply arbitrary CSS/classes; annotation styling 
 V39: async UI results/errors/loading commit only to current request/entity/session; polling single-flight & disposed with owner.
 V40: API calls explicit; global fetch unchanged; credentials restricted to normalized same-origin API paths.
 V41: hooks unconditional; frontend static debt monotonic down; new boundary modules strict; route failures recoverable.
+V42: conversation metric state isolated by `conversation_id`; interleaving/restart replay = isolated replay within tolerance.
+V43: ∀ metric-driven generation control → requested value recorded; provider-applied/unsupported status explicit; ⊥ silent claim of actuation.
+V44: diffractive activation reachable for labeled persistent stagnation with ordinary vitality; productive deep focus false-positive rate ≤10%.
+V45: intervention mode ∈ `clarify|counterexample|experiment|reframe|consolidate|compress`; selector uses pressure + resolution + uptake; repeated failed mode escalates or changes.
+V46: intervention success judged from next ≤2 participant turns by task progress + uptake; velocity/novelty gain alone ⊥ success.
+V47: benchmark arm changes exactly 1 controller dimension; receipt records model, provider, prompt hash, controls, seed availability, errors, latency.
+V48: calibration winner requires no regression in DRR/Paskian health beyond 0.02 and improves uptake/progress with 95% bootstrap CI or remains explicitly inconclusive.
+V49: receipt ordering explicit: human-turn metrics → intervention/control request → outbound request → agent-turn metrics → next-turn outcomes; ⊥ relabel post-response metric as trigger.
+V50: controller state reconstructed from sediment or bounded by active conversation lifecycle; ⊥ unbounded process-local conversation maps.
 
 ## §T
 
@@ -117,6 +133,12 @@ T22|x|expand strict `mypy` allowlist across refactored slices; ADR; full pytest/
 T23|x|frontend session/transport & Markdown regression tests + fixes|V8,V17,V36,V37,V38,V40
 T24|x|isolate search/research/notes/chat requests; own notification polling|V39,V41
 T25|x|extract chat/canvas responsibilities; tighten frontend quality gates; ADR & verification|V28,V30,V41
+T26|x|add causal receipt + uptake/progress evaluator; replay historical baseline; archive run|V46,V47,V48,V49,I.benchmark
+T27|~|isolate metric state by conversation; wire reasoning controls + applied-status receipt through provider boundary|V42,V43,V49,V50,I.internal
+T28|.|test 3 diffractive activation hypotheses in isolated branches; adopt empirical winner|V44,V47,V48
+T29|.|add progress-aware intervention selector + failed-mode progression; integrate regulator prompt|V45,V46,I.internal
+T30|.|run focused/full offline + repeated live conversation benchmarks; compare causal arms; publish Report 019 + ADR|V42,V43,V44,V45,V46,V47,V48,I.benchmark
+T31|.|run full ruff/format/mypy/pytest + frontend gates; clean ephemeral artifacts; reconcile article/report claims|V18,V30,V42,V43,V44,V45,V46,V47,V48,I.quality
 
 ## §B
 
