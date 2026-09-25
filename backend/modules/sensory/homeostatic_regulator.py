@@ -2,6 +2,7 @@ import logging
 
 from backend.modules.base import ProcessingModule
 from backend.pipeline.metadata import ModuleMeta
+from backend.utils.metabolic_regulator import get_llm_execution_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,6 @@ _DEFAULTS = {
 class HomeostaticRegulatorModule(ProcessingModule):
     def __init__(self, config: dict | None = None):
         self._config = config or _DEFAULTS
-        self._consecutive_stagnant_turns: dict[str, int] = {}
 
     @property
     def name(self) -> str:
@@ -65,15 +65,12 @@ class HomeostaticRegulatorModule(ProcessingModule):
         entropy = metrics.get("rolling_entropy")
         collapse_pressure = metrics.get("collapse_pressure", metrics.get("boringness"))
 
-        current_msg = payload.get("current_message", {})
-        conversation_id = current_msg.get("conversation_id") or payload.get("conversation_id")
-        conv_key = str(conversation_id or "default")
-
-        if collapse_pressure is not None and collapse_pressure >= 0.60:
-            self._consecutive_stagnant_turns[conv_key] = self._consecutive_stagnant_turns.get(conv_key, 0) + 1
-        else:
-            self._consecutive_stagnant_turns[conv_key] = 0
-        stagnant_turns = self._consecutive_stagnant_turns[conv_key]
+        stagnant_turns = int(
+            metrics.get(
+                "collapse_pressure_streak",
+                1 if collapse_pressure is not None and collapse_pressure >= 0.60 else 0,
+            )
+        )
 
         t_cfg = self._config["temperature"]
         p_cfg = self._config["presence_penalty"]
@@ -99,6 +96,24 @@ class HomeostaticRegulatorModule(ProcessingModule):
             "somatic_reflection_prompt": somatic_reflection,
             "consecutive_stagnant_turns": stagnant_turns,
         }
+        reasoning = get_llm_execution_parameters(
+            {
+                "collapse_pressure": float(collapse_pressure or 0.0),
+                "curiosity": float(novelty if novelty is not None else 0.5),
+            },
+            {"base_completion_tokens": int(payload.get("max_tokens", 4096))},
+        )
+        reasoning["thinking_override"] = bool(collapse_pressure is not None and collapse_pressure > 0.65)
+        requested_controls = {
+            "temperature": temp_rec["value"],
+            "presence_penalty": pres_rec["value"],
+            "frequency_penalty": freq_rec["value"],
+            "max_tokens": reasoning["max_completion_tokens"],
+            "reasoning_effort": reasoning["reasoning_effort"],
+            "thinking_override": reasoning["thinking_override"],
+        }
+        recommendations["reasoning"] = reasoning
+        recommendations["requested_controls"] = requested_controls
 
         # Inject Reflection Protocol directive into messages if structural tension detected
         if somatic_reflection:

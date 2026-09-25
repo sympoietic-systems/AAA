@@ -1,5 +1,6 @@
 import pytest
 
+from backend.modules.conversation_metrics import _compute_collapse_pressure_streak
 from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule
 
 
@@ -62,6 +63,7 @@ async def test_two_stage_boredom_progression():
                 "boringness": 0.68,
                 "pairwise_similarity": 0.45,
                 "rolling_entropy": 0.40,
+                "collapse_pressure_streak": 1,
             },
             "messages": [{"role": "user", "content": "wipe cache"}],
         }
@@ -81,6 +83,7 @@ async def test_two_stage_boredom_progression():
                 "boringness": 0.82,
                 "pairwise_similarity": 0.55,
                 "rolling_entropy": 0.30,
+                "collapse_pressure_streak": 2,
             },
             "messages": [{"role": "user", "content": "wipe cache now"}],
         }
@@ -141,3 +144,10 @@ def test_trajectory_curvature_and_recovery_half_life():
     # Case where peak is reached but never recovers
     cp_series_no_recovery = [0.2, 0.75, 0.80, 0.78]
     assert compute_recovery_half_life(cp_series_no_recovery) is None
+
+
+def test_v50_stagnation_streak_reconstructs_from_recent_metrics():
+    recent = [{"boringness": 0.2}, {"boringness": 0.68}, {"boringness": 0.79}]
+
+    assert _compute_collapse_pressure_streak(0.82, recent) == 3
+    assert _compute_collapse_pressure_streak(0.40, recent) == 0

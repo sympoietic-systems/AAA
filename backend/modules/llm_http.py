@@ -176,6 +176,20 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         raise last_error or RuntimeError("All retries exhausted")
 
     async def generate(self, messages: list[LLMMessage], **params: Any) -> LLMResult:
+        requested_controls = {
+            key: value
+            for key, value in params.items()
+            if key
+            in {
+                "temperature",
+                "top_p",
+                "presence_penalty",
+                "frequency_penalty",
+                "max_tokens",
+                "reasoning_effort",
+                "thinking_override",
+            }
+        }
         merged_params = {**self._default_params, **params}
 
         is_anthropic = "anthropic" in self._api_base
@@ -251,7 +265,22 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             if resolved_or_provider:
                 build_openrouter_provider_config(body, resolved_or_provider)
 
-        return await self._request_with_retry(body)
+        result = await self._request_with_retry(body)
+        forwarded: dict[str, Any] = {}
+        unsupported: list[str] = []
+        for key in requested_controls:
+            body_key = "thinking" if key == "thinking_override" else key
+            if body_key in body:
+                forwarded[key] = body[body_key]
+            else:
+                unsupported.append(key)
+        result["generation_controls"] = {
+            "requested": requested_controls,
+            "forwarded": forwarded,
+            "unsupported": unsupported,
+            "status": "forwarded" if forwarded else "unsupported",
+        }
+        return result
 
     async def validate_connection(self) -> bool:
         try:

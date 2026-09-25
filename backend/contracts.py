@@ -20,6 +20,7 @@ class MetricsInfo(BaseModel):
     conceptual_velocity: float | None = None
     divergence_resolution_ratio: float | None = None
     paskian_health: float | None = None
+    collapse_pressure_streak: int = 0
     phase_shifts: list[dict[str, object]] | None = None
 
 
@@ -29,6 +30,10 @@ class HomeostaticRecommendations(BaseModel):
     frequency_penalty: dict[str, object] | None = None
     state: str = "healthy"
     triggered_flags: list[str] = Field(default_factory=list)
+    reasoning: dict[str, object] | None = None
+    requested_controls: dict[str, object] | None = None
+    applied_controls: dict[str, object] | None = None
+    intervention: dict[str, object] | None = None
 
 
 class HistoryMessage(BaseModel):

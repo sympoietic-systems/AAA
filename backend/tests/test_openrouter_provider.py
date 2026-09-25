@@ -187,6 +187,28 @@ class TestOpenRouterProviderConfig(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(called_json["max_tokens"], 8192)
         self.assertIn("thinking", called_json)
 
+    @patch("httpx.AsyncClient.post")
+    async def test_v43_generation_control_receipt_distinguishes_forwarded_controls(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"choices": [{"message": {"content": "controlled", "role": "assistant"}}]}
+        mock_post.return_value = mock_response
+
+        provider = OpenRouterProvider(api_key="sk-or-dummy", model="xiaomi/mimo-v2.6-flash")
+        result = await provider.generate(
+            [{"role": "user", "content": "hi"}],
+            temperature=0.91,
+            presence_penalty=0.42,
+            thinking_override=True,
+            reasoning_effort="high",
+        )
+
+        controls = result["generation_controls"]
+        self.assertEqual(controls["requested"]["temperature"], 0.91)
+        self.assertIn("thinking_override", controls["forwarded"])
+        self.assertIn("reasoning_effort", controls["forwarded"])
+        self.assertIn("temperature", controls["unsupported"])
+
 
 if __name__ == "__main__":
     unittest.main()

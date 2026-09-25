@@ -52,6 +52,13 @@ class LLMClientModule(ProcessingModule):
                     val = rec["value"]
                     if param == "temperature" or val > 0.0:
                         params[param] = val
+            reasoning = recs.get("reasoning")
+            if isinstance(reasoning, dict) and reasoning.get("thinking_override"):
+                params["thinking_override"] = True
+                params["reasoning_effort"] = reasoning.get("reasoning_effort", "high")
+                recommended_max = reasoning.get("max_completion_tokens")
+                if isinstance(recommended_max, int):
+                    params["max_tokens"] = max(int(params.get("max_tokens", 0)), recommended_max)
 
         result = await self._provider.generate(messages, **params)
         payload["response"] = result["content"]
@@ -65,6 +72,10 @@ class LLMClientModule(ProcessingModule):
             payload["truncated"] = result["truncated"]
         if result.get("finish_reason"):
             payload["finish_reason"] = result["finish_reason"]
+        if result.get("generation_controls"):
+            payload["applied_controls"] = result["generation_controls"]
+            if recs:
+                recs["applied_controls"] = result["generation_controls"]
         return payload
 
     @property

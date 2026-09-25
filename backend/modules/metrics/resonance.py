@@ -68,8 +68,20 @@ def _compute_conceptual_novelty(
         return None, {"fast": c_vec, "slow": c_vec}
 
     if prior_centroid is None:
-        c_fast = c_vec
-        c_slow = c_vec
+        history_vectors = []
+        for item in recent_history:
+            vector = item.get("embedding")
+            if vector is None:
+                continue
+            norm = float(np.linalg.norm(vector))
+            history_vectors.append(vector / norm if norm > 1e-8 else vector)
+        c_fast = history_vectors[0] if history_vectors else c_vec
+        c_slow = history_vectors[0] if history_vectors else c_vec
+        for vector in history_vectors[1:]:
+            c_fast = (alpha_fast * vector) + ((1.0 - alpha_fast) * c_fast)
+            c_slow = (alpha_slow * vector) + ((1.0 - alpha_slow) * c_slow)
+        c_fast = (alpha_fast * c_vec) + ((1.0 - alpha_fast) * c_fast)
+        c_slow = (alpha_slow * c_vec) + ((1.0 - alpha_slow) * c_slow)
     elif isinstance(prior_centroid, dict):
         c_f = prior_centroid.get("fast", c_vec)
         c_s = prior_centroid.get("slow", c_vec)

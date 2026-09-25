@@ -86,6 +86,7 @@ class MetricsService:
             conceptual_velocity=metrics.get("conceptual_velocity"),
             divergence_resolution_ratio=metrics.get("divergence_resolution_ratio"),
             paskian_health=metrics.get("paskian_health"),
+            collapse_pressure_streak=int(metrics.get("collapse_pressure_streak", 0)),
             phase_shifts=metrics.get("phase_shifts"),
         )
 
@@ -121,6 +122,10 @@ class MetricsService:
             frequency_penalty=recs.get("frequency_penalty"),
             state=recs.get("state", "healthy"),
             triggered_flags=recs.get("triggered_flags", []),
+            reasoning=recs.get("reasoning"),
+            requested_controls=recs.get("requested_controls"),
+            applied_controls=recs.get("applied_controls"),
+            intervention=recs.get("intervention"),
         )
 
     @staticmethod

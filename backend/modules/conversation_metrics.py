@@ -65,8 +65,6 @@ class ConversationMetricsModule(ProcessingModule):
         self._entropy_window = entropy_window
         self._agent_self_window = agent_self_window
         self._phase_shift_threshold = phase_shift_threshold
-        self._prior_metrics: dict[str, float | None] = {}
-        self._prior_centroid: np.ndarray | None = None
 
     @property
     def name(self) -> str:
@@ -154,9 +152,11 @@ class ConversationMetricsModule(ProcessingModule):
             recent_history = recent_history[:-1]
 
         prior_metrics = {}
+        recent_metric_rows: list[dict] = []
         if ancestor_ids and hasattr(self._repo, "get_recent_with_metrics_for_path"):
             recent_path = self._repo.get_recent_with_metrics_for_path(ancestor_ids, limit=5, exclude_message_id=msg_id)
             if recent_path and isinstance(recent_path, list):
+                recent_metric_rows = [turn for turn in recent_path if isinstance(turn, dict)]
                 for turn in reversed(recent_path):
                     if isinstance(turn, dict) and turn.get("s_t") is not None:
                         prior_metrics = turn
@@ -175,11 +175,8 @@ class ConversationMetricsModule(ProcessingModule):
         metrics["s_t"] = s_t
         metrics["pairwise_similarity"] = s_t
 
-        novelty, new_centroid = _compute_conceptual_novelty(
-            current_vec, recent_history, prior_centroid=self._prior_centroid
-        )
+        novelty, _ = _compute_conceptual_novelty(current_vec, recent_history, prior_centroid=None)
         metrics["conceptual_novelty"] = novelty
-        self._prior_centroid = new_centroid
 
         rolling_entropy = _compute_rolling_entropy(current_vec, recent_history)
         metrics["rolling_entropy"] = rolling_entropy
@@ -234,6 +231,10 @@ class ConversationMetricsModule(ProcessingModule):
         )
         metrics["collapse_pressure"] = collapse_pressure
         metrics["boringness"] = collapse_pressure  # ponytail: backward compatibility alias
+        metrics["collapse_pressure_streak"] = _compute_collapse_pressure_streak(
+            collapse_pressure,
+            recent_metric_rows,
+        )
 
         conceptual_velocity, phase_trans = _compute_conceptual_velocity(current_vec, all_recent)
         metrics["conceptual_velocity"] = conceptual_velocity
@@ -285,8 +286,6 @@ class ConversationMetricsModule(ProcessingModule):
         if msg_id is not None and hasattr(self._repo, "save_metrics"):
             self._repo.save_metrics(msg_id, metrics)
 
-        self._prior_metrics = metrics
-
         payload["metrics"] = metrics
         payload["phase_shifts"] = phase_shifts
         payload["homeostatic_deficit"] = deficit
@@ -314,6 +313,22 @@ class ConversationMetricsModule(ProcessingModule):
         )
 
         return payload
+
+
+def _compute_collapse_pressure_streak(
+    collapse_pressure: float | None,
+    recent_metric_rows: list[dict],
+    threshold: float = 0.60,
+) -> int:
+    if collapse_pressure is None or collapse_pressure < threshold:
+        return 0
+    streak = 1
+    for row in reversed(recent_metric_rows):
+        prior = row.get("boringness", row.get("collapse_pressure"))
+        if prior is None or float(prior) < threshold:
+            break
+        streak += 1
+    return streak
 
 
 def _fmt(v: float | None) -> str:

@@ -134,8 +134,8 @@ T23|x|frontend session/transport & Markdown regression tests + fixes|V8,V17,V36,
 T24|x|isolate search/research/notes/chat requests; own notification polling|V39,V41
 T25|x|extract chat/canvas responsibilities; tighten frontend quality gates; ADR & verification|V28,V30,V41
 T26|x|add causal receipt + uptake/progress evaluator; replay historical baseline; archive run|V46,V47,V48,V49,I.benchmark
-T27|~|isolate metric state by conversation; wire reasoning controls + applied-status receipt through provider boundary|V42,V43,V49,V50,I.internal
-T28|.|test 3 diffractive activation hypotheses in isolated branches; adopt empirical winner|V44,V47,V48
+T27|x|isolate metric state by conversation; wire reasoning controls + applied-status receipt through provider boundary|V42,V43,V49,V50,I.internal
+T28|~|test 3 diffractive activation hypotheses in isolated branches; adopt empirical winner|V44,V47,V48
 T29|.|add progress-aware intervention selector + failed-mode progression; integrate regulator prompt|V45,V46,I.internal
 T30|.|run focused/full offline + repeated live conversation benchmarks; compare causal arms; publish Report 019 + ADR|V42,V43,V44,V45,V46,V47,V48,I.benchmark
 T31|.|run full ruff/format/mypy/pytest + frontend gates; clean ephemeral artifacts; reconcile article/report claims|V18,V30,V42,V43,V44,V45,V46,V47,V48,I.quality

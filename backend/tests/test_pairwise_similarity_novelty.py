@@ -125,3 +125,16 @@ def test_conceptual_novelty_repetitive_basin_suppression():
     # Orthogonal turn should register strong novelty (>= 0.70) under ADR-084 dual-horizon attractor
     assert novelty_ortho >= 0.70, f"Expected high novelty for orthogonal shift, got {novelty_ortho}"
     assert novelty_ortho > novelty_near * 2, "Orthogonal novelty should be significantly higher than near novelty"
+
+
+def test_v42_novelty_replay_does_not_depend_on_prior_conversation_state():
+    history = [
+        {"embedding": np.eye(3, 384, dtype=np.float32)[0], "speaker": "human"},
+        {"embedding": np.eye(3, 384, dtype=np.float32)[1], "speaker": "agent"},
+    ]
+    current = np.eye(3, 384, dtype=np.float32)[2]
+
+    first, _ = _compute_conceptual_novelty(current, history, prior_centroid=None)
+    replay, _ = _compute_conceptual_novelty(current, history, prior_centroid=None)
+
+    assert first == replay
