@@ -40,6 +40,21 @@ def resolve_simulator_api_base(environment: dict[str, str] | None = None) -> str
     return source.get("AAA_LLM_API_BASE", "https://openrouter.ai/api/v1").rstrip("/")
 
 
+def resolve_simulator_model(environment: dict[str, str] | None = None) -> str:
+    """Translate AAA's provider-qualified alias into the OpenRouter wire model id."""
+
+    source = environment if environment is not None else os.environ
+    configured = (
+        source.get(
+            "AAA_BENCHMARK_PARTICIPANT_MODEL",
+            source.get("AAA_LLM_MODEL", "google/gemini-3.8-flash"),
+        )
+        .split(",")[0]
+        .strip()
+    )
+    return configured.removeprefix("openrouter_router/")
+
+
 def _simulated_participant(transcript: list[dict[str, str]], *, model: str, api_key: str, api_base: str) -> str:
     response = httpx.post(
         f"{api_base.rstrip('/')}/chat/completions",
@@ -93,7 +108,7 @@ def _run_conversation(
             json={
                 "conversation_id": conversation_id,
                 "user_message_id": message_data["user_message_id"],
-                "max_tokens": 900,
+                "max_tokens": 450,
             },
         )
         generation_response.raise_for_status()
@@ -236,7 +251,7 @@ def main() -> None:
     if not api_key:
         raise RuntimeError("AAA_LLM_API_KEY is required for the adaptive live benchmark")
     api_base = resolve_simulator_api_base()
-    simulator_model = os.environ.get("AAA_LLM_MODEL", "google/gemini-3.7-flash").split(",")[0].strip()
+    simulator_model = resolve_simulator_model()
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     out_dir = args.out or PROJECT_ROOT / "benchmarks" / "runs" / "telemetry" / f"dialogue_feedback_{timestamp}"
     out_dir.mkdir(parents=True, exist_ok=False)

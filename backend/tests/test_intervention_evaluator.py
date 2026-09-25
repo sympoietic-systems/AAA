@@ -3,7 +3,10 @@ from benchmarks.suites.telemetry.intervention_evaluator import (
     build_causal_receipts,
     rate_participant_turn,
 )
-from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import resolve_simulator_api_base
+from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import (
+    resolve_simulator_api_base,
+    resolve_simulator_model,
+)
 
 
 def test_v46_outcome_requires_uptake_and_task_progress():
@@ -50,4 +53,11 @@ def test_v51_simulator_uses_llm_provider_endpoint():
     assert (
         resolve_simulator_api_base({**environment, "AAA_LLM_API_BASE": "https://models.example/v1/"})
         == "https://models.example/v1"
+    )
+
+
+def test_v51_simulator_translates_provider_qualified_model():
+    assert (
+        resolve_simulator_model({"AAA_LLM_MODEL": "openrouter_router/google/gemini-3.8-flash"})
+        == "google/gemini-3.8-flash"
     )
