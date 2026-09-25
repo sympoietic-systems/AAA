@@ -50,3 +50,13 @@ from backend.core.registry import ModuleRegistry as CanonicalModuleRegistry
 assert CanonicalModuleRegistry.__module__ == "backend.core.registry"
 """
     subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, check=True)
+
+
+def test_v22_retired_legacy_redirect_modules_stay_absent():
+    retired_modules = (
+        "backend/core/sedimentation.py",
+        "backend/metabolisation/context.py",
+        "backend/storage/repository.py",
+        "backend/utils/similarity.py",
+    )
+    assert all(not (REPO_ROOT / path).exists() for path in retired_modules)
