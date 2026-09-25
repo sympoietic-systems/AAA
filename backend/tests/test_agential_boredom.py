@@ -64,14 +64,15 @@ async def test_two_stage_boredom_progression():
                 "pairwise_similarity": 0.45,
                 "rolling_entropy": 0.40,
                 "collapse_pressure_streak": 1,
+                "divergence_resolution_ratio": 0.70,
             },
             "messages": [{"role": "user", "content": "wipe cache"}],
         }
     )
     recs1 = res1["homeostatic_recommendations"]
     prompt1 = recs1["somatic_reflection_prompt"]
-    assert "AGENTIAL SOCRATIC SEIZURE DIRECTIVE" in prompt1
-    assert "seize the unexamined assumption" in prompt1
+    assert recs1["intervention"]["mode"] == "counterexample"
+    assert "concrete counterexample" in prompt1
     assert recs1["consecutive_stagnant_turns"] == 1
 
     # Turn 2: Prolonged high boredom (CP = 0.82, turn 2) -> Stage 2 Laconic Compression & Nomadic Rupture
@@ -84,14 +85,15 @@ async def test_two_stage_boredom_progression():
                 "pairwise_similarity": 0.55,
                 "rolling_entropy": 0.30,
                 "collapse_pressure_streak": 2,
+                "divergence_resolution_ratio": 0.70,
             },
             "messages": [{"role": "user", "content": "wipe cache now"}],
         }
     )
     recs2 = res2["homeostatic_recommendations"]
     prompt2 = recs2["somatic_reflection_prompt"]
-    assert "AGENTIAL LACONIC COMPRESSION & NOMADIC RUPTURE DIRECTIVE" in prompt2
-    assert "Emit at most 1 to 2 dense, surgical sentences" in prompt2
+    assert recs2["intervention"]["mode"] == "experiment"
+    assert "discriminating experiment" in prompt2
     assert recs2["consecutive_stagnant_turns"] == 2
 
 

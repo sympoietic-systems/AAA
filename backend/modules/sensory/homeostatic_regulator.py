@@ -1,6 +1,7 @@
 import logging
 
 from backend.modules.base import ProcessingModule
+from backend.modules.sensory.intervention_policy import select_intervention
 from backend.pipeline.metadata import ModuleMeta
 from backend.utils.metabolic_regulator import get_llm_execution_parameters
 
@@ -85,7 +86,15 @@ class HomeostaticRegulatorModule(ProcessingModule):
         if glitch_fidelity is not None and glitch_fidelity < 0.50 and "glitch_fidelity_low" not in flags:
             flags.append("glitch_fidelity_low")
 
-        somatic_reflection = _synthesize_somatic_reflection(flags, metrics, stagnant_turns=stagnant_turns)
+        intervention = select_intervention(
+            collapse_pressure=float(collapse_pressure or 0.0),
+            divergence_resolution=float(metrics.get("divergence_resolution_ratio") or 0.5),
+            streak=stagnant_turns,
+            participant_text=str(payload.get("content", "")),
+        )
+        somatic_reflection = intervention.directive
+        if somatic_reflection is None and float(collapse_pressure or 0.0) < 0.35:
+            somatic_reflection = _synthesize_somatic_reflection(flags, metrics, stagnant_turns=stagnant_turns)
 
         recommendations = {
             "temperature": temp_rec,
@@ -95,6 +104,7 @@ class HomeostaticRegulatorModule(ProcessingModule):
             "triggered_flags": flags,
             "somatic_reflection_prompt": somatic_reflection,
             "consecutive_stagnant_turns": stagnant_turns,
+            "intervention": intervention.to_dict(),
         }
         reasoning = get_llm_execution_parameters(
             {
