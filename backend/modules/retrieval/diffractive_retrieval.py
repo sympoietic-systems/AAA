@@ -4,6 +4,7 @@ from datetime import datetime
 import numpy as np
 
 from backend.modules.base import ProcessingModule
+from backend.modules.retrieval.diffractive_activation import decide_diffractive_activation
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repositories import MessageRepository, PerceptionSedimentRepository, SemanticKnotRepository
 from backend.utils.token_counter import estimate_tokens
@@ -126,15 +127,19 @@ class DiffractiveRetrievalModule(ProcessingModule):
             if val_e is not None:
                 rolling_entropy = val_e
 
-        # Compute P_diffract with stochastic jitter R ~ U(-0.05, 0.05)
-        jitter = np.random.uniform(-0.05, 0.05)
-        p_diffract = 0.5 * boringness + 0.3 * (1.0 - rolling_entropy) - 0.4 * vitality + jitter
-        p_diffract = float(np.clip(p_diffract, 0.0, 1.0))
-        payload["diffractive_p"] = p_diffract
-
         # Hysteresis State Machine
         current_state = self._states.get(conversation_id, "FLOWING")
         timer = self._timers.get(conversation_id, 0)
+        pressure_streak = int(metrics.get("collapse_pressure_streak", 0)) if metrics else 0
+        activation = decide_diffractive_activation(
+            collapse_pressure=float(boringness),
+            rolling_entropy=float(rolling_entropy),
+            vitality=float(vitality),
+            streak=pressure_streak,
+            currently_active=current_state == "STAGNANT",
+        )
+        p_diffract = activation.score
+        payload["diffractive_p"] = p_diffract
 
         start_time = datetime.now()
 
@@ -159,14 +164,14 @@ class DiffractiveRetrievalModule(ProcessingModule):
                 target_state = current_state
         else:
             if current_state == "FLOWING":
-                if p_diffract >= 0.75:
+                if activation.active:
                     target_state = "STAGNANT"
                     timer = self._cohesion_length
                     self._timers[conversation_id] = timer
                 else:
                     target_state = "FLOWING"
             else:  # STAGNANT
-                target_state = "FLOWING" if p_diffract <= 0.35 else "STAGNANT"
+                target_state = "STAGNANT" if activation.active else "FLOWING"
 
         self._states[conversation_id] = target_state
         payload["diffractive_state"] = target_state
@@ -176,10 +181,10 @@ class DiffractiveRetrievalModule(ProcessingModule):
         r_context = 0.20 + 0.35 * stagnation
         payload["diffractive_ratio"] = r_context
 
-        # Dynamic max count based on stagnation + randomness
-        base_rand = np.random.randint(0, 3)  # 0, 1, or 2
+        # Deterministic count keeps causal benchmark arms reproducible.
+        base_count = 1 if target_state == "STAGNANT" else 0
         stagnation_bonus = int(np.round(stagnation * (self._max_diffractive_count - 1)))
-        dynamic_max = int(np.clip(base_rand + stagnation_bonus, 0, self._max_diffractive_count))
+        dynamic_max = int(np.clip(base_count + stagnation_bonus, 0, self._max_diffractive_count))
 
         # Dynamic Sliding Goldilocks Range Bounds
         # Under normal flow: [0.45, 0.85]
@@ -195,6 +200,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
                 "state": target_state,
                 "previous_state": current_state,
                 "p_diffract": round(p_diffract, 4),
+                "activation_reason": activation.reason,
                 "stagnation_index": round(stagnation, 4),
                 "r_context": round(r_context, 4),
                 "dynamic_max": 0,
@@ -216,6 +222,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
                 "state": target_state,
                 "previous_state": current_state,
                 "p_diffract": round(p_diffract, 4),
+                "activation_reason": activation.reason,
                 "stagnation_index": round(stagnation, 4),
                 "r_context": round(r_context, 4),
                 "dynamic_max": 0,
@@ -463,6 +470,7 @@ class DiffractiveRetrievalModule(ProcessingModule):
             "state": target_state,
             "previous_state": current_state,
             "p_diffract": round(p_diffract, 4),
+            "activation_reason": activation.reason,
             "stagnation_index": round(stagnation, 4),
             "r_context": round(r_context, 4),
             "dynamic_max": dynamic_max,

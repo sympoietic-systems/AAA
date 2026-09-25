@@ -58,14 +58,15 @@ async def test_hysteresis_state_machine(mock_repos, monkeypatch):
     payload = {
         "conversation_id": "test_conv",
         "embedding": np.zeros(384, dtype="float32").tobytes(),
-        "conversation_vitality": 0.0,
-        "metrics": {"boringness": 1.0, "rolling_entropy": 0.0},
+        "conversation_vitality": 0.55,
+            "metrics": {"boringness": 0.68, "rolling_entropy": 0.55, "collapse_pressure_streak": 2},
     }
 
     # First turn: transitions to STAGNANT, cohesion timer set to 3
     res1 = await module.process(payload)
     assert res1["diffractive_state"] == "STAGNANT"
     assert module._timers["test_conv"] == 3
+    assert res1["diffractive_meta"]["activation_reason"] == "adaptive_persistence"
 
     # Second turn: cohesion countdown decreases to 2, state remains STAGNANT even if P_diffract drops
     low_stagnation_payload = {
