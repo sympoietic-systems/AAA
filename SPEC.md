@@ -150,3 +150,5 @@ B38|2026-09-24|strict typing exposed research metabolism calling an attribute th
 B39|2026-09-24|typing expansion left import order and formatting outside Ruff's canonical form|V30
 B40|2026-09-24|ADR metadata used Markdown hard-break spaces and the commit sequence did not stop after `diff --check`|V30
 B41|2026-09-24|legacy-import migration left four import blocks + one package file outside Ruff canonical form|V30
+B42|2026-09-25|cold strict-mypy run exposed duplicate branch-local annotation for LLM request body|V30
+B43|2026-09-25|LLM request-body annotation fix missed Ruff format gate|V30

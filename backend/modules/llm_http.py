@@ -197,19 +197,20 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             merged_params.pop("response_format", None)
 
         # ── Build request body ────────────────────────────────────────
+        body: dict[str, Any]
         if is_anthropic:
             system_prompt = ""
             for m in messages:
                 if m.get("role") == "system":
                     system_prompt += m.get("content", "") + "\n"
-            body: dict[str, Any] = build_anthropic_body(
+            body = build_anthropic_body(
                 self._model,
                 messages,
                 system_prompt.strip(),
                 merged_params.get("max_tokens", 4096),
             )
         else:
-            body: dict[str, Any] = {"model": self._model, "messages": messages}
+            body = {"model": self._model, "messages": messages}
             if "max_tokens" in merged_params:
                 body["max_tokens"] = merged_params["max_tokens"]
 
