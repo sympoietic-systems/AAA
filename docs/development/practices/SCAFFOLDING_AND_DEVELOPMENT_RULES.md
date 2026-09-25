@@ -139,13 +139,15 @@ The client is built with React 19, TypeScript, and Vite, utilizing a reactive, d
 *   **Provider Mocking:** Never execute live LLM provider network calls inside unit tests. Mock external completions with deterministic payloads.
 *   **Execution:** Run tests with `uv run pytest` before staging any changes.
 
-### 4.2. Linting & Formatting Standards
-*   **Python:** Governed by **Ruff** (configured in `pyproject.toml`).
+### 4.2. Linting, Formatting & Typing Standards
+*   **Python:** Governed by **Ruff** and strict **mypy** settings configured in `pyproject.toml` and specified by [QUALITY.md](../../../.agents/protocols/QUALITY.md).
     ```bash
-    uv run ruff check backend/ --fix
-    uv run ruff format backend/
+    uv run ruff check backend/
+    uv run ruff format --check backend/
+    uv run mypy
     ```
 *   **Rules:** Line length 120, double quotes, space indentation, Python 3.11+.
+*   **Progressive typing:** Add new and substantially refactored backend modules to `[tool.mypy].files` in the same change. Do not weaken strict settings or remove typed paths to bypass failures.
 
 ### 4.3. Invariant Backpropagation
 When a bug, test failure, or runtime glitch is identified:

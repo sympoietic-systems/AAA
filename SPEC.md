@@ -152,3 +152,4 @@ B40|2026-09-24|ADR metadata used Markdown hard-break spaces and the commit seque
 B41|2026-09-24|legacy-import migration left four import blocks + one package file outside Ruff canonical form|V30
 B42|2026-09-25|cold strict-mypy run exposed duplicate branch-local annotation for LLM request body|V30
 B43|2026-09-25|LLM request-body annotation fix missed Ruff format gate|V30
+B44|2026-09-25|new quality protocol used a Markdown hard-break space rejected by the commit whitespace gate|V30

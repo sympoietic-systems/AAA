@@ -29,13 +29,16 @@ graph TB
         UC & UCO & TS --> AC
     end
 
-    subgraph Backend ["FastAPI Backend (main.py)"]
+    subgraph Backend ["FastAPI Backend"]
         direction TB
-        subgraph Pipeline ["Processing Pipeline (13 Modules)"]
+        APP["AppServices<br/>(lifespan-owned composition root)"]
+        API["API Routes<br/>(HTTP membrane)"]
+        SVC["Use-Case Services<br/>(orchestration)"]
+        subgraph Pipeline ["Configured Processing Pipeline (15 Modules)"]
             direction LR
-            M1["embedder"] --> M1_5["structural_scorer"] --> M2["perception"] --> M2_5["web_retrieval"] --> M3["conversation_metrics"] --> M4["context_collector"] --> M5["consolidation_checkpoint"] --> M6["sedimentation_retrieval"] --> M7["diffractive_retrieval"] --> M7_5["belief_metabolism"] --> M8["prompt_assembler"] --> M9["homeostatic_regulator"] --> M10["llm_client"]
+            M1["embedder"] --> M2["structural_scorer"] --> M3["perception"] --> M4["web_retrieval"] --> M5["conversation_metrics"] --> M6["context_collector"] --> M7["consolidation_checkpoint"] --> M8["sedimentation_retrieval"] --> M9["diffractive_retrieval"] --> M10["belief_metabolism"] --> M11["skill_activator"] --> M12["skill_workshop"] --> M13["prompt_assembler"] --> M14["homeostatic_regulator"] --> M15["llm_client"]
         end
-        subgraph Structural ["Structural Scoring (out-of-pipeline)"]
+        subgraph Structural ["Structural Scorer Collaborators"]
             direction TB
             SS1["JevStructuralScorer\n(calibrated System One)"] --> SSC["CompositeStructuralScorer"]
             SS2["LLMScorer\n(LLM JSON schema analysis)"] --> SSC
@@ -58,10 +61,15 @@ graph TB
     end
 
     Components -. "Actions & State" .-> Logic
-    AC == "HTTP (Vite Proxy)" ==> Backend
-    Pipeline == "Read / Write" ==> Database
-    M7 -.-> Diffractive
-```,StartLine:26,TargetContent:
+    AC == "HTTP (Vite Proxy)" ==> API
+    APP --> API
+    APP --> SVC
+    APP --> Pipeline
+    API --> SVC
+    SVC --> Pipeline
+    SVC --> Database
+    Pipeline --> Database
+    M9 -.-> Diffractive
 ```
 
 ## Data Flow (Chat Request)
@@ -71,13 +79,17 @@ sequenceDiagram
     autonumber
     actor Interlocutor
     participant API as api/routes/chat.py
+    participant Service as ChatService
     participant Pipeline as ProcessingPipeline
-    participant DB as SQLite DB
+    participant Repo as Repositories / SQLite WAL
+    participant BG as Background engine
     participant LLM as LLM Provider
 
     Interlocutor->>API: POST /api/chat {content, conversation_id}
-    Note over API: If new conversation,<br/>create UUID & store
-    API->>Pipeline: run(payload)
+    API->>Service: process_chat(validated request)
+    Service->>Repo: create/resolve conversation and save human message
+    Note over Service,Repo: Blocking repository work crosses one<br/>asyncio.to_thread use-case boundary
+    Service->>Pipeline: run(payload)
     
     rect rgb(28, 28, 30)
         Note over Pipeline: Module Ingestion & Processing
@@ -110,6 +122,9 @@ sequenceDiagram
         
         Pipeline->>Pipeline: belief_metabolism.process()
         Note over Pipeline: Update proto-belief lifecycle states,<br/>compute ecosystem health, detect bifurcations
+
+        Pipeline->>Pipeline: skill_activator.process()
+        Pipeline->>Pipeline: skill_workshop.process()
         
         Pipeline->>Pipeline: prompt_assembler.process()
         Note over Pipeline: Compose: system prompt (with BEGIN/END<br/>SKILLS/BELIEFS/DIRECTIVE blocks) + procedural<br/>sediment + history + cross-conv + file + web<br/>+ diffractive zone + query. Enforce token budget.
@@ -122,14 +137,16 @@ sequenceDiagram
         LLM-->>Pipeline: response text & reasoning
     end
     
-    Pipeline-->>API: PipelineResult (enriched payload)
+    Pipeline-->>Service: PipelineResult (enriched payload)
     
-    API->>DB: Save human/apparatus messages (with tokens, thinking, embeddings)
-    Note over API: If trigger_consolidation:<br/>Fire async background ConsolidateAction
-    Note over API: If new conversation:<br/>Fire async background title generation
+    Service->>Repo: save apparatus message and metrics
+    Service->>BG: schedule consolidation/title work when triggered
+    Service-->>API: ChatResponse
     
     API-->>Interlocutor: ChatResponse {id, content, thinking, tokens}
 ```
+
+`backend/config.yaml` owns the ordered pipeline module list. `backend/bootstrap/lifecycle.py` assembles one typed `AppServices` dependency container for the application lifespan; dependency getters construct use-case services around that container. Routes translate HTTP input and output, while services own orchestration and repository sequencing.
 
 ## Database Schema
 
@@ -664,7 +681,7 @@ Cross-conversation knowledge transfer happens through the sedimentation module
 | LLM structural scorer | Done | JSON schema analysis via `structural_llm` model pool; `AAA_LLM_SCORER_ENABLED` toggle |
 | Structural justification cache | Done | In-memory SHA256-keyed cache; surfaced in UI debug panel |
 | Structural payload JSON panel | Done | Collapsible per-message debug view with named dimension scores |
-| File reprocessing & error retry | Done | Background exception propagation, `/reprocess` route, and UI retry button; see [ADR-015](decisions/ADR-015-error-propagation-and-reprocessing.md) |
+| File reprocessing & error retry | Done | Background exception propagation, `/reprocess` route, and UI retry button; see [ADR-015](../decisions/ADR-015-error-propagation-and-reprocessing.md) |
 | Extended perception (Tripartite Vision) | Done | Ingestion of images (PNG, JPEG, WebP) with classification, OCR text extraction, somatic/aesthetic notes, and belief collisions mapping. |
 | Exogenous Web retrieval | Done | Rhizome Web Probe DuckDuckGo crawler & scorer for real-time web-probing context. |
 | Centralized prompts configuration | Done | Relocated all scattered prompts into YAML templates under `backend/prompts/` with robust inline fallbacks. |

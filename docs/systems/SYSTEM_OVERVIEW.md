@@ -135,16 +135,17 @@ AAA/
 │   ├── main.py              # Entry point (~50 lines)
 │   ├── config.py            # YAML + env config loader
 │   ├── config.yaml          # All configuration defaults
-│   ├── bootstrap/           # App initialization (providers, repos, modules, lifecycle)
-│   ├── api/                 # FastAPI routes (20 domain routers)
-│   ├── services/            # Business logic layer (16 services)
-│   ├── modules/             # Pipeline processing modules (20+ modules)
-│   ├── metabolisation/      # Pipeline orchestrator, consolidation, daemon, scheduler
+│   ├── bootstrap/           # AppServices composition root and lifespan assembly
+│   ├── api/                 # FastAPI routes and Pydantic HTTP membrane
+│   ├── services/            # Typed use-case orchestration
+│   ├── pipeline/            # ProcessingPipeline engine and result contract
+│   ├── modules/             # Cognitive operators and focused collaborators
+│   ├── metabolisation/      # Background consolidation, daemon, and scheduler
 │   ├── personality/         # Agent identity YAML, prompt assembler, seeding
 │   ├── storage/             # Database, ORM models, repositories, migrations
 │   ├── prompts/             # YAML prompt templates (centralized)
-│   ├── utils/               # Token counter, similarity, vector utilities
-│   ├── core/                # AppState, registries, context types
+│   ├── utils/               # Token counting, vector math, security, filesystem helpers
+│   ├── core/                # Authentication, registries, and logging
 │   └── tests/               # pytest suite
 ├── frontend/
 │   └── src/
@@ -180,26 +181,22 @@ POST /api/chat { content, conversation_id, parent_message_id (optional), attachm
 
 ### 4.3 Phase 2: Pipeline Execution
 
-The `ProcessingPipeline` runs **19 modules sequentially** through a shared `payload` dict:
+The `ProcessingPipeline` runs the **15 modules configured in `backend/config.yaml`** sequentially through a shared payload. The configuration is the source of truth for order; this table documents the current default:
 
 | # | Module | What It Does | Output |
 |---|--------|-------------|--------|
 | 1 | **embedder** | Encodes message text → 384D embedding | `payload["embedding"]` |
 | 2 | **structural_scorer** | Computes 16D cybernetic signature via Lexicon + Topology + LLM scorers | `payload["structural_signature"]` |
 | 3 | **perception** | Ingests attached files (PDF/DOCX/image), chunks, embeds, retrieves top-K relevant chunks | `payload["file_context"]` |
-| 4 | **rhizome_web_probe** | Detects stagnation/belief tension; proposes autonomous deep-research task (non-blocking, async) | `payload["research_proposal_id"]` |
-| 5 | **web_retrieval** | Searches web for exogenous context via DuckDuckGo | `payload["web_context"]` |
-| 6 | **conversation_metrics** | Computes novelty, entropy, coupling, vitality from recent messages | `payload["metrics"]` |
-| 7 | **trait_computer** | Computes 7 descriptive personality traits from metrics with EMA smoothing | `payload["descriptive_traits"]` |
-| 8 | **expertise_engine** | Accretes expertise mass from domain signals in messages | `payload["expertise_signals"]` |
-| 9 | **commitment_store** | Post-hoc filter on belief nucleation (blocks contradictory proto-beliefs); triggers daemon scan every 50 turns | `payload["proto_belief_proposals"]` (filtered) |
-| 10 | **context_collector** | 3-tier compression: raw floating window (last 8 msgs) + LLM batch-compressed blocks + caveman fallback | `payload["messages"]` |
-| 11 | **consolidation_checkpoint** | Injects memory nodes from prior consolidation + triggers new consolidation at threshold | `payload["trigger_consolidation"]` |
-| 12 | **sedimentation_retrieval** | Cross-conversation embedding similarity retrieval (top-10 above 0.3 sim) with non-Euclidean knot-mass gravitational warping | `payload["sediment_messages"]` |
-| 13 | **diffractive_retrieval** | Stagnation detection with adaptive hysteresis; if STAGNANT, injects Goldilocks-zone fragments | `payload["diffractive_zone"]` |
-| 14 | **belief_metabolism** | Updates belief lifecycles: nucleation, accretion, ecosystem health, self-tuning | DB writes |
-| 15 | **skill_activator** | Detects skill trigger keywords in message, loads on-demand skills | `payload["loaded_skills"]` |
-| 16 | **skill_workshop** | Processes skill proposals, confidence scoring, crystallization | DB writes |
+| 4 | **web_retrieval** | Searches the web for bounded exogenous context | `payload["web_context"]` |
+| 5 | **conversation_metrics** | Computes novelty, entropy, coupling, and vitality from recent messages | `payload["metrics"]` |
+| 6 | **context_collector** | Builds tiered conversational context within the token budget | `payload["messages"]` |
+| 7 | **consolidation_checkpoint** | Injects prior memory nodes and signals threshold-based consolidation | `payload["trigger_consolidation"]` |
+| 8 | **sedimentation_retrieval** | Retrieves token-budgeted cross-conversation sediment | `payload["sediment_messages"]` |
+| 9 | **diffractive_retrieval** | Detects stagnation and injects Goldilocks-zone fragments | `payload["diffractive_zone"]` |
+| 10 | **belief_metabolism** | Updates belief lifecycles and ecosystem state | DB writes |
+| 11 | **skill_activator** | Selects relevant database-native skills | `payload["loaded_skills"]` |
+| 12 | **skill_workshop** | Processes skill proposals and lifecycle transitions | DB writes |
 
 ### 4.4 Final Stage: Prompt Assembly → LLM Call
 
@@ -209,16 +206,20 @@ prompt_assembler  →  homeostatic_regulator  →  llm_client
 
 | # | Module | What It Does |
 |---|--------|-------------|
-| 17 | **prompt_assembler** | Composes final ordered message list: system prompt → procedural sediment → history → cross-conv → file → web → diffractive zone → query |
-| 18 | **homeostatic_regulator** | Maps metrics → dynamic temperature, presence/frequency penalty adjustments |
-| 19 | **llm_client** | Sends assembled messages to LLM provider, returns response text + thinking trace |
+| 13 | **prompt_assembler** | Composes final ordered message list: system prompt → procedural sediment → history → cross-conv → file → web → diffractive zone → query |
+| 14 | **homeostatic_regulator** | Maps metrics → dynamic temperature, presence/frequency penalty adjustments |
+| 15 | **llm_client** | Sends assembled messages to the selected provider and returns response text plus reasoning metadata |
+
+Personality traits, expertise accretion, commitments, autonomous research proposals, and other background metabolism remain active subsystems, but they are not entries in the configured synchronous chat pipeline.
 
 ### 4.5 Post-Response
 
-1. Save apparatus message with thinking, tokens, embeddings
-2. If `trigger_consolidation` flag set → spawn background `ConsolidateAction`
-3. If new conversation → spawn background title generation
-4. Return `ChatResponse { id, content, thinking, tokens, metrics }`
+1. `ChatService` saves the apparatus message with thinking, tokens, and embeddings through repository collaborators.
+2. If `trigger_consolidation` is set, the service schedules the background consolidation action.
+3. If this is a new conversation, the service schedules title generation.
+4. The route serializes `ChatResponse { id, content, thinking, tokens, metrics }`.
+
+The application lifespan assembles a single typed `AppServices` dependency container. API dependency getters construct concrete use-case services around that container; routes do not sequence repository operations directly. Blocking repository/file/CPU use cases cross one `asyncio.to_thread` boundary before returning to the event loop.
 
 ---
 
@@ -896,7 +897,7 @@ cd frontend && npm run dev
 | Rhizomatic memory (graph-based) | 🔜 Phase 3 | Replace linear context with graph-based diffractive traversal |
 | Foundational memory (bifurcation) | 🔜 Phase 4 | Ontological deterritorialization and Kintsugi adaptation |
 
-**Total ADRs:** 50 Architecture Decision Records (ADR-001 through ADR-050)
+**Architecture decisions:** 97 ADR files through ADR-095. Letter-suffixed records preserve parallel decisions without renumbering historical entries.
 
 **Resolved Gaps (Memory System Audit — Implemented 2026-06-15 via ADR-049):**
 

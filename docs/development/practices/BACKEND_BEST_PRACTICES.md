@@ -185,13 +185,17 @@ To enable rapid production incident triage without risking disk exhaustion or se
 
 ---
 
-## 9. Linting & Code Quality (ruff)
+## 9. Linting, Formatting & Progressive Typing
 
-The project uses **ruff** for Python linting and formatting, configured in `pyproject.toml`.
+The project uses **Ruff** for linting and formatting and **mypy** for a progressively expanding strict type boundary. Both are configured in `pyproject.toml`; the canonical gate policy lives in [QUALITY.md](../../../.agents/protocols/QUALITY.md).
 
 ### Guidelines
 *   **Lint before commit**: Run `uv run ruff check backend/` before committing. Auto-fix safe issues with `uv run ruff check backend/ --fix`.
 *   **Format consistently**: Run `uv run ruff format backend/` to apply consistent formatting (120-char lines, double quotes, spaces).
+*   **Check formatting without mutation**: Run `uv run ruff format --check backend/` in verification and CI-style review.
+*   **Run strict typing**: Run `uv run mypy`. This checks the configured strict slice in `[tool.mypy].files`.
+*   **Ratchet coverage forward**: Add every new or substantially refactored backend module to the mypy `files` allowlist in the same change. Do not remove typed paths or weaken strict settings to bypass errors.
+*   **Type boundaries explicitly**: Prefer protocols for repository/provider dependencies and confine `Any` to documented compatibility membranes.
 *   **Pre-commit hooks**: The project includes `.pre-commit-config.yaml` with hooks for `ruff` (lint + format) and general file checks (`check-yaml`, `check-toml`, `end-of-file-fixer`, `trailing-whitespace`). Install via `pre-commit install`.
 *   **Ruff supersedes other tools**: Ruff replaces flake8, isort, pyupgrade, and black. Do not configure or use these tools separately.
 *   **Ignored rules** (project-specific exemptions):
@@ -227,7 +231,7 @@ When AI agents (Antigravity, OpenCode, Codex, ChatGPT) operate on the AAA backen
 ### 11.1. The 3-Phase Agent Engineering Loop
 1.  **Phase 1: Research & Contract Design**: Before editing code, review relevant ADRs under `docs/decisions/`, consult the Symbia MCP server for foundational decisions, and specify Pydantic schemas or database schemas.
 2.  **Phase 2: Implementation & Boundary Hardening**: Implement minimal, non-blocking code. Apply `@with_connection` safety, offload blocking work via `asyncio.to_thread`, and enforce the Four-Pillar Upload and Input Boundary defenses.
-3.  **Phase 3: Verification & Invariant Backpropagation**: Run `uv run ruff check backend/` and `uv run pytest`. If a bug or regression is uncovered, invoke the `backprop` skill to transcribe the lesson into a permanent invariant or test assertion.
+3.  **Phase 3: Verification & Invariant Backpropagation**: Run `uv run ruff check backend/`, `uv run ruff format --check backend/`, `uv run mypy`, and `uv run pytest` for backend-wide changes. If a bug or regression is uncovered, invoke the `backprop` skill to transcribe the lesson into a permanent invariant or test assertion.
 
 ### 11.2. Backend Skill Routing Matrix
 
@@ -238,7 +242,7 @@ When AI agents (Antigravity, OpenCode, Codex, ChatGPT) operate on the AAA backen
 | **Database & Repositories** | [`database-design`](file:///d:/01_GIT/AAA/.agents/skills/database-design/SKILL.md) | Use when adding entities to `models.py`, altering table DDL in `database.py`, or designing composite indexes for SQLite WAL. |
 | **Security & Hardening** | [`app-security`](file:///d:/01_GIT/AAA/.agents/skills/app-security/SKILL.md) | Mandatory when adding endpoints handling files, external URLs, auth tokens, or mutations. Review against IDOR, SSRF, and upload vulnerabilities. |
 | **Error Handling & Glitches** | [`error-handling`](file:///d:/01_GIT/AAA/.agents/skills/error-handling/SKILL.md) | Implement structured Glitch payloads, custom domain exceptions in `backend/errors.py`, and avoid swallowing exceptions. |
-| **Testing & Quality Gates** | [`quality-gates`](file:///d:/01_GIT/AAA/.agents/skills/quality-gates/SKILL.md) | Ensure test isolation using `conftest.py`, mock async LLM providers correctly, and run verification gates prior to completion. |
+| **Testing & Quality Gates** | [`quality-gates`](../../../.agents/skills/quality-gates/SKILL.md) | Ensure test isolation using `conftest.py`, mock async LLM providers correctly, and run Ruff, strict mypy, and pytest gates prior to completion. |
 | **Bug Fixing & Invariants** | [`backprop`](file:///d:/01_GIT/AAA/.agents/skills/backprop/SKILL.md)<br>[`debugging-workflow`](file:///d:/01_GIT/AAA/.agents/skills/debugging-workflow/SKILL.md) | Trace the root cause, isolate failure with a minimal test, and add invariant checks (§V) to prevent recurrence. |
 | **Refactoring & Modularity** | [`architecture-principles`](file:///d:/01_GIT/AAA/.agents/skills/architecture-principles/SKILL.md)<br>[`deepen`](file:///d:/01_GIT/AAA/.agents/skills/deepen/SKILL.md) | Used when splitting oversized modules or transitioning directory boundaries using stratal deprecation stubs. |
 | **Telemetry & Metrics** | [`metric-calibration`](file:///d:/01_GIT/AAA/.agents/skills/metric-calibration/SKILL.md)<br>[`empirical-benchmark`](file:///d:/01_GIT/AAA/.agents/skills/empirical-benchmark/SKILL.md) | Benchmark and calibrate cybernetic sensors, homeostatic regulation thresholds, and structural scorer distributions. |
