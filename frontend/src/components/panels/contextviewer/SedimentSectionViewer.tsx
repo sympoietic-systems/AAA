@@ -1,3 +1,4 @@
+import { apiFetch } from "../../../api/http"
 import React, { useState, memo } from 'react';
 
 interface ParsedSedimentMemory {
@@ -50,7 +51,7 @@ export const SedimentSectionViewer: React.FC<{ content: string }> = memo(({ cont
     if (loadedFiles[fileName]?.summary || loadedFiles[fileName]?.loading) return;
     setLoadedFiles(prev => ({ ...prev, [fileName]: { loading: true } }));
     try {
-      const res = await fetch(`/api/files/by-name?file_name=${encodeURIComponent(fileName)}`);
+      const res = await apiFetch(`/api/files/by-name?file_name=${encodeURIComponent(fileName)}`);
       if (!res.ok) {
         throw new Error(`Failed to load file: ${res.statusText}`);
       }

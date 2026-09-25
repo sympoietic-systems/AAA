@@ -2,7 +2,7 @@
 
 /** Repair a JSON string that has been truncated by balancing braces, brackets, and quotes. */
 export function repairTruncatedJson(str: string): string {
-  let cleaned = str.trim()
+  const cleaned = str.trim()
   if (!cleaned) return ""
 
   let inString = false

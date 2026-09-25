@@ -1,7 +1,7 @@
 // Research API — Autonomous Research Engine endpoints.
 // See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 4.8.
 
-import { apiFetch, BASE } from "./http"
+import { apiFetch, apiJson, BASE } from "./http"
 
 export interface ResearchTask {
   id: string
@@ -109,19 +109,17 @@ export async function getResearchTasks(params?: {
   if (params?.trigger_source) qs.set("trigger_source", params.trigger_source)
   if (params?.conversation_id) qs.set("conversation_id", params.conversation_id)
   if (params?.limit) qs.set("limit", String(params.limit))
-  const res = await fetch(`${BASE}/research/tasks?${qs}`)
+  const res = await apiFetch(`${BASE}/research/tasks?${qs}`)
   if (!res.ok) throw new Error(`Research tasks fetch failed: ${res.status}`)
   return res.json()
 }
 
-export async function getResearchTask(taskId: string): Promise<ResearchTask> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}`)
-  if (!res.ok) throw new Error(`Research task fetch failed: ${res.status}`)
-  return res.json()
+export async function getResearchTask(taskId: string, signal?: AbortSignal): Promise<ResearchTask> {
+  return apiJson<ResearchTask>(`${BASE}/research/tasks/${taskId}`, { signal })
 }
 
 export async function getResearchSummary(): Promise<ResearchSummary> {
-  const res = await fetch(`${BASE}/research/tasks/active/summary`)
+  const res = await apiFetch(`${BASE}/research/tasks/active/summary`)
   if (!res.ok) throw new Error(`Research summary fetch failed: ${res.status}`)
   return res.json()
 }
@@ -129,7 +127,7 @@ export async function getResearchSummary(): Promise<ResearchSummary> {
 // ── Mutations ────────────────────────────────────────────────────────
 
 export async function dispatchResearch(payload: DispatchPayload): Promise<{ task_id: string; status: string }> {
-  const res = await fetch(`${BASE}/research/dispatch`, {
+  const res = await apiFetch(`${BASE}/research/dispatch`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -139,7 +137,7 @@ export async function dispatchResearch(payload: DispatchPayload): Promise<{ task
 }
 
 export async function continueResearch(payload: ContinuePayload): Promise<{ task_id: string; status: string; continued_from: string; max_depth: number }> {
-  const res = await fetch(`${BASE}/research/continue`, {
+  const res = await apiFetch(`${BASE}/research/continue`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -159,7 +157,7 @@ export interface ContinueTaskPayload {
 }
 
 export async function continueTask(taskId: string, payload: ContinueTaskPayload): Promise<{ task_id: string; status: string; max_depth: number }> {
-  const res = await fetch(`${BASE}/research/${taskId}/continue`, {
+  const res = await apiFetch(`${BASE}/research/${taskId}/continue`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -173,49 +171,49 @@ export async function listIndexedFiles(conversationId?: string): Promise<FilesLi
   if (conversationId) params.set("conversation_id", conversationId)
   const qs = params.toString()
   const url = qs ? `${BASE}/research/files?${qs}` : `${BASE}/research/files`
-  const res = await fetch(url)
+  const res = await apiFetch(url)
   if (!res.ok) throw new Error(`Files list failed: ${res.status}`)
   return res.json()
 }
 
 export async function approveProposal(taskId: string): Promise<{ task_id: string; status: string }> {
-  const res = await fetch(`${BASE}/research/proposals/${taskId}/approve`, { method: "POST" })
+  const res = await apiFetch(`${BASE}/research/proposals/${taskId}/approve`, { method: "POST" })
   if (!res.ok) throw new Error(`Proposal approval failed: ${res.status}`)
   return res.json()
 }
 
 export async function rejectProposal(taskId: string): Promise<{ task_id: string; status: string }> {
-  const res = await fetch(`${BASE}/research/proposals/${taskId}/reject`, { method: "POST" })
+  const res = await apiFetch(`${BASE}/research/proposals/${taskId}/reject`, { method: "POST" })
   if (!res.ok) throw new Error(`Proposal rejection failed: ${res.status}`)
   return res.json()
 }
 
 export async function cancelTask(taskId: string): Promise<{ task_id: string; status: string }> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/cancel`, { method: "POST" })
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/cancel`, { method: "POST" })
   if (!res.ok) throw new Error(`Task cancellation failed: ${res.status}`)
   return res.json()
 }
 
 export async function deleteTask(taskId: string): Promise<{ task_id: string; deleted: boolean }> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}`, { method: "DELETE" })
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}`, { method: "DELETE" })
   if (!res.ok) throw new Error(`Task deletion failed: ${res.status}`)
   return res.json()
 }
 
 export async function retryTask(taskId: string): Promise<{ task_id: string; status: string; retried_from: string }> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/retry`, { method: "POST" })
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/retry`, { method: "POST" })
   if (!res.ok) throw new Error(`Task retry failed: ${res.status}`)
   return res.json()
 }
 
 export async function runTask(taskId: string): Promise<{ task_id: string; status: string }> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/run`, { method: "POST" })
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/run`, { method: "POST" })
   if (!res.ok) throw new Error(`Task run failed: ${res.status}`)
   return res.json()
 }
 
 export async function rerunTask(taskId: string): Promise<{ task_id: string; status: string; rerun_count: number; auto_run: boolean }> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/rerun`, { method: "POST" })
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/rerun`, { method: "POST" })
   if (!res.ok) throw new Error(`Task rerun failed: ${res.status}`)
   return res.json()
 }
@@ -243,17 +241,15 @@ export async function executeStep(taskId: string, rerunStepType?: string, rerunS
   if (rerunStepId) params.set("rerun_step_id", rerunStepId)
   const qs = params.toString()
   const url = qs ? `${BASE}/research/tasks/${taskId}/step?${qs}` : `${BASE}/research/tasks/${taskId}/step`
-  const res = await fetch(url, { method: "POST" })
+  const res = await apiFetch(url, { method: "POST" })
   if (!res.ok) throw new Error(`Step failed: ${res.status}`)
   return res.json()
 }
 
 // ── Orchestrator Phase / Preview ────────────────────────────────────
 
-export async function getTaskPhase(taskId: string): Promise<{ task_id: string; phase: string }> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/phase`)
-  if (!res.ok) throw new Error(`Phase fetch failed: ${res.status}`)
-  return res.json()
+export async function getTaskPhase(taskId: string, signal?: AbortSignal): Promise<{ task_id: string; phase: string }> {
+  return apiJson<{ task_id: string; phase: string }>(`${BASE}/research/tasks/${taskId}/phase`, { signal })
 }
 
 export interface StepPreview {
@@ -309,13 +305,13 @@ export interface StepPreview {
 }
 
 export async function getStepPreview(taskId: string, phase: string): Promise<StepPreview> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/preview/${phase}`)
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/preview/${phase}`)
   if (!res.ok) throw new Error(`Preview fetch failed: ${res.status}`)
   return res.json()
 }
 
 export async function reinitializeTask(taskId: string): Promise<{ task_id: string; status: string }> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/reinitialize`, { method: "POST" })
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/reinitialize`, { method: "POST" })
   if (!res.ok) throw new Error(`Reinitialize failed: ${res.status}`)
   return res.json()
 }
@@ -344,7 +340,7 @@ export async function getTaskMetaLog(taskId: string, branchId?: string): Promise
   const url = branchId
     ? `${BASE}/research/tasks/${taskId}/meta-log?step_id=${branchId}`
     : `${BASE}/research/tasks/${taskId}/meta-log`
-  const res = await fetch(url)
+  const res = await apiFetch(url)
   if (!res.ok) throw new Error(`Meta log fetch failed: ${res.status}`)
   return res.json()
 }
@@ -397,7 +393,7 @@ export interface TaskStepsResponse {
 }
 
 export async function getTaskSteps(taskId: string): Promise<TaskStepsResponse> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/steps`)
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/steps`)
   if (!res.ok) throw new Error(`Steps fetch failed: ${res.status}`)
   return res.json()
 }
@@ -417,7 +413,7 @@ export interface ScrapedAsset {
 }
 
 export async function getTaskAssets(taskId: string): Promise<ScrapedAsset[]> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}`)
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}`)
   if (!res.ok) throw new Error(`Task fetch failed: ${res.status}`)
   const task = await res.json()
   return task.assets || []
@@ -438,7 +434,7 @@ export async function downloadResearchExport(taskId: string): Promise<void> {
 }
 
 export async function downloadResearchStagesExport(taskId: string, title?: string, rerunCount?: number, maxDepth?: number): Promise<void> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/export/stages`)
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/export/stages`)
   if (!res.ok) throw new Error(`Export failed: ${res.status}`)
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
@@ -455,7 +451,7 @@ export async function downloadResearchStagesExport(taskId: string, title?: strin
 }
 
 export async function getTaskNotes(taskId: string): Promise<NoteInfo[]> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/notes`)
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/notes`)
   if (!res.ok) throw new Error(`Task notes fetch failed: ${res.status}`)
   return res.json()
 }
@@ -466,7 +462,7 @@ export interface UnifiedNoteInfo extends NoteInfo {
 }
 
 export async function getTaskUnifiedNotes(taskId: string): Promise<UnifiedNoteInfo[]> {
-  const res = await fetch(`${BASE}/research/tasks/${taskId}/notes/unified`)
+  const res = await apiFetch(`${BASE}/research/tasks/${taskId}/notes/unified`)
   if (!res.ok) throw new Error(`Unified notes fetch failed: ${res.status}`)
   return res.json()
 }
@@ -510,13 +506,13 @@ export interface ResearchKnotsResponse {
 }
 
 export async function getResearchMemoryNodes(taskId: string): Promise<ResearchMemoryNodesResponse> {
-  const res = await fetch(`${BASE}/research/${taskId}/memory-nodes`)
+  const res = await apiFetch(`${BASE}/research/${taskId}/memory-nodes`)
   if (!res.ok) throw new Error(`Memory nodes fetch failed: ${res.status}`)
   return res.json()
 }
 
 export async function getResearchSemanticKnots(taskId: string): Promise<ResearchKnotsResponse> {
-  const res = await fetch(`${BASE}/research/${taskId}/semantic-knots`)
+  const res = await apiFetch(`${BASE}/research/${taskId}/semantic-knots`)
   if (!res.ok) throw new Error(`Semantic knots fetch failed: ${res.status}`)
   return res.json()
 }

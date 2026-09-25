@@ -1,4 +1,4 @@
-import { BASE } from "./http"
+import { apiJson, BASE } from "./http"
 
 export interface SearchMatch {
   id: string
@@ -20,7 +20,7 @@ export interface SearchQueryParams {
   w_glitch?: number
 }
 
-export async function searchArchive(params: SearchQueryParams): Promise<SearchMatch[]> {
+export async function searchArchive(params: SearchQueryParams, signal?: AbortSignal): Promise<SearchMatch[]> {
   const url = new URL(`${window.location.origin}${BASE}/search`)
   
   if (params.q) url.searchParams.set("q", params.q)
@@ -32,9 +32,5 @@ export async function searchArchive(params: SearchQueryParams): Promise<SearchMa
   if (params.w_structural !== undefined) url.searchParams.set("w_structural", String(params.w_structural))
   if (params.w_glitch !== undefined) url.searchParams.set("w_glitch", String(params.w_glitch))
 
-  const resp = await fetch(url)
-  if (!resp.ok) {
-    throw new Error(`Search request failed with status ${resp.status}`)
-  }
-  return resp.json()
+  return apiJson<SearchMatch[]>(url, { signal })
 }

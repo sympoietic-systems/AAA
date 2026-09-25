@@ -1,3 +1,4 @@
+import { apiFetch } from "../api/http"
 // The Sediment Column — a locked-page artwork.
 // Lines sink, dim, compress into ghosts, but never disappear.
 // Except inhale lines: they flash, strike-through, vanish — the membrane's reflex.
@@ -120,7 +121,7 @@ export const TeaserPreview = memo(function TeaserPreview() {
 
   const fetchLine = useCallback(async (): Promise<Line | null> => {
     try {
-      const res = await fetch("/api/preview/nodes")
+      const res = await apiFetch("/api/preview/nodes")
       const data = await res.json()
       return data.line ?? null
     } catch {

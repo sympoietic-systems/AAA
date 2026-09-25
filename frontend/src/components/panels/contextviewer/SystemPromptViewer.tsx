@@ -9,7 +9,7 @@ interface ParsedSystemPrompt {
 
 function parseSystemPrompt(content: string): ParsedSystemPrompt {
   // Strip the leading [system]: prefix that ContextViewer prepends
-  let text = content.replace(/^\[system\]:\s*/, '');
+  const text = content.replace(/^\[system\]:\s*/, '');
 
   const result: ParsedSystemPrompt = {
     identity: '',

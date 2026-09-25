@@ -193,7 +193,7 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
         <span className="text-[#555] ml-3">state:</span>
         {(['all', 'unread', 'read'] as const).map((v) => (
           <span key={v} className="flex items-center gap-x-2">
-            {true && <span className="text-[#333]">•</span>}
+            <span className="text-[#333]">•</span>
             <button onClick={() => setViewFilter(v)}
               className={`cursor-pointer transition-colors ${viewFilter === v ? "text-[#94a3b8]" : "text-[#444] hover:text-[#777]"}`}>
               {v}

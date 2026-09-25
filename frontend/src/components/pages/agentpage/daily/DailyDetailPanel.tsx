@@ -134,7 +134,7 @@ export const DailyDetailPanel = memo(function DailyDetailPanel({
       month: "long",
       day: "numeric",
     })
-  } catch (e) {
+  } catch {
     // fallback
   }
 

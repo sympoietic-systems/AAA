@@ -2,6 +2,9 @@ import { useState, useEffect, lazy, Suspense, useCallback } from "react"
 import { Routes, Route, Navigate, useNavigate, useSearchParams } from "react-router-dom"
 import { checkAuthStatus, verifyPassword, logout, getAgent } from "./api/client"
 import type { AuthCheckResult } from "./api/auth"
+import { SESSION_EXPIRED_EVENT } from "./api/http"
+import { setNotificationSession } from "./stores/notificationStore"
+import { RouteErrorBoundary } from "./components/shared/RouteErrorBoundary"
 
 const TeaserPreview = lazy(() => import("./components/TeaserPreview").then(m => ({ default: m.TeaserPreview })))
 const LoginPage = lazy(() => import("./components/pages/login/LoginPage").then(m => ({ default: m.LoginPage })))
@@ -39,22 +42,45 @@ export default function App() {
     verifyStatus()
   }, [verifyStatus])
 
+  useEffect(() => {
+    setNotificationSession(authState.authenticated)
+    return () => setNotificationSession(false)
+  }, [authState.authenticated])
+
+  useEffect(() => {
+    const expire = () => {
+      setNotificationSession(false)
+      setAuthState({ status: "locked", authenticated: false, authEnabled: true })
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, expire)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expire)
+  }, [])
+
   const handlePasswordSubmit = async (password: string) => {
     setAuthError(null)
-    const success = await verifyPassword(password)
-    if (success) {
-      localStorage.setItem("aaa_password", password)
-      setAuthState({ status: "authenticated", authenticated: true, authEnabled: true })
-      navigate("/nodes")
-    } else {
-      setAuthError("Incorrect password")
+    try {
+      const success = await verifyPassword(password)
+      if (success) {
+        setAuthState({ status: "authenticated", authenticated: true, authEnabled: true })
+        getAgent().then(info => setAgentFlux(!!info.agent_flux)).catch(() => setAgentFlux(false))
+        navigate("/nodes")
+      } else {
+        setAuthError("Incorrect password")
+      }
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Authentication service unavailable")
     }
   }
 
-  const handleLogout = () => {
-    logout()
-    setAuthState({ status: "locked", authenticated: false, authEnabled: true })
-    navigate("/")
+  const handleLogout = async () => {
+    try {
+      await logout()
+      setNotificationSession(false)
+      setAuthState({ status: "locked", authenticated: false, authEnabled: true })
+      navigate("/")
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to end the session")
+    }
   }
 
   if (authState.status === "checking") {
@@ -88,7 +114,7 @@ export default function App() {
   const { authenticated, authEnabled } = authState
 
   return (
-    <Suspense fallback={<PageLoader />}>
+    <RouteErrorBoundary><Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={
           authEnabled && !authenticated
@@ -122,7 +148,7 @@ export default function App() {
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Suspense>
+    </Suspense></RouteErrorBoundary>
   )
 }
 

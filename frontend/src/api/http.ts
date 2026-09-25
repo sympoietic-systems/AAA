@@ -1,95 +1,53 @@
-// Shared HTTP infrastructure — used by all API domain files.
-// Protects against credential leakage by strictly validating origin and API path,
-// and preserves Request headers and signals.
-
 export const BASE = "/api"
+export const SESSION_EXPIRED_EVENT = "aaa:session-expired"
 
-/**
- * Checks whether an input URL target is strictly a same-origin API endpoint.
- * Disallows third-party domains (e.g. https://evil.com/api/...) from receiving credentials.
- */
+export function resolveApiUrl(input: RequestInfo | URL): RequestInfo | URL {
+  return typeof input === "string" ? new URL(input, window.location.origin) : input
+}
+
 export function isSameOriginApiRequest(input: RequestInfo | URL): boolean {
   try {
-    let urlStr: string
-    if (typeof input === "string") {
-      urlStr = input
-    } else if (input instanceof URL) {
-      urlStr = input.toString()
-    } else if (typeof Request !== "undefined" && input instanceof Request) {
-      urlStr = input.url
-    } else {
-      return false
-    }
-
-    // Relative URLs starting with /api
-    if (urlStr.startsWith("/api/") || urlStr === "/api") {
-      return true
-    }
-
-    // Absolute URLs
-    if (typeof window !== "undefined" && window.location?.origin) {
-      const parsed = new URL(urlStr, window.location.origin)
-      return (
-        parsed.origin === window.location.origin &&
-        (parsed.pathname.startsWith("/api/") || parsed.pathname === "/api")
-      )
-    }
-
-    return false
+    const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin)
+    return url.origin === window.location.origin && (url.pathname === BASE || url.pathname.startsWith(`${BASE}/`))
   } catch {
     return false
   }
 }
 
-/**
- * Resolves input URL to an absolute URL string if needed, safe for both
- * browser and Node/jsdom test environments.
- */
-export function resolveApiUrl(input: RequestInfo | URL): RequestInfo | URL {
-  if (typeof input === "string" && input.startsWith("/")) {
-    if (typeof window !== "undefined" && window.location?.origin) {
-      return `${window.location.origin}${input}`
-    }
-  }
-  return input
-}
-
-const originalFetch = typeof window !== "undefined" && window.fetch ? window.fetch.bind(window) : globalThis.fetch
-
-/**
- * Explicit authenticated API fetch client.
- * Enforces same-origin verification, preserves Request headers, and passes abort signals.
- */
+/** Explicit transport; global fetch stays untouched and redirects cannot carry credentials. */
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const isApi = isSameOriginApiRequest(input)
-  const resolvedInput = resolveApiUrl(input)
-
-  if (isApi) {
-    const password = typeof localStorage !== "undefined" ? localStorage.getItem("aaa_password") : null
-    const headers = new Headers()
-
-    // 1. Inherit headers from Request object if passed
-    if (typeof Request !== "undefined" && input instanceof Request) {
-      input.headers.forEach((val, key) => headers.set(key, val))
-    }
-
-    // 2. Merge headers from init
-    if (init?.headers) {
-      new Headers(init.headers).forEach((val, key) => headers.set(key, val))
-    }
-
-    // 3. Inject Bearer token if password is set and not already specified
-    if (password && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${password}`)
-    }
-
-    return originalFetch(resolvedInput, { ...init, headers })
+  if (!isSameOriginApiRequest(input)) throw new Error("API requests must target a same-origin /api endpoint")
+  const headers = new Headers(input instanceof Request ? input.headers : undefined)
+  new Headers(init?.headers).forEach((value, key) => headers.set(key, value))
+  headers.set("X-AAA-CSRF", "1")
+  const response = await globalThis.fetch(resolveApiUrl(input), {
+    ...init, headers, credentials: "same-origin", redirect: "error",
+  })
+  const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin)
+  if (response.status === 401 && !url.pathname.startsWith("/api/auth/")) {
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
   }
-
-  return originalFetch(resolvedInput, init)
+  return response
 }
 
-// Intercept global fetch as a safety membrane for any direct fetch calls across legacy components
-if (typeof window !== "undefined") {
-  window.fetch = apiFetch
+export class ApiError extends Error {
+  status: number
+  kind?: string
+  constructor(status: number, message: string, kind?: string) {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+    this.kind = kind
+  }
+}
+
+export async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+  const response = await apiFetch(input, init)
+  if (!response.ok) {
+    const data: unknown = await response.json().catch(() => null)
+    const body = data && typeof data === "object" ? data as Record<string, unknown> : {}
+    throw new ApiError(response.status, typeof body.message === "string" ? body.message : `Request failed (${response.status})`,
+      typeof body.kind === "string" ? body.kind : undefined)
+  }
+  return response.json() as Promise<T>
 }

@@ -1,18 +1,15 @@
+import { useConversationFiles } from "./useConversationFiles"
 import { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import {
   getAgent,
   getHistory,
   saveMessage,
   generateResponse,
-  getConversationFiles,
-  uploadFiles,
-  deleteConversationFile,
-  reprocessFile,
   commitBranch,
   getConversationTree,
   getMessagePath,
 } from "../api/client"
-import type { ChatMessage, ConversationFile, ConversationTreeNode, ConversationTreeLink } from "../api/client"
+import type { ChatMessage, ConversationTreeNode, ConversationTreeLink } from "../api/client"
 import { addNotification, dismissByMatch } from "../stores/notificationStore"
 import { estimateTokens, getAncestorPathIds } from "./useChatHelpers"
 
@@ -29,23 +26,8 @@ export function useChat(conversationId: string) {
   const [treeNodes, setTreeNodes] = useState<ConversationTreeNode[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [generatingUserMessageIds, setGeneratingUserMessageIds] = useState<Set<number>>(new Set())
-  const [files, setFiles] = useState<ConversationFile[]>([])
-  const [isUploading, setIsUploading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-
-  // Reset conversation-specific states when the active thread changes
-  useEffect(() => {
-    setMessages([])
-    setLinks([])
-    setTreeNodes([])
-    setHasMore(true)
-    const params = new URLSearchParams(window.location.search)
-    const urlMsgId = params.get("m")
-    const targetMsgId = urlMsgId ? parseInt(urlMsgId, 10) : null
-    const nextId = targetMsgId && !isNaN(targetMsgId) ? targetMsgId : null
-    setActiveMessageId(nextId)
-  }, [conversationId])
 
   const loading = useMemo(() => {
     return isHistoryLoading || (activeMessageId !== null && generatingUserMessageIds.has(activeMessageId))
@@ -62,15 +44,18 @@ export function useChat(conversationId: string) {
     }
   }, [conversationId, activeMessageId])
 
+  const loadedRef = useRef<string>("")
+  const lifecycle = useRef(0)
   const fetchTree = useCallback(async (convId: string) => {
+    const owner = lifecycle.current
     if (!convId) return
     try {
       const data = await getConversationTree(convId)
-      if (loadedRef.current !== convId) return
+      if (owner !== lifecycle.current || loadedRef.current !== convId) return
       setLinks(data.links)
       setTreeNodes(data.nodes)
     } catch (err: unknown) {
-      if (loadedRef.current !== convId) return
+      if (owner !== lifecycle.current || loadedRef.current !== convId) return
       setLinks([])
       setTreeNodes([])
       const message = err instanceof Error ? err.message : String(err)
@@ -84,6 +69,22 @@ export function useChat(conversationId: string) {
   const [error, setError] = useState<string | null>(null)
   const [agentName, setAgentName] = useState("...")
   const [history, setHistory] = useState<{ id: number; speaker: string; snippet: string }[]>([])
+
+  const [renderedConversation, setRenderedConversation] = useState(conversationId)
+  if (renderedConversation !== conversationId) {
+    setRenderedConversation(conversationId)
+    setMessages([])
+    setLinks([])
+    setTreeNodes([])
+    setError(null)
+    setHistory([])
+    setHasMore(true)
+    setLoadingMore(false)
+    setIsHistoryLoading(false)
+    setGeneratingUserMessageIds(new Set())
+    const target = Number(new URLSearchParams(window.location.search).get("m"))
+    setActiveMessageId(Number.isSafeInteger(target) && target > 0 ? target : null)
+  }
 
   const addToHistory = useCallback((msg: ChatMessage) => {
     setHistory((prev) => {
@@ -101,63 +102,28 @@ export function useChat(conversationId: string) {
   }, [])
 
   const selectMessage = useCallback((msgId: number | null) => {
-    setActiveMessageId((prevId) => {
-      if (prevId !== null && msgId !== null && prevId !== msgId) {
-        const currentMsg = messages.find((m) => m.id === prevId)
-        if (currentMsg) {
-          addToHistory(currentMsg)
-        }
-      }
-      return msgId
+    if (activeMessageId !== null && msgId !== null && activeMessageId !== msgId) {
+      const current = messages.find(message => message.id === activeMessageId)
+      if (current) addToHistory(current)
+    }
+    setActiveMessageId(msgId)
+  }, [messages, activeMessageId, addToHistory])
+  const handleFilesIndexed = useCallback(() => {
+    const owner = lifecycle.current
+    getHistory(PAGE_SIZE, 0, conversationId).then(data => {
+      if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
+      setMessages(data.messages)
+      setHasMore(false)
+      fetchTree(conversationId)
+    }).catch(error => {
+      if (owner === lifecycle.current) setError(error instanceof Error ? error.message : "Unable to refresh indexed files")
     })
-  }, [messages, addToHistory])
-  const loadedRef = useRef<string>("")
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const startPolling = useCallback((convId: string) => {
-    if (pollTimerRef.current) clearInterval(pollTimerRef.current)
-    pollTimerRef.current = setInterval(async () => {
-      try {
-        const res = await getConversationFiles(convId)
-        if (loadedRef.current !== convId) return
-        setFiles(res.files)
-        const active = res.files.some(
-          (f) => f.status === "uploading" || f.status === "processing"
-        )
-        if (!active) {
-          if (pollTimerRef.current) {
-            clearInterval(pollTimerRef.current)
-            pollTimerRef.current = null
-          }
-          // Fetch updated conversation history to display system message after file indexing completes
-          getHistory(PAGE_SIZE, 0, convId)
-            .then((data) => {
-              if (loadedRef.current !== convId) return
-              setMessages(data.messages)
-              if (data.messages.length > 0) {
-                setActiveMessageId((prev) => {
-                  if (prev !== null && data.messages.some((m) => m.id === prev)) {
-                    return prev
-                  }
-                  return data.messages[data.messages.length - 1].id
-                })
-              }
-              setHasMore(false)
-            })
-            .catch(() => { })
-        }
-      } catch {
-        // silent
-      }
-    }, 2000)
-  }, [])
+  }, [conversationId, fetchTree])
+  const fileState = useConversationFiles(conversationId, handleFilesIndexed)
+  const { files, upload, deleteFile, reprocess, isIndexing, refreshFiles } = fileState
 
   useEffect(() => {
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current)
-      pollTimerRef.current = null
-    }
-
+    const owner = ++lifecycle.current
     loadedRef.current = conversationId
 
     getAgent()
@@ -174,13 +140,13 @@ export function useChat(conversationId: string) {
       if (targetMsgId && !isNaN(targetMsgId)) {
         getMessagePath(targetMsgId)
           .then((pathMessages) => {
-            if (loadedRef.current !== conversationId) return
+            if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
             setMessages(pathMessages)
             setActiveMessageId(targetMsgId)
             setHasMore(false)
           })
           .catch((err) => {
-            if (loadedRef.current !== conversationId) return
+            if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
             console.error("Failed to load message path from URL param 'm':", err)
             addNotification({
               type: "glitch",
@@ -189,7 +155,7 @@ export function useChat(conversationId: string) {
             })
             getHistory(PAGE_SIZE, 0, conversationId)
               .then((data) => {
-                if (loadedRef.current !== conversationId) return
+                if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
                 setMessages(data.messages)
                 if (data.messages.length > 0) {
                   const newest = data.messages[data.messages.length - 1]
@@ -200,7 +166,7 @@ export function useChat(conversationId: string) {
                 setHasMore(false)
               })
               .catch((errHistory) => {
-                if (loadedRef.current !== conversationId) return
+                if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
                 setMessages([])
                 setActiveMessageId(null)
                 setHasMore(false)
@@ -212,12 +178,12 @@ export function useChat(conversationId: string) {
               })
           })
           .finally(() => {
-            if (loadedRef.current === conversationId) setIsHistoryLoading(false)
+            if (owner === lifecycle.current && loadedRef.current === conversationId) setIsHistoryLoading(false)
           })
       } else {
         getHistory(PAGE_SIZE, 0, conversationId)
           .then((data) => {
-            if (loadedRef.current !== conversationId) return
+            if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
             setMessages(data.messages)
             if (data.messages.length > 0) {
               const newest = data.messages[data.messages.length - 1]
@@ -228,7 +194,7 @@ export function useChat(conversationId: string) {
             setHasMore(false)
           })
           .catch((err) => {
-            if (loadedRef.current !== conversationId) return
+            if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
             setMessages([])
             setActiveMessageId(null)
             setHasMore(false)
@@ -239,44 +205,18 @@ export function useChat(conversationId: string) {
             })
           })
           .finally(() => {
-            if (loadedRef.current === conversationId) setIsHistoryLoading(false)
+            if (owner === lifecycle.current && loadedRef.current === conversationId) setIsHistoryLoading(false)
           })
       }
 
       fetchTree(conversationId)
 
-      getConversationFiles(conversationId)
-        .then((data) => {
-          if (loadedRef.current !== conversationId) return
-          setFiles(data.files)
-          const active = data.files.some(
-            (f) => f.status === "uploading" || f.status === "processing"
-          )
-          if (active) {
-            startPolling(conversationId)
-          }
-        })
-        .catch((err) => {
-          if (loadedRef.current !== conversationId) return
-          setFiles([])
-          addNotification({
-            type: "glitch",
-            snippet: `Failed to list conversation files: ${err.message || "Unknown resistance"}`,
-            source: "Chat.listFiles"
-          })
-        })
     } else {
       setMessages([])
-      setFiles([])
       setHasMore(false)
     }
-  }, [conversationId, startPolling, fetchTree])
-
-  useEffect(() => {
-    return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current)
-    }
-  }, [])
+    return () => { loadedRef.current = ""; lifecycle.current = owner + 1 }
+  }, [conversationId, fetchTree])
 
   // Sync activeMessageId to URL search params in place without pushing a new history entry
   useEffect(() => {
@@ -292,6 +232,7 @@ export function useChat(conversationId: string) {
 
   // Watch popstate to synchronize active message ID with the URL if it updates via browser back/forward
   useEffect(() => {
+    const owner = lifecycle.current
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search)
       const urlMsgId = params.get("m")
@@ -304,6 +245,7 @@ export function useChat(conversationId: string) {
           } else {
             getMessagePath(targetMsgId)
               .then((pathMessages) => {
+                if (owner !== lifecycle.current) return
                 setMessages(pathMessages)
                 setActiveMessageId(targetMsgId)
               })
@@ -314,13 +256,15 @@ export function useChat(conversationId: string) {
     }
     window.addEventListener("popstate", handlePopState)
     return () => window.removeEventListener("popstate", handlePopState)
-  }, [messages, activeMessageId])
+  }, [messages, activeMessageId, conversationId])
 
   const loadMoreMessages = useCallback(async () => {
+    const owner = lifecycle.current
     if (!conversationId || loadingMore || !hasMore) return
     setLoadingMore(true)
     try {
       const data = await getHistory(PAGE_SIZE, messages.length, conversationId)
+      if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
       if (data.messages.length < PAGE_SIZE) {
         setHasMore(false)
       } else {
@@ -339,11 +283,12 @@ export function useChat(conversationId: string) {
         source: "Chat.loadMore"
       })
     } finally {
-      setLoadingMore(false)
+      if (owner === lifecycle.current) setLoadingMore(false)
     }
   }, [conversationId, messages.length, loadingMore, hasMore])
 
   const send = useCallback(async (content: string) => {
+    const owner = lifecycle.current
     setError(null)
 
     const parentId = activeMessageId
@@ -370,7 +315,7 @@ export function useChat(conversationId: string) {
       savedMsg = await saveMessage(content, targetConvId || undefined, parentId)
 
       // Guard check before changing state of this conversation
-      if (targetConvId && loadedRef.current !== targetConvId) {
+      if (owner !== lifecycle.current || (targetConvId && loadedRef.current !== targetConvId)) {
         // User switched conversations, don't update local hook state.
         targetConvId = savedMsg.conversation_id
       } else {
@@ -398,25 +343,15 @@ export function useChat(conversationId: string) {
           // Fetch/refresh trees and files
           fetchTree(finalConvId)
 
-          getConversationFiles(finalConvId)
-            .then((res) => {
-              setFiles(res.files)
-              const active = res.files.some(
-                (f) => f.status === "uploading" || f.status === "processing"
-              )
-              if (active) {
-                startPolling(finalConvId)
-              }
-            })
-            .catch(() => {})
+          refreshFiles(finalConvId)
         }
       }
     } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to persist user message"
-      if (!targetConvId || loadedRef.current === targetConvId) {
+      if (owner === lifecycle.current && (!targetConvId || loadedRef.current === targetConvId)) {
         setError(msg)
       }
-      setGeneratingUserMessageIds((prev) => {
+      if (owner === lifecycle.current) setGeneratingUserMessageIds((prev) => {
         const next = new Set(prev)
         next.delete(tempId)
         return next
@@ -433,7 +368,7 @@ export function useChat(conversationId: string) {
     try {
       const response = await generateResponse(targetConvId!, savedMsg.id)
 
-      if (loadedRef.current !== targetConvId) {
+      if (owner !== lifecycle.current || loadedRef.current !== targetConvId) {
         // User has switched to another conversation. Show notification.
         addNotification({
           conversationId: targetConvId!,
@@ -474,7 +409,7 @@ export function useChat(conversationId: string) {
       return response
     } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to generate response"
-      if (loadedRef.current === targetConvId) {
+      if (owner === lifecycle.current && loadedRef.current === targetConvId) {
         setError(msg)
       }
       addNotification({
@@ -484,7 +419,7 @@ export function useChat(conversationId: string) {
       })
       return savedMsg // Return the user message so App.tsx knows the conversation was created/updated
     } finally {
-      setGeneratingUserMessageIds((prev) => {
+      if (owner === lifecycle.current) setGeneratingUserMessageIds((prev) => {
         const next = new Set(prev)
         next.delete(tempId)
         if (savedMsg) {
@@ -493,9 +428,10 @@ export function useChat(conversationId: string) {
         return next
       })
     }
-  }, [loading, conversationId, activeMessageId, startPolling, fetchTree])
+  }, [conversationId, activeMessageId, refreshFiles, fetchTree])
 
   const regenerate = useCallback(async (userMsgId?: number) => {
+    const owner = lifecycle.current
     if (loading) return
     setError(null)
     const targetConvId = conversationId
@@ -519,7 +455,7 @@ export function useChat(conversationId: string) {
 
       const response = await generateResponse(targetConvId, targetMsgId)
 
-      if (loadedRef.current !== targetConvId) {
+      if (owner !== lifecycle.current || loadedRef.current !== targetConvId) {
         addNotification({
           conversationId: targetConvId,
           messageId: response.id,
@@ -556,7 +492,7 @@ export function useChat(conversationId: string) {
       return response
     } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to generate response"
-      if (loadedRef.current === targetConvId) {
+      if (owner === lifecycle.current && loadedRef.current === targetConvId) {
         setError(msg)
       }
       addNotification({
@@ -566,7 +502,7 @@ export function useChat(conversationId: string) {
       })
       return null
     } finally {
-      setGeneratingUserMessageIds((prev) => {
+      if (owner === lifecycle.current) setGeneratingUserMessageIds((prev) => {
         const next = new Set(prev)
         if (targetMsgId) {
           next.delete(targetMsgId)
@@ -577,74 +513,14 @@ export function useChat(conversationId: string) {
   }, [loading, conversationId, messages, fetchTree])
 
 
-  const upload = useCallback(async (filesToUpload: File[]) => {
-    if (filesToUpload.length === 0) return null
-    setIsUploading(true)
-    setError(null)
-    try {
-      const targetId = conversationId || "new"
-      const res = await uploadFiles(targetId, filesToUpload)
-      setFiles(res.files)
-      startPolling(res.conversation_id)
-      return res.conversation_id
-    } catch (e: any) {
-      const msg = e instanceof Error ? e.message : "Failed to upload files"
-      setError(msg)
-      addNotification({
-        type: "glitch",
-        snippet: `Failed to upload files: ${msg}`,
-        source: "Chat.uploadFiles"
-      })
-      return null
-    } finally {
-      setIsUploading(false)
-    }
-  }, [conversationId, startPolling])
-
-  const deleteFile = useCallback(async (fileName: string) => {
-    if (!conversationId) return
-    try {
-      await deleteConversationFile(conversationId, fileName)
-      setFiles((prev) => prev.filter((f) => f.file_name !== fileName))
-    } catch (e: any) {
-      const msg = e instanceof Error ? e.message : "Failed to delete file"
-      setError(msg)
-      addNotification({
-        type: "glitch",
-        snippet: `Failed to delete file: ${msg}`,
-        source: "Chat.deleteFile"
-      })
-    }
-  }, [conversationId])
-
-  const reprocess = useCallback(async (fileName: string) => {
-    if (!conversationId) return
-    try {
-      await reprocessFile(conversationId, fileName)
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.file_name === fileName ? { ...f, status: "processing" as const } : f
-        )
-      )
-      startPolling(conversationId)
-    } catch (e: any) {
-      const msg = e instanceof Error ? e.message : "Failed to reprocess file"
-      setError(msg)
-      addNotification({
-        type: "glitch",
-        snippet: `Failed to reprocess file: ${msg}`,
-        source: "Chat.reprocessFile"
-      })
-    }
-  }, [conversationId, startPolling])
-
   const clearError = useCallback(() => setError(null), [])
 
   const refreshMessages = useCallback(() => {
+    const owner = lifecycle.current
     if (conversationId) {
-      getHistory(1000, 0, conversationId)
+      getHistory(PAGE_SIZE, 0, conversationId)
         .then((data) => {
-          setMessages(data.messages)
+          if (owner === lifecycle.current && loadedRef.current === conversationId) setMessages(data.messages)
         })
         .catch(() => {})
 
@@ -658,14 +534,11 @@ export function useChat(conversationId: string) {
     }
   }, [conversationId, fetchTree])
 
-  const isIndexing = isUploading || files.some(
-    (f) => f.status === "uploading" || f.status === "processing"
-  )
-
   const activePathIds = useMemo(() => getAncestorPathIds(messages, activeMessageId), [messages, activeMessageId])
   const activePathMessages = useMemo(() => messages.filter((m) => activePathIds.has(m.id)), [messages, activePathIds])
 
   const commitProposedBranch = useCallback(async (parentMsgId: number, content: string) => {
+    const owner = lifecycle.current
     if (!conversationId) return null
     setGeneratingUserMessageIds((prev) => new Set([...prev, parentMsgId]))
     setError(null)
@@ -673,7 +546,7 @@ export function useChat(conversationId: string) {
     try {
       const response = await commitBranch(targetConvId, parentMsgId, content)
       
-      if (loadedRef.current !== targetConvId) {
+      if (owner !== lifecycle.current || loadedRef.current !== targetConvId) {
         addNotification({
           conversationId: targetConvId,
           messageId: response.id,
@@ -694,7 +567,7 @@ export function useChat(conversationId: string) {
       return response
     } catch (e: any) {
       const msg = e instanceof Error ? e.message : "Failed to commit branch"
-      if (loadedRef.current === targetConvId) {
+      if (owner === lifecycle.current && loadedRef.current === targetConvId) {
         setError(msg)
       }
       addNotification({
@@ -704,7 +577,7 @@ export function useChat(conversationId: string) {
       })
       return null
     } finally {
-      setGeneratingUserMessageIds((prev) => {
+      if (owner === lifecycle.current) setGeneratingUserMessageIds((prev) => {
         const next = new Set(prev)
         next.delete(parentMsgId)
         return next
@@ -713,6 +586,7 @@ export function useChat(conversationId: string) {
   }, [conversationId, fetchTree])
 
   const navigateToMessage = useCallback(async (msgId: number) => {
+    const owner = lifecycle.current
     if (activeMessageId !== null && activeMessageId !== msgId) {
       const currentMsg = messages.find((m) => m.id === activeMessageId)
       if (currentMsg) {
@@ -730,9 +604,11 @@ export function useChat(conversationId: string) {
     setError(null)
     try {
       const pathMessages = await getMessagePath(msgId)
+      if (owner !== lifecycle.current || loadedRef.current !== conversationId) return
       setMessages(pathMessages)
       setActiveMessageId(msgId)
     } catch (e: any) {
+      if (owner !== lifecycle.current) return
       console.error("Failed to navigate to message path:", e)
       setError("Failed to navigate to the selected message path.")
       addNotification({
@@ -741,9 +617,9 @@ export function useChat(conversationId: string) {
         source: "Chat.navigateToMessage"
       })
     } finally {
-      setIsHistoryLoading(false)
+      if (owner === lifecycle.current) setIsHistoryLoading(false)
     }
-  }, [messages, activeMessageId, addToHistory])
+  }, [messages, activeMessageId, addToHistory, conversationId])
 
   const selectedNode = useMemo(() => {
     return messages.find((m) => m.id === activeMessageId) || null
@@ -777,10 +653,10 @@ export function useChat(conversationId: string) {
     commitProposedBranch,
     navigateToMessage,
     loading,
-    error,
+    error: error || fileState.error,
     send,
     regenerate,
-    clearError,
+    clearError: () => { clearError(); fileState.clearError() },
     agentName,
     uploadedFiles: files,
     isIndexing,

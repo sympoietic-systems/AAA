@@ -35,6 +35,10 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
   const steps = data ? [...data.steps].reverse() : []
   const selected = steps.find(s => s.id === selectedId)
   if (!selected) return null
+  return <SelectedStepDetail key={`${taskId}:${selectedId}`} taskId={taskId} data={data} selectedId={selectedId} selected={selected} />
+})
+
+const SelectedStepDetail = memo(function SelectedStepDetail({ taskId, data, selectedId, selected }: DbStepDetailProps & { selected: ResearchStep }) {
   const selectedResults = data ? (data.results_by_step[selectedId] || []) : []
   const noteHook = useNotes("research_step", selectedId)
 

@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from "react"
+import { useArchiveSearch } from "../../../hooks/useArchiveSearch"
+import React, { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { searchArchive, type SearchMatch } from "../../../api/search"
+import { type SearchMatch } from "../../../api/search"
 
 export const SearchPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   
   const [query, setQuery] = useState(() => searchParams.get("q") || "")
-  const [results, setResults] = useState<SearchMatch[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // Sliders/weights state
   const [wText, setWText] = useState(0.5)
@@ -17,56 +15,7 @@ export const SearchPage: React.FC = () => {
   const [wStructural, setWStructural] = useState(0.5)
   const [wGlitch, setWGlitch] = useState(0.0)
 
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const triggerSearch = useCallback(async (
-    qVal: string, 
-    wt: number, 
-    wsem: number, 
-    wstr: number, 
-    wg: number
-  ) => {
-    // If all weights are 0 or query is empty (unless glitch weight is > 0), clear results
-    if (!qVal.trim() && wg === 0.0) {
-      setResults([])
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await searchArchive({
-        q: qVal,
-        w_text: wt,
-        w_semantic: wsem,
-        w_structural: wstr,
-        w_glitch: wg,
-      })
-      setResults(data)
-    } catch (err: any) {
-      setError(err?.message || "Search execution failed")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Live trigger when search params, query, or weights change
-  useEffect(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current)
-    }
-
-    // Debounce to prevent slamming API on fast slider drags
-    debounceTimer.current = setTimeout(() => {
-      triggerSearch(query, wText, wSemantic, wStructural, wGlitch)
-    }, 250)
-
-    return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current)
-      }
-    }
-  }, [query, wText, wSemantic, wStructural, wGlitch, triggerSearch])
+  const { results, loading, error } = useArchiveSearch({ q: query, w_text: wText, w_semantic: wSemantic, w_structural: wStructural, w_glitch: wGlitch })
 
   const handleCardClick = (match: SearchMatch) => {
     if (match.conversation_id) {

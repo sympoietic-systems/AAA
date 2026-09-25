@@ -1,50 +1,8 @@
 import type { NoteInfo } from "../api/client"
 
-const VISIBILITY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  personal: {
-    bg: "rgba(133, 77, 14, 0.4)",
-    text: "#fef3c7",
-    border: "rgba(234, 179, 8, 0.5)",
-  },
-  shared: {
-    bg: "rgba(91, 33, 182, 0.35)",
-    text: "#e9d5ff",
-    border: "rgba(168, 85, 247, 0.5)",
-  },
-  agent: {
-    bg: "rgba(14, 116, 144, 0.4)",
-    text: "#a5f3fc",
-    border: "rgba(34, 211, 238, 0.6)",
-  },
-}
-
-const MARK_CSS = `
-.note-highlight {
-  padding: 0 1px;
-  border-bottom: 1.5px solid var(--nh-border);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.note-highlight:hover {
-  filter: brightness(1.3);
-  border-bottom-width: 2px;
-}
-`.replace(/\n/g, "")
-
-let styleInjected = false
-
-function injectStyles() {
-  if (styleInjected) return
-  const el = document.createElement("style")
-  el.textContent = MARK_CSS
-  document.head.appendChild(el)
-  styleInjected = true
-}
-
 export function wrapSelectedTextInMarks(markdown: string, notes: NoteInfo[]): string {
   if (!notes.length) return markdown
 
-  injectStyles()
 
   const plainChars: string[] = []
   const mapping: number[] = []
@@ -86,7 +44,7 @@ export function wrapSelectedTextInMarks(markdown: string, notes: NoteInfo[]): st
     .filter(n => n.selected_text)
     .sort((a, b) => b.selected_text.length - a.selected_text.length)
 
-  const ranges: { start: number; end: number; noteId: string; colors: typeof VISIBILITY_COLORS.personal; comment: string; visibility: string }[] = []
+  const ranges: { start: number; end: number; noteId: string; comment: string; visibility: string }[] = []
 
   for (const note of sorted) {
     const searchText = note.selected_text
@@ -98,8 +56,7 @@ export function wrapSelectedTextInMarks(markdown: string, notes: NoteInfo[]): st
     while ((idx = plainText.indexOf(searchText, idx)) !== -1) {
       const rStart = mapping[idx]
       const rEnd = mapping[Math.min(idx + searchLen - 1, plainText.length - 1)] + 1
-      const colors = VISIBILITY_COLORS[note.visibility] || VISIBILITY_COLORS.personal
-      ranges.push({ start: rStart, end: rEnd, noteId: note.id, colors, comment: note.comment, visibility: note.visibility || "personal" })
+      ranges.push({ start: rStart, end: rEnd, noteId: note.id, comment: note.comment, visibility: note.visibility || "personal" })
       idx++
     }
   }
@@ -110,7 +67,7 @@ export function wrapSelectedTextInMarks(markdown: string, notes: NoteInfo[]): st
   const closeTags: { pos: number; tag: string }[] = []
 
   for (const r of ranges) {
-    openTags.push({ pos: r.start, tag: `<mark id="note-highlight-${r.noteId}" data-note-id="${r.noteId}" data-note-comment="${escapeHtml(r.comment)}" data-note-visibility="${r.visibility}" style="background:${r.colors.bg};color:${r.colors.text};--nh-border:${r.colors.border}" class="note-highlight">` })
+    openTags.push({ pos: r.start, tag: `<mark id="note-highlight-${escapeHtml(r.noteId)}" data-note-id="${escapeHtml(r.noteId)}" data-note-comment="${escapeHtml(r.comment)}" data-note-visibility="${escapeHtml(r.visibility)}" class="note-highlight note-${["personal", "shared", "agent"].includes(r.visibility) ? r.visibility : "personal"}">` })
     closeTags.push({ pos: r.end, tag: '</mark>' })
   }
 

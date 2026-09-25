@@ -1,3 +1,4 @@
+import { apiFetch } from "../../../api/http"
 import { useState, useEffect, memo } from "react"
 import { CollapsibleSection } from "./shared/CollapsibleSection"
 
@@ -21,7 +22,7 @@ function RefusalsSectionComponent() {
   const [data, setData] = useState<RefusalsResponse | null>(null)
 
   useEffect(() => {
-    fetch("/api/refusals")
+    apiFetch("/api/refusals")
       .then(r => r.json())
       .then(setData)
       .catch(() => {})

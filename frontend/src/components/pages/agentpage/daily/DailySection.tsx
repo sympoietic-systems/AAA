@@ -1,3 +1,4 @@
+import { apiFetch } from "../../../../api/http"
 import { useState, useEffect, useCallback, memo } from "react"
 import { CalendarPicker, type DailyIndexItem } from "./CalendarPicker"
 import { DailyDetailPanel, type DailyDetail } from "./DailyDetailPanel"
@@ -36,7 +37,7 @@ export const DailySection = memo(function DailySection() {
   const fetchIndex = useCallback(async () => {
     setIsIndexLoading(true)
     try {
-      const res = await fetch("/api/agent/daily/index")
+      const res = await apiFetch("/api/agent/daily/index")
       if (res.ok) {
         const data = await res.json()
         setIndexDates(data.dates || [])
@@ -57,7 +58,7 @@ export const DailySection = memo(function DailySection() {
     if (!dateStr) return
     setIsDetailLoading(true)
     try {
-      const res = await fetch(`/api/agent/daily/${dateStr}`)
+      const res = await apiFetch(`/api/agent/daily/${dateStr}`)
       if (res.ok) {
         const data = await res.json()
         setDailyDetail(data)
@@ -88,7 +89,7 @@ export const DailySection = memo(function DailySection() {
     if (!selectedDate || isGeneratingSummary) return
     setIsGeneratingSummary(true)
     try {
-      const res = await fetch(`/api/agent/daily/${selectedDate}/summarize`, {
+      const res = await apiFetch(`/api/agent/daily/${selectedDate}/summarize`, {
         method: "POST",
       })
       if (res.ok) {

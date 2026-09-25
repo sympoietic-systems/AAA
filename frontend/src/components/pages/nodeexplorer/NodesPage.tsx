@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useChat } from "../../../hooks/useChat"
 import { useConversations } from "../../../hooks/useConversations"
@@ -181,7 +181,7 @@ export function NodesPage({ isAuthEnabled, handleLogout, agentFlux }: NodesPageP
   })
 
   const activeIdRef = useRef(activeId)
-  activeIdRef.current = activeId
+  useEffect(() => { activeIdRef.current = activeId }, [activeId])
 
   const activeConv = conversations.find((c) => c.id === activeId)
   const conversationTitle = activeConv?.title || ""

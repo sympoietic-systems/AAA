@@ -2,7 +2,7 @@ import React, { memo, useState, useRef } from "react"
 import { UnifiedFooter } from "../../UI"
 
 interface Props {
-  onPasswordSubmit: (password: string) => void
+  onPasswordSubmit: (password: string) => Promise<void>
   authError: string | null
   onClearError: () => void
 }
@@ -24,13 +24,16 @@ export const LoginPage = memo(function LoginPage({
     if (authError) onClearError()
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!password.trim() || unlocking) return
     setUnlocking(true)
-    onPasswordSubmit(password.trim())
-    // Keep unlocking status matching the verify API lifetime
-    setTimeout(() => setUnlocking(false), 1500)
+    try {
+      await onPasswordSubmit(password.trim())
+    } finally {
+      setPassword("")
+      setUnlocking(false)
+    }
   }
 
   const handleTearClick = () => {
@@ -50,6 +53,8 @@ export const LoginPage = memo(function LoginPage({
             <input
               ref={passwordRef}
               type="password"
+              aria-label="Password"
+              autoComplete="current-password"
               value={password}
               onChange={handlePasswordKey}
               className="absolute inset-0 opacity-0 cursor-text pointer-events-auto w-full h-full"

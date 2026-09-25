@@ -117,7 +117,7 @@ export function parseContextSent(contextText: string): ContextSection[] {
       flushSection();
       currentSectionType = 'diffractive';
       // Strip both tags from the content
-      let cleanContent = rawContent
+      const cleanContent = rawContent
         .replace('<diffractive_interference_zone>', '')
         .replace('</diffractive_interference_zone>', '')
         .trim();

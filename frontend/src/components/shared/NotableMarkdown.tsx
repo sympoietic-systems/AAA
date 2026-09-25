@@ -1,17 +1,14 @@
+import { safeMathPlugins } from "../../utils/markdownPolicy"
 import { memo, useState, useRef, useCallback, useMemo, useEffect } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import remarkMath from "remark-math"
-import rehypeRaw from "rehype-raw"
-import rehypeSanitize from "rehype-sanitize"
-import rehypeKatex from "rehype-katex"
 import { useNotes } from "../../hooks/useNotes"
 import { NotesSection } from "./NotesSection"
 import { SelectionToolbar } from "../pages/nodeexplorer/SelectionToolbar"
 import { NoteEditorPopover } from "../pages/nodeexplorer/NoteEditorPopover"
 import { wrapSelectedTextInMarks, scrollToNoteHighlight } from "../../utils/noteHighlight"
-import { aaaSanitizeSchema } from "../../utils/sanitizeSchema"
 import type { NoteInfo } from "../../api/client"
 
 type ContentTab = "content" | "notes"
@@ -169,25 +166,10 @@ export const NotableMarkdown = memo(function NotableMarkdown({
     mark: ({ node, ...props }: any) => {
       const properties = node?.properties ?? {}
       const noteId = properties['data-note-id'] ?? props['data-note-id']
-      const styleString = properties['style'] ?? ''
-      const styleObj: Record<string, string> = {}
-      if (typeof styleString === 'string' && styleString) {
-        styleString.split(';').forEach((pair: string) => {
-          const [k, v] = pair.split(':').map((s: string) => s.trim())
-          if (!k || !v) return
-          if (k.startsWith('--')) {
-            styleObj[k] = v
-          } else {
-            const camelKey = k.replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase())
-            styleObj[camelKey] = v
-          }
-        })
-      }
       return (
         <mark
           {...{ 'data-note-id': noteId }}
-          className={properties['className'] || ''}
-          style={styleObj}
+          className={props.className || ''}
           onClick={handleNoteClick}
         >
           {props.children}
@@ -224,7 +206,7 @@ export const NotableMarkdown = memo(function NotableMarkdown({
         <div ref={reportRef} onMouseUp={handleMouseUp} className={contentClassName ?? "text-[#94a3b8] text-[10px] leading-relaxed prose prose-invert prose-xs max-w-none"}>
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-            rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema], rehypeKatex] as any}
+            rehypePlugins={safeMathPlugins}
             components={markComponents}
           >
             {highlightedContent}

@@ -14,6 +14,11 @@ MetricsInfo = _contracts.MetricsInfo
 ProposedBranch = _contracts.ProposedBranch
 
 
+class AuthStatusResponse(BaseModel):
+    status: Literal["authenticated", "unauthenticated"]
+    auth_enabled: bool
+
+
 class ChatRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=50_000)
     speaker: str = Field(default="human", max_length=100, pattern=r"^(human|apparatus|[\w-]+)$")

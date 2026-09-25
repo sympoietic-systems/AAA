@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": { "strict": true },
+  "include": [
+    "src/api/http.ts", "src/api/auth.ts", "src/api/search.ts",
+    "src/utils/sanitizeSchema.ts", "src/utils/markdownPolicy.ts",
+    "src/hooks/useArchiveSearch.ts", "src/hooks/useConversationFiles.ts", "src/hooks/useNotes.ts",
+    "src/stores/notificationStore.ts", "src/components/pages/researchpage/shared/useTaskPolling.ts",
+    "src/components/shared/RouteErrorBoundary.tsx",
+    "src/components/panels/leftpanel/ConnectionCloudRenderer.ts"
+  ]
+}

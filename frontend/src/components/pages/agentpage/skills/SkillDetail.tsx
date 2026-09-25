@@ -1,3 +1,4 @@
+import { apiFetch } from "../../../../api/http"
 import { useState, useEffect, memo } from "react"
 import { updateSkill, deleteSkill } from "../../../../api/client"
 import type { DbSkillInfo } from "../../../../api/client"
@@ -84,7 +85,7 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
     setIsEditing(false); setIsConfirmingDelete(false); setErrorMsg(null); setExpandedVersions({})
     if (!skill) { setVersions([]); return }
     setVersions([]); setActiveTab("details")
-    fetch(`/api/skills/${skill.id}/versions`)
+    apiFetch(`/api/skills/${skill.id}/versions`)
       .then(res => res.json()).then(data => { if (data?.versions) setVersions(data.versions) })
       .catch(e => console.error("Failed to load versions:", e))
   }, [skill])
@@ -159,11 +160,11 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
   const revertSkill = async (targetVersion: number) => {
     if (revertingVersion) return; setRevertingVersion(targetVersion)
     try {
-      const res = await fetch(`/api/skills/${skill.id}/revert/${targetVersion}`, { method: "POST" })
+      const res = await apiFetch(`/api/skills/${skill.id}/revert/${targetVersion}`, { method: "POST" })
       if (!res.ok) { const err = await res.json(); alert(err.detail || "Revert failed") }
       else {
         const updated = await res.json(); onUpdate(updated, updated.content)
-        const vRes = await fetch(`/api/skills/${skill.id}/versions`); const vData = await vRes.json()
+        const vRes = await apiFetch(`/api/skills/${skill.id}/versions`); const vData = await vRes.json()
         if (vData?.versions) setVersions(vData.versions)
       }
     } catch (e) { alert(String(e)) }

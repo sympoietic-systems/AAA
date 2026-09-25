@@ -17,7 +17,7 @@ function MemoryNodesSectionComponent({ conversationId, enabled = false, classNam
   const hasFetchedRef = useRef(false)
 
   // Keep ref in sync with state for the polling closure
-  hasFetchedRef.current = hasFetched
+  useEffect(() => { hasFetchedRef.current = hasFetched }, [hasFetched])
 
   // Reset when conversation changes
   useEffect(() => {

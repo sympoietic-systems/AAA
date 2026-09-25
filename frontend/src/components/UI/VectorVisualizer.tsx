@@ -45,7 +45,7 @@ export function VectorVisualizer({
       {vector.map((val, idx) => {
         const isPositive = val >= 0
         let displayColor = barColorClass
-        let magnitude = 0
+        let magnitude: number
 
         if (isImpact) {
           // Impact vector values range roughly in [-0.5, 0.5]

@@ -26,7 +26,7 @@ interface Props {
 export function AgentPage({ onGoHome }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const params = new URLSearchParams(window.location.search)
-    let tab = params.get("tab")
+    const tab = params.get("tab")
     if (tab) {
       // Legacy URLs: redirect old tab names to personality with sub-tab
       if (tab === "beliefs" || tab === "belief") return "personality"

@@ -26,6 +26,7 @@ from starlette.datastructures import State
 
 from backend.bootstrap.services import AppServices
 from backend.core.auth import auth_enabled, bearer_token, credentials_valid
+from backend.core.sessions import SESSION_COOKIE, SessionStore
 
 if TYPE_CHECKING:
     from backend.modules.background_tasks.engine import BackgroundTaskEngine
@@ -67,6 +68,24 @@ logger = logging.getLogger(__name__)
 # ── Auth ───────────────────────────────────────────────────────────────
 
 
+def get_session_store(request: Request) -> SessionStore:
+    """Lazy app ownership also supports small dependency-isolated test apps."""
+    store = getattr(request.app.state, "auth_sessions", None)
+    if not isinstance(store, SessionStore):
+        store = SessionStore()
+        request.app.state.auth_sessions = store
+    return store
+
+
+def require_session_origin(request: Request, *, mutation: bool = True) -> None:
+    origin = f"{request.url.scheme}://{request.url.netloc}"
+    supplied_origin = request.headers.get("origin")
+    if (supplied_origin is not None and supplied_origin != origin) or (
+        mutation and (supplied_origin != origin or request.headers.get("x-aaa-csrf") != "1")
+    ):
+        raise HTTPException(status_code=403, detail="Same-origin session request required")
+
+
 async def verify_password(
     request: Request,
     authorization: str | None = Header(None),
@@ -77,7 +96,7 @@ async def verify_password(
     The /api/auth/verify endpoint is always allowed (used by frontend to
     detect whether auth is enabled before prompting for a password).
 
-    Credentials are accepted only through the Authorization header.
+    API clients use Bearer; browsers use bounded HttpOnly sessions.
     """
     if not auth_enabled():
         return
@@ -87,6 +106,10 @@ async def verify_password(
         return
 
     token = bearer_token(authorization)
+
+    if token is None and get_session_store(request).valid(request.cookies.get(SESSION_COOKIE)):
+        require_session_origin(request, mutation=request.method not in {"GET", "HEAD", "OPTIONS"})
+        return
 
     if not token:
         raise HTTPException(

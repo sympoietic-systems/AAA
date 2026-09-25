@@ -137,7 +137,7 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
     }
     setInjectedDocs(prev => [...prev, newDocItem])
 
-    let targetConvId = uploadConvId || "new"
+    const targetConvId = uploadConvId || "new"
 
     try {
       const res = await uploadFiles(targetConvId, [file])

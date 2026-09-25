@@ -1,13 +1,10 @@
+import { safeMathPlugins } from "../../../utils/markdownPolicy"
 import { useState, memo, useRef, useEffect } from "react"
 import React from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import remarkMath from "remark-math"
-import rehypeRaw from "rehype-raw"
-import rehypeSanitize from "rehype-sanitize"
-import rehypeKatex from "rehype-katex"
-import { aaaSanitizeSchema } from "../../../utils/sanitizeSchema"
 import type { ChatMessage, NoteInfo } from "../../../api/client"
 import { getMessageThinking, getMessageContext } from "../../../api/client"
 import { formatTime } from "../../../utils/dateFormat"
@@ -233,7 +230,7 @@ export const MessageBubble = memo(function MessageBubble({
           <div className="mt-2 text-xs text-[#aaa] leading-relaxed markdown-body pl-3 border-l border-[#1a1a1a]">
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-              rehypePlugins={[rehypeKatex]}
+              rehypePlugins={safeMathPlugins}
             >
               {remainingBody}
             </ReactMarkdown>
@@ -259,7 +256,7 @@ export const MessageBubble = memo(function MessageBubble({
     }, null, 2);
   };
 
-  const renderNoteComponent = ({ node, ...props }: any) => {
+  const renderNoteComponent = (props: any) => {
     // Support both data-note-id (new split marks) and id (legacy marks)
     let noteId = props["data-note-id"] || props.id || props["note_id"] || props["note-id"];
     if (noteId && noteId.startsWith("note-highlight-")) {
@@ -267,7 +264,7 @@ export const MessageBubble = memo(function MessageBubble({
     }
     
     if (!noteId) {
-      return <mark {...props} className="bg-yellow-500/20 text-yellow-100 px-0.5 rounded" />;
+      return <mark className="bg-yellow-500/20 text-yellow-100 px-0.5 rounded">{props.children}</mark>;
     }
     let note: any = notes.find((n: any) => n.id === noteId);
     const commentFromProps = props["data-note-comment"] || props["dataNoteComment"] || props.comment;
@@ -289,7 +286,7 @@ export const MessageBubble = memo(function MessageBubble({
     const isAgent = note.visibility === "agent";
     const isShared = note.visibility === "shared";
     
-    let highlightColorClass = "";
+    let highlightColorClass: string;
     if (isAgent) {
       highlightColorClass = "bg-cyan-950/60 text-cyan-200 border-b border-cyan-400/80 cursor-pointer px-0.5 rounded-sm hover:bg-cyan-900/60 transition-colors";
     } else if (isShared) {
@@ -358,7 +355,7 @@ export const MessageBubble = memo(function MessageBubble({
             <div className={userExpanded ? "" : "max-h-24 overflow-y-auto"}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-                rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema], rehypeKatex] as any}
+                rehypePlugins={safeMathPlugins}
                 components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,
@@ -377,7 +374,7 @@ export const MessageBubble = memo(function MessageBubble({
           <div className="markdown-body" onMouseUp={handleMouseUp}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-              rehypePlugins={[rehypeRaw, [rehypeSanitize, aaaSanitizeSchema], rehypeKatex] as any}
+              rehypePlugins={safeMathPlugins}
               components={{
                   'aaa-note': renderNoteComponent,
                   mark: renderNoteComponent,

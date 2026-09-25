@@ -1,51 +1,42 @@
 import { useState, useEffect, useCallback } from "react"
-import type { ResearchTask } from "../../../../api/research"
-import { getResearchTask, getTaskPhase } from "../../../../api/research"
+import { getResearchTask, getTaskPhase, type ResearchTask } from "../../../../api/research"
 
-/** Visibility-aware polling hook for live task status */
+/** Each polling generation owns its requests and one completion-scheduled timer. */
 export function useTaskPolling(taskId: string, _taskStatus: string, initialTask: ResearchTask) {
-  const [liveTask, setLiveTask] = useState(initialTask)
-  const [orchPhase, setOrchPhase] = useState(initialTask.status === "queued" ? "planning" : "")
-
-  // Track live status so we can detect the active→completed transition
-  const liveStatus = liveTask.status
-
+  const [state, setState] = useState({ task: initialTask, phase: "", error: "" })
+  const [revision, setRevision] = useState(0)
   useEffect(() => {
-    // Poll while the task is active or queued (using the live status, not the stale prop)
-    if (liveStatus !== "active" && liveStatus !== "queued") return
-    const poll = () => {
-      if (document.hidden) return
-      getResearchTask(taskId).then(t => { if (t) setLiveTask(t) }).catch(() => {})
-      getTaskPhase(taskId).then(p => {
-        if (p.phase && p.phase !== "not_started") setOrchPhase(p.phase)
-      }).catch(() => {})
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let busy = false
+    let active = true
+    const poll = async () => {
+      if (busy || controller.signal.aborted || document.hidden) return
+      clearTimeout(timer)
+      busy = true
+      try {
+        const [task, phase] = await Promise.all([
+          getResearchTask(taskId, controller.signal), getTaskPhase(taskId, controller.signal),
+        ])
+        if (controller.signal.aborted) return
+        active = task.status === "active" || task.status === "queued"
+        setState({ task, phase: phase.phase === "not_started" ? "" : phase.phase, error: "" })
+      } catch (error) {
+        if (!controller.signal.aborted) setState(previous => ({ ...previous, error: error instanceof Error ? error.message : "Task polling failed" }))
+      } finally {
+        busy = false
+        if (!controller.signal.aborted && active) timer = setTimeout(poll, 5000)
+      }
     }
-    poll()
-    const timer = setInterval(poll, 5000)
-    const onVisible = () => { poll() }
+    void poll()
+    const onVisible = () => { if (!document.hidden) void poll() }
     document.addEventListener("visibilitychange", onVisible)
     return () => {
-      clearInterval(timer)
+      controller.abort()
+      clearTimeout(timer)
       document.removeEventListener("visibilitychange", onVisible)
     }
-  }, [taskId, liveStatus])
-
-  // One-shot final fetch when the task transitions from active → terminal
-  // This ensures the result_summary (synthesis report) is captured after synthesis completes
-  useEffect(() => {
-    if (liveStatus === "completed" || liveStatus === "failed" || liveStatus === "cancelled") {
-      getResearchTask(taskId).then(t => { if (t) setLiveTask(t) }).catch(() => {})
-    }
-  }, [taskId, liveStatus])
-
-  const refreshAll = useCallback(() => {
-    getResearchTask(taskId).then(t => { if (t) setLiveTask(t) }).catch(() => {})
-    getTaskPhase(taskId).then(p => {
-      if (p.phase && p.phase !== "not_started") setOrchPhase(p.phase)
-    }).catch(() => {})
-  }, [taskId])
-
-  const current = liveTask || initialTask
-
-  return { current, orchPhase, refreshAll }
+  }, [taskId, revision])
+  const refreshAll = useCallback(() => setRevision(value => value + 1), [])
+  return { current: state.task.id === taskId ? state.task : initialTask, orchPhase: state.task.id === taskId ? state.phase : "", error: state.error, refreshAll }
 }

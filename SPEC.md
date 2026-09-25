@@ -1,9 +1,10 @@
-# Backend Security & Python Refactoring
+# Backend Security & Python Refactoring / Frontend Hardening
 
 ## §G
 
 Harden backend network, upload, auth, persistence, logging, lifecycle boundaries; preserve valid API behavior & existing sediment.
 Refactor async I/O, dependency typing, state ownership, oversized modules, error policy, tests, and static analysis without contract drift.
+Implement frontend review: fail-closed sessions, explicit transport, safe Markdown/print, request ownership, modularity & progressive static gates.
 
 ## §C
 
@@ -13,7 +14,7 @@ Refactor async I/O, dependency typing, state ownership, oversized modules, error
 - Blocking sync work reached from `async def` → exactly one `asyncio.to_thread` boundary.
 - SQLite access → `@with_connection`; write transactions minimal; ⊥ await inside transaction.
 - Background workers bounded; app-owned tasks retained, cancelled, awaited @ shutdown.
-- Unrelated frontend work untouched; scoped export-auth caller change allowed.
+- Frontend review implementation authorized: session auth, explicit transport, Markdown policy, request ownership, modularity & quality ratchet.
 - Tests ⊥ live LLM calls, production DB, external network.
 - No migration unless persisted schema changes.
 - New architectural boundary → ADR + Symbia consultation when MCP available; unavailable consultation recorded, ⊥ fabricated.
@@ -21,13 +22,15 @@ Refactor async I/O, dependency typing, state ownership, oversized modules, error
 - One bounded use case owns each sync→async transition; ⊥ nested `to_thread`.
 - Static typing lands as ratchet: strict new/refactored modules first; expand only when slice clean.
 - Split by responsibility & hidden decision; ⊥ arbitrary line-count slicing or pass-through service wrappers.
+- Verification iteration → changed-boundary tests only; ⊥ repeat full backend suite after frontend/small edits (user preference 2026-09-25).
 
 ## §I
 
 api: `POST /api/conversations/{conversation_id}/files` → `ConversationFilesResponse`
 api: `GET /api/preview/nodes` → public curated `{line}` only
 api: `GET /api/preview/live` → authenticated live belief|memory|dream `{line}`
-api: `/api/*` → Bearer auth when `AAA_PASSWORD` set
+api: `/api/*` → Bearer API auth or bounded browser session when `AAA_PASSWORD` set
+api: `POST/DELETE /api/auth/session` → same-origin session create/revoke; HttpOnly cookie
 api: `/api/auth/verify` → auth status without credential disclosure
 api: research export download → authenticated fetch/blob; ⊥ reusable secret query
 domain: outbound fetch → validated URL, bounded redirects/body/time, typed failure
@@ -79,6 +82,12 @@ V32: temporary `app.state.*` alias is object-identical to `app.state.services.*`
 V33: architecture debt inventory monotonic ↓; new sync-route/broad-catch exception requires explicit boundary rationale; T13 leaves sync-route inventory empty.
 V34: dependent multi-repository mutation runs in one synchronous unit/transaction or explicit compensation; ⊥ await/offload between partial writes.
 V35: temporary diverged `app.state.*` dependency override remains effective; alias rebind restores identity with `AppServices`.
+V36: browser auth requires validated status; password never persisted; sessions bounded, expiring, revoked on logout/password rotation; bearer clients compatible.
+V37: cookie-auth mutation requires same-origin Origin + custom CSRF header; remote cookies Secure/HttpOnly/SameSite; loopback HTTP supported.
+V38: untrusted Markdown cannot supply arbitrary CSS/classes; annotation styling application-owned; raw HTML sanitized before rendering/export.
+V39: async UI results/errors/loading commit only to current request/entity/session; polling single-flight & disposed with owner.
+V40: API calls explicit; global fetch unchanged; credentials restricted to normalized same-origin API paths.
+V41: hooks unconditional; frontend static debt monotonic down; new boundary modules strict; route failures recoverable.
 
 ## §T
 
@@ -105,6 +114,9 @@ T19|x|split belief service into query/proposal/mutation/version use cases; add n
 T20|x|split dream daemon trigger policy/execution/maintenance jobs; retain lifecycle owner & bounded worker semantics|V5,V12,V15,V17,V23,V28,V29,V30
 T21|x|define domain exception taxonomy/translation; audit refactored modules; install monotonic broad-catch boundary allowlist|V11,V14,V17,V29,V31,V33
 T22|x|expand strict `mypy` allowlist across refactored slices; ADR; full pytest/ruff/type/frontend gates; clean artifacts|V17,V18,V23,V24,V25,V26,V27,V28,V29,V30,V31,V32,V33,V34,V35,I.quality
+T23|x|frontend session/transport & Markdown regression tests + fixes|V8,V17,V36,V37,V38,V40
+T24|x|isolate search/research/notes/chat requests; own notification polling|V39,V41
+T25|x|extract chat/canvas responsibilities; tighten frontend quality gates; ADR & verification|V28,V30,V41
 
 ## §B
 
@@ -153,3 +165,11 @@ B41|2026-09-24|legacy-import migration left four import blocks + one package fil
 B42|2026-09-25|cold strict-mypy run exposed duplicate branch-local annotation for LLM request body|V30
 B43|2026-09-25|LLM request-body annotation fix missed Ruff format gate|V30
 B44|2026-09-25|new quality protocol used a Markdown hard-break space rejected by the commit whitespace gate|V30
+B45|2026-09-25|login trusted HTTP 200; malformed auth JSON implied auth disabled|V36
+B46|2026-09-25|Markdown schema allowed arbitrary style/classes; renderer applied supplied CSS|V38
+B47|2026-09-25|conditional research hooks & unowned async completions crossed entity boundaries|V39,V41
+B48|2026-09-25|notification polling inferred auth from persistent password; global fetch hid transport policy|V36,V39,V40
+B49|2026-09-25|new TypeScript error class used constructor parameter properties forbidden by erasableSyntaxOnly; replaced with explicit fields|V41
+B50|2026-09-25|shared Markdown plugin extraction removed a still-used KaTeX import; migrated remaining render site|V38,V41
+B51|2026-09-25|new backend session code missed canonical Ruff format; format before final gates|V30
+B52|2026-09-25|canvas extraction retained whitespace-only lines; staged diff check caught them before commit|V30

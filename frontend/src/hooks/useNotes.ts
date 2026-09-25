@@ -1,285 +1,83 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import {
-  getNotes,
-  createNote,
-  updateNote,
-  deleteNote,
-  type NoteInfo,
-} from "../api/client"
+import { getNotes, createNote, updateNote, deleteNote, type NoteInfo } from "../api/notes"
 import { addNotification } from "../stores/notificationStore"
 
-function notifyFailure(op: string, err: unknown) {
-  const msg = err instanceof Error ? err.message : String(err)
-  addNotification({
-    type: "glitch",
-    snippet: `Notes: Failed to ${op}: ${msg}`,
-    source: "Notes",
-  })
+type Visibility = "personal" | "shared" | "agent"
+type Query = { assetType?: string; assetId?: string; conversationId?: string }
+type NewNote = Parameters<typeof createNote>[0]
+
+/** One owner for loading and mutations; stale reads cannot overwrite successful writes. */
+function useNoteCollection(query: Query | null) {
+  const key = JSON.stringify(query)
+  const [state, setState] = useState<{ key: string; notes: NoteInfo[]; loading: boolean; error: string | null }>({ key, notes: [], loading: false, error: null })
+  const [revision, setRevision] = useState(0)
+  const scope = useRef(0)
+  const reads = useRef(0)
+  useEffect(() => {
+    const owner = ++scope.current
+    return () => { scope.current = owner + 1 }
+  }, [key])
+  useEffect(() => {
+    const controller = new AbortController()
+    const request = ++reads.current
+    const load = async () => {
+      const params = JSON.parse(key) as Query | null
+      if (!params) return
+      await Promise.resolve()
+      if (controller.signal.aborted) return
+      setState(previous => ({ key, notes: previous.key === key ? previous.notes : [], loading: true, error: null }))
+      try {
+        const notes = await getNotes(params, controller.signal)
+        if (!controller.signal.aborted && request === reads.current) setState({ key, notes, loading: false, error: null })
+      } catch (error) {
+        if (!controller.signal.aborted && request === reads.current) {
+          setState({ key, notes: [], loading: false, error: error instanceof Error ? error.message : "Unable to load notes" })
+        }
+      }
+    }
+    void load()
+    return () => controller.abort()
+  }, [key, revision])
+
+  const mutate = useCallback(async <T,>(operation: () => Promise<T>, apply: (notes: NoteInfo[], value: T) => NoteInfo[]): Promise<T | null> => {
+    const owner = scope.current
+    try {
+      const value = await operation()
+      if (owner === scope.current) {
+        reads.current++
+        setState(previous => ({ key, notes: apply(previous.key === key ? previous.notes : [], value), loading: false, error: null }))
+      }
+      return value
+    } catch (error) {
+      if (owner === scope.current) {
+        const message = error instanceof Error ? error.message : "Note operation failed"
+        setState(previous => ({ ...previous, error: message }))
+        addNotification({ type: "glitch", snippet: message, source: "Notes" })
+      }
+      return null
+    }
+  }, [key])
+  const create = useCallback((params: NewNote) => mutate(() => createNote(params), (notes, created) => [created, ...notes]), [mutate])
+  const editNote = useCallback((id: string, comment?: string, visibility?: Visibility) => mutate(() => updateNote(id, comment, visibility), (notes, updated) => notes.map(note => note.id === id ? updated : note)), [mutate])
+  const removeNote = useCallback(async (id: string) => {
+    const result = await mutate(async () => { await deleteNote(id); return true }, notes => notes.filter(note => note.id !== id))
+    return result === true
+  }, [mutate])
+  const refreshNotes = useCallback(() => setRevision(value => value + 1), [])
+  const visible = query && state.key === key ? state : { notes: [], loading: Boolean(query), error: null }
+  return { ...visible, create, editNote, removeNote, refreshNotes }
 }
 
-export function useNotes(assetType: string, assetId: string, enabled: boolean = true) {
-  const [notes, setNotes] = useState<NoteInfo[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const currentAssetRef = useRef(`${assetType}:${assetId}`)
-
-  const fetchNotes = useCallback(async (targetType: string, targetId: string) => {
-    if (!enabled || !targetType || !targetId) {
-      setNotes([])
-      return
-    }
-    const targetKey = `${targetType}:${targetId}`
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await getNotes({ assetType: targetType, assetId: targetId })
-      if (currentAssetRef.current === targetKey) {
-        setNotes(data)
-      }
-    } catch (err: unknown) {
-      if (currentAssetRef.current === targetKey) {
-        setError("Failed to load notes")
-        notifyFailure("load", err)
-      }
-    } finally {
-      if (currentAssetRef.current === targetKey) {
-        setLoading(false)
-      }
-    }
-  }, [enabled])
-
-  useEffect(() => {
-    currentAssetRef.current = `${assetType}:${assetId}`
-    let cancelled = false
-
-    const load = async () => {
-      if (!enabled || !assetType || !assetId) {
-        if (!cancelled) setNotes([])
-        return
-      }
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await getNotes({ assetType, assetId })
-        if (!cancelled && currentAssetRef.current === `${assetType}:${assetId}`) {
-          setNotes(data)
-        }
-      } catch (err: unknown) {
-        if (!cancelled && currentAssetRef.current === `${assetType}:${assetId}`) {
-          setError("Failed to load notes")
-          notifyFailure("load", err)
-        }
-      } finally {
-        if (!cancelled && currentAssetRef.current === `${assetType}:${assetId}`) {
-          setLoading(false)
-        }
-      }
-    }
-
-    load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [assetType, assetId, enabled])
-
-  const addNote = useCallback(async (
-    selectedText: string,
-    comment?: string,
-    visibility: "personal" | "shared" | "agent" = "personal",
-    startOffset?: number
-  ) => {
-    try {
-      const created = await createNote({
-        assetType,
-        assetId,
-        comment: comment ?? "",
-        visibility,
-        selectedText,
-        startOffset,
-      })
-      setNotes(prev => [created, ...prev])
-      return created
-    } catch (err: unknown) {
-      notifyFailure("create note", err)
-      return null
-    }
-  }, [assetType, assetId])
-
-  const editNote = useCallback(async (
-    noteId: string,
-    comment?: string,
-    visibility?: "personal" | "shared" | "agent"
-  ) => {
-    try {
-      const updated = await updateNote(noteId, comment, visibility)
-      setNotes(prev => prev.map(n => n.id === noteId ? updated : n))
-      return updated
-    } catch (err: unknown) {
-      notifyFailure("update note", err)
-      return null
-    }
-  }, [])
-
-  const removeNote = useCallback(async (noteId: string) => {
-    try {
-      await deleteNote(noteId)
-      setNotes(prev => prev.filter(n => n.id !== noteId))
-      return true
-    } catch (err: unknown) {
-      notifyFailure("delete note", err)
-      return false
-    }
-  }, [])
-
-  const refreshNotes = useCallback(() => {
-    if (assetType && assetId) {
-      fetchNotes(assetType, assetId)
-    }
-  }, [assetType, assetId, fetchNotes])
-
-  return {
-    notes,
-    loading,
-    error,
-    addNote,
-    editNote,
-    removeNote,
-    refreshNotes,
-  }
+export function useNotes(assetType: string, assetId: string, enabled = true) {
+  const { create, ...collection } = useNoteCollection(enabled && assetType && assetId ? { assetType, assetId } : null)
+  const addNote = useCallback((selectedText: string, comment = "", visibility: Visibility = "personal", startOffset?: number) =>
+    create({ assetType, assetId, selectedText, comment, visibility, startOffset }), [create, assetType, assetId])
+  return { ...collection, addNote }
 }
 
 export function useConversationNotes(conversationId: string) {
-  const [notes, setNotes] = useState<NoteInfo[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const currentConvRef = useRef(conversationId)
-
-  const fetchNotes = useCallback(async (targetId: string) => {
-    if (!targetId) {
-      setNotes([])
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await getNotes({ conversationId: targetId })
-      if (currentConvRef.current === targetId) {
-        setNotes(data)
-      }
-    } catch (err: unknown) {
-      if (currentConvRef.current === targetId) {
-        setError("Failed to load notes")
-        notifyFailure("load", err)
-      }
-    } finally {
-      if (currentConvRef.current === targetId) {
-        setLoading(false)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    currentConvRef.current = conversationId
-    let cancelled = false
-
-    const load = async () => {
-      if (!conversationId) {
-        if (!cancelled) setNotes([])
-        return
-      }
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await getNotes({ conversationId })
-        if (!cancelled && currentConvRef.current === conversationId) {
-          setNotes(data)
-        }
-      } catch (err: unknown) {
-        if (!cancelled && currentConvRef.current === conversationId) {
-          setError("Failed to load notes")
-          notifyFailure("load", err)
-        }
-      } finally {
-        if (!cancelled && currentConvRef.current === conversationId) {
-          setLoading(false)
-        }
-      }
-    }
-
-    load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [conversationId])
-
-  const addNote = useCallback(async (
-    targetAssetId: number,
-    selectedText: string,
-    comment: string,
-    visibility: "personal" | "shared" | "agent",
-    startOffset?: number
-  ) => {
-    try {
-      const created = await createNote({
-        assetType: "conversation_message",
-        assetId: String(targetAssetId),
-        conversationId,
-        comment,
-        visibility,
-        selectedText,
-        startOffset,
-      })
-      setNotes(prev => [created, ...prev])
-      return created
-    } catch (err: unknown) {
-      notifyFailure("create note", err)
-      return null
-    }
-  }, [conversationId])
-
-  const editNote = useCallback(async (
-    noteId: string,
-    comment?: string,
-    visibility?: "personal" | "shared" | "agent"
-  ) => {
-    try {
-      const updated = await updateNote(noteId, comment, visibility)
-      setNotes(prev => prev.map(n => n.id === noteId ? updated : n))
-      return updated
-    } catch (err: unknown) {
-      notifyFailure("update note", err)
-      return null
-    }
-  }, [])
-
-  const removeNote = useCallback(async (noteId: string) => {
-    try {
-      await deleteNote(noteId)
-      setNotes(prev => prev.filter(n => n.id !== noteId))
-      return true
-    } catch (err: unknown) {
-      notifyFailure("delete note", err)
-      return false
-    }
-  }, [])
-
-  const refreshNotes = useCallback(() => {
-    if (conversationId) {
-      fetchNotes(conversationId)
-    }
-  }, [conversationId, fetchNotes])
-
-  return {
-    notes,
-    loading,
-    error,
-    addNote,
-    editNote,
-    removeNote,
-    refreshNotes,
-  }
+  const { create, ...collection } = useNoteCollection(conversationId ? { conversationId } : null)
+  const addNote = useCallback((targetAssetId: number, selectedText: string, comment: string, visibility: Visibility, startOffset?: number) =>
+    create({ assetType: "conversation_message", assetId: String(targetAssetId), conversationId, selectedText, comment, visibility, startOffset }), [create, conversationId])
+  return { ...collection, addNote }
 }

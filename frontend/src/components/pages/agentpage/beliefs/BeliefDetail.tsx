@@ -1,3 +1,4 @@
+import { apiFetch } from "../../../../api/http"
 import { useState, useEffect, useRef, memo } from "react"
 import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement, getBeliefTimeseries } from "../../../../api/client"
 import type { BeliefNodeInfo, BeliefTimeseriesPoint } from "../../../../api/client"
@@ -125,7 +126,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       else if (activeBeliefs && activeBeliefs.length > 0) setTargetBeliefId(activeBeliefs[0].id)
       return
     }
-    fetch(`/api/beliefs/${belief.id}/versions`)
+    apiFetch(`/api/beliefs/${belief.id}/versions`)
       .then(res => res.json()).then(data => { if (Array.isArray(data)) setVersions(data) })
       .catch(e => console.error("Failed to load belief versions:", e))
   }, [belief, activeBeliefs])
@@ -189,7 +190,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
     try {
       const result = await revertBelief(b.id, targetVersion)
       if (result.status === "ok") {
-        const vRes = await fetch(`/api/beliefs/${b.id}/versions`); const vData = await vRes.json()
+        const vRes = await apiFetch(`/api/beliefs/${b.id}/versions`); const vData = await vRes.json()
         if (Array.isArray(vData)) {
           setVersions(vData)
           const tv = vData.find((x: any) => x.version === targetVersion)

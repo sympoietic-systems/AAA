@@ -54,6 +54,8 @@ files = [
     "backend/contracts.py",
     "backend/api/exceptions.py",
     "backend/core/auth.py",
+    "backend/core/sessions.py",
+    "backend/api/routes/auth.py",
     "backend/errors.py",
     "backend/modules/llm_client.py",
     "backend/modules/llm_http.py",

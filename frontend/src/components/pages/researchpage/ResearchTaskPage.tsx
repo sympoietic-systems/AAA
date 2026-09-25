@@ -1,3 +1,4 @@
+import { printContent } from "../../../utils/printContent"
 // ResearchTaskPage — single research task detail with tabbed Info, Steps, Report, Notes.
 import { memo, useState, useEffect, useRef, useMemo } from "react"
 import { useNavigate, Link } from "react-router-dom"
@@ -198,18 +199,6 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
       }).join("\n")
     : ""
 
-  const notesAppendixHtml = taskNotes.length > 0
-    ? `<hr><h2>Notes</h2>` + taskNotes.map(n => {
-        const visLabel = n.visibility === "shared" ? "Shared" : n.visibility === "agent" ? "Agent" : "Personal"
-        const colorCode = n.visibility === "shared" ? COLOR_PALETTE.noteShared : n.visibility === "agent" ? COLOR_PALETTE.noteAgent : COLOR_PALETTE.notePersonal
-        let html = `<div style="margin:1em 0;padding:0.5em 0;border-bottom:1px solid #ddd">`
-        html += `<strong style="color:${colorCode}">[${visLabel}]</strong> <em>"${n.selected_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}"</em>`
-        if (n.comment) html += `<blockquote style="border-left:3px solid #ccc;margin:0.3em 0;padding-left:1em;color:#555">${n.comment.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</blockquote>`
-        html += `</div>`
-        return html
-      }).join("")
-    : ""
-
   useEffect(() => {
     if (tab === "notes") {
       getTaskUnifiedNotes(task.id).then(setUnifiedNotes).catch(() => {})
@@ -353,36 +342,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
                       </TerminalButton>
                       <TerminalButton onClick={() => { const blob = new Blob([reportContent + notesAppendixMd], { type: "text/markdown;charset=utf-8" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${baseName}.md`; a.click(); URL.revokeObjectURL(url) }} intent="neutral">export markdown</TerminalButton>
                       <TerminalButton onClick={() => {
-                        const iframe = document.createElement("iframe")
-                        iframe.style.position = "fixed"
-                        iframe.style.right = "0"
-                        iframe.style.bottom = "0"
-                        iframe.style.width = "0"
-                        iframe.style.height = "0"
-                        iframe.style.border = "none"
-                        document.body.appendChild(iframe)
-                        const doc = iframe.contentWindow?.document
-                        if (doc) {
-                          const titleEl = doc.createElement("title")
-                          titleEl.textContent = baseName
-                          doc.head.appendChild(titleEl)
-                          const styleEl = doc.createElement("style")
-                          styleEl.textContent = "body{font-family:-apple-system,Segoe UI,Roboto,monospace;padding:2.5rem;color:#222;max-width:800px;margin:0 auto;line-height:1.7;font-size:13px}h1,h2{color:#333;margin-top:1.2em}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:12px}th{background:#f5f5f5}code{background:#f0f0f0;padding:2px 5px;border-radius:3px;font-size:12px}pre{background:#f6f6f6;padding:10px}a{color:#06c}img{max-width:100%}"
-                          doc.head.appendChild(styleEl)
-                          if (reportRef.current) {
-                            doc.body.appendChild(reportRef.current.cloneNode(true))
-                          }
-                          if (notesAppendixHtml) {
-                            const appendixDiv = doc.createElement("div")
-                            appendixDiv.innerHTML = notesAppendixHtml
-                            doc.body.appendChild(appendixDiv)
-                          }
-                          iframe.contentWindow?.focus()
-                          iframe.contentWindow?.print()
-                        }
-                        setTimeout(() => {
-                          if (document.body.contains(iframe)) document.body.removeChild(iframe)
-                        }, 1000)
+                        printContent(reportRef.current, baseName, taskNotes)
                       }} intent="cyan">export pdf</TerminalButton>
                     </div>
                   }
@@ -527,13 +487,22 @@ interface Props {
 }
 
 export const ResearchTaskPage = memo(function ResearchTaskPage({ taskId, isNew }: Props) {
-  if (isNew) return <NewTaskInline />
+  return isNew ? <NewTaskInline /> : <ExistingResearchTask key={taskId} taskId={taskId} />
+})
+
+function ExistingResearchTask({ taskId }: { taskId: string }) {
 
   const [task, setTask] = useState<ResearchTask | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getResearchTask(taskId).then(setTask).catch(e => setError(e.message))
+    const controller = new AbortController()
+    getResearchTask(taskId, controller.signal).then(value => {
+      if (!controller.signal.aborted) setTask(value)
+    }).catch(error => {
+      if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Unable to load task")
+    })
+    return () => controller.abort()
   }, [taskId])
 
   if (error) return (
@@ -552,5 +521,5 @@ export const ResearchTaskPage = memo(function ResearchTaskPage({ taskId, isNew }
     </div>
   )
 
-  return <TaskPageInner task={task} />
-})
+  return <TaskPageInner key={task.id} task={task} />
+}

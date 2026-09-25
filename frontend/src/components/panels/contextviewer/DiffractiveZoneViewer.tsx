@@ -17,7 +17,7 @@ interface ParsedDiffractiveZone {
 function parseDiffractiveZone(content: string): ParsedDiffractiveZone {
   // Content now arrives pre-cleaned by the parser (tags and [system]: prefixes already stripped).
   // Still normalize any leftover formatting as a safety net.
-  let text = content
+  const text = content
     .replace(/^\[system\]:\s*/gm, '')
     .replace('</diffractive_interference_zone>', '')
     .replace('<diffractive_interference_zone>', '')

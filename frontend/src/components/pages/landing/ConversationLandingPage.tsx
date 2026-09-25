@@ -427,7 +427,7 @@ export const ConversationLandingPage = memo(function ConversationLandingPage({
               {/* Tab bar */}
               <div className="flex items-center gap-2 px-6 py-2 border-b border-[#1a1a1a] text-[10px] font-mono select-none shrink-0">
                 {(["summary", "notes", "memory_nodes"] as const).map((tab, i) => {
-                  let label = tab === "memory_nodes" ? "memory nodes" : tab
+                  const label = tab === "memory_nodes" ? "memory nodes" : tab
                   let countStr = ""
                   if (tab === "notes" && notes !== null) countStr = ` (${notes.length})`
                   return (

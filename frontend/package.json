@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "build": "tsc -b && tsc -p tsconfig.strict.json --noEmit && vite build",
+    "lint": "node scripts/check-lint.mjs",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint:all": "eslint .",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.strict.json --noEmit"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",

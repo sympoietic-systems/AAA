@@ -22,8 +22,7 @@ export const aaaSanitizeSchema = {
     ...defaultSchema.attributes,
     "*": [
       ...((defaultSchema.attributes && defaultSchema.attributes["*"]) || []),
-      "className",
-      "style",
+      ["className", "note-highlight", "note-personal", "note-shared", "note-agent"],
       "id",
       "dataNoteId",
       "data-note-id",
@@ -46,8 +45,7 @@ export const aaaSanitizeSchema = {
       "noteId",
       "note-id",
       "note_id",
-      "className",
-      "style",
+      ["className", "note-highlight", "note-personal", "note-shared", "note-agent"],
     ],
     "aaa-note": [
       "id",
@@ -60,8 +58,7 @@ export const aaaSanitizeSchema = {
       "noteId",
       "note-id",
       "note_id",
-      "className",
-      "style",
+      ["className", "note-highlight", "note-personal", "note-shared", "note-agent"],
     ],
     "note-entanglement": [
       "id",
@@ -74,8 +71,7 @@ export const aaaSanitizeSchema = {
       "noteId",
       "note-id",
       "note_id",
-      "className",
-      "style",
+      ["className", "note-highlight", "note-personal", "note-shared", "note-agent"],
     ],
     "note_entanglement": [
       "id",
@@ -88,8 +84,7 @@ export const aaaSanitizeSchema = {
       "noteId",
       "note-id",
       "note_id",
-      "className",
-      "style",
+      ["className", "note-highlight", "note-personal", "note-shared", "note-agent"],
     ],
     "research-proposal": [
       "proposalId",
@@ -98,7 +93,7 @@ export const aaaSanitizeSchema = {
       "description",
       "objective",
       "status",
-      "className",
+      ["className", "note-highlight", "note-personal", "note-shared", "note-agent"],
     ],
     a: [
       ...((defaultSchema.attributes && defaultSchema.attributes["a"]) || []),

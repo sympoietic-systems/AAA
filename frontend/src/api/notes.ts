@@ -1,4 +1,4 @@
-import { BASE } from "./http"
+import { apiFetch, BASE } from "./http"
 import type { NoteInfo } from "./types"
 
 export { type NoteInfo }
@@ -12,7 +12,7 @@ export async function createNote(params: {
   visibility?: "personal" | "shared" | "agent"
   startOffset?: number
 }): Promise<NoteInfo> {
-  const res = await fetch(`${BASE}/notes`, {
+  const res = await apiFetch(`${BASE}/notes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -33,17 +33,10 @@ export async function createNote(params: {
 }
 
 export async function getNotes(params: {
-  assetType: string
-  assetId: string
-}): Promise<NoteInfo[]>
-export async function getNotes(params: {
-  conversationId: string
-}): Promise<NoteInfo[]>
-export async function getNotes(params: {
   assetType?: string
   assetId?: string
   conversationId?: string
-}): Promise<NoteInfo[]> {
+}, signal?: AbortSignal): Promise<NoteInfo[]> {
   const qs = new URLSearchParams()
   if (params.assetType && params.assetId) {
     qs.set("asset_type", params.assetType)
@@ -51,7 +44,7 @@ export async function getNotes(params: {
   } else if (params.conversationId) {
     qs.set("conversation_id", params.conversationId)
   }
-  const res = await fetch(`${BASE}/notes?${qs}`)
+  const res = await apiFetch(`${BASE}/notes?${qs}`, { signal })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
@@ -61,7 +54,7 @@ export async function updateNote(
   comment?: string,
   visibility?: "personal" | "shared" | "agent"
 ): Promise<NoteInfo> {
-  const res = await fetch(`${BASE}/notes/${noteId}`, {
+  const res = await apiFetch(`${BASE}/notes/${noteId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ comment, visibility }),
@@ -71,7 +64,7 @@ export async function updateNote(
 }
 
 export async function deleteNote(noteId: string): Promise<void> {
-  const res = await fetch(`${BASE}/notes/${noteId}`, { method: "DELETE" })
+  const res = await apiFetch(`${BASE}/notes/${noteId}`, { method: "DELETE" })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
@@ -83,7 +76,7 @@ export async function createConversationNote(
   visibility: "personal" | "shared" | "agent" = "personal",
   startOffset?: number
 ): Promise<NoteInfo> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}/notes`, {
+  const res = await apiFetch(`${BASE}/conversations/${conversationId}/notes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -102,7 +95,7 @@ export async function createConversationNote(
 }
 
 export async function getConversationNotes(conversationId: string): Promise<NoteInfo[]> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}/notes`)
+  const res = await apiFetch(`${BASE}/conversations/${conversationId}/notes`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
@@ -113,7 +106,7 @@ export async function updateConversationNote(
   comment?: string,
   visibility?: "personal" | "shared" | "agent"
 ): Promise<NoteInfo> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}/notes/${noteId}`, {
+  const res = await apiFetch(`${BASE}/conversations/${conversationId}/notes/${noteId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ comment, visibility }),
@@ -126,7 +119,7 @@ export async function deleteConversationNote(
   conversationId: string,
   noteId: string
 ): Promise<void> {
-  const res = await fetch(`${BASE}/conversations/${conversationId}/notes/${noteId}`, {
+  const res = await apiFetch(`${BASE}/conversations/${conversationId}/notes/${noteId}`, {
     method: "DELETE",
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

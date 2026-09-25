@@ -14,6 +14,29 @@ type Listener = () => void
 
 let notifications: SedimentNotification[] = []
 const listeners = new Set<Listener>()
+let sessionActive = false
+let epoch = 0
+let timer: ReturnType<typeof setTimeout> | undefined
+let pendingEpoch: number | undefined
+
+function schedule() {
+  if (!sessionActive || !listeners.size || timer !== undefined) return
+  timer = setTimeout(() => {
+    timer = undefined
+    void syncNotifications().finally(schedule)
+  }, 12000)
+}
+
+export function setNotificationSession(active: boolean) {
+  if (sessionActive === active) return
+  sessionActive = active
+  epoch++
+  clearTimeout(timer)
+  timer = undefined
+  notifications = []
+  emitChange()
+  if (active && listeners.size) void syncNotifications().finally(schedule)
+}
 
 function emitChange() {
   for (const listener of listeners) {
@@ -23,8 +46,14 @@ function emitChange() {
 
 function subscribe(listener: Listener) {
   listeners.add(listener)
+  if (listeners.size === 1 && sessionActive) void syncNotifications().finally(schedule)
   return () => {
     listeners.delete(listener)
+    if (!listeners.size) {
+      clearTimeout(timer)
+      timer = undefined
+      epoch++
+    }
   }
 }
 
@@ -37,9 +66,12 @@ function getSnapshot(): SedimentNotification[] {
  */
 export async function syncNotifications() {
   // Don't sync when not authenticated (locked page)
-  if (!localStorage.getItem("aaa_password")) return
+  if (!sessionActive || pendingEpoch === epoch) return
+  const requestEpoch = epoch
+  pendingEpoch = requestEpoch
   try {
     const backendNotifs = await getNotifications(false)
+    if (!sessionActive || requestEpoch !== epoch) return
     // Check if anything changed in the list of IDs or read states
     const idsA = notifications.map(n => `${n.id}-${n.read ? 1 : 0}`).join(",")
     const idsB = backendNotifs.map(n => `${n.id}-${n.read ? 1 : 0}`).join(",")
@@ -48,16 +80,10 @@ export async function syncNotifications() {
       emitChange()
     }
   } catch (err) {
-    console.warn("Failed to sync notifications with backend:", err)
+    if (requestEpoch === epoch) console.warn("Failed to sync notifications with backend:", err)
+  } finally {
+    if (pendingEpoch === requestEpoch) pendingEpoch = undefined
   }
-}
-
-// Perform initial synchronization
-syncNotifications()
-
-// Set up periodic polling every 12 seconds
-if (typeof window !== "undefined") {
-  setInterval(syncNotifications, 12000)
 }
 
 /**
@@ -70,6 +96,7 @@ export function addNotification(
     timestamp?: string
   }
 ) {
+  if (!sessionActive) return
   const type = notif.type || 'sediment'
   const timestamp = notif.timestamp || new Date().toISOString()
   let id = notif.id
