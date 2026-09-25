@@ -1,3 +1,6 @@
+import pytest
+
+from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule
 from backend.modules.sensory.intervention_policy import select_intervention
 
 
@@ -37,3 +40,10 @@ def test_low_resolution_prefers_clarification_before_resistance():
     )
 
     assert decision.mode == "clarify"
+
+
+def test_regulator_rejects_unknown_benchmark_policy():
+    regulator = HomeostaticRegulatorModule()
+
+    with pytest.raises(ValueError, match="unsupported intervention policy mode"):
+        regulator.set_intervention_policy_mode("unknown")

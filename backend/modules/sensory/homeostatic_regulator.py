@@ -34,6 +34,14 @@ _DEFAULTS = {
 class HomeostaticRegulatorModule(ProcessingModule):
     def __init__(self, config: dict | None = None):
         self._config = config or _DEFAULTS
+        self._intervention_policy_mode = "progressive"
+
+    def set_intervention_policy_mode(self, mode: str) -> None:
+        """Select the intervention policy for a controlled benchmark ablation."""
+
+        if mode not in {"progressive", "legacy"}:
+            raise ValueError(f"unsupported intervention policy mode: {mode}")
+        self._intervention_policy_mode = mode
 
     @property
     def name(self) -> str:
@@ -86,13 +94,23 @@ class HomeostaticRegulatorModule(ProcessingModule):
         if glitch_fidelity is not None and glitch_fidelity < 0.50 and "glitch_fidelity_low" not in flags:
             flags.append("glitch_fidelity_low")
 
-        intervention = select_intervention(
-            collapse_pressure=float(collapse_pressure or 0.0),
-            divergence_resolution=float(metrics.get("divergence_resolution_ratio") or 0.5),
-            streak=stagnant_turns,
-            participant_text=str(payload.get("content", "")),
-        )
-        somatic_reflection = intervention.directive
+        if self._intervention_policy_mode == "legacy":
+            somatic_reflection = _synthesize_somatic_reflection(flags, metrics, stagnant_turns=stagnant_turns)
+            intervention_data = {
+                "mode": "legacy_stage",
+                "reason": "fixed Socratic/compression threshold ablation",
+                "directive": somatic_reflection,
+                "observed_outcome": {"uptake": 0.0, "task_progress": 0.0, "joint": 0.0},
+            }
+        else:
+            intervention = select_intervention(
+                collapse_pressure=float(collapse_pressure or 0.0),
+                divergence_resolution=float(metrics.get("divergence_resolution_ratio") or 0.5),
+                streak=stagnant_turns,
+                participant_text=str(payload.get("content", "")),
+            )
+            somatic_reflection = intervention.directive
+            intervention_data = intervention.to_dict()
         if somatic_reflection is None and float(collapse_pressure or 0.0) < 0.35:
             somatic_reflection = _synthesize_somatic_reflection(flags, metrics, stagnant_turns=stagnant_turns)
 
@@ -104,7 +122,7 @@ class HomeostaticRegulatorModule(ProcessingModule):
             "triggered_flags": flags,
             "somatic_reflection_prompt": somatic_reflection,
             "consecutive_stagnant_turns": stagnant_turns,
-            "intervention": intervention.to_dict(),
+            "intervention": intervention_data,
         }
         reasoning = get_llm_execution_parameters(
             {
