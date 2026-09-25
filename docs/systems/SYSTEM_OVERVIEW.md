@@ -715,14 +715,15 @@ Messages are organized as a **directed tree** via `parent_message_id`. Key impli
 ### 7.1 Component Hierarchy (with React Router + Code Splitting)
 
 All page components are lazy-loaded via `React.lazy()` for automatic code splitting.
-ConnectionCloud now receives `treeNodes`/`treeLinks` as props from `App.tsx` (no longer self-fetches).
+`App.tsx` owns authentication and lazy routes. `NodesPage` owns the chat workspace and passes `useChat` tree data to `ConnectionCloud`; `ConnectionCloudRenderer` handles drawing without React or network ownership.
 
 ```
 App.tsx (root orchestrator — React Router + lazy loading)
 ├── AgentPage.tsx              (when pathname === "/agent")
 │   └── PersonalitySection.tsx (5 sub-tabs: Traits | Commitments | Expertise | Beliefs | Skills)
-├── ConversationLandingPage    (when no active conversation)
-└── NodeExplorer + SidePanel   (three-panel chat workspace)
+├── ResearchPage / ResearchTaskPage (research list, creation, and task detail)
+├── SearchPage / LoginPage     (archive search and browser login)
+└── NodesPage                  (three-panel chat workspace; ConversationLandingPage when no conversation)
     ├── ConnectionCloud (left) — DAG visualization of conversation tree
     ├── NodeExplorer (center)
     │   ├── MessageBubble     — individual message with thinking/context/structural/notes toggles
@@ -741,11 +742,16 @@ App.tsx (root orchestrator — React Router + lazy loading)
 
 ### 7.2 State Management
 
-- **`useChat(conversationId)`** — Core chat engine: message history (paginated, 50/page), tree structure, send/regenerate/branch, file management, active path navigation (~730 lines)
+- **`useChat(conversationId)`** — Message history (50/page), tree structure, send/regenerate/branch, and active path navigation; obsolete conversation results are ignored.
+- **`useConversationFiles()`** — Upload/delete/reprocess operations and cancellation-aware indexing polling, scoped to the active conversation.
+- **`useNotes()` / `useConversationNotes()`** — Shared collection logic protects entity ownership and prevents older reads from overwriting successful mutations.
+- **`useArchiveSearch()` / `useTaskPolling()`** — Debounced search and completion-scheduled task polling; obsolete requests are cancelled and ignored.
 - **`useConversations()`** — Conversation list CRUD, URL-synced activeId via `?c=` param
 - **`usePanelResizer()`** — Reusable panel resize hook with localStorage persistence
 - **`telemetryStore`** — Vanilla JS pub-sub with generic factory (`createPollingChannel`, `createKeyedPollingChannel`). Five subscriber hooks: `useTelemetryMetrics`, `useTelemetryBeliefs`, `useTelemetryTokens`, `useTelemetryDaemon`, `useTelemetryScheduler`
-- **`notificationStore`** — Stream manager for sediment, glitch, and trace notifications (drives CreasesDropdown)
+- **`notificationStore`** — Session- and subscriber-owned notification polling, including auth-disabled mode; logout clears cached notifications.
+- **`apiFetch`** — Explicit same-origin session transport; preserves signals and headers, rejects redirects, and never overrides global fetch.
+- **Markdown/export** — Shared raw-HTML sanitization policy, fixed annotation classes, and sandboxed DOM print export. See [ADR-096](../decisions/ADR-096-browser-sessions-and-frontend-request-ownership.md).
 
 ### 7.3 Key UI Features
 
@@ -1069,7 +1075,7 @@ All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt ref
 | `/api/notifications` | Notifications | GET recent system notifications |
 | `/api/scheduler` | Background scheduler | GET scheduler status |
 
-All routes protected by Bearer token authentication (bypassed if `AAA_PASSWORD` env var is not set).
+Protected routes accept Bearer credentials or browser sessions when `AAA_PASSWORD` is set. `/api/auth/verify` exposes authentication status, and curated preview/artwork endpoints are public exceptions. Browser session creation/deletion use `POST/DELETE /api/auth/session`; cookie-authenticated mutations require same-origin checks. See [Authentication configuration](../guides/CONFIG.md#authentication).
 
 ---
 

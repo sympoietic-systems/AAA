@@ -344,7 +344,7 @@ The left panel renders the conversation's DAG as an interactive canvas force gra
 
 ```
 App.tsx
-├── ConnectionCloud (memo'd, receives treeNodes/treeLinks as props from App.tsx)
+├── ConnectionCloud (memo'd, receives treeNodes/treeLinks as props from NodesPage)
 │   └── Canvas: node/link drawing, force simulation, zoom/pan, click/tooltip
 │   └── Overlays: tooltip, context menu, commit modal, resonance details
 │   └── Controls: zoom [+]/[−]/[⟲], settling toggle
@@ -518,3 +518,13 @@ StepsTab
 *   **SPA routing (§5 best-practices)**: All in-app navigation uses `useNavigate()` from `react-router-dom` — never `window.location.href`. Post-mutation refreshes thread an explicit callback (e.g. `ContinueResearchModal` → `onContinued`) rather than `window.location.reload()`.
 *   **Header**: Uses the §15 `UnifiedHeader` sub-components with `gold` intent.
 
+
+## Security and lifecycle boundaries
+
+Use explicit `apiFetch` calls for same-origin API access. Browser authentication uses expiring HttpOnly sessions; never persist passwords or add credentials to URLs. Read [CONFIG.md](../../guides/CONFIG.md#authentication) for the server contract.
+
+Raw-HTML Markdown uses `safeHtmlPlugins` or `safeMathPlugins`; arbitrary CSS is forbidden. Annotation classes are application-owned, and print exports use `printContent` rather than HTML string sinks.
+
+Async work belongs to an entity and request lifetime. Cancel or ignore obsolete completions, including errors and loading updates. Poll after completion to avoid overlap, and release timers with their session/subscriber owner. Keep hooks unconditional; keyed detail components isolate research task and step state.
+
+The current implementation separates file processing into `useConversationFiles` and canvas drawing into `ConnectionCloudRenderer`. New/refactored boundaries enter `tsconfig.strict.json`. Use the focused verification commands and lint debt policy in the [frontend README](../../../frontend/README.md); accepted historical ADRs describe their original implementation, while [ADR-096](../../decisions/ADR-096-browser-sessions-and-frontend-request-ownership.md) records the current hardening decisions.

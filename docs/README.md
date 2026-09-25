@@ -91,6 +91,7 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 | Is there a non-technical quickstart guide? | [guides/QUICKSTART_NON_TECHNICAL.md](guides/QUICKSTART_NON_TECHNICAL.md) |
 | How do I customize Symbia's personality/beliefs? | [guides/CUSTOMIZE_PERSONALITY.md](guides/CUSTOMIZE_PERSONALITY.md) |
 | What does each config option do? | [guides/CONFIG.md](guides/CONFIG.md) |
+| How do browser sessions and reverse proxies work? | [Authentication configuration](guides/CONFIG.md#authentication) |
 | How does the architecture work? | [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) |
 | What is the database schema? | [architecture/DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) |
 | Why was a decision made this way? | [decisions/README.md](decisions/README.md) |

@@ -298,3 +298,16 @@ curl http://127.0.0.1:8499/api/skills
 | PM2: service crashes on startup | Check logs: `pm2 logs aaa-backend --lines 50`. Ensure `.env` has valid API keys and `uv sync` has been run. |
 | Terminal freezes / Website hangs on Windows (waiting for Enter key) | Windows Command Prompt QuickEdit Mode can suspend console execution when you click inside the terminal window. Press **Enter** or **Esc** inside the terminal to resume it. We programmatically disable QuickEdit at startup now, but you can also disable it permanently by right-clicking the terminal title bar -> **Defaults** -> uncheck **QuickEdit Mode**. |
 
+
+## Browser login and proxy troubleshooting
+
+Set `AAA_PASSWORD` to enable authentication; without it the application runs in auth-disabled mode. The browser exchanges the password for an expiring HttpOnly session. See [Authentication configuration](CONFIG.md#authentication) for endpoints, lifetime, and deployment requirements.
+
+| Symptom | Check |
+|---------|-------|
+| Login succeeds but the next API request returns 401 | Remote access must use HTTPS. Confirm the browser accepted the session cookie and `/api` uses the same public origin. |
+| A mutation returns 403 with “Same-origin session request required” | Preserve public Host at the proxy, forward the correct HTTPS scheme from a trusted proxy, and use `apiFetch` so the CSRF header is present. Do not disable origin validation. |
+| Login disappears after restart or requests alternate between success and 401 | Sessions are process-local. Restart requires login; multiple workers need affinity to the issuing process or shared session storage. |
+| The UI reports an unavailable authentication service | Check `/api/auth/verify` reaches the backend and returns JSON rather than the SPA HTML fallback. |
+
+Existing installations prompt for login again because persisted browser passwords are removed. Bearer API clients remain supported. The Vite development proxy preserves Host to keep local origin checks consistent.

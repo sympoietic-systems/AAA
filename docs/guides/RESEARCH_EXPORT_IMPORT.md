@@ -13,7 +13,7 @@ clean process traces, or structured JSON for re-import.
 | GET | `/api/research/export/all` | Export all tasks as JSON array |
 | POST | `/api/research/import` | Import task(s) from JSON |
 
-All endpoints require Bearer token auth (same as all `/api` routes).
+When `AAA_PASSWORD` is set, these endpoints require authentication. Command-line clients use the Bearer header shown below; the same-origin browser UI uses its session cookie. Cookie-authenticated imports also require the Origin and CSRF checks described in [CONFIG.md](CONFIG.md#authentication). Never put credentials in download URLs.
 
 ## Markdown Exports
 
