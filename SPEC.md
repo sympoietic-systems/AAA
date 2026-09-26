@@ -206,3 +206,5 @@ B58|2026-09-25|progression test assumed the rejected experimental policy remaine
 B59|2026-09-25|T30 commit sequence did not stop after Markdown whitespace failure|V30
 B60|2026-09-25|full format gate found two earlier benchmark-branch files outside Ruff canonical form|V30
 B61|2026-09-25|sandboxed Vitest could not load Tailwind's native Windows binding; rerun with build-equivalent access|V30
+B62|2026-09-26|report plot treated universally undefined first-turn metrics as numeric aggregates and failed lint ordering|V30
+B63|2026-09-26|human-readable report header used Markdown hard-break whitespace rejected by the diff gate|V30
