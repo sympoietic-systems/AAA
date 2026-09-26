@@ -59,7 +59,7 @@ async def test_hysteresis_state_machine(mock_repos, monkeypatch):
         "conversation_id": "test_conv",
         "embedding": np.zeros(384, dtype="float32").tobytes(),
         "conversation_vitality": 0.55,
-            "metrics": {"boringness": 0.68, "rolling_entropy": 0.55, "collapse_pressure_streak": 2},
+        "metrics": {"boringness": 0.68, "rolling_entropy": 0.55, "collapse_pressure_streak": 2},
     }
 
     # First turn: transitions to STAGNANT, cohesion timer set to 3

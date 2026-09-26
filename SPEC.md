@@ -140,7 +140,7 @@ T27|x|isolate metric state by conversation; wire reasoning controls + applied-st
 T28|x|test 3 diffractive activation hypotheses in isolated branches; adopt empirical winner|V44,V47,V48
 T29|x|add progress-aware intervention selector + failed-mode progression; integrate regulator prompt|V45,V46,I.internal
 T30|x|run focused/full offline + repeated live conversation benchmarks; compare causal arms; publish Report 019 + ADR|V42,V43,V44,V45,V46,V47,V48,I.benchmark
-T31|~|run full ruff/format/mypy/pytest + frontend gates; clean ephemeral artifacts; reconcile article/report claims|V18,V30,V42,V43,V44,V45,V46,V47,V48,I.quality
+T31|x|run full ruff/format/mypy/pytest + frontend gates; clean ephemeral artifacts; reconcile article/report claims|V18,V30,V42,V43,V44,V45,V46,V47,V48,I.quality
 
 ## §B
 
@@ -204,3 +204,5 @@ B56|2026-09-25|participant simulator reasoning consumed its response budget and 
 B57|2026-09-25|semantic-knot service called removed mock-only `EmbedderModule.embed_text`; live compaction failed|V17,V52
 B58|2026-09-25|progression test assumed the rejected experimental policy remained the production default|V48
 B59|2026-09-25|T30 commit sequence did not stop after Markdown whitespace failure|V30
+B60|2026-09-25|full format gate found two earlier benchmark-branch files outside Ruff canonical form|V30
+B61|2026-09-25|sandboxed Vitest could not load Tailwind's native Windows binding; rerun with build-equivalent access|V30

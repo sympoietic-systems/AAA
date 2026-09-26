@@ -11,11 +11,7 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_INPUT = (
-    PROJECT_ROOT
-    / "docs"
-    / "reports"
-    / "015-empirical-15-turn-boredom-benchmark"
-    / "agential_boredom_receipts.json"
+    PROJECT_ROOT / "docs" / "reports" / "015-empirical-15-turn-boredom-benchmark" / "agential_boredom_receipts.json"
 )
 
 
