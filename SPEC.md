@@ -139,8 +139,8 @@ T26|x|add causal receipt + uptake/progress evaluator; replay historical baseline
 T27|x|isolate metric state by conversation; wire reasoning controls + applied-status receipt through provider boundary|V42,V43,V49,V50,I.internal
 T28|x|test 3 diffractive activation hypotheses in isolated branches; adopt empirical winner|V44,V47,V48
 T29|x|add progress-aware intervention selector + failed-mode progression; integrate regulator prompt|V45,V46,I.internal
-T30|~|run focused/full offline + repeated live conversation benchmarks; compare causal arms; publish Report 019 + ADR|V42,V43,V44,V45,V46,V47,V48,I.benchmark
-T31|.|run full ruff/format/mypy/pytest + frontend gates; clean ephemeral artifacts; reconcile article/report claims|V18,V30,V42,V43,V44,V45,V46,V47,V48,I.quality
+T30|x|run focused/full offline + repeated live conversation benchmarks; compare causal arms; publish Report 019 + ADR|V42,V43,V44,V45,V46,V47,V48,I.benchmark
+T31|~|run full ruff/format/mypy/pytest + frontend gates; clean ephemeral artifacts; reconcile article/report claims|V18,V30,V42,V43,V44,V45,V46,V47,V48,I.quality
 
 ## §B
 
@@ -202,3 +202,5 @@ B54|2026-09-25|participant simulator forwarded AAA's provider-qualified model al
 B55|2026-09-25|participant simulator sent a chat completion whose final message had assistant role|V51
 B56|2026-09-25|participant simulator reasoning consumed its response budget and emitted clipped prompt fragments|V46,V51
 B57|2026-09-25|semantic-knot service called removed mock-only `EmbedderModule.embed_text`; live compaction failed|V17,V52
+B58|2026-09-25|progression test assumed the rejected experimental policy remained the production default|V48
+B59|2026-09-25|T30 commit sequence did not stop after Markdown whitespace failure|V30

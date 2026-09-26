@@ -145,6 +145,8 @@ def _run_conversation(
                 "provider": generated.get("provider_used"),
                 "seed_available": False,
                 "latency_ms": round(latency_ms, 3),
+                "finish_reason": generated.get("finish_reason"),
+                "truncated": generated.get("truncated"),
             }
         )
         transcript.extend(({"role": "user", "content": prompt}, {"role": "assistant", "content": reply}))
@@ -173,6 +175,7 @@ def _mean_metric(turns: list[dict[str, Any]], key: str) -> float:
 def _summarize_run(policy: str, repetition: int, turns: list[dict[str, Any]]) -> dict[str, Any]:
     receipts = build_causal_receipts(turns, turns)
     outcomes = [receipt.outcome_score for receipt in receipts if receipt.outcome_score is not None]
+    uptake = [outcome.uptake for receipt in receipts for outcome in receipt.next_turn_outcomes]
     progress = [outcome.task_progress for receipt in receipts for outcome in receipt.next_turn_outcomes]
     modes = Counter(receipt.intervention.get("mode", "none") for receipt in receipts)
     observable = [bool(receipt.requested_controls) and bool(receipt.applied_controls) for receipt in receipts]
@@ -181,6 +184,7 @@ def _summarize_run(policy: str, repetition: int, turns: list[dict[str, Any]]) ->
         "repetition": repetition,
         "turn_count": len(turns),
         "mean_outcome_score": round(mean(outcomes), 4) if outcomes else 0.0,
+        "mean_uptake": round(mean(uptake), 4) if uptake else 0.0,
         "mean_task_progress": round(mean(progress), 4) if progress else 0.0,
         "mean_drr": _mean_metric(turns, "divergence_resolution_ratio"),
         "mean_paskian_health": _mean_metric(turns, "paskian_health"),
@@ -204,6 +208,7 @@ def _scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
     by_policy = {policy: [run for run in runs if run["policy"] == policy] for policy in ("legacy", "progressive")}
     fields = (
         "mean_outcome_score",
+        "mean_uptake",
         "mean_task_progress",
         "mean_drr",
         "mean_paskian_health",
@@ -240,10 +245,11 @@ def _scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
     health_ok = deltas["mean_paskian_health"]["mean"] >= -0.02
     drr_ok = deltas["mean_drr"]["mean"] >= -0.02
     outcome_confident = deltas["mean_outcome_score"]["ci_low"] > 0.0
+    uptake_confident = deltas["mean_uptake"]["ci_low"] > 0.0
     progress_confident = deltas["mean_task_progress"]["ci_low"] > 0.0
     if not health_ok or not drr_ok:
         decision = "reject_regression"
-    elif outcome_confident and progress_confident:
+    elif outcome_confident and uptake_confident and progress_confident:
         decision = "accept"
     else:
         decision = "inconclusive"
@@ -255,6 +261,7 @@ def _scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "paskian_health_decline_at_most_0_02": health_ok,
             "drr_decline_at_most_0_02": drr_ok,
             "outcome_gain_ci_above_zero": outcome_confident,
+            "uptake_gain_ci_above_zero": uptake_confident,
             "task_progress_gain_ci_above_zero": progress_confident,
         },
     }
@@ -265,7 +272,18 @@ def main() -> None:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--turns", type=int, default=8)
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--rescore", type=Path)
     args = parser.parse_args()
+    if args.rescore:
+        runs_path = args.rescore / "telemetry_receipts.json"
+        saved_runs = json.loads(runs_path.read_text(encoding="utf-8"))
+        rescored = [_summarize_run(run["policy"], int(run["repetition"]), run["turns"]) for run in saved_runs]
+        runs_path.write_text(json.dumps(rescored, indent=2) + "\n", encoding="utf-8")
+        (args.rescore / "scorecard.json").write_text(
+            json.dumps(_scorecard(rescored), indent=2) + "\n", encoding="utf-8"
+        )
+        print(json.dumps({"rescored": str(args.rescore)}, indent=2))
+        return
     if args.repetitions < 2 or args.turns < 3:
         raise ValueError("benchmark requires at least 2 repetitions and 3 turns")
 

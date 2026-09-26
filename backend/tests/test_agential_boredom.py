@@ -52,6 +52,7 @@ async def test_continuous_collapse_pressure_coupling():
 @pytest.mark.asyncio
 async def test_two_stage_boredom_progression():
     module = HomeostaticRegulatorModule()
+    module.set_intervention_policy_mode("progressive")
     conv_id = "progression_conv"
 
     # Turn 1: Moderate boredom (CP = 0.68) -> Stage 1 Socratic Seizure Directive

@@ -34,7 +34,7 @@ _DEFAULTS = {
 class HomeostaticRegulatorModule(ProcessingModule):
     def __init__(self, config: dict | None = None):
         self._config = config or _DEFAULTS
-        self._intervention_policy_mode = "progressive"
+        self._intervention_policy_mode = "legacy"
 
     def set_intervention_policy_mode(self, mode: str) -> None:
         """Select the intervention policy for a controlled benchmark ablation."""

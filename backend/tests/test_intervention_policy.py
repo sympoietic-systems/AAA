@@ -47,3 +47,9 @@ def test_regulator_rejects_unknown_benchmark_policy():
 
     with pytest.raises(ValueError, match="unsupported intervention policy mode"):
         regulator.set_intervention_policy_mode("unknown")
+
+
+def test_rejected_progressive_policy_is_not_production_default():
+    regulator = HomeostaticRegulatorModule()
+
+    assert regulator._intervention_policy_mode == "legacy"

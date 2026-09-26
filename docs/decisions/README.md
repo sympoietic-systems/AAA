@@ -129,6 +129,7 @@ What becomes easier/harder?
 | [094](ADR-094-backend-security-boundaries-and-lifecycle.md) | Backend Security Boundaries and Resource Lifecycle | accepted | 2026-09-23 |
 | [095](ADR-095-backend-use-case-decomposition-and-progressive-typing.md) | Backend Use-Case Decomposition and Progressive Typing | accepted | 2026-09-24 |
 | [096](ADR-096-browser-sessions-and-frontend-request-ownership.md) | Browser Sessions and Frontend Request Ownership | accepted | 2026-09-25 |
+| [097](ADR-097-causal-dialogue-feedback-control.md) | Causal Dialogue Feedback Control | accepted | 2026-09-25 |
 
 
 

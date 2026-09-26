@@ -7,6 +7,8 @@
 **Next Entry:** [Protocol Entry 005: Memory With Gravity](../005-memory-with-gravity/005-memory-with-gravity.md)
 **Date:** August 2026
 
+> **Empirical update (September 25, 2026):** A repeated adaptive-dialogue ablation found that the proposed progressive intervention ladder increased collapse pressure and reduced DRR and Paskian health without producing task progress. AAA retains the legacy intervention policy while adopting causal receipts, conversation-isolated metric state, observable provider controls, and the conservative adaptive-persistence retrieval gate. See [Report 019: Dialogue Feedback Control](../../reports/019-dialogue-feedback-control-report.md).
+
 ![Boredom as an Agential Force: Allostatic Regulation and Dynamic Perturbation](assets/003-boredom-hero-v2.jpg)
 
 ---
