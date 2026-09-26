@@ -4,6 +4,7 @@ from benchmarks.suites.telemetry.intervention_evaluator import (
     rate_participant_turn,
 )
 from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import (
+    participant_messages,
     resolve_simulator_api_base,
     resolve_simulator_model,
 )
@@ -61,3 +62,14 @@ def test_v51_simulator_translates_provider_qualified_model():
         resolve_simulator_model({"AAA_LLM_MODEL": "openrouter_router/google/gemini-3.8-flash"})
         == "google/gemini-3.8-flash"
     )
+
+
+def test_v51_participant_request_ends_with_user_instruction():
+    messages = participant_messages(
+        [
+            {"role": "user", "content": "proposal"},
+            {"role": "assistant", "content": "response"},
+        ]
+    )
+
+    assert messages[-1]["role"] == "user"

@@ -55,13 +55,23 @@ def resolve_simulator_model(environment: dict[str, str] | None = None) -> str:
     return configured.removeprefix("openrouter_router/")
 
 
+def participant_messages(transcript: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Build a provider-valid request that asks for the participant's next turn."""
+
+    return [
+        {"role": "system", "content": PARTICIPANT_SYSTEM},
+        *transcript,
+        {"role": "user", "content": "Write the engineering lead's next reply now."},
+    ]
+
+
 def _simulated_participant(transcript: list[dict[str, str]], *, model: str, api_key: str, api_base: str) -> str:
     response = httpx.post(
         f"{api_base.rstrip('/')}/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         json={
             "model": model,
-            "messages": [{"role": "system", "content": PARTICIPANT_SYSTEM}, *transcript],
+            "messages": participant_messages(transcript),
             "temperature": 0.2,
             "max_tokens": 180,
         },

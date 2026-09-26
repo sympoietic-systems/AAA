@@ -198,3 +198,4 @@ B51|2026-09-25|new backend session code missed canonical Ruff format; format bef
 B52|2026-09-25|canvas extraction retained whitespace-only lines; staged diff check caught them before commit|V30
 B53|2026-09-25|adaptive participant simulator reused public `AAA_API_BASE` and sent model requests to a non-LLM route|V51
 B54|2026-09-25|participant simulator forwarded AAA's provider-qualified model alias to the OpenRouter wire API|V51
+B55|2026-09-25|participant simulator sent a chat completion whose final message had assistant role|V51
