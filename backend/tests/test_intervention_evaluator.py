@@ -5,6 +5,7 @@ from benchmarks.suites.telemetry.intervention_evaluator import (
 )
 from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import (
     participant_messages,
+    participant_request_body,
     resolve_simulator_api_base,
     resolve_simulator_model,
 )
@@ -73,3 +74,10 @@ def test_v51_participant_request_ends_with_user_instruction():
     )
 
     assert messages[-1]["role"] == "user"
+
+
+def test_v51_participant_request_excludes_reasoning_from_budget():
+    body = participant_request_body([], "example/model")
+
+    assert body["reasoning"] == {"exclude": True}
+    assert body["include_reasoning"] is False

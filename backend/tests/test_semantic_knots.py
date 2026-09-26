@@ -110,9 +110,9 @@ async def test_semantic_knot_compaction_trigger():
     }
 
     # Mock embedder
-    mock_app_state.embedder.embed_text.return_value = {
-        "embedding": np.ones(384, dtype="float32"),
-        "model": "test-embed-model",
+    mock_app_state.embedder.process.return_value = {
+        "embedding": np.ones(384, dtype="float32").tobytes(),
+        "embedding_model": "test-embed-model",
     }
 
     # Mock scorer
@@ -154,4 +154,7 @@ async def test_semantic_knot_compaction_trigger():
     expected_text = "\n".join(expected_text_lines)
 
     mock_app_state.background_engine.run.assert_called_once_with("semantic_knot", {"text": expected_text})
+    mock_app_state.embedder.process.assert_awaited_once_with(
+        {"content": "Distilled conceptual insight about symbiotic feedback loops."}
+    )
     mock_app_state.semantic_knot_repo.insert_knot.assert_called_once()

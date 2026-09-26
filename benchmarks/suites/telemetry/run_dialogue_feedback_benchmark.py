@@ -65,16 +65,22 @@ def participant_messages(transcript: list[dict[str, str]]) -> list[dict[str, str
     ]
 
 
+def participant_request_body(transcript: list[dict[str, str]], model: str) -> dict[str, Any]:
+    return {
+        "model": model,
+        "messages": participant_messages(transcript),
+        "temperature": 0.2,
+        "max_tokens": 180,
+        "reasoning": {"exclude": True},
+        "include_reasoning": False,
+    }
+
+
 def _simulated_participant(transcript: list[dict[str, str]], *, model: str, api_key: str, api_base: str) -> str:
     response = httpx.post(
         f"{api_base.rstrip('/')}/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json={
-            "model": model,
-            "messages": participant_messages(transcript),
-            "temperature": 0.2,
-            "max_tokens": 180,
-        },
+        json=participant_request_body(transcript, model),
         timeout=90.0,
     )
     response.raise_for_status()
@@ -118,7 +124,7 @@ def _run_conversation(
             json={
                 "conversation_id": conversation_id,
                 "user_message_id": message_data["user_message_id"],
-                "max_tokens": 450,
+                "max_tokens": 900,
             },
         )
         generation_response.raise_for_status()
@@ -153,7 +159,14 @@ def _run_conversation(
 
 
 def _mean_metric(turns: list[dict[str, Any]], key: str) -> float:
-    values = [float(turn["metrics"][key]) for turn in turns if turn.get("metrics", {}).get(key) is not None]
+    values = []
+    for turn in turns:
+        metrics = turn.get("metrics", {})
+        value = metrics.get(key)
+        if value is None and key == "collapse_pressure":
+            value = metrics.get("boringness")
+        if value is not None:
+            values.append(float(value))
     return round(mean(values), 4) if values else 0.0
 
 
@@ -298,7 +311,12 @@ def main() -> None:
         "turns_per_conversation": args.turns,
         "arms": ["legacy", "progressive"],
         "ablation_dimension": "intervention selection policy",
-        "participant": {"type": "adaptive_llm_simulation", "model": simulator_model, "temperature": 0.2},
+        "participant": {
+            "type": "adaptive_llm_simulation",
+            "model": simulator_model,
+            "temperature": 0.2,
+            "reasoning_excluded": True,
+        },
         "seed_available": False,
         "arm_order": [{"policy": run["policy"], "repetition": run["repetition"]} for run in runs],
     }

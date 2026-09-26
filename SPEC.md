@@ -105,6 +105,7 @@ V48: calibration winner requires no regression in DRR/Paskian health beyond 0.02
 V49: receipt ordering explicit: human-turn metrics → intervention/control request → outbound request → agent-turn metrics → next-turn outcomes; ⊥ relabel post-response metric as trigger.
 V50: controller state reconstructed from sediment or bounded by active conversation lifecycle; ⊥ unbounded process-local conversation maps.
 V51: benchmark model calls resolve from LLM-provider configuration; ⊥ reuse public AAA application URL as an OpenAI-compatible endpoint.
+V52: background semantic-knot embedding uses the registered `EmbedderModule.process` contract; integration test ⊥ mock-only legacy method.
 
 ## §T
 
@@ -199,3 +200,5 @@ B52|2026-09-25|canvas extraction retained whitespace-only lines; staged diff che
 B53|2026-09-25|adaptive participant simulator reused public `AAA_API_BASE` and sent model requests to a non-LLM route|V51
 B54|2026-09-25|participant simulator forwarded AAA's provider-qualified model alias to the OpenRouter wire API|V51
 B55|2026-09-25|participant simulator sent a chat completion whose final message had assistant role|V51
+B56|2026-09-25|participant simulator reasoning consumed its response budget and emitted clipped prompt fragments|V46,V51
+B57|2026-09-25|semantic-knot service called removed mock-only `EmbedderModule.embed_text`; live compaction failed|V17,V52

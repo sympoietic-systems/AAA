@@ -63,9 +63,9 @@ class SemanticKnotService:
                     logger.warning("Distillation returned empty content for semantic knot")
                     return
 
-                emb_res = await embedder.embed_text(concept_text)
-                embedding_bytes = emb_res["embedding"].tobytes()
-                embedding_model = emb_res["model"]
+                emb_res = await embedder.process({"content": concept_text})
+                embedding_bytes = emb_res["embedding"]
+                embedding_model = emb_res["embedding_model"]
 
                 scorer = CompositeStructuralScorer(llm_provider=structural_provider)
                 sig_vec = await scorer.score_async(concept_text)
