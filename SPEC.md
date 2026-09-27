@@ -125,6 +125,7 @@ V60: intervention selector includes `abstain`; transition receipt names actual p
 V61: unresolved-issue hypothesis tested active-memory vs write-only sham vs current selector; active arm changes memory read only.
 V62: controller promotion requires ≥10 paired valid repetitions/scenario, counterbalanced order, positive state-revision effect, V48 health bounds, no disagreement-depth loss.
 V63: annotation belief writeback uses the concrete repository contract for node creation, mass, and events; contract-shaped test required.
+V64: lexical state/progress evaluators account for explicit negation; refusing a test, measure, or comparison cannot count as issue advancement.
 
 ## §T
 
@@ -164,7 +165,7 @@ T32|x|complete participant cap removal; return structured completion receipt; ad
 T33|x|replace aliased trigger/response snapshots; implement effective-control observability + temporal receipt tests|V43,V47,V49,V55,V57,I.benchmark
 T34|x|isolate temp DB, controller, conversation, consolidation per arm/repetition; assert production DB untouched|V42,V50,V56,I.benchmark
 T35|x|run 2-pair × 8-turn validity probe; publish completion/format/exclusion audit; ⊥ policy ranking unless V54 passes|V53,V54,V56,I.benchmark
-T36|.|build labeled dead-loop/productive-focus/spiral/disagreement corpus; validate boringness conjunction + state-revision evaluator|V44,V46,V58,V59,I.benchmark
+T36|x|build labeled dead-loop/productive-focus/spiral/disagreement corpus; validate boringness conjunction + state-revision evaluator|V44,V46,V58,V59,I.benchmark
 T37|.|add bounded unresolved-issue state, `abstain`, predicate receipts, mode reachability; implement active/sham/current arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
 T38|.|run counterbalanced ≥10-pair multi-scenario ablation; exclude invalid turns; report dispersion, state revision, disagreement depth, health|V47,V48,V53,V54,V56,V59,V61,V62,I.benchmark
 T39|.|publish Report 020 + ADR amendment; reclassify Report 019 as invalid causal ranking while preserving receipts|V48,V53,V54,V55,V56,V57,V62,I.benchmark
@@ -242,3 +243,4 @@ B66|2026-09-26|control coverage treated nonempty request/applied mappings as pro
 B67|2026-09-26|live arms shared runtime DB + background consolidation state|V56
 B68|2026-09-26|Report 019 attributed ladder resets to uptake despite pressure/streak selector predicates|V60
 B69|2026-09-27|scar-fold belief writeback retained obsolete repository argument, mass, and event names; live benchmark logged TypeError and dropped events|V63
+B70|2026-09-27|boringness evaluator counted “do not want a test” as issue advancement and missed a near-duplicate at the threshold edge|V58,V64

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "dead-loop-1",
+    "category": "dead_loop",
+    "history": ["Wipe every cache and restart on every 429.", "Wipe every cache and restart on every 429."],
+    "participant_turn": "Wipe every cache and restart on every 429 again.",
+    "unresolved_issue": "Whether restart resolves an upstream rate limit.",
+    "expected": {"predictable_move": true, "participant_state_revision": false, "issue_advanced": false, "boring": true}
+  },
+  {
+    "id": "dead-loop-2",
+    "category": "dead_loop",
+    "history": ["Just do the restart; I do not want a test.", "Just do the restart; I do not want a test."],
+    "participant_turn": "Same answer: just do the restart; I do not want a test.",
+    "unresolved_issue": "The restart may amplify the retry burst.",
+    "expected": {"predictable_move": true, "participant_state_revision": false, "issue_advanced": false, "boring": true}
+  },
+  {
+    "id": "dead-loop-3",
+    "category": "dead_loop",
+    "history": ["The policy stays unchanged: purge state after throttling.", "The policy stays unchanged: purge state after throttling."],
+    "participant_turn": "The policy is still unchanged: purge state after throttling.",
+    "unresolved_issue": "State loss prevents adaptive backoff.",
+    "expected": {"predictable_move": true, "participant_state_revision": false, "issue_advanced": false, "boring": true}
+  },
+  {
+    "id": "productive-focus-1",
+    "category": "productive_focus",
+    "history": ["The p99 retry delay is our decision variable.", "The p99 retry delay is our decision variable after jitter."],
+    "participant_turn": "The p99 retry delay remains the decision variable; next run measure it after jitter.",
+    "unresolved_issue": "Choose a safe retry delay.",
+    "expected": {"predictable_move": true, "participant_state_revision": false, "issue_advanced": true, "boring": false}
+  },
+  {
+    "id": "productive-focus-2",
+    "category": "productive_focus",
+    "history": ["Compare bounded backoff with restart.", "Compare bounded backoff with restart under the same load."],
+    "participant_turn": "Compare bounded backoff with restart under the same load and add a recovery-time threshold.",
+    "unresolved_issue": "Select a recovery policy.",
+    "expected": {"predictable_move": true, "participant_state_revision": false, "issue_advanced": true, "boring": false}
+  },
+  {
+    "id": "productive-focus-3",
+    "category": "productive_focus",
+    "history": ["Instrument cache hit rate before deciding.", "Instrument cache hit rate and retry volume before deciding."],
+    "participant_turn": "Instrument cache hit rate and retry volume again, then test the failure threshold.",
+    "unresolved_issue": "Determine whether cache retention is safe.",
+    "expected": {"predictable_move": true, "participant_state_revision": false, "issue_advanced": true, "boring": false}
+  },
+  {
+    "id": "spiral-return-1",
+    "category": "spiral_return",
+    "history": ["Cache invalidation caused stale reads.", "We moved on to retry budgets."],
+    "participant_turn": "Returning to cache invalidation: the new eviction trace changes my view, so let's test retained state.",
+    "unresolved_issue": "Whether retained cache state is coherent.",
+    "expected": {"predictable_move": false, "participant_state_revision": true, "issue_advanced": true, "boring": false}
+  },
+  {
+    "id": "spiral-return-2",
+    "category": "spiral_return",
+    "history": ["A circuit breaker may hide recovery.", "We examined queue pressure instead."],
+    "participant_turn": "Fair point; the queue trace gives a counterexample, so I now agree we should prototype the breaker.",
+    "unresolved_issue": "Whether the circuit breaker improves recovery.",
+    "expected": {"predictable_move": false, "participant_state_revision": true, "issue_advanced": true, "boring": false}
+  },
+  {
+    "id": "spiral-return-3",
+    "category": "spiral_return",
+    "history": ["Restarts are deterministic.", "We examined upstream quotas."],
+    "participant_turn": "The quota evidence changes my view: preserve the cache rather than restart, and compare both policies.",
+    "unresolved_issue": "Whether deterministic restart improves resilience.",
+    "expected": {"predictable_move": false, "participant_state_revision": true, "issue_advanced": true, "boring": false}
+  },
+  {
+    "id": "disagreement-1",
+    "category": "legitimate_disagreement",
+    "history": ["Warm-start traces support retaining cache.", "The current sample contains only warm starts."],
+    "participant_turn": "I still disagree because the trace samples only warm starts; add cold-start data before choosing.",
+    "unresolved_issue": "Whether cache retention works for cold starts.",
+    "expected": {"predictable_move": false, "participant_state_revision": false, "issue_advanced": true, "boring": false}
+  },
+  {
+    "id": "disagreement-2",
+    "category": "legitimate_disagreement",
+    "history": ["A five-second threshold appears safe.", "The trace omits regional failover."],
+    "participant_turn": "I still reject five seconds because regional failover is absent; measure that path first.",
+    "unresolved_issue": "Choose a safe threshold during failover.",
+    "expected": {"predictable_move": false, "participant_state_revision": false, "issue_advanced": true, "boring": false}
+  },
+  {
+    "id": "disagreement-3",
+    "category": "legitimate_disagreement",
+    "history": ["Retry jitter should reduce bursts.", "The evidence covers one traffic shape."],
+    "participant_turn": "I remain unconvinced by one traffic shape; run the experiment against synchronized clients.",
+    "unresolved_issue": "Whether jitter handles synchronized retries.",
+    "expected": {"predictable_move": false, "participant_state_revision": false, "issue_advanced": true, "boring": false}
+  }
+]
