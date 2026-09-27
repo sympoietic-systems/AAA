@@ -70,7 +70,6 @@ def participant_request_body(transcript: list[dict[str, str]], model: str) -> di
         "model": model,
         "messages": participant_messages(transcript),
         "temperature": 0.2,
-        "max_tokens": 180,
         "reasoning": {"exclude": True},
         "include_reasoning": False,
     }
