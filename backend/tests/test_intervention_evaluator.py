@@ -50,6 +50,22 @@ def test_v49_receipt_keeps_trigger_and_response_metrics_distinct():
     assert receipt.outcome_score is not None and receipt.outcome_score > 0.0
 
 
+def test_v55_missing_post_response_sample_is_explicit_null():
+    generated = [
+        {
+            "turn": 1,
+            "user": "Repeat the premise.",
+            "metrics": {"collapse_pressure": 0.81},
+            "homeostatic": {},
+        }
+    ]
+
+    receipt = build_causal_receipts(generated)[0]
+
+    assert receipt.trigger_metrics == {"collapse_pressure": 0.81}
+    assert receipt.response_metrics is None
+
+
 def test_v48_bootstrap_ci_is_deterministic_and_contains_mean():
     center, low, high = bootstrap_mean_ci([0.2, 0.4, 0.8], samples=1000)
 
@@ -170,3 +186,23 @@ def test_v54_participant_validity_gate_blocks_policy_ranking():
     progressive = {**run, "policy": "progressive"}
 
     assert _scorecard([run, progressive])["decision"] == "invalid_participant_completions"
+
+
+def test_v57_observability_requires_every_controller_control_accounted():
+    from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import _control_receipt_observable
+
+    requested = {"temperature": 0.7, "presence_penalty": 0.2}
+    turn = {
+        "homeostatic": {"requested_controls": requested},
+        "applied_controls": {
+            "controller_requested": requested,
+            "forwarded": {"temperature": 0.7},
+            "unsupported": [],
+            "not_forwarded": ["presence_penalty"],
+            "status": "forwarded",
+        },
+    }
+
+    assert _control_receipt_observable(turn) is True
+    turn["applied_controls"]["not_forwarded"] = []
+    assert _control_receipt_observable(turn) is False

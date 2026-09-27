@@ -43,6 +43,14 @@ async def test_v43_llm_client_forwards_critical_reasoning_controls():
             "reasoning_effort": "high",
             "max_completion_tokens": 2400,
         },
+        "requested_controls": {
+            "temperature": 0.88,
+            "presence_penalty": 0.3,
+            "frequency_penalty": 0.2,
+            "max_tokens": 2400,
+            "reasoning_effort": "high",
+            "thinking_override": True,
+        },
     }
 
     result = await module.process(
@@ -57,4 +65,6 @@ async def test_v43_llm_client_forwards_critical_reasoning_controls():
     assert provider.params["reasoning_effort"] == "high"
     assert provider.params["max_tokens"] == 2400
     assert result["applied_controls"]["status"] == "forwarded"
+    assert result["applied_controls"]["controller_requested"] == recommendations["requested_controls"]
+    assert result["applied_controls"]["not_forwarded"] == []
     assert recommendations["applied_controls"]["status"] == "forwarded"

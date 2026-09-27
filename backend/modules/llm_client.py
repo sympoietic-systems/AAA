@@ -73,9 +73,19 @@ class LLMClientModule(ProcessingModule):
         if result.get("finish_reason"):
             payload["finish_reason"] = result["finish_reason"]
         if result.get("generation_controls"):
-            payload["applied_controls"] = result["generation_controls"]
+            generation_controls = dict(result["generation_controls"])
             if recs:
-                recs["applied_controls"] = result["generation_controls"]
+                controller_requested = recs.get("requested_controls")
+                if isinstance(controller_requested, dict):
+                    forwarded = generation_controls.get("forwarded")
+                    unsupported = generation_controls.get("unsupported")
+                    accounted = set(forwarded) if isinstance(forwarded, dict) else set()
+                    if isinstance(unsupported, list):
+                        accounted.update(str(item) for item in unsupported)
+                    generation_controls["controller_requested"] = dict(controller_requested)
+                    generation_controls["not_forwarded"] = sorted(set(controller_requested) - accounted)
+                recs["applied_controls"] = generation_controls
+            payload["applied_controls"] = generation_controls
         return payload
 
     @property

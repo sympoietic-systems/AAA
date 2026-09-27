@@ -264,6 +264,19 @@ def _participant_validity(turns: list[dict[str, Any]], expected_completions: int
     }
 
 
+def _control_receipt_observable(turn: dict[str, Any]) -> bool:
+    requested = (turn.get("homeostatic") or {}).get("requested_controls") or {}
+    receipt = turn.get("applied_controls") or {}
+    if not requested or receipt.get("controller_requested") != requested:
+        return False
+    accounted = {
+        *dict(receipt.get("forwarded") or {}),
+        *(str(item) for item in receipt.get("unsupported") or ()),
+        *(str(item) for item in receipt.get("not_forwarded") or ()),
+    }
+    return bool(receipt.get("status")) and set(requested).issubset(accounted)
+
+
 def _summarize_run(
     policy: str, repetition: int, turns: list[dict[str, Any]], *, expected_completions: int | None = None
 ) -> dict[str, Any]:
@@ -274,7 +287,7 @@ def _summarize_run(
         outcome.task_progress for receipt in receipts for outcome in receipt.next_turn_outcomes if outcome.valid
     ]
     modes = Counter(receipt.intervention.get("mode", "none") for receipt in receipts)
-    observable = [bool(receipt.requested_controls) and bool(receipt.applied_controls) for receipt in receipts]
+    observable = [_control_receipt_observable(turn) for turn in turns]
     return {
         "policy": policy,
         "repetition": repetition,

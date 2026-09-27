@@ -52,7 +52,7 @@ class CausalInterventionReceipt:
     intervention: dict[str, Any]
     requested_controls: dict[str, Any]
     applied_controls: dict[str, Any]
-    response_metrics: dict[str, Any]
+    response_metrics: dict[str, Any] | None
     next_turn_outcomes: tuple[OutcomeRating, ...]
     model: str | None = None
     provider: str | None = None
@@ -154,7 +154,7 @@ def build_causal_receipts(
                 intervention=dict(intervention),
                 requested_controls=dict(requested),
                 applied_controls=dict(applied),
-                response_metrics=dict(response.get("metrics") or {}),
+                response_metrics=dict(response.get("metrics") or {}) if response_turns is not None else None,
                 next_turn_outcomes=next_outcomes,
                 model=generated.get("model") or model,
                 provider=generated.get("provider") or provider,
