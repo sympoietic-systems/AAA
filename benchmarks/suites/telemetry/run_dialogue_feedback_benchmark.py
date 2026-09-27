@@ -7,6 +7,9 @@ import json
 import os
 import random
 import re
+import subprocess
+import sys
+import tempfile
 import time
 from collections import Counter
 from dataclasses import asdict, dataclass
@@ -230,6 +233,132 @@ def _run_conversation(
     return turns
 
 
+def _assert_isolated_path(path: Path, isolation_root: Path) -> Path:
+    """Reject any benchmark database or receipt path outside its temporary root."""
+
+    resolved = path.resolve()
+    root = isolation_root.resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError(f"benchmark isolation path escapes temporary root: {resolved}")
+    return resolved
+
+
+def _worker_environment(database_path: Path) -> dict[str, str]:
+    """Build the environment before importing the backend in an isolated worker."""
+
+    environment = dict(os.environ)
+    environment.update(
+        {
+            "AAA_DB_PATH": str(database_path.resolve()),
+            "AAA_RUN_MIGRATIONS": "true",
+            "AAA_DAEMON_ENABLED": "false",
+        }
+    )
+    return environment
+
+
+def _database_fingerprint(path: Path) -> dict[str, tuple[int, int]]:
+    """Capture SQLite files cheaply enough to prove a benchmark did not mutate them."""
+
+    fingerprint: dict[str, tuple[int, int]] = {}
+    for candidate in (path, Path(f"{path}-wal"), Path(f"{path}-shm")):
+        if candidate.exists():
+            stat = candidate.stat()
+            fingerprint[str(candidate.resolve())] = (stat.st_size, stat.st_mtime_ns)
+    return fingerprint
+
+
+def _production_database_paths() -> tuple[Path, ...]:
+    paths = {PROJECT_ROOT / "backend" / "data" / "aaa.db"}
+    configured = os.environ.get("AAA_DB_PATH", "").strip()
+    if configured:
+        path = Path(configured)
+        paths.add(path if path.is_absolute() else PROJECT_ROOT / "backend" / path)
+    return tuple(sorted((path.resolve() for path in paths), key=str))
+
+
+def _run_isolated_arm(
+    *,
+    policy: str,
+    repetition: int,
+    turn_count: int,
+    simulator_model: str,
+    api_base: str,
+    isolation_root: Path,
+) -> dict[str, Any]:
+    """Run exactly one arm in a fresh interpreter and SQLite database."""
+
+    arm_root = _assert_isolated_path(isolation_root / f"r{repetition}_{policy}", isolation_root)
+    arm_root.mkdir(parents=True, exist_ok=False)
+    database_path = _assert_isolated_path(arm_root / "benchmark.db", isolation_root)
+    output_path = _assert_isolated_path(arm_root / "receipt.json", isolation_root)
+    command = [
+        sys.executable,
+        "-m",
+        "benchmarks.suites.telemetry.run_dialogue_feedback_benchmark",
+        "--worker-policy",
+        policy,
+        "--worker-repetition",
+        str(repetition),
+        "--worker-turns",
+        str(turn_count),
+        "--worker-model",
+        simulator_model,
+        "--worker-api-base",
+        api_base,
+        "--worker-output",
+        str(output_path),
+    ]
+    subprocess.run(
+        command,
+        cwd=PROJECT_ROOT,
+        env=_worker_environment(database_path),
+        check=True,
+    )
+    return json.loads(output_path.read_text(encoding="utf-8"))
+
+
+def _run_worker(args: argparse.Namespace) -> None:
+    """Worker entry point; backend imports occur only after DB isolation is configured."""
+
+    if args.worker_policy not in {"legacy", "progressive"}:
+        raise ValueError(f"unsupported worker policy: {args.worker_policy}")
+    if not args.worker_output or not args.worker_model or not args.worker_api_base:
+        raise ValueError("worker output, model, and API base are required")
+    database_path = Path(os.environ.get("AAA_DB_PATH", ""))
+    if not database_path.is_absolute():
+        raise RuntimeError("isolated worker requires an absolute AAA_DB_PATH")
+
+    load_dotenv(PROJECT_ROOT / ".env")
+    api_key = os.environ.get("AAA_LLM_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("AAA_LLM_API_KEY is required for the adaptive live benchmark")
+
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    with TestClient(app) as client:
+        password = os.environ.get("AAA_PASSWORD", "").strip()
+        if password:
+            client.headers.update({"Authorization": f"Bearer {password}"})
+        turns = _run_conversation(
+            client,
+            policy=args.worker_policy,
+            turn_count=args.worker_turns,
+            simulator_model=args.worker_model,
+            api_key=api_key,
+            api_base=args.worker_api_base,
+        )
+    result = _summarize_run(
+        args.worker_policy,
+        args.worker_repetition,
+        turns,
+        expected_completions=args.worker_turns - 1,
+    )
+    Path(args.worker_output).write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+
+
 def _mean_metric(turns: list[dict[str, Any]], key: str) -> float:
     values = []
     for turn in turns:
@@ -389,7 +518,16 @@ def main() -> None:
     parser.add_argument("--turns", type=int, default=8)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--rescore", type=Path)
+    parser.add_argument("--worker-policy", help=argparse.SUPPRESS)
+    parser.add_argument("--worker-repetition", type=int, default=0, help=argparse.SUPPRESS)
+    parser.add_argument("--worker-turns", type=int, default=0, help=argparse.SUPPRESS)
+    parser.add_argument("--worker-model", help=argparse.SUPPRESS)
+    parser.add_argument("--worker-api-base", help=argparse.SUPPRESS)
+    parser.add_argument("--worker-output", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.worker_policy:
+        _run_worker(args)
+        return
     if args.rescore:
         runs_path = args.rescore / "telemetry_receipts.json"
         saved_runs = json.loads(runs_path.read_text(encoding="utf-8"))
@@ -413,30 +551,30 @@ def main() -> None:
     out_dir = args.out or PROJECT_ROOT / "benchmarks" / "runs" / "telemetry" / f"dialogue_feedback_{timestamp}"
     out_dir.mkdir(parents=True, exist_ok=False)
 
-    from fastapi.testclient import TestClient
-
-    from backend.main import app
-
     runs: list[dict[str, Any]] = []
     order_rng = random.Random(1729)
-    with TestClient(app) as client:
-        password = os.environ.get("AAA_PASSWORD", "").strip()
-        if password:
-            client.headers.update({"Authorization": f"Bearer {password}"})
+    production_paths = _production_database_paths()
+    production_before = {str(path): _database_fingerprint(path) for path in production_paths}
+    with tempfile.TemporaryDirectory(prefix="isolated_", dir=out_dir) as temporary:
+        isolation_root = Path(temporary)
         for repetition in range(1, args.repetitions + 1):
             policies = ["legacy", "progressive"]
             order_rng.shuffle(policies)
             for policy in policies:
                 print(f"repetition={repetition} policy={policy} turns={args.turns}", flush=True)
-                turns = _run_conversation(
-                    client,
-                    policy=policy,
-                    turn_count=args.turns,
-                    simulator_model=simulator_model,
-                    api_key=api_key,
-                    api_base=api_base,
+                runs.append(
+                    _run_isolated_arm(
+                        policy=policy,
+                        repetition=repetition,
+                        turn_count=args.turns,
+                        simulator_model=simulator_model,
+                        api_base=api_base,
+                        isolation_root=isolation_root,
+                    )
                 )
-                runs.append(_summarize_run(policy, repetition, turns, expected_completions=args.turns - 1))
+    production_after = {str(path): _database_fingerprint(path) for path in production_paths}
+    if production_after != production_before:
+        raise RuntimeError("benchmark modified a production database")
 
     metadata = {
         "benchmark": "dialogue_feedback_control",
@@ -452,6 +590,11 @@ def main() -> None:
             "reasoning_excluded": True,
         },
         "seed_available": False,
+        "isolation": {
+            "worker_process_per_arm": True,
+            "temporary_database_per_arm": True,
+            "production_database_unchanged": True,
+        },
         "arm_order": [{"policy": run["policy"], "repetition": run["repetition"]} for run in runs],
     }
     scorecard = _scorecard(runs)

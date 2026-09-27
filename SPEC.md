@@ -161,7 +161,7 @@ T30|x|run focused/full offline + repeated live conversation benchmarks; compare 
 T31|x|run full ruff/format/mypy/pytest + frontend gates; clean ephemeral artifacts; reconcile article/report claims|V18,V30,V42,V43,V44,V45,V46,V47,V48,I.quality
 T32|x|complete participant cap removal; return structured completion receipt; add invalid-turn filter + request/receipt tests|V46,V51,V53,V54,I.benchmark
 T33|x|replace aliased trigger/response snapshots; implement effective-control observability + temporal receipt tests|V43,V47,V49,V55,V57,I.benchmark
-T34|.|isolate temp DB, controller, conversation, consolidation per arm/repetition; assert production DB untouched|V42,V50,V56,I.benchmark
+T34|x|isolate temp DB, controller, conversation, consolidation per arm/repetition; assert production DB untouched|V42,V50,V56,I.benchmark
 T35|.|run 2-pair × 8-turn validity probe; publish completion/format/exclusion audit; ⊥ policy ranking unless V54 passes|V53,V54,V56,I.benchmark
 T36|.|build labeled dead-loop/productive-focus/spiral/disagreement corpus; validate boringness conjunction + state-revision evaluator|V44,V46,V58,V59,I.benchmark
 T37|.|add bounded unresolved-issue state, `abstain`, predicate receipts, mode reachability; implement active/sham/current arms|V45,V50,V58,V60,V61,I.internal,I.benchmark

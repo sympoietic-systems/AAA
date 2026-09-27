@@ -1,18 +1,42 @@
+from pathlib import Path
+
+import pytest
+
 from benchmarks.suites.telemetry.intervention_evaluator import (
     bootstrap_mean_ci,
     build_causal_receipts,
     rate_participant_turn,
 )
 from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import (
+    _assert_isolated_path,
     _participant_validity,
     _scorecard,
     _summarize_run,
+    _worker_environment,
     parse_participant_completion,
     participant_messages,
     participant_request_body,
     resolve_simulator_api_base,
     resolve_simulator_model,
 )
+
+
+def test_v56_worker_environment_uses_fresh_database(tmp_path: Path):
+    database_path = tmp_path / "arm" / "benchmark.db"
+
+    environment = _worker_environment(database_path)
+
+    assert environment["AAA_DB_PATH"] == str(database_path.resolve())
+    assert environment["AAA_RUN_MIGRATIONS"] == "true"
+    assert environment["AAA_DAEMON_ENABLED"] == "false"
+
+
+def test_v56_isolation_paths_cannot_escape_temporary_root(tmp_path: Path):
+    inside = tmp_path / "arm" / "benchmark.db"
+
+    assert _assert_isolated_path(inside, tmp_path) == inside.resolve()
+    with pytest.raises(ValueError, match="escapes temporary root"):
+        _assert_isolated_path(tmp_path.parent / "production.db", tmp_path)
 
 
 def test_v46_outcome_requires_uptake_and_task_progress():
