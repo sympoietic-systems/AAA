@@ -393,6 +393,71 @@ def _participant_validity(turns: list[dict[str, Any]], expected_completions: int
     }
 
 
+def _completion_audit(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate participant completion validity without ranking benchmark arms."""
+
+    completions = [
+        completion
+        for run in runs
+        for turn in run.get("turns", [])
+        if (completion := turn.get("next_participant_completion")) is not None
+    ]
+    exclusions = Counter(reason for completion in completions for reason in completion.get("exclusion_reasons", []))
+    expected = sum(int(run.get("participant_validity", {}).get("expected_completions", 0)) for run in runs)
+    stop_count = sum(completion.get("finish_reason") == "stop" for completion in completions)
+    format_count = sum(1 <= int(completion.get("sentence_count", 0)) <= 3 for completion in completions)
+    empty_count = sum(not str(completion.get("content", "")).strip() for completion in completions)
+    word_counts = [int(completion.get("word_count", 0)) for completion in completions]
+    run_gates = [
+        {
+            "policy": run["policy"],
+            "repetition": run["repetition"],
+            **run.get("participant_validity", {}),
+        }
+        for run in runs
+    ]
+    apparatus_turns = [turn for run in runs for turn in run.get("turns", [])]
+    apparatus_truncated = sum(bool(turn.get("truncated")) for turn in apparatus_turns)
+    passed = bool(run_gates) and all(bool(gate.get("passed")) for gate in run_gates)
+    return {
+        "purpose": "participant validity audit; policy effects require a separately powered benchmark",
+        "expected_completions": expected,
+        "observed_completions": len(completions),
+        "valid_completions": sum(bool(completion.get("valid")) for completion in completions),
+        "finish_reason_counts": dict(
+            sorted(Counter(str(completion.get("finish_reason") or "null") for completion in completions).items())
+        ),
+        "native_finish_reason_counts": dict(
+            sorted(Counter(str(completion.get("native_finish_reason") or "null") for completion in completions).items())
+        ),
+        "sentence_count_distribution": dict(
+            sorted(Counter(int(completion.get("sentence_count", 0)) for completion in completions).items())
+        ),
+        "word_count": {
+            "min": min(word_counts) if word_counts else None,
+            "mean": round(mean(word_counts), 3) if word_counts else None,
+            "max": max(word_counts) if word_counts else None,
+        },
+        "exclusion_reason_counts": dict(sorted(exclusions.items())),
+        "gate": {
+            "stop_rate": round(stop_count / max(1, expected), 4),
+            "format_rate": round(format_count / max(1, expected), 4),
+            "empty_count": empty_count,
+            "passed": passed,
+        },
+        "run_gates": run_gates,
+        "policy_ranking_allowed": passed,
+        "apparatus_completion_context": {
+            "turn_count": len(apparatus_turns),
+            "truncated_count": apparatus_truncated,
+            "finish_reason_counts": dict(
+                sorted(Counter(str(turn.get("finish_reason") or "null") for turn in apparatus_turns).items())
+            ),
+            "interpretation": "apparatus truncation is separate from participant validity and may confound outcomes",
+        },
+    }
+
+
 def _control_receipt_observable(turn: dict[str, Any]) -> bool:
     requested = (turn.get("homeostatic") or {}).get("requested_controls") or {}
     receipt = turn.get("applied_controls") or {}
@@ -536,6 +601,9 @@ def main() -> None:
         (args.rescore / "scorecard.json").write_text(
             json.dumps(_scorecard(rescored), indent=2) + "\n", encoding="utf-8"
         )
+        (args.rescore / "completion_audit.json").write_text(
+            json.dumps(_completion_audit(rescored), indent=2) + "\n", encoding="utf-8"
+        )
         print(json.dumps({"rescored": str(args.rescore)}, indent=2))
         return
     if args.repetitions < 2 or args.turns < 3:
@@ -601,6 +669,9 @@ def main() -> None:
     (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     (out_dir / "telemetry_receipts.json").write_text(json.dumps(runs, indent=2) + "\n", encoding="utf-8")
     (out_dir / "scorecard.json").write_text(json.dumps(scorecard, indent=2) + "\n", encoding="utf-8")
+    (out_dir / "completion_audit.json").write_text(
+        json.dumps(_completion_audit(runs), indent=2) + "\n", encoding="utf-8"
+    )
     print(json.dumps({"out_dir": str(out_dir), "decision": scorecard["decision"]}, indent=2))
 
 

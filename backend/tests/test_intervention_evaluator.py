@@ -9,6 +9,7 @@ from benchmarks.suites.telemetry.intervention_evaluator import (
 )
 from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import (
     _assert_isolated_path,
+    _completion_audit,
     _participant_validity,
     _scorecard,
     _summarize_run,
@@ -37,6 +38,39 @@ def test_v56_isolation_paths_cannot_escape_temporary_root(tmp_path: Path):
     assert _assert_isolated_path(inside, tmp_path) == inside.resolve()
     with pytest.raises(ValueError, match="escapes temporary root"):
         _assert_isolated_path(tmp_path.parent / "production.db", tmp_path)
+
+
+def test_v54_completion_audit_separates_participant_and_apparatus_truncation():
+    completion = {
+        "content": "Complete response.",
+        "finish_reason": "stop",
+        "native_finish_reason": "STOP",
+        "sentence_count": 1,
+        "word_count": 2,
+        "valid": True,
+        "exclusion_reasons": [],
+    }
+    runs = [
+        {
+            "policy": "legacy",
+            "repetition": 1,
+            "participant_validity": {"expected_completions": 1, "passed": True},
+            "turns": [
+                {
+                    "finish_reason": "length",
+                    "truncated": True,
+                    "next_participant_completion": completion,
+                }
+            ],
+        }
+    ]
+
+    audit = _completion_audit(runs)
+
+    assert audit["gate"]["passed"] is True
+    assert audit["policy_ranking_allowed"] is True
+    assert audit["exclusion_reason_counts"] == {}
+    assert audit["apparatus_completion_context"]["truncated_count"] == 1
 
 
 def test_v46_outcome_requires_uptake_and_task_progress():
