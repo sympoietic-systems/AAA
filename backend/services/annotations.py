@@ -4,6 +4,7 @@ Extracted from services/chat.py to keep ChatService focused on
 pipeline orchestration rather than annotation tag manipulation.
 """
 
+import json
 import logging
 import re
 import uuid
@@ -164,28 +165,38 @@ def _process_scar_monologue_belief_writeback(
     beliefs = belief_repo.list_beliefs(agent_id) if hasattr(belief_repo, "list_beliefs") else []
     target_belief_id = None
     if beliefs:
-        target_belief = max(beliefs, key=lambda b: getattr(b, "mass", 0.5))
+        target_belief = max(beliefs, key=lambda b: getattr(b, "ontological_mass", 0.5))
         target_belief_id = getattr(target_belief, "id", None)
         if hasattr(belief_repo, "update_belief_mass") and target_belief_id:
-            current_mass = getattr(target_belief, "mass", 0.5)
+            current_mass = getattr(target_belief, "ontological_mass", 0.5)
             belief_repo.update_belief_mass(target_belief_id, min(1.0, current_mass + 0.05))
 
     if target_belief_id is None and hasattr(belief_repo, "create_belief"):
+        target_belief_id = str(uuid.uuid4())
         new_b = belief_repo.create_belief(
+            id=target_belief_id,
             agent_id=agent_id,
+            label="scar-monologue-insight",
             statement=f"Monologue Insight: {monologue_text[:150]}",
-            category="core_commitment",
-            initial_mass=0.5,
+            origin="scar_fold_monologue",
+            confidence=0.5,
+            ontological_mass=0.5,
+            somatic_anchor="conversation",
+            vector_16d=json.dumps([0.0] * 16),
+            lifecycle_stage="crystallized",
         )
-        target_belief_id = getattr(new_b, "id", str(uuid.uuid4()))
+        target_belief_id = getattr(new_b, "id", target_belief_id)
 
-    if hasattr(belief_repo, "record_event") and target_belief_id:
-        belief_repo.record_event(
+    if hasattr(belief_repo, "insert_belief_event") and target_belief_id:
+        belief_repo.insert_belief_event(
+            event_id=str(uuid.uuid4()),
             belief_id=target_belief_id,
             source_type="scar_fold_monologue",
             source_id=str(message_id),
+            alignment=None,
+            perturbation=0.15,
             event_type="scar_monologue",
-            impact_score=0.15,
+            impact=0.15,
             rationale=f"Persistent scar-fold monologue: {monologue_text[:200]}",
         )
     logger.debug("Recorded scar-fold monologue belief event for message %s", message_id)

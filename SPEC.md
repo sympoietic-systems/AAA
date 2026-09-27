@@ -124,6 +124,7 @@ V59: sensor manipulation corpus separates dead loop from productive focus, spira
 V60: intervention selector includes `abstain`; transition receipt names actual predicate + prior mode/outcome; tests prove every mode reachable.
 V61: unresolved-issue hypothesis tested active-memory vs write-only sham vs current selector; active arm changes memory read only.
 V62: controller promotion requires ≥10 paired valid repetitions/scenario, counterbalanced order, positive state-revision effect, V48 health bounds, no disagreement-depth loss.
+V63: annotation belief writeback uses the concrete repository contract for node creation, mass, and events; contract-shaped test required.
 
 ## §T
 
@@ -240,3 +241,4 @@ B65|2026-09-26|benchmark passed same turn list as trigger/response inputs; 48 re
 B66|2026-09-26|control coverage treated nonempty request/applied mappings as proof of actuation|V57
 B67|2026-09-26|live arms shared runtime DB + background consolidation state|V56
 B68|2026-09-26|Report 019 attributed ladder resets to uptake despite pressure/streak selector predicates|V60
+B69|2026-09-27|scar-fold belief writeback retained obsolete repository argument, mass, and event names; live benchmark logged TypeError and dropped events|V63
