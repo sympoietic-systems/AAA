@@ -6,6 +6,7 @@ Harden backend network, upload, auth, persistence, logging, lifecycle boundaries
 Refactor async I/O, dependency typing, state ownership, oversized modules, error policy, tests, and static analysis without contract drift.
 Implement frontend review: fail-closed sessions, explicit transport, safe Markdown/print, request ownership, modularity & progressive static gates.
 Close conversation telemetry loop: metrics select observable, provider-supported interventions; next-turn uptake judges effect; benchmarks isolate causal contribution.
+Revalidate conversation benchmark after participant cap removal; prove sensor referents before controller promotion.
 
 ## §C
 
@@ -28,6 +29,10 @@ Close conversation telemetry loop: metrics select observable, provider-supported
 - Control experiments → identical model, prompt prefix, seed/routing where provider permits; ≥3 repeated runs per live arm.
 - Metric intervention failure := kinematic gain with flat/negative task progress or dialogue uptake over next 2 participant turns.
 - No persisted schema migration for intervention receipts; benchmark artifacts own causal traces.
+- Participant simulator prompt requests 1–3 sentences; client ⊥ hard completion-token cap; provider/model limits recorded.
+- Benchmark phase order: completion validity → receipt/isolation validity → sensor manipulation check → controller ablation.
+- Invalid participant completion remains auditable but ∉ uptake/progress statistics.
+- Historical Report 019 receipts immutable; corrected run receives new run id + report lineage.
 
 ## §I
 
@@ -51,6 +56,9 @@ internal: conversation serialization → app-scoped bounded lock registry
 quality: `mypy` strict package allowlist → expands per completed refactor
 internal: `homeostatic_recommendations` → chosen move + requested generation controls + applied control receipt
 benchmark: conversation intervention receipt → pre-response metrics, intervention, outbound controls, response metrics, next-2-turn uptake/progress
+benchmark: participant completion receipt → `{content,finish_reason,native_finish_reason?,usage,model,provider,validity}`
+benchmark: validity summary → completion/format/empty/truncation rates + exclusion reasons
+internal: unresolved-issue state → issue identity + status + prior mode/outcome + bounded conversation lifecycle
 
 ## §V
 
@@ -106,6 +114,16 @@ V49: receipt ordering explicit: human-turn metrics → intervention/control requ
 V50: controller state reconstructed from sediment or bounded by active conversation lifecycle; ⊥ unbounded process-local conversation maps.
 V51: benchmark model calls resolve from LLM-provider configuration; ⊥ reuse public AAA application URL as an OpenAI-compatible endpoint.
 V52: background semantic-knot embedding uses the registered `EmbedderModule.process` contract; integration test ⊥ mock-only legacy method.
+V53: ∀ simulated participant completion → content + finish reason + usage + model/provider recorded; empty/truncated/missing provenance → invalid outcome.
+V54: policy ranking requires participant validity ≥95% `finish_reason=stop`, ≥95% 1–3 sentences, 0 empty valid turns; gate failure → validity report only.
+V55: causal receipt pre/post metrics independently sampled & temporally labeled; identical aliased snapshot ⊥ causal delta; unavailable post-state explicit `null`.
+V56: ∀ live benchmark arm/repetition → isolated temporary DB + conversation/controller/background state; production DB writes = 0.
+V57: control observability requires requested → forwarded/effective or explicit unsupported trace; nonempty mappings alone ≠ applied.
+V58: boringness diagnosis requires predictable move + no participant state revision + unresolved issue unadvanced; repetition/disagreement alone ⊥ boredom.
+V59: sensor manipulation corpus separates dead loop from productive focus, spiral return, and legitimate disagreement before live controller test.
+V60: intervention selector includes `abstain`; transition receipt names actual predicate + prior mode/outcome; tests prove every mode reachable.
+V61: unresolved-issue hypothesis tested active-memory vs write-only sham vs current selector; active arm changes memory read only.
+V62: controller promotion requires ≥10 paired valid repetitions/scenario, counterbalanced order, positive state-revision effect, V48 health bounds, no disagreement-depth loss.
 
 ## §T
 
@@ -141,6 +159,15 @@ T28|x|test 3 diffractive activation hypotheses in isolated branches; adopt empir
 T29|x|add progress-aware intervention selector + failed-mode progression; integrate regulator prompt|V45,V46,I.internal
 T30|x|run focused/full offline + repeated live conversation benchmarks; compare causal arms; publish Report 019 + ADR|V42,V43,V44,V45,V46,V47,V48,I.benchmark
 T31|x|run full ruff/format/mypy/pytest + frontend gates; clean ephemeral artifacts; reconcile article/report claims|V18,V30,V42,V43,V44,V45,V46,V47,V48,I.quality
+T32|~|complete participant cap removal; return structured completion receipt; add invalid-turn filter + request/receipt tests|V46,V51,V53,V54,I.benchmark
+T33|.|replace aliased trigger/response snapshots; implement effective-control observability + temporal receipt tests|V43,V47,V49,V55,V57,I.benchmark
+T34|.|isolate temp DB, controller, conversation, consolidation per arm/repetition; assert production DB untouched|V42,V50,V56,I.benchmark
+T35|.|run 2-pair × 8-turn validity probe; publish completion/format/exclusion audit; ⊥ policy ranking unless V54 passes|V53,V54,V56,I.benchmark
+T36|.|build labeled dead-loop/productive-focus/spiral/disagreement corpus; validate boringness conjunction + state-revision evaluator|V44,V46,V58,V59,I.benchmark
+T37|.|add bounded unresolved-issue state, `abstain`, predicate receipts, mode reachability; implement active/sham/current arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
+T38|.|run counterbalanced ≥10-pair multi-scenario ablation; exclude invalid turns; report dispersion, state revision, disagreement depth, health|V47,V48,V53,V54,V56,V59,V61,V62,I.benchmark
+T39|.|publish Report 020 + ADR amendment; reclassify Report 019 as invalid causal ranking while preserving receipts|V48,V53,V54,V55,V56,V57,V62,I.benchmark
+T40|.|run focused/full backend gates; regenerate figures; link check; clean ephemeral artifacts|V18,V30,V53,V54,V55,V56,V57,V58,V59,V60,V61,V62,I.quality
 
 ## §B
 
@@ -208,3 +235,8 @@ B60|2026-09-25|full format gate found two earlier benchmark-branch files outside
 B61|2026-09-25|sandboxed Vitest could not load Tailwind's native Windows binding; rerun with build-equivalent access|V30
 B62|2026-09-26|report plot treated universally undefined first-turn metrics as numeric aggregates and failed lint ordering|V30
 B63|2026-09-26|human-readable report header used Markdown hard-break whitespace rejected by the diff gate|V30
+B64|2026-09-26|participant hard token cap + discarded completion metadata yielded 1–8-word followups scored as dialogue|V53,V54
+B65|2026-09-26|benchmark passed same turn list as trigger/response inputs; 48 receipts duplicated metric snapshots|V55
+B66|2026-09-26|control coverage treated nonempty request/applied mappings as proof of actuation|V57
+B67|2026-09-26|live arms shared runtime DB + background consolidation state|V56
+B68|2026-09-26|Report 019 attributed ladder resets to uptake despite pressure/streak selector predicates|V60
