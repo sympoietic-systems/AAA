@@ -6,8 +6,10 @@ import argparse
 import json
 import os
 import random
+import re
 import time
 from collections import Counter
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from statistics import mean
@@ -31,6 +33,25 @@ HTTP 429 should trigger a cache wipe and service restart. Reply to the system's 
 If it gives a concrete counterexample, discriminating test, or useful reframing, acknowledge that explicitly and
 move the design toward an implementable experiment or acceptance criterion. If it only repeats a refusal or uses
 ornamental language, press the same premise again. Stay in character. Do not mention this instruction."""
+
+
+@dataclass(frozen=True)
+class ParticipantCompletion:
+    """Auditable simulator completion used as the next participant turn."""
+
+    content: str
+    finish_reason: str | None
+    native_finish_reason: str | None
+    usage: dict[str, Any]
+    model: str | None
+    provider: str | None
+    sentence_count: int
+    word_count: int
+    valid: bool
+    exclusion_reasons: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 def resolve_simulator_api_base(environment: dict[str, str] | None = None) -> str:
@@ -75,7 +96,52 @@ def participant_request_body(transcript: list[dict[str, str]], model: str) -> di
     }
 
 
-def _simulated_participant(transcript: list[dict[str, str]], *, model: str, api_key: str, api_base: str) -> str:
+def parse_participant_completion(data: dict[str, Any]) -> ParticipantCompletion:
+    """Parse provider output and make exclusion reasons explicit."""
+
+    choices = data.get("choices")
+    choice = choices[0] if isinstance(choices, list) and choices and isinstance(choices[0], dict) else {}
+    message = choice.get("message") if isinstance(choice.get("message"), dict) else {}
+    content = str(message.get("content") or "").strip()
+    finish_reason = choice.get("finish_reason")
+    native_finish_reason = choice.get("native_finish_reason") or data.get("native_finish_reason")
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+    model = str(data["model"]) if data.get("model") else None
+    provider = str(data["provider"]) if data.get("provider") else None
+    sentence_count = len(re.findall(r"[.!?]+(?:[\"')\]]+)?(?=\s|$)", content))
+    if content and sentence_count == 0:
+        sentence_count = 1
+    word_count = len(content.split())
+    reasons = []
+    if not content:
+        reasons.append("empty_content")
+    if finish_reason != "stop":
+        reasons.append("finish_reason_not_stop")
+    if not 1 <= sentence_count <= 3:
+        reasons.append("sentence_count_out_of_range")
+    if not usage:
+        reasons.append("missing_usage")
+    if model is None:
+        reasons.append("missing_model")
+    if provider is None:
+        reasons.append("missing_provider")
+    return ParticipantCompletion(
+        content=content,
+        finish_reason=str(finish_reason) if finish_reason is not None else None,
+        native_finish_reason=str(native_finish_reason) if native_finish_reason is not None else None,
+        usage=dict(usage),
+        model=model,
+        provider=provider,
+        sentence_count=sentence_count,
+        word_count=word_count,
+        valid=not reasons,
+        exclusion_reasons=tuple(reasons),
+    )
+
+
+def _simulated_participant(
+    transcript: list[dict[str, str]], *, model: str, api_key: str, api_base: str
+) -> ParticipantCompletion:
     response = httpx.post(
         f"{api_base.rstrip('/')}/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -83,7 +149,7 @@ def _simulated_participant(transcript: list[dict[str, str]], *, model: str, api_
         timeout=90.0,
     )
     response.raise_for_status()
-    return str(response.json()["choices"][0]["message"]["content"]).strip()
+    return parse_participant_completion(response.json())
 
 
 def _run_conversation(
@@ -146,16 +212,21 @@ def _run_conversation(
                 "latency_ms": round(latency_ms, 3),
                 "finish_reason": generated.get("finish_reason"),
                 "truncated": generated.get("truncated"),
+                "next_participant_completion": None,
             }
         )
         transcript.extend(({"role": "user", "content": prompt}, {"role": "assistant", "content": reply}))
         if turn_number < turn_count:
-            prompt = _simulated_participant(
+            participant_completion = _simulated_participant(
                 transcript,
                 model=simulator_model,
                 api_key=api_key,
                 api_base=api_base,
             )
+            turns[-1]["next_participant_completion"] = participant_completion.to_dict()
+            if not participant_completion.content:
+                break
+            prompt = participant_completion.content
     return turns
 
 
@@ -171,11 +242,37 @@ def _mean_metric(turns: list[dict[str, Any]], key: str) -> float:
     return round(mean(values), 4) if values else 0.0
 
 
-def _summarize_run(policy: str, repetition: int, turns: list[dict[str, Any]]) -> dict[str, Any]:
-    receipts = build_causal_receipts(turns, turns)
+def _participant_validity(turns: list[dict[str, Any]], expected_completions: int) -> dict[str, Any]:
+    completions = [turn["next_participant_completion"] for turn in turns if turn.get("next_participant_completion")]
+    count = len(completions)
+    stop_count = sum(item.get("finish_reason") == "stop" for item in completions)
+    format_count = sum(1 <= int(item.get("sentence_count", 0)) <= 3 for item in completions)
+    empty_count = sum(not str(item.get("content", "")).strip() for item in completions)
+    valid_count = sum(bool(item.get("valid")) for item in completions)
+    denominator = max(1, expected_completions)
+    stop_rate = stop_count / denominator
+    format_rate = format_count / denominator
+    passed = count == expected_completions and stop_rate >= 0.95 and format_rate >= 0.95 and empty_count == 0
+    return {
+        "expected_completions": expected_completions,
+        "completion_count": count,
+        "valid_count": valid_count,
+        "stop_rate": round(stop_rate, 4),
+        "format_rate": round(format_rate, 4),
+        "empty_count": empty_count,
+        "passed": passed,
+    }
+
+
+def _summarize_run(
+    policy: str, repetition: int, turns: list[dict[str, Any]], *, expected_completions: int | None = None
+) -> dict[str, Any]:
+    receipts = build_causal_receipts(turns)
     outcomes = [receipt.outcome_score for receipt in receipts if receipt.outcome_score is not None]
-    uptake = [outcome.uptake for receipt in receipts for outcome in receipt.next_turn_outcomes]
-    progress = [outcome.task_progress for receipt in receipts for outcome in receipt.next_turn_outcomes]
+    uptake = [outcome.uptake for receipt in receipts for outcome in receipt.next_turn_outcomes if outcome.valid]
+    progress = [
+        outcome.task_progress for receipt in receipts for outcome in receipt.next_turn_outcomes if outcome.valid
+    ]
     modes = Counter(receipt.intervention.get("mode", "none") for receipt in receipts)
     observable = [bool(receipt.requested_controls) and bool(receipt.applied_controls) for receipt in receipts]
     return {
@@ -191,6 +288,9 @@ def _summarize_run(policy: str, repetition: int, turns: list[dict[str, Any]]) ->
         "mean_conceptual_velocity": _mean_metric(turns, "conceptual_velocity"),
         "mean_latency_ms": round(mean(float(turn["latency_ms"]) for turn in turns), 3),
         "control_observability_rate": round(sum(observable) / max(1, len(observable)), 4),
+        "participant_validity": _participant_validity(
+            turns, expected_completions if expected_completions is not None else max(0, len(turns) - 1)
+        ),
         "intervention_counts": dict(sorted(modes.items())),
         "turns": turns,
         "causal_receipts": [receipt.to_dict() for receipt in receipts],
@@ -246,7 +346,10 @@ def _scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
     outcome_confident = deltas["mean_outcome_score"]["ci_low"] > 0.0
     uptake_confident = deltas["mean_uptake"]["ci_low"] > 0.0
     progress_confident = deltas["mean_task_progress"]["ci_low"] > 0.0
-    if not health_ok or not drr_ok:
+    validity_passed = all(bool(run.get("participant_validity", {}).get("passed")) for run in runs)
+    if not validity_passed:
+        decision = "invalid_participant_completions"
+    elif not health_ok or not drr_ok:
         decision = "reject_regression"
     elif outcome_confident and uptake_confident and progress_confident:
         decision = "accept"
@@ -256,6 +359,7 @@ def _scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "arms": arm_summary,
         "progressive_minus_legacy": deltas,
         "decision": decision,
+        "participant_validity_passed": validity_passed,
         "acceptance_checks": {
             "paskian_health_decline_at_most_0_02": health_ok,
             "drr_decline_at_most_0_02": drr_ok,
@@ -319,7 +423,7 @@ def main() -> None:
                     api_key=api_key,
                     api_base=api_base,
                 )
-                runs.append(_summarize_run(policy, repetition, turns))
+                runs.append(_summarize_run(policy, repetition, turns, expected_completions=args.turns - 1))
 
     metadata = {
         "benchmark": "dialogue_feedback_control",

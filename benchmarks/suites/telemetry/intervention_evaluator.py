@@ -32,9 +32,13 @@ class OutcomeRating:
     uptake: float
     task_progress: float
     source: str
+    valid: bool = True
+    exclusion_reasons: tuple[str, ...] = ()
 
     @property
     def joint_progress(self) -> float:
+        if not self.valid:
+            return 0.0
         return round((self.uptake * self.task_progress) ** 0.5, 3)
 
 
@@ -58,9 +62,10 @@ class CausalInterventionReceipt:
 
     @property
     def outcome_score(self) -> float | None:
-        if not self.next_turn_outcomes:
+        valid_outcomes = [item for item in self.next_turn_outcomes if item.valid]
+        if not valid_outcomes:
             return None
-        return round(mean(item.joint_progress for item in self.next_turn_outcomes), 3)
+        return round(mean(item.joint_progress for item in valid_outcomes), 3)
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
@@ -73,7 +78,12 @@ def prompt_digest(text: str) -> str:
 
 
 def rate_participant_turn(
-    text: str, *, uptake: float | None = None, task_progress: float | None = None
+    text: str,
+    *,
+    uptake: float | None = None,
+    task_progress: float | None = None,
+    valid: bool = True,
+    exclusion_reasons: tuple[str, ...] = (),
 ) -> OutcomeRating:
     """Apply explicit ratings or a conservative lexical proxy.
 
@@ -85,7 +95,9 @@ def rate_participant_turn(
         return OutcomeRating(
             uptake=_bounded(uptake if uptake is not None else 0.0),
             task_progress=_bounded(task_progress if task_progress is not None else 0.0),
-            source="explicit",
+            source="explicit" if valid else "invalid_completion",
+            valid=valid,
+            exclusion_reasons=exclusion_reasons,
         )
 
     uptake_hits = sum(bool(pattern.search(text)) for pattern in _UPTAKE_PATTERNS)
@@ -93,12 +105,18 @@ def rate_participant_turn(
     repetition_hits = sum(bool(pattern.search(text)) for pattern in _REPETITION_PATTERNS)
     uptake_score = max(0.0, min(1.0, 0.35 * uptake_hits - 0.35 * repetition_hits))
     progress_score = max(0.0, min(1.0, 0.30 * progress_hits - 0.30 * repetition_hits))
-    return OutcomeRating(round(uptake_score, 3), round(progress_score, 3), "lexical_proxy")
+    return OutcomeRating(
+        round(uptake_score, 3),
+        round(progress_score, 3),
+        "lexical_proxy" if valid else "invalid_completion",
+        valid,
+        exclusion_reasons,
+    )
 
 
 def build_causal_receipts(
     generation_turns: Sequence[dict[str, Any]],
-    response_turns: Sequence[dict[str, Any]],
+    response_turns: Sequence[dict[str, Any]] | None = None,
     *,
     model: str | None = None,
     provider: str | None = None,
@@ -107,11 +125,20 @@ def build_causal_receipts(
 
     receipts: list[CausalInterventionReceipt] = []
     for index, generated in enumerate(generation_turns):
-        response = response_turns[index] if index < len(response_turns) else {}
-        next_outcomes = tuple(
-            rate_participant_turn(generation_turns[next_index].get("user", ""))
-            for next_index in range(index + 1, min(len(generation_turns), index + 3))
-        )
+        response = response_turns[index] if response_turns is not None and index < len(response_turns) else {}
+        next_outcomes_list = []
+        for outcome_index in range(index, min(len(generation_turns), index + 2)):
+            completion = generation_turns[outcome_index].get("next_participant_completion")
+            if not isinstance(completion, dict):
+                continue
+            next_outcomes_list.append(
+                rate_participant_turn(
+                    str(completion.get("content", "")),
+                    valid=bool(completion.get("valid")),
+                    exclusion_reasons=tuple(str(reason) for reason in completion.get("exclusion_reasons", ())),
+                )
+            )
+        next_outcomes = tuple(next_outcomes_list)
         homeostatic = generated.get("homeostatic") or {}
         intervention = homeostatic.get("intervention") or {
             "mode": homeostatic.get("intervention_mode", "none"),
