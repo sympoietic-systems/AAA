@@ -194,7 +194,14 @@ class RhizomeWebProbe:
                 },
             )
         except SafeFetchError as err:
-            logger.warning("SSRF blocked crawl of unsafe URL %s: %s", url, err)
+            logger.warning("Bounded web crawl rejected destination %s: %s", urlparse(url).hostname or "unknown", err)
+            return ""
+        except httpx.RequestError as err:
+            logger.warning(
+                "Web crawl network failure for destination %s: %s",
+                urlparse(url).hostname or "unknown",
+                type(err).__name__,
+            )
             return ""
         if response.status_code == 200:
             parser = HTMLToTextParser()

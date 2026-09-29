@@ -126,6 +126,8 @@ V61: unresolved-issue hypothesis tested active-memory vs write-only sham vs curr
 V62: controller promotion requires ≥10 paired valid repetitions/scenario, counterbalanced order, positive state-revision effect, V48 health bounds, no disagreement-depth loss.
 V63: annotation belief writeback uses the concrete repository contract for node creation, mass, and events; contract-shaped test required.
 V64: lexical state/progress evaluators account for explicit negation; refusing a test, measure, or comparison cannot count as issue advancement.
+V65: transient outbound web-crawl failures retain TLS/SSRF boundaries and yield empty crawl content; daemon cycle remains available.
+V66: HTTP-200 LLM responses without a valid completion are typed provider glitches; credential rotation occurs only for authentication/rate-limit failures.
 
 ## §T
 
@@ -245,3 +247,5 @@ B68|2026-09-26|Report 019 attributed ladder resets to uptake despite pressure/st
 B69|2026-09-27|scar-fold belief writeback retained obsolete repository argument, mass, and event names; live benchmark logged TypeError and dropped events|V63
 B70|2026-09-27|boringness evaluator counted “do not want a test” as issue advancement and missed a near-duplicate at the threshold edge|V58,V64
 B71|2026-09-29|Windows test worker lacked permission to create the default pytest temporary root; use an explicit writable temporary base for verification|environment
+B72|2026-09-29|certificate-verification failure from a harvested remote page escaped the crawl fallback and terminated the dream daemon cycle|V65
+B73|2026-09-29|HTTP-200 upstream LLM error envelope was indexed as `choices` and poisoned model/key exhaustion state|V66

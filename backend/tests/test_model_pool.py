@@ -10,6 +10,7 @@ from backend.modules.llm_client import (
     KeyManager,
     ModelPoolProvider,
     OpenAICompatibleProvider,
+    ProviderResponseError,
     RateLimitError,
     generate_unified,
 )
@@ -327,8 +328,30 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_generate.call_count, 3)
         self.assertEqual(mock_sleep.call_count, 2)
 
-        # Since both failed, key is exhausted
-        self.assertIsNone(provider._google_key_mgr.get_available_key())
+        # Transient transport failure must not poison a credential.
+        self.assertEqual(provider._google_key_mgr.get_available_key(), "g_key1")
+
+    @patch("backend.modules.llm_pool.OpenAICompatibleProvider.generate", autospec=True)
+    async def test_v66_invalid_provider_response_falls_back_without_exhausting_key(self, mock_generate):
+        provider = ModelPoolProvider(
+            api_key="or_key_default",
+            models=["openrouter_router/first", "openrouter_router/second"],
+            fallback_model="",
+            openrouter_keys=["or_key1"],
+            cooldown_seconds=10,
+        )
+
+        async def side_effect(provider_instance, messages, **params):
+            if provider_instance._model == "first":
+                raise ProviderResponseError("Provider response missing completion choices")
+            return {"content": "fallback response", "thinking": None}
+
+        mock_generate.side_effect = side_effect
+
+        result = await provider.generate([{"role": "user", "content": "hello"}])
+
+        self.assertEqual(result["content"], "fallback response")
+        self.assertEqual(provider._openrouter_key_mgr.get_available_key(), "or_key1")
 
     @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate")
     async def test_generate_unified_forwards_thinking_override(self, mock_generate):

@@ -10,6 +10,7 @@ from backend.modules.llm_client import (
     OpenAICompatibleProvider,
     RateLimitError,
 )
+from backend.modules.llm_protocol import ProviderResponseError
 
 
 def _make_provider(**kwargs):
@@ -109,6 +110,27 @@ class TestRateLimitError:
         assert err.remaining == 5
         assert err.limit == 100
         assert "Too many requests" in str(err)
+
+
+class TestProviderResponseValidation:
+    @pytest.mark.asyncio
+    async def test_v66_rejects_success_response_without_choices(self):
+        provider = _make_provider(max_retries=0)
+        response = MagicMock()
+        response.status_code = 200
+        response.headers = {"x-request-id": "request-123"}
+        response.json.return_value = {"error": {"code": "provider_unavailable"}}
+        response.raise_for_status = MagicMock()
+        client = MagicMock()
+        client.__aenter__ = AsyncMock(return_value=client)
+        client.__aexit__ = AsyncMock(return_value=None)
+        client.post = AsyncMock(return_value=response)
+
+        with (
+            patch("httpx.AsyncClient", return_value=client),
+            pytest.raises(ProviderResponseError, match="missing completion choices"),
+        ):
+            await provider._request_with_retry({"model": "test", "messages": []})
 
 
 class TestRetryLogic:

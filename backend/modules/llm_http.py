@@ -7,7 +7,13 @@ from typing import Any
 
 import httpx
 
-from backend.modules.llm_protocol import BaseLLMProvider, LLMMessage, LLMResult, RateLimitError
+from backend.modules.llm_protocol import (
+    BaseLLMProvider,
+    LLMMessage,
+    LLMResult,
+    ProviderResponseError,
+    RateLimitError,
+)
 from backend.modules.providers.anthropic_utils import (
     build_anthropic_body,
     get_anthropic_endpoint,
@@ -167,9 +173,26 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                     )
 
                 response.raise_for_status()
-                data = response.json()
+                try:
+                    data = response.json()
+                except ValueError as exc:
+                    raise ProviderResponseError("Provider returned invalid JSON") from exc
 
-                message = parse_anthropic_response(data) if is_anthropic else data["choices"][0]["message"]
+                if is_anthropic:
+                    message = parse_anthropic_response(data)
+                else:
+                    choices = data.get("choices") if isinstance(data, dict) else None
+                    if not isinstance(choices, list) or not choices:
+                        response_keys = sorted(data) if isinstance(data, dict) else []
+                        request_id = response.headers.get("x-request-id", "")
+                        raise ProviderResponseError(
+                            "Provider response missing completion choices "
+                            f"(keys={response_keys}, request_id={request_id or 'unavailable'})"
+                        )
+                    first_choice = choices[0]
+                    if not isinstance(first_choice, dict) or not isinstance(first_choice.get("message"), dict):
+                        raise ProviderResponseError("Provider response has an invalid completion choice")
+                    message = first_choice["message"]
 
                 return self._parse_message(message, data)
 

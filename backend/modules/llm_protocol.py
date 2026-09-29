@@ -15,6 +15,10 @@ class RateLimitError(Exception):
         self.limit = limit
 
 
+class ProviderResponseError(Exception):
+    """An upstream response that cannot satisfy the configured LLM contract."""
+
+
 class BaseLLMProvider(ABC):
     @abstractmethod
     async def generate(self, messages: list[LLMMessage], **params: Any) -> LLMResult: ...

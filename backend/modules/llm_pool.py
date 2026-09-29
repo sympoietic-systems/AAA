@@ -8,7 +8,13 @@ from typing import Any, cast
 import httpx
 
 from backend.modules.llm_http import OpenAICompatibleProvider
-from backend.modules.llm_protocol import BaseLLMProvider, LLMMessage, LLMResult, RateLimitError
+from backend.modules.llm_protocol import (
+    BaseLLMProvider,
+    LLMMessage,
+    LLMResult,
+    ProviderResponseError,
+    RateLimitError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -254,11 +260,23 @@ class ModelPoolProvider(BaseLLMProvider):
                     errors.append(f"{model} (key: {masked_key}): rate limited - {e}")
                     logger.warning("Key %s rate limited for model %s. Rotating key...", masked_key, model)
                 except httpx.HTTPStatusError as e:
-                    key_mgr.mark_key_exhausted(key)
-                    errors.append(f"{model} (key: {masked_key}): HTTP {e.response.status_code} - {e}")
+                    status_code = e.response.status_code
+                    errors.append(f"{model} (key: {masked_key}): HTTP {status_code} - {e}")
+                    if status_code in {401, 403}:
+                        key_mgr.mark_key_exhausted(key)
+                        logger.warning(
+                            "Key %s was rejected with HTTP %s for model %s. Rotating key...",
+                            masked_key,
+                            status_code,
+                            model,
+                        )
+                        continue
                     logger.warning(
-                        "Key %s HTTP error %s for model %s. Rotating key...", masked_key, e.response.status_code, model
+                        "HTTP %s for model %s; preserving key and trying the next model.",
+                        status_code,
+                        model,
                     )
+                    break
                 except (httpx.RequestError, TimeoutError) as e:
                     # Network timeouts are transient — retry a few times before giving up
                     timeout_retries = 2
@@ -289,19 +307,25 @@ class ModelPoolProvider(BaseLLMProvider):
                     if success:
                         break
                     if not success:
-                        key_mgr.mark_key_exhausted(key)
                         errors.append(
                             f"{model} (key: {masked_key}): connection timeout after {timeout_retries} retries - {e}"
                         )
                         logger.warning(
-                            "All timeout retries failed for model %s with key %s. Rotating key...", model, masked_key
+                            "All timeout retries failed for model %s; preserving key and trying the next model.", model
                         )
+                        break
+                except ProviderResponseError as e:
+                    errors.append(f"{model} (key: {masked_key}): invalid provider response - {e}")
+                    logger.warning(
+                        "Invalid provider response for model %s; preserving key and trying the next model.", model
+                    )
+                    break
                 except Exception as e:
-                    key_mgr.mark_key_exhausted(key)
                     errors.append(f"{model} (key: {masked_key}): {e}")
                     logger.warning(
-                        "Key %s encountered error %s for model %s. Rotating key...", masked_key, type(e).__name__, model
+                        "Unexpected %s for model %s; preserving key and trying the next model.", type(e).__name__, model
                     )
+                    break
 
             if success:
                 return cast(LLMResult, result)
