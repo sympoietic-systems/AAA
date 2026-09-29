@@ -27,7 +27,7 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
     Supports:
     - Single-model providers (OpenRouter, DeepSeek, OpenAI-compatible)
     - Model pools with fallback, per-provider API keys, and cool-down
-    - Router-prefix models (google_router/, deepseek_router/, openrouter_router/)
+    - Router-prefix models (google_router/, deepseek_router/, nvidia_router/, openrouter_router/)
     - Thinking mode and reasoning effort parameters
     """
     provider_name = cfg.get("provider", "openrouter")
@@ -47,12 +47,14 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
         fallback = cfg.get("fallback_model", "openrouter/free")
         google_keys = cfg.get("google_keys", [])
         deepseek_keys = cfg.get("deepseek_keys", [])
+        nvidia_keys = cfg.get("nvidia_keys", [])
         openrouter_keys = cfg.get("openrouter_keys", [])
         google_api_base = cfg.get(
             "google_api_base",
             "https://generativelanguage.googleapis.com/v1beta/openai",
         )
         deepseek_api_base = cfg.get("deepseek_api_base", "https://api.deepseek.com")
+        nvidia_api_base = cfg.get("nvidia_api_base", "https://integrate.api.nvidia.com/v1")
         openrouter_api_base = cfg.get("openrouter_api_base", "https://openrouter.ai/api/v1")
         cooldown_seconds = cfg.get("cooldown_seconds", 300)
         timeout = cfg.get("timeout", 60.0)
@@ -68,9 +70,11 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             api_base=api_base,
             google_keys=google_keys,
             deepseek_keys=deepseek_keys,
+            nvidia_keys=nvidia_keys,
             openrouter_keys=openrouter_keys,
             google_api_base=google_api_base,
             deepseek_api_base=deepseek_api_base,
+            nvidia_api_base=nvidia_api_base,
             openrouter_api_base=openrouter_api_base,
             cooldown_seconds=cooldown_seconds,
             thinking=thinking,
@@ -128,6 +132,20 @@ def _create_provider(cfg: dict, *, use_default_params: bool = True, label: str =
             timeout=timeout,
             openrouter_provider=openrouter_provider,
             openrouter_providers_map=openrouter_providers_map,
+        )
+
+    if model.startswith("nvidia_router/"):
+        effective_model = model.split("nvidia_router/", 1)[1]
+        key = (cfg.get("nvidia_keys", []) or [api_key])[0]
+        return _create_openai_compatible(
+            key,
+            effective_model,
+            cfg.get("nvidia_api_base", "https://integrate.api.nvidia.com/v1"),
+            "nvidia",
+            default_params,
+            thinking=thinking,
+            reasoning_effort=reasoning_effort,
+            timeout=timeout,
         )
 
     # ── Standard provider dispatch ────────────────────────────────────

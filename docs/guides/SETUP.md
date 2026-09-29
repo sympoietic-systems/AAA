@@ -92,6 +92,7 @@ Define your prioritized models in the `AAA_LLM_MODELS` list (comma-separated), u
 
 *   `google_router/` — Routes natively to Google's API (requires `AAA_GOOGLE_API_KEY`)
 *   `deepseek_router/` — Routes natively to DeepSeek's API (requires `AAA_DEEPSEEK_API_KEY`)
+*   `nvidia_router/` — Routes to NVIDIA hosted NIM (requires `AAA_NVIDIA_API_KEY`)
 *   `openrouter_router/` — Routes to OpenRouter (requires `AAA_LLM_API_KEY`)
 
 **Example list configuration:**

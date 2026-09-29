@@ -244,3 +244,4 @@ B67|2026-09-26|live arms shared runtime DB + background consolidation state|V56
 B68|2026-09-26|Report 019 attributed ladder resets to uptake despite pressure/streak selector predicates|V60
 B69|2026-09-27|scar-fold belief writeback retained obsolete repository argument, mass, and event names; live benchmark logged TypeError and dropped events|V63
 B70|2026-09-27|boringness evaluator counted “do not want a test” as issue advancement and missed a near-duplicate at the threshold edge|V58,V64
+B71|2026-09-29|Windows test worker lacked permission to create the default pytest temporary root; use an explicit writable temporary base for verification|environment

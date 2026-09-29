@@ -195,6 +195,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         is_anthropic = "anthropic" in self._api_base
         is_google = "google" in self.provider_name.lower() or "googleapis.com" in self._api_base
         is_openrouter = "openrouter" in self.provider_name.lower() or "openrouter.ai" in self._api_base
+        is_nvidia = "nvidia" in self.provider_name.lower() or "integrate.api.nvidia.com" in self._api_base
 
         # ── Thinking / reasoning configuration ────────────────────────
         thinking_override = merged_params.pop("thinking_override", None)
@@ -231,6 +232,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         if use_thinking:
             if is_anthropic:
                 body["thinking"] = {"type": "enabled", "budget_tokens": 1024}
+            elif is_nvidia:
+                body["chat_template_kwargs"] = {"enable_thinking": True}
             else:
                 body["thinking"] = {"type": "enabled"}
                 body["reasoning_effort"] = merged_params.pop("reasoning_effort", self._reasoning_effort)
@@ -241,6 +244,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 build_google_thinking_disabled(body)
             elif is_anthropic:
                 body["thinking"] = {"type": "disabled"}
+            elif is_nvidia:
+                body["chat_template_kwargs"] = {"enable_thinking": False}
             else:
                 body["thinking"] = {"type": "disabled"}
 

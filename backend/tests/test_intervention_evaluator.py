@@ -18,6 +18,7 @@ from benchmarks.suites.telemetry.run_dialogue_feedback_benchmark import (
     participant_messages,
     participant_request_body,
     resolve_simulator_api_base,
+    resolve_simulator_api_key,
     resolve_simulator_model,
 )
 
@@ -146,6 +147,19 @@ def test_v51_simulator_translates_provider_qualified_model():
         resolve_simulator_model({"AAA_LLM_MODEL": "openrouter_router/google/gemini-3.8-flash"})
         == "google/gemini-3.8-flash"
     )
+
+
+def test_v51_nvidia_simulator_uses_dedicated_model_key_and_endpoint():
+    environment = {
+        "AAA_BENCHMARK_PARTICIPANT_MODEL": "nvidia_router/nvidia/nemotron-3-ultra-550b-a55b",
+        "AAA_NVIDIA_API_KEY": "nvidia-key",
+        "AAA_NVIDIA_API_BASE": "https://integrate.api.nvidia.com/v1/",
+        "AAA_LLM_API_KEY": "openrouter-key",
+    }
+
+    assert resolve_simulator_model(environment) == "nvidia/nemotron-3-ultra-550b-a55b"
+    assert resolve_simulator_api_key(environment) == "nvidia-key"
+    assert resolve_simulator_api_base(environment) == "https://integrate.api.nvidia.com/v1"
 
 
 def test_v51_participant_request_ends_with_user_instruction():

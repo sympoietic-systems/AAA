@@ -140,6 +140,22 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_generate.call_count, 1)
 
     @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate", autospec=True)
+    async def test_nvidia_routing_uses_nvidia_key_and_endpoint(self, mock_generate):
+        provider = ModelPoolProvider(
+            api_key="default",
+            models=["nvidia_router/nvidia/nemotron-3-ultra-550b-a55b"],
+            nvidia_keys=["nvidia_key"],
+        )
+        mock_generate.return_value = {"content": "NVIDIA response", "thinking": None}
+
+        await provider.generate([{"role": "user", "content": "hello"}])
+
+        called_provider = mock_generate.call_args.args[0]
+        self.assertEqual(called_provider._api_key, "nvidia_key")
+        self.assertEqual(called_provider._api_base, "https://integrate.api.nvidia.com/v1")
+        self.assertEqual(called_provider._model, "nvidia/nemotron-3-ultra-550b-a55b")
+
+    @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate", autospec=True)
     async def test_last_working_model_stateful_prioritization(self, mock_generate):
         provider = ModelPoolProvider(
             api_key="or_key_default",
@@ -235,6 +251,26 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         body = kwargs["json"]
         self.assertEqual(body["max_tokens"], 456)
         self.assertNotIn("temperature", body)  # temperature not sent in thinking mode
+
+    @patch("httpx.AsyncClient.post")
+    async def test_nvidia_thinking_uses_documented_chat_template_flag(self, mock_post):
+        mock_response = unittest.mock.MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"choices": [{"message": {"role": "assistant", "content": "hello"}}]}
+        mock_post.return_value = mock_response
+        provider = OpenAICompatibleProvider(
+            api_key="nvidia-key",
+            model="nvidia/nemotron-3-ultra-550b-a55b",
+            api_base="https://integrate.api.nvidia.com/v1",
+            provider_name="nvidia",
+            thinking=True,
+        )
+
+        await provider.generate([{"role": "user", "content": "hi"}])
+
+        body = mock_post.call_args.kwargs["json"]
+        self.assertEqual(body["chat_template_kwargs"], {"enable_thinking": True})
+        self.assertNotIn("thinking", body)
 
     @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate")
     @patch("backend.modules.llm_client.asyncio.sleep")

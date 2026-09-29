@@ -42,7 +42,7 @@ class KeyManager:
 class ModelPoolProvider(BaseLLMProvider):
     """Provider that tries models from a pool in order, with rate-limit and provider fallback.
 
-    Supports 'google_router/', 'deepseek_router/', and 'openrouter_router/' prefixes to route requests to
+    Supports 'google_router/', 'deepseek_router/', 'nvidia_router/', and 'openrouter_router/' prefixes to route requests to
     different providers (Google API vs DeepSeek API vs OpenRouter API) with independent API key rotation pools.
     """
 
@@ -54,9 +54,11 @@ class ModelPoolProvider(BaseLLMProvider):
         api_base: str = "https://openrouter.ai/api/v1",
         google_keys: list[str] | None = None,
         deepseek_keys: list[str] | None = None,
+        nvidia_keys: list[str] | None = None,
         openrouter_keys: list[str] | None = None,
         google_api_base: str = "https://generativelanguage.googleapis.com/v1beta/openai",
         deepseek_api_base: str = "https://api.deepseek.com",
+        nvidia_api_base: str = "https://integrate.api.nvidia.com/v1",
         openrouter_api_base: str = "https://openrouter.ai/api/v1",
         cooldown_seconds: int = 300,
         max_retries_per_model: int = 0,
@@ -73,6 +75,7 @@ class ModelPoolProvider(BaseLLMProvider):
         self._api_base = api_base
         self._google_api_base = google_api_base
         self._deepseek_api_base = deepseek_api_base
+        self._nvidia_api_base = nvidia_api_base
         self._openrouter_api_base = (
             openrouter_api_base
             if openrouter_api_base
@@ -93,6 +96,7 @@ class ModelPoolProvider(BaseLLMProvider):
         # Setup key managers
         self._google_key_mgr = KeyManager(google_keys or [], cooldown_seconds=cooldown_seconds)
         self._deepseek_key_mgr = KeyManager(deepseek_keys or [], cooldown_seconds=cooldown_seconds)
+        self._nvidia_key_mgr = KeyManager(nvidia_keys or [], cooldown_seconds=cooldown_seconds)
 
         # If openrouter_keys is empty but we have api_key, use it as fallback
         or_keys = list(openrouter_keys) if openrouter_keys else []
@@ -126,6 +130,7 @@ class ModelPoolProvider(BaseLLMProvider):
         self._exhausted.clear()
         self._google_key_mgr._exhausted.clear()
         self._deepseek_key_mgr._exhausted.clear()
+        self._nvidia_key_mgr._exhausted.clear()
         self._openrouter_key_mgr._exhausted.clear()
         self._last_model_used = ""
         self._last_model_time = 0.0
@@ -183,6 +188,11 @@ class ModelPoolProvider(BaseLLMProvider):
                 api_base = self._openrouter_api_base
                 key_mgr = self._openrouter_key_mgr
                 provider_type = "openrouter"
+            elif model.startswith("nvidia_router/"):
+                actual_model = model.split("nvidia_router/", 1)[1]
+                api_base = self._nvidia_api_base
+                key_mgr = self._nvidia_key_mgr
+                provider_type = "nvidia"
             else:
                 actual_model = model
                 api_base = self._openrouter_api_base
@@ -197,6 +207,9 @@ class ModelPoolProvider(BaseLLMProvider):
                 continue
             if provider_type == "openrouter" and not self._openrouter_key_mgr.has_keys():
                 logger.warning("Model %s routes to openrouter but no openrouter API keys are configured", model)
+                continue
+            if provider_type == "nvidia" and not self._nvidia_key_mgr.has_keys():
+                logger.warning("Model %s has nvidia_router/ prefix but no NVIDIA API keys are configured", model)
                 continue
 
             success = False
@@ -220,7 +233,7 @@ class ModelPoolProvider(BaseLLMProvider):
                     model=actual_model,
                     api_base=api_base,
                     provider_name=f"model_pool_{provider_type}",
-                    thinking=self._thinking if provider_type == "deepseek" else False,
+                    thinking=self._thinking if provider_type in {"deepseek", "nvidia"} else False,
                     reasoning_effort=self._reasoning_effort,
                     max_retries=self._max_retries_per_model,
                     default_params=self._default_params,

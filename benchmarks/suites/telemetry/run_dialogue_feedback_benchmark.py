@@ -58,14 +58,17 @@ class ParticipantCompletion:
 
 
 def resolve_simulator_api_base(environment: dict[str, str] | None = None) -> str:
-    """Resolve only the OpenAI-compatible LLM boundary used by the simulator."""
+    """Resolve the configured OpenAI-compatible participant boundary."""
 
     source = environment if environment is not None else os.environ
+    configured = source.get("AAA_BENCHMARK_PARTICIPANT_MODEL", source.get("AAA_LLM_MODEL", ""))
+    if configured.split(",")[0].strip().startswith("nvidia_router/"):
+        return source.get("AAA_NVIDIA_API_BASE", "https://integrate.api.nvidia.com/v1").rstrip("/")
     return source.get("AAA_LLM_API_BASE", "https://openrouter.ai/api/v1").rstrip("/")
 
 
 def resolve_simulator_model(environment: dict[str, str] | None = None) -> str:
-    """Translate AAA's provider-qualified alias into the OpenRouter wire model id."""
+    """Translate AAA's provider-qualified alias into its provider wire model id."""
 
     source = environment if environment is not None else os.environ
     configured = (
@@ -76,7 +79,18 @@ def resolve_simulator_model(environment: dict[str, str] | None = None) -> str:
         .split(",")[0]
         .strip()
     )
-    return configured.removeprefix("openrouter_router/")
+    return configured.removeprefix("openrouter_router/").removeprefix("nvidia_router/")
+
+
+def resolve_simulator_api_key(environment: dict[str, str] | None = None) -> str:
+    """Resolve the participant key without coupling an NVIDIA run to OpenRouter."""
+
+    source = environment if environment is not None else os.environ
+    configured = source.get("AAA_BENCHMARK_PARTICIPANT_MODEL", source.get("AAA_LLM_MODEL", ""))
+    key_name = (
+        "AAA_NVIDIA_API_KEY" if configured.split(",")[0].strip().startswith("nvidia_router/") else "AAA_LLM_API_KEY"
+    )
+    return source.get(key_name, "").strip()
 
 
 def participant_messages(transcript: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -330,9 +344,9 @@ def _run_worker(args: argparse.Namespace) -> None:
         raise RuntimeError("isolated worker requires an absolute AAA_DB_PATH")
 
     load_dotenv(PROJECT_ROOT / ".env")
-    api_key = os.environ.get("AAA_LLM_API_KEY", "").strip()
+    api_key = resolve_simulator_api_key()
     if not api_key:
-        raise RuntimeError("AAA_LLM_API_KEY is required for the adaptive live benchmark")
+        raise RuntimeError("configured participant API key is required for the adaptive live benchmark")
 
     from fastapi.testclient import TestClient
 
@@ -610,9 +624,9 @@ def main() -> None:
         raise ValueError("benchmark requires at least 2 repetitions and 3 turns")
 
     load_dotenv(PROJECT_ROOT / ".env")
-    api_key = os.environ.get("AAA_LLM_API_KEY", "").strip()
+    api_key = resolve_simulator_api_key()
     if not api_key:
-        raise RuntimeError("AAA_LLM_API_KEY is required for the adaptive live benchmark")
+        raise RuntimeError("configured participant API key is required for the adaptive live benchmark")
     api_base = resolve_simulator_api_base()
     simulator_model = resolve_simulator_model()
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")

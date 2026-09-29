@@ -85,11 +85,15 @@ def _apply_env_overrides(config: dict) -> dict:
     deepseek_api_key = os.environ.get("AAA_DEEPSEEK_API_KEY")
     deepseek_keys = [k.strip() for k in deepseek_api_key.split(",") if k.strip()] if deepseek_api_key else []
 
+    nvidia_api_key = os.environ.get("AAA_NVIDIA_API_KEY")
+    nvidia_keys = [k.strip() for k in nvidia_api_key.split(",") if k.strip()] if nvidia_api_key else []
+
     openrouter_api_keys = os.environ.get("AAA_BACKGROUND_API_KEY") or os.environ.get("AAA_LLM_API_KEY")
     openrouter_keys = [k.strip() for k in openrouter_api_keys.split(",") if k.strip()] if openrouter_api_keys else []
 
     google_api_base = os.environ.get("AAA_GOOGLE_API_BASE")
     deepseek_api_base = os.environ.get("AAA_DEEPSEEK_API_BASE") or os.environ.get("AAA_LLM_API_BASE")
+    nvidia_api_base = os.environ.get("AAA_NVIDIA_API_BASE")
 
     for section in ("llm", "background_llm", "vision_llm", "structural_llm"):
         cfg = config.setdefault(section, {})
@@ -97,12 +101,16 @@ def _apply_env_overrides(config: dict) -> dict:
             cfg["google_keys"] = google_keys
         if deepseek_keys:
             cfg["deepseek_keys"] = deepseek_keys
+        if nvidia_keys:
+            cfg["nvidia_keys"] = nvidia_keys
         if openrouter_keys:
             cfg["openrouter_keys"] = openrouter_keys
         if google_api_base:
             cfg["google_api_base"] = google_api_base
         if deepseek_api_base:
             cfg["deepseek_api_base"] = deepseek_api_base
+        if nvidia_api_base:
+            cfg["nvidia_api_base"] = nvidia_api_base
 
     # ── Propagate timeout and openrouter_provider settings to other LLM configs ─
     llm_timeout = config.get("llm", {}).get("timeout")

@@ -118,7 +118,7 @@ vision_llm:
 # ── Structural Scorer ─────────────────────────────
 # LLM-based 16-dimensional cybernetic taxonomy scorer.
 # Endpoint routing is resolved automatically from the model prefix
-# (google_router/, deepseek_router/, openrouter_router/) — no api_base needed.
+# (google_router/, deepseek_router/, nvidia_router/, openrouter_router/) — no api_base needed.
 structural_llm:
   thinking:
     enabled: false            # Structural scoring defaults to fast mode
@@ -165,6 +165,7 @@ All env vars are optional overrides. Copy `.env.example` to `.env`.
 |----------|----------|-------------|
 | `AAA_LLM_API_KEY` | openrouter | [openrouter.ai/keys](https://openrouter.ai/keys) |
 | `AAA_DEEPSEEK_API_KEY` | deepseek | [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) |
+| `AAA_NVIDIA_API_KEY` | NVIDIA hosted NIM | [build.nvidia.com](https://build.nvidia.com/) |
 
 The correct key is automatically selected based on `AAA_LLM_PROVIDER`.
 
@@ -290,6 +291,7 @@ and is stored as `agent_id` in every database row for multi-agent support.
 | `AAA_GOOGLE_API_KEY` | Google Gemini API key(s); comma-separated for key rotation fallback |
 | `AAA_GOOGLE_API_BASE` | Google Gemini API base URL (default: `https://generativelanguage.googleapis.com`) |
 | `AAA_DEEPSEEK_API_BASE` | DeepSeek API base URL override (default: `https://api.deepseek.com`) |
+| `AAA_NVIDIA_API_BASE` | NVIDIA hosted NIM base URL (default: `https://integrate.api.nvidia.com/v1`) |
 
 ### Web Retrieval & Probing
 
@@ -484,7 +486,7 @@ AAA_STRUCTURAL_FALLBACK_MODEL=openrouter_router/google/gemma-4-26b-a4b-it:free
 # AAA_STRUCTURAL_API_KEY=  # optional: inherits AAA_LLM_API_KEY by default
 ```
 
-Model prefix routing is automatic — `google_router/` uses the Google Gemini API endpoint, `openrouter_router/` uses OpenRouter. No `AAA_STRUCTURAL_API_BASE` is required unless routing to a custom proxy.
+Model prefix routing is automatic — `google_router/` uses the Google Gemini API endpoint, `nvidia_router/` uses NVIDIA hosted NIM, and `openrouter_router/` uses OpenRouter. No `AAA_STRUCTURAL_API_BASE` is required unless routing to a custom proxy.
 
 To disable LLM scoring (use only lexicon + topology scorers):
 ```bash
