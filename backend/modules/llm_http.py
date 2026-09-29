@@ -9,6 +9,7 @@ import httpx
 
 from backend.modules.llm_protocol import (
     BaseLLMProvider,
+    EmptyTruncatedCompletionError,
     LLMMessage,
     LLMResult,
     ProviderResponseError,
@@ -116,6 +117,10 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 self._model,
                 len(content or ""),
             )
+            if not content:
+                raise EmptyTruncatedCompletionError(
+                    "Provider exhausted its completion budget without returning final content"
+                )
 
         return {
             "content": content or "",

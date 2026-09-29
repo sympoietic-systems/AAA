@@ -10,7 +10,7 @@ from backend.modules.llm_client import (
     OpenAICompatibleProvider,
     RateLimitError,
 )
-from backend.modules.llm_protocol import ProviderResponseError
+from backend.modules.llm_protocol import EmptyTruncatedCompletionError, ProviderResponseError
 
 
 def _make_provider(**kwargs):
@@ -44,6 +44,14 @@ class TestParseMessage:
         result = p._parse_message(message, data)
         assert result["truncated"] is True
         assert result["finish_reason"] == "length"
+
+    def test_v67_rejects_empty_truncated_completion(self):
+        p = _make_provider()
+        message = {"role": "assistant", "content": ""}
+        data = {"choices": [{"finish_reason": "length"}]}
+
+        with pytest.raises(EmptyTruncatedCompletionError, match="without returning final content"):
+            p._parse_message(message, data)
 
     def test_detects_truncation_from_max_tokens(self):
         p = _make_provider()

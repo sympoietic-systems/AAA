@@ -228,11 +228,7 @@ class ModelPoolProvider(BaseLLMProvider):
                     break
 
                 tried_keys.add(key)
-                masked_key = self._mask_key(key)
-
-                logger.info(
-                    "Attempting model %s using provider %s with key %s", actual_model, provider_type, masked_key
-                )
+                logger.info("Attempting model %s using provider %s", actual_model, provider_type)
 
                 provider = OpenAICompatibleProvider(
                     api_key=key,
@@ -257,16 +253,15 @@ class ModelPoolProvider(BaseLLMProvider):
                     break
                 except RateLimitError as e:
                     key_mgr.mark_key_exhausted(key)
-                    errors.append(f"{model} (key: {masked_key}): rate limited - {e}")
-                    logger.warning("Key %s rate limited for model %s. Rotating key...", masked_key, model)
+                    errors.append(f"{model}: rate limited - {e}")
+                    logger.warning("Credential rate limited for model %s. Rotating key...", model)
                 except httpx.HTTPStatusError as e:
                     status_code = e.response.status_code
-                    errors.append(f"{model} (key: {masked_key}): HTTP {status_code} - {e}")
+                    errors.append(f"{model}: HTTP {status_code} - {e}")
                     if status_code in {401, 403}:
                         key_mgr.mark_key_exhausted(key)
                         logger.warning(
-                            "Key %s was rejected with HTTP %s for model %s. Rotating key...",
-                            masked_key,
+                            "Credential was rejected with HTTP %s for model %s. Rotating key...",
                             status_code,
                             model,
                         )
@@ -282,10 +277,9 @@ class ModelPoolProvider(BaseLLMProvider):
                     timeout_retries = 2
                     for retry_num in range(timeout_retries):
                         logger.warning(
-                            "Connection error '%s' on model %s with key %s. Waiting 10s to retry (attempt %d/%d)...",
+                            "Connection error '%s' on model %s. Waiting 10s to retry (attempt %d/%d)...",
                             type(e).__name__,
                             model,
-                            masked_key,
                             retry_num + 1,
                             timeout_retries,
                         )
@@ -299,29 +293,35 @@ class ModelPoolProvider(BaseLLMProvider):
                             break
                         except (httpx.RequestError, TimeoutError):
                             continue
+                        except ProviderResponseError as retry_e:
+                            errors.append(f"{model}: invalid provider response after retry - {retry_e}")
+                            logger.warning(
+                                "Invalid provider response after retry for model %s; preserving key and trying the next model.",
+                                model,
+                            )
+                            break
                         except Exception as retry_e:
-                            key_mgr.mark_key_exhausted(key)
-                            errors.append(f"{model} (key: {masked_key}): error after retry - {retry_e}")
-                            logger.warning("Retry failed for model %s with key %s. Rotating key...", model, masked_key)
+                            errors.append(f"{model}: error after retry - {retry_e}")
+                            logger.warning(
+                                "Retry failed for model %s; preserving key and trying the next model.", model
+                            )
                             break
                     if success:
                         break
                     if not success:
-                        errors.append(
-                            f"{model} (key: {masked_key}): connection timeout after {timeout_retries} retries - {e}"
-                        )
+                        errors.append(f"{model}: connection timeout after {timeout_retries} retries - {e}")
                         logger.warning(
                             "All timeout retries failed for model %s; preserving key and trying the next model.", model
                         )
                         break
                 except ProviderResponseError as e:
-                    errors.append(f"{model} (key: {masked_key}): invalid provider response - {e}")
+                    errors.append(f"{model}: invalid provider response - {e}")
                     logger.warning(
                         "Invalid provider response for model %s; preserving key and trying the next model.", model
                     )
                     break
                 except Exception as e:
-                    errors.append(f"{model} (key: {masked_key}): {e}")
+                    errors.append(f"{model}: {e}")
                     logger.warning(
                         "Unexpected %s for model %s; preserving key and trying the next model.", type(e).__name__, model
                     )

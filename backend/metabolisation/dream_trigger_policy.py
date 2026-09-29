@@ -54,26 +54,14 @@ class DreamTriggerPolicyMixin(DreamDaemonCollaborator):
 
         # ── STEP 2: HARD budget caps (both windows) — NO override path ──
         if self.short_counter >= self.short_window_max:
-            pending = queue_depth(self.app_state)
-            logger.warning(
-                "Short-window dream budget EXHAUSTED (%d/%d in %dh). %d self-triggered dream(s) queued — next slot frees in rolling %dh window.",
-                self.short_counter,
-                self.short_window_max,
-                self.short_window_hours,
-                pending,
-                self.short_window_hours,
-            )
+            self._log_budget_exhausted("short_window", queue_depth(self.app_state))
             return None
 
         if self.dream_counter >= self.max_daily_dreams:
-            pending = queue_depth(self.app_state)
-            logger.warning(
-                "Daily dream budget EXHAUSTED (%d/%d in 24h). %d self-triggered dream(s) queued — budget frees oldest slot in rolling 24h window.",
-                self.dream_counter,
-                self.max_daily_dreams,
-                pending,
-            )
+            self._log_budget_exhausted("daily", queue_depth(self.app_state))
             return None
+
+        self._last_budget_exhaustion_state = None
 
         # ── STEP 3: Drain self-triggered queue — highest priority ──
         # Each tick pops ONE item. Queue drains item-by-item across ticks.
@@ -334,3 +322,20 @@ class DreamTriggerPolicyMixin(DreamDaemonCollaborator):
         except Exception as e:
             logger.exception("Failed to execute resonance for Dream Daemon: %s", e)
             return None
+
+    def _log_budget_exhausted(self, window: str, pending_self_triggers: int) -> None:
+        """Emit one operational event per budget-exhaustion transition."""
+        state = (window, self.short_counter, self.dream_counter)
+        if getattr(self, "_last_budget_exhaustion_state", None) == state:
+            return
+        self._last_budget_exhaustion_state = state
+        logger.warning(
+            "Dream budget exhausted (window=%s, short=%d/%d over %dh, daily=%d/%d, pending_self_triggers=%d)",
+            window,
+            self.short_counter,
+            self.short_window_max,
+            self.short_window_hours,
+            self.dream_counter,
+            self.max_daily_dreams,
+            pending_self_triggers,
+        )

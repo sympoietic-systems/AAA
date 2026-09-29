@@ -4,6 +4,7 @@ import uuid
 from typing import Protocol
 
 from backend.contracts import AttachmentInfo, ChatResponse
+from backend.errors import ProviderGlitch
 from backend.metabolisation.daemon_trigger_signal import enqueue_dream_trigger
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
 from backend.services.annotations import (
@@ -349,7 +350,7 @@ class ChatService:
                         error=RuntimeError(err["error_message"]),
                         context={"input": content},
                     )
-                raise ValueError("Pipeline processing failed")
+                raise ProviderGlitch("The language model did not return a usable completion", entity="chat")
 
             scorer = CompositeStructuralScorer(llm_provider=state.structural_provider)
             try:

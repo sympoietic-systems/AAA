@@ -1,12 +1,15 @@
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
+
+import httpx
 
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.modules.llm_client import (
+    EmptyTruncatedCompletionError,
     KeyManager,
     ModelPoolProvider,
     OpenAICompatibleProvider,
@@ -344,6 +347,31 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         async def side_effect(provider_instance, messages, **params):
             if provider_instance._model == "first":
                 raise ProviderResponseError("Provider response missing completion choices")
+            return {"content": "fallback response", "thinking": None}
+
+        mock_generate.side_effect = side_effect
+
+        result = await provider.generate([{"role": "user", "content": "hello"}])
+
+        self.assertEqual(result["content"], "fallback response")
+        self.assertEqual(provider._openrouter_key_mgr.get_available_key(), "or_key1")
+
+    @patch("backend.modules.llm_pool.asyncio.sleep", new_callable=AsyncMock)
+    @patch("backend.modules.llm_pool.OpenAICompatibleProvider.generate", autospec=True)
+    async def test_v67_retry_provider_error_falls_back_without_exhausting_key(self, mock_generate, _mock_sleep):
+        provider = ModelPoolProvider(
+            api_key="or_key_default",
+            models=["openrouter_router/first", "openrouter_router/second"],
+            fallback_model="",
+            openrouter_keys=["or_key1"],
+            cooldown_seconds=10,
+        )
+
+        async def side_effect(provider_instance, messages, **params):
+            if provider_instance._model == "first":
+                if mock_generate.call_count == 1:
+                    raise httpx.ConnectError("transient connection failure")
+                raise EmptyTruncatedCompletionError("without returning final content")
             return {"content": "fallback response", "thinking": None}
 
         mock_generate.side_effect = side_effect

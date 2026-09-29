@@ -7,10 +7,18 @@ from backend.modules.base import ProcessingModule
 from backend.modules.llm_http import OpenAICompatibleProvider, OpenRouterProvider
 from backend.modules.llm_parsing import _format_context, _parse_json_safely, generate_unified
 from backend.modules.llm_pool import KeyManager, ModelPoolProvider
-from backend.modules.llm_protocol import BaseLLMProvider, LLMMessage, LLMResult, ProviderResponseError, RateLimitError
+from backend.modules.llm_protocol import (
+    BaseLLMProvider,
+    EmptyTruncatedCompletionError,
+    LLMMessage,
+    LLMResult,
+    ProviderResponseError,
+    RateLimitError,
+)
 
 __all__ = [
     "BaseLLMProvider",
+    "EmptyTruncatedCompletionError",
     "KeyManager",
     "LLMClientModule",
     "ModelPoolProvider",

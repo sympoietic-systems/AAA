@@ -19,6 +19,10 @@ class ProviderResponseError(Exception):
     """An upstream response that cannot satisfy the configured LLM contract."""
 
 
+class EmptyTruncatedCompletionError(ProviderResponseError):
+    """A provider exhausted its completion budget without returning final content."""
+
+
 class BaseLLMProvider(ABC):
     @abstractmethod
     async def generate(self, messages: list[LLMMessage], **params: Any) -> LLMResult: ...
