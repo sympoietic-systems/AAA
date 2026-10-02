@@ -205,3 +205,7 @@ To add a new benchmark suite (e.g. `memory`):
 3. Create `benchmarks/suites/memory/cli.py` with `register_memory_cli(subparsers)` and `execute_memory_cli(args)`.
 4. Register the new suite in `benchmarks/cli.py`.
 5. Add unit tests in `benchmarks/tests/test_memory_suite.py`.
+
+## Skill vitality audit
+
+`python -m benchmarks.suites.skill_vitality --help` audits checkpointed snapshots read-only. [Report 022](../docs/reports/022-skill-vitality-audit-report.md) describes trace coverage, dormancy criteria, and bounded adversarial probes.

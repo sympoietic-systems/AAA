@@ -134,6 +134,8 @@ V69: web crawler detects PDF content and extracts font-aware headings/text via t
 
 V100: Message insertion honors outer atomic rollback; invalid parent fails structurally; committed parent visible across worker connections.
 
+V101: Skill audit reads checkpointed snapshot in SQLite URI read-only mode; activation gaps ≠ lifetime nonuse; archived skills ∉ pruning candidates; probe failure ≠ skill failure.
+
 ## §T
 
 id|status|task|cites
@@ -182,6 +184,8 @@ T42|x|unfilter skill-beliefs in UI, tag `[Skill]` vs `[Belief]`, resolve skill t
 T43|x|add PDF content detection and fallback extraction via `SimpleChunkDigester` and `pdfplumber` in `RhizomeWebProbe.crawl`|V69,I.domain
 
 T47|x|close message transaction and parent validation gaps|V100,V34,V17
+
+T48|x|implement read-only skill vitality and adversarial evidence harness|V101,V56
 
 ## §B
 
@@ -265,3 +269,5 @@ B76|2026-10-02|crawler fed binary PDF payloads into HTML parser, discarding acad
 
 
 B77|2026-10-03|message insert directly committed inside atomic scope; missing parent surfaces raw foreign-key exception|V100
+
+B78|2026-10-03|audit URI lacked uri=True; live harness passed unsupported prompt keyword; archived skills falsely flagged for pruning|V101

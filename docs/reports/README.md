@@ -30,3 +30,5 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 | **[019](019-dialogue-feedback-control-report.md)** | **Dialogue Feedback Control** | `backend/modules/metrics/`, `backend/modules/sensory/` | Causal receipts, adaptive retrieval gate, and rejected progressive intervention ablation. |
 
 - [Report 021: Message tree integrity](021-message-tree-integrity-report.md)
+
+- [Report 022: Skill vitality audit](022-skill-vitality-audit-report.md)
