@@ -2716,6 +2716,12 @@ python -m playwright install
 
 **When to add Firecrawl later:** Only if you need structured search results, sitemap discovery, or enterprise-grade anti-bot handling. Free tier is 1,000 credits/month.
 
+### 9.6 Academic PDF Digestion Fallback
+During autonomous crawling and probe execution (`RhizomeWebProbe.crawl()` and `select_and_fetch()`), search queries frequently surface academic PDFs (`.pdf` URLs from arXiv, PhilPapers, Semantic Scholar, etc.) or responses with `content-type: application/pdf` / `%PDF` magic bytes.
+*   **Behavior:** Rather than passing binary PDF payloads through the HTML parser (which previously resulted in empty text or discarded sources), the crawler routes binary payloads to a temporary file and digests them via `SimpleChunkDigester().extract(tmp_path, "pdf")` running non-blocking inside `asyncio.to_thread`.
+*   **Font-Aware ATX Headings:** Employs `PDFHeadingExtractor` (`pdfplumber`) to derive markdown `#` headings from character font geometry, preserving document hierarchy while falling back to plain text if font tables are corrupted.
+*   **Sanitization:** Temporary files are unlinked in `finally` blocks, adhering strictly to ephemeral cache hygiene invariants.
+
 ---
 
 ## 10. Anti-Mastery Vocabulary Middleware

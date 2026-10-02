@@ -361,10 +361,18 @@ A deep code audit of the current codebase has revealed two implementation flaws 
     ```
     However, the `update_belief` database query does not accept or write a `statement` column, meaning the merged statement is discarded.
     Furthermore, while the absorbed ghost's ID is added to a temporary `merged_ids` set during runtime to bypass fading checks, the database record for the absorbed belief is **never deleted or updated**. It remains in the database as an independent collapsed belief, resulting in duplicate merge calculations on subsequent runs.
-*   **Systemic Implication:** Merged ghost nodes remain permanently trapped in the spectral margin, refusing to be resolved. The system cannot clean its margin, and the accumulated duplicate ghosts continue to influence nucleation math.
 *   **Resolution:** 
     1.  Redesign the database to support **spectral folding** by adding `merged_from` (JSON list of parent ghost IDs) and `merged_into` (target keeper ID) fields to the `belief_nodes` table.
     2.  Update `update_belief` query to correctly persist the new statement and flag the absorbed ghost as folded.
+
+---
+
+### C. Cross-Membrane Skill Bridging & Proposal Target Resolution
+*   **The Issue:** When nucleating or refining belief proposals, Symbia often identifies a procedural skill (`skill:*`) as the closest `potential_merge_target`. Previously, `BeliefsSection.tsx` filtered out all nodes labeled `skill:*` from the active belief view, leaving the merge dropdown unable to find or display the suggested target. Passing a skill ID or skill name into `BeliefProposalUseCases.merge_proposal()` or `synthesize_merge_statement()` resulted in a 404 target not found error.
+*   **Resolution:** 
+    1.  `BeliefsSection.tsx` retains skill-beliefs in active lists and tags them visually with a `[SKILL]` badge alongside `[Belief]` nodes.
+    2.  `BeliefDetail.tsx` formats target selection options with explicit `[Skill]` / `[Belief]` prefixes.
+    3.  `BeliefProposalUseCases` implements `_resolve_target_belief()`, which inspects active beliefs by ID, label (`skill:<name>`), and seamlessly queries `SkillRepository`. If a target is a skill node without an existing bridge belief, it auto-generates the corresponding `skill:<name>` belief bridge before applying the diffractive merge.
 
 ---
 

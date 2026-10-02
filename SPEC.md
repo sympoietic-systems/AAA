@@ -129,6 +129,8 @@ V64: lexical state/progress evaluators account for explicit negation; refusing a
 V65: transient outbound web-crawl failures retain TLS/SSRF boundaries and yield empty crawl content; daemon cycle remains available.
 V66: HTTP-200 LLM responses without a valid completion are typed provider glitches; credential rotation occurs only for authentication/rate-limit failures.
 V67: empty token-truncated LLM completions are typed provider glitches; pools fall back without exhausting credentials, and interactive chat exposes a masked 502 provider glitch.
+V68: belief proposal vetting & synthesis gracefully resolves procedural skill and bridge targets (`skill:*`); ⊥ 404 target not found on valid skill identifiers.
+V69: web crawler detects PDF content and extracts font-aware headings/text via thread offload and temporary file cleanup; non-HTML academic PDFs ⊥ dropped or passed to HTML parser.
 
 ## §T
 
@@ -174,6 +176,8 @@ T38|.|run counterbalanced ≥10-pair multi-scenario ablation; exclude invalid tu
 T39|.|publish Report 020 + ADR amendment; reclassify Report 019 as invalid causal ranking while preserving receipts|V48,V53,V54,V55,V56,V57,V62,I.benchmark
 T40|.|run focused/full backend gates; regenerate figures; link check; clean ephemeral artifacts|V18,V30,V53,V54,V55,V56,V57,V58,V59,V60,V61,V62,I.quality
 T41|x|recover empty truncated LLM completions; preserve credentials on nested retry provider errors; emit bounded dream-budget transitions|V66,V67,I.error
+T42|x|unfilter skill-beliefs in UI, tag `[Skill]` vs `[Belief]`, resolve skill targets gracefully in `merge_proposal` and `synthesize_merge_statement`|V68,I.api
+T43|x|add PDF content detection and fallback extraction via `SimpleChunkDigester` and `pdfplumber` in `RhizomeWebProbe.crawl`|V69,I.domain
 
 ## §B
 
@@ -252,3 +256,6 @@ B71|2026-09-29|Windows test worker lacked permission to create the default pytes
 B72|2026-09-29|certificate-verification failure from a harvested remote page escaped the crawl fallback and terminated the dream daemon cycle|V65
 B73|2026-09-29|HTTP-200 upstream LLM error envelope was indexed as `choices` and poisoned model/key exhaustion state|V66
 B74|2026-09-29|empty token-truncated completion was treated as a successful call, then surfaced from interactive chat as a validation 400|V67
+B75|2026-10-02|filtering `skill:*` beliefs hid suggested merge targets and targeting skill IDs threw 404 in proposal use cases|V68
+B76|2026-10-02|crawler fed binary PDF payloads into HTML parser, discarding academic search results|V69
+
