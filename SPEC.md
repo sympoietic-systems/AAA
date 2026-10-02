@@ -132,6 +132,8 @@ V67: empty token-truncated LLM completions are typed provider glitches; pools fa
 V68: belief proposal vetting & synthesis gracefully resolves procedural skill and bridge targets (`skill:*`); ⊥ 404 target not found on valid skill identifiers.
 V69: web crawler detects PDF content and extracts font-aware headings/text via thread offload and temporary file cleanup; non-HTML academic PDFs ⊥ dropped or passed to HTML parser.
 
+V100: Message insertion honors outer atomic rollback; invalid parent fails structurally; committed parent visible across worker connections.
+
 ## §T
 
 id|status|task|cites
@@ -178,6 +180,8 @@ T40|.|run focused/full backend gates; regenerate figures; link check; clean ephe
 T41|x|recover empty truncated LLM completions; preserve credentials on nested retry provider errors; emit bounded dream-budget transitions|V66,V67,I.error
 T42|x|unfilter skill-beliefs in UI, tag `[Skill]` vs `[Belief]`, resolve skill targets gracefully in `merge_proposal` and `synthesize_merge_statement`|V68,I.api
 T43|x|add PDF content detection and fallback extraction via `SimpleChunkDigester` and `pdfplumber` in `RhizomeWebProbe.crawl`|V69,I.domain
+
+T47|x|close message transaction and parent validation gaps|V100,V34,V17
 
 ## §B
 
@@ -259,3 +263,5 @@ B74|2026-09-29|empty token-truncated completion was treated as a successful call
 B75|2026-10-02|filtering `skill:*` beliefs hid suggested merge targets and targeting skill IDs threw 404 in proposal use cases|V68
 B76|2026-10-02|crawler fed binary PDF payloads into HTML parser, discarding academic search results|V69
 
+
+B77|2026-10-03|message insert directly committed inside atomic scope; missing parent surfaces raw foreign-key exception|V100

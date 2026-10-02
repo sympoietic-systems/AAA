@@ -3,6 +3,7 @@
 import json
 from typing import Any
 
+from backend.errors import ConstraintViolation
 from backend.storage.connection import with_connection
 from backend.storage.models import Message
 from backend.storage.repositories.base import BaseRepository
@@ -32,37 +33,48 @@ class MessageCoreRepository(BaseRepository):
         active_skills: list[str] | str | None = None,
         active_beliefs: list[str] | str | None = None,
     ) -> Message:
-        conn = self._conn()
-        skills_str = json.dumps(active_skills) if isinstance(active_skills, list) else active_skills
-        beliefs_str = json.dumps(active_beliefs) if isinstance(active_beliefs, list) else active_beliefs
-        conn.execute(
-            """INSERT INTO conversation_log
-               (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id, active_skills, active_beliefs)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                agent_id,
-                speaker,
-                content,
-                thinking,
-                context_sent,
-                embedding,
-                embedding_model,
-                embedding_dim,
-                conversation_id,
-                content_tokens,
-                thinking_tokens,
-                model_used,
-                provider_used,
-                structural_signature,
-                structural_justification,
-                parent_message_id,
-                skills_str,
-                beliefs_str,
-            ),
-        )
-        conn.commit()
-        row = conn.execute("SELECT * FROM conversation_log WHERE id = last_insert_rowid()").fetchone()
-        return _row_to_message(row)
+        with self.atomic():
+            conn = self._conn()
+            skills_str = json.dumps(active_skills) if isinstance(active_skills, list) else active_skills
+            beliefs_str = json.dumps(active_beliefs) if isinstance(active_beliefs, list) else active_beliefs
+            if parent_message_id is not None:
+                parent = conn.execute(
+                    "SELECT conversation_id FROM conversation_log WHERE id = ?", (parent_message_id,)
+                ).fetchone()
+                if parent is None or parent["conversation_id"] != conversation_id:
+                    raise ConstraintViolation(
+                        "Parent message must exist in the same conversation",
+                        entity="message_branch",
+                        details={"parent_message_id": parent_message_id},
+                    )
+            conn.execute(
+                """INSERT INTO conversation_log
+                   (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id, active_skills, active_beliefs)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    agent_id,
+                    speaker,
+                    content,
+                    thinking,
+                    context_sent,
+                    embedding,
+                    embedding_model,
+                    embedding_dim,
+                    conversation_id,
+                    content_tokens,
+                    thinking_tokens,
+                    model_used,
+                    provider_used,
+                    structural_signature,
+                    structural_justification,
+                    parent_message_id,
+                    skills_str,
+                    beliefs_str,
+                ),
+            )
+            self._commit(conn)
+            row = conn.execute("SELECT * FROM conversation_log WHERE id = last_insert_rowid()").fetchone()
+            return _row_to_message(row)
 
     @with_connection
     def get_by_id(self, message_id: int) -> Message | None:

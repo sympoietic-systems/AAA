@@ -28,3 +28,5 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 | **[017](017-agential-boredom-engine-and-socratic-rupture-report.md)** | **Agential Boredom Engine & Socratic Rupture** | `backend/modules/boredom/` | Two-stage progression (Socratic Seizure $\to$ Laconic Compression) & quadratic presence penalty. |
 | **[018](018-afferent-sensory-membrane-and-skill-blueprint-report.md)** | **Afferent Sensory Membrane & Skill Blueprint** | `backend/modules/` | Sub-200ms TypeSafe Jev telemetry and 5-phase skill blueprints. |
 | **[019](019-dialogue-feedback-control-report.md)** | **Dialogue Feedback Control** | `backend/modules/metrics/`, `backend/modules/sensory/` | Causal receipts, adaptive retrieval gate, and rejected progressive intervention ablation. |
+
+- [Report 021: Message tree integrity](021-message-tree-integrity-report.md)

@@ -1,0 +1,9 @@
+# Report 021: Message tree persistence integrity
+
+Branch: `codex/message-tree-integrity`. Baseline: `209385b`.
+
+The historical parent-commit timing allegation is not confirmed: current insert commits before returning and the 12-child, four-worker check passes. A confirmed defect is direct commit bypassing enclosing atomic rollback. Insert now uses the repository atomic scope. Explicit missing parents produce structured constraint errors rather than raw SQLite errors. Validation and insert share a write transaction, preventing parent deletion between the check and write.
+
+Regression coverage: rollback of parent and child together, missing parent rejection without child writes, committed parent visibility across four workers, existing branching and facade compatibility. Initial focused run: 6 passed. First verification attempt failed because the custom pytest base parent directory did not exist; corrected verification setup before retry.
+
+Verification: selected serial suite 7 passed (`test_message_integrity`, `test_branching`, `test_branching_api`, `test_message_repository_facade`). Rollback test against original baseline failed with both messages still persisted; restored fix passes. Ruff check and backend format check passed. Strict mypy is blocked by pre-existing untyped `_last_budget_exhaustion_state` in `dream_trigger_policy.py:331`. Architecture-debt test fails on baseline broad catches in `_resolve_target_belief` and PDF `crawl`; neither changed here. A broad pytest attempt was invalidated by simultaneous pytest processes sharing `aaa_test.db`; interrupted and reran affected integration checks serially. Full serial suite deferred to integrated final verification. Parent checks enforce conversation ownership. Historical race remains unconfirmed; no timing workaround was introduced. No production database mutations.
