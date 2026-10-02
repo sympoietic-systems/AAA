@@ -405,7 +405,11 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                       <select value={targetBeliefId} onChange={e => setTargetBeliefId(e.target.value)}
                         className="bg-[#050508] border border-[#222] text-[#ccc] px-1 py-1 rounded text-[10px] w-full focus:outline-none focus:border-[#a78bfa]/50">
                         <option value="">-- select target --</option>
-                        {activeBeliefs.map(ab => <option key={ab.id} value={ab.id}>{ab.label} (v{ab.version})</option>)}
+                        {activeBeliefs.map(ab => (
+                          <option key={ab.id} value={ab.id}>
+                            {ab.label.startsWith("skill:") ? "[Skill] " : "[Belief] "}{ab.label} (v{ab.version})
+                          </option>
+                        ))}
                       </select>
                     </div>
                     {targetBeliefId && (

@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from typing import cast
+from typing import Any, cast
 
 from backend.modules.llm_protocol import BaseLLMProvider
 from backend.services.belief_common import BeliefResult, BeliefUseCase, _score_statement_16d
@@ -125,6 +125,57 @@ class BeliefProposalUseCases(BeliefUseCase):
 
         return {"status": "ok"}
 
+    def _resolve_target_belief(
+        self, belief_repo: BeliefProposalRepository, agent_id: str, target_belief_id: str
+    ) -> Any | None:
+        """Resolve a target belief ID, accepting either a direct belief ID, a skill-belief label, or a skill node ID."""
+        active_beliefs = belief_repo.list_beliefs(agent_id)
+        for b in active_beliefs:
+            if b.id == target_belief_id:
+                return b
+
+        # If not found by ID, check if target_belief_id matches a belief label (e.g. "skill:foo")
+        for b in active_beliefs:
+            if b.label == target_belief_id or (
+                not target_belief_id.startswith("skill:") and b.label == f"skill:{target_belief_id}"
+            ):
+                return b
+
+        # Check skill repository in state if target_belief_id is a skill ID or skill name
+        skill_repo = getattr(self._state, "skill_repo", None)
+        if skill_repo:
+            skill = skill_repo.get_skill(target_belief_id)
+            if not skill and target_belief_id.startswith("skill:"):
+                skill = skill_repo.get_skill_by_name(target_belief_id[len("skill:") :])
+            elif not skill:
+                skill = skill_repo.get_skill_by_name(target_belief_id)
+
+            if skill:
+                # Check if bridge belief already exists
+                bridge_label = f"skill:{skill.name}"
+                for b in active_beliefs:
+                    if b.label == bridge_label:
+                        return b
+                # Create bridge belief on the fly
+                try:
+                    new_b = belief_repo.create_belief(
+                        id=str(uuid.uuid4()),
+                        agent_id=agent_id,
+                        label=bridge_label,
+                        statement=skill.short_content or skill.description or skill.name,
+                        origin="emergent",
+                        confidence=skill.confidence,
+                        ontological_mass=1.0,
+                        somatic_anchor="conceptual",
+                        vector_16d=skill.vector_16d or "[]",
+                        lifecycle_stage="crystallized",
+                    )
+                    return new_b
+                except Exception as e:
+                    logger.warning("Failed to auto-bridge skill '%s' to belief: %s", skill.name, e)
+
+        return None
+
     async def merge_proposal(
         self, proposal_id: str, target_belief_id: str, merged_statement: str | None = None
     ) -> BeliefResult:
@@ -137,13 +188,7 @@ class BeliefProposalUseCases(BeliefUseCase):
         if not p:
             return {"status": "error", "message": "Proposal not found"}
 
-        active_beliefs = belief_repo.list_beliefs(p.agent_id)
-        target_belief = None
-        for b in active_beliefs:
-            if b.id == target_belief_id:
-                target_belief = b
-                break
-
+        target_belief = self._resolve_target_belief(belief_repo, p.agent_id, target_belief_id)
         if not target_belief:
             return {"status": "error", "message": "Target belief not found"}
 
@@ -223,7 +268,7 @@ class BeliefProposalUseCases(BeliefUseCase):
         if not p:
             return {"status": "error", "message": "Proposal not found"}
 
-        target_belief = belief_repo.get_belief(p.agent_id, target_belief_id)
+        target_belief = self._resolve_target_belief(belief_repo, p.agent_id, target_belief_id)
         if not target_belief:
             return {"status": "error", "message": "Target active belief not found"}
 

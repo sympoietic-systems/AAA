@@ -1,6 +1,10 @@
+import asyncio
+import contextlib
 import json
 import logging
+import os
 import re
+import tempfile
 import uuid
 from html.parser import HTMLParser
 from pathlib import Path
@@ -204,6 +208,32 @@ class RhizomeWebProbe:
             )
             return ""
         if response.status_code == 200:
+            content_type = response.headers.get("content-type", "").lower()
+            is_pdf = (
+                url.lower().split("?")[0].endswith(".pdf")
+                or "application/pdf" in content_type
+                or response.content[:4] == b"%PDF"
+            )
+            if is_pdf:
+                tmp_path = None
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                        tmp_file.write(response.content)
+                        tmp_path = Path(tmp_file.name)
+
+                    from backend.modules.digester import SimpleChunkDigester
+
+                    digester = SimpleChunkDigester()
+                    extracted_text = await asyncio.to_thread(digester.extract, tmp_path, "pdf")
+                    return extracted_text.strip()
+                except Exception as err:
+                    logger.warning("PDF extraction failed during web crawl for %s: %s", url, err)
+                    return ""
+                finally:
+                    if tmp_path and tmp_path.exists():
+                        with contextlib.suppress(OSError):
+                            os.unlink(tmp_path)
+
             parser = HTMLToTextParser()
             parser.feed(response.text)
             return parser.get_text()

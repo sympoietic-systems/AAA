@@ -17,6 +17,7 @@ const NodeListItem = memo(function NodeListItem({
   const stage = b.lifecycle_stage || "crystallized"
   const isProto = stage === "nucleation" || stage === "accretion"
   const isGhost = ghost || stage === "collapsed" || stage === "faded"
+  const isSkill = b.label?.startsWith("skill:") ?? false
 
   return (
     <div
@@ -33,6 +34,11 @@ const NodeListItem = memo(function NodeListItem({
         {isProto ? "◇" : isGhost ? "◆" : "●"}
       </span>
       {isGhost && <span className="text-[8px] shrink-0">👻</span>}
+      {isSkill && (
+        <span className="text-[8px] font-mono px-1 py-px rounded shrink-0 text-[#38bdf8] border border-[#38bdf8]/40 bg-[#38bdf8]/10">
+          SKILL
+        </span>
+      )}
       <span className={`font-mono text-[11px] truncate flex-1 min-w-0 text-[#bbb] ${isGhost ? "line-through" : ""}`}>
         {b.label} <span className="text-[#555] text-[9px] font-normal">v{b.version}</span>
       </span>
@@ -104,10 +110,9 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
 
   const { beliefs: rawBeliefs, proto_beliefs: rawProtos, ghosts: rawGhosts } = data
 
-  const isSkillBelief = (b: BeliefNodeInfo) => b.label?.startsWith("skill:") ?? false
-  const beliefs = (rawBeliefs || []).filter(b => !isSkillBelief(b))
-  const proto_beliefs = (rawProtos || []).filter(b => !isSkillBelief(b))
-  const ghosts = (rawGhosts || []).filter(b => !isSkillBelief(b))
+  const beliefs = rawBeliefs || []
+  const proto_beliefs = rawProtos || []
+  const ghosts = rawGhosts || []
 
   const sortFunc = (a: BeliefNodeInfo, b: BeliefNodeInfo) => {
     if (sortBy === "mass") {

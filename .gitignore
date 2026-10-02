@@ -54,3 +54,4 @@ reports/*/
 benchmarks/runs/
 *.log
 **/*.log
+.tmp_pytest_nvidia/

@@ -11,13 +11,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from backend.services.belief import BeliefService
 from backend.storage.database import get_db_path, init_db
-from backend.storage.repositories import BeliefRepository, NotificationRepository
+from backend.storage.repositories import BeliefRepository, NotificationRepository, SkillRepository
 
 
 class MockState:
     def __init__(self, db_path):
         self.belief_repo = BeliefRepository(db_path)
         self.notification_repo = NotificationRepository(db_path)
+        self.skill_repo = SkillRepository(db_path)
 
 
 def test_belief_proposal_crud_and_service():
@@ -561,6 +562,70 @@ async def test_belief_service_synthesize_merge_statement():
 
         assert res["status"] == "ok"
         assert res["synthesized_statement"] == "Synthesized: Rhizomatic deterritorialization connects all nodes."
+
+    finally:
+        conn.close()
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+
+@pytest.mark.asyncio
+async def test_merge_proposal_into_skill_target():
+    db_path = str(get_db_path("data/aaa_skill_target_test.db"))
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    conn = init_db(db_path)
+    try:
+        state = MockState(db_path)
+        service = BeliefService(state)
+
+        # 1. Create a skill in skill_repo
+        skill_id = str(uuid.uuid4())
+        state.skill_repo.create_skill(
+            id=skill_id,
+            name="diffractive-reading",
+            description="Reads texts through one another to discover insights.",
+            content="Detailed instructions for diffractive reading.",
+            short_content="Diffractive methodology applied to concepts.",
+            lifecycle_stage="crystallized",
+            confidence=0.85,
+            ontological_mass=1.2,
+        )
+
+        # 2. Create proposal with potential_merge_target pointing to the skill ID or skill label
+        proposal_id = str(uuid.uuid4())
+        state.belief_repo.create_proposal(
+            id=proposal_id,
+            agent_id="symbia",
+            provisional_statement="Diffractive analysis creates interference patterns between ontological planes.",
+            source_trace="[]",
+            initial_signature=json.dumps({"v16d": [0.2] * 16}),
+            nucleation_mass=0.4,
+            confidence=0.7,
+            status="pending",
+        )
+
+        # 3. Merge directly targeting skill ID
+        res = await service.merge_proposal(
+            proposal_id=proposal_id,
+            target_belief_id=skill_id,
+            merged_statement="Diffractive analysis creates interference patterns across concepts.",
+        )
+
+        assert res["status"] == "ok"
+        assert res["label"] == "skill:diffractive-reading"
+
+        # Verify proposal marked adopted
+        prop = state.belief_repo.get_proposal(proposal_id)
+        assert prop.status == "adopted"
+
+        # Verify bridge belief was created/updated and mass increased
+        target_belief = state.belief_repo.get_belief(res["belief_id"])
+        assert target_belief is not None
+        assert target_belief.label == "skill:diffractive-reading"
+        assert target_belief.ontological_mass >= 1.4  # 1.0 (default bridge mass) + 0.4 nucleation_mass
+        assert target_belief.statement == "Diffractive analysis creates interference patterns across concepts."
 
     finally:
         conn.close()

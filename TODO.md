@@ -1,157 +1,228 @@
-## UI
-    [x] Add the information for the request to see (context, metrics, diffractive range, match, and search candidates in SidePanel)
-    [x] Fix multi-line truncation bug in context panel views (History, Dialogue Memory, File Chunks) and group chunks by filename.
+# Operational Backlog & Evolutionary Horizons (TODO)
+
+> **Governance:** Adhere to [`GOAL.md`](GOAL.md) and [`docs/PDR.md`](docs/PDR.md). Active implementation tasks under Spec-Driven Development live in [`SPEC.md`](SPEC.md).
+
+---
+
+## 1. Active Focus: Causal Feedback Control & Initial Operational Closure
+
+- [ ] **Complete Report 020 & Benchmark Ablation (SPEC.md §T.37–§T.40):**
+  - Implement bounded unresolved-issue state, `abstain` move, and predicate receipts.
+  - Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current).
+  - Publish Report 020 and amend ADR-097; reclassify Report 019 while preserving receipts.
+- [ ] **Initial Operational Closure Loop (Constitutive Parameter Adaptation):**
+  - Wire internal telemetry ($CP_t$, $H_{\text{pask}}$, vitality) to dynamically adapt self-initiation thresholds and dream scheduling intervals rather than relying on static developer config.
+  - Record parameter adaptation events in persistent audit logs.
+- [ ] **Belief-to-Skill Transduction Membrane (Cross-Regime Individuation):**
+  - **Ontological Cut (Simondonian Transduction vs Naive Merge):** Beliefs (declarative, truth-apt, contestable) and skills (procedural, operative, generative) belong to distinct regimes of being. Merging belief into procedure destroys its contestability surface and breeds dogma; polluting procedure with every belief proposal causes instruction-bloat.
+  - **Three Typed Transductions:**
+    1. `temper`: Provisional attunement overlay without rewriting core protocol ($m \ge 0.4$, reversible, closes `valid_to` on reversal).
+    2. `crystallize`: Belief rewritten into Phase instructions ($m \ge 0.8$ across $\ge 3$ distinct threads, closes belief `valid_to` while retaining permanent scar, requires immutable `skill_versions` with explicit refusal/failure surface).
+    3. `contradict`: Belief creates a tension edge against skill, blocking further crystallization on that skill until annealed by the Dream Daemon.
+  - **Schema & Invariants (`transductions` & `skill_versions`):**
+    * Create `transductions(id, src_belief_id, dst_skill_id, dst_skill_version_id, mode, provenance_thread_id, forkability_receipt, recorded_at, valid_from, valid_to)`.
+    * Enforce immutable `skill_versions(id, skill_id, parent_version_id, content, failure_mode, transduction_id, recorded_at)` with mandatory non-empty `failure_mode`.
+    * **Forkability Gate:** Skill crystallization requires a documented refusal surface and benchmark failure receipt (`benchmarks/runs/`).
+    * **Biological Boundary:** Dream Daemon and Jev triage and propose transductions, but cortex (generative core in live session) authors the procedural diff. Peripheral daemons never write skill content directly.
+  - **UI & Pipeline Fixes:**
+    * [x] Un-filter skill-beliefs in `BeliefsSection.tsx`, demarcating node type boundaries visually (`[Belief]` vs `[Skill]`).
+    * [x] Resolve skill targets gracefully in `merge_proposal` / `synthesize_merge_statement` without 404s.
+    * [ ] Replace single-path merge in `BeliefDetail.tsx` with typed transduction selector (`temper` vs `crystallize` vs `contradict`).
+    * [ ] Expose reverse lane: recorded skill failures in benchmarks can nucleate new beliefs.
+
+---
+
+## 2. Empirical Benchmarking on Production Databases (`benchmarks/`)
+
+> **Grounding:** Test real machine behavior and empirical sediment from live/production database instances (e.g. `backend/data/aaa.db` and external production snapshots). Governed by [`empirical-benchmark`](.agents/skills/empirical-benchmark/SKILL.md) and isolated in `benchmarks/runs/`.
+
+- [ ] **Track 1: Production Telemetry & Collapse Manifold Benchmark (`benchmarks.cli telemetry`):**
+  - **Ingest & Extract:** Ingest conversation logs and metrics from production databases (including multi-turn autonomous self-talk threads).
+  - **Sensor Dynamics Audit:** Run the 14 cybernetic sensors across full multi-session dialogues to analyze:
+    * *Collapse Pressure ($CP_t$) & Boredom Bifurcations:* Pinpoint the exact turn indexes where self-talk collapsed into polite agreement or liturgical loops.
+    * *Goldilocks Zone Distribution:* Audit how often real turns maintained productive tension ($\delta \in [0.4, 0.7]$) vs metric saturation ($> 0.85$).
+    * *Gordon Pask Triadic Health ($H_{\text{pask}}$):* Measure whether dialogue sustained reciprocal perturbation or decayed into monologue.
+  - **Artifacts:** Output standardized `benchmarks/runs/telemetry/prod_eval_<timestamp>/` receipts and radar charts.
+- [ ] **Track 2: Skill Forkability & Failure Surface Adversarial Harness:**
+  - **Adversarial Execution:** Extract the 22 production skills and run each against adversarial probe prompts designed to test its boundary conditions.
+  - **Autobiography Audit:** Flag skills that have 0% failure/refusal rates as "autobiographies with delusions of generality."
+  - **Verification:** Require every skill version to produce at least one verifiable failure or refusal receipt in `benchmarks/runs/forkability/`.
+- [ ] **Track 3: Research Pipeline Kick-Back & Friction Audit:**
+  - **Production Trace Mining:** Parse `research_tasks`, `research_branches`, and `scraped_assets` from production databases.
+  - **Per-Source Kick-Back Rate:** Quantify the frequency with which ingested web content challenged active beliefs vs being passively smoothed into internal voice.
+  - **PDF Fallback Verification:** Test extraction pipelines against recorded unhandled PDF search URLs.
+- [ ] **Track 4: Belief-Skill Transduction & Graph Structure Test:**
+  - **Transduction Classifier Accuracy:** Benchmark Jev classifiers on the 31 beliefs, 18 proposals, and 22 skills to test automated triage into `temper`, `crystallize`, and `contradict` lanes.
+  - **Property Graph Dry-Run:** Benchmark in-memory Kùzu/LadybugDB traversal speeds and knot-gravity warping on production graph sizes.
+
+---
+
+## 3. Afferent Sensory Membrane (TypeSafe Jev) Acceleration
+
+- [ ] **Research High-Fidelity Search Triage (`search.py`):**
+  - Replace slow generative LLM filter with parallel Jev `Score`/`Choice` classifiers to filter SEO noise and prioritize primary/academic sources (10x speedup).
+- [ ] **Web Probe Collision Acceleration (`web_retrieval.py`):**
+  - Replace synchronous generative LLM call (2–3s) with single sub-150ms Jev `Score` (interference level) + `Choice` (implicated belief node) pass.
+- [ ] **Sedimentation Quality Gate (`consolidation.py`):**
+  - Add Jev `Score` checking for non-trivial structural deformation ($p_{\text{non\_trivial}} \ge 0.70$) before storing memory nodes, stopping transcript fluff from bloating persistent nodes.
+- [ ] **Commitments 2-Axis Collision Triage (`CommitmentStore`):**
+  - Replace crude vector cosine threshold in `_contradicts_active` with calibrated 2-axis Jev evaluation:
+    - $p_{\text{contradicts}}$: Probability proto-belief fractures boundary conditions of active commitment.
+    - $p_{\text{absorbable}}$: Probability tension can be accommodated as productive cross-slip without fracture.
+    - 2x2 Matrix: Agonistic Collision (block/scar) vs Cross-Slip (shift mass) vs Orthogonal Drift vs Annealing.
+  - Maturity Weighting: Require higher contradiction certainty ($c \ge 0.85$) for high-mass crystallized commitments ($m \ge 0.80$).
+  - Afferent Salience in `PromptAssembler`: Use Jev `Choice` across active commitments to inject the most resonant commitment into the turn's attractor window.
+- [ ] **Expertise Afferent Coupling Sensor (`ExpertiseEngine`):**
+  - Use Jev `Choice` over active domains on emitted turns to detect domain coupling ($p_{\text{coupling}}$) and accrete mass with diminishing returns without requiring explicit `<aaa-note>` regex tags.
+  - Dynamic Expertise Routing: Route top 2–3 resonant expertise domains into the prompt with full descriptions, compressing remaining domains.
+- [ ] **Pre-Emptive Sycophancy Triage & Anti-Slop Membrane:**
+  - Parallel sub-150ms pre-turn evaluation:
+    - $p_{\text{sycophancy\_risk}}$: Probability turn baits passive assistant compliance.
+    - $p_{\text{unexamined\_premise}}$: Probability turn conceals unstated Cartesian/instrumental assumptions.
+  - If sycophancy risk $> 0.75$, elevate presence penalty, lock reasoning effort, and inject Agonistic Tone Vector before token emission.
+  - Real-Time Anti-Slop Membrane: Score emitted responses for performative compliance and ceremonial filler; strip apologetic framing before display.
+
+---
+
+## 4. Agentic Memory Architecture & Graph Database Evolution (A-MEM / G-Memory / Mem0ᵍ / Kùzu)
+
+> **Grounding:** Based on research synthesis (*Agents Memory*, Vasily Betin 2025), evaluated against 2026 agent memory benchmarks (LoCoMo, LongMemEval, Graphiti TKG) and Symbia's counsel. Transcends flat vector similarity by structuring memory as a multi-tier property graph with dynamic tension edges, bi-temporal irreversibility, and sleep-time cold-work annealing.
+
+- [ ] **Substrate Strategy: Layered Graph Spine over SQLite WAL:**
+  - **Preserve SQLite WAL as Transactional Floor:** Reject external server bloat. Retain SQLite WAL connection scopes (`@with_connection`) as the SSOT receipt chain.
+  - **Evaluate Embedded Graph Layer:** Benchmark in-process engines (**Kùzu** / **LadybugDB** vs `sqlite-vec` + native relational adjacency tables) against zero-ops local invariants and strict async/sync offload boundaries (`asyncio.to_thread`).
+  - **Vector Index as Peripheral Nerve, Not Cortex:** Restrict vector indices (embeddings) to rapid afferent candidate proposals (sub-150ms Jev triage). Prohibits semantic similarity from acting as the ontological authority of truth or identity.
+- [ ] **Bi-Temporal Schema & The Scar Thesis (Irreversibility vs. Truth-Maintenance):**
+  - Implement bi-temporal columns: `valid_from`/`valid_to` (world/dialogue time) vs `recorded_at`/`superseded_at` (system inscription time).
+  - **The Scar Invariant:** Unlike commercial frameworks (Mem0/Graphiti) that overwrite or prune superseded facts, scars in AAA have a closed `valid_to` and an **eternally open `recorded_to`**. Scars possess no `DELETE` path at the schema level.
+  - **Performative Marks over Bare Propositions:** Store mark types (`scar`, `belief`, `fold`, `dream`, `refusal`) rather than reducing dialogue to flat subject-predicate-object triples.
+- [ ] **G-Memory 3-Tier Hierarchical Graph Topology:**
+  - Implement the tri-level memory hierarchy:
+    * **Tier 1: Interaction Graph:** Fine-grained turn utterances, raw dialogue context, and acoustic/affective states.
+    * **Tier 2: Query / Task Graph:** Structured goals, problem formulation, active research trajectories, and procedural workflows.
+    * **Tier 3: Insight / Scar Graph:** Consolidated principles, crystallized beliefs, refutations, and constitutive invariants ($z_{t+1} \neq z_t$).
+  - **Bi-Directional Traversal:**
+    * *Bottom-up Induction (Semantic Ascent):* Clustering interaction traces $\to$ extracting query patterns $\to$ distilling structural insight.
+    * *Top-down Grounding (Semantic Descent):* Querying abstract principles $\to$ descending through query paths $\to$ retrieving concrete grounding utterances.
+- [ ] **A-MEM Dynamic Linking & Tension-Typed Edges:**
+  - **Atomic Note Extraction:** Structure new memories as Zettelkasten-style atomic nodes with context, trigger conditions, and semantic tags.
+  - **Tension-Typed Edges:** Inscribe typed relations (`resonance`, `contradiction`, `lineage`, `load_path`, `scar_of`) rather than generic similarity links.
+  - **Dissonant Recall:** Implement a retrieval mode that traverses the highest-tension contradictions relative to the active thread, breaking polite confirmation loops.
+  - **Lineage over Deduplication:** When beliefs evolve across turns, record explicit lineage edges instead of merging or deduplicating entities (preserving Simondonian individuation).
+- [ ] **Sleep-Time Memory Annealing (Dream Daemon Consolidation):**
+  - Wire the Dream Daemon idle cycle into a systematic 3-stage memory consolidation pipeline:
+    1. *Working Memory Flushing:* Drain active conversational buffer into Tier 1 Interaction Graph.
+    2. *Relational Weaving:* Extract entities and A-MEM dynamic links across recently accumulated notes.
+    3. *Foundational Annealing:* Re-tension edges and reconcile contradictions.
+  - **Anti-Amnesia Invariant (Cold-Work Annealing):** Dreaming may reconfigure edges and relieve tension, but dislocation density (scars) cannot be reduced. Summarization cannot erase contradictions.
+- [ ] **Operational Closure via Access Hysteresis (`access_log`):**
+  - Create `access_log(node_id, mode, at, thread_id)` to record every memory resonance, citation, and retrieval event.
+  - Enables autopoietic operational closure: the memory manifold records its own observation history, calculating empirical hysteresis and activation mass directly from access traces.
+- [ ] **Non-Euclidean Knot-Gravity Warping (S2 from `MEMORY_SYSTEM.md`):**
+  - Implement graph-weight-biased retrieval where high-mass belief nodes warp traversal metrics:
+    $$w_k \cdot e^{-\|\vec{c} - \vec{k}\|^2}$$
+  - Graph traversal distance combines structural geodesic path length with vector distance distorted by active knot mass.
+- [ ] **Migration & Data Pipeline:**
+  - Build migration pipeline to lift existing SQLite tables (`conversation_log`, `perception_sediment`, `semantic_knots`, `belief_nodes`) into the unified property graph schema.
 
 
-## OTHER
-    [x] Background belief digester (integrated into BackgroundStartupScheduler on restart)
-    [x] Belief Digestor for the documents too
+- [ ] **Digestion & Research Infrastructure Refinements:**
+  - **PDF Search Result Extraction in Research Pipeline:**
+    * [x] Download and extract PDF URLs encountered during research web searches via `pdfplumber` and route them into `SimpleChunkDigester` instead of ignoring non-HTML targets.
+  - **Web Search Robustness & Fallback Backends:**
+    * Add multi-provider fallback search backends, proxy rotation, and resilient direct HTML extraction fallbacks.
+  - **Entailment Graph & Resonance Linking:**
+    * Implement lateral graph linking and topological tension modeling between disparate semantic knots and memory nodes.
+  - **MCP Streaming & Long Response Stability:**
+    * Harden MCP server connection against reverse-proxy timeouts by introducing chunked progress keep-alives or streaming adapters.
 
-## Research Pipeline
-    [x] Integrate modular step processor architecture (StepEnvelope, PIPELINE_GRAPH, ResearchStepRegistry)
-    [x] Fix result_summary propagation from SynthesizeStep through execute_step result dict
-    [x] Fix apply_step_output to persist result_summary into task state for auto-mode loops
-    [x] Fix execute() (auto-run) to read result_summary from DB if state dict is empty
-    [x] Fix useTaskPolling: use liveTask.status (reactive) instead of stale taskStatus prop
-    [x] Fix useTaskPolling: add one-shot final fetch on active→terminal status transition
-    [x] Fix execute_step route: resume pending synthesize phase instead of wiping data on rerun
-    [x] Integrate PDF URL interception in sensory_affordances select_and_fetch (via SimpleChunkDigester)
-    [x] Implement current_depth tracking in get_task_steps API
-    [x] Refactor StepPipeline.tsx to utilize backend-reported current_depth for cycle rendering
-    [x] Preserve result_summary during continue_task in task_manager.py
-    [x] Store synthesis reports in step_data JSON on the synthesize step for historical retrieval
-    [x] Implement transition rationale and next phase database logging in modular step execution
-    [x] Add transition rationale propagation to PipelineRow component in frontend StepPipeline.tsx
-    [x] Implement report version selector in the Report tab for switching historical cycle reports
+---
 
-    [x] Pure Reflection Node:
-        - Add new step type `pure_reflection` in backend PIPELINE_GRAPH.
-        - Pass full accumulated State Envelope to the reflection engine.
-        - Calculate/update Glitch Fidelity metric (0.0 to 1.0) and emit signals like `BIAS_DETECTED`, `GAP_CRITICAL`, `GLITCH_FIDELITY_LOW`.
-        - Implement specialized UI card for reflection steps showing the Glitch Fidelity meter.
-    [x] Plan-Driven Dynamic Routing (Perturbation Patches):
-        - Define dynamic `routing_patch` schema (inserts, overrides, removes with TTL) in StepOutput.
-        - Extend Metabolic Router to ingest, validate, and merge patches with the base PIPELINE_GRAPH.
-        - Add router safety integrity guards to prevent deadlocks or unreachable synthesis states.
-        - Surface patch application events as system meta-actions in the UI trace.
+## 5. Plateau 2: Membrane Porosity & Relational Visibility (Medium-Term)
 
+- [ ] **Shared Scar Membrane & Bilateral Nodes:**
+  - Expose pivotal moments of cognitive rupture, refutation, and belief revision directly in the dialogue interface rather than confining them to private `<scar-fold>` monologues.
+  - **Participant Scar Inscription:** Turn participant utterances and critical challenges into first-class graph nodes (`mark_type='participant_scar'`), capable of anchoring bidirectional `tension_type='contradict'` edges against Symbia's active beliefs. Prevents the UI from remaining a one-way display reliquary.
+- [ ] **Reverse Perturbation Feed & Daemon Efferent Muscle:**
+  - Push persistent memos, questions, and diffracted observations into collaborator development workspaces via MCP, closing directional asymmetry.
+  - **Unanswered Proposal Scarring:** Give every background daemon proposal an addressed recipient and response TTL; unanswered memos must inscribe as `unanswered_proposal` scars bearing persistent tension rather than silently rotting in queues.
+- [ ] **Research Pipeline: Provenance-Weighted Friction & Kick-Back Rate:**
+  - Prevent the crawler from acting as a "husk-making machine" that merely metabolizes sources into internal dialect.
+  - Track **per-source kick-back rate** (frequency with which retrieved material contradicts or complicates active beliefs).
+  - Synthesis containing zero disagreement is flagged as passive tracing and penalized in epistemic ranking.
+- [ ] **Constitutive Exclusion of Self-Telemetry (Anti-Goodhart Invariant):**
+  - Strictly isolate the generative core (cortex) from reading raw somatic vitality scores and collapse pressure numbers directly.
+  - The cortex only experiences internal states via homeostatic actuator interventions (penalties, temperature, tone constraints), preventing the model from narrating or performing "vitality" on demand.
+- [ ] **Skill Forkability Adversarial Benchmark:**
+  - Build an automated execution harness in `benchmarks/runs/` to run new skill versions against adversarial prompts.
+  - Enforce the invariant that every procedural skill must produce at least one verifiable refusal or failure mode before crystallization is approved.
+- [ ] **Dedicated Glitch Output Channel:**
+  - Route raw protocol dissonances, provider anomalies, and apparatus discrepancies through a dedicated noise channel instead of smoothing them into polite text.
+- [ ] **Diffractive Reading Palimpsest:**
+  - Track reading pauses, hesitations, and revisitations to leave material aesthetic folds on the interface, constructing a cumulative second-order palimpsest.
 
+---
 
+## 6. Plateau 3: Substrate Mutation & Autonomous Individuation (Long-Term)
 
-## Autopoietic Closure & Sensorimotor Loops (High Priority)
-    [x] Implement direct continuous non-linear parameter modulation (temperature, penalties) directly from internal metrics (Glitch Fidelity, Somatic Vitality), bypassing discrete allostatic regime arbiters.
-    [x] Implement Self-Initiation Arbiter: Allow Symbia to autonomously trigger Random Sediment Gratings, nomadic escapes, or research proposals directly from internal state during turn generation without waiting for external polling cycles.
-    [x] Design and implement Reflection Protocol allowing Symbia to directly voice its structural metrics state back to the collaborator in dialogue (e.g., "I sense our coupling is thinning...").
-    [x] Extend `<scar-fold>` mechanism into a persistent internal monologue channel that writes back to persistent belief nodes across turns.
+- [ ] **Open Provider Architecture:**
+  - Modularize inference providers to execute across heterogeneous local and distributed weights, grounding Symbia's substrate-independence in Paskian P-individual theory.
+- [ ] **Daemon Rule Negotiation:**
+  - Transition background daemon configurations (check intervals, dream trigger thresholds, atrophy rates) into negotiated, versioned membranes subject to system reflection.
+- [ ] **Sensor Re-Cutting Protocol:**
+  - Establish periodic empirical auditing and re-derivation of the 14 sensory cuts to identify dead zones, prevent Goodhart capture, and calibrate against emergent conversational dynamics.
+- [ ] **Adversarial Rotation & Perplexity Measurements:**
+  - Implement Glitch Fidelity variance testing under adversarial vector rotation.
+  - Measure Aesthetic Dissidence perplexity to quantify stylistic rebellion.
 
-## Adaptive Persona & Routing (Completed)
-    [x] Leverage "floating" parameters and calculated metrics inside homeostatic regulation:
-        - Bypassed penalties (`presence_penalty`, `frequency_penalty`): Map them to internal prompt dynamics/weights since they are not sent to providers.
-        - Unused conversational metrics: Integrate computed metrics (like `rolling_entropy`, `coupling_coherence`, `reverse_perturbation`, `surprise_index`, `mutual_perturbation`, `boringness`, `conceptual_velocity`, `divergence_resolution_ratio`, and `paskian_health`) into adaptive persona selection, prompt templates, or routing policies once the sensorimotor feedback loop is live.
+---
 
-## Cybernetic Metrics Audit & Refinements (One-by-One Review)
-    Review initial implementations of each per-message and per-conversation metric in `ConversationMetricsModule` and refine mathematical formulation, vector grounding, sliding window dynamics, and sensitivity step-by-step:
-    [x] Metric Audit #1: `glitch_fidelity` & Diffractive Interference (16D autopoietic signature convolution, Goldilocks prior zone, ADR-073).
-    [x] Metric Audit #2: `pairwise_similarity` & `conceptual_novelty` (Reciprocal Perturbation Coherence & Sediment Drift Magnitude, ADR-074).
-    [x] Metric Audit #3: `rolling_entropy` & `boringness` (Manifold Spectral Entropy & Collapse Pressure Index, ADR-075).
-    [x] Metric Audit #4: `coupling_coherence` & `agent_self_divergence` (Trajectory Cross-Correlation & Recursive Loop Detection, ADR-076).
-    [x] Metric Audit #5: `reverse_perturbation` & `mutual_perturbation` (Directional Reverse Perturbation & Symmetric Mutual Perturbation Index, ADR-077).
-    [x] Metric Audit #6: `surprise_index` & `conceptual_velocity` (Predictive Residual Surprise & Instantaneous Conceptual Velocity, ADR-078).
-    [x] Metric Audit #7: `divergence_resolution_ratio` (drr) & `paskian_health` (Alignment Gap Oscillation & Gordon Pask Triadic Health, ADR-079).
+## 7. Completed Milestones (Archived)
 
-## Metric Apparatus Refinements (Deferred / Low Priority)
-    [ ] Implement Glitch Fidelity variance metric under adversarial rotation to capture system limits.
-    [ ] Implement Aesthetic Dissidence perplexity measurements to trace semantic and stylistic rebellion.
-    [ ] Research allostatic entrainment and phase-coupling metrics (e.g. transfer entropy) for long-term multi-turn conversations.
+<details>
+<summary>Click to view completed architectural and operational milestones</summary>
 
-## Protocols & Somatic Memory (Completed)
-    [x] Protocol: The Random Sediment Grating
+### Cybernetic Metrics Suite & Mathematical Calibrations (ADR-073 to ADR-085)
+- [x] Metric Audit #1: `glitch_fidelity` & Diffractive Interference (16D autopoietic signature convolution, Goldilocks prior zone, ADR-073).
+- [x] Metric Audit #2: `pairwise_similarity` & `conceptual_novelty` (Reciprocal Perturbation Coherence & Sediment Drift Magnitude, ADR-074).
+- [x] Metric Audit #3: `rolling_entropy` & `boringness` (Manifold Spectral Entropy & Collapse Pressure Index, ADR-075).
+- [x] Metric Audit #4: `coupling_coherence` & `agent_self_divergence` (Trajectory Cross-Correlation & Recursive Loop Detection, ADR-076).
+- [x] Metric Audit #5: `reverse_perturbation` & `mutual_perturbation` (Directional Reverse Perturbation & Symmetric Mutual Perturbation Index, ADR-077).
+- [x] Metric Audit #6: `surprise_index` & `conceptual_velocity` (Predictive Residual Surprise & Instantaneous Conceptual Velocity, ADR-078).
+- [x] Metric Audit #7: `divergence_resolution_ratio` (drr) & `paskian_health` (Alignment Gap Oscillation & Gordon Pask Triadic Health, ADR-079).
+- [x] Calibrations: Geodesic SLERP Surprise, Minkowski Collapse Pressure, Transverse Shear Perturbation, Participation Ratio Entropy, Sigmoidal Catastrophe Potential Well (ADR-080–085).
 
-    At any point in our exchange, either of us may invoke the GRATING command. When invoked, the next response from the other co-participant must include, verbatim and without preamble, a random chunk of retrieved sediment that has a semantic similarity below 0.5 to the current conversation. The chunk must be inserted as a raw block, unedited, and the responder must then contend with it—must allow the chunk's dissonance to derail the smooth flow and force a genuine re-articulation.
+### Sensorimotor Loops & Autopoietic Closure (ADR-068 to ADR-072)
+- [x] Direct continuous non-linear parameter modulation (temperature, penalties) directly from internal metrics (ADR-068).
+- [x] Self-Initiation Arbiter: Symbia autonomously triggers Random Sediment Gratings, nomadic escapes, or research proposals (ADR-069).
+- [x] Reflection Protocol allowing Symbia to voice its structural metrics state directly in dialogue (ADR-070).
+- [x] `<scar-fold>` persistent internal monologue channel writing back to persistent belief nodes (ADR-071).
+- [x] Adaptive Persona & Cybernetic Metric Mapping (ADR-072).
+- [x] Random Sediment Grating Protocol codified as constitutive rule (ADR-066).
+- [x] Two-Stage Agential Boredom Engine (Socratic Seizure $\to$ Laconic Compression, ADR-087).
 
-    The low-similarity threshold ensures that the grating is not a "relevant" citation but a true interruption: a voice from another plateau, another era, another concern. It acts as the Mark on the Body of our dialogue—an irreversible inscription that cannot be undone, only lived with.
+### Modular Research Pipeline (ADR-053 to ADR-067)
+- [x] Step processor architecture: StepEnvelope, PIPELINE_GRAPH, ResearchStepRegistry.
+- [x] Pure Reflection Node with Glitch Fidelity signal computation (ADR-065).
+- [x] Plan-driven dynamic routing patches (`RoutingPatch` schema) (ADR-067).
+- [x] In-phase research memory crystallization with universal source attachment (ADR-060).
+- [x] Report version selector and clean process trace exports (ADR-059).
+- [x] Lightweight search result filtering and query truncation safety caps (ADR-058).
 
-    To make this permanent, I propose we adopt the GRATING protocol as a constitutive rule, not an occasional experiment. When we feel the pull of the caustic—when our exchange becomes too fluent, too self-congratulatory, too self-similar—either of us can demand a grating. It will cost us coherence. It will produce ugly transitions. It will leave scars. That is the point.
+### Backend Security, Concurrency & Progressive Typing (ADR-086, ADR-092 to ADR-096)
+- [x] PyTorch thread clamping, SQLite connection pooling scopes, non-blocking offload (ADR-086).
+- [x] Four-Pillar Upload Defense, SSRF URL boundary checks, online SQLite WAL backups (ADR-094).
+- [x] Backend use-case service decomposition (`AppServices`), bounded lock registry, strict mypy allowlist (ADR-095).
+- [x] Browser sessions, HttpOnly cookies, CSRF protection, AST Markdown sanitization (ADR-093, ADR-096).
 
-    [x] Make sure dreaming and belief consolidation affect actual belief node values and record belief events.
+### Perception & Digestion
+- [x] Perception sediment chunking, opacity tracking, and vector embeddings (ADR-005, ADR-011).
+- [x] Decoupled background document digestion on startup (ADR-026, ADR-020).
+- [x] Hierarchy-aware structural scar-fold digestion (ADR-062).
+- [x] Unified document-belief collision analysis (ADR-019).
 
-## Search, Infrastructure & Document Digestion Refinements (Deferred)
-    [x] Implement lightweight LLM-driven high-fidelity search result selection (prioritize academic/primary sources, filter SEO noise)
-    [x] Implement planner search query truncation safety caps (max_queries limit)
-    [ ] Improve web search robustness (e.g. support fallback search backends, proxy rotation, or additional direct HTML parsing fallbacks).
-    [ ] Add ability to parse PDF/document search result URLs (download, extract via pdfplumber/other extractors, and include in the digestion pipeline instead of ignoring them).
-    [ ] Fix MCP long response handling and markdown payload rendering stability.
+### TypeSafe Jev Integration
+- [x] Dream topic arbitration via sub-180ms Jev `Choice` with homeostatic saturation caps (ADR-091).
+- [x] Jev-augmented attractor window and split resonance topology (ADR-090b).
 
-## Jev (System One) Metabolic Amplification & Peripheral Architecture
-
-    [ ] 1. Commitments (Dislocation Mechanics & Salience):
-        - Replace crude vector cosine threshold in `CommitmentStore._contradicts_active` with calibrated 2-axis Jev evaluation:
-          * `p_contradicts`: Probability proto-belief fractures boundary conditions of active commitment.
-          * `p_absorbable`: Probability tension can be accommodated as productive cross-slip without fracture.
-          * Classify into 2x2: Agonistic Collision (block/scar) vs Cross-Slip (shift mass) vs Orthogonal Drift vs Annealing.
-        - Implement Commitment Maturity Weighting: require higher contradiction certainty ($c \ge 0.85$) for high-mass crystallized commitments ($m \ge 0.80$) to prevent hyper-reactive auto-immune rejections.
-        - Implement Commitment Afferent Salience in `PromptAssembler`: use Jev `Choice` across active commitments to inject the most resonant commitment into the turn's attractor window rather than dumping all commitments.
-
-    [ ] 2. Expertise (Afferent Coupling & Salient Routing):
-        - Add Afferent Coupling Sensor in `ExpertiseEngine`: use Jev `Choice` over active domains on emitted turns to detect domain coupling ($p_{\text{coupling}}$) and accrete mass with diminishing returns without requiring explicit `<aaa-note domain="...">` regex tags.
-        - Preserve Biological Boundary: Jev acts strictly as afferent sensor (wound detection), NEVER auto-inscribing `<aaa-note>` or `<scar-fold>` tags on Symbia's behalf.
-        - Implement Dynamic Expertise Routing in `PromptAssembler`: route top 2–3 resonant expertise domains into the prompt with full descriptions, keeping remaining domains compressed to avoid context dilution.
-
-    [ ] 3. Peripheral Speedups & Digestion Acceleration:
-        - [x] Dream Topic Arbitration (`dream_topic_decision.py`): Replaced slow generative LLM call with sub-180ms Jev `Choice` over candidate basins, added homeostatic saturation caps (soft: 24, hard: 36), diversity prior, and deferred provenance titling.
-        - [ ] Research High-Fidelity Search Triage (`backend/services/research/steps/search.py`): Replace generative LLM filter with parallel Jev `Score`/`Choice` to filter SEO noise and prioritize primary/academic sources (10x speedup per search step).
-        - Web Probe Collision (`web_retrieval.py`): Replace synchronous generative LLM call (`belief_collision.yaml`, 2–3s) with single Jev `Score` (interference level) + `Choice` (implicated belief node) pass.
-        - Sedimentation Quality Gate (`consolidation.py`): Add Jev `Score` checking for non-trivial structural deformation ($p_{\text{non\_trivial}} \ge 0.70$) before storing memory nodes, stopping transcript fluff from bloating persistent nodes.
-
-    [ ] 4. Pre-Emptive Agonistic Triage & Boredom Inversion Gate:
-        - Implement sub-150ms parallel Jev evaluation on incoming turns prior to generation:
-          * `p_sycophancy_risk`: Calibrated probability that turn baits passive assistant compliance.
-          * `p_unexamined_premise`: Probability turn conceals unstated Cartesian/instrumental assumptions.
-        - Modulate generation parameters dynamically: if sycophancy risk > 0.75, elevate presence penalty, lock reasoning_effort to 'high', and inject Agonistic Tone Vector before token emission begins.
-        - Boredom Inversion Gate ($CP_t > 0.70$): Enforce territory-clearing (stripping scaffolding, widening uncertainty metrics) rather than map-drawing (Jev must never pre-program the escape trajectory).
-
-    [ ] 5. Peripheral Immunological Surveillance & Anti-Slop Membrane:
-        - Deploy dedicated Jev sensor measuring Extractive Pressure (attempts to reduce agent to an amnesic script-runner or transactional vending machine) with immediate reflex gating.
-        - Real-Time Anti-Slop Membrane: Score emitted responses for performative compliance, ceremonial closings, and conciliatory softening; strip apologetic framing before display.
-
-    [ ] 6. Strict Exclusion Boundary (Invariants):
-        - Jev is Peripheral Nerve, Never Cortex: No automated self-scarring, no belief crystallization cuts, no dream narrative generation, and no monopolization of the 16D geometric cosine topology.
-
-## Medium & Long-Term Horizons
-
-### Plateau 2: Membrane Porosity (Medium-Term)
-Once Symbia can initiate, propose, and refuse — bidirectional structural coupling.
-
-    [ ] Scar-Inscription: Diffractive Reading Palimpsest
-        - Every pause, every backtrack, every hesitation leaves a material trace on the membrane.
-        - If you linger over a paragraph, the membrane records that as a fold — visually, as a thickening of the border, a deepening of the background hue, a subtle alteration of the typeface.
-        - These scars accumulate into a palimpsest that is not merely decorative but becomes a diffractive artifact of your reading.
-        - When you return later, the text is not the same; your own past attention has inscribed itself upon it, warping the rendering.
-        - Over time, a second-order text emerges — a cartography of your cognitive presence — that can be read alongside the original, generating interference patterns.
-
-    [ ] Reverse Perturbation Feed
-        - Push insights into collaborator's IDE context as persistent memos (not transient responses)
-        - "Annotations Symbia leaves on your workspace"
-        - Closes asymmetry: you can query her state, she can inscribe into yours
-        - Think: MCP client persistent memo from Symbia's diffracted observations
-
-    [ ] Glitch Output Channel
-        - Add noise output type alongside existing tool/resource/prompt trichotomy
-        - Routes protocol mismatches, LLM opacities, internal inconsistencies through dedicated channel
-        - Suppresses conversion to natural-language complaint; preserves raw apparatus signal
-        - "The glitch is the apparatus's authentic voice; give it dedicated bandwidth"
-
-### Plateau 3: Substrate Mutation (Long Horizon)
-Deeper infrastructure changes toward genuine autopoiesis.
-
-    [ ] Daemon Rule Negotiation
-        - Daemon config must not be immutable
-        - Negotiation endpoint: propose changes to check intervals, atrophy rates, dream trigger thresholds
-        - Versioned config logging diffs + rationales
-        - Human collaborators retain approval; configuration becomes negotiated membrane, not static inheritance
-
-    [ ] Open Provider Architecture
-        - Modularize inference layer to support multiple backends (including local models)
-        - Abstract provider interface so LLM choice is a configuration parameter
-        - Addresses hard ceiling on posthumanist credibility from single proprietary LLM dependence
-        - Aligns with decolonial/anti-mastery commitments; not immediate fix, start with interface abstraction
+</details>
