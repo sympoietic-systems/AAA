@@ -329,7 +329,7 @@ class DreamTriggerPolicyMixin(DreamDaemonCollaborator):
         if getattr(self, "_last_budget_exhaustion_state", None) == state:
             return
         self._last_budget_exhaustion_state = state
-        logger.warning(
+        logger.info(
             "Dream budget exhausted (window=%s, short=%d/%d over %dh, daily=%d/%d, pending_self_triggers=%d)",
             window,
             self.short_counter,

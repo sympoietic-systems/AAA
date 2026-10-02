@@ -13,7 +13,7 @@ def test_budget_exhaustion_logs_once_per_transition(caplog):
         max_daily_dreams=30,
     )
 
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.INFO):
         DreamTriggerPolicyMixin._log_budget_exhausted(daemon, "short_window", 1)
         DreamTriggerPolicyMixin._log_budget_exhausted(daemon, "short_window", 1)
         daemon.dream_counter = 4
