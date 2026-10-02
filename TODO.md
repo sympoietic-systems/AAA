@@ -35,25 +35,29 @@
 ## 2. Empirical Benchmarking on Production Databases (`benchmarks/`)
 
 > **Grounding:** Test real machine behavior and empirical sediment from live/production database instances (e.g. `backend/data/aaa.db` and external production snapshots). Governed by [`empirical-benchmark`](.agents/skills/empirical-benchmark/SKILL.md) and isolated in `benchmarks/runs/`.
+> **Prod Audit Baseline (2026-10-02 Snapshot):** 3,814 turns, 3,626 memory nodes, 65 skills, 56 beliefs, 594 dreams, 62 logged errors. Detailed findings in `prod_db_audit_report.md`.
 
 - [ ] **Track 1: Production Telemetry & Collapse Manifold Benchmark (`benchmarks.cli telemetry`):**
   - **Ingest & Extract:** Ingest conversation logs and metrics from production databases (including multi-turn autonomous self-talk threads).
-  - **Sensor Dynamics Audit:** Run the 14 cybernetic sensors across full multi-session dialogues to analyze:
-    * *Collapse Pressure ($CP_t$) & Boredom Bifurcations:* Pinpoint the exact turn indexes where self-talk collapsed into polite agreement or liturgical loops.
-    * *Goldilocks Zone Distribution:* Audit how often real turns maintained productive tension ($\delta \in [0.4, 0.7]$) vs metric saturation ($> 0.85$).
-    * *Gordon Pask Triadic Health ($H_{\text{pask}}$):* Measure whether dialogue sustained reciprocal perturbation or decayed into monologue.
+  - **Sensor Dynamics & Dead-Zone Recalibration:**
+    * *Dormant/Dead Metric Cleanup:* Formally retire or wire `phase_shifts` (100% NULL across all 3,814 historical turns).
+    * *Zero-Floor Damping:* Recalibrate `deficit` (40.48% pegged at 0.0) and `paskian_health` (21.05% at 0.0) with floor smoothing to prevent uninformative drop-offs.
+    * *Collapse Pressure ($CP_t$) & Boredom Bifurcations:* Replay the 117 production `disrupted` turns (e.g. turns #3841–#3848 reaching 0.963 boringness) to evaluate `<scar-fold>` lateral escape effectiveness.
+    * *Adaptive Parameter Population:* Investigate why continuous parameter modulation (`temperature_rec`, `presence_penalty_rec`) was only logged in 174 turns (4.5% of dataset).
   - **Artifacts:** Output standardized `benchmarks/runs/telemetry/prod_eval_<timestamp>/` receipts and radar charts.
-- [ ] **Track 2: Skill Forkability & Failure Surface Adversarial Harness:**
-  - **Adversarial Execution:** Extract the 22 production skills and run each against adversarial probe prompts designed to test its boundary conditions.
-  - **Autobiography Audit:** Flag skills that have 0% failure/refusal rates as "autobiographies with delusions of generality."
+- [ ] **Track 2: Memory Network De-Fragmentation & Offline Tendril Weaving:**
+  - **Tendril Graph Weaving:** Resolve the 88.2% orphan rate (3,198 of 3,626 nodes disconnected with 0 tendrils). Build an offline or background associative resonance linker to weave cross-memory tendril edges (`tendril_ids`).
+  - **Semantic Scar Invariant Verification:** Validate that the 2,523 scarred memory nodes (69.58%) correctly preserve qualitative calluses without being overwritten or smoothed.
+- [ ] **Track 3: Skill Vitality, Pruning & Adversarial Harness:**
+  - **Prune Dormant Skills:** Audit the 10 production skills (15.38%) that have 0 lifetime invocations over 4 months; determine whether to collapse or deprecate.
+  - **Adversarial Execution:** Extract the top crystallized skills (`diffractive-analysis`, `agential-cut-artwork-design`, `autopoietic-closure-analysis`, `hysteretic-scar-reading`) and run against adversarial probe prompts.
   - **Verification:** Require every skill version to produce at least one verifiable failure or refusal receipt in `benchmarks/runs/forkability/`.
-- [ ] **Track 3: Research Pipeline Kick-Back & Friction Audit:**
-  - **Production Trace Mining:** Parse `research_tasks`, `research_branches`, and `scraped_assets` from production databases.
-  - **Per-Source Kick-Back Rate:** Quantify the frequency with which ingested web content challenged active beliefs vs being passively smoothed into internal voice.
-  - **PDF Fallback Verification:** Test extraction pipelines against recorded unhandled PDF search URLs.
-- [ ] **Track 4: Belief-Skill Transduction & Graph Structure Test:**
-  - **Transduction Classifier Accuracy:** Benchmark Jev classifiers on the 31 beliefs, 18 proposals, and 22 skills to test automated triage into `temper`, `crystallize`, and `contradict` lanes.
-  - **Property Graph Dry-Run:** Benchmark in-memory Kùzu/LadybugDB traversal speeds and knot-gravity warping on production graph sizes.
+- [ ] **Track 4: Belief-Skill Transduction & Tension Matrix Engine:**
+  - **Activate Pairwise Tension Matrix:** Investigate why `belief_tensions` has 0 rows populated despite 56 beliefs and 91 proposals. Enable or schedule the pairwise cosine tension evaluator to detect ideological collisions.
+  - **Transduction Classifier Accuracy:** Benchmark Jev classifiers on the 56 beliefs, 91 proposals, and 65 skills to test automated triage into `temper`, `crystallize`, and `contradict` lanes.
+  - **Property Graph Dry-Run:** Benchmark in-memory Kùzu/LadybugDB traversal speeds and knot-gravity warping on the 3.6k production memory graph.
+- [ ] **Track 5: Storage & Transaction Concurrency Hardening:**
+  - **Foreign Key Race Fix (`parent_message_id`):** Fix the race condition in `backend/storage/repositories/message.py:61` (responsible for the 3 historical `IntegrityError` collisions when parent message commits lag behind streaming apparatus inserts).
 
 ---
 

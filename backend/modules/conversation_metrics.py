@@ -282,6 +282,7 @@ class ConversationMetricsModule(ProcessingModule):
             prior=prior_metrics,
             threshold=self._phase_shift_threshold,
         )
+        metrics["phase_shifts"] = phase_shifts
 
         if msg_id is not None and hasattr(self._repo, "save_metrics"):
             self._repo.save_metrics(msg_id, metrics)
