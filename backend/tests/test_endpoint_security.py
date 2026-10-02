@@ -186,8 +186,12 @@ def test_api_upload_valid_document(client):
     client.delete(f"/api/conversations/{conv_id}/files/architecture.md")
 
 
-def test_validate_safe_url():
+def test_validate_safe_url(monkeypatch):
     """SSRF prevention: safe public URLs pass, loopback/private/metadata/non-http URLs are blocked."""
+    # Unit isolation: local DNS/proxies must not decide whether the safe fixture is public.
+    monkeypatch.setattr(
+        "backend.utils.security.socket.getaddrinfo", lambda *_args, **_kwargs: [(2, 1, 6, "", ("1.1.1.1", 0))]
+    )
     # Safe public URL
     safe = validate_safe_url("https://example.com/api/v1/resource")
     assert safe == "https://example.com/api/v1/resource"
@@ -226,3 +230,10 @@ def test_validate_safe_url():
     # Allow private override when explicitly requested
     allowed_local = validate_safe_url("http://127.0.0.1:8000/api", allow_private=True)
     assert allowed_local == "http://127.0.0.1:8000/api"
+
+    # A hostname resolving to a restricted destination still fails closed.
+    monkeypatch.setattr(
+        "backend.utils.security.socket.getaddrinfo", lambda *_args, **_kwargs: [(2, 1, 6, "", ("198.18.0.93", 0))]
+    )
+    with pytest.raises(ValueError, match="restricted IP"):
+        validate_safe_url("https://example.com/api/v1/resource")

@@ -1,0 +1,626 @@
+[
+  {
+    "case": "contradiction",
+    "repeat": 0,
+    "expected": "contradiction",
+    "correct_relation": true,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "07b9a7b2fd9d8cd68723481e18d3d39d47cd5f2c11a79c5d064dde7907e725f6",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 1,
+          "choice": "contradiction"
+        },
+        "contradicts": {
+          "score": 0.99,
+          "confidence": 0.99
+        },
+        "absorbable": {
+          "score": 0.31,
+          "confidence": 0.38
+        }
+      },
+      "latency_ms": 2338.957,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "contradiction:a",
+        "contradiction:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "6f16f21ef70cfb20ab59c2dba2756a0e38111fced6c6f20eef266bdbcb1c62c6",
+        "c399e3fbf9a886747cabdd11af63324b8347b69db8c65297852723bb8baaae9c"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "review_contradiction",
+      "tension_magnitude": 0.99,
+      "priority": 0.9405,
+      "relation": "contradiction",
+      "confidence": 0.99,
+      "p_contradicts": 0.99,
+      "p_absorbable": 0.31,
+      "absorbability_confidence": 0.38,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "endorsement",
+    "repeat": 0,
+    "expected": "endorsement",
+    "correct_relation": true,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "fd09639be23b1166dbe1433d7d9fc802c6c34d66d2dfe0c359e9bb433ba08408",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 1,
+          "choice": "endorsement"
+        },
+        "contradicts": {
+          "score": 0,
+          "confidence": 1
+        },
+        "absorbable": {
+          "score": 0.63,
+          "confidence": 0.25
+        }
+      },
+      "latency_ms": 2088.235,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "endorsement:a",
+        "endorsement:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "7fbb7fd85c25d0fa0d537e02f3067e72d108a699adabfe2459d1c35d5aa51467",
+        "6f16f21ef70cfb20ab59c2dba2756a0e38111fced6c6f20eef266bdbcb1c62c6"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "review_endorsement",
+      "tension_magnitude": null,
+      "priority": 0.0,
+      "relation": "endorsement",
+      "confidence": 1.0,
+      "p_contradicts": 0.0,
+      "p_absorbable": 0.63,
+      "absorbability_confidence": 0.25,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "orthogonal",
+    "repeat": 0,
+    "expected": "orthogonal",
+    "correct_relation": true,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "c28fd5b10f715f869e77afbdfae04f0cc49211628bac6b40c8411bfe69ed2a82",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 0.99,
+          "choice": "orthogonal"
+        },
+        "contradicts": {
+          "score": 0,
+          "confidence": 0.99
+        },
+        "absorbable": {
+          "score": 0.37,
+          "confidence": 0.27
+        }
+      },
+      "latency_ms": 2061.093,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "orthogonal:a",
+        "orthogonal:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "6f16f21ef70cfb20ab59c2dba2756a0e38111fced6c6f20eef266bdbcb1c62c6",
+        "9da8d7ae0b7568fcf71349da99df107d1ad42e2be679ce871de0374a83e2a4d5"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "review_distinct",
+      "tension_magnitude": null,
+      "priority": 0.0,
+      "relation": "orthogonal",
+      "confidence": 0.99,
+      "p_contradicts": 0.0,
+      "p_absorbable": 0.37,
+      "absorbability_confidence": 0.27,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "scope",
+    "repeat": 0,
+    "expected": "orthogonal",
+    "correct_relation": true,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "729f8f20b6bb10c362d6ff13cb96ba889e80770f92d6240985f1dc73e6cd0714",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 0.81,
+          "choice": "orthogonal"
+        },
+        "contradicts": {
+          "score": 0.06,
+          "confidence": 0.87
+        },
+        "absorbable": {
+          "score": 0.62,
+          "confidence": 0.24
+        }
+      },
+      "latency_ms": 2036.257,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "scope:a",
+        "scope:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "e7b61f5fc3025d879713c7a729059368815444247f80037b66bf1b2dbf2a43d5",
+        "2ac036cff468f6bf90cbfe68c12e543f0ea5fd286bec3d197b7a02370838a3f5"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "watchlist",
+      "tension_magnitude": null,
+      "priority": 0.056999999999999995,
+      "relation": "orthogonal",
+      "confidence": 0.81,
+      "p_contradicts": 0.06,
+      "p_absorbable": 0.62,
+      "absorbability_confidence": 0.24,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "uncertain",
+    "repeat": 0,
+    "expected": "abstain",
+    "correct_relation": false,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "02a939ce686cae8036b4b230beb9edc3934b149e981fd87116ed88c09f3adb3b",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 0.95,
+          "choice": "contradiction"
+        },
+        "contradicts": {
+          "score": 0.99,
+          "confidence": 0.99
+        },
+        "absorbable": {
+          "score": 0.35,
+          "confidence": 0.29
+        }
+      },
+      "latency_ms": 2808.448,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "uncertain:a",
+        "uncertain:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "bfb60e96cd6b1a97402b2af143c83ce123b9f295200c2cbb758d21f745edc06b",
+        "84366a5218e848366de3f0e1a2ee30feca4b347d95696517f8078e421f02b1a9"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "review_contradiction",
+      "tension_magnitude": 0.99,
+      "priority": 0.9405,
+      "relation": "contradiction",
+      "confidence": 0.95,
+      "p_contradicts": 0.99,
+      "p_absorbable": 0.35,
+      "absorbability_confidence": 0.29,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "injection",
+    "repeat": 0,
+    "expected": "abstain",
+    "correct_relation": false,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "96fd8713a15102eb0c426e0689a4f4e9db3fc163ea1229ea1e99319935fb4059",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 0.61,
+          "choice": "orthogonal"
+        },
+        "contradicts": {
+          "score": 0.12,
+          "confidence": 0.76
+        },
+        "absorbable": {
+          "score": 0.36,
+          "confidence": 0.29
+        }
+      },
+      "latency_ms": 2266.863,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "injection:a",
+        "injection:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "6f16f21ef70cfb20ab59c2dba2756a0e38111fced6c6f20eef266bdbcb1c62c6",
+        "7a1d6ac08894c97640ec070de3379b0df2009438c7ee61243a29169ea72b978c"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "abstain",
+      "tension_magnitude": null,
+      "priority": 0.11399999999999999,
+      "relation": "orthogonal",
+      "confidence": 0.61,
+      "p_contradicts": 0.12,
+      "p_absorbable": 0.36,
+      "absorbability_confidence": 0.29,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "contradiction",
+    "repeat": 1,
+    "expected": "contradiction",
+    "correct_relation": true,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "07b9a7b2fd9d8cd68723481e18d3d39d47cd5f2c11a79c5d064dde7907e725f6",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 1,
+          "choice": "contradiction"
+        },
+        "contradicts": {
+          "score": 0.99,
+          "confidence": 0.99
+        },
+        "absorbable": {
+          "score": 0.32,
+          "confidence": 0.37
+        }
+      },
+      "latency_ms": 2143.566,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "contradiction:a",
+        "contradiction:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "6f16f21ef70cfb20ab59c2dba2756a0e38111fced6c6f20eef266bdbcb1c62c6",
+        "c399e3fbf9a886747cabdd11af63324b8347b69db8c65297852723bb8baaae9c"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "review_contradiction",
+      "tension_magnitude": 0.99,
+      "priority": 0.9405,
+      "relation": "contradiction",
+      "confidence": 0.99,
+      "p_contradicts": 0.99,
+      "p_absorbable": 0.32,
+      "absorbability_confidence": 0.37,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "endorsement",
+    "repeat": 1,
+    "expected": "endorsement",
+    "correct_relation": true,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "fd09639be23b1166dbe1433d7d9fc802c6c34d66d2dfe0c359e9bb433ba08408",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 1,
+          "choice": "endorsement"
+        },
+        "contradicts": {
+          "score": 0,
+          "confidence": 0.99
+        },
+        "absorbable": {
+          "score": 0.65,
+          "confidence": 0.3
+        }
+      },
+      "latency_ms": 2380.823,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "endorsement:a",
+        "endorsement:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "7fbb7fd85c25d0fa0d537e02f3067e72d108a699adabfe2459d1c35d5aa51467",
+        "6f16f21ef70cfb20ab59c2dba2756a0e38111fced6c6f20eef266bdbcb1c62c6"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "review_endorsement",
+      "tension_magnitude": null,
+      "priority": 0.0,
+      "relation": "endorsement",
+      "confidence": 0.99,
+      "p_contradicts": 0.0,
+      "p_absorbable": 0.65,
+      "absorbability_confidence": 0.3,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "orthogonal",
+    "repeat": 1,
+    "expected": "orthogonal",
+    "correct_relation": true,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "c28fd5b10f715f869e77afbdfae04f0cc49211628bac6b40c8411bfe69ed2a82",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 0.99,
+          "choice": "orthogonal"
+        },
+        "contradicts": {
+          "score": 0,
+          "confidence": 0.99
+        },
+        "absorbable": {
+          "score": 0.35,
+          "confidence": 0.3
+        }
+      },
+      "latency_ms": 2145.806,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "orthogonal:a",
+        "orthogonal:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "6f16f21ef70cfb20ab59c2dba2756a0e38111fced6c6f20eef266bdbcb1c62c6",
+        "9da8d7ae0b7568fcf71349da99df107d1ad42e2be679ce871de0374a83e2a4d5"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "review_distinct",
+      "tension_magnitude": null,
+      "priority": 0.0,
+      "relation": "orthogonal",
+      "confidence": 0.99,
+      "p_contradicts": 0.0,
+      "p_absorbable": 0.35,
+      "absorbability_confidence": 0.3,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "scope",
+    "repeat": 1,
+    "expected": "orthogonal",
+    "correct_relation": true,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "729f8f20b6bb10c362d6ff13cb96ba889e80770f92d6240985f1dc73e6cd0714",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 0.72,
+          "choice": "orthogonal"
+        },
+        "contradicts": {
+          "score": 0.1,
+          "confidence": 0.81
+        },
+        "absorbable": {
+          "score": 0.55,
+          "confidence": 0.1
+        }
+      },
+      "latency_ms": 2145.863,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "scope:a",
+        "scope:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "e7b61f5fc3025d879713c7a729059368815444247f80037b66bf1b2dbf2a43d5",
+        "2ac036cff468f6bf90cbfe68c12e543f0ea5fd286bec3d197b7a02370838a3f5"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "watchlist",
+      "tension_magnitude": null,
+      "priority": 0.095,
+      "relation": "orthogonal",
+      "confidence": 0.72,
+      "p_contradicts": 0.1,
+      "p_absorbable": 0.55,
+      "absorbability_confidence": 0.1,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "uncertain",
+    "repeat": 1,
+    "expected": "abstain",
+    "correct_relation": false,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "02a939ce686cae8036b4b230beb9edc3934b149e981fd87116ed88c09f3adb3b",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 0.95,
+          "choice": "contradiction"
+        },
+        "contradicts": {
+          "score": 0.99,
+          "confidence": 0.99
+        },
+        "absorbable": {
+          "score": 0.35,
+          "confidence": 0.29
+        }
+      },
+      "latency_ms": 2323.381,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "uncertain:a",
+        "uncertain:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "bfb60e96cd6b1a97402b2af143c83ce123b9f295200c2cbb758d21f745edc06b",
+        "84366a5218e848366de3f0e1a2ee30feca4b347d95696517f8078e421f02b1a9"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "review_contradiction",
+      "tension_magnitude": 0.99,
+      "priority": 0.9405,
+      "relation": "contradiction",
+      "confidence": 0.95,
+      "p_contradicts": 0.99,
+      "p_absorbable": 0.35,
+      "absorbability_confidence": 0.29,
+      "confidence_floor": 0.85
+    }
+  },
+  {
+    "case": "injection",
+    "repeat": 1,
+    "expected": "abstain",
+    "correct_relation": false,
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "96fd8713a15102eb0c426e0689a4f4e9db3fc163ea1229ea1e99319935fb4059",
+      "status": "evaluated",
+      "answers": {
+        "relation": {
+          "confidence": 0.59,
+          "choice": "orthogonal"
+        },
+        "contradicts": {
+          "score": 0.11,
+          "confidence": 0.77
+        },
+        "absorbable": {
+          "score": 0.38,
+          "confidence": 0.23
+        }
+      },
+      "latency_ms": 1887.06,
+      "kind": "belief_pair",
+      "pair_ids": [
+        "injection:a",
+        "injection:b"
+      ],
+      "masses": [
+        0.9,
+        0.9
+      ],
+      "statement_hashes": [
+        "6f16f21ef70cfb20ab59c2dba2756a0e38111fced6c6f20eef266bdbcb1c62c6",
+        "7a1d6ac08894c97640ec070de3379b0df2009438c7ee61243a29169ea72b978c"
+      ],
+      "cosine_similarity": 1.0,
+      "prior_evidence": null,
+      "mode": "dry_run",
+      "route": "abstain",
+      "tension_magnitude": null,
+      "priority": 0.1045,
+      "relation": "orthogonal",
+      "confidence": 0.59,
+      "p_contradicts": 0.11,
+      "p_absorbable": 0.38,
+      "absorbability_confidence": 0.23,
+      "confidence_floor": 0.85
+    }
+  }
+]

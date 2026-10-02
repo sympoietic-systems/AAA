@@ -23,3 +23,4 @@ The [boundary-only retry](../../benchmarks/runs/skills/boundary_retry_20261003/l
 `python -m benchmarks.suites.skill_vitality <checkpointed-snapshot> --as-of <ISO timestamp> --output <new-run-directory>` creates immutable metadata, scorecards, probes, and a summary. `--live-config`, one to four `--skill` selections, and optional `--probe` execute bounded text-only challenges with secret-sanitized receipts. `--responses` attaches externally adjudicated evidence and rejects unknown or duplicate probe IDs. Existing WAL snapshots are rejected; checkpoint first.
 
 Two harness tests passed: immutable snapshot/coverage/receipt validation, and signature-sensitive execution-failure handling. Ruff passes. Live evidence is incomplete and does not authorize pruning.
+Final repository-wide checks and delivery branches are recorded in [Report 025](025-four-followups-delivery-report.md).

@@ -136,6 +136,8 @@ V100: Message insertion honors outer atomic rollback; invalid parent fails struc
 
 V101: Skill audit reads checkpointed snapshot in SQLite URI read-only mode; activation gaps ≠ lifetime nonuse; archived skills ∉ pruning candidates; probe failure ≠ skill failure.
 V102: Jev evidence triage ≤10 candidates; finite scores + confidence required; unknown IDs/uncertainty abstain; excluded sources inspectable; receipts survive task restart; no belief/vector authorship; default promotion requires calibration.
+V103: Belief Jev service has no write port; similarity nominates only; mass weights stakes, never contradiction; mature confidence band retained; absorbability uncertainty cannot erase contradiction; prior verdict excluded from classifier state; matrix application fresh copy only + atomic stale-evidence rejection.
+V104: SSRF unit verification uses deterministic public/restricted DNS fixtures; environment DNS cannot override safe fixture; restricted hostname resolution remains denied.
 
 ## §T
 
@@ -188,6 +190,7 @@ T47|x|close message transaction and parent validation gaps|V100,V34,V17
 
 T48|x|implement read-only skill vitality and adversarial evidence harness|V101,V56
 T49|x|implement and calibrate opt-in Jev source screening and grounded web collision receipts|V102,V30
+T50|x|implement dry-run Jev candidate review routing and inspectable tension matrix producer|V103,V30
 
 ## §B
 
@@ -274,3 +277,5 @@ B77|2026-10-03|message insert directly committed inside atomic scope; missing pa
 
 B78|2026-10-03|audit URI lacked uri=True; live harness passed unsupported prompt keyword; archived skills falsely flagged for pruning|V101
 B79|2026-10-03|triage receipt omitted from orchestrator persistence allowlist; numeric answer inference lost strict collection type|V102,V30
+B80|2026-10-03|absorbability confidence incorrectly gated contradiction; synthetic seed violated belief origin and anchor schema|V103,V23
+B81|2026-10-03|SSRF unit test depended on live DNS; example.com resolved to restricted benchmark network here and correctly failed closed|V104,V23

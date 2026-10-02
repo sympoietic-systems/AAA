@@ -51,6 +51,7 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/services/belief_triage.py",
     "backend/modules/sensory/evidence_triage.py",
     "backend/contracts.py",
     "backend/api/exceptions.py",

@@ -214,3 +214,6 @@ To add a new benchmark suite (e.g. `memory`):
 `python -m benchmarks.suites.research_triage --config backend/config.yaml --output benchmarks/runs/research/<fresh-run> --repeats 2`
 
 The four synthetic source cases compare returned LLM and Jev selections. Timeouts and abstention are retained. This smoke calibration cannot establish general source quality or justify default rollout.
+`python -m benchmarks.suites.belief_triage --config backend/config.yaml --output benchmarks/runs/beliefs/<fresh-run> --repeats 2`
+
+For snapshot inspection, add `--snapshot <checkpointed-backup> --agent-id symbia --proposal-agent-id codex --limit 8 --proposal-limit 3`. Optional `--matrix-copy <fresh-file>` applies qualified belief-pair evidence to a new disposable database copy. The evaluator has no production write path. Proposal ownership is scoped explicitly; no cross-owner aggregation happens by default. Inspect abstention, false positives and watchlist rates before any runtime integration.

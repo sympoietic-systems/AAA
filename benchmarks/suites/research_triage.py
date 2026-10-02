@@ -9,8 +9,8 @@ from pathlib import Path
 from backend.bootstrap.providers import _create_provider
 from backend.config import load_config
 from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
-from backend.services.research.steps.search import _select_high_fidelity_results
 from backend.modules.sensory.evidence_triage import EvidenceTriage
+from backend.services.research.steps.search import _select_high_fidelity_results
 
 CASES = [
     {
