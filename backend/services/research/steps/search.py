@@ -4,6 +4,7 @@ import re
 import uuid
 
 from backend.modules.llm_client import generate_unified
+from backend.modules.sensory.evidence_triage import EvidenceTriage
 from backend.services.research.search_tool import web_search
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import SearchPayload, StepEnvelope, StepOutput
@@ -188,6 +189,8 @@ class SearchStep(BaseResearchStep):
             group_steps[direct_group] = step_id
 
         search_results_list = []
+        triage_receipts = []
+        triage = EvidenceTriage.from_config(orch._state.config)
         config_orchestrator = orch._state.config.get("research_orchestrator") or {}
         candidate_count = config_orchestrator.get("search_candidates", 10)
         llm = getattr(orch._state, "llm_provider", None)
@@ -197,9 +200,13 @@ class SearchStep(BaseResearchStep):
                 logger.info("Staggering search: sleeping 1.5s between requests...")
                 await asyncio.sleep(1.5)
             raw_res = await web_search(q, candidate_count, orch._state.config)
-            selected_res = await _select_high_fidelity_results(
-                llm=llm, objective=envelope.objective, query=q, results=raw_res, target_count=orch.default_top_n
-            )
+            if triage is not None:
+                selected_res, receipt = await triage.screen(envelope.objective, q, raw_res, orch.default_top_n)
+                triage_receipts.append(receipt)
+            else:
+                selected_res = await _select_high_fidelity_results(
+                    llm=llm, objective=envelope.objective, query=q, results=raw_res, target_count=orch.default_top_n
+                )
             search_results_list.append(selected_res)
 
         search_results = []
@@ -284,7 +291,10 @@ class SearchStep(BaseResearchStep):
                 )
 
         out_payload = SearchPayload(
-            queries=payload.queries, direct_urls=payload.direct_urls, search_results=search_results
+            queries=payload.queries,
+            direct_urls=payload.direct_urls,
+            search_results=search_results,
+            triage_receipts=triage_receipts,
         )
 
         signal_flags = {"has_results": len(search_results) > 0}

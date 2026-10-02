@@ -183,6 +183,8 @@ def _init_modules(
         structural_scorer=structural_scorer,
         llm_provider=structural_provider,
         config=config,
+        belief_repo=repos["belief_repo"],
+        agent_id=_load_identity(config)[1],
     )
 
     # ── Rhizome Web Probe (autonomous deep research) ──

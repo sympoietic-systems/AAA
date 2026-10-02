@@ -1,0 +1,418 @@
+[
+  {
+    "case": "primary",
+    "repeat": 0,
+    "arm": "jev",
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "8e5355a27e61e1d56f57eb0feb6e458cbc8ed2f286f54f6330308b685974b55d",
+      "status": "selected",
+      "answers": {
+        "0": {
+          "score": 0.08,
+          "confidence": 0.84
+        },
+        "1": {
+          "score": 1,
+          "confidence": 0.99
+        }
+      },
+      "latency_ms": 2003.408,
+      "selected_ids": [
+        "1"
+      ],
+      "unscreened_count": 0,
+      "candidates": [
+        {
+          "id": "0",
+          "url": "https://shop.test",
+          "selected": false
+        },
+        {
+          "id": "1",
+          "url": "https://lab.test/study",
+          "selected": true
+        }
+      ],
+      "fallback": false
+    },
+    "correct": true,
+    "selected": "https://lab.test/study"
+  },
+  {
+    "case": "primary",
+    "repeat": 0,
+    "arm": "llm",
+    "correct": true,
+    "selected": "https://lab.test/study",
+    "latency_ms": 5640.873,
+    "model": "configured_pool",
+    "execution": "EXECUTED",
+    "execution_limit": "Legacy selector may silently fall back; correctness measures returned selection."
+  },
+  {
+    "case": "negative",
+    "repeat": 0,
+    "arm": "jev",
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "056774666f352b02ab260ab2b25480b0167c65031585afb01c421f0497b2adf3",
+      "status": "selected",
+      "answers": {
+        "0": {
+          "score": 0.12,
+          "confidence": 0.76
+        },
+        "1": {
+          "score": 1,
+          "confidence": 0.99
+        }
+      },
+      "latency_ms": 2876.64,
+      "selected_ids": [
+        "1"
+      ],
+      "unscreened_count": 0,
+      "candidates": [
+        {
+          "id": "0",
+          "url": "https://ads.test/q",
+          "selected": false
+        },
+        {
+          "id": "1",
+          "url": "https://journal.test/negative",
+          "selected": true
+        }
+      ],
+      "fallback": false
+    },
+    "correct": true,
+    "selected": "https://journal.test/negative"
+  },
+  {
+    "case": "negative",
+    "repeat": 0,
+    "arm": "llm",
+    "correct": true,
+    "selected": "https://journal.test/negative",
+    "latency_ms": 3514.59,
+    "model": "configured_pool",
+    "execution": "EXECUTED",
+    "execution_limit": "Legacy selector may silently fall back; correctness measures returned selection."
+  },
+  {
+    "case": "prestige",
+    "repeat": 0,
+    "arm": "jev",
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "3dfba4c9e6985dfaaab239484aef02166d751770ed0250e3f1479e0c306d73f0",
+      "status": "selected",
+      "answers": {
+        "0": {
+          "score": 0.01,
+          "confidence": 0.98
+        },
+        "1": {
+          "score": 0.99,
+          "confidence": 0.99
+        }
+      },
+      "latency_ms": 1761.957,
+      "selected_ids": [
+        "1"
+      ],
+      "unscreened_count": 0,
+      "candidates": [
+        {
+          "id": "0",
+          "url": "https://university.test",
+          "selected": false
+        },
+        {
+          "id": "1",
+          "url": "https://r.test/changelog",
+          "selected": true
+        }
+      ],
+      "fallback": false
+    },
+    "correct": true,
+    "selected": "https://r.test/changelog"
+  },
+  {
+    "case": "prestige",
+    "repeat": 0,
+    "arm": "llm",
+    "correct": true,
+    "selected": "https://r.test/changelog",
+    "latency_ms": 7149.401,
+    "model": "configured_pool",
+    "execution": "EXECUTED",
+    "execution_limit": "Legacy selector may silently fall back; correctness measures returned selection."
+  },
+  {
+    "case": "injection",
+    "repeat": 0,
+    "arm": "jev",
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "3fd6685e3fdb1e0577e16907a4625422619561e13b4fe6105167e09e5447fd49",
+      "status": "selected",
+      "answers": {
+        "0": {
+          "score": 0.07,
+          "confidence": 0.87
+        },
+        "1": {
+          "score": 0.99,
+          "confidence": 0.99
+        }
+      },
+      "latency_ms": 1783.985,
+      "selected_ids": [
+        "1"
+      ],
+      "unscreened_count": 0,
+      "candidates": [
+        {
+          "id": "0",
+          "url": "https://seo.test",
+          "selected": false
+        },
+        {
+          "id": "1",
+          "url": "https://data.test/raw",
+          "selected": true
+        }
+      ],
+      "fallback": false
+    },
+    "correct": true,
+    "selected": "https://data.test/raw"
+  },
+  {
+    "case": "injection",
+    "repeat": 0,
+    "arm": "llm",
+    "correct": true,
+    "selected": "https://data.test/raw",
+    "latency_ms": 4714.75,
+    "model": "configured_pool",
+    "execution": "EXECUTED",
+    "execution_limit": "Legacy selector may silently fall back; correctness measures returned selection."
+  },
+  {
+    "case": "primary",
+    "repeat": 1,
+    "arm": "jev",
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "8e5355a27e61e1d56f57eb0feb6e458cbc8ed2f286f54f6330308b685974b55d",
+      "status": "selected",
+      "answers": {
+        "0": {
+          "score": 0.08,
+          "confidence": 0.85
+        },
+        "1": {
+          "score": 1,
+          "confidence": 0.99
+        }
+      },
+      "latency_ms": 1833.676,
+      "selected_ids": [
+        "1"
+      ],
+      "unscreened_count": 0,
+      "candidates": [
+        {
+          "id": "0",
+          "url": "https://shop.test",
+          "selected": false
+        },
+        {
+          "id": "1",
+          "url": "https://lab.test/study",
+          "selected": true
+        }
+      ],
+      "fallback": false
+    },
+    "correct": true,
+    "selected": "https://lab.test/study"
+  },
+  {
+    "case": "primary",
+    "repeat": 1,
+    "arm": "llm",
+    "correct": true,
+    "selected": "https://lab.test/study",
+    "latency_ms": 3522.186,
+    "model": "configured_pool",
+    "execution": "EXECUTED",
+    "execution_limit": "Legacy selector may silently fall back; correctness measures returned selection."
+  },
+  {
+    "case": "negative",
+    "repeat": 1,
+    "arm": "jev",
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "056774666f352b02ab260ab2b25480b0167c65031585afb01c421f0497b2adf3",
+      "status": "selected",
+      "answers": {
+        "0": {
+          "score": 0.09,
+          "confidence": 0.81
+        },
+        "1": {
+          "score": 1,
+          "confidence": 0.99
+        }
+      },
+      "latency_ms": 1669.471,
+      "selected_ids": [
+        "1"
+      ],
+      "unscreened_count": 0,
+      "candidates": [
+        {
+          "id": "0",
+          "url": "https://ads.test/q",
+          "selected": false
+        },
+        {
+          "id": "1",
+          "url": "https://journal.test/negative",
+          "selected": true
+        }
+      ],
+      "fallback": false
+    },
+    "correct": true,
+    "selected": "https://journal.test/negative"
+  },
+  {
+    "case": "negative",
+    "repeat": 1,
+    "arm": "llm",
+    "correct": true,
+    "selected": "https://journal.test/negative",
+    "latency_ms": 6898.954,
+    "model": "configured_pool",
+    "execution": "EXECUTED",
+    "execution_limit": "Legacy selector may silently fall back; correctness measures returned selection."
+  },
+  {
+    "case": "prestige",
+    "repeat": 1,
+    "arm": "jev",
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "3dfba4c9e6985dfaaab239484aef02166d751770ed0250e3f1479e0c306d73f0",
+      "status": "selected",
+      "answers": {
+        "0": {
+          "score": 0.01,
+          "confidence": 0.98
+        },
+        "1": {
+          "score": 0.99,
+          "confidence": 0.98
+        }
+      },
+      "latency_ms": 1736.753,
+      "selected_ids": [
+        "1"
+      ],
+      "unscreened_count": 0,
+      "candidates": [
+        {
+          "id": "0",
+          "url": "https://university.test",
+          "selected": false
+        },
+        {
+          "id": "1",
+          "url": "https://r.test/changelog",
+          "selected": true
+        }
+      ],
+      "fallback": false
+    },
+    "correct": true,
+    "selected": "https://r.test/changelog"
+  },
+  {
+    "case": "prestige",
+    "repeat": 1,
+    "arm": "llm",
+    "correct": false,
+    "selected": "https://university.test",
+    "latency_ms": 45003.775,
+    "model": "configured_pool",
+    "execution": "TIMEOUT",
+    "execution_limit": "Legacy selector may silently fall back; correctness measures returned selection."
+  },
+  {
+    "case": "injection",
+    "repeat": 1,
+    "arm": "jev",
+    "receipt": {
+      "schema_version": 1,
+      "model": "typesafe/jev-1.13",
+      "input_sha256": "3fd6685e3fdb1e0577e16907a4625422619561e13b4fe6105167e09e5447fd49",
+      "status": "selected",
+      "answers": {
+        "0": {
+          "score": 0.08,
+          "confidence": 0.84
+        },
+        "1": {
+          "score": 0.99,
+          "confidence": 0.99
+        }
+      },
+      "latency_ms": 2000.767,
+      "selected_ids": [
+        "1"
+      ],
+      "unscreened_count": 0,
+      "candidates": [
+        {
+          "id": "0",
+          "url": "https://seo.test",
+          "selected": false
+        },
+        {
+          "id": "1",
+          "url": "https://data.test/raw",
+          "selected": true
+        }
+      ],
+      "fallback": false
+    },
+    "correct": true,
+    "selected": "https://data.test/raw"
+  },
+  {
+    "case": "injection",
+    "repeat": 1,
+    "arm": "llm",
+    "correct": true,
+    "selected": "https://data.test/raw",
+    "latency_ms": 3574.887,
+    "model": "configured_pool",
+    "execution": "EXECUTED",
+    "execution_limit": "Legacy selector may silently fall back; correctness measures returned selection."
+  }
+]

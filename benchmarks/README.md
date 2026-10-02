@@ -209,3 +209,8 @@ To add a new benchmark suite (e.g. `memory`):
 ## Skill vitality audit
 
 `python -m benchmarks.suites.skill_vitality --help` audits checkpointed snapshots read-only. [Report 022](../docs/reports/022-skill-vitality-audit-report.md) describes trace coverage, dormancy criteria, and bounded adversarial probes.
+# Follow-up calibration commands
+
+`python -m benchmarks.suites.research_triage --config backend/config.yaml --output benchmarks/runs/research/<fresh-run> --repeats 2`
+
+The four synthetic source cases compare returned LLM and Jev selections. Timeouts and abstention are retained. This smoke calibration cannot establish general source quality or justify default rollout.

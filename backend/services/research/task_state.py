@@ -45,6 +45,7 @@ class SearchPayload(BaseModel):
     queries: list[str] = Field(default_factory=list)
     direct_urls: list[str] = Field(default_factory=list)
     search_results: list[dict] = Field(default_factory=list)
+    triage_receipts: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ParsePayload(BaseModel):
@@ -173,6 +174,7 @@ class StepOutput(BaseModel):
 
 
 _ORCH_STATE_KEYS = {
+    "triage_receipts",
     "phase",
     "objective",
     "max_depth",
@@ -244,6 +246,7 @@ def make_initial_state(task: dict) -> dict:
         "current_depth": extra.get("current_depth", 0),
         "query_index": 0,
         "search_results_cache": extra.get("search_results_cache", []),
+        "triage_receipts": extra.get("triage_receipts", []),
         "parsed_sources_cache": extra.get("parsed_sources_cache", []),
         "digest_results_cache": extra.get("digest_results_cache", []),
         "digest_signals": extra.get("digest_signals", {}),

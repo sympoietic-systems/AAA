@@ -16,6 +16,7 @@ import yaml
 from backend.modules.base import ProcessingModule
 from backend.modules.llm_client import generate_unified
 from backend.modules.retrieval.safe_http import SafeFetchError, safe_fetch
+from backend.modules.sensory.evidence_triage import EvidenceTriage
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repositories import PerceptionSedimentRepository
 from backend.utils.token_counter import estimate_tokens
@@ -145,11 +146,17 @@ class RhizomeWebProbe:
         embedder,
         structural_scorer,
         llm_provider=None,
+        triage=None,
+        belief_repo=None,
+        agent_id="symbia",
     ):
         self.repo = perception_repo
         self.embedder = embedder
         self.scorer = structural_scorer
         self.llm = llm_provider
+        self.triage = triage
+        self.belief_repo = belief_repo
+        self.agent_id = agent_id
 
     async def search(self, query: str) -> list[dict]:
         headers = {
@@ -244,7 +251,13 @@ class RhizomeWebProbe:
         if not results:
             return {"status": "empty", "results": []}
 
-        top_result = results[0]
+        triage_receipt = None
+        if self.triage is not None:
+            selected, source_receipt = await self.triage.screen(query, query, results, 1)
+            top_result = selected[0]
+            triage_receipt = {"source_screen": source_receipt}
+        else:
+            top_result = results[0]
         url = top_result["url"]
         title = top_result["title"]
         snippet = top_result["snippet"]
@@ -259,7 +272,19 @@ class RhizomeWebProbe:
         implicated_nodes = []
         state_vector_impact = [0.0] * 16
 
-        if self.llm:
+        if self.triage is not None:
+            beliefs = await asyncio.to_thread(self.belief_repo.list_beliefs, self.agent_id) if self.belief_repo else []
+            candidates = [
+                {"id": b.id, "statement": b.statement[:1000]}
+                for b in sorted(beliefs, key=lambda b: (-b.ontological_mass, b.id))
+                if b.lifecycle_stage not in {"collapsed", "folded", "faded"} and b.confidence >= 0.2
+            ][:10]
+            collision = await self.triage.collision(crawled_text, candidates)
+            triage_receipt["collision"] = collision
+            implicated_nodes = collision["implicated_nodes"]
+            # Legacy scalar requires a number; receipt preserves the unknown state explicitly.
+            interference_score = collision["interference_score"] if collision["interference_score"] is not None else 0.5
+        elif self.llm:
             try:
                 from backend.utils.prompt_loader import get_prompt
 
@@ -317,7 +342,8 @@ class RhizomeWebProbe:
                 logger.warning("Failed to score web chunk: %s", e)
                 sig_blob = b""
 
-            self.repo.insert_chunk(
+            await asyncio.to_thread(
+                self.repo.insert_chunk,
                 conversation_id=conversation_id,
                 file_name=virtual_file_name,
                 file_type="web_probe",
@@ -330,7 +356,8 @@ class RhizomeWebProbe:
             )
             chunk_count += 1
 
-        self.repo.insert_exogenous_stream(
+        await asyncio.to_thread(
+            self.repo.insert_exogenous_stream,
             id=str(uuid.uuid4()),
             query_used=query,
             source_url=url,
@@ -341,17 +368,20 @@ class RhizomeWebProbe:
             associated_file_name=virtual_file_name,
         )
 
-        self.repo.create_file(
+        await asyncio.to_thread(
+            self.repo.create_file,
             conversation_id=conversation_id,
             file_name=virtual_file_name,
             file_type="web_probe",
             status="ready",
         )
-        self.repo.update_file(
+        await asyncio.to_thread(
+            self.repo.update_file,
             conversation_id=conversation_id,
             file_name=virtual_file_name,
             status="ready",
-            summary=f"Web search results and crawled content for query: '{query}'",
+            summary=f"Web search results and crawled content for query: '{query}'"
+            + ("\nJev triage receipt: " + json.dumps(triage_receipt, ensure_ascii=False) if triage_receipt else ""),
             summary_model="RhizomeWebProbe",
             token_count=estimate_tokens(crawled_text),
             chunk_count=chunk_count,
@@ -368,6 +398,7 @@ class RhizomeWebProbe:
             "interference_score": interference_score,
             "implicated_nodes": implicated_nodes,
             "state_vector_impact": state_vector_impact,
+            "triage_receipt": triage_receipt,
         }
 
 
@@ -379,12 +410,17 @@ class WebRetrievalModule(ProcessingModule):
         structural_scorer,
         llm_provider=None,
         config: dict | None = None,
+        belief_repo=None,
+        agent_id="symbia",
     ):
         self._probe = RhizomeWebProbe(
             perception_repo=perception_repo,
             embedder=embedder,
             structural_scorer=structural_scorer,
             llm_provider=llm_provider,
+            triage=EvidenceTriage.from_config(config or {}),
+            belief_repo=belief_repo,
+            agent_id=agent_id,
         )
         self.config = config or {}
         self._enabled = self.config.get("web_retrieval", {}).get("enabled", True)

@@ -437,3 +437,6 @@ backup:
 server:
   host: "127.0.0.1"
   port: 8499
+# Candidate rollout: enable only after representative local quality calibration.
+research_triage:
+  enabled: false

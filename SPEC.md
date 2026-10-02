@@ -135,6 +135,7 @@ V69: web crawler detects PDF content and extracts font-aware headings/text via t
 V100: Message insertion honors outer atomic rollback; invalid parent fails structurally; committed parent visible across worker connections.
 
 V101: Skill audit reads checkpointed snapshot in SQLite URI read-only mode; activation gaps ≠ lifetime nonuse; archived skills ∉ pruning candidates; probe failure ≠ skill failure.
+V102: Jev evidence triage ≤10 candidates; finite scores + confidence required; unknown IDs/uncertainty abstain; excluded sources inspectable; receipts survive task restart; no belief/vector authorship; default promotion requires calibration.
 
 ## §T
 
@@ -186,6 +187,7 @@ T43|x|add PDF content detection and fallback extraction via `SimpleChunkDigester
 T47|x|close message transaction and parent validation gaps|V100,V34,V17
 
 T48|x|implement read-only skill vitality and adversarial evidence harness|V101,V56
+T49|x|implement and calibrate opt-in Jev source screening and grounded web collision receipts|V102,V30
 
 ## §B
 
@@ -271,3 +273,4 @@ B76|2026-10-02|crawler fed binary PDF payloads into HTML parser, discarding acad
 B77|2026-10-03|message insert directly committed inside atomic scope; missing parent surfaces raw foreign-key exception|V100
 
 B78|2026-10-03|audit URI lacked uri=True; live harness passed unsupported prompt keyword; archived skills falsely flagged for pruning|V101
+B79|2026-10-03|triage receipt omitted from orchestrator persistence allowlist; numeric answer inference lost strict collection type|V102,V30

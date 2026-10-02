@@ -32,3 +32,4 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 021: Message tree integrity](021-message-tree-integrity-report.md)
 
 - [Report 022: Skill vitality audit](022-skill-vitality-audit-report.md)
+- [Report 023: Jev research triage](023-jev-research-triage-report.md)

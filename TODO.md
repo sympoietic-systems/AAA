@@ -230,3 +230,9 @@
 - [x] Jev-augmented attractor window and split resonance topology (ADR-090b).
 
 </details>
+# Follow-up execution, 2026-10-03
+
+- [x] Message-tree transaction integrity: Report 021; branch `codex/message-tree-integrity`.
+- [x] Read-only skill vitality and adversarial probe harness: Report 022; branch `codex/skill-vitality-audit`. Broader automatic crystallization gate remains future work.
+- [x] Opt-in Jev source screening and grounded web collision receipts: Report 023; branch `codex/jev-research-triage`. Production promotion depends on calibration.
+- [ ] Dry-run Jev belief candidate routing and tension matrix evidence: Report 024; branch `codex/jev-belief-tension`.

@@ -131,6 +131,7 @@ class ResearchEnvelopeMapper:
             task_state["sources_analyzed"] = task_state.get("sources_analyzed", 0) + 1
         elif phase == "searching" and isinstance(payload, SearchPayload):
             task_state["search_results_cache"] = payload.search_results
+            task_state["triage_receipts"] = (task_state.get("triage_receipts", []) + payload.triage_receipts)[-100:]
             task_state["parsed_sources_cache"] = []
         elif phase == "parsing" and isinstance(payload, ParsePayload):
             task_state["parsed_sources_cache"] = payload.parsed_sources
