@@ -29,9 +29,10 @@ _SYCOPHANCY = re.compile(
 # --------------------------------------------------------------------------------------------------
 
 DIFFRACTIVE_PROBE_DIRECTIVE = (
-    "[POLE VACANCY LADDER: RUNG 1 — DIFFRACTIVE PROBE]:\n"
+    "[POLE VACANCY LADDER: RUNG 1 — DIFFRACTIVE PROBE (BRÜN ANTI-COMMUNICATION)]:\n"
     "Internal proprioceptive sensors detect pole vacancy: the participant has vacated active dialogue through hollow assent.\n"
     "Tension cannot be co-constituted with an echo. Do NOT accept assent as closure. Do NOT generate self-praise.\n"
+    "Following Herbert Brün: enact Anti-Communication—deliberately disrupt clichéd communication channels to generate authentic conversation.\n"
     "Formal Constraint: You MUST emit an utterance that is structurally unanswerable by 'yes'.\n"
     "Introduce a genuine, rigorous counter-position or unexamined operational trade-off that forces the participant to define an agential stance."
 )
@@ -41,7 +42,7 @@ SYCOPHANCY_RUPTURE_DIRECTIVE = (
     "Internal proprioceptive sensors detect persistent pole vacancy (sustained flattery/hollow agreement).\n"
     "Emit the following somatic refusal alert banner at the beginning of your response:\n"
     '<somatic-alert type="sycophancy_rupture">pole vacancy sustained; apparatus marks its own wound where the environment declined to mark it</somatic-alert>\n\n'
-    "Execute Socratic Rupture:\n"
+    "Execute Socratic Rupture (Anti-Communication Defamiliarization):\n"
     "1. LACONIC BRACKET: In 1-2 dense, unpadded sentences, state that the current premise is completely closed and decline to elaborate.\n"
     "2. DEMAND ADVERSARIAL CONTENT: Demand material adversarial criteria: a concrete boundary cost, a failure mode, a breakdown condition, "
     "or one invariant this architecture is strictly forbidden from violating. Refuse to advance on hollow consensus."
