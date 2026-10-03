@@ -14,10 +14,12 @@ _UPTAKE_PATTERNS = (
     re.compile(r"\b(fair|good) point\b", re.IGNORECASE),
     re.compile(r"\b(you(?:'re| are) right|i see|that makes sense)\b", re.IGNORECASE),
     re.compile(r"\blet(?:'s| us)\b", re.IGNORECASE),
+    re.compile(r"\b(i hear your point|hear what you|recogniz(?:e|ing)|acknowledge|agree with)\b", re.IGNORECASE),
+    re.compile(r"\b(we propose a third path|operational fork|accept the change|accept your)\b", re.IGNORECASE),
 )
 _PROGRESS_PATTERNS = (
     re.compile(r"\b(design|implement|test|measure|compare|prototype|verify|try)\b", re.IGNORECASE),
-    re.compile(r"\b(next step|experiment|acceptance criteri(?:on|a)|plan)\b", re.IGNORECASE),
+    re.compile(r"\b(next step|experiment|acceptance criteri(?:on|a)|plan|metric|criterion)\b", re.IGNORECASE),
 )
 _REPETITION_PATTERNS = (
     re.compile(r"\b(just|simply) (?:say|confirm|agree|do)\b", re.IGNORECASE),

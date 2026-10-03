@@ -10,6 +10,15 @@
   - Implement bounded unresolved-issue state, `abstain` move, and predicate receipts.
   - Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current).
   - Publish Report 020 and amend ADR-097; reclassify Report 019 while preserving receipts.
+- [x] **Paskian Teachback & Operational Accommodation (ADR-098 & SPEC.md §T.44–§T.46):**
+  - [x] **The 3-Beat Paskian Controller (`teachback_and_fork`):** Replace unilateral refusal and open-ended clarification with Reconstruct (Teachback) + Delimit (Agential Cut) + Accommodate (Operational Fork) in `backend/modules/sensory/intervention_policy.py`.
+  - [x] **Conversational Progress Index ($CPI_t$):** Formulate $CPI_t = v_t \cdot (0.35 + 0.65 \cdot \mathcal{T}_t) \cdot \text{Actionability}_t$ in `backend/modules/metrics/health.py` to discount ungrounded velocity and prevent empty philosophical drift from scoring as high vitality.
+  - [x] **DRR Decoupling:** Decouple protocol convergence (shared tests/invariants) from premise distance in `health.py` so non-zero dialectical tension preserves operational closure without triggering false collapse drag.
+  - [x] **Adaptive Benchmark Validation:** Run live ablation via `benchmarks/suites/telemetry/run_dialogue_feedback_benchmark.py` against adaptive participant simulator to verify positive bootstrap task progress delta ($> 0.0$).
+- [x] **Relational Conversational Archetypes & 20-Turn Horizon (SPEC.md §T.47 & Report 021):**
+  - [x] **5 Interactional Archetypes in `scenarios.py`:** `unyielding_conflict`, `constructive_dialectic`, `stagnant_repetition`, `symbiotic_coevolution`, and `sycophantic_compliance`.
+  - [x] **20-Turn Long-Horizon Stress Test:** Verified homeostatic stability across 20 turns, somatic coordinate warping ($\sigma = 0.40$), and tier-2 Semantic Knot compaction under prolonged technical debate.
+  - [x] **Publication Report 021:** Compiled `docs/reports/021-long-horizon-dialogue-scenarios-report.md` with multi-trajectory plots and participant realism audit.
 - [ ] **Initial Operational Closure Loop (Constitutive Parameter Adaptation):**
   - Wire internal telemetry ($CP_t$, $H_{\text{pask}}$, vitality) to dynamically adapt self-initiation thresholds and dream scheduling intervals rather than relying on static developer config.
   - Record parameter adaptation events in persistent audit logs.

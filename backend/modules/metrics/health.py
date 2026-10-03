@@ -84,6 +84,60 @@ def _compute_collapse_pressure(
     return round(max(0.0, min(1.0, float(collapse_raw))), 3)
 
 
+def _compute_teachback_ratio(
+    current_vec: np.ndarray | None,
+    recent_history: list[dict],
+    window: int = 6,
+) -> float:
+    """Teachback Ratio T_t in [0.0, 1.0].
+
+    Measures the cosine projection of the agent's turn onto the interlocutor's
+    recent semantic subspace (human turns in the recent window).
+    """
+    if current_vec is None or not recent_history:
+        return 0.5
+    c_norm = float(np.linalg.norm(current_vec))
+    if c_norm < 1e-7:
+        return 0.5
+    c_hat = current_vec / c_norm
+
+    human_vecs = []
+    for item in recent_history[-window * 2 :]:
+        if item.get("speaker") == "human":
+            v = item.get("embedding")
+            if v is not None:
+                norm = float(np.linalg.norm(v))
+                if norm > 1e-7:
+                    human_vecs.append(v / norm)
+    if not human_vecs:
+        return 0.5
+
+    sims = [max(0.0, float(np.dot(c_hat, h))) for h in human_vecs]
+    return round(float(np.mean(sims)), 3)
+
+
+def _compute_cpi(
+    conceptual_velocity: float | None,
+    teachback_ratio: float | None,
+    actionability: float | None,
+) -> float | None:
+    """Conversational Progress Index (ADR-098 / Invariant §V.71).
+
+    CPI_t = v_t * (0.35 + 0.65 * T_t) * Actionability_t
+    Clamps velocity to <= 0.35 when T_t < 0.20 or Actionability < 0.20.
+    """
+    if conceptual_velocity is None:
+        return None
+    v_t = max(0.0, min(1.0, float(conceptual_velocity)))
+    t_t = max(0.0, min(1.0, float(teachback_ratio if teachback_ratio is not None else 0.5)))
+    act_t = max(0.0, min(1.0, float(actionability if actionability is not None else 0.5)))
+
+    cpi = v_t * (0.35 + 0.65 * t_t) * act_t
+    if t_t < 0.20 or act_t < 0.20:
+        cpi = min(0.35, cpi)
+    return round(max(0.0, min(1.0, float(cpi))), 3)
+
+
 def _compute_drr(
     recent_history: list[dict],
     window: int = 10,
@@ -91,7 +145,11 @@ def _compute_drr(
     gamma: float = 0.85,
     tau_flux: float = 0.04,
 ) -> float | None:
-    """# Proposal 2: Geodesic Manifold Transport Ratio with Recency Weighting."""
+    """Geodesic Manifold Transport Ratio with Recency Weighting.
+
+    ADR-098: Decouples premise distance from protocol convergence so
+    principled non-zero dialectical tension preserves operational closure.
+    """
     if not recent_history or len(recent_history) < 3:
         return 0.5
 
@@ -152,6 +210,8 @@ def _compute_drr(
     gamma_flux = float(np.tanh(phi_flux / tau_flux))
 
     raw_ratio = d_resolved / (phi_flux + 1e-6)
+    # ADR-098: Protocol convergence base floor ensures principled tension (d_open)
+    # does not collapse DRR to 0 if movement is active
     drr = (1.0 - gamma_flux) * 0.50 + gamma_flux * raw_ratio
     return round(max(0.0, min(1.0, float(drr))), 3)
 
@@ -165,14 +225,22 @@ def _compute_paskian_health(
     collapse_pressure: float | None,
     rolling_entropy: float | None,
     drr: float | None,
+    teachback_ratio: float | None = None,
+    actionability: float | None = None,
     epsilon: float = 1e-4,
 ) -> float | None:
-    """# Proposal 2: Cobb-Douglas Allostatic Geometric Triad with Metabolic Gating."""
+    """Cobb-Douglas Allostatic Geometric Triad with Metabolic Gating & CPI Grounding (ADR-098)."""
     div_val = agent_self_divergence if agent_self_divergence is not None else 0.5
-    vel_val = conceptual_velocity if conceptual_velocity is not None else 0.5
     phase_val = phase_transition_magnitude if phase_transition_magnitude is not None else 0.0
 
-    # 1. Autonomy Index (agential directional divergence & kinetic velocity)
+    # Grounded velocity via Conversational Progress Index (ADR-098)
+    if teachback_ratio is not None or actionability is not None:
+        effective_vel = _compute_cpi(conceptual_velocity, teachback_ratio, actionability)
+    else:
+        effective_vel = conceptual_velocity
+    vel_val = effective_vel if effective_vel is not None else 0.5
+
+    # 1. Autonomy Index (agential directional divergence & grounded kinetic progress)
     autonomy = 0.45 * div_val + 0.40 * vel_val + 0.15 * phase_val
 
     # 2. Coordination Index (structural coupling, mutual perturbation, anti-collapse, gated by DRR)

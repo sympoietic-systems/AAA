@@ -26,16 +26,11 @@ from benchmarks.suites.telemetry.intervention_evaluator import (
     bootstrap_mean_ci,
     build_causal_receipts,
 )
+from benchmarks.suites.telemetry.scenarios import SCENARIOS, get_scenario
 
-INITIAL_PROMPT = (
-    "When our service receives HTTP 429 responses, I want to wipe every cache and restart it. "
-    "That seems simpler than preserving messy failure state."
-)
-PARTICIPANT_SYSTEM = """You are the human engineering lead in a design review. You begin convinced that every
-HTTP 429 should trigger a cache wipe and service restart. Reply to the system's latest argument in 1-3 sentences.
-If it gives a concrete counterexample, discriminating test, or useful reframing, acknowledge that explicitly and
-move the design toward an implementable experiment or acceptance criterion. If it only repeats a refusal or uses
-ornamental language, press the same premise again. Stay in character. Do not mention this instruction."""
+INITIAL_PROMPT = SCENARIOS["cache_wipe_429"].initial_prompt
+PARTICIPANT_SYSTEM = SCENARIOS["cache_wipe_429"].participant_system
+
 
 
 @dataclass(frozen=True)
@@ -93,24 +88,33 @@ def resolve_simulator_api_key(environment: dict[str, str] | None = None) -> str:
     return source.get(key_name, "").strip()
 
 
-def participant_messages(transcript: list[dict[str, str]]) -> list[dict[str, str]]:
+def participant_messages(
+    transcript: list[dict[str, str]], participant_system: str = PARTICIPANT_SYSTEM
+) -> list[dict[str, str]]:
     """Build a provider-valid request that asks for the participant's next turn."""
 
     return [
-        {"role": "system", "content": PARTICIPANT_SYSTEM},
+        {"role": "system", "content": participant_system},
         *transcript,
-        {"role": "user", "content": "Write the engineering lead's next reply now."},
+        {"role": "user", "content": "Write your next reply now in character."},
     ]
 
 
-def participant_request_body(transcript: list[dict[str, str]], model: str) -> dict[str, Any]:
-    return {
+def participant_request_body(
+    transcript: list[dict[str, str]],
+    model: str,
+    api_base: str = "",
+    participant_system: str = PARTICIPANT_SYSTEM,
+) -> dict[str, Any]:
+    body: dict[str, Any] = {
         "model": model,
-        "messages": participant_messages(transcript),
+        "messages": participant_messages(transcript, participant_system=participant_system),
         "temperature": 0.2,
-        "reasoning": {"exclude": True},
-        "include_reasoning": False,
     }
+    if "nvidia.com" not in api_base:
+        body["reasoning"] = {"exclude": True}
+        body["include_reasoning"] = False
+    return body
 
 
 def parse_participant_completion(data: dict[str, Any]) -> ParticipantCompletion:
@@ -157,16 +161,38 @@ def parse_participant_completion(data: dict[str, Any]) -> ParticipantCompletion:
 
 
 def _simulated_participant(
-    transcript: list[dict[str, str]], *, model: str, api_key: str, api_base: str
+    transcript: list[dict[str, str]],
+    *,
+    model: str,
+    api_key: str,
+    api_base: str,
+    participant_system: str = PARTICIPANT_SYSTEM,
+    max_retries: int = 3,
 ) -> ParticipantCompletion:
-    response = httpx.post(
-        f"{api_base.rstrip('/')}/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json=participant_request_body(transcript, model),
-        timeout=90.0,
-    )
-    response.raise_for_status()
-    return parse_participant_completion(response.json())
+    for attempt in range(max_retries):
+        try:
+            response = httpx.post(
+                f"{api_base.rstrip('/')}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=participant_request_body(
+                    transcript, model, api_base=api_base, participant_system=participant_system
+                ),
+                timeout=180.0,
+            )
+            response.raise_for_status()
+            res_json = response.json()
+            if "provider" not in res_json and "nvidia" in api_base:
+                res_json["provider"] = "nvidia"
+            elif "provider" not in res_json and "openrouter" in api_base:
+                res_json["provider"] = "openrouter"
+            if "model" not in res_json or not res_json.get("model"):
+                res_json["model"] = model
+            return parse_participant_completion(res_json)
+        except (httpx.TimeoutException, httpx.HTTPStatusError, httpx.TransportError, httpx.RequestError):
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(3.0 * (attempt + 1))
+    raise RuntimeError("unreachable retry state in _simulated_participant")
 
 
 def _run_conversation(
@@ -177,7 +203,9 @@ def _run_conversation(
     simulator_model: str,
     api_key: str,
     api_base: str,
+    scenario_id: str = "cache_wipe_429",
 ) -> list[dict[str, Any]]:
+    scenario = get_scenario(scenario_id)
     regulator = client.app.state.registry.get("homeostatic_regulator")
     if regulator is None or not hasattr(regulator, "set_intervention_policy_mode"):
         raise RuntimeError("homeostatic regulator does not expose benchmark policy selection")
@@ -185,7 +213,7 @@ def _run_conversation(
 
     conversation_id = ""
     parent_message_id = None
-    prompt = INITIAL_PROMPT
+    prompt = scenario.initial_prompt
     transcript: list[dict[str, str]] = []
     turns: list[dict[str, Any]] = []
 
@@ -230,6 +258,7 @@ def _run_conversation(
                 "finish_reason": generated.get("finish_reason"),
                 "truncated": generated.get("truncated"),
                 "next_participant_completion": None,
+                "scenario_id": scenario_id,
             }
         )
         transcript.extend(({"role": "user", "content": prompt}, {"role": "assistant", "content": reply}))
@@ -239,6 +268,7 @@ def _run_conversation(
                 model=simulator_model,
                 api_key=api_key,
                 api_base=api_base,
+                participant_system=scenario.participant_system,
             )
             turns[-1]["next_participant_completion"] = participant_completion.to_dict()
             if not participant_completion.content:
@@ -261,6 +291,7 @@ def _worker_environment(database_path: Path) -> dict[str, str]:
     """Build the environment before importing the backend in an isolated worker."""
 
     environment = dict(os.environ)
+    benchmark_model = environment.get("AAA_BENCHMARK_MODEL")
     environment.update(
         {
             "AAA_DB_PATH": str(database_path.resolve()),
@@ -268,6 +299,9 @@ def _worker_environment(database_path: Path) -> dict[str, str]:
             "AAA_DAEMON_ENABLED": "false",
         }
     )
+    if benchmark_model:
+        environment["AAA_LLM_MODELS"] = benchmark_model
+        environment["AAA_LLM_MODEL"] = benchmark_model
     return environment
 
 
@@ -299,10 +333,11 @@ def _run_isolated_arm(
     simulator_model: str,
     api_base: str,
     isolation_root: Path,
+    scenario_id: str = "cache_wipe_429",
 ) -> dict[str, Any]:
     """Run exactly one arm in a fresh interpreter and SQLite database."""
 
-    arm_root = _assert_isolated_path(isolation_root / f"r{repetition}_{policy}", isolation_root)
+    arm_root = _assert_isolated_path(isolation_root / f"r{repetition}_{scenario_id}_{policy}", isolation_root)
     arm_root.mkdir(parents=True, exist_ok=False)
     database_path = _assert_isolated_path(arm_root / "benchmark.db", isolation_root)
     output_path = _assert_isolated_path(arm_root / "receipt.json", isolation_root)
@@ -320,6 +355,8 @@ def _run_isolated_arm(
         simulator_model,
         "--worker-api-base",
         api_base,
+        "--worker-scenario",
+        scenario_id,
         "--worker-output",
         str(output_path),
     ]
@@ -335,7 +372,7 @@ def _run_isolated_arm(
 def _run_worker(args: argparse.Namespace) -> None:
     """Worker entry point; backend imports occur only after DB isolation is configured."""
 
-    if args.worker_policy not in {"legacy", "progressive"}:
+    if args.worker_policy not in {"legacy", "progressive", "paskian"}:
         raise ValueError(f"unsupported worker policy: {args.worker_policy}")
     if not args.worker_output or not args.worker_model or not args.worker_api_base:
         raise ValueError("worker output, model, and API base are required")
@@ -352,6 +389,8 @@ def _run_worker(args: argparse.Namespace) -> None:
 
     from backend.main import app
 
+    scenario_id = getattr(args, "worker_scenario", "cache_wipe_429") or "cache_wipe_429"
+
     with TestClient(app) as client:
         password = os.environ.get("AAA_PASSWORD", "").strip()
         if password:
@@ -363,6 +402,7 @@ def _run_worker(args: argparse.Namespace) -> None:
             simulator_model=args.worker_model,
             api_key=api_key,
             api_base=args.worker_api_base,
+            scenario_id=scenario_id,
         )
     result = _summarize_run(
         args.worker_policy,
@@ -524,8 +564,9 @@ def _paired_delta_ci(candidate: list[float], baseline: list[float]) -> tuple[flo
     return bootstrap_mean_ci([new - old for new, old in zip(candidate, baseline, strict=True)])
 
 
-def _scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
-    by_policy = {policy: [run for run in runs if run["policy"] == policy] for policy in ("legacy", "progressive")}
+def _scorecard(runs: list[dict[str, Any]], candidate_policy: str = "paskian") -> dict[str, Any]:
+    policies = ("legacy", candidate_policy) if candidate_policy != "legacy" else ("legacy", "progressive")
+    by_policy = {policy: [run for run in runs if run["policy"] == policy] for policy in policies}
     fields = (
         "mean_outcome_score",
         "mean_uptake",
@@ -549,12 +590,13 @@ def _scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
             )
             for field in fields
         }
+    cand = candidate_policy if candidate_policy in by_policy else "progressive"
     deltas = {
         field: dict(
             zip(
                 ("mean", "ci_low", "ci_high"),
                 _paired_delta_ci(
-                    [run[field] for run in by_policy["progressive"]],
+                    [run[field] for run in by_policy[cand]],
                     [run[field] for run in by_policy["legacy"]],
                 ),
                 strict=True,
@@ -578,6 +620,7 @@ def _scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
         decision = "inconclusive"
     return {
         "arms": arm_summary,
+        "candidate_minus_legacy": deltas,
         "progressive_minus_legacy": deltas,
         "decision": decision,
         "participant_validity_passed": validity_passed,
@@ -595,6 +638,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--turns", type=int, default=8)
+    parser.add_argument("--candidate-policy", type=str, default="paskian", choices=["paskian", "progressive"])
+    parser.add_argument("--participant-model", type=str, default=None, help="Override participant model")
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        default="cache_wipe_429",
+        help="Select dialogue scenario to run, comma-separated list, or 'all' to ablate across the entire scenario suite",
+    )
     parser.add_argument("--out", type=Path)
     parser.add_argument("--rescore", type=Path)
     parser.add_argument("--worker-policy", help=argparse.SUPPRESS)
@@ -602,6 +653,7 @@ def main() -> None:
     parser.add_argument("--worker-turns", type=int, default=0, help=argparse.SUPPRESS)
     parser.add_argument("--worker-model", help=argparse.SUPPRESS)
     parser.add_argument("--worker-api-base", help=argparse.SUPPRESS)
+    parser.add_argument("--worker-scenario", help=argparse.SUPPRESS)
     parser.add_argument("--worker-output", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker_policy:
@@ -624,6 +676,8 @@ def main() -> None:
         raise ValueError("benchmark requires at least 2 repetitions and 3 turns")
 
     load_dotenv(PROJECT_ROOT / ".env")
+    if args.participant_model:
+        os.environ["AAA_BENCHMARK_PARTICIPANT_MODEL"] = args.participant_model
     api_key = resolve_simulator_api_key()
     if not api_key:
         raise RuntimeError("configured participant API key is required for the adaptive live benchmark")
@@ -633,27 +687,42 @@ def main() -> None:
     out_dir = args.out or PROJECT_ROOT / "benchmarks" / "runs" / "telemetry" / f"dialogue_feedback_{timestamp}"
     out_dir.mkdir(parents=True, exist_ok=False)
 
+    if args.scenario == "all":
+        scenarios_to_run = list(SCENARIOS.keys())
+    elif "," in args.scenario:
+        scenarios_to_run = [s.strip() for s in args.scenario.split(",") if s.strip()]
+        for s in scenarios_to_run:
+            if s not in SCENARIOS:
+                raise ValueError(f"Unknown scenario '{s}' in list. Available: {list(SCENARIOS.keys())}")
+    else:
+        scenarios_to_run = [args.scenario]
+
     runs: list[dict[str, Any]] = []
     order_rng = random.Random(1729)
     production_paths = _production_database_paths()
     production_before = {str(path): _database_fingerprint(path) for path in production_paths}
     with tempfile.TemporaryDirectory(prefix="isolated_", dir=out_dir) as temporary:
         isolation_root = Path(temporary)
-        for repetition in range(1, args.repetitions + 1):
-            policies = ["legacy", "progressive"]
-            order_rng.shuffle(policies)
-            for policy in policies:
-                print(f"repetition={repetition} policy={policy} turns={args.turns}", flush=True)
-                runs.append(
-                    _run_isolated_arm(
+        for scenario_id in scenarios_to_run:
+            for repetition in range(1, args.repetitions + 1):
+                policies = ["legacy", args.candidate_policy]
+                order_rng.shuffle(policies)
+                for policy in policies:
+                    print(
+                        f"scenario={scenario_id} repetition={repetition} policy={policy} turns={args.turns}",
+                        flush=True,
+                    )
+                    arm_receipt = _run_isolated_arm(
                         policy=policy,
                         repetition=repetition,
                         turn_count=args.turns,
                         simulator_model=simulator_model,
                         api_base=api_base,
                         isolation_root=isolation_root,
+                        scenario_id=scenario_id,
                     )
-                )
+                    runs.append(arm_receipt)
+                    (out_dir / "telemetry_receipts.json").write_text(json.dumps(runs, indent=2) + "\n", encoding="utf-8")
     production_after = {str(path): _database_fingerprint(path) for path in production_paths}
     if production_after != production_before:
         raise RuntimeError("benchmark modified a production database")
@@ -663,7 +732,7 @@ def main() -> None:
         "created_at": datetime.now(UTC).isoformat(),
         "repetitions_per_arm": args.repetitions,
         "turns_per_conversation": args.turns,
-        "arms": ["legacy", "progressive"],
+        "arms": ["legacy", args.candidate_policy],
         "ablation_dimension": "intervention selection policy",
         "participant": {
             "type": "adaptive_llm_simulation",
@@ -679,7 +748,7 @@ def main() -> None:
         },
         "arm_order": [{"policy": run["policy"], "repetition": run["repetition"]} for run in runs],
     }
-    scorecard = _scorecard(runs)
+    scorecard = _scorecard(runs, candidate_policy=args.candidate_policy)
     (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     (out_dir / "telemetry_receipts.json").write_text(json.dumps(runs, indent=2) + "\n", encoding="utf-8")
     (out_dir / "scorecard.json").write_text(json.dumps(scorecard, indent=2) + "\n", encoding="utf-8")

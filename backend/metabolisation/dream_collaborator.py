@@ -13,6 +13,7 @@ class DreamDaemonCollaborator:
     last_dream_time: float
     last_reset_day: int
     last_dream_action: str | None
+    _last_budget_exhaustion_state: tuple[str, int, int] | None
 
     def __getattr__(self, name: str) -> Any:
         raise AttributeError(name)

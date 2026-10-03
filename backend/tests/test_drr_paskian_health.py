@@ -83,3 +83,40 @@ def test_paskian_health_triadic_synthesis():
     )
     assert health_active > 0.6, f"Expected high Paskian health, got {health_active}"
     assert health_collapsed < 0.2, f"Expected collapsed Paskian health, got {health_collapsed}"
+
+
+def test_v71_cpi_discounts_ungrounded_velocity():
+    from backend.modules.metrics import _compute_cpi
+
+    # Ungrounded high velocity: high velocity but low teachback & low actionability
+    cpi_ungrounded = _compute_cpi(conceptual_velocity=0.95, teachback_ratio=0.10, actionability=0.10)
+    assert cpi_ungrounded is not None
+    # §V.71: Clamped to <= 0.35 when teachback < 0.20 or actionability < 0.20
+    assert cpi_ungrounded <= 0.35, f"Expected clamped CPI <= 0.35, got {cpi_ungrounded}"
+
+    # Grounded velocity: high velocity with solid teachback and high actionability
+    cpi_grounded = _compute_cpi(conceptual_velocity=0.90, teachback_ratio=0.80, actionability=0.85)
+    assert cpi_grounded is not None
+    assert cpi_grounded > 0.60, f"Expected high grounded CPI > 0.60, got {cpi_grounded}"
+    assert cpi_grounded > cpi_ungrounded
+
+
+def test_teachback_ratio_subspace_projection():
+    from backend.modules.metrics import _compute_teachback_ratio
+
+    v_human = np.array([1.0, 0.0] + [0.0] * 382, dtype=np.float32)
+    history = [
+        {"embedding": v_human, "speaker": "human"},
+    ]
+
+    # Agent turn closely aligned with human invariant
+    v_aligned = np.array([0.95, 0.05] + [0.0] * 382, dtype=np.float32)
+    ratio_aligned = _compute_teachback_ratio(v_aligned, history)
+
+    # Agent turn completely orthogonal (talking past the human)
+    v_orthogonal = np.array([0.0, 1.0] + [0.0] * 382, dtype=np.float32)
+    ratio_orthogonal = _compute_teachback_ratio(v_orthogonal, history)
+
+    assert ratio_aligned > 0.85
+    assert ratio_orthogonal < 0.10
+    assert ratio_aligned > ratio_orthogonal

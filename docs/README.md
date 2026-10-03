@@ -3,6 +3,10 @@
 This is the central documentation repository for the **Autopoietic Agentic Assemblage (AAA)** and **Sympoietic Systems**. The structure is partitioned strictly by operational concern rather than by chronology or mixed file types.
 
 > **Governance & Rules:** All documentation must adhere to [`.agents/protocols/DOCUMENTATION.md`](../.agents/protocols/DOCUMENTATION.md) and [`DOCUMENTATION_STANDARDS.md`](DOCUMENTATION_STANDARDS.md).
+>
+> **North Star:** [`GOAL.md`](GOAL.md) (Canonical Project Goals, Invariants & Strategic Horizons).
+>
+> **Project Direction Record (PDR):** [`PDR.md`](PDR.md) (Comprehensive audit of 99 ADRs, operational capabilities, gap analysis, and trajectory).
 
 ---
 
@@ -19,7 +23,7 @@ System architecture, technical specification, and the record of architectural de
 
 - [ARCHITECTURE.md](architecture/ARCHITECTURE.md) — High-level design, data flow, modular pipeline, and component diagrams.
 - [DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) — Live database schema and table reference.
-- [decisions/](decisions/) — Architecture Decision Records documenting significant choices with context, options, and consequences. [ADR-099](decisions/ADR-099-chat-response-quality-diagnostics.md) records the production response-quality and completion diagnostics.
+- [decisions/](decisions/) — Architecture Decision Records through `ADR-099`, documenting significant choices with context, options, and consequences. ADR-097 and ADR-098 define the causal dialogue feedback control loop, Paskian teachback, operational accommodation, and the Pole Vacancy escalation ladder; [ADR-099](decisions/ADR-099-chat-response-quality-diagnostics.md) records the production response-quality and completion diagnostics.
 
 ### systems/
 Deep-dive specifications for individual subsystems.
@@ -31,7 +35,7 @@ Deep-dive specifications for individual subsystems.
 - [SKILL_SYSTEM.md](systems/SKILL_SYSTEM.md) — Autonomous skill nucleation, accretion, and refinement.
 - [DREAM_DAEMON.md](systems/DREAM_DAEMON.md) — Background cognitive cycles and somatic drift.
 - [VECTOR_SYSTEMS.md](systems/VECTOR_SYSTEMS.md) — Embedding, structural scoring, and isomorphic retrieval.
-- [CYBERNETIC_METRICS_SYSTEM.md](systems/CYBERNETIC_METRICS_SYSTEM.md) — Proprioceptive sensor suite: mathematical formulations, sliding window dynamics, and homeostatic sensorimotor loops (14 calibrated metrics, ADR-073 to ADR-084).
+- [CYBERNETIC_METRICS_SYSTEM.md](systems/CYBERNETIC_METRICS_SYSTEM.md) — Proprioceptive sensor suite: mathematical formulations, sliding window dynamics, and homeostatic sensorimotor loops (14 calibrated metrics, ADR-073 to ADR-084, plus ADR-098 Paskian metrics).
 - [AUTONOMOUS_RESEARCH_ARCHITECTURE.md](systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md) — Deep-dive on the autonomous research engine orchestrator (phases, state machine, persistence, manual mode).
 
 ### guides/
@@ -55,7 +59,7 @@ Developer workflows, engineering best practices, and scaffolding guidelines.
 ### reports/
 Empirical evaluation benchmarks, calibration scorecards, and research reports (Single Source of Truth).
 
-- [reports/README.md](reports/README.md) — **Master benchmark registry and chronology (Reports 002–018)**.
+- [reports/README.md](reports/README.md) — **Master benchmark registry and chronology (Reports 002–022)**.
 - [002-16d-structural-scoring-benchmark-report.md](reports/002-16d-structural-scoring-benchmark-report.md) — Benchmark comparison between Jev-1.13 structural signature and frontier LLM baselines.
 - [003-empirical-10-turn-benchmark-report.md](reports/003-empirical-10-turn-benchmark-report.md) — 10-turn head-to-head adversarial pressure test (AAA vs. Gemini 3.7 Flash).
 - [004-conversation-metrics-calibration-report.md](reports/004-conversation-metrics-calibration-report.md) — Calibration of Coupling Coherence ($C_t$) & Divergence Resolution Ratio ($DRR_t$).
@@ -69,6 +73,10 @@ Empirical evaluation benchmarks, calibration scorecards, and research reports (S
 - [016-backend-resource-and-concurrency-optimization-report.md](reports/016-backend-resource-and-concurrency-optimization-report.md) — Concurrency and CPU saturation report: thread clamping, SQLite connection scopes, and zero event loop starvation.
 - [017-agential-boredom-engine-and-socratic-rupture-report.md](reports/017-agential-boredom-engine-and-socratic-rupture-report.md) — Two-stage boredom engine: allostatic presence penalty and Socratic rupture mechanics.
 - [018-afferent-sensory-membrane-and-skill-blueprint-report.md](reports/018-afferent-sensory-membrane-and-skill-blueprint-report.md) — TypeSafe Jev integration: sub-200ms afferent telemetry and 5-phase skill blueprints.
+- [019-dialogue-feedback-control-report.md](reports/019-dialogue-feedback-control-report.md) — Causal dialogue feedback control ablation and isolation validity.
+- [020-paskian-teachback-and-operational-accommodation-report.md](reports/020-paskian-teachback-and-operational-accommodation-report.md) — Paskian teachback, operational accommodation, and conversational progress index ($CPI_t$).
+- [021-long-horizon-dialogue-scenarios-report.md](reports/021-long-horizon-dialogue-scenarios-report.md) — Long-horizon multi-scenario dialogue evaluation platform.
+- [022-relational-conversational-archetypes-report.md](reports/022-relational-conversational-archetypes-report.md) — Relational conversational archetypes, pole vacancy dynamics, and Socratic sycophancy rupture.
 
 ### publish/
 Published protocol entries: academic-philosophical essays on machine agency, non-Euclidean memory, and human-machine coupling.

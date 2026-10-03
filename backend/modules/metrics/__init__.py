@@ -5,9 +5,11 @@
 
 from .health import (
     _compute_collapse_pressure,
+    _compute_cpi,
     _compute_deficit,
     _compute_drr,
     _compute_paskian_health,
+    _compute_teachback_ratio,
     _compute_vitality,
     _detect_phase_shifts,
 )
@@ -42,6 +44,8 @@ __all__ = [
     "_compute_collapse_pressure",
     "_compute_drr",
     "_compute_paskian_health",
+    "_compute_cpi",
+    "_compute_teachback_ratio",
     "_compute_deficit",
     "_compute_vitality",
     "_detect_phase_shifts",

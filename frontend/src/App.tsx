@@ -117,9 +117,7 @@ export default function App() {
     <RouteErrorBoundary><Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={
-          authEnabled && !authenticated
-            ? <Navigate to="/login" replace />
-            : (<div className="h-screen w-screen overflow-hidden"><TeaserPreview /></div>)
+          <div className="h-screen w-screen overflow-hidden"><TeaserPreview /></div>
         } />
         <Route path="/login" element={
           !authEnabled || authenticated

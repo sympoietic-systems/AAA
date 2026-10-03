@@ -26,24 +26,25 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 | **[015](015-empirical-15-turn-boredom-benchmark-report.md)** | **15-Turn Empirical Boredom Benchmark** | `backend/modules/boredom/` | 1:1 model parity on Gemini 3.7 Flash: 4-arm control ablation with raw JSON receipts. |
 | **[016](016-backend-resource-and-concurrency-optimization-report.md)** | **Backend Resource & Concurrency Report** | `backend/` | Thread clamping, SQLite connection scopes, and zero event loop starvation. |
 | **[017](017-agential-boredom-engine-and-socratic-rupture-report.md)** | **Agential Boredom Engine & Socratic Rupture** | `backend/modules/boredom/` | Two-stage progression (Socratic Seizure $\to$ Laconic Compression) & quadratic presence penalty. |
-| **[018](018-afferent-sensory-membrane-and-skill-blueprint-report.md)** | **Afferent Sensory Membrane & Skill Blueprint** | `backend/modules/` | Sub-200ms TypeSafe Jev telemetry and 5-phase skill blueprints. |
+| **[018](018-afferent-sensory-membrane-and-skill-blueprint-report.md)** | **Afferent Sensory Membrane & Skill Blueprints** | `backend/modules/sensory/`, `backend/prompts/` | TypeSafe Jev System One afferent membrane, 0% contemplative false positives, and 5-phase SCAR skill blueprints. |
 | **[019](019-dialogue-feedback-control-report.md)** | **Dialogue Feedback Control** | `backend/modules/metrics/`, `backend/modules/sensory/` | Causal receipts, adaptive retrieval gate, and rejected progressive intervention ablation. |
+| **[020](020-paskian-teachback-and-operational-accommodation-report.md)** | **Paskian Teachback & Operational Accommodation** | `backend/modules/` | 3-beat Paskian controller ablation with Nemotron-3 Super 120B on NVIDIA NIM (+0.113 conceptual velocity). |
+| **[021](021-long-horizon-dialogue-scenarios-report.md)** | **Long-Horizon Dialogue Feedback Scenarios** | `backend/modules/` | 20-turn adversarial stress test of Paskian homeostasis, semantic knot compaction, and simulator realism audits. |
+| **[022](022-relational-conversational-archetypes-report.md)** | **Relational Conversational Archetypes & Phase Space** | `backend/modules/` | 5 relational archetypes benchmark on Nemotron-3 Super 120B: +33.8% DRR ($p=0.043$), -17.3% collapse pressure ($p=0.019$). |
+
+---
+
+### Additional Operational & Verification Reports
 
 - [Report 021: Message tree integrity](021-message-tree-integrity-report.md)
-
 - [Report 022: Skill vitality audit](022-skill-vitality-audit-report.md)
 - [Report 023: Jev research triage](023-jev-research-triage-report.md)
 - [Report 024: Jev belief routing and tension evidence](024-jev-belief-routing-and-tension-report.md)
 - [Report 025: Four follow-ups delivery and integrated verification](025-four-followups-delivery-report.md)
-
 - [Report 026: Post-merge usage and calibration plan](026-post-merge-usage-and-calibration-plan.md)
-
 - [Report 027: Baseline quality gate repairs](027-baseline-quality-gates-report.md)
-
 - [Report 028: Activation provenance and stale skill review](028-activation-provenance-and-stale-skill-review.md)
-
 - [Report 029: Belief context and calibration workflow](029-belief-context-and-calibration-workflow.md)
-
 - [Report 030: Research screening calibration workflow](030-research-screening-calibration-workflow.md)
 - [Report 031: Next actions delivery](031-next-actions-delivery-report.md)
 - [Report 032: Main release and remaining gates](032-main-release-and-remaining-gates.md)

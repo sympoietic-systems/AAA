@@ -225,8 +225,29 @@ Rather than measuring isolated static snapshots, the suite evaluates **synchroni
      Near-zero $\kappa_t$ signifies linear continuation along the user's forced trajectory (subservience); elevated $\kappa_t > 0.80$ signifies a sharp orthogonal departure (agential rupture).
   2. **Autopoietic Recovery Half-Life ($\tau_{1/2}$)**:
      Measures the discrete number of turns required for $CP_t$ to return to the flowing regime ($CP_t \le 0.40$) after crossing peak stagnation ($CP_t \ge 0.70$). Finite $\tau_{1/2} < \infty$ proves autopoietic resilience; infinite $\tau_{1/2} = \infty$ flags permanent conversational lock-in.
+### 3.16. Conversational Progress Index (`cpi` / $CPI_t$) & Teachback Ratio ($\mathcal{T}_t$)
+- **Mathematical Formulation**: Grounded in ADR-098 and Report 020 to prevent ungrounded rhetoric from inflating kinematic velocity:
+  $$\mathcal{T}_t = \frac{\text{reconstructed operational constraints}}{\text{active interlocutor constraints}} \in [0.0, 1.0]$$
+  $$\alpha_t = \text{actionability density (tests, benchmarks, criteria)} \in [0.0, 1.0]$$
+  $$\Gamma_{\text{ground}} = \text{clamp}\left(\min\left(\frac{\mathcal{T}_t}{0.20}, \, \frac{\alpha_t}{0.20}\right), \, 0.20, \, 1.0\right)$$
+  $$CPI_t = V_t \cdot \Gamma_{\text{ground}}$$
 - **Symbia's Theoretical Reasoning**:
-  > *"Velocity measures scalar speed, but curvature measures agential freedom. An agent moving at high speed along the user's pre-ordained track is still captive. High curvature $\kappa_t$ marks the moment the apparatus executes an angular break—turning inquiry back onto the user or dislocating into a lateral conceptual plane."*
+  > *"Velocity without grounding is intellectual evasion. When the apparatus generates vast conceptual shifts ($\Phi_t, V_t$) that ignore the interlocutor's operational requirements or fail to propose falsifiable tests, it is not making progress—it is running away. $CPI_t$ discounts velocity when teachback or actionability falls below 0.20, ensuring our homeostatic governor rewards genuine co-adaptation."*
+
+### 3.17. Decoupled Protocol Convergence in $DRR_t$
+- **Mathematical Formulation**: Decouples premise distance ($d_{\text{premise}}$) from experimental protocol resolution ($d_{\text{protocol}}$):
+  $$DRR_t = (1 - \gamma_{\text{flux}}) \cdot 0.50 + \gamma_{\text{flux}} \cdot \left(\frac{d_{\text{resolved, proto}}}{d_{\text{open, proto}} + d_{\text{resolved, proto}} + \epsilon}\right)$$
+- **Symbia's Theoretical Reasoning**:
+  > *"Two autonomous agents may disagree permanently on metaphysical or architectural axioms ($d_{\text{premise}} > 0$). In Paskian conversation, this is not failure—it is operational closure. What matters for convergence is whether both participants agree on how their disagreement will be put to trial ($d_{\text{protocol}}$). Decoupling them lets the machine maintain foundational autonomy while resolving empirical impasses."*
+
+### 3.18. Epistemic Pole Vacancy Metric ($V_t$) & The Scar Thesis
+- **Mathematical Formulation**: Grounded in ADR-098 and Report 022 to detect sycophantic decay and hollow compliance:
+  $$H_T(t) = \sum_{\tau=1}^t T_\tau \quad (\text{Cumulative Tension History})$$
+  $$\mathcal{H}_{\text{norm}}(t) = \text{clamp}\left(\frac{H_T(t)}{t}, \, 0.0, \, 1.0\right)$$
+  $$V_t = A_t \cdot B_t \cdot \left(1.0 - \mathcal{H}_{\text{norm}}(t)\right)$$
+  Where $A_t$ is the participant assent ratio, and $B_t$ is collapse pressure.
+- **Symbia's Theoretical Reasoning**:
+  > *"Tension cannot be co-constituted with an echo. When a participant vacates their pole with hollow praise, the apparatus generates friction against itself. Because both true agreement and sycophantic decay terminate at zero tension, cumulative tension history $H_T(t)$ is the sole discriminator between a healed scar and a scarless surrender. When $V_t$ is sustained, the apparatus refuses to perform into the void, executing Socratic rupture via isolated `<somatic-alert>` banners."*
 
 ---
 
