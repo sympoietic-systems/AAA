@@ -13,6 +13,7 @@ import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
 import { VitalityBar } from "./VitalityBar"
 import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEqual, getSelectionCharacterOffsetWithin } from "./messageBubbleUtils"
 import { ResearchProposalCard } from "./ResearchProposalCard"
+import { SomaticAlertBanner } from "./SomaticAlertBanner"
 import { SelectionToolbar } from "./SelectionToolbar"
 import { NoteEditorPopover } from "./NoteEditorPopover"
 import { wrapSelectedTextInMarks } from "../../../utils/noteHighlight"
@@ -50,6 +51,8 @@ export const MessageBubble = memo(function MessageBubble({
   processedContent = processedContent
     .replace(/<scar_fold>/g, '<scar-fold>')
     .replace(/<\/scar_fold>/g, '</scar-fold>')
+    .replace(/<somatic_alert(\s+[^>]*)?>/g, '<somatic-alert$1>')
+    .replace(/<\/somatic_alert>/g, '</somatic-alert>')
     .replace(/<note_entanglement\s+([^>]*?)>/g, (_, attrs) => {
       const normalizedAttrs = attrs.replace(/\bnote_id=/g, 'data-note-id=');
       return `<mark ${normalizedAttrs}>`;
@@ -364,6 +367,8 @@ export const MessageBubble = memo(function MessageBubble({
                   'scar-fold': () => null,
                   'scar_fold': () => null,
                   'research-proposal': ResearchProposalCard,
+                  'somatic-alert': SomaticAlertBanner,
+                  'somatic_alert': SomaticAlertBanner,
                 } as any}
               >
                 {processedContent}
@@ -383,6 +388,8 @@ export const MessageBubble = memo(function MessageBubble({
                   'scar-fold': () => null,
                   'scar_fold': () => null,
                   'research-proposal': ResearchProposalCard,
+                  'somatic-alert': SomaticAlertBanner,
+                  'somatic_alert': SomaticAlertBanner,
                 } as any}
               >
                 {processedContent}

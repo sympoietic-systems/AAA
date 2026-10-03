@@ -17,11 +17,17 @@ export const aaaSanitizeSchema = {
     "scar-fold",
     "scar_fold",
     "research-proposal",
+    "somatic-alert",
+    "somatic_alert",
   ],
   attributes: {
     ...defaultSchema.attributes,
     "*": [
       ...((defaultSchema.attributes && defaultSchema.attributes["*"]) || []),
+      "type",
+      "status",
+      "comment",
+      "title",
       ["className", "note-highlight", "note-personal", "note-shared", "note-agent"],
       "id",
       "dataNoteId",
