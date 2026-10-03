@@ -688,7 +688,7 @@ User Message
 Response + Post-Processing (save, trigger consolidation, title generation)
 ```
 
-After generation, the chat service records safe provider metadata and checks for empty or unusable output. The normal Jev structural pass also records a separate response-local quality label (`sound`, `degraded`, or `uncertain`) for obvious incoherence or runaway lexical repetition. This observation does not alter the reply or the 16D structural signature, and it is not a conversation-level collapse metric. Provider finish reason and truncation are logged alongside the result. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md).
+After generation, the chat service records safe provider metadata and checks for empty or unusable output. The normal Jev structural pass also records a separate response-local quality label (`sound`, `degraded`, or `uncertain`) for obvious incoherence or runaway lexical repetition. This observation does not alter the reply or the 16D structural signature, and it is not a conversation-level collapse metric. Provider finish reason and truncation are logged alongside the result. Chat collapse pressure does not trigger reasoning-mode changes or increase the completion-token cap; provider configuration remains in control. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md) and [ADR-103](../decisions/ADR-103-disable-metric-triggered-thinking-escalation.md).
 
 ### 6.2 Key Cross-Subsystem Couplings
 

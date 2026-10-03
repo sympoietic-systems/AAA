@@ -155,6 +155,7 @@ V106: activation trace ! assembly-owned bounded IDs + selected/injected + origin
 
 V107: belief classification ! statement-bound scope/time/provenance + explicit referent bindings; missing/ambiguous/stale context → abstain before model; replay ⊥ unvalidated context; held-out gold ! independent provenance + leakage check
 V108: research calibration ! raw candidates before selection + source IDs/exclusion receipts; archived survivors ⊥ gold pools; independent relevance/quality/contrary/injection labels + frozen task-family splits; fallback ⊥ valid model trial; repeats ⊥ independent sample count; promotion ! reviewed downstream evidence
+V109: chat collapse_pressure ⊥ automatic thinking_override or completion-budget inflation; provider defaults + explicit per-call thinking remain available
 
 ## §T
 
@@ -226,6 +227,7 @@ T57|.|independently label belief pairs; run frozen held-out Jev comparison + sha
 T58|.|acquire raw research pools; independently label; evaluate held-out arms + downstream citation/usefulness|V108,V102,V56
 T59|.|define geometry coordinate/antagonism contract; audit live evidence before integration|V103,V107
 T60|.|retry timed-out representative skill probes; review before lifecycle changes|V101,V23
+T61|x|remove metric-triggered chat thinking escalation; preserve provider-configured and explicit-call modes|V109
 
 ## §B
 
@@ -320,3 +322,4 @@ B81|2026-10-03|SSRF unit test depended on live DNS; example.com resolved to rest
 B82|2026-10-03|bridge faults disguised missing targets; PDF catch hid unexpected faults; dream tuple inferred None|V105
 
 B83|2026-10-03|provenance serializer imported prompt builder from storage → cognitive import cycle; pure schema moved storage leaf|V22,V106
+B84|2026-10-03|collapse-pressure signal automatically enabled higher reasoning effort and inflated completion budget without evidence of benefit|V109

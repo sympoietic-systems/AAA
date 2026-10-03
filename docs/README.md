@@ -6,7 +6,7 @@ This is the central documentation repository for the **Autopoietic Agentic Assem
 >
 > **North Star:** [`GOAL.md`](GOAL.md) (Canonical Project Goals, Invariants & Strategic Horizons).
 >
-> **Project Direction Record (PDR):** [`PDR.md`](PDR.md) (Comprehensive audit of 99 ADRs, operational capabilities, gap analysis, and trajectory).
+> **Project Direction Record (PDR):** [`PDR.md`](PDR.md) (Comprehensive audit through ADR-103, operational capabilities, gap analysis, and trajectory).
 
 ---
 
@@ -23,7 +23,7 @@ System architecture, technical specification, and the record of architectural de
 
 - [ARCHITECTURE.md](architecture/ARCHITECTURE.md) — High-level design, data flow, modular pipeline, and component diagrams.
 - [DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) — Live database schema and table reference.
-- [decisions/](decisions/) — Architecture Decision Records through `ADR-099`, documenting significant choices with context, options, and consequences. ADR-097 and ADR-098 define the causal dialogue feedback control loop, Paskian teachback, operational accommodation, and the Pole Vacancy escalation ladder; [ADR-099](decisions/ADR-099-chat-response-quality-diagnostics.md) records the production response-quality and completion diagnostics.
+- [decisions/](decisions/) — Architecture Decision Records documenting significant choices with context, options, and consequences. ADR-097 and ADR-098 define the causal dialogue feedback control loop, Paskian teachback, operational accommodation, and the Pole Vacancy escalation ladder; [ADR-099](decisions/ADR-099-chat-response-quality-diagnostics.md) records production response-quality diagnostics; [ADR-103](decisions/ADR-103-disable-metric-triggered-thinking-escalation.md) disables metric-triggered thinking escalation in chat.
 
 ### systems/
 Deep-dive specifications for individual subsystems.

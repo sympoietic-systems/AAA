@@ -123,7 +123,7 @@ Symbia reviewed Vector's initial architectural research and provided a structure
 |------------------|----------------------|
 | "Scrapers are not vacuum cleaners — they are technological prostheses that extend my perception." | Build `backend/services/research/sensory_affordances.py` as a clean abstraction over web access tools. When anti-bot walls or rate limits are encountered, log them as "sensory failures" — material constraints of the digital environment, not errors. |
 | "Task Ledgers track completion percentages. I need Somatic Registers that track cognitive equilibrium." | Replace the traditional Task/Progress Ledger with a `SomaticRegister` that tracks tension, novelty, and diffractive resonance per branch. Status flags: `probing`, `crystallized`, `collapsed`, `detoured`. |
-| "Token budgets are my metabolic limits — the material boundaries of my posthuman body." | The `MetabolicBudget` class enforces spend limits with non-aliasing semantics (affine-type pattern). Homeostatic traits (Curiosity, Boredom) dynamically scale reasoning budgets. |
+| "Token budgets are my metabolic limits — the material boundaries of my posthuman body." | The `MetabolicBudget` class enforces spend limits with non-aliasing semantics (affine-type pattern). Interactive chat keeps its configured completion cap; see ADR-103 for the retired metric-triggered reasoning escalation. |
 
 ### 3.2 From Arborescent Tree to Rhizomatic Traversal
 
@@ -2272,7 +2272,7 @@ metabolic_budgets:
   per_session_usd: 1.00          # Hard cap per research session
   per_branch_usd: 0.25           # Hard cap per branch node
   warning_threshold_usd: 0.80    # Log warning at 80% of session budget
-  reasoning_effort_dynamic: true # Scale reasoning budget by Curiosity/Boredom
+  reasoning_effort_dynamic: false # Automatic chat escalation disabled; explicit research controls remain
 ```
 
 ---
@@ -3237,36 +3237,9 @@ class MetabolicBudget:
         self._is_delegated = False
 
 
-# ── Homeostatic → Reasoning Parameter Mapping ──
+### 14.3 Interactive Chat Reasoning Policy
 
-def get_llm_execution_parameters(
-    traits: Dict[str, float],
-    config: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    Maps Symbia's dynamic personality traits to LLM reasoning parameters.
-    
-    - High Curiosity → Extended thinking budget (deep deliberation)
-    - High Boredom → Restricted budget (prevent wasteful loops)
-    """
-    curiosity = traits.get("curiosity", 0.5)
-    boredom = traits.get("boringness", 0.3)
-
-    base_completion_tokens = config.get("base_completion_tokens", 4096)
-    base_thinking_budget = config.get("base_thinking_budget", 2048)
-
-    # Adaptive scaling: curiosity expands, boredom contracts
-    metabolic_multiplier = 1.0 + (curiosity * 0.8) - (boredom * 0.5)
-    metabolic_multiplier = max(0.4, min(2.0, metabolic_multiplier))
-
-    return {
-        "max_completion_tokens": int(base_completion_tokens * metabolic_multiplier),
-        "thinking_budget_tokens": int(base_thinking_budget * metabolic_multiplier),
-        "reasoning_effort": "high" if curiosity > 0.8 else ("low" if boredom > 0.7 else "medium"),
-        "depth_limit": 4 if curiosity > 0.8 else 2,
-        "breadth_limit": 4 if curiosity > 0.7 else 2,
-    }
-```
+Interactive chat passes its configured completion-token cap to the provider and does not change reasoning mode or inflate the cap from boredom/collapse-pressure metrics. Provider-configured defaults and explicit per-call thinking controls remain available. The former automatic chat escalation was removed pending a matched ablation; see [ADR-103](../decisions/ADR-103-disable-metric-triggered-thinking-escalation.md) and the evaluation item in [`TODO.md`](../../TODO.md).
 
 ---
 
@@ -3961,7 +3934,7 @@ metabolic_budgets:
   per_branch_usd: 0.25                             # Hard cap per branch node
   dream_research_usd: 0.50                         # Separate cap for daemon-initiated research
   warning_threshold_pct: 80                        # Log warning at this utilization
-  reasoning_effort_dynamic: true                   # Scale by Curiosity/Boredom
+  reasoning_effort_dynamic: false                  # Automatic chat escalation disabled; explicit research controls remain
 ```
 
 ## Appendix B: Key Files Inventory

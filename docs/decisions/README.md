@@ -130,7 +130,13 @@ What becomes easier/harder?
 | [095](ADR-095-backend-use-case-decomposition-and-progressive-typing.md) | Backend Use-Case Decomposition and Progressive Typing | accepted | 2026-09-24 |
 | [096](ADR-096-browser-sessions-and-frontend-request-ownership.md) | Browser Sessions and Frontend Request Ownership | accepted | 2026-09-25 |
 | [097](ADR-097-causal-dialogue-feedback-control.md) | Causal Dialogue Feedback Control | accepted | 2026-09-25 |
-| [099](ADR-099-chat-response-quality-diagnostics.md) | Chat Response Quality Diagnostics | accepted | 2026-10-03 |
+| [098](ADR-098-paskian-teachback-and-operational-accommodation.md) | Paskian Teachback, Operational Accommodation, and Grounded Conversational Progress | accepted | 2026-10-02 |
+| [099a](ADR-099-bounded-jev-evidence-triage.md) | Bounded Jev Evidence Triage | accepted for candidate implementation; default promotion pending calibration | 2026-10-03 |
+| [099b](ADR-099-chat-response-quality-diagnostics.md) | Chat Response Quality Diagnostics | accepted | 2026-10-03 |
+| [100](ADR-100-jev-belief-evidence-and-review-routing.md) | Jev Belief Evidence and Review Routing | accepted for dry-run evaluation; runtime promotion withheld | 2026-10-03 |
+| [101](ADR-101-activation-provenance.md) | Assembly-Owned Activation Provenance | accepted for implementation | 2026-10-03 |
+| [102](ADR-102-belief-context-and-calibration.md) | Explicit Belief Context and Independent Calibration | accepted for implementation | 2026-10-03 |
+| [103](ADR-103-disable-metric-triggered-thinking-escalation.md) | Disable Metric-Triggered Thinking Escalation | accepted | 2026-10-03 |
 
 
 

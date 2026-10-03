@@ -3,7 +3,6 @@ import logging
 from backend.modules.base import ProcessingModule
 from backend.modules.sensory.intervention_policy import select_intervention
 from backend.pipeline.metadata import ModuleMeta
-from backend.utils.metabolic_regulator import get_llm_execution_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -125,21 +124,15 @@ class HomeostaticRegulatorModule(ProcessingModule):
             "consecutive_stagnant_turns": stagnant_turns,
             "intervention": intervention_data,
         }
-        reasoning = get_llm_execution_parameters(
-            {
-                "collapse_pressure": float(collapse_pressure or 0.0),
-                "curiosity": float(novelty if novelty is not None else 0.5),
-            },
-            {"base_completion_tokens": int(payload.get("max_tokens", 4096))},
-        )
-        reasoning["thinking_override"] = bool(collapse_pressure is not None and collapse_pressure > 0.65)
+        base_max_tokens = int(payload.get("max_tokens", 4096))
+        reasoning = {
+            "max_completion_tokens": base_max_tokens,
+        }
         requested_controls = {
             "temperature": temp_rec["value"],
             "presence_penalty": pres_rec["value"],
             "frequency_penalty": freq_rec["value"],
-            "max_tokens": reasoning["max_completion_tokens"],
-            "reasoning_effort": reasoning["reasoning_effort"],
-            "thinking_override": reasoning["thinking_override"],
+            "max_tokens": base_max_tokens,
         }
         recommendations["reasoning"] = reasoning
         recommendations["requested_controls"] = requested_controls

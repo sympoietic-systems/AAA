@@ -138,7 +138,7 @@ background_llm:
   cooldown_seconds: 300        # Cooldown in seconds for rate-limited keys/models (default: 300)
 ```
 
-The homeostatic regulator clamps chat temperature to a default range of `0.3`–`1.0` (base `0.7`). The ceiling limits adaptive sampling changes; it cannot guarantee coherent output. Provider logs include request/model metadata, finish reason, truncation state, output lengths, token usage when supplied, and effective controls. Empty, malformed, and non-text completions are logged without recording prompt or response text. On the normal Jev structural-scoring path, a response-local quality judgment is logged separately from the 16 structural dimensions; it does not change or retry the answer. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md).
+The homeostatic regulator clamps chat temperature to a default range of `0.3`–`1.0` (base `0.7`). Collapse pressure still informs the intervention and temperature/penalty controls, but it no longer enables thinking or increases the chat completion-token cap. Provider-configured thinking and explicit per-call overrides remain available. Provider logs include request/model metadata, finish reason, truncation state, output lengths, token usage when supplied, and effective controls. Empty, malformed, and non-text completions are logged without recording prompt or response text. On the normal Jev structural-scoring path, a response-local quality judgment is logged separately from the 16 structural dimensions; it does not change or retry the answer. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md) and [ADR-103](../decisions/ADR-103-disable-metric-triggered-thinking-escalation.md).
 
 ## Stateful Model Pool & Fallback Prioritization
 

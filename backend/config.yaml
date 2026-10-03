@@ -403,7 +403,7 @@ metabolic_budgets:
   per_branch_usd: 0.25                         # Hard cap per branch node
   dream_research_usd: 0.50                     # Separate cap for daemon-initiated research
   warning_threshold_pct: 80                    # Log warning at this utilization
-  reasoning_effort_dynamic: true               # Scale by Curiosity/Boredom
+  reasoning_effort_dynamic: false              # Automatic chat escalation disabled; explicit research controls remain
 
 # ── Research Consolidation ─────────────────────
 research_consolidation:

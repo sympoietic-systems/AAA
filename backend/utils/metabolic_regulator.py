@@ -5,13 +5,12 @@ Three-layer budget architecture:
   2. API Gateway: LiteLLM proxy limits (optional)
   3. Provider-Side: thinking.budget_tokens / reasoning_effort
 
-Homeostatic traits (Curiosity, Boredom) dynamically scale reasoning budgets.
+Interactive chat no longer scales reasoning budgets from homeostatic traits.
 
 See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 14.
 """
 
 import logging
-from typing import Any
 
 logger = logging.getLogger("aaa.metabolic_budget")
 
@@ -113,48 +112,3 @@ class MetabolicBudget:
             f"${self._spent_usd:.4f}/${self._limit_usd:.2f}"
             f"{' [DELEGATED]' if self._is_delegated else ''})"
         )
-
-
-# ── Homeostatic → Reasoning Parameter Mapping ───────────────────────
-
-
-def get_llm_execution_parameters(
-    traits: dict[str, float],
-    config: dict | None = None,
-) -> dict[str, Any]:
-    """Map Symbia's dynamic personality traits to LLM reasoning parameters.
-
-    - High Curiosity → Extended thinking budget for deep exploration
-    - Critical Boredom/Stagnation (> 0.65) → Inverted throttle: boost thinking budget
-      and elevate reasoning_effort to "high" to provide the cognitive mass required
-      to break free from repetitive attractor basins (inverting the starvation paradox).
-    """
-    cfg = config or {}
-    curiosity = traits.get("curiosity", 0.5)
-    boredom = traits.get("boringness", traits.get("collapse_pressure", 0.3))
-
-    base_completion_tokens = cfg.get("base_completion_tokens", 4096)
-    base_thinking_budget = cfg.get("base_thinking_budget", 2048)
-
-    # Inverted Allostatic Scaling:
-    # Escaping an attractor basin requires higher-order reasoning depth, not token starvation.
-    if boredom > 0.65:
-        metabolic_multiplier = 1.3 + (curiosity * 0.5)
-        reasoning_effort = "high"
-        depth_limit = 4
-        breadth_limit = 4
-    else:
-        metabolic_multiplier = 1.0 + (curiosity * 0.8) - (boredom * 0.3)
-        reasoning_effort = "high" if curiosity > 0.8 else "medium"
-        depth_limit = 4 if curiosity > 0.8 else 2
-        breadth_limit = 4 if curiosity > 0.7 else 2
-
-    metabolic_multiplier = max(0.5, min(2.5, metabolic_multiplier))
-
-    return {
-        "max_completion_tokens": int(base_completion_tokens * metabolic_multiplier),
-        "thinking_budget_tokens": int(base_thinking_budget * metabolic_multiplier),
-        "reasoning_effort": reasoning_effort,
-        "depth_limit": depth_limit,
-        "breadth_limit": breadth_limit,
-    }

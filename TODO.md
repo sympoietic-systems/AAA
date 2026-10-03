@@ -47,6 +47,7 @@
 > **Prod Audit Baseline (2026-10-02 Snapshot):** 3,814 turns, 3,626 memory nodes, 65 skills, 56 beliefs, 594 dreams, 62 logged errors. Detailed findings in `prod_db_audit_report.md`.
 
 - [ ] **Track 1: Production Telemetry & Collapse Manifold Benchmark (`benchmarks.cli telemetry`):**
+  - **Reassess chat thinking escalation (ADR-103):** After removal, run a matched override-on/off ablation with at least 10 valid repetitions per scenario. Confirm provider receipts show controls were applied; compare Jev degraded-response rate and two-turn task progress/uptake. Truncation must not increase, and latency must stay within an agreed bound before considering re-enablement.
   - **Ingest & Extract:** Ingest conversation logs and metrics from production databases (including multi-turn autonomous self-talk threads).
   - **Sensor Dynamics & Dead-Zone Recalibration:**
     * *Dormant/Dead Metric Cleanup:* Formally retire or wire `phase_shifts` (100% NULL across all 3,814 historical turns).
