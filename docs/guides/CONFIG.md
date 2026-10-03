@@ -138,6 +138,8 @@ background_llm:
   cooldown_seconds: 300        # Cooldown in seconds for rate-limited keys/models (default: 300)
 ```
 
+The homeostatic regulator clamps chat temperature to a default range of `0.3`–`1.0` (base `0.7`). The ceiling limits adaptive sampling changes; it cannot guarantee coherent output. Provider logs include request/model metadata, finish reason, truncation state, output lengths, token usage when supplied, and effective controls. Empty, malformed, and non-text completions are logged without recording prompt or response text. On the normal Jev structural-scoring path, a response-local quality judgment is logged separately from the 16 structural dimensions; it does not change or retry the answer. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md).
+
 ## Stateful Model Pool & Fallback Prioritization
 
 When utilizing model pools (such as the `background_llm`, `vision_llm`, or `structural_llm` model lists), the system utilizes a stateful routing client that optimizes key usage and latency:
@@ -503,4 +505,3 @@ To disable LLM scoring for a single request, send `"include_structural_scoring":
 *   [Setup & Deployment Guide](SETUP.md) — Advanced setup and database seeding.
 *   [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) — Configuring identity, beliefs, skills, and prompts.
 *   [Documentation Index](../README.md) — Navigation hub for all architecture documents.
-

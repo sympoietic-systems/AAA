@@ -130,6 +130,7 @@ What becomes easier/harder?
 | [095](ADR-095-backend-use-case-decomposition-and-progressive-typing.md) | Backend Use-Case Decomposition and Progressive Typing | accepted | 2026-09-24 |
 | [096](ADR-096-browser-sessions-and-frontend-request-ownership.md) | Browser Sessions and Frontend Request Ownership | accepted | 2026-09-25 |
 | [097](ADR-097-causal-dialogue-feedback-control.md) | Causal Dialogue Feedback Control | accepted | 2026-09-25 |
+| [099](ADR-099-chat-response-quality-diagnostics.md) | Chat Response Quality Diagnostics | accepted | 2026-10-03 |
 
 
 

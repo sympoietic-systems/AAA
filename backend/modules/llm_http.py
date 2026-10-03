@@ -79,7 +79,15 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             "reset": headers.get("x-ratelimit-reset-requests", ""),
         }
 
-    def _parse_message(self, message: LLMResult, data: LLMResult) -> LLMResult:
+    def _parse_message(
+        self,
+        message: LLMResult,
+        data: LLMResult,
+        *,
+        request_id: str,
+        http_status: int,
+        generation_controls: dict[str, Any],
+    ) -> LLMResult:
         """Parse response message into consistent format.
 
         Handles both thinking and non-thinking models:
@@ -111,16 +119,67 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         truncated = finish_reason in ("length", "max_tokens")
         if truncated:
             logger.warning(
-                "Response truncated by token limit (finish_reason=%s, model=%s). "
-                "Content length: %d chars. Consider increasing max_tokens.",
+                "LLM completion truncated: provider=%s model=%s request_id=%s finish_reason=%s content_chars=%s",
+                self.provider_name,
+                data.get("model", self._model),
+                request_id or "unavailable",
                 finish_reason,
-                self._model,
-                len(content or ""),
+                len(content) if isinstance(content, str) else "unknown",
             )
             if not content:
                 raise EmptyTruncatedCompletionError(
                     "Provider exhausted its completion budget without returning final content"
                 )
+
+        content_type = type(content).__name__ if content is not None else "NoneType"
+        content_chars = len(content) if isinstance(content, str) else None
+        reasoning_chars = len(reasoning) if isinstance(reasoning, str) else None
+        raw_usage = data.get("usage")
+        usage: dict[str, Any] = raw_usage if isinstance(raw_usage, dict) else {}
+        usage_summary = {
+            key: usage.get(key)
+            for key in ("prompt_tokens", "completion_tokens", "total_tokens")
+            if usage.get(key) is not None
+        }
+        if not isinstance(content, (str, type(None))):
+            logger.warning(
+                "LLM completion has non-text content: provider=%s model=%s request_id=%s "
+                "content_type=%s finish_reason=%s",
+                self.provider_name,
+                data.get("model", self._model),
+                request_id or "unavailable",
+                content_type,
+                finish_reason or "unavailable",
+            )
+        if not isinstance(content, str) or not content.strip():
+            logger.warning(
+                "LLM completion has no visible text: provider=%s model=%s request_id=%s "
+                "http_status=%d content_type=%s reasoning_chars=%s finish_reason=%s usage=%s",
+                self.provider_name,
+                data.get("model", self._model),
+                request_id or "unavailable",
+                http_status,
+                content_type,
+                reasoning_chars,
+                finish_reason or "unavailable",
+                usage_summary,
+            )
+        logger.info(
+            "LLM completion received: provider=%s requested_model=%s response_model=%s "
+            "request_id=%s http_status=%d finish_reason=%s truncated=%s "
+            "content_chars=%s reasoning_chars=%s usage=%s controls=%s",
+            self.provider_name,
+            self._model,
+            data.get("model", self._model),
+            request_id or "unavailable",
+            http_status,
+            finish_reason or "unavailable",
+            truncated,
+            content_chars if content_chars is not None else "unknown",
+            reasoning_chars if reasoning_chars is not None else "unknown",
+            usage_summary,
+            generation_controls,
+        )
 
         return {
             "content": content or "",
@@ -181,7 +240,27 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 try:
                     data = response.json()
                 except ValueError as exc:
+                    request_id = (
+                        response.headers.get("x-request-id") or response.headers.get("request-id") or "unavailable"
+                    )
+                    logger.error(
+                        "LLM provider returned invalid JSON: provider=%s model=%s request_id=%s "
+                        "http_status=%d content_type=%s response_bytes=%d",
+                        self.provider_name,
+                        self._model,
+                        request_id,
+                        response.status_code,
+                        response.headers.get("content-type", "unavailable"),
+                        len(response.content),
+                    )
                     raise ProviderResponseError("Provider returned invalid JSON") from exc
+
+                request_id = (
+                    response.headers.get("x-request-id")
+                    or response.headers.get("request-id")
+                    or (data.get("id") if isinstance(data, dict) else None)
+                    or "unavailable"
+                )
 
                 if is_anthropic:
                     message = parse_anthropic_response(data)
@@ -189,17 +268,51 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                     choices = data.get("choices") if isinstance(data, dict) else None
                     if not isinstance(choices, list) or not choices:
                         response_keys = sorted(data) if isinstance(data, dict) else []
-                        request_id = response.headers.get("x-request-id", "")
+                        logger.error(
+                            "LLM provider response missing choices: provider=%s model=%s "
+                            "request_id=%s http_status=%d response_keys=%s",
+                            self.provider_name,
+                            self._model,
+                            request_id,
+                            response.status_code,
+                            response_keys,
+                        )
                         raise ProviderResponseError(
                             "Provider response missing completion choices "
-                            f"(keys={response_keys}, request_id={request_id or 'unavailable'})"
+                            f"(keys={response_keys}, request_id={request_id})"
                         )
                     first_choice = choices[0]
                     if not isinstance(first_choice, dict) or not isinstance(first_choice.get("message"), dict):
+                        logger.error(
+                            "LLM provider response has invalid first choice: provider=%s model=%s "
+                            "request_id=%s http_status=%d choice_type=%s",
+                            self.provider_name,
+                            self._model,
+                            request_id,
+                            response.status_code,
+                            type(first_choice).__name__,
+                        )
                         raise ProviderResponseError("Provider response has an invalid completion choice")
                     message = first_choice["message"]
 
-                return self._parse_message(message, data)
+                return self._parse_message(
+                    message,
+                    data,
+                    request_id=request_id,
+                    http_status=response.status_code,
+                    generation_controls={
+                        key: body[key]
+                        for key in (
+                            "temperature",
+                            "top_p",
+                            "presence_penalty",
+                            "frequency_penalty",
+                            "max_tokens",
+                            "reasoning_effort",
+                        )
+                        if key in body
+                    },
+                )
 
         raise last_error or RuntimeError("All retries exhausted")
 

@@ -11,7 +11,7 @@ _DEFAULTS = {
     "temperature": {
         "base": 0.7,
         "floor": 0.3,
-        "ceiling": 1.5,
+        "ceiling": 1.0,
         "alpha": 0.8,
         "gamma": 0.4,
     },

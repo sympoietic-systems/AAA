@@ -19,7 +19,7 @@ System architecture, technical specification, and the record of architectural de
 
 - [ARCHITECTURE.md](architecture/ARCHITECTURE.md) — High-level design, data flow, modular pipeline, and component diagrams.
 - [DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) — Live database schema and table reference.
-- [decisions/](decisions/) — Architecture Decision Records through `ADR-095`, documenting significant choices with context, options, and consequences. ADR-094 and ADR-095 define the current backend security, lifecycle, use-case, and progressive-typing boundaries.
+- [decisions/](decisions/) — Architecture Decision Records documenting significant choices with context, options, and consequences. [ADR-099](decisions/ADR-099-chat-response-quality-diagnostics.md) records the production response-quality and completion diagnostics.
 
 ### systems/
 Deep-dive specifications for individual subsystems.
