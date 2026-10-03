@@ -358,7 +358,7 @@ class BeliefDynamicsEngine(ProcessingModule):
                         sig_vec = sig_vec / norm
 
                     payload["structural_signature"] = sig_vec.tobytes()
-                    logger.info(f"Somatic coordinate warping active (\u03c3={sigma:.2f}). Input signature warped.")
+                    logger.info("Somatic coordinate warping active (sigma=%.2f). Input signature warped.", sigma)
             except Exception as e:
                 logger.error(f"Coordinate warping error: {e}")
 

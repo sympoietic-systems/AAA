@@ -8,6 +8,7 @@ from backend.modules.metrics import (
     _compute_conceptual_novelty,
     _compute_conceptual_velocity,
     _compute_coupling_coherence,
+    _compute_cpi,
     _compute_deficit,
     _compute_drr,
     _compute_forward_perturbation,
@@ -17,9 +18,11 @@ from backend.modules.metrics import (
     _compute_reverse_perturbation,
     _compute_rolling_entropy,
     _compute_surprise_index,
+    _compute_teachback_ratio,
     _compute_vitality,
     _detect_phase_shifts,
 )
+from backend.modules.sensory.intervention_policy import estimate_actionability
 from backend.pipeline.metadata import ModuleMeta
 from backend.storage.repositories import MessageRepository
 
@@ -43,6 +46,8 @@ __all__ = [
     "_compute_collapse_pressure",
     "_compute_drr",
     "_compute_paskian_health",
+    "_compute_cpi",
+    "_compute_teachback_ratio",
     "_compute_deficit",
     "_compute_vitality",
     "_detect_phase_shifts",
@@ -240,6 +245,17 @@ class ConversationMetricsModule(ProcessingModule):
         metrics["conceptual_velocity"] = conceptual_velocity
         metrics["phase_transition_magnitude"] = phase_trans
 
+        # ADR-098: Teachback Ratio and Actionability for Grounded Conversational Progress
+        teachback_ratio = _compute_teachback_ratio(current_vec, recent_history)
+        raw_text = str(current_msg.get("content") or payload.get("content") or "")
+        actionability = estimate_actionability(raw_text)
+        cpi = _compute_cpi(conceptual_velocity, teachback_ratio, actionability)
+
+        metrics["teachback_ratio"] = teachback_ratio
+        metrics["actionability"] = actionability
+        metrics["conversational_progress_index"] = cpi
+        metrics["cpi"] = cpi
+
         pask_health = _compute_paskian_health(
             agent_self_divergence=agent_divergence,
             conceptual_velocity=conceptual_velocity,
@@ -249,6 +265,8 @@ class ConversationMetricsModule(ProcessingModule):
             collapse_pressure=collapse_pressure,
             rolling_entropy=rolling_entropy,
             drr=drr,
+            teachback_ratio=teachback_ratio,
+            actionability=actionability,
         )
         metrics["paskian_health"] = pask_health
 

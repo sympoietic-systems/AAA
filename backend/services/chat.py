@@ -314,7 +314,19 @@ class ChatService:
 
             result = await pipeline.run(initial_payload)
 
-            response_text = result.payload.get("response", "")
+            response_value = result.payload.get("response", "")
+            if not isinstance(response_value, str):
+                logger.error(
+                    "Chat generation returned non-text completion: status=%s model=%s provider=%s "
+                    "response_type=%s finish_reason=%s",
+                    result.status,
+                    result.payload.get("model_used", "unavailable"),
+                    result.payload.get("provider_used", "unavailable"),
+                    type(response_value).__name__,
+                    result.payload.get("finish_reason", "unavailable"),
+                )
+                raise ProviderGlitch("The language model returned a non-text completion", entity="chat")
+            response_text = response_value
 
             # Parse embedded artifact tags from response text
             (
@@ -343,7 +355,21 @@ class ChatService:
             model_used = result.payload.get("model_used")
             provider_used = result.payload.get("provider_used")
 
-            if result.status == "error" or not response_text:
+            if result.status == "error" or not response_text.strip():
+                pipeline_errors = [
+                    {"module": err.get("module"), "error_type": err.get("error_type")} for err in result.errors
+                ]
+                logger.error(
+                    "Chat generation returned unusable completion: status=%s model=%s provider=%s "
+                    "finish_reason=%s truncated=%s response_chars=%d pipeline_errors=%s",
+                    result.status,
+                    model_used or "unavailable",
+                    provider_used or "unavailable",
+                    result.payload.get("finish_reason", "unavailable"),
+                    result.payload.get("truncated", False),
+                    len(response_text),
+                    pipeline_errors,
+                )
                 for err in result.errors:
                     error_repo.log_error(
                         module=err["module"],
@@ -354,7 +380,17 @@ class ChatService:
 
             scorer = CompositeStructuralScorer(llm_provider=state.structural_provider)
             try:
-                assistant_sig = await scorer.score_async(response_text, use_llm_scorer=include_structural_scoring)
+                assistant_sig = await scorer.score_async(
+                    response_text,
+                    context={
+                        "_check_response_quality": True,
+                        "_current_user_message": content,
+                        "_finish_reason": result.payload.get("finish_reason", "unavailable"),
+                        "_truncated": result.payload.get("truncated", False),
+                        "_turn_id": msg.id,
+                    },
+                    use_llm_scorer=include_structural_scoring,
+                )
                 assistant_sig_blob = assistant_sig.tobytes()
             except Exception as e:
                 logger.warning("Failed to score assistant message: %s", e)

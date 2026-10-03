@@ -11,7 +11,7 @@ _DEFAULTS = {
     "temperature": {
         "base": 0.7,
         "floor": 0.3,
-        "ceiling": 1.5,
+        "ceiling": 1.0,
         "alpha": 0.8,
         "gamma": 0.4,
     },
@@ -39,7 +39,7 @@ class HomeostaticRegulatorModule(ProcessingModule):
     def set_intervention_policy_mode(self, mode: str) -> None:
         """Select the intervention policy for a controlled benchmark ablation."""
 
-        if mode not in {"progressive", "legacy"}:
+        if mode not in {"progressive", "legacy", "paskian"}:
             raise ValueError(f"unsupported intervention policy mode: {mode}")
         self._intervention_policy_mode = mode
 
@@ -108,6 +108,7 @@ class HomeostaticRegulatorModule(ProcessingModule):
                 divergence_resolution=float(metrics.get("divergence_resolution_ratio") or 0.5),
                 streak=stagnant_turns,
                 participant_text=str(payload.get("content", "")),
+                policy_mode=self._intervention_policy_mode,
             )
             somatic_reflection = intervention.directive
             intervention_data = intervention.to_dict()

@@ -251,7 +251,21 @@ class JevStructuralScorer(StructuralScorer):
         fallback_power = np.full(16, 0.25, dtype=np.float32)
         fallback_conf = np.full(16, 0.50, dtype=np.float32)
 
+        check_response_quality = bool(context and context.get("_check_response_quality"))
+        turn_id = context.get("_turn_id", "unavailable") if context else "unavailable"
+        finish_reason = context.get("_finish_reason", "unavailable") if context else "unavailable"
+        truncated = bool(context and context.get("_truncated", False))
         if not self.is_available or not text:
+            if check_response_quality:
+                logger.warning(
+                    "Jev response-quality check unavailable: turn_id=%s configured=%s response_chars=%d "
+                    "finish_reason=%s truncated=%s",
+                    turn_id,
+                    self.is_available,
+                    len(text),
+                    finish_reason,
+                    truncated,
+                )
             return fallback_power, fallback_conf
 
         state = {
@@ -259,17 +273,89 @@ class JevStructuralScorer(StructuralScorer):
             "char_count": len(text),
         }
         if context:
-            state["context"] = {k: v for k, v in context.items() if isinstance(v, (str, int, float, bool))}
+            state_context = {
+                k: v[:1500] if isinstance(v, str) else v
+                for k, v in context.items()
+                if not k.startswith("_") and isinstance(v, (str, int, float, bool))
+            }
+            if state_context:
+                state["context"] = state_context
+            current_user_message = context.get("_current_user_message")
+            if check_response_quality and isinstance(current_user_message, str):
+                state["current_user_message"] = current_user_message[:1500]
 
         questions = self._build_questions()
+        if check_response_quality:
+            quality_question = {
+                "type": "choice",
+                "instructions": (
+                    "Assess this assistant reply against the supplied current_user_message. Judge local coherence and "
+                    "whether it responds to that turn. Select degraded only for clear semantic breakdown, runaway "
+                    "lexical chaining, incoherence, or a non-answer. Use uncertain when evidence is mixed or unclear. "
+                    "Do not infer conversation-level collapse from one reply."
+                ),
+                "criteria": {
+                    "sound": "Coherent and meaningfully responsive to the current user turn.",
+                    "degraded": "Clearly incoherent, caught in runaway lexical chaining, or not responsive.",
+                    "uncertain": "Insufficient or mixed evidence; do not overcall degradation.",
+                },
+            }
+            questions = {"response_quality": quality_question, **questions}
 
         try:
             res = await self.client.evaluate(state=state, questions=questions)
             if not res.get("success"):
+                if check_response_quality:
+                    logger.warning(
+                        "Jev response-quality check unavailable: turn_id=%s model=%s response_chars=%d "
+                        "finish_reason=%s truncated=%s",
+                        turn_id,
+                        res.get("model", "unavailable"),
+                        len(text),
+                        finish_reason,
+                        truncated,
+                    )
                 logger.warning("JevStructuralScorer evaluation unsuccessful: %s", res.get("error"))
                 return fallback_power, fallback_conf
 
             answers = res.get("answers") or res.get("results") or {}
+            if check_response_quality:
+                quality_answer = answers.get("response_quality", {})
+                verdict = quality_answer.get("choice") or quality_answer.get("decision")
+                confidence = quality_answer.get("confidence", quality_answer.get("certainty"))
+                if verdict == "degraded":
+                    logger.warning(
+                        "Jev flagged degraded chat response: turn_id=%s model=%s confidence=%s "
+                        "response_chars=%d finish_reason=%s truncated=%s",
+                        turn_id,
+                        res.get("model", "unavailable"),
+                        confidence if confidence is not None else "unavailable",
+                        len(text),
+                        finish_reason,
+                        truncated,
+                    )
+                elif verdict == "uncertain":
+                    logger.info(
+                        "Jev response-quality assessment uncertain: turn_id=%s model=%s confidence=%s "
+                        "response_chars=%d finish_reason=%s truncated=%s",
+                        turn_id,
+                        res.get("model", "unavailable"),
+                        confidence if confidence is not None else "unavailable",
+                        len(text),
+                        finish_reason,
+                        truncated,
+                    )
+                elif verdict != "sound":
+                    logger.warning(
+                        "Jev response-quality answer missing or invalid: turn_id=%s model=%s "
+                        "response_chars=%d finish_reason=%s truncated=%s",
+                        turn_id,
+                        res.get("model", "unavailable"),
+                        len(text),
+                        finish_reason,
+                        truncated,
+                    )
+
             power_list: list[float] = []
             conf_list: list[float] = []
 
