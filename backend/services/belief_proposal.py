@@ -157,22 +157,19 @@ class BeliefProposalUseCases(BeliefUseCase):
                     if b.label == bridge_label:
                         return b
                 # Create bridge belief on the fly
-                try:
-                    new_b = belief_repo.create_belief(
-                        id=str(uuid.uuid4()),
-                        agent_id=agent_id,
-                        label=bridge_label,
-                        statement=skill.short_content or skill.description or skill.name,
-                        origin="emergent",
-                        confidence=skill.confidence,
-                        ontological_mass=1.0,
-                        somatic_anchor="conceptual",
-                        vector_16d=skill.vector_16d or "[]",
-                        lifecycle_stage="crystallized",
-                    )
-                    return new_b
-                except Exception as e:
-                    logger.warning("Failed to auto-bridge skill '%s' to belief: %s", skill.name, e)
+                new_b = belief_repo.create_belief(
+                    id=str(uuid.uuid4()),
+                    agent_id=agent_id,
+                    label=bridge_label,
+                    statement=skill.short_content or skill.description or skill.name,
+                    origin="emergent",
+                    confidence=skill.confidence,
+                    ontological_mass=1.0,
+                    somatic_anchor="conceptual",
+                    vector_16d=skill.vector_16d or "[]",
+                    lifecycle_stage="crystallized",
+                )
+                return new_b
 
         return None
 

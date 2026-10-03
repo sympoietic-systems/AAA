@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class DreamTriggerPolicyMixin(DreamDaemonCollaborator):
+    _last_budget_exhaustion_state: tuple[str, int, int] | None = None
+
     async def check_and_trigger_dream(self, force: bool = False) -> DreamResult | None:
         """Single dream cycle entry point — called once per daemon tick.
 

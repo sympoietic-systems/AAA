@@ -106,3 +106,5 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 | What are the documentation standards? | [DOCUMENTATION_STANDARDS.md](DOCUMENTATION_STANDARDS.md) |
 
 - [Report 026: Post-merge usage and calibration plan](reports/026-post-merge-usage-and-calibration-plan.md)
+
+- [Report 027: Baseline quality gate repairs](reports/027-baseline-quality-gates-report.md)

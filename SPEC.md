@@ -139,6 +139,8 @@ V102: Jev evidence triage ≤10 candidates; finite scores + confidence required;
 V103: Belief Jev service has no write port; similarity nominates only; mass weights stakes, never contradiction; mature confidence band retained; absorbability uncertainty cannot erase contradiction; prior verdict excluded from classifier state; matrix application fresh copy only + atomic stale-evidence rejection.
 V104: SSRF unit verification uses deterministic public/restricted DNS fixtures; environment DNS cannot override safe fixture; restricted hostname resolution remains denied.
 
+V105: bridge storage faults → propagate; PDF parser/I/O failures → bounded fallback; unexpected extraction faults → propagate + temp cleanup; dream budget transition state ! explicit optional tuple
+
 ## §T
 
 id|status|task|cites
@@ -191,6 +193,8 @@ T47|x|close message transaction and parent validation gaps|V100,V34,V17
 T48|x|implement read-only skill vitality and adversarial evidence harness|V101,V56
 T49|x|implement and calibrate opt-in Jev source screening and grounded web collision receipts|V102,V30
 T50|x|implement dry-run Jev candidate review routing and inspectable tension matrix producer|V103,V30
+
+T51|x|restore baseline failure boundaries and strict dream state typing|V105,V29,V30
 
 ## §B
 
@@ -279,3 +283,5 @@ B78|2026-10-03|audit URI lacked uri=True; live harness passed unsupported prompt
 B79|2026-10-03|triage receipt omitted from orchestrator persistence allowlist; numeric answer inference lost strict collection type|V102,V30
 B80|2026-10-03|absorbability confidence incorrectly gated contradiction; synthetic seed violated belief origin and anchor schema|V103,V23
 B81|2026-10-03|SSRF unit test depended on live DNS; example.com resolved to restricted benchmark network here and correctly failed closed|V104,V23
+
+B82|2026-10-03|bridge faults disguised missing targets; PDF catch hid unexpected faults; dream tuple inferred None|V105

@@ -1,8 +1,6 @@
 import asyncio
-import contextlib
 import json
 import logging
-import os
 import re
 import tempfile
 import uuid
@@ -12,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 import yaml
+from pdfminer.pdfexceptions import PDFException
 
 from backend.modules.base import ProcessingModule
 from backend.modules.llm_client import generate_unified
@@ -222,29 +221,27 @@ class RhizomeWebProbe:
                 or response.content[:4] == b"%PDF"
             )
             if is_pdf:
-                tmp_path = None
                 try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                        tmp_file.write(response.content)
-                        tmp_path = Path(tmp_file.name)
-
-                    from backend.modules.digester import SimpleChunkDigester
-
-                    digester = SimpleChunkDigester()
-                    extracted_text = await asyncio.to_thread(digester.extract, tmp_path, "pdf")
-                    return extracted_text.strip()
-                except Exception as err:
-                    logger.warning("PDF extraction failed during web crawl for %s: %s", url, err)
+                    return await asyncio.to_thread(self._extract_pdf, response.content)
+                except (OSError, ValueError, PDFException, ImportError) as err:
+                    logger.warning(
+                        "PDF extraction failed for destination %s: %s", urlparse(url).hostname, type(err).__name__
+                    )
                     return ""
-                finally:
-                    if tmp_path and tmp_path.exists():
-                        with contextlib.suppress(OSError):
-                            os.unlink(tmp_path)
 
             parser = HTMLToTextParser()
             parser.feed(response.text)
             return parser.get_text()
         return ""
+
+    @staticmethod
+    def _extract_pdf(content: bytes) -> str:
+        from backend.modules.digester import SimpleChunkDigester
+
+        with tempfile.TemporaryDirectory(prefix="aaa-crawl-") as directory:
+            path = Path(directory) / "source.pdf"
+            path.write_bytes(content)
+            return SimpleChunkDigester().extract(path, "pdf").strip()
 
     async def execute_probe(self, query: str, conversation_id: str) -> dict:
         results = await self.search(query)
