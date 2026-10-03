@@ -112,3 +112,7 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 028: Activation provenance and stale skill review](reports/028-activation-provenance-and-stale-skill-review.md)
 
 - [Report 029: Belief context and calibration workflow](reports/029-belief-context-and-calibration-workflow.md)
+
+- [Report 030: Research screening calibration workflow](reports/030-research-screening-calibration-workflow.md)
+
+- [Report 031: Next actions delivery](reports/031-next-actions-delivery-report.md)

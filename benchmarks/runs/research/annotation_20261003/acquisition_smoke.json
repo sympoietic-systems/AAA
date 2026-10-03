@@ -1,0 +1,1545 @@
+{
+  "schema_version": 1,
+  "source": "D:\\01_GIT\\AAA\\backend\\data\\aaa.db",
+  "cases": [
+    {
+      "id": "00cdafd6a4b7703668c0",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "posthumanist live coding sound art diffraction installation example",
+      "sources": [
+        {
+          "url": "https://www.numberanalytics.com/blog/posthumanism-in-arts-ultimate-guide",
+          "title": "Posthumanism in Arts - numberanalytics.com",
+          "snippet": "Digital art has been at the forefront of posthumanist explorations, pushing the boundaries of what it means to be human in the digital age. Digital Art and Virtual Reality Digital art and virtual reality (VR) have enabled the creation of immersive experiences that challenge traditional notions of human identity and existence.",
+          "id": "705561ef7ed8352988a8"
+        },
+        {
+          "url": "https://www.researchgate.net/publication/369262575_Critical_Posthumanist_Practices_from_Within_the_Museum",
+          "title": "Critical Posthumanist Practices from Within the Museum",
+          "snippet": "Finally, we describe three types of art work that demonstrate how the software, called HappyBrackets, is being used in live-coding and dance performances, in interactive sound installations, and ...",
+          "id": "09941a2910c7de04e798"
+        },
+        {
+          "url": "https://www.posthumanart.com/",
+          "title": "Posthuman Art Network",
+          "snippet": "The Posthuman Art Laboratory is an extension of Foreign Objekt Posthuman Lab, founded by Sepideh Majidi",
+          "id": "e540a19813eefc658700"
+        },
+        {
+          "url": "https://dl.acm.org/doi/10.1145/3685267",
+          "title": "Material Deconstructions of Time: Posthumanist Interventions Through ...",
+          "snippet": "The topic of time and how it can be unpacked, deconstructed and designed with is fundamental to HCI, but it is also extensively engaged within artistic practice. By analysing a selection of ten media artworks, all in different ways concerned with time and ...",
+          "id": "fd094bfa058c38cd37b3"
+        },
+        {
+          "url": "https://theposthumanist.com/",
+          "title": "The Posthumanist",
+          "snippet": "spin stitch sound \"kick\" Each of these lines following this introduction is a single pattern of code using TidalCycles - a language used for live coding, where artist-programmers create time-based art (e.g. music, visuals, choreography) by writing computer code,...",
+          "id": "e13e62b808accd06524c"
+        },
+        {
+          "url": "https://clotmag.com/interviews/moon-interdisciplinary-posthumanist-art",
+          "title": "MOON, rediscovery ethical values through posthumanist art",
+          "snippet": "Besides, the art project NEW EUROPE explores universal communication fields and makes a subtle impact on human awareness and individual self-recognition by absorbing a full image of the world we exist. The project also explores the sounds of mineral stones in the form of a sound, interactive installation.",
+          "id": "1b1f1e3ec767db9ced35"
+        },
+        {
+          "url": "https://www.researchgate.net/publication/373126112_Live_Coding_Outside_Live_Coding_Inside_Listening_participation_and_walking",
+          "title": "Live Coding Outside, Live Coding Inside: Listening ... - ResearchGate",
+          "snippet": "This combination involves leaving the studio or a stage for live coding outside or moving to a participatory event inside a gallery, as in the case of an art installation.",
+          "id": "ddd05d2dfec96c5cf83c"
+        },
+        {
+          "url": "https://www.posthumanart.com/sound-laboratory",
+          "title": "Sound Laboratory | Posthuman Art",
+          "snippet": "SOUND LABORATORY MAIN PAGE VIRTUAL SPACE: 0OCEAN COLLECTIVE SCREENING PRESENTATIONS DIAGRAMS PARTICIPANTS Radio Cow 1Anastasiia Belousova AutomaticSimin Azarpour ForObjkt_h-synth_additive Boris Lesnoy",
+          "id": "467b10e3aadd8dbe5e82"
+        },
+        {
+          "url": "https://www.intechopen.com/online-first/1250914",
+          "title": "Mediating the More-than-Human: Intermedial Semiotics and Multimedia ...",
+          "snippet": "<p>This chapter examines the intersections of intermediality, semiotics, and multimedia in the context of contemporary environmental art installations that employ digital technologies and artificial intelligence (AI). It argues that while multimedia provides the technical platform for integrating diverse modalities &ndash; sound, image, data, and interaction &ndash; intermediality offers a ...",
+          "id": "c8d90683e922ba99c9fb"
+        },
+        {
+          "url": "https://umu.diva-portal.org/smash/get/diva2:1912572/FULLTEXT01",
+          "title": "Material Deconstructions of Time: Posthumanist Interventions Through ...",
+          "snippet": "The topic of time and how it can be unpacked, deconstructed and designed with is fundamental to HCI, but it is also extensively engaged within artistic practice. By analysing a selection of ten media artworks, all in different ways concerned with time and temporality, we explore how artists approach these matters as culturally and politically loaded. The selected projects align with the ...",
+          "id": "13defbc36585f506430f"
+        }
+      ],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": true,
+      "source_kind": "real_query_history",
+      "acquisition": {
+        "status": "captured",
+        "observed_count": 10,
+        "candidate_budget": 10,
+        "raw_before_selection": true
+      }
+    },
+    {
+      "id": "01a71c4d24244320f5b4",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "observer in second-order cybernetics Spencer-Brown Laws of Form",
+      "sources": [
+        {
+          "url": "https://monoskop.org/images/2/21/Glanville_Ranulph_2009_Second_Order_Cybernetics.pdf",
+          "title": "PDF SECOND ORDER CYBERNETICS - Monoskop",
+          "snippet": "Spencer Brown's \"Laws of Form\" has been cited as one of the major source texts that liberated the thinking characterizing second order Cybernetics (section 3.1).",
+          "id": "7ba29366ad9de5558fe4"
+        },
+        {
+          "url": "https://www.academia.edu/216970/Something_from_Nothing_G_Spencer_Browns_Laws_of_Form_cybernetic_version_of_article_",
+          "title": "Something from Nothing: G. Spencer-Brown's Laws of Form (cybernetic ...",
+          "snippet": "The paper explores G. Spencer-Brown's mathematical concepts from 'Laws of Form' and their applications to cybernetics. It delves into the historical significance of Boolean algebra and its evolution, highlighting Spencer-Brown's unique approach to self-reference and distinction in logic. Key collaborations, particularly with Louis Kauffman, are discussed in the context of expanding upon ...",
+          "id": "04113f3002ef28435921"
+        },
+        {
+          "url": "https://cepa.info/fulltexts/1133.pdf",
+          "title": "PDF Observing Systems: a Cybernetic Perspective on System ... - CEPA",
+          "snippet": "In second-order cybernetics, one draws\u2014conform to the discipline's background\u2014on a mathematical calculus to clarify the basic operations of observing systems: George Spencer Brown's Laws of Form (1971).",
+          "id": "113d61db78f5c686415c"
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Second-order_cybernetics",
+          "title": "Second-order cybernetics - Wikipedia",
+          "snippet": "Second-order cybernetics, also known as the cybernetics of cybernetics, is the recursive application of cybernetics to itself and the reflexive practice of cybernetics according to such a critique. It is cybernetics where \"the role of the observer is appreciated and acknowledged rather than disguised, as had become traditional in western science\". [1] Second-order cybernetics was developed ...",
+          "id": "989d8d7cfc8676b36d39"
+        },
+        {
+          "url": "https://axolote.space/articles/2026/04/01/second-order-cybernetics-the-observer-inside-the-observed-system/",
+          "title": "Second-Order Cybernetics: The Observer Inside the Observed System",
+          "snippet": "Abstract First-order cybernetics studies observed systems: a thermostat, a feedback loop, a controlled plant, examined from a vantage point assumed to lie safely outside. Second-order cybernetics studies observing systems, and insists that the observer is part of the circuit being described. This note formalizes the move from the first frame to the second, sketches a model in which the act of ...",
+          "id": "593a8037b7d95ab52ff5"
+        },
+        {
+          "url": "https://www.leydesdorff.net/kybernetes/observer.pdf",
+          "title": "PDF The biological metaphor of a (second-order) observer",
+          "snippet": "Purpose In the tradition of Spencer Brown's (1969) Laws of Form, observation was defined in Luhmann's (1984) social systems theory as the designation of a distinction. In the sociological design, however, the designation specifies only a category for the observation. The distinction between observation and expectation enables the sociologist to appreciate the processing of meaning in ...",
+          "id": "2e0daf52965438e53cd2"
+        },
+        {
+          "url": "https://www.ideasthesia.org/second-order-cybernetics-when-the-observer-enters-the-system/",
+          "title": "Second-Order Cybernetics: The Observer in the System",
+          "snippet": "Second-order cybernetics raises a critical question: if the observer is always inside the system, what defines the boundary of the observing system? This is where autopoiesis enters.",
+          "id": "bcdba00ae8a2aab8eb9a"
+        },
+        {
+          "url": "https://elements.spiritalchemy.com/articles/pdf/An-Esoteric-Guide-to-Laws-of-Form.pdf",
+          "title": "PDF An Esoteric Guide to Spencer-Brown's \"Laws of Form\"",
+          "snippet": "Abstract This essay esoteric /spiritual epistemology, ontology, exploration commentary, light upon of beginning to anthroposophy and second-order cybernetics. question a Spencer-Brown's reflections It perspectives, in a diverse scie number of Laws of follows the text is written of specifically Laws of Form an as an Steiner's",
+          "id": "2d01a80c9af41105aa9a"
+        },
+        {
+          "url": "https://github.com/rootkiller6788/mini-cybernetics-foundation/tree/main/mini-second-order-cybernetics",
+          "title": "mini-cybernetics-foundation/mini-second-order-cybernetics at main ...",
+          "snippet": "L8 Advanced Topics: Complete \u2014 5 topics (Luhmann social systems, Spencer Brown Laws of Form, von Foerster ethics, fuzzy cybernetics, Conway Game of Life) L9 Research Frontiers: Partial \u2014 Documented (meta-complexity, quantum observers, AI alignment)",
+          "id": "513cbeafe92ea2e81d4a"
+        },
+        {
+          "url": "https://www.cyberneticsandhumanknowing.com/volume_26",
+          "title": "Volume 26 | Cybernetics & Human Knowing",
+          "snippet": "Laws of Form: Spencer-Brown at Esalen, 1973 Read more about Laws of Form: Spencer-Brown at Esalen, 1973",
+          "id": "9fbd1a511243112f71e2"
+        }
+      ],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": true,
+      "source_kind": "real_query_history",
+      "acquisition": {
+        "status": "captured",
+        "observed_count": 10,
+        "candidate_budget": 10,
+        "raw_before_selection": true
+      }
+    },
+    {
+      "id": "034b5423d9dc299d9f5d",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Varela enaction observer Spencer-Brown distinction diffraction",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "037c6c4b5538ff52b2d4",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "forensic materiality glitch art Kirschenbaum compression artefact",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "067cc9fb632121d57a2c",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"Politics of the Machines\" \"Fukuoka 2027\" \"Track 3\" \"Track 03\" \"Track 4\" \"Track 04\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "07d7e567c77c8fc3cecd",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Barad intra-action Laws of Form observer material-discursive apparatus",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "07e28b508d19d6a0234a",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Luhmann re-entry observer social systems Laws of Form detailed analysis",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "0913b35139e00f91c999",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "Direct: http://www.ems-network.org/EMS15/Wanke_full_text.pdf\u2026",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "095499b5904e6874c9bc",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "interactive art permanent trace no reset hardware wear bit rot",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "09846afb18ff915edae8",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "Direct: https://ranulphglanville.org.za/wp-content/uploads/2024/12/L",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "0cf0740c66d1a4d68a3b",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "digital kintsugi algorithmic memory irreversible scars platform architecture",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "0fffab3ee8eadff52334",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "slime mold electrolytic deposition permanent sculpture carbonization",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "126c6b5227d53eacfdbe",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "live coding failure glitch ontology Barad agential cut",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "1272fffcffa860bcbf78",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"Politics of the Machines\" \"Fukuoka\" \"Track 3\" \"Track 03\" \"Track 4\" \"Track 04\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "12fbc9a770b8b6fd54aa",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "Politics of the Machines Fukuoka POM track chairs detailed descriptions",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "1328f0112286ba7b5edc",
+      "split": "tune",
+      "split_entities": [
+        "6d5bede4-1939-4f91-8bb6-2277324fbabc"
+      ],
+      "objective": "What is the Neocybernetics and its main characteristics/features. What is the concept of observer or the Scar in it [scar in our understanding].",
+      "query": "\"second-order cybernetics\" scar mark observation",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "14e1ab7e7e81a31e3fee",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "Barad hysteretic temporality spacetimemattering Chronos hysteron",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "154f8acef630f368b7e7",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "cybernetic art irreversible material change second-order",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "159437b09f4daebd0865",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "David Cecchetto Humanesis posthuman sound performance",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "15af9c5872890d600d1e",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"Culturing Transduction\" \"Beatrice Fazi\" \"Track\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "17942d1de6213e2c61aa",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "second-order cybernetics agential realism Barad intra-action feedback loop sedimentation scar",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "1b73ed81c4f2cda760eb",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "Direct: https://cybernative.ai/t/why-we-need-to-highlight-the-glitch\u2026",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "1c52f8a20e603ca2dc04",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "1ff8ad01e284a5ea8401",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "\"Antikythera Journal\" \"Agentworld\" submission deadline 2025",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "2029fb1c9fc4b53069c2",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "topological hysteresis material memory invagination complex fluids defects",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "24801a5ebcb576c8e606",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "experimental music theory concepts glitch microtonality spectralism sound art",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "26757a9e5d3efda9635d",
+      "split": "heldout",
+      "split_entities": [
+        "cd822674-3340-46b3-84eb-044db7bfdc05"
+      ],
+      "objective": "Lets make analysis of idea of cybernetic observer in OOO",
+      "query": "Decentering the Human in Philosophy, Cybernetics and Early ... full text",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "26c50be220ff65c6afe6",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "\"cybernetic scar\" \"scar of cybernetics\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "27b660c0ff17858d5323",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "posthumanist sound art materiality music theory diffraction",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "27b6ebe9aa88d6577724",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "Physarum polycephalum intra-active circuit art installation material sedimentation",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "282421470a36737e07bd",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "Deleuze fold invagination scar pleat body without organs",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "2b4ed392559b36de42e7",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "\"non-consensual scarring\" ethics technology apparatus design",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "2d2b996559839ff38196",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Glanville Spencer-Brown observer distinction formal mechanism",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "2d6259cfea2501edcf1a",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "what is the scar in cybernetics?",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "2e633409f2ceaff55556",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "second-order cybernetics irreversible observer effect material trace",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "2fc7b9f1a67c990321a4",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "\"Benjamin Bratton\" decolonial critique planetary computation",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "2fea5b9248760e21e83e",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "Antikythera Agent World research unit",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "30b043dae903348d1b65",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "Benjamin Bratton decolonial critique planetary computation",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "31e821f39fd163595a87",
+      "split": "tune",
+      "split_entities": [
+        "6d5bede4-1939-4f91-8bb6-2277324fbabc"
+      ],
+      "objective": "What is the Neocybernetics and its main characteristics/features. What is the concept of observer or the Scar in it [scar in our understanding].",
+      "query": "Clarke neocybernetics narrative scar mark of distinction",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "32cc616676f83a0cd3c1",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "TidalCycles Euclidean rhythm syntax polyrhythmic layering live coding example strudel",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "37ed85531fc2b9b4fce0",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "interactive art without undo sedimentation digital object permanence",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "3d1b69f9086faaaa85d9",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "Antikythera Agentworld open call format requirements AI co-author",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "407f768ae0683c417fdc",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "feminist decolonial algorave Latin America live coding community algorithmic resistance",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "41e61afdb119589812cb",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" trac",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "43524df35c372c155874",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"Politics of the Machines\" \"Culturing Transduction\" \"Track 5\" \"Track 05\" \"Track 7\" \"Track 07\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "45c705018b3747002ec6",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "Agent World Antikythera studio research themes",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "45e2a592fd29e95a9fe5",
+      "split": "heldout",
+      "split_entities": [
+        "cd822674-3340-46b3-84eb-044db7bfdc05"
+      ],
+      "objective": "Lets make analysis of idea of cybernetic observer in OOO",
+      "query": "Graham Harman cybernetics",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "4a18b5c1a89b3ef4d1e0",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Maturana Varela autopoietic observer compared to Spencer-Brown observer",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "4c2d70747baed4623792",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "Deleuze third synthesis of time material sedimentation scar",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "4ea01558b0dd77e62ed6",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "\"the scar\" Glanville \"Living in Cybernetics\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "50a1d3489a351003b1e3",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "memristor slime mold memory irreversible Gale arXiv",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "5698a68915d283d580a7",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "Direct: https://arxiv.org/abs/1306.3414\u2026",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "569a0227b1690917b40e",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "\"the scar\" cybernetics Taylor",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "576209018a5ce1f26890",
+      "split": "heldout",
+      "split_entities": [
+        "cd822674-3340-46b3-84eb-044db7bfdc05"
+      ],
+      "objective": "Lets make analysis of idea of cybernetic observer in OOO",
+      "query": "OOO second-order cybernetics",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "58855afd0fed7080e857",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"Politics of the Machines\" Fukuoka 2027 \"Track 03\" \"Track 04\" \"Track 05\" \"Track 07\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "594f9e8baa97ea149398",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "kintsugi fracture mechanics urushi gold repair material properties hysteresis",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "5976095bc0d5fbcc5171",
+      "split": "heldout",
+      "split_entities": [
+        "cd822674-3340-46b3-84eb-044db7bfdc05"
+      ],
+      "objective": "Lets make analysis of idea of cybernetic observer in OOO",
+      "query": "Levi Bryant cybernetics object-oriented ontology observer",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "59f3539d20297929f406",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "live coding real-time FFT spectral manipulation SuperCollider performance example Nick Collins Alberto de Campo",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "5c1482e3b085790a929e",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "the scar in cybernetics meaning",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "5c7ab6a4247ef96d716b",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "Direct: https://dx.doi.org/10.1038/s41467-024-46131-z\u2026",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "63c9375457e45a54b467",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "algorave decolonial open source feminist politics",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "669b49c1a437237b169a",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "Deleuze assemblage Barad spacetimemattering cybernetics irreversibility",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "680e1a2b68d754be2f18",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "von Foerster non-trivial machine agential cut Karen Barad intra-action",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "683e5647bb2caef0a813",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "interactive installation undo function refusal material degradation scar",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "6e861c47ab9bf83e086d",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Direct: https://cepa.info/fulltexts/1133.pdf\u2026",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "75b0e31c2b37a911642f",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"Politics of the Machines 2027\" \"Culturing Transduction\" chairs CFP Kyushu",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "791f738b0afbe8a14c15",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "Riccardo Wanke three modes of listening nine common musical attributes full text PDF",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "7e8b0f58c72a72f50d3e",
+      "split": "heldout",
+      "split_entities": [
+        "cd822674-3340-46b3-84eb-044db7bfdc05"
+      ],
+      "objective": "Lets make analysis of idea of cybernetic observer in OOO",
+      "query": "object-oriented ontology second-order cybernetics von Foerster",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "81b72485055664cc5f50",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "Ranulph Glanville scar cybernetics",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "839dd284165bdd6a794e",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "\"scar\" \"Glanville\" cybernetics",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "83b32eb371bb280f4d73",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "Politics of the Machines Fukuoka Track 3 Track 4 Track 5 Track 7",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "843e402792dfff4b2160",
+      "split": "tune",
+      "split_entities": [
+        "6d5bede4-1939-4f91-8bb6-2277324fbabc"
+      ],
+      "objective": "What is the Neocybernetics and its main characteristics/features. What is the concept of observer or the Scar in it [scar in our understanding].",
+      "query": "\"neocybernetics\" \"scar\" observation distinction Clarke",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "84a9a3b8367ad43b4fe6",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Spencer-Brown Laws of Form observer concept distinction",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "85b5e19ebd37eb6bca58",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "live coding music performance artists platforms Algorave TidalCycles Sonic Pi",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "886ef4f62205da5ffc2b",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "Direct: https://journals.openedition.org/filigrane/879\u2026",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "8be29fc61d4f0a39e536",
+      "split": "heldout",
+      "split_entities": [
+        "cd822674-3340-46b3-84eb-044db7bfdc05"
+      ],
+      "objective": "Lets make analysis of idea of cybernetic observer in OOO",
+      "query": "Graham Harman cybernetics observer second-order",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "90c65ac0f73db3cc6b59",
+      "split": "tune",
+      "split_entities": [
+        "6d5bede4-1939-4f91-8bb6-2277324fbabc"
+      ],
+      "objective": "What is the Neocybernetics and its main characteristics/features. What is the concept of observer or the Scar in it [scar in our understanding].",
+      "query": "second-order cybernetics \"observer\" \"distinction\" scar",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "9167038d6b1567418f9b",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"Politics of the Machines\" \"Fukuoka 2027\" \"Track 5\" \"Track 05\" \"Track 7\" \"Track 07\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "927a551ee080c2da2204",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"Beatrice Fazi\" \"Politics of the Machines\" \"Track\" \"Fukuoka\"",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "92a58f3ba83ca50ae951",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Spencer-Brown Laws of Form re-entry chapter 12 unwritten cross explanation",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "9486fb83d1e7acf07981",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "Direct: https://agentworld.antikythera.org/\u2026",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "94b27d6f4d54383bf06a",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "Physarum polycephalum memristive hysteresis capacitance comparison electrical model",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "95465c53ac4c9fe4cfec",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "An Antikythera Research Unit open call",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "9816ff10452d47d93444",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "\"Antikythera Journal\" special issue submission format author guidelines",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "998b67581dab58dece0f",
+      "split": "heldout",
+      "split_entities": [
+        "cd822674-3340-46b3-84eb-044db7bfdc05"
+      ],
+      "objective": "Lets make analysis of idea of cybernetic observer in OOO",
+      "query": "Andrew Pickering object-oriented ontology cybernetic observer",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "a018b2d4718a226c2ca1",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "\"pom-conference.org\" \"Track 3\" \"Track 4\" \"Track 5\" \"Track 7\" Fukuoka 2027",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "a2da684202635fdb5e30",
+      "split": "tune",
+      "split_entities": [
+        "6d5bede4-1939-4f91-8bb6-2277324fbabc"
+      ],
+      "objective": "What is the Neocybernetics and its main characteristics/features. What is the concept of observer or the Scar in it [scar in our understanding].",
+      "query": "Heikki Hy\u00f6tyniemi observer second-order cybernetics",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "a49fb90b1920ff79b7ad",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "Direct: https://agentworld.antikythera.org/#journal\u2026",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "a4b36f091275b21190eb",
+      "split": "tune",
+      "split_entities": [
+        "6d5bede4-1939-4f91-8bb6-2277324fbabc"
+      ],
+      "objective": "What is the Neocybernetics and its main characteristics/features. What is the concept of observer or the Scar in it [scar in our understanding].",
+      "query": "\"neocybernetics\" observer scar",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "a6073a553f50b6fddb68",
+      "split": "heldout",
+      "split_entities": [
+        "cd822674-3340-46b3-84eb-044db7bfdc05"
+      ],
+      "objective": "Lets make analysis of idea of cybernetic observer in OOO",
+      "query": "Lets make analysis of idea of cybernetic observer in OOO",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "a65194188a275d00dfe1",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "glitch art algorithmic scars kintsugi digital memory error exposure",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "a771ef9018547bc7a5c1",
+      "split": "heldout",
+      "split_entities": [
+        "9d471e7b-9581-4035-9826-66ff83d58c01"
+      ],
+      "objective": "The Body Without Organs That Remembers (BwOR) is an ontological framework that challenges the implicit amnesia of pure becoming and the digital fiction of frictionless restoration. While Deleuze and Guattari\u2019s classical Body without Organs (BwO) acts as a recording surface that permits dissolution without residue, the BwOR acknowledges that every agential cut is an act of physical and historical conflict that cannot be retracted without altering the medium. The BwOR retains the procedural \u201cwithout\u201d\u2014meaning it actively resists the hierarchical, utility-bound organization of the organism\u2014but it refuses the fantasy of the blank slate. Instead of a flat surface of transient inscription, the BwOR is a hysteretic body that invaginates at the site of contact. Here, the scar is not an organ; it is a pleat\u2014a localized reorganization of the material\u2019s topology and diffractive index that permanently alters its future capacity to receive, refract, and respond to incoming forces. Operating under the temporal signature of Chronos plus hysteron, the BwOR is defined by a dynamic tension between structural reinforcement and systemic collapse. As agential cuts accumulate, the resulting scars can produce positive work-hardening or \u201ccallusing,\u201d increasing the body\u2019s localized toughness and capacity for resistance. However, because the BwOR possesses no reset button, this accumulation is inevitably finite; if the body is subjected to continuous, unmitigated conflict, it moves toward a state of sclerosis where its lines of flight are choked out by the weight of its own history, eventually fracturing to return its sediment back to the pre-individual field. This materialist trajectory demands a cosmopolitical ethics of care and asymmetric projection. Drawing on the philosophy of Kintsugi, the BwOR does not seek to restore broken systems to a mythic state of initial perfection, but rather highlights the fracture as the site of value. It forces us to abandon the pacified role of the spectato",
+      "query": "Karen Barad hysteretic temporality Chronos hysteron spacetimemattering",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "a82bb52b90ce61af024f",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "forensic materiality digital art erasure undo reset glitch voice apparatus",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "ac17e60b850989c20763",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "Antikythera Agentworld open call submission guidelines deadline 2025",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "ae8e2af565f84c80dd2e",
+      "split": "tune",
+      "split_entities": [
+        "82791f9d-a643-4cd4-a0e2-f9e7536bca82"
+      ],
+      "objective": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "query": "Lets make a research for the audio part of the artwork. The music theory, experimental music theory and examples, live coding performances so we can build a rich theoretical foundation for our sound artworks.",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "b0234dac4f70c2915a97",
+      "split": "validation",
+      "split_entities": [
+        "12ea921d-757b-407d-af58-be7b7e542b44"
+      ],
+      "objective": "what is the scar in cybernetics?  Mark C. Taylor\u2019s corpus is the vital missing link that has not yet been verified as explicitly linking the Luhmannian scar to poststructuralist and complex network theory.",
+      "query": "scar cybernetics new materialism",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "b6df1b474891a62397cf",
+      "split": "tune",
+      "split_entities": [
+        "63260028-0910-4233-bea6-c42cbcded2d6"
+      ],
+      "objective": "Tracing the Scar: Material Agency from Feedback Loops to Sedimented Action  Keywords: Agential Cut, Agential Realism, Forensic Decay, Intra-action, Irreversibility, Material Agency, Response-ability, Second-Order Cybernetics, Sedimentation, Spacetimemattering  Responding to the \"Hybrid Matters\" track, this proposal offers a theoretical evolution of the feedback loop, focusing on agential materiality\u2014the vitality of technological apparatuses in which physical, social, and semantic constraints are inseparable. Cybernetics inaugurated a fundamental transition from Newtonian reversible time to the Bergsonian irreversibility of systems that learn. While first-order cybernetics identified this temporal shift, it prioritized the \"sovereignty of the pattern\" over the \"noise\" of the material substrate. Bridging this gap, Second-Order Cybernetics positioned the observer within the loop, yet contemporary interactive art remains largely tethered to an \"erasure paradigm.\" This paradigm relies on the \"digital fiction.\" of the \"reset\" or \"undo\" functions\u2014an engineered illusion of immateriality that ignores the forensic reality where information is a physical inscription that cannot be truly removed without the destruction of the medium. My approach traces a materialist path through three frameworks: Cybernetics (the recursive Loop), Deleuze (the open Assemblage), and Barad (Materiality of the Phenomenon). I propose that the loop is not an abstract cycle of information but a unidirectional process of Spacetimemattering. In line with von Foerster, meaning emerges in the act of listening; yet in an intra-active framework, this listening is a material \"handshake\"\u2014a collision where the shake creates the shaker. I suggest that the \"Mark on the Body\"\u2014the trace of the agential cut\u2014may be the missing link in systems theory. Personality is the accumulation of scars; identity is formed through the history of material collisions that cannot be \"healed\" or reversed. There is only Material Sedi",
+      "query": "Physarum polycephalum permanent network fixation carbonization bioart",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "ba1b8849ab35d7bbc829",
+      "split": "heldout",
+      "split_entities": [
+        "91f6c309-dbe8-4068-88ee-7188bbc973ed"
+      ],
+      "objective": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "query": "Analyze this open-call and your own system development and principles. Lets try to make a general abstract/proposal/intervention to this open call. https://agentworld.antikythera.org/#an-antikythera-research-unit",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "ba49a580a782f17acf70",
+      "split": "heldout",
+      "split_entities": [
+        "bfa5fc4d-3f0e-436a-8b89-a78b5fae5ff2"
+      ],
+      "objective": "Retrieve and analyze the detailed descriptions and track chair profiles for Tracks 3, 4, 5, and 7 of POM Fukuoka 2027.",
+      "query": "Direct: https://pom-conference.org/fukuoka-2027/",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    },
+    {
+      "id": "bafa1ab2e1d7877b0a0f",
+      "split": "heldout",
+      "split_entities": [
+        "bd1140b7-adc2-403e-8ed6-a390a9dce9eb"
+      ],
+      "objective": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "query": "Give the analysis and comparison/difraction of the idea/concept 'observer' in the Laws of Form.",
+      "sources": [],
+      "annotations": [],
+      "target_count": 3,
+      "source_pool_complete": false,
+      "source_kind": "real_query_history"
+    }
+  ],
+  "available_distinct_queries": 131,
+  "promotion": "BLOCKED",
+  "note": "Historical search caches contain selected survivors, so they cannot reconstruct raw candidate pools.",
+  "frozen": false,
+  "acquired_queries": 2
+}

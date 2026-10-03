@@ -144,6 +144,7 @@ V105: bridge storage faults → propagate; PDF parser/I/O failures → bounded f
 V106: activation trace ! assembly-owned bounded IDs + selected/injected + origin; legacy NULL → unknown; chat/dream parity; provenance ≠ response influence; ⊥ automatic pruning
 
 V107: belief classification ! statement-bound scope/time/provenance + explicit referent bindings; missing/ambiguous/stale context → abstain before model; replay ⊥ unvalidated context; held-out gold ! independent provenance + leakage check
+V108: research calibration ! raw candidates before selection + source IDs/exclusion receipts; archived survivors ⊥ gold pools; independent relevance/quality/contrary/injection labels + frozen task-family splits; fallback ⊥ valid model trial; repeats ⊥ independent sample count; promotion ! reviewed downstream evidence
 
 ## §T
 
@@ -203,6 +204,7 @@ T51|x|restore baseline failure boundaries and strict dream state typing|V105,V29
 T52|x|persist assembly provenance and audit coverage; review stale skill probes|V106,V101,V23
 
 T53|x|guard belief context; export independent annotation corpus; implement held-out calibration gates|V107,V103,V56
+T54|x|export real research queries; capture raw pools; independent annotation + frozen three-arm comparisons|V108,V102,V56
 
 ## §B
 

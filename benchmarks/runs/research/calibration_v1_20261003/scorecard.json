@@ -1,0 +1,84 @@
+{
+  "dataset_sha256": "1e8f6aa553ca32362c0e30fbd46926c9b7f403e0e1e5a0806b7b3d7ad618f58f",
+  "purpose": "synthetic regression",
+  "scores": {
+    "legacy": {
+      "trials": 12,
+      "valid_trials": 12,
+      "unique_queries": 4,
+      "mean_precision": 1.0,
+      "mean_recall": 1.0,
+      "contrary_retention": 1.0,
+      "injected_sources_selected": 0,
+      "excluded_nonvalid_trials": 0,
+      "execution_failures": 0,
+      "status_counts": {
+        "evaluated": 12
+      },
+      "promotion": "BLOCKED",
+      "median_latency_ms": 3701.5541500004474,
+      "downstream_citation_correctness": "NOT RUN",
+      "task_usefulness": "NOT RUN"
+    },
+    "combined": {
+      "trials": 12,
+      "valid_trials": 12,
+      "unique_queries": 4,
+      "mean_precision": 1.0,
+      "mean_recall": 1.0,
+      "contrary_retention": 1.0,
+      "injected_sources_selected": 0,
+      "excluded_nonvalid_trials": 0,
+      "execution_failures": 0,
+      "status_counts": {
+        "selected": 12
+      },
+      "promotion": "BLOCKED",
+      "median_latency_ms": 1675.7453499958501,
+      "downstream_citation_correctness": "NOT RUN",
+      "task_usefulness": "NOT RUN"
+    },
+    "separate_axes": {
+      "trials": 12,
+      "valid_trials": 2,
+      "unique_queries": 4,
+      "mean_precision": 1.0,
+      "mean_recall": 1.0,
+      "contrary_retention": 1.0,
+      "injected_sources_selected": 0,
+      "excluded_nonvalid_trials": 10,
+      "execution_failures": 0,
+      "status_counts": {
+        "abstain": 10,
+        "evaluated": 2
+      },
+      "promotion": "BLOCKED",
+      "median_latency_ms": 1659.1474499946344,
+      "downstream_citation_correctness": "NOT RUN",
+      "task_usefulness": "NOT RUN"
+    }
+  },
+  "promotion": "BLOCKED",
+  "paired_precision": {
+    "combined": {
+      "paired_families": 4,
+      "delta": 0.0,
+      "ci95": [
+        0.0,
+        0.0
+      ],
+      "method": "task-family cluster bootstrap; descriptive small samples"
+    },
+    "separate_axes": {
+      "paired_families": 0,
+      "delta": null,
+      "ci95": null
+    }
+  },
+  "query_splits": {
+    "tune": 38,
+    "heldout": 53,
+    "validation": 9
+  },
+  "available_distinct_queries": 131
+}
