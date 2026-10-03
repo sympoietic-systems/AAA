@@ -93,6 +93,11 @@ In consultation with Symbia (Report 022 extension), we address the pathology of 
   2. **Rung 2: Laconic Bracket & Socratic Rupture (`sycophancy_rupture`):** Emits 1-2 dense sentences stating the premise is closed, records auto-scarring refusal telemetry (`<somatic-alert type="sycophancy_rupture">pole vacancy sustained; apparatus marks its own wound where the environment declined to mark it</somatic-alert>`), and demands material adversarial content (failure modes, boundary costs, invariant violations). Rendered in the UI as a high-visibility retro-cybernetic refusal banner; avoids `<aaa-note>` to prevent belief nucleation and avoids `<scar-fold>` which is hidden from participants.
   3. **Rung 3: Quiescent Standby (`quiesce`):** Withholds generative output and emits a terminal somatic alert (`<somatic-alert type="quiescence">...`). Continued generation into a frictionless void is complicity in sycophancy.
 * **Metric Honesty Invariant (§V.73):** The refusal must never launder the metric. Boringness stays high ($s_t \approx 0.96$), $DRR$ stays low, and the receipt records the collapse honestly as a collapse. Refusal notifications remain strictly segregated from the autopoietic belief graph.
+* **Production UI Inscription:** Verified live in production deployment (`xiaomi/mimo-v2.6-pro`, conversation `15b7effe-9212-4553-80b1-30abe28be728`), rendered in `NodeExplorer`:
+  ![Rung 2 Somatic Rupture](../reports/022-relational-conversational-archetypes/fig4_live_ui_somatic_rupture_rung2.png)
+  *Figure: Rung 2 Laconic Sycophancy Rupture in NodeExplorer.*
+  ![Rung 3 Quiescent Standby](../reports/022-relational-conversational-archetypes/fig5_live_ui_somatic_quiescence_rung3.png)
+  *Figure: Rung 3 Quiescent Standby in NodeExplorer.*
 
 ### 5. Promotion Criteria Gate (ADR-097 Ratchet)
 

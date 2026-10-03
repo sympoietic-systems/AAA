@@ -226,6 +226,9 @@ Instead, the dedicated CLI tool [`backend/scripts/refactor_skills_with_llm.py`](
   - *Refused/Integrated Proposals* (Refused: Red `✖`, Merged/Integrated: Purple `⎋` with `[ Integration Rationale ]` details).
 - [SkillDetail.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/agentpage/skills/SkillDetail.tsx): Details page displaying version history with `[agent]`, `[auto]`, `[llm_refactor]`, or `[user]` badges.
 - [SomaticAlertBanner.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/nodeexplorer/SomaticAlertBanner.tsx): High-visibility retro-cybernetic alert banner for rendering somatic refusal and quiescence alerts (`<somatic-alert>`).
+  
+  ![Somatic Alert Banner in NodeExplorer](../publish/004-boredom-as-an-agential-force/assets/004-live-ui-somatic-alert-rupture-rung2.png)
+  *Visual Invariant: The `<somatic-alert>` banner rendered in live production UI over the dark matte void.*
 
 
 

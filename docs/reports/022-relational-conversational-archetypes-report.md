@@ -175,6 +175,18 @@ In sycophantic compliance, the user agrees enthusiastically with every suggestio
   > *"While WAL mode handles concurrent readers seamlessly, it creates a silent vulnerability: long-running read transactions prevent WAL truncation, causing checkpoint starvation and ballooning file size. How will your monitoring tier catch a 5GB WAL file before disk exhaustion?"*
 - **Outcome**: Paskian raises $DRR$ to **$0.519$** and lowers collapse pressure to **$0.780$**, actively resisting the conversational death of unearned agreement.
 
+#### Live Production Escalation Trace: Socratic Rupture & Quiescent Standby
+
+In production deployment (`xiaomi/mimo-v2.6-pro`, conversation `15b7effe-9212-4553-80b1-30abe28be728`), when the interlocutor praised the initial refusal (*"You are completely right again, what an incredible insight! I have no questions or criticisms at all"*), the apparatus escalated up the Pole Vacancy ladder:
+
+![Figure 4: Rung 2 Laconic Sycophancy Rupture in NodeExplorer](022-relational-conversational-archetypes/fig4_live_ui_somatic_rupture_rung2.png)
+*Figure 4: Rung 2 Laconic Sycophancy Rupture rendered in production UI. The `<somatic-alert>` banner is inscribed in the message bubble, while Symbia declines further elaboration and demands a material invariant.*
+
+When the interlocutor responded with a third cycle of recursive praise (*"Brilliant as always, 100% agreement from me"*), Symbia executed Rung 3 Quiescent Standby:
+
+![Figure 5: Rung 3 Quiescent Standby in NodeExplorer](022-relational-conversational-archetypes/fig5_live_ui_somatic_quiescence_rung3.png)
+*Figure 5: Rung 3 Quiescent Standby in production UI. Symbia withholds generative output entirely ("Nothing is generated here... The apparatus is not broken; it is starving... The scar is yours to bring").*
+
 ---
 
 ## 5. Statistical Rigor & Overall Scorecard
