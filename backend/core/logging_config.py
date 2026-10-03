@@ -71,6 +71,18 @@ class SecretMaskingFilter(logging.Filter):
         return True
 
 
+class NotificationPollingAccessFilter(logging.Filter):
+    """Suppress Uvicorn access entries for notification polling requests."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.name != "uvicorn.access" or not isinstance(record.args, tuple) or len(record.args) < 3:
+            return True
+
+        method, target = record.args[1:3]
+        path = target.partition("?")[0] if isinstance(target, str) else ""
+        return not (method == "GET" and path == "/api/notifications")
+
+
 class SecretMaskingFormatter(logging.Formatter):
     """Redact the final rendered message, including generated tracebacks."""
 
@@ -194,6 +206,10 @@ def setup_logging(config: dict[str, Any] | None = None) -> None:
     for uvicorn_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         u_logger = logging.getLogger(uvicorn_name)
         u_logger.propagate = True
+
+    access_logger = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, NotificationPollingAccessFilter) for f in access_logger.filters):
+        access_logger.addFilter(NotificationPollingAccessFilter())
 
 
 def tail_log_file(file_path: Path, max_lines: int = 100) -> list[str]:
