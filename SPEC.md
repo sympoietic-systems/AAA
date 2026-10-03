@@ -143,6 +143,8 @@ V105: bridge storage faults → propagate; PDF parser/I/O failures → bounded f
 
 V106: activation trace ! assembly-owned bounded IDs + selected/injected + origin; legacy NULL → unknown; chat/dream parity; provenance ≠ response influence; ⊥ automatic pruning
 
+V107: belief classification ! statement-bound scope/time/provenance + explicit referent bindings; missing/ambiguous/stale context → abstain before model; replay ⊥ unvalidated context; held-out gold ! independent provenance + leakage check
+
 ## §T
 
 id|status|task|cites
@@ -199,6 +201,8 @@ T50|x|implement dry-run Jev candidate review routing and inspectable tension mat
 T51|x|restore baseline failure boundaries and strict dream state typing|V105,V29,V30
 
 T52|x|persist assembly provenance and audit coverage; review stale skill probes|V106,V101,V23
+
+T53|x|guard belief context; export independent annotation corpus; implement held-out calibration gates|V107,V103,V56
 
 ## §B
 

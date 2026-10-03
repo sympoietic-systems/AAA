@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sqlite3
 from types import SimpleNamespace
@@ -5,11 +6,29 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from backend.modules.sensory.belief_context import ClaimContext
 from backend.modules.sensory.evidence_triage import EvidenceTriage
-from backend.services.belief_triage import BeliefEvidence, BeliefTriage, nominate_pairs, replay
+from backend.services.belief_triage import BeliefEvidence as RawBeliefEvidence
+from backend.services.belief_triage import BeliefTriage, nominate_pairs, replay
 from backend.storage.database import init_db
 from backend.storage.repositories.cognitive.belief import BeliefRepository
 from benchmarks.suites.belief_triage import VECTOR, digest_file, matrix_copy, read_snapshot
+
+
+def BeliefEvidence(identifier, statement, mass, vector):
+    return RawBeliefEvidence(
+        identifier,
+        statement,
+        mass,
+        vector,
+        ClaimContext(
+            statement_sha256=hashlib.sha256(statement.encode()).hexdigest(),
+            scope="explicit fixture",
+            temporal_scope="same fixture time",
+            provenance="test fixture",
+            resolution="resolved",
+        ),
+    )
 
 
 def service(relation="contradiction", confidence=0.99, strength=0.9, absorbable=0.1):
@@ -121,6 +140,7 @@ async def test_snapshot_copy_populates_only_tension_with_atomic_stale_rejection(
     before = digest_file(source)
     beliefs, _, skipped, prior = read_snapshot(source, "symbia")
     assert not skipped and not prior
+    beliefs = [BeliefEvidence(b.id, b.statement, b.mass, b.vector) for b in beliefs]
     triage, _ = service()
     receipt = await triage.evaluate_pair(beliefs[0], beliefs[1])
     destination = tmp_path / "matrix_test.db"

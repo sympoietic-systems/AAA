@@ -1,0 +1,12 @@
+{
+  "belief_count": 56,
+  "coordinate_min": 0.0,
+  "coordinate_max": 1.0,
+  "cosine_min": 0.6092033240704704,
+  "cosine_max": 0.9790582214606517,
+  "pairs_below_geometric_antagonism_threshold": 0,
+  "existing_tension_rows": 0,
+  "existing_tension_min": null,
+  "existing_tension_max": null,
+  "interpretation": "Snapshot geometry cannot establish semantic contradiction. Geometric mass-weighted intensity and semantic strength need separate provenance before live integration."
+}
