@@ -178,10 +178,10 @@ def _process_scar_monologue_belief_writeback(
             agent_id=agent_id,
             label="scar-monologue-insight",
             statement=f"Monologue Insight: {monologue_text[:150]}",
-            origin="scar_fold_monologue",
+            origin="emergent",
             confidence=0.5,
             ontological_mass=0.5,
-            somatic_anchor="conversation",
+            somatic_anchor="conceptual",
             vector_16d=json.dumps([0.0] * 16),
             lifecycle_stage="crystallized",
         )
