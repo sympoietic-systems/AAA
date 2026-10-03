@@ -43,3 +43,7 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 028: Activation provenance and stale skill review](028-activation-provenance-and-stale-skill-review.md)
 
 - [Report 029: Belief context and calibration workflow](029-belief-context-and-calibration-workflow.md)
+
+- [Report 030: Research screening calibration workflow](030-research-screening-calibration-workflow.md)
+- [Report 031: Next actions delivery](031-next-actions-delivery-report.md)
+- [Report 032: Main release and remaining gates](032-main-release-and-remaining-gates.md)

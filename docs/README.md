@@ -116,3 +116,5 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 030: Research screening calibration workflow](reports/030-research-screening-calibration-workflow.md)
 
 - [Report 031: Next actions delivery](reports/031-next-actions-delivery-report.md)
+
+- [Report 032: Main release and remaining gates](reports/032-main-release-and-remaining-gates.md)

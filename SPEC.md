@@ -205,6 +205,12 @@ T52|x|persist assembly provenance and audit coverage; review stale skill probes|
 
 T53|x|guard belief context; export independent annotation corpus; implement held-out calibration gates|V107,V103,V56
 T54|x|export real research queries; capture raw pools; independent annotation + frozen three-arm comparisons|V108,V102,V56
+T55|.|apply migration 051 before provenance writers; verify target-like upgrade + new writes|V106,I.db
+T56|.|collect prospective activation receipts; audit coverage without inferring response influence|V106,V101
+T57|.|independently label belief pairs; run frozen held-out Jev comparison + shadow; review thresholds|V107,V103,V56
+T58|.|acquire raw research pools; independently label; evaluate held-out arms + downstream citation/usefulness|V108,V102,V56
+T59|.|define geometry coordinate/antagonism contract; audit live evidence before integration|V103,V107
+T60|.|retry timed-out representative skill probes; review before lifecycle changes|V101,V23
 
 ## §B
 

@@ -236,3 +236,18 @@
 - [x] Read-only skill vitality and adversarial probe harness: Report 022; branch `codex/skill-vitality-audit`. Broader automatic crystallization gate remains future work.
 - [x] Opt-in Jev source screening and grounded web collision receipts: Report 023; branch `codex/jev-research-triage`. Production promotion depends on calibration.
 - [x] Dry-run Jev belief candidate routing and tension matrix evidence: Report 024; branch `codex/jev-belief-tension`. Runtime promotion withheld after false-positive calibration.
+
+## 8. Follow-up release and calibration status, 2026-10-03
+
+- [x] Restore backend failure boundaries and configured quality gates; Report 027.
+- [x] Persist assembly-owned activation provenance and review stale-skill probes; Report 028. Migration 051 and prospective coverage remain pending.
+- [x] Add belief-context abstention and prepare an independently labelable 240-pair packet; Report 029. No labeled corpus exists yet.
+- [x] Prepare research screening annotation/acquisition and held-out comparison workflow; Report 030. Exported 100/131 queries; historical sources are selected survivors, not raw gold pools.
+- [ ] Apply additive migration 051 before deploying provenance-writing code; verify rollout against a target-like database (SPEC T55).
+- [ ] Collect prospective activation receipts and measure coverage; do not infer response influence from assembly traces (SPEC T56).
+- [ ] Independently annotate belief pairs, run frozen held-out comparison and shadow observation, then review promotion thresholds (SPEC T57).
+- [ ] Acquire remaining raw research pools, independently annotate sources, evaluate held-out arms and blinded downstream citation/task usefulness (SPEC T58).
+- [ ] Define belief geometry scale/antagonism contract before integrating tension nomination (SPEC T59).
+- [ ] Retry timed-out representative skill probes and review evidence before any lifecycle change (SPEC T60).
+
+Calibration-gated behavior remains disabled: research selection stays opt-in/off by default, belief routing remains dry-run, and no skill pruning or automatic promotion is authorized by the current evidence.
